@@ -22,7 +22,7 @@ Ok file path - should work
   $ touch 123456789
   $ hg ci -Aqm 1
   $ hgmn push -r . --to master_bookmark
-  pushing rev 2f6ac546dc81 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 2f6ac546dc81 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -35,7 +35,7 @@ File path too long - should fail
   $ touch 1234567890
   $ hg ci -Aqm 1
   $ hgmn push -r . --to master_bookmark
-  pushing rev 56fa24a52883 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 56fa24a52883 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -48,7 +48,7 @@ File path too long - should fail
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nlimit_path_length for 56fa24a5288379b752543077df52a8da6d6113ec: Path length for '1234567890' (10) exceeds length limit (>= 10)"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 File path too long (UTF-8 multibyte characters) - should fail
@@ -57,7 +57,7 @@ File path too long (UTF-8 multibyte characters) - should fail
   $ touch 12345678€
   $ hg ci -Aqm 1
   $ hgmn push -r . --to master_bookmark
-  pushing rev 2aa9727c0ca2 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 2aa9727c0ca2 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -70,5 +70,5 @@ File path too long (UTF-8 multibyte characters) - should fail
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nlimit_path_length for 2aa9727c0ca277205aedda2a1acf9d077eafc9d5: Path length for '12345678€' (11) exceeds length limit (>= 10)"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]

@@ -28,7 +28,7 @@ Negative testing
   > done
   $ hg ci -Aqm 1
   $ hgmn push -r . --to master_bookmark
-  pushing rev 069fca863ff8 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 069fca863ff8 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -39,7 +39,7 @@ Positive testing
   $ hg up -q "min(all())"
   $ echo '>>>>>>> 123' > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark
-  pushing rev 17a746afd78e to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 17a746afd78e to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -52,13 +52,13 @@ Positive testing
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nconflict_markers for 17a746afd78ed3f7f06d1d5396fa89adf656ae51: Conflict markers were found in file '1'"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
   $ hg up -q "min(all())"
   $ echo '<<<<<<< 123' > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark
-  pushing rev 948f2ceaf570 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 948f2ceaf570 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -71,7 +71,7 @@ Positive testing
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nconflict_markers for 948f2ceaf570f89539966000cf65d4a56dc4ec37: Conflict markers were found in file '1'"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Negative testing
@@ -83,7 +83,7 @@ Files with bad markers should be accepted with these suffixes
   $ done
   $ hg ci -Aqm 'markdowns'
   $ hgmn push -r . --to master_bookmark
-  pushing rev ced9269b0dde to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev ced9269b0dde to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -97,7 +97,7 @@ File is considered binary if it contains \0
   $ echo -e ">>>>>>> \0" > file
   $ hg ci -Aqm binary
   $ hgmn push -r . --to master_bookmark
-  pushing rev e913daf3ef9f to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev e913daf3ef9f to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -109,7 +109,7 @@ Test bypass
   $ echo -e ">>>>>>> " > largefile
   $ hg ci -Aqm '@ignore-conflict-markers'
   $ hgmn push -r . --to master_bookmark
-  pushing rev a45fdf76c250 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev a45fdf76c250 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -121,7 +121,7 @@ Test markers not on the first line
   $ echo -e "ololo\nonemore\n\n>>>>>>> " > notfirstline
   $ hg ci -Aqm notfirstline
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev be491e50f486 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -134,5 +134,5 @@ Test markers not on the first line
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nconflict_markers for be491e50f4868f90970fb2267d7724d8580780af: Conflict markers were found in file 'notfirstline'"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]

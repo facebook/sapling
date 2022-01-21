@@ -128,7 +128,6 @@ Do a manual move
   * successful sync of entries [15] (glob)
 
   $ cd "$TESTTMP/backup"
-  $ MONONOKE_DIRECT_PEER=True
   $ REPONAME=backup
   $ hgmn pull
   pulling from mononoke://$LOCALIP:*/backup (glob)

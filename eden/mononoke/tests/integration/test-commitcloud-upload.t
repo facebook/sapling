@@ -9,7 +9,6 @@
 
 setup configuration
   $ export READ_ONLY_REPO=1
-  $ export MONONOKE_DIRECT_PEER=1
   $ INFINITEPUSH_ALLOW_WRITES=true \
   >   ENABLE_PRESERVE_BUNDLE2=true \
   >   setup_common_config

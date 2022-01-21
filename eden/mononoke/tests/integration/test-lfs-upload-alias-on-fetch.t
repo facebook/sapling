@@ -63,7 +63,7 @@
   $ echo $LONG > lfs-largefile
   $ hg commit -Aqm "add lfs-large file"
   $ hgmn push -r . --to master_bookmark -v
-  pushing rev 0db8825b9792 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 0db8825b9792 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -100,7 +100,7 @@
   > EOF
 
   $ hgmn pull
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests

@@ -20,7 +20,7 @@ Small commit
   $ for x in $(seq $BYTE_LIMIT); do echo -n 1 > $x; done
   $ hg ci -Aqm 1
   $ hgmn push -r . --to master_bookmark
-  pushing rev e6f2d01a954a to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev e6f2d01a954a to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -33,7 +33,7 @@ Large file
   $ echo -n "$LARGE_CONTENT" > largefile
   $ hg ci -Aqm largefile
   $ hgmn push -r . --to master_bookmark
-  pushing rev b4b4dcaa16f9 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev b4b4dcaa16f9 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -50,7 +50,7 @@ Large file
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nlimit_commitsize for b4b4dcaa16f97662c6a6e70b6eb8c3af1aea8253: Commit size limit is 10 bytes.\nYou tried to push a commit 11 bytes in size that is over the limit.\nSee https://fburl.com/landing_big_diffs for instructions."
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Large commit
@@ -58,7 +58,7 @@ Large commit
   $ for x in $(seq $(( $BYTE_LIMIT + 1))); do echo -n 1 > "${x}_b"; done
   $ hg ci -Aqm largecommit
   $ hgmn push -r . --to master_bookmark
-  pushing rev 0d437325fdc4 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 0d437325fdc4 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -75,13 +75,13 @@ Large commit
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nlimit_commitsize for 0d437325fdc4006bbd174b823446331bfa53a68d: Commit size limit is 10 bytes.\nYou tried to push a commit 11 bytes in size that is over the limit.\nSee https://fburl.com/landing_big_diffs for instructions."
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Bypass
   $ hg commit --amend -m "@allow-large-files"
   $ hgmn push -r . --to master_bookmark
-  pushing rev dcf66a8e39a7 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev dcf66a8e39a7 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -106,7 +106,7 @@ Removing files whose total size is large should work
   R 8_b
   R 9_b
   $ hgmn push -r . --to master_bookmark
-  pushing rev f4021c22aa2d to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev f4021c22aa2d to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

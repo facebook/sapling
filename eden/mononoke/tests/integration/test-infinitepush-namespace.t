@@ -57,18 +57,18 @@ Prepare push
   $ hg ci -m new
 
 Valid infinitepush, with pushrebase disabled
-  $ hgmn push ssh://user@dummy/repo -r . --to "infinitepush1/123" --create
-  pushing to ssh://user@dummy/repo
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "infinitepush1/123" --create
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
 
 Valid infinitepush, with pushrebase enabled
-  $ hgmn push ssh://user@dummy/repo -r . --to "infinitepush1/456" --create --config extensions.pushrebase=
-  pushing to ssh://user@dummy/repo
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "infinitepush1/456" --create --config extensions.pushrebase=
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
 
 Invalid infinitepush, with pushrebase disabled
-  $ hgmn push ssh://user@dummy/repo -r . --to "bad/123" --create
-  pushing to ssh://user@dummy/repo
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "bad/123" --create
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -95,12 +95,12 @@ Invalid infinitepush, with pushrebase disabled
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Invalid infinitepush, with pushrebase enabled
-  $ hgmn push ssh://user@dummy/repo -r . --to "bad/456" --create --config extensions.pushrebase=
-  pushing to ssh://user@dummy/repo
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "bad/456" --create --config extensions.pushrebase=
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -127,25 +127,25 @@ Invalid infinitepush, with pushrebase enabled
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Valid push, with pushrebase disabled
-  $ hgmn push ssh://user@dummy/repo -r . --to "plain/123" --create
-  pushing rev 47da8b81097c to destination ssh://user@dummy/repo bookmark plain/123
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "plain/123" --create
+  pushing rev 47da8b81097c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark plain/123
   searching for changes
   exporting bookmark plain/123
 
 Valid push, with pushrebase enabled
-  $ hgmn push ssh://user@dummy/repo -r . --to "plain/456" --create --config extensions.pushrebase=
-  pushing rev 47da8b81097c to destination ssh://user@dummy/repo bookmark plain/456
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "plain/456" --create --config extensions.pushrebase=
+  pushing rev 47da8b81097c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark plain/456
   searching for changes
   no changes found
   exporting bookmark plain/456
 
 Invalid push, with pushrebase disabled
-  $ hgmn push ssh://user@dummy/repo -r . --to "infinitepush2/123" --create
-  pushing rev 47da8b81097c to destination ssh://user@dummy/repo bookmark infinitepush2/123
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "infinitepush2/123" --create
+  pushing rev 47da8b81097c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark infinitepush2/123
   searching for changes
   no changes found
   remote: Command failed
@@ -173,12 +173,12 @@ Invalid push, with pushrebase disabled
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Invalid push, with pushrebase enabled
-  $ hgmn push ssh://user@dummy/repo -r . --to "infinitepush2/456" --create --config extensions.pushrebase=
-  pushing rev 47da8b81097c to destination ssh://user@dummy/repo bookmark infinitepush2/456
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "infinitepush2/456" --create --config extensions.pushrebase=
+  pushing rev 47da8b81097c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark infinitepush2/456
   searching for changes
   no changes found
   remote: Command failed
@@ -206,14 +206,14 @@ Invalid push, with pushrebase enabled
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Check everything is as expected
   $ cd ..
   $ cd repo-pull
   $ hgmn pull
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests

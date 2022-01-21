@@ -24,7 +24,7 @@ Pushrebase commit 1
   $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark
-  pushing rev a0c9c5791058 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev a0c9c5791058 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -61,7 +61,7 @@ Check that the filenode for 1 does not point to the draft commit in a new clone
   > EOF
 
   $ hgmn pull -r master_bookmark
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests
@@ -77,7 +77,7 @@ Push rebase fails with conflict in the bottom of the stack
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev 0c67ec8c24b9 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -98,7 +98,7 @@ Push rebase fails with conflict in the top of the stack
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev 8d2ff619947e to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -119,7 +119,7 @@ Push stack
   $ echo 3 > 3 && hg add 3 && hg ci -m 3
   $ echo 4 > 4 && hg add 4 && hg ci -m 4
   $ hgmn push -r . --to master_bookmark
-  pushing rev 7a68f123d810 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 7a68f123d810 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -150,7 +150,7 @@ Push fast-forward
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 5 > 5 && hg add 5 && hg ci -m 5
   $ hgmn push -r . --to master_bookmark
-  pushing rev 59e5396444cf to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 59e5396444cf to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -177,7 +177,7 @@ Push fast-forward
 
 Push with no new commits
   $ hgmn push -r . --to master_bookmark
-  pushing rev 59e5396444cf to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 59e5396444cf to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   no changes found
   updating bookmark master_bookmark
@@ -217,7 +217,7 @@ Push a merge commit with both parents not ancestors of destination bookmark
   $
 
   $ hgmn push -r . --to master_bookmark
-  pushing rev fad460d85200 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev fad460d85200 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -276,7 +276,7 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
 
 - Actually test the push
   $ hgmn push -r . --to master_bookmark
-  pushing rev e3db177db1d1 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev e3db177db1d1 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -287,7 +287,7 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   eb388b759fde98ed5b1e05fd2da5309f3762c2fd
 Test creating a bookmark on a public commit
   $ hgmn push --rev 25 --to master_bookmark_2 --create
-  pushing rev eb388b759fde to destination ssh://user@dummy/repo bookmark master_bookmark_2
+  pushing rev eb388b759fde to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark_2
   searching for changes
   no changes found
   exporting bookmark master_bookmark_2
@@ -319,7 +319,7 @@ Test a non-forward push
   │
   ~
   $ hgmn push --force -r . --to master_bookmark_2 --non-forward-move --pushvar NON_FAST_FORWARD=true
-  pushing rev 589551466f25 to destination ssh://user@dummy/repo bookmark master_bookmark_2
+  pushing rev 589551466f25 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark_2
   searching for changes
   no changes found
   updating bookmark master_bookmark_2
@@ -338,7 +338,7 @@ Test a non-forward push
 
 Test deleting a bookmark
   $ hgmn push --delete master_bookmark_2
-  pushing to ssh://user@dummy/repo
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   no changes found
   deleting remote bookmark master_bookmark_2
@@ -359,7 +359,7 @@ Test deleting a bookmark
 Test creating a bookmark and new head
   $ echo draft > draft && hg add draft && hg ci -m draft
   $ hgmn push -r . --to newbook --create
-  pushing rev 7a037594e202 to destination ssh://user@dummy/repo bookmark newbook
+  pushing rev 7a037594e202 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark newbook
   searching for changes
   adding changesets
   adding manifests
@@ -387,7 +387,7 @@ Test non-fast-forward force pushrebase
   ~
 -- we don't need to pass --pushvar NON_FAST_FORWARD if we're doing a force pushrebase
   $ hgmn push -r . -f --to newbook
-  pushing rev 4899f9112d9b to destination ssh://user@dummy/repo bookmark newbook
+  pushing rev 4899f9112d9b to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark newbook
   searching for changes
   adding changesets
   adding manifests
@@ -412,7 +412,7 @@ Test non-fast-forward force pushrebase
 -- Check that pulling a force pushrebase has good linknodes.
   $ cd ../repo3
   $ hgmn pull -r newbook
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests
@@ -427,7 +427,7 @@ Test non-fast-forward force pushrebase
   $ echo SPARTACUS > sum_ego && hg ci -qAm 27
   $ echo SPARTACUS! > sum_ego && hg amend --config mutation.enabled=true --config mutation.record=true
   $ hgmn push -r . -f --to newbook
-  pushing rev * to destination ssh://user@dummy/repo bookmark newbook (glob)
+  pushing rev * to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark newbook (glob)
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -442,7 +442,7 @@ Test non-fast-forward force pushrebase
   remote: 
   remote:   Debug context:
   remote:     "Forced push blocked because it contains mutation metadata.\nYou can remove the metadata from a commit with `hg amend --config mutation.record=false`.\nFor more help, please contact the Source Control team at https://fburl.com/27qnuyl2"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Check that we can replace a file with a directory
@@ -454,7 +454,7 @@ Check that we can replace a file with a directory
   $ hgmn add A/hello -q
   $ hgmn ci -qm "replace a file with a dir"
   $ hgmn push --to newbook
-  pushing rev 4e5fec14573f to destination ssh://user@dummy/repo bookmark newbook
+  pushing rev 4e5fec14573f to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark newbook
   searching for changes
   adding changesets
   adding manifests

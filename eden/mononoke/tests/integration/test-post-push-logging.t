@@ -62,7 +62,7 @@ create new commits in repo2 and check that they are seen as outgoing
   $ hg add b_dir/b
   $ hg ci -mb
   $ hgmn push -r . --to master_bookmark --create --config extensions.remotenames= --config extensions.pushrebase=
-  pushing rev bb0985934a0f to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev bb0985934a0f to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -85,7 +85,7 @@ create new commits in repo2 and check that they are seen as outgoing
   $ hg add -q forcepushrebase
   $ hg ci -m forcepushrebase
   $ hgmn push -r . --to forcepushrebase --create --force --config extensions.remotenames= --config extensions.pushrebase=
-  pushing rev 0c1e5152244c to destination ssh://user@dummy/repo bookmark forcepushrebase
+  pushing rev 0c1e5152244c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark forcepushrebase
   searching for changes
   adding changesets
   adding manifests
@@ -103,7 +103,7 @@ Use normal push (non-pushrebase)
   $ hg add -q push
   $ hg ci -m 'commit'
   $ hgmn push --force
-  pushing to ssh://user@dummy/repo
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
 
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .bookmark
@@ -141,8 +141,8 @@ Stop tracking master_bookmark
   $ echo infinitepush > infinitepush
   $ hg add -q infinitepush
   $ hg ci -m 'infinitepush'
-  $ hgmn push ssh://user@dummy/repo -r . --to "scratch/123" --create
-  pushing to ssh://user@dummy/repo
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "scratch/123" --create
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   $ cat "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY" | jq .bookmark
   "scratch/123"

@@ -26,14 +26,14 @@ setup repo
   $ hgmn push -q --to master --create
 
 clone from the new repo as well
-  $ hgmn_clone ssh://user@dummy/repo repo-clone
+  $ hgmn_clone mononoke://$(mononoke_address)/repo repo-clone
 
 Push with bookmark
   $ cd repo-clone
   $ echo withbook > withbook && hgmn addremove && hgmn ci -m withbook
   adding withbook
   $ hgmn push --to withbook --create
-  pushing rev 11f53bbd855a to destination ssh://user@dummy/repo bookmark withbook
+  pushing rev 11f53bbd855a to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark withbook
   searching for changes
   exporting bookmark withbook
   $ hg book --remote

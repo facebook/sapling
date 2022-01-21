@@ -41,7 +41,7 @@ Try creating again, this should fail
   $ mononoke
   $ wait_for_mononoke
 
-  $ hgmn clone --stream ssh://user@dummy/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
+  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
   streaming all changes
   2 files to transfer, 357 bytes of data
   transferred 357 bytes in * seconds (*) (glob)
@@ -68,7 +68,7 @@ Try creating again, this should fail
   * current max chunk num is None, repo: repo (glob)
   $ rm -rf "$TESTTMP/repo-streamclone"
   $ cd "$TESTTMP"
-  $ hgmn clone --stream ssh://user@dummy/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
+  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
   streaming all changes
   2 files to transfer, 357 bytes of data
   transferred 357 bytes in * seconds (*) (glob)
@@ -97,19 +97,19 @@ Push a few new commits and update streaming clone
   $ hg add 1
   $ hg ci -m 'add 1'
   $ hgmn push -r . --to master_bookmark
-  pushing rev abfb584eacfc to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev abfb584eacfc to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
   $ echo 11 > 1
   $ hg ci -m 'echo 11'
   $ hgmn push -r . --to master_bookmark
-  pushing rev 3f2a7f32ccfc to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 3f2a7f32ccfc to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
   $ echo 111 > 1
   $ hg ci -m 'echo 111'
   $ hgmn push -r . --to master_bookmark
-  pushing rev 9e0f64de2fee to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 9e0f64de2fee to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
   $ hg log -r tip
@@ -122,7 +122,7 @@ Push a few new commits and update streaming clone
   
 
   $ cd "$TESTTMP"
-  $ hgmn clone --stream ssh://user@dummy/repo repo-streamclone-2 --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
+  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone-2 --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
   streaming all changes
   2 files to transfer, 357 bytes of data
   transferred 357 bytes in * seconds (* KB/sec) (glob)
@@ -152,7 +152,7 @@ Check that with last chunk skipping no new batches are uploaded
 
 Clone it again to make sure saved streaming chunks are valid
   $ cd "$TESTTMP"
-  $ hgmn clone --stream ssh://user@dummy/repo repo-streamclone-3 --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
+  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone-3 --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
   streaming all changes
   2 files to transfer, 731 bytes of data
   transferred 731 bytes in 0.0 seconds (* KB/sec) (glob)

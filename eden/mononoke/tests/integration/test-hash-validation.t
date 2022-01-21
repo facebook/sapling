@@ -63,7 +63,7 @@ start mononoke
 Prefetch should fail with corruption error
   $ cd $TESTTMP/repo-client
   $ hgmn pull --config ui.disable-stream-clone=true
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   warning: stream clone is disabled
   requesting all changes
   adding changesets
@@ -92,5 +92,5 @@ Prefetch should fail with corruption error
   remote:             ),
   remote:         ),
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 2)
+  abort: unexpected EOL, expected netstring digit
   [255]

@@ -56,7 +56,7 @@ Check that we cannot pushrebase on that bookmark
   $ touch file3
   $ hg ci -Aqm commit3
   $ hgmn push -r . --to other_bookmark
-  pushing rev 9596b4eb01f6 to destination ssh://user@dummy/repo bookmark other_bookmark
+  pushing rev 9596b4eb01f6 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark other_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -74,7 +74,7 @@ Check that we cannot pushrebase on that bookmark
   remote:             bookmark: "master_bookmark",
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Check that we cannot push to that bookmark if the commit is not a descendant
@@ -82,7 +82,7 @@ Check that we cannot push to that bookmark if the commit is not a descendant
   $ hg ci -Aqm commit3
   [1]
   $ hgmn push -r . --to other_bookmark --force
-  pushing rev 9596b4eb01f6 to destination ssh://user@dummy/repo bookmark other_bookmark
+  pushing rev 9596b4eb01f6 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark other_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -111,12 +111,12 @@ Check that we cannot push to that bookmark if the commit is not a descendant
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Check that we cannot do a regular push to the globalrev bookmark either
   $ hgmn push -r . --to master_bookmark --force
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev 9596b4eb01f6 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -145,5 +145,5 @@ Check that we cannot do a regular push to the globalrev bookmark either
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]

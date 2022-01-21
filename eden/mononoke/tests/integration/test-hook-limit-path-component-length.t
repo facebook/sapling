@@ -28,7 +28,7 @@ S200449
   $ touch "$DIR/$TOO_LARGE_FILE"
   $ hg ci -Aqm too_large
   $ hgmn push -r . --to master_bookmark
-  pushing rev 9af0f6fef03e to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 9af0f6fef03e to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -41,7 +41,7 @@ S200449
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nlimit_path_length for 9af0f6fef03e3490dddf78cc54e01e787d8a0046: Path component length for \"GQLG:Intern::PlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionResponsePayload::EntPlatformToolViewerContextCallsiteMigrationRuleAction::genPerformGraphQLPlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionMutationType.php.i\" (256) exceeds length limit (>= 255)"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
   $ hg up -q master_bookmark
@@ -49,7 +49,7 @@ S200449
   $ touch "$DIR/$NOT_TOO_LARGE_FILE"
   $ hg ci -Aqm not_too_large
   $ hgmn push -r . --to master_bookmark
-  pushing rev 7dfdeae7524e to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 7dfdeae7524e to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

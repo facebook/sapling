@@ -64,7 +64,7 @@ blobimport hg servers repos into Mononoke repos
   $ wait_for_mononoke
 
   $ cd $TESTTMP
-  $ REPONAME=hyper_repo hgmn clone --stream ssh://user@dummy/hyper_repo hyper_repo --config extensions.treemanifest= --config remotefilelog.reponame=hyper_repo --shallow --config treemanifest.treeonly=true
+  $ REPONAME=hyper_repo hgmn clone --stream mononoke://$(mononoke_address)/hyper_repo hyper_repo --config extensions.treemanifest= --config remotefilelog.reponame=hyper_repo --shallow --config treemanifest.treeonly=true
   streaming all changes
   2 files to transfer, 0 bytes of data
   transferred * bytes in * seconds (* bytes/sec) (glob)
@@ -90,14 +90,14 @@ blobimport hg servers repos into Mononoke repos
 
 push one more commit
   $ cd $TESTTMP
-  $ REPONAME=first_source_repo hgmn clone --stream ssh://user@dummy/first_source_repo first_source_repo_client --config extensions.treemanifest= --config remotefilelog.reponame=first_source_repo --shallow --config treemanifest.treeonly=true -q
+  $ REPONAME=first_source_repo hgmn clone --stream mononoke://$(mononoke_address)/first_source_repo first_source_repo_client --config extensions.treemanifest= --config remotefilelog.reponame=first_source_repo --shallow --config treemanifest.treeonly=true -q
   $ cd $TESTTMP/first_source_repo_client
   $ REPONAME=first_source_repo  hgmn up -q tip
   $ echo newfile > newfile
   $ REPONAME=first_source_repo  hgmn add newfile
   $ REPONAME=first_source_repo hgmn ci -m 'new commit in first repo'
   $ REPONAME=first_source_repo hgmn push -r . --to master_bookmark --config treemanifest.treeonly=true --config extensions.treemanifest=
-  pushing rev 1b234100fb5f to destination ssh://user@dummy/first_source_repo bookmark master_bookmark
+  pushing rev 1b234100fb5f to destination mononoke://$LOCALIP:$LOCAL_PORT/first_source_repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

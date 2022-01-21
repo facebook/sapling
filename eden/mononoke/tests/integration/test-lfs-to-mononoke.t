@@ -57,7 +57,7 @@ Perform LFS push
   $ echo "${LONG}for-rename" > lfs-largefile-for-rename
   $ hg commit -Aqm "add lfs-large files"
   $ hgmn push -r . --to master_bookmark -v
-  pushing rev 99765c8d839c to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 99765c8d839c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   lfs: need to transfer 2 objects (3.92 KB)
   lfs: uploading e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d (1.95 KB)
@@ -79,7 +79,7 @@ Perform LFS push
   $ hg mv lfs-largefile-for-rename lfs-largefile-renamed
   $ hg commit -Aqm "rename"
   $ hgmn push -r . --to master_bookmark -v
-  pushing rev c651f052c52d to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev c651f052c52d to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -102,7 +102,7 @@ Verify that if we fail to upload LFS blobs first, the push fails
   $ echo "${LONG}ANOTHER-LFS" > f
   $ hg commit -m f -A f
   $ hgmn push -r . --to master_bookmark -v
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev e4337405c947 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -136,7 +136,7 @@ Verify that if we fail to upload LFS blobs first, the push fails
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
   $ cd ..
@@ -158,7 +158,7 @@ Create a new client repository, using getpack (with its own cachepath)
   > EOF
 
   $ hgmn pull -v
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   all local heads known remotely
   adding changesets
@@ -194,7 +194,7 @@ Change "sha256:oid" to an another valid oid to check sha1 consisnency
   $ sed -i s/sha256:f79cf994214182953d15cd20b2a92731052ddc9a02f4c60518dc78d7a005cca9/sha256:e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d/ "$PACK_TO_CORRUPT"
 
   $ hgmn push -r . --to master_bookmark -v
-  pushing rev 77f499cb0645 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 77f499cb0645 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -255,7 +255,7 @@ Change "sha256:oid" to an another valid oid to check sha1 consisnency
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 # trailing whitespace

@@ -105,7 +105,7 @@
   $ HG_CS_ID="$(REPOID=0 mononoke_admin convert --from bonsai --to hg 146b951933c6d1554a377d733af183659f61794da5c6537c5de68e52acd5e949 2> /dev/null)"
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -r "$HG_CS_ID"
-  pulling from ssh://user@dummy/large-mon
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/large-mon
   searching for changes
   adding changesets
   adding manifests
@@ -192,7 +192,7 @@
   $ echo 'newcontent' > 3
   $ hg ci -qm 'one more after rebinding'
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark
-  pushing rev 9cb648e934be to destination ssh://user@dummy/small-mon bookmark master_bookmark
+  pushing rev 9cb648e934be to destination mononoke://$LOCALIP:$LOCAL_PORT/small-mon bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

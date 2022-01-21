@@ -1370,7 +1370,7 @@ function extract_json_error {
 # talk to Mononoke or use the new hg direct Mononoke connection
 # if this is setup and available.
 function hgmn {
-  if [[ -z "${MONONOKE_DIRECT_PEER}" ]]; then
+  if [[ -n "${NO_MONONOKE_DIRECT_PEER}" ]]; then
     hg --config ui.ssh="$DUMMYSSH" --config paths.default="ssh://user@dummy/$REPONAME" --config ui.remotecmd="$MONONOKE_HGCLI" "$@"
   else
     hg --config paths.default="mononoke://$(mononoke_address)/$REPONAME" "$@"

@@ -73,7 +73,7 @@ Try to push merge commit
   $
 
   $ hgmn push -r . --to master_bookmark
-  pushing rev 3e1c4ca1f9be to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 3e1c4ca1f9be to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -90,5 +90,5 @@ Try to push merge commit
   remote:     Error(
   remote:         "Pushrebase blocked because it contains a merge commit.\nIf you need this for a specific use case please contact\nthe Source Control team at https://fburl.com/27qnuyl2",
   remote:     )
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]

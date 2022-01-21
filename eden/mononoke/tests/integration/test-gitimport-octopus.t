@@ -73,7 +73,7 @@
 
 # Clone the repository
   $ cd "$TESTTMP"
-  $ hgmn_clone 'ssh://user@dummy/repo' "$HG_REPO"
+  $ hgmn_clone mononoke://$(mononoke_address)/repo "$HG_REPO"
   $ cd "$HG_REPO"
   $ tail master branch1 branch2
   ==> master <==

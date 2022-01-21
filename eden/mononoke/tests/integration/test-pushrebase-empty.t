@@ -33,7 +33,7 @@ Push single empty commit
   
   
   $ hgmn push -r . --to master_bookmark
-  pushing rev 4d5799789652 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 4d5799789652 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -47,7 +47,7 @@ Push empty and non-empty commit in a stack
   $ hg revert -r .^ 2
   $ hg commit --amend
   $ hgmn push -r . --to master_bookmark
-  pushing rev 22c3c2036561 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 22c3c2036561 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -63,7 +63,7 @@ Push stack of empty commits
   $ hg revert -r .^ 111
   $ hg commit --amend
   $ hgmn push -r . --to master_bookmark
-  pushing rev aeb4783bffb3 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev aeb4783bffb3 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

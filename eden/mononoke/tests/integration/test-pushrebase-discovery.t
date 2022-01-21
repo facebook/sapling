@@ -78,7 +78,7 @@ Clone the repo
 
 Unsuccessful push creates a draft commit on the server
   $ hgmn push -r . --to master_bookmark
-  pushing rev 812eca0823f9 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 812eca0823f9 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -91,7 +91,7 @@ Unsuccessful push creates a draft commit on the server
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nalways_fail_changeset for 812eca0823f97743f8d85cdef5cf338b54cebb01: This hook always fails"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 In order to hit an edge case the master on the server needs to point to another commit.

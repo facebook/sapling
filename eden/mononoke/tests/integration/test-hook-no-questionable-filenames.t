@@ -16,7 +16,7 @@ Attempt to add a filename with spaces in it
   $ echo "bad" > "test/foo bar"
   $ hg ci -Aqm success
   $ hgmn push -r . --to master_bookmark
-  pushing rev c60235ea2c7f to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev c60235ea2c7f to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -29,7 +29,7 @@ Attempt to add a filename with spaces in it
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nno_questionable_filenames for c60235ea2c7ff0fbb5fd0e1e9906fb712b7853d0: ABORT: Illegal filename: test/foo bar"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Attempt to add a filename with braces in it
@@ -38,7 +38,7 @@ Attempt to add a filename with braces in it
   $ echo "bad" > "test/{foobar}"
   $ hg ci -Aqm success
   $ hgmn push -r . --to master_bookmark
-  pushing rev 8d7d42b0b3af to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 8d7d42b0b3af to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -51,7 +51,7 @@ Attempt to add a filename with braces in it
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nno_questionable_filenames for 8d7d42b0b3afdb18551c0e69751d044c68e1906b: ABORT: Illegal filename: test/{foobar}"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Attempt to add a filename with a hypen at the start
@@ -59,7 +59,7 @@ Attempt to add a filename with a hypen at the start
   $ echo "good" > -testfile
   $ hg ci -Aqm good
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev b2b56d66a707 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -72,7 +72,7 @@ Attempt to add a filename with a hypen at the start
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nno_questionable_filenames for b2b56d66a7073312c059555f1193c5183cf8d37f: ABORT: Illegal filename: -testfile"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Attempt to add a filename with an apostrophe in it
@@ -80,7 +80,7 @@ Attempt to add a filename with an apostrophe in it
   $ echo "bad" > "test'file"
   $ hg ci -Aqm failure
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev 11ee725a3317 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -93,5 +93,5 @@ Attempt to add a filename with an apostrophe in it
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nno_questionable_filenames for 11ee725a331757675c477522b172ab35967903ef: ABORT: Illegal filename: test'file"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]

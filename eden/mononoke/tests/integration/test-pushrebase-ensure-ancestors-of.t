@@ -57,7 +57,7 @@ Prepare the client-side repo
 Push commit to ancestor bookmark, should work
   $ hgmn up -q master_bookmark
   $ hgmn push -r . --to ancestor --create
-  pushing rev 112478962961 to destination ssh://user@dummy/repo bookmark ancestor
+  pushing rev 112478962961 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark ancestor
   searching for changes
   no changes found
   exporting bookmark ancestor
@@ -67,7 +67,7 @@ Now try to pushrebase "ancestor" bookmark, should fail
   $ hg addremove -q
   $ hg ci -m 'new commit'
   $ hgmn push -r . --to ancestor
-  pushing rev 9ddef2ba352e to destination ssh://user@dummy/repo bookmark ancestor
+  pushing rev 9ddef2ba352e to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark ancestor
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -85,12 +85,12 @@ Now try to pushrebase "ancestor" bookmark, should fail
   remote:             bookmark: "master_bookmark",
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Now push this commit to another bookmark
   $ hgmn push -r . --to another_bookmark --create
-  pushing rev 9ddef2ba352e to destination ssh://user@dummy/repo bookmark another_bookmark
+  pushing rev 9ddef2ba352e to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark another_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -99,7 +99,7 @@ Now push this commit to another bookmark
 
 And try to move "ancestor" bookmark there, it should fail
   $ hgmn push -r . --to ancestor
-  pushing rev 9ddef2ba352e to destination ssh://user@dummy/repo bookmark ancestor
+  pushing rev 9ddef2ba352e to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark ancestor
   searching for changes
   no changes found
   remote: Command failed
@@ -129,6 +129,6 @@ And try to move "ancestor" bookmark there, it should fail
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 

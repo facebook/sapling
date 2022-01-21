@@ -9,6 +9,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-commit.sh"
+  $ export NO_MONONOKE_DIRECT_PEER=1
 
 Setup repository
   $ BLOB_TYPE="blob_files" default_setup

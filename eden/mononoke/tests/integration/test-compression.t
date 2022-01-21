@@ -7,7 +7,6 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ MONONOKE_DIRECT_PEER=1
   $ setup_common_config
   $ cd $TESTTMP
 

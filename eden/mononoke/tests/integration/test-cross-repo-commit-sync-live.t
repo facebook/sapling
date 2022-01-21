@@ -6,6 +6,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
+  $ export NO_MONONOKE_DIRECT_PEER=1
 
 Setup configuration
   $ setup_configerator_configs

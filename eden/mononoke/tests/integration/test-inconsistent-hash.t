@@ -64,7 +64,7 @@
 Do a push, but disable cache verification on the client side, otherwise
 filenode won't be send at all
   $ hgmn push -r . --to master_bookmark -v --config remotefilelog.validatecachehashes=False
-  pushing rev cb67355f2348 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev cb67355f2348 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -125,5 +125,5 @@ filenode won't be send at all
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]

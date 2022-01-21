@@ -56,8 +56,8 @@ Do infinitepush (aka commit cloud) push
   $ echo new > newfile
   $ hg addremove -q
   $ hg ci -m new
-  $ hgmn push ssh://user@dummy/repo -r . --to "scratch/123"
-  pushing to ssh://user@dummy/repo
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "scratch/123"
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -79,7 +79,7 @@ Do infinitepush (aka commit cloud) push
   remote:             source: "Infinitepush is not enabled on this server. Contact Source Control @ FB.",
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
   $ tglogp
@@ -102,6 +102,6 @@ Commit should have been rejected
   > branchpattern=re:scratch/.+
   > EOF
   $ hgmn pull -r 47da8b81097c5534f3eb7947a8764dd323cffe3d
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   abort: 47da8b81097c5534f3eb7947a8764dd323cffe3d not found!
   [255]

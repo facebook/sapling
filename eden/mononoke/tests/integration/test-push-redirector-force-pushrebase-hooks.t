@@ -53,7 +53,7 @@ to the small repo
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ REPONAME=small-mon hgmn push -r . --to test_bookmark --create
-  pushing rev 11f848659bfc to destination ssh://user@dummy/small-mon bookmark test_bookmark
+  pushing rev 11f848659bfc to destination mononoke://$LOCALIP:$LOCAL_PORT/small-mon bookmark test_bookmark
   searching for changes
   no changes found
   exporting bookmark test_bookmark
@@ -89,7 +89,7 @@ Note that the node is from the small repo, even though the hook is in the large 
   $ hg log -T"small_node: {node}\n" -r .
   small_node: 6e6a22d48eb51db1e7b8af685d9c99c0d7f10f70
   $ REPONAME=small-mon hgmn push -r . --to test_bookmark --force
-  pushing rev 6e6a22d48eb5 to destination ssh://user@dummy/small-mon bookmark test_bookmark
+  pushing rev 6e6a22d48eb5 to destination mononoke://$LOCALIP:$LOCAL_PORT/small-mon bookmark test_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -102,7 +102,7 @@ Note that the node is from the small repo, even though the hook is in the large 
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\ndeny_files for 6e6a22d48eb51db1e7b8af685d9c99c0d7f10f70: Denied filename 'smallrepofolder/f/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again."
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Create a commit in the large repo that triggers deny_files.  Since we haven't enabled the hook
@@ -116,7 +116,7 @@ there, we are ok to create it.  Create a commit on top of that that is backsynce
   large_node: d967862de4d54c47ba51e0259fb1f72d881efd73
   $ echo 3 > smallrepofolder/largerepofile && hg addremove -q && hg ci -q -m backsync
   $ REPONAME=large-mon hgmn push --to master_bookmark
-  pushing rev 148264a57519 to destination ssh://user@dummy/large-mon bookmark master_bookmark
+  pushing rev 148264a57519 to destination mononoke://$LOCALIP:$LOCAL_PORT/large-mon bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -141,7 +141,7 @@ changeset id.
 
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ REPONAME=small-mon hgmn push -r . --to test_bookmark --pushvar NON_FAST_FORWARD=true
-  pushing rev cd9bfa9f25eb to destination ssh://user@dummy/small-mon bookmark test_bookmark
+  pushing rev cd9bfa9f25eb to destination mononoke://$LOCALIP:$LOCAL_PORT/small-mon bookmark test_bookmark
   searching for changes
   no changes found
   remote: Command failed
@@ -155,5 +155,5 @@ changeset id.
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\ndeny_files for d967862de4d54c47ba51e0259fb1f72d881efd73: Denied filename 'x/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again."
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]

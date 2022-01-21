@@ -53,14 +53,14 @@ create new bookmarks, then update their properties
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ touch b && hg addremove && hg ci -q -m 'add b'
   adding b
-  $ hgmn push ssh://user@dummy/repo -r . --to "not_pull_default" --create
-  pushing rev 907767d421e4 to destination ssh://user@dummy/repo bookmark not_pull_default
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "not_pull_default" --create
+  pushing rev 907767d421e4 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark not_pull_default
   searching for changes
   exporting bookmark not_pull_default
   $ touch c && hg addremove && hg ci -q -m 'add c'
   adding c
-  $ hgmn push ssh://user@dummy/repo -r . --to "scratch" --create
-  pushing rev b2d646f64a99 to destination ssh://user@dummy/repo bookmark scratch
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "scratch" --create
+  pushing rev b2d646f64a99 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark scratch
   searching for changes
   exporting bookmark scratch
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks SET hg_kind = CAST('scratch' AS BLOB) WHERE CAST(name AS TEXT) LIKE 'scratch';"
@@ -83,7 +83,7 @@ test publishing
   o  ac82d8b1f7c4 public 'add a'  default/master_bookmark
   
   $ hgmn pull
-  pulling from ssh://user@dummy/rep* (glob)
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests
@@ -91,7 +91,7 @@ test publishing
   $ hgmn up 907767d421e4cb28c7978bedef8ccac7242b155e
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hgmn up b2d646f64a9978717516887968786c6b7a33edf9
-  pulling 'b2d646f64a9978717516887968786c6b7a33edf9' from 'ssh://user@dummy/repo'
+  pulling 'b2d646f64a9978717516887968786c6b7a33edf9' from 'mononoke://$LOCALIP:$LOCAL_PORT/repo'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglogpnr
   @  b2d646f64a99 draft 'add c'
@@ -108,8 +108,8 @@ test publishing
      scratch                   b2d646f64a9978717516887968786c6b7a33edf9
 Exercise the limit (5 bookmarks should be allowed, this was our limit)
   $ cd ../repo-push
-  $ hgmn push ssh://user@dummy/repo -r . --to "more/1" --create >/dev/null 2>&1
-  $ hgmn push ssh://user@dummy/repo -r . --to "more/2" --create >/dev/null 2>&1
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "more/1" --create >/dev/null 2>&1
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "more/2" --create >/dev/null 2>&1
   $ hgmn bookmarks --list-remote "*"
      master_bookmark           ac82d8b1f7c418c61a493ed229ffaa981bda8e90
      more/1                    b2d646f64a9978717516887968786c6b7a33edf9
@@ -119,7 +119,7 @@ Exercise the limit (5 bookmarks should be allowed, this was our limit)
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks SET hg_kind = CAST('scratch' AS BLOB) WHERE CAST(name AS TEXT) LIKE 'more/%';"
   $ flush_mononoke_bookmarks
 Exercise the limit (6 bookmarks should fail)
-  $ hgmn push ssh://user@dummy/repo -r . --to "more/3" --create >/dev/null 2>&1
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "more/3" --create >/dev/null 2>&1
   $ hgmn bookmarks --list-remote "*"
   remote: Command failed
   remote:   Error:
@@ -130,7 +130,7 @@ Exercise the limit (6 bookmarks should fail)
   remote: 
   remote:   Debug context:
   remote:     "Bookmark query was truncated after 6 results, use a more specific prefix search."
-  abort: unexpected response: empty string
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Narrowing down our query should fix it:

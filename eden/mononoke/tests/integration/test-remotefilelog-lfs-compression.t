@@ -31,7 +31,7 @@ any block size boundaries or such.
 Clone the repo. Take a unique cache path to go to the server, and turn off compression.
 
   $ cd "$TESTTMP"
-  $ hgmn_clone ssh://user@dummy/repo repo2 --noupdate --config extensions.remotenames=
+  $ hgmn_clone mononoke://$(mononoke_address)/repo repo2 --noupdate --config extensions.remotenames=
   $ cd repo2
   $ setup_hg_modern_lfs "$lfs_url" 10B
   $ setconfig "remotefilelog.cachepath=$TESTTMP/cachepath2"
@@ -58,7 +58,7 @@ Update. Check for compression. It shouldn't be used.
 Clone again. This time, enable compression
 
   $ cd "$TESTTMP"
-  $ hgmn_clone ssh://user@dummy/repo repo3 --noupdate --config extensions.remotenames=
+  $ hgmn_clone mononoke://$(mononoke_address)/repo repo3 --noupdate --config extensions.remotenames=
   $ cd repo3
   $ setup_hg_modern_lfs "$lfs_url" 10B
   $ setconfig "remotefilelog.cachepath=$TESTTMP/cachepath3"

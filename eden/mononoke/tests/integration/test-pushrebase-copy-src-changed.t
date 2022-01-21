@@ -66,7 +66,7 @@ Create a copy on a client and push it
   $ hg cp A D
   $ hg ci -m 'make a copy'
   $ hgmn push -r . --to master_bookmark
-  pushing rev 726a45528732 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 726a45528732 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -77,5 +77,5 @@ Create a copy on a client and push it
   remote: 
   remote:   Debug context:
   remote:     "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"A\"), right: MPath(\"A\") }])"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]

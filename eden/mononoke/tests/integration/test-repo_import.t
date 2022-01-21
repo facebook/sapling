@@ -215,7 +215,7 @@
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo1 --noupdate -q
   $ cd repo1
   $ hgmn pull
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests

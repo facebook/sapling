@@ -44,13 +44,8 @@ Create new commits
   $ yes A 2>/dev/null | head -c 200 > large
   $ hg commit -Aqm "add files"
   $ hgmn push --debug
-  pushing to ssh://user@dummy/repo
-  running * (glob)
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: * (glob)
   sending clienttelemetry command
   query 1; heads
   sending batch command
@@ -82,7 +77,7 @@ Clone the repository, and pull
   $ cd hg-client
   $ setup_hg_modern_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache"
   $ hgmn pull
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests

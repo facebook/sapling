@@ -23,7 +23,7 @@ Large commit
   $ for x in $(seq $(( $OVERRIDE_BYTE_LIMIT))); do echo -n 1 > "${x}_b"; done
   $ hg ci -Aqm 1
   $ hgmn push -r . --to master_bookmark
-  pushing rev f67c0f33f0f5 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev f67c0f33f0f5 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -35,7 +35,7 @@ Too large commit
   $ for x in $(seq $(( $OVERRIDE_BYTE_LIMIT + 1))); do echo -n 1 > "${x}_b"; done
   $ hg ci -Aqm 1
   $ hgmn push -r . --to master_bookmark
-  pushing rev a998ef262b2a to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev a998ef262b2a to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -52,5 +52,5 @@ Too large commit
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nlimit_commitsize for a998ef262b2a9c8ad130d0fcb11a4577e0ff67a5: Commit size limit is 10 bytes.\nYou tried to push a commit 11 bytes in size that is over the limit.\nSee https://fburl.com/landing_big_diffs for instructions."
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]

@@ -45,7 +45,7 @@ create a commit with mutation extras
   
 pushrebase it directly onto master - it will be rewritten without the mutation extras
   $ hgmn push -r . --to master
-  pushing rev 6ad95cdc8ab9 to destination ssh://user@dummy/repo bookmark master
+  pushing rev 6ad95cdc8ab9 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master
   searching for changes
   adding changesets
   adding manifests
@@ -73,7 +73,7 @@ create another commit on the base commit with mutation extras
   
 pushrebase it onto master - it will be rebased and rewritten without the mutation extras
   $ hgmn push -r . --to master
-  pushing rev fd935a5d42c4 to destination ssh://user@dummy/repo bookmark master
+  pushing rev fd935a5d42c4 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master
   searching for changes
   adding changesets
   adding manifests

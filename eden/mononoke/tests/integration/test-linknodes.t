@@ -77,7 +77,7 @@ push an infinitepush commit with new content
 pull the infinitepush commit
   $ cd $TESTTMP/repo-pull1
   $ hgmn pull -r 60ab8a6c8e652ea968be7ffdb658b49de35d3621
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests
@@ -134,8 +134,8 @@ push a master commit with the same content
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "content1" > file
   $ hg commit -q -m master
-  $ hgmn push ssh://user@dummy/repo --to master_bookmark
-  pushing rev 6dbc3093b595 to destination ssh://user@dummy/repo bookmark master_bookmark
+  $ hgmn push --to master_bookmark
+  pushing rev 6dbc3093b595 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
 
@@ -143,8 +143,8 @@ pull only the master branch into another repo
   $ cd $TESTTMP/repo-pull2
   $ hg up master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hgmn pull ssh://user@dummy/repo -B master_bookmark
-  pulling from ssh://user@dummy/repo
+  $ hgmn pull mononoke://$(mononoke_address)/repo -B master_bookmark
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests
@@ -183,7 +183,7 @@ NOTE: linkrevfixup was not called
 pull the infinitepush commit again in a new repo
   $ cd $TESTTMP/repo-pull3
   $ hgmn pull -r 60ab8a6c8e652ea968be7ffdb658b49de35d3621
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests

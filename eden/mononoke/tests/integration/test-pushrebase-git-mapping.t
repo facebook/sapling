@@ -33,7 +33,7 @@ Push another commit that conflicts
   $ touch file3
   $ hg ci -Aqm commit3 --extra hg-git-rename-source=git --extra convert_revision=2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev 7fc28fc53a18 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -68,7 +68,7 @@ Push another commit that conflicts
   remote:             ),
   remote:         ),
   remote:     )
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Force-push a commit
@@ -78,7 +78,7 @@ Force-push a commit
   $ touch file4
   $ hg ci -Aqm commit4 --extra hg-git-rename-source=git --extra convert_revision=4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d
   $ hgmn push -r . --to master_bookmark --force
-  pushing rev 1b5b68e81ae5 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 1b5b68e81ae5 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

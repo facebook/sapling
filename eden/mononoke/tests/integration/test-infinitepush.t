@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ export NO_MONONOKE_DIRECT_PEER=1
 
 setup configuration
   $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
@@ -349,7 +350,7 @@ Pushbackup to mononoke peer with compression enabled
 Pushbackup that does nothing, as only bookmarks have changed
   $ cd ../repo-push
   $ hg book newbook
-  $ hgmn cloud backup --debug
+  $ hgmn cloud backup
   nothing to back up
 
   $ tglogp

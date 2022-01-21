@@ -186,14 +186,9 @@ move master bookmarks
 
 push to Mononoke
 
-  $ hgmn push --force --config treemanifest.treeonly=True --debug ssh://user@dummy/repo
-  pushing to ssh://user@dummy/repo
-  running * 'user@dummy' '$TESTTMP/mononoke_hgcli -R repo serve --stdio' (glob)
+  $ hgmn push --force --config treemanifest.treeonly=True --debug mononoke://$(mononoke_address)/repo
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: 1
   sending clienttelemetry command
   query 1; heads
   sending batch command
@@ -247,7 +242,7 @@ Because the revision numbers are assigned nondeterministically we cannot
 compare output of the entire tree. Instead we compare only linear histories
 
   $ hgmn log --graph --template '{node} {bookmarks}' -r "::f40c09205504"
-  pulling 'f40c09205504' from 'ssh://user@dummy/repo'
+  pulling 'f40c09205504' from 'mononoke://$LOCALIP:$LOCAL_PORT/repo'
   o  f40c09205504d8410f8c8679bf7a85fef25f9337
   │
   o  bb0985934a0f8a493887892173b68940ceb40b4f

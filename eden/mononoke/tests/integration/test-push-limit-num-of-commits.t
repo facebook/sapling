@@ -57,8 +57,8 @@ create new commit in repo2 and check that push fails
   $ hg addremove
   $ hg ci -ma
 
-  $ hgmn push ssh://user@dummy/repo -r . --to master_bookmark --config extensions.remotenames=
-  pushing rev 2b761f0782ab to destination ssh://user@dummy/repo bookmark master_bookmark
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to master_bookmark --config extensions.remotenames=
+  pushing rev 2b761f0782ab to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
 
@@ -69,8 +69,8 @@ create new commit in repo2 and check that push fails
   $ hg ci -maaa
   $ echo "1" >> a
   $ hg ci -maaaa
-  $ hgmn push ssh://user@dummy/repo -r . --to master_bookmark --config extensions.remotenames=
-  pushing rev 3a090ff5a2b7 to destination ssh://user@dummy/repo bookmark master_bookmark
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to master_bookmark --config extensions.remotenames=
+  pushing rev 3a090ff5a2b7 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -92,5 +92,5 @@ create new commit in repo2 and check that push fails
   remote:             source: "Trying to push too many commits! Limit is 2, tried to push 3",
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]

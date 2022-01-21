@@ -16,7 +16,7 @@ Add a .hg(sub|tags|substate) file
   $ echo "bad" > .hgtags
   $ hg ci -Aqm failure
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev 42be02defdee to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -29,7 +29,7 @@ Add a .hg(sub|tags|substate) file
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nno_insecure_filenames for 42be02defdeedc5825555cc9adbbf537b1bf1c49: ABORT: Illegal filename: .hgtags"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Add a legitimate file with hg in its name
@@ -37,7 +37,7 @@ Add a legitimate file with hg in its name
   $ echo "good" > .hgsubstatefoo
   $ hg ci -Aqm good
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev e805597b3712 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -50,7 +50,7 @@ Add a dir with a naughty .Git directory inside
   $ echo "bad" > test/.Git/test.py
   $ hg ci -Aqm failure
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev 63a821ce8ce6 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -63,7 +63,7 @@ Add a dir with a naughty .Git directory inside
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nno_insecure_filenames for 63a821ce8ce6d0e38385bb41f49a77b46d1d81a1: ABORT: Illegal insecure name: test/.Git/test.py"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Add a dir with a naughty .git directory inside
@@ -72,7 +72,7 @@ Add a dir with a naughty .git directory inside
   $ echo "bad" > test/.git/test.py
   $ hg ci -Aqm failure
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev 214bf1e67d48 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -85,7 +85,7 @@ Add a dir with a naughty .git directory inside
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nno_insecure_filenames for 214bf1e67d4847fabd9a134bae0a1bf466fea704: ABORT: Illegal insecure name: test/.git/test.py"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Add a dir with a naughty .git directory inside that includes a ~1
@@ -94,7 +94,7 @@ Add a dir with a naughty .git directory inside that includes a ~1
   $ echo "bad" > test/.Git~1/test.py
   $ hg ci -Aqm failure
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev 7800fe789a87 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -107,7 +107,7 @@ Add a dir with a naughty .git directory inside that includes a ~1
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nno_insecure_filenames for 7800fe789a874b225e4974fa09a25a051ea3d1e0: ABORT: Illegal insecure name: test/.Git~1/test.py"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Add a dir with a naughty .git directory inside that includes a ~1234
@@ -116,7 +116,7 @@ Add a dir with a naughty .git directory inside that includes a ~1234
   $ echo "bad" > test/.Git~1234/test/test.py
   $ hg ci -Aqm failure
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev 8e508312f2d6 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -129,7 +129,7 @@ Add a dir with a naughty .git directory inside that includes a ~1234
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nno_insecure_filenames for 8e508312f2d6a7f354ee17bc46a9dc618da9ded3: ABORT: Illegal insecure name: test/.Git~1234/test/test.py"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Add a bad dir
@@ -138,7 +138,7 @@ Add a bad dir
   $ echo "bad" > dir1/.Git8B6C~2/file1
   $ hg ci -Aqm failure
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev 695a2a5c3e7c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -151,7 +151,7 @@ Add a bad dir
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nno_insecure_filenames for 695a2a5c3e7ce0fdccefa1945c8bd8868027248b: ABORT: Illegal insecure name: dir1/.Git8B6C~2/file1"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Add a dir with a naughty .git directory inside that includes 2 ~1
@@ -160,7 +160,7 @@ Add a dir with a naughty .git directory inside that includes 2 ~1
   $ echo "bad" > test~1/.Git~1/test/test.py
   $ hg ci -Aqm failure
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev 014b76ac58ed to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -173,7 +173,7 @@ Add a dir with a naughty .git directory inside that includes 2 ~1
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nno_insecure_filenames for 014b76ac58ed568649b5308bece3aa75aefceca8: ABORT: Illegal insecure name: test~1/.Git~1/test/test.py"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Add a legitimate dir with git in its name
@@ -182,7 +182,7 @@ Add a legitimate dir with git in its name
   $ echo "good" > test/git/test.py
   $ hg ci -Aqm good
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev 70379a892860 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -194,7 +194,7 @@ Add a legitimate dir with jgit in its name
   $ echo "good" > jgit
   $ hg ci -Aqm good
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev aee9ff2bb5ad to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -207,7 +207,7 @@ Add a legitimate dir with xGit in its name
   $ echo "good" > test/xGit/test.py
   $ hg ci -Aqm good
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev 431331784585 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -221,7 +221,7 @@ Add a file with an ignorable unicode char in it
   $ echo "bad" > "test/.git${bad}"
   $ hg ci -Aqm failure
   $ hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev 673dc62e3d09 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -234,7 +234,7 @@ Add a file with an ignorable unicode char in it
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nno_insecure_filenames for 673dc62e3d09668ca2ef53b04d2527dd3c8e0b2e: ABORT: Illegal insecure name: test/.git\u{200c}"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 

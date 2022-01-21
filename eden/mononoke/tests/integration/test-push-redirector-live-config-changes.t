@@ -232,7 +232,7 @@ Do a push it should fail because we disallow pushing over a changeset that chang
   $ mkdir -p special
   $ echo f > special/f && hg ci -Aqm post_config_change_commit
   $ REPONAME=small-mon-1 hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/small-mon-1 bookmark master_bookmark (glob)
+  pushing rev 318b198c67b1 to destination mononoke://$LOCALIP:$LOCAL_PORT/small-mon-1 bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -252,7 +252,7 @@ Do a push it should fail because we disallow pushing over a changeset that chang
   remote:             ),
   remote:         ),
   remote:     )
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Again, normal pushrebase with one commit

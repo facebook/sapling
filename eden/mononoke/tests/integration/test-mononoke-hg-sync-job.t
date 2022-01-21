@@ -200,7 +200,7 @@ Make a commit that makes a file executable and a commit that adds a symlink. Mak
   $ chmod +x pushcommit
   $ hg ci -m 'exec mode'
   $ hgmn push -r . --to master_bookmark
-  pushing rev 15776eb106e6 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 15776eb106e6 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -212,7 +212,7 @@ Make a commit that makes a file executable and a commit that adds a symlink. Mak
   adding symlink_to_pushcommit
   $ hg ci -m 'symlink'
   $ hgmn push -r . --to master_bookmark
-  pushing rev 6f060fabc8e7 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 6f060fabc8e7 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

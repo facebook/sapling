@@ -67,7 +67,7 @@ attempt to push a case conflict onto main
   warning: possible case-folding collision for caseconflict.txt
   $ hg commit -qm conflict1
   $ hgmn push -r . --to main
-  pushing rev ddbe318d5aca to destination ssh://user@dummy/repo bookmark main
+  pushing rev ddbe318d5aca to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -84,19 +84,19 @@ attempt to push a case conflict onto main
   remote:         path1: MPath("CaseConflict.txt"),
   remote:         path2: MPath("caseconflict.txt"),
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 it's ok to push it on to a scratch bookmark, though
   $ hgmn push -r . --to scratch/conflict1 --create
-  pushing to ssh://user@dummy/repo
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
 
 if we stack a commit that fixes the case conflict, we still can't land the stack
   $ hg rm caseconflict.txt
   $ hg commit -qm "fix conflict"
   $ hgmn push -r . --to main
-  pushing rev cbb97717004c to destination ssh://user@dummy/repo bookmark main
+  pushing rev cbb97717004c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -113,7 +113,7 @@ if we stack a commit that fixes the case conflict, we still can't land the stack
   remote:         path1: MPath("CaseConflict.txt"),
   remote:         path2: MPath("caseconflict.txt"),
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 attempt to push a commit that introduces a case conflict onto main
@@ -123,7 +123,7 @@ attempt to push a commit that introduces a case conflict onto main
   warning: possible case-folding collision for SomeFile
   $ hg commit -qm conflict2
   $ hgmn push -r . --to main
-  pushing rev 99950f688a32 to destination ssh://user@dummy/repo bookmark main
+  pushing rev 99950f688a32 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -140,17 +140,17 @@ attempt to push a commit that introduces a case conflict onto main
   remote:         path1: MPath("SomeFile"),
   remote:         path2: MPath("somefile"),
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 again, it's ok to push this to a scratch branch
   $ hgmn push -r . --to scratch/conflict2 --create
-  pushing to ssh://user@dummy/repo
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
 
 we can't move the bookmark to a commit with a pre-existing case conflict via bookmark-only pushrebase
   $ hgmn push -r other --to main --pushvar NON_FAST_FORWARD=true
-  pushing rev 2b2f2fedc926 to destination ssh://user@dummy/repo bookmark main
+  pushing rev 2b2f2fedc926 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
   searching for changes
   no changes found
   remote: Command failed
@@ -179,7 +179,7 @@ we can't move the bookmark to a commit with a pre-existing case conflict via boo
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 we can't land to the other if we introduce a new case conflict
@@ -190,7 +190,7 @@ we can't land to the other if we introduce a new case conflict
   warning: possible case-folding collision for testfile
   $ hg commit -qm conflict3
   $ hgmn push -r . --to other
-  pushing rev 379371c4bd8a to destination ssh://user@dummy/repo bookmark other
+  pushing rev 379371c4bd8a to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark other
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -207,7 +207,7 @@ we can't land to the other if we introduce a new case conflict
   remote:         path1: MPath("TestFile"),
   remote:         path2: MPath("testfile"),
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 we can land something that doesn't introduce a new case conflict
@@ -216,7 +216,7 @@ we can land something that doesn't introduce a new case conflict
   $ hg add testfile
   $ hg commit -qm nonewconflict
   $ hgmn push -r . --to other
-  pushing rev 951a1a92f401 to destination ssh://user@dummy/repo bookmark other
+  pushing rev 951a1a92f401 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark other
   searching for changes
   adding changesets
   adding manifests
@@ -229,7 +229,7 @@ we can't land if we try to make an existing case conflict worse
   warning: possible case-folding collision for existing/CASECONFLICT
   $ hg commit -qm conflict4
   $ hgmn push -r . --to other
-  pushing rev 13488940ae4f to destination ssh://user@dummy/repo bookmark other
+  pushing rev 13488940ae4f to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark other
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -246,7 +246,7 @@ we can't land if we try to make an existing case conflict worse
   remote:         path1: MPath("existing/CASECONFLICT"),
   remote:         path2: MPath("existing/CaseConflict"),
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 we can land it if we also fix all of the related case conflicts
@@ -254,7 +254,7 @@ we can land it if we also fix all of the related case conflicts
   $ hg rm existing/caseconflict
   $ hg amend -q
   $ hgmn push -r . --to other
-  pushing rev f53c362f9b2d to destination ssh://user@dummy/repo bookmark other
+  pushing rev f53c362f9b2d to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark other
   searching for changes
   adding changesets
   adding manifests

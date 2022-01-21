@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ export NO_MONONOKE_DIRECT_PEER=1
 
 setup configuration
   $ POPULATE_GIT_MAPPING=1 setup_common_config

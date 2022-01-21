@@ -13,7 +13,7 @@
   $ echo 1 > 1 && hg -q addremove && hg ci -m empty
   $ hg revert -r ".^" 1 && hg commit --amend
   $ hgmn push -r . --to master_bookmark
-  pushing rev afd5c05eb235 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev afd5c05eb235 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -26,13 +26,13 @@
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nblock_empty_commit for afd5c05eb235daf088b93d9cbc0dfecbb267a01a: You must include file changes in your commit for it to land"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
   $ echo 1 > 1 && hg addremove && hg ci --amend -m nonempty
   adding 1
   $ hgmn push -r . --to master_bookmark
-  pushing rev d2f8add702e6 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev d2f8add702e6 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

@@ -77,7 +77,7 @@ Now pull and update to them
   $ cd "$TESTTMP/repo-pull"
   $ setup_hg_client
   $ hgmn pull
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests

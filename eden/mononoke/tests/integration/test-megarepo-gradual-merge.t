@@ -88,7 +88,7 @@ setup hg server repo
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo --noupdate
   $ cd repo
   $ hgmn pull
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests

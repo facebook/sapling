@@ -91,7 +91,7 @@ Normal pushrebase with many commits
   $ createfile 7 && hg ci -qm "The staunchest tramp to ply his trade"
 
   $ REPONAME=small-mon hgmn push --to master_bookmark
-  pushing rev beb30dc3a35c to destination ssh://user@dummy/small-mon bookmark master_bookmark
+  pushing rev beb30dc3a35c to destination mononoke://$LOCALIP:$LOCAL_PORT/small-mon bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

@@ -24,7 +24,7 @@ setup repo
   $ hg add B
   $ hg ci -m 'B'
   $ hgmn push -r . --to master_bookmark --create
-  pushing rev c0e1f5917744 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev c0e1f5917744 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   exporting bookmark master_bookmark
 

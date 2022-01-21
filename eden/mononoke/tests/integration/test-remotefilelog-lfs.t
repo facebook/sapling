@@ -54,7 +54,7 @@ Perform LFS push
   $ echo "${LONG}for-rename" > lfs-largefile-for-rename
   $ hg commit -Aqm "add lfs-large files"
   $ hgmn push -r . --to master_bookmark -v
-  pushing rev 99765c8d839c to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 99765c8d839c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -78,7 +78,7 @@ Perform LFS push
   $ hg mv lfs-largefile-for-rename lfs-largefile-renamed
   $ hg commit -Aqm "rename"
   $ hgmn push -r . --to master_bookmark -v
-  pushing rev c651f052c52d to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev c651f052c52d to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -99,7 +99,7 @@ Verify that if we fail to upload LFS blobs first, the push fails
   $ echo "${LONG}ANOTHER-LFS" > f
   $ hg commit -m f -A f
   $ hgmn push -r . --to master_bookmark -v
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  pushing rev e4337405c947 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -133,7 +133,7 @@ Verify that if we fail to upload LFS blobs first, the push fails
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
   $ cd ..
@@ -155,7 +155,7 @@ Create a new client repository, using getpack (with its own cachepath)
   > EOF
 
   $ hgmn pull -v
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   all local heads known remotely
   adding changesets

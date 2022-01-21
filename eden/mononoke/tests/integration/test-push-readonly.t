@@ -53,14 +53,9 @@ create new commit in repo2 and check that push fails
   $ hg add b_dir/b
   $ hg ci -mb
 
-  $ hgmn push --force --config treemanifest.treeonly=True --debug ssh://user@dummy/repo
-  pushing to ssh://user@dummy/repo
-  running * 'user@dummy' '$TESTTMP/mononoke_hgcli -R repo serve --stdio' (glob)
+  $ hgmn push --force --config treemanifest.treeonly=True --debug mononoke://$(mononoke_address)/repo
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: 1
   sending clienttelemetry command
   query 1; heads
   sending batch command
@@ -79,7 +74,7 @@ create new commit in repo2 and check that push fails
   bundle2-output-part: "replycaps" * bytes payload (glob)
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
-  remote: Command failed
+  remote: * (glob)
   remote:   Error:
   remote:     Repo is marked as read-only: Set by config option
   remote: 
@@ -90,10 +85,10 @@ create new commit in repo2 and check that push fails
   remote:     RepoReadOnly(
   remote:         "Set by config option",
   remote:     )
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Try to bypass the check
-  $ hgmn push --force --config treemanifest.treeonly=True ssh://user@dummy/repo --pushvars "BYPASS_READONLY=true"
-  pushing to ssh://user@dummy/repo
+  $ hgmn push --force --config treemanifest.treeonly=True mononoke://$(mononoke_address)/repo --pushvars "BYPASS_READONLY=true"
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes

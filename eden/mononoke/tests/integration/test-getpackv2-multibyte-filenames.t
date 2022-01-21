@@ -46,7 +46,7 @@
 # because that breaks over utf-8 characters as well.
 
   $ cd "$TESTTMP"
-  $ hgmn_clone ssh://user@dummy/repo "$HG_REPO" --noupdate --config extensions.remotenames=
+  $ hgmn_clone mononoke://$(mononoke_address)/repo "$HG_REPO" --noupdate --config extensions.remotenames=
   $ cd "$HG_REPO"
   $ hgmn cat -r "$BOOKMARK" "$NAME"
   foo

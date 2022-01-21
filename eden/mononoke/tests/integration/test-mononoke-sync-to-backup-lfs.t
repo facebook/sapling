@@ -62,7 +62,7 @@ Perform LFS push
   $ echo "$LONG" > lfs-largefile
   $ hg commit -Aqm "add lfs-large files"
   $ hgmn push -r . --to master_bookmark -v
-  pushing rev 99262937f158 to destination ssh://user@dummy/orig bookmark master_bookmark
+  pushing rev 99262937f158 to destination mononoke://$LOCALIP:$LOCAL_PORT/orig bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -76,7 +76,6 @@ Perform LFS push
 
 Check LFS is not in backup
   $ cd "$TESTTMP/backup"
-  $ MONONOKE_DIRECT_PEER=True
   $ REPONAME=backup
   $ hgmn pull
   pulling from mononoke://$LOCALIP:*/backup (glob)

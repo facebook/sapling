@@ -269,7 +269,7 @@ Force pushrebase should fail, because it pushes to a shared bookmark
   remote: 
   remote:   Debug context:
   remote:     "cannot force pushrebase to shared bookmark master_bookmark"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Non-shared bookmark should work

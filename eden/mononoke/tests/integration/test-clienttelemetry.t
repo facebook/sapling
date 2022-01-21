@@ -41,7 +41,7 @@ set up the local repo
   $ hgclone_treemanifest ssh://user@dummy/repo-hg local -q
   $ cd local
   $ hgmn pull
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   connected to * (glob)
   searching for changes
   no changes found
@@ -50,7 +50,7 @@ set up the local repo
   adding file changes
   $ hgmn pull -q
   $ hgmn pull --config clienttelemetry.announceremotehostname=False
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   no changes found
   adding changesets

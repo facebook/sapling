@@ -54,7 +54,7 @@ Clone the repo
 
 Pull from Mononoke, make sure it fails
   $ hgmn pull
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   remote: Authorization failed: Unauthorized access, permission denied
-  abort: no suitable response from remote hg* (glob)
+  abort: unexpected EOL, expected netstring digit
   [255]

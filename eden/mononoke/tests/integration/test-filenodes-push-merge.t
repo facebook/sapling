@@ -31,7 +31,7 @@ Creating a merge commit
 
 Pushing a merge
   $ hgmn push -r . --to master_bookmark
-  pushing rev 7d332475050d to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 7d332475050d to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

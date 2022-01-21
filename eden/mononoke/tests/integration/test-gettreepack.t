@@ -69,7 +69,7 @@ Make sure that new entries were downloaded
 
 Update to the revisions. Change the path to make sure that gettreepack command is
 not sent because we've already downloaded all the trees
-  $ hgmn up 2 --config paths.default=ssh://brokenpath -q
+  $ hgmn up 2 --config paths.default=mononoke://brokenpath -q
   $ ls
   A
   B
@@ -77,7 +77,7 @@ not sent because we've already downloaded all the trees
 
 Change the path to make sure that no wireproto commands should be sent at all,
 because everything has been already downloaded.
-  $ hgmn up 1 --config paths.default=ssh://brokenpath -q
+  $ hgmn up 1 --config paths.default=mononoke://brokenpath -q
   $ ls
   A
   B
@@ -113,5 +113,5 @@ because everything has been already downloaded.
   remote:     Missing(
   remote:         "hgmanifest.sha1.1111111111111111111111111111111111111111",
   remote:     )
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]

@@ -62,14 +62,14 @@ Force push
 
 Bookmark move
   $ hgmn push -r "$BOOK_LOC" --to newbook --pushvar NON_FAST_FORWARD=true
-  pushing rev 1e43292ffbb3 to destination ssh://user@dummy/repo bookmark newbook
+  pushing rev 1e43292ffbb3 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark newbook
   searching for changes
   no changes found
   updating bookmark newbook
 
 Delete a bookmark
   $ hgmn push --delete newbook
-  pushing to ssh://user@dummy/repo
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   no changes found
   deleting remote bookmark newbook

@@ -49,8 +49,8 @@ create new hg commits
   adding b
 
 try doing a non-pushrebase push with the new commits
-  $ hgmn push --force ssh://user@dummy/repo
-  pushing to ssh://user@dummy/repo
+  $ hgmn push --force
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -72,12 +72,12 @@ try doing a non-pushrebase push with the new commits
   remote:             source: "Pure pushes are disallowed in this repo",
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 try doing a pushrebase push with the new commits
-  $ hgmn push ssh://user@dummy/repo --config extensions.pushrebase= --config extensions.remotenames= --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
+  $ hgmn push mononoke://$(mononoke_address)/repo --config extensions.pushrebase= --config extensions.remotenames= --to master_bookmark
+  pushing rev 95415a1a54e2 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

@@ -18,7 +18,7 @@ Small commit, one file changed
   $ echo file > file
   $ hg ci -Aqm 1
   $ hgmn push -r . --to master_bookmark
-  pushing rev 4f751d63133d to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 4f751d63133d to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -30,7 +30,7 @@ Large commit, a lot of files changed
   $ for x in $(seq 6); do echo $x > $x; done
   $ hg ci -Aqm 2
   $ hgmn push -r . --to master_bookmark
-  pushing rev bb41d2a5d8c3 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev bb41d2a5d8c3 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -43,5 +43,5 @@ Large commit, a lot of files changed
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\nlimit_commitsize for bb41d2a5d8c3492f085f4d276927533e79f269ae: Commit changed 6 files but at most 5 are allowed. Reach out to Source Control @ Meta for instructions."
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]

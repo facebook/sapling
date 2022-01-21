@@ -68,7 +68,6 @@ Sync it to another client with bypass-readonly should success
 Check synced commit in backup repo
   $ hgclone_treemanifest mononoke://$(mononoke_address)/backup backup --noupdate --config extensions.remotenames=
   $ cd "$TESTTMP/backup"
-  $ MONONOKE_DIRECT_PEER=True
   $ REPONAME=backup
   $ hgmn pull -q
   $ hgmn log -r master_bookmark -T '{node}\n'

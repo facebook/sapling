@@ -54,7 +54,7 @@ pull on repo2
 
   $ cd $TESTTMP/repo2
   $ hgmn pull --config ui.disable-stream-clone=true
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   warning: stream clone is disabled
   requesting all changes
   adding changesets
@@ -96,7 +96,7 @@ push one more long path from repo2
   summary:     long
    (re)
   $ hgmn push
-  pushing to ssh://user@dummy/repo
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   updating bookmark master_bookmark
 
@@ -104,7 +104,7 @@ pull on repo3
 
   $ cd $TESTTMP/repo3
   $ hgmn pull --config ui.disable-stream-clone=true
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   warning: stream clone is disabled
   requesting all changes
   adding changesets

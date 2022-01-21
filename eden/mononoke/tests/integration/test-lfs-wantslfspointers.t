@@ -53,7 +53,7 @@ Perform LFS push
   $ echo "$LONG" > lfs-largefile
   $ hg commit -Aqm "add lfs-large files"
   $ hgmn push -r . --to master_bookmark -v
-  pushing rev 99262937f158 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 99262937f158 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found

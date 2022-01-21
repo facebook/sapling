@@ -94,7 +94,7 @@ Fetch with designated ndoes
 
 Confirm that Mononoke logged commands, but didn't log any missing filenodes
   $ grep "Command processed" "$SCUBA_LOGGING_PATH" | wc -l
-  41
+  36
   $ grep NullLinknode "$SCUBA_LOGGING_PATH"
   [1]
 

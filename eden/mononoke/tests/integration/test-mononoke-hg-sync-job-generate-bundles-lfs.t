@@ -71,7 +71,7 @@ Push to Mononoke
   $ echo "$LONG" > lfs-largefile
   $ hg commit -Aqm "add lfs-large files"
   $ hgmn push -r . --to master_bookmark -v
-  pushing rev b2a5e71d6d8d to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev b2a5e71d6d8d to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -87,7 +87,7 @@ Push to Mononoke
   $ echo "$LONG2" > lfs-largefile
   $ hg commit -Aqm "modify lfs-large file"
   $ hgmn push -r . --to master_bookmark -v
-  pushing rev 0700ec892f3c to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 0700ec892f3c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -101,7 +101,7 @@ Push to Mononoke
   $ hg mv lfs-largefile lfs-renamed-largefile
   $ hg commit -Aqm "move lfs-large file"
   $ hgmn push -r . --to master_bookmark -v
-  pushing rev b75c987b6343 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev b75c987b6343 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found

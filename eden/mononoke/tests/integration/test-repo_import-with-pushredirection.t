@@ -41,7 +41,7 @@ Before the change
   $ echo b > non_path_shifting/bar
   $ hg ci -Aqm "before config change"
   $ REPONAME=small-mon hgmn push -r . --to new_bookmark --create
-  pushing rev bc6a206054d0 to destination ssh://user@dummy/small-mon bookmark new_bookmark
+  pushing rev bc6a206054d0 to destination mononoke://$LOCALIP:$LOCAL_PORT/small-mon bookmark new_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -127,7 +127,7 @@ Before the change
 -- Checking imported files
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull
-  pulling from ssh://user@dummy/large-mon
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/large-mon
   searching for changes
   adding changesets
   adding manifests

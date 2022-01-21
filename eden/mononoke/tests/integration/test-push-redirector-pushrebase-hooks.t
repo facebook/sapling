@@ -76,7 +76,7 @@ Note that the node is from the small repo, even though the hook is in the large 
   $ hg log -T"small_node: {node}\n" -r .
   small_node: 6e6a22d48eb51db1e7b8af685d9c99c0d7f10f70
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark
-  pushing rev * to destination ssh://user@dummy/small-mon bookmark master_bookmark (glob)
+  pushing rev 6e6a22d48eb5 to destination mononoke://$LOCALIP:$LOCAL_PORT/small-mon bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -89,7 +89,7 @@ Note that the node is from the small repo, even though the hook is in the large 
   remote: 
   remote:   Debug context:
   remote:     "hooks failed:\ndeny_files for 6e6a22d48eb51db1e7b8af685d9c99c0d7f10f70: Denied filename 'smallrepofolder/f/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again."
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Let's check that disabling running pushredirected hooks work
@@ -103,7 +103,7 @@ Let's check that disabling running pushredirected hooks work
 
   $ force_update_configerator
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark
-  pushing rev 6e6a22d48eb5 to destination ssh://user@dummy/small-mon bookmark master_bookmark
+  pushing rev 6e6a22d48eb5 to destination mononoke://$LOCALIP:$LOCAL_PORT/small-mon bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

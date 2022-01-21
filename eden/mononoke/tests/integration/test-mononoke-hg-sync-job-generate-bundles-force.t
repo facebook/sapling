@@ -66,7 +66,7 @@ Two pushes, one with --force. Pushes intentionally modify the same file
 
 Move backward
   $ hgmn push -r .^ --to master_bookmark --force --pushvar NON_FAST_FORWARD=true
-  pushing rev add0c792bfce to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev add0c792bfce to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   no changes found
   updating bookmark master_bookmark

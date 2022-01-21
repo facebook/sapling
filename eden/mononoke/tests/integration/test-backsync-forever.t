@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
+  $ export NO_MONONOKE_DIRECT_PEER=1
 
   $ setup_configerator_configs
   $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF

@@ -46,7 +46,7 @@ Push with bookmark
   $ echo withbook > withbook && hg addremove && hg ci -m withbook
   adding withbook
   $ hgmn push --to withbook --create
-  pushing rev 11f53bbd855a to destination ssh://user@dummy/repo bookmark withbook
+  pushing rev 11f53bbd855a to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark withbook
   searching for changes
   exporting bookmark withbook
 
@@ -64,7 +64,7 @@ Update the bookmark
   $ echo update > update && hg addremove && hg ci -m update
   adding update
   $ hgmn push --to withbook
-  pushing rev 66b9c137712a to destination ssh://user@dummy/repo bookmark withbook
+  pushing rev 66b9c137712a to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark withbook
   searching for changes
   updating bookmark withbook
   $ cd ../repo-pull
@@ -78,11 +78,11 @@ Try non fastforward moves (backwards and across branches)
   $ hg update -q master_bookmark
   $ echo other_commit > other_commit && hg -q addremove && hg ci -m other_commit
   $ hgmn push
-  pushing to ssh://user@dummy/repo
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   updating bookmark master_bookmark
   $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to master_bookmark
-  pushing rev 0e7ec5675652 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 0e7ec5675652 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   no changes found
   remote: Command failed
@@ -112,10 +112,10 @@ Try non fastforward moves (backwards and across branches)
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
   $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 66b9c137712a --to master_bookmark
-  pushing rev 66b9c137712a to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 66b9c137712a to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   no changes found
   remote: Command failed
@@ -145,10 +145,10 @@ Try non fastforward moves (backwards and across branches)
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
   $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to withbook
-  pushing rev 0e7ec5675652 to destination ssh://user@dummy/repo bookmark withbook
+  pushing rev 0e7ec5675652 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark withbook
   searching for changes
   no changes found
   updating bookmark withbook
@@ -161,7 +161,7 @@ Try non fastforward moves (backwards and across branches)
 Try non fastfoward moves on regex bookmark
   $ hgmn push -r a075b5221b92 --to ffonly_bookmark --create -q
   $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to ffonly_bookmark
-  pushing rev 0e7ec5675652 to destination ssh://user@dummy/repo bookmark ffonly_bookmark
+  pushing rev 0e7ec5675652 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark ffonly_bookmark
   searching for changes
   no changes found
   remote: Command failed
@@ -191,13 +191,13 @@ Try non fastfoward moves on regex bookmark
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Try to delete master
   $ cd ../repo-push
   $ hgmn push --delete master_bookmark
-  pushing to ssh://user@dummy/repo
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   no changes found
   remote: Command failed
@@ -224,12 +224,12 @@ Try to delete master
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 Delete the bookmark
   $ hgmn push --delete withbook
-  pushing to ssh://user@dummy/repo
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   no changes found
   deleting remote bookmark withbook

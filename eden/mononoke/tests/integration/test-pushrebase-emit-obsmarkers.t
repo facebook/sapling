@@ -66,7 +66,7 @@ Push commits that will be obsoleted
   o  A [public;rev=0;426bada5c675]
   $
   $ hgmn push -r . --to master_bookmark
-  pushing rev 0c67ec8c24b9 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 0c67ec8c24b9 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -102,7 +102,7 @@ Push commits that will not be obsoleted
   o  A [public;rev=0;426bada5c675]
   $
   $ hgmn push -r . --to master_bookmark
-  pushing rev 6398085ceb9d to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 6398085ceb9d to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

@@ -114,7 +114,7 @@ Rename a file and then prefetch it
   $ hg mv A AA
   $ hg ci -m 'rename A to AA'
   $ hgmn push -r . --to master_bookmark
-  pushing to ssh://user@dummy/repo
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests
@@ -141,6 +141,6 @@ generated because copy metadata wasn't added
   $ echo B > AA
   $ hg ci -m 'commit on top of a rename'
   $ hgmn push -r . --to master_bookmark --config extensions.remotenames=
-  pushing rev 0ce8239858c4 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 0ce8239858c4 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
