@@ -11,12 +11,8 @@ use backsyncer::{backsync_latest, open_backsyncer_dbs, BacksyncLimit, TargetRepo
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
-use bookmarks::{BookmarkName, BookmarkUpdateReason, Bookmarks};
+use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use borrowed::borrowed;
-use bulkops::PublicChangesetBulkFetch;
-use changeset_fetcher::PrefetchedChangesetsFetcher;
-use changesets::ChangesetsArc;
 use clap::ArgMatches;
 use cmdlib::args::{self, MononokeMatches};
 use cmdlib::helpers::block_execute;
@@ -46,16 +42,12 @@ use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime};
 use movers::{DefaultAction, Mover};
 use mutable_counters::SqlMutableCounters;
-use phases::PhasesArc;
 use pushrebase::do_pushrebase_bonsai;
-use segmented_changelog::{
-    seedheads_from_config, SeedHead, SegmentedChangelogSqlConnections, SegmentedChangelogTailer,
-};
+use segmented_changelog::{seedheads_from_config, SeedHead, SegmentedChangelogTailer};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use slog::info;
-use sql_ext::facebook::{MyAdmin, MysqlOptions};
-use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
+use sql_ext::facebook::MysqlOptions;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::Arc;
@@ -1215,63 +1207,21 @@ async fn tail_segmented_changelog(
     mysql_options: &MysqlOptions,
     segmented_changelog_config: &SegmentedChangelogConfig,
 ) -> Result<(), Error> {
-    let repo_id = blobrepo.get_repoid();
-
-    let db_address = match storage_config_metadata {
-        MetadataDatabaseConfig::Local(_) => None,
-        MetadataDatabaseConfig::Remote(remote_config) => {
-            Some(remote_config.primary.db_address.clone())
-        }
-    };
-    let replica_lag_monitor: Arc<dyn ReplicaLagMonitor> = match db_address {
-        None => Arc::new(NoReplicaLagMonitor()),
-        Some(address) => {
-            let my_admin = MyAdmin::new(ctx.fb).context("building myadmin client")?;
-            Arc::new(my_admin.single_shard_lag_monitor(address))
-        }
-    };
-
-    let sql_factory = make_metadata_sql_factory(
-        ctx.fb,
-        storage_config_metadata.clone(),
-        mysql_options.clone(),
-        ReadOnlyStorage(false),
-    )
-    .await
-    .with_context(|| format!("repo {}: constructing metadata sql factory", repo_id))?;
-
-    let segmented_changelog_sql_connections = sql_factory
-        .open::<SegmentedChangelogSqlConnections>()
-        .with_context(|| {
-            format!(
-                "repo {}: error constructing segmented changelog sql connections",
-                repo_id
-            )
-        })?;
-    let changeset_fetcher = Arc::new(
-        PrefetchedChangesetsFetcher::new(repo_id, blobrepo.changesets_arc(), stream::empty())
-            .await?,
-    );
-
-    let bulk_fetcher = Arc::new(PublicChangesetBulkFetch::new(
-        blobrepo.changesets_arc(),
-        blobrepo.phases_arc(),
-    ));
-
     let mut seed_heads = seedheads_from_config(&ctx, &segmented_changelog_config)?;
     seed_heads.push(SeedHead::from(imported_cs_id));
 
-    let segmented_changelog_tailer = SegmentedChangelogTailer::new(
-        repo_id,
-        segmented_changelog_sql_connections,
-        replica_lag_monitor,
-        changeset_fetcher,
-        bulk_fetcher,
-        Arc::new(blobrepo.get_blobstore()),
-        Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
+    let segmented_changelog_tailer = SegmentedChangelogTailer::build_from(
+        ctx,
+        blobrepo,
+        storage_config_metadata,
+        mysql_options,
         seed_heads,
-        None,
-    );
+        stream::empty(), // no prefetched commits
+        None,            // no caching
+    )
+    .await?;
+
+    let repo_id = blobrepo.get_repoid();
 
     info!(
         ctx.logger(),

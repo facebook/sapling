@@ -7,7 +7,6 @@
 
 #![deny(warnings)]
 
-use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{format_err, Context, Error};
@@ -18,24 +17,14 @@ use futures::future::join_all;
 use futures::stream;
 use slog::{error, info};
 
-use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
-use bookmarks::Bookmarks;
-use bulkops::PublicChangesetBulkFetch;
-use changeset_fetcher::PrefetchedChangesetsFetcher;
-use changesets::{deserialize_cs_entries, ChangesetsArc};
+use changesets::deserialize_cs_entries;
 use cmdlib::{
     args::{self, MononokeMatches},
     helpers,
 };
 use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
-use metaconfig_types::MetadataDatabaseConfig;
-use phases::PhasesArc;
-use segmented_changelog::{
-    seedheads_from_config, SegmentedChangelogSqlConnections, SegmentedChangelogTailer,
-};
-use sql_ext::facebook::MyAdmin;
-use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
+use segmented_changelog::{seedheads_from_config, SegmentedChangelogTailer};
 
 const ONCE_ARG: &str = "once";
 const REPO_ARG: &str = "repo";
@@ -113,7 +102,6 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     let config_store = matches.config_store();
     let mysql_options = matches.mysql_options();
     let configs = args::load_repo_configs(config_store, matches)?;
-    let readonly_storage = ReadOnlyStorage(false);
 
     let mut tasks = Vec::new();
     for (index, reponame) in reponames.into_iter().enumerate() {
@@ -130,39 +118,6 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
 
         let seed_heads = seedheads_from_config(&ctx, &config.segmented_changelog_config)?;
 
-        let storage_config = config.storage_config.clone();
-        let db_address = match &storage_config.metadata {
-            MetadataDatabaseConfig::Local(_) => None,
-            MetadataDatabaseConfig::Remote(remote_config) => {
-                Some(remote_config.primary.db_address.clone())
-            }
-        };
-        let replica_lag_monitor: Arc<dyn ReplicaLagMonitor> = match db_address {
-            None => Arc::new(NoReplicaLagMonitor()),
-            Some(address) => {
-                let my_admin = MyAdmin::new(ctx.fb).context("building myadmin client")?;
-                Arc::new(my_admin.single_shard_lag_monitor(address))
-            }
-        };
-
-        let sql_factory = make_metadata_sql_factory(
-            ctx.fb,
-            storage_config.metadata,
-            mysql_options.clone(),
-            readonly_storage,
-        )
-        .await
-        .with_context(|| format!("repo {}: constructing metadata sql factory", repo_id))?;
-
-        let segmented_changelog_sql_connections = sql_factory
-            .open::<SegmentedChangelogSqlConnections>()
-            .with_context(|| {
-                format!(
-                    "repo {}: error constructing segmented changelog sql connections",
-                    repo_id
-                )
-            })?;
-
         // This is a bit weird from the dependency point of view but I think that it is best. The
         // BlobRepo may have a SegmentedChangelog attached to it but that doesn't hurt us in any
         // way.  On the other hand reconstructing the dependencies for SegmentedChangelog without
@@ -170,36 +125,24 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         let blobrepo: BlobRepo =
             args::open_repo_with_repo_id(ctx.fb, ctx.logger(), repo_id, matches).await?;
 
-        let changeset_fetcher = Arc::new(
-            PrefetchedChangesetsFetcher::new(
-                repo_id,
-                blobrepo.changesets_arc(),
-                stream::iter(prefetched_commits.iter().filter_map(|entry| {
-                    if entry.repo_id == repo_id {
-                        Some(Ok(entry.clone()))
-                    } else {
-                        None
-                    }
-                })),
-            )
-            .await?,
-        );
+        let prefetched_commits = stream::iter(prefetched_commits.iter().filter_map(|entry| {
+            if entry.repo_id == repo_id {
+                Some(Ok(entry.clone()))
+            } else {
+                None
+            }
+        }));
 
-        let bulk_fetcher = Arc::new(PublicChangesetBulkFetch::new(
-            blobrepo.changesets_arc(),
-            blobrepo.phases_arc(),
-        ));
-        let segmented_changelog_tailer = SegmentedChangelogTailer::new(
-            repo_id,
-            segmented_changelog_sql_connections,
-            replica_lag_monitor,
-            changeset_fetcher,
-            bulk_fetcher,
-            Arc::new(blobrepo.get_blobstore()),
-            Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
+        let segmented_changelog_tailer = SegmentedChangelogTailer::build_from(
+            &ctx,
+            &blobrepo,
+            &config.storage_config.metadata,
+            mysql_options,
             seed_heads,
+            prefetched_commits,
             None,
-        );
+        )
+        .await?;
 
         info!(
             ctx.logger(),

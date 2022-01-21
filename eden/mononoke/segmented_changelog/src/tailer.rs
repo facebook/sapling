@@ -10,19 +10,25 @@ use std::time::Duration;
 
 use anyhow::{Context, Error, Result};
 use fbinit::FacebookInit;
-use futures::stream::{self, TryStreamExt};
+use futures::stream::{self, Stream, TryStreamExt};
 use futures_stats::TimedFutureExt;
 use slog::{debug, error, info};
-use sql_ext::replication::ReplicaLagMonitor;
+use sql_ext::facebook::{MyAdmin, MysqlOptions};
+use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 
 use stats::prelude::*;
 
+use blobrepo::BlobRepo;
 use blobstore::Blobstore;
+use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
 use bookmarks::Bookmarks;
 use bulkops::{Direction, PublicChangesetBulkFetch};
 use changeset_fetcher::{ChangesetFetcher, PrefetchedChangesetsFetcher};
+use changesets::{ChangesetEntry, ChangesetsArc};
 use context::CoreContext;
+use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_types::{Generation, RepositoryId};
+use phases::PhasesArc;
 
 use crate::dag::ops::DagAddHeads;
 use crate::dag::DagAlgorithm;
@@ -92,6 +98,76 @@ impl SegmentedChangelogTailer {
             iddag_save_store,
             idmap_factory,
         }
+    }
+
+    pub async fn build_from(
+        ctx: &CoreContext,
+        blobrepo: &BlobRepo,
+        storage_config_metadata: &MetadataDatabaseConfig,
+        mysql_options: &MysqlOptions,
+        seed_heads: Vec<SeedHead>,
+        prefetched_commits: impl Stream<Item = Result<ChangesetEntry, Error>>,
+        caching: Option<(FacebookInit, cachelib::VolatileLruCachePool)>,
+    ) -> Result<Self> {
+        let repo_id = blobrepo.get_repoid();
+
+        let db_address = match storage_config_metadata {
+            MetadataDatabaseConfig::Local(_) => None,
+            MetadataDatabaseConfig::Remote(remote_config) => {
+                Some(remote_config.primary.db_address.clone())
+            }
+        };
+        let replica_lag_monitor: Arc<dyn ReplicaLagMonitor> = match db_address {
+            None => Arc::new(NoReplicaLagMonitor()),
+            Some(address) => {
+                let my_admin = MyAdmin::new(ctx.fb).context("building myadmin client")?;
+                Arc::new(my_admin.single_shard_lag_monitor(address))
+            }
+        };
+
+        let sql_factory = make_metadata_sql_factory(
+            ctx.fb,
+            storage_config_metadata.clone(),
+            mysql_options.clone(),
+            ReadOnlyStorage(false),
+        )
+        .await
+        .with_context(|| format!("repo {}: constructing metadata sql factory", repo_id))?;
+
+        let segmented_changelog_sql_connections = sql_factory
+            .open::<SegmentedChangelogSqlConnections>()
+            .with_context(|| {
+                format!(
+                    "repo {}: error constructing segmented changelog sql connections",
+                    repo_id
+                )
+            })?;
+
+        let changeset_fetcher = Arc::new(
+            PrefetchedChangesetsFetcher::new(
+                repo_id,
+                blobrepo.changesets_arc(),
+                prefetched_commits,
+            )
+            .await?,
+        );
+
+        let bulk_fetcher = Arc::new(PublicChangesetBulkFetch::new(
+            blobrepo.changesets_arc(),
+            blobrepo.phases_arc(),
+        ));
+
+        Ok(SegmentedChangelogTailer::new(
+            repo_id,
+            segmented_changelog_sql_connections,
+            replica_lag_monitor,
+            changeset_fetcher,
+            bulk_fetcher,
+            Arc::new(blobrepo.get_blobstore()),
+            Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
+            seed_heads,
+            caching,
+        ))
     }
 
     pub async fn run(&self, ctx: &CoreContext, period: Duration) {
