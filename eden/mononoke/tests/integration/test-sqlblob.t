@@ -5,11 +5,10 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ export NO_MONONOKE_DIRECT_PEER=1
   $ setconfig ui.ignorerevnum=false
 
 setup configuration
-  $ setup_mononoke_config "blob_sqlite"
+  $ setup_common_config "blob_sqlite"
   $ REPOID=1 REPONAME=disabled_repo ENABLED=false setup_mononoke_config
   $ cd $TESTTMP
 
@@ -129,11 +128,11 @@ start mononoke
 
   $ mononoke
   $ wait_for_mononoke
-  $ hgmn debugwireargs ssh://user@dummy/disabled_repo one two --three three
+  $ hgmn debugwireargs mononoke://$(mononoke_address)/disabled_repo one two --three three
   remote: Requested repo "disabled_repo" does not exist or is disabled
-  abort: no suitable response from remote hg* (glob)
+  abort: unexpected EOL, expected netstring digit
   [255]
-  $ hgmn debugwireargs ssh://user@dummy/repo one two --three three
+  $ hgmn debugwireargs mononoke://$(mononoke_address)/repo one two --three three
   one two three None None
 
   $ cd repo2
@@ -206,7 +205,7 @@ to create a fileblob bookmark
 #     test-bookmark             0:3903775176ed
 
 Do a streaming clone of the repo
-  $ hgmn clone -U --stream ssh://user@dummy/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
+  $ hgmn clone -U --stream mononoke://$(mononoke_address)/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
   fetching changelog
   2 files to transfer, * bytes of data (glob)
   transferred * bytes in * seconds (* bytes/sec) (glob)

@@ -60,14 +60,9 @@ Do infinitepush (aka commit cloud) push
   $ hg ci -m new1
   $ echo more >> newfile
   $ hg ci -m new2
-  $ hgmn push ssh://user@dummy/repo -r . --bundle-store --debug --allow-anon
-  pushing to ssh://user@dummy/repo
-  running * (glob)
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --bundle-store --debug --allow-anon
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: 1
   sending clienttelemetry command
   query 1; heads
   sending batch command

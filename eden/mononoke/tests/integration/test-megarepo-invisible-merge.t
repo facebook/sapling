@@ -6,7 +6,6 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
-  $ export NO_MONONOKE_DIRECT_PEER=1
 
 Setup repositories
   $ REPOTYPE="blob_files"
@@ -195,7 +194,7 @@ Prepare for the invisible merge
   >     --config extensions.pushrebase=! \
   >     --to ovrsource/pre_move_master \
   >     --create --force -r . \
-  >     ssh://user@dummy/fbs-mon
+  >     mononoke://$(mononoke_address)/fbs-mon
   warning: repository is unrelated
 1.5. Mark independent ovrsource DAG in fbsource as preserved
   $ cd "$TESTTMP"

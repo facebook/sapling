@@ -5,7 +5,6 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ export NO_MONONOKE_DIRECT_PEER=1
 
 Setup configuration
   $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config blob_files
@@ -59,14 +58,9 @@ Do infinitepush (aka commit cloud) push
   $ yes A 2>/dev/null | head -c 200 > large
   $ hg addremove -q
   $ hg ci -m new
-  $ hgmn push ssh://user@dummy/repo -r . --bundle-store --debug --allow-anon
-  pushing to ssh://user@dummy/repo
-  running * (glob)
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --bundle-store --debug --allow-anon
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: 1
   sending clienttelemetry command
   query 1; heads
   sending batch command
@@ -95,7 +89,7 @@ Do infinitepush (aka commit cloud) push
 Try to pull it
   $ cd "${TESTTMP}/repo-pull"
   $ hgmn pull -r 68394cf51f7e96952fe832a3c05d17a9b49e8b4b
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests

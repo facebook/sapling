@@ -70,14 +70,9 @@ Do infinitepush (aka commit cloud) push
   $ echo new > newfile
   $ hg addremove -q
   $ hg ci -m new
-  $ hgmn push ssh://user@dummy/repo -r . --bundle-store --debug --allow-anon
-  pushing to ssh://user@dummy/repo
-  running * (glob)
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --bundle-store --debug --allow-anon
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: 1
   sending clienttelemetry command
   query 1; heads
   sending batch command
@@ -140,8 +135,8 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   $ echo new2 > newfile2
   $ hg addremove -q
   $ hg ci -m new2
-  $ hgmn push ssh://user@dummy/repo -r . --to "scratch/123"
-  pushing to ssh://user@dummy/repo
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "scratch/123"
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -158,11 +153,11 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:         context: "While doing an infinitepush",
   remote:         source: "Unknown bookmark: scratch/123. Use --create to create one.",
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
-  $ hgmn push ssh://user@dummy/repo -r . --to "scratch/123" --create
-  pushing to ssh://user@dummy/repo
+  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "scratch/123" --create
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   $ tglogp
   @  007299f6399f draft 'new2'
@@ -174,8 +169,8 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
   master_bookmark|pull_default|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
   scratch/123|scratch|58C64A8A96ADD9087220CA5B94CD892364562F40CBDA51ACFBBA2DAD8F5C979E
-  $ hgmn push ssh://user@dummy/repo -r 3903775176ed --to "scratch/123"
-  pushing to ssh://user@dummy/repo
+  $ hgmn push mononoke://$(mononoke_address)/repo -r 3903775176ed --to "scratch/123"
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -204,23 +199,23 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
-  $ hgmn push ssh://user@dummy/repo -r 3903775176ed --to "scratch/123" --force
-  pushing to ssh://user@dummy/repo
+  $ hgmn push mononoke://$(mononoke_address)/repo -r 3903775176ed --to "scratch/123" --force
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
   master_bookmark|pull_default|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
   scratch/123|scratch|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
-  $ hgmn push ssh://user@dummy/repo -r 007299f6399f --to "scratch/123"
-  pushing to ssh://user@dummy/repo
+  $ hgmn push mononoke://$(mononoke_address)/repo -r 007299f6399f --to "scratch/123"
+  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
   master_bookmark|pull_default|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
   scratch/123|scratch|58C64A8A96ADD9087220CA5B94CD892364562F40CBDA51ACFBBA2DAD8F5C979E
-  $ hgmn push ssh://user@dummy/repo -r 007299f6399f --to "scratch/124" --create --config "infinitepush.branchpattern=foo"
-  pushing rev 007299f6399f to destination ssh://user@dummy/repo bookmark scratch/124
+  $ hgmn push mononoke://$(mononoke_address)/repo -r 007299f6399f --to "scratch/124" --create --config "infinitepush.branchpattern=foo"
+  pushing rev 007299f6399f to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark scratch/124
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -247,7 +242,7 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:             },
   remote:         },
   remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected EOL, expected netstring digit
   [255]
 
 
