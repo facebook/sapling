@@ -3,6 +3,7 @@ name = "eden_apfs_mount_helper"
 version = "0.1.0"
 authors = ["Wez Furlong"]
 edition = "2021"
+rust = "1.58.1"
 
 [features]
 default = ["json-plist"]
