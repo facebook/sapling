@@ -9,6 +9,7 @@
 
 use async_trait::async_trait;
 use serde::Serialize;
+use std::collections::HashSet;
 use std::fs;
 use std::fs::DirEntry;
 use std::path::PathBuf;
@@ -160,7 +161,6 @@ fn write_title(title: &str) {
 impl crate::Subcommand for DiskUsageCmd {
     async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
         let client = instance.connect(None).await?;
-        let mut aggregated_usage_counts = AggregatedUsageCounts::new();
 
         // GET MOUNT INFO
         let mounts = if !self.mounts.is_empty() {
@@ -177,7 +177,9 @@ impl crate::Subcommand for DiskUsageCmd {
             config_paths
         };
 
+        let mut aggregated_usage_counts = AggregatedUsageCounts::new();
         let mut backing_repos = Vec::new();
+        let mut redirections = HashSet::new();
         for mount in &mounts {
             let checkout = find_checkout(&instance, mount)?;
 
@@ -204,8 +206,8 @@ impl crate::Subcommand for DiskUsageCmd {
                 aggregated_usage_counts.fsck += usage_count;
             }
 
-            // GET SUMMARY INFO for redirections
             for (_, redir) in get_effective_redirections(&checkout)? {
+                // GET SUMMARY INFO for redirections
                 if let Some(target) = redir.expand_target_abspath(&checkout)? {
                     let (usage_count, _failed_file_checks) =
                         usage_for_dir(target, None).from_err()?;
@@ -216,11 +218,21 @@ impl crate::Subcommand for DiskUsageCmd {
                         redir
                     )));
                 }
+
+                // GET REDIRECTIONS LIST
+                let repo_path = redir.repo_path();
+                if let Some(file_name) = repo_path.file_name() {
+                    if file_name == "buck-out" {
+                        let redir_full_path = checkout.path().join(repo_path);
+                        redirections.insert(redir_full_path);
+                    }
+                }
             }
         }
         // Make immutable
-        let backing_repos = backing_repos;
         let aggregated_usage_counts = aggregated_usage_counts;
+        let backing_repos = backing_repos;
+        let redirections = redirections;
 
         // PRINT OUTPUT
         if self.json {
@@ -232,6 +244,22 @@ impl crate::Subcommand for DiskUsageCmd {
             write_title("Mounts");
             for path in &mounts {
                 println!("{}", path.display());
+            }
+
+            write_title("Redirections");
+            if redirections.is_empty() {
+                println!("No redirections");
+            } else {
+                for redir in redirections {
+                    println!("{}", redir.display());
+                }
+
+                if !self.clean && !self.deep_clean {
+                    println!(
+                        "\nTo reclaim space from buck-out directories, run `buck clean` from the \
+                        parent of the buck-out directory."
+                    )
+                }
             }
 
             write_title("Backing repos");

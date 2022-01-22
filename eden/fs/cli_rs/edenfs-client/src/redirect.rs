@@ -95,6 +95,10 @@ pub struct Redirection {
 }
 
 impl Redirection {
+    pub fn repo_path(&self) -> PathBuf {
+        self.repo_path.clone()
+    }
+
     /// Determine if the APFS volume helper is installed with appropriate
     /// permissions such that we can use it to mount things
     fn have_apfs_helper() -> Result<bool> {
