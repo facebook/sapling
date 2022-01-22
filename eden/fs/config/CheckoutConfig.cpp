@@ -16,6 +16,7 @@
 #include <folly/json.h>
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathMap.h"
+#include "eden/fs/utils/SystemError.h"
 
 using folly::ByteRange;
 using folly::IOBuf;
@@ -225,7 +226,13 @@ folly::dynamic CheckoutConfig::loadClientDirectoryMap(
     AbsolutePathPiece edenDir) {
   // Extract the JSON and strip any comments.
   auto configJsonFile = edenDir + kClientDirectoryMap;
-  auto jsonContents = readFile(configJsonFile).value();
+  auto fileContents = readFile(configJsonFile);
+
+  if (auto* exc = fileContents.tryGetExceptionObject<std::system_error>();
+      exc && isEnoent(*exc)) {
+    return folly::dynamic::object();
+  }
+  auto jsonContents = fileContents.value();
   auto jsonWithoutComments = folly::json::stripComments(jsonContents);
   if (jsonWithoutComments.empty()) {
     return folly::dynamic::object();
