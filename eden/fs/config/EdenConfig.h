@@ -750,11 +750,11 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * The number of globs to use for a predictive prefetch profile,
-   * 10,000 by default.
+   * 1500 by default.
    */
   ConfigSetting<uint32_t> predictivePrefetchProfileSize{
       "predictive-prefetch-profiles:size",
-      10000,
+      1500,
       this};
 
   /**
