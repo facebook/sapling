@@ -178,7 +178,8 @@ impl crate::Subcommand for DiskUsageCmd {
         };
 
         let mut aggregated_usage_counts = AggregatedUsageCounts::new();
-        let mut backing_repos = Vec::new();
+        let mut backing_repos = HashSet::new();
+        let mut backed_working_copy_repos = HashSet::new();
         let mut redirections = HashSet::new();
         for mount in &mounts {
             let checkout = find_checkout(&instance, mount)?;
@@ -189,7 +190,15 @@ impl crate::Subcommand for DiskUsageCmd {
                 aggregated_usage_counts.backing += usage_count;
 
                 // GET BACKING REPO INFO
-                backing_repos.push(b);
+                backing_repos.insert(b.clone());
+
+                // GET BACKED WORKING COPY REPOS
+                // if the backing repo folder contains ".hg" and
+                // has more than just the .hg directory inside it,
+                // then it is a backed working copy repo
+                if b.join(".hg").is_dir() && fs::read_dir(&b).from_err()?.count() > 1 {
+                    backed_working_copy_repos.insert(b);
+                }
             }
 
             // GET SUMMARY INFO for materialized counts
@@ -237,6 +246,7 @@ impl crate::Subcommand for DiskUsageCmd {
         // Make immutable
         let aggregated_usage_counts = aggregated_usage_counts;
         let backing_repos = backing_repos;
+        let backed_working_copy_repos = backed_working_copy_repos;
         let redirections = redirections;
 
         // PRINT OUTPUT
@@ -267,14 +277,27 @@ impl crate::Subcommand for DiskUsageCmd {
                 }
             }
 
-            write_title("Backing repos");
-            for backing in backing_repos {
-                println!("{}", backing.display());
+            if !backing_repos.is_empty() {
+                write_title("Backing repos");
+                for backing in backing_repos {
+                    println!("{}", backing.display());
+                }
+                println!(
+                    "\nCAUTION: You can lose work and break things by manually deleting data \
+                    from the backing repo directory!"
+                );
+
+                if !backed_working_copy_repos.is_empty() {
+                    println!(
+                        "\nWorking copy detected in backing repo.  This is not generally useful \
+                        and just takes up space.  You can make this a bare repo to reclaim \
+                        space by running:\n"
+                    );
+                    for backed_working_copy in backed_working_copy_repos {
+                        println!("hg -R {} checkout null", backed_working_copy.display());
+                    }
+                }
             }
-            println!(
-                "\nCAUTION: You can lose work and break things by manually deleting data \
-                from the backing repo directory!"
-            );
         }
         Ok(0)
     }
