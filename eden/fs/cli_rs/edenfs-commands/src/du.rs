@@ -14,6 +14,7 @@ use std::fs;
 use std::fs::DirEntry;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
+use subprocess::{Exec, Redirection};
 
 use anyhow::anyhow;
 use edenfs_client::checkout::{find_checkout, EdenFsCheckout};
@@ -21,7 +22,7 @@ use edenfs_client::redirect::get_effective_redirections;
 use edenfs_client::{EdenFsClient, EdenFsInstance};
 use edenfs_error::{EdenFsError, Result, ResultExt};
 use edenfs_utils::metadata::MetadataExt;
-use edenfs_utils::{bytes_from_path, path_from_bytes};
+use edenfs_utils::{bytes_from_path, get_environment_suitable_for_subprocess, path_from_bytes};
 
 use crate::ExitCode;
 
@@ -152,6 +153,30 @@ async fn ignored_usage_counts_for_mount(
     Ok(aggregated_usage_counts_ignored)
 }
 
+fn get_hg_cache_path() -> Result<PathBuf> {
+    let output = Exec::cmd("hg")
+        .args(&["config", "remotefilelog.cachepath"])
+        .stdout(Redirection::Pipe)
+        .stderr(Redirection::Pipe)
+        .env_clear()
+        .env_extend(&get_environment_suitable_for_subprocess())
+        .capture()
+        .from_err()?;
+
+    if output.success() {
+        let raw_path = output.stdout_str();
+        let raw_path = raw_path.trim();
+        assert!(!raw_path.is_empty());
+        Ok(PathBuf::from(raw_path))
+    } else {
+        Err(EdenFsError::Other(anyhow!(
+            "Failed to execute `hg config remotefilelog.cachepath`, stderr: {}, exit status: {:?}",
+            output.stderr_str(),
+            output.exit_status,
+        )))
+    }
+}
+
 fn write_title(title: &str) {
     println!("\n{}", title);
     println!("{}", "-".repeat(title.len()));
@@ -249,6 +274,9 @@ impl crate::Subcommand for DiskUsageCmd {
         let backed_working_copy_repos = backed_working_copy_repos;
         let redirections = redirections;
 
+        // GET HGCACHE PATH
+        let hg_cache_path = get_hg_cache_path()?;
+
         // PRINT OUTPUT
         if self.json {
             println!(
@@ -286,16 +314,28 @@ impl crate::Subcommand for DiskUsageCmd {
                     "\nCAUTION: You can lose work and break things by manually deleting data \
                     from the backing repo directory!"
                 );
+            }
 
-                if !backed_working_copy_repos.is_empty() {
-                    println!(
-                        "\nWorking copy detected in backing repo.  This is not generally useful \
-                        and just takes up space.  You can make this a bare repo to reclaim \
-                        space by running:\n"
-                    );
-                    for backed_working_copy in backed_working_copy_repos {
-                        println!("hg -R {} checkout null", backed_working_copy.display());
-                    }
+            println!("\nTo reclaim space from the hgcache directory, run:");
+            if cfg!(windows) {
+                println!("\n`rmdir {}`", hg_cache_path.display());
+            } else {
+                println!("\n`rm -rf {}/*`", hg_cache_path.display());
+            }
+            println!(
+                "\nNOTE: The hgcache should manage its size itself. You should only run the command \
+                above if you are completely out of space and quickly need to reclaim some space \
+                temporarily. This will affect other users if you run this command on a shared machine."
+            );
+
+            if !backed_working_copy_repos.is_empty() {
+                println!(
+                    "\nWorking copy detected in backing repo.  This is not generally useful \
+                    and just takes up space.  You can make this a bare repo to reclaim \
+                    space by running:\n"
+                );
+                for backed_working_copy in backed_working_copy_repos {
+                    println!("hg -R {} checkout null", backed_working_copy.display());
                 }
             }
         }
