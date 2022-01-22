@@ -738,17 +738,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * TODO(helsel): remove this after the all configs that set this have been
-   * removed
-   * An allowlist to check for logging if the alias environment variable is
-   * set
-   */
-  ConfigSetting<std::vector<std::string>> logFileAccessesAliasAllowlist{
-      "prefetch-profiles:file-access-logging-alias-allowlist",
-      std::vector<std::string>{},
-      this};
-
-  /**
    * The number of globs to use for a predictive prefetch profile,
    * 1500 by default.
    */
