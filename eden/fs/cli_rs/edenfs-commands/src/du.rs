@@ -12,7 +12,7 @@ use serde::Serialize;
 use std::collections::HashSet;
 use std::fs;
 use std::fs::DirEntry;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
 use anyhow::anyhow;
@@ -81,7 +81,7 @@ fn usage_for_dir_entry(
     if symlink_metadata.is_dir() {
         // Don't recurse onto different filesystems
         if cfg!(windows) || symlink_metadata.eden_dev() == parent_device_id {
-            usage_for_dir(entry.path(), Some(parent_device_id))
+            usage_for_dir(&entry.path(), Some(parent_device_id))
         } else {
             Ok((0, vec![]))
         }
@@ -90,7 +90,7 @@ fn usage_for_dir_entry(
     }
 }
 
-fn usage_for_dir(path: PathBuf, device_id: Option<u64>) -> std::io::Result<(u64, Vec<PathBuf>)> {
+fn usage_for_dir(path: &Path, device_id: Option<u64>) -> std::io::Result<(u64, Vec<PathBuf>)> {
     let device_id = match device_id {
         Some(device_id) => device_id,
         None => fs::metadata(&path)?.eden_dev(),
@@ -109,7 +109,7 @@ fn usage_for_dir(path: PathBuf, device_id: Option<u64>) -> std::io::Result<(u64,
                 if e.kind() == std::io::ErrorKind::NotFound
                     || e.kind() == std::io::ErrorKind::PermissionDenied =>
             {
-                failed_to_check_files.push(path.clone());
+                failed_to_check_files.push(path.to_path_buf());
                 Ok(())
             }
             Err(e) => Err(e),
@@ -183,15 +183,20 @@ impl crate::Subcommand for DiskUsageCmd {
         for mount in &mounts {
             let checkout = find_checkout(&instance, mount)?;
 
-            // GET BACKING REPO INFO
             if let Some(b) = checkout.backing_repo() {
+                // GET SUMMARY INFO for backing counts
+                let (usage_count, _failed_file_checks) = usage_for_dir(&b, None).from_err()?;
+                aggregated_usage_counts.backing += usage_count;
+
+                // GET BACKING REPO INFO
                 backing_repos.push(b);
             }
 
             // GET SUMMARY INFO for materialized counts
             let overlay_dir = checkout.data_dir().join("local");
             // TODO: print failed_file_checks
-            let (usage_count, _failed_file_checks) = usage_for_dir(overlay_dir, None).from_err()?;
+            let (usage_count, _failed_file_checks) =
+                usage_for_dir(&overlay_dir, None).from_err()?;
             aggregated_usage_counts.materialized += usage_count;
 
             // GET SUMMARY INFO for ignored counts
@@ -202,7 +207,7 @@ impl crate::Subcommand for DiskUsageCmd {
             let fsck_dir = checkout.data_dir().join("fsck");
             if fsck_dir.exists() {
                 let (usage_count, _failed_file_checks) =
-                    usage_for_dir(fsck_dir, None).from_err()?;
+                    usage_for_dir(&fsck_dir, None).from_err()?;
                 aggregated_usage_counts.fsck += usage_count;
             }
 
@@ -210,7 +215,7 @@ impl crate::Subcommand for DiskUsageCmd {
                 // GET SUMMARY INFO for redirections
                 if let Some(target) = redir.expand_target_abspath(&checkout)? {
                     let (usage_count, _failed_file_checks) =
-                        usage_for_dir(target, None).from_err()?;
+                        usage_for_dir(&target, None).from_err()?;
                     aggregated_usage_counts.redirection += usage_count;
                 } else {
                     return Err(EdenFsError::Other(anyhow!(
