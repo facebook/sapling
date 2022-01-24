@@ -37,6 +37,7 @@ use crate::app::MononokeApp;
 pub struct MononokeAppBuilder {
     fb: FacebookInit,
     readonly_storage_default: ReadOnlyStorage,
+    default_scuba_dataset: Option<String>,
 }
 
 #[derive(Args, Debug)]
@@ -78,6 +79,7 @@ impl MononokeAppBuilder {
         MononokeAppBuilder {
             fb,
             readonly_storage_default: ReadOnlyStorage(false),
+            default_scuba_dataset: None,
         }
     }
 
@@ -123,6 +125,11 @@ impl MononokeAppBuilder {
         MononokeApp::new(self.fb, args, env)
     }
 
+    pub fn with_default_scuba_dataset(mut self, default: impl Into<String>) -> Self {
+        self.default_scuba_dataset = Some(default.into());
+        self
+    }
+
     fn build_environment(&self, env_args: EnvironmentArgs) -> Result<MononokeEnvironment> {
         let EnvironmentArgs {
             blobstore_args,
@@ -159,10 +166,13 @@ impl MononokeAppBuilder {
             observability_context.clone(),
         )?;
 
-        // TODO: pass the default scuba dataset to builder
-        let scuba_sample_builder =
-            create_scuba_sample_builder(self.fb, &scuba_logging_args, &observability_context)
-                .context("Failed to create scuba sample builder")?;
+        let scuba_sample_builder = create_scuba_sample_builder(
+            self.fb,
+            &scuba_logging_args,
+            &observability_context,
+            &self.default_scuba_dataset,
+        )
+        .context("Failed to create scuba sample builder")?;
         let warm_bookmarks_cache_scuba_sample_builder =
             create_warm_bookmark_cache_scuba_sample_builder(self.fb, &scuba_logging_args)
                 .context("Failed to create warm bookmark cache scuba sample builder")?;

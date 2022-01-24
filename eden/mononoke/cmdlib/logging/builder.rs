@@ -164,8 +164,8 @@ pub fn create_scuba_sample_builder(
     fb: FacebookInit,
     scuba_args: &ScubaLoggingArgs,
     observability_context: &ObservabilityContext,
+    default_scuba_set: &Option<String>,
 ) -> Result<MononokeScubaSampleBuilder> {
-    let default_scuba_set = None; // TODO get default scuba set from somewhere
     let mut scuba_logger = if let Some(scuba_dataset) = &scuba_args.scuba_dataset {
         MononokeScubaSampleBuilder::new(fb, scuba_dataset.as_str())
     } else if let Some(default_scuba_dataset) = default_scuba_set {
