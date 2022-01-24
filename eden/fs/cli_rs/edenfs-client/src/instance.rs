@@ -166,6 +166,14 @@ impl EdenFsInstance {
     pub fn clients_dir(&self) -> PathBuf {
         self.config_dir.join(CLIENTS_DIR)
     }
+
+    pub fn logs_dir(&self) -> PathBuf {
+        self.config_dir.join("logs")
+    }
+
+    pub fn storage_dir(&self) -> PathBuf {
+        self.config_dir.join("storage")
+    }
 }
 
 pub trait DaemonHealthy {

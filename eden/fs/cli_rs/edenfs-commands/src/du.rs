@@ -268,6 +268,15 @@ impl crate::Subcommand for DiskUsageCmd {
                 }
             }
         }
+
+        // GET SUMMARY INFO for shared usage
+        let (logs_dir_usage, _failed_logs_dir_file_checks) =
+            usage_for_dir(&instance.logs_dir(), None).from_err()?;
+        aggregated_usage_counts.shared += logs_dir_usage;
+        let (storage_dir_usage, _failed_storage_dir_file_checks) =
+            usage_for_dir(&instance.storage_dir(), None).from_err()?;
+        aggregated_usage_counts.shared += storage_dir_usage;
+
         // Make immutable
         let aggregated_usage_counts = aggregated_usage_counts;
         let backing_repos = backing_repos;
@@ -337,6 +346,11 @@ impl crate::Subcommand for DiskUsageCmd {
                 for backed_working_copy in backed_working_copy_repos {
                     println!("hg -R {} checkout null", backed_working_copy.display());
                 }
+            }
+
+            write_title("Shared space");
+            if !self.clean && !self.deep_clean {
+                println!("Run `eden gc` to reduce the space used by the storage engine.");
             }
         }
         Ok(0)
