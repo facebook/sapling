@@ -6,7 +6,6 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
-  $ export NO_MONONOKE_DIRECT_PEER=1
 
 Setup configuration
   $ setup_configerator_configs
@@ -46,7 +45,7 @@ Before the change
   ~
 
 -- wait a little to give sync job some time to catch up
-  $ sleep 3
+  $ sleep 10
   $ flush_mononoke_bookmarks
 
 -- check the same commit in the large repo
@@ -104,7 +103,7 @@ After the change
   ~
 
 -- wait a little to give sync job some time to catch up
-  $ sleep 3
+  $ sleep 8
   $ flush_mononoke_bookmarks
 
 -- check the same commit in the large repo
