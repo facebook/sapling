@@ -226,6 +226,7 @@ members = [
   "changesets/if",
   "cmdlib",
   "cmdlib/environment",
+  "cmdlib/log",
   "cmdlib/mononoke_app",
   "cmdlib/mononoke_args",
   "cmdlib/x_repo",

@@ -13,13 +13,9 @@ backsyncer = { version = "0.1.0", path = "../commit_rewriting/backsyncer" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
-blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-bulkops = { version = "0.1.0", path = "../bulkops" }
-changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
-changesets = { version = "0.1.0", path = "../changesets" }
 clap = "2.33"
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
@@ -38,7 +34,6 @@ mononoke_hg_sync_job_helper_lib = { version = "0.1.0", path = "../mononoke_hg_sy
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 movers = { version = "0.1.0", path = "../commit_rewriting/movers" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
-phases = { version = "0.1.0", path = "../phases" }
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
