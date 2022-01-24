@@ -1492,7 +1492,7 @@ extmodules = [
 def cythonize(*args, **kwargs):
     """Proxy to Cython.Build.cythonize. Download Cython on demand."""
     cythonsrc = asset(
-        url="https://files.pythonhosted.org/packages/c1/f2/d1207fd0dfe5cb4dbb06a035eb127653821510d896ce952b5c66ca3dafa4/Cython-0.29.2.tar.gz"
+        url="https://files.pythonhosted.org/packages/bc/fa/8604d92ef753e0036d807f1b3179813ab2fa283e3b19c926e11673c8205b/Cython-0.29.26.tar.gz"
     )
     path = cythonsrc.ensureready()
     sys.path.insert(0, path)
