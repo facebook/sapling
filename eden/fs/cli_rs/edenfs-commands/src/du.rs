@@ -9,6 +9,7 @@
 
 use anyhow::anyhow;
 use async_trait::async_trait;
+use colored::Colorize;
 use comfy_table::{Cell, CellAlignment, Color, Row, Table};
 use serde::Serialize;
 use std::collections::HashSet;
@@ -333,8 +334,10 @@ impl crate::Subcommand for DiskUsageCmd {
                     println!("{}", backing.display());
                 }
                 println!(
-                    "\nCAUTION: You can lose work and break things by manually deleting data \
+                    "\n{}",
+                    "CAUTION: You can lose work and break things by manually deleting data \
                     from the backing repo directory!"
+                        .yellow()
                 );
             }
 
@@ -444,7 +447,10 @@ impl crate::Subcommand for DiskUsageCmd {
             println!("{}", table.to_string());
 
             if !self.clean && !self.deep_clean {
-                println!("\nTo perform automated cleanup, run `eden du --clean`");
+                println!(
+                    "{}",
+                    "\nTo perform automated cleanup, run `eden du --clean`".blue()
+                );
             }
         }
         Ok(0)

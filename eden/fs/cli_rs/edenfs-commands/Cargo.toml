@@ -10,6 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.51"
 async-trait = "0.1.51"
+colored = "1.9"
 comfy-table = "4.0.1"
 crossterm = { version = "0.20.0", features = ["event-stream"] }
 dirs = "2.0"
