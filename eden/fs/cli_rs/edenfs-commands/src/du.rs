@@ -56,7 +56,6 @@ struct AggregatedUsageCounts {
     backing: u64,
     shared: u64,
     fsck: u64,
-    legacy: u64,
 }
 
 impl AggregatedUsageCounts {
@@ -68,7 +67,6 @@ impl AggregatedUsageCounts {
             backing: 0,
             shared: 0,
             fsck: 0,
-            legacy: 0,
         }
     }
 }
