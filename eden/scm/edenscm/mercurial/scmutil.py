@@ -982,7 +982,8 @@ def _interestingfiles(repo, matcher):
     unknown = [file for file in status.unknown if audit_path.check(file)]
 
     for file in status.removed:
-        if exists(file):
+        # audit here to make sure "file" hasn't reappeared behind a symlink
+        if exists(file) and audit_path.check(file):
             if dirstate.normalize(file) == file:
                 forgotten.append(file)
             else:
