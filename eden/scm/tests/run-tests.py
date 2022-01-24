@@ -2509,8 +2509,9 @@ class TestResult(unittest._TextTestResult):
     def addSkip(self, test, reason):
         self.skipped.append((test, reason))
         if self.showAll:
-            with iolock:
-                self.stream.writeln("skipped %s" % reason)
+            if reason != "not retesting":
+                with iolock:
+                    self.stream.writeln("skipped %s" % reason)
         else:
             if not showprogress:
                 with iolock:
