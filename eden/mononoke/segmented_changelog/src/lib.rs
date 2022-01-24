@@ -29,7 +29,6 @@ mod owned;
 mod parents;
 mod periodic_reload;
 mod read_only;
-mod seeder;
 mod sql_types;
 mod tailer;
 pub mod types;
@@ -47,7 +46,6 @@ pub use segmented_changelog_types::{
 
 pub use crate::builder::{new_server_segmented_changelog, SegmentedChangelogSqlConnections};
 pub use crate::copy::copy_segmented_changelog;
-pub use crate::seeder::SegmentedChangelogSeeder;
 pub use crate::tailer::SegmentedChangelogTailer;
 pub use crate::update::{seedheads_from_config, SeedHead};
 

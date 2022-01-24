@@ -24,7 +24,7 @@ Setup repository
   cloning repo in hg client 'repo2'
 
 Seed repository.
-  $ quiet segmented_changelog_seeder --head=$A
+  $ quiet segmented_changelog_tailer_reseed --repo repo --head=$A
 
   $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
   > [segmented_changelog_config]

@@ -33,7 +33,6 @@ MONONOKE_BINS = {
     "MONONOKE_RECHUNKER": "rechunker",
     "MONONOKE_REGENERATE_HG_FILENODES": "regenerate_hg_filenodes",
     "MONONOKE_REPO_IMPORT": "repo_import",
-    "MONONOKE_SEGMENTED_CHANGELOG_SEEDER": "segmented_changelog_seeder",
     "MONONOKE_SEGMENTED_CHANGELOG_TAILER": "segmented_changelog_tailer",
     "MONONOKE_STREAMING_CLONE": "new_streaming_clone",
     "MONONOKE_SERVER": "mononoke",

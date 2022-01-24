@@ -21,6 +21,12 @@ impl fmt::Display for IdMapVersion {
     }
 }
 
+impl IdMapVersion {
+    pub fn bump(&self) -> Self {
+        Self(self.0 + 1)
+    }
+}
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[derive(mysql::OptTryFromRowField)]
 pub struct IdDagVersion(pub Blake2);

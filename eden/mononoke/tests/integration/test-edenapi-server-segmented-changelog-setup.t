@@ -55,10 +55,7 @@ Blobimport test repo.
   $ cd ..
   $ blobimport repo-hg/.hg repo
   $ quiet default_setup_blobimport "blob_files"
-FIXME. Seeder builds a BlobRepo that has a SegmentedChangelog. If the Segmented
-Changelog is enabled then seeder may not have what to load for Segmented
-Changelog.
-  $ quiet segmented_changelog_seeder --head=$F
+  $ quiet segmented_changelog_tailer_reseed --repo repo --head=$F
 
 Start up EdenAPI server.
   $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG

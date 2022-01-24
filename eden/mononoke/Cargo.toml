@@ -64,10 +64,6 @@ name = "revlogrepo"
 path = "cmds/revlogrepo.rs"
 
 [[bin]]
-name = "segmented_changelog_seeder"
-path = "cmds/segmented_changelog_seeder.rs"
-
-[[bin]]
 name = "segmented_changelog_tailer"
 path = "cmds/segmented_changelog_tailer.rs"
 
@@ -89,14 +85,12 @@ blobrepo_hg = { version = "0.1.0", path = "blobrepo/blobrepo_hg" }
 blobrepo_utils = { version = "0.1.0", path = "blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "blobstore" }
 blobstore_factory = { version = "0.1.0", path = "blobstore/factory" }
-bookmarks = { version = "0.1.0", path = "bookmarks" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bulkops = { version = "0.1.0", path = "bulkops" }
 bytes = { version = "1.1", features = ["serde"] }
 bytesize = "1.0"
 cacheblob = { version = "0.1.0", path = "blobstore/cacheblob" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-changeset_fetcher = { version = "0.1.0", path = "blobrepo/changeset_fetcher" }
 changesets = { version = "0.1.0", path = "changesets" }
 check_git_wc = { version = "0.1.0", path = "git/check_git_wc" }
 clap = "2.33"

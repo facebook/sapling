@@ -1818,15 +1818,15 @@ function regenerate_hg_filenodes() {
     "$@"
 }
 
-function segmented_changelog_seeder() {
-  "$MONONOKE_SEGMENTED_CHANGELOG_SEEDER" \
+function segmented_changelog_tailer_reseed() {
+  "$MONONOKE_SEGMENTED_CHANGELOG_TAILER" \
     "${COMMON_ARGS[@]}" \
-    --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    --force-reseed \
     "$@"
 }
 
-function segmented_changelog_tailer() {
+function segmented_changelog_tailer_once() {
   "$MONONOKE_SEGMENTED_CHANGELOG_TAILER" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \

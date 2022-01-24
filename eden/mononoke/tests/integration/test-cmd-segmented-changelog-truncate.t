@@ -10,19 +10,18 @@ Setup repository
 
   $ BLOB_TYPE="blob_files" quiet default_setup
 
-Run Segmented Changelog Seeder.
+Run Segmented Changelog Tailer to seed the repo.
   $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
   > [segmented_changelog_config]
   > master_bookmark="master_bookmark"
   > CONFIG
-  $ quiet segmented_changelog_seeder --head=master_bookmark
-  $ grep 'successfully finished' "$TESTTMP/quiet.last.log"
-  * successfully finished seeding segmented changelog (glob)
-  * successfully finished seeding SegmentedChangelog for repository 'repo' (glob)
+  $ quiet segmented_changelog_tailer_reseed --repo repo
+  $ grep 'successfully' "$TESTTMP/quiet.last.log"
+  * repo 0: successfully seeded segmented changelog (glob)
 
 Run Segmented Changelog Tailer. Nothing to do.
 
-  $ quiet segmented_changelog_tailer --repo repo
+  $ quiet segmented_changelog_tailer_once --repo repo
   $ grep 'already up to date'  "$TESTTMP/quiet.last.log"
   * repo 0: segmented changelog already up to date, skipping update to iddag (glob)
 
@@ -32,6 +31,6 @@ Truncate down to 1 changeset and then tail in the missing two
   * repo 0: segmented changelog version saved, idmap_version: 2, iddag_version: 5fd1e81c* (glob)
 
 Run the tailer again, and see it pull in the commits we removed
-  $ quiet segmented_changelog_tailer --repo repo
+  $ quiet segmented_changelog_tailer_once --repo repo
   $ grep 'successful incremental update' "$TESTTMP/quiet.last.log"
   * repo 0: successful incremental update to segmented changelog (glob)

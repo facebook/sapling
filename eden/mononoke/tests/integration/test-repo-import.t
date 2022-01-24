@@ -100,7 +100,7 @@
   > [segmented_changelog_config]
   > master_bookmark="master_bookmark"
   > CONFIG
-  $ segmented_changelog_tailer --repo repo  2>&1 | grep -e successfully -e segmented_changelog_tailer
+  $ segmented_changelog_tailer_reseed --repo repo  2>&1 | grep -e successfully -e segmented_changelog_tailer
   * repo name 'repo' translates to id 0 (glob)
   * repo 0: SegmentedChangelogTailer initialized (glob)
   * repo 0: successfully seeded segmented changelog (glob)

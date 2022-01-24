@@ -33,7 +33,7 @@ use phases::PhasesArc;
 use crate::dag::ops::DagAddHeads;
 use crate::dag::DagAlgorithm;
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::{cs_id_from_vertex_name, CacheHandlers, IdMapFactory};
+use crate::idmap::{cs_id_from_vertex_name, CacheHandlers, IdMapFactory, SqlIdMapVersionStore};
 use crate::owned::OwnedSegmentedChangelog;
 use crate::parents::FetchParents;
 use crate::types::{IdMapVersion, SegmentedChangelogVersion};
@@ -67,6 +67,7 @@ pub struct SegmentedChangelogTailer {
     sc_version_store: SegmentedChangelogVersionStore,
     iddag_save_store: IdDagSaveStore,
     idmap_factory: IdMapFactory,
+    idmap_version_store: SqlIdMapVersionStore,
 }
 
 impl SegmentedChangelogTailer {
@@ -82,6 +83,7 @@ impl SegmentedChangelogTailer {
         caching: Option<(FacebookInit, cachelib::VolatileLruCachePool)>,
     ) -> Self {
         let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
+        let idmap_version_store = SqlIdMapVersionStore::new(connections.0.clone(), repo_id);
         let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore);
         let mut idmap_factory = IdMapFactory::new(connections.0, replica_lag_monitor, repo_id);
         if let Some((fb, pool)) = caching {
@@ -97,6 +99,7 @@ impl SegmentedChangelogTailer {
             sc_version_store,
             iddag_save_store,
             idmap_factory,
+            idmap_version_store,
         }
     }
 
@@ -182,7 +185,7 @@ impl SegmentedChangelogTailer {
             STATS::count.add_value(1);
             STATS::count_per_repo.add_value(1, (self.repo_id.id(),));
 
-            let (stats, update_result) = self.once(&ctx).timed().await;
+            let (stats, update_result) = self.once(&ctx, false).timed().await;
 
             STATS::duration_ms.add_value(stats.completion_time.as_millis() as i64);
             STATS::duration_ms_per_repo.add_value(
@@ -217,7 +220,11 @@ impl SegmentedChangelogTailer {
         }
     }
 
-    pub async fn once(&self, ctx: &CoreContext) -> Result<OwnedSegmentedChangelog> {
+    pub async fn once(
+        &self,
+        ctx: &CoreContext,
+        force_reseed: bool,
+    ) -> Result<OwnedSegmentedChangelog> {
         info!(
             ctx.logger(),
             "repo {}: starting incremental update to segmented changelog", self.repo_id,
@@ -233,12 +240,22 @@ impl SegmentedChangelogTailer {
 
             match sc_version {
                 Some(sc_version) => {
-                    let iddag = self
-                        .iddag_save_store
-                        .load(&ctx, sc_version.iddag_version)
-                        .await
-                        .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
-                    (false, sc_version.idmap_version, iddag)
+                    if force_reseed {
+                        (
+                            true,
+                            sc_version.idmap_version.bump(),
+                            InProcessIdDag::new_in_process(),
+                        )
+                    } else {
+                        let iddag = self
+                            .iddag_save_store
+                            .load(&ctx, sc_version.iddag_version)
+                            .await
+                            .with_context(|| {
+                                format!("repo {}: failed to load iddag", self.repo_id)
+                            })?;
+                        (false, sc_version.idmap_version, iddag)
+                    }
                 }
                 None => (true, IdMapVersion(1), InProcessIdDag::new_in_process()),
             }
@@ -366,6 +383,12 @@ impl SegmentedChangelogTailer {
                 "repo {}: successful incremental update to segmented changelog", self.repo_id,
             );
         }
+
+        // Update IdMapVersion
+        self.idmap_version_store
+            .set(&ctx, idmap_version)
+            .await
+            .context("updating idmap version")?;
 
         let owned = OwnedSegmentedChangelog::new(iddag, idmap);
         Ok(owned)

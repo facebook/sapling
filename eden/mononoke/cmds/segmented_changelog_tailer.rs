@@ -28,6 +28,8 @@ use segmented_changelog::{seedheads_from_config, SegmentedChangelogTailer};
 
 const ONCE_ARG: &str = "once";
 const REPO_ARG: &str = "repo";
+const HEAD_ARG: &str = "head";
+const FORCE_RESEED_ARG: &str = "force-reseed";
 const ARG_PREFETCHED_COMMITS_PATH: &str = "prefetched-commits-path";
 
 #[fbinit::main]
@@ -51,7 +53,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .long(ONCE_ARG)
                 .takes_value(false)
                 .required(false)
-                .help("When set, the tailer will perform a single incremental build run."),
+                .help(
+                    "When set, the tailer will perform a single incremental build run. \
+                If no previous version exists it will perform full reseed instead",
+                ),
         )
         .arg(
             Arg::with_name(ARG_PREFETCHED_COMMITS_PATH)
@@ -62,6 +67,23 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     "a file with a serialized list of ChangesetEntry, \
                 which can be used to speed up rebuilding of segmented changelog",
                 ),
+        )
+        .arg(
+            Arg::with_name(HEAD_ARG)
+                .long(HEAD_ARG)
+                .takes_value(true)
+                .multiple(true)
+                .help(
+                    "What heads to use for Segmented Changelog. If not provided, \
+                tailer will use the config to obtain heads.",
+                ),
+        )
+        .arg(
+            Arg::with_name(FORCE_RESEED_ARG)
+                .long(FORCE_RESEED_ARG)
+                .takes_value(false)
+                .conflicts_with(ONCE_ARG)
+                .help("When set, the tailer will perform a single full reseed run."),
         );
     let matches = app.get_matches(fb)?;
 
@@ -116,8 +138,6 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             "repo name '{}' translates to id {}", reponame, repo_id
         );
 
-        let seed_heads = seedheads_from_config(&ctx, &config.segmented_changelog_config)?;
-
         // This is a bit weird from the dependency point of view but I think that it is best. The
         // BlobRepo may have a SegmentedChangelog attached to it but that doesn't hurt us in any
         // way.  On the other hand reconstructing the dependencies for SegmentedChangelog without
@@ -132,6 +152,23 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                 None
             }
         }));
+
+        let seed_heads = match matches.values_of(HEAD_ARG) {
+            Some(head_args) => {
+                let mut heads = vec![];
+                for head_arg in head_args.into_iter() {
+                    let head = helpers::csid_resolve(&ctx, blobrepo.clone(), head_arg)
+                        .await
+                        .with_context(|| {
+                            format!("repo {}: resolving head csid for '{}'", repo_id, head_arg)
+                        })?;
+                    info!(ctx.logger(), "repo {}: using '{}' for head", repo_id, head);
+                    heads.push(head.into());
+                }
+                heads
+            }
+            None => seedheads_from_config(&ctx, &config.segmented_changelog_config)?,
+        };
 
         let segmented_changelog_tailer = SegmentedChangelogTailer::build_from(
             &ctx,
@@ -149,9 +186,9 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             "repo {}: SegmentedChangelogTailer initialized", repo_id
         );
 
-        if matches.is_present(ONCE_ARG) {
+        if matches.is_present(ONCE_ARG) || matches.is_present(FORCE_RESEED_ARG) {
             segmented_changelog_tailer
-                .once(&ctx)
+                .once(&ctx, matches.is_present(FORCE_RESEED_ARG))
                 .await
                 .with_context(|| format!("repo {}: incrementally building repo", repo_id))?;
             info!(

@@ -1229,7 +1229,7 @@ async fn tail_segmented_changelog(
     );
 
     segmented_changelog_tailer
-        .once(ctx)
+        .once(ctx, false)
         .await
         .with_context(|| format!("repo {}: incrementally building repo", repo_id))?;
     info!(

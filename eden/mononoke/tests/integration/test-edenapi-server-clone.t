@@ -11,7 +11,7 @@ Set up local hgrc and Mononoke config.
   $ setup_configerator_configs
 
 Build up segmented changelog
-  $ quiet segmented_changelog_seeder --head=master_bookmark
+  $ quiet segmented_changelog_tailer_reseed --repo repo --head=master_bookmark
 
 Enable Segmented Changelog
   $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
