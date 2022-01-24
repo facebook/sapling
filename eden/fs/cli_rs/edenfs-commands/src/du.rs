@@ -34,14 +34,20 @@ pub struct DiskUsageCmd {
     #[structopt(help = "Names of the mount points")]
     mounts: Vec<PathBuf>,
 
-    #[structopt(long, help = "Performs automated cleanup")]
+    #[structopt(
+        long,
+        help = "Performs automated cleanup",
+        conflicts_with = "deep-clean",
+        conflicts_with = "json"
+    )]
     clean: bool,
 
     #[structopt(
         long,
         help = "Performs automated cleanup (--clean) and removes fsck dirs. \
         Unlike --clean this will destroy unrecoverable data. If you have any \
-        local changes you hope to recover, recover them before you run this command."
+        local changes you hope to recover, recover them before you run this command.",
+        conflicts_with = "json"
     )]
     deep_clean: bool,
 
