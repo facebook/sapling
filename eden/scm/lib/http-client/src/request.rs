@@ -15,18 +15,20 @@ use std::path::PathBuf;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::AcqRel;
 use std::time::Duration;
+use std::time::SystemTime;
 
 use curl::easy::Easy2;
 use curl::easy::HttpVersion;
 use curl::easy::List;
 use curl::{self};
 use http::header;
+use lru_cache::LruCache;
 use maplit::hashmap;
 use once_cell::sync::Lazy;
 use openssl::pkcs12::Pkcs12;
 use openssl::pkey::PKey;
 use openssl::x509::X509;
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use serde::Serialize;
 use url::Url;
 
@@ -379,7 +381,6 @@ impl Request {
         self.set_cbor_body(value)?;
         Ok(self)
     }
-
 
     /// Serialize the given value as CBOR and use it as the request body.
     pub fn set_cbor_body<S: Serialize>(
@@ -820,6 +821,17 @@ fn read_file(path: impl AsRef<Path>) -> Result<Vec<u8>, anyhow::Error> {
     Ok(buf)
 }
 
+#[derive(Eq, Hash, PartialEq)]
+struct PemCacheKey {
+    pub cert: PathBuf,
+    pub key: Option<PathBuf>,
+    pub cert_mtime: SystemTime,
+    pub key_mtime: Option<SystemTime>,
+}
+
+static PEM_CONVERT_CACHE: Lazy<Mutex<LruCache<PemCacheKey, Vec<u8>>>> =
+    Lazy::new(|| Mutex::new(LruCache::new(10)));
+
 /// Convert a PEM-formatted X.509 certificate chain and private key into a
 /// PKCS#12 archive, which can then be directly passed to libcurl using
 /// `CURLOPT_SSLCERT_BLOB`. This is useful because not all TLS engines (notably
@@ -830,6 +842,22 @@ fn pem_to_pkcs12(
     cert: impl AsRef<Path>,
     key: Option<impl AsRef<Path>>,
 ) -> Result<Vec<u8>, anyhow::Error> {
+    let mut cache = PEM_CONVERT_CACHE.lock();
+    let cert_mtime = cert.as_ref().metadata()?.modified()?;
+    let key_mtime = match &key {
+        Some(key) => Some(key.as_ref().metadata()?.modified()?),
+        None => None,
+    };
+    let cache_key = PemCacheKey {
+        cert: cert.as_ref().to_owned(),
+        key: key.as_ref().map(|k| k.as_ref().to_owned()),
+        cert_mtime,
+        key_mtime,
+    };
+    if let Some(data) = cache.get_mut(&cache_key) {
+        return Ok(data.clone());
+    }
+
     // It's common for the certificate and private key to be concatenated
     // together in the same PEM file. If a key path isn't specified, assume
     // this is the case and use the certificate PEM for the key as well.
@@ -848,7 +876,10 @@ fn pem_to_pkcs12(
     // is specified.
     let pkcs12 = Pkcs12::builder().build("", "", &key, &cert)?;
 
-    Ok(pkcs12.to_der()?)
+    let result = pkcs12.to_der()?;
+    cache.insert(cache_key, result.clone());
+
+    Ok(result)
 }
 
 #[cfg(test)]
