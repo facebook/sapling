@@ -196,6 +196,22 @@ fn write_title(title: &str) {
     println!("{}", "-".repeat(title.len()));
 }
 
+fn write_failed_to_check_files_message(file_paths: &HashSet<PathBuf>) {
+    if !file_paths.is_empty() {
+        println!(
+            "\n{}",
+            "Warning: failed to check paths due to file not found or permission errors:".yellow()
+        );
+        for f in file_paths {
+            println!("{}", format!("{}", f.display()).yellow());
+        }
+        println!(
+            "\n{}",
+            "Note that we also cannot clean these paths.".yellow()
+        );
+    }
+}
+
 #[async_trait]
 impl crate::Subcommand for DiskUsageCmd {
     async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
@@ -217,6 +233,9 @@ impl crate::Subcommand for DiskUsageCmd {
         };
 
         let mut aggregated_usage_counts = AggregatedUsageCounts::new();
+        let mut backing_failed_file_checks = HashSet::new();
+        let mut mount_failed_file_checks = HashSet::new();
+        let mut redirection_failed_file_checks = HashSet::new();
         let mut backing_repos = HashSet::new();
         let mut backed_working_copy_repos = HashSet::new();
         let mut redirections = HashSet::new();
@@ -225,8 +244,9 @@ impl crate::Subcommand for DiskUsageCmd {
 
             if let Some(b) = checkout.backing_repo() {
                 // GET SUMMARY INFO for backing counts
-                let (usage_count, _failed_file_checks) = usage_for_dir(&b, None).from_err()?;
+                let (usage_count, failed_file_checks) = usage_for_dir(&b, None).from_err()?;
                 aggregated_usage_counts.backing += usage_count;
+                backing_failed_file_checks.extend(failed_file_checks);
 
                 // GET BACKING REPO INFO
                 backing_repos.insert(b.clone());
@@ -242,10 +262,9 @@ impl crate::Subcommand for DiskUsageCmd {
 
             // GET SUMMARY INFO for materialized counts
             let overlay_dir = checkout.data_dir().join("local");
-            // TODO: print failed_file_checks
-            let (usage_count, _failed_file_checks) =
-                usage_for_dir(&overlay_dir, None).from_err()?;
+            let (usage_count, failed_file_checks) = usage_for_dir(&overlay_dir, None).from_err()?;
             aggregated_usage_counts.materialized += usage_count;
+            mount_failed_file_checks.extend(failed_file_checks);
 
             // GET SUMMARY INFO for ignored counts
             aggregated_usage_counts.ignored +=
@@ -254,17 +273,19 @@ impl crate::Subcommand for DiskUsageCmd {
             // GET SUMMARY INFO for fsck
             let fsck_dir = checkout.data_dir().join("fsck");
             if fsck_dir.exists() {
-                let (usage_count, _failed_file_checks) =
+                let (usage_count, failed_file_checks) =
                     usage_for_dir(&fsck_dir, None).from_err()?;
                 aggregated_usage_counts.fsck += usage_count;
+                mount_failed_file_checks.extend(failed_file_checks);
             }
 
             for (_, redir) in get_effective_redirections(&checkout)? {
                 // GET SUMMARY INFO for redirections
                 if let Some(target) = redir.expand_target_abspath(&checkout)? {
-                    let (usage_count, _failed_file_checks) =
+                    let (usage_count, failed_file_checks) =
                         usage_for_dir(&target, None).from_err()?;
                     aggregated_usage_counts.redirection += usage_count;
+                    redirection_failed_file_checks.extend(failed_file_checks);
                 } else {
                     return Err(EdenFsError::Other(anyhow!(
                         "Cannot resolve target for redirection: {:?}",
@@ -282,20 +303,28 @@ impl crate::Subcommand for DiskUsageCmd {
                 }
             }
         }
-
-        // GET SUMMARY INFO for shared usage
-        let (logs_dir_usage, _failed_logs_dir_file_checks) =
-            usage_for_dir(&instance.logs_dir(), None).from_err()?;
-        aggregated_usage_counts.shared += logs_dir_usage;
-        let (storage_dir_usage, _failed_storage_dir_file_checks) =
-            usage_for_dir(&instance.storage_dir(), None).from_err()?;
-        aggregated_usage_counts.shared += storage_dir_usage;
-
         // Make immutable
-        let aggregated_usage_counts = aggregated_usage_counts;
+        let backing_failed_file_checks = backing_failed_file_checks;
+        let mount_failed_file_checks = mount_failed_file_checks;
+        let redirection_failed_file_checks = redirection_failed_file_checks;
         let backing_repos = backing_repos;
         let backed_working_copy_repos = backed_working_copy_repos;
         let redirections = redirections;
+
+        // GET SUMMARY INFO for shared usage
+        let mut shared_failed_file_checks = HashSet::new();
+        let (logs_dir_usage, failed_logs_dir_file_checks) =
+            usage_for_dir(&instance.logs_dir(), None).from_err()?;
+        aggregated_usage_counts.shared += logs_dir_usage;
+        shared_failed_file_checks.extend(failed_logs_dir_file_checks);
+        let (storage_dir_usage, failed_storage_dir_file_checks) =
+            usage_for_dir(&instance.storage_dir(), None).from_err()?;
+        aggregated_usage_counts.shared += storage_dir_usage;
+        shared_failed_file_checks.extend(failed_storage_dir_file_checks);
+
+        // Make immutable
+        let shared_failed_file_checks = shared_failed_file_checks;
+        let aggregated_usage_counts = aggregated_usage_counts;
 
         // GET HGCACHE PATH
         let hg_cache_path = get_hg_cache_path()?;
@@ -307,11 +336,14 @@ impl crate::Subcommand for DiskUsageCmd {
                 serde_json::to_string(&aggregated_usage_counts).from_err()?
             );
         } else {
+            // PRINT MOUNTS
             write_title("Mounts");
             for path in &mounts {
                 println!("{}", path.display());
             }
+            write_failed_to_check_files_message(&mount_failed_file_checks);
 
+            // PRINT REDIRECTIONS
             write_title("Redirections");
             if redirections.is_empty() {
                 println!("No redirections");
@@ -327,9 +359,13 @@ impl crate::Subcommand for DiskUsageCmd {
                     )
                 }
             }
+            write_failed_to_check_files_message(&redirection_failed_file_checks);
 
-            if !backing_repos.is_empty() {
+            // PRINT BACKING REPOS
+            if !backing_repos.is_empty() || !backing_failed_file_checks.is_empty() {
                 write_title("Backing repos");
+            }
+            if !backing_repos.is_empty() {
                 for backing in backing_repos {
                     println!("{}", backing.display());
                 }
@@ -340,6 +376,7 @@ impl crate::Subcommand for DiskUsageCmd {
                         .yellow()
                 );
             }
+            write_failed_to_check_files_message(&backing_failed_file_checks);
 
             println!("\nTo reclaim space from the hgcache directory, run:");
             if cfg!(windows) {
@@ -364,11 +401,14 @@ impl crate::Subcommand for DiskUsageCmd {
                 }
             }
 
+            // PRINT SHARED SPACE
             write_title("Shared space");
             if !self.clean && !self.deep_clean {
                 println!("Run `eden gc` to reduce the space used by the storage engine.");
             }
+            write_failed_to_check_files_message(&shared_failed_file_checks);
 
+            // PRINT SUMMARY
             write_title("Summary");
             let mut table = Table::new();
             table.load_preset(comfy_table::presets::NOTHING);
