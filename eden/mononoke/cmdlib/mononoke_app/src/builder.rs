@@ -146,6 +146,8 @@ impl MononokeAppBuilder {
         } = env_args;
 
         let log_level = create_log_level(&logging_args);
+        #[cfg(fbcode_build)]
+        cmdlib_logging::set_glog_log_level(self.fb, log_level)?;
         let root_log_drain = create_root_log_drain(self.fb, &logging_args, log_level)
             .context("Failed to create root log drain")?;
 

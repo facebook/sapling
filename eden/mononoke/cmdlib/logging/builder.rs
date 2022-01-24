@@ -8,7 +8,9 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{format_err, Context, Error, Result};
+#[cfg(fbcode_build)]
+use anyhow::format_err;
+use anyhow::{Context, Error, Result};
 use cached_config::ConfigStore;
 use fbinit::FacebookInit;
 use observability::{DynamicLevelDrain, ObservabilityContext};
@@ -32,6 +34,26 @@ pub fn create_log_level(logging_args: &LoggingArgs) -> Level {
             None => Level::Info,
         }
     }
+}
+
+/// Sets the log level used by glog library to match the level use we use in slog.
+/// It can be overridden by setting the GLOG_minloglevel env variable.
+#[cfg(fbcode_build)]
+pub fn set_glog_log_level(fb: FacebookInit, level: Level) -> Result<()> {
+    if std::env::var("GLOG_minloglevel").is_err() {
+        let level_glog_num = match level {
+            Level::Critical => 4,
+            Level::Error => 3,
+            Level::Warning => 2,
+            // Normally glog 1 corresponds to our INFO but since we normally
+            // care very little about things logged by our deps it might be
+            // easier to delegate those to DEBUG output.
+            Level::Info => 2,
+            _ => 0,
+        };
+        gflags::set_gflag_value(fb, "minloglevel", gflags::GflagValue::U32(level_glog_num))?;
+    }
+    Ok(())
 }
 
 /// Create a default root logger for Facebook services
