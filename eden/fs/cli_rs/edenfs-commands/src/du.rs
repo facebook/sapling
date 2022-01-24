@@ -218,6 +218,12 @@ fn write_failed_to_check_files_message(file_paths: &HashSet<PathBuf>) {
     }
 }
 
+impl DiskUsageCmd {
+    fn should_clean(&self) -> bool {
+        self.clean || self.deep_clean
+    }
+}
+
 #[async_trait]
 impl crate::Subcommand for DiskUsageCmd {
     async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
@@ -245,6 +251,7 @@ impl crate::Subcommand for DiskUsageCmd {
         let mut backing_repos = HashSet::new();
         let mut backed_working_copy_repos = HashSet::new();
         let mut redirections = HashSet::new();
+        let mut fsck_dirs = Vec::new();
         for mount in &mounts {
             let checkout = find_checkout(&instance, mount)?;
 
@@ -277,12 +284,13 @@ impl crate::Subcommand for DiskUsageCmd {
                 ignored_usage_counts_for_mount(&checkout, &client).await?;
 
             // GET SUMMARY INFO for fsck
-            let fsck_dir = checkout.data_dir().join("fsck");
+            let fsck_dir = checkout.fsck_dir();
             if fsck_dir.exists() {
                 let (usage_count, failed_file_checks) =
                     usage_for_dir(&fsck_dir, None).from_err()?;
                 aggregated_usage_counts.fsck += usage_count;
                 mount_failed_file_checks.extend(failed_file_checks);
+                fsck_dirs.push(fsck_dir);
             }
 
             for (_, redir) in get_effective_redirections(&checkout)? {
@@ -342,6 +350,19 @@ impl crate::Subcommand for DiskUsageCmd {
                 serde_json::to_string(&aggregated_usage_counts).from_err()?
             );
         } else {
+            if self.should_clean() {
+                println!(
+                    "{}",
+                    "WARNING: --clean/--deep-clean options don't remove ignored files. \
+                    Materialized files will be de-materialized once committed. \
+                    Use `hg status -i` to see Ignored files, `hg clean --all` \
+                    to remove them but be careful: it will remove untracked files as well! \
+                    It is best to use `eden redirect` or the `mkscratch` utility to relocate \
+                    files outside the repo rather than to ignore and clean them up."
+                        .yellow()
+                );
+            }
+
             // PRINT MOUNTS
             write_title("Mounts");
             for path in &mounts {
@@ -349,23 +370,71 @@ impl crate::Subcommand for DiskUsageCmd {
             }
             write_failed_to_check_files_message(&mount_failed_file_checks);
 
+            // CLEAN MOUNTS
+            if self.should_clean() {
+                if self.deep_clean {
+                    println!();
+                    for dir in &fsck_dirs {
+                        println!(
+                            "{}",
+                            format!("Reclaiming space from directory: {}", dir.display()).blue()
+                        );
+
+                        // TODO: actually do the deep clean
+                    }
+                } else if self.clean {
+                    let fsck_dir_strings: Vec<String> = fsck_dirs
+                        .iter()
+                        .map(|path| path.display().to_string())
+                        .collect();
+
+                    if !fsck_dir_strings.is_empty() {
+                        println!(
+                            "\n{}",
+                            format!(
+                                "A filesytem check recovered data and stored it at:
+- {}
+
+If you have recovered all that you need from these locations, you can remove that directory to reclaim the disk space.
+
+To automatically remove this directory, run `eden du --deep-clean`.",
+                                fsck_dir_strings.join("\n- ")
+                            )
+                            .blue()
+                        )
+                    }
+                }
+            }
+
             // PRINT REDIRECTIONS
             write_title("Redirections");
             if redirections.is_empty() {
                 println!("No redirections");
             } else {
-                for redir in redirections {
+                for redir in &redirections {
                     println!("{}", redir.display());
-                }
-
-                if !self.clean && !self.deep_clean {
-                    println!(
-                        "\nTo reclaim space from buck-out directories, run `buck clean` from the \
-                        parent of the buck-out directory."
-                    )
                 }
             }
             write_failed_to_check_files_message(&redirection_failed_file_checks);
+
+            // CLEAN REDIRECTIONS
+            if !redirections.is_empty() {
+                if self.should_clean() {
+                    for redir in redirections {
+                        println!(
+                            "\n{}",
+                            format!("Reclaiming space from redirection: {}", redir.display())
+                                .blue()
+                        )
+                        // TODO: actually clean this
+                    }
+                } else {
+                    println!(
+                        "\nTo reclaim space from buck-out directories, run `buck clean` from the \
+                        parent of the buck-out directory."
+                    );
+                }
+            }
 
             // PRINT BACKING REPOS
             if !backing_repos.is_empty() || !backing_failed_file_checks.is_empty() {
@@ -409,7 +478,13 @@ impl crate::Subcommand for DiskUsageCmd {
 
             // PRINT SHARED SPACE
             write_title("Shared space");
-            if !self.clean && !self.deep_clean {
+            if self.should_clean() {
+                println!(
+                    "{}",
+                    "Cleaning shared space used by the storage engine...".blue()
+                );
+                // TODO: Actually do the clean
+            } else {
                 println!("Run `eden gc` to reduce the space used by the storage engine.");
             }
             write_failed_to_check_files_message(&shared_failed_file_checks);
@@ -423,7 +498,7 @@ impl crate::Subcommand for DiskUsageCmd {
                 let mut row = Row::new();
                 row.add_cell(Cell::new("Materialized files:").set_alignment(CellAlignment::Right));
                 row.add_cell(Cell::new(format_size(aggregated_usage_counts.materialized)));
-                if self.clean || self.deep_clean {
+                if self.should_clean() {
                     row.add_cell(
                         Cell::new("Not cleaned. Please see WARNING above").fg(Color::Yellow),
                     );
@@ -434,7 +509,7 @@ impl crate::Subcommand for DiskUsageCmd {
                 let mut row = Row::new();
                 row.add_cell(Cell::new("Redirections:").set_alignment(CellAlignment::Right));
                 row.add_cell(Cell::new(format_size(aggregated_usage_counts.redirection)));
-                if self.clean || self.deep_clean {
+                if self.should_clean() {
                     row.add_cell(Cell::new("Cleaned").fg(Color::Green));
                 }
                 table.add_row(row);
@@ -443,7 +518,7 @@ impl crate::Subcommand for DiskUsageCmd {
                 let mut row = Row::new();
                 row.add_cell(Cell::new("Ignored files:").set_alignment(CellAlignment::Right));
                 row.add_cell(Cell::new(format_size(aggregated_usage_counts.ignored)));
-                if self.clean || self.deep_clean {
+                if self.should_clean() {
                     row.add_cell(
                         Cell::new("Not cleaned. Please see WARNING above").fg(Color::Yellow),
                     );
@@ -454,7 +529,7 @@ impl crate::Subcommand for DiskUsageCmd {
                 let mut row = Row::new();
                 row.add_cell(Cell::new("Backing repos:").set_alignment(CellAlignment::Right));
                 row.add_cell(Cell::new(format_size(aggregated_usage_counts.backing)));
-                if self.clean || self.deep_clean {
+                if self.should_clean() {
                     row.add_cell(
                         Cell::new("Not cleaned. Please see CAUTION above").fg(Color::Yellow),
                     );
@@ -465,7 +540,7 @@ impl crate::Subcommand for DiskUsageCmd {
                 let mut row = Row::new();
                 row.add_cell(Cell::new("Shared space:").set_alignment(CellAlignment::Right));
                 row.add_cell(Cell::new(format_size(aggregated_usage_counts.shared)));
-                if self.clean || self.deep_clean {
+                if self.should_clean() {
                     row.add_cell(Cell::new("Cleaned").fg(Color::Green));
                 }
                 table.add_row(row);
@@ -492,7 +567,7 @@ impl crate::Subcommand for DiskUsageCmd {
 
             println!("{}", table.to_string());
 
-            if !self.clean && !self.deep_clean {
+            if !self.should_clean() {
                 println!(
                     "{}",
                     "\nTo perform automated cleanup, run `eden du --clean`".blue()

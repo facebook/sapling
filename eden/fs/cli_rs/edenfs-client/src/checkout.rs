@@ -206,6 +206,10 @@ impl EdenFsCheckout {
         self.data_dir.clone()
     }
 
+    pub fn fsck_dir(&self) -> PathBuf {
+        self.data_dir.join("fsck")
+    }
+
     fn encode_hex(bytes: &[u8]) -> String {
         let mut s = String::with_capacity(bytes.len() * 2);
         for &b in bytes {
