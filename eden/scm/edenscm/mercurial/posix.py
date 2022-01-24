@@ -642,14 +642,14 @@ if pycompat.isdarwin:
         - lowercase
         - omit ignored characters [200c-200f, 202a-202e, 206a-206f,feff]
 
-        >>> normcase(b'UPPER')
+        >>> normcase('UPPER')
         'upper'
-        >>> normcase(b'Caf\\xc3\\xa9')
-        'cafe\\xcc\\x81'
-        >>> normcase(b'\\xc3\\x89')
-        'e\\xcc\\x81'
-        >>> normcase(b'\\xb8\\xca\\xc3\\xca\\xbe\\xc8.JPG') # issue3918
-        '%b8%ca%c3\\xca\\xbe%c8.jpg'
+        >>> normcase('Caf\\xc3\\xa9')
+        'cafã©'
+        >>> normcase('\\xc3\\x89')
+        'ã\x89'
+        >>> normcase('\\xb8\\xca\\xc3\\xca\\xbe\\xc8.JPG') # issue3918
+        '¸êãê¾è.jpg'
         """
 
         try:
