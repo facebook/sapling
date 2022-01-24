@@ -7,7 +7,9 @@
 
 //! edenfsctl du
 
+use anyhow::anyhow;
 use async_trait::async_trait;
+use comfy_table::{Cell, CellAlignment, Color, Row, Table};
 use serde::Serialize;
 use std::collections::HashSet;
 use std::fs;
@@ -16,7 +18,6 @@ use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 use subprocess::{Exec, Redirection};
 
-use anyhow::anyhow;
 use edenfs_client::checkout::{find_checkout, EdenFsCheckout};
 use edenfs_client::redirect::get_effective_redirections;
 use edenfs_client::{EdenFsClient, EdenFsInstance};
@@ -69,6 +70,20 @@ impl AggregatedUsageCounts {
             fsck: 0,
             legacy: 0,
         }
+    }
+}
+
+fn format_size(size: u64) -> String {
+    if size > 1000000000 {
+        format!("{:.1} GB", size as f64 / 1000000000.0)
+    } else if size > 1000000 {
+        format!("{:.1} MB", size as f64 / 1000000.0)
+    } else if size > 1000 {
+        format!("{:.1} KB", size as f64 / 1000.0)
+    } else if size > 0 {
+        format!("{} B", size)
+    } else {
+        "0".to_string()
     }
 }
 
@@ -351,6 +366,87 @@ impl crate::Subcommand for DiskUsageCmd {
             write_title("Shared space");
             if !self.clean && !self.deep_clean {
                 println!("Run `eden gc` to reduce the space used by the storage engine.");
+            }
+
+            write_title("Summary");
+            let mut table = Table::new();
+            table.load_preset(comfy_table::presets::NOTHING);
+
+            if aggregated_usage_counts.materialized > 0 {
+                let mut row = Row::new();
+                row.add_cell(Cell::new("Materialized files:").set_alignment(CellAlignment::Right));
+                row.add_cell(Cell::new(format_size(aggregated_usage_counts.materialized)));
+                if self.clean || self.deep_clean {
+                    row.add_cell(
+                        Cell::new("Not cleaned. Please see WARNING above").fg(Color::Yellow),
+                    );
+                }
+                table.add_row(row);
+            }
+            if aggregated_usage_counts.redirection > 0 {
+                let mut row = Row::new();
+                row.add_cell(Cell::new("Redirections:").set_alignment(CellAlignment::Right));
+                row.add_cell(Cell::new(format_size(aggregated_usage_counts.redirection)));
+                if self.clean || self.deep_clean {
+                    row.add_cell(Cell::new("Cleaned").fg(Color::Green));
+                }
+                table.add_row(row);
+            }
+            if aggregated_usage_counts.ignored > 0 {
+                let mut row = Row::new();
+                row.add_cell(Cell::new("Ignored files:").set_alignment(CellAlignment::Right));
+                row.add_cell(Cell::new(format_size(aggregated_usage_counts.ignored)));
+                if self.clean || self.deep_clean {
+                    row.add_cell(
+                        Cell::new("Not cleaned. Please see WARNING above").fg(Color::Yellow),
+                    );
+                }
+                table.add_row(row);
+            }
+            if aggregated_usage_counts.backing > 0 {
+                let mut row = Row::new();
+                row.add_cell(Cell::new("Backing repos:").set_alignment(CellAlignment::Right));
+                row.add_cell(Cell::new(format_size(aggregated_usage_counts.backing)));
+                if self.clean || self.deep_clean {
+                    row.add_cell(
+                        Cell::new("Not cleaned. Please see CAUTION above").fg(Color::Yellow),
+                    );
+                }
+                table.add_row(row);
+            }
+            if aggregated_usage_counts.shared > 0 {
+                let mut row = Row::new();
+                row.add_cell(Cell::new("Shared space:").set_alignment(CellAlignment::Right));
+                row.add_cell(Cell::new(format_size(aggregated_usage_counts.shared)));
+                if self.clean || self.deep_clean {
+                    row.add_cell(Cell::new("Cleaned").fg(Color::Green));
+                }
+                table.add_row(row);
+            }
+            if aggregated_usage_counts.fsck > 0 {
+                let mut row = Row::new();
+                row.add_cell(
+                    Cell::new("Filesystem Check recovered files:")
+                        .set_alignment(CellAlignment::Right),
+                );
+                row.add_cell(Cell::new(format_size(aggregated_usage_counts.fsck)));
+                if self.deep_clean {
+                    row.add_cell(Cell::new("Cleaned").fg(Color::Green));
+                } else if self.clean {
+                    row.add_cell(
+                        Cell::new(
+                            "Not cleaned. Directories listed above. Check and remove manually",
+                        )
+                        .fg(Color::Yellow),
+                    );
+                }
+                table.add_row(row);
+            }
+
+            println!("{}", table.to_string());
+
+            if !self.clean && !self.deep_clean {
+                println!("\nTo perform automated cleanup, run `eden du --clean`");
             }
         }
         Ok(0)
