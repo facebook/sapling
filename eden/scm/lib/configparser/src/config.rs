@@ -1128,7 +1128,7 @@ pub(crate) mod tests {
         );
         assert!(errors.is_empty());
 
-        assert_eq!(cfg.get("remotenames", "hoist"), Some(Text::from("origin")));
+        assert_eq!(cfg.get("remotenames", "hoist"), Some(Text::from("remote")));
     }
 
     #[test]
