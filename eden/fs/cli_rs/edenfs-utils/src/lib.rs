@@ -10,7 +10,8 @@
 use anyhow::anyhow;
 use edenfs_error::{EdenFsError, Result, ResultExt};
 use std::ffi::OsString;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use subprocess::{Exec, Redirection};
 
 pub mod humantime;
 pub mod metadata;
@@ -52,4 +53,58 @@ pub fn get_environment_suitable_for_subprocess() -> Vec<(OsString, OsString)> {
             }
         })
         .collect()
+}
+
+/// In the EdenFS buck integration tests we build buck from source
+/// in these tests we need to use the source built buck. The path for
+/// this will be in the SOURCE_BUILT_BUCK environment variable. Otherwise we use
+/// the default buck in our path.
+pub fn get_buck_command() -> String {
+    match std::env::vars().find(|(k, _)| k == "SOURCE_BUILT_BUCK") {
+        Some((_, v)) => v,
+        None => "buck".to_string(),
+    }
+}
+
+/// Buck is sensitive to many environment variables, so we need to set them up
+/// properly before calling into buck
+pub fn get_env_with_buck_version(path: &Path) -> Result<Vec<(OsString, OsString)>> {
+    let mut env = get_environment_suitable_for_subprocess();
+    // If we are going to use locally built buck we don't need to set a buck
+    // version. The locally build buck will only use the locally built
+    // version
+    if env
+        .iter()
+        .find(|&(k, _)| k == "SOURCE_BUILT_BUCK")
+        .is_none()
+    {
+        // Using BUCKVERSION=last here to avoid triggering a download of a new
+        // version of buck just to kill off buck.  This is specific to Facebook's
+        // deployment of buck, and has no impact on the behavior of the opensource
+        // buck executable.
+        let buck_version = if !cfg!(windows) {
+            Ok("last".to_string())
+        } else {
+            // On Windows, "last" doesn't work, fallback to reading the .buck-java11 file.
+            let output = Exec::cmd(get_buck_command())
+                .arg("--version-fast")
+                .stdout(Redirection::Pipe)
+                .stderr(Redirection::Pipe)
+                .cwd(path)
+                .capture()
+                .from_err()?;
+
+            if output.success() {
+                Ok(output.stdout_str().trim().to_string())
+            } else {
+                Err(EdenFsError::Other(anyhow!(
+                    "Failed to execute command to get buck version, stderr: {}, exit status: {:?}",
+                    output.stderr_str().trim(),
+                    output.exit_status,
+                )))
+            }
+        }?;
+        env.push((OsString::from("BUCKVERSION"), OsString::from(buck_version)));
+    }
+    Ok(env)
 }

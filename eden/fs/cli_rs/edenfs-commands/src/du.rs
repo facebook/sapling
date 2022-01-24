@@ -24,7 +24,10 @@ use edenfs_client::redirect::get_effective_redirections;
 use edenfs_client::{EdenFsClient, EdenFsInstance};
 use edenfs_error::{EdenFsError, Result, ResultExt};
 use edenfs_utils::metadata::MetadataExt;
-use edenfs_utils::{bytes_from_path, get_environment_suitable_for_subprocess, path_from_bytes};
+use edenfs_utils::{
+    bytes_from_path, get_buck_command, get_env_with_buck_version,
+    get_environment_suitable_for_subprocess, path_from_bytes,
+};
 
 use crate::ExitCode;
 
@@ -376,11 +379,16 @@ impl crate::Subcommand for DiskUsageCmd {
                     println!();
                     for dir in &fsck_dirs {
                         println!(
-                            "{}",
+                            "\n{}",
                             format!("Reclaiming space from directory: {}", dir.display()).blue()
                         );
-
-                        // TODO: actually do the deep clean
+                        match fs::remove_dir_all(&dir) {
+                            Ok(_) => println!("{}", "Space reclaimed. Directory removed.".blue()),
+                            Err(e) => println!(
+                                "{}",
+                                format!("Failed to remove {} : {:?}", dir.display(), e).yellow()
+                            ),
+                        };
                     }
                 } else if self.clean {
                     let fsck_dir_strings: Vec<String> = fsck_dirs
@@ -425,8 +433,33 @@ To automatically remove this directory, run `eden du --deep-clean`.",
                             "\n{}",
                             format!("Reclaiming space from redirection: {}", redir.display())
                                 .blue()
-                        )
-                        // TODO: actually clean this
+                        );
+                        if let Some(basename) = redir.parent() {
+                            let output = Exec::cmd(get_buck_command())
+                                .arg("clean")
+                                .stderr(Redirection::Pipe)
+                                .cwd(basename)
+                                .env_clear()
+                                .env_extend(&get_env_with_buck_version(basename)?)
+                                .capture()
+                                .from_err()?;
+
+                            if output.success() {
+                                println!("{}", "Space reclaimed".blue());
+                            } else {
+                                return Err(EdenFsError::Other(anyhow!(
+                                    "Failed to execute buck clean from {}, stderr: {}, exit status: {:?}",
+                                    basename.display(),
+                                    output.stderr_str(),
+                                    output.exit_status,
+                                )));
+                            }
+                        } else {
+                            return Err(EdenFsError::Other(anyhow!(
+                                "Found invalid redirection: {}",
+                                redir.display()
+                            )));
+                        };
                     }
                 } else {
                     println!(
@@ -483,7 +516,22 @@ To automatically remove this directory, run `eden du --deep-clean`.",
                     "{}",
                     "Cleaning shared space used by the storage engine...".blue()
                 );
-                // TODO: Actually do the clean
+                let output = Exec::cmd("eden")
+                    .arg("gc")
+                    .stdout(Redirection::Pipe)
+                    .stderr(Redirection::Pipe)
+                    .capture()
+                    .from_err()?;
+
+                if output.success() {
+                    println!("{}", "Finished cleaning shared space.".blue())
+                } else {
+                    return Err(EdenFsError::Other(anyhow!(
+                        "Failed to execute `eden gc`, stderr: {}, exit status: {:?}",
+                        output.stderr_str(),
+                        output.exit_status,
+                    )));
+                }
             } else {
                 println!("Run `eden gc` to reduce the space used by the storage engine.");
             }
