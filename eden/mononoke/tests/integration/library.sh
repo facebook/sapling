@@ -284,23 +284,6 @@ function init_repo_lock_sqlite3_db {
     "insert into repo_lock (repo, state, reason) values(CAST('repo' AS BLOB), 2, null)";
 }
 
-function create_mutable_counters_sqlite3_db {
-  cat >> "$TESTTMP"/mutable_counters.sql <<SQL
-  CREATE TABLE IF NOT EXISTS mutable_counters (
-    repo_id INT UNSIGNED NOT NULL,
-    name VARCHAR(512) NOT NULL,
-    value BIGINT NOT NULL,
-    PRIMARY KEY (repo_id, name)
-  );
-SQL
-  sqlite3 "$TESTTMP/monsql/sqlite_dbs" < "$TESTTMP"/mutable_counters.sql
-}
-
-function init_mutable_counters_sqlite3_db {
-  sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
-  "insert into mutable_counters (repo_id, name, value) values(0, 'latest-replayed-request', 0)";
-}
-
 function create_books_sqlite3_db {
   cat >> "$TESTTMP"/bookmarks.sql <<SQL
   CREATE TABLE IF NOT EXISTS bookmarks_update_log (
@@ -364,13 +347,6 @@ function mononoke_admin_source_target {
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }
 
-function mononoke_admin_sourcerepo {
-  GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
-    "${COMMON_ARGS[@]}" \
-    --source-repo-id $REPOID \
-    --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
-
-}
 function write_stub_log_entry {
   GLOG_minloglevel=5 "$WRITE_STUB_LOG_ENTRY" \
     "${COMMON_ARGS[@]}" \
@@ -507,46 +483,6 @@ function setup_common_config {
     setup_mononoke_config "$@"
     setup_common_hg_configs
     setup_configerator_configs
-}
-
-function create_pushrebaserecording_sqlite3_db {
-  cat >> "$TESTTMP"/pushrebaserecording.sql <<SQL
-  CREATE TABLE IF NOT EXISTS pushrebaserecording (
-     id bigint(20) NOT NULL,
-     repo_id int(10) NOT NULL,
-     ontorev binary(40) NOT NULL,
-     onto varchar(512) NOT NULL,
-     onto_rebased_rev binary(40),
-     conflicts longtext,
-     pushrebase_errmsg varchar(1024) DEFAULT NULL,
-     upload_errmsg varchar(1024) DEFAULT NULL,
-     bundlehandle varchar(1024) DEFAULT NULL,
-     timestamps longtext NOT NULL,
-     recorded_manifest_hashes longtext NOT NULL,
-     real_manifest_hashes longtext NOT NULL,
-     duration_ms int(10) DEFAULT NULL,
-     replacements_revs varchar(1024) DEFAULT NULL,
-     ordered_added_revs varchar(1024) DEFAULT NULL,
-    PRIMARY KEY (id)
-  );
-SQL
-  sqlite3 "$TESTTMP"/pushrebaserecording < "$TESTTMP"/pushrebaserecording.sql
-}
-
-function init_pushrebaserecording_sqlite3_db {
-  sqlite3 "$TESTTMP/pushrebaserecording" \
-  "insert into pushrebaserecording \
-  (id, repo_id, bundlehandle, ontorev, onto, timestamps, recorded_manifest_hashes, real_manifest_hashes)  \
-  values(1, 0, 'handle', 'add0c792bfce89610d277fd5b1e32f5287994d1d', 'master_bookmark', '', '', '')";
-}
-
-function init_bookmark_log_sqlite3_db {
-  sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
-  "insert into bookmarks_update_log \
-  (repo_id, name, from_changeset_id, to_changeset_id, reason, timestamp) \
-  values(0, 'master_bookmark', NULL, X'04C1EA537B01FFF207445E043E310807F9059572DD3087A0FCE458DEC005E4BD', 'pushrebase', 0)";
-
-  sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from bookmarks_update_log";
 }
 
 function get_bonsai_svnrev_mapping {
@@ -1378,12 +1314,6 @@ function lfs_server {
   return 1
 }
 
-function extract_json_error {
-  input=$(< /dev/stdin)
-  echo "$input" | head -1 | jq -r '.message'
-  echo "$input" | tail -n +2
-}
-
 # Run an hg binary configured with the settings required to
 # talk to Mononoke or use the new hg direct Mononoke connection
 # if this is setup and available.
@@ -1401,15 +1331,6 @@ function hgedenapi {
 
 function hgmn_local {
   hg --config ui.ssh="${TEST_FIXTURES}/nossh.sh" "$@"
-}
-
-function hgmn_show {
-  echo "LOG $*"
-  hgmn log --template 'node:\t{node}\np1node:\t{p1node}\np2node:\t{p2node}\nauthor:\t{author}\ndate:\t{date}\ndesc:\t{desc}\n\n{diff()}' -r "$@"
-  hgmn update "$@"
-  echo
-  echo "CONTENT $*"
-  find . -type f -not -path "./.hg/*" -print -exec cat {} \;
 }
 
 function hginit_treemanifest() {
@@ -1668,13 +1589,6 @@ function mkcommit() {
    hg ci -m "$1"
 }
 
-function call_with_certs() {
-  REPLAY_CA_PEM="$TEST_CERTDIR/root-ca.crt" \
-  THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/localhost.crt" \
-  THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/localhost.key" \
-  GLOG_minloglevel=5 "$@"
-}
-
 function enable_replay_verification_hook {
 
 cat >> "$TESTTMP"/replayverification.py <<EOF
@@ -1736,37 +1650,6 @@ function get_bonsai_bookmark() {
   bookmark="$2"
   mononoke_admin bookmarks get -c bonsai "$bookmark" 2>/dev/null | cut -d' ' -f2
   export REPOID="$repoid_backup"
-}
-
-function create_replaybookmarks_table() {
-  if [[ -n "$DB_SHARD_NAME" ]]; then
-    # We don't need to do anything: the MySQL setup creates this for us.
-    true
-  else
-    # We don't actually create any DB here, replaybookmarks will create it for it
-    # when it opens a SQLite DB in this directory.
-    mkdir "$TESTTMP/replaybookmarksqueue"
-  fi
-}
-
-function insert_replaybookmarks_entry() {
-  local repo bookmark
-  repo="$1"
-  bookmark="$2"
-  node="$3"
-
-  if [[ -n "$DB_SHARD_NAME" ]]; then
-    # See above for why we have to redirect this output to /dev/null
-    db -w "$DB_SHARD_NAME" 2>/dev/null <<EOF
-      INSERT INTO replaybookmarksqueue (reponame, bookmark, node, bookmark_hash)
-      VALUES ('$repo', '$bookmark', '$node', '$bookmark');
-EOF
-  else
-    sqlite3 "$TESTTMP/replaybookmarksqueue/replaybookmarksqueue" <<EOF
-      INSERT INTO replaybookmarksqueue (reponame, bookmark, node, bookmark_hash)
-      VALUES (CAST('$repo' AS BLOB), '$bookmark', '$node', '$bookmark');
-EOF
-fi
 }
 
 function add_synced_commit_mapping_entry() {
