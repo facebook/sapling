@@ -9,13 +9,11 @@ mod cache;
 mod mem;
 mod shared_traits;
 mod sql;
-mod version;
 
 pub use self::cache::{CacheHandlers, CachedIdMap};
 pub use self::mem::{ConcurrentMemIdMap, MemIdMap};
 pub use self::shared_traits::{cs_id_from_vertex_name, vertex_name_from_cs_id, IdMapWrapper};
 pub use self::sql::SqlIdMap;
-pub use self::version::SqlIdMapVersionStore;
 
 use std::collections::HashMap;
 use std::sync::Arc;

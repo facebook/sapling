@@ -15,11 +15,6 @@ CREATE TABLE IF NOT EXISTS segmented_changelog_idmap (
   UNIQUE (repo_id, version, cs_id)
 );
 
-CREATE TABLE IF NOT EXISTS segmented_changelog_idmap_version (
-  repo_id INTEGER PRIMARY KEY,
-  version INTEGER NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS segmented_changelog_version (
   repo_id INTEGER PRIMARY KEY,
   iddag_version VARBINARY(32) NOT NULL,

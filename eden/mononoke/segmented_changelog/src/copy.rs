@@ -14,8 +14,8 @@ use mononoke_types::{ChangesetId, RepositoryId};
 use sql_ext::replication::ReplicaLagMonitor;
 
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::{IdMap, SqlIdMap, SqlIdMapVersionStore};
-use crate::types::{IdMapVersion, SegmentedChangelogVersion};
+use crate::idmap::{IdMap, SqlIdMap};
+use crate::types::SegmentedChangelogVersion;
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::{InProcessIdDag, SegmentedChangelogSqlConnections};
 
@@ -27,18 +27,8 @@ pub async fn copy_segmented_changelog(
     replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
     heads: Vec<ChangesetId>,
 ) -> Result<()> {
-    let idmap_version_store = SqlIdMapVersionStore::new(connections.0.clone(), repo_id);
     let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore);
     let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
-
-    let new_idmap_version = {
-        let v = idmap_version_store
-            .get(&ctx)
-            .await
-            .context("error fetching idmap version from store")?
-            .context("no current IdMap version")?;
-        IdMapVersion(v.0 + 1)
-    };
     let sc_version = sc_version_store
         .get(&ctx)
         .await
@@ -74,6 +64,7 @@ pub async fn copy_segmented_changelog(
         .max()
         .with_context(|| format!("repo {}: no valid heads in {:?}", repo_id, heads))?;
 
+    let new_idmap_version = sc_version.idmap_version.bump();
     let _new_idmap = idmap.copy(dag_limit, new_idmap_version).await?;
 
     // Build an IdDag - we can use the old IdDag's shape to speed things up,

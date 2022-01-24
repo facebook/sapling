@@ -33,7 +33,7 @@ use phases::PhasesArc;
 use crate::dag::ops::DagAddHeads;
 use crate::dag::DagAlgorithm;
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::{cs_id_from_vertex_name, CacheHandlers, IdMapFactory, SqlIdMapVersionStore};
+use crate::idmap::{cs_id_from_vertex_name, CacheHandlers, IdMapFactory};
 use crate::owned::OwnedSegmentedChangelog;
 use crate::parents::FetchParents;
 use crate::types::{IdMapVersion, SegmentedChangelogVersion};
@@ -67,7 +67,6 @@ pub struct SegmentedChangelogTailer {
     sc_version_store: SegmentedChangelogVersionStore,
     iddag_save_store: IdDagSaveStore,
     idmap_factory: IdMapFactory,
-    idmap_version_store: SqlIdMapVersionStore,
 }
 
 impl SegmentedChangelogTailer {
@@ -83,7 +82,6 @@ impl SegmentedChangelogTailer {
         caching: Option<(FacebookInit, cachelib::VolatileLruCachePool)>,
     ) -> Self {
         let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
-        let idmap_version_store = SqlIdMapVersionStore::new(connections.0.clone(), repo_id);
         let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore);
         let mut idmap_factory = IdMapFactory::new(connections.0, replica_lag_monitor, repo_id);
         if let Some((fb, pool)) = caching {
@@ -99,7 +97,6 @@ impl SegmentedChangelogTailer {
             sc_version_store,
             iddag_save_store,
             idmap_factory,
-            idmap_version_store,
         }
     }
 
@@ -383,12 +380,6 @@ impl SegmentedChangelogTailer {
                 "repo {}: successful incremental update to segmented changelog", self.repo_id,
             );
         }
-
-        // Update IdMapVersion
-        self.idmap_version_store
-            .set(&ctx, idmap_version)
-            .await
-            .context("updating idmap version")?;
 
         let owned = OwnedSegmentedChangelog::new(iddag, idmap);
         Ok(owned)

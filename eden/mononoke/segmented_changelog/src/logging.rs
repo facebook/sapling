@@ -10,23 +10,9 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use context::CoreContext;
 use mononoke_types::RepositoryId;
 
-use crate::types::{IdDagVersion, IdMapVersion, SegmentedChangelogVersion};
+use crate::types::{IdDagVersion, SegmentedChangelogVersion};
 
 const SCUBA_TABLE: &str = "segmented_changelog_version";
-
-pub fn log_new_idmap_version(
-    ctx: &CoreContext,
-    repo_id: RepositoryId,
-    idmap_version: IdMapVersion,
-) {
-    if let Some(mut sample_builder) = new_sample_builder(ctx) {
-        sample_builder
-            .add("type", "idmap")
-            .add("repo_id", repo_id.id())
-            .add("idmap_version", idmap_version.0)
-            .log(); // note that logging may fail
-    }
-}
 
 pub fn log_new_iddag_version(
     ctx: &CoreContext,
