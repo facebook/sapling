@@ -46,7 +46,7 @@
 
 # Make sure we get a normal download URL
   $ curl -s --data-binary @batch.json "$LFS_URI/objects/batch" | jq ".objects[0].actions.download.href"
-  "http://localhost:*/repo1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" (glob)
+  "http://$LOCALIP:*/repo1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" (glob)
 
 # Update the config to enable consistent routing
   $ sed -i 's/"enable_consistent_routing": false/"enable_consistent_routing": true/g' "$LIVE_CONFIG"
@@ -56,7 +56,7 @@
 
 # Make sure we get a normal download URL
   $ curl -s --data-binary @batch.json "$LFS_URI/objects/batch" | jq ".objects[0].actions.download.href"
-  "http://localhost:*/repo1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?routing=ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746" (glob)
+  "http://$LOCALIP:*/repo1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d?routing=ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746" (glob)
 
 # Make sure we can read it back
   $ hg --config extensions.lfs= debuglfsreceive ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048 "$LFS_URI" | sha256sum

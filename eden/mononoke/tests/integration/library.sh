@@ -17,8 +17,11 @@ JSON_CLIENT_ID="${FB_JSON_CLIENT_ID:-[\"X509_SUBJECT_NAME:CN=localhost,O=Mononok
 
 if [[ -n "$DB_SHARD_NAME" ]]; then
   MONONOKE_DEFAULT_START_TIMEOUT=60
+  MONONOKE_LFS_DEFAULT_START_TIMEOUT=60
 else
   MONONOKE_DEFAULT_START_TIMEOUT=15
+  # LFS was doing 200 iterations of curl with 0.1 sleep between
+  MONONOKE_LFS_DEFAULT_START_TIMEOUT=20
 fi
 
 REPOID=0
@@ -1286,6 +1289,17 @@ function lfs_server {
   proto="http"
   poll="curl"
 
+  # Used to separate log files etc when multiple lfs servers started in a test
+  instance_count_file="$TESTTMP/lfs_instance_count.txt"
+
+  # lfs_server is started from subshells in the .t tests
+  # so use a file rather than env var to keep count
+  if [[ ! -r "$instance_count_file" ]]; then
+    echo 0 > "$instance_count_file"
+  fi
+
+  lfs_instance=$(($(cat "$instance_count_file") + 1))
+  echo "$lfs_instance" > "$instance_count_file"
   opts=(
     "${COMMON_ARGS[@]}"
     --mononoke-config-path "$TESTTMP/mononoke-config"
@@ -1339,6 +1353,9 @@ function lfs_server {
 
   uri="${proto}://localhost:${port}"
   echo "$uri"
+  local start timeout
+  start=$(date +%s)
+  timeout="${MONONOKE_LFS_START_TIMEOUT:-"$MONONOKE_LFS_DEFAULT_START_TIMEOUT"}"
 
   GLOG_minloglevel=5 "$LFS_SERVER" \
     "${opts[@]}" "$uri" "${args[@]}" >> "$log" 2>&1 &
@@ -1346,8 +1363,9 @@ function lfs_server {
   lfs_server_pid="$!"
   echo "$lfs_server_pid" >> "$DAEMON_PIDS"
 
-  for _ in $(seq 1 200); do
-    if "$poll" "${uri}/health_check" >/dev/null 2>&1; then
+  while [[ $(($(date +%s) - start)) -lt $timeout ]]; do
+    if [[ -n "$uri" ]] && "$poll" "${uri}/health_check" >/dev/null 2>&1; then
+      cp "$log" "$log.saved"
       truncate -s 0 "$log"
       return 0
     fi
@@ -1355,7 +1373,7 @@ function lfs_server {
     sleep 0.1
   done
 
-  echo "lfs_server did not start:" >&2
+  echo "lfs_server $lfs_instance did not start in $timeout seconds" >&2
   cat "$log" >&2
   return 1
 }

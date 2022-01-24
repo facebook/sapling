@@ -13,8 +13,9 @@
 # Start a "server" that never responds as the upstream
   $ upstream_port="$(get_free_socket)"
   $ upstream="http://${LOCALIP}:${upstream_port}/"
-  $ ncat --sh-exec "sleep 1" --keep-open --listen "$LOCALIP" "$upstream_port" &
+  $ ncat --exec "/bin/sleep 1" --keep-open --listen "$LOCALIP" "$upstream_port" &
   $ nc_pid="$!"
+  $ echo "$nc_pid" >> "$DAEMON_PIDS"
 
 # Start a LFS server
   $ scuba_proxy="$TESTTMP/scuba.json"
@@ -57,6 +58,8 @@
   "internal"
   null
 
+  $ cat "$log_proxy" >> "$log_proxy.saved"
+  $ cat "$scuba_proxy" >> "$scuba_proxy.saved"
   $ truncate -s 0 "$log_proxy"
   $ truncate -s 0 "$scuba_proxy"
 
@@ -74,6 +77,8 @@
   $ jq -S .normal.batch_order < "$scuba_proxy"
   "both"
 
+  $ cat "$log_proxy" >> "$log_proxy.saved"
+  $ cat "$scuba_proxy" >> "$scuba_proxy.saved"
   $ truncate -s 0 "$log_proxy"
   $ truncate -s 0 "$scuba_proxy"
 
