@@ -219,7 +219,7 @@ Nested submodules can share submodules with same URLs
   mod/1 mod/p mod/p/mod/1 mod/p/mod/2
 
   $ cd .hg/store/gitmodules
-  $ find | grep gitmodules
+  $ find . | grep gitmodules
   [1]
 
 Rebase submodule change
