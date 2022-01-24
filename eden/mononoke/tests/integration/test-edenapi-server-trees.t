@@ -47,12 +47,13 @@ Create and send tree request.
   > }
   > EOF
 
-  $ hgedenapi debugapi -e trees -f keys -f attrs
-  [{"key": {"node": bin("c8743b14e0789cc546125213c18a18d813862db5"),
-            "path": ""},
-    "data": b"copy.txt\017b8d4e3bafd4ec4812ad7c930aace9bf07ab033\ntest.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
-    "parents": bin("15024c4dc4a27b572d623db342ae6a08d7f7adec")},
-   {"key": {"node": bin("15024c4dc4a27b572d623db342ae6a08d7f7adec"),
-            "path": ""},
-    "data": b"test.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
-    "parents": None}]
+  $ hgedenapi debugapi -e trees -f keys -f attrs > out
+  $ wc -l out
+  8 out
+  $ cat <(head -n4 out | tr -d "\n") <(echo "") > out_two_lines
+  $ cat <(tail -n4 out | tr -d "\n") <(echo "") >> out_two_lines
+  $ wc -l out_two_lines
+  2 out_two_lines
+  $ sort out_two_lines
+   {"key": {"node": bin("c8743b14e0789cc546125213c18a18d813862db5"),          "path": ""},  "data": b"copy.txt\017b8d4e3bafd4ec4812ad7c930aace9bf07ab033\ntest.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",  "parents": bin("15024c4dc4a27b572d623db342ae6a08d7f7adec")}]
+  [{"key": {"node": bin("15024c4dc4a27b572d623db342ae6a08d7f7adec"),          "path": ""},  "data": b"test.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",  "parents": None},

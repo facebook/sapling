@@ -5,7 +5,6 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ export NO_MONONOKE_DIRECT_PEER=1
 
 setup configuration
   $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
@@ -113,7 +112,7 @@ Do infinitepush (aka commit cloud) push
   > branchpattern=re:scratch/.+
   > EOF
   $ hgmn pull -r 47da8b81097c
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests
@@ -248,7 +247,7 @@ Do infinitepush (aka commit cloud) push, to a bookmark
 
   $ cd ../repo-pull
   $ hgmn pull -B "scratch/123"
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests
@@ -273,12 +272,7 @@ Pushbackup also works
   $ echo aa > aa && hg addremove && hg ci -q -m newrepo
   adding aa
   $ hgmn cloud backup --debug
-  running * (glob)
   sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: 1
   sending clienttelemetry command
   sending knownnodes command
   reusing connection from pool
@@ -323,7 +317,7 @@ Pushbackup to mononoke peer with compression enabled
 
   $ cd ../repo-pull
   $ hgmn pull -r 2cfeca6399fd
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests
@@ -360,7 +354,7 @@ Pushbackup that does nothing, as only bookmarks have changed
 
 Finally, try to push existing commit to a public bookmark
   $ hgmn push -r . --to master_bookmark
-  pushing rev 2cfeca6399fd to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev 2cfeca6399fd to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
 
@@ -378,7 +372,7 @@ Finally, try to push existing commit to a public bookmark
 Check phases on another side (for pull command and pull -r)
   $ cd ../repo-pull
   $ hgmn pull -r 47da8b81097c
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   no changes found
   adding changesets
   adding manifests
@@ -395,7 +389,7 @@ Check phases on another side (for pull command and pull -r)
   
 
   $ hgmn pull
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   no changes found
   adding changesets
@@ -422,7 +416,7 @@ Check phases on another side (for pull command and pull -r)
   $ hg ci -m "feature release"
 
   $ hgmn push -r . --to "test_release_1.0.0"  --create # push this release (creating new remote bookmark)
-  pushing rev 500658c138a4 to destination ssh://user@dummy/repo bookmark test_release_1.0.0
+  pushing rev 500658c138a4 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark test_release_1.0.0
   searching for changes
   exporting bookmark test_release_1.0.0
   $ echo new > file2
@@ -451,7 +445,7 @@ Check phases on another side (for pull command and pull -r)
 
   $ cd ../repo-pull
   $ hgmn pull -r eca836c7c651 # draft revision based on different public bookmark
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
   adding changesets
   adding manifests
@@ -472,7 +466,7 @@ Check phases on another side (for pull command and pull -r)
   
 
   $ hgmn pull -r test_release_1.0.0
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   no changes found
   adding changesets
   adding manifests
@@ -504,7 +498,7 @@ Test phases with pushrebase
   $ hg addremove -q
   $ hg ci -m "new feature on top of master"
   $ hgmn push -r . --to master_bookmark # push-rebase
-  pushing rev f9e4cd522499 to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev f9e4cd522499 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -629,7 +623,7 @@ More sophisticated test for phases
   $ cd ../repo-pull
 
   $ hgmn pull -r b  # test ambiguous prefix
-  pulling from ssh://user@dummy/repo
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   abort: ambiguous identifier
   suggestions are:
   

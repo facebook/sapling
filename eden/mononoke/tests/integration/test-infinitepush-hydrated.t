@@ -5,7 +5,6 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ export NO_MONONOKE_DIRECT_PEER=1
 
 setup configuration
   $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
@@ -119,12 +118,7 @@ check unhydrated infinitepush pulls
 -- trees and files on the subsequent `update`
   $ hgmn pull -r c5564d074f73 --debug
   pulling from * (glob)
-  running * (glob)
   sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: * (glob)
   sending clienttelemetry command
   preparing listkeys for "bookmarks"
   sending listkeys command
@@ -153,12 +147,7 @@ check unhydrated infinitepush pulls
 -- note the presence of peer connection, the `gettreepack` and `getpackv1` wireproto commands
 -- indicative of actually fetching commit contents
   $ hgmn up -r c5564d074f73 --debug
-  running * (glob)
   sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: * (glob)
   sending clienttelemetry command
   sending gettreepack command
   bundle2-input-bundle: 1 params no-transaction
@@ -197,13 +186,8 @@ check hydrated infinitepush pulls
 -- note the presence of the `b2x:treegroup2` part and the "2 changes to 1 files" wording,
 -- indicative of the fact that we return a "hydrated" commit
   $ hgmn pull -r c5564d074f73 --debug
-  pulling from ssh://user@dummy/repo
-  running * (glob)
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: * (glob)
   sending clienttelemetry command
   preparing listkeys for "bookmarks"
   sending listkeys command
@@ -276,12 +260,7 @@ check unhydrated infinitepush pulls if special config option is passed
 -- trees and files on the subsequent `update`
   $ hgmn pull -r c5564d074f73 --debug --config infinitepush.wantsunhydratedcommits=True
   pulling from * (glob)
-  running * (glob)
   sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: * (glob)
   sending clienttelemetry command
   preparing listkeys for "bookmarks"
   sending listkeys command
@@ -310,12 +289,7 @@ check unhydrated infinitepush pulls if special config option is passed
 -- note the presence of peer connection, the `gettreepack` and `getpackv1` wireproto commands
 -- indicative of actually fetching commit contents
   $ hgmn up -r c5564d074f73 --debug
-  running * (glob)
   sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: * (glob)
-  remote: * (glob)
   sending clienttelemetry command
   sending gettreepack command
   bundle2-input-bundle: 1 params no-transaction
