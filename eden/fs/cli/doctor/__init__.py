@@ -227,7 +227,13 @@ class EdenDoctorChecker:
                 self.instance,
                 fs_util=self.fs_util,
             )
-            check_facebook(self.tracker)
+            check_facebook(
+                self.tracker,
+                check_fuse=any(
+                    checkout.get_checkout().get_config().mount_protocol == "fuse"
+                    for checkout in checkouts.values()
+                ),
+            )
 
         watchman_info = check_watchman.pre_check()
 
