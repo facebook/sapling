@@ -1015,11 +1015,10 @@ def _filesindirs(repo, manifest, dirs):
     inside the directories listed in dirs, and which directory they are found
     in.
     """
-    for f in manifest:
-        for p in util.finddirs(f):
-            if p in dirs:
-                yield f, p
-                break
+    for dir in dirs:
+        dirmatch = matchmod.match(repo.root, "", include=[dir + "/**"])
+        for f in manifest.matches(dirmatch):
+            yield f, dir
 
 
 def checkpathconflicts(repo, wctx, mctx, actions):
