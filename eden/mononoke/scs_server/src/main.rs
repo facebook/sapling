@@ -10,6 +10,8 @@
 #![deny(unused)]
 #![type_length_limit = "2097152"]
 
+use std::fs::File;
+use std::io::Write;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -51,6 +53,7 @@ mod specifiers;
 
 const ARG_PORT: &str = "port";
 const ARG_HOST: &str = "host";
+const ARG_BOUND_ADDR_FILE: &str = "bound-address-file";
 
 const SERVICE_NAME: &str = "mononoke_scs_server";
 
@@ -82,6 +85,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .default_value("8367")
                 .value_name("PORT")
                 .help("Thrift port"),
+        )
+        .arg(
+            Arg::with_name(ARG_BOUND_ADDR_FILE)
+                .long(ARG_BOUND_ADDR_FILE)
+                .required(false)
+                .takes_value(true)
+                .help("path for file in which to write the bound tcp address in rust std::net::SocketAddr format"),
         );
 
     let matches = app.get_matches(fb)?;
@@ -90,6 +100,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let runtime = matches.runtime();
     let port = value_t!(matches.value_of(ARG_PORT), u16)?;
     let host = matches.value_of(ARG_HOST).unwrap_or("::");
+    let bound_addr_path = matches.value_of(ARG_BOUND_ADDR_FILE).map(|v| v.to_string());
     let config_path = matches
         .value_of("mononoke-config-path")
         .expect("must set config path");
@@ -177,10 +188,20 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     service_framework.add_module(ProfileModule)?;
 
     // Start listening.
-    info!(logger, "Listening on {}:{}", &host, port);
     service_framework
         .serve_background()
         .expect("failed to start thrift service");
+
+    let bound_addr = format!("{}:{}", &host, service_framework.get_address()?.get_port()?);
+    info!(logger, "Listening on {}", bound_addr);
+
+    // Write out the bound address if requested, this is helpful in tests when using automatic binding with :0
+    if let Some(bound_addr_path) = bound_addr_path {
+        let mut writer = File::create(bound_addr_path)?;
+        writer.write_all(bound_addr.as_bytes())?;
+        writer.write_all(b"\n")?;
+    }
+
     serve_forever(
         runtime,
         monitoring_forever.map(Result::<(), Error>::Ok),

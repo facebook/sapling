@@ -18,10 +18,13 @@ JSON_CLIENT_ID="${FB_JSON_CLIENT_ID:-[\"X509_SUBJECT_NAME:CN=localhost,O=Mononok
 if [[ -n "$DB_SHARD_NAME" ]]; then
   MONONOKE_DEFAULT_START_TIMEOUT=60
   MONONOKE_LFS_DEFAULT_START_TIMEOUT=60
+  MONONOKE_SCS_DEFAULT_START_TIMEOUT=60
 else
-  MONONOKE_DEFAULT_START_TIMEOUT=15
+  MONONOKE_DEFAULT_START_TIMEOUT=20
   # LFS was doing 200 iterations of curl with 0.1 sleep between
   MONONOKE_LFS_DEFAULT_START_TIMEOUT=20
+  # First scsc call takes a while as scs server is doing derivation
+  MONONOKE_SCS_DEFAULT_START_TIMEOUT=60
 fi
 
 REPOID=0
@@ -1180,37 +1183,52 @@ function s_client {
 
 function start_and_wait_for_scs_server {
   export SCS_PORT
-  SCS_PORT=$(get_free_socket)
+  local SCS_SERVER_ADDR_FILE
+  SCS_SERVER_ADDR_FILE="$TESTTMP/scs_server_addr.txt"
+  rm -f "$SCS_SERVER_ADDR_FILE"
   GLOG_minloglevel=5 "$SCS_SERVER" "$@" \
-    -p "$SCS_PORT" \
+    --host "$LOCALIP" \
+    --port 0 \
     --log-level DEBUG \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --bound-address-file "$SCS_SERVER_ADDR_FILE" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/scs_server.out" 2>&1 &
   export SCS_SERVER_PID=$!
   echo "$SCS_SERVER_PID" >> "$DAEMON_PIDS"
 
   # Wait until a SCS server is available
-  # MONONOKE_START_TIMEOUT is set in seconds
-  # Number of attempts is timeout multiplied by 10, since we
-  # sleep every 0.1 seconds.
-  local attempts timeout
-  timeout="${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}"
-  attempts="$((timeout * 10))"
+  local start timeout
+  start=$(date +%s)
+  timeout="${MONONOKE_SCS_START_TIMEOUT:-"$MONONOKE_SCS_DEFAULT_START_TIMEOUT"}"
 
-  for _ in $(seq 1 $attempts); do
-    scsc repos >/dev/null 2>&1 && break
+  local found_port
+  found_port=""
+  while [[ $(($(date +%s) - start)) -lt $timeout ]]; do
+    if [[ -z "$found_port" && -r "$SCS_SERVER_ADDR_FILE" ]]; then
+      found_port=$(sed 's/^.*:\([^:]*\)$/\1/' "$SCS_SERVER_ADDR_FILE")
+      SCS_PORT="$found_port"
+    fi
+    if [[ -n "$found_port" ]] && scsc repos >/dev/null 2>&1; then
+      return 0
+    fi
     sleep 0.1
   done
 
-  if ! scsc repos >/dev/null 2>&1 ; then
-    echo "SCS server did not start" >&2
-    cat "$TESTTMP/scs_server.out"
-    exit 1
+  date
+  echo "SCS server did not start in $timeout seconds, took $(($(date +%s) - start))" >&2
+  if [[ -n "$found_port" ]]; then
+    scsc repos >/dev/null
+    echo "exited with $?"
+  else
+    echo "Port was never written to $SCS_SERVER_ADDR_FILE" 1>&2
   fi
+  echo ""
+  echo "Log of SCS server"
+  cat "$TESTTMP/scs_server.out"
+  exit 1
 }
 
 function megarepo_async_worker {
-  export SCS_PORT
   GLOG_minloglevel=5 "$ASYNC_REQUESTS_WORKER" "$@" \
     --log-level INFO \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
@@ -1221,7 +1239,7 @@ function megarepo_async_worker {
 }
 
 function scsc {
-  GLOG_minloglevel=5 "$SCS_CLIENT" --host "localhost:$SCS_PORT" "$@"
+  GLOG_minloglevel=5 "$SCS_CLIENT" --host "$LOCALIP:$SCS_PORT" "$@"
 }
 
 function lfs_server {
