@@ -68,8 +68,7 @@ sh % "touch buildstuff/output builddocs.txt"
 sh % "hg status" == r"""
     ? .gitignore
     ? Makefile
+    ? builddocs.txt
     ? exp/.gitignore
     ? exp/i.tmp
     ? x.pyc"""
-# ERROR: builddocs.txt should show up as unknown.  It doesn't because of
-# gitignorematcher.matchfn assuming it is a directory.

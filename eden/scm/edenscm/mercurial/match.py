@@ -743,9 +743,7 @@ class gitignorematcher(basematcher):
         self._matcher = pathmatcher.gitignorematcher(root, gitignorepaths)
 
     def matchfn(self, f):
-        # XXX: is_dir is set to True here for performance.
-        # It should be set to whether "f" is actually a directory or not.
-        return self._matcher.match_relative(f, True)
+        return self._matcher.match_relative(f, False)
 
     def explain(self, f):
         return self._matcher.explain(f, True)

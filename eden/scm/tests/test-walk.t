@@ -479,6 +479,9 @@ Test patterns:
   $ hg debugwalk ignored/file
   matcher: <patternmatcher patterns='(?:ignored/file(?:/|$))'>
   f  ignored/file  ignored/file  exact
+  $ echo 'ignored/' > .gitignore
+  $ hg debugwalk ignored
+  matcher: <patternmatcher patterns='(?:ignored(?:/|$))'>
 
 Test listfile and listfile0
 
