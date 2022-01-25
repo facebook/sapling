@@ -9,9 +9,6 @@ mod app;
 mod cache;
 mod matches;
 
-#[cfg(fbcode_build)]
-pub mod facebook;
-
 pub use self::cache::CachelibSettings;
 
 use std::borrow::Borrow;

@@ -47,7 +47,7 @@ async-trait = "0.1.51"
 blobrepo_errors = { version = "0.1.0", path = "errors" }
 blobrepo_hg = { version = "0.1.0", path = "blobrepo_hg" }
 bytes = { version = "1.1", features = ["serde"] }
-cmdlib = { version = "0.1.0", path = "../cmdlib" }
+cmdlib_caching = { version = "0.1.0", path = "../cmdlib/caching" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

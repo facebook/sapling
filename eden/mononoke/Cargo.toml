@@ -219,6 +219,7 @@ members = [
   "changesets/changesets_impl",
   "changesets/if",
   "cmdlib",
+  "cmdlib/caching",
   "cmdlib/environment",
   "cmdlib/log",
   "cmdlib/mononoke_app",

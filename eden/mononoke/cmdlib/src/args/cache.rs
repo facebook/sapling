@@ -13,6 +13,8 @@ use std::time::Duration;
 
 use super::app::{bool_as_str, BOOL_VALUES};
 
+pub use cmdlib_caching::CachelibSettings;
+
 const CACHE_SIZE_GB: &str = "cache-size-gb";
 const USE_TUPPERWARE_SHRINKER: &str = "use-tupperware-shrinker";
 const MAX_PROCESS_SIZE: &str = "max-process-size";
@@ -269,7 +271,7 @@ pub fn parse_and_init_cachelib(
             }
             #[cfg(fbcode_build)]
             {
-                super::facebook::init_cachelib_from_settings(fb, settings).unwrap();
+                cmdlib_caching::facebook::init_cachelib_from_settings(fb, settings).unwrap();
             }
         }
         Caching::Disabled => {
@@ -278,53 +280,4 @@ pub fn parse_and_init_cachelib(
     };
 
     caching
-}
-
-#[derive(Clone)]
-pub struct CachelibSettings {
-    pub cache_size: usize,
-    pub max_process_size_gib: Option<u32>,
-    pub min_process_size_gib: Option<u32>,
-    pub buckets_power: Option<u32>,
-    pub use_tupperware_shrinker: bool,
-    pub presence_cache_size: Option<usize>,
-    pub changesets_cache_size: Option<usize>,
-    pub filenodes_cache_size: Option<usize>,
-    pub filenodes_history_cache_size: Option<usize>,
-    pub idmapping_cache_size: Option<usize>,
-    pub globalrev_cache_size: Option<usize>,
-    pub svnrev_cache_size: Option<usize>,
-    pub blob_cache_size: Option<usize>,
-    pub phases_cache_size: Option<usize>,
-    pub segmented_changelog_cache_size: Option<usize>,
-    pub expected_item_size_bytes: Option<usize>,
-    pub blobstore_cachelib_only: bool,
-    pub rebalancing_use_lru: bool,
-    pub rebalancing_interval: Duration,
-}
-
-impl Default for CachelibSettings {
-    fn default() -> Self {
-        Self {
-            cache_size: 20 * ONE_GIB,
-            max_process_size_gib: None,
-            min_process_size_gib: None,
-            buckets_power: None,
-            use_tupperware_shrinker: false,
-            presence_cache_size: None,
-            changesets_cache_size: None,
-            filenodes_cache_size: None,
-            filenodes_history_cache_size: None,
-            idmapping_cache_size: None,
-            globalrev_cache_size: None,
-            svnrev_cache_size: None,
-            blob_cache_size: None,
-            phases_cache_size: None,
-            segmented_changelog_cache_size: None,
-            expected_item_size_bytes: None,
-            blobstore_cachelib_only: false,
-            rebalancing_use_lru: false,
-            rebalancing_interval: Duration::from_secs(300),
-        }
-    }
 }
