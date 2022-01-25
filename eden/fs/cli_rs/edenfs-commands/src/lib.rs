@@ -86,7 +86,7 @@ pub enum TopLevelSubcommand {
     Debug(crate::debug::DebugCmd),
     // Top(crate::top::TopCmd),
     Minitop(crate::minitop::MinitopCmd),
-    // Du(crate::du::DiskUsageCmd),
+    Du(crate::du::DiskUsageCmd),
     List(crate::list::ListCmd),
 }
 
@@ -103,7 +103,7 @@ impl Subcommand for TopLevelSubcommand {
             Debug(cmd) => cmd,
             // Top(cmd) => cmd,
             Minitop(cmd) => cmd,
-            // Du(cmd) => cmd,
+            Du(cmd) => cmd,
             List(cmd) => cmd,
         };
         sc.run(instance).await
