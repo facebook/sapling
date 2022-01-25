@@ -24,6 +24,7 @@ else
   MONONOKE_LFS_DEFAULT_START_TIMEOUT=30
   # First scsc call takes a while as scs server is doing derivation
   MONONOKE_SCS_DEFAULT_START_TIMEOUT=60
+  MONONOKE_DDS_DEFAULT_START_TIMEOUT=60
 fi
 
 REPOID=0
@@ -396,45 +397,60 @@ function wait_for_json_record_count {
     sleep 0.1
   done
 
-  echo "File $file did not contain $count records" >&2
+  echo "File $file did not contain $count records, it had $(jq 'true' < "$file" | wc -l)" >&2
   jq -S . < "$file" >&2
   return 1
 }
 
-# Wait until a Mononoke server is available for this repo.
-function wait_for_mononoke {
-  local start timeout
+function wait_for_server {
+  local service_description port_env_var log_file timeout_secs bound_addr_file
+  service_description="$1"; shift
+  port_env_var="$1"; shift
+  log_file="$1"; shift
+  timeout_secs="$1"; shift
+  bound_addr_file="$1"; shift
+
+  local start
   start=$(date +%s)
-  timeout="${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}"
 
   local found_port
-  while [[ $(($(date +%s) - start)) -lt $timeout ]]; do
-    if [[ -z "$found_port" && -r "$MONONOKE_SERVER_ADDR_FILE" ]]; then
-      found_port=$(sed 's/^.*:\([^:]*\)$/\1/' "$MONONOKE_SERVER_ADDR_FILE")
+  while [[ $(($(date +%s) - start)) -lt "$timeout_secs" ]]; do
+    if [[ -z "$found_port" && -r "$bound_addr_file" ]]; then
+      found_port=$(sed 's/^.*:\([^:]*\)$/\1/' "$bound_addr_file")
+      eval "$port_env_var"="$found_port"
     fi
-
-    if [[ -n "$found_port" ]] && sslcurl -q "https://localhost:$found_port/health_check" > /dev/null 2>&1; then
-      export MONONOKE_SOCKET EDENAPI_URI
-      EDENAPI_URI="https://localhost:$found_port/edenapi"
-      MONONOKE_SOCKET="$found_port"
+    if [[ -n "$found_port" ]] && "$@" >/dev/null 2>&1 ; then
       return 0
     fi
     sleep 0.1
   done
 
-  echo "Mononoke did not start in $timeout seconds, took $(($(date +%s) - start))" >&2
+  echo "$service_description did not start in $timeout_secs seconds, took $(($(date +%s) - start))" >&2
   if [[ -n "$found_port" ]]; then
-    echo ""
-    echo "Results of curl invocation"
-    sslcurl -v "https://localhost:$found_port/health_check"
+    echo "Running check: $* >/dev/null"
+    "$@" >/dev/null
+    echo "exited with $?"
   else
-    echo "Port was never written to $MONONOKE_SERVER_ADDR_FILE" 1>&2
+    echo "Port was never written to $bound_addr_file" 1>&2
   fi
   echo ""
-  echo "Log of Mononoke server"
-  cat "$TESTTMP/mononoke.out"
-
+  echo "Log of $service_description"
+  cat "$log_file"
   exit 1
+}
+
+function mononoke_health {
+  sslcurl -q "https://localhost:$MONONOKE_SOCKET/health_check"
+}
+
+# Wait until a Mononoke server is available for this repo.
+function wait_for_mononoke {
+  export MONONOKE_SOCKET EDENAPI_URI
+  wait_for_server "Mononoke" MONONOKE_SOCKET "$TESTTMP/mononoke.out" \
+    "${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}" "$MONONOKE_SERVER_ADDR_FILE" \
+    mononoke_health
+
+  EDENAPI_URI="https://localhost:$MONONOKE_SOCKET/edenapi"
 }
 
 function flush_mononoke_bookmarks {
@@ -1196,35 +1212,9 @@ function start_and_wait_for_scs_server {
   export SCS_SERVER_PID=$!
   echo "$SCS_SERVER_PID" >> "$DAEMON_PIDS"
 
-  # Wait until a SCS server is available
-  local start timeout
-  start=$(date +%s)
-  timeout="${MONONOKE_SCS_START_TIMEOUT:-"$MONONOKE_SCS_DEFAULT_START_TIMEOUT"}"
-
-  local found_port
-  found_port=""
-  while [[ $(($(date +%s) - start)) -lt $timeout ]]; do
-    if [[ -z "$found_port" && -r "$SCS_SERVER_ADDR_FILE" ]]; then
-      found_port=$(sed 's/^.*:\([^:]*\)$/\1/' "$SCS_SERVER_ADDR_FILE")
-      SCS_PORT="$found_port"
-    fi
-    if [[ -n "$found_port" ]] && scsc repos >/dev/null 2>&1; then
-      return 0
-    fi
-    sleep 0.1
-  done
-
-  echo "SCS server did not start in $timeout seconds, took $(($(date +%s) - start))" >&2
-  if [[ -n "$found_port" ]]; then
-    scsc repos >/dev/null
-    echo "exited with $?"
-  else
-    echo "Port was never written to $SCS_SERVER_ADDR_FILE" 1>&2
-  fi
-  echo ""
-  echo "Log of SCS server"
-  cat "$TESTTMP/scs_server.out"
-  exit 1
+  wait_for_server "SCS server" SCS_PORT "$TESTTMP/scs_server.out" \
+    "${MONONOKE_SCS_START_TIMEOUT:-"$MONONOKE_SCS_DEFAULT_START_TIMEOUT"}" "$SCS_SERVER_ADDR_FILE" \
+    scsc repos
 }
 
 function megarepo_async_worker {
@@ -1239,6 +1229,14 @@ function megarepo_async_worker {
 
 function scsc {
   GLOG_minloglevel=5 "$SCS_CLIENT" --host "$LOCALIP:$SCS_PORT" "$@"
+}
+
+function lfs_health {
+  local poll proto bound_addr_file
+  poll="$1"; shift
+  proto="$1";shift
+  bound_addr_file="$1"; shift
+  "$poll" "${proto}://$(cat "$bound_addr_file")/health_check"
 }
 
 function lfs_server {
@@ -1322,39 +1320,21 @@ function lfs_server {
     opts=("${opts[@]}" "--listen-host" "$LOCALIP")
   fi
 
-  local start timeout
-  start=$(date +%s)
-  timeout="${MONONOKE_LFS_START_TIMEOUT:-"$MONONOKE_LFS_DEFAULT_START_TIMEOUT"}"
-
   GLOG_minloglevel=5 "$LFS_SERVER" \
     "${opts[@]}" "${args[@]}" >> "$log" 2>&1 &
 
   lfs_server_pid="$!"
   echo "$lfs_server_pid" >> "$DAEMON_PIDS"
 
-  while [[ $(($(date +%s) - start)) -lt $timeout ]]; do
-    if [[ -z "$uri" && -r "$bound_addr_file" ]]; then
-      uri="${proto}://$(cat "$bound_addr_file")"
-      echo "$uri"
-    fi
+  wait_for_server "lfs_server" "LFS_PORT" "$log" \
+    "${MONONOKE_LFS_START_TIMEOUT:-"$MONONOKE_LFS_DEFAULT_START_TIMEOUT"}" "$bound_addr_file" \
+    lfs_health "$poll" "$proto" "$bound_addr_file"
 
-    if [[ -n "$uri" ]] && "$poll" "${uri}/health_check" >/dev/null 2>&1; then
-      cp "$log" "$log.saved"
-      truncate -s 0 "$log"
-      return 0
-    fi
+  uri="${proto}://$(cat "$bound_addr_file")"
+  echo "$uri"
 
-    sleep 0.1
-  done
-
-  echo "lfs_server $lfs_instance did not start in $timeout seconds, took $(($(date +%s) - start))" >&2
-  if [[ -z "$uri" ]]; then
-    echo "lfs_server uri was never found from $bound_addr_file" >&2
-  else
-    "$poll" "${uri}/health_check" >/dev/null
-  fi
-  cat "$log" >&2
-  return 1
+  cp "$log" "$log.saved"
+  truncate -s 0 "$log"
 }
 
 # Run an hg binary configured with the settings required to
@@ -2033,27 +2013,20 @@ function check_git_wc() {
 
 function derived_data_service() {
   export PORT_2DS
-  PORT_2DS="$(get_free_socket)"
+  local DDS_SERVER_ADDR_FILE
+  DDS_SERVER_ADDR_FILE="$TESTTMP/dds_server_addr.txt"
   GLOG_minloglevel=5 "$DERIVED_DATA_SERVICE" "$@" \
-    -p "$PORT_2DS" \
+    -p 0 \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    --bound-address-file "$DDS_SERVER_ADDR_FILE" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/derived_data_service.out" 2>&1 &
 
   pid=$!
   echo "$pid" >> "$DAEMON_PIDS"
 
-  # Wait for derived_data_service to start up
-  # MONONOKE_START_TIMEOUT is set in seconds
-  # Number of attempts is timeout multiplied by 10, since we
-  # sleep every 0.1 seconds.
-  local attempts timeout
-  timeout="${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}"
-  attempts="$((timeout * 10))"
-
-  for _ in $(seq 1 "$attempts"); do
-    derived_data_client get-status >/dev/null 2>&1 && break
-    sleep 0.1
-  done
+  wait_for_server "Derived data service" PORT_2DS "$TESTTMP/derived_data_service.out" \
+    "${MONONOKE_DDS_START_TIMEOUT:-"$MONONOKE_DDS_DEFAULT_START_TIMEOUT"}" "$DDS_SERVER_ADDR_FILE" \
+    derived_data_client get-status
 }
 
 function derived_data_client() {
