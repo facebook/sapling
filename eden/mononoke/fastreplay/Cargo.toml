@@ -39,7 +39,7 @@ serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_dep
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sshrelay = { version = "0.1.0", path = "../sshrelay" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 
 [patch.crates-io]
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }

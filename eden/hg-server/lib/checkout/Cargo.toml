@@ -11,7 +11,7 @@ manifest = { path = "../manifest", features = ["for-tests"] }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 pathmatcher = { path = "../pathmatcher" }
 revisionstore = { path = "../revisionstore" }
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tracing = "0.1.29"
 types = { path = "../types" }
 vfs = { path = "../vfs" }

@@ -36,7 +36,7 @@ session_id = { version = "0.1.0", path = "../server/session_id" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 slog-term = "2.8"
 sshrelay = { version = "0.1.0", path = "../sshrelay" }
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-openssl = "0.6"
 tokio-util = { version = "0.6", features = ["full"] }
 users = "0.11"

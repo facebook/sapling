@@ -46,7 +46,7 @@ sha2 = "0.8"
 storemodel = { path = "../storemodel" }
 tempfile = "3.2"
 thiserror = "1.0.29"
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 tracing = "0.1.29"
 types = { path = "../types" }

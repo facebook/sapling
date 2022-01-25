@@ -13,6 +13,6 @@ edenapi_types = { path = "../types" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 itertools = "0.10.3"
 minibytes = { path = "../../minibytes" }
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 types = { path = "../../types" }
 vfs = { path = "../../vfs" }

@@ -12,7 +12,7 @@ clidispatch = { path = "../clidispatch" }
 fbthrift_socket = { path = "../../../../common/rust/shed/fbthrift_ext/socket" }
 sha2 = "0.8"
 thrift-types = { path = "../thrift-types" }
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-uds-compat = { path = "../../../../common/rust/shed/tokio-uds-compat/tokio-uds-compat" }
 
 [dev-dependencies]

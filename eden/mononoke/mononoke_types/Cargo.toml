@@ -48,7 +48,7 @@ memblob = { version = "0.1.0", path = "../blobstore/memblob" }
 pretty_assertions = "0.6"
 quickcheck_async = "0.1.1"
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 
 [patch.crates-io]
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }

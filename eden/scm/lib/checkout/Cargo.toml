@@ -15,7 +15,7 @@ pathmatcher = { path = "../pathmatcher" }
 progress-model = { path = "../progress/model" }
 status = { path = "../status" }
 storemodel = { path = "../storemodel" }
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tracing = "0.1.29"
 treestate = { path = "../treestate" }
 types = { path = "../types" }

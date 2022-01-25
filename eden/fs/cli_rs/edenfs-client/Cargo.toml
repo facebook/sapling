@@ -20,7 +20,7 @@ serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_dep
 subprocess = "0.2.7"
 sysinfo = "=0.17.2"
 thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 toml = "=0.5.8"
 tracing = "0.1.29"

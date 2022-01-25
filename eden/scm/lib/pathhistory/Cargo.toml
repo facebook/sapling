@@ -17,4 +17,4 @@ types = { path = "../types" }
 async-trait = "0.1.51"
 dev-logger = { path = "../dev-logger" }
 manifest = { path = "../manifest" }
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }

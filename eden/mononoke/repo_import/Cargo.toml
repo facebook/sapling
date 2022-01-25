@@ -41,7 +41,7 @@ serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_dep
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../common/topo_sort" }
 
 [dev-dependencies]

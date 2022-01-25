@@ -24,7 +24,7 @@ rand = { version = "0.8", features = ["small_rng"] }
 requests_table = { version = "0.1.0", path = "../requests_table" }
 source_control = { version = "0.1.0", path = "../../scs/if" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

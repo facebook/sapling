@@ -20,7 +20,7 @@ permission_checker = { version = "0.1.0", path = "../permission_checker" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 session_id = { version = "0.1.0", path = "../server/session_id" }
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.6", features = ["full"] }
 trust-dns-resolver = "0.20"
 zstd = "=0.8.0+zstd.1.4.9"

@@ -25,7 +25,7 @@ structopt = "0.3.23"
 subprocess = "0.2.7"
 termwiz = { version = "0.15", features = ["widgets"] }
 thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 toml = "=0.5.8"
 tracing = "0.1.29"
 util = { version = "0.1.0", path = "../../../scm/lib/util" }

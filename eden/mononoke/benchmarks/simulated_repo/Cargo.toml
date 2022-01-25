@@ -64,7 +64,7 @@ skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sqlphases = { version = "0.1.0", path = "../../phases/sqlphases" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 
 [patch.crates-io]
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }

@@ -12,7 +12,7 @@ clidispatch = { path = "../clidispatch" }
 libc = "0.2.98"
 sha2 = "0.8"
 thrift-types = { path = "../thrift-types" }
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 
 [target.'cfg(unix)'.dependencies]
 fbthrift_socket = { package = "fbthrift_socket_eden_oss", path = "../third-party/rust/fbthrift_socket" }
