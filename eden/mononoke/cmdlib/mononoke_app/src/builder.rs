@@ -17,13 +17,14 @@ use blobstore_factory::{
 };
 use cached_config::ConfigStore;
 use clap::{App, AppSettings, Args, FromArgMatches, IntoApp};
+use cmdlib_caching::{init_cachelib, CachelibArgs, CachelibSettings};
 use cmdlib_logging::{
     create_log_level, create_logger, create_observability_context, create_root_log_drain,
     create_scuba_sample_builder, create_warm_bookmark_cache_scuba_sample_builder, LoggingArgs,
     ScubaLoggingArgs,
 };
 use derived_data_remote::RemoteDerivationArgs;
-use environment::{Caching, MononokeEnvironment};
+use environment::MononokeEnvironment;
 use fbinit::FacebookInit;
 use megarepo_config::{MegarepoConfigsArgs, MononokeMegarepoConfigsOptions};
 use mononoke_args::config::ConfigArgs;
@@ -37,6 +38,7 @@ use crate::app::MononokeApp;
 
 pub struct MononokeAppBuilder {
     fb: FacebookInit,
+    cachelib_settings: CachelibSettings,
     readonly_storage: ReadOnlyStorage,
     default_scuba_dataset: Option<String>,
     defaults: HashMap<&'static str, String>,
@@ -52,6 +54,9 @@ pub struct EnvironmentArgs {
 
     #[clap(flatten, help_heading = "SCUBA LOGGING OPTIONS")]
     scuba_logging_args: ScubaLoggingArgs,
+
+    #[clap(flatten, help_heading = "CACHELIB OPTIONS")]
+    cachelib_args: CachelibArgs,
 
     #[clap(flatten, help_heading = "MYSQL OPTIONS")]
     mysql_args: MysqlArgs,
@@ -80,6 +85,7 @@ impl MononokeAppBuilder {
     pub fn new(fb: FacebookInit) -> Self {
         MononokeAppBuilder {
             fb,
+            cachelib_settings: CachelibSettings::default(),
             readonly_storage: ReadOnlyStorage(false),
             default_scuba_dataset: None,
             defaults: HashMap::new(),
@@ -93,6 +99,11 @@ impl MononokeAppBuilder {
 
     pub fn with_default_scuba_dataset(mut self, default: impl Into<String>) -> Self {
         self.default_scuba_dataset = Some(default.into());
+        self
+    }
+
+    pub fn with_default_cachelib_settings(mut self, cachelib_settings: CachelibSettings) -> Self {
+        self.cachelib_settings = cachelib_settings;
         self
     }
 
@@ -110,7 +121,10 @@ impl MononokeAppBuilder {
     where
         AppArgs: IntoApp,
     {
-        for defaults in [self.readonly_storage.arg_defaults()] {
+        for defaults in [
+            self.readonly_storage.arg_defaults(),
+            self.cachelib_settings.arg_defaults(),
+        ] {
             for (arg, default) in defaults {
                 self.defaults.insert(arg, default);
             }
@@ -154,6 +168,7 @@ impl MononokeAppBuilder {
             config_args,
             logging_args,
             scuba_logging_args,
+            cachelib_args,
             #[cfg(fbcode_build)]
             manifold_args,
             megarepo_configs_args,
@@ -197,8 +212,7 @@ impl MononokeAppBuilder {
             create_warm_bookmark_cache_scuba_sample_builder(self.fb, &scuba_logging_args)
                 .context("Failed to create warm bookmark cache scuba sample builder")?;
 
-        // TODO: create CacheArgs and plumb through CachelibSettings
-        let caching = init_cachelib();
+        let caching = init_cachelib(self.fb, &self.cachelib_settings, &cachelib_args);
 
         // TODO: create RuntimeArgs
         let runtime = create_runtime()?;
@@ -269,10 +283,6 @@ fn create_config_store(
         CONFIGERATOR_POLL_INTERVAL,
         CONFIGERATOR_REFRESH_TIMEOUT,
     )
-}
-
-fn init_cachelib() -> Caching {
-    Caching::Disabled
 }
 
 fn create_runtime() -> Result<Runtime> {
