@@ -80,6 +80,10 @@ function get_free_socket {
   "$GET_FREE_SOCKET"
 }
 
+function urlencode {
+  "$URLENCODE" "$@"
+}
+
 function mononoke_address {
   if [[ $LOCALIP == *":"* ]]; then
     # ipv6, surround in brackets
@@ -559,6 +563,8 @@ redaction_sets_location = "scm/mononoke/redaction/redaction_sets"
 [[whitelist_entry]]
 identity_type = "$ALLOWED_IDENTITY_TYPE"
 identity_data = "${OVERRIDE_ALLOWED_IDDATA:-$ALLOWED_IDENTITY_DATA}"
+
+${ADDITIONAL_MONONOKE_COMMON_CONFIG}
 CONFIG
 
   echo "# Start new config" > common/storage.toml
