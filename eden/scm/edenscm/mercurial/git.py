@@ -86,7 +86,7 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
 
     repo = hg.repository(ui, ui.expandpath(destpath), create=True).local()
     try:
-        ret = initgitbare(ui, url, repo.svfs.join("git"))
+        ret = initgitbare(ui, repo.svfs.join("git"))
         if ret != 0:
             raise error.Abort(_("git clone was not successful"))
         initgit(repo, "git", url)
@@ -151,10 +151,9 @@ def maybegiturl(url):
     return None
 
 
-def initgitbare(ui, giturl, destpath):
+def initgitbare(ui, destpath):
     """Create a git repo into local path `dest` as a git bare repo.
     This does not prepare working copy or `.hg`, or fetch git commits.
-    If giturl is empty, do not add a remote.
     """
     # not using 'git clone --bare' because it writes refs to refs/heads/,
     # not in desirable refs/remotes/origin/heads/.
