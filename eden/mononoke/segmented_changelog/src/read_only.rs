@@ -162,11 +162,6 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
             .idmap
             .find_many_dag_ids(ctx, all_cs_ids.clone())
             .await?;
-        for cs_id in &all_cs_ids {
-            if request_ids.contains_key(cs_id) {
-                bail!("ChangesetId {} not found", cs_id);
-            }
-        }
 
         let common_ids = common
             .iter()
