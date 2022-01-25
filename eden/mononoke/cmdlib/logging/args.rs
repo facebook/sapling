@@ -11,18 +11,22 @@ use clap::{ArgEnum, Args};
 #[derive(Args, Debug)]
 pub struct LoggingArgs {
     /// Print debug output
+    ///
+    /// Equivalent to --log-level=DEBUG.
     #[clap(long)]
     pub debug: bool,
 
-    /// Log level to use (does not work with --debug)
+    /// Log level to use
     #[clap(long, conflicts_with = "debug", possible_values = &slog::LOG_LEVEL_NAMES)]
     pub log_level: Option<String>,
 
-    /// Include only log messages with these slog::Record::tags()/log::Record::targets
+    /// Include only log messages with these slog::Record::tags() or
+    /// log::Record::targets
     #[clap(long, short = 'l')]
     pub log_include_tag: Vec<String>,
 
-    // Exclude log messages with these slog::Record::tags()/log::Record::targets
+    /// Exclude log messages with these slog::Record::tags() or
+    /// log::Record::targets
     #[clap(long, short = 'L')]
     pub log_exclude_tag: Vec<String>,
 
@@ -30,10 +34,13 @@ pub struct LoggingArgs {
     #[clap(long)]
     pub logview_category: Option<String>,
 
-    /// Logview level to filter. If logview category is not set then this is
-    /// ignored. Note that this level is applied AFTER --log-level/--debug was
-    /// applied, so it doesn't make sense to set this parameter to a lower level
-    /// than --log-level
+    /// Logview level to filter
+    ///
+    /// If logview-category is not set then this is ignored.
+    ///
+    /// Note that this level is applied AFTER --log-level/--debug was applied,
+    /// so it doesn't make sense to set this parameter to a lower level than
+    /// --log-level.
     #[clap(long, requires = "logview-category", possible_values = &slog::LOG_LEVEL_NAMES)]
     pub logview_additional_level_filter: Option<String>,
 
