@@ -204,7 +204,7 @@ def readconfig(repo):
 
 @dataclass
 class RefName:
-    """simple reference name handing for git
+    """simple reference name handling for git
 
     Common reference names examples:
     - refs/heads/foo           # branch "foo"
@@ -223,7 +223,7 @@ class RefName:
         components = ["refs"]
         if self.remote:
             components += ["remotes", self.remote]
-        elif not self.name.startswith("tags/"):
+        elif all(not self.name.startswith(p) for p in ("visibleheads/", "tags/")):
             components.append("heads")
         components.append(self.name)
         return "/".join(components)
@@ -232,8 +232,8 @@ class RefName:
         return RefName(name=self.name, remote=remote)
 
     @classmethod
-    def visiblehead(cls, node, remote=""):
-        return cls("visibleheads/%s" % hex(node), remote=remote)
+    def visiblehead(cls, node):
+        return cls("visibleheads/%s" % hex(node))
 
     @property
     def remotename(self):
@@ -276,7 +276,11 @@ def pull(repo, source, names=(), nodes=()):
         refspecs.append(refspec)
 
     for node in nodes:
-        refspec = "+%s:%s" % (hex(node), RefName.visiblehead(node, remote=remote))
+        # NOTE: node will be pulled as a draft visiblehead.
+        # Maybe this should be using public visibleheads once we support
+        # public visibleheads.
+        refspec = "+%s:%s" % (hex(node), RefName.visiblehead(node))
+        refspecs.append(refspec)
 
     ret = pullrefspecs(repo, url, refspecs)
 

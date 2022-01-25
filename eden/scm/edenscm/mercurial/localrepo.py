@@ -963,10 +963,23 @@ class localrepository(object):
         if git.isgitpeer(self):
             # git does not support "lookup", aka. prefix match
             if headnames:
-                raise errormod.Abort(
-                    _("pulling %s in git repo is not supported")
-                    % _(", ").join(headnames)
-                )
+                # some headnames are 40-byte hex that are just nodes.
+                nodes = []
+                unknownnames = []
+                for headname in headnames:
+                    if len(headname) == len(nullhex):
+                        try:
+                            nodes.append(bin(headname))
+                            continue
+                        except TypeError:
+                            pass
+                    unknownnames.append(headname)
+                if unknownnames:
+                    raise errormod.Abort(
+                        _("pulling %s in git repo is not supported")
+                        % _(", ").join(unknownnames)
+                    )
+                headnodes = list(headnodes) + nodes
             with self.ui.configoverride(configoverride):
                 git.pull(self, source, names=bookmarknames, nodes=headnodes)
             return
