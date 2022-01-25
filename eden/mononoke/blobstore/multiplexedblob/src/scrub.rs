@@ -18,6 +18,7 @@ use blobstore::{
 };
 use blobstore_sync_queue::BlobstoreSyncQueue;
 use chrono::Duration as ChronoDuration;
+use clap::ArgEnum;
 use context::CoreContext;
 use futures::stream::{FuturesUnordered, TryStreamExt};
 use metaconfig_types::{BlobstoreId, MultiplexId};
@@ -44,6 +45,7 @@ static HEAL_MAX_BACKLOG: Lazy<Duration> =
     Eq,
     PartialEq,
     Hash,
+    ArgEnum,
     EnumString,
     EnumVariantNames,
     IntoStaticStr
@@ -63,6 +65,7 @@ pub enum ScrubAction {
     Eq,
     PartialEq,
     Hash,
+    ArgEnum,
     EnumString,
     EnumVariantNames,
     IntoStaticStr

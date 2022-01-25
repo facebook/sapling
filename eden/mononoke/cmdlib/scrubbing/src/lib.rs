@@ -1,0 +1,112 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+use std::time::Duration;
+
+use anyhow::Result;
+use blobstore_factory::{ScrubAction, ScrubOptions, ScrubWriteMostly};
+use clap::Args;
+use environment::MononokeEnvironment;
+use mononoke_app::ArgExtension;
+
+#[derive(Args, Debug)]
+pub struct ScrubArgs {
+    /// Enable ScrubBlobstore with the given action
+    ///
+    /// Checks for keys missing from the stores.  In ReportOnly mode, this
+    /// only logs, otherwise it performs a copy to the missing stores.
+    #[clap(long, help_heading = "BLOBSTORE OPTIONS")]
+    pub blobstore_scrub_action: Option<ScrubAction>,
+
+    /// Number of seconds grace to give for key to arrive in multiple
+    /// blobstores or the healer queue when scrubbing
+    #[clap(
+        long,
+        help_heading = "BLOBSTORE OPTIONS",
+        requires = "blobstore-scrub-action"
+    )]
+    pub blobstore_scrub_grace: Option<u64>,
+
+    /// Number of seconds within which we consider it worth checking the
+    /// healer queue
+    #[clap(
+        long,
+        help_heading = "BLOBSTORE OPTIONS",
+        requires = "blobstore-scrub-action"
+    )]
+    pub blobstore_scrub_queue_peek_bound: Option<u64>,
+
+    /// Whether to allow missing values from write-mostly stores when
+    /// scrubbing
+    #[clap(
+        long,
+        help_heading = "BLOBSTORE OPTIONS",
+        requires = "blobstore-scrub-action"
+    )]
+    pub blobstore_scrub_write_mostly_missing: Option<ScrubWriteMostly>,
+}
+
+#[derive(Default, Debug)]
+pub struct ScrubArgExtension {
+    action: Option<ScrubAction>,
+    grace: Option<Duration>,
+    queue_peek_bound: Option<Duration>,
+    write_mostly_missing: Option<ScrubWriteMostly>,
+}
+
+impl ScrubArgExtension {
+    pub fn new() -> Self {
+        ScrubArgExtension::default()
+    }
+}
+
+impl ArgExtension for ScrubArgExtension {
+    type Args = ScrubArgs;
+
+    fn arg_defaults(&self) -> Vec<(&'static str, String)> {
+        let mut defaults = Vec::new();
+        if let Some(action) = self.action {
+            defaults.push((
+                "blobstore-scrub-action",
+                <&'static str>::from(action).to_string(),
+            ));
+        }
+        if let Some(grace) = self.grace {
+            defaults.push(("blobstore-scrub-grace", grace.as_secs().to_string()));
+        }
+        if let Some(queue_peek_bound) = self.queue_peek_bound {
+            defaults.push((
+                "blobstore-scrub-queue-peek-bound",
+                queue_peek_bound.as_secs().to_string(),
+            ));
+        }
+        if let Some(write_mostly_missing) = self.write_mostly_missing {
+            defaults.push((
+                "blobstore-scrub-write-mostly-missing",
+                <&'static str>::from(write_mostly_missing).to_string(),
+            ));
+        }
+        defaults
+    }
+
+    fn process_args(&self, args: &ScrubArgs, env: &mut MononokeEnvironment) -> Result<()> {
+        if let Some(scrub_action) = args.blobstore_scrub_action {
+            let scrub_options = ScrubOptions {
+                scrub_action,
+                scrub_grace: args.blobstore_scrub_grace.map(Duration::from_secs),
+                scrub_action_on_missing_write_mostly: args
+                    .blobstore_scrub_write_mostly_missing
+                    .unwrap_or(ScrubWriteMostly::Scrub),
+                queue_peek_bound: args
+                    .blobstore_scrub_queue_peek_bound
+                    .map(Duration::from_secs),
+            };
+            env.blobstore_options.set_scrub_options(scrub_options);
+        }
+        Ok(())
+    }
+}

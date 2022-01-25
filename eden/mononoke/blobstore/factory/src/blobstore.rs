@@ -83,6 +83,10 @@ impl BlobstoreOptions {
         }
     }
 
+    pub fn set_scrub_options(&mut self, scrub_options: ScrubOptions) {
+        self.scrub_options = Some(scrub_options);
+    }
+
     pub fn with_scrub_action(self, scrub_action: Option<ScrubAction>) -> Self {
         if let Some(scrub_action) = scrub_action {
             let mut scrub_options = self.scrub_options.unwrap_or_default();
