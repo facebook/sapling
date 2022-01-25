@@ -1,6 +1,7 @@
 #chg-compatible
 #require git no-windows
 
+  $ . $TESTDIR/git.sh
   $ setconfig diff.git=true ui.allowemptycommit=true
 
 Prepare a git repo:
