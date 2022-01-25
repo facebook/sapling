@@ -262,31 +262,41 @@ impl MononokeAppBuilder {
 
 fn create_config_store(
     fb: FacebookInit,
-    _config_args: &ConfigArgs,
+    config_args: &ConfigArgs,
     logger: Logger,
 ) -> Result<ConfigStore> {
     const CRYPTO_PROJECT: &str = "SCM";
     const CONFIGERATOR_POLL_INTERVAL: Duration = Duration::from_secs(1);
     const CONFIGERATOR_REFRESH_TIMEOUT: Duration = Duration::from_secs(1);
 
-    // TODO: use local_configerator_path from config args
-    // TODO: add crypto_path_regex to config args
-    let crypto_regex_paths = vec![
-        "scm/mononoke/tunables/.*",
-        "scm/mononoke/repos/.*",
-        "scm/mononoke/redaction/.*",
-    ];
-    let crypto_regex = crypto_regex_paths
-        .into_iter()
-        .map(|path| (path.to_string(), CRYPTO_PROJECT.to_string()))
-        .collect();
-    ConfigStore::regex_signed_configerator(
-        fb,
-        logger,
-        crypto_regex,
-        CONFIGERATOR_POLL_INTERVAL,
-        CONFIGERATOR_REFRESH_TIMEOUT,
-    )
+    if let Some(path) = &config_args.local_configerator_path {
+        Ok(ConfigStore::file(
+            logger,
+            path.clone(),
+            String::new(),
+            CONFIGERATOR_POLL_INTERVAL,
+        ))
+    } else {
+        let crypto_regex_paths = match &config_args.crypto_path_regex {
+            Some(paths) => paths.clone(),
+            None => vec![
+                "scm/mononoke/tunables/.*".to_string(),
+                "scm/mononoke/repos/.*".to_string(),
+                "scm/mononoke/redaction/.*".to_string(),
+            ],
+        };
+        let crypto_regex = crypto_regex_paths
+            .into_iter()
+            .map(|path| (path, CRYPTO_PROJECT.to_string()))
+            .collect();
+        ConfigStore::regex_signed_configerator(
+            fb,
+            logger,
+            crypto_regex,
+            CONFIGERATOR_POLL_INTERVAL,
+            CONFIGERATOR_REFRESH_TIMEOUT,
+        )
+    }
 }
 
 fn create_runtime(runtime_args: &RuntimeArgs) -> Result<Runtime> {

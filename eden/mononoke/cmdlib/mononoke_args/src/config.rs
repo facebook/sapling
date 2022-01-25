@@ -27,6 +27,11 @@ pub struct ConfigArgs {
     /// Local path to fetch configerator configs from
     #[clap(long)]
     pub local_configerator_path: Option<PathBuf>,
+
+    /// Regex for a Configerator path that must be covered by
+    /// Mononoke's crypto project
+    #[clap(long)]
+    pub crypto_path_regex: Option<Vec<String>>,
 }
 
 fn configerator_config_path(tier: &str) -> String {
