@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
@@ -36,8 +37,9 @@ use crate::app::MononokeApp;
 
 pub struct MononokeAppBuilder {
     fb: FacebookInit,
-    readonly_storage_default: ReadOnlyStorage,
+    readonly_storage: ReadOnlyStorage,
     default_scuba_dataset: Option<String>,
+    defaults: HashMap<&'static str, String>,
 }
 
 #[derive(Args, Debug)]
@@ -78,25 +80,42 @@ impl MononokeAppBuilder {
     pub fn new(fb: FacebookInit) -> Self {
         MononokeAppBuilder {
             fb,
-            readonly_storage_default: ReadOnlyStorage(false),
+            readonly_storage: ReadOnlyStorage(false),
             default_scuba_dataset: None,
+            defaults: HashMap::new(),
         }
     }
 
-    pub fn build<AppArgs>(self) -> Result<MononokeApp>
+    pub fn with_default_readonly_storage(mut self, readonly_storage: bool) -> Self {
+        self.readonly_storage = ReadOnlyStorage(readonly_storage);
+        self
+    }
+
+    pub fn with_default_scuba_dataset(mut self, default: impl Into<String>) -> Self {
+        self.default_scuba_dataset = Some(default.into());
+        self
+    }
+
+    pub fn build<AppArgs>(&mut self) -> Result<MononokeApp>
     where
         AppArgs: IntoApp,
     {
         self.build_with_subcommands::<AppArgs>(Vec::new())
     }
 
-    pub fn build_with_subcommands<'help, AppArgs>(
-        self,
-        subcommands: Vec<App<'help>>,
+    pub fn build_with_subcommands<'sub, AppArgs>(
+        &'sub mut self,
+        subcommands: Vec<App<'sub>>,
     ) -> Result<MononokeApp>
     where
         AppArgs: IntoApp,
     {
+        for defaults in [self.readonly_storage.arg_defaults()] {
+            for (arg, default) in defaults {
+                self.defaults.insert(arg, default);
+            }
+        }
+
         let mut app = AppArgs::into_app();
 
         // Save app-generated about so we can restore it.
@@ -115,6 +134,10 @@ impl MononokeAppBuilder {
                 .setting(AppSettings::SubcommandRequiredElseHelp);
         }
 
+        for (name, default) in self.defaults.iter() {
+            app = app.mut_arg(*name, |arg| arg.default_value(default.as_str()));
+        }
+
         let args = app.get_matches();
         let env_args = EnvironmentArgs::from_arg_matches(&args)?;
         let env = self.build_environment(env_args)?;
@@ -123,11 +146,6 @@ impl MononokeAppBuilder {
         // TODO: maybe_enable_mcrouter
 
         MononokeApp::new(self.fb, args, env)
-    }
-
-    pub fn with_default_scuba_dataset(mut self, default: impl Into<String>) -> Self {
-        self.default_scuba_dataset = Some(default.into());
-        self
     }
 
     fn build_environment(&self, env_args: EnvironmentArgs) -> Result<MononokeEnvironment> {
@@ -196,11 +214,7 @@ impl MononokeAppBuilder {
         )
         .context("Failed to parse blobstore options")?;
 
-        let readonly_storage = ReadOnlyStorage(
-            readonly_storage_args
-                .with_readonly_storage
-                .unwrap_or(self.readonly_storage_default.0),
-        );
+        let readonly_storage = ReadOnlyStorage::from_args(&readonly_storage_args);
 
         let rendezvous_options = rendezvous_args.into();
 

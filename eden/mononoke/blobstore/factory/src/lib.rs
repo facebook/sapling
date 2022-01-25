@@ -39,13 +39,27 @@ pub use crate::sql::{make_metadata_sql_factory, MetadataSqlFactory, SqlTierInfo}
 #[derive(Copy, Clone, PartialEq)]
 pub struct ReadOnlyStorage(pub bool);
 
+impl ReadOnlyStorage {
+    pub fn arg_defaults(&self) -> Vec<(&'static str, String)> {
+        vec![("with-readonly-storage", self.0.to_string())]
+    }
+
+    pub fn from_args(args: &ReadOnlyStorageArgs) -> Self {
+        ReadOnlyStorage(args.with_readonly_storage)
+    }
+}
+
 /// Command line arguments for controlling read-only storage
 #[derive(Args, Debug)]
 pub struct ReadOnlyStorageArgs {
-    /// Error on any attempts to write to storage if set to true,
-    /// allow writes to storaga if set to false (overrides app default)
-    // This is Option<bool> as we distinguish between option being
-    // not present vs being set to false.
-    #[clap(long, value_name = "BOOL")]
-    pub with_readonly_storage: Option<bool>,
+    /// Error on any attempts to write to storage if set to true
+    // For compatibility with existing usage, allows usage as
+    // `--with-readonly-storage=true`.
+    #[clap(
+        long,
+        value_name = "BOOL",
+        parse(try_from_str),
+        default_missing_value = "true"
+    )]
+    pub with_readonly_storage: bool,
 }
