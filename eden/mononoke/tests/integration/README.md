@@ -5,13 +5,18 @@ which is orchestrated using a wrapper to make it more friendly to TestPilot and
 provide some added functionality, such as wiring up dependencies and / or
 setting up an ephemeral MySQL shard.
 
+Integration tests are grouped into small targets so that a minimal set of
+dependencies are built for each test.
 
 ## TL;DR: Running one test
+
+First, find the target responsible for the test you want to run by checking in
+the TARGETS file.
 
 Use:
 
 ```sh
-buck run //eden/mononoke/tests/integration/facebook:integration_runner -- TEST
+buck run //eden/mononoke/tests/integration/facebook:some_target -- TEST
 ```
 
 But! Keep reading: there are faster ways to run the tests if you're going to be
@@ -26,19 +31,22 @@ This allows you to skip most build steps, and rebuild only what you need to
 re-run your test (e.g. if you're iterating on Mononoke server, then you won't
 need to rebuild blobimport more than once).
 
-To do this, you should start by building everything once:
+To do this, you should start by building everything once for your integration
+test target:
 
+e.g.
 ```sh
-buck build //eden/mononoke/tests/integration
+buck build //eden/mononoke/tests/integration:server
 ```
 
 Then, run the tests by executing the integration runner directly. The
 integration runner relies on a manifest to find all the binaries it needs to run
-(the ones you built earlier), so you need to point it there:
+(the ones you built earlier), so you need to point it there. Note that each
+test rule has its own manifest. Here's an example for the `server` rule:
 
 ```
 ~/fbcode/buck-out/dev/gen/eden/mononoke/tests/integration/integration_runner_real.par \
-  ~/fbcode/buck-out/gen/eden/mononoke/tests/integration/facebook/manifest/manifest.json \
+  ~/fbcode/buck-out/gen/eden/mononoke/tests/integration/facebook/server-manifest/server-manifest.json \
   test1.t test2.t test3.t
 ```
 
@@ -59,6 +67,8 @@ changes to your `.t` files.
 Add your new test in this directory (or under `facebook/`) if it's not relevant
 to open-source.
 
+Add the test to an existing test target, or add a new one if required.
+
 If your test needs assets to work, then you'll need to:
 
 - Put the asset somewhere under this directory.
@@ -73,18 +83,17 @@ If your test needs assets to work, then you'll need to:
 
 ## Exposing a new binary
 
-Add it to `MANIFEST_DEPS` in the `TARGETS` file in this directory. The key is an
-environment variable that will be set to the path to this binary when the tests
-execute (if you need to customize the environment variable a bit, you can do so
-in `generate_manifest.py`).
+Add it to `MONONOKE_TARGETS_TO_ENV` variable in the `fb_manifest_deps.bzl` file
+in the `facebook/` directory. The key is the buck target for the dependency and
+the value is an environment variable that will be set to the path to this
+binary when the tests execute (if you need to customize the environment
+variable a bit, you can do so in `facebook/generate_manifest.py`).
 
 
 # How it works
 
 To avoid full rebuilds whenever you make a change, the test runner takes a few
-shortcuts to avoid relying on the Buck dependency graph (that is because Buck
-doesn't see each individual test's dependencies: it only knows that all the
-tests depend on everything).
+shortcuts to avoid relying on the Buck dependency graph.
 
 Notably, it:
 

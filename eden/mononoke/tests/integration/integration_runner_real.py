@@ -26,23 +26,9 @@ Env = Dict[str, str]
 
 SUITE = "run-tests"
 
-EPHEMERAL_DB_ALLOWLIST = {
-    "test-server-init.t",
-    "test-server-lookup.t",
-    "test-mononoke-admin.t",
-    "test-bookmarks-filler.t",
-    "test-pushrebase.t",
-    "test-mononoke-hg-sync-job-generate-bundles-loop.t",
-    "test-blobstore-healer.t",
-    "test-infinitepush-mutation.t",
-    "test-redaction-sql.t",
-}
-
 # At this time, all tests support the network void script (except when
 # ephemeral MySQL is used)
 DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
-    "test-commitcloud-forwardfiller.t",
-    "test-commitcloud-reversefiller.t",
     # Purposely not disabling network as this tests reverse dns lookups
     "test-metadata-fb-host.t",
     "test-metadata.t",
@@ -226,25 +212,6 @@ def hg_runner_facebook(manifest_env: Env, *args, **kwargs):
         return True
 
 
-def discover_tests(manifest_env: Env, mysql: bool):
-    all_tests = []
-
-    for runner in [hg_runner_public, hg_runner_facebook]:
-        with tempfile.NamedTemporaryFile(mode="rb") as f:
-            if runner(
-                manifest_env, ["--list-tests", "--xunit", f.name], {}, quiet=True
-            ):
-                xml = ET.parse(f)
-                suite = xml.getroot()
-                for child in suite:
-                    all_tests.append(child.get("name"))
-
-    if mysql:
-        all_tests = [t for t in all_tests if t in EPHEMERAL_DB_ALLOWLIST]
-
-    return all_tests
-
-
 def format_discovered_tests(
     tests: List[str],
     ctx: Any,
@@ -421,11 +388,8 @@ def run(
 
     maybe_use_local_test_paths(manifest_env)
 
-    if dry_run and discovered_tests:
-        return format_discovered_tests(list(discovered_tests), ctx, output)
     if dry_run:
-        tests = discover_tests(manifest_env, mysql_client)
-        return format_discovered_tests(tests, ctx, output)
+        return format_discovered_tests(list(discovered_tests), ctx, output)
 
     test_flags: TestFlags = TestFlags(
         interactive,
@@ -449,7 +413,7 @@ def run(
         )
     elif simple_test_selector is not None:
         suite, test = simple_test_selector.split(",", 1)
-        if suite != "run-tests":
+        if suite != SUITE:
             raise click.BadParameter(
                 'suite should always be "%s"' % SUITE,
                 ctx,
