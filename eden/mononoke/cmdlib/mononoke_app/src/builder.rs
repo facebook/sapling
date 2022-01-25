@@ -36,9 +36,11 @@ use sql_ext::facebook::{MysqlOptions, PoolConfig, ReadConnectionType, SharedConn
 use tokio::runtime::Runtime;
 
 use crate::app::MononokeApp;
+use crate::extension::{ArgExtension, ArgExtensionBox};
 
 pub struct MononokeAppBuilder {
     fb: FacebookInit,
+    arg_extensions: Vec<Box<dyn ArgExtensionBox>>,
     cachelib_settings: CachelibSettings,
     readonly_storage: ReadOnlyStorage,
     default_scuba_dataset: Option<String>,
@@ -89,6 +91,7 @@ impl MononokeAppBuilder {
     pub fn new(fb: FacebookInit) -> Self {
         MononokeAppBuilder {
             fb,
+            arg_extensions: Vec::new(),
             cachelib_settings: CachelibSettings::default(),
             readonly_storage: ReadOnlyStorage(false),
             default_scuba_dataset: None,
@@ -108,6 +111,14 @@ impl MononokeAppBuilder {
 
     pub fn with_default_cachelib_settings(mut self, cachelib_settings: CachelibSettings) -> Self {
         self.cachelib_settings = cachelib_settings;
+        self
+    }
+
+    pub fn with_arg_extension<Ext>(mut self, ext: Ext) -> Self
+    where
+        Ext: ArgExtension + 'static,
+    {
+        self.arg_extensions.push(Box::new(ext));
         self
     }
 
@@ -134,6 +145,12 @@ impl MononokeAppBuilder {
             }
         }
 
+        for ext in self.arg_extensions.iter() {
+            for (arg, default) in ext.arg_defaults() {
+                self.defaults.insert(arg, default);
+            }
+        }
+
         let mut app = AppArgs::into_app();
 
         // Save app-generated about so we can restore it.
@@ -141,6 +158,9 @@ impl MononokeAppBuilder {
         let long_about = app.get_long_about();
 
         app = EnvironmentArgs::augment_args_for_update(app);
+        for ext in self.arg_extensions.iter() {
+            app = ext.augment_args(app);
+        }
 
         // Adding the additional args overrode the about messages.
         // Restore them.
@@ -158,10 +178,13 @@ impl MononokeAppBuilder {
 
         let args = app.get_matches();
         let env_args = EnvironmentArgs::from_arg_matches(&args)?;
-        let env = self.build_environment(env_args)?;
+        let mut env = self.build_environment(env_args)?;
 
         // TODO: create TunablesArgs and init tunables
-        // TODO: maybe_enable_mcrouter
+
+        for ext in self.arg_extensions.iter() {
+            ext.process_args(&args, &mut env)?;
+        }
 
         MononokeApp::new(self.fb, args, env)
     }
@@ -394,8 +417,6 @@ fn create_blobstore_options(
         blobstore_put_behaviour,
         mysql_sqlblob_options,
     );
-
-    // TODO: add scrub args if requested
 
     Ok(blobstore_options)
 }

@@ -7,6 +7,8 @@
 
 mod app;
 mod builder;
+mod extension;
 
 pub use app::MononokeApp;
 pub use builder::MononokeAppBuilder;
+pub use extension::ArgExtension;

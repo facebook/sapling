@@ -27,7 +27,9 @@ struct Repo {
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
+    let ext = additional::TestArgExtension { default: Some(42) };
     MononokeAppBuilder::new(fb)
+        .with_arg_extension(ext)
         .build::<ExampleArgs>()?
         .run(async_main)
 }
@@ -44,4 +46,47 @@ async fn async_main(app: MononokeApp) -> Result<()> {
     );
 
     Ok(())
+}
+
+/// Example module for hooking into command line arguments that modify the
+/// environment.
+mod additional {
+    use anyhow::Result;
+    use clap::Args;
+    use environment::MononokeEnvironment;
+    use mononoke_app::ArgExtension;
+
+    // This struct defines the command line arguments, and is a normal
+    // implementor of `clap::Args`.
+    #[derive(Args)]
+    pub struct TestArgs {
+        /// Test argument.
+        #[clap(long, help_heading = "TEST OPTIONS")]
+        pub test_arg: Option<u32>,
+    }
+
+    // This struct defines the extension.  It can be used to store default
+    // values and other items necessary for the arguments to operate.
+    pub struct TestArgExtension {
+        pub default: Option<u32>,
+    }
+
+    impl ArgExtension for TestArgExtension {
+        type Args = TestArgs;
+
+        fn arg_defaults(&self) -> Vec<(&'static str, String)> {
+            if let Some(default) = self.default {
+                vec![("test-arg", default.to_string())]
+            } else {
+                Vec::new()
+            }
+        }
+
+        fn process_args(&self, args: &TestArgs, _env: &mut MononokeEnvironment) -> Result<()> {
+            if let Some(value) = args.test_arg {
+                println!("Test arg received: {}", value);
+            }
+            Ok(())
+        }
+    }
 }
