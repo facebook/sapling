@@ -31,6 +31,8 @@ use hyper::header::HeaderValue;
 use permission_checker::{ArcPermissionChecker, MononokeIdentitySet, PermissionCheckerBuilder};
 use slog::info;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Write;
 use std::net::ToSocketAddrs;
 use std::str::FromStr;
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
@@ -63,6 +65,7 @@ mod service;
 mod upload;
 mod util;
 
+const ARG_BOUND_ADDR_FILE: &str = "bound-address-file";
 const ARG_SELF_URL: &str = "self-url";
 const ARG_UPSTREAM_URL: &str = "upstream-url";
 const ARG_LISTEN_HOST: &str = "listen-host";
@@ -118,6 +121,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .help("The port to listen on locally"),
         )
         .arg(
+            Arg::with_name(ARG_BOUND_ADDR_FILE)
+                .long(ARG_BOUND_ADDR_FILE)
+                .required(false)
+                .takes_value(true)
+                .help("path for file in which to write the bound tcp address in rust std::net::SocketAddr format"),
+        )
+        .arg(
             Arg::with_name(ARG_TLS_CERTIFICATE)
                 .long("--tls-certificate")
                 .takes_value(true),
@@ -140,7 +150,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .arg(
             Arg::with_name(ARG_SELF_URL)
                 .takes_value(true)
-                .required(true)
+                .required_unless(ARG_BOUND_ADDR_FILE)
                 .value_delimiter(",")
                 .help("The base URL for this server"),
         )
@@ -229,8 +239,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let runtime = matches.runtime();
     let config_store = matches.config_store();
 
-    let listen_host = matches.value_of(ARG_LISTEN_HOST).unwrap();
+    let listen_host = matches.value_of(ARG_LISTEN_HOST).unwrap().to_string();
     let listen_port = matches.value_of(ARG_LISTEN_PORT).unwrap();
+    let bound_addr_path = matches.value_of(ARG_BOUND_ADDR_FILE).map(|v| v.to_string());
 
     let addr = format!("{}:{}", listen_host, listen_port);
 
@@ -287,15 +298,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .map(|u| u.parse())
         .transpose()?;
 
-    let self_urls = matches.values_of(ARG_SELF_URL);
-    let upstream_url = matches.value_of(ARG_UPSTREAM_URL).to_owned();
+    let self_urls: Option<Vec<String>> = matches
+        .values_of(ARG_SELF_URL)
+        .map(|v| v.into_iter().map(|v| v.to_string()).collect());
+    let upstream_url = matches.value_of(ARG_UPSTREAM_URL).map(|v| v.to_string());
     let always_wait_for_upstream = matches.is_present(ARG_ALWAYS_WAIT_FOR_UPSTREAM);
     let log_middleware = match matches.is_present(ARG_TEST_FRIENDLY_LOGGING) {
         true => LogMiddleware::test_friendly(),
         false => LogMiddleware::slog(logger.clone()),
     };
-
-    let server_uris = ServerUris::new(self_urls.unwrap().collect(), upstream_url)?;
 
     let RepoConfigs { repos, common } = args::load_repo_configs(config_store, &matches)?;
 
@@ -349,6 +360,32 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .await
                 .context(Error::msg("Could not start TCP listener"))?;
 
+            // We use the listen_host rather than the ip of listener.local_addr()
+            // because the certs user passed will be referencing listen_host
+            let bound_addr = format!("{}:{}", listen_host, listener.local_addr()?.port());
+
+            // For tests we use one empty string self_url, map it to None
+            let self_urls = self_urls.and_then(|self_urls| {
+                if self_urls.len() == 1 && self_urls[0].is_empty() {
+                    None
+                } else {
+                    Some(self_urls)
+                }
+            });
+
+            let self_urls = if let Some(self_urls) = self_urls {
+                self_urls
+            } else {
+                let protocol = if tls_acceptor.is_some() {
+                    "https://"
+                } else {
+                    "http://"
+                };
+                vec![protocol.to_owned() + &bound_addr]
+            };
+
+            let server_uris = ServerUris::new(self_urls, upstream_url)?;
+
             let ctx = LfsServerContext::new(
                 repos,
                 server_uris,
@@ -376,6 +413,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .add(OdsMiddleware::new())
                 .add(TimerMiddleware::new())
                 .build(router);
+
+            info!(&logger, "Listening on {}", bound_addr);
+
+            // Write out the bound address if requested, this is helpful in tests when using automatic binding with :0
+            if let Some(bound_addr_path) = bound_addr_path {
+                let mut writer = File::create(bound_addr_path)?;
+                writer.write_all(bound_addr.as_bytes())?;
+                writer.write_all(b"\n")?;
+            }
 
             if let Some(tls_acceptor) = tls_acceptor {
                 serve::https(

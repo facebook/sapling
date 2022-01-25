@@ -21,8 +21,7 @@ if [[ -n "$DB_SHARD_NAME" ]]; then
   MONONOKE_SCS_DEFAULT_START_TIMEOUT=60
 else
   MONONOKE_DEFAULT_START_TIMEOUT=20
-  # LFS was doing 200 iterations of curl with 0.1 sleep between
-  MONONOKE_LFS_DEFAULT_START_TIMEOUT=20
+  MONONOKE_LFS_DEFAULT_START_TIMEOUT=30
   # First scsc call takes a while as scs server is doing derivation
   MONONOKE_SCS_DEFAULT_START_TIMEOUT=60
 fi
@@ -30,6 +29,7 @@ fi
 REPOID=0
 REPONAME=${REPONAME:-repo}
 
+# Where we write host:port information after servers bind to :0
 MONONOKE_SERVER_ADDR_FILE="$TESTTMP/mononoke_server_addr.txt"
 
 export LOCAL_CONFIGERATOR_PATH="$TESTTMP/configerator"
@@ -422,7 +422,7 @@ function wait_for_mononoke {
     sleep 0.1
   done
 
-  echo "Mononoke did not start in $timeout seconds" >&2
+  echo "Mononoke did not start in $timeout seconds, took $(($(date +%s) - start))" >&2
   if [[ -n "$found_port" ]]; then
     echo ""
     echo "Results of curl invocation"
@@ -1214,7 +1214,6 @@ function start_and_wait_for_scs_server {
     sleep 0.1
   done
 
-  date
   echo "SCS server did not start in $timeout seconds, took $(($(date +%s) - start))" >&2
   if [[ -n "$found_port" ]]; then
     scsc repos >/dev/null
@@ -1243,9 +1242,7 @@ function scsc {
 }
 
 function lfs_server {
-  local port uri log opts args proto poll lfs_server_pid
-  port="$(get_free_socket)"
-  log="${TESTTMP}/lfs_server.${port}"
+  local uri log opts args proto poll lfs_server_pid bound_addr_file lfs_instance instance_count_file
   proto="http"
   poll="curl"
 
@@ -1260,11 +1257,17 @@ function lfs_server {
 
   lfs_instance=$(($(cat "$instance_count_file") + 1))
   echo "$lfs_instance" > "$instance_count_file"
+
+  log="${TESTTMP}/lfs_server.$lfs_instance"
+
+  bound_addr_file="$TESTTMP/lfs_server_addr.$lfs_instance"
+  rm -f "$bound_addr_file"
+
   opts=(
     "${COMMON_ARGS[@]}"
     --mononoke-config-path "$TESTTMP/mononoke-config"
-    --listen-host "$LOCALIP"
-    --listen-port "$port"
+    --listen-port 0
+    --bound-address-file "$bound_addr_file"
     --test-friendly-logging
   )
   args=()
@@ -1272,7 +1275,7 @@ function lfs_server {
   while [[ "$#" -gt 0 ]]; do
     if [[ "$1" = "--upstream" ]]; then
       shift
-      args=("${args[@]}" "$1")
+      args=("${args[@]}" "" "$1")
       shift
     elif [[ "$1" = "--live-config" ]]; then
       opts=("${opts[@]}" "$1" "$2" "--live-config-fetch-interval" "1")
@@ -1311,19 +1314,30 @@ function lfs_server {
     fi
   done
 
-  uri="${proto}://localhost:${port}"
-  echo "$uri"
+  if [[ "$proto" = "https" ]]; then
+    # need to use localhost to match test certs
+    opts=("${opts[@]}" "--listen-host" "localhost")
+  else
+    # use local IP as its more stable for test expectations when localhost is multihomed
+    opts=("${opts[@]}" "--listen-host" "$LOCALIP")
+  fi
+
   local start timeout
   start=$(date +%s)
   timeout="${MONONOKE_LFS_START_TIMEOUT:-"$MONONOKE_LFS_DEFAULT_START_TIMEOUT"}"
 
   GLOG_minloglevel=5 "$LFS_SERVER" \
-    "${opts[@]}" "$uri" "${args[@]}" >> "$log" 2>&1 &
+    "${opts[@]}" "${args[@]}" >> "$log" 2>&1 &
 
   lfs_server_pid="$!"
   echo "$lfs_server_pid" >> "$DAEMON_PIDS"
 
   while [[ $(($(date +%s) - start)) -lt $timeout ]]; do
+    if [[ -z "$uri" && -r "$bound_addr_file" ]]; then
+      uri="${proto}://$(cat "$bound_addr_file")"
+      echo "$uri"
+    fi
+
     if [[ -n "$uri" ]] && "$poll" "${uri}/health_check" >/dev/null 2>&1; then
       cp "$log" "$log.saved"
       truncate -s 0 "$log"
@@ -1333,7 +1347,12 @@ function lfs_server {
     sleep 0.1
   done
 
-  echo "lfs_server $lfs_instance did not start in $timeout seconds" >&2
+  echo "lfs_server $lfs_instance did not start in $timeout seconds, took $(($(date +%s) - start))" >&2
+  if [[ -z "$uri" ]]; then
+    echo "lfs_server uri was never found from $bound_addr_file" >&2
+  else
+    "$poll" "${uri}/health_check" >/dev/null
+  fi
   cat "$log" >&2
   return 1
 }

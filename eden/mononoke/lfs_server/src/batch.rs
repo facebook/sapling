@@ -891,7 +891,10 @@ mod test {
         .into_iter()
         .collect();
 
-        let server = ServerUris::new(vec!["http://foo.com"], Some("http://bar.com"))?;
+        let server = ServerUris::new(
+            vec!["http://foo.com".to_string()],
+            Some("http://bar.com".to_string()),
+        )?;
         let uri_builder = UriBuilder {
             repository: "repo123".to_string(),
             server: Arc::new(server),

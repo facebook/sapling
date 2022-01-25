@@ -474,13 +474,13 @@ pub struct ServerUris {
 }
 
 impl ServerUris {
-    pub fn new<'a>(self_uris: Vec<&str>, upstream_uri: Option<&str>) -> Result<Self, Error> {
+    pub fn new<'a>(self_uris: Vec<String>, upstream_uri: Option<String>) -> Result<Self, Error> {
         Ok(Self {
             self_uris: self_uris
                 .into_iter()
-                .map(parse_and_check_uri)
+                .map(|v| parse_and_check_uri(&v))
                 .collect::<Result<Vec<_>, _>>()?,
-            upstream_uri: upstream_uri.map(parse_and_check_uri).transpose()?,
+            upstream_uri: upstream_uri.map(|v| parse_and_check_uri(&v)).transpose()?,
         })
     }
 }
@@ -532,7 +532,10 @@ mod test {
         upstream_uri: Option<&str>,
         host: String,
     ) -> Result<UriBuilder, Error> {
-        let server = ServerUris::new(self_uris, upstream_uri)?;
+        let server = ServerUris::new(
+            self_uris.into_iter().map(|v| v.to_string()).collect(),
+            upstream_uri.map(|v| v.to_string()),
+        )?;
         Ok(UriBuilder {
             repository: "repo123".to_string(),
             server: Arc::new(server),
