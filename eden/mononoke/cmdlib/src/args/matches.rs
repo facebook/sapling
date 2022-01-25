@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use slog::Record;
 use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::ffi::OsStr;
@@ -96,7 +97,8 @@ impl<'a> MononokeMatches<'a> {
     ) -> Result<Self, Error> {
         let log_level = get_log_level(&matches);
 
-        let root_log_drain = create_root_log_drain(fb, &matches, log_level)
+        let log_filter_fn: Option<fn(&Record) -> bool> = app_data.slog_filter_fn;
+        let root_log_drain = create_root_log_drain(fb, &matches, log_level, log_filter_fn)
             .context("Failed to create root log drain")?;
 
         // TODO: FacebookKV for this one?
@@ -270,6 +272,7 @@ fn create_root_log_drain(
     fb: FacebookInit,
     matches: &ArgMatches<'_>,
     log_level: Level,
+    log_filter_fn: Option<fn(&Record) -> bool>,
 ) -> Result<impl Drain + Clone> {
     // Set the panic handler up here. Not really relevent to logger other than it emits output
     // when things go wrong. This writes directly to stderr as coredumper expects.
@@ -339,6 +342,15 @@ fn create_root_log_drain(
             }
         }
         None => Arc::new(glog_drain),
+    };
+
+    let root_log_drain = if let Some(filter_fn) = log_filter_fn {
+        Arc::new(slog::IgnoreResult::new(slog::Filter::new(
+            root_log_drain,
+            filter_fn,
+        )))
+    } else {
+        root_log_drain
     };
 
     // NOTE: We pass an unfiltered Logger to init_stdlog_once. That's because we do the filtering

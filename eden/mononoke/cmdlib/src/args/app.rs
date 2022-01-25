@@ -9,18 +9,17 @@ use std::collections::HashSet;
 use std::ffi::OsString;
 use std::num::NonZeroU32;
 
+use super::cache::{add_cachelib_args, CachelibSettings};
+use super::matches::MononokeMatches;
 use anyhow::{Error, Result};
+use blobstore_factory::{PutBehaviour, ScrubAction, ScrubWriteMostly, DEFAULT_PUT_BEHAVIOUR};
 use clap::{App, Arg, ArgGroup};
 use fbinit::FacebookInit;
 use once_cell::sync::OnceCell;
-
-use blobstore_factory::{PutBehaviour, ScrubAction, ScrubWriteMostly, DEFAULT_PUT_BEHAVIOUR};
 use repo_factory::ReadOnlyStorage;
+use slog::Record;
 use sql_ext::facebook::SharedConnectionPool;
 use strum::VariantNames;
-
-use super::cache::{add_cachelib_args, CachelibSettings};
-use super::matches::MononokeMatches;
 
 pub const CONFIG_PATH: &str = "mononoke-config-path";
 pub const REPO_ID: &str = "repo-id";
@@ -204,6 +203,9 @@ pub struct MononokeAppBuilder {
 
     // Whether to set a default for how long to peek back at the multiplex queue when scrubbing
     scrub_queue_peek_bound_secs_default: Option<u64>,
+
+    /// Additional filter for customising logging
+    slog_filter_fn: Option<fn(&Record) -> bool>,
 }
 
 /// Things we want to live for the lifetime of the mononoke binary
@@ -214,6 +216,7 @@ pub struct MononokeAppData {
     pub global_mysql_connection_pool: SharedConnectionPool,
     pub sqlblob_mysql_connection_pool: SharedConnectionPool,
     pub default_scuba_dataset: Option<String>,
+    pub slog_filter_fn: Option<fn(&Record) -> bool>,
 }
 
 // Result of MononokeAppBuilder::build() which has clap plus the MononokeApp data
@@ -298,6 +301,7 @@ impl MononokeAppBuilder {
             scrub_grace_secs_default: None,
             scrub_action_on_missing_write_mostly_default: None,
             scrub_queue_peek_bound_secs_default: None,
+            slog_filter_fn: None,
         }
     }
 
@@ -449,6 +453,12 @@ impl MononokeAppBuilder {
         d: Option<ScrubWriteMostly>,
     ) -> Self {
         self.scrub_action_on_missing_write_mostly_default = d;
+        self
+    }
+
+    /// Enables custom logging filter
+    pub fn with_slog_filter(mut self, slog_filter_fn: fn(&Record) -> bool) -> Self {
+        self.slog_filter_fn = Some(slog_filter_fn);
         self
     }
 
@@ -612,6 +622,7 @@ impl MononokeAppBuilder {
                 global_mysql_connection_pool: SharedConnectionPool::new(),
                 sqlblob_mysql_connection_pool: SharedConnectionPool::new(),
                 default_scuba_dataset: self.default_scuba_dataset,
+                slog_filter_fn: self.slog_filter_fn,
             },
             arg_types: self.arg_types,
         }
