@@ -29,6 +29,7 @@ use fbinit::FacebookInit;
 use megarepo_config::{MegarepoConfigsArgs, MononokeMegarepoConfigsOptions};
 use mononoke_args::config::ConfigArgs;
 use mononoke_args::mysql::MysqlArgs;
+use mononoke_args::runtime::RuntimeArgs;
 use rendezvous::RendezVousArgs;
 use slog::{o, Logger};
 use sql_ext::facebook::{MysqlOptions, PoolConfig, ReadConnectionType, SharedConnectionPool};
@@ -48,6 +49,9 @@ pub struct MononokeAppBuilder {
 pub struct EnvironmentArgs {
     #[clap(flatten, help_heading = "CONFIG OPTIONS")]
     config_args: ConfigArgs,
+
+    #[clap(flatten, help_heading = "RUNTIME OPTIONS")]
+    runtime_args: RuntimeArgs,
 
     #[clap(flatten, help_heading = "LOGGING OPTIONS")]
     logging_args: LoggingArgs,
@@ -166,6 +170,7 @@ impl MononokeAppBuilder {
         let EnvironmentArgs {
             blobstore_args,
             config_args,
+            runtime_args,
             logging_args,
             scuba_logging_args,
             cachelib_args,
@@ -214,8 +219,7 @@ impl MononokeAppBuilder {
 
         let caching = init_cachelib(self.fb, &self.cachelib_settings, &cachelib_args);
 
-        // TODO: create RuntimeArgs
-        let runtime = create_runtime()?;
+        let runtime = create_runtime(&runtime_args)?;
 
         let mysql_options =
             create_mysql_options(&mysql_args, create_mysql_pool_config(&mysql_args));
@@ -285,11 +289,13 @@ fn create_config_store(
     )
 }
 
-fn create_runtime() -> Result<Runtime> {
+fn create_runtime(runtime_args: &RuntimeArgs) -> Result<Runtime> {
     let mut builder = tokio::runtime::Builder::new_multi_thread();
     builder.enable_all();
     builder.thread_name("tk");
-    // builder.worker_threads(worker_threads);
+    if let Some(threads) = runtime_args.runtime_threads {
+        builder.worker_threads(threads);
+    }
     let runtime = builder.build()?;
     Ok(runtime)
 }
