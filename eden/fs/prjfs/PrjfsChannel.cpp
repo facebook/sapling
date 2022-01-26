@@ -400,12 +400,12 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
             context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
             return ImmediateFuture{folly::unit};
           }
-          auto lookupResult = std::move(optLookupResult).value();
+          const auto& lookupResult = optLookupResult.value();
 
           PRJ_PLACEHOLDER_INFO placeholderInfo{};
-          placeholderInfo.FileBasicInfo.IsDirectory = lookupResult.meta.isDir;
-          placeholderInfo.FileBasicInfo.FileSize = lookupResult.meta.size;
-          auto inodeName = lookupResult.meta.path.wide();
+          placeholderInfo.FileBasicInfo.IsDirectory = lookupResult.isDir;
+          placeholderInfo.FileBasicInfo.FileSize = lookupResult.size;
+          auto inodeName = lookupResult.path.wide();
 
           HRESULT result = PrjWritePlaceholderInfo(
               virtualizationContext,
@@ -418,12 +418,10 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
                 result,
                 fmt::format(
                     FMT_STRING("Writing placeholder for {}"),
-                    lookupResult.meta.path)));
+                    lookupResult.path)));
           }
 
           context->sendSuccess();
-
-          lookupResult.incFsRefcount();
 
           return ImmediateFuture{folly::unit};
         });

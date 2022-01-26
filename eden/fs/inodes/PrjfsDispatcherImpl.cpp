@@ -128,36 +128,45 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
     RelativePath path,
     std::shared_ptr<ObjectFetchContext> context) {
   return mount_->getTreeOrTreeEntry(path, *context)
-      .thenValue([this, &context = *context, path](
+      .thenValue([this, context = std::move(context), path](
                      std::variant<std::shared_ptr<const Tree>, TreeEntry>
                          treeOrTreeEntry) mutable {
         bool isDir = std::holds_alternative<std::shared_ptr<const Tree>>(
             treeOrTreeEntry);
-        auto pathFut = mount_->canonicalizePathFromTree(path, context);
+        auto pathFut = mount_->canonicalizePathFromTree(path, *context);
         auto sizeFut = isDir
             ? ImmediateFuture<uint64_t>{0}
             : mount_->getObjectStore()->getBlobSize(
-                  std::get<TreeEntry>(treeOrTreeEntry).getHash(), context);
+                  std::get<TreeEntry>(treeOrTreeEntry).getHash(), *context);
 
         return collectAllSafe(pathFut, sizeFut)
-            .thenValue([this, isDir, &context](
+            .thenValue([this, isDir, context = std::move(context)](
                            std::tuple<RelativePath, uint64_t> res) {
               auto [path, size] = std::move(res);
-              auto inodeMetadata = InodeMetadata{path, size, isDir};
+              auto lookupResult = LookupResult{path, size, isDir};
 
-              // Finally, let's tell the TreeInode that this file needs
-              // invalidation during update.
-              return mount_->getInode(path, context)
-                  .thenValue([inodeMetadata =
-                                  std::move(inodeMetadata)](InodePtr inode) {
-                    // Since a lookup is needed prior to any file operation,
-                    // this getInode call shouldn't race with concurrent file
-                    // removal/move
-                    return std::optional{LookupResult{
-                        std::move(inodeMetadata), [inode = std::move(inode)] {
-                          inode->incFsRefcount();
-                        }}};
+              // We need to run the following asynchronously to avoid the risk
+              // of deadlocks when EdenFS recursively triggers this lookup
+              // call. In rare situation, this might happen during a checkout
+              // operation which is already holding locks that the code below
+              // also need.
+              folly::via(
+                  notificationExecutor_,
+                  [&mount = *mount_,
+                   path = std::move(path),
+                   context = std::move(context)]() {
+                    // Finally, let's tell the TreeInode that this file needs
+                    // invalidation during update. This is run in a separate
+                    // executor to avoid deadlocks. This is guaranteed to 1) run
+                    // before any other changes to this inode, and 2) before
+                    // checkout starts invalidating files/directories.
+                    mount.getInode(path, *context)
+                        .thenValue(
+                            [](InodePtr inode) { inode->incFsRefcount(); })
+                        .get();
                   });
+
+              return std::optional{std::move(lookupResult)};
             });
       })
       .thenTry(
@@ -168,12 +177,10 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
               if (isEnoent(*exc)) {
                 if (path == kDotEdenConfigPath) {
                   return folly::Try{std::optional{LookupResult{
-                      InodeMetadata{
-                          std::move(path), dotEdenConfig_.length(), false},
-                      [] {}}}};
+                      std::move(path), dotEdenConfig_.length(), false}}};
                 } else if (path == kDotEdenRelativePath) {
-                  return folly::Try{std::optional{LookupResult{
-                      InodeMetadata{std::move(path), 0, true}, [] {}}}};
+                  return folly::Try{
+                      std::optional{LookupResult{std::move(path), 0, true}}};
                 } else {
                   XLOG(DBG6) << path << ": File not found";
                   return folly::Try<std::optional<LookupResult>>{std::nullopt};
@@ -181,8 +188,7 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
               }
             }
             return result;
-          })
-      .ensure([context = std::move(context)]() {});
+          });
 }
 
 ImmediateFuture<bool> PrjfsDispatcherImpl::access(

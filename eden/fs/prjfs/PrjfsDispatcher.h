@@ -21,18 +21,13 @@ class EdenStats;
 template <class T>
 class ImmediateFuture;
 
-struct InodeMetadata {
+struct LookupResult {
   // To ensure that the OS has a record of the canonical file name, and not
   // just whatever case was used to lookup the file, we capture the
   // relative path here.
   RelativePath path;
   size_t size;
   bool isDir;
-};
-
-struct LookupResult {
-  InodeMetadata meta;
-  folly::Function<void()> incFsRefcount;
 };
 
 class PrjfsDispatcher {
