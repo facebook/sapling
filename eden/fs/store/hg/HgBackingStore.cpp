@@ -682,7 +682,9 @@ unique_ptr<Tree> HgBackingStore::getTreeFromHgCache(
 
     auto treeMetadataFuture =
         folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
-    if (metadataImporter_->metadataFetchingAvailable() && prefetchMetadata) {
+    bool useAuxMetadata = config_->getEdenConfig()->useAuxMetadata.getValue();
+    if (metadataImporter_->metadataFetchingAvailable() && prefetchMetadata &&
+        !useAuxMetadata) {
       treeMetadataFuture =
           metadataImporter_->getTreeMetadata(edenTreeId, proxyHash.revHash());
     }
