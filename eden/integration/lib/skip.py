@@ -88,6 +88,7 @@ if sys.platform == "win32":
         "stop_test.StopWithSystemdTestSystemdEdenCLI": True,
         "takeover_test.TakeoverRocksDBStressTestHg": True,
         "takeover_test.TakeoverTestHg": True,
+        "takeover_test.TakeoverTestNoNFSServerHg": True,
         "thrift_test.ThriftTestHg": [
             "test_get_sha1_throws_for_symlink",
             "test_pid_fetch_counts",

@@ -876,9 +876,9 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
 
 #ifndef _WIN32
   if (auto nfsServer = serverState_->getNfsServer()) {
-    if (doingTakeover) {
+    if (doingTakeover && takeoverData.mountdServerSocket.has_value()) {
       XLOG(DBG7) << "Initializing mountd from existing socket";
-      nfsServer->initialize(std::move(takeoverData.mountdServerSocket));
+      nfsServer->initialize(std::move(takeoverData.mountdServerSocket.value()));
     } else {
       XLOG(DBG7) << "Initializing mountd from scratch";
       std::optional<AbsolutePath> unixSocketPath;
@@ -2045,13 +2045,26 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
 
         takeover.thriftSocket = std::move(socket);
         return via(getMainEventBase())
-            .thenValue([this](auto&&) {
-              return this->getServerState()->getNfsServer()->takeoverStop();
-            })
+            .thenValue(
+                [this](
+                    auto&&) -> folly::SemiFuture<std::optional<folly::File>> {
+                  if (auto& takeoverServer =
+                          this->getServerState()->getNfsServer()) {
+                    return takeoverServer->takeoverStop().deferValue(
+                        [](folly::File&& file) {
+                          return std::make_optional<folly::File>(
+                              std::move(file));
+                        });
+                  } else {
+                    return std::nullopt;
+                  }
+                })
             .thenValue([takeover = std::move(takeover)](
-                           folly::File&& mountdSocket) mutable {
-              XLOG(DBG7) << "Got mountd Socket for takeover "
-                         << mountdSocket.fd();
+                           std::optional<folly::File>&& mountdSocket) mutable {
+              if (mountdSocket.has_value()) {
+                XLOG(DBG7) << "Got mountd Socket for takeover "
+                           << mountdSocket.value().fd();
+              }
               takeover.mountdServerSocket = std::move(mountdSocket);
               return std::move(takeover);
             });

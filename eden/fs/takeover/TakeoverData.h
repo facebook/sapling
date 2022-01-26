@@ -83,6 +83,20 @@ class TakeoverCapabilities {
     // Indicates this version of the protocol is able to serialize NFS mount
     // points
     NFS = 1 << 5,
+
+    // Indicates that we use SerializedTakeoverResult instead of
+    // SerializedTakeoverData to serialize and deserialize the data. This allows
+    // us to pass non mount specific information in the takeover message.
+    RESULT_TYPE_SERIALIZATION = 1 << 6,
+
+    // Indicates that we will specify which fds we transfer during takeover and
+    // what order they are in the takeover message instead of passing all of
+    // them all the time in a hard coded order.
+    ORDERED_FDS = 1 << 7,
+
+    // does the mountd socket need to be sent.
+    // Note this capability can not be used with out ORDERED_FDS.
+    OPTIONAL_MOUNTD = 1 << 8,
   };
 };
 
@@ -136,7 +150,11 @@ class TakeoverData {
     // This includes serializing the mountd socket as well as the
     // connected socket to the kernel for each of the mount points.
     kTakeoverProtocolVersionFive = 5,
-    // version 5 should be the last real version, we should bump to version 6
+
+    // This version introduced a more generic thrift struct for serialization
+    // and allows us to only pass some of the file descriptors.
+    kTakeoverProtocolVersionSix = 6
+    // version 6 should be the last real version, we should bump to version 7
     // and from then on only match capabilities
   };
 
@@ -279,7 +297,13 @@ class TakeoverData {
   /**
    * Server socket for the mountd.
    */
-  folly::File mountdServerSocket;
+  std::optional<folly::File> mountdServerSocket;
+
+  std::vector<FileDescriptorType> generalFDOrder;
+
+  // allows manipulating the result of generateGeneralFdOrder in tests.
+  // should not be set to anything other than std::nullopt production.
+  std::optional<std::vector<FileDescriptorType>> injectedFdOrderForTesting;
 
   /**
    * The list of mount points.
@@ -312,7 +336,15 @@ class TakeoverData {
    * Serialize an exception for any version that uses thrift serialization. This
    * is versions 3+.
    */
-  static folly::IOBuf serializeErrorThrift(const folly::exception_wrapper& ew);
+  static folly::IOBuf serializeErrorThrift(
+      uint64_t protocolCapabilities,
+      const folly::exception_wrapper& ew);
+
+  /*
+   * Serialize the file descriptor in this TakeoverData instance for the given
+   * file `type` into the list of `files` for the UnixSocket::Message.
+   */
+  void serializeFd(FileDescriptorType type, std::vector<folly::File>& files);
 
   /**
    * Deserialize the TakeoverData from a buffer. We assume that we are only sent
@@ -329,6 +361,33 @@ class TakeoverData {
   static TakeoverData deserializeThrift(
       uint32_t protocolCapabilities,
       folly::IOBuf* buf);
+
+  /**
+   * Deserialize the file descriptor for file `type` from the
+   * UnixSocket::Message `file` into this TakeoverData instance.
+   */
+  void deserializeFd(FileDescriptorType type, folly::File& file);
+
+  /*
+   * Deserialize the data on the mounts serialized in serializedMounts into
+   * a TakeoverData object. This TakeoverData object will not yet have any of
+   * the file descriptors or generic data filled in yet.
+   */
+  static TakeoverData deserializeThriftMounts(
+      uint32_t protocolCapabilities,
+      std::vector<SerializedMountInfo>& serializedMounts);
+
+  /**
+   * Generates an order for the general file descriptors to be sent in
+   * sendmsg. "general file descriptors" does not include file descriptors
+   * for mount points. This order may vary in length depending on which file
+   * descriptors need to be sent in the given protocol capabilities.
+   * This method is virtual to allow mocking it in tests.
+   *
+   * To manipulate this return type for testing set injectedFdOrderForTesting.
+   */
+  std::vector<FileDescriptorType> generateGeneralFdOrder(
+      uint32_t protocolCapabilities);
 
   /**
    * Message type values.

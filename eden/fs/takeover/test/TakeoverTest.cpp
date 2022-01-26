@@ -13,6 +13,7 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
+#include <eden/fs/takeover/gen-cpp2/takeover_types.h>
 #include "eden/fs/takeover/TakeoverClient.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
@@ -243,7 +244,7 @@ TEST(Takeover, simple) {
   checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
   // And the thrift socket FD
   checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
-  checkExpectedFile(clientData.mountdServerSocket.fd(), mountdSocketPath);
+  checkExpectedFile(clientData.mountdServerSocket->fd(), mountdSocketPath);
 
   // Make sure the received mount information is correct
   ASSERT_EQ(2, clientData.mountPoints.size());
@@ -292,7 +293,7 @@ TEST(Takeover, noMounts) {
   // expected files.
   checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
   checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
-  checkExpectedFile(clientData.mountdServerSocket.fd(), mountdSocketPath);
+  checkExpectedFile(clientData.mountdServerSocket->fd(), mountdSocketPath);
 
   // Make sure the received mount information is empty
   EXPECT_EQ(0, clientData.mountPoints.size());
@@ -356,7 +357,7 @@ TEST(Takeover, manyMounts) {
   // Make sure the received lock file and thrift socket FDs are correct
   checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
   checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
-  checkExpectedFile(clientData.mountdServerSocket.fd(), mountdSocketPath);
+  checkExpectedFile(clientData.mountdServerSocket->fd(), mountdSocketPath);
 
   // Make sure the received mount information is correct
   ASSERT_EQ(numMounts, clientData.mountPoints.size());
@@ -523,7 +524,7 @@ TEST(Takeover, nfs) {
   checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
   // And the thrift socket FD
   checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
-  checkExpectedFile(clientData.mountdServerSocket.fd(), mountdSocketPath);
+  checkExpectedFile(clientData.mountdServerSocket->fd(), mountdSocketPath);
 
   // Make sure the received mount information is correct
   ASSERT_EQ(2, clientData.mountPoints.size());
@@ -592,4 +593,162 @@ TEST(Takeover, nfsOldVersion) {
       "protocol does not support serializing/deserializing this type of "
       "mounts. protocol capabilities: 14. problem mount: .*mount2. mount "
       "protocol: 2");
+}
+
+TEST(Takeover, mixedupFdOrder) {
+  TemporaryDirectory tmpDir("eden_takeover_test");
+  AbsolutePathPiece tmpDirPath{tmpDir.path().string()};
+
+  // Build the TakeoverData object to send
+  TakeoverData serverData;
+  serverData.injectedFdOrderForTesting = std::vector<FileDescriptorType>{
+      FileDescriptorType::MOUNTD_SOCKET,
+      FileDescriptorType::LOCK_FILE,
+      FileDescriptorType::THRIFT_SOCKET};
+
+  auto lockFilePath = tmpDirPath + "lock"_pc;
+  serverData.lockFile =
+      folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
+
+  auto thriftSocketPath = tmpDirPath + "thrift"_pc;
+  serverData.thriftSocket =
+      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+
+  auto mountdSocketPath = tmpDirPath + "mountd"_pc;
+  serverData.mountdServerSocket =
+      folly::File{mountdSocketPath.stringPiece(), O_RDWR | O_CREAT};
+
+  auto mount1Path = tmpDirPath + "mount1"_pc;
+  auto client1Path = tmpDirPath + "client1"_pc;
+  auto mount1FusePath = tmpDirPath + "fuse1"_pc;
+  serverData.mountPoints.emplace_back(
+      mount1Path,
+      client1Path,
+      std::vector<AbsolutePath>{},
+      FuseChannelData{
+          folly::File{mount1FusePath.stringPiece(), O_RDWR | O_CREAT},
+          fuse_init_out{}},
+      SerializedInodeMap{});
+
+  // Perform the takeover
+  auto serverSendFuture = serverData.takeoverComplete.getFuture();
+  TestHandler handler{std::move(serverData)};
+  auto result = runTakeover(tmpDir, &handler);
+  ASSERT_TRUE(serverSendFuture.hasValue());
+  EXPECT_TRUE(result.hasValue());
+  const auto& clientData = result.value();
+
+  // Make sure the received lock file refers to the expected file.
+  checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
+  // And the thrift socket FD
+  checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
+  checkExpectedFile(clientData.mountdServerSocket->fd(), mountdSocketPath);
+
+  // Make sure the received mount information is correct
+  ASSERT_EQ(1, clientData.mountPoints.size());
+  EXPECT_EQ(mount1Path, clientData.mountPoints.at(0).mountPath);
+  EXPECT_EQ(client1Path, clientData.mountPoints.at(0).stateDirectory);
+  EXPECT_THAT(clientData.mountPoints.at(0).bindMounts, ElementsAre());
+  auto& fuseChannelData0 =
+      std::get<FuseChannelData>(clientData.mountPoints.at(0).channelInfo);
+  checkExpectedFile(fuseChannelData0.fd.fd(), mount1FusePath);
+}
+
+TEST(Takeover, missingFdOrder) {
+  TemporaryDirectory tmpDir("eden_takeover_test");
+  AbsolutePathPiece tmpDirPath{tmpDir.path().string()};
+
+  // Build the TakeoverData object to send
+  TakeoverData serverData;
+  serverData.injectedFdOrderForTesting = std::vector<FileDescriptorType>{};
+
+  auto lockFilePath = tmpDirPath + "lock"_pc;
+  serverData.lockFile =
+      folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
+
+  auto thriftSocketPath = tmpDirPath + "thrift"_pc;
+  serverData.thriftSocket =
+      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+
+  auto mountdSocketPath = tmpDirPath + "mountd"_pc;
+  serverData.mountdServerSocket =
+      folly::File{mountdSocketPath.stringPiece(), O_RDWR | O_CREAT};
+
+  auto mount1Path = tmpDirPath + "mount1"_pc;
+  auto client1Path = tmpDirPath + "client1"_pc;
+  auto mount1FusePath = tmpDirPath + "fuse1"_pc;
+  serverData.mountPoints.emplace_back(
+      mount1Path,
+      client1Path,
+      std::vector<AbsolutePath>{},
+      FuseChannelData{
+          folly::File{mount1FusePath.stringPiece(), O_RDWR | O_CREAT},
+          fuse_init_out{}},
+      SerializedInodeMap{});
+
+  // Perform the takeover
+  auto serverSendFuture = serverData.takeoverComplete.getFuture();
+  TestHandler handler{std::move(serverData)};
+  auto result = runTakeover(tmpDir, &handler);
+  ASSERT_TRUE(serverSendFuture.hasValue());
+  EXPECT_TRUE(result.hasValue());
+  const auto& clientData = result.value();
+
+  // Make sure we didn't receive any files because the fd order was empty
+  EXPECT_EQ(clientData.lockFile.fd(), -1);
+  EXPECT_EQ(clientData.thriftSocket.fd(), -1);
+  EXPECT_FALSE(clientData.mountdServerSocket.has_value());
+}
+
+TEST(Takeover, nfsNotEnabled) {
+  TemporaryDirectory tmpDir("eden_takeover_test");
+  AbsolutePathPiece tmpDirPath{tmpDir.path().string()};
+
+  // Build the TakeoverData object to send
+  TakeoverData serverData;
+
+  auto lockFilePath = tmpDirPath + "lock"_pc;
+  serverData.lockFile =
+      folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
+
+  auto thriftSocketPath = tmpDirPath + "thrift"_pc;
+  serverData.thriftSocket =
+      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+
+  serverData.mountdServerSocket = std::nullopt;
+
+  auto mount1Path = tmpDirPath + "mount1"_pc;
+  auto client1Path = tmpDirPath + "client1"_pc;
+  auto mount1FusePath = tmpDirPath + "fuse1"_pc;
+  serverData.mountPoints.emplace_back(
+      mount1Path,
+      client1Path,
+      std::vector<AbsolutePath>{},
+      FuseChannelData{
+          folly::File{mount1FusePath.stringPiece(), O_RDWR | O_CREAT},
+          fuse_init_out{}},
+      SerializedInodeMap{});
+
+  // Perform the takeover
+  auto serverSendFuture = serverData.takeoverComplete.getFuture();
+  TestHandler handler{std::move(serverData)};
+  auto result = runTakeover(tmpDir, &handler);
+  ASSERT_TRUE(serverSendFuture.hasValue());
+  EXPECT_TRUE(result.hasValue());
+  const auto& clientData = result.value();
+
+  // Make sure the received lock file refers to the expected file.
+  checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
+  // And the thrift socket FD
+  checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
+  EXPECT_EQ(clientData.mountdServerSocket, std::nullopt);
+
+  // Make sure the received mount information is correct
+  ASSERT_EQ(1, clientData.mountPoints.size());
+  EXPECT_EQ(mount1Path, clientData.mountPoints.at(0).mountPath);
+  EXPECT_EQ(client1Path, clientData.mountPoints.at(0).stateDirectory);
+  EXPECT_THAT(clientData.mountPoints.at(0).bindMounts, ElementsAre());
+  auto& fuseChannelData0 =
+      std::get<FuseChannelData>(clientData.mountPoints.at(0).channelInfo);
+  checkExpectedFile(fuseChannelData0.fd.fd(), mount1FusePath);
 }

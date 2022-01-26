@@ -10,7 +10,7 @@ import sys
 import threading
 from multiprocessing import Process
 from pathlib import Path
-from typing import Dict, Optional
+from typing import List, Dict, Optional
 
 import pexpect
 from eden.fs.cli.util import get_pid_using_lockfile, poll_until
@@ -22,9 +22,8 @@ from .lib import testcase
 from .lib.find_executables import FindExe
 
 
-@testcase.eden_repo_test
 # pyre-ignore[13]: T62487924
-class TakeoverTest(testcase.EdenRepoTest):
+class TakeoverTestBase(testcase.EdenRepoTest):
     pagesize: int
     page1: str
     page2: str
@@ -149,6 +148,9 @@ class TakeoverTest(testcase.EdenRepoTest):
             self.assertEqual(self.page1, f.read(self.pagesize))
             self.assertEqual(self.page2, f.read(self.pagesize))
 
+
+@testcase.eden_repo_test
+class TakeoverTest(TakeoverTestBase):
     def test_takeover(self) -> None:
         return self.do_takeover_test()
 
@@ -431,6 +433,15 @@ class TakeoverTest(testcase.EdenRepoTest):
             )
 
             p.join()
+
+
+@testcase.eden_repo_test(run_on_nfs=False)
+class TakeoverTestNoNFSServer(TakeoverTestBase):
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        return {}
+
+    def test_takeover(self) -> None:
+        return self.do_takeover_test()
 
 
 @testcase.eden_repo_test
