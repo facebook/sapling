@@ -212,6 +212,22 @@ def hg_runner_facebook(manifest_env: Env, *args, **kwargs):
         return True
 
 
+def discover_tests(manifest_env: Env):
+    all_tests = []
+
+    for runner in [hg_runner_public, hg_runner_facebook]:
+        with tempfile.NamedTemporaryFile(mode="rb") as f:
+            if runner(
+                manifest_env, ["--list-tests", "--xunit", f.name], {}, quiet=True
+            ):
+                xml = ET.parse(f)
+                suite = xml.getroot()
+                for child in suite:
+                    all_tests.append(child.get("name"))
+
+    return all_tests
+
+
 def format_discovered_tests(
     tests: List[str],
     ctx: Any,
@@ -388,8 +404,11 @@ def run(
 
     maybe_use_local_test_paths(manifest_env)
 
-    if dry_run:
+    if dry_run and discovered_tests:
         return format_discovered_tests(list(discovered_tests), ctx, output)
+    if dry_run:
+        tests = discover_tests(manifest_env)
+        return format_discovered_tests(tests, ctx, output)
 
     test_flags: TestFlags = TestFlags(
         interactive,
