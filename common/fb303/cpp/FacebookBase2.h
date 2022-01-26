@@ -35,7 +35,7 @@ class FacebookBase2 : virtual public cpp2::FacebookServiceSvIf {
   time_t startTime;
 
  public:
-  explicit FacebookBase2(const char*) {
+  explicit FacebookBase2(std::string name) {
     startTime = time(nullptr);
   }
 
@@ -73,6 +73,13 @@ class FacebookBase2 : virtual public cpp2::FacebookServiceSvIf {
         min,
         max);
   }
+};
+
+/// Stub
+class FacebookBase2DeprecationMigration : public FacebookBase2 {
+ protected:
+  explicit FacebookBase2DeprecationMigration(std::string name)
+      : FacebookBase2(std::move(name)) {}
 };
 
 } // namespace fb303
