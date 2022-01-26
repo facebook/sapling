@@ -1352,10 +1352,6 @@ function hgedenapi {
   hgmn --config "edenapi.url=${EDENAPI_URI}" --config "auth.edenapi.prefix=localhost" --config "edenapi.enable=true" --config "remotefilelog.http=true" --config "remotefilelog.reponame=$REPONAME" --config "auth.edenapi.cert=$TEST_CERTDIR/localhost.crt" --config "auth.edenapi.key=$TEST_CERTDIR/localhost.key" --config "auth.edenapi.cacerts=$TEST_CERTDIR/root-ca.crt" "$@"
 }
 
-function hgmn_local {
-  hg --config ui.ssh="${TEST_FIXTURES}/nossh.sh" "$@"
-}
-
 function hginit_treemanifest() {
   hg init "$@"
   cat >> "$1"/.hg/hgrc <<EOF
