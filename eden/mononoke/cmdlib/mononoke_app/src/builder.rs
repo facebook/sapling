@@ -15,7 +15,7 @@ use blobstore_factory::{
     BlobstoreArgs, BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, DelayOptions,
     PackOptions, ReadOnlyStorage, ReadOnlyStorageArgs, ThrottleOptions,
 };
-use cached_config::ConfigStore;
+use cached_config::{ConfigHandle, ConfigStore};
 use clap::{App, AppSettings, Args, FromArgMatches, IntoApp};
 use cmdlib_caching::{init_cachelib, CachelibArgs, CachelibSettings};
 use cmdlib_logging::{
@@ -29,11 +29,14 @@ use fbinit::FacebookInit;
 use megarepo_config::{MegarepoConfigsArgs, MononokeMegarepoConfigsOptions};
 use mononoke_args::config::ConfigArgs;
 use mononoke_args::mysql::MysqlArgs;
+use mononoke_args::parse_config_spec_to_path;
 use mononoke_args::runtime::RuntimeArgs;
+use mononoke_args::tunables::TunablesArgs;
 use rendezvous::RendezVousArgs;
-use slog::{o, Logger};
+use slog::{debug, o, Logger};
 use sql_ext::facebook::{MysqlOptions, PoolConfig, ReadConnectionType, SharedConnectionPool};
 use tokio::runtime::Runtime;
+use tunables;
 
 use crate::app::MononokeApp;
 use crate::extension::{ArgExtension, ArgExtensionBox};
@@ -66,6 +69,9 @@ pub struct EnvironmentArgs {
 
     #[clap(flatten, help_heading = "MYSQL OPTIONS")]
     mysql_args: MysqlArgs,
+
+    #[clap(flatten, help_heading = "TUNABLES OPTIONS")]
+    tunables_args: TunablesArgs,
 
     #[clap(flatten, help_heading = "BLOBSTORE OPTIONS")]
     blobstore_args: BlobstoreArgs,
@@ -180,8 +186,6 @@ impl MononokeAppBuilder {
         let env_args = EnvironmentArgs::from_arg_matches(&args)?;
         let mut env = self.build_environment(env_args)?;
 
-        // TODO: create TunablesArgs and init tunables
-
         for ext in self.arg_extensions.iter() {
             ext.process_args(&args, &mut env)?;
         }
@@ -204,6 +208,7 @@ impl MononokeAppBuilder {
             readonly_storage_args,
             remote_derivation_args,
             rendezvous_args,
+            tunables_args,
         } = env_args;
 
         let log_level = create_log_level(&logging_args);
@@ -263,6 +268,8 @@ impl MononokeAppBuilder {
             MononokeMegarepoConfigsOptions::from_args(&config_args, &megarepo_configs_args);
 
         let remote_derivation_options = remote_derivation_args.into();
+
+        init_tunables_worker(&tunables_args, &config_store, logger.clone())?;
 
         Ok(MononokeEnvironment {
             fb: self.fb,
@@ -419,4 +426,29 @@ fn create_blobstore_options(
     );
 
     Ok(blobstore_options)
+}
+
+fn init_tunables_worker(
+    tunables_args: &TunablesArgs,
+    config_store: &ConfigStore,
+    logger: Logger,
+) -> Result<()> {
+    if tunables_args.disable_tunables {
+        debug!(logger, "Tunables are disabled");
+        return Ok(());
+    }
+
+    if let Some(tunables_local_path) = &tunables_args.tunables_local_path {
+        let value = std::fs::read_to_string(tunables_local_path)
+            .with_context(|| format!("failed to open tunables path {}", tunables_local_path))?;
+        let config_handle = ConfigHandle::from_json(&value)
+            .with_context(|| format!("failed to parse tunables at path {}", tunables_local_path))?;
+        return tunables::init_tunables_worker(logger, config_handle);
+    }
+
+    let tunables_config = tunables_args.tunables_config_or_default();
+    let config_handle =
+        config_store.get_config_handle(parse_config_spec_to_path(&tunables_config)?)?;
+
+    tunables::init_tunables_worker(logger, config_handle)
 }

@@ -11,6 +11,7 @@ pub mod config;
 pub mod mysql;
 pub mod repo;
 pub mod runtime;
+pub mod tunables;
 
 /// NOTE: Don't use this. "configerator:" prefix don't need to exist and is going to be removed.
 /// Pass raw path instead.
