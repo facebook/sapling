@@ -309,9 +309,11 @@ getOnDiskState(const EdenMount& mount, RelativePathPiece path, int retry = 0) {
   auto boostPath = boost::filesystem::path(absPath.stringPiece());
 
   boost::system::error_code ec;
-  auto fileType = boost::filesystem::status(boostPath, ec).type();
+  auto fileType = boost::filesystem::symlink_status(boostPath, ec).type();
 
   if (fileType == boost::filesystem::regular_file) {
+    return OnDiskState::MaterializedFile;
+  } else if (fileType == boost::filesystem::symlink_file) {
     return OnDiskState::MaterializedFile;
   } else if (fileType == boost::filesystem::directory_file) {
     return OnDiskState::MaterializedDirectory;
