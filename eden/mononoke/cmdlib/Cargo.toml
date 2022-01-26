@@ -33,6 +33,7 @@ megarepo_config = { version = "0.1.0", path = "../megarepo_api/megarepo_config" 
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_parser = { version = "0.1.0", path = "../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+mononoke_args = { version = "0.1.0", path = "mononoke_args" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 observability = { version = "0.1.0", path = "../observability" }
 once_cell = "1.8"

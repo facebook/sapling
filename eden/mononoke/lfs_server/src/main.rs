@@ -40,12 +40,13 @@ use tokio::net::TcpListener;
 
 use blobrepo::BlobRepo;
 use cmdlib::{
-    args::{self, parse_config_spec_to_path, CachelibSettings},
+    args::{self, CachelibSettings},
     helpers::serve_forever,
     monitoring::{start_fb303_server, AliveService},
 };
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::RepoConfig;
+use mononoke_args::parse_config_spec_to_path;
 use repo_factory::RepoFactory;
 
 use crate::lfs_server_context::{LfsServerContext, ServerUris};

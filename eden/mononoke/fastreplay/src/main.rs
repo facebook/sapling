@@ -18,7 +18,7 @@ use cached_config::ConfigHandle;
 use clap::Arg;
 use cloned::cloned;
 use cmdlib::{
-    args::{self, parse_config_spec_to_path, MononokeMatches},
+    args::{self, MononokeMatches},
     monitoring::ReadyFlagService,
 };
 use context::SessionContainer;
@@ -33,6 +33,7 @@ use hgproto::HgCommands;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::{BlobConfig, CensoredScubaParams};
 use mononoke_api::{MononokeApiEnvironment, Repo, WarmBookmarksCacheDerivedData};
+use mononoke_args::parse_config_spec_to_path;
 use mononoke_types::Timestamp;
 use nonzero_ext::nonzero;
 use rand::{thread_rng, Rng};

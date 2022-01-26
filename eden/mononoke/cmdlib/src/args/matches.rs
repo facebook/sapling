@@ -22,6 +22,7 @@ use derived_data_remote::RemoteDerivationOptions;
 use fbinit::FacebookInit;
 use maybe_owned::MaybeOwned;
 use megarepo_config::MononokeMegarepoConfigsOptions;
+use mononoke_args::parse_config_spec_to_path;
 use panichandler::{self, Fate};
 use rendezvous::RendezVousOptions;
 use slog::{debug, o, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
@@ -47,7 +48,6 @@ use tunables::init_tunables_worker;
 pub type Normal = rand_distr::Normal<f64>;
 use crate::helpers::create_runtime;
 
-use super::parse_config_spec_to_path;
 use super::{
     app::{
         ArgType, MononokeAppData, BLOBSTORE_BYTES_MIN_THROTTLE_ARG, BLOBSTORE_PUT_BEHAVIOUR_ARG,

@@ -5,7 +5,25 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::{format_err, Result};
+
 pub mod config;
 pub mod mysql;
 pub mod repo;
 pub mod runtime;
+
+/// NOTE: Don't use this. "configerator:" prefix don't need to exist and is going to be removed.
+/// Pass raw path instead.
+pub fn parse_config_spec_to_path(source_spec: &str) -> Result<String> {
+    // NOTE: This means we don't support file paths with ":" in them, but it also means we can
+    // add other options after the first ":" later if we want.
+    let mut iter = source_spec.split(':');
+
+    // NOTE: We match None as the last element to make sure the input doesn't contain
+    // disallowed trailing parts.
+    match (iter.next(), iter.next(), iter.next()) {
+        (Some("configerator"), Some(path), None) => Ok(path.to_string()),
+        (Some(path), None, None) => Ok(path.to_string()),
+        _ => Err(format_err!("Invalid configuration spec: {:?}", source_spec)),
+    }
+}
