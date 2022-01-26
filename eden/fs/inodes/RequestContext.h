@@ -20,46 +20,17 @@
 namespace facebook::eden {
 
 class RequestContext : public ObjectFetchContext {
-  // Needed to track stats
-  std::chrono::time_point<std::chrono::steady_clock> startTime_;
-  ChannelThreadStats::StatPtr latencyStat_{nullptr};
-  EdenStats* stats_{nullptr};
-  RequestMetricsScope requestMetricsScope_;
-  std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
-      channelThreadLocalStats_;
-  ProcessAccessLog& pal_;
-
-  struct EdenTopStats {
-   public:
-    Origin getFetchOrigin() {
-      return fetchOrigin_.load(std::memory_order_relaxed);
-    }
-    void setFetchOrigin(Origin origin) {
-      fetchOrigin_.store(origin, std::memory_order_relaxed);
-    }
-    std::chrono::nanoseconds fuseDuration{0};
-
-   private:
-    std::atomic<Origin> fetchOrigin_{Origin::NotFetched};
-  } edenTopStats_;
-
-  /**
-   * Normally, one requestData is created for only one fetch request,
-   * so priority will only be accessed by one thread, but that is
-   * not strictly guaranteed. Atomic is used here because there
-   * might be rare cases where multiple threads access priority_
-   * at the same time.
-   */
-  std::atomic<ImportPriority> priority_{
-      ImportPriority(ImportPriorityKind::High)};
-
  public:
+  explicit RequestContext(ProcessAccessLog& pal) : pal_(pal) {}
+
   RequestContext(const RequestContext&) = delete;
   RequestContext& operator=(const RequestContext&) = delete;
   RequestContext(RequestContext&&) = delete;
   RequestContext& operator=(RequestContext&&) = delete;
 
-  explicit RequestContext(ProcessAccessLog& pal) : pal_(pal) {}
+  ~RequestContext() override {
+    finishRequest();
+  }
 
   /**
    * Override of `ObjectFetchContext`
@@ -97,11 +68,47 @@ class RequestContext : public ObjectFetchContext {
       ChannelThreadStats::StatPtr stat,
       std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
           requestWatches);
-  void finishRequest();
+
+ private:
+  void finishRequest() noexcept;
+
+  struct EdenTopStats {
+   public:
+    Origin getFetchOrigin() {
+      return fetchOrigin_.load(std::memory_order_relaxed);
+    }
+    void setFetchOrigin(Origin origin) {
+      fetchOrigin_.store(origin, std::memory_order_relaxed);
+    }
+    std::chrono::nanoseconds fuseDuration{0};
+
+   private:
+    std::atomic<Origin> fetchOrigin_{Origin::NotFetched};
+  };
 
   EdenTopStats& getEdenTopStats() {
     return edenTopStats_;
   }
+
+  // Needed to track stats
+  std::chrono::time_point<std::chrono::steady_clock> startTime_;
+  ChannelThreadStats::StatPtr latencyStat_{nullptr};
+  EdenStats* stats_{nullptr};
+  RequestMetricsScope requestMetricsScope_;
+  std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
+      channelThreadLocalStats_;
+  ProcessAccessLog& pal_;
+  EdenTopStats edenTopStats_;
+
+  /**
+   * Normally, one requestData is created for only one fetch request,
+   * so priority will only be accessed by one thread, but that is
+   * not strictly guaranteed. Atomic is used here because there
+   * might be rare cases where multiple threads access priority_
+   * at the same time.
+   */
+  std::atomic<ImportPriority> priority_{
+      ImportPriority(ImportPriorityKind::High)};
 };
 
 } // namespace facebook::eden

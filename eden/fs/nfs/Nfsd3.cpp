@@ -1837,7 +1837,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
   return (this->*handlerEntry.handler)(
              std::move(deser), std::move(ser), contextRef)
       .ensure([liveRequest = std::move(liveRequest),
-               context = std::move(context)]() { context->finishRequest(); });
+               context = std::move(context)]() {});
 }
 
 void Nfsd3ServerProcessor::onShutdown(RpcStopData data) {

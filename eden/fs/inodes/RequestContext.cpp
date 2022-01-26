@@ -32,41 +32,47 @@ void RequestContext::startRequest(
   }
 }
 
-void RequestContext::finishRequest() {
-  const auto now = steady_clock::now();
+void RequestContext::finishRequest() noexcept {
+  try {
+    const auto now = steady_clock::now();
 
-  const auto diff = now - startTime_;
-  const auto diff_us = duration_cast<microseconds>(diff);
-  const auto diff_ns = duration_cast<nanoseconds>(diff);
+    const auto diff = now - startTime_;
+    const auto diff_us = duration_cast<microseconds>(diff);
+    const auto diff_ns = duration_cast<nanoseconds>(diff);
 
-  stats_->getChannelStatsForCurrentThread().recordLatency(
-      latencyStat_, diff_us);
-  latencyStat_ = nullptr;
-  stats_ = nullptr;
-
-  if (channelThreadLocalStats_) {
-    { auto temp = std::move(requestMetricsScope_); }
-    channelThreadLocalStats_.reset();
-  }
-
-  if (auto pid = getClientPid(); pid.has_value()) {
-    switch (getEdenTopStats().getFetchOrigin()) {
-      case Origin::FromMemoryCache:
-        pal_.recordAccess(
-            *pid, ProcessAccessLog::AccessType::FsChannelMemoryCacheImport);
-        break;
-      case Origin::FromDiskCache:
-        pal_.recordAccess(
-            *pid, ProcessAccessLog::AccessType::FsChannelDiskCacheImport);
-        break;
-      case Origin::FromNetworkFetch:
-        pal_.recordAccess(
-            *pid, ProcessAccessLog::AccessType::FsChannelBackingStoreImport);
-        break;
-      default:
-        break;
+    if (stats_ != nullptr) {
+      stats_->getChannelStatsForCurrentThread().recordLatency(
+          latencyStat_, diff_us);
+      latencyStat_ = nullptr;
+      stats_ = nullptr;
     }
-    pal_.recordDuration(*pid, diff_ns);
+
+    if (channelThreadLocalStats_) {
+      { auto temp = std::move(requestMetricsScope_); }
+      channelThreadLocalStats_.reset();
+    }
+
+    if (auto pid = getClientPid(); pid.has_value()) {
+      switch (getEdenTopStats().getFetchOrigin()) {
+        case Origin::FromMemoryCache:
+          pal_.recordAccess(
+              *pid, ProcessAccessLog::AccessType::FsChannelMemoryCacheImport);
+          break;
+        case Origin::FromDiskCache:
+          pal_.recordAccess(
+              *pid, ProcessAccessLog::AccessType::FsChannelDiskCacheImport);
+          break;
+        case Origin::FromNetworkFetch:
+          pal_.recordAccess(
+              *pid, ProcessAccessLog::AccessType::FsChannelBackingStoreImport);
+          break;
+        default:
+          break;
+      }
+      pal_.recordDuration(*pid, diff_ns);
+    }
+  } catch (const std::exception& ex) {
+    XLOG(WARN) << "Failed to complete request: " << folly::exceptionStr(ex);
   }
 }
 

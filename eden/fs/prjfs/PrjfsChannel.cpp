@@ -880,10 +880,6 @@ HRESULT PrjfsChannelInner::notification(
     auto fut = (this->*handler)(
         std::move(relPath), std::move(destPath), isDirectory, *context);
 
-    SCOPE_EXIT {
-      context->finishRequest();
-    };
-
     // Since the future should just be enqueing to an executor, it should
     // always be ready.
     return tryToHResult(std::move(fut).getTry(0ms));

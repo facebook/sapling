@@ -36,10 +36,6 @@ class PrjfsRequestContext : public RequestContext {
 
   ImmediateFuture<folly::Unit> catchErrors(ImmediateFuture<folly::Unit>&& fut) {
     return std::move(fut).thenTry([this](folly::Try<folly::Unit>&& try_) {
-      SCOPE_EXIT {
-        finishRequest();
-      };
-
       auto result = tryToHResult(try_);
       if (result != S_OK) {
         sendError(result);

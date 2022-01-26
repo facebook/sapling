@@ -74,9 +74,6 @@ class FuseRequestContext : public RequestContext {
       Notifications* FOLLY_NULLABLE notifications) {
     return std::move(fut).thenTryInline([this, notifications](
                                             folly::Try<folly::Unit>&& try_) {
-      SCOPE_EXIT {
-        finishRequest();
-      };
       if (try_.hasException()) {
         if (auto* err = try_.tryGetExceptionObject<folly::FutureTimeout>()) {
           timeoutErrorHandler(*err, notifications);
