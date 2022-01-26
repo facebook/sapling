@@ -47,21 +47,21 @@ class PrjfsDispatcher {
    */
   virtual ImmediateFuture<std::vector<PrjfsDirEntry>> opendir(
       RelativePath path,
-      ObjectFetchContext& context) = 0;
+      std::shared_ptr<ObjectFetchContext> context) = 0;
 
   /**
    * Lookup the specified file and get its attributes.
    */
   virtual ImmediateFuture<std::optional<LookupResult>> lookup(
       RelativePath path,
-      ObjectFetchContext& context) = 0;
+      std::shared_ptr<ObjectFetchContext> context) = 0;
 
   /**
    * Test if a file with the given name exist
    */
   virtual ImmediateFuture<bool> access(
       RelativePath path,
-      ObjectFetchContext& context) = 0;
+      std::shared_ptr<ObjectFetchContext> context) = 0;
 
   /**
    * Read the file with the given name
@@ -73,28 +73,28 @@ class PrjfsDispatcher {
    */
   virtual ImmediateFuture<std::string> read(
       RelativePath path,
-      ObjectFetchContext& context) = 0;
+      std::shared_ptr<ObjectFetchContext> context) = 0;
 
   /**
    * Notification sent when a file was created
    */
   virtual ImmediateFuture<folly::Unit> fileCreated(
       RelativePath path,
-      ObjectFetchContext& context) = 0;
+      std::shared_ptr<ObjectFetchContext> context) = 0;
 
   /**
    * Notification sent when a directory was created
    */
   virtual ImmediateFuture<folly::Unit> dirCreated(
       RelativePath path,
-      ObjectFetchContext& context) = 0;
+      std::shared_ptr<ObjectFetchContext> context) = 0;
 
   /**
    * Notification sent when a file has been modified
    */
   virtual ImmediateFuture<folly::Unit> fileModified(
       RelativePath relPath,
-      ObjectFetchContext& context) = 0;
+      std::shared_ptr<ObjectFetchContext> context) = 0;
 
   /**
    * Notification sent when a file is renamed
@@ -102,21 +102,21 @@ class PrjfsDispatcher {
   virtual ImmediateFuture<folly::Unit> fileRenamed(
       RelativePath oldPath,
       RelativePath newPath,
-      ObjectFetchContext& context) = 0;
+      std::shared_ptr<ObjectFetchContext> context) = 0;
 
   /**
    * Notification sent when a file was removed
    */
   virtual ImmediateFuture<folly::Unit> fileDeleted(
       RelativePath relPath,
-      ObjectFetchContext& context) = 0;
+      std::shared_ptr<ObjectFetchContext> context) = 0;
 
   /**
    * Notification sent when a directory was removed
    */
   virtual ImmediateFuture<folly::Unit> dirDeleted(
       RelativePath relPath,
-      ObjectFetchContext& context) = 0;
+      std::shared_ptr<ObjectFetchContext> context) = 0;
 
   /**
    * Wait for all received notifications to complete.

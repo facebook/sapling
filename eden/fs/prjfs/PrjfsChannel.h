@@ -127,7 +127,7 @@ class PrjfsChannelInner {
       RelativePath relPath,
       RelativePath destPath,
       bool isDirectory,
-      ObjectFetchContext& context);
+      std::shared_ptr<ObjectFetchContext> context);
 
   /**
    * Notification sent when a file or directory has been replaced.
@@ -136,7 +136,7 @@ class PrjfsChannelInner {
       RelativePath relPath,
       RelativePath destPath,
       bool isDirectory,
-      ObjectFetchContext& context);
+      std::shared_ptr<ObjectFetchContext> context);
 
   /**
    * Notification sent when a file has been modified.
@@ -145,7 +145,7 @@ class PrjfsChannelInner {
       RelativePath relPath,
       RelativePath destPath,
       bool isDirectory,
-      ObjectFetchContext& context);
+      std::shared_ptr<ObjectFetchContext> context);
 
   /**
    * Notification sent when a file or directory has been renamed.
@@ -154,7 +154,7 @@ class PrjfsChannelInner {
       RelativePath oldPath,
       RelativePath newPath,
       bool isDirectory,
-      ObjectFetchContext& context);
+      std::shared_ptr<ObjectFetchContext> context);
 
   /**
    * Notification sent prior to a file or directory being renamed.
@@ -167,7 +167,7 @@ class PrjfsChannelInner {
       RelativePath oldPath,
       RelativePath newPath,
       bool isDirectory,
-      ObjectFetchContext& context);
+      std::shared_ptr<ObjectFetchContext> context);
 
   /**
    * Notification sent when a file or directory has been removed.
@@ -176,7 +176,7 @@ class PrjfsChannelInner {
       RelativePath relPath,
       RelativePath destPath,
       bool isDirectory,
-      ObjectFetchContext& context);
+      std::shared_ptr<ObjectFetchContext> context);
 
   /**
    * Notification sent prior to a hardlink being created.
@@ -185,7 +185,7 @@ class PrjfsChannelInner {
       RelativePath oldPath,
       RelativePath newPath,
       bool isDirectory,
-      ObjectFetchContext& context);
+      std::shared_ptr<ObjectFetchContext> context);
 
   ProcessAccessLog& getProcessAccessLog() {
     return processAccessLog_;

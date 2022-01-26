@@ -21,43 +21,44 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
 
   ImmediateFuture<std::vector<PrjfsDirEntry>> opendir(
       RelativePath path,
-      ObjectFetchContext& context) override;
+      std::shared_ptr<ObjectFetchContext> context) override;
 
   ImmediateFuture<std::optional<LookupResult>> lookup(
       RelativePath path,
-      ObjectFetchContext& context) override;
+      std::shared_ptr<ObjectFetchContext> context) override;
 
-  ImmediateFuture<bool> access(RelativePath path, ObjectFetchContext& context)
-      override;
+  ImmediateFuture<bool> access(
+      RelativePath path,
+      std::shared_ptr<ObjectFetchContext> context) override;
 
   ImmediateFuture<std::string> read(
       RelativePath path,
-      ObjectFetchContext& context) override;
+      std::shared_ptr<ObjectFetchContext> context) override;
 
   ImmediateFuture<folly::Unit> fileCreated(
       RelativePath relPath,
-      ObjectFetchContext& context) override;
+      std::shared_ptr<ObjectFetchContext> context) override;
 
   ImmediateFuture<folly::Unit> dirCreated(
       RelativePath relPath,
-      ObjectFetchContext& context) override;
+      std::shared_ptr<ObjectFetchContext> context) override;
 
   ImmediateFuture<folly::Unit> fileModified(
       RelativePath relPath,
-      ObjectFetchContext& context) override;
+      std::shared_ptr<ObjectFetchContext> context) override;
 
   ImmediateFuture<folly::Unit> fileRenamed(
       RelativePath oldPath,
       RelativePath newPath,
-      ObjectFetchContext& context) override;
+      std::shared_ptr<ObjectFetchContext> context) override;
 
   ImmediateFuture<folly::Unit> fileDeleted(
       RelativePath oldPath,
-      ObjectFetchContext& context) override;
+      std::shared_ptr<ObjectFetchContext> context) override;
 
   ImmediateFuture<folly::Unit> dirDeleted(
       RelativePath oldPath,
-      ObjectFetchContext& context) override;
+      std::shared_ptr<ObjectFetchContext> context) override;
 
   ImmediateFuture<folly::Unit> waitForPendingNotifications() override;
 
