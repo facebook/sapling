@@ -8,6 +8,7 @@
 use anyhow::{format_err, Result};
 
 pub mod config;
+pub mod hooks;
 pub mod mysql;
 pub mod repo;
 pub mod runtime;
