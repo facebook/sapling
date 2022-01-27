@@ -33,7 +33,6 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
 use async_runtime::block_on;
-use auth::AuthGroup;
 use auth::AuthSection;
 use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
@@ -151,11 +150,10 @@ struct HttpOptions {
     min_transfer_speed: Option<MinTransferSpeed>,
     correlator: Option<String>,
     user_agent: String,
-    auth: Option<AuthGroup>,
     backoff_times: Vec<f32>,
     throttle_backoff_times: Vec<f32>,
     request_timeout: Duration,
-    use_client_certs: bool,
+    missing_client_certs: bool,
 }
 
 pub(crate) enum LfsRemoteInner {
@@ -1123,7 +1121,7 @@ impl LfsRemoteInner {
         check_status: impl Fn(StatusCode) -> Result<(), TransferError>,
         http_options: &HttpOptions,
     ) -> Result<Bytes, FetchError> {
-        if http_options.use_client_certs && http_options.auth.is_none() {
+        if http_options.missing_client_certs {
             return Err(FetchError {
                 url,
                 method,
@@ -1171,18 +1169,6 @@ impl LfsRemoteInner {
 
                 if let Some(mts) = http_options.min_transfer_speed {
                     req.set_min_transfer_speed(mts);
-                }
-
-                if let Some(auth) = &http_options.auth {
-                    if let Some(cert) = &auth.cert {
-                        req.set_cert(cert);
-                    }
-                    if let Some(key) = &auth.key {
-                        req.set_key(key);
-                    }
-                    if let Some(ca) = &auth.cacerts {
-                        req.set_cainfo(ca);
-                    }
                 }
 
                 let res = async {
@@ -1588,6 +1574,8 @@ impl LfsRemote {
                 None
             };
 
+            let missing_client_certs = use_client_certs && auth.is_none();
+
             let user_agent = config.get_or("experimental", "lfs.user-agent", || {
                 format!("EdenSCM/{}", ::version::VERSION)
             })?;
@@ -1635,7 +1623,7 @@ impl LfsRemote {
                 .map(|s| NonZeroU64::new(s).context("download chunk size cannot be 0"))
                 .transpose()?;
 
-            let client = http_client("lfs", http_config(config, None));
+            let client = http_client("lfs", http_config(config, auth));
 
             Ok(Self {
                 shared,
@@ -1653,11 +1641,10 @@ impl LfsRemote {
                         min_transfer_speed,
                         correlator,
                         user_agent,
-                        auth,
                         backoff_times,
                         throttle_backoff_times,
                         request_timeout,
-                        use_client_certs,
+                        missing_client_certs,
                     },
                 }),
             })
