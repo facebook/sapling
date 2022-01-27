@@ -12,7 +12,7 @@ import sys
 from datetime import datetime, date
 from pathlib import Path
 from textwrap import dedent
-from typing import Dict, Optional
+from typing import List, Dict, Optional
 
 from eden.fs.cli import (
     config as config_mod,
@@ -22,8 +22,12 @@ from eden.fs.cli import (
     ui,
     version,
 )
-from eden.fs.cli.config import EdenCheckout, EdenInstance
-from eden.fs.cli.doctor.util import CheckoutInfo
+from eden.fs.cli.config import EdenInstance
+from eden.fs.cli.doctor.util import (
+    CheckoutInfo,
+    hg_doctor_in_backing_repo,
+    get_dependent_repos,
+)
 from facebook.eden.ttypes import MountState
 from fb303_core.ttypes import fb303_status
 
@@ -181,6 +185,9 @@ class EdenDoctorChecker:
                 checkout = CheckoutInfo(
                     self.instance,
                     path,
+                    backing_repo=Path(os.fsdecode(mount.backingRepoPath))
+                    if mount.backingRepoPath is not None
+                    else None,
                     running_state_dir=Path(os.fsdecode(mount.edenClientPath)),
                     state=mount_state,
                 )
@@ -194,6 +201,10 @@ class EdenDoctorChecker:
                 checkout_info.configured_state_dir = configured_checkout.state_dir
                 checkouts[checkout_info.path] = checkout_info
 
+            if checkout_info.backing_repo is None:
+                checkout_info.backing_repo = (
+                    configured_checkout.get_config().backing_repo
+                )
             checkout_info.configured_state_dir = configured_checkout.state_dir
 
         return checkouts
@@ -241,11 +252,13 @@ class EdenDoctorChecker:
             self.out.writeln(f"Checking {path}")
             try:
                 check_mount(
+                    self.out,
                     self.tracker,
                     self.instance,
                     checkout,
                     self.mount_table,
                     watchman_info,
+                    list(checkouts.values()),
                 )
             except Exception as ex:
                 self.tracker.add_problem(
@@ -385,18 +398,20 @@ class EdenfsUnexpectedStatus(Problem):
 
 
 def check_mount(
+    out: ui.Output,
     tracker: ProblemTracker,
     instance: EdenInstance,
     checkout: CheckoutInfo,
     mount_table: mtab.MountTable,
     watchman_info: check_watchman.WatchmanCheckInfo,
+    all_checkouts: List[CheckoutInfo],
 ) -> None:
     if sys.platform == "win32":
         check_mount_overlay_type(tracker, checkout)
 
     if checkout.state is None:
         # This checkout is configured but not currently running.
-        tracker.add_problem(CheckoutNotMounted(checkout))
+        tracker.add_problem(CheckoutNotMounted(out, checkout, all_checkouts))
     elif checkout.state == MountState.RUNNING:
         check_running_mount(tracker, instance, checkout, mount_table, watchman_info)
     elif checkout.state in (
@@ -536,12 +551,23 @@ Please reclone your repository. You can do so by running `fbclone <repo_type>
 
 
 class CheckoutNotMounted(FixableProblem):
+    _out: ui.Output
     _instance: EdenInstance
     _mount_path: Path
+    _backing_repo: Path
+    _all_checkouts: List[CheckoutInfo]
 
-    def __init__(self, checkout_info: CheckoutInfo) -> None:
+    def __init__(
+        self,
+        out: ui.Output,
+        checkout_info: CheckoutInfo,
+        all_checkouts: List[CheckoutInfo],
+    ) -> None:
+        self._out = out
         self._instance = checkout_info.instance
         self._mount_path = checkout_info.path
+        self._backing_repo = checkout_info.get_backing_repo()
+        self._all_checkouts = all_checkouts
 
     def description(self) -> str:
         return f"{self._mount_path} is not currently mounted"
@@ -555,7 +581,9 @@ class CheckoutNotMounted(FixableProblem):
     def perform_fix(self) -> None:
         try:
             self._instance.mount(str(self._mount_path), False)
+            return
         except Exception as ex:
+            # eden corruption
             if "is too short for header" in str(ex):
                 raise Exception(
                     f"""\
@@ -571,7 +599,37 @@ you may be able to restore it from your system backup.
 
 To remove the corrupted repo, run: `eden rm {self._mount_path}`"""
                 )
-            raise
+
+            # if it is not this ^ eden corruption then it could be hg
+            # corruption that hg doctor could fix. Let's try hg doctor and then
+            # retry the mount for this case.
+
+        self._out.write(
+            "\nMount failed. Running `hg doctor` in the backing repo and then "
+            "will retry the mount.\n",
+            flush=True,
+        )
+        result = hg_doctor_in_backing_repo(
+            self._backing_repo,
+            get_dependent_repos(self._backing_repo, self._all_checkouts),
+        )
+
+        try:
+            self._instance.mount(str(self._mount_path), False)
+        except Exception as ex:
+            # If the result is non None then hg tried to fix something. It must
+            # not have succeeded all the way because the mount still failed.
+            if result is not None:
+                raise Exception(
+                    f"""\
+Failed to remount this mount with error:
+
+{ex}
+
+{result}"""
+                )
+            else:
+                raise
 
 
 class StaleWorkingDirectory(Problem):
