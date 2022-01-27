@@ -8,7 +8,7 @@
 import os
 import subprocess
 from pathlib import Path
-from typing import List, Optional
+from typing import Set, List, Optional
 
 from eden.fs.cli.config import EdenInstance, EdenCheckout
 from eden.fs.cli.util import get_environment_suitable_for_subprocess
@@ -63,10 +63,20 @@ def get_dependent_repos(
 # `dependent_repos` are the EdenFS repos that use this backing repo. These
 # are used for display purposes. Note that if clones have failed the set of
 # dependent repos may be empty.
+# `checked_backing_repos` is a set of backing repos in which we have already run
+# `hg doctor`. We keep this around so that we don't attempt to run hg doctor
+# multiple times in the same backing repo. Running it multiple times will
+# not fix any extra errors and `hg doctor` can be pretty slow, so we save time
+# this way.
 def hg_doctor_in_backing_repo(
-    backing_repo: Path,
-    dependent_repos: List[Path],
+    backing_repo: Path, dependent_repos: List[Path], checked_backing_repos: Set[str]
 ) -> Optional[str]:
+    # We use a set of strings instead of a set of paths because paths have
+    # weird equivalence. behavior. Paths that str to the same string do not
+    # report as equal.
+    if str(backing_repo) in checked_backing_repos:
+        return
+    checked_backing_repos.add(str(backing_repo))
 
     hg = os.environ.get("EDEN_HG_BINARY", "hg")
 

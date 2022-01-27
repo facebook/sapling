@@ -12,7 +12,7 @@ import sys
 from datetime import datetime, date
 from pathlib import Path
 from textwrap import dedent
-from typing import List, Dict, Optional
+from typing import Set, List, Dict, Optional
 
 from eden.fs.cli import (
     config as config_mod,
@@ -225,6 +225,7 @@ class EdenDoctorChecker:
     def run_normal_checks(self) -> None:
         check_edenfs_version(self.tracker, self.instance)
         checkouts = self._get_checkouts_info()
+        checked_backing_repos = set()
 
         if sys.platform != "win32":
             self.check_privhelper()
@@ -259,6 +260,7 @@ class EdenDoctorChecker:
                     self.mount_table,
                     watchman_info,
                     list(checkouts.values()),
+                    checked_backing_repos,
                 )
             except Exception as ex:
                 self.tracker.add_problem(
@@ -405,13 +407,16 @@ def check_mount(
     mount_table: mtab.MountTable,
     watchman_info: check_watchman.WatchmanCheckInfo,
     all_checkouts: List[CheckoutInfo],
+    checked_backing_repos: Set[str],
 ) -> None:
     if sys.platform == "win32":
         check_mount_overlay_type(tracker, checkout)
 
     if checkout.state is None:
         # This checkout is configured but not currently running.
-        tracker.add_problem(CheckoutNotMounted(out, checkout, all_checkouts))
+        tracker.add_problem(
+            CheckoutNotMounted(out, checkout, all_checkouts, checked_backing_repos)
+        )
     elif checkout.state == MountState.RUNNING:
         check_running_mount(tracker, instance, checkout, mount_table, watchman_info)
     elif checkout.state in (
@@ -556,18 +561,21 @@ class CheckoutNotMounted(FixableProblem):
     _mount_path: Path
     _backing_repo: Path
     _all_checkouts: List[CheckoutInfo]
+    _checked_backing_repos: Set[str]
 
     def __init__(
         self,
         out: ui.Output,
         checkout_info: CheckoutInfo,
         all_checkouts: List[CheckoutInfo],
+        checked_backing_repos: Set[str],
     ) -> None:
         self._out = out
         self._instance = checkout_info.instance
         self._mount_path = checkout_info.path
         self._backing_repo = checkout_info.get_backing_repo()
         self._all_checkouts = all_checkouts
+        self._checked_backing_repos = checked_backing_repos
 
     def description(self) -> str:
         return f"{self._mount_path} is not currently mounted"
@@ -612,6 +620,7 @@ To remove the corrupted repo, run: `eden rm {self._mount_path}`"""
         result = hg_doctor_in_backing_repo(
             self._backing_repo,
             get_dependent_repos(self._backing_repo, self._all_checkouts),
+            self._checked_backing_repos,
         )
 
         try:
