@@ -216,19 +216,10 @@ impl Client {
 
         let config = self.config();
 
-        if let Some(ref cert) = config.cert {
+        if let Some(ref cert) = config.http_config.cert_path {
             if self.config().validate_certs {
                 check_certs(cert)?;
             }
-            req.set_cert(cert);
-        }
-
-        if let Some(ref key) = config.key {
-            req.set_key(key);
-        }
-
-        if let Some(ref ca) = config.ca_bundle {
-            req.set_cainfo(ca);
         }
 
         for (k, v) in &config.headers {

@@ -122,9 +122,6 @@ impl<'a> Builder<'a> {
 pub struct HttpClientBuilder {
     repo_name: Option<String>,
     server_url: Option<Url>,
-    cert: Option<PathBuf>,
-    key: Option<PathBuf>,
-    ca_bundle: Option<PathBuf>,
     headers: HashMap<String, String>,
     max_files: Option<usize>,
     max_trees: Option<usize>,
@@ -173,7 +170,7 @@ impl HttpClientBuilder {
 
         let validate_certs =
             get_config::<bool>(config, "edenapi", "validate-certs")?.unwrap_or_default();
-        let (cert, key, ca_bundle) = AuthSection::from_config(config)
+        let auth = AuthSection::from_config(config)
             .best_match_for(&server_url)
             .or_else(|e| {
                 // If certificate validation is disabled, ignore errors here and make it appear as
@@ -185,9 +182,7 @@ impl HttpClientBuilder {
                     tracing::warn!("Ignoring missing client certificates: {}", &e);
                     Ok(None)
                 }
-            })?
-            .map(|auth| (auth.cert, auth.key, auth.cacerts))
-            .unwrap_or_default();
+            })?;
 
         let mut headers = get_config::<String>(config, "edenapi", "headers")?
             .map(parse_headers)
@@ -236,16 +231,13 @@ impl HttpClientBuilder {
             get_config::<usize>(config, "edenapi", "max-retry-per-request")?.unwrap_or(10);
         let use_files2 = get_config::<bool>(config, "edenapi", "use-files2")?.unwrap_or_default();
 
-        let mut http_config = hg_http::http_config(config, None);
+        let mut http_config = hg_http::http_config(config, auth);
         http_config.verbose_stats |= debug;
         http_config.max_concurrent_requests = max_requests;
 
         Ok(HttpClientBuilder {
             repo_name,
             server_url: Some(server_url),
-            cert,
-            key,
-            ca_bundle,
             headers,
             max_files,
             max_trees,
@@ -275,29 +267,6 @@ impl HttpClientBuilder {
     /// Set the server URL.
     pub fn server_url(mut self, url: Url) -> Self {
         self.server_url = Some(url);
-        self
-    }
-
-    /// Specify a client certificate for authenticating with the server.
-    /// The caller should provide a path to PEM-encoded X.509 certificate file.
-    /// The corresponding private key may either be provided in the same file
-    /// as the certificate, or separately using the `key` method.
-    pub fn cert(mut self, cert: impl AsRef<Path>) -> Self {
-        self.cert = Some(cert.as_ref().into());
-        self
-    }
-
-    /// Specify the client's private key
-    pub fn key(mut self, key: impl AsRef<Path>) -> Self {
-        self.key = Some(key.as_ref().into());
-        self
-    }
-
-    /// Specify a CA certificate bundle to be used to validate the server's
-    /// TLS certificate in place of the default system certificate bundle.
-    /// Primarily used in tests.
-    pub fn ca_bundle(mut self, ca: impl AsRef<Path>) -> Self {
-        self.ca_bundle = Some(ca.as_ref().into());
         self
     }
 
@@ -427,9 +396,6 @@ pub(crate) struct Config {
     #[allow(dead_code)]
     pub(crate) repo_name: String,
     pub(crate) server_url: Url,
-    pub(crate) cert: Option<PathBuf>,
-    pub(crate) key: Option<PathBuf>,
-    pub(crate) ca_bundle: Option<PathBuf>,
     pub(crate) headers: HashMap<String, String>,
     pub(crate) max_files: Option<usize>,
     pub(crate) max_trees: Option<usize>,
@@ -456,9 +422,6 @@ impl TryFrom<HttpClientBuilder> for Config {
         let HttpClientBuilder {
             repo_name,
             server_url,
-            cert,
-            key,
-            ca_bundle,
             headers,
             max_files,
             max_trees,
@@ -497,9 +460,6 @@ impl TryFrom<HttpClientBuilder> for Config {
         Ok(Config {
             repo_name,
             server_url,
-            cert,
-            key,
-            ca_bundle,
             headers,
             max_files,
             max_trees,
