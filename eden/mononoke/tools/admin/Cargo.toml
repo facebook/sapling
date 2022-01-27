@@ -16,7 +16,6 @@ cmdlib_scrubbing = { version = "0.1.0", path = "../../cmdlib/scrubbing" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 heck = "0.3.1"
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
-mononoke_args = { version = "0.1.0", path = "../../cmdlib/mononoke_args" }
 regex = "1.5.4"
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 

@@ -21,7 +21,7 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 megarepo_config = { version = "0.1.0", path = "../../megarepo_api/megarepo_config" }
 metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }
-mononoke_args = { version = "0.1.0", path = "../mononoke_args" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 repo_factory = { version = "0.1.0", path = "../../repo_factory" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

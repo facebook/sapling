@@ -223,7 +223,6 @@ members = [
   "cmdlib/environment",
   "cmdlib/log",
   "cmdlib/mononoke_app",
-  "cmdlib/mononoke_args",
   "cmdlib/scrubbing",
   "cmdlib/x_repo",
   "cmds/copy_blobstore_keys",
