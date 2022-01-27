@@ -241,6 +241,8 @@ class EdenDoctorChecker:
             )
             check_facebook(
                 self.tracker,
+                list(checkouts.values()),
+                checked_backing_repos,
                 check_fuse=any(
                     checkout.get_checkout().get_config().mount_protocol == "fuse"
                     for checkout in checkouts.values()
