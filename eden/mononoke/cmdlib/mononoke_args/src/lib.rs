@@ -12,6 +12,7 @@ pub mod hooks;
 pub mod mysql;
 pub mod repo;
 pub mod runtime;
+pub mod shutdown_timeout;
 pub mod tunables;
 
 /// NOTE: Don't use this. "configerator:" prefix don't need to exist and is going to be removed.
