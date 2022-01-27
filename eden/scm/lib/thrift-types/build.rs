@@ -115,11 +115,6 @@ tracing = "0.1"
 fn main() -> io::Result<()> {
     let thrift_units = [
         ThriftUnit {
-            name: "fb303",
-            path: "common/fb303/if/fb303.thrift",
-            deps: vec!["fb303_core"],
-        },
-        ThriftUnit {
             name: "fb303_core",
             path: "fb303/thrift/fb303_core.thrift",
             deps: vec![],

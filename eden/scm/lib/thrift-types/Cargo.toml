@@ -9,7 +9,6 @@ anyhow = "1.0.51"
 const-cstr = "0.3.0"
 eden = { path = "eden" }
 eden_config = { path = "eden_config" }
-fb303 = { path = "fb303" }
 fb303_core = { path = "fb303_core" }
 fbthrift = { path = "../../../../thrift/lib/rust" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
