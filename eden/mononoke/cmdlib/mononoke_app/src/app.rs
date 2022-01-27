@@ -17,8 +17,7 @@ use fbinit::FacebookInit;
 use metaconfig_parser::{RepoConfigs, StorageConfigs};
 use mononoke_args::config::ConfigArgs;
 use mononoke_args::repo::{RepoArg, RepoArgs};
-use repo_factory::RepoFactory;
-use repo_factory::RepoFactoryBuilder;
+use repo_factory::{RepoFactory, RepoFactoryBuilder};
 use slog::Logger;
 use tokio::runtime::Handle;
 
@@ -103,6 +102,16 @@ impl MononokeApp {
     /// Create a basic CoreContext.
     pub fn new_context(&self) -> CoreContext {
         CoreContext::new_with_logger(self.env.fb, self.logger().clone())
+    }
+
+    /// Return repo factory used by app.
+    pub fn repo_factory(&self) -> RepoFactory {
+        self.repo_factory.clone()
+    }
+
+    /// Mononoke environment for this app.
+    pub fn environment(&self) -> &Arc<MononokeEnvironment> {
+        &self.env
     }
 
     /// Open a repository based on user-provided arguments.
