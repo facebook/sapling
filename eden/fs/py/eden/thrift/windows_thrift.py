@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import ctypes
 import errno
-import socket
 import sys
 
 from thrift.transport.TSocket import TSocket
@@ -169,6 +168,7 @@ class WindowsSocketException(Exception):
 class WindowsSocketHandle(object):
     AF_UNIX = 1
     SOCK_STREAM = 1
+    IPPROTO_TCP = 6
 
     fd = -1  # type: int
     address = ""  # type: str
@@ -209,6 +209,9 @@ class WindowsSocketHandle(object):
         fd = socket(self.AF_UNIX, self.SOCK_STREAM, 0)
         self._checkReturnCode(fd)
         self.fd = fd
+        self.type = self.SOCK_STREAM
+        self.family = self.AF_UNIX
+        self.proto = self.IPPROTO_TCP
 
     def fileno(self):
         # type: () -> int
