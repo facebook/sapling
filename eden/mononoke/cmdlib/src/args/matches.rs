@@ -22,7 +22,7 @@ use derived_data_remote::RemoteDerivationOptions;
 use fbinit::FacebookInit;
 use maybe_owned::MaybeOwned;
 use megarepo_config::MononokeMegarepoConfigsOptions;
-use mononoke_args::parse_config_spec_to_path;
+use mononoke_app::args::parse_config_spec_to_path;
 use panichandler::{self, Fate};
 use rendezvous::RendezVousOptions;
 use slog::{debug, o, Level, Logger, Never, SendSyncRefUnwindSafeDrain};

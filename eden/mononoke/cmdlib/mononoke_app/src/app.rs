@@ -15,11 +15,11 @@ use environment::MononokeEnvironment;
 use facet::AsyncBuildable;
 use fbinit::FacebookInit;
 use metaconfig_parser::{RepoConfigs, StorageConfigs};
-use mononoke_args::config::ConfigArgs;
-use mononoke_args::repo::{RepoArg, RepoArgs};
 use repo_factory::{RepoFactory, RepoFactoryBuilder};
 use slog::Logger;
 use tokio::runtime::Handle;
+
+use crate::args::{ConfigArgs, RepoArg, RepoArgs};
 
 pub struct MononokeApp {
     args: ArgMatches,

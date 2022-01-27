@@ -8,8 +8,8 @@
 use anyhow::Result;
 use clap::Parser;
 use fbinit::FacebookInit;
+use mononoke_app::args::RepoArgs;
 use mononoke_app::{MononokeApp, MononokeAppBuilder};
-use mononoke_args::repo::RepoArgs;
 use repo_identity::{RepoIdentity, RepoIdentityRef};
 
 /// Display the repo identity of the chosen repo.

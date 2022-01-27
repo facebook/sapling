@@ -9,8 +9,8 @@ use anyhow::{Context, Result};
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use clap::Parser;
+use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
-use mononoke_args::repo::RepoArgs;
 use repo_identity::RepoIdentityRef;
 
 /// List configured repositories.

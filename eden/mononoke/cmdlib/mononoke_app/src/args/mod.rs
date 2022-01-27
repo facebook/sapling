@@ -7,13 +7,21 @@
 
 use anyhow::{format_err, Result};
 
-pub mod config;
-pub mod hooks;
-pub mod mysql;
-pub mod repo;
-pub mod runtime;
-pub mod shutdown_timeout;
-pub mod tunables;
+mod config;
+mod hooks;
+mod mysql;
+mod repo;
+mod runtime;
+mod shutdown_timeout;
+mod tunables;
+
+pub use self::tunables::TunablesArgs;
+pub use config::ConfigArgs;
+pub use hooks::HooksArgs;
+pub use mysql::MysqlArgs;
+pub use repo::{RepoArg, RepoArgs};
+pub use runtime::RuntimeArgs;
+pub use shutdown_timeout::ShutdownTimeoutArgs;
 
 /// NOTE: Don't use this. "configerator:" prefix don't need to exist and is going to be removed.
 /// Pass raw path instead.

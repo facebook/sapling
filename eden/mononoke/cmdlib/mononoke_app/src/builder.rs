@@ -27,11 +27,6 @@ use derived_data_remote::RemoteDerivationArgs;
 use environment::MononokeEnvironment;
 use fbinit::FacebookInit;
 use megarepo_config::{MegarepoConfigsArgs, MononokeMegarepoConfigsOptions};
-use mononoke_args::config::ConfigArgs;
-use mononoke_args::mysql::MysqlArgs;
-use mononoke_args::parse_config_spec_to_path;
-use mononoke_args::runtime::RuntimeArgs;
-use mononoke_args::tunables::TunablesArgs;
 use rendezvous::RendezVousArgs;
 use slog::{debug, o, Logger};
 use sql_ext::facebook::{MysqlOptions, PoolConfig, ReadConnectionType, SharedConnectionPool};
@@ -39,6 +34,7 @@ use tokio::runtime::Runtime;
 use tunables;
 
 use crate::app::MononokeApp;
+use crate::args::{parse_config_spec_to_path, ConfigArgs, MysqlArgs, RuntimeArgs, TunablesArgs};
 use crate::extension::{ArgExtension, ArgExtensionBox};
 
 pub struct MononokeAppBuilder {

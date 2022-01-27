@@ -6,6 +6,7 @@
  */
 
 mod app;
+pub mod args;
 mod builder;
 mod extension;
 

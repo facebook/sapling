@@ -46,7 +46,7 @@ use cmdlib::{
 };
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::RepoConfig;
-use mononoke_args::parse_config_spec_to_path;
+use mononoke_app::args::parse_config_spec_to_path;
 use repo_factory::RepoFactory;
 
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
