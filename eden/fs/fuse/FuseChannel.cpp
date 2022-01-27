@@ -83,8 +83,6 @@ struct FuseArg {
 
 namespace argrender {
 
-using fmt::format;
-
 using RenderFn = std::string (&)(FuseArg arg);
 
 std::string default_render(FuseArg /*arg*/) {
@@ -105,21 +103,21 @@ constexpr RenderFn readlink = default_render;
 std::string symlink(FuseArg arg) {
   auto name = arg.readz();
   auto target = arg.readz();
-  return format("name={}, target={}", name, target);
+  return fmt::format("name={}, target={}", name, target);
 }
 
 std::string mknod(FuseArg arg) {
   auto& in = arg.read<fuse_mknod_in>();
   auto name = arg.readz();
 
-  return format("{}, mode={:#o}, rdev={}", name, in.mode, in.rdev);
+  return fmt::format("{}, mode={:#o}, rdev={}", name, in.mode, in.rdev);
 }
 
 std::string mkdir(FuseArg arg) {
   auto& in = arg.read<fuse_mkdir_in>();
   auto name = arg.readz();
   auto mode = in.mode & ~in.umask;
-  return format("{}, mode={:#o}", name, mode);
+  return fmt::format("{}, mode={:#o}", name, mode);
 }
 
 constexpr RenderFn unlink = single_string_render;
@@ -129,25 +127,25 @@ std::string rename(FuseArg arg) {
   auto& in = arg.read<fuse_rename_in>();
   auto oldName = arg.readz();
   auto newName = arg.readz();
-  return format("old={}, newdir={}, new={}", oldName, in.newdir, newName);
+  return fmt::format("old={}, newdir={}, new={}", oldName, in.newdir, newName);
 }
 
 std::string link(FuseArg arg) {
   auto& in = arg.read<fuse_link_in>();
   auto newName = arg.readz();
-  return format("oldParent={}, newName={}", in.oldnodeid, newName);
+  return fmt::format("oldParent={}, newName={}", in.oldnodeid, newName);
 }
 
 constexpr RenderFn open = default_render;
 
 std::string read(FuseArg arg) {
   auto& in = arg.read<fuse_read_in>();
-  return format("off={}, len={}", in.offset, in.size);
+  return fmt::format("off={}, len={}", in.offset, in.size);
 }
 
 std::string write(FuseArg arg) {
   auto& in = arg.read<fuse_write_in>();
-  return format("off={}, len={}", in.offset, in.size);
+  return fmt::format("off={}, len={}", in.offset, in.size);
 }
 
 constexpr RenderFn statfs = default_render;
@@ -158,14 +156,14 @@ std::string setxattr(FuseArg arg) {
   auto& in = arg.read<fuse_setxattr_in>();
   (void)in;
   auto name = arg.readz();
-  return format("name={}", name);
+  return fmt::format("name={}", name);
 }
 
 std::string getxattr(FuseArg arg) {
   auto& in = arg.read<fuse_getxattr_in>();
   (void)in;
   auto name = arg.readz();
-  return format("name={}", name);
+  return fmt::format("name={}", name);
 }
 
 constexpr RenderFn listxattr = default_render;
@@ -175,7 +173,7 @@ constexpr RenderFn opendir = default_render;
 
 std::string readdir(FuseArg arg) {
   auto& in = arg.read<fuse_read_in>();
-  return format("offset={}", in.offset);
+  return fmt::format("offset={}", in.offset);
 }
 
 constexpr RenderFn releasedir = default_render;
@@ -183,13 +181,13 @@ constexpr RenderFn fsyncdir = default_render;
 
 std::string access(FuseArg arg) {
   auto& in = arg.read<fuse_access_in>();
-  return format("mask={}", in.mask);
+  return fmt::format("mask={}", in.mask);
 }
 
 std::string create(FuseArg arg) {
   auto& in = arg.read<fuse_create_in>();
   auto name = arg.readz();
-  return format("name={}, mode={:#o}", name, in.mode);
+  return fmt::format("name={}, mode={:#o}", name, in.mode);
 }
 
 constexpr RenderFn bmap = default_render;
@@ -197,12 +195,13 @@ constexpr RenderFn bmap = default_render;
 std::string batchforget(FuseArg arg) {
   auto& in = arg.read<fuse_batch_forget_in>();
   // TODO: could print some specific inode values here
-  return format("count={}", in.count);
+  return fmt::format("count={}", in.count);
 }
 
 std::string fallocate(FuseArg arg) {
   auto& in = arg.read<fuse_fallocate_in>();
-  return format("mode={}, offset={}, length={}", in.mode, in.offset, in.length);
+  return fmt::format(
+      "mode={}, offset={}, length={}", in.mode, in.offset, in.length);
 }
 
 } // namespace argrender

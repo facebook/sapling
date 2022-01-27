@@ -244,7 +244,8 @@ HRESULT PrjfsChannelInner::startEnumeration(
     auto stat = &ChannelThreadStats::openDir;
     context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
-    FB_LOGF(getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid);
+    FB_LOGF(
+        getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid.toString());
     return dispatcher_->opendir(std::move(path), context)
         .thenValue([this, context = std::move(context), guid = std::move(guid)](
                        auto&& dirents) {
@@ -263,7 +264,7 @@ HRESULT PrjfsChannelInner::endEnumeration(
     const PRJ_CALLBACK_DATA* /*callbackData*/,
     const GUID* enumerationId) {
   auto guid = Guid(*enumerationId);
-  FB_LOGF(getStraceLogger(), DBG7, "closedir({})", guid);
+  FB_LOGF(getStraceLogger(), DBG7, "closedir({})", guid.toString());
 
   removeDirectoryEnumeration(guid);
 
