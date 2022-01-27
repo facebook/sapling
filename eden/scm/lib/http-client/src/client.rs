@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashSet;
+use std::path::PathBuf;
 use std::pin::Pin;
 
 use curl::easy::Easy2;
@@ -53,8 +54,12 @@ pub struct HttpClient {
 
 #[derive(Clone, Debug)]
 pub struct Config {
-    pub client_info: Option<String>,
+    pub cert_path: Option<PathBuf>,
+    pub key_path: Option<PathBuf>,
+    pub ca_path: Option<PathBuf>,
     pub convert_cert: bool,
+
+    pub client_info: Option<String>,
     pub disable_tls_verification: bool,
     pub max_concurrent_requests: Option<usize>,
     pub unix_socket_domains: HashSet<String>,
@@ -66,8 +71,12 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            client_info: None,
+            cert_path: None,
+            key_path: None,
+            ca_path: None,
             convert_cert: cfg!(windows),
+
+            client_info: None,
             disable_tls_verification: false,
             max_concurrent_requests: None, // No limit by default
             unix_socket_domains: HashSet::new(),
@@ -393,6 +402,18 @@ impl HttpClient {
             if self.config.unix_socket_domains.contains(domain) {
                 req.set_auth_proxy_socket_path(self.config.unix_socket_path.clone());
             }
+        }
+
+        if let Some(cert_path) = &self.config.cert_path {
+            req.set_cert(cert_path);
+        }
+
+        if let Some(key_path) = &self.config.key_path {
+            req.set_key(key_path);
+        }
+
+        if let Some(ca_path) = &self.config.ca_path {
+            req.set_cainfo(ca_path);
         }
 
         req.set_verify_tls_cert(!self.config.disable_tls_verification);

@@ -236,7 +236,7 @@ impl HttpClientBuilder {
             get_config::<usize>(config, "edenapi", "max-retry-per-request")?.unwrap_or(10);
         let use_files2 = get_config::<bool>(config, "edenapi", "use-files2")?.unwrap_or_default();
 
-        let mut http_config = hg_http::http_config(config);
+        let mut http_config = hg_http::http_config(config, None);
         http_config.verbose_stats |= debug;
         http_config.max_concurrent_requests = max_requests;
 

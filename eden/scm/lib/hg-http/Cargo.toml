@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 async-runtime = { path = "../async-runtime" }
+auth = { path = "../auth" }
 clientinfo = { path = "../clientinfo" }
 configmodel = { path = "../configmodel" }
 hg-metrics = { path = "../hg-metrics" }

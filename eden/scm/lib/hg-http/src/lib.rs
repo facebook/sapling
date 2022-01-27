@@ -15,6 +15,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
 
+use auth::AuthGroup;
 use clientinfo::ClientInfo;
 use configmodel::ConfigExt;
 use hg_metrics::increment_counter;
@@ -60,12 +61,23 @@ pub fn http_client(client_id: impl ToString, config: http_client::Config) -> Htt
     })
 }
 
-pub fn http_config(config: &dyn configmodel::Config) -> http_client::Config {
+pub fn http_config(
+    config: &dyn configmodel::Config,
+    auth: Option<AuthGroup>,
+) -> http_client::Config {
+    let (cert, key, ca) = auth
+        .map(|auth| (auth.cert, auth.key, auth.cacerts))
+        .unwrap_or_default();
+
     http_client::Config {
-        client_info: ClientInfo::new(config).and_then(|i| i.into_json()).ok(),
+        cert_path: cert,
+        key_path: key,
+        ca_path: ca,
         convert_cert: config
             .get_or("http", "convert-cert", || cfg!(windows))
             .unwrap_or(cfg!(windows)),
+
+        client_info: ClientInfo::new(config).and_then(|i| i.into_json()).ok(),
         disable_tls_verification: INSECURE_MODE.load(Relaxed),
         unix_socket_path: config
             .get_nonempty_opt("auth_proxy", "unix_socket_path")
@@ -193,12 +205,12 @@ mod tests {
     fn test_convert_cert_config() {
         let mut hg_config = BTreeMap::<String, String>::new();
 
-        assert_eq!(cfg!(windows), http_config(&hg_config).convert_cert);
+        assert_eq!(cfg!(windows), http_config(&hg_config, None).convert_cert);
 
         hg_config.insert("http.convert-cert".into(), "True".into());
-        assert!(http_config(&hg_config).convert_cert);
+        assert!(http_config(&hg_config, None).convert_cert);
 
         hg_config.insert("http.convert-cert".into(), "false".into());
-        assert!(!http_config(&hg_config).convert_cert);
+        assert!(!http_config(&hg_config, None).convert_cert);
     }
 }
