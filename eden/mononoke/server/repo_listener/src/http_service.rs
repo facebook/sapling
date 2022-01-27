@@ -244,7 +244,29 @@ where
             let hyper::upgrade::Parts { io, read_buf, .. } = io.downcast::<S>().unwrap();
 
             let (rx, tx) = tokio::io::split(io);
-            let rx = AsyncReadExt::chain(Cursor::new(read_buf), rx);
+            let mut rx = AsyncReadExt::chain(Cursor::new(read_buf), rx);
+
+            // Sometimes server rejects client's request quickly. So quickly,
+            // that right after sending 101 Switching Protocols, it immediately
+            // sends wireproto error message to the client on the stderr channel,
+            // and terminates the connection right away.
+            //
+            // Client sees HTTP 101 and assumes it can speak wireproto to the server.
+            // It tries to send wireproto's "hello" command, but fails miserably, because
+            // the connection has already been closed.
+            //
+            // Example:
+            // https://pxl.cl/1XcnH
+            //
+            // Lines bellow make server wait for the client to send any data before
+            // any wireproto handling can take place. Normally server that speaks just
+            // wireproto shouldn't send anything to the client until it sees "hello".
+            // Here we try to replicate that behavior by making sure the client
+            // sent something. We assume it's wireproto's "hello".
+            let mut buffer = [0; 1];
+            rx.read_exact(&mut buffer).await?;
+            let rx = AsyncReadExt::chain(Cursor::new(buffer), rx);
+
             let framed = FramedConn::setup(rx, tx, compression)?;
 
             connection_acceptor::handle_wireproto(this.conn, framed, reponame, metadata, debug)
@@ -254,10 +276,13 @@ where
             Result::<_, Error>::Ok(())
         };
 
+        // Spawning concurrent task handling wireproto
         self.conn
             .pending
             .spawn_task(fut, "Failed to handle websocket channel");
 
+        // Returning with HTTP 101. The task spawned above will handle
+        // upgraded connection.
         Ok(res)
     }
 
