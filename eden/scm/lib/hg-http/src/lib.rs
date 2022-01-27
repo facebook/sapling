@@ -11,9 +11,11 @@
 //! paths, error handling, etc.
 
 use std::collections::HashSet;
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
 
+use clientinfo::ClientInfo;
 use configmodel::ConfigExt;
 use hg_metrics::increment_counter;
 use http_client::HttpClient;
@@ -59,43 +61,30 @@ pub fn http_client(client_id: impl ToString, config: http_client::Config) -> Htt
 }
 
 pub fn http_config(config: &dyn configmodel::Config) -> http_client::Config {
-    return http_client::Config {
+    http_client::Config {
+        client_info: ClientInfo::new(config).and_then(|i| i.into_json()).ok(),
         convert_cert: config
             .get_or("http", "convert-cert", || cfg!(windows))
             .unwrap_or(cfg!(windows)),
+        disable_tls_verification: INSECURE_MODE.load(Relaxed),
+        unix_socket_path: config
+            .get_nonempty_opt("auth_proxy", "unix_socket_path")
+            .expect("Can't get auth_proxy.unix_socket_path config"),
+        unix_socket_domains: HashSet::from_iter(
+            config
+                .get_or("auth_proxy", "unix_socket_domains", Vec::new)
+                .unwrap_or_else(|_| vec![])
+                .into_iter(),
+        ),
+        verbose: config.get_or_default("http", "verbose").unwrap_or(false),
         ..Default::default()
-    };
-}
-
-/// Global configuration settings for Mercurial's HTTP client.
-#[derive(Debug)]
-pub struct HgHttpConfig {
-    pub verbose: bool,
-    pub disable_tls_verification: bool,
-    pub client_info: Option<String>,
-    pub unix_socket_path: Option<String>,
-    pub unix_socket_domains: HashSet<String>,
-}
-
-/// Set a global configuration that will be applied to all HTTP requests in
-/// Mercurial's Rust code.
-pub fn set_global_config(config: HgHttpConfig) {
-    if config.disable_tls_verification {
-        tracing::warn!("--insecure flag specified; server TLS certificate will not be verified");
     }
+}
 
+static INSECURE_MODE: AtomicBool = AtomicBool::new(false);
 
-    Request::on_new_request(move |req| {
-        if let Some(domain) = req.ctx().url().domain() {
-            if config.unix_socket_domains.contains(domain) {
-                req.set_auth_proxy_socket_path(config.unix_socket_path.clone());
-            }
-        }
-        req.set_verify_tls_cert(!config.disable_tls_verification)
-            .set_verify_tls_host(!config.disable_tls_verification)
-            .set_verbose(config.verbose)
-            .set_client_info(&config.client_info);
-    });
+pub fn enable_insecure_mode() {
+    INSECURE_MODE.store(true, Relaxed);
 }
 
 /// Setup progress reporting to the main progress registry for the lifetime of

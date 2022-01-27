@@ -6,9 +6,9 @@ edition = "2021"
 
 [dependencies]
 async-runtime = { path = "../async-runtime" }
+clientinfo = { path = "../clientinfo" }
 configmodel = { path = "../configmodel" }
 hg-metrics = { path = "../hg-metrics" }
 http-client = { path = "../http-client" }
 once_cell = "1.8"
 progress-model = { path = "../progress/model" }
-tracing = "0.1.29"

@@ -6,11 +6,11 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.51"
-configparser = { path = "../configparser" }
+configmodel = { path = "../configmodel" }
 hostname = { path = "../../../../common/rust/shed/hostname" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 
 [features]
 default = []
-fb = []
+fb = ["hostname/fb"]

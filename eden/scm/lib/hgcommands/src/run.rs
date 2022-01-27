@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
 use std::env;
 use std::fs::File;
 use std::io;
@@ -31,11 +30,8 @@ use clidispatch::errors;
 use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::io::IsTty;
 use clidispatch::io::IO;
-use clientinfo::ClientInfo;
 use configparser::config::ConfigSet;
-use configparser::configmodel::ConfigExt;
 use fail::FailScenario;
-use hg_http::HgHttpConfig;
 use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
@@ -146,7 +142,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
                     }
                 };
 
-                setup_http(config, global_opts);
+                setup_http(global_opts);
 
                 let _ = spawn_progress_thread(
                     config,
@@ -656,22 +652,10 @@ mod exitcode {
     pub const IOERR: i32 = 74;
 }
 
-fn setup_http(config: &ConfigSet, global_opts: &HgGlobalOpts) {
-    let http_config = HgHttpConfig {
-        verbose: config.get_or_default("http", "verbose").unwrap_or_default(),
-        disable_tls_verification: global_opts.insecure,
-        client_info: ClientInfo::new(config).and_then(|i| i.into_json()).ok(),
-        unix_socket_path: config
-            .get_nonempty_opt("auth_proxy", "unix_socket_path")
-            .expect("Can't get auth_proxy.unix_socket_path config"),
-        unix_socket_domains: HashSet::from_iter(
-            config
-                .get_or("auth_proxy", "unix_socket_domains", Vec::new)
-                .unwrap_or_else(|_| vec![])
-                .into_iter(),
-        ),
-    };
-    hg_http::set_global_config(http_config);
+fn setup_http(global_opts: &HgGlobalOpts) {
+    if global_opts.insecure {
+        hg_http::enable_insecure_mode();
+    }
 }
 
 fn setup_eager_repo() {

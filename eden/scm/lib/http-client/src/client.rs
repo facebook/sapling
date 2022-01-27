@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::pin::Pin;
 
 use curl::easy::Easy2;
@@ -52,17 +53,27 @@ pub struct HttpClient {
 
 #[derive(Clone, Debug)]
 pub struct Config {
-    pub verbose_stats: bool,
-    pub max_concurrent_requests: Option<usize>,
+    pub client_info: Option<String>,
     pub convert_cert: bool,
+    pub disable_tls_verification: bool,
+    pub max_concurrent_requests: Option<usize>,
+    pub unix_socket_domains: HashSet<String>,
+    pub unix_socket_path: Option<String>,
+    pub verbose: bool,
+    pub verbose_stats: bool,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            verbose_stats: false,
-            max_concurrent_requests: None, // No limit by default
+            client_info: None,
             convert_cert: cfg!(windows),
+            disable_tls_verification: false,
+            max_concurrent_requests: None, // No limit by default
+            unix_socket_domains: HashSet::new(),
+            unix_socket_path: None,
+            verbose: false,
+            verbose_stats: false,
         }
     }
 }
@@ -373,8 +384,21 @@ impl HttpClient {
         self.new_request(url, Method::Put)
     }
 
-    fn configure_request(&self, req: Request) -> Request {
-        req.convert_cert(self.config.convert_cert)
+    fn configure_request(&self, mut req: Request) -> Request {
+        req.set_client_info(&self.config.client_info);
+        req.set_convert_cert(self.config.convert_cert);
+        req.set_verbose(self.config.verbose);
+
+        if let Some(domain) = req.ctx().url().domain() {
+            if self.config.unix_socket_domains.contains(domain) {
+                req.set_auth_proxy_socket_path(self.config.unix_socket_path.clone());
+            }
+        }
+
+        req.set_verify_tls_cert(!self.config.disable_tls_verification);
+        req.set_verify_tls_host(!self.config.disable_tls_verification);
+
+        req
     }
 }
 

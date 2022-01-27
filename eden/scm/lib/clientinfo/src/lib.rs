@@ -7,7 +7,8 @@
 
 use anyhow::anyhow;
 use anyhow::Result;
-use configparser::config::ConfigSet;
+use configmodel::Config;
+use configmodel::ConfigExt;
 use hostname::get_hostname;
 use serde::Deserialize;
 use serde::Serialize;
@@ -34,7 +35,7 @@ pub struct ClientInfo {
 }
 
 impl ClientInfo {
-    pub fn new(config: &ConfigSet) -> Result<Self> {
+    pub fn new(config: &dyn Config) -> Result<Self> {
         let fb = get_fb_client_info();
 
         let u64token = config.get_opt::<u64>("clientinfo", "u64token")?;
