@@ -10,7 +10,7 @@ else()
   list(REMOVE_ITEM INTEGRATION_LIB_SRCS pexpect.py)
 endif()
 
-if(INCLUDE_FB_INTEGRATION_LIB)
+if(IS_FB_BUILD)
   list(APPEND INTEGRATION_LIB_DEPENDENCIES eden_integration_fb_lib)
 endif()
 

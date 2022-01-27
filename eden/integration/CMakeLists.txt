@@ -3,10 +3,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-option(INCLUDE_FB_INTEGRATION_LIB "If enabled, include dependencies on \
-  Facebook specific directories"
-  OFF)
-
 file(GLOB INTEGRATION_SRCS "*.py")
 
 # Linux-specific integration tests.
@@ -55,7 +51,7 @@ add_fb_python_unittest(
 add_subdirectory(hg)
 add_subdirectory(helpers)
 
-if(INCLUDE_FB_INTEGRATION_LIB)
+if(IS_FB_BUILD)
   add_subdirectory(facebook/lib)
 endif()
 
