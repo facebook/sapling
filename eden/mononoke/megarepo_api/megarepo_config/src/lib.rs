@@ -15,8 +15,7 @@ pub use megarepo_configs::types::{
     Source, SourceMappingRules, SourceRevision, SyncConfigVersion, SyncTargetConfig, Target,
 };
 use megarepo_error::MegarepoError;
-use mononoke_args::config::ConfigArgs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 #[cfg(fbcode_build)]
 mod facebook;
 #[cfg(not(fbcode_build))]
@@ -69,12 +68,12 @@ pub struct MegarepoConfigsArgs {
 
 impl MononokeMegarepoConfigsOptions {
     pub fn from_args(
-        config_args: &ConfigArgs,
+        local_configerator_path: Option<&Path>,
         megarepo_configs_args: &MegarepoConfigsArgs,
     ) -> Self {
         if megarepo_configs_args.with_test_megarepo_configs_client {
-            if let Some(path) = config_args.local_configerator_path.clone() {
-                MononokeMegarepoConfigsOptions::IntegrationTest(path)
+            if let Some(path) = local_configerator_path {
+                MononokeMegarepoConfigsOptions::IntegrationTest(path.to_path_buf())
             } else {
                 MononokeMegarepoConfigsOptions::UnitTest
             }

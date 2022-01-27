@@ -264,8 +264,10 @@ impl MononokeAppBuilder {
 
         let rendezvous_options = rendezvous_args.into();
 
-        let megarepo_configs_options =
-            MononokeMegarepoConfigsOptions::from_args(&config_args, &megarepo_configs_args);
+        let megarepo_configs_options = MononokeMegarepoConfigsOptions::from_args(
+            config_args.local_configerator_path.as_deref(),
+            &megarepo_configs_args,
+        );
 
         let remote_derivation_options = remote_derivation_args.into();
 
