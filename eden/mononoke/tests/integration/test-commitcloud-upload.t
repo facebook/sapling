@@ -73,9 +73,7 @@ blobimport
   $ blobimport repo/.hg repo
 
 start mononoke
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 
   $ cd client1
   $ hgedenapi up master_bookmark -q

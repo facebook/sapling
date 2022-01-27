@@ -35,9 +35,7 @@ Blobimport the hg repo to Mononoke
   $ REPOID=1 blobimport repo-hg/.hg backup
 
 start mononoke
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Push to Mononoke
   $ hgclone_treemanifest ssh://user@dummy/repo-hg client-push --noupdate --config extensions.remotenames=
   $ cd $TESTTMP/client-push

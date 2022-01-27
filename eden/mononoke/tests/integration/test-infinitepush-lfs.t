@@ -23,8 +23,7 @@ Setup repo
   $ blobimport repo-hg/.hg repo
 
 Start Mononoke
-  $ mononoke
-  $ wait_for_mononoke
+  $ start_and_wait_for_mononoke_server  
   $ lfs_uri="$(lfs_server)/repo"
 
 Setup common client configuration for these tests

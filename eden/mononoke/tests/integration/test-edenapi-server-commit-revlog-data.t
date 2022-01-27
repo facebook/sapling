@@ -28,9 +28,7 @@ Blobimport test repo.
   $ blobimport repo-hg/.hg repo
 
 Start up EdenAPI server.
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Check response.
   $ hgedenapi debugapi -e commitdata -i "['$COMMIT_1','$COMMIT_2']"
   [{"hgid": bin("e83645968c8f2954b97a3c79ce5a6b90a464c54d"),

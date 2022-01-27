@@ -209,9 +209,7 @@ Setup helpers
   $ SMALL2_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDSMALL2 master_bookmark)
 
 start mononoke server
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Make sure mapping is set up and we know what we don't have to sync initial entries
   $ add_synced_commit_mapping_entry $REPOIDSMALL1 $SMALL1_MASTER_BONSAI $REPOIDLARGE $LARGE_MASTER_BONSAI TEST_VERSION_NAME_LIVE
   $ add_synced_commit_mapping_entry $REPOIDSMALL2 $SMALL2_MASTER_BONSAI $REPOIDLARGE $LARGE_MASTER_BONSAI TEST_VERSION_NAME_LIVE

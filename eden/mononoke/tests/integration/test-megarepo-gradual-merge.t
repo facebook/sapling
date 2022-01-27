@@ -82,8 +82,7 @@ setup hg server repo
   > --bookmark head_bookmark 2>&1 | grep 'merging'
   * merging 2 commits (glob)
 
-  $ mononoke
-  $ wait_for_mononoke
+  $ start_and_wait_for_mononoke_server
   $ cd "$TESTTMP"
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo --noupdate
   $ cd repo

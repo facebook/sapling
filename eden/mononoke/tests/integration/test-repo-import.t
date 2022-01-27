@@ -179,9 +179,7 @@
   Derived: 2dcfd5aae7492591bca9870e9679b74ca607f50093a667c635b3e3e183c11681
 
 # Start Mononoke
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 # Clone the repository
   $ cd "$TESTTMP"
   $ jq -S '.' "$GIT_REPO/recovery_file.json" > "$GIT_REPO/recovery_file_sorted.json"

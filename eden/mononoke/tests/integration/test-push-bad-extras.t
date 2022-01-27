@@ -40,9 +40,7 @@ setup push source repo
 
 start mononoke
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 create new commit in repo2 and check that push fails
 
   $ cd repo2

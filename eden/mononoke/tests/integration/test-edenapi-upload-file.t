@@ -27,9 +27,7 @@ import testing repo
 
 Start up EdenAPI server.
   $ SEGMENTED_CHANGELOG_ENABLE=1 setup_mononoke_config
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Check responses.
 
   $ hgedenapi debugapi -e uploadfilecontents -i '[({"Sha1":"03cfd743661f07975fa2f1220c5194cbaff48451"}, b"abc\n")]'

@@ -39,9 +39,7 @@
 
 # Start Mononoke
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 # Try to get the file from Mononoke. We can't do this by updating to the rev,
 # because that breaks over utf-8 characters as well.
 

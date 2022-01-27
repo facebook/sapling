@@ -64,9 +64,7 @@ Start up EdenAPI server.
   > master_bookmark="master_bookmark"
   > CONFIG
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Create response.
   $ hgedenapi debugapi -e commithashtolocation -i "['$G']" -i "['$F','$D','$C','$B','$A','$F','$H']"
   [{"hgid": bin("bb56d4161ee371c720dbc8b504810c62a22fe314"),

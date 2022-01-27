@@ -14,9 +14,7 @@ setup configuration
   $ cd $TESTTMP
 
 setup repo
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
   $ cd $TESTTMP
   $ hgmn_init repo
   $ cd repo

@@ -37,9 +37,7 @@ to pull these pushed commits
 
 start mononoke
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Push with bookmark
   $ cd repo-push
   $ enableextension remotenames

@@ -19,8 +19,6 @@ Enable Segmented Changelog
   > enabled=true
   > CONFIG
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
   $ sslcurl -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/capabilities"
   ["segmented-changelog"] (no-eol)

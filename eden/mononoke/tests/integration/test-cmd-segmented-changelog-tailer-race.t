@@ -111,9 +111,7 @@ Run many Segmented Changelog Tailer processes.
 
   $ sleep 3
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
   $ cd ..
   $ hgedenapi debugsegmentclone repo segmentrepo  --traceback
   $ cd segmentrepo

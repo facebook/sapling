@@ -28,9 +28,7 @@ Blobimport test repo.
   $ blobimport repo-hg/.hg repo
 
 Start up EdenAPI server.
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Create and send tree request.
   $ cat > keys << EOF
   > [

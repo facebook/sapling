@@ -29,9 +29,7 @@ Blobimport test repo.
 
 Start up EdenAPI server.
   $ setup_mononoke_config
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Create and send file request.
   $ cat > req << EOF
   > [{

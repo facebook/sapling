@@ -24,8 +24,7 @@ Setup repo and blobimport it
 
 Start mononoke and the LFS Server
 
-  $ mononoke
-  $ wait_for_mononoke
+  $ start_and_wait_for_mononoke_server
   $ lfs_uri="$(lfs_server)/repo"
 
 Setup client repo

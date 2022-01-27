@@ -19,9 +19,7 @@ Enable Segmented Changelog
   > enabled=true
   > CONFIG
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Test clone and other pull related endpoints
 
   $ hgedenapi debugapi -e clonedata

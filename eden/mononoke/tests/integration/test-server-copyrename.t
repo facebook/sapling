@@ -36,9 +36,7 @@ blobimport
 
 start mononoke
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 push some files with copy/move files
 
   $ cd $TESTTMP/repo-push

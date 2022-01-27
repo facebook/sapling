@@ -125,8 +125,7 @@ blobimport
   * created bonsai #1. Deriving hg changeset for it to verify its correctness (glob)
   * derived *, pushrebasing... (glob)
   * Pushrebased to * (glob)
-  $ mononoke
-  $ wait_for_mononoke
+  $ start_and_wait_for_mononoke_server
   $ cd "$TESTTMP/repo-client"
   $ hgmn pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo

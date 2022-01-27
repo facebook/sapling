@@ -36,9 +36,7 @@
   $ blobimport repo-hg-nolfs/.hg repo
 
 # 3. Setup Mononoke. Introduce LFS_THRESHOLD into Mononoke server config.
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 # 4. Setup Mononoke API server.
   $ lfs_uri="$(lfs_server)/repo"
 

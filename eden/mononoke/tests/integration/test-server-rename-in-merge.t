@@ -56,9 +56,7 @@ blobimport them into Mononoke storage and start Mononoke
   $ blobimport repo-hg/.hg repo
 
 start mononoke
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
   $ cd repo2
   $ hgmn pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo

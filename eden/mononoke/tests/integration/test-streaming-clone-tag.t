@@ -28,9 +28,7 @@ Try creating with a tag
   * inserting into streaming clone database, tag: another_mainline, repo: repo (glob)
   * current max chunk num is None, tag: another_mainline, repo: repo (glob)
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Clone - check that no bytes were transferred from streaming clone because no tags were used
   $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
   streaming all changes

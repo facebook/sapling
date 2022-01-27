@@ -461,6 +461,11 @@ function force_update_configerator {
   sslcurl -X POST -fsS "https://localhost:$MONONOKE_SOCKET/control/force_update_configerator"
 }
 
+function start_and_wait_for_mononoke_server {
+    mononoke "$@"
+    wait_for_mononoke
+}
+
 # Wait until cache warmup finishes
 function wait_for_mononoke_cache_warmup {
   local attempts=150
@@ -1521,8 +1526,7 @@ EOF
   cd ..
   blobimport repo-hg/.hg repo
 
-  mononoke
-  wait_for_mononoke "$TESTTMP"/repo
+  start_and_wait_for_mononoke_server
 
   hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames= -q
   cd repo2 || exit 1
@@ -1760,8 +1764,8 @@ function default_setup_blobimport() {
 function default_setup() {
   default_setup_blobimport "$BLOB_TYPE"
   echo "starting Mononoke"
-  mononoke "$@"
-  wait_for_mononoke "$TESTTMP/repo"
+
+  start_and_wait_for_mononoke_server "$@"
 
   echo "cloning repo in hg client 'repo2'"
   hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames= -q

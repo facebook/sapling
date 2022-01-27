@@ -13,8 +13,7 @@ Setup a Mononoke repo.
 
 Start Mononoke & LFS.
 
-  $ mononoke
-  $ wait_for_mononoke
+  $ start_and_wait_for_mononoke_server
   $ lfs_log="$TESTTMP/lfs.log"
   $ lfs_url="$(lfs_server --log "$lfs_log")/repo"
 

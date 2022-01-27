@@ -35,9 +35,7 @@ blobimport the repo
 
 start mononoke
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 setup the client repo
   $ cd $TESTTMP
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-server client --noupdate --config extensions.remotenames= -q

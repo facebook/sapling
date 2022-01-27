@@ -27,9 +27,7 @@ import testing repo
 
 Start up EdenAPI server.
   $ SEGMENTED_CHANGELOG_ENABLE=1 setup_mononoke_config
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Check response.
   $ hgedenapi debugapi -e ephemeralprepare -i None
   [{"bubble_id": 1}]

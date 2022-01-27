@@ -50,9 +50,7 @@ blobimport
 
 start mononoke
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
   $ cd $TESTTMP/repo-push
   $ enable remotenames
   $ setconfig infinitepush.server=false infinitepush.branchpattern="re:scratch/.+"

@@ -68,9 +68,7 @@
   * Current position of BookmarkName { bookmark: "master" } is None (glob)
 
 # Start Mononoke
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 # Clone the repository
   $ cd "$TESTTMP"
   $ hgmn_clone mononoke://$(mononoke_address)/repo "$HG_REPO"

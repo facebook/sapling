@@ -38,9 +38,7 @@ Try creating again, this should fail
   * cannot create new streaming clone chunks because they already exists (glob)
   [1]
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
   $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
   streaming all changes
   2 files to transfer, 357 bytes of data

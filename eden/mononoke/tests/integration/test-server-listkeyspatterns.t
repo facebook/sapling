@@ -45,9 +45,7 @@ blobimport them into Mononoke storage and start Mononoke
   $ blobimport repo-hg/.hg repo
 
 start mononoke
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 switch to client and enable infinitepush extension
   $ cd repo-client
   $ setconfig extensions.infinitepush=

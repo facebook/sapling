@@ -13,9 +13,7 @@ Setup a Mononoke repo.
 
 Start Mononoke & LFS.
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Create a repo
 
   $ hgmn_init repo

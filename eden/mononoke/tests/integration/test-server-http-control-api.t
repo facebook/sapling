@@ -6,9 +6,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ DISABLE_HTTP_CONTROL_API=1 setup_common_config
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
   $ sslcurl -X POST -fsS "https://localhost:$MONONOKE_SOCKET/control/drop_bookmarks_cache"
   curl: (22) The requested URL returned error: 403 Forbidden
   [22]

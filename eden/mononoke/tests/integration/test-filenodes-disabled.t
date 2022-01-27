@@ -43,9 +43,7 @@ blobimport
 
 start mononoke
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 
 Push a a few commits
   $ cd "$TESTTMP/repo-push"

@@ -56,9 +56,7 @@ blobimport
   $ blobimport repo-hg/.hg repo
 
 start mononoke
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 push an infinitepush commit with new content
   $ cd $TESTTMP/repo-push
   $ hg up master_bookmark

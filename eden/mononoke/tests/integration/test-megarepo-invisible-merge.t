@@ -92,9 +92,7 @@ Setup repositories
 
 
 Start mononoke server
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 
 Setup commit sync mapping
 -- get some bonsai hashes to avoid magic strings later

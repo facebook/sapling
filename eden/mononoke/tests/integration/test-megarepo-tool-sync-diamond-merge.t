@@ -68,9 +68,7 @@ merge things in both repos
   $ megarepo_tool merge with_merge_move another_move user "megarepo merge" --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark master_bookmark &> /dev/null
 
 start mononoke server
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Record current master and the first commit in the preserved stack
   $ WITH_MERGE_PRE_MERGE_PRESERVED=$(get_bonsai_bookmark 1 with_merge_pre_big_merge)
   $ WITH_MERGE_C1=$(get_bonsai_bookmark 1 with_merge_master)

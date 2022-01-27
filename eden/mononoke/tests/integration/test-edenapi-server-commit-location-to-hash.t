@@ -58,9 +58,7 @@ Blobimport test repo.
 
 Start up EdenAPI server.
   $ SEGMENTED_CHANGELOG_ENABLE=1 setup_mononoke_config
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Prepare request.
   $ cat > req <<EOF
   > [

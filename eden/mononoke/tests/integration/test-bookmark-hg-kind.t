@@ -40,9 +40,7 @@ blobimport
   master_bookmark|pull_default
 start mononoke
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 create new bookmarks, then update their properties
   $ cd repo-push
   $ cat >> .hg/hgrc <<EOF

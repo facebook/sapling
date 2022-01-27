@@ -25,9 +25,7 @@
   $ hgclone_treemanifest ssh://user@dummy/meg-hg-srv meg-hg-cnt --noupdate
 
 -- start mononoke
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_2', 2)";
   $ mononoke_x_repo_sync 2 0 tail --catch-up-once |& grep -E '(processing|skipping)'
   * processing log entry * (glob)

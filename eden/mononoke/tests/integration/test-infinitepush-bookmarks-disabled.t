@@ -51,9 +51,7 @@ blobimport
 
 start mononoke
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 
 Do infinitepush (aka commit cloud) push
   $ cd repo-push

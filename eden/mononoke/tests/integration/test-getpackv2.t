@@ -47,9 +47,7 @@ blobimport them into Mononoke storage and start Mononoke
 
 start mononoke
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Pull from Mononoke
   $ cd repo2
   $ setconfig remotefilelog.fetchpacks=True

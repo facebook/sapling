@@ -31,9 +31,7 @@
   $ blobimport repo-hg/.hg repo
 
 # 2. Setup Mononoke.
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 # 3. Clone hg server repo to hg client repo
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-hg-client --noupdate --config extensions.remotenames=
   $ cd repo-hg-client

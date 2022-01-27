@@ -73,8 +73,7 @@ Setup repositories
   $ hgclone_treemanifest ssh://user@dummy/fbs-hg-srv fbs-hg-cnt --noupdate
 
 Start mononoke server
-  $ mononoke
-  $ wait_for_mononoke
+  $ start_and_wait_for_mononoke_server
   $ cat > "paths_to_fixup" <<EOF
   > fbcode/file_with_incorrect_history
   > file_with_incorrect_history2

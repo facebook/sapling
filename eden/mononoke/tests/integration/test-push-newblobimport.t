@@ -47,9 +47,7 @@ verify content
 
   $ cd $TESTTMP
   $ blobimport repo-hg/.hg repo
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
   $ cd client
   $ echo 'remotefilelog' >> .hg/requires
   $ hgmn pull --config ui.disable-stream-clone=true -q

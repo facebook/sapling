@@ -45,9 +45,7 @@ blobimport
 
 start mononoke
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Prepare push
   $ cd repo-push
   $ hg up tip

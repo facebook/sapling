@@ -6,9 +6,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ setup_common_config
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Check Download
   $ sslcurl -s --header "x-netspeedtest-nbytes: 1337" -f https:\/\/localhost:$MONONOKE_SOCKET/netspeedtest > output
   $ du -b output

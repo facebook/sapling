@@ -126,8 +126,7 @@ blobimport
 
 start mononoke
 
-  $ mononoke
-  $ wait_for_mononoke
+  $ start_and_wait_for_mononoke_server
   $ hgmn debugwireargs mononoke://$(mononoke_address)/disabled_repo one two --three three
   remote: Requested repo "disabled_repo" does not exist or is disabled
   abort: unexpected EOL, expected netstring digit

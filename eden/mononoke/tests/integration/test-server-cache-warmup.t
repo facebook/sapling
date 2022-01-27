@@ -30,6 +30,5 @@ blobimport them into Mononoke storage and start Mononoke
 
 start mononoke
 
-  $ mononoke
-  $ wait_for_mononoke
+  $ start_and_wait_for_mononoke_server
   $ wait_for_mononoke_cache_warmup

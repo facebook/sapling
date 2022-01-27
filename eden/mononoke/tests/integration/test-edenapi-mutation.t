@@ -71,9 +71,7 @@ Import and start mononoke
   $ hgclone_treemanifest ssh://user@dummy/repo client1 --noupdate
   $ hgclone_treemanifest ssh://user@dummy/repo client2 --noupdate
   $ blobimport repo/.hg repo
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Test mutations on client 1
   $ cd client1
   $ hgedenapi up 8b2dca0c8a72 -q

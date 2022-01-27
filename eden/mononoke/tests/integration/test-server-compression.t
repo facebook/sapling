@@ -33,9 +33,7 @@ Setup the right configuration
   > EOF
 
 start mononoke
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 clone and checkout the repository with compression enabled
   $ hg clone -U --shallow --debug "mononoke://$(mononoke_address)/repo" --config mononokepeer.compression=true 2>&1 | grep zstd
   zstd compression on the wire is enabled

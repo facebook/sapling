@@ -28,9 +28,7 @@ Setup repo
   $ blobimport repo-hg-nolfs/.hg repo
 
 Setup Mononoke
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Setup LFS server
   $ lfs_uri="$(lfs_server)/repo"
 

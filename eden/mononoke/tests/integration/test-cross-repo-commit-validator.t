@@ -83,9 +83,7 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
   $ hgclone_treemanifest ssh://user@dummy/meg-hg-srv meg-hg-cnt --noupdate
 
 -- start mononoke
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 -- create an older version of fbsource_master, with a single simple change
   $ cd "$TESTTMP"/fbs-hg-cnt
   $ REPONAME=fbs-mon hgmn up -q master_bookmark

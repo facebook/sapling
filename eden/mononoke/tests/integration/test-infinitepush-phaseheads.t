@@ -47,9 +47,7 @@ blobimport
 
 start mononoke
 
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 push some draft commits
   $ cd repo-push
   $ cat >> .hg/hgrc <<EOF

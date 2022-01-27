@@ -60,9 +60,7 @@ blobimport hg servers repos into Mononoke repos
   * creating * (glob)
 
   $ cd $TESTTMP
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
   $ cd $TESTTMP
   $ REPONAME=hyper_repo hgmn clone --stream mononoke://$(mononoke_address)/hyper_repo hyper_repo --config extensions.treemanifest= --config remotefilelog.reponame=hyper_repo --shallow --config treemanifest.treeonly=true
   streaming all changes

@@ -69,9 +69,7 @@ setup hg client repos
   $ hgclone_treemanifest ssh://user@dummy/meg-hg-srv meg-hg-cnt --noupdate
 
 start mononoke server
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 insert sync mapping entry
   $ add_synced_commit_mapping_entry 1 $FBSOURCE_C1_BONSAI 0 $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
 

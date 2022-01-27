@@ -35,9 +35,7 @@ Blobimport the hg repo to Mononoke
   $ REPOID=1 blobimport repo-hg/.hg backup
 
 Start Mononoke with LFS enabled.
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Start Mononoke API server, to serve LFS blobs
   $ lfs_uri="$(lfs_server)/orig"
 

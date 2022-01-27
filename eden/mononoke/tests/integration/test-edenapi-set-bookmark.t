@@ -49,9 +49,7 @@ Blobimport test repo.
 
 Start up EdenAPI server.
   $ ENABLE_API_WRITES=1 setup_mononoke_config
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Clone the repo
   $ cd $TESTTMP
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate -q

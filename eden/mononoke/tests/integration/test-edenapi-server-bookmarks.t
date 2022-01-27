@@ -37,9 +37,7 @@ import testing repo to mononoke
 
 
 Start up EdenAPI server.
-  $ mononoke
-  $ wait_for_mononoke
-
+  $ start_and_wait_for_mononoke_server
 Check response.
   $ hgedenapi debugapi -e bookmarks -i '["alpha", "beta", "unknown"]'
   {"beta": "112478962961147124edd43549aedd1a335e44bf",
