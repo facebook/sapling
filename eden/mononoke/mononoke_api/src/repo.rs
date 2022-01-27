@@ -1561,7 +1561,7 @@ impl RepoContext {
 
     pub async fn segmented_changelog_clone_data(
         &self,
-    ) -> Result<CloneData<ChangesetId>, MononokeError> {
+    ) -> Result<(CloneData<ChangesetId>, HashMap<ChangesetId, HgChangesetId>), MononokeError> {
         let segmented_changelog = self.repo.segmented_changelog();
         let clone_data = segmented_changelog
             .clone_data(&self.ctx)

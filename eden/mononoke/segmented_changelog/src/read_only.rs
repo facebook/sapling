@@ -15,6 +15,7 @@ use futures::prelude::*;
 use stats::prelude::*;
 
 use context::CoreContext;
+use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 
 use crate::idmap::IdMap;
@@ -127,7 +128,10 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
         Ok(locations)
     }
 
-    async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
+    async fn clone_data(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<(CloneData<ChangesetId>, HashMap<ChangesetId, HgChangesetId>)> {
         let group = Group::MASTER;
         let flat_segments = self
             .iddag
@@ -148,7 +152,7 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
             flat_segments,
             idmap: idmap.into_iter().collect(),
         };
-        Ok(clone_data)
+        Ok((clone_data, HashMap::new()))
     }
 
     async fn pull_data(

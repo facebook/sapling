@@ -38,6 +38,7 @@ mod version_store;
 #[cfg(test)]
 mod tests;
 
+use mercurial_types::HgChangesetId;
 pub use segmented_changelog_types::{
     dag, ArcSegmentedChangelog, CloneData, DagId, DagIdSet, FirstAncestorConstraint, FlatSegment,
     Group, InProcessIdDag, Location, MismatchedHeadsError, PreparedFlatSegments,
@@ -76,7 +77,10 @@ impl SegmentedChangelog for DisabledSegmentedChangelog {
         ))
     }
 
-    async fn clone_data(&self, _ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
+    async fn clone_data(
+        &self,
+        _ctx: &CoreContext,
+    ) -> Result<(CloneData<ChangesetId>, HashMap<ChangesetId, HgChangesetId>)> {
         Err(format_err!(
             "Segmented Changelog is not enabled for this repo",
         ))
@@ -140,7 +144,10 @@ macro_rules! segmented_changelog_delegate {
                     .await
             }
 
-            async fn clone_data(&$self, $ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
+            async fn clone_data(
+                &$self,
+                $ctx: &CoreContext
+            ) -> Result<(CloneData<ChangesetId>, HashMap<ChangesetId, ::mercurial_types::HgChangesetId>)> {
                 let delegate = $delegate;
                 delegate.clone_data($ctx).await
             }

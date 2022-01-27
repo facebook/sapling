@@ -25,6 +25,7 @@ use stats::prelude::*;
 use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
+use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::dag::ops::DagAddHeads;
@@ -352,7 +353,10 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
             .await
     }
 
-    async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
+    async fn clone_data(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<(CloneData<ChangesetId>, HashMap<ChangesetId, HgChangesetId>)> {
         let namedag = self.namedag.read().await;
         let read_dag = ReadOnlySegmentedChangelog::new(namedag.dag(), namedag.map().clone_idmap());
         read_dag.clone_data(ctx).await

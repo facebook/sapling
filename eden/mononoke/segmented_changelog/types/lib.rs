@@ -15,6 +15,7 @@ use anyhow::{format_err, Result};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use context::CoreContext;
+use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RepositoryId};
 use thiserror::Error;
 
@@ -193,7 +194,13 @@ pub trait SegmentedChangelog: Send + Sync {
     ///
     /// Note that the heads that are sent over in a clone can vary. Strictly speaking the client
     /// only needs one head.
-    async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>>;
+    ///
+    /// The HashMap is provided to contain hints for Mercurial clones - it has any pre-cached
+    /// bonsai to hg mappings we have loaded as part of clone, and may be empty.
+    async fn clone_data(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<(CloneData<ChangesetId>, HashMap<ChangesetId, HgChangesetId>)>;
 
     /// Returns data that client can import to perform a lazy fast pull.
     /// `common` specifies heads known by both client and server.

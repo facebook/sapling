@@ -641,8 +641,8 @@ impl HgRepoContext {
     pub async fn segmented_changelog_clone_data(
         &self,
     ) -> Result<CloneData<HgChangesetId>, MononokeError> {
-        let m_clone_data = self.repo().segmented_changelog_clone_data().await?;
-        self.convert_clone_data(m_clone_data).await
+        let (m_clone_data, hints) = self.repo().segmented_changelog_clone_data().await?;
+        self.convert_clone_data(m_clone_data, hints).await
     }
 
     pub async fn segmented_changelog_disabled(&self) -> Result<bool, MononokeError> {
@@ -687,27 +687,36 @@ impl HgRepoContext {
             .repo()
             .segmented_changelog_pull_data(common, missing)
             .await?;
-        self.convert_clone_data(m_clone_data).await
+        self.convert_clone_data(m_clone_data, HashMap::new()).await
     }
 
     async fn convert_clone_data(
         &self,
         m_clone_data: CloneData<ChangesetId>,
+        hints: HashMap<ChangesetId, HgChangesetId>,
     ) -> Result<CloneData<HgChangesetId>, MononokeError> {
+        let mapping = {
+            let to_fetch: Vec<ChangesetId> = m_clone_data
+                .idmap
+                .values()
+                .filter(|csid| !hints.contains_key(csid))
+                .map(|&csid| csid)
+                .collect();
+
+            let mut mapping = hints;
+
+            self.blob_repo()
+                .get_hg_bonsai_mapping(self.ctx().clone(), to_fetch)
+                .await
+                .context("error fetching hg bonsai mapping")?
+                .into_iter()
+                .fold(&mut mapping, |mapping, (hgid, csid)| {
+                    mapping.insert(csid, hgid);
+                    mapping
+                });
+            mapping
+        };
         let mut hg_idmap = BTreeMap::new();
-        let csids = m_clone_data
-            .idmap
-            .iter()
-            .map(|(_, csid)| *csid)
-            .collect::<Vec<_>>();
-        let mapping = self
-            .blob_repo()
-            .get_hg_bonsai_mapping(self.ctx().clone(), csids)
-            .await
-            .context("error fetching hg bonsai mapping")?
-            .into_iter()
-            .map(|(hgid, csid)| (csid, hgid))
-            .collect::<HashMap<_, _>>();
         for (v, csid) in m_clone_data.idmap {
             let hgid = mapping.get(&csid).ok_or_else(|| {
                 MononokeError::from(format_err!(

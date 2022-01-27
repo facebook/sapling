@@ -55,6 +55,7 @@ where
     async fn head(&self, ctx: &CoreContext) -> Result<ChangesetId> {
         let clone_data = self.clone_data(ctx).await?;
         let cs_id = clone_data
+            .0
             .idmap
             .iter()
             .max_by_key(|i| i.0)
@@ -780,7 +781,7 @@ async fn test_clone_data(fb: FacebookInit) -> Result<()> {
     let clone_data = sc.clone_data(&ctx).await?;
 
     let mut new_iddag = InProcessIdDag::new_in_process();
-    new_iddag.build_segments_from_prepared_flat_segments(&clone_data.flat_segments)?;
+    new_iddag.build_segments_from_prepared_flat_segments(&clone_data.0.flat_segments)?;
     let new_owned = OwnedSegmentedChangelog::new(new_iddag, sc.idmap.clone());
 
     let distance: u64 = 4;
