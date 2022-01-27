@@ -1151,6 +1151,8 @@ class Test(unittest.TestCase):
 
         name = self._tmpname
         self._testtmp = os.path.join(self._threadtmp, name)
+        if self._keeptmpdir:
+            log("testtmp dir: %s" % self._testtmp)
         os.mkdir(self._testtmp)
 
         # Remove any previous output files.

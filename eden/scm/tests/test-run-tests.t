@@ -899,6 +899,7 @@ No Diff
 
 test --tmpdir support
   $ rt --tmpdir=$TESTTMP/keep test-success.t
+  testtmp dir: $TESTTMP/keep/child1/test-success.t 
   
   Keeping testtmp dir: $TESTTMP/keep/child1/test-success.t
   Keeping threadtmp dir: $TESTTMP/keep/child1 
@@ -913,6 +914,7 @@ test --tmpdir support
 (bucktest produces .scm.sqlite file)
 test --record support
   $ rt --tmpdir=$TESTTMP/record --record test-success.t
+  testtmp dir: $TESTTMP/record/child1/test-success.t 
   
   Keeping testtmp dir: $TESTTMP/record/child1/test-success.t
   Keeping threadtmp dir: $TESTTMP/record/child1 
