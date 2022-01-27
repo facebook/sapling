@@ -28,6 +28,18 @@ fn main() {
             .join(path_from_manifest_to_base)
             .canonicalize()
             .expect("Failed to canonicalize base_path");
+        // TODO: replace canonicalize() with std::path::absolute() when
+        // https://github.com/rust-lang/rust/pull/91673 is available (~Rust 1.60)
+        // and remove this block.
+        #[cfg(windows)]
+        let base_path = Path::new(
+            base_path
+                .as_path()
+                .to_string_lossy()
+                .trim_start_matches(r"\\?\"),
+            )
+            .to_path_buf();
+
         conf.base_path(base_path);
 
         let options = "serde";
