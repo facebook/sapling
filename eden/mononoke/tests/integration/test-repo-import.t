@@ -140,6 +140,8 @@
   * using 'Bookmark master_bookmark' for head (glob)
   * repo 0: SegmentedChangelogTailer initialized (glob)
   * repo 0: starting incremental update to segmented changelog (glob)
+  * Adding hints for repo 0 idmap_version 1 (glob)
+  * repo 0 idmap_version 1 has a full set of hints * (glob)
   * repo 0: IdMap updated, IdDag updated (glob)
   * repo 0: segmented changelog version saved, idmap_version: 1, iddag_version: * (glob)
   * repo 0: successful incremental update to segmented changelog (glob)

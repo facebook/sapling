@@ -64,6 +64,9 @@ pub trait IdMap: Send + Sync {
 
     async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(DagId, ChangesetId)>>;
 
+
+    fn idmap_version(&self) -> Option<IdMapVersion>;
+
     // Default implementations
 
     async fn insert(&self, ctx: &CoreContext, dag_id: DagId, cs_id: ChangesetId) -> Result<()> {
@@ -277,6 +280,10 @@ impl IdMap for OverlayIdMap {
             }
             None => Ok(None),
         }
+    }
+
+    fn idmap_version(&self) -> Option<IdMapVersion> {
+        self.shared.idmap_version()
     }
 }
 

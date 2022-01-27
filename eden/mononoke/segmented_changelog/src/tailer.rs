@@ -21,6 +21,8 @@ use stats::prelude::*;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bookmarks::Bookmarks;
 use bulkops::{Direction, PublicChangesetBulkFetch};
 use changeset_fetcher::{ChangesetFetcher, PrefetchedChangesetsFetcher};
@@ -39,8 +41,7 @@ use crate::parents::FetchParents;
 use crate::types::{IdMapVersion, SegmentedChangelogVersion};
 use crate::update::{server_namedag, vertexlist_from_seedheads, SeedHead};
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::InProcessIdDag;
-use crate::SegmentedChangelogSqlConnections;
+use crate::{CloneHints, InProcessIdDag, SegmentedChangelogSqlConnections};
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.tailer.update";
@@ -67,6 +68,8 @@ pub struct SegmentedChangelogTailer {
     sc_version_store: SegmentedChangelogVersionStore,
     iddag_save_store: IdDagSaveStore,
     idmap_factory: IdMapFactory,
+    clone_hints: CloneHints,
+    bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
 }
 
 impl SegmentedChangelogTailer {
@@ -76,11 +79,13 @@ impl SegmentedChangelogTailer {
         replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
         changeset_fetcher: Arc<PrefetchedChangesetsFetcher>,
         bulk_fetch: Arc<PublicChangesetBulkFetch>,
+        bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         blobstore: Arc<dyn Blobstore>,
         bookmarks: Arc<dyn Bookmarks>,
         seed_heads: Vec<SeedHead>,
         caching: Option<(FacebookInit, cachelib::VolatileLruCachePool)>,
     ) -> Self {
+        let clone_hints = CloneHints::new(connections.0.clone(), repo_id, blobstore.clone());
         let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
         let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore);
         let mut idmap_factory = IdMapFactory::new(connections.0, replica_lag_monitor, repo_id);
@@ -97,6 +102,8 @@ impl SegmentedChangelogTailer {
             sc_version_store,
             iddag_save_store,
             idmap_factory,
+            clone_hints,
+            bonsai_hg_mapping,
         }
     }
 
@@ -157,12 +164,15 @@ impl SegmentedChangelogTailer {
             blobrepo.phases_arc(),
         ));
 
+        let bonsai_hg_mapping = blobrepo.bonsai_hg_mapping_arc();
+
         Ok(SegmentedChangelogTailer::new(
             repo_id,
             segmented_changelog_sql_connections,
             replica_lag_monitor,
             changeset_fetcher,
             bulk_fetcher,
+            bonsai_hg_mapping,
             Arc::new(blobrepo.get_blobstore()),
             Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
             seed_heads,
@@ -323,6 +333,15 @@ impl SegmentedChangelogTailer {
         // Thus, if OOMs happen here, the IdMap may need to flush writes to the DB
         // at interesting points.
         let changed = namedag.add_heads(&parent_fetcher, &heads).await?;
+
+        self.clone_hints
+            .add_hints(
+                ctx,
+                &namedag,
+                idmap_version,
+                self.bonsai_hg_mapping.as_ref(),
+            )
+            .await?;
 
         let (idmap, iddag) = namedag.into_idmap_dag();
         let idmap = idmap.finish().await?;

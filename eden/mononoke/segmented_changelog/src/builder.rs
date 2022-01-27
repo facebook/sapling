@@ -26,7 +26,8 @@ use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::periodic_reload::PeriodicReloadSegmentedChangelog;
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::{
-    seedheads_from_config, DisabledSegmentedChangelog, InProcessIdDag, SegmentedChangelog,
+    seedheads_from_config, CloneHints, DisabledSegmentedChangelog, InProcessIdDag,
+    SegmentedChangelog,
 };
 
 #[derive(Clone)]
@@ -74,18 +75,17 @@ pub async fn new_server_segmented_changelog<'a>(
             changeset_fetcher,
             bookmarks,
             seed_heads,
+            None,
         )?));
     }
-    let mut idmap_factory = IdMapFactory::new(
-        connections.0.clone(),
-        Arc::new(NoReplicaLagMonitor()),
-        repo_id,
-    );
+    let replica_lag_monitor = Arc::new(NoReplicaLagMonitor());
+    let mut idmap_factory = IdMapFactory::new(connections.0.clone(), replica_lag_monitor, repo_id);
     if let Some(pool) = cache_pool {
         idmap_factory = idmap_factory.with_cache_handlers(CacheHandlers::prod(fb, pool));
     }
     let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
-    let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore);
+    let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore.clone());
+    let clone_hints = CloneHints::new(connections.0, repo_id, blobstore);
     let manager = SegmentedChangelogManager::new(
         repo_id,
         sc_version_store,
@@ -95,6 +95,7 @@ pub async fn new_server_segmented_changelog<'a>(
         bookmarks,
         seed_heads,
         config.update_to_master_bookmark_period,
+        Some(clone_hints),
     );
     let name = repo_identity.name().to_string();
     let sc = match config.reload_dag_save_period {

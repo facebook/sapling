@@ -24,7 +24,9 @@ use crate::idmap::IdMapFactory;
 use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::owned::OwnedSegmentedChangelog;
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{segmented_changelog_delegate, CloneData, Location, SeedHead, SegmentedChangelog};
+use crate::{
+    segmented_changelog_delegate, CloneData, CloneHints, Location, SeedHead, SegmentedChangelog,
+};
 
 pub struct SegmentedChangelogManager {
     repo_id: RepositoryId,
@@ -35,6 +37,7 @@ pub struct SegmentedChangelogManager {
     bookmarks: Arc<dyn Bookmarks>,
     seed_heads: Vec<SeedHead>,
     update_to_master_bookmark_period: Option<Duration>,
+    clone_hints: Option<CloneHints>,
 }
 
 impl SegmentedChangelogManager {
@@ -47,6 +50,7 @@ impl SegmentedChangelogManager {
         bookmarks: Arc<dyn Bookmarks>,
         seed_heads: Vec<SeedHead>,
         update_to_master_bookmark_period: Option<Duration>,
+        clone_hints: Option<CloneHints>,
     ) -> Self {
         Self {
             repo_id,
@@ -57,6 +61,7 @@ impl SegmentedChangelogManager {
             bookmarks,
             seed_heads,
             update_to_master_bookmark_period,
+            clone_hints,
         }
     }
 
@@ -102,6 +107,7 @@ impl SegmentedChangelogManager {
             Arc::clone(&self.changeset_fetcher),
             Arc::clone(&self.bookmarks),
             self.seed_heads.clone(),
+            self.clone_hints.clone(),
         )?))
     }
 

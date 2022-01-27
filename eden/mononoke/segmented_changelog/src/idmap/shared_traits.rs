@@ -16,7 +16,7 @@ use crate::dag::id::{Group, Id};
 use crate::dag::idmap::IdMapWrite;
 use crate::dag::ops::{IdConvert, PrefixLookup};
 use crate::dag::{Result, VerLink, VertexName};
-use crate::idmap::ConcurrentMemIdMap;
+use crate::idmap::{ConcurrentMemIdMap, IdMapVersion};
 use crate::{DagId, IdMap};
 
 use stats::prelude::*;
@@ -50,7 +50,7 @@ pub fn vertex_name_from_cs_id(cs_id: &ChangesetId) -> VertexName {
 }
 
 #[derive(Clone)]
-struct IdMapMemWrites {
+pub struct IdMapMemWrites {
     /// The actual IdMap
     inner: Arc<dyn IdMap>,
     /// Stores recent writes that haven't yet been persisted to the backing store
@@ -172,6 +172,10 @@ impl IdMap for IdMapMemWrites {
             None => self.inner.get_last_entry(ctx).await,
         }
     }
+
+    fn idmap_version(&self) -> Option<IdMapVersion> {
+        self.inner.idmap_version()
+    }
 }
 
 /// The server needs metadata that isn't normally available in the `dag` crate
@@ -217,6 +221,11 @@ impl IdMapWrapper {
     pub async fn finish(self) -> anyhow::Result<Arc<dyn IdMap>> {
         self.flush_writes().await?;
         Ok(self.inner.inner)
+    }
+
+    /// Access to the inner IdMap
+    pub fn as_inner(&self) -> &IdMapMemWrites {
+        &self.inner
     }
 
     /// Get a clone of the original IdMap fed in.

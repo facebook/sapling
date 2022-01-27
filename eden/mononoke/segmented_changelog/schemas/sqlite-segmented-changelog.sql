@@ -28,3 +28,10 @@ CREATE TABLE IF NOT EXISTS segmented_changelog_idmap_copy_mappings (
   copy_limit BIGINT NOT NULL,
   PRIMARY KEY (repo_id, copied_version, idmap_version)
 );
+
+CREATE TABLE IF NOT EXISTS segmented_changelog_clone_hints (
+  repo_id INTEGER NOT NULL,
+  idmap_version INTEGER NOT NULL,
+  blob_name STRING NOT NULL,
+  PRIMARY KEY (repo_id, idmap_version, blob_name)
+);

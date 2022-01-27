@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use anyhow::{bail, format_err, Context, Result};
@@ -132,27 +132,7 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
         &self,
         ctx: &CoreContext,
     ) -> Result<(CloneData<ChangesetId>, HashMap<ChangesetId, HgChangesetId>)> {
-        let group = Group::MASTER;
-        let flat_segments = self
-            .iddag
-            .flat_segments(group)
-            .context("error during flat segment retrieval")?;
-        let universal_ids = self
-            .iddag
-            .universal_ids()
-            .context("error computing universal ids")?
-            .into_iter()
-            .collect();
-        let idmap = self
-            .idmap
-            .find_many_changeset_ids(&ctx, universal_ids)
-            .await
-            .context("error retrieving mappings for dag universal ids")?;
-        let clone_data = CloneData {
-            flat_segments,
-            idmap: idmap.into_iter().collect(),
-        };
-        Ok((clone_data, HashMap::new()))
+        self.clone_data_with_hints(ctx, HashMap::new()).await
     }
 
     async fn pull_data(
@@ -285,5 +265,55 @@ impl<'a> ReadOnlySegmentedChangelog<'a> {
             .buffered(IDMAP_CHANGESET_FETCH_BATCH)
             .try_collect()
             .await
+    }
+
+    pub(crate) async fn clone_data_with_hints(
+        &self,
+        ctx: &CoreContext,
+        mut hints: HashMap<DagId, (ChangesetId, HgChangesetId)>,
+    ) -> Result<(CloneData<ChangesetId>, HashMap<ChangesetId, HgChangesetId>)> {
+        let group = Group::MASTER;
+        let flat_segments = self
+            .iddag
+            .flat_segments(group)
+            .context("error during flat segment retrieval")?;
+        let (idmap, hints) = {
+            let universal_ids: Vec<_> = self
+                .iddag
+                .universal_ids()
+                .context("error computing universal ids")?
+                .into_iter()
+                .collect();
+            let mut to_fetch: Vec<_> =
+                Vec::with_capacity(universal_ids.len().saturating_sub(hints.len()));
+
+            let mut idmap = BTreeMap::new();
+            let mut output_hints = HashMap::with_capacity(hints.len());
+
+            for id in universal_ids {
+                if let Some((cs, hgcs)) = hints.remove(&id) {
+                    idmap.insert(id, cs);
+                    output_hints.insert(cs, hgcs);
+                } else {
+                    to_fetch.push(id);
+                }
+            }
+
+            if !to_fetch.is_empty() {
+                let fetched_idmap = self
+                    .idmap
+                    .find_many_changeset_ids(&ctx, to_fetch)
+                    .await
+                    .context("error retrieving mappings for dag universal ids")?;
+                idmap.extend(fetched_idmap);
+            }
+
+            (idmap, output_hints)
+        };
+        let clone_data = CloneData {
+            flat_segments,
+            idmap,
+        };
+        Ok((clone_data, hints))
     }
 }

@@ -172,6 +172,10 @@ impl IdMap for CachedIdMap {
     async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(DagId, ChangesetId)>> {
         self.idmap.get_last_entry(ctx).await
     }
+
+    fn idmap_version(&self) -> Option<IdMapVersion> {
+        self.idmap.idmap_version()
+    }
 }
 
 type ChangesetIdCacheRequest<'a> = (&'a CoreContext, &'a CachedIdMap);

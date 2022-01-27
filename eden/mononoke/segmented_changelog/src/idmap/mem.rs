@@ -13,7 +13,7 @@ use parking_lot::RwLock;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
-use crate::idmap::IdMap;
+use crate::idmap::{IdMap, IdMapVersion};
 use crate::DagId;
 
 #[derive(Debug)]
@@ -138,6 +138,10 @@ impl IdMap for ConcurrentMemIdMap {
     async fn get_last_entry(&self, _ctx: &CoreContext) -> Result<Option<(DagId, ChangesetId)>> {
         let inner = self.inner.read();
         inner.get_last_entry()
+    }
+
+    fn idmap_version(&self) -> Option<IdMapVersion> {
+        None
     }
 }
 

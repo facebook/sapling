@@ -35,8 +35,8 @@ use crate::parents::FetchParents;
 use crate::read_only::ReadOnlySegmentedChangelog;
 use crate::update::{server_namedag, vertexlist_from_seedheads, SeedHead, ServerNameDag};
 use crate::{
-    segmented_changelog_delegate, CloneData, InProcessIdDag, Location, MismatchedHeadsError,
-    SegmentedChangelog,
+    segmented_changelog_delegate, CloneData, CloneHints, InProcessIdDag, Location,
+    MismatchedHeadsError, SegmentedChangelog,
 };
 
 define_stats! {
@@ -95,6 +95,7 @@ pub struct OnDemandUpdateSegmentedChangelog {
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     bookmarks: Arc<dyn Bookmarks>,
     seed_heads: Vec<SeedHead>,
+    clone_hints: Option<CloneHints>,
     ongoing_update: Arc<Mutex<Option<TryShared<BoxFuture<'static, Result<()>>>>>>,
 }
 
@@ -107,6 +108,7 @@ impl OnDemandUpdateSegmentedChangelog {
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
         bookmarks: Arc<dyn Bookmarks>,
         seed_heads: Vec<SeedHead>,
+        clone_hints: Option<CloneHints>,
     ) -> Result<Self> {
         let namedag = server_namedag(ctx, iddag, idmap)?;
         let namedag = Arc::new(RwLock::new(namedag));
@@ -116,6 +118,7 @@ impl OnDemandUpdateSegmentedChangelog {
             changeset_fetcher,
             bookmarks,
             seed_heads,
+            clone_hints,
             ongoing_update: Arc::new(Mutex::new(None)),
         })
     }
@@ -359,7 +362,15 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
     ) -> Result<(CloneData<ChangesetId>, HashMap<ChangesetId, HgChangesetId>)> {
         let namedag = self.namedag.read().await;
         let read_dag = ReadOnlySegmentedChangelog::new(namedag.dag(), namedag.map().clone_idmap());
-        read_dag.clone_data(ctx).await
+        let hints = if let (Some(clone_hints), Some(idmap_version)) = (
+            self.clone_hints.as_ref(),
+            namedag.map().as_inner().idmap_version(),
+        ) {
+            clone_hints.fetch(ctx, idmap_version).await?
+        } else {
+            HashMap::new()
+        };
+        read_dag.clone_data_with_hints(ctx, hints).await
     }
 
     async fn pull_data(

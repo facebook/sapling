@@ -17,6 +17,7 @@ use futures::StreamExt;
 use once_cell::sync::Lazy;
 
 use blobrepo::BlobRepo;
+use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bookmarks::{BookmarkName, Bookmarks, BookmarksArc};
 use bulkops::PublicChangesetBulkFetch;
 use caching_ext::{CachelibHandler, MemcacheHandler};
@@ -110,6 +111,7 @@ async fn new_tailer(
         Arc::new(NoReplicaLagMonitor()),
         changeset_fetcher,
         bulk_fetcher,
+        blobrepo.bonsai_hg_mapping_arc(),
         Arc::new(blobrepo.get_blobstore()),
         blobrepo.bookmarks_arc(),
         seed_heads,
@@ -213,6 +215,7 @@ fn new_isolated_on_demand_update(
         blobrepo.get_changeset_fetcher(),
         Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
         vec![Some(BOOKMARK_NAME.clone()).into()],
+        None,
     )
 }
 
@@ -734,6 +737,7 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
             blobrepo.get_changeset_fetcher(),
             Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
             vec![Some(BOOKMARK_NAME.clone()).into()],
+            None,
         )
     };
 
@@ -883,6 +887,7 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
         blobrepo.get_changeset_fetcher(),
         Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
         vec![Some(bookmark_name.clone()).into()],
+        None,
     )?;
     let sc =
         Arc::new(on_demand).with_periodic_update_to_master_bookmark(&ctx, Duration::from_secs(5));

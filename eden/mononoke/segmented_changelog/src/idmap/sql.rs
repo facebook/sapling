@@ -471,6 +471,10 @@ impl IdMap for SqlIdMap {
             Ok(rows.into_iter().next().map(|r| (DagId(r.0), r.1)))
         }
     }
+
+    fn idmap_version(&self) -> Option<IdMapVersion> {
+        Some(self.version)
+    }
 }
 
 #[cfg(test)]

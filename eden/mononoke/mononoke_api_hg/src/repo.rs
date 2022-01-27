@@ -705,15 +705,17 @@ impl HgRepoContext {
 
             let mut mapping = hints;
 
-            self.blob_repo()
-                .get_hg_bonsai_mapping(self.ctx().clone(), to_fetch)
-                .await
-                .context("error fetching hg bonsai mapping")?
-                .into_iter()
-                .fold(&mut mapping, |mapping, (hgid, csid)| {
-                    mapping.insert(csid, hgid);
-                    mapping
-                });
+            if !to_fetch.is_empty() {
+                self.blob_repo()
+                    .get_hg_bonsai_mapping(self.ctx().clone(), to_fetch)
+                    .await
+                    .context("error fetching hg bonsai mapping")?
+                    .into_iter()
+                    .fold(&mut mapping, |mapping, (hgid, csid)| {
+                        mapping.insert(csid, hgid);
+                        mapping
+                    });
+            }
             mapping
         };
         let mut hg_idmap = BTreeMap::new();

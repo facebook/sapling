@@ -19,6 +19,7 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 
 mod builder;
+mod clone_hints;
 mod copy;
 mod iddag;
 mod idmap;
@@ -46,6 +47,7 @@ pub use segmented_changelog_types::{
 };
 
 pub use crate::builder::{new_server_segmented_changelog, SegmentedChangelogSqlConnections};
+pub use crate::clone_hints::CloneHints;
 pub use crate::copy::copy_segmented_changelog;
 pub use crate::tailer::SegmentedChangelogTailer;
 pub use crate::update::{seedheads_from_config, SeedHead};
