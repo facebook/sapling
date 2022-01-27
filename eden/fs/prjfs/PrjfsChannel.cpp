@@ -283,7 +283,7 @@ HRESULT PrjfsChannelInner::getEnumerationData(
       getStraceLogger(),
       DBG7,
       "readdir({}, searchExpression={})",
-      guid,
+      guid.toString(),
       searchExpression == nullptr
           ? "<nullptr>"
           : wideToMultibyteString<std::string>(searchExpression));
