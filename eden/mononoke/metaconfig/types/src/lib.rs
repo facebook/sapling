@@ -26,18 +26,16 @@ use std::{
 
 use ascii::AsciiString;
 use bookmarks_types::BookmarkName;
+use derive_more::{From, Into};
 use fbinit::FacebookInit;
 use mononoke_types::{BonsaiChangeset, ChangesetId, MPath, PrefixTrie, RepositoryId};
+use mysql_common::value::convert::{ConvIr, FromValue, ParseIr};
 use permission_checker::{BoxMembershipChecker, MembershipCheckerBuilder};
 use regex::Regex;
 use scuba::ScubaValue;
 use serde_derive::Deserialize;
 use sql::mysql;
-use sql::mysql_async::{
-    from_value_opt,
-    prelude::{ConvIr, FromValue},
-    FromValueError, Value,
-};
+use sql::mysql_async::{FromValueError, Value};
 use sshrelay::Metadata;
 
 /// A Regex that can be compared against other Regexes.
@@ -773,8 +771,9 @@ pub struct LfsParams {
 
 /// Id used to discriminate diffirent underlying blobstore instances
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd, Deserialize)]
-#[derive(mysql::OptTryFromRowField)]
+#[derive(From, Into, mysql::OptTryFromRowField)]
 pub struct BlobstoreId(u64);
+sql::proxy_conv_ir!(BlobstoreId, ParseIr<u64>, u64);
 
 impl BlobstoreId {
     /// Construct blobstore from integer
@@ -789,28 +788,6 @@ impl fmt::Display for BlobstoreId {
     }
 }
 
-impl From<BlobstoreId> for Value {
-    fn from(id: BlobstoreId) -> Self {
-        Value::UInt(id.0)
-    }
-}
-
-impl ConvIr<BlobstoreId> for BlobstoreId {
-    fn new(v: Value) -> Result<Self, FromValueError> {
-        Ok(BlobstoreId(from_value_opt(v)?))
-    }
-    fn commit(self) -> Self {
-        self
-    }
-    fn rollback(self) -> Value {
-        self.into()
-    }
-}
-
-impl FromValue for BlobstoreId {
-    type Intermediate = BlobstoreId;
-}
-
 impl From<BlobstoreId> for ScubaValue {
     fn from(blobstore_id: BlobstoreId) -> Self {
         ScubaValue::from(blobstore_id.0 as i64)
@@ -819,8 +796,9 @@ impl From<BlobstoreId> for ScubaValue {
 
 /// Id used to identify storage configuration for a multiplexed blobstore.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
-#[derive(mysql::OptTryFromRowField)]
+#[derive(From, Into, mysql::OptTryFromRowField)]
 pub struct MultiplexId(i32);
+sql::proxy_conv_ir!(MultiplexId, ParseIr<i32>, i32);
 
 impl MultiplexId {
     /// Construct a MultiplexId from an i32.
@@ -839,28 +817,6 @@ impl From<MultiplexId> for ScubaValue {
     fn from(multiplex_id: MultiplexId) -> Self {
         ScubaValue::from(multiplex_id.0)
     }
-}
-
-impl From<MultiplexId> for Value {
-    fn from(id: MultiplexId) -> Self {
-        Value::Int(id.0.into())
-    }
-}
-
-impl ConvIr<MultiplexId> for MultiplexId {
-    fn new(v: Value) -> Result<Self, FromValueError> {
-        Ok(MultiplexId(from_value_opt(v)?))
-    }
-    fn commit(self) -> Self {
-        self
-    }
-    fn rollback(self) -> Value {
-        self.into()
-    }
-}
-
-impl FromValue for MultiplexId {
-    type Intermediate = MultiplexId;
 }
 
 /// Define storage needed for repo.
