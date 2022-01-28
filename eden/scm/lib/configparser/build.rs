@@ -32,7 +32,7 @@ fn check_signed_source() -> io::Result<()> {
 
     let thrift_file_content = fs::read_to_string(&thrift_file_path)?;
 
-    let hash = "01965ea0e1ef6bd5e49df926eac98611";
+    let hash = "4bc06e1c39884f65a4e9cd145972df39";
     if !thrift_file_content.contains(hash) {
         let msg = format!(
             "thrift_types.rs and HASH need update: {} hash mismatch (expect: {})",
