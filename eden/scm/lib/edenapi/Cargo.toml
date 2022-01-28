@@ -33,3 +33,6 @@ tracing = "0.1.29"
 types = { path = "../types" }
 url = "2.2.2"
 version = { path = "../version" }
+
+[features]
+fb = ["hg-http/fb"]
