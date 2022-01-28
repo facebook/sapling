@@ -10,7 +10,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Error, Result};
 use fbinit::FacebookInit;
-use futures::stream::{self, Stream, TryStreamExt};
+use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use futures_stats::TimedFutureExt;
 use slog::{debug, error, info};
 use sql_ext::facebook::{MyAdmin, MysqlOptions};
@@ -31,6 +31,7 @@ use context::CoreContext;
 use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_types::{Generation, RepositoryId};
 use phases::PhasesArc;
+use tunables::tunables;
 
 use crate::dag::ops::DagAddHeads;
 use crate::dag::DagAlgorithm;
@@ -58,6 +59,8 @@ define_stats! {
         1000, 0, 60_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99
     ),
 }
+
+const DEFAULT_LOG_SAMPLING_RATE: usize = 5000;
 
 pub struct SegmentedChangelogTailer {
     repo_id: RepositoryId,
@@ -267,9 +270,18 @@ impl SegmentedChangelogTailer {
                 None => (true, IdMapVersion(1), InProcessIdDag::new_in_process()),
             }
         };
+
+        if let Ok(set) = iddag.all() {
+            info!(
+                ctx.logger(),
+                "repo {}: iddag initialized, it covers {} ids",
+                self.repo_id,
+                set.count(),
+            );
+        }
         let idmap = self.idmap_factory.for_writer(ctx, idmap_version);
 
-        let mut namedag = server_namedag(ctx.clone(), iddag, idmap)?;
+        let mut namedag = server_namedag(ctx.clone(), self.repo_id, iddag, idmap)?;
 
         let heads =
             vertexlist_from_seedheads(&ctx, &self.seed_heads, self.bookmarks.as_ref()).await?;
@@ -309,17 +321,39 @@ impl SegmentedChangelogTailer {
             .await?;
 
             if heads_min_gen.saturating_sub(namedag_max_gen) > 1000 {
+                let repo_bounds = self
+                    .bulk_fetch
+                    .get_repo_bounds_after_commits(ctx, head_commits)
+                    .await?;
+                info!(
+                    ctx.logger(),
+                    "repo {}: prefetching changeset entries", self.repo_id,
+                );
+                let mut counter = 0usize;
                 // This has the potential to cause OOM by fetching a large
                 // chunk of the repo
-                let missing = self.bulk_fetch.fetch_bounded(
-                    &ctx,
-                    Direction::NewestFirst,
-                    Some(
-                        self.bulk_fetch
-                            .get_repo_bounds_after_commits(&ctx, head_commits)
-                            .await?,
-                    ),
-                );
+                let missing = self
+                    .bulk_fetch
+                    .fetch_bounded(ctx, Direction::NewestFirst, Some(repo_bounds))
+                    .map(|res| {
+                        counter += 1;
+                        let sampling_rate =
+                            tunables().get_segmented_changelog_tailer_log_sampling_rate();
+                        let sampling_rate = if sampling_rate <= 0 {
+                            DEFAULT_LOG_SAMPLING_RATE
+                        } else {
+                            sampling_rate as usize
+                        };
+                        if counter % sampling_rate == 0 {
+                            info!(
+                                ctx.logger(),
+                                "repo {}: fetched {} changeset entries in total",
+                                self.repo_id,
+                                counter,
+                            );
+                        }
+                        res
+                    });
                 Arc::new(self.changeset_fetcher.clone_with_extension(missing).await?)
             } else {
                 self.changeset_fetcher.clone()
@@ -328,6 +362,10 @@ impl SegmentedChangelogTailer {
 
         let parent_fetcher = FetchParents::new(ctx.clone(), changeset_fetcher);
 
+        info!(
+            ctx.logger(),
+            "repo {}: starting the actual update", self.repo_id,
+        );
         // Note on memory use: we do not flush the changes out in the middle
         // of writing to the IdMap.
         // Thus, if OOMs happen here, the IdMap may need to flush writes to the DB

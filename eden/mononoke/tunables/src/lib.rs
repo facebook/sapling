@@ -217,6 +217,10 @@ pub struct MononokeTunables {
     // Usage of segmented changelog for speeding up server-side operations
     segmented_changelog_is_ancestor_percentage: AtomicI64,
 
+    // Override default progress logging sampling rate for segmented changelog parts
+    segmented_changelog_idmap_log_sampling_rate: AtomicI64,
+    segmented_changelog_tailer_log_sampling_rate: AtomicI64,
+
     // Use comprehensive mode for is_present method in multiplexed blobstore for edenapi lookup api.
     edenapi_lookup_use_comprehensive_mode: AtomicBool,
 

@@ -17,7 +17,7 @@ use bookmarks::{
 };
 use context::CoreContext;
 use metaconfig_types::SegmentedChangelogConfig;
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::dag::{NameDagBuilder, VertexListWithOptions, VertexName, VertexOptions};
 use crate::idmap::{vertex_name_from_cs_id, IdMap, IdMapWrapper};
@@ -129,10 +129,11 @@ pub type ServerNameDag = crate::dag::namedag::AbstractNameDag<InProcessIdDag, Id
 /// to write out updates to the IdMap
 pub fn server_namedag(
     ctx: CoreContext,
+    repo_id: RepositoryId,
     iddag: InProcessIdDag,
     idmap: Arc<dyn IdMap>,
 ) -> Result<ServerNameDag> {
-    let idmap = IdMapWrapper::new(ctx, idmap);
+    let idmap = IdMapWrapper::new(ctx, repo_id, idmap);
     NameDagBuilder::new_with_idmap_dag(idmap, iddag)
         .build()
         .map_err(anyhow::Error::from)

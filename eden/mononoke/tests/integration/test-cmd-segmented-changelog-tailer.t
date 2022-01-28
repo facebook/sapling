@@ -39,13 +39,18 @@ Setup repository
   $ quiet default_setup_blobimport "blob_files"
 
 Run Segmented Changelog Tailer. This seeds the segmented changelog.
-  $ segmented_changelog_tailer_once --head master_bookmark --repo repo &>"$TESTTMP/error.log"
-  $ grep -e successfully -e segmented_changelog_tailer -e idmap_version "$TESTTMP/error.log"
+  $ quiet segmented_changelog_tailer_once --head master_bookmark --repo repo
+  $ grep -e "repo 0" -e "segmented_changelog_tailer" "$TESTTMP/quiet.last.log"
   * repo name 'repo' translates to id 0 (glob)
   * repo 0: using * for head (glob)
   * repo 0: SegmentedChangelogTailer initialized (glob)
+  * repo 0: starting incremental update to segmented changelog (glob)
+  * repo 0: iddag initialized, it covers 0 ids (glob)
+  * repo 0: starting the actual update (glob)
   * Adding hints for repo 0 idmap_version 1 (glob)
   * repo 0 idmap_version 1 has a full set of hints * (glob)
+  * repo 0: flushing 3 in-memory IdMap entries to SQL (glob)
+  * repo 0: IdMap updated, IdDag updated (glob)
   * repo 0: segmented changelog version saved, idmap_version: 1, iddag_version: * (glob)
   * repo 0: successfully seeded segmented changelog (glob)
   * repo 0: SegmentedChangelogTailer is done (glob)
@@ -57,13 +62,18 @@ Now test without head option (tailer will fetch it from config) and with prefetc
   > master_bookmark="master_bookmark"
   > CONFIG
   $ dump_public_changeset_entries --out-filename "$TESTTMP/prefetched_commits" &> /dev/null
-  $ segmented_changelog_tailer_reseed --repo repo --prefetched-commits-path "$TESTTMP/prefetched_commits" &>"$TESTTMP/error.log"
-  $ grep -e successfully -e segmented_changelog_tailer -e idmap_version "$TESTTMP/error.log"
+  $ quiet segmented_changelog_tailer_reseed --repo repo --prefetched-commits-path "$TESTTMP/prefetched_commits"
+  $ grep -e "repo 0" -e "segmented_changelog_tailer" "$TESTTMP/quiet.last.log"
   * reading prefetched commits from $TESTTMP/prefetched_commits (glob)
   * repo name 'repo' translates to id 0 (glob)
   * repo 0: SegmentedChangelogTailer initialized (glob)
+  * repo 0: starting incremental update to segmented changelog (glob)
+  * repo 0: iddag initialized, it covers 0 ids (glob)
+  * repo 0: starting the actual update (glob)
   * Adding hints for repo 0 idmap_version 2 (glob)
   * repo 0 idmap_version 2 has a full set of hints * (glob)
+  * repo 0: flushing 3 in-memory IdMap entries to SQL (glob)
+  * repo 0: IdMap updated, IdDag updated (glob)
   * repo 0: segmented changelog version saved, idmap_version: 2, iddag_version: * (glob)
   * repo 0: successfully seeded segmented changelog (glob)
   * repo 0: SegmentedChangelogTailer is done (glob)
@@ -76,8 +86,18 @@ Add a new commit, and see the tailer tail it in properly
   $ cd ..
   $ blobimport repo-hg/.hg repo --derived-data-type fsnodes
   $ quiet segmented_changelog_tailer_once --repo repo
-  $ grep 'successful incremental update' "$TESTTMP/quiet.last.log"
+  $ grep "repo 0" "$TESTTMP/quiet.last.log"
+  * repo 0: SegmentedChangelogTailer initialized (glob)
+  * repo 0: starting incremental update to segmented changelog (glob)
+  * repo 0: iddag initialized, it covers 3 ids (glob)
+  * repo 0: starting the actual update (glob)
+  * Adding hints for repo 0 idmap_version 2 (glob)
+  * repo 0 idmap_version 2 has a full set of hints * (glob)
+  * repo 0: flushing 1 in-memory IdMap entries to SQL (glob)
+  * repo 0: IdMap updated, IdDag updated (glob)
+  * repo 0: segmented changelog version saved, idmap_version: 2, iddag_version: * (glob)
   * repo 0: successful incremental update to segmented changelog (glob)
+  * repo 0: SegmentedChangelogTailer is done (glob)
 
 Run Segmented Changelog Tailer. Nothing to do.
 

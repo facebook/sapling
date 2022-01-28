@@ -110,7 +110,7 @@ impl OnDemandUpdateSegmentedChangelog {
         seed_heads: Vec<SeedHead>,
         clone_hints: Option<CloneHints>,
     ) -> Result<Self> {
-        let namedag = server_namedag(ctx, iddag, idmap)?;
+        let namedag = server_namedag(ctx, repo_id, iddag, idmap)?;
         let namedag = Arc::new(RwLock::new(namedag));
         Ok(Self {
             repo_id,

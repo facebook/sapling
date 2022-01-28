@@ -7,9 +7,11 @@
 
 use async_trait::async_trait;
 use context::CoreContext;
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, RepositoryId};
+use slog::info;
 use std::collections::HashMap;
 use std::sync::Arc;
+use tunables::tunables;
 
 use crate::dag::errors::{self, BackendError, DagError};
 use crate::dag::id::{Group, Id};
@@ -26,6 +28,8 @@ define_stats! {
     insert_many: timeseries(Sum),
     flush_writes: timeseries(Sum),
 }
+
+const DEFAULT_LOG_SAMPLING_RATE: usize = 20000;
 
 /// Type conversion - `VertexName` is used in the `dag` crate to abstract over different ID types
 /// such as Mercurial IDs, Bonsai, a theoretical git ID and more.
@@ -51,6 +55,8 @@ pub fn vertex_name_from_cs_id(cs_id: &ChangesetId) -> VertexName {
 
 #[derive(Clone)]
 pub struct IdMapMemWrites {
+    /// Needed for logging
+    repo_id: RepositoryId,
     /// The actual IdMap
     inner: Arc<dyn IdMap>,
     /// Stores recent writes that haven't yet been persisted to the backing store
@@ -58,14 +64,21 @@ pub struct IdMapMemWrites {
 }
 
 impl IdMapMemWrites {
-    pub fn new(inner: Arc<dyn IdMap>) -> Self {
+    pub fn new(repo_id: RepositoryId, inner: Arc<dyn IdMap>) -> Self {
         Self {
             inner,
             mem: Arc::new(ConcurrentMemIdMap::new()),
+            repo_id,
         }
     }
 
     pub async fn flush_writes(&self, ctx: &CoreContext) -> anyhow::Result<()> {
+        info!(
+            ctx.logger(),
+            "repo {}: flushing {} in-memory IdMap entries to SQL",
+            self.repo_id,
+            self.mem.len(),
+        );
         let writes = self.mem.drain();
         STATS::flush_writes.add_value(
             writes
@@ -84,13 +97,32 @@ impl IdMap for IdMapMemWrites {
         ctx: &CoreContext,
         mappings: Vec<(DagId, ChangesetId)>,
     ) -> anyhow::Result<()> {
+        let mappings_size = mappings.len();
         STATS::insert_many.add_value(
-            mappings
-                .len()
+            mappings_size
                 .try_into()
                 .expect("More than an i64 of writes in one go!"),
         );
         let res = self.mem.insert_many(ctx, mappings).await;
+        if res.is_ok() {
+            let new_size = self.mem.len();
+            let old_size = new_size - mappings_size;
+            let sampling_rate = tunables().get_segmented_changelog_idmap_log_sampling_rate();
+            let sampling_rate = if sampling_rate <= 0 {
+                DEFAULT_LOG_SAMPLING_RATE
+            } else {
+                sampling_rate as usize
+            };
+            if new_size / sampling_rate != old_size / sampling_rate {
+                info!(
+                    ctx.logger(),
+                    "repo {}: {} entries inserted into in-memory IdMap, new size: {}",
+                    self.repo_id,
+                    mappings_size,
+                    new_size,
+                );
+            }
+        }
         res
     }
 
@@ -203,8 +235,8 @@ pub struct IdMapWrapper {
 impl IdMapWrapper {
     /// Create a new wrapper around the server IdMap, using CoreContext
     /// for calling update functions
-    pub fn new(ctx: CoreContext, idmap: Arc<dyn IdMap>) -> Self {
-        let idmap_memwrites = IdMapMemWrites::new(idmap);
+    pub fn new(ctx: CoreContext, repo_id: RepositoryId, idmap: Arc<dyn IdMap>) -> Self {
+        let idmap_memwrites = IdMapMemWrites::new(repo_id, idmap);
         Self {
             verlink: VerLink::new(),
             inner: idmap_memwrites,
