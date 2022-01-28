@@ -1,4 +1,5 @@
 #chg-compatible
+#require mononoke
   $ setconfig experimental.allowfilepeer=True
 
   $ . "$TESTDIR/library.sh"
@@ -11,13 +12,14 @@
   $ mkdir dir
   $ echo y > dir/y
   $ hg commit -qAm y
-  $ hg push -r tip --to master --create
-  pushing rev 79c51fb96423 to destination ssh://user@dummy/master bookmark master
-  searching for changes
-  exporting bookmark master
+  $ hg push -r tip --to master --create --config paths.default=mononoke://$(mononoke_address)/master
   remote: adding changesets (?)
   remote: adding manifests (?)
   remote: adding file changes (?)
+  pushing rev 79c51fb96423 to destination mononoke://$LOCALIP:$LOCAL_PORT/master bookmark master
+  searching for changes
+  exporting bookmark master
+
   $ cd ..
 
 Shallow clone from full
@@ -34,22 +36,12 @@ Shallow clone from full
   store
   treestate
 
-#if mononoke
   $ hg update
   fetching tree '' 05bd2758dd7a25912490d0633b8975bf52bfab06
   1 trees fetched over 0.00s
   fetching tree 'dir' 8a87e5128a9877c501d5a20c32dbd2103a54afad
   1 trees fetched over 0.00s
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-#else
-  $ hg update
-  fetching tree '' 05bd2758dd7a25912490d0633b8975bf52bfab06
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
-  1 trees fetched over 0.00s
-  fetching tree 'dir' 8a87e5128a9877c501d5a20c32dbd2103a54afad
-  1 trees fetched over 0.00s
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-#endif
 
 Log on a file without -f
 

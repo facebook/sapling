@@ -1,4 +1,5 @@
 #chg-compatible
+#require mononoke
   $ setconfig experimental.allowfilepeer=True
 
   $ . "$TESTDIR/library.sh"
@@ -11,13 +12,14 @@
   $ mkdir dir
   $ echo y > dir/y
   $ hg commit -qAm y
-  $ hg push -r tip --to master --create
-  pushing rev 79c51fb96423 to destination ssh://user@dummy/master bookmark master
-  searching for changes
-  exporting bookmark master
+  $ hg push -r tip --to master --create --config paths.default=mononoke://$(mononoke_address)/master
   remote: adding changesets (?)
   remote: adding manifests (?)
   remote: adding file changes (?)
+  pushing rev 79c51fb96423 to destination mononoke://$LOCALIP:$LOCAL_PORT/master bookmark master
+  searching for changes
+  exporting bookmark master
+
   $ cd ..
 
 Shallow clone from full
@@ -30,20 +32,11 @@ Shallow clone from full
   > getpackversion=2
   > EOF
 
-#if mononoke
   $ hg up -q tip
   fetching tree '' 05bd2758dd7a25912490d0633b8975bf52bfab06
   1 trees fetched over 0.00s
   fetching tree 'dir' 8a87e5128a9877c501d5a20c32dbd2103a54afad
   1 trees fetched over 0.00s
-#else
-  $ hg up -q tip
-  fetching tree '' 05bd2758dd7a25912490d0633b8975bf52bfab06
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
-  1 trees fetched over 0.00s
-  fetching tree 'dir' 8a87e5128a9877c501d5a20c32dbd2103a54afad
-  1 trees fetched over 0.00s
-#endif
 
   $ hg debugfilerev -v
   79c51fb96423: y
@@ -51,9 +44,18 @@ Shallow clone from full
     rawdata: 'y\n'
 
 Now try prefetchchunksize option, and expect that two getpackv2 calls were made
-  $ hg up -q null
-  $ rm -r "$TESTTMP"/hgcache/*
+  $ hg up null --debug
+  resolving manifests
+   branchmerge: False, force: False, partial: False
+   ancestor: 79c51fb96423, local: 79c51fb96423+, remote: 000000000000
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ rm -rf "$TESTTMP"/hgcache/*
   $ ls "$TESTTMP"/hgcache/
-  $ hg up tip --config remotefilelog.prefetchchunksize=1 --debug 2>&1 | grep 'sending getpackv2 command'
-  sending getpackv2 command
-  sending getpackv2 command
+  ls: cannot access '$TESTTMP/hgcache/': $ENOENT$
+  [2]
+  $ hg up tip --config remotefilelog.prefetchchunksize=1 --debug
+  resolving manifests
+   branchmerge: False, force: False, partial: False
+   ancestor: 000000000000, local: 000000000000+, remote: 79c51fb96423
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+

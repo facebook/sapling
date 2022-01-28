@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
 
 import os
 import shlex
@@ -78,36 +82,6 @@ if cmdargv[:2] == ["hg", "-R"] and cmdargv[3:] == ["serve", "--stdio"]:
         path = path + "_copy"
     cmdargv[2] = path
     hgcmd = subprocess.list2cmdline(cmdargv)
-
-if "hgcli" in hgcmd:
-    certdir = os.environ.get("HGTEST_CERTDIR") or os.environ.get("TEST_CERTS")
-    if certdir is None:
-        raise ValueError("No cert dir")
-    certdir = none_throws(certdir)
-    cert = os.path.join(certdir, "localhost.crt")
-    capem = os.path.join(certdir, "root-ca.crt")
-    privatekey = os.path.join(certdir, "localhost.key")
-    localip = os.environ.get("LOCALIP", "127.0.0.1")
-    if ":" in localip:
-        # this is ipv6, put it in brackets
-        localip = "[" + localip + "]"
-
-    hgcmd += (
-        (" --mononoke-path %s:" % localip)
-        + none_throws(os.getenv("MONONOKE_SOCKET"))
-        + (
-            " --cert %s --ca-pem %s --private-key %s --common-name localhost"
-            % (cert, capem, privatekey)
-        )
-    )
-
-    mock_username = os.environ.get("MOCK_USERNAME")
-    if mock_username:
-        hgcmd += " --mock-username '{}'".format(mock_username)
-
-    client_debug = os.environ.get("CLIENT_DEBUG")
-    if client_debug == "true":
-        hgcmd += " --client-debug"
 
 if os.environ.get("DUMMYSSH_STABLE_ORDER"):
     # Buffer all stderr outputs until the end of connection.  This reduces test

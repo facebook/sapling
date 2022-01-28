@@ -64,13 +64,17 @@ newremoterepo() {
   echo remotefilelog >> .hg/requires
   enable treemanifest remotefilelog pushrebase remotenames
   setconfig treemanifest.sendtrees=True treemanifest.treeonly=True
-  setconfig paths.default=ssh://user@dummy/server
+  if [ -n "$USE_MONONOKE" ] ; then
+    setconfig paths.default=mononoke://$(mononoke_address)/server
+  else
+    setconfig paths.default=ssh://user@dummy/server
+  fi
 }
 
 newserver() {
   local reponame="$1"
   if [ -n "$USE_MONONOKE" ] ; then
-    REPONAME=$reponame setup_mononoke_config
+    REPONAME=$reponame setup_common_config
     mononoke
     MONONOKE_START_TIMEOUT=60 wait_for_mononoke "$TESTTMP/$reponame"
   elif [ -f "$TESTTMP/.eagerepo" ] ; then
@@ -102,11 +106,10 @@ clone() {
   shift 2
   cd "$TESTTMP"
   remotecmd="hg"
-  if [ -n "$USE_MONONOKE" ] ; then
-    remotecmd="$MONONOKE_HGCLI"
-  fi
   if [ -f "$TESTTMP/.eagerepo" ] ; then
       serverurl="test:$servername"
+  elif [ -n "$USE_MONONOKE" ] ; then
+      serverurl="mononoke://$(mononoke_address)/$servername"
   else
       serverurl="ssh://user@dummy/$servername"
   fi
@@ -146,13 +149,6 @@ ssh=$(dummysshcmd)
 [tweakdefaults]
 rebasekeepdate=True
 EOF
-
-  if [ -n "$USE_MONONOKE" ] ; then
-      cat >> $clientname/.hg/hgrc <<EOF
-[ui]
-remotecmd=$MONONOKE_HGCLI
-EOF
-  fi
 
   if [ -n "$COMMITCLOUD" ]; then
     hg --cwd $clientname cloud join -q

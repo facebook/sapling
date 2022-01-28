@@ -544,20 +544,6 @@ function setup_mononoke_config {
     shift
   fi
 
-  if [[ ! -e "$TESTTMP/mononoke_hgcli" ]]; then
-    local priority=""
-    if [[ -n "${MONONOKE_HGCLI_PRIORITY:-}" ]]; then
-      priority="--priority $MONONOKE_HGCLI_PRIORITY"
-    fi
-
-    cat >> "$TESTTMP/mononoke_hgcli" <<EOF
-#!/bin/sh
-"$MONONOKE_HGCLI" $priority --no-session-output "\$@"
-EOF
-    chmod a+x "$TESTTMP/mononoke_hgcli"
-    MONONOKE_HGCLI="$TESTTMP/mononoke_hgcli"
-  fi
-
   cd mononoke-config || exit 1
   mkdir -p common
   touch common/common.toml

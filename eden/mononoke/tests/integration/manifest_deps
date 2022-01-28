@@ -22,7 +22,6 @@ MONONOKE_BINS = {
     "MONONOKE_DUMP_PUBLIC_CHANGESET_ENTRIES": "dump_public_changeset_entries",
     "MONONOKE_FASTREPLAY": "fastreplay",
     "MONONOKE_GITIMPORT": "gitimport",
-    "MONONOKE_HGCLI": "hgcli",
     "MONONOKE_HG_SYNC": "mononoke_hg_sync_job",
     "MONONOKE_HOOK_TAILER": "hook_tailer",
     "MONONOKE_HYPER_REPO_BUILDER": "hyper_repo_builder",

@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
@@ -16,7 +16,6 @@ import sys
 import unittest
 
 import libfb.py.parutil as parutil
-import libfb.py.parutil as parutil
 
 
 try:
@@ -27,7 +26,6 @@ try:
     pythonbinpath = parutil.get_file_path("hgpython.sh", pkg=__package__)
     watchman = parutil.get_file_path("watchman", pkg=__package__)
     mononoke_server = parutil.get_file_path("mononoke", pkg=__package__)
-    mononoke_hgcli = parutil.get_file_path("hgcli", pkg=__package__)
     dummyssh = parutil.get_file_path("dummyssh3.par", pkg=__package__)
     get_free_socket = parutil.get_file_path("get_free_socket.par", pkg=__package__)
 except ImportError:
@@ -36,7 +34,6 @@ except ImportError:
     pythonbinpath = os.environ.get("HGTEST_PYTHON", "python2")
     watchman = os.environ.get("HGTEST_WATCHMAN")
     mononoke_server = os.environ.get("HGTEST_MONONOKE_SERVER")
-    mononoke_hgcli = os.environ.get("HGTEST_MONONOKE_HGCLI")
     dummyssh = os.environ.get("HGTEST_DUMMYSSH")
     get_free_socket = os.environ.get("HGTEST_GET_FREE_SOCKET")
 
@@ -91,7 +88,6 @@ def prepareargsenv(runtestsdir, port=None):
     # Variables needed for mononoke integration
     if os.environ.get("USE_MONONOKE"):
         env["MONONOKE_SERVER"] = mononoke_server
-        env["MONONOKE_HGCLI"] = mononoke_hgcli
         env["GET_FREE_SOCKET"] = get_free_socket
 
     return args, env
