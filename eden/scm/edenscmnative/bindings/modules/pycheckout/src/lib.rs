@@ -29,6 +29,7 @@ use cpython_ext::ResultPyErrExt;
 use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use pathmatcher::Matcher;
+use progress_model::ProgressBar;
 use pyconfigparser::config;
 use pymanifest::treemanifest;
 use pypathmatcher::extract_matcher;
@@ -149,15 +150,19 @@ py_class!(class checkoutplan |py| {
         let vfs = plan.vfs();
         let state = state.get_state(py);
         py.allow_threads(move || -> Result<()> {
+            let bar = ProgressBar::register_new("recording", plan.all_files().count() as u64, "files");
+
             let mut state = state.lock();
 
             for removed in plan.removed_files() {
                 state.remove(removed)?;
+                bar.increase_position(1);
             }
 
             for updated in plan.updated_content_files().chain(plan.updated_meta_files()) {
                 let fstate = file_state(vfs, updated)?;
                 state.insert(updated, &fstate)?;
+                bar.increase_position(1);
             }
 
             Ok(())

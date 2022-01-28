@@ -2778,8 +2778,7 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
     if not partial and not wc.isinmemory():
         with repo.dirstate.parentchange():
             repo.setparents(fp1, fp2)
-            with progress.spinner(repo.ui, "recording"):
-                plan.record_updates(repo.dirstate._map._tree)
+            plan.record_updates(repo.dirstate._map._tree)
             # update completed, clear state
             repo.localvfs.unlink("updatestate")
             repo.localvfs.unlink("updateprogress")
