@@ -278,16 +278,18 @@ def checkproxyagentstate(ui):
     logs = "OS not supported"
     if pycompat.iswindows:
         username = util.getuser()
-        logs = shcmd(
-            "type C:\\Users\\{}\\AppData\\Local\\facebook\\fb-x2pagentd\\fb-x2pagentd.log".format(
-                username
-            )
+        logs = _tail(
+            "C:\\Users\\{}\\AppData\\Local\\facebook\\fb-x2pagentd".format(username),
+            ["fb-x2pagentd.log"],
+            nlines=100,
         )
     elif pycompat.islinux:
         logs = shcmd("journalctl --user-unit x2pagentd.service | tail -n 100")
     elif pycompat.isdarwin:
-        logs = shcmd(
-            "cat ~/Library/Application\\ Support/fb-x2pagentd/fb-x2pagentd.log | tail -n 100"
+        logs = _tail(
+            os.path.expanduser("~/Library/Application Support/fb-x2pagentd"),
+            ["fb-x2pagentd.log"],
+            nlines=100,
         )
 
     return """{}
@@ -555,7 +557,7 @@ def _makerage(ui, repo, **opts):
     profile.append((time.time() - allstart, "basic info", None))
     for name, gen in detailed:
         start = time.time()
-        with progress.spinner(ui, "collecting %r" % name):
+        with progress.spinner(ui, name):
             value = _failsafe(gen)
         finish = time.time()
         msg.append(
@@ -599,7 +601,7 @@ def rage(ui, repo, *pats, **opts):
         advice = Please see our FAQ guide: https://...
 
     """
-    with progress.spinner(ui, "collecting information"):
+    with progress.spinner(ui, "collecting"):
         with ui.configoverride({("ui", "color"): "False"}):
             # Disable colors when generating a rage.
             color.setup(ui)
