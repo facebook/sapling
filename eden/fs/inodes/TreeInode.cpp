@@ -975,7 +975,7 @@ FileInodePtr TreeInode::createImpl(
         .throwUnlessValue();
     // Make sure that the directory cache is invalidated so a subsequent
     // readdir will see the added file.
-    invalidateChannelDirCache(*contents).throwUnlessValue();
+    invalidateChannelDirCache(*contents).get();
   }
 
   getMount()->getJournal().recordCreated(targetName);
@@ -1075,7 +1075,7 @@ TreeInodePtr TreeInode::mkdir(
     if (InvalidationRequired::Yes == invalidate) {
       invalidateChannelEntryCache(*contents, name, std::nullopt)
           .throwUnlessValue();
-      invalidateChannelDirCache(*contents).throwUnlessValue();
+      invalidateChannelDirCache(*contents).get();
     }
 
     // Allocate an inode number
@@ -1347,7 +1347,7 @@ int TreeInode::tryRemoveChild(
         return EIO;
       }
 
-      success = invalidateChannelDirCache(*contents);
+      success = invalidateChannelDirCache(*contents).getTry();
       if (success.hasException()) {
         return EIO;
       }
@@ -1694,10 +1694,9 @@ ImmediateFuture<Unit> TreeInode::doRename(
             locks.dstInodeState(), destName, std::nullopt)
         .throwUnlessValue();
 
-    invalidateChannelDirCache(locks.srcInodeState()).throwUnlessValue();
+    invalidateChannelDirCache(locks.srcInodeState()).get();
     if (destParent.get() != this) {
-      destParent->invalidateChannelDirCache(locks.dstInodeState())
-          .throwUnlessValue();
+      destParent->invalidateChannelDirCache(locks.dstInodeState()).get();
     }
   }
 
@@ -2580,28 +2579,52 @@ Future<Unit> TreeInode::checkout(
                   self.get(), actions[n]->getEntryName(), result.exception());
             }
 
+            auto invalidation = ImmediateFuture<folly::Unit>{folly::unit};
             if (wasDirectoryListModified) {
               // TODO(xavierd): In theory, this should be done before running
               // the futures, while holding the contents lock all the way. The
               // reason is that we in theory need to rollback what was done in
               // case we can't invalidate.
-              auto contents = self->contents_.wlock();
-              auto success = self->invalidateChannelDirCache(*contents);
-              if (success.hasException()) {
-                auto location = self->getLocationInfo(ctx->renameLock());
-                ctx->addError(
-                    location.parent.get(), location.name, success.exception());
+              {
+                auto contents = self->contents_.wlock();
+                invalidation = self->invalidateChannelDirCache(*contents);
               }
+              invalidation =
+                  std::move(invalidation)
+                      .thenTry([self, ctx](folly::Try<folly::Unit>&& success) {
+                        if (success.hasException()) {
+                          auto location =
+                              self->getLocationInfo(ctx->renameLock());
+                          ctx->addError(
+                              location.parent.get(),
+                              location.name,
+                              success.exception());
+                        }
 
-              self->updateMtimeAndCtimeLocked(
-                  contents->entries, self->getNow());
+                        self->updateMtimeAndCtimeLocked(
+                            self->contents_.wlock()->entries, self->getNow());
+                      });
             }
 
-            // Update our state in the overlay
-            self->saveOverlayPostCheckout(ctx, toTree.get());
+            auto fut = std::move(invalidation)
+                           .thenValue([self,
+                                       ctx,
+                                       toTree = std::move(toTree),
+                                       numErrors](auto&&) {
+                             // Update our state in the overlay
+                             self->saveOverlayPostCheckout(ctx, toTree.get());
 
-            XLOG(DBG4) << "checkout: finished update of " << self->getLogPath()
-                       << ": " << numErrors << " errors";
+                             XLOG(DBG4) << "checkout: finished update of "
+                                        << self->getLogPath() << ": "
+                                        << numErrors << " errors";
+                           });
+
+            if (fut.isReady()) {
+              return folly::makeFuture(std::move(fut).getTry());
+            } else {
+              return std::move(fut).semi().via(
+                  self->getMount()->getServerThreadPool().get());
+            }
           });
 }
 
@@ -3073,51 +3096,71 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
             }
 
             // Add the new entry
-            bool inserted;
+            auto invalidation = ImmediateFuture<folly::Unit>{folly::unit};
+
             {
               auto contents = parentInode->contents_.wlock();
               XDCHECK(!newScmEntry->isTree());
 
               // This code is running asynchronously during checkout, so
               // flush the readdir cache right here.
-              auto success = parentInode->invalidateChannelDirCache(*contents);
-              if (success.hasException()) {
-                ctx->addError(
-                    parentInode.get(),
-                    getInodeName(ctx, treeInode),
-                    success.exception());
-                return InvalidationRequired::No;
-              }
-
-              auto ret = contents->entries.emplace(
-                  newScmEntry->getName(),
-                  modeFromTreeEntryType(newScmEntry->getType()),
-                  parentInode->getOverlay()->allocateInodeNumber(),
-                  newScmEntry->getHash());
-              inserted = ret.second;
+              invalidation = parentInode->invalidateChannelDirCache(*contents);
             }
 
-            if (!inserted) {
-              const auto& name = getInodeName(ctx, treeInode);
-              // Hmm.  Someone else already created a new entry in this location
-              // before we had a chance to add our new entry.  We don't block
-              // new file or directory creations during a checkout operation, so
-              // this is possible.  Just report an error in this case.
-              ctx->addError(
-                  parentInode.get(),
-                  name,
-                  InodeError(
-                      EEXIST,
-                      parentInode,
-                      name,
-                      "new file created with this name while checkout operation "
-                      "was in progress"));
-            }
+            auto fut =
+                std::move(invalidation)
+                    .thenTry([ctx, treeInode, parentInode, newScmEntry](
+                                 folly::Try<folly::Unit>&& success) mutable {
+                      if (success.hasException()) {
+                        ctx->addError(
+                            parentInode.get(),
+                            getInodeName(ctx, treeInode),
+                            success.exception());
+                        return InvalidationRequired::No;
+                      }
 
-            // Return false because the code above has already invalidated
-            // this inode's readdir cache, so we don't technically need to
-            // do it again unless something else modifies the contents.
-            return InvalidationRequired::No;
+                      bool inserted;
+                      {
+                        auto contents = parentInode->contents_.wlock();
+                        auto ret = contents->entries.emplace(
+                            newScmEntry->getName(),
+                            modeFromTreeEntryType(newScmEntry->getType()),
+                            parentInode->getOverlay()->allocateInodeNumber(),
+                            newScmEntry->getHash());
+                        inserted = ret.second;
+                      }
+
+                      if (!inserted) {
+                        const auto& name = getInodeName(ctx, treeInode);
+                        // Hmm.  Someone else already created a new entry in
+                        // this location before we had a chance to add our new
+                        // entry.  We don't block new file or directory
+                        // creations during a checkout operation, so this is
+                        // possible.  Just report an error in this case.
+                        ctx->addError(
+                            parentInode.get(),
+                            name,
+                            InodeError(
+                                EEXIST,
+                                parentInode,
+                                name,
+                                "new file created with this name while checkout operation "
+                                "was in progress"));
+                      }
+
+                      // Return false because the code above has already
+                      // invalidated this inode's readdir cache, so we don't
+                      // technically need to do it again unless something else
+                      // modifies the contents.
+                      return InvalidationRequired::No;
+                    });
+
+            if (fut.isReady()) {
+              return std::move(fut).getTry();
+            } else {
+              return std::move(fut).semi().via(
+                  parentInode->getMount()->getServerThreadPool().get());
+            }
           });
 }
 
@@ -3132,7 +3175,7 @@ bool needDecFsRefcount(InodeMap& inodeMap, InodeNumber ino) {
 } // namespace
 #endif
 
-folly::Try<void> TreeInode::invalidateChannelEntryCache(
+folly::Try<folly::Unit> TreeInode::invalidateChannelEntryCache(
     TreeInodeState&,
     PathComponentPiece name,
     FOLLY_MAYBE_UNUSED std::optional<InodeNumber> ino) {
@@ -3162,10 +3205,11 @@ folly::Try<void> TreeInode::invalidateChannelEntryCache(
   }
 #endif
 
-  return folly::Try<void>{};
+  return folly::Try<folly::Unit>{folly::unit};
 }
 
-folly::Try<void> TreeInode::invalidateChannelDirCache(TreeInodeState&) {
+ImmediateFuture<folly::Unit> TreeInode::invalidateChannelDirCache(
+    TreeInodeState&) {
 #ifndef _WIN32
   if (auto* fuseChannel = getMount()->getFuseChannel()) {
     // FUSE_NOTIFY_INVAL_ENTRY is the appropriate invalidation function
@@ -3182,15 +3226,25 @@ folly::Try<void> TreeInode::invalidateChannelDirCache(TreeInodeState&) {
   if (auto* fsChannel = getMount()->getPrjfsChannel()) {
     const auto path = getPath();
     if (path.has_value()) {
-      // Don't call decFsRefcount here as we're adding a placeholder, and thus
-      // this TreeInode need to be kept in the InodeMap until
-      // invalidateChannelEntryCache is called on it.
-      return fsChannel->addDirectoryPlaceholder(path.value());
+      // Invalidation may block, thus in order to not starve the server thread
+      // pool during checkout let's move it to a separate thread.
+      return ImmediateFuture{folly::via(
+                                 getMount()->getInvalidationThreadPool().get(),
+                                 [fsChannel, path = std::move(path).value()]() {
+                                   // Don't call decFsRefcount here as we're
+                                   // adding a placeholder, and thus this
+                                   // TreeInode need to be kept in the InodeMap
+                                   // until invalidateChannelEntryCache is
+                                   // called on it.
+                                   return fsChannel->addDirectoryPlaceholder(
+                                       path);
+                                 })
+                                 .semi()};
     }
   }
 #endif
 
-  return folly::Try<void>{};
+  return folly::unit;
 }
 
 void TreeInode::saveOverlayPostCheckout(

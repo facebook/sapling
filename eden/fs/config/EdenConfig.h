@@ -499,6 +499,15 @@ class EdenConfig : private ConfigSettingManager {
       true,
       this};
 
+  /**
+   * Controls the number of threads per mount dedicated to running directory
+   * invalidation.
+   */
+  ConfigSetting<uint8_t> prjfsNumInvalidationThreads{
+      "prjfs:num-invalidation-threads",
+      1,
+      this};
+
   // [hg]
 
   /**

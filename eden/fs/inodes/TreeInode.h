@@ -704,7 +704,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * being held to avoid races between invalidation during checkout and use
    * lookups.
    */
-  FOLLY_NODISCARD folly::Try<void> invalidateChannelDirCache(TreeInodeState&);
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> invalidateChannelDirCache(
+      TreeInodeState&);
 
   /**
    * Send a request to the kernel to invalidate its cache for the given child
@@ -720,7 +721,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * being held to avoid races between invalidation during checkout and use
    * lookups.
    */
-  FOLLY_NODISCARD folly::Try<void> invalidateChannelEntryCache(
+  FOLLY_NODISCARD folly::Try<folly::Unit> invalidateChannelEntryCache(
       TreeInodeState&,
       PathComponentPiece name,
       std::optional<InodeNumber> ino);

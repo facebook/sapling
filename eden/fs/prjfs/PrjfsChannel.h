@@ -301,7 +301,8 @@ class PrjfsChannel {
    * This can fail when the underlying file cannot be evicted from ProjectedFS,
    * one example is when the user has locked the file.
    */
-  FOLLY_NODISCARD folly::Try<void> removeCachedFile(RelativePathPiece path);
+  FOLLY_NODISCARD folly::Try<folly::Unit> removeCachedFile(
+      RelativePathPiece path);
 
   /**
    * Ensure that the directory is a placeholder so that ProjectedFS will always
@@ -309,7 +310,7 @@ class PrjfsChannel {
    * This particularly matters for directories that were created by the user to
    * later be committed.
    */
-  FOLLY_NODISCARD folly::Try<void> addDirectoryPlaceholder(
+  FOLLY_NODISCARD folly::Try<folly::Unit> addDirectoryPlaceholder(
       RelativePathPiece path);
 
   void flushNegativePathCache();

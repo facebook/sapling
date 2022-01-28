@@ -451,6 +451,14 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   const std::shared_ptr<UnboundedQueueExecutor>& getServerThreadPool() const;
 
+#ifdef _WIN32
+  /**
+   * Returns the thread pool where directory invalidation need to be performed.
+   */
+  const std::shared_ptr<UnboundedQueueExecutor>& getInvalidationThreadPool()
+      const;
+#endif
+
   /**
    * Returns the Clock with which this mount was configured.
    */
@@ -1013,6 +1021,13 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Eden server state shared across multiple mount points.
    */
   std::shared_ptr<ServerState> serverState_;
+
+#ifdef _WIN32
+  /**
+   * On Windows, directory invalidation will run on this executor.
+   */
+  std::shared_ptr<UnboundedQueueExecutor> invalidationExecutor_;
+#endif
 
   /**
    * Should the created mount use NFS (only currently supported on Linux and

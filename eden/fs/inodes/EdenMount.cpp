@@ -206,6 +206,11 @@ EdenMount::EdenMount(
     std::unique_ptr<Journal> journal)
     : checkoutConfig_{std::move(checkoutConfig)},
       serverState_{std::move(serverState)},
+#ifdef _WIN32
+      invalidationExecutor_{std::make_shared<UnboundedQueueExecutor>(
+          serverState_->getEdenConfig()->prjfsNumInvalidationThreads.getValue(),
+          "prjfs-dir-inval")},
+#endif
       shouldUseNFSMount_{shouldUseNFSMount()},
       inodeMap_{new InodeMap(
           this,
@@ -853,6 +858,13 @@ const shared_ptr<UnboundedQueueExecutor>& EdenMount::getServerThreadPool()
     const {
   return serverState_->getThreadPool();
 }
+
+#ifdef _WIN32
+const shared_ptr<UnboundedQueueExecutor>& EdenMount::getInvalidationThreadPool()
+    const {
+  return invalidationExecutor_;
+}
+#endif
 
 std::shared_ptr<const EdenConfig> EdenMount::getEdenConfig() const {
   return serverState_->getReloadableConfig().getEdenConfig();

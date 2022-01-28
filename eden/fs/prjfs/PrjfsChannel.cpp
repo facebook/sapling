@@ -1032,9 +1032,9 @@ folly::SemiFuture<PrjfsChannel::StopData> PrjfsChannel::getStopFuture() {
 // TODO: We need to add an extra layer to absorb all the exceptions generated in
 // Eden from leaking into FS. This would come in soon.
 
-folly::Try<void> PrjfsChannel::removeCachedFile(RelativePathPiece path) {
+folly::Try<folly::Unit> PrjfsChannel::removeCachedFile(RelativePathPiece path) {
   if (path.empty()) {
-    return folly::Try<void>{};
+    return folly::Try<folly::Unit>{folly::unit};
   }
 
   auto winPath = path.wide();
@@ -1057,7 +1057,7 @@ folly::Try<void> PrjfsChannel::removeCachedFile(RelativePathPiece path) {
         result == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND)) {
       // The file or a directory in the path is not cached, ignore.
     } else {
-      return folly::Try<void>{makeHResultErrorExplicit(
+      return folly::Try<folly::Unit>{makeHResultErrorExplicit(
           result,
           fmt::format(
               FMT_STRING("Couldn't delete file {}: {:#x}"),
@@ -1066,12 +1066,13 @@ folly::Try<void> PrjfsChannel::removeCachedFile(RelativePathPiece path) {
     }
   }
 
-  return folly::Try<void>{};
+  return folly::Try<folly::Unit>{folly::unit};
 }
 
-folly::Try<void> PrjfsChannel::addDirectoryPlaceholder(RelativePathPiece path) {
+folly::Try<folly::Unit> PrjfsChannel::addDirectoryPlaceholder(
+    RelativePathPiece path) {
   if (path.empty()) {
-    return folly::Try<void>{};
+    return folly::Try<folly::Unit>{folly::unit};
   }
 
   auto winMountPath = mountPath_.wide();
@@ -1100,7 +1101,7 @@ folly::Try<void> PrjfsChannel::addDirectoryPlaceholder(RelativePathPiece path) {
               "Couldn't add a placeholder for: {}, as it triggered a recursive EdenFS call"),
           path);
     } else {
-      return folly::Try<void>{makeHResultErrorExplicit(
+      return folly::Try<folly::Unit>{makeHResultErrorExplicit(
           result,
           fmt::format(
               FMT_STRING("Couldn't add a placeholder for {}: {:#x}"),
@@ -1109,7 +1110,7 @@ folly::Try<void> PrjfsChannel::addDirectoryPlaceholder(RelativePathPiece path) {
     }
   }
 
-  return folly::Try<void>{};
+  return folly::Try<folly::Unit>{folly::unit};
 }
 
 void PrjfsChannel::flushNegativePathCache() {
