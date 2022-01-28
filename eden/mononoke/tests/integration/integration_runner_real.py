@@ -262,7 +262,7 @@ def run_tests(
     # If junit output has been requested, then that means testpilot is calling
     # us, and if testpilot is calling us, we shouldn't be running more than one
     # test at a time. Since we don't want to try and have to do anything smart
-    # about coalescing results from reguler tests and FB tests, we just make
+    # about coalescing results from regular tests and FB tests, we just make
     # this an error.
     if xunit_output is not None and len(tests) > 1:
         raise click.BadParameter("Cannot run more than one test with --output", ctx)
