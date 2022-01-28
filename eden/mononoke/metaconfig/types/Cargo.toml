@@ -11,9 +11,11 @@ license = "GPLv2+"
 anyhow = "1.0.51"
 ascii = "1.0"
 bookmarks_types = { version = "0.1.0", path = "../../bookmarks/bookmarks_types" }
+derive_more = "0.99.3"
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+mysql_common = "0.26.0"
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 regex = "1.5.4"
 scuba = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
