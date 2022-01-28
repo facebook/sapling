@@ -74,6 +74,16 @@ impl LoggingContainer {
         }
     }
 
+    pub fn clone_with_logger(&self, logger: Logger) -> Self {
+        Self {
+            logger,
+            scuba: self.scuba.clone(),
+            perf_counters: self.perf_counters.clone(),
+            sampling_key: self.sampling_key.clone(),
+            scribe: self.scribe.clone(),
+        }
+    }
+
     pub fn with_scribe(&mut self, scribe: Scribe) -> &mut Self {
         self.scribe = scribe;
         self

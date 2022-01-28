@@ -40,20 +40,21 @@ Setup repository
 
 Run Segmented Changelog Tailer. This seeds the segmented changelog.
   $ quiet segmented_changelog_tailer_once --head master_bookmark --repo repo
-  $ grep -e "repo 0" -e "segmented_changelog_tailer" "$TESTTMP/quiet.last.log"
+  $ grep -e "repo_id: 0" -e "segmented_changelog_tailer" "$TESTTMP/quiet.last.log"
   * repo name 'repo' translates to id 0 (glob)
-  * repo 0: using * for head (glob)
-  * repo 0: SegmentedChangelogTailer initialized (glob)
-  * repo 0: starting incremental update to segmented changelog (glob)
-  * repo 0: iddag initialized, it covers 0 ids (glob)
-  * repo 0: starting the actual update (glob)
-  * Adding hints for repo 0 idmap_version 1 (glob)
-  * repo 0 idmap_version 1 has a full set of hints * (glob)
-  * repo 0: flushing 3 in-memory IdMap entries to SQL (glob)
-  * repo 0: IdMap updated, IdDag updated (glob)
-  * repo 0: segmented changelog version saved, idmap_version: 1, iddag_version: * (glob)
-  * repo 0: successfully seeded segmented changelog (glob)
-  * repo 0: SegmentedChangelogTailer is done (glob)
+  * changeset resolved as: *, repo_id: 0 (glob)
+  * using * for head, repo_id: 0 (glob)
+  * SegmentedChangelogTailer initialized, repo_id: 0 (glob)
+  * starting incremental update to segmented changelog, repo_id: 0 (glob)
+  * iddag initialized, it covers 0 ids, repo_id: 0 (glob)
+  * starting the actual update, repo_id: 0 (glob)
+  * Adding hints for idmap_version 1, repo_id: 0 (glob)
+  * idmap_version 1 has a full set of hints *, repo_id: 0 (glob)
+  * flushing 3 in-memory IdMap entries to SQL, repo_id: 0 (glob)
+  * IdMap updated, IdDag updated, repo_id: 0 (glob)
+  * segmented changelog version saved, idmap_version: 1, iddag_version: *, repo_id: 0 (glob)
+  * successfully seeded segmented changelog, repo_id: 0 (glob)
+  * SegmentedChangelogTailer is done, repo_id: 0 (glob)
 
 
 Now test without head option (tailer will fetch it from config) and with prefetched commits
@@ -63,20 +64,21 @@ Now test without head option (tailer will fetch it from config) and with prefetc
   > CONFIG
   $ dump_public_changeset_entries --out-filename "$TESTTMP/prefetched_commits" &> /dev/null
   $ quiet segmented_changelog_tailer_reseed --repo repo --prefetched-commits-path "$TESTTMP/prefetched_commits"
-  $ grep -e "repo 0" -e "segmented_changelog_tailer" "$TESTTMP/quiet.last.log"
+  $ grep -e "repo_id: 0" -e "segmented_changelog_tailer" "$TESTTMP/quiet.last.log"
   * reading prefetched commits from $TESTTMP/prefetched_commits (glob)
   * repo name 'repo' translates to id 0 (glob)
-  * repo 0: SegmentedChangelogTailer initialized (glob)
-  * repo 0: starting incremental update to segmented changelog (glob)
-  * repo 0: iddag initialized, it covers 0 ids (glob)
-  * repo 0: starting the actual update (glob)
-  * Adding hints for repo 0 idmap_version 2 (glob)
-  * repo 0 idmap_version 2 has a full set of hints * (glob)
-  * repo 0: flushing 3 in-memory IdMap entries to SQL (glob)
-  * repo 0: IdMap updated, IdDag updated (glob)
-  * repo 0: segmented changelog version saved, idmap_version: 2, iddag_version: * (glob)
-  * repo 0: successfully seeded segmented changelog (glob)
-  * repo 0: SegmentedChangelogTailer is done (glob)
+  * using 'Bookmark master_bookmark' for head, repo_id: 0 (glob)
+  * SegmentedChangelogTailer initialized, repo_id: 0 (glob)
+  * starting incremental update to segmented changelog, repo_id: 0 (glob)
+  * iddag initialized, it covers 0 ids, repo_id: 0 (glob)
+  * starting the actual update, repo_id: 0 (glob)
+  * Adding hints for idmap_version 2, repo_id: 0 (glob)
+  * idmap_version 2 has a full set of hints *, repo_id: 0 (glob)
+  * flushing 3 in-memory IdMap entries to SQL, repo_id: 0 (glob)
+  * IdMap updated, IdDag updated, repo_id: 0 (glob)
+  * segmented changelog version saved, idmap_version: 2, iddag_version: *, repo_id: 0 (glob)
+  * successfully seeded segmented changelog, repo_id: 0 (glob)
+  * SegmentedChangelogTailer is done, repo_id: 0 (glob)
 
 Add a new commit, and see the tailer tail it in properly
   $ cd repo-hg || exit 1
@@ -86,21 +88,22 @@ Add a new commit, and see the tailer tail it in properly
   $ cd ..
   $ blobimport repo-hg/.hg repo --derived-data-type fsnodes
   $ quiet segmented_changelog_tailer_once --repo repo
-  $ grep "repo 0" "$TESTTMP/quiet.last.log"
-  * repo 0: SegmentedChangelogTailer initialized (glob)
-  * repo 0: starting incremental update to segmented changelog (glob)
-  * repo 0: iddag initialized, it covers 3 ids (glob)
-  * repo 0: starting the actual update (glob)
-  * Adding hints for repo 0 idmap_version 2 (glob)
-  * repo 0 idmap_version 2 has a full set of hints * (glob)
-  * repo 0: flushing 1 in-memory IdMap entries to SQL (glob)
-  * repo 0: IdMap updated, IdDag updated (glob)
-  * repo 0: segmented changelog version saved, idmap_version: 2, iddag_version: * (glob)
-  * repo 0: successful incremental update to segmented changelog (glob)
-  * repo 0: SegmentedChangelogTailer is done (glob)
+  $ grep "repo_id: 0" "$TESTTMP/quiet.last.log"
+  * using 'Bookmark master_bookmark' for head, repo_id: 0 (glob)
+  * SegmentedChangelogTailer initialized, repo_id: 0 (glob)
+  * starting incremental update to segmented changelog, repo_id: 0 (glob)
+  * iddag initialized, it covers 3 ids, repo_id: 0 (glob)
+  * starting the actual update, repo_id: 0 (glob)
+  * Adding hints for idmap_version 2, repo_id: 0 (glob)
+  * idmap_version 2 has a full set of hints *, repo_id: 0 (glob)
+  * flushing 1 in-memory IdMap entries to SQL, repo_id: 0 (glob)
+  * IdMap updated, IdDag updated, repo_id: 0 (glob)
+  * segmented changelog version saved, idmap_version: 2, iddag_version: *, repo_id: 0 (glob)
+  * successful incremental update to segmented changelog, repo_id: 0 (glob)
+  * SegmentedChangelogTailer is done, repo_id: 0 (glob)
 
 Run Segmented Changelog Tailer. Nothing to do.
 
   $ quiet segmented_changelog_tailer_once --repo repo
   $ grep 'already up to date' "$TESTTMP/quiet.last.log"
-  * repo 0: segmented changelog already up to date, skipping update to iddag (glob)
+  * segmented changelog already up to date, skipping update to iddag, repo_id: 0 (glob)

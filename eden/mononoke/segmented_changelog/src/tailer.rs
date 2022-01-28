@@ -142,13 +142,13 @@ impl SegmentedChangelogTailer {
             ReadOnlyStorage(false),
         )
         .await
-        .with_context(|| format!("repo {}: constructing metadata sql factory", repo_id))?;
+        .with_context(|| format!("constructing metadata sql factory for repo {}", repo_id))?;
 
         let segmented_changelog_sql_connections = sql_factory
             .open::<SegmentedChangelogSqlConnections>()
             .with_context(|| {
                 format!(
-                    "repo {}: error constructing segmented changelog sql connections",
+                    "error constructing segmented changelog sql connections for repo {}",
                     repo_id
                 )
             })?;
@@ -190,7 +190,7 @@ impl SegmentedChangelogTailer {
         let mut interval = tokio::time::interval(period);
         loop {
             let _ = interval.tick().await;
-            debug!(ctx.logger(), "repo {}: woke up to update", self.repo_id,);
+            debug!(ctx.logger(), "woke up to update");
 
             STATS::count.add_value(1);
             STATS::count_per_repo.add_value(1, (self.repo_id.id(),));
@@ -219,9 +219,7 @@ impl SegmentedChangelogTailer {
                     STATS::failure_per_repo.add_value(1, (self.repo_id.id(),));
                     error!(
                         ctx.logger(),
-                        "repo {}: failed to incrementally update segmented changelog: {:?}",
-                        self.repo_id,
-                        err
+                        "failed to incrementally update segmented changelog: {:?}", err
                     );
                     Some(format!("{:?}", err))
                 }
@@ -237,13 +235,13 @@ impl SegmentedChangelogTailer {
     ) -> Result<OwnedSegmentedChangelog> {
         info!(
             ctx.logger(),
-            "repo {}: starting incremental update to segmented changelog", self.repo_id,
+            "starting incremental update to segmented changelog",
         );
 
         let (seeding, idmap_version, iddag) = {
             let sc_version = self.sc_version_store.get(&ctx).await.with_context(|| {
                 format!(
-                    "repo {}: error loading segmented changelog version",
+                    "error loading segmented changelog version for repo {}",
                     self.repo_id
                 )
             })?;
@@ -262,7 +260,7 @@ impl SegmentedChangelogTailer {
                             .load(&ctx, sc_version.iddag_version)
                             .await
                             .with_context(|| {
-                                format!("repo {}: failed to load iddag", self.repo_id)
+                                format!("failed to load iddag for repo {}", self.repo_id)
                             })?;
                         (false, sc_version.idmap_version, iddag)
                     }
@@ -274,14 +272,13 @@ impl SegmentedChangelogTailer {
         if let Ok(set) = iddag.all() {
             info!(
                 ctx.logger(),
-                "repo {}: iddag initialized, it covers {} ids",
-                self.repo_id,
+                "iddag initialized, it covers {} ids",
                 set.count(),
             );
         }
         let idmap = self.idmap_factory.for_writer(ctx, idmap_version);
 
-        let mut namedag = server_namedag(ctx.clone(), self.repo_id, iddag, idmap)?;
+        let mut namedag = server_namedag(ctx.clone(), iddag, idmap)?;
 
         let heads =
             vertexlist_from_seedheads(&ctx, &self.seed_heads, self.bookmarks.as_ref()).await?;
@@ -325,10 +322,7 @@ impl SegmentedChangelogTailer {
                     .bulk_fetch
                     .get_repo_bounds_after_commits(ctx, head_commits)
                     .await?;
-                info!(
-                    ctx.logger(),
-                    "repo {}: prefetching changeset entries", self.repo_id,
-                );
+                info!(ctx.logger(), "prefetching changeset entries",);
                 let mut counter = 0usize;
                 // This has the potential to cause OOM by fetching a large
                 // chunk of the repo
@@ -347,9 +341,7 @@ impl SegmentedChangelogTailer {
                         if counter % sampling_rate == 0 {
                             info!(
                                 ctx.logger(),
-                                "repo {}: fetched {} changeset entries in total",
-                                self.repo_id,
-                                counter,
+                                "fetched {} changeset entries in total", counter,
                             );
                         }
                         res
@@ -362,10 +354,7 @@ impl SegmentedChangelogTailer {
 
         let parent_fetcher = FetchParents::new(ctx.clone(), changeset_fetcher);
 
-        info!(
-            ctx.logger(),
-            "repo {}: starting the actual update", self.repo_id,
-        );
+        info!(ctx.logger(), "starting the actual update");
         // Note on memory use: we do not flush the changes out in the middle
         // of writing to the IdMap.
         // Thus, if OOMs happen here, the IdMap may need to flush writes to the DB
@@ -387,24 +376,20 @@ impl SegmentedChangelogTailer {
         if !changed {
             info!(
                 ctx.logger(),
-                "repo {}: segmented changelog already up to date, skipping update to iddag",
-                self.repo_id
+                "segmented changelog already up to date, skipping update to iddag",
             );
             let owned = OwnedSegmentedChangelog::new(iddag, idmap);
             return Ok(owned);
         }
 
-        info!(
-            ctx.logger(),
-            "repo {}: IdMap updated, IdDag updated", self.repo_id
-        );
+        info!(ctx.logger(), "IdMap updated, IdDag updated",);
 
         // Save the IdDag
         let iddag_version = self
             .iddag_save_store
             .save(&ctx, &iddag)
             .await
-            .with_context(|| format!("repo {}: error saving iddag", self.repo_id))?;
+            .with_context(|| format!("error saving iddag for repo {}", self.repo_id))?;
 
         // Update SegmentedChangelogVersion
         let sc_version = SegmentedChangelogVersion::new(iddag_version, idmap_version);
@@ -414,27 +399,24 @@ impl SegmentedChangelogTailer {
                 .await
                 .with_context(|| {
                     format!(
-                        "repo {}: error updating segmented changelog version store",
+                        "error updating segmented changelog version store for repo {}",
                         self.repo_id
                     )
                 })?;
-            info!(
-                ctx.logger(),
-                "repo {}: successfully seeded segmented changelog", self.repo_id,
-            );
+            info!(ctx.logger(), "successfully seeded segmented changelog",);
         } else {
             self.sc_version_store
                 .update(&ctx, sc_version)
                 .await
                 .with_context(|| {
                     format!(
-                        "repo {}: error updating segmented changelog version store",
+                        "error updating segmented changelog version store for repo {}",
                         self.repo_id
                     )
                 })?;
             info!(
                 ctx.logger(),
-                "repo {}: successful incremental update to segmented changelog", self.repo_id,
+                "successful incremental update to segmented changelog",
             );
         }
 

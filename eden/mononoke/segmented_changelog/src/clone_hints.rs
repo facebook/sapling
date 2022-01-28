@@ -124,7 +124,7 @@ impl CloneHints {
     ) -> Result<()> {
         info!(
             ctx.logger(),
-            "Adding hints for repo {} idmap_version {}", self.inner.repo_id, idmap_version.0
+            "Adding hints for idmap_version {}", idmap_version.0
         );
         let universal_ids: Vec<_> = namedag
             .dag()
@@ -142,8 +142,7 @@ impl CloneHints {
         if new_ids.len() < HINTS_PER_CHUNK {
             info!(
                 ctx.logger(),
-                "repo {} idmap_version {} has a full set of hints ({} unhinted IDs is less than chunk size of {})",
-                self.inner.repo_id,
+                "idmap_version {} has a full set of hints ({} unhinted IDs is less than chunk size of {})",
                 idmap_version.0,
                 new_ids.len(),
                 HINTS_PER_CHUNK
@@ -229,10 +228,7 @@ impl CloneHints {
         )
         .await?;
 
-        info!(
-            ctx.logger(),
-            "Hints uploaded for repo {}", self.inner.repo_id
-        );
+        info!(ctx.logger(), "Hints uploaded",);
         Ok(())
     }
 }

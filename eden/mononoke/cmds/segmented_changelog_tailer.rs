@@ -15,7 +15,7 @@ use bytes::Bytes;
 use clap::Arg;
 use futures::future::join_all;
 use futures::stream;
-use slog::{error, info};
+use slog::{error, info, o};
 
 use changesets::deserialize_cs_entries;
 use cmdlib::{
@@ -145,6 +145,8 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         let blobrepo: BlobRepo =
             args::open_repo_with_repo_id(ctx.fb, ctx.logger(), repo_id, matches).await?;
 
+        let ctx = ctx.clone_with_logger(ctx.logger().new(o!("repo_id" => repo_id.to_string())));
+
         let prefetched_commits = stream::iter(prefetched_commits.iter().filter_map(|entry| {
             if entry.repo_id == repo_id {
                 Some(Ok(entry.clone()))
@@ -160,9 +162,9 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                     let head = helpers::csid_resolve(&ctx, blobrepo.clone(), head_arg)
                         .await
                         .with_context(|| {
-                            format!("repo {}: resolving head csid for '{}'", repo_id, head_arg)
+                            format!("resolving head csid '{}' for repo {}", head_arg, repo_id)
                         })?;
-                    info!(ctx.logger(), "repo {}: using '{}' for head", repo_id, head);
+                    info!(ctx.logger(), "using '{}' for head", head);
                     heads.push(head.into());
                 }
                 heads
@@ -181,20 +183,14 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         )
         .await?;
 
-        info!(
-            ctx.logger(),
-            "repo {}: SegmentedChangelogTailer initialized", repo_id
-        );
+        info!(ctx.logger(), "SegmentedChangelogTailer initialized",);
 
         if matches.is_present(ONCE_ARG) || matches.is_present(FORCE_RESEED_ARG) {
             segmented_changelog_tailer
                 .once(&ctx, matches.is_present(FORCE_RESEED_ARG))
                 .await
-                .with_context(|| format!("repo {}: incrementally building repo", repo_id))?;
-            info!(
-                ctx.logger(),
-                "repo {}: SegmentedChangelogTailer is done", repo_id,
-            );
+                .with_context(|| format!("incrementally building repo {}", repo_id))?;
+            info!(ctx.logger(), "SegmentedChangelogTailer is done",);
         } else if let Some(period) = config.segmented_changelog_config.tailer_update_period {
             // spread out update operations, start updates on another repo after 7 seconds
             let wait_to_start = Duration::from_secs(7 * index as u64);

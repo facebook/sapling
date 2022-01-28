@@ -35,8 +35,7 @@ pub fn log_new_segmented_changelog_version(
 ) {
     slog::info!(
         ctx.logger(),
-        "repo {}: segmented changelog version saved, idmap_version: {}, iddag_version: {}",
-        repo_id,
+        "segmented changelog version saved, idmap_version: {}, iddag_version: {}",
         sc_version.idmap_version,
         sc_version.iddag_version,
     );

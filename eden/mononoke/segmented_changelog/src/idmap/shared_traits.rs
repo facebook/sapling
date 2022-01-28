@@ -7,7 +7,7 @@
 
 use async_trait::async_trait;
 use context::CoreContext;
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::ChangesetId;
 use slog::info;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -55,8 +55,6 @@ pub fn vertex_name_from_cs_id(cs_id: &ChangesetId) -> VertexName {
 
 #[derive(Clone)]
 pub struct IdMapMemWrites {
-    /// Needed for logging
-    repo_id: RepositoryId,
     /// The actual IdMap
     inner: Arc<dyn IdMap>,
     /// Stores recent writes that haven't yet been persisted to the backing store
@@ -64,19 +62,17 @@ pub struct IdMapMemWrites {
 }
 
 impl IdMapMemWrites {
-    pub fn new(repo_id: RepositoryId, inner: Arc<dyn IdMap>) -> Self {
+    pub fn new(inner: Arc<dyn IdMap>) -> Self {
         Self {
             inner,
             mem: Arc::new(ConcurrentMemIdMap::new()),
-            repo_id,
         }
     }
 
     pub async fn flush_writes(&self, ctx: &CoreContext) -> anyhow::Result<()> {
         info!(
             ctx.logger(),
-            "repo {}: flushing {} in-memory IdMap entries to SQL",
-            self.repo_id,
+            "flushing {} in-memory IdMap entries to SQL",
             self.mem.len(),
         );
         let writes = self.mem.drain();
@@ -116,8 +112,7 @@ impl IdMap for IdMapMemWrites {
             if new_size / sampling_rate != old_size / sampling_rate {
                 info!(
                     ctx.logger(),
-                    "repo {}: {} entries inserted into in-memory IdMap, new size: {}",
-                    self.repo_id,
+                    "{} entries inserted into in-memory IdMap, new size: {}",
                     mappings_size,
                     new_size,
                 );
@@ -235,8 +230,8 @@ pub struct IdMapWrapper {
 impl IdMapWrapper {
     /// Create a new wrapper around the server IdMap, using CoreContext
     /// for calling update functions
-    pub fn new(ctx: CoreContext, repo_id: RepositoryId, idmap: Arc<dyn IdMap>) -> Self {
-        let idmap_memwrites = IdMapMemWrites::new(repo_id, idmap);
+    pub fn new(ctx: CoreContext, idmap: Arc<dyn IdMap>) -> Self {
+        let idmap_memwrites = IdMapMemWrites::new(idmap);
         Self {
             verlink: VerLink::new(),
             inner: idmap_memwrites,

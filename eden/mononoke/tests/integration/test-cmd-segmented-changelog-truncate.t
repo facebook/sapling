@@ -17,20 +17,20 @@ Run Segmented Changelog Tailer to seed the repo.
   > CONFIG
   $ quiet segmented_changelog_tailer_reseed --repo repo
   $ grep 'successfully' "$TESTTMP/quiet.last.log"
-  * repo 0: successfully seeded segmented changelog (glob)
+  * successfully seeded segmented changelog, repo_id: 0 (glob)
 
 Run Segmented Changelog Tailer. Nothing to do.
 
   $ quiet segmented_changelog_tailer_once --repo repo
   $ grep 'already up to date'  "$TESTTMP/quiet.last.log"
-  * repo 0: segmented changelog already up to date, skipping update to iddag (glob)
+  * segmented changelog already up to date, skipping update to iddag, repo_id: 0 (glob)
 
 Truncate down to 1 changeset and then tail in the missing two
   $ quiet mononoke_admin truncate-segmented-changelog $(hg log -T'{node}' -r 'limit(::master_bookmark, 1)')
   $ grep 'segmented changelog version saved' "$TESTTMP/quiet.last.log"
-  * repo 0: segmented changelog version saved, idmap_version: 2, iddag_version: 5fd1e81c* (glob)
+  * segmented changelog version saved, idmap_version: 2, iddag_version: 5fd1e81c* (glob)
 
 Run the tailer again, and see it pull in the commits we removed
   $ quiet segmented_changelog_tailer_once --repo repo
   $ grep 'successful incremental update' "$TESTTMP/quiet.last.log"
-  * repo 0: successful incremental update to segmented changelog (glob)
+  * successful incremental update to segmented changelog, repo_id: 0 (glob)
