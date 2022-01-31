@@ -30,7 +30,7 @@ drawdag = { path = "../drawdag" }
 fs2 = { version = "0.4", optional = true }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 indexedlog = { path = "../indexedlog", optional = true }
-indexmap = { version = "1.7.0", features = ["rayon", "serde-1"] }
+indexmap = { version = "1.8.0", features = ["rayon", "serde-1"] }
 itertools = "0.10.3"
 minibytes = { path = "../minibytes" }
 nonblocking = { path = "../nonblocking" }

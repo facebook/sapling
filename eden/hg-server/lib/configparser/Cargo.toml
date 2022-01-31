@@ -17,7 +17,7 @@ dirs = "2.0"
 filetime = "0.2.9"
 hgtime = { path = "../hgtime" }
 hostname = "0.3"
-indexmap = { version = "1.7.0", features = ["rayon", "serde-1"] }
+indexmap = { version = "1.8.0", features = ["rayon", "serde-1"] }
 minibytes = { path = "../minibytes" }
 os_info = "3.0.7"
 pest = "2.1"
