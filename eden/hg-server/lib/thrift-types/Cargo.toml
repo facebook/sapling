@@ -13,7 +13,7 @@ fb303 = { path = "fb303" }
 fb303_core = { path = "fb303_core" }
 fbthrift = { package = "fbthrift_eden_oss", path = "../third-party/rust/fbthrift" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-hgclient_conf = { path = "hgclient_conf" }
+hgclient_conf = { package = "config", path = "hgclient_conf" }
 thiserror = "1.0.29"
 
 [build-dependencies]

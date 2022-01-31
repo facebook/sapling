@@ -12,7 +12,7 @@ eden_config = { path = "eden_config" }
 fb303_core = { path = "fb303_core" }
 fbthrift = { path = "../../../../thrift/lib/rust" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-hgclient_conf = { path = "hgclient_conf" }
+hgclient_conf = { package = "config", path = "../../../../configerator/structs/scm/hg/hgclientconf" }
 thiserror = "1.0.29"
 
 [build-dependencies]

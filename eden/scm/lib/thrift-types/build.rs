@@ -129,11 +129,6 @@ fn main() -> io::Result<()> {
             path: "eden/fs/service/eden.thrift",
             deps: vec!["eden_config", "fb303_core"],
         },
-        ThriftUnit {
-            name: "hgclient_conf",
-            path: "configerator/structs/scm/hg/hgclientconf/hgclient.thrift",
-            deps: vec![],
-        },
     ];
 
     generate_thrift_subcrates(&thrift_units)
