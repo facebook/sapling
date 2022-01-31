@@ -87,7 +87,6 @@ impl WireprotoSinkData {
             IoStream::Stdout => self.stdout.peek(item.as_ref()),
             IoStream::Stderr => self.stderr.peek(item.as_ref()),
             IoStream::Stdin => {}
-            IoStream::Preamble(..) => {}
         }
     }
 

@@ -11,7 +11,7 @@ use session_id::generate_session_id;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, Write};
-use std::net::{IpAddr, SocketAddr};
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
@@ -19,7 +19,7 @@ use std::sync::{
 };
 use std::time::Duration;
 
-use anyhow::{anyhow, Context, Error, Result};
+use anyhow::{Context, Error, Result};
 use bytes::Bytes;
 use cached_config::ConfigStore;
 use edenapi_service::EdenApi;
@@ -49,9 +49,7 @@ use tokio_util::codec::{FramedRead, FramedWrite};
 use cmdlib::monitoring::ReadyFlagService;
 use qps::Qps;
 use quiet_stream::QuietShutdownStream;
-use sshrelay::{
-    IoStream, Metadata, Preamble, Priority, SshDecoder, SshEncoder, SshEnvVars, SshMsg, Stdio,
-};
+use sshrelay::{IoStream, Metadata, Priority, SshDecoder, SshEncoder, SshMsg, Stdio};
 use stats::prelude::*;
 
 use crate::errors::ErrorKind;
@@ -64,7 +62,6 @@ use crate::wireproto_sink::WireprotoSink;
 define_stats! {
     prefix = "mononoke.connection_acceptor";
     http_accepted: timeseries(Sum),
-    hgcli_accepted: timeseries(Sum),
 }
 
 pub trait MononokeStream: AsyncRead + AsyncWrite + Unpin + Send + Sync + 'static {}
@@ -89,8 +86,6 @@ pub async fn wait_for_connections_closed(logger: &Logger) {
     }
 }
 
-/// This function accepts connections, reads Preamble and routes first_line to a thread responsible for
-/// a particular repo
 pub async fn connection_acceptor(
     fb: FacebookInit,
     common_config: CommonConfig,
@@ -269,54 +264,11 @@ async fn handle_connection(conn: PendingConnection, sock: TcpStream) -> Result<(
         identities: Arc::new(identities),
     };
 
-    let is_hgcli = ssl_socket.ssl().selected_alpn_protocol() == Some(alpn::HGCLI_ALPN.as_bytes());
-
     let ssl_socket = QuietShutdownStream::new(ssl_socket);
 
-    if is_hgcli {
-        handle_hgcli(conn, ssl_socket)
-            .await
-            .context("Failed to handle_hgcli")?;
-    } else {
-        handle_http(conn, ssl_socket)
-            .await
-            .context("Failed to handle_http")?;
-    }
-
-    Ok(())
-}
-
-async fn handle_hgcli<S: MononokeStream>(conn: AcceptedConnection, stream: S) -> Result<()> {
-    STATS::hgcli_accepted.add_value(1);
-
-    let (rx, tx) = tokio::io::split(stream);
-
-    let mut framed = FramedConn::setup(rx, tx, None)?;
-
-    let preamble = match framed.rd.next().await.transpose()? {
-        Some(maybe_preamble) => {
-            if let IoStream::Preamble(preamble) = maybe_preamble.stream() {
-                preamble
-            } else {
-                return Err(ErrorKind::NoConnectionPreamble.into());
-            }
-        }
-        None => {
-            return Err(ErrorKind::NoConnectionPreamble.into());
-        }
-    };
-
-    let metadata = if conn.is_trusted {
-        // Relayed through trusted proxy. Proxy authenticates end client and generates
-        // preamble so we can trust it. Use identity provided in preamble.
-        Some(try_convert_preamble_to_metadata(&preamble, conn.pending.addr.ip()).await?)
-    } else {
-        None
-    };
-
-    handle_wireproto(conn, framed, preamble.reponame, metadata, false)
+    handle_http(conn, ssl_socket)
         .await
-        .context("Failed to handle_wireproto")?;
+        .context("Failed to handle_http")?;
 
     Ok(())
 }
@@ -565,68 +517,6 @@ impl ChannelConn {
             join_handle,
         }
     }
-}
-
-async fn try_convert_preamble_to_metadata(preamble: &Preamble, addr: IpAddr) -> Result<Metadata> {
-    let vars = SshEnvVars::from_map(&preamble.misc);
-    let client_ip = match vars.ssh_client {
-        Some(ssh_client) => ssh_client
-            .split_whitespace()
-            .next()
-            .and_then(|ip| ip.parse::<IpAddr>().ok())
-            .unwrap_or(addr),
-        None => addr,
-    };
-
-    let priority = match Priority::extract_from_preamble(&preamble) {
-        Ok(Some(p)) => p,
-        Ok(None) => Priority::Default,
-        Err(..) => Priority::Default,
-    };
-
-    let identity = {
-        #[cfg(fbcode_build)]
-        {
-            // SSH Connections are either authentication via ssh certificate principals or
-            // via some form of keyboard-interactive. In the case of certificates we should always
-            // rely on these. If they are not present, we should fallback to use the unix username
-            // as the primary principal.
-            let ssh_identities = match vars.ssh_cert_principals {
-                Some(ssh_identities) => ssh_identities,
-                None => preamble
-                    .unix_name()
-                    .ok_or_else(|| anyhow!("missing username and principals from preamble"))?
-                    .to_string(),
-            };
-
-            MononokeIdentity::try_from_ssh_encoded(&ssh_identities)?
-        }
-        #[cfg(not(fbcode_build))]
-        {
-            use maplit::btreeset;
-            btreeset! { MononokeIdentity::new(
-                "USER",
-               preamble
-                    .unix_name()
-                    .ok_or_else(|| anyhow!("missing username from preamble"))?
-                    .to_string(),
-            )?}
-        }
-    };
-
-    Ok(Metadata::new(
-        preamble.misc.get("session_uuid"),
-        true,
-        identity,
-        priority,
-        preamble
-            .misc
-            .get("client_debug")
-            .map(|debug| debug.parse::<bool>().unwrap_or_default())
-            .unwrap_or_default(),
-        client_ip,
-    )
-    .await)
 }
 
 // TODO(stash): T33775046 we had to chunk responses because hgcli

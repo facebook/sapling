@@ -14,11 +14,8 @@ bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 futures = "0.1.31"
 futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-maplit = "1.0"
 netstring = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
-serde = { version = "1.0.126", features = ["derive", "rc"] }
-serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 session_id = { version = "0.1.0", path = "../server/session_id" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.6", features = ["full"] }

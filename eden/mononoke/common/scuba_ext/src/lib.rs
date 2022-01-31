@@ -15,7 +15,7 @@ use observability::{ObservabilityContext, ScubaLoggingDecisionFields};
 use permission_checker::MononokeIdentitySetExt;
 use scuba::{builder::ServerData, ScubaSample, ScubaSampleBuilder};
 pub use scuba::{Sampling, ScubaValue};
-use sshrelay::{Metadata, Preamble};
+use sshrelay::Metadata;
 use std::collections::hash_map::Entry;
 use std::io::Error as IoError;
 use std::num::NonZeroU64;
@@ -95,14 +95,6 @@ impl MononokeScubaSampleBuilder {
 
     pub fn add<K: Into<String>, V: Into<ScubaValue>>(&mut self, key: K, value: V) -> &mut Self {
         self.inner.add(key, value);
-        self
-    }
-
-    pub fn add_preamble(&mut self, preamble: &Preamble) -> &mut Self {
-        self.inner.add("repo", preamble.reponame.as_ref());
-        for (key, value) in preamble.misc.iter() {
-            self.inner.add(key, value.as_ref());
-        }
         self
     }
 

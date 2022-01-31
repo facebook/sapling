@@ -288,7 +288,6 @@ members = [
   "git/gitimport",
   "git/import_tools",
   "gotham_ext",
-  "hgcli",
   "hgproto",
   "hook_tailer",
   "hooks",

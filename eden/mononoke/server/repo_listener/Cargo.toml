@@ -8,7 +8,6 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-alpn = { version = "0.1.0", path = "../../alpn" }
 anyhow = "1.0.51"
 backsyncer = { version = "0.1.0", path = "../../commit_rewriting/backsyncer" }
 base64 = "0.11.0"

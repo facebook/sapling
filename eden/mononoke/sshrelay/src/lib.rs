@@ -9,8 +9,6 @@
 mod priority;
 
 use anyhow::{anyhow, Error, Result};
-use std::collections::HashMap;
-use std::env::var;
 use std::io;
 use std::net::IpAddr;
 use std::sync::Arc;
@@ -20,9 +18,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 use clientinfo::ClientInfo;
 use futures::sync::mpsc;
 use futures_ext::BoxStream;
-use maplit::hashmap;
 use permission_checker::{MononokeIdentitySet, MononokeIdentitySetExt};
-use serde::{Deserialize, Serialize};
 use session_id::{generate_session_id, SessionId};
 use tokio::time::timeout;
 use tokio_util::codec::{Decoder, Encoder};
@@ -230,48 +226,12 @@ impl Metadata {
     }
 }
 
-// Common information for a connection
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct Preamble {
-    // Name of the repo to connect to
-    pub reponame: String,
-    // Additional information that will be send to the server. Examples: user/host identity.
-    pub misc: HashMap<String, String>,
-}
-
-impl Preamble {
-    pub fn new(
-        reponame: String,
-        session_uuid: SessionId,
-        unix_username: Option<String>,
-        source_hostname: Option<String>,
-        ssh_env_vars: SshEnvVars,
-    ) -> Self {
-        let mut misc = hashmap! {"session_uuid".to_owned() => format!("{}", session_uuid)};
-        if let Some(unix_username) = unix_username {
-            misc.insert("unix_username".to_owned(), unix_username);
-        }
-        if let Some(source_hostname) = source_hostname {
-            misc.insert("source_hostname".to_owned(), source_hostname);
-        }
-
-        ssh_env_vars.add_into_map(&mut misc);
-
-        Self { reponame, misc }
-    }
-
-    pub fn unix_name(&self) -> Option<&str> {
-        self.misc.get("unix_username").map(AsRef::as_ref)
-    }
-}
-
 // Matches Iostream in Mercurial mononokepeer.py
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum IoStream {
     Stdin,
     Stdout,
     Stderr,
-    Preamble(Preamble),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -331,20 +291,6 @@ impl Decoder for SshDecoder {
                 0 => Ok(Some(SshMsg(IoStream::Stdin, data.freeze()))),
                 1 => Ok(Some(SshMsg(IoStream::Stdout, data.freeze()))),
                 2 => Ok(Some(SshMsg(IoStream::Stderr, data.freeze()))),
-                3 => {
-                    let data = data.freeze();
-                    let strdata = match std::str::from_utf8(&data) {
-                        Ok(data) => data,
-                        Err(err) => {
-                            return Err(io::Error::new(
-                                io::ErrorKind::InvalidInput,
-                                format!("expected valid utf8 input for preamble: {}", err),
-                            ));
-                        }
-                    };
-                    let preamble: Preamble = serde_json::from_str(strdata)?;
-                    Ok(Some(SshMsg(IoStream::Preamble(preamble), Bytes::new())))
-                }
                 _ => {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidInput,
@@ -426,63 +372,6 @@ impl Encoder<SshMsg> for SshEncoder {
                 self.compress_into(&mut v, &msg.1).map_err(ioerr_cvt)?;
                 Ok(self.netstring.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
             }
-            IoStream::Preamble(preamble) => {
-                // msg.1 is ignored in preamble
-                debug_assert!(msg.1.is_empty(), "preamble ignores additional bytes");
-                v.put_u8(3);
-                let preamble = serde_json::to_vec(&preamble)?;
-                v.extend_from_slice(&preamble);
-                Ok(self.netstring.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
-            }
-        }
-    }
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct SshEnvVars {
-    pub ssh_cert_principals: Option<String>,
-    pub ssh_original_command: Option<String>,
-    pub ssh_client: Option<String>,
-}
-
-impl SshEnvVars {
-    const SSH_CERT_PRINCIPALS: &'static str = "SSH_CERT_PRINCIPALS";
-    const SSH_ORIGINAL_COMMAND: &'static str = "SSH_ORIGINAL_COMMAND";
-    const SSH_CLIENT: &'static str = "SSH_CLIENT";
-
-    pub fn new_from_env() -> Self {
-        Self {
-            ssh_cert_principals: var(Self::SSH_CERT_PRINCIPALS).ok(),
-            ssh_original_command: var(Self::SSH_ORIGINAL_COMMAND).ok(),
-            ssh_client: var(Self::SSH_CLIENT).ok(),
-        }
-    }
-
-    pub fn add_into_map(self, map: &mut HashMap<String, String>) {
-        let Self {
-            ssh_cert_principals,
-            ssh_original_command,
-            ssh_client,
-        } = self;
-
-        if let Some(v) = ssh_cert_principals {
-            map.insert(Self::SSH_CERT_PRINCIPALS.to_string(), v);
-        }
-
-        if let Some(v) = ssh_original_command {
-            map.insert(Self::SSH_ORIGINAL_COMMAND.to_string(), v);
-        }
-
-        if let Some(v) = ssh_client {
-            map.insert(Self::SSH_CLIENT.to_string(), v);
-        }
-    }
-
-    pub fn from_map(map: &HashMap<String, String>) -> Self {
-        Self {
-            ssh_cert_principals: map.get(Self::SSH_CERT_PRINCIPALS).cloned(),
-            ssh_original_command: map.get(Self::SSH_ORIGINAL_COMMAND).cloned(),
-            ssh_client: map.get(Self::SSH_CLIENT).cloned(),
         }
     }
 }
