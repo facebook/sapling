@@ -145,6 +145,9 @@ fn fetch_blob(
     .boxed()
 }
 
+const RETRY_COUNT: usize = 5;
+const BASE_RETRY_DELAY_MS: u64 = 1000;
+
 impl SqlStreamingChunksFetcher {
     pub async fn count_chunks(
         &self,
@@ -156,7 +159,14 @@ impl SqlStreamingChunksFetcher {
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
         let tag = tag.unwrap_or("");
-        let res = CountChunks::query(&self.read_connection, &repo_id, &tag).await?;
+        let res = retry::retry(
+            &ctx.logger(),
+            |_| CountChunks::query(&self.read_connection, &repo_id, &tag),
+            BASE_RETRY_DELAY_MS,
+            RETRY_COUNT,
+        )
+        .await?
+        .0;
         Ok(res.get(0).map_or(0, |x| x.0))
     }
 
@@ -171,7 +181,14 @@ impl SqlStreamingChunksFetcher {
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
         let tag = tag.unwrap_or("");
-        let rows = SelectChunks::query(&self.read_connection, &repo_id, &tag).await?;
+        let rows = retry::retry(
+            &ctx.logger(),
+            |_| SelectChunks::query(&self.read_connection, &repo_id, &tag),
+            BASE_RETRY_DELAY_MS,
+            RETRY_COUNT,
+        )
+        .await?
+        .0;
 
         let res = rows.into_iter().fold(
             RevlogStreamingChunks::new(),
@@ -216,7 +233,13 @@ impl SqlStreamingChunksFetcher {
             .map(|row| (&repo_id, &tag, &row.0, &row.1, &row.2, &row.3, &row.4))
             .collect();
 
-        InsertChunks::query(&self.write_connection, &ref_chunks[..]).await?;
+        retry::retry(
+            &ctx.logger(),
+            |_| InsertChunks::query(&self.write_connection, &ref_chunks[..]),
+            BASE_RETRY_DELAY_MS,
+            RETRY_COUNT,
+        )
+        .await?;
 
         Ok(())
     }
@@ -232,7 +255,15 @@ impl SqlStreamingChunksFetcher {
 
         let tag = tag.unwrap_or("");
 
-        let res = SelectSizes::query(&self.read_connection, &repo_id, &tag).await?;
+        let res = retry::retry(
+            &ctx.logger(),
+            |_| SelectSizes::query(&self.read_connection, &repo_id, &tag),
+            BASE_RETRY_DELAY_MS,
+            RETRY_COUNT,
+        )
+        .await?
+        .0;
+
         let (idx, data) = match res.get(0) {
             Some((Some(idx), Some(data))) => (idx, data),
             _ => {
@@ -251,7 +282,14 @@ impl SqlStreamingChunksFetcher {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let res = SelectMaxChunkNum::query(&self.read_connection, &repo_id).await?;
+        let res = retry::retry(
+            &ctx.logger(),
+            |_| SelectMaxChunkNum::query(&self.read_connection, &repo_id),
+            BASE_RETRY_DELAY_MS,
+            RETRY_COUNT,
+        )
+        .await?
+        .0;
         Ok(res.get(0).and_then(|x| x.0))
     }
 }
