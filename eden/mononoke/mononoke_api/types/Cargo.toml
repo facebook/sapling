@@ -22,8 +22,6 @@ skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 [patch.crates-io]
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
-mockall = { git = "https://github.com/fbsource/mockall", rev = "4bc4ff4ab7d04ebaa7e7c9510a3337b7dda9d324" }
-mockall_derive = { git = "https://github.com/fbsource/mockall", rev = "4bc4ff4ab7d04ebaa7e7c9510a3337b7dda9d324" }
 prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-types = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
