@@ -60,6 +60,7 @@ mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
 regex = "1.5.4"
 repo_read_write_status = { version = "0.1.0", path = "../repo_client/repo_read_write_status" }
+retry = { version = "0.1.0", path = "../common/retry" }
 revset = { version = "0.1.0", path = "../revset" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }

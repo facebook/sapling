@@ -47,11 +47,11 @@ use mercurial_types::HgChangesetId;
 use metaconfig_types::HgsqlName;
 use metaconfig_types::RepoReadOnly;
 use mononoke_api_types::InnerRepo;
-use mononoke_hg_sync_job_helper_lib::{retry, RetryAttemptsCount};
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use regex::Regex;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
+use retry::{retry, RetryAttemptsCount};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{error, info};
 use sql_construct::{

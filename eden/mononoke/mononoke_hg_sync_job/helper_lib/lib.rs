@@ -12,10 +12,10 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use bookmarks::Freshness;
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, stream::TryStreamExt, Future};
+use futures::{compat::Future01CompatExt, stream::TryStreamExt};
 use mononoke_types::RawBundle2Id;
 use mutable_counters::MutableCounters;
-use slog::{info, Logger};
+use slog::info;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -161,46 +161,6 @@ pub fn read_file_contents<F: Seek + Read>(f: &mut F) -> Result<String> {
         .map_err(|e| format_err!("could not read: {:?}", e))?;
 
     String::from_utf8(buff).map_err(|e| format_err!("log file is not valid utf-8: {:?}", e))
-}
-
-#[derive(Copy, Clone)]
-pub struct RetryAttemptsCount(pub usize);
-
-pub async fn retry<V, Fut, Func>(
-    logger: &Logger,
-    func: Func,
-    base_retry_delay_ms: u64,
-    retry_num: usize,
-) -> Result<(V, RetryAttemptsCount), Error>
-where
-    V: Send + 'static,
-    Fut: Future<Output = Result<V, Error>>,
-    Func: Fn(usize) -> Fut + Send,
-{
-    let mut attempt = 1;
-    loop {
-        let res = func(attempt).await;
-        match res {
-            Ok(res) => {
-                return Ok((res, RetryAttemptsCount(attempt)));
-            }
-            Err(err) => {
-                if attempt >= retry_num {
-                    return Err(err);
-                }
-                info!(
-                    logger,
-                    "retrying attempt {} of {}...",
-                    attempt + 1,
-                    retry_num
-                );
-
-                let delay = Duration::from_millis(base_retry_delay_ms * 2u64.pow(attempt as u32));
-                sleep(delay).await;
-                attempt += 1;
-            }
-        }
-    }
 }
 
 /// Wait until all of the entries in the queue have been synced to hg

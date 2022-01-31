@@ -247,6 +247,7 @@ members = [
   "common/path_hash",
   "common/reloader",
   "common/rendezvous",
+  "common/retry",
   "common/rust/caching_ext",
   "common/rust/slog_ext",
   "common/rust/sql_ext",
