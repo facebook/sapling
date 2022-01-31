@@ -49,7 +49,7 @@ use tokio_util::codec::{FramedRead, FramedWrite};
 use cmdlib::monitoring::ReadyFlagService;
 use qps::Qps;
 use quiet_stream::QuietShutdownStream;
-use sshrelay::{IoStream, Metadata, Priority, SshDecoder, SshEncoder, SshMsg, Stdio};
+use sshrelay::{IoStream, Metadata, SshDecoder, SshEncoder, SshMsg, Stdio};
 use stats::prelude::*;
 
 use crate::errors::ErrorKind;
@@ -309,7 +309,6 @@ where
             Some(&generate_session_id().to_string()),
             conn.is_trusted,
             (*conn.identities).clone(),
-            Priority::Default,
             client_debug,
             conn.pending.addr.ip(),
         )

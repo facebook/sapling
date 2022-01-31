@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 use anyhow::{anyhow, Context, Error, Result};
 use bytes::Bytes;
-use context::{LoggingContainer, SessionClass, SessionContainer, SessionId};
+use context::{LoggingContainer, SessionContainer, SessionId};
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
@@ -27,13 +27,12 @@ use scribe_ext::Scribe;
 use slog::{self, error, o, Drain, Level, Logger};
 use slog_ext::SimpleFormatWithError;
 use slog_kvfilter::KVFilter;
-use sshrelay::{Priority, SenderBytesWrite, Stdio};
+use sshrelay::{SenderBytesWrite, Stdio};
 use stats::prelude::*;
 use std::mem;
 use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
 use time_ext::DurationExt;
-use tunables::tunables;
 
 use crate::repo_handlers::RepoHandler;
 
@@ -135,22 +134,11 @@ pub async fn request_handler(
     // Info per wireproto command within this session
     let wireproto_calls = Arc::new(Mutex::new(Vec::new()));
 
-    let priority = metadata.priority();
-    scuba.add("priority", priority.to_string());
     scuba.log_with_msg("Connection established", None);
 
-    let mut session_builder = SessionContainer::builder(fb)
+    let session_builder = SessionContainer::builder(fb)
         .metadata(metadata.clone())
         .rate_limiter(rate_limiter);
-
-    if priority == &Priority::Wishlist {
-        session_builder = session_builder
-            .session_class(SessionClass::Background)
-            .blobstore_maybe_read_qps_limiter(tunables().get_wishlist_read_qps())
-            .await
-            .blobstore_maybe_write_qps_limiter(tunables().get_wishlist_write_qps())
-            .await;
-    }
 
     let session = session_builder.build();
 

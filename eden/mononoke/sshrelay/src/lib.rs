@@ -6,7 +6,6 @@
  */
 
 #![feature(result_flattening)]
-mod priority;
 
 use anyhow::{anyhow, Error, Result};
 use std::io;
@@ -26,8 +25,6 @@ use trust_dns_resolver::TokioAsyncResolver;
 use zstd::stream::raw::{Encoder as ZstdEncoder, InBuffer, Operation, OutBuffer};
 
 use netstring::{NetstringDecoder, NetstringEncoder};
-
-pub use priority::Priority;
 
 // Multiplex stdin/out/err over a single stream using netstring as framing
 #[derive(Debug)]
@@ -68,7 +65,6 @@ pub struct Metadata {
     session_id: SessionId,
     is_trusted_client: bool,
     identities: MononokeIdentitySet,
-    priority: Priority,
     client_debug: bool,
     client_ip: Option<IpAddr>,
     client_hostname: Option<String>,
@@ -82,7 +78,6 @@ impl Metadata {
         session_id: Option<&String>,
         is_trusted_client: bool,
         identities: MononokeIdentitySet,
-        priority: Priority,
         client_debug: bool,
         client_ip: IpAddr,
     ) -> Self {
@@ -109,7 +104,6 @@ impl Metadata {
             session_id,
             is_trusted_client,
             identities,
-            priority,
             client_debug,
             client_ip: Some(client_ip),
             client_hostname,
@@ -172,10 +166,6 @@ impl Metadata {
     pub fn set_identities(mut self, identities: MononokeIdentitySet) -> Self {
         self.identities = identities;
         self
-    }
-
-    pub fn priority(&self) -> &Priority {
-        &self.priority
     }
 
     pub fn revproxy_region(&self) -> &Option<String> {

@@ -461,7 +461,6 @@ async fn try_convert_headers_to_metadata(
     use percent_encoding::percent_decode;
     use permission_checker::MononokeIdentity;
     use session_id::generate_session_id;
-    use sshrelay::Priority;
     use std::net::IpAddr;
 
     const HEADER_ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
@@ -495,7 +494,6 @@ async fn try_convert_headers_to_metadata(
             Some(&generate_session_id().to_string()),
             false,
             identities,
-            Priority::Default,
             headers.contains_key(HEADER_CLIENT_DEBUG),
             ip_addr,
         )
