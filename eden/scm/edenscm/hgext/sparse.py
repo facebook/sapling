@@ -2510,6 +2510,21 @@ def disableprofilesubcmd(ui, repo, *pats, **opts):
 @subcmd("enable|enableprofile", _common_config_opts, "[PROFILE]...")
 def enableprofilesubcmd(ui, repo, *pats, **opts):
     """enable a sparse profile"""
+
+    def normalizeprofile(p):
+        # We want a canonical path from root of repo. Check if given path is already
+        # canonical or is relative from cwd. This also normalizes path separators.
+        for maybebase in (repo.root, repo.getcwd()):
+            try:
+                norm = pathutil.canonpath(repo.root, maybebase, p)
+            except Exception:
+                continue
+            if repo.wvfs.exists(norm):
+                return norm
+
+        return p
+
+    pats = [normalizeprofile(p) for p in pats]
     _checknonexistingprofiles(ui, repo, pats)
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, enableprofile=True, **commonopts)
