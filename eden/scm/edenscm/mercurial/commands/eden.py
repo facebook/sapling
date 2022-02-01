@@ -814,9 +814,18 @@ class HgServer(object):
         #       -> AttributeType
         try:
             fctx = self.repo.filectx(path, fileid=rev_hash)
+            # Disable very slow code paths loading the flags via
+            # fctx.data -> fctx.flags -> fctx.changeid -> linkrev scan
+            # (see P477777289).
+            # This does not affect correctness because HgServer
+            # does not care about file flags.
+            # Ideally, a proper "changeid" can be provided.
+            fctx._flags = ""
         except Exception:
             self.repo.invalidate()
             fctx = self.repo.filectx(path, fileid=rev_hash)
+            # See the comments above.
+            fctx._flags = ""
 
         try:
             return attr_of(fctx)
