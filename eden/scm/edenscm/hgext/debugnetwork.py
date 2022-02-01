@@ -154,8 +154,6 @@ def checkspeedhttp(ui, url, opts):
 
     def downloadtest(_description, bytecount):
         headers = {HEADER_NETSPEEDTEST_NBYTES: bytecount}
-        if unixsocketpath:
-            headers["x-x2pagentd-ws-over-h1"] = "1"
         conn.request(b"GET", b"/netspeedtest", body=None, headers=headers)
         starttime = util.timer()
         res = conn.getresponse()
@@ -168,12 +166,9 @@ def checkspeedhttp(ui, url, opts):
         return endtime - starttime
 
     def uploadtest(_description, bytecount):
-        headers = {}
-        if unixsocketpath:
-            headers["x-x2pagentd-ws-over-h1"] = "1"
         body = bytecount * b"A"
         starttime = util.timer()
-        conn.request(b"POST", b"/netspeedtest", body=body, headers=headers)
+        conn.request(b"POST", b"/netspeedtest", body=body)
         res = conn.getresponse()
         while not res.complete():
             res.read(length=BLOCK_SIZE)
@@ -184,12 +179,9 @@ def checkspeedhttp(ui, url, opts):
         return endtime - starttime
 
     def latencytest(n):
-        headers = {}
-        if unixsocketpath:
-            headers["x-x2pagentd-ws-over-h1"] = "1"
         latencies = []
         while n > 0:
-            conn.request(b"GET", b"/health_check", body=None, headers=headers)
+            conn.request(b"GET", b"/health_check", body=None)
             starttime = util.timer()
             res = conn.getresponse()
             while not res.complete():

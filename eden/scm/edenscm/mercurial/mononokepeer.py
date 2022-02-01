@@ -342,9 +342,6 @@ class mononokepeer(stdiopeer.stdiopeer):
                 }
                 headers["X-Client-Info"] = self._clientinfo.into_json().decode()
 
-                if self._unix_socket_proxy or self._auth_proxy_http:
-                    headers["x-x2pagentd-ws-over-h1"] = "1"
-
                 if self._cats:
                     headers["x-forwarded-cats"] = self._cats
 

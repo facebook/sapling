@@ -107,7 +107,6 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             )
 
         if self._unix_socket_proxy:
-            self.headers["x-x2pagentd-ws-over-h1"] = 1
             u.scheme = "http"
 
         remotehost = u.host

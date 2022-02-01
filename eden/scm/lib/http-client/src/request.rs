@@ -645,8 +645,7 @@ impl Request {
         if self.auth_proxy_socket_path.is_some() {
             url.set_scheme("http")
                 .expect("Failed setting url scheme to http");
-            self.set_header("x-x2pagentd-ws-over-h1", "1")
-                .set_verify_tls_cert(false)
+            self.set_verify_tls_cert(false)
                 .set_verify_tls_host(false)
                 .set_convert_cert(false);
 
