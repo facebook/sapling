@@ -17,6 +17,8 @@ use cliparser::parser::ParseOptions;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
 use configparser::config::ConfigSet;
+use repo::repo::OptionalRepo;
+use repo::repo::Repo;
 
 use crate::command::CommandDefinition;
 use crate::command::CommandFunc;
@@ -24,8 +26,6 @@ use crate::command::CommandTable;
 use crate::errors;
 use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
-use crate::repo::OptionalRepo;
-use crate::repo::Repo;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 

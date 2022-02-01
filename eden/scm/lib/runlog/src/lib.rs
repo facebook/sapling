@@ -14,12 +14,12 @@ use std::time::Duration;
 
 use anyhow::Result;
 use chrono;
-use clidispatch::repo::Repo;
 pub use filestore::FileStore;
 use parking_lot::Mutex;
 use rand::distributions::Alphanumeric;
 use rand::thread_rng;
 use rand::Rng;
+use repo::repo::Repo;
 use serde::Deserialize;
 use serde::Serialize;
 

@@ -12,6 +12,7 @@ cliparser = { path = "../cliparser" }
 configparser = { path = "../configparser" }
 indexedlog = { path = "../indexedlog" }
 io = { path = "../io" }
+repo = { path = "../repo" }
 taggederror = { path = "../taggederror" }
 taggederror-util = { path = "../taggederror-util" }
 thiserror = "1.0.29"

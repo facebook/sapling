@@ -40,6 +40,7 @@ python27-sys = { version = "0.7", optional = true }
 python3-sys = { version = "0.7", optional = true }
 pytracing = { path = "../../edenscmnative/bindings/modules/pytracing", default-features = false }
 rand = { version = "0.8", features = ["small_rng"] }
+repo = { path = "../repo" }
 revisionstore = { path = "../revisionstore" }
 runlog = { path = "../runlog" }
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }

@@ -8,11 +8,11 @@
 use anyhow::Result;
 use clidispatch::errors;
 use clidispatch::io::IO;
-use clidispatch::repo::Repo;
 use cliparser::define_flags;
 use edenfs_client::status::maybe_status_fastpath;
 use edenfs_client::status::PrintConfig;
 use edenfs_client::status::PrintConfigStatusTypes;
+use repo::repo::Repo;
 
 use crate::commands::FormatterOpts;
 use crate::commands::WalkOpts;

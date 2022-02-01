@@ -36,14 +36,6 @@ pub struct FallbackToPython;
 pub struct RepoRequired(pub String);
 
 #[derive(Debug, Error)]
-#[error("repository {0} not found!")]
-pub struct RepoNotFound(pub String);
-
-#[derive(Debug, Error)]
-#[error(".hg/sharedpath points to nonexistent directory {0}!")]
-pub struct InvalidSharedPath(pub String);
-
-#[derive(Debug, Error)]
 #[error("malformed --config option: '{0}' (use --config section.name=value)")]
 pub struct MalformedConfigOption(pub String);
 

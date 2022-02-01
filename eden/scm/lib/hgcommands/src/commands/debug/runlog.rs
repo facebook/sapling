@@ -10,8 +10,8 @@ use std::io::Write;
 use anyhow::Result;
 use clidispatch::errors;
 use clidispatch::io::IO;
-use clidispatch::repo::Repo;
 use cliparser::define_flags;
+use repo::repo::Repo;
 
 define_flags! {
     pub struct DebugRunlogOpts {

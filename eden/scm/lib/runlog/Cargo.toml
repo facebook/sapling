@@ -7,13 +7,13 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.51"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
-clidispatch = { path = "../clidispatch" }
 fs2 = "0.4"
 hg-http = { path = "../hg-http" }
 libc = "0.2.98"
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 progress-model = { path = "../progress/model" }
 rand = { version = "0.8", features = ["small_rng"] }
+repo = { path = "../repo" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 util = { path = "../util" }
