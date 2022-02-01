@@ -2378,7 +2378,9 @@ def update(
                 fallbackcheckout = "ancestor is not supported: %s" % ancestor
             elif wc is not None and wc.isinmemory():
                 fallbackcheckout = "Native checkout does not work inmemory"
-            elif (force or updatecheck != "noconflict") and wc.dirty(missing=True):
+            elif (force or updatecheck != "noconflict") and (
+                wc.dirty(missing=True) or mergestate.read(repo).active()
+            ):
                 fallbackcheckout = (
                     "Working copy is dirty and --clean specified - not supported yet"
                 )
