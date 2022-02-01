@@ -10,14 +10,24 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.51"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
+blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+bytes = { version = "1.1", features = ["serde"] }
+chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clap = { version = "3.0.9", features = ["derive", "regex", "unicode", "wrap_help"] }
 cmdlib_scrubbing = { version = "0.1.0", path = "../../cmdlib/scrubbing" }
+context = { version = "0.1.0", path = "../../server/context" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+git_types = { version = "0.1.0", path = "../../git/git_types" }
 heck = "0.3.1"
+hex = "0.4.3"
+mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 regex = "1.5.4"
+repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 
 [patch.crates-io]
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }

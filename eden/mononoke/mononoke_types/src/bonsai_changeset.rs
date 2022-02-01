@@ -168,6 +168,19 @@ pub struct BonsaiChangeset {
 }
 
 impl BonsaiChangeset {
+    pub fn from_bytes(data: impl AsRef<[u8]>) -> Result<Self> {
+        let data = data.as_ref();
+        let id = {
+            let mut context = ChangesetIdContext::new();
+            context.update(data);
+            context.finish()
+        };
+        let thrift_tc = compact_protocol::deserialize(data)
+            .with_context(|| ErrorKind::BlobDeserializeError("BonsaiChangeset".into()))?;
+        let bcs = Self::from_thrift_with_id(thrift_tc, id)?;
+        Ok(bcs)
+    }
+
     fn from_thrift_with_id(tc: thrift::BonsaiChangeset, id: ChangesetId) -> Result<Self> {
         let catch_block = || -> Result<_> {
             let inner = BonsaiChangesetMut::from_thrift(tc)?;

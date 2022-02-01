@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Context, Error};
 use clap::{value_t, App, Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
@@ -118,10 +118,14 @@ pub async fn subcommand_async_requests<'a>(
         warm_bookmarks_cache_enabled: false,
         warm_bookmarks_cache_scuba_sample_builder: MononokeScubaSampleBuilder::with_discard(),
     };
-    let mononoke = Arc::new(Mononoke::new(&env, repo_configs.clone()).await?);
+    let mononoke = Arc::new(
+        Mononoke::new(&env, repo_configs.clone())
+            .await
+            .context("Failed to initialize Mononoke API")?,
+    );
     let megarepo = MegarepoApi::new(matches.environment(), repo_configs, repo_factory, mononoke)
         .await
-        .map_err(Error::new)?;
+        .context("Failed to initialize MegarepoApi")?;
     let session = SessionContainer::new_with_defaults(fb);
     let ctx = session.new_context(logger.clone(), matches.scuba_sample_builder());
     match sub_m.subcommand() {

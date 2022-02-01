@@ -11,6 +11,7 @@ mod config;
 mod hooks;
 mod mysql;
 mod repo;
+mod repo_blobstore;
 mod runtime;
 mod shutdown_timeout;
 mod tunables;
@@ -20,6 +21,7 @@ pub use config::ConfigArgs;
 pub use hooks::HooksArgs;
 pub use mysql::MysqlArgs;
 pub use repo::{RepoArg, RepoArgs};
+pub use repo_blobstore::RepoBlobstoreArgs;
 pub use runtime::RuntimeArgs;
 pub use shutdown_timeout::ShutdownTimeoutArgs;
 

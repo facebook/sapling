@@ -320,7 +320,7 @@ impl SkeletonManifest {
         }
     }
 
-    pub(crate) fn from_bytes(bytes: &[u8]) -> Result<Self> {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(bytes)
             .with_context(|| ErrorKind::BlobDeserializeError("SkeletonManifest".into()))?;
         Self::from_thrift(thrift_tc)

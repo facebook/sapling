@@ -8,18 +8,25 @@
 use std::future::Future;
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
+use blobstore::Blobstore;
 use clap::{ArgMatches, Error as ClapError, FromArgMatches};
 use context::CoreContext;
 use environment::MononokeEnvironment;
 use facet::AsyncBuildable;
 use fbinit::FacebookInit;
 use metaconfig_parser::{RepoConfigs, StorageConfigs};
+use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, RepoConfig};
+use mononoke_types::RepositoryId;
+use prefixblob::PrefixBlobstore;
+use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig, SqlRedactedContentStore};
 use repo_factory::{RepoFactory, RepoFactoryBuilder};
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use tokio::runtime::Handle;
 
-use crate::args::{ConfigArgs, RepoArg, RepoArgs};
+use crate::args::{ConfigArgs, RepoArg, RepoArgs, RepoBlobstoreArgs};
 
 pub struct MononokeApp {
     args: ArgMatches,
@@ -114,31 +121,153 @@ impl MononokeApp {
         &self.env
     }
 
-    /// Open a repository based on user-provided arguments.
-    pub async fn open_repo<Repo>(&self, repo_args: &RepoArgs) -> Result<Repo>
-    where
-        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
-    {
-        let (repo_name, repo_config) = match repo_args.id_or_name()? {
+    /// Get repo config based on user-provided arguments.
+    pub fn repo_config(&self, repo_args: &RepoArgs) -> Result<(String, RepoConfig)> {
+        match repo_args.id_or_name()? {
             RepoArg::Id(repo_id) => {
                 let (repo_name, repo_config) = self
                     .repo_configs
                     .get_repo_config(repo_id)
-                    .ok_or_else(|| anyhow::anyhow!("unknown repoid: {:?}", repo_id))?;
-                (repo_name.clone(), repo_config.clone())
+                    .ok_or_else(|| anyhow!("unknown repoid: {:?}", repo_id))?;
+                Ok((repo_name.clone(), repo_config.clone()))
             }
             RepoArg::Name(repo_name) => {
                 let repo_config = self
                     .repo_configs
                     .repos
                     .get(repo_name)
-                    .ok_or_else(|| anyhow::anyhow!("unknown reponame: {:?}", repo_name))?;
-                (repo_name.to_string(), repo_config.clone())
+                    .ok_or_else(|| anyhow!("unknown reponame: {:?}", repo_name))?;
+                Ok((repo_name.to_string(), repo_config.clone()))
             }
+        }
+    }
+
+    /// Open a repository based on user-provided arguments.
+    pub async fn open_repo<Repo>(&self, repo_args: &RepoArgs) -> Result<Repo>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let (repo_name, repo_config) = self.repo_config(repo_args)?;
+        let repo = self.repo_factory.build(repo_name, repo_config).await?;
+        Ok(repo)
+    }
+
+    /// Open just the blobstore based on user-provided arguments.
+    pub async fn open_blobstore(
+        &self,
+        repo_blobstore_args: &RepoBlobstoreArgs,
+    ) -> Result<Arc<dyn Blobstore>> {
+        let (mut repo_id, redaction, storage_config) =
+            if let Some(repo_id) = repo_blobstore_args.repo_id {
+                let repo_id = RepositoryId::new(repo_id);
+                let (_repo_name, repo_config) = self
+                    .repo_configs
+                    .get_repo_config(repo_id)
+                    .ok_or_else(|| anyhow!("unknown repoid: {:?}", repo_id))?;
+                (
+                    Some(repo_id),
+                    repo_config.redaction,
+                    repo_config.storage_config.clone(),
+                )
+            } else if let Some(repo_name) = &repo_blobstore_args.repo_name {
+                let repo_config = self
+                    .repo_configs
+                    .repos
+                    .get(repo_name)
+                    .ok_or_else(|| anyhow!("unknown reponame: {:?}", repo_name))?;
+                (
+                    Some(repo_config.repoid),
+                    repo_config.redaction,
+                    repo_config.storage_config.clone(),
+                )
+            } else if let Some(storage_name) = &repo_blobstore_args.storage_name {
+                let storage_config = self
+                    .storage_configs
+                    .storage
+                    .get(storage_name)
+                    .ok_or_else(|| anyhow!("unknown storage name: {:?}", storage_name))?;
+                (None, Redaction::Enabled, storage_config.clone())
+            } else {
+                return Err(anyhow!("Expected a storage argument"));
+            };
+
+        let blob_config = match repo_blobstore_args.inner_blobstore_id {
+            None => storage_config.blobstore,
+            Some(id) => match storage_config.blobstore {
+                BlobConfig::Multiplexed { blobstores, .. } => {
+                    let sought_id = BlobstoreId::new(id);
+                    blobstores
+                        .into_iter()
+                        .find_map(|(blobstore_id, _, blobstore)| {
+                            if blobstore_id == sought_id {
+                                Some(blobstore)
+                            } else {
+                                None
+                            }
+                        })
+                        .ok_or_else(|| anyhow!("could not find a blobstore with id {}", id))?
+                }
+                _ => {
+                    return Err(anyhow!(
+                        "inner-blobstore-id supplied by blobstore is not multiplexed"
+                    ));
+                }
+            },
         };
 
-        let repo = self.repo_factory.build(repo_name, repo_config).await?;
+        if repo_blobstore_args.no_prefix {
+            repo_id = None;
+        }
 
-        Ok(repo)
+        let blobstore = blobstore_factory::make_blobstore(
+            self.env.fb,
+            blob_config,
+            &self.env.mysql_options,
+            self.env.readonly_storage,
+            &self.env.blobstore_options,
+            &self.env.logger,
+            &self.env.config_store,
+            &blobstore_factory::default_scrub_handler(),
+            None,
+        )
+        .await?;
+
+        let blobstore = if let Some(repo_id) = repo_id {
+            PrefixBlobstore::new(blobstore, repo_id.prefix())
+        } else {
+            PrefixBlobstore::new(blobstore, String::new())
+        };
+
+        let blobstore = if redaction == Redaction::Enabled {
+            let redacted_blobs_db = SqlRedactedContentStore::with_metadata_database_config(
+                self.env.fb,
+                &storage_config.metadata,
+                &self.env.mysql_options,
+                self.env.readonly_storage.0,
+            )?;
+            let redacted_blobs = Arc::new(redacted_blobs_db.get_all_redacted_blobs().await?);
+            RedactedBlobstore::new(
+                blobstore,
+                RedactedBlobstoreConfig::new(Some(redacted_blobs), self.redaction_scuba_builder()?),
+            )
+            .boxed()
+        } else {
+            Arc::new(blobstore)
+        };
+
+        Ok(blobstore)
+    }
+
+    fn redaction_scuba_builder(&self) -> Result<MononokeScubaSampleBuilder> {
+        let params = &self.repo_configs.common.censored_scuba_params;
+        let mut builder =
+            MononokeScubaSampleBuilder::with_opt_table(self.env.fb, params.table.clone());
+        if let Some(file) = &params.local_path {
+            builder = builder
+                .with_log_file(file)
+                .context("Failed to open scuba log file")?;
+        }
+
+        Ok(builder)
     }
 }

@@ -44,6 +44,7 @@ macro_rules! commands {
 }
 
 commands! {
+    mod blobstore;
     mod list_repos;
     mod repo_info;
 }
