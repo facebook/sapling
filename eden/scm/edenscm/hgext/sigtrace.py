@@ -116,11 +116,11 @@ def reposetup(ui, repo):
     # Do not track known long-running commands.
     if not repo.local():
         return
-    if ui.cmdname in {"debugedenimporthelper"} and not util.istest():
-        return
     interval = ui.configint("sigtrace", "interval")
     if not interval or interval <= 0:
         return
+
+    knownlongruning = ui.cmdname in {"debugedenimporthelper"} and not util.istest()
 
     def writesigtracethread(path, interval):
         try:
@@ -130,6 +130,14 @@ def reposetup(ui, repo):
                 time.sleep(interval)
                 # Keep 10 minutes of sigtraces.
                 util.gcdir(dir, 60 * 10)
+
+                if knownlongruning:
+                    forcefile = "force_sigtrace_%s" % (os.getpid(),)
+                    if repo.localvfs.exists(forcefile):
+                        repo.localvfs.tryunlink(forcefile)
+                    else:
+                        continue
+
                 writesigtrace(path)
         except Exception:
             pass
