@@ -11,8 +11,10 @@ license = "GPLv2+"
 anyhow = "1.0.51"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 bytes = { version = "1.1", features = ["serde"] }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clap = { version = "3.0.9", features = ["derive", "regex", "unicode", "wrap_help"] }
 cmdlib_scrubbing = { version = "0.1.0", path = "../../cmdlib/scrubbing" }
@@ -22,6 +24,7 @@ git_types = { version = "0.1.0", path = "../../git/git_types" }
 heck = "0.3.1"
 hex = "0.4.3"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 regex = "1.5.4"

@@ -45,6 +45,7 @@ macro_rules! commands {
 
 commands! {
     mod blobstore;
+    mod blobstore_unlink;
     mod list_repos;
     mod repo_info;
 }

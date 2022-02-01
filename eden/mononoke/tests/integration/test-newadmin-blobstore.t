@@ -8,7 +8,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ default_setup_blobimport "blob_files"
+  $ default_setup_blobimport "blob_sqlite"
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │
@@ -24,6 +24,17 @@ Check we can upload and fetch an arbitrary blob.
   Writing 6 bytes to blobstore key somekey
   $ mononoke_newadmin blobstore -R repo fetch -q somekey -o "$TESTTMP/fetched_value"
   $ diff "$TESTTMP/value" "$TESTTMP/fetched_value"
+
+Test we can unlink a blob
+
+NOTE: The blobstore-unlink command currently only works for sqlblob, and
+doesn't construct the blobstore in the usual way, so we need to give the full
+key.
+
+  $ mononoke_newadmin blobstore-unlink -R repo repo0000.somekey
+  Unlinking key repo0000.somekey
+  $ mononoke_newadmin blobstore -R repo fetch -q somekey -o "$TESTTMP/fetched_value_unlinked"
+  No blob exists for somekey
 
 Examine some of the data
   $ mononoke_newadmin blobstore -R repo fetch changeset.blake2.9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec

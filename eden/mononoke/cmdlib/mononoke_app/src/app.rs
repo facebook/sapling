@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 use blobstore::Blobstore;
+use cached_config::ConfigStore;
 use clap::{ArgMatches, Error as ClapError, FromArgMatches};
 use context::CoreContext;
 use environment::MononokeEnvironment;
@@ -29,6 +30,7 @@ use tokio::runtime::Handle;
 use crate::args::{ConfigArgs, RepoArg, RepoArgs, RepoBlobstoreArgs};
 
 pub struct MononokeApp {
+    pub fb: FacebookInit,
     args: ArgMatches,
     env: Arc<MononokeEnvironment>,
     storage_configs: StorageConfigs,
@@ -38,7 +40,7 @@ pub struct MononokeApp {
 
 impl MononokeApp {
     pub(crate) fn new(
-        _fb: FacebookInit,
+        fb: FacebookInit,
         args: ArgMatches,
         env: MononokeEnvironment,
     ) -> Result<Self> {
@@ -52,6 +54,7 @@ impl MononokeApp {
         let repo_factory = RepoFactory::new(env.clone(), &repo_configs.common);
 
         Ok(MononokeApp {
+            fb,
             args,
             env,
             storage_configs,
@@ -89,6 +92,11 @@ impl MononokeApp {
     /// Returns a handle to this app's runtime.
     pub fn runtime(&self) -> &Handle {
         self.env.runtime.handle()
+    }
+
+    /// The config store for this app.
+    pub fn config_store(&self) -> &ConfigStore {
+        &self.env.config_store
     }
 
     /// The repo configs for this app.
