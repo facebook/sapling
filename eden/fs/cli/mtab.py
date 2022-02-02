@@ -7,6 +7,7 @@
 import abc
 import errno
 import logging
+import multiprocessing
 import os
 import random
 import re
@@ -24,6 +25,22 @@ MountInfo = NamedTuple(
 
 
 MTStat = NamedTuple("MTStat", [("st_uid", int), ("st_dev", int), ("st_mode", int)])
+
+kMountStaleSecondsTimeout = 10
+
+# Note this function needs to be a global function, otherwise it will cause
+# errors to spawn a process with this function as the entry point.
+def lstat_process(path):
+    """
+    Function to be the entry point of the multiproccessing process
+    to stat path. stat might hang so we might kill this process.
+    The return code of this process is the exit code of lstat.
+    """
+    try:
+        os.lstat(path)
+    except OSError as e:
+        exit(e.errno)
+    exit(0)
 
 
 class MountTable(abc.ABC):
@@ -44,22 +61,73 @@ class MountTable(abc.ABC):
         st = os.lstat(path)
         return MTStat(st_uid=st.st_uid, st_dev=st.st_dev, st_mode=st.st_mode)
 
-    def check_path_access(self, path: bytes) -> None:
+    def check_path_access(self, path: bytes, mount_type: bytes) -> None:
         """\
         Attempts to stat the given directory, bypassing the kernel's caches.
         Raises OSError upon failure.
         """
-        # Even if the FUSE process is shut down, the lstat call will succeed if
-        # the stat result is cached. Append a random string to avoid that. In a
-        # better world, this code would bypass the cache by opening a handle
-        # with O_DIRECT, but Eden does not support O_DIRECT.
+        # For FUSE it's pretty easy, we can lstat the mount. ENOENT means the
+        # mount seems to be working fine and ENOTCONN means the mount is stale.
+        if mount_type == b"fuse":
+            try:
+                # Even if the FUSE process is shut down, the lstat call will succeed if
+                # the stat result is cached. Append a random string to avoid that. In a
+                # better world, this code would bypass the cache by opening a handle
+                # with O_DIRECT, but Eden does not support O_DIRECT.
+                os.lstat(os.path.join(path, hex(random.getrandbits(32))[2:].encode()))
+            except OSError as e:
+                if e.errno == errno.ENOENT:
+                    return
+                raise
+        # For NFS it's less easy. Stating the mount point will hang if the mount
+        # is stale. So we need to add a timeout on our stat call. A timeout
+        # means the mount is stale and ENOENT still means the mount seems to be
+        # working properly.
+        elif mount_type == b"nfs":
+            proc = multiprocessing.Process(
+                target=lstat_process,
+                args=(os.path.join(path, hex(random.getrandbits(32))[2:].encode()),),
+            )
+            proc.start()
+            proc.join(timeout=kMountStaleSecondsTimeout)
+            if proc.is_alive():
+                # ask the lstat to terminate nicely, this is expected to succeed.
+                proc.terminate()
+                # note we need a timeout here incase the process is miss
+                # behaving and refuses to exit
+                proc.join(timeout=kMountStaleSecondsTimeout)
+                # if terminate didn't work then we fallback to killing the process
+                if proc.is_alive():
+                    proc.kill()
+                    # note we need a timeout here incase the process blocked on
+                    # an uniteruptable syscall and refuses to exit (should not
+                    # be the case, but ya know ... caution)
+                    proc.join(timeout=kMountStaleSecondsTimeout)
+                # if the process is alive at this point the only thing that we
+                # can hope to kill it is the umount that we will trigger later.
+                # But we can still close all the resources the process might be
+                # holding on to to prevent deadlocks and such.
+                if proc.is_alive():
+                    proc.close()
 
-        try:
-            os.lstat(os.path.join(path, hex(random.getrandbits(32))[2:].encode()))
-        except OSError as e:
-            if e.errno == errno.ENOENT:
-                return
-            raise
+                raise OSError(
+                    errno.ENOTCONN,
+                    "Stating the mount timed out, mount point is not connected",
+                )
+            else:
+                if proc.exitcode == errno.ENOENT:
+                    return
+                # The return code is technically an optional, but it should
+                # only be none if the process has not yet terminated.
+                if proc.exitcode is None:
+                    raise Exception(
+                        """
+Reaching here should be impossible, checking process was terminated, but does
+not seem to have finished.
+"""
+                    )
+                raise OSError(proc.exitcode, "stating the mountpoint failed")
+        raise Exception(f"Unknown mount type {mount_type}")
 
     @abc.abstractmethod
     def create_bind_mount(self, source_path, dest_path) -> bool:

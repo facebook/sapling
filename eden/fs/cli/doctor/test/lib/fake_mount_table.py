@@ -114,7 +114,7 @@ class FakeMountTable(mtab.MountTable):
             # pyre-fixme[22]: The cast is redundant.
             return typing.cast(mtab.MTStat, result)
 
-    def check_path_access(self, path: bytes) -> None:
+    def check_path_access(self, path: bytes, mount_type: bytes) -> None:
         path_str = os.fsdecode(path)
 
         try:

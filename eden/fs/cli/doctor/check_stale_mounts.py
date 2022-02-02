@@ -7,7 +7,7 @@
 import errno
 import logging
 import os
-from typing import List, Set
+from typing import List, Set, Tuple
 
 from eden.fs.cli import mtab
 from eden.fs.cli.doctor.problem import FixableProblem, ProblemTracker, RemediationError
@@ -76,7 +76,7 @@ class StaleMountsFound(FixableProblem):
 def get_all_stale_eden_mount_points(mount_table: mtab.MountTable) -> List[bytes]:
     log = logging.getLogger("eden.fs.cli.doctor.stale_mounts")
     stale_eden_mount_points: Set[bytes] = set()
-    for mount_point in get_all_eden_mount_points(mount_table):
+    for mount_point, mount_type in get_all_eden_mount_points(mount_table):
         # All eden mounts should have a .eden directory.
         # If the edenfs daemon serving this mount point has died we
         # will get ENOTCONN when trying to access it.  (Simply calling
@@ -85,7 +85,7 @@ def get_all_stale_eden_mount_points(mount_table: mtab.MountTable) -> List[bytes]
         eden_dir = os.path.join(mount_point, b".eden")
 
         try:
-            mount_table.check_path_access(eden_dir)
+            mount_table.check_path_access(eden_dir, mount_type)
         except OSError as e:
             if e.errno == errno.ENOTCONN or e.errno == errno.ENXIO:
                 stale_eden_mount_points.add(mount_point)
@@ -98,11 +98,18 @@ def get_all_stale_eden_mount_points(mount_table: mtab.MountTable) -> List[bytes]
     return sorted(stale_eden_mount_points)
 
 
-def get_all_eden_mount_points(mount_table: mtab.MountTable) -> Set[bytes]:
+def get_all_eden_mount_points(mount_table: mtab.MountTable) -> Set[Tuple[bytes, bytes]]:
+    """
+    Returns a set of mount point path, mount point type pairs of all of the
+    mounts which seem to be EdenFS mounts.
+    """
     all_system_mounts = mount_table.read()
-    return {
-        mount.mount_point
-        for mount in all_system_mounts
-        if is_edenfs_mount_device(mount.device)
-        and (mount.vfstype == b"fuse" or mount.vfstype == b"macfuse_eden")
-    }
+    eden_mounts = set()
+    for mount in all_system_mounts:
+        if is_edenfs_mount_device(mount.device):
+            if mount.vfstype == b"fuse" or mount.vfstype == b"macfuse_eden":
+                eden_mounts.add((mount.mount_point, b"fuse"))
+            elif mount.vfstype == b"nfs" or mount.vfstype == b"edenfs:":
+                eden_mounts.add((mount.mount_point, b"nfs"))
+
+    return eden_mounts
