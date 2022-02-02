@@ -1425,6 +1425,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
     contentopts = {"cg.version": cgversion}
     if repo.ui.configbool("experimental", "bundle-phases"):
         contentopts["phases"] = True
+    if git.isgitstore(repo):
+        return git.bundle(repo, fname, outgoing.missing)
     bundle2.writenewbundle(
         ui,
         repo,
@@ -6211,6 +6213,14 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     Returns 0 on success, 1 if an update has unresolved files.
     """
     fnames = (fname1,) + fnames
+
+    if git.isgitstore(repo):
+        newheads = []
+        for fname in fnames:
+            newheads += git.unbundle(repo, fname)
+        if newheads and opts.get("update"):
+            hg.update(repo, newheads[-1])
+        return 0
 
     with repo.wlock(), repo.lock():
         for fname in fnames:

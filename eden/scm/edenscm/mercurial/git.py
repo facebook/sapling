@@ -302,6 +302,63 @@ def pull(repo, source, names=(), nodes=()):
     return ret
 
 
+def bundle(repo, filename, nodes):
+    """create a git bundle at filename that contains nodes"""
+    dag = repo.changelog.dag
+    nodes = dag.sort(nodes)
+    heads = dag.heads(nodes)
+    bases = dag.parents(dag.roots(nodes))
+    # git bundle create <file> heads... ^bases...
+    args = ["bundle", "create", filename]
+    # git bundle requires heads to be references.
+    # find nodes that do not have bookmarks, create visiblehead refs
+    anonheads = []
+    for node in heads:
+        bmarks = repo.nodebookmarks(node)
+        if not bmarks:
+            anonheads.append(node)
+            args.append(str(RefName.visiblehead(node)))
+        else:
+            args += [str(RefName(b)) for b in bmarks]
+    _writevisibleheadrefs(repo, anonheads)
+    # ^ prefix excludes base nodes
+    for node in bases:
+        args.append("^%s" % hex(node))
+    return rungit(repo, args)
+
+
+def unbundle(repo, filename):
+    """unpack a git bundle, return unbundled head nodes"""
+    out = callgit(repo, ["bundle", "unbundle", filename])
+    refmap = {}
+    for line in sorted(out.decode("utf-8").splitlines()):
+        # ex. e5fc4478a3399127bac948e2c445d2e7f035a8db refs/heads/D
+        hexnode, refname = line.split(" ", 1)
+        node = bin(hexnode)
+        refmap[refname] = node
+    # 'git bundle unbundle' does not change refs, create refs by ourselves
+    _writerefs(repo, sorted(refmap.items()))
+    _syncfromgit(repo)
+    return list(refmap.values())
+
+
+def _writevisibleheadrefs(repo, nodes):
+    """write visibleheads refs for nodes"""
+    refnodes = [(RefName.visiblehead(n), n) for n in nodes]
+    _writerefs(repo, refnodes)
+
+
+def _writerefs(repo, refnodes):
+    """write git references. refnodes is a list of (ref, node)."""
+    for (ref, node) in refnodes:
+        callgit(repo, ["update-ref", str(ref), hex(node)])
+
+
+def _syncfromgit(repo):
+    repo.invalidate(clearfilecache=True)
+    repo.changelog  # trigger updating metalog
+
+
 def _urlremote(ui, source):
     """normalize source into (url, remotename)"""
     source = source or "default"
@@ -330,8 +387,7 @@ def pullrefspecs(repo, url, refspecs):
         repo,
         ["fetch", "--no-write-fetch-head", "--no-tags", "--prune", url] + refspecs,
     )
-    repo.invalidate(clearfilecache=True)
-    repo.changelog  # trigger updating metalog
+    _syncfromgit(repo)
     return ret
 
 
@@ -631,14 +687,20 @@ def rungitnorepo(ui, args, gitdir=None, configs=None):
             cmd += ["-c", config]
     if gitdir is not None:
         cmd.append("--git-dir=%s" % gitdir)
-    gitcmd = args[0]
-    cmd.append(gitcmd)
+    # bundle is followed by a subcommand
+    if args[0] in {"bundle"}:
+        gitcmd = args[0:2]
+    else:
+        gitcmd = args[0:1]
+    cmdargs = args[len(gitcmd) :]
+    cmd += gitcmd
+    gitcmd = tuple(gitcmd)
     # not all git commands support --verbose or --quiet
-    if ui.verbose and gitcmd in {"fetch", "push"}:
+    if ui.verbose and gitcmd in {("fetch",), ("push",)}:
         cmd.append("--verbose")
-    if ui.quiet and gitcmd in {"fetch", "init", "push"}:
+    if ui.quiet and gitcmd in {("fetch",), ("init",), ("push",), ("bundle", "create")}:
         cmd.append("--quiet")
-    cmd += args[1:]
+    cmd += cmdargs
     cmd = " ".join(util.shellquote(c) for c in cmd)
     tracing.debug("running %s\n" % cmd)
     # use ui.system, which is compatibile with chg, but goes through shell
