@@ -474,6 +474,16 @@ def _debugbundle2part(ui, part, all, **opts):
 )
 def debugbundle(ui, bundlepath, all=None, spec=None, **opts):
     """lists the contents of a bundle"""
+    if git.isgitbundle(bundlepath):
+        refmap = git.listbundle(ui, bundlepath)
+        # write a "header"
+        ui.write(_("git bundle heads\n"))
+        # commit hashes indented by 4 spaces, similar to
+        # _debugchangegroup(all=None)
+        for node in util.dedup(refmap.values()):
+            ui.write(_("    %s\n") % hex(node))
+        return 0
+
     with hg.openpath(ui, bundlepath) as f:
         if spec:
             spec = exchange.getbundlespec(ui, f)

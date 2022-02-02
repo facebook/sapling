@@ -7,6 +7,7 @@
 utilities for git support
 """
 
+import errno
 import hashlib
 import os
 import shutil
@@ -330,16 +331,41 @@ def bundle(repo, filename, nodes):
 def unbundle(repo, filename):
     """unpack a git bundle, return unbundled head nodes"""
     out = callgit(repo, ["bundle", "unbundle", filename])
+    refmap = _parsebundleheads(out)
+    # 'git bundle unbundle' does not change refs, create refs by ourselves
+    _writerefs(repo, sorted(refmap.items()))
+    _syncfromgit(repo)
+    return list(refmap.values())
+
+
+def listbundle(ui, filename):
+    """return {refname: node} in a bundle"""
+    out = callgitnorepo(ui, ["bundle", "list-heads", filename])
+    return _parsebundleheads(out.stdout)
+
+
+def isgitbundle(filename):
+    """test if filename is a git bundle"""
+    try:
+        with open(filename, "rb") as f:
+            header = f.read(16)
+            # see bundle.c in git
+            return header in {b"# v2 git bundle\n", b"# v3 git bundle\n"}
+    except IOError as e:
+        if e.errno == errno.ENOENT:
+            return False
+        raise
+
+
+def _parsebundleheads(out):
+    """return {refname: node} for 'git bundle list-heads' or 'git bundle unbundle' output"""
     refmap = {}
     for line in sorted(out.decode("utf-8").splitlines()):
         # ex. e5fc4478a3399127bac948e2c445d2e7f035a8db refs/heads/D
         hexnode, refname = line.split(" ", 1)
         node = bin(hexnode)
         refmap[refname] = node
-    # 'git bundle unbundle' does not change refs, create refs by ourselves
-    _writerefs(repo, sorted(refmap.items()))
-    _syncfromgit(repo)
-    return list(refmap.values())
+    return refmap
 
 
 def _writevisibleheadrefs(repo, nodes):

@@ -19,6 +19,14 @@ Prepare bundle
 
   $ hg bundle -r $B+$D+$Y --base $A $TESTTMP/bundle
 
+Test debugbundle
+
+  $ hg debugbundle $TESTTMP/bundle
+  git bundle heads
+      0de30934572f96ff6d3cbfc70aa8b46ef95dbb42
+      3d8b07a81055bd39346878ecc52ac2763b7ce8f8
+      5e987cb91d3a6d4e42726b701c4ac053755eb2c9
+
 Apply bundle in another repo
 
   $ cd
