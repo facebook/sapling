@@ -33,7 +33,7 @@ selectivepull=true
 
 [smartlog]
 names=main,master
-repos=origin/
+repos=remote/
 
 [experimental]
 copytrace=off
