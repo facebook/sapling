@@ -482,33 +482,6 @@ def _makerage(ui, repo, **opts):
 
     msg = ""
 
-    if util.safehasattr(repo, "name"):
-        # Add the contents of both local and shared pack directories.
-        packlocs = {
-            "local": lambda category: shallowutil.getlocalpackpath(
-                repo.svfs.vfs.base, category
-            ),
-            "shared": lambda category: shallowutil.getcachepackpath(repo, category),
-        }
-
-        for loc, getpath in pycompat.iteritems(packlocs):
-            for category in constants.ALL_CATEGORIES:
-                path = getpath(category)
-                detailed.append(
-                    (
-                        "%s packs (%s)" % (loc, constants.getunits(category)),
-                        lambda path=path: "%s:\n%s"
-                        % (
-                            path,
-                            shcmd(
-                                "dir /o-s %s" % os.path.normpath(path)
-                                if pycompat.iswindows
-                                else "ls -lhS %s" % path
-                            ),
-                        ),
-                    )
-                )
-
     footnotes = []
     timeout = opts.get("timeout") or 20
 
