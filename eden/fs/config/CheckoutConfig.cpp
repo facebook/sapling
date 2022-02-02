@@ -70,11 +70,20 @@ const facebook::eden::RelativePathPiece kClientDirectoryMap{"config.json"};
 // Version 2:
 // - 32-bit length
 // - Arbitrary-length binary string of said length
+// Version 3: (checkout in progress)
+// - 32-bit pid of EdenFS process doing the checkout
+// - 32-bit length
+// - Arbitrary-length binary string of said length for the commit being updated
+// from
+// - 32-bit length
+// - Arbitrary-length binary string of said length for the commit being updated
+// to
 constexpr folly::StringPiece kSnapshotFileMagic{"eden"};
 enum : uint32_t {
   kSnapshotHeaderSize = 8,
   kSnapshotFormatVersion1 = 1,
   kSnapshotFormatVersion2 = 2,
+  kSnapshotFormatCheckoutInProgressVersion = 3,
 };
 } // namespace
 
@@ -85,7 +94,7 @@ CheckoutConfig::CheckoutConfig(
     AbsolutePathPiece clientDirectory)
     : clientDirectory_(clientDirectory), mountPath_(mountPath) {}
 
-RootId CheckoutConfig::getParentCommit() const {
+ParentCommit CheckoutConfig::getParentCommit() const {
   // Read the snapshot.
   auto snapshotFile = getSnapshotPath();
   auto snapshotFileContents = readFile(snapshotFile).value();
@@ -140,6 +149,20 @@ RootId CheckoutConfig::getParentCommit() const {
       return RootId{std::move(rootId)};
     }
 
+    case kSnapshotFormatCheckoutInProgressVersion: {
+      // Skip the PID
+      cursor.skip(sizeof(uint32_t));
+
+      auto fromLength = cursor.readBE<uint32_t>();
+      std::string fromRootId = cursor.readFixedString(fromLength);
+
+      auto toLength = cursor.readBE<uint32_t>();
+      std::string toRootId = cursor.readFixedString(toLength);
+
+      return ParentCommit::CheckoutInProgress{
+          RootId{std::move(fromRootId)}, RootId{std::move(toRootId)}};
+    }
+
     default:
       throw std::runtime_error(fmt::format(
           "unsupported eden SNAPSHOT file format (version {}): {}",
@@ -165,6 +188,37 @@ void CheckoutConfig::setParentCommit(const RootId& parent) const {
   // (Depends on the backing store, but usually this is:) 40-byte hex commit ID:
   // parent1
   cursor.push(folly::StringPiece{parentString});
+  writeFileAtomic(getSnapshotPath(), ByteRange{buf->data(), buf->length()})
+      .value();
+}
+
+void CheckoutConfig::setCheckoutInProgress(const RootId& from, const RootId& to)
+    const {
+  auto& fromString = from.value();
+  auto& toString = to.value();
+
+  auto buf = IOBuf::create(
+      kSnapshotHeaderSize + 3 * sizeof(uint32_t) + fromString.size() +
+      toString.size());
+  folly::io::Appender cursor{buf.get(), 0};
+
+  // Snapshot file format:
+  // 4-byte identifier: "eden"
+  cursor.push(ByteRange{kSnapshotFileMagic});
+  // 4-byte format version identifier
+  cursor.writeBE<uint32_t>(kSnapshotFormatCheckoutInProgressVersion);
+
+  // PID of this process
+  cursor.writeBE<uint32_t>(getpid());
+
+  // From:
+  cursor.writeBE<uint32_t>(fromString.size());
+  cursor.push(folly::StringPiece{fromString});
+
+  // To:
+  cursor.writeBE<uint32_t>(toString.size());
+  cursor.push(folly::StringPiece{toString});
+
   writeFileAtomic(getSnapshotPath(), ByteRange{buf->data(), buf->length()})
       .value();
 }

@@ -33,6 +33,7 @@ const SNAPSHOT: &str = "SNAPSHOT";
 // Magical snapshot strings
 const SNAPSHOT_MAGIC_1: &[u8] = b"eden\x00\x00\x00\x01";
 const SNAPSHOT_MAGIC_2: &[u8] = b"eden\x00\x00\x00\x02";
+const SNAPSHOT_MAGIC_3: &[u8] = b"eden\x00\x00\x00\x03";
 
 const SUPPORTED_REPOS: &[&str] = &["git", "hg", "recas"];
 const SUPPORTED_MOUNT_PROTOCOLS: &[&str] = &["fuse", "nfs", "prjfs"];
@@ -233,6 +234,23 @@ impl EdenFsCheckout {
             let mut buf = vec![0u8; body_length as usize];
             f.read_exact(&mut buf).from_err()?;
             Ok(std::str::from_utf8(&buf).from_err()?.to_string())
+        } else if header == SNAPSHOT_MAGIC_3 {
+            let _pid = f.read_u32::<BigEndian>().from_err()?;
+
+            let from_length = f.read_u32::<BigEndian>().from_err()?;
+            let mut from_buf = vec![0u8; from_length as usize];
+            f.read_exact(&mut from_buf).from_err()?;
+
+            let to_length = f.read_u32::<BigEndian>().from_err()?;
+            let mut to_buf = vec![0u8; to_length as usize];
+            f.read_exact(&mut to_buf).from_err()?;
+
+            // TODO(xavierd): return a proper object that the caller could use.
+            Err(EdenFsError::Other(anyhow!(
+                "A checkout operation is ongoing from {} to {}",
+                std::str::from_utf8(&from_buf).from_err()?,
+                std::str::from_utf8(&to_buf).from_err()?
+            )))
         } else {
             Err(EdenFsError::Other(anyhow!(
                 "SNAPSHOT file has invalid header"

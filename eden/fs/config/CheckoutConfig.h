@@ -10,6 +10,7 @@
 #include <folly/dynamic.h>
 #include <optional>
 #include "eden/fs/config/MountProtocol.h"
+#include "eden/fs/config/ParentCommit.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -57,12 +58,19 @@ class CheckoutConfig {
   /**
    * Get the parent commit of the working directory.
    */
-  RootId getParentCommit() const;
+  ParentCommit getParentCommit() const;
 
   /**
    * Set the parent commit of the working directory.
    */
   void setParentCommit(const RootId& parent) const;
+
+  /**
+   * Indicate that a checkout operation is in progress.
+   *
+   * A setParentCommit call should be made once checkout is complete.
+   */
+  void setCheckoutInProgress(const RootId& from, const RootId& to) const;
 
   const AbsolutePath& getMountPath() const {
     return mountPath_;

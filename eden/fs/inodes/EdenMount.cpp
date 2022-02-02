@@ -262,8 +262,12 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
       .via(getServerThreadPool().get())
       .thenValue([this, progressCallback = std::move(progressCallback)](
                      auto&&) mutable {
-        auto parent = checkoutConfig_->getParentCommit();
-        *parentState_.wlock() = ParentCommitState{parent, false};
+        auto parentCommit = checkoutConfig_->getParentCommit();
+        auto parent =
+            parentCommit.getCurrentRootId(ParentCommit::RootIdPreference::To)
+                .value();
+        *parentState_.wlock() =
+            ParentCommitState{parent, parentCommit.isCheckoutInProgress()};
 
         // Record the transition from no snapshot to the current snapshot in
         // the journal.  This also sets things up so that we can carry the

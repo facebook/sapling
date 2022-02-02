@@ -500,7 +500,9 @@ TEST(EdenMount, resetParents) {
   testMount.initialize(RootId("1"));
   const auto& edenMount = testMount.getEdenMount();
   EXPECT_EQ(RootId("1"), edenMount->getParentCommit());
-  EXPECT_EQ(RootId("1"), edenMount->getCheckoutConfig()->getParentCommit());
+  EXPECT_EQ(
+      ParentCommit(RootId("1")),
+      edenMount->getCheckoutConfig()->getParentCommit());
   auto latestJournalEntry = edenMount->getJournal().getLatest();
   ASSERT_TRUE(latestJournalEntry);
   EXPECT_EQ(RootId("1"), latestJournalEntry->fromHash);
@@ -512,7 +514,9 @@ TEST(EdenMount, resetParents) {
   edenMount->resetParent(RootId("2"));
   // The snapshot ID should be updated, both in memory and on disk
   EXPECT_EQ(RootId("2"), edenMount->getParentCommit());
-  EXPECT_EQ(RootId("2"), edenMount->getCheckoutConfig()->getParentCommit());
+  EXPECT_EQ(
+      ParentCommit(RootId("2")),
+      edenMount->getCheckoutConfig()->getParentCommit());
   latestJournalEntry = edenMount->getJournal().getLatest();
   ASSERT_TRUE(latestJournalEntry);
   EXPECT_EQ(RootId("1"), latestJournalEntry->fromHash);

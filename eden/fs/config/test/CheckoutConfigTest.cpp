@@ -67,7 +67,8 @@ TEST_F(CheckoutConfigTest, testLoadFromClientDirectory) {
       CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
 
   auto parent = config->getParentCommit();
-  EXPECT_EQ(RootId{"1234567812345678123456781234567812345678"}, parent);
+  EXPECT_EQ(
+      ParentCommit{RootId{"1234567812345678123456781234567812345678"}}, parent);
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 }
 
@@ -86,7 +87,8 @@ TEST_F(CheckoutConfigTest, testLoadWithIgnoredSettings) {
       CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
 
   auto parent = config->getParentCommit();
-  EXPECT_EQ(RootId{"1234567812345678123456781234567812345678"}, parent);
+  EXPECT_EQ(
+      ParentCommit{RootId{"1234567812345678123456781234567812345678"}}, parent);
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 }
 
@@ -106,7 +108,8 @@ TEST_F(CheckoutConfigTest, testVersion1MultipleParents) {
   writeFile(snapshotPath, snapshotContents).value();
 
   auto parent = config->getParentCommit();
-  EXPECT_EQ(RootId{"99887766554433221100aabbccddeeffabcdef99"}, parent);
+  EXPECT_EQ(
+      ParentCommit{RootId{"99887766554433221100aabbccddeeffabcdef99"}}, parent);
 }
 
 TEST_F(CheckoutConfigTest, testVersion2ParentBinary) {
@@ -125,8 +128,47 @@ TEST_F(CheckoutConfigTest, testVersion2ParentBinary) {
 
   auto parent = config->getParentCommit();
   EXPECT_EQ(
-      RootId{Hash20{"99887766554433221100aabbccddeeffabcdef99"}.toByteString()},
+      ParentCommit{RootId{
+          Hash20{"99887766554433221100aabbccddeeffabcdef99"}.toByteString()}},
       parent);
+}
+
+TEST_F(CheckoutConfigTest, testInProgress) {
+  auto config =
+      CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
+
+  // Overwrite the SNAPSHOT file to contain an in progress binary hash.
+  auto snapshotContents = folly::StringPiece{
+      "eden\00\00\00\03"
+      "\x00\x00\x00\x01" // PID
+      "\x00\x00\x00\x28" // Size of following hash
+      "99887766554433221100aabbccddeeffabcdef99"
+      "\x00\x00\x00\x28" // Size of following hash
+      "fedcba99887766554433221100ffeeddccbbaa99",
+      100};
+  auto snapshotPath = clientDir_ + "SNAPSHOT"_pc;
+  writeFile(snapshotPath, snapshotContents).value();
+
+  ParentCommit inProgress = ParentCommit::CheckoutInProgress{
+      RootId{"99887766554433221100aabbccddeeffabcdef99"},
+      RootId{"fedcba99887766554433221100ffeeddccbbaa99"}};
+
+  auto parent = config->getParentCommit();
+  EXPECT_EQ(inProgress, parent);
+}
+
+TEST_F(CheckoutConfigTest, testInProgressRoundtrip) {
+  auto config =
+      CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
+
+  auto from = RootId{"99887766554433221100aabbccddeeffabcdef99"};
+  auto to = RootId{"fedcba998887766554433221100ffeeddccbbaa99"};
+  ParentCommit inProgress = ParentCommit::CheckoutInProgress{from, to};
+
+  config->setCheckoutInProgress(from, to);
+
+  auto parent = config->getParentCommit();
+  EXPECT_EQ(inProgress, parent);
 }
 
 TEST_F(CheckoutConfigTest, testVersion2ParentHex) {
@@ -143,7 +185,8 @@ TEST_F(CheckoutConfigTest, testVersion2ParentHex) {
   writeFile(snapshotPath, snapshotContents).value();
 
   auto parent = config->getParentCommit();
-  EXPECT_EQ(RootId{"99887766554433221100aabbccddeeffabcdef99"}, parent);
+  EXPECT_EQ(
+      ParentCommit{RootId{"99887766554433221100aabbccddeeffabcdef99"}}, parent);
 }
 
 TEST_F(CheckoutConfigTest, testWriteSnapshot) {
@@ -156,17 +199,17 @@ TEST_F(CheckoutConfigTest, testWriteSnapshot) {
   // Write out a single parent and read it back
   config->setParentCommit(hash1);
   auto parent = config->getParentCommit();
-  EXPECT_EQ(hash1, parent);
+  EXPECT_EQ(ParentCommit{hash1}, parent);
 
   // Change the parent
   config->setParentCommit(hash2);
   parent = config->getParentCommit();
-  EXPECT_EQ(hash2, parent);
+  EXPECT_EQ(ParentCommit{hash2}, parent);
 
   // Change the parent back
   config->setParentCommit(hash1);
   parent = config->getParentCommit();
-  EXPECT_EQ(hash1, parent);
+  EXPECT_EQ(ParentCommit{hash1}, parent);
 }
 
 template <typename ExceptionType>

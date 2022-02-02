@@ -13,12 +13,13 @@ from typing import Dict, List, Optional, Tuple, Type
 
 import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
-from eden.fs.cli import hg_util
-from eden.fs.cli.config import EdenCheckout
+from eden.fs.cli import hg_util, proc_utils
+from eden.fs.cli.config import EdenCheckout, InProgressCheckoutError
 from eden.fs.cli.doctor.problem import (
     FixableProblem,
     ProblemTracker,
     UnexpectedCheckError,
+    Problem,
 )
 from eden.fs.cli.util import get_tip_commit_hash
 
@@ -80,6 +81,7 @@ class DirstateChecker(HgFileChecker):
     _tuples_dict: Dict[bytes, Tuple[str, int, int]] = {}
     _copymap: Dict[bytes, bytes] = {}
     _new_parents: Optional[Tuple[bytes, bytes]] = None
+    _in_progress_checkout: bool = False
 
     def __init__(self, checkout: EdenCheckout) -> None:
         super().__init__(checkout, "dirstate")
@@ -131,6 +133,9 @@ class DirstateChecker(HgFileChecker):
         try:
             snapshot_hex = self.checkout.get_snapshot()
             self._old_snapshot = binascii.unhexlify(snapshot_hex)
+        except InProgressCheckoutError:
+            self._in_progress_checkout = True
+            return
         except Exception as ex:
             errors.append(f"error parsing Eden snapshot ID: {ex}")
             return
@@ -176,6 +181,12 @@ class DirstateChecker(HgFileChecker):
         if self._new_parents is None:
             self.check_for_error()
         assert self._new_parents is not None
+
+        if self._in_progress_checkout:
+            # Nothing to be done, a checkout is in progress. The check for
+            # whether EdenFS is alive is done in check_in_progress_checkout
+            # below.
+            return
 
         if self._new_parents != self._old_dirstate_parents:
             with self.path.open("wb") as f:
@@ -318,6 +329,24 @@ class AbandonedTransactionChecker(HgChecker):
         self.backing_repo._run_hg(["recover"])
 
 
+def check_in_progress_checkout(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
+    try:
+        checkout.get_snapshot()
+    except InProgressCheckoutError as ex:
+        if proc_utils.new().is_edenfs_process(ex.pid):
+            return
+
+        tracker.add_problem(
+            Problem(
+                f"{str(ex)}",
+                remediation=(
+                    "EdenFS was killed or crashed during a checkout/update operation. "
+                    + "This is unfortunately not recoverable at this time and recloning the repository is necessary"
+                ),
+            )
+        )
+
+
 def check_hg(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
     file_checker_classes: List[Type[HgChecker]] = [
         DirstateChecker,
@@ -346,6 +375,8 @@ def check_hg(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
         description = f"Missing hg directory: {checkout.path}/.hg"
         tracker.add_problem(HgDirectoryError(checkout, checkers, description))
         return
+
+    check_in_progress_checkout(tracker, checkout)
 
     bad_checkers: List[HgChecker] = []
     for checker in checkers:

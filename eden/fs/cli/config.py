@@ -94,6 +94,7 @@ MOUNT_CONFIG = "config.toml"
 SNAPSHOT = "SNAPSHOT"
 SNAPSHOT_MAGIC_1 = b"eden\x00\x00\x00\x01"
 SNAPSHOT_MAGIC_2 = b"eden\x00\x00\x00\x02"
+SNAPSHOT_MAGIC_3 = b"eden\x00\x00\x00\x03"
 
 DEFAULT_REVISION = {  # supported repo name -> default bookmark
     "git": "refs/heads/master",
@@ -128,6 +129,23 @@ automatically remount your checkouts.
 
 class UsageError(Exception):
     pass
+
+
+class InProgressCheckoutError(Exception):
+    from_commit: str
+    to_commit: str
+    pid: int
+
+    def __init__(self, from_commit: str, to_commit: str, pid: int) -> None:
+        super().__init__()
+        self.from_commit = from_commit
+        self.to_commit = to_commit
+        self.pid = pid
+
+    def __str__(self) -> str:
+        return (
+            f"A checkout operation is ongoing: {self.from_commit} -> {self.to_commit}"
+        )
 
 
 class CheckoutConfig(typing.NamedTuple):
@@ -1273,6 +1291,21 @@ class EdenCheckout:
                 if len(parent) != bodyLength:
                     raise RuntimeError("SNAPSHOT file too short")
                 return parent.decode()
+            elif header == SNAPSHOT_MAGIC_3:
+                (pid,) = struct.unpack(">L", f.read(4))
+
+                (fromLength,) = struct.unpack(">L", f.read(4))
+                fromParent = f.read(fromLength)
+                if len(fromParent) != fromLength:
+                    raise RuntimeError("SNAPSHOT file too short")
+                (toLength,) = struct.unpack(">L", f.read(4))
+                toParent = f.read(toLength)
+                if len(fromParent) != toLength:
+                    raise RuntimeError("SNAPSHOT file too short")
+
+                raise InProgressCheckoutError(
+                    fromParent.decode(), toParent.decode(), pid
+                )
             else:
                 raise RuntimeError("SNAPSHOT file has invalid header")
 
