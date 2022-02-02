@@ -73,8 +73,15 @@ class CheckoutContext {
 
   /**
    * Start the checkout operation.
+   *
+   * As a side effect, this updates the SNAPSHOT file on disk, in the case
+   * where EdenFS is killed or crashes during checkout, this allows EdenFS to
+   * detect that Mercurial is out of date.
    */
-  void start(RenameLock&& renameLock);
+  void start(
+      RenameLock&& renameLock,
+      EdenMount::ParentLock::LockedPtr&& parentLock,
+      RootId newSnapshot);
 
   /**
    * Complete the checkout operation
@@ -82,9 +89,7 @@ class CheckoutContext {
    * Returns the list of conflicts and errors that were encountered during the
    * operation.
    */
-  folly::Future<std::vector<CheckoutConflict>> finish(
-      EdenMount::ParentLock::LockedPtr&& parentLock,
-      RootId newSnapshot);
+  folly::Future<std::vector<CheckoutConflict>> finish(RootId newSnapshot);
 
   void addConflict(ConflictType type, RelativePathPiece path);
   void

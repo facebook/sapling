@@ -35,31 +35,47 @@ CheckoutContext::CheckoutContext(
 
 CheckoutContext::~CheckoutContext() {}
 
-void CheckoutContext::start(RenameLock&& renameLock) {
-  renameLock_ = std::move(renameLock);
-}
-
-Future<vector<CheckoutConflict>> CheckoutContext::finish(
+void CheckoutContext::start(
+    RenameLock&& renameLock,
     EdenMount::ParentLock::LockedPtr&& parentLock,
     RootId newSnapshot) {
+  renameLock_ = std::move(renameLock);
+
   // Only update the parent if it is not a dry run.
   if (!isDryRun()) {
     std::optional<RootId> oldParent;
     if (parentLock) {
+      XCHECK(parentLock->checkoutInProgress);
       oldParent = parentLock->commitHash;
       // Update the in-memory snapshot ID
       parentLock->commitHash = newSnapshot;
     }
 
     auto config = mount_->getCheckoutConfig();
+
     // Save the new snapshot hash to the config
-    config->setParentCommit(std::move(newSnapshot));
+    if (!oldParent.has_value()) {
+      config->setParentCommit(std::move(newSnapshot));
+    } else {
+      config->setCheckoutInProgress(oldParent.value(), newSnapshot);
+    }
     XLOG(DBG1) << "updated snapshot for " << config->getMountPath() << " from "
                << (oldParent.has_value() ? oldParent->value() : "<none>")
                << " to " << newSnapshot;
   }
+}
 
-  parentLock.unlock();
+Future<vector<CheckoutConflict>> CheckoutContext::finish(RootId newSnapshot) {
+  auto config = mount_->getCheckoutConfig();
+
+  auto parentCommit = config->getParentCommit();
+  if (parentCommit.isCheckoutInProgress()) {
+    XCHECK_EQ(
+        parentCommit.getCurrentRootId(ParentCommit::RootIdPreference::To)
+            .value(),
+        newSnapshot);
+    config->setParentCommit(newSnapshot);
+  }
 
   // Release the rename lock.
   // This allows any filesystem unlink() or rename() operations to proceed.

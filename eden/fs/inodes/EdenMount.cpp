@@ -693,14 +693,13 @@ folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
         auto [targetTreeInode, incomingTree] = results;
         targetTreeInode->unloadChildrenUnreferencedByFs();
         // TODO(@yipu): Remove rename lock
-        ctx->start(this->acquireRenameLock());
+        ctx->start(this->acquireRenameLock(), {}, rootId);
         setPathObjectIdTime->didAcquireRenameLock = stopWatch.elapsed();
         return targetTreeInode->checkout(ctx.get(), nullptr, incomingTree);
       })
-      .thenValue([this, ctx, setPathObjectIdTime, stopWatch, rootId](auto&&) {
+      .thenValue([ctx, setPathObjectIdTime, stopWatch, rootId](auto&&) {
         setPathObjectIdTime->didCheckout = stopWatch.elapsed();
-        // Complete and save the new snapshot
-        return ctx->finish(parentState_.wlock(), rootId);
+        return ctx->finish(rootId);
       })
       .thenValue([ctx, setPathObjectIdTime, stopWatch](
                      std::vector<CheckoutConflict>&& conflicts) {
@@ -1351,8 +1350,10 @@ folly::Future<CheckoutResult> EdenMount::checkout(
         checkoutTimes->didDiff = stopWatch.elapsed();
 
         // Perform the requested checkout operation after the journal diff
-        // completes.
-        ctx->start(this->acquireRenameLock());
+        // completes. This also updates the SNAPSHOT file to make sure that an
+        // interrupted checkout can be properly detected.
+        auto renameLock = this->acquireRenameLock();
+        ctx->start(std::move(renameLock), parentState_.wlock(), snapshotHash);
 
         checkoutTimes->didAcquireRenameLock = stopWatch.elapsed();
 
@@ -1390,11 +1391,11 @@ folly::Future<CheckoutResult> EdenMount::checkout(
               return rootInode->checkout(ctx.get(), fromTree, toTree);
             });
       })
-      .thenValue([this, ctx, checkoutTimes, stopWatch, snapshotHash](auto&&) {
+      .thenValue([ctx, checkoutTimes, stopWatch, snapshotHash](auto&&) {
         checkoutTimes->didCheckout = stopWatch.elapsed();
 
         // Complete the checkout
-        return ctx->finish(parentState_.wlock(), snapshotHash);
+        return ctx->finish(snapshotHash);
       })
       .ensure([this]() {
         // Checkout completed, make sure to always reset the checkoutInProgress
