@@ -69,6 +69,8 @@ Clone 1 and 2
 
 Clone 3
   $ cd $TESTTMP
+This is a hack, it seems WBC may be stale, causing the test to be flaky. It needs a proper fix.
+  $ sleep 3
   $ hgedenapi clone "mononoke://$(mononoke_address)/repo" client3
   fetching lazy changelog
   populating main commit graph
