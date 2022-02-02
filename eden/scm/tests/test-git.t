@@ -180,6 +180,10 @@ Test pull:
 
   $ hg paths -a origin "file://$TESTTMP/gitrepo/.git"
 
+- tree prefetch config is ignored
+
+  $ setconfig treemanifest.pullprefetchrevs=tip
+
 - pull with -B
   $ hg pull origin -B foo
   pulling from file:/*/$TESTTMP/gitrepo/.git (glob)
