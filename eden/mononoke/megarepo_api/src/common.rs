@@ -562,7 +562,7 @@ pub trait MegarepoOp {
                     )
                     .map_err(MegarepoError::request)?;
 
-                    let linkfiles = self.prepare_linkfiles(&source_config, &mover)?;
+                    let linkfiles = self.prepare_linkfiles(&source_config, &directory_mover)?;
                     let linkfiles = self.upload_linkfiles(ctx, linkfiles, repo).await?;
                     // TODO(stash): it assumes that commit is present in target
                     let moved = self
@@ -695,12 +695,16 @@ pub trait MegarepoOp {
     fn prepare_linkfiles(
         &self,
         source_config: &Source,
-        mover: &MultiMover,
+        mover: &DirectoryMultiMover,
     ) -> Result<BTreeMap<MPath, Bytes>, MegarepoError> {
         let mut links = BTreeMap::new();
         for (dst, src) in &source_config.mapping.linkfiles {
             // src is a file inside a given source, so mover needs to be applied to it
-            let src = MPath::new(src).map_err(MegarepoError::request)?;
+            let src = if src == "." {
+                None
+            } else {
+                MPath::new_opt(src).map_err(MegarepoError::request)?
+            };
             let dst = MPath::new(dst).map_err(MegarepoError::request)?;
             let moved_srcs = mover(&src).map_err(MegarepoError::request)?;
 
@@ -708,6 +712,10 @@ pub trait MegarepoOp {
             let moved_src = match (iter.next(), iter.next()) {
                 (Some(moved_src), None) => moved_src,
                 (None, None) => {
+                    let src = match src {
+                        None => ".".to_string(),
+                        Some(path) => path.to_string(),
+                    };
                     return Err(MegarepoError::request(anyhow!(
                         "linkfile source {} does not map to any file inside source {}",
                         src,
@@ -715,13 +723,28 @@ pub trait MegarepoOp {
                     )));
                 }
                 _ => {
+                    let src = match src {
+                        None => ".".to_string(),
+                        Some(path) => path.to_string(),
+                    };
                     return Err(MegarepoError::request(anyhow!(
                         "linkfile source {} maps to too many files inside source {}",
                         src,
                         source_config.name
                     )));
                 }
-            };
+            }
+            .ok_or_else(|| {
+                let src = match src {
+                    None => ".".to_string(),
+                    Some(path) => path.to_string(),
+                };
+                MegarepoError::request(anyhow!(
+                    "linkfile source {} does not map to any file inside the destination from source {}",
+                    src,
+                    source_config.name
+                ))
+            })?;
 
             let content = create_relative_symlink(&moved_src, &dst)?;
             links.insert(dst, content);
