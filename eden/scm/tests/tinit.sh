@@ -211,7 +211,6 @@ configure() {
         ;;
       modern)
         enable amend
-        setconfig pull.httpmutation=true
         setconfig remotenames.rename.default=remote
         setconfig remotenames.hoist=remote
         setconfig experimental.changegroup3=True
