@@ -5,14 +5,75 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
 use crate::CreateCommitContext;
+
+pub type ChangeFn = dyn FnOnce(CreateCommitContext) -> CreateCommitContext + Send + Sync;
+
+pub async fn extend_from_dag_with_changes<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
+    dag: &'a str,
+    mut changes: BTreeMap<String, Box<ChangeFn>>,
+    existing: BTreeMap<String, ChangesetId>,
+    default_files: bool,
+) -> Result<(
+    BTreeMap<String, ChangesetId>,
+    BTreeMap<String, BTreeSet<String>>,
+)> {
+    let mut committed: BTreeMap<String, ChangesetId> = BTreeMap::new();
+    let dag = drawdag::parse(dag);
+
+    for (name, id) in existing {
+        if !dag.contains_key(&name) {
+            return Err(anyhow!("graph does not contain {}", name));
+        }
+        committed.insert(name, id);
+    }
+
+    while committed.len() < dag.len() {
+        let mut made_progress = false;
+        for (name, parents) in dag.iter() {
+            if committed.contains_key(name) {
+                // This node was already committed.
+                continue;
+            }
+
+            if parents.iter().any(|parent| !committed.contains_key(parent)) {
+                // This node still has uncommitted parents.
+                continue;
+            }
+
+            let parent_ids = parents
+                .iter()
+                .map(|parent| committed[parent].clone())
+                .collect();
+            let mut create_commit =
+                CreateCommitContext::new(ctx, repo, parent_ids).set_message(name);
+
+            if default_files {
+                create_commit = create_commit.add_file(name.as_str(), name.as_str());
+            }
+            if let Some(change) = changes.remove(name.as_str()) {
+                create_commit = change(create_commit);
+            }
+            let new_id = create_commit.commit().await?;
+            committed.insert(name.to_string(), new_id);
+            made_progress = true;
+        }
+        if !made_progress {
+            return Err(anyhow!("graph contains cycles"));
+        }
+    }
+
+    Ok((committed, dag))
+}
 
 /// Create commits from an ASCII DAG.
 ///
@@ -58,43 +119,11 @@ pub async fn create_from_dag_with_changes<'a>(
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
     dag: &'a str,
-    mut changes: BTreeMap<&'a str, Box<dyn FnMut(CreateCommitContext) -> CreateCommitContext>>,
+    changes: BTreeMap<String, Box<ChangeFn>>,
 ) -> Result<BTreeMap<String, ChangesetId>> {
-    let mut committed: BTreeMap<String, ChangesetId> = BTreeMap::new();
-
-    let dag = drawdag::parse(dag);
-
-    while committed.len() < dag.len() {
-        let mut made_progress = false;
-        for (name, parents) in dag.iter() {
-            if committed.contains_key(name) {
-                // This node was already committed.
-                continue;
-            }
-
-            if parents.iter().any(|parent| !committed.contains_key(parent)) {
-                // This node still has uncommitted parents.
-                continue;
-            }
-
-            let parent_ids = parents
-                .iter()
-                .map(|parent| committed[parent].clone())
-                .collect();
-            let mut create_commit = CreateCommitContext::new(ctx, repo, parent_ids)
-                .set_message(name)
-                .add_file(name.as_str(), name);
-            if let Some(change) = changes.get_mut(name.as_str()) {
-                create_commit = change(create_commit);
-            }
-            let new_id = create_commit.commit().await?;
-            committed.insert(name.to_string(), new_id);
-            made_progress = true;
-        }
-        assert!(made_progress, "graph contains cycles");
-    }
-
-    Ok(committed)
+    let (commits, _dag) =
+        extend_from_dag_with_changes(ctx, repo, dag, changes, BTreeMap::new(), true).await?;
+    Ok(commits)
 }
 
 /// Create commits from an ASCII DAG.
@@ -148,12 +177,10 @@ pub async fn create_from_dag(
 macro_rules! __drawdag_changes {
     ( $( $key:expr => | $c:ident | $body:expr ),* $( , )? ) => {
         {
-            type ChangeFn =
-                dyn FnMut($crate::CreateCommitContext) -> $crate::CreateCommitContext;
-            let mut changes: std::collections::BTreeMap<&str, Box<ChangeFn>> =
+            let mut changes: std::collections::BTreeMap<String, Box<$crate::drawdag::ChangeFn>> =
                 std::collections::BTreeMap::new();
             $(
-                changes.insert($key, Box::new(|$c: $crate::CreateCommitContext| $body));
+                changes.insert(String::from($key), Box::new(|$c: $crate::CreateCommitContext| $body));
             )*
             changes
         }

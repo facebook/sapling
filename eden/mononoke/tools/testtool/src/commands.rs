@@ -5,4 +5,6 @@
  * GNU General Public License version 2.
  */
 
-mononoke_app::subcommands! {}
+mononoke_app::subcommands! {
+    mod drawdag;
+}

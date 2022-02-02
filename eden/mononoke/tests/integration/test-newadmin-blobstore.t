@@ -8,15 +8,19 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ default_setup_blobimport "blob_sqlite"
-  hg repo
-  o  C [draft;rev=2;26805aba1e60]
-  │
-  o  B [draft;rev=1;112478962961]
-  │
-  o  A [draft;rev=0;426bada5c675]
-  $
-  blobimporting
+  $ setup_common_config "blob_sqlite"
+  $ mononoke_testtool drawdag -R repo <<'EOF'
+  > Z-A
+  >  \ \
+  >   B-C
+  > # modify: C file "test content \xaa end"
+  > # delete: C Z
+  > EOF
+  *] Reloading redacted config from configerator (glob)
+  A=e26d4ad219658cadec76d086a28621bc612762d0499ae79ba093c5ec15efe5fc
+  B=ecf6ed0f7b5c6d1871a3b7b0bc78b04e2cc036a67f96890f2834b728355e5fc5
+  C=f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1
+  Z=e5c07a6110ea10bbcc576b969f936f91fc0a69df0b9bcf1fdfacbf3add06f07a
 
 Check we can upload and fetch an arbitrary blob.
   $ echo value > "$TESTTMP/value"
@@ -37,31 +41,51 @@ key.
   No blob exists for somekey
 
 Examine some of the data
-  $ mononoke_newadmin blobstore -R repo fetch changeset.blake2.9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec
-  Key: changeset.blake2.9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec
+  $ mononoke_newadmin blobstore -R repo fetch changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1
+  Key: changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1
   Ctime: * (glob)
-  Size: 69
+  Size: 194
   
   BonsaiChangeset {
       inner: BonsaiChangesetMut {
-          parents: [],
-          author: "test",
+          parents: [
+              ChangesetId(
+                  Blake2(e26d4ad219658cadec76d086a28621bc612762d0499ae79ba093c5ec15efe5fc),
+              ),
+              ChangesetId(
+                  Blake2(ecf6ed0f7b5c6d1871a3b7b0bc78b04e2cc036a67f96890f2834b728355e5fc5),
+              ),
+          ],
+          author: "author",
           author_date: DateTime(
               1970-01-01T00:00:00+00:00,
           ),
           committer: None,
           committer_date: None,
-          message: "A",
+          message: "C",
           extra: {},
           file_changes: {
-              MPath("A"): Change(
+              MPath("C"): Change(
                   TrackedFileChange {
                       inner: BasicFileChange {
                           content_id: ContentId(
-                              Blake2(eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9),
+                              Blake2(896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d),
                           ),
                           file_type: Regular,
                           size: 1,
+                      },
+                      copy_from: None,
+                  },
+              ),
+              MPath("Z"): Deletion,
+              MPath("file"): Change(
+                  TrackedFileChange {
+                      inner: BasicFileChange {
+                          content_id: ContentId(
+                              Blake2(6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8),
+                          ),
+                          file_type: Regular,
+                          size: 18,
                       },
                       copy_from: None,
                   },
@@ -70,13 +94,15 @@ Examine some of the data
           is_snapshot: false,
       },
       id: ChangesetId(
-          Blake2(9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec),
+          Blake2(f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1),
       ),
   }
 
-  $ mononoke_newadmin blobstore --storage-name blobstore fetch repo0000.content.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9
-  Key: repo0000.content.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9
+  $ mononoke_newadmin blobstore --storage-name blobstore fetch repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8
+  Key: repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8
   Ctime: * (glob)
-  Size: 4
+  Size: 21
   
-  00000000: 41                                A
+  00000000: 7465737420636f6e74656e7420aa2065  test content . e
+  00000010: 6e64                              nd
+

@@ -383,6 +383,7 @@ members = [
   "time_window_counter",
   "tools/admin",
   "tools/example",
+  "tools/testtool",
   "tunables",
   "tunables/tunables-derive",
   "unbundle_replay",

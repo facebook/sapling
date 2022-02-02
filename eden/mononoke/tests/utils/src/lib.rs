@@ -171,7 +171,7 @@ impl<'a> CreateCommitContext<'a> {
         self
     }
 
-    pub fn add_file(mut self, path: impl TryInto<MPath>, content: impl Into<String>) -> Self {
+    pub fn add_file(mut self, path: impl TryInto<MPath>, content: impl Into<Vec<u8>>) -> Self {
         self.files.insert(
             path.try_into().ok().expect("Invalid path"),
             CreateFileContext::FromHelper(content.into(), FileType::Regular, None),
@@ -179,7 +179,7 @@ impl<'a> CreateCommitContext<'a> {
         self
     }
 
-    pub fn add_files<P: TryInto<MPath>, C: Into<String>, I: IntoIterator<Item = (P, C)>>(
+    pub fn add_files<P: TryInto<MPath>, C: Into<Vec<u8>>, I: IntoIterator<Item = (P, C)>>(
         mut self,
         path_contents: I,
     ) -> Self {
@@ -206,7 +206,7 @@ impl<'a> CreateCommitContext<'a> {
     pub fn add_file_with_type(
         mut self,
         path: impl TryInto<MPath>,
-        content: impl Into<String>,
+        content: impl Into<Vec<u8>>,
         t: FileType,
     ) -> Self {
         self.files.insert(
@@ -219,7 +219,7 @@ impl<'a> CreateCommitContext<'a> {
     pub fn add_file_with_copy_info(
         mut self,
         path: impl TryInto<MPath>,
-        content: impl Into<String>,
+        content: impl Into<Vec<u8>>,
         (parent, parent_path): (impl Into<CommitIdentifier>, impl TryInto<MPath>),
     ) -> Self {
         let copy_info = (
@@ -315,7 +315,7 @@ impl<'a> CreateCommitContext<'a> {
 }
 
 enum CreateFileContext {
-    FromHelper(String, FileType, Option<(MPath, CommitIdentifier)>),
+    FromHelper(Vec<u8>, FileType, Option<(MPath, CommitIdentifier)>),
     FromFileChange(FileChange),
     Deleted,
 }
@@ -329,7 +329,7 @@ impl CreateFileContext {
     ) -> Result<FileChange, Error> {
         let file_change = match self {
             Self::FromHelper(content, file_type, copy_info) => {
-                let content = Bytes::copy_from_slice(content.as_bytes());
+                let content = Bytes::copy_from_slice(content.as_ref());
 
                 let meta = filestore::store(
                     repo.blobstore(),
