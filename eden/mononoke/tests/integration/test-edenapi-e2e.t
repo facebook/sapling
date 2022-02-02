@@ -8,7 +8,7 @@
   $ configure modern
   $ setconfig pull.master-fastpath=1 \
   >  remotenames.selectivepulldefault=master_bookmark \
-  >  pull.httpcommitgraph=1 pull.httpbookmarks=1 pull.httphashprefix=1 \
+  >  pull.httpcommitgraph=1 pull.httphashprefix=1 \
   >  exchange.httpcommitlookup=1
 
 Set up local hgrc and Mononoke config, with http pull

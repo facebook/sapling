@@ -48,7 +48,6 @@ Set up local hgrc and Mononoke config, with commit cloud, http pull and upload.
   > reponame=repo
   > [pull]
   > httpcommitgraph = true
-  > httpbookmarks = true
   > httphashprefix = true
   > [exchange]
   > httpcommitlookup = true

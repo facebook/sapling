@@ -58,7 +58,6 @@ Do infinitepush (aka commit cloud) push
   > [extensions]
   > remotenames=
   > [infinitepush]
-  > httpbookmarks=True
   > server=False
   > branchpattern=re:scratch/.+
   > EOF

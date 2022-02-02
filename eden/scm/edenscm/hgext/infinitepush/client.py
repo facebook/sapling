@@ -46,7 +46,7 @@ _definitelyhash = re.compile(r"^[a-f0-9]{40}$").search
 configtable = {}
 configitem = registrar.configitem(configtable)
 # Use the http Edenapi protocol to fetch bookmarks
-configitem("infinitepush", "httpbookmarks", default=False)
+configitem("infinitepush", "httpbookmarks", default=True)
 
 
 def extsetup(ui):
