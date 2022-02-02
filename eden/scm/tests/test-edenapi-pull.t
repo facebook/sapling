@@ -5,7 +5,6 @@
   $ setconfig paths.default=test:e1 ui.traceback=1
   $ setconfig pull.httphashprefix=1
   $ setconfig pull.httpcommitgraph=1
-  $ setconfig exchange.httpcommitlookup=1
   $ export LOG=exchange::httpcommitlookup=debug,pull
 
 Disable SSH:

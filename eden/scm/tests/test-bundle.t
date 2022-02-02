@@ -2,6 +2,8 @@
   $ configure modernclient
 
   $ setconfig format.usegeneraldelta=yes
+We're bundling local clones here
+  $ setconfig exchange.httpcommitlookup=False
 
 Setting up test
 
@@ -305,4 +307,3 @@ directory does not exist
   $ hg bundle --base 'desc(1)' -r 'desc(3)' ../update2bundled.hg
   1 changesets found
   $ hg debugstrip -r 'desc(3)'
-
