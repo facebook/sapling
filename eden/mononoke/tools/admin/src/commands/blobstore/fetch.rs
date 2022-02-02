@@ -13,6 +13,7 @@ use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use chrono::{Local, TimeZone};
 use clap::{ArgEnum, Args};
+use cmdlib_displaying::hexdump;
 use context::CoreContext;
 use git_types::Tree as GitTree;
 use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
@@ -136,32 +137,6 @@ fn decode(key: &str, data: BlobstoreGetData, mut decode_as: DecodeAs) -> Decoded
         DecodeAs::Fsnode => Decoded::try_debug(Fsnode::from_bytes(data.into_raw_bytes().as_ref())),
     }
 }
-fn sanitize(slice: &[u8]) -> String {
-    slice
-        .iter()
-        .map(|c| {
-            if *c < b' ' || *c > b'~' {
-                '.'
-            } else {
-                *c as char
-            }
-        })
-        .collect::<String>()
-}
-
-fn hexdump(data: impl AsRef<[u8]>) -> Result<()> {
-    const CHUNK_SIZE: usize = 16;
-    for (i, slice) in data.as_ref().chunks(CHUNK_SIZE).enumerate() {
-        writeln!(
-            std::io::stdout(),
-            "{:08x}: {:<32}  {}",
-            i * CHUNK_SIZE,
-            hex::encode(slice),
-            sanitize(slice),
-        )?;
-    }
-    Ok(())
-}
 
 pub async fn fetch(
     ctx: &CoreContext,
@@ -215,15 +190,15 @@ pub async fn fetch(
                         writeln!(std::io::stdout(), "{}", decoded)?;
                     }
                     Decoded::Hexdump(data) => {
-                        hexdump(data)?;
+                        hexdump(std::io::stdout(), data)?;
                     }
                     Decoded::Fail(err) => {
                         writeln!(std::io::stderr(), "Failed to decode: {}", err)?;
                         // Fall back to dumping as raw hex
-                        hexdump(bytes)?;
+                        hexdump(std::io::stdout(), bytes)?;
                     }
                     Decoded::None => {
-                        hexdump(bytes)?;
+                        hexdump(std::io::stdout(), bytes)?;
                     }
                 }
             }

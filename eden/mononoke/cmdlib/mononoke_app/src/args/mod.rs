@@ -7,6 +7,7 @@
 
 use anyhow::{format_err, Result};
 
+mod changeset;
 mod config;
 mod hooks;
 mod mysql;
@@ -17,6 +18,7 @@ mod shutdown_timeout;
 mod tunables;
 
 pub use self::tunables::TunablesArgs;
+pub use changeset::ChangesetArgs;
 pub use config::ConfigArgs;
 pub use hooks::HooksArgs;
 pub use mysql::MysqlArgs;

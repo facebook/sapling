@@ -25,5 +25,7 @@ pub use crate::builder::RepoEphemeralStoreBuilder;
 pub use crate::changesets::EphemeralChangesets;
 pub use crate::error::EphemeralBlobstoreError;
 pub use crate::handle::EphemeralHandle;
-pub use crate::store::{ArcRepoEphemeralStore, RepoEphemeralStore};
+pub use crate::store::{
+    ArcRepoEphemeralStore, RepoEphemeralStore, RepoEphemeralStoreArc, RepoEphemeralStoreRef,
+};
 pub use crate::view::EphemeralRepoView;

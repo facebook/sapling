@@ -218,6 +218,7 @@ members = [
   "changesets/if",
   "cmdlib",
   "cmdlib/caching",
+  "cmdlib/displaying",
   "cmdlib/environment",
   "cmdlib/log",
   "cmdlib/mononoke_app",
