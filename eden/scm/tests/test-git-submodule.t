@@ -44,8 +44,8 @@ Prepare git repo with submodules
 Clone the git repo with submodules
 
   $ cd
-  $ hg clone git+file://$TESTTMP/parent-repo-git parent-repo-hg
-  From file:/*/$TESTTMP/parent-repo-git (glob)
+  $ hg clone --git "$TESTTMP/parent-repo-git" parent-repo-hg
+  From $TESTTMP/parent-repo-git
    * [new ref]         * -> remote/main (glob)
   pulling submodule mod/1
   pulling submodule mod/2
@@ -102,7 +102,7 @@ Make changes to submodules via working copy
   M mod/1
   R mod/2
 
-  $ hg clone -q git+file://$TESTTMP/sub1/.hg/store/git mod/3
+  $ hg clone -q --git "$TESTTMP/sub1/.hg/store/git" mod/3
   $ hg status
   M .gitmodules
   M mod/1
@@ -181,11 +181,11 @@ Diff committed changes
 Try checking out the submodule change made by hg
 
   $ cd
-  $ hg clone -qU git+file://$TESTTMP/parent-repo-git parent-repo-hg2
+  $ hg clone -qU --git "$TESTTMP/parent-repo-git" parent-repo-hg2
   $ cd parent-repo-hg2
   $ hg pull -B foo --update
-  pulling from file:/*/$TESTTMP/parent-repo-git (glob)
-  From file:/*/$TESTTMP/parent-repo-git (glob)
+  pulling from $TESTTMP/parent-repo-git
+  From $TESTTMP/parent-repo-git
    * [new ref]         * -> remote/foo (glob)
   pulling submodule mod/1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -207,8 +207,8 @@ Nested submodules can share submodules with same URLs
   $ git commit -qm 'add .gitmodules'
 
   $ cd
-  $ hg clone git+file://$TESTTMP/grandparent-repo-git grandparent-repo-hg
-  From file:/*/$TESTTMP/grandparent-repo-git (glob)
+  $ hg clone --git "$TESTTMP/grandparent-repo-git" grandparent-repo-hg
+  From $TESTTMP/grandparent-repo-git
    * [new ref]         * -> remote/main (glob)
   pulling submodule mod/1
   pulling submodule mod/p
@@ -233,7 +233,7 @@ Rebase submodule change
   $ git commit -qm A
 
   $ cd
-  $ hg clone -q git+file://$TESTTMP/rebase-git rebase-hg
+  $ hg clone -q --git "$TESTTMP/rebase-git" rebase-hg
   $ cd rebase-hg
   $ touch B
   $ hg commit -Aqm B B

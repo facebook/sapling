@@ -293,7 +293,10 @@ def wrappackers():
 
 def cloneshallow(orig, ui, source, *args, **opts):
     # skip for (full) git repos
-    giturl = git.maybegiturl(source)
+    if opts.get("git"):
+        giturl = source
+    else:
+        giturl = git.maybegiturl(source)
     if opts.get("shallow") and giturl is None:
         repos = []
 

@@ -398,7 +398,7 @@ Show all commands + options
   branch: force, clean, new
   bundle: force, rev, base, all, type, ssh, remotecmd
   cat: output, rev, decode, include, exclude, template
-  clone: noupdate, updaterev, rev, pull, uncompressed, stream, shallow, ssh, remotecmd
+  clone: noupdate, updaterev, rev, pull, uncompressed, stream, shallow, git, ssh, remotecmd
   commit: addremove, amend, edit, interactive, reuse-message, include, exclude, message, logfile, date, user
   config: untrusted, edit, local, global, template
   continue: 

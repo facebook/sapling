@@ -211,7 +211,7 @@ Test clone with flags (--noupdate, --updaterev):
   $ mkdir $TESTTMP/clonetest
   $ cd $TESTTMP/clonetest
 
-  $ hg clone -q --noupdate "git+file://$TESTTMP/gitrepo"
+  $ hg clone -q --noupdate --git "$TESTTMP/gitrepo"
   $ cd gitrepo
   $ hg log -r . -T '{node|short}\n'
   000000000000
@@ -219,8 +219,8 @@ Test clone with flags (--noupdate, --updaterev):
      remote/master             3f5848713286
   $ cd ..
 
-  $ hg clone "git+file://$TESTTMP/gitrepo" cloned1 --config remotenames.selectivepulldefault=foo,master
-  From file:/*/$TESTTMP/gitrepo (glob)
+  $ hg clone --git "$TESTTMP/gitrepo" cloned1 --config remotenames.selectivepulldefault=foo,master
+  From $TESTTMP/gitrepo
    * [new ref]         4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> remote/foo
    * [new ref]         3f5848713286c67b8a71a450e98c7fa66787bde2 -> remote/master
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -228,8 +228,8 @@ Test clone with flags (--noupdate, --updaterev):
   4899b7b71a9c remote/foo alpha3
   $ cd ..
 
-  $ hg clone --updaterev remote/foo "git+file://$TESTTMP/gitrepo" cloned2 --config remotenames.selectivepulldefault=foo
-  From file:/*/$TESTTMP/gitrepo (glob)
+  $ hg clone --updaterev remote/foo --git "$TESTTMP/gitrepo" cloned2 --config remotenames.selectivepulldefault=foo
+  From $TESTTMP/gitrepo
    * [new ref]         4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> remote/foo
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd cloned2 log -r . -T '{node|short} {remotenames} {desc}\n'
@@ -247,7 +247,7 @@ Test push:
 
 - --to with -r
   $ hg push -r '.^' --to parent_change_beta
-  To file:/*/$TESTTMP/gitrepo (glob)
+  To $TESTTMP/gitrepo
    * [new branch]      4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> parent_change_beta
 
   $ hg log -r '.^+.' -T '{desc} {remotenames}\n'
@@ -256,7 +256,7 @@ Test push:
 
 - delete bookmark
   $ hg push --delete book_change_beta
-  To file:/*/$TESTTMP/gitrepo (glob)
+  To $TESTTMP/gitrepo
    - [deleted]         book_change_beta
 
   $ hg log -r '.^+.' -T '{desc} {remotenames}\n'
@@ -270,7 +270,7 @@ Test push:
 
   $ cd "$TESTTMP"
   $ git init -qb main --bare "pushforce.git"
-  $ hg clone "git+file://$TESTTMP/pushforce.git"
+  $ hg clone --git "$TESTTMP/pushforce.git"
   $ cd pushforce
   $ git --git-dir=.hg/store/git config advice.pushUpdateRejected false
 
@@ -282,9 +282,9 @@ Test push:
 
   $ hg push -qr $B --to foo
   $ hg push -qr $C --to foo
-  To file:/*/$TESTTMP/pushforce.git (glob)
+  To $TESTTMP/pushforce.git
    ! [rejected]        5d38a953d58b0c80a4416ba62e62d3f2985a3726 -> foo (non-fast-forward)
-  error: failed to push some refs to 'file:/*/$TESTTMP/pushforce.git' (glob)
+  error: failed to push some refs to '$TESTTMP/pushforce.git'
   [1]
   $ hg push -qr $C --to foo --force
 
@@ -292,7 +292,7 @@ Test push:
 
   $ cd "$TESTTMP"
   $ git init -qb main --bare "pushto.git"
-  $ hg clone "git+file://$TESTTMP/pushto.git"
+  $ hg clone --git "$TESTTMP/pushto.git"
   $ cd pushto
 
   $ drawdag << 'EOS'
@@ -308,7 +308,7 @@ Test push:
 
  (pick "main" automatically)
   $ hg push
-  To file:/*/$TESTTMP/pushto.git (glob)
+  To $TESTTMP/pushto.git
      0de3093..a9d5bd6  a9d5bd6ac8bcf89de9cd99fd215cca243e8aeed9 -> main
   $ hg push -q --to stable
 
@@ -340,8 +340,8 @@ Submodule does not cause a crash:
 
   $ cd
   $ setconfig git.submodules=false
-  $ hg clone "git+file://$TESTTMP/submod" cloned-submod
-  From file:/*/$TESTTMP/submod (glob)
+  $ hg clone --git "$TESTTMP/submod" cloned-submod
+  From $TESTTMP/submod
    * [new ref]         a4c97159e197fb3aaab3f24fc3b39d7942b311ff -> remote/master
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd cloned-submod

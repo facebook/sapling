@@ -22,7 +22,7 @@ Prepare git repo with tags
 Clone it
 
   $ cd
-  $ hg clone -q git+file://$TESTTMP/git-repo hg-repo
+  $ hg clone -q --git $TESTTMP/git-repo hg-repo
   $ cd hg-repo
 
 No remotenames about tags initially
@@ -33,14 +33,14 @@ No remotenames about tags initially
 Pull tags explicitly
 
   $ hg pull -B tags/v1
-  pulling from file:/*/$TESTTMP/git-repo (glob)
-  From file:/*/$TESTTMP/git-repo (glob)
+  pulling from $TESTTMP/git-repo
+  From $TESTTMP/git-repo
    * [new ref]         bfff4215bb0ba84b76577621c9974de957610ecb -> remote/tags/v1
 
 Pull implicitly via autopull
 
   $ hg update tags/v2
-  pulling 'tags/v2' from 'file:/*/$TESTTMP/git-repo' (glob)
+  pulling 'tags/v2' from '$TESTTMP/git-repo'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Verify the pulled tags can be seen
@@ -62,7 +62,7 @@ Push tags
   $ echo 2 > a
   $ hg commit -m C
   $ hg push --to tags/v3
-  To file:/*/$TESTTMP/git-repo (glob)
+  To $TESTTMP/git-repo
    * [new tag]         42d0e8258ed6249380f83aaf4564a0c0865ae5f7 -> v3
   $ hg log -Gr: -T '{remotenames} {desc}'
   @  remote/tags/v3 C

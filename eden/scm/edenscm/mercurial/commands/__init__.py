@@ -1510,6 +1510,7 @@ def cat(ui, repo, file1, *pats, **opts):
             True,
             _("use remotefilelog (only turn it off in legacy tests) (ADVANCED)"),
         ),
+        ("", "git", False, _("use git protocol (EXPERIMENTAL)")),
     ]
     + remoteopts,
     _("[OPTION]... SOURCE [DEST]"),
@@ -1618,7 +1619,10 @@ def clone(ui, source, dest=None, **opts):
     """
     if opts.get("noupdate") and opts.get("updaterev"):
         raise error.Abort(_("cannot specify both --noupdate and --updaterev"))
-    giturl = git.maybegiturl(source)
+    if opts.get("git"):
+        giturl = source
+    else:
+        giturl = git.maybegiturl(source)
     if giturl is not None:
         if opts.get("noupdate"):
             update = False

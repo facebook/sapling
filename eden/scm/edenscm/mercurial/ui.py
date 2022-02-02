@@ -2030,7 +2030,11 @@ class path(object):
         This is its own function so that extensions can change the definition of
         'valid' in this case (like when pulling from a git repo into a hg
         one)."""
-        return os.path.isdir(os.path.join(path, ".hg"))
+        # objects/: potentially a bare git repo
+        return any(
+            os.path.isdir(os.path.join(path, name))
+            for name in (".hg", ".git", "objects")
+        )
 
     @property
     def suboptions(self):

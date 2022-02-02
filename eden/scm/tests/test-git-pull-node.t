@@ -19,7 +19,7 @@ Server repo
 Client repo
 
   $ cd
-  $ hg clone -q git+file://$TESTTMP/server-repo/.hg/store/git client-repo
+  $ hg clone -q --git "$TESTTMP/server-repo/.hg/store/git" client-repo
   $ cd client-repo
   $ hg log -Gr: -T '{desc} {remotenames} {phase}'
   @  B remote/main public
