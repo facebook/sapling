@@ -27,10 +27,11 @@ use slog::Logger;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use tokio::runtime::Handle;
 
-use crate::args::{ConfigArgs, RepoArg, RepoArgs, RepoBlobstoreArgs};
+use crate::args::{ConfigArgs, ConfigMode, RepoArg, RepoArgs, RepoBlobstoreArgs};
 
 pub struct MononokeApp {
     pub fb: FacebookInit,
+    config_mode: ConfigMode,
     args: ArgMatches,
     env: Arc<MononokeEnvironment>,
     storage_configs: StorageConfigs,
@@ -41,6 +42,7 @@ pub struct MononokeApp {
 impl MononokeApp {
     pub(crate) fn new(
         fb: FacebookInit,
+        config_mode: ConfigMode,
         args: ArgMatches,
         env: MononokeEnvironment,
     ) -> Result<Self> {
@@ -55,6 +57,7 @@ impl MononokeApp {
 
         Ok(MononokeApp {
             fb,
+            config_mode,
             args,
             env,
             storage_configs,
@@ -127,6 +130,11 @@ impl MononokeApp {
     /// Mononoke environment for this app.
     pub fn environment(&self) -> &Arc<MononokeEnvironment> {
         &self.env
+    }
+
+    /// Returns true if this is a production configuration of Mononoke
+    pub fn is_production(&self) -> bool {
+        self.config_mode == ConfigMode::Production
     }
 
     /// Get repo config based on user-provided arguments.

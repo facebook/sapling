@@ -19,7 +19,7 @@ mod tunables;
 
 pub use self::tunables::TunablesArgs;
 pub use changeset::ChangesetArgs;
-pub use config::ConfigArgs;
+pub use config::{ConfigArgs, ConfigMode};
 pub use hooks::HooksArgs;
 pub use mysql::MysqlArgs;
 pub use repo::{RepoArg, RepoArgs};

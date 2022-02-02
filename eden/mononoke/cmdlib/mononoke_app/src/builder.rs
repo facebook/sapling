@@ -180,13 +180,14 @@ impl MononokeAppBuilder {
 
         let args = app.get_matches();
         let env_args = EnvironmentArgs::from_arg_matches(&args)?;
+        let config_mode = env_args.config_args.mode();
         let mut env = self.build_environment(env_args)?;
 
         for ext in self.arg_extensions.iter() {
             ext.process_args(&args, &mut env)?;
         }
 
-        MononokeApp::new(self.fb, args, env)
+        MononokeApp::new(self.fb, config_mode, args, env)
     }
 
     fn build_environment(&self, env_args: EnvironmentArgs) -> Result<MononokeEnvironment> {

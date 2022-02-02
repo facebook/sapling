@@ -34,8 +34,10 @@ pub struct ConfigArgs {
     pub crypto_path_regex: Option<Vec<String>>,
 }
 
+const PRODUCTION_PREFIX: &str = "configerator://scm/mononoke/repos/tiers/";
+
 fn configerator_config_path(tier: &str) -> String {
-    format!("configerator://scm/mononoke/repos/tiers/{}", tier)
+    format!("{}{}", PRODUCTION_PREFIX, tier)
 }
 
 impl ConfigArgs {
@@ -50,4 +52,25 @@ impl ConfigArgs {
             String::new()
         }
     }
+
+    pub fn mode(&self) -> ConfigMode {
+        if let Some(config_path) = &self.config_path {
+            // Any configuration that matches the production prefix is prod.
+            if config_path.starts_with(PRODUCTION_PREFIX) {
+                return ConfigMode::Production;
+            }
+        } else {
+            // Otherwise, we are prod if a prod tier is requested.
+            if self.prod || self.config_tier.is_some() {
+                return ConfigMode::Production;
+            }
+        }
+        ConfigMode::Development
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum ConfigMode {
+    Production,
+    Development,
 }
