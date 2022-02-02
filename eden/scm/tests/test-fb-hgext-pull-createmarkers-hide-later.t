@@ -2,12 +2,13 @@
 
 Setup
 
-  $ configure mutation-norecord dummyssh
+  $ configure mutation-norecord dummyssh phabstatus
   $ enable amend pullcreatemarkers pushrebase rebase remotenames
   $ setconfig ui.username="nobody <no.reply@fb.com>" experimental.rebaseskipobsolete=true
   $ setconfig remotenames.allownonfastforward=true
   $ setconfig pullcreatemarkers.use-graphql=false
   $ setconfig pullcreatemarkers.hook-pull=true
+  $ setconfig extensions.arcconfig="$TESTDIR/../edenscm/hgext/extlib/phabricator/arcconfig.py"
 
 Test that hg pull creates obsolescence markers for landed diffs
   $ hg init server
@@ -24,6 +25,11 @@ Test that hg pull creates obsolescence markers for landed diffs
   >    echo "Reviewed By: someone" >> msg
   >    hg ci --amend -l msg
   > }
+  $ landed_graphql() {
+  >   printf '{"number": %s, ' $1
+  >   printf '"phabricator_versions": { "nodes": [] }, "phabricator_diff_commit": '
+  >   printf '{ "nodes": [{"commit_identifier": "%s"}]}}' $2
+  > }
 
 Set up server repository
 
@@ -32,6 +38,10 @@ Set up server repository
   $ mkcommit secondcommit
   $ hg book master
   $ cd ..
+
+Configure arc
+  $ echo '{}' > .arcrc
+  $ echo '{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "oauth" : "garbage_cert"}}}' > .arcconfig
 
 Set up a client repository, and work on 3 diffs
 
@@ -73,6 +83,9 @@ when a diff is landed with landcastle.
   remote: pushing 2 changesets:
   remote:     e0672eeeb97c  add b
   remote:     cc68f5e5f8d6  add c
+  $ printf '[{"data": {"phabricator_diff_query": [{"results": {"nodes": [%s, %s]}}]}}]' \
+  > "$(landed_graphql 123 e0672eeeb97c5767cc642e702951cfcfa73cdc82)" \
+  > "$(landed_graphql 124 cc68f5e5f8d6a0aa5683ff6fb1afd15aa95a08b8)"  > $TESTTMP/mockduit
 
 Strip the commits we just landed.
 
@@ -83,12 +96,13 @@ Strip the commits we just landed.
 Here pull should now detect commits 2 and 3 as landed, but it won't be able to
 hide them since there is a non-hidden successor.
 
-  $ hg pull
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg pull
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
+  marked 2 commits as landed
   $ hg log -G -T '"{desc}" {remotebookmarks}' -r 'all()'
   o  "add c
   │
@@ -129,6 +143,10 @@ Now land the last diff.
   updating bookmark master
   remote: pushing 1 changeset:
   remote:     296f9d37d5c1  add d
+  $ printf '[{"data": {"phabricator_diff_query": [{"results": {"nodes": [%s, %s, %s]}}]}}]' \
+  > "$(landed_graphql 123 e0672eeeb97c5767cc642e702951cfcfa73cdc82)" \
+  > "$(landed_graphql 124 cc68f5e5f8d6a0aa5683ff6fb1afd15aa95a08b8)" \
+  > "$(landed_graphql 131 296f9d37d5c114b8e03228a16e0fb390dcc1dca8)"  > $TESTTMP/mockduit
 
 And strip the commit we just landed.
 
@@ -140,12 +158,13 @@ Here pull should now detect commit 4 has been landed.  It should hide this
 commit, and should also hide 3 and 2, which were previously landed, but up
 until now had non-hidden successors.
 
-  $ hg pull
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg pull
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
+  marked 1 commit as landed
   $ hg log -G -T '"{desc}" {remotebookmarks}' -r 'all()'
   o  "add d
   │

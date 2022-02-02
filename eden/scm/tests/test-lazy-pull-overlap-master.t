@@ -9,7 +9,7 @@ And the client does not limit itself to only be able to resolve ancestors of
 the old master in that case.
 
   $ configure modern
-  $ setconfig paths.default=test:e1 ui.ssh=false pull.master-fastpath=true 
+  $ setconfig paths.default=test:e1 ui.ssh=false
   $ shorttraceback
 
 Reduce discovery sample size so we avoid triggering resolving lazy hashes to expose issues.

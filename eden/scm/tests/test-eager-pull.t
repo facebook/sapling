@@ -51,7 +51,7 @@ Pull:
 
 
   $ setconfig paths.default=test:e2
-  $ LOG=pull::fastpath=debug hg pull --config pull.master-fastpath=True
+  $ LOG=pull::fastpath=debug hg pull
   pulling from test:e2
   DEBUG pull::fastpath: master: 26805aba1e600a82e93661149f2313866a221a7b => 9bc730a19041f9ec7cb33c626e811aa233efb18c
   imported commit graph for 2 commits (1 segment)
@@ -67,7 +67,7 @@ Pull:
   o  A
   
 (pull again does not trigger pull fast path API)
-  $ LOG=pull::fastpath=debug hg pull --config pull.master-fastpath=True
+  $ LOG=pull::fastpath=debug hg pull
   pulling from test:e2
   DEBUG pull::fastpath: master: 9bc730a19041f9ec7cb33c626e811aa233efb18c (unchanged)
 
@@ -95,7 +95,7 @@ Test fallback to slow path:
   > |
   > A
   > EOS
-  $ LOG=pull::fastpath=debug hg pull --config pull.master-fastpath=True
+  $ LOG=pull::fastpath=debug hg pull
   pulling from test:e2
   DEBUG pull::fastpath: master: 26805aba1e600a82e93661149f2313866a221a7b => 9bc730a19041f9ec7cb33c626e811aa233efb18c
    WARN pull::fastpath: cannot use pull fast path: NeedSlowPath: f585351a92f85104bff7c284233c338b10eb1df7 exists in local graph
@@ -121,7 +121,7 @@ Test DAG flushed but not metalog (Emulates Ctrl+C or SIGKILL in between):
   pulling from test:e1
 
   $ setconfig paths.default=test:e2
-  $ FAILPOINTS=transaction-metalog-commit=return LOG=pull::fastpath=debug hg pull --config pull.master-fastpath=True
+  $ FAILPOINTS=transaction-metalog-commit=return LOG=pull::fastpath=debug hg pull
   pulling from test:e2
   DEBUG pull::fastpath: master: 26805aba1e600a82e93661149f2313866a221a7b => 9bc730a19041f9ec7cb33c626e811aa233efb18c
   imported commit graph for 2 commits (1 segment)
@@ -133,7 +133,7 @@ Test DAG flushed but not metalog (Emulates Ctrl+C or SIGKILL in between):
 Fast path can still be used with stale remotenames:
 
   $ setconfig paths.default=test:e3
-  $ LOG=pull::fastpath=debug,dag::protocol=debug  hg pull --config pull.master-fastpath=True
+  $ LOG=pull::fastpath=debug,dag::protocol=debug  hg pull
   pulling from test:e3
   DEBUG pull::fastpath: master: 9bc730a19041f9ec7cb33c626e811aa233efb18c => 7b3a68e117f183a6da8e60779d8fbeeed22382bb
   DEBUG dag::protocol: resolve names [9d37022187178c68e8fe8dff17c9c57fb62b9ea5, a194cadd16930608adaa649035ad4c16930cbd0f] remotely

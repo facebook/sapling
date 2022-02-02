@@ -1,12 +1,13 @@
 #chg-compatible
   $ setconfig experimental.allowfilepeer=True
 
-  $ enable amend commitcloud infinitepush rebase remotenames pullcreatemarkers
+  $ enable amend commitcloud infinitepush rebase remotenames pullcreatemarkers phabstatus
   $ configure dummyssh
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=server
   $ setconfig pullcreatemarkers.use-graphql=false
   $ setconfig pullcreatemarkers.hook-pull=true
+  $ setconfig extensions.arcconfig="$TESTDIR/../edenscm/hgext/extlib/phabricator/arcconfig.py"
 
   $ hg init server --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   $ cd server
@@ -18,7 +19,11 @@
   $ hg bookmark master
   $ hg debugmakepublic .
   $ cd ..
+Configure arc
+  $ echo '{}' > .arcrc
+  $ echo '{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "oauth" : "garbage_cert"}}}' > .arcconfig
 
+Client 1
   $ hg clone ssh://user@dummy/server client1 -q
   $ cd client1
   $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
@@ -66,15 +71,46 @@ Fake land the commit
   $ echo 2 > serverfile
   $ hg commit -Aqm public-commit-2
   $ hg debugmakepublic .
+  $ cat > $TESTTMP/mockduit << EOF
+  > [{
+  >   "data": {
+  >     "phabricator_diff_query": [
+  >       {
+  >         "results": {
+  >           "nodes": [
+  >             {
+  >               "number": 1234,
+  >               "phabricator_versions": {
+  >                 "nodes": [
+  >                   {"local_commits": []}
+  >                 ]
+  >               },
+  >               "phabricator_diff_commit": {
+  >                 "nodes": [
+  >                   {"commit_identifier": "441f69264760bc9126522b19ffd4ad350cb79a29"}
+  >                 ]
+  >               }
+  >             }
+  >           ]
+  >         }
+  >       }
+  >     ]
+  >   },
+  >   "extensions": {
+  >     "is_final": true
+  >   }
+  > }]
+  > EOF
   $ cd ..
 
   $ cd client1
-  $ hg pull
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg pull
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
+  marked 1 commit as landed
   $ tglogp
   o  67d363c9001e public 'public-commit-2'
   │
@@ -132,7 +168,7 @@ Sync in client2.   This will omit the bookmark because we don't have the landed 
   
 Pull so that we have the public commit and sync again.
 
-  $ hg pull
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg pull
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets

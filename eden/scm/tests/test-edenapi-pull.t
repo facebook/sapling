@@ -75,6 +75,7 @@ C and E are known and F is unknown
   $ hg pull -r 99dac869f01e09
   pulling from test:e1
   DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': '178c10ffbc2f92d5407c14478ae9d9dea81f232e'}
+  DEBUG pull::fastpath: master: 178c10ffbc2f92d5407c14478ae9d9dea81f232e (unchanged)
   DEBUG pull::httphashlookup: edenapi hash lookups: ['99dac869f01e09fe3d501fa645ea524af80d498f']
   DEBUG exchange::httpcommitlookup: edenapi commitknown: {'hgid': b'\x17\x8c\x10\xff\xbc/\x92\xd5@|\x14G\x8a\xe9\xd9\xde\xa8\x1f#.', 'known': {'Ok': True}}
   DEBUG exchange::httpcommitlookup: edenapi commitknown: {'hgid': b"/'FJf\xa0\x1c\x1c\x14\xaa%yN\xf4\x10Q\x8d\xc0\x17\xaf", 'known': {'Ok': False}}
