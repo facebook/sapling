@@ -157,9 +157,10 @@ def initgitbare(ui, destpath):
     """
     # not using 'git clone --bare' because it writes refs to refs/heads/,
     # not in desirable refs/remotes/origin/heads/.
-    cmdlist = [(None, ["init", "-q", "-b", "default", "--bare", destpath])]
+    cmdlist = [(None, ["init", "-q", "--bare", destpath])]
+    configs = ["init.defaultBranch=_unused_branch"]
     for gitdir, cmd in cmdlist:
-        ret = rungitnorepo(ui, cmd, gitdir=gitdir)
+        ret = rungitnorepo(ui, cmd, gitdir=gitdir, configs=configs)
         if ret != 0:
             return ret
     return 0
@@ -619,11 +620,15 @@ def rungit(repo, args):
     return rungitnorepo(repo.ui, args, gitdir=gitdir)
 
 
-def rungitnorepo(ui, args, gitdir=None):
+def rungitnorepo(ui, args, gitdir=None, configs=None):
     """Run git command without an optional repo path, using inherited stdio.
     Passes --quiet and --verbose to the git command.
+    'configs' is an optional list of configs in '<name>=<value>' format.
     """
     cmd = [gitbinary(ui)]
+    if configs:
+        for config in configs:
+            cmd += ["-c", config]
     if gitdir is not None:
         cmd.append("--git-dir=%s" % gitdir)
     gitcmd = args[0]
