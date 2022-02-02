@@ -1396,7 +1396,7 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
                  .thenValue([this,
                              paths = std::move(paths),
                              &fetchContext,
-                             mountPath,
+                             mountPath = mountPath.copy(),
                              reqBitmask](auto&&) mutable {
                    vector<ImmediateFuture<BlobMetadata>> futures;
                    for (const auto& p : paths) {
