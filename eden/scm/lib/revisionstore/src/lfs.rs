@@ -422,7 +422,9 @@ impl LfsIndexedLogBlobsStore {
             if &apparent_hash == hash || is_redacted(&data) {
                 Ok(Some(data))
             } else {
-                tracing::debug!(target: "lfs_read_hash_mismatch", lfs_read_hash_mismatch=&hash.to_hex()[..]);
+                if data.len() as u64 == total_size {
+                    tracing::debug!(target: "lfs_read_hash_mismatch", lfs_read_hash_mismatch=&hash.to_hex()[..]);
+                }
                 Ok(None)
             }
         }
