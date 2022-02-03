@@ -794,16 +794,26 @@ class FixupCmd(Subcmd):
             ),
             action="store_true",
         )
+        parser.add_argument(
+            "--all-sources",
+            help=(
+                "By default, paths with source of .eden-redirections will be fixed. "
+                "Setting this flag to true will fix paths from all sources."
+            ),
+            action="store_true",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         _instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
         mount_table = mtab.new()
         redirs = get_effective_redirections(checkout, mount_table)
-
         for redir in redirs.values():
             if redir.state == RedirectionState.MATCHES_CONFIGURATION and not (
                 args.force_remount_bind_mounts and redir.type == RedirectionType.BIND
             ):
+                continue
+
+            if redir.source != REPO_SOURCE and not args.all_sources:
                 continue
 
             print(f"Fixing {redir.repo_path}", file=sys.stderr)
