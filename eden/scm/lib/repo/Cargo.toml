@@ -11,7 +11,6 @@ thiserror = "1.0.29"
 util = { path = "../util" }
 
 [dev-dependencies]
-regex = "1.5.4"
 tempfile = "3.2"
 
 [features]
