@@ -28,6 +28,7 @@ use blackbox::serde_json;
 use clidispatch::dispatch;
 use clidispatch::errors;
 use clidispatch::global_flags::HgGlobalOpts;
+use clidispatch::io::CanColor;
 use clidispatch::io::IsTty;
 use clidispatch::io::IO;
 use configparser::config::ConfigSet;
@@ -276,6 +277,7 @@ fn setup_tracing(
         let error = io.error();
         let env_logger = FmtLayer::new()
             .with_span_events(FmtSpan::ACTIVE)
+            .with_ansi(error.can_color())
             .with_writer(move || error.clone());
         if is_test {
             // In tests, disable color and timestamps for cleaner output.
