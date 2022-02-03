@@ -134,7 +134,7 @@ pub mod types {
         #[serde(default)]
         #[doc = "List of command line arguments, including the executable name,\ngiven to the edenfs process."]
         pub commandLine: ::std::vec::Vec<::std::string::String>,
-        #[doc = "The service status.\nThis is the same data reported by fb303_core.getStatus()"]
+        #[doc = "The service status.\n\nThis is almost the same value reported by\nfb303_core.BaseService.getStatus(). fb303_core.BaseService.getStatus()\nonly returns the Thrift server status and does not understand mounts or\ngraceful restarts."]
         pub status: ::std::option::Option<fb303_core::types::fb303_status>,
         #[doc = "The uptime of the edenfs daemon\nSame data from /proc/pid/stat"]
         pub uptime: ::std::option::Option<::std::primitive::f32>,
@@ -264,6 +264,75 @@ pub mod types {
         info(crate::types::FileInformation),
         error(crate::types::EdenError),
         UnknownField(::std::primitive::i32),
+    }
+
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[doc = "Subset of attributes for a single file returned by getAttributesFromFiles()"]
+    pub struct FileAttributeData {
+        pub sha1: ::std::option::Option<crate::types::BinaryHash>,
+        pub fileSize: ::std::option::Option<::std::primitive::i64>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
+    }
+
+    #[derive(Clone, PartialEq, Debug, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[doc = "Attributes for a file or information about error encountered when accessing file attributes.\nThe most likely error will be ENOENT, implying that the file doesn't exist."]
+    pub enum FileAttributeDataOrError {
+        data(crate::types::FileAttributeData),
+        error(crate::types::EdenError),
+        UnknownField(::std::primitive::i32),
+    }
+
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[doc = "Ensure that all inflight working copy modification have completed.\n\nOn some platforms, EdenFS is processing working copy modifications\ncallbacks from the platform in an asynchronous manner, which means that by\nthe time a write/creat/mkdir/unlink/etc syscall returns from the kernel,\nEdenFS may not have updated its internal state.\n\nThus, an application making changes to the working copy and quickly\nrequesting EdenFS to perform an operation on it will race with EdenFS\nupdating its internal state and may thus get stale data.\n\nTo avoid this, EdenFS queries need to internally synchronize the working\ncopy before performing the query itself. This structure defines how EdenFS\nwill do this.\n\nApplications that care about synchronizing EdenFS up to a certain point in\ntime are expected to set a non-zero syncTimeout once to synchronize EdenFS\nand then issue all their thrift requests with a syncTimeout of 0."]
+    pub struct SyncBehavior {
+        pub syncTimeoutSeconds: ::std::option::Option<::std::primitive::i64>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
+    }
+
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[doc = "Parameters for the getAttributesFromFiles() function"]
+    pub struct GetAttributesFromFilesParams {
+        #[serde(default)]
+        pub mountPoint: crate::types::PathString,
+        #[serde(default)]
+        pub paths: ::std::vec::Vec<crate::types::PathString>,
+        #[serde(default)]
+        pub requestedAttributes: crate::types::unsigned64,
+        #[serde(default)]
+        pub sync: crate::types::SyncBehavior,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
+    }
+
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[doc = "Return value for the getAttributesFromFiles() function.\nThe returned list of attributes corresponds to the input list of\npaths; eg; res[0] holds the information for paths[0]."]
+    pub struct GetAttributesFromFilesResult {
+        #[serde(default)]
+        pub res: ::std::vec::Vec<crate::types::FileAttributeDataOrError>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
     #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
@@ -789,6 +858,8 @@ pub mod types {
         pub predictiveGlob: ::std::option::Option<crate::types::PredictiveFetch>,
         #[serde(default)]
         pub listOnlyFiles: ::std::primitive::bool,
+        #[serde(default)]
+        pub sync: crate::types::SyncBehavior,
         // This field forces `..Default::default()` when instantiating this
         // struct, to make code future-proof against new fields added later to
         // the definition in Thrift. If you don't want this, add the annotation
@@ -983,7 +1054,7 @@ pub mod types {
         pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct SetPathObjectIdParams {
         #[serde(default)]
         pub mountPoint: crate::types::PathString,
@@ -996,6 +1067,7 @@ pub mod types {
         pub r#type: crate::types::ObjectType,
         #[serde(default)]
         pub mode: crate::types::CheckoutMode,
+        pub requestInfo: ::std::option::Option<::std::collections::BTreeMap<::std::string::String, ::std::string::String>>,
         // This field forces `..Default::default()` when instantiating this
         // struct, to make code future-proof against new fields added later to
         // the definition in Thrift. If you don't want this, add the annotation
@@ -1035,6 +1107,19 @@ pub mod types {
     pub struct ResetParentCommitsParams {
         #[doc = "The hg root manifest that corresponds to the commit (if known).\n\nWhen a commit is newly created, EdenFS won't know the commit\nto root-manifest mapping for the commit, and won't be able to find\nout from the import helper until the import helper re-opens the\nrepo.  To speed this up, Mercurial clients may optionally provide\nthe hash of the root manifest directly, so that EdenFS doesn't\nneed to look it up."]
         pub hgRootManifest: ::std::option::Option<crate::types::BinaryHash>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
+    }
+
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    pub struct SynchronizeWorkingCopyParams {
+        #[serde(default)]
+        pub sync: crate::types::SyncBehavior,
         // This field forces `..Default::default()` when instantiating this
         // struct, to make code future-proof against new fields added later to
         // the definition in Thrift. If you don't want this, add the annotation
@@ -1372,6 +1457,123 @@ pub mod types {
         #[inline]
         fn read(p: &mut P) -> ::anyhow::Result<Self> {
             ::std::result::Result::Ok(MountState::from(p.read_i32()?))
+        }
+    }
+
+    #[doc = "File Attributes that can be requested with getAttributesFromFiles(). All attributes\nshould be a power of 2. OR the requested attributes together to get a bitmask."]
+    #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    pub struct FileAttributes(pub ::std::primitive::i32);
+
+    impl FileAttributes {
+        pub const NONE: Self = FileAttributes(0i32);
+        pub const SHA1_HASH: Self = FileAttributes(1i32);
+        pub const FILE_SIZE: Self = FileAttributes(2i32);
+    }
+
+    impl ::fbthrift::ThriftEnum for FileAttributes {
+        fn enumerate() -> &'static [(FileAttributes, &'static str)] {
+            &[
+                (FileAttributes::NONE, "NONE"),
+                (FileAttributes::SHA1_HASH, "SHA1_HASH"),
+                (FileAttributes::FILE_SIZE, "FILE_SIZE"),
+            ]
+        }
+
+        fn variants() -> &'static [&'static str] {
+            &[
+                "NONE",
+                "SHA1_HASH",
+                "FILE_SIZE",
+            ]
+        }
+
+        fn variant_values() -> &'static [FileAttributes] {
+            &[
+                FileAttributes::NONE,
+                FileAttributes::SHA1_HASH,
+                FileAttributes::FILE_SIZE,
+            ]
+        }
+    }
+
+    impl ::std::default::Default for FileAttributes {
+        fn default() -> Self {
+            FileAttributes(::fbthrift::__UNKNOWN_ID)
+        }
+    }
+
+    impl<'a> ::std::convert::From<&'a FileAttributes> for ::std::primitive::i32 {
+        #[inline]
+        fn from(x: &'a FileAttributes) -> Self {
+            x.0
+        }
+    }
+
+    impl ::std::convert::From<FileAttributes> for ::std::primitive::i32 {
+        #[inline]
+        fn from(x: FileAttributes) -> Self {
+            x.0
+        }
+    }
+
+    impl ::std::convert::From<::std::primitive::i32> for FileAttributes {
+        #[inline]
+        fn from(x: ::std::primitive::i32) -> Self {
+            Self(x)
+        }
+    }
+
+    impl ::std::fmt::Display for FileAttributes {
+        fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            static VARIANTS_BY_NUMBER: &[(&::std::primitive::str, ::std::primitive::i32)] = &[
+                ("NONE", 0),
+                ("SHA1_HASH", 1),
+                ("FILE_SIZE", 2),
+            ];
+            ::fbthrift::help::enum_display(VARIANTS_BY_NUMBER, fmt, self.0)
+        }
+    }
+
+    impl ::std::fmt::Debug for FileAttributes {
+        fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            write!(fmt, "FileAttributes::{}", self)
+        }
+    }
+
+    impl ::std::str::FromStr for FileAttributes {
+        type Err = ::anyhow::Error;
+
+        fn from_str(string: &::std::primitive::str) -> ::std::result::Result<Self, Self::Err> {
+            static VARIANTS_BY_NAME: &[(&::std::primitive::str, ::std::primitive::i32)] = &[
+                ("FILE_SIZE", 2),
+                ("NONE", 0),
+                ("SHA1_HASH", 1),
+            ];
+            ::fbthrift::help::enum_from_str(VARIANTS_BY_NAME, string, "FileAttributes").map(FileAttributes)
+        }
+    }
+
+    impl ::fbthrift::GetTType for FileAttributes {
+        const TTYPE: ::fbthrift::TType = ::fbthrift::TType::I32;
+    }
+
+    impl<P> ::fbthrift::Serialize<P> for FileAttributes
+    where
+        P: ::fbthrift::ProtocolWriter,
+    {
+        #[inline]
+        fn write(&self, p: &mut P) {
+            p.write_i32(self.into())
+        }
+    }
+
+    impl<P> ::fbthrift::Deserialize<P> for FileAttributes
+    where
+        P: ::fbthrift::ProtocolReader,
+    {
+        #[inline]
+        fn read(p: &mut P) -> ::anyhow::Result<Self> {
+            ::std::result::Result::Ok(FileAttributes::from(p.read_i32()?))
         }
     }
 
@@ -3119,6 +3321,393 @@ pub mod types {
             ::std::result::Result::Ok(alt.unwrap_or_default())
         }
     }
+
+    impl ::std::default::Default for self::FileAttributeData {
+        fn default() -> Self {
+            Self {
+                sha1: ::std::option::Option::None,
+                fileSize: ::std::option::Option::None,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
+            }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::FileAttributeData {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("FileAttributeData")
+                .field("sha1", &self.sha1)
+                .field("fileSize", &self.fileSize)
+                .finish()
+        }
+    }
+
+    unsafe impl ::std::marker::Send for self::FileAttributeData {}
+    unsafe impl ::std::marker::Sync for self::FileAttributeData {}
+
+    impl ::fbthrift::GetTType for self::FileAttributeData {
+        const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
+    }
+
+    impl<P> ::fbthrift::Serialize<P> for self::FileAttributeData
+    where
+        P: ::fbthrift::ProtocolWriter,
+    {
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("FileAttributeData");
+            if let ::std::option::Option::Some(some) = &self.sha1 {
+                p.write_field_begin("sha1", ::fbthrift::TType::String, 1);
+                ::fbthrift::Serialize::write(some, p);
+                p.write_field_end();
+            }
+            if let ::std::option::Option::Some(some) = &self.fileSize {
+                p.write_field_begin("fileSize", ::fbthrift::TType::I64, 2);
+                ::fbthrift::Serialize::write(some, p);
+                p.write_field_end();
+            }
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    impl<P> ::fbthrift::Deserialize<P> for self::FileAttributeData
+    where
+        P: ::fbthrift::ProtocolReader,
+    {
+        fn read(p: &mut P) -> ::anyhow::Result<Self> {
+            static FIELDS: &[::fbthrift::Field] = &[
+                ::fbthrift::Field::new("fileSize", ::fbthrift::TType::I64, 2),
+                ::fbthrift::Field::new("sha1", ::fbthrift::TType::String, 1),
+            ];
+            let mut field_sha1 = ::std::option::Option::None;
+            let mut field_fileSize = ::std::option::Option::None;
+            let _ = p.read_struct_begin(|_| ())?;
+            loop {
+                let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::String, 1) => field_sha1 = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::I64, 2) => field_fileSize = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (fty, _) => p.skip(fty)?,
+                }
+                p.read_field_end()?;
+            }
+            p.read_struct_end()?;
+            ::std::result::Result::Ok(Self {
+                sha1: field_sha1,
+                fileSize: field_fileSize,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
+            })
+        }
+    }
+
+
+
+    impl ::std::default::Default for FileAttributeDataOrError {
+        fn default() -> Self {
+            Self::UnknownField(-1)
+        }
+    }
+
+    impl ::fbthrift::GetTType for FileAttributeDataOrError {
+        const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
+    }
+
+    impl<P> ::fbthrift::Serialize<P> for FileAttributeDataOrError
+    where
+        P: ::fbthrift::ProtocolWriter,
+    {
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("FileAttributeDataOrError");
+            match self {
+                FileAttributeDataOrError::data(inner) => {
+                    p.write_field_begin("data", ::fbthrift::TType::Struct, 1);
+                    ::fbthrift::Serialize::write(inner, p);
+                    p.write_field_end();
+                }
+                FileAttributeDataOrError::error(inner) => {
+                    p.write_field_begin("error", ::fbthrift::TType::Struct, 2);
+                    ::fbthrift::Serialize::write(inner, p);
+                    p.write_field_end();
+                }
+                FileAttributeDataOrError::UnknownField(_) => {}
+            }
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    impl<P> ::fbthrift::Deserialize<P> for FileAttributeDataOrError
+    where
+        P: ::fbthrift::ProtocolReader,
+    {
+        fn read(p: &mut P) -> ::anyhow::Result<Self> {
+            static FIELDS: &[::fbthrift::Field] = &[
+                ::fbthrift::Field::new("data", ::fbthrift::TType::Struct, 1),
+                ::fbthrift::Field::new("error", ::fbthrift::TType::Struct, 2),
+            ];
+            let _ = p.read_struct_begin(|_| ())?;
+            let mut once = false;
+            let mut alt = ::std::option::Option::None;
+            loop {
+                let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
+                match (fty, fid as ::std::primitive::i32, once) {
+                    (::fbthrift::TType::Stop, _, _) => break,
+                    (::fbthrift::TType::Struct, 1, false) => {
+                        once = true;
+                        alt = ::std::option::Option::Some(FileAttributeDataOrError::data(::fbthrift::Deserialize::read(p)?));
+                    }
+                    (::fbthrift::TType::Struct, 2, false) => {
+                        once = true;
+                        alt = ::std::option::Option::Some(FileAttributeDataOrError::error(::fbthrift::Deserialize::read(p)?));
+                    }
+                    (fty, _, false) => p.skip(fty)?,
+                    (badty, badid, true) => return ::std::result::Result::Err(::std::convert::From::from(::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
+                        format!(
+                            "unwanted extra union {} field ty {:?} id {}",
+                            "FileAttributeDataOrError",
+                            badty,
+                            badid,
+                        ),
+                    ))),
+                }
+                p.read_field_end()?;
+            }
+            p.read_struct_end()?;
+            ::std::result::Result::Ok(alt.unwrap_or_default())
+        }
+    }
+
+    impl ::std::default::Default for self::SyncBehavior {
+        fn default() -> Self {
+            Self {
+                syncTimeoutSeconds: ::std::option::Option::None,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
+            }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::SyncBehavior {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("SyncBehavior")
+                .field("syncTimeoutSeconds", &self.syncTimeoutSeconds)
+                .finish()
+        }
+    }
+
+    unsafe impl ::std::marker::Send for self::SyncBehavior {}
+    unsafe impl ::std::marker::Sync for self::SyncBehavior {}
+
+    impl ::fbthrift::GetTType for self::SyncBehavior {
+        const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
+    }
+
+    impl<P> ::fbthrift::Serialize<P> for self::SyncBehavior
+    where
+        P: ::fbthrift::ProtocolWriter,
+    {
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("SyncBehavior");
+            if let ::std::option::Option::Some(some) = &self.syncTimeoutSeconds {
+                p.write_field_begin("syncTimeoutSeconds", ::fbthrift::TType::I64, 1);
+                ::fbthrift::Serialize::write(some, p);
+                p.write_field_end();
+            }
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    impl<P> ::fbthrift::Deserialize<P> for self::SyncBehavior
+    where
+        P: ::fbthrift::ProtocolReader,
+    {
+        fn read(p: &mut P) -> ::anyhow::Result<Self> {
+            static FIELDS: &[::fbthrift::Field] = &[
+                ::fbthrift::Field::new("syncTimeoutSeconds", ::fbthrift::TType::I64, 1),
+            ];
+            let mut field_syncTimeoutSeconds = ::std::option::Option::None;
+            let _ = p.read_struct_begin(|_| ())?;
+            loop {
+                let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::I64, 1) => field_syncTimeoutSeconds = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (fty, _) => p.skip(fty)?,
+                }
+                p.read_field_end()?;
+            }
+            p.read_struct_end()?;
+            ::std::result::Result::Ok(Self {
+                syncTimeoutSeconds: field_syncTimeoutSeconds,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
+            })
+        }
+    }
+
+
+    impl ::std::default::Default for self::GetAttributesFromFilesParams {
+        fn default() -> Self {
+            Self {
+                mountPoint: ::std::default::Default::default(),
+                paths: ::std::default::Default::default(),
+                requestedAttributes: ::std::default::Default::default(),
+                sync: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
+            }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::GetAttributesFromFilesParams {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("GetAttributesFromFilesParams")
+                .field("mountPoint", &self.mountPoint)
+                .field("paths", &self.paths)
+                .field("requestedAttributes", &self.requestedAttributes)
+                .field("sync", &self.sync)
+                .finish()
+        }
+    }
+
+    unsafe impl ::std::marker::Send for self::GetAttributesFromFilesParams {}
+    unsafe impl ::std::marker::Sync for self::GetAttributesFromFilesParams {}
+
+    impl ::fbthrift::GetTType for self::GetAttributesFromFilesParams {
+        const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
+    }
+
+    impl<P> ::fbthrift::Serialize<P> for self::GetAttributesFromFilesParams
+    where
+        P: ::fbthrift::ProtocolWriter,
+    {
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("GetAttributesFromFilesParams");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("paths", ::fbthrift::TType::List, 2);
+            ::fbthrift::Serialize::write(&self.paths, p);
+            p.write_field_end();
+            p.write_field_begin("requestedAttributes", ::fbthrift::TType::I64, 3);
+            ::fbthrift::Serialize::write(&self.requestedAttributes, p);
+            p.write_field_end();
+            p.write_field_begin("sync", ::fbthrift::TType::Struct, 4);
+            ::fbthrift::Serialize::write(&self.sync, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    impl<P> ::fbthrift::Deserialize<P> for self::GetAttributesFromFilesParams
+    where
+        P: ::fbthrift::ProtocolReader,
+    {
+        fn read(p: &mut P) -> ::anyhow::Result<Self> {
+            static FIELDS: &[::fbthrift::Field] = &[
+                ::fbthrift::Field::new("mountPoint", ::fbthrift::TType::String, 1),
+                ::fbthrift::Field::new("paths", ::fbthrift::TType::List, 2),
+                ::fbthrift::Field::new("requestedAttributes", ::fbthrift::TType::I64, 3),
+                ::fbthrift::Field::new("sync", ::fbthrift::TType::Struct, 4),
+            ];
+            let mut field_mountPoint = ::std::option::Option::None;
+            let mut field_paths = ::std::option::Option::None;
+            let mut field_requestedAttributes = ::std::option::Option::None;
+            let mut field_sync = ::std::option::Option::None;
+            let _ = p.read_struct_begin(|_| ())?;
+            loop {
+                let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::String, 1) => field_mountPoint = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::List, 2) => field_paths = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::I64, 3) => field_requestedAttributes = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::Struct, 4) => field_sync = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (fty, _) => p.skip(fty)?,
+                }
+                p.read_field_end()?;
+            }
+            p.read_struct_end()?;
+            ::std::result::Result::Ok(Self {
+                mountPoint: field_mountPoint.unwrap_or_default(),
+                paths: field_paths.unwrap_or_default(),
+                requestedAttributes: field_requestedAttributes.unwrap_or_default(),
+                sync: field_sync.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
+            })
+        }
+    }
+
+
+    impl ::std::default::Default for self::GetAttributesFromFilesResult {
+        fn default() -> Self {
+            Self {
+                res: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
+            }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::GetAttributesFromFilesResult {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("GetAttributesFromFilesResult")
+                .field("res", &self.res)
+                .finish()
+        }
+    }
+
+    unsafe impl ::std::marker::Send for self::GetAttributesFromFilesResult {}
+    unsafe impl ::std::marker::Sync for self::GetAttributesFromFilesResult {}
+
+    impl ::fbthrift::GetTType for self::GetAttributesFromFilesResult {
+        const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
+    }
+
+    impl<P> ::fbthrift::Serialize<P> for self::GetAttributesFromFilesResult
+    where
+        P: ::fbthrift::ProtocolWriter,
+    {
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("GetAttributesFromFilesResult");
+            p.write_field_begin("res", ::fbthrift::TType::List, 1);
+            ::fbthrift::Serialize::write(&self.res, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    impl<P> ::fbthrift::Deserialize<P> for self::GetAttributesFromFilesResult
+    where
+        P: ::fbthrift::ProtocolReader,
+    {
+        fn read(p: &mut P) -> ::anyhow::Result<Self> {
+            static FIELDS: &[::fbthrift::Field] = &[
+                ::fbthrift::Field::new("res", ::fbthrift::TType::List, 1),
+            ];
+            let mut field_res = ::std::option::Option::None;
+            let _ = p.read_struct_begin(|_| ())?;
+            loop {
+                let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::List, 1) => field_res = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (fty, _) => p.skip(fty)?,
+                }
+                p.read_field_end()?;
+            }
+            p.read_struct_end()?;
+            ::std::result::Result::Ok(Self {
+                res: field_res.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
+            })
+        }
+    }
+
 
     impl ::std::default::Default for self::JournalPosition {
         fn default() -> Self {
@@ -5578,6 +6167,7 @@ pub mod types {
                 background: false,
                 predictiveGlob: ::std::option::Option::None,
                 listOnlyFiles: false,
+                sync: ::std::default::Default::default(),
                 _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
         }
@@ -5599,6 +6189,7 @@ pub mod types {
                 .field("background", &self.background)
                 .field("predictiveGlob", &self.predictiveGlob)
                 .field("listOnlyFiles", &self.listOnlyFiles)
+                .field("sync", &self.sync)
                 .finish()
         }
     }
@@ -5654,6 +6245,9 @@ pub mod types {
             p.write_field_begin("listOnlyFiles", ::fbthrift::TType::Bool, 12);
             ::fbthrift::Serialize::write(&self.listOnlyFiles, p);
             p.write_field_end();
+            p.write_field_begin("sync", ::fbthrift::TType::Struct, 13);
+            ::fbthrift::Serialize::write(&self.sync, p);
+            p.write_field_end();
             p.write_field_stop();
             p.write_struct_end();
         }
@@ -5676,6 +6270,7 @@ pub mod types {
                 ::fbthrift::Field::new("revisions", ::fbthrift::TType::List, 7),
                 ::fbthrift::Field::new("searchRoot", ::fbthrift::TType::String, 9),
                 ::fbthrift::Field::new("suppressFileList", ::fbthrift::TType::Bool, 5),
+                ::fbthrift::Field::new("sync", ::fbthrift::TType::Struct, 13),
                 ::fbthrift::Field::new("wantDtype", ::fbthrift::TType::Bool, 6),
             ];
             let mut field_mountPoint = ::std::option::Option::None;
@@ -5690,6 +6285,7 @@ pub mod types {
             let mut field_background = ::std::option::Option::None;
             let mut field_predictiveGlob = ::std::option::Option::None;
             let mut field_listOnlyFiles = ::std::option::Option::None;
+            let mut field_sync = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
@@ -5707,6 +6303,7 @@ pub mod types {
                     (::fbthrift::TType::Bool, 10) => field_background = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::Struct, 11) => field_predictiveGlob = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::Bool, 12) => field_listOnlyFiles = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::Struct, 13) => field_sync = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -5725,6 +6322,7 @@ pub mod types {
                 background: field_background.unwrap_or_else(|| false),
                 predictiveGlob: field_predictiveGlob,
                 listOnlyFiles: field_listOnlyFiles.unwrap_or_else(|| false),
+                sync: field_sync.unwrap_or_default(),
                 _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
@@ -6673,6 +7271,7 @@ pub mod types {
                 objectId: ::std::default::Default::default(),
                 r#type: ::std::default::Default::default(),
                 mode: ::std::default::Default::default(),
+                requestInfo: ::std::option::Option::None,
                 _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
         }
@@ -6687,6 +7286,7 @@ pub mod types {
                 .field("objectId", &self.objectId)
                 .field("r#type", &self.r#type)
                 .field("mode", &self.mode)
+                .field("requestInfo", &self.requestInfo)
                 .finish()
         }
     }
@@ -6719,6 +7319,11 @@ pub mod types {
             p.write_field_begin("mode", ::fbthrift::TType::I32, 5);
             ::fbthrift::Serialize::write(&self.mode, p);
             p.write_field_end();
+            if let ::std::option::Option::Some(some) = &self.requestInfo {
+                p.write_field_begin("requestInfo", ::fbthrift::TType::Map, 6);
+                ::fbthrift::Serialize::write(some, p);
+                p.write_field_end();
+            }
             p.write_field_stop();
             p.write_struct_end();
         }
@@ -6734,6 +7339,7 @@ pub mod types {
                 ::fbthrift::Field::new("mountPoint", ::fbthrift::TType::String, 1),
                 ::fbthrift::Field::new("objectId", ::fbthrift::TType::String, 3),
                 ::fbthrift::Field::new("path", ::fbthrift::TType::String, 2),
+                ::fbthrift::Field::new("requestInfo", ::fbthrift::TType::Map, 6),
                 ::fbthrift::Field::new("type", ::fbthrift::TType::I32, 4),
             ];
             let mut field_mountPoint = ::std::option::Option::None;
@@ -6741,6 +7347,7 @@ pub mod types {
             let mut field_objectId = ::std::option::Option::None;
             let mut field_type = ::std::option::Option::None;
             let mut field_mode = ::std::option::Option::None;
+            let mut field_requestInfo = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
@@ -6751,6 +7358,7 @@ pub mod types {
                     (::fbthrift::TType::String, 3) => field_objectId = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::I32, 4) => field_type = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::I32, 5) => field_mode = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::Map, 6) => field_requestInfo = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -6762,6 +7370,7 @@ pub mod types {
                 objectId: field_objectId.unwrap_or_default(),
                 r#type: field_type.unwrap_or_default(),
                 mode: field_mode.unwrap_or_default(),
+                requestInfo: field_requestInfo,
                 _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
@@ -6967,6 +7576,73 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 hgRootManifest: field_hgRootManifest,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
+            })
+        }
+    }
+
+
+    impl ::std::default::Default for self::SynchronizeWorkingCopyParams {
+        fn default() -> Self {
+            Self {
+                sync: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
+            }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::SynchronizeWorkingCopyParams {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("SynchronizeWorkingCopyParams")
+                .field("sync", &self.sync)
+                .finish()
+        }
+    }
+
+    unsafe impl ::std::marker::Send for self::SynchronizeWorkingCopyParams {}
+    unsafe impl ::std::marker::Sync for self::SynchronizeWorkingCopyParams {}
+
+    impl ::fbthrift::GetTType for self::SynchronizeWorkingCopyParams {
+        const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
+    }
+
+    impl<P> ::fbthrift::Serialize<P> for self::SynchronizeWorkingCopyParams
+    where
+        P: ::fbthrift::ProtocolWriter,
+    {
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("SynchronizeWorkingCopyParams");
+            p.write_field_begin("sync", ::fbthrift::TType::Struct, 1);
+            ::fbthrift::Serialize::write(&self.sync, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    impl<P> ::fbthrift::Deserialize<P> for self::SynchronizeWorkingCopyParams
+    where
+        P: ::fbthrift::ProtocolReader,
+    {
+        fn read(p: &mut P) -> ::anyhow::Result<Self> {
+            static FIELDS: &[::fbthrift::Field] = &[
+                ::fbthrift::Field::new("sync", ::fbthrift::TType::Struct, 1),
+            ];
+            let mut field_sync = ::std::option::Option::None;
+            let _ = p.read_struct_begin(|_| ())?;
+            loop {
+                let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::Struct, 1) => field_sync = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (fty, _) => p.skip(fty)?,
+                }
+                p.read_field_end()?;
+            }
+            p.read_struct_end()?;
+            ::std::result::Result::Ok(Self {
+                sync: field_sync.unwrap_or_default(),
                 _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
@@ -7696,6 +8372,147 @@ pub mod services {
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "ResetParentCommitsExn",
+                                    badty,
+                                    badid,
+                                ),
+                            )
+                        )),
+                    }
+                    p.read_field_end()?;
+                }
+                p.read_struct_end()?;
+                ::std::result::Result::Ok(alt)
+            }
+        }
+
+        #[derive(Clone, Debug)]
+        pub enum SynchronizeWorkingCopyExn {
+            Success(()),
+            ex(crate::types::EdenError),
+            ApplicationException(::fbthrift::ApplicationException),
+        }
+
+        impl ::std::convert::From<crate::types::EdenError> for SynchronizeWorkingCopyExn {
+            fn from(exn: crate::types::EdenError) -> Self {
+                SynchronizeWorkingCopyExn::ex(exn)
+            }
+        }
+
+        impl ::std::convert::From<::fbthrift::ApplicationException> for SynchronizeWorkingCopyExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
+                SynchronizeWorkingCopyExn::ApplicationException(exn)
+            }
+        }
+
+        impl ::fbthrift::ExceptionInfo for SynchronizeWorkingCopyExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    SynchronizeWorkingCopyExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    SynchronizeWorkingCopyExn::ApplicationException(aexn) => aexn.exn_name(),
+                    SynchronizeWorkingCopyExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    SynchronizeWorkingCopyExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    SynchronizeWorkingCopyExn::ApplicationException(aexn) => aexn.exn_value(),
+                    SynchronizeWorkingCopyExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    SynchronizeWorkingCopyExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    SynchronizeWorkingCopyExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    SynchronizeWorkingCopyExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for SynchronizeWorkingCopyExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    SynchronizeWorkingCopyExn::Success(_) => ::fbthrift::ResultType::Return,
+                    SynchronizeWorkingCopyExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    SynchronizeWorkingCopyExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
+        impl ::fbthrift::GetTType for SynchronizeWorkingCopyExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
+        }
+
+        impl<P> ::fbthrift::Serialize<P> for SynchronizeWorkingCopyExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
+            fn write(&self, p: &mut P) {
+                if let SynchronizeWorkingCopyExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
+                p.write_struct_begin("SynchronizeWorkingCopy");
+                match self {
+                    SynchronizeWorkingCopyExn::Success(inner) => {
+                        p.write_field_begin(
+                            "Success",
+                            ::fbthrift::TType::Void,
+                            0i16,
+                        );
+                        inner.write(p);
+                        p.write_field_end();
+                    }
+                    SynchronizeWorkingCopyExn::ex(inner) => {
+                        p.write_field_begin(
+                            "ex",
+                            ::fbthrift::TType::Struct,
+                            1,
+                        );
+                        inner.write(p);
+                        p.write_field_end();
+                    }
+                    SynchronizeWorkingCopyExn::ApplicationException(_aexn) => unreachable!(),
+                }
+                p.write_field_stop();
+                p.write_struct_end();
+            }
+        }
+
+        impl<P> ::fbthrift::Deserialize<P> for SynchronizeWorkingCopyExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
+                static RETURNS: &[::fbthrift::Field] = &[
+                    ::fbthrift::Field::new("Success", ::fbthrift::TType::Void, 0),
+                    ::fbthrift::Field::new("ex", ::fbthrift::TType::Struct, 1),
+                ];
+                let _ = p.read_struct_begin(|_| ())?;
+                let mut once = false;
+                let mut alt = SynchronizeWorkingCopyExn::Success(());
+                loop {
+                    let (_, fty, fid) = p.read_field_begin(|_| (), RETURNS)?;
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
+                            p.read_field_end()?;
+                            break;
+                        }
+                        ((::fbthrift::TType::Void, 0i32), false) => {
+                            once = true;
+                            alt = SynchronizeWorkingCopyExn::Success(::fbthrift::Deserialize::read(p)?);
+                        }
+                        ((::fbthrift::TType::Struct, 1), false) => {
+                            once = true;
+                            alt = SynchronizeWorkingCopyExn::ex(::fbthrift::Deserialize::read(p)?);
+                        }
+                        ((ty, _id), false) => p.skip(ty)?,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
+                                format!(
+                                    "unwanted extra union {} field ty {:?} id {}",
+                                    "SynchronizeWorkingCopyExn",
                                     badty,
                                     badid,
                                 ),
@@ -9443,6 +10260,153 @@ pub mod services {
                     ::fbthrift::ApplicationException::new(
                         ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetFileInformationExn"),
+                    )
+                    .into(),
+                )
+            }
+        }
+
+        #[derive(Clone, Debug)]
+        pub enum GetAttributesFromFilesExn {
+            Success(crate::types::GetAttributesFromFilesResult),
+            ex(crate::types::EdenError),
+            ApplicationException(::fbthrift::ApplicationException),
+        }
+
+        impl ::std::convert::From<crate::types::EdenError> for GetAttributesFromFilesExn {
+            fn from(exn: crate::types::EdenError) -> Self {
+                GetAttributesFromFilesExn::ex(exn)
+            }
+        }
+
+        impl ::std::convert::From<::fbthrift::ApplicationException> for GetAttributesFromFilesExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
+                GetAttributesFromFilesExn::ApplicationException(exn)
+            }
+        }
+
+        impl ::fbthrift::ExceptionInfo for GetAttributesFromFilesExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetAttributesFromFilesExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetAttributesFromFilesExn::ApplicationException(aexn) => aexn.exn_name(),
+                    GetAttributesFromFilesExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetAttributesFromFilesExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetAttributesFromFilesExn::ApplicationException(aexn) => aexn.exn_value(),
+                    GetAttributesFromFilesExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetAttributesFromFilesExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetAttributesFromFilesExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GetAttributesFromFilesExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetAttributesFromFilesExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetAttributesFromFilesExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetAttributesFromFilesExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GetAttributesFromFilesExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
+        impl ::fbthrift::GetTType for GetAttributesFromFilesExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
+        }
+
+        impl<P> ::fbthrift::Serialize<P> for GetAttributesFromFilesExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
+            fn write(&self, p: &mut P) {
+                if let GetAttributesFromFilesExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
+                p.write_struct_begin("GetAttributesFromFiles");
+                match self {
+                    GetAttributesFromFilesExn::Success(inner) => {
+                        p.write_field_begin(
+                            "Success",
+                            ::fbthrift::TType::Struct,
+                            0i16,
+                        );
+                        inner.write(p);
+                        p.write_field_end();
+                    }
+                    GetAttributesFromFilesExn::ex(inner) => {
+                        p.write_field_begin(
+                            "ex",
+                            ::fbthrift::TType::Struct,
+                            1,
+                        );
+                        inner.write(p);
+                        p.write_field_end();
+                    }
+                    GetAttributesFromFilesExn::ApplicationException(_aexn) => unreachable!(),
+                }
+                p.write_field_stop();
+                p.write_struct_end();
+            }
+        }
+
+        impl<P> ::fbthrift::Deserialize<P> for GetAttributesFromFilesExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
+                static RETURNS: &[::fbthrift::Field] = &[
+                    ::fbthrift::Field::new("Success", ::fbthrift::TType::Struct, 0),
+                    ::fbthrift::Field::new("ex", ::fbthrift::TType::Struct, 1),
+                ];
+                let _ = p.read_struct_begin(|_| ())?;
+                let mut once = false;
+                let mut alt = ::std::option::Option::None;
+                loop {
+                    let (_, fty, fid) = p.read_field_begin(|_| (), RETURNS)?;
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
+                            p.read_field_end()?;
+                            break;
+                        }
+                        ((::fbthrift::TType::Struct, 0i32), false) => {
+                            once = true;
+                            alt = ::std::option::Option::Some(GetAttributesFromFilesExn::Success(::fbthrift::Deserialize::read(p)?));
+                        }
+                        ((::fbthrift::TType::Struct, 1), false) => {
+                            once = true;
+                            alt = ::std::option::Option::Some(GetAttributesFromFilesExn::ex(::fbthrift::Deserialize::read(p)?));
+                        }
+                        ((ty, _id), false) => p.skip(ty)?,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
+                                format!(
+                                    "unwanted extra union {} field ty {:?} id {}",
+                                    "GetAttributesFromFilesExn",
+                                    badty,
+                                    badid,
+                                ),
+                            )
+                        )),
+                    }
+                    p.read_field_end()?;
+                }
+                p.read_struct_end()?;
+                alt.ok_or_else(||
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
+                        format!("Empty union {}", "GetAttributesFromFilesExn"),
                     )
                     .into(),
                 )
@@ -15363,7 +16327,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::UnmountError>> + ::std::marker::Send + 'static>>;
-        #[doc = "Potentially check out the specified snapshot, reporting conflicts (and\npossibly errors), as appropriate.\n\nIf the checkoutMode is FORCE, the working directory will be forcibly\nupdated to the contents of the new snapshot, even if there were conflicts.\nConflicts will still be reported in the return value, but the files will be\nupdated to their new state.\n\nIf the checkoutMode is NORMAL, files with conflicts will be left\nunmodified. Files that are untracked in both the source and destination\nsnapshots are always left unchanged, even if force is true.\n\nIf the checkoutMode is DRY_RUN, then no files are modified in the working\ncopy and the current snapshot does not change. However, potential conflicts\nare still reported in the return value.\n\nOn successful return from this function (unless it is a DRY_RUN), the mount\npoint will point to the new snapshot, even if some paths had conflicts or\nerrors. The caller is responsible for taking appropriate action to update\nthese paths as desired after checkOutRevision() returns."]
+        #[doc = "Potentially check out the specified snapshot, reporting conflicts (and\npossibly errors), as appropriate.\n\nIf the checkoutMode is FORCE, the working directory will be forcibly\nupdated to the contents of the new snapshot, even if there were conflicts.\nConflicts will still be reported in the return value, but the files will be\nupdated to their new state.\n\nIf the checkoutMode is NORMAL, files with conflicts will be left\nunmodified. Files that are untracked in both the source and destination\nsnapshots are always left unchanged, even if force is true.\n\nIf the checkoutMode is DRY_RUN, then no files are modified in the working\ncopy and the current snapshot does not change. However, potential conflicts\nare still reported in the return value.\n\nOn successful return from this function (unless it is a DRY_RUN), the mount\npoint will point to the new snapshot, even if some paths had conflicts or\nerrors. The caller is responsible for taking appropriate action to update\nthese paths as desired after checkOutRevision() returns.\n\nNote: this internally synchronize the working copy."]
         fn checkOutRevision(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -15378,11 +16342,18 @@ pub mod client {
             arg_parents: &crate::types::WorkingDirectoryParents,
             arg_params: &crate::types::ResetParentCommitsParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ResetParentCommitsError>> + ::std::marker::Send + 'static>>;
-        #[doc = "For each path, returns an EdenError instead of the SHA-1 if any of the\nfollowing occur:\n- path is the empty string.\n- path identifies a non-existent file.\n- path identifies something that is not an ordinary file (e.g., symlink\n  or directory)."]
+        #[doc = "Ensure that all inflight working copy modification have completed.\n\nOn some platforms, EdenFS is processing working copy modifications\ncallbacks from the platform in an asynchronous manner, which means that by\nthe time a write/creat/mkdir/unlink/etc syscall returns from the kernel,\nEdenFS may not have updated its internal state.\n\nThus, an application making changes to the working copy and quickly\nrequesting EdenFS to perform an operation on it will race with EdenFS\nupdating its internal state and may thus get stale data.\n\nTo avoid this, applications can call this method prior to issuing other\nThrift requests (such as getSHA1, globFiles, etc) to wait for EdenFS to\nupdate its internal state. Applications that care about synchronizing\nEdenFS up to a certain point in time are expected to call this once and\nthen issue all their thrift requests without synchronizing.\n\nAs an alternative, applications may also set the SyncBehavior of a Thrift\nmethod to a non-zero value to achieve the same result.\n\nSome Thrift methods are implicitely synchronizing, their documentation\nwill state it."]
+        fn synchronizeWorkingCopy(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_params: &crate::types::SynchronizeWorkingCopyParams,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::SynchronizeWorkingCopyError>> + ::std::marker::Send + 'static>>;
+        #[doc = "For each path, returns an EdenError instead of the SHA-1 if any of the\nfollowing occur:\n- path is the empty string.\n- path identifies a non-existent file.\n- path identifies something that is not an ordinary file (e.g., symlink\n  or directory).\n\nNote: may return stale data if synchronizeWorkingCopy isn't called, and if\nthe SyncBehavior specify a 0 timeout. see the documentation for both of\nthese for more details."]
         fn getSHA1(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
+            arg_sync: &crate::types::SyncBehavior,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::SHA1Result>, crate::errors::eden_service::GetSHA1Error>> + ::std::marker::Send + 'static>>;
         #[doc = "Returns a list of paths relative to the mountPoint. DEPRECATED!"]
         fn getBindMounts(
@@ -15434,30 +16405,37 @@ pub mod client {
             &self,
             arg_params: &crate::types::DebugGetRawJournalParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::DebugGetRawJournalResponse, crate::errors::eden_service::DebugGetRawJournalError>> + ::std::marker::Send + 'static>>;
-        #[doc = "Returns the subset of information about a list of paths that can\nbe determined from each's parent directory tree. For now, that\nincludes whether the entry exists and its dtype."]
+        #[doc = "Returns the subset of information about a list of paths that can\nbe determined from each's parent directory tree. For now, that\nincludes whether the entry exists and its dtype.\n\nNote: may return stale data if synchronizeWorkingCopy isn't called, and if\nthe SyncBehavior specify a 0 timeout. see the documentation for both of\nthese for more details."]
         fn getEntryInformation(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
+            arg_sync: &crate::types::SyncBehavior,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::EntryInformationOrError>, crate::errors::eden_service::GetEntryInformationError>> + ::std::marker::Send + 'static>>;
-        #[doc = "Returns a subset of the stat() information for a list of paths.\nThe returned list of information corresponds to the input list of\npaths; eg; result[0] holds the information for paths[0].\nWe only support returning the instantaneous information about\nthese paths, as we cannot answer with historical information about\nfiles in the overlay."]
+        #[doc = "Returns a subset of the stat() information for a list of paths.\nThe returned list of information corresponds to the input list of\npaths; eg; result[0] holds the information for paths[0].\nWe only support returning the instantaneous information about\nthese paths, as we cannot answer with historical information about\nfiles in the overlay.\n\nNote: may return stale data if synchronizeWorkingCopy isn't called, and if\nthe SyncBehavior specify a 0 timeout. see the documentation for both of\nthese for more details."]
         fn getFileInformation(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
+            arg_sync: &crate::types::SyncBehavior,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::FileInformationOrError>, crate::errors::eden_service::GetFileInformationError>> + ::std::marker::Send + 'static>>;
-        #[doc = "DEPRECATED: Use globFiles()."]
+        #[doc = "Returns the requested file attributes for the provided list of files.\nThe result maps the files to attribute results which may be an EdenError\nor a FileAttributeData struct.\n\nNote: may return stale data if synchronizeWorkingCopy isn't called, and if\nthe SyncBehavior specify a 0 timeout. see the documentation for both of\nthese for more details."]
+        fn getAttributesFromFiles(
+            &self,
+            arg_params: &crate::types::GetAttributesFromFilesParams,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetAttributesFromFilesResult, crate::errors::eden_service::GetAttributesFromFilesError>> + ::std::marker::Send + 'static>>;
+        #[doc = "DEPRECATED: Use globFiles().\n\nNote: may return stale data if synchronizeWorkingCopy isn't called, see the\ndocumentation for that method."]
         fn glob(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_globs: &[::std::string::String],
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::PathString>, crate::errors::eden_service::GlobError>> + ::std::marker::Send + 'static>>;
-        #[doc = "Returns a list of files that match the GlobParams, notably,\nthe list of glob patterns.\nThere are no duplicate values in the result."]
+        #[doc = "Returns a list of files that match the GlobParams, notably,\nthe list of glob patterns.\nThere are no duplicate values in the result.\n\nNote: may return stale data if synchronizeWorkingCopy isn't called, and if\nthe SyncBehavior specify a 0 timeout. see the documentation for both of\nthese for more details."]
         fn globFiles(
             &self,
             arg_params: &crate::types::GlobParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::Glob, crate::errors::eden_service::GlobFilesError>> + ::std::marker::Send + 'static>>;
-        #[doc = "Gets a list of a user's most accessed directories, performs\nprefetching as specified by PredictiveGlobParams, and returns\na list of files matching the glob patterns.\nThere are no duplicate values in the result."]
+        #[doc = "Gets a list of a user's most accessed directories, performs\nprefetching as specified by PredictiveGlobParams, and returns\na list of files matching the glob patterns.\nThere are no duplicate values in the result.\n\nNote: may return stale data if synchronizeWorkingCopy isn't called, and if\nthe SyncBehavior specify a 0 timeout. see the documentation for both of\nthese for more details."]
         fn predictiveGlobFiles(
             &self,
             arg_params: &crate::types::GlobParams,
@@ -15469,12 +16447,12 @@ pub mod client {
             arg_uid: ::std::primitive::i32,
             arg_gid: ::std::primitive::i32,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ChownError>> + ::std::marker::Send + 'static>>;
-        #[doc = "Return the list of files that are different from the specified source\ncontrol commit."]
+        #[doc = "Return the list of files that are different from the specified source\ncontrol commit.\n\nNote: this internally synchronize the working copy and thus the returned\ndata is guaranteed to return be the set of files that changed prior to\ncalling this method."]
         fn getScmStatusV2(
             &self,
             arg_params: &crate::types::GetScmStatusParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetScmStatusResult, crate::errors::eden_service::GetScmStatusV2Error>> + ::std::marker::Send + 'static>>;
-        #[doc = "Get the status of the working directory against the specified commit.\n\nDEPRECATED: Prefer using getScmStatusV2() in new code.  Callers may still\nneed to fall back to getScmStatus() if talking to an older edenfs daemon\nthat does not support getScmStatusV2() yet."]
+        #[doc = "Get the status of the working directory against the specified commit.\n\nNote: this internally synchronize the working copy and thus the returned\ndata is guaranteed to return be the set of files that changed prior to\ncalling this method.\n\nDEPRECATED: Prefer using getScmStatusV2() in new code.  Callers may still\nneed to fall back to getScmStatus() if talking to an older edenfs daemon\nthat does not support getScmStatusV2() yet."]
         fn getScmStatus(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -15535,12 +16513,13 @@ pub mod client {
             arg_id: &crate::types::BinaryHash,
             arg_localStoreOnly: ::std::primitive::bool,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::ScmBlobMetadata, crate::errors::eden_service::DebugGetScmBlobMetadataError>> + ::std::marker::Send + 'static>>;
-        #[doc = "Get status about inodes with allocated inode numbers.\n\nThis returns details about all previously-observed inode objects under the\ngiven path.\n\nIf the path argument is the empty string data will be returned about all\ninodes in the entire mount point.  Otherwise the path argument should\nrefer to a subdirectory, and data will be returned for all inodes under\nthe specified subdirectory.\n\nThe rename lock is not held while gathering this information, so the path\nname information returned may not always be internally consistent.  If\nrenames were taking place while gathering the data, some inodes may show\nup under multiple parents.  It's also possible that we may miss some\ninodes during the tree walk if they were renamed from a directory that was\nnot yet walked into a directory that has already been walked.\n\nThis API cannot return data about inodes that have been unlinked but still\nhave outstanding references."]
+        #[doc = "Get status about inodes with allocated inode numbers.\n\nThis returns details about all previously-observed inode objects under the\ngiven path.\n\nIf the path argument is the empty string data will be returned about all\ninodes in the entire mount point.  Otherwise the path argument should\nrefer to a subdirectory, and data will be returned for all inodes under\nthe specified subdirectory.\n\nThe rename lock is not held while gathering this information, so the path\nname information returned may not always be internally consistent.  If\nrenames were taking place while gathering the data, some inodes may show\nup under multiple parents.  It's also possible that we may miss some\ninodes during the tree walk if they were renamed from a directory that was\nnot yet walked into a directory that has already been walked.\n\nThis API cannot return data about inodes that have been unlinked but still\nhave outstanding references.\n\nNote: may return stale data if synchronizeWorkingCopy isn't called, and if\nthe SyncBehavior specify a 0 timeout. see the documentation for both of\nthese for more details."]
         fn debugInodeStatus(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
             arg_flags: ::std::primitive::i64,
+            arg_sync: &crate::types::SyncBehavior,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError>> + ::std::marker::Send + 'static>>;
         #[doc = "Get the list of outstanding fuse requests\n\nThis will return the list of FuseCall structure containing the data from\nfuse_in_header."]
         fn debugOutstandingFuseCalls(
@@ -15767,9 +16746,32 @@ pub mod client {
         }
     }
 
+    struct Args_EdenService_synchronizeWorkingCopy<'a> {
+        mountPoint: &'a crate::types::PathString,
+        params: &'a crate::types::SynchronizeWorkingCopyParams,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_synchronizeWorkingCopy<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.synchronizeWorkingCopy"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("params", ::fbthrift::TType::Struct, 2i16);
+            ::fbthrift::Serialize::write(&self.params, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
     struct Args_EdenService_getSHA1<'a> {
         mountPoint: &'a crate::types::PathString,
         paths: &'a [crate::types::PathString],
+        sync: &'a crate::types::SyncBehavior,
         _phantom: ::std::marker::PhantomData<&'a ()>,
     }
 
@@ -15783,6 +16785,9 @@ pub mod client {
             p.write_field_end();
             p.write_field_begin("paths", ::fbthrift::TType::List, 2i16);
             ::fbthrift::Serialize::write(&self.paths, p);
+            p.write_field_end();
+            p.write_field_begin("sync", ::fbthrift::TType::Struct, 3i16);
+            ::fbthrift::Serialize::write(&self.sync, p);
             p.write_field_end();
             p.write_field_stop();
             p.write_struct_end();
@@ -15974,6 +16979,7 @@ pub mod client {
     struct Args_EdenService_getEntryInformation<'a> {
         mountPoint: &'a crate::types::PathString,
         paths: &'a [crate::types::PathString],
+        sync: &'a crate::types::SyncBehavior,
         _phantom: ::std::marker::PhantomData<&'a ()>,
     }
 
@@ -15988,6 +16994,9 @@ pub mod client {
             p.write_field_begin("paths", ::fbthrift::TType::List, 2i16);
             ::fbthrift::Serialize::write(&self.paths, p);
             p.write_field_end();
+            p.write_field_begin("sync", ::fbthrift::TType::Struct, 3i16);
+            ::fbthrift::Serialize::write(&self.sync, p);
+            p.write_field_end();
             p.write_field_stop();
             p.write_struct_end();
         }
@@ -15996,6 +17005,7 @@ pub mod client {
     struct Args_EdenService_getFileInformation<'a> {
         mountPoint: &'a crate::types::PathString,
         paths: &'a [crate::types::PathString],
+        sync: &'a crate::types::SyncBehavior,
         _phantom: ::std::marker::PhantomData<&'a ()>,
     }
 
@@ -16009,6 +17019,27 @@ pub mod client {
             p.write_field_end();
             p.write_field_begin("paths", ::fbthrift::TType::List, 2i16);
             ::fbthrift::Serialize::write(&self.paths, p);
+            p.write_field_end();
+            p.write_field_begin("sync", ::fbthrift::TType::Struct, 3i16);
+            ::fbthrift::Serialize::write(&self.sync, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getAttributesFromFiles<'a> {
+        params: &'a crate::types::GetAttributesFromFilesParams,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getAttributesFromFiles<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getAttributesFromFiles"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("params", ::fbthrift::TType::Struct, 1i16);
+            ::fbthrift::Serialize::write(&self.params, p);
             p.write_field_end();
             p.write_field_stop();
             p.write_struct_end();
@@ -16343,6 +17374,7 @@ pub mod client {
         mountPoint: &'a crate::types::PathString,
         path: &'a crate::types::PathString,
         flags: ::std::primitive::i64,
+        sync: &'a crate::types::SyncBehavior,
         _phantom: ::std::marker::PhantomData<&'a ()>,
     }
 
@@ -16359,6 +17391,9 @@ pub mod client {
             p.write_field_end();
             p.write_field_begin("flags", ::fbthrift::TType::I64, 3i16);
             ::fbthrift::Serialize::write(&self.flags, p);
+            p.write_field_end();
+            p.write_field_begin("sync", ::fbthrift::TType::Struct, 4i16);
+            ::fbthrift::Serialize::write(&self.sync, p);
             p.write_field_end();
             p.write_field_stop();
             p.write_struct_end();
@@ -17041,10 +18076,58 @@ pub mod client {
         }
 
 
+        fn synchronizeWorkingCopy(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_params: &crate::types::SynchronizeWorkingCopyParams,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::SynchronizeWorkingCopyError>> + ::std::marker::Send + 'static>> {
+            use ::const_cstr::const_cstr;
+            use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
+            const_cstr! {
+                SERVICE_NAME = "EdenService";
+                METHOD_NAME = "EdenService.synchronizeWorkingCopy";
+            }
+            let args = self::Args_EdenService_synchronizeWorkingCopy {
+                mountPoint: arg_mountPoint,
+                params: arg_params,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("synchronizeWorkingCopy", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.synchronizeWorkingCopy"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::SynchronizeWorkingCopyExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::SynchronizeWorkingCopyError::ApplicationException(aexn))
+                }
+            }
+            .instrument(::tracing::info_span!("EdenService.synchronizeWorkingCopy"))
+            .boxed()
+        }
+
+
         fn getSHA1(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
+            arg_sync: &crate::types::SyncBehavior,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::SHA1Result>, crate::errors::eden_service::GetSHA1Error>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
             use ::tracing::Instrument as _;
@@ -17057,6 +18140,7 @@ pub mod client {
             let args = self::Args_EdenService_getSHA1 {
                 mountPoint: arg_mountPoint,
                 paths: arg_paths,
+                sync: arg_sync,
                 _phantom: ::std::marker::PhantomData,
             };
 
@@ -17507,6 +18591,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
+            arg_sync: &crate::types::SyncBehavior,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::EntryInformationOrError>, crate::errors::eden_service::GetEntryInformationError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
             use ::tracing::Instrument as _;
@@ -17519,6 +18604,7 @@ pub mod client {
             let args = self::Args_EdenService_getEntryInformation {
                 mountPoint: arg_mountPoint,
                 paths: arg_paths,
+                sync: arg_sync,
                 _phantom: ::std::marker::PhantomData,
             };
 
@@ -17554,6 +18640,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
+            arg_sync: &crate::types::SyncBehavior,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::FileInformationOrError>, crate::errors::eden_service::GetFileInformationError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
             use ::tracing::Instrument as _;
@@ -17566,6 +18653,7 @@ pub mod client {
             let args = self::Args_EdenService_getFileInformation {
                 mountPoint: arg_mountPoint,
                 paths: arg_paths,
+                sync: arg_sync,
                 _phantom: ::std::marker::PhantomData,
             };
 
@@ -17593,6 +18681,51 @@ pub mod client {
                 }
             }
             .instrument(::tracing::info_span!("EdenService.getFileInformation"))
+            .boxed()
+        }
+
+
+        fn getAttributesFromFiles(
+            &self,
+            arg_params: &crate::types::GetAttributesFromFilesParams,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetAttributesFromFilesResult, crate::errors::eden_service::GetAttributesFromFilesError>> + ::std::marker::Send + 'static>> {
+            use ::const_cstr::const_cstr;
+            use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
+            const_cstr! {
+                SERVICE_NAME = "EdenService";
+                METHOD_NAME = "EdenService.getAttributesFromFiles";
+            }
+            let args = self::Args_EdenService_getAttributesFromFiles {
+                params: arg_params,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getAttributesFromFiles", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getAttributesFromFiles"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetAttributesFromFilesExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetAttributesFromFilesError::ApplicationException(aexn))
+                }
+            }
+            .instrument(::tracing::info_span!("EdenService.getAttributesFromFiles"))
             .boxed()
         }
 
@@ -18340,6 +19473,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
             arg_flags: ::std::primitive::i64,
+            arg_sync: &crate::types::SyncBehavior,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
             use ::tracing::Instrument as _;
@@ -18353,6 +19487,7 @@ pub mod client {
                 mountPoint: arg_mountPoint,
                 path: arg_path,
                 flags: arg_flags,
+                sync: arg_sync,
                 _phantom: ::std::marker::PhantomData,
             };
 
@@ -19556,14 +20691,26 @@ pub mod client {
                 arg_params,
             )
         }
+        fn synchronizeWorkingCopy(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_params: &crate::types::SynchronizeWorkingCopyParams,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::SynchronizeWorkingCopyError>> + ::std::marker::Send + 'static>> {
+            self.as_ref().synchronizeWorkingCopy(
+                arg_mountPoint,
+                arg_params,
+            )
+        }
         fn getSHA1(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
+            arg_sync: &crate::types::SyncBehavior,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::SHA1Result>, crate::errors::eden_service::GetSHA1Error>> + ::std::marker::Send + 'static>> {
             self.as_ref().getSHA1(
                 arg_mountPoint,
                 arg_paths,
+                arg_sync,
             )
         }
         fn getBindMounts(
@@ -19652,20 +20799,32 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
+            arg_sync: &crate::types::SyncBehavior,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::EntryInformationOrError>, crate::errors::eden_service::GetEntryInformationError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getEntryInformation(
                 arg_mountPoint,
                 arg_paths,
+                arg_sync,
             )
         }
         fn getFileInformation(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
+            arg_sync: &crate::types::SyncBehavior,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::FileInformationOrError>, crate::errors::eden_service::GetFileInformationError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getFileInformation(
                 arg_mountPoint,
                 arg_paths,
+                arg_sync,
+            )
+        }
+        fn getAttributesFromFiles(
+            &self,
+            arg_params: &crate::types::GetAttributesFromFilesParams,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetAttributesFromFilesResult, crate::errors::eden_service::GetAttributesFromFilesError>> + ::std::marker::Send + 'static>> {
+            self.as_ref().getAttributesFromFiles(
+                arg_params,
             )
         }
         fn glob(
@@ -19819,11 +20978,13 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
             arg_flags: ::std::primitive::i64,
+            arg_sync: &crate::types::SyncBehavior,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError>> + ::std::marker::Send + 'static>> {
             self.as_ref().debugInodeStatus(
                 arg_mountPoint,
                 arg_path,
                 arg_flags,
+                arg_sync,
             )
         }
         fn debugOutstandingFuseCalls(
@@ -20191,6 +21352,7 @@ pub mod mock {
         pub unmount: r#impl::eden_service::unmount<'mock>,
         pub checkOutRevision: r#impl::eden_service::checkOutRevision<'mock>,
         pub resetParentCommits: r#impl::eden_service::resetParentCommits<'mock>,
+        pub synchronizeWorkingCopy: r#impl::eden_service::synchronizeWorkingCopy<'mock>,
         pub getSHA1: r#impl::eden_service::getSHA1<'mock>,
         pub getBindMounts: r#impl::eden_service::getBindMounts<'mock>,
         pub addBindMount: r#impl::eden_service::addBindMount<'mock>,
@@ -20203,6 +21365,7 @@ pub mod mock {
         pub debugGetRawJournal: r#impl::eden_service::debugGetRawJournal<'mock>,
         pub getEntryInformation: r#impl::eden_service::getEntryInformation<'mock>,
         pub getFileInformation: r#impl::eden_service::getFileInformation<'mock>,
+        pub getAttributesFromFiles: r#impl::eden_service::getAttributesFromFiles<'mock>,
         pub glob: r#impl::eden_service::glob<'mock>,
         pub globFiles: r#impl::eden_service::globFiles<'mock>,
         pub predictiveGlobFiles: r#impl::eden_service::predictiveGlobFiles<'mock>,
@@ -20257,6 +21420,7 @@ pub mod mock {
                 unmount: r#impl::eden_service::unmount::unimplemented(),
                 checkOutRevision: r#impl::eden_service::checkOutRevision::unimplemented(),
                 resetParentCommits: r#impl::eden_service::resetParentCommits::unimplemented(),
+                synchronizeWorkingCopy: r#impl::eden_service::synchronizeWorkingCopy::unimplemented(),
                 getSHA1: r#impl::eden_service::getSHA1::unimplemented(),
                 getBindMounts: r#impl::eden_service::getBindMounts::unimplemented(),
                 addBindMount: r#impl::eden_service::addBindMount::unimplemented(),
@@ -20269,6 +21433,7 @@ pub mod mock {
                 debugGetRawJournal: r#impl::eden_service::debugGetRawJournal::unimplemented(),
                 getEntryInformation: r#impl::eden_service::getEntryInformation::unimplemented(),
                 getFileInformation: r#impl::eden_service::getFileInformation::unimplemented(),
+                getAttributesFromFiles: r#impl::eden_service::getAttributesFromFiles::unimplemented(),
                 glob: r#impl::eden_service::glob::unimplemented(),
                 globFiles: r#impl::eden_service::globFiles::unimplemented(),
                 predictiveGlobFiles: r#impl::eden_service::predictiveGlobFiles::unimplemented(),
@@ -20361,14 +21526,24 @@ pub mod mock {
             let closure: &mut dyn ::std::ops::FnMut(crate::types::PathString, crate::types::WorkingDirectoryParents, crate::types::ResetParentCommitsParams) -> _ = &mut **closure;
             ::std::boxed::Box::pin(::futures::future::ready(closure(arg_mountPoint.clone(), arg_parents.clone(), arg_params.clone())))
         }
+        fn synchronizeWorkingCopy(
+            &self,
+            arg_mountPoint: &crate::types::PathString,
+            arg_params: &crate::types::SynchronizeWorkingCopyParams,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::SynchronizeWorkingCopyError>> + ::std::marker::Send + 'static>> {
+            let mut closure = self.synchronizeWorkingCopy.closure.lock().unwrap();
+            let closure: &mut dyn ::std::ops::FnMut(crate::types::PathString, crate::types::SynchronizeWorkingCopyParams) -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_mountPoint.clone(), arg_params.clone())))
+        }
         fn getSHA1(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
+            arg_sync: &crate::types::SyncBehavior,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::SHA1Result>, crate::errors::eden_service::GetSHA1Error>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getSHA1.closure.lock().unwrap();
-            let closure: &mut dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> _ = &mut **closure;
-            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_mountPoint.clone(), arg_paths.to_owned())))
+            let closure: &mut dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>, crate::types::SyncBehavior) -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_mountPoint.clone(), arg_paths.to_owned(), arg_sync.clone())))
         }
         fn getBindMounts(
             &self,
@@ -20451,19 +21626,29 @@ pub mod mock {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
+            arg_sync: &crate::types::SyncBehavior,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::EntryInformationOrError>, crate::errors::eden_service::GetEntryInformationError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getEntryInformation.closure.lock().unwrap();
-            let closure: &mut dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> _ = &mut **closure;
-            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_mountPoint.clone(), arg_paths.to_owned())))
+            let closure: &mut dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>, crate::types::SyncBehavior) -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_mountPoint.clone(), arg_paths.to_owned(), arg_sync.clone())))
         }
         fn getFileInformation(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
+            arg_sync: &crate::types::SyncBehavior,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::FileInformationOrError>, crate::errors::eden_service::GetFileInformationError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getFileInformation.closure.lock().unwrap();
-            let closure: &mut dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> _ = &mut **closure;
-            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_mountPoint.clone(), arg_paths.to_owned())))
+            let closure: &mut dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>, crate::types::SyncBehavior) -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_mountPoint.clone(), arg_paths.to_owned(), arg_sync.clone())))
+        }
+        fn getAttributesFromFiles(
+            &self,
+            arg_params: &crate::types::GetAttributesFromFilesParams,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetAttributesFromFilesResult, crate::errors::eden_service::GetAttributesFromFilesError>> + ::std::marker::Send + 'static>> {
+            let mut closure = self.getAttributesFromFiles.closure.lock().unwrap();
+            let closure: &mut dyn ::std::ops::FnMut(crate::types::GetAttributesFromFilesParams) -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_params.clone())))
         }
         fn glob(
             &self,
@@ -20607,10 +21792,11 @@ pub mod mock {
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
             arg_flags: ::std::primitive::i64,
+            arg_sync: &crate::types::SyncBehavior,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.debugInodeStatus.closure.lock().unwrap();
-            let closure: &mut dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, ::std::primitive::i64) -> _ = &mut **closure;
-            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_mountPoint.clone(), arg_path.clone(), arg_flags.clone())))
+            let closure: &mut dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, ::std::primitive::i64, crate::types::SyncBehavior) -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_mountPoint.clone(), arg_path.clone(), arg_flags.clone(), arg_sync.clone())))
         }
         fn debugOutstandingFuseCalls(
             &self,
@@ -21041,9 +22227,53 @@ pub mod mock {
                 }
             }
 
+            pub struct synchronizeWorkingCopy<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::SynchronizeWorkingCopyParams) -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::SynchronizeWorkingCopyError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
+            }
+
+            impl<'mock> synchronizeWorkingCopy<'mock> {
+                pub fn unimplemented() -> Self {
+                    synchronizeWorkingCopy {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::SynchronizeWorkingCopyParams| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "synchronizeWorkingCopy",
+                        ))),
+                    }
+                }
+
+                pub fn ret(&self, value: ()) {
+                    self.mock(move |_: crate::types::PathString, _: crate::types::SynchronizeWorkingCopyParams| value.clone());
+                }
+
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::SynchronizeWorkingCopyParams) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, params| ::std::result::Result::Ok(mock(mountPoint, params)));
+                }
+
+                pub fn mock_result(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::SynchronizeWorkingCopyParams) -> ::std::result::Result<(), crate::errors::eden_service::SynchronizeWorkingCopyError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, params| mock(mountPoint, params));
+                }
+
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::SynchronizeWorkingCopyError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::SynchronizeWorkingCopyParams| ::std::result::Result::Err(exception.clone().into()));
+                }
+            }
+
             pub struct getSHA1<'mock> {
                 pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
-                    dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::result::Result<
+                    dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>, crate::types::SyncBehavior) -> ::std::result::Result<
                         ::std::vec::Vec<crate::types::SHA1Result>,
                         crate::errors::eden_service::GetSHA1Error,
                     > + ::std::marker::Send + ::std::marker::Sync + 'mock,
@@ -21053,7 +22283,7 @@ pub mod mock {
             impl<'mock> getSHA1<'mock> {
                 pub fn unimplemented() -> Self {
                     getSHA1 {
-                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| panic!(
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>, _: crate::types::SyncBehavior| panic!(
                             "{}::{} is not mocked",
                             "EdenService",
                             "getSHA1",
@@ -21062,17 +22292,17 @@ pub mod mock {
                 }
 
                 pub fn ret(&self, value: ::std::vec::Vec<crate::types::SHA1Result>) {
-                    self.mock(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| value.clone());
+                    self.mock(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>, _: crate::types::SyncBehavior| value.clone());
                 }
 
-                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::vec::Vec<crate::types::SHA1Result> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>, crate::types::SyncBehavior) -> ::std::vec::Vec<crate::types::SHA1Result> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                     let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |mountPoint, paths| ::std::result::Result::Ok(mock(mountPoint, paths)));
+                    *closure = ::std::boxed::Box::new(move |mountPoint, paths, sync| ::std::result::Result::Ok(mock(mountPoint, paths, sync)));
                 }
 
-                pub fn mock_result(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::result::Result<::std::vec::Vec<crate::types::SHA1Result>, crate::errors::eden_service::GetSHA1Error> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                pub fn mock_result(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>, crate::types::SyncBehavior) -> ::std::result::Result<::std::vec::Vec<crate::types::SHA1Result>, crate::errors::eden_service::GetSHA1Error> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                     let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |mountPoint, paths| mock(mountPoint, paths));
+                    *closure = ::std::boxed::Box::new(move |mountPoint, paths, sync| mock(mountPoint, paths, sync));
                 }
 
                 pub fn throw<E>(&self, exception: E)
@@ -21081,7 +22311,7 @@ pub mod mock {
                     E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
                 {
                     let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| ::std::result::Result::Err(exception.clone().into()));
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>, _: crate::types::SyncBehavior| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
@@ -21483,7 +22713,7 @@ pub mod mock {
 
             pub struct getEntryInformation<'mock> {
                 pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
-                    dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::result::Result<
+                    dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>, crate::types::SyncBehavior) -> ::std::result::Result<
                         ::std::vec::Vec<crate::types::EntryInformationOrError>,
                         crate::errors::eden_service::GetEntryInformationError,
                     > + ::std::marker::Send + ::std::marker::Sync + 'mock,
@@ -21493,7 +22723,7 @@ pub mod mock {
             impl<'mock> getEntryInformation<'mock> {
                 pub fn unimplemented() -> Self {
                     getEntryInformation {
-                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| panic!(
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>, _: crate::types::SyncBehavior| panic!(
                             "{}::{} is not mocked",
                             "EdenService",
                             "getEntryInformation",
@@ -21502,17 +22732,17 @@ pub mod mock {
                 }
 
                 pub fn ret(&self, value: ::std::vec::Vec<crate::types::EntryInformationOrError>) {
-                    self.mock(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| value.clone());
+                    self.mock(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>, _: crate::types::SyncBehavior| value.clone());
                 }
 
-                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::vec::Vec<crate::types::EntryInformationOrError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>, crate::types::SyncBehavior) -> ::std::vec::Vec<crate::types::EntryInformationOrError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                     let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |mountPoint, paths| ::std::result::Result::Ok(mock(mountPoint, paths)));
+                    *closure = ::std::boxed::Box::new(move |mountPoint, paths, sync| ::std::result::Result::Ok(mock(mountPoint, paths, sync)));
                 }
 
-                pub fn mock_result(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::result::Result<::std::vec::Vec<crate::types::EntryInformationOrError>, crate::errors::eden_service::GetEntryInformationError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                pub fn mock_result(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>, crate::types::SyncBehavior) -> ::std::result::Result<::std::vec::Vec<crate::types::EntryInformationOrError>, crate::errors::eden_service::GetEntryInformationError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                     let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |mountPoint, paths| mock(mountPoint, paths));
+                    *closure = ::std::boxed::Box::new(move |mountPoint, paths, sync| mock(mountPoint, paths, sync));
                 }
 
                 pub fn throw<E>(&self, exception: E)
@@ -21521,13 +22751,13 @@ pub mod mock {
                     E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
                 {
                     let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| ::std::result::Result::Err(exception.clone().into()));
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>, _: crate::types::SyncBehavior| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
             pub struct getFileInformation<'mock> {
                 pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
-                    dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::result::Result<
+                    dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>, crate::types::SyncBehavior) -> ::std::result::Result<
                         ::std::vec::Vec<crate::types::FileInformationOrError>,
                         crate::errors::eden_service::GetFileInformationError,
                     > + ::std::marker::Send + ::std::marker::Sync + 'mock,
@@ -21537,7 +22767,7 @@ pub mod mock {
             impl<'mock> getFileInformation<'mock> {
                 pub fn unimplemented() -> Self {
                     getFileInformation {
-                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| panic!(
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>, _: crate::types::SyncBehavior| panic!(
                             "{}::{} is not mocked",
                             "EdenService",
                             "getFileInformation",
@@ -21546,17 +22776,17 @@ pub mod mock {
                 }
 
                 pub fn ret(&self, value: ::std::vec::Vec<crate::types::FileInformationOrError>) {
-                    self.mock(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| value.clone());
+                    self.mock(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>, _: crate::types::SyncBehavior| value.clone());
                 }
 
-                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::vec::Vec<crate::types::FileInformationOrError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>, crate::types::SyncBehavior) -> ::std::vec::Vec<crate::types::FileInformationOrError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                     let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |mountPoint, paths| ::std::result::Result::Ok(mock(mountPoint, paths)));
+                    *closure = ::std::boxed::Box::new(move |mountPoint, paths, sync| ::std::result::Result::Ok(mock(mountPoint, paths, sync)));
                 }
 
-                pub fn mock_result(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::result::Result<::std::vec::Vec<crate::types::FileInformationOrError>, crate::errors::eden_service::GetFileInformationError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                pub fn mock_result(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>, crate::types::SyncBehavior) -> ::std::result::Result<::std::vec::Vec<crate::types::FileInformationOrError>, crate::errors::eden_service::GetFileInformationError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                     let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |mountPoint, paths| mock(mountPoint, paths));
+                    *closure = ::std::boxed::Box::new(move |mountPoint, paths, sync| mock(mountPoint, paths, sync));
                 }
 
                 pub fn throw<E>(&self, exception: E)
@@ -21565,7 +22795,51 @@ pub mod mock {
                     E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
                 {
                     let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| ::std::result::Result::Err(exception.clone().into()));
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>, _: crate::types::SyncBehavior| ::std::result::Result::Err(exception.clone().into()));
+                }
+            }
+
+            pub struct getAttributesFromFiles<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::GetAttributesFromFilesParams) -> ::std::result::Result<
+                        crate::types::GetAttributesFromFilesResult,
+                        crate::errors::eden_service::GetAttributesFromFilesError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
+            }
+
+            impl<'mock> getAttributesFromFiles<'mock> {
+                pub fn unimplemented() -> Self {
+                    getAttributesFromFiles {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::GetAttributesFromFilesParams| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getAttributesFromFiles",
+                        ))),
+                    }
+                }
+
+                pub fn ret(&self, value: crate::types::GetAttributesFromFilesResult) {
+                    self.mock(move |_: crate::types::GetAttributesFromFilesParams| value.clone());
+                }
+
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::GetAttributesFromFilesParams) -> crate::types::GetAttributesFromFilesResult + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |params| ::std::result::Result::Ok(mock(params)));
+                }
+
+                pub fn mock_result(&self, mut mock: impl ::std::ops::FnMut(crate::types::GetAttributesFromFilesParams) -> ::std::result::Result<crate::types::GetAttributesFromFilesResult, crate::errors::eden_service::GetAttributesFromFilesError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |params| mock(params));
+                }
+
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetAttributesFromFilesError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::GetAttributesFromFilesParams| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
@@ -22275,7 +23549,7 @@ pub mod mock {
 
             pub struct debugInodeStatus<'mock> {
                 pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
-                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, ::std::primitive::i64) -> ::std::result::Result<
+                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, ::std::primitive::i64, crate::types::SyncBehavior) -> ::std::result::Result<
                         ::std::vec::Vec<crate::types::TreeInodeDebugInfo>,
                         crate::errors::eden_service::DebugInodeStatusError,
                     > + ::std::marker::Send + ::std::marker::Sync + 'mock,
@@ -22285,7 +23559,7 @@ pub mod mock {
             impl<'mock> debugInodeStatus<'mock> {
                 pub fn unimplemented() -> Self {
                     debugInodeStatus {
-                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString, _: ::std::primitive::i64| panic!(
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString, _: ::std::primitive::i64, _: crate::types::SyncBehavior| panic!(
                             "{}::{} is not mocked",
                             "EdenService",
                             "debugInodeStatus",
@@ -22294,17 +23568,17 @@ pub mod mock {
                 }
 
                 pub fn ret(&self, value: ::std::vec::Vec<crate::types::TreeInodeDebugInfo>) {
-                    self.mock(move |_: crate::types::PathString, _: crate::types::PathString, _: ::std::primitive::i64| value.clone());
+                    self.mock(move |_: crate::types::PathString, _: crate::types::PathString, _: ::std::primitive::i64, _: crate::types::SyncBehavior| value.clone());
                 }
 
-                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, ::std::primitive::i64) -> ::std::vec::Vec<crate::types::TreeInodeDebugInfo> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, ::std::primitive::i64, crate::types::SyncBehavior) -> ::std::vec::Vec<crate::types::TreeInodeDebugInfo> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                     let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |mountPoint, path, flags| ::std::result::Result::Ok(mock(mountPoint, path, flags)));
+                    *closure = ::std::boxed::Box::new(move |mountPoint, path, flags, sync| ::std::result::Result::Ok(mock(mountPoint, path, flags, sync)));
                 }
 
-                pub fn mock_result(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, ::std::primitive::i64) -> ::std::result::Result<::std::vec::Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                pub fn mock_result(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, ::std::primitive::i64, crate::types::SyncBehavior) -> ::std::result::Result<::std::vec::Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                     let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |mountPoint, path, flags| mock(mountPoint, path, flags));
+                    *closure = ::std::boxed::Box::new(move |mountPoint, path, flags, sync| mock(mountPoint, path, flags, sync));
                 }
 
                 pub fn throw<E>(&self, exception: E)
@@ -22313,7 +23587,7 @@ pub mod mock {
                     E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
                 {
                     let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString, _: ::std::primitive::i64| ::std::result::Result::Err(exception.clone().into()));
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString, _: ::std::primitive::i64, _: crate::types::SyncBehavior| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
@@ -23447,6 +24721,9 @@ pub mod errors {
                     if let Some(ResetParentCommitsError::ex(e)) = cause.downcast_ref::<ResetParentCommitsError>() {
                         return Some(e);
                     }
+                    if let Some(SynchronizeWorkingCopyError::ex(e)) = cause.downcast_ref::<SynchronizeWorkingCopyError>() {
+                        return Some(e);
+                    }
                     if let Some(GetSHA1Error::ex(e)) = cause.downcast_ref::<GetSHA1Error>() {
                         return Some(e);
                     }
@@ -23481,6 +24758,9 @@ pub mod errors {
                         return Some(e);
                     }
                     if let Some(GetFileInformationError::ex(e)) = cause.downcast_ref::<GetFileInformationError>() {
+                        return Some(e);
+                    }
+                    if let Some(GetAttributesFromFilesError::ex(e)) = cause.downcast_ref::<GetAttributesFromFilesError>() {
                         return Some(e);
                     }
                     if let Some(GlobError::ex(e)) = cause.downcast_ref::<GlobError>() {
@@ -23843,6 +25123,58 @@ pub mod errors {
                         ::std::result::Result::Err(ResetParentCommitsError::ApplicationException(aexn)),
                     crate::services::eden_service::ResetParentCommitsExn::ex(exn) =>
                         ::std::result::Result::Err(ResetParentCommitsError::ex(exn)),
+                }
+            }
+        }
+
+        /// Errors for synchronizeWorkingCopy (client side).
+        #[derive(Debug, ::thiserror::Error)]
+        pub enum SynchronizeWorkingCopyError {
+            #[error("EdenService::synchronizeWorkingCopy failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl ::std::convert::From<crate::types::EdenError> for SynchronizeWorkingCopyError {
+            fn from(e: crate::types::EdenError) -> Self {
+                SynchronizeWorkingCopyError::ex(e)
+            }
+        }
+
+        impl AsEdenError for SynchronizeWorkingCopyError {
+            fn as_eden_error(&self) -> Option<&crate::types::EdenError> {
+                match self {
+                    SynchronizeWorkingCopyError::ex(inner) => Some(inner),
+                    _ => None,
+                }
+            }
+        }
+
+        impl ::std::convert::From<::anyhow::Error> for SynchronizeWorkingCopyError {
+            fn from(err: ::anyhow::Error) -> Self {
+                SynchronizeWorkingCopyError::ThriftError(err)
+            }
+        }
+
+        impl ::std::convert::From<::fbthrift::ApplicationException> for SynchronizeWorkingCopyError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                SynchronizeWorkingCopyError::ApplicationException(ae)
+            }
+        }
+        impl ::std::convert::From<crate::services::eden_service::SynchronizeWorkingCopyExn> for
+            ::std::result::Result<(), SynchronizeWorkingCopyError>
+        {
+            fn from(e: crate::services::eden_service::SynchronizeWorkingCopyExn) -> Self {
+                match e {
+                    crate::services::eden_service::SynchronizeWorkingCopyExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::SynchronizeWorkingCopyExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(SynchronizeWorkingCopyError::ApplicationException(aexn)),
+                    crate::services::eden_service::SynchronizeWorkingCopyExn::ex(exn) =>
+                        ::std::result::Result::Err(SynchronizeWorkingCopyError::ex(exn)),
                 }
             }
         }
@@ -24467,6 +25799,58 @@ pub mod errors {
                         ::std::result::Result::Err(GetFileInformationError::ApplicationException(aexn)),
                     crate::services::eden_service::GetFileInformationExn::ex(exn) =>
                         ::std::result::Result::Err(GetFileInformationError::ex(exn)),
+                }
+            }
+        }
+
+        /// Errors for getAttributesFromFiles (client side).
+        #[derive(Debug, ::thiserror::Error)]
+        pub enum GetAttributesFromFilesError {
+            #[error("EdenService::getAttributesFromFiles failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl ::std::convert::From<crate::types::EdenError> for GetAttributesFromFilesError {
+            fn from(e: crate::types::EdenError) -> Self {
+                GetAttributesFromFilesError::ex(e)
+            }
+        }
+
+        impl AsEdenError for GetAttributesFromFilesError {
+            fn as_eden_error(&self) -> Option<&crate::types::EdenError> {
+                match self {
+                    GetAttributesFromFilesError::ex(inner) => Some(inner),
+                    _ => None,
+                }
+            }
+        }
+
+        impl ::std::convert::From<::anyhow::Error> for GetAttributesFromFilesError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetAttributesFromFilesError::ThriftError(err)
+            }
+        }
+
+        impl ::std::convert::From<::fbthrift::ApplicationException> for GetAttributesFromFilesError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetAttributesFromFilesError::ApplicationException(ae)
+            }
+        }
+        impl ::std::convert::From<crate::services::eden_service::GetAttributesFromFilesExn> for
+            ::std::result::Result<crate::types::GetAttributesFromFilesResult, GetAttributesFromFilesError>
+        {
+            fn from(e: crate::services::eden_service::GetAttributesFromFilesExn) -> Self {
+                match e {
+                    crate::services::eden_service::GetAttributesFromFilesExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetAttributesFromFilesExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetAttributesFromFilesError::ApplicationException(aexn)),
+                    crate::services::eden_service::GetAttributesFromFilesExn::ex(exn) =>
+                        ::std::result::Result::Err(GetAttributesFromFilesError::ex(exn)),
                 }
             }
         }
