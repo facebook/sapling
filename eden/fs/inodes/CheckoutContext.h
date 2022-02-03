@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <optional>
+#include <unordered_map>
 #include <vector>
 
 #include <folly/Range.h>
@@ -40,9 +42,20 @@ class CheckoutContext {
  public:
   CheckoutContext(
       EdenMount* mount,
+      folly::Synchronized<RootId>::LockedPtr&& parentLock,
       CheckoutMode checkoutMode,
       std::optional<pid_t> clientPid,
-      folly::StringPiece thriftMethodName);
+      folly::StringPiece thriftMethodName,
+      const std::optional<std::unordered_map<std::string, std::string>>&
+          requestInfo = std::nullopt);
+
+  CheckoutContext(
+      EdenMount* mount,
+      CheckoutMode checkoutMode,
+      std::optional<pid_t> clientPid,
+      folly::StringPiece thriftMethodName,
+      const std::optional<std::unordered_map<std::string, std::string>>&
+          requestInfo = std::nullopt);
 
   ~CheckoutContext();
 

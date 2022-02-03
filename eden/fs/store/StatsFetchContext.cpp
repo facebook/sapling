@@ -13,8 +13,13 @@ namespace facebook::eden {
 StatsFetchContext::StatsFetchContext(
     std::optional<pid_t> pid,
     Cause cause,
-    folly::StringPiece causeDetail)
-    : clientPid_{pid}, cause_{cause}, causeDetail_{std::move(causeDetail)} {}
+    folly::StringPiece causeDetail,
+    const std::optional<std::unordered_map<std::string, std::string>>&
+        requestInfo)
+    : clientPid_{pid},
+      cause_{cause},
+      causeDetail_{std::move(causeDetail)},
+      requestInfo_(requestInfo) {}
 
 StatsFetchContext::StatsFetchContext(const StatsFetchContext& other) {
   for (size_t y = 0; y < ObjectFetchContext::kObjectTypeEnumMax; ++y) {

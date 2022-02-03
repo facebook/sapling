@@ -171,9 +171,23 @@ class ThriftFetchContext : public ObjectFetchContext {
     return endpoint_;
   }
 
+  const std::optional<std::unordered_map<std::string, std::string>>&
+  getRequestInfo() const override {
+    return requestInfo_;
+  }
+
+  void updateRequestInfo(const std::map<std::string, std::string>& another) {
+    if (!requestInfo_.has_value()) {
+      requestInfo_ =
+          std::make_optional(std::unordered_map<std::string, std::string>());
+    }
+    requestInfo_.value().insert(another.begin(), another.end());
+  }
+
  private:
   std::optional<pid_t> pid_;
   folly::StringPiece endpoint_;
+  std::optional<std::unordered_map<std::string, std::string>> requestInfo_;
 };
 
 class PrefetchFetchContext : public ObjectFetchContext {
@@ -1674,7 +1688,9 @@ EdenServiceHandler::future_setPathObjectId(
   auto parsedRootId =
       edenMount->getObjectStore()->parseRootId(params->get_objectId());
   auto& fetchContext = helper->getFetchContext();
-
+  if (auto requestInfo = params->requestInfo_ref()) {
+    fetchContext.updateRequestInfo(std::move(*requestInfo));
+  }
   return wrapFuture(
       std::move(helper),
       edenMount

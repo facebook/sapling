@@ -25,13 +25,16 @@ CheckoutContext::CheckoutContext(
     EdenMount* mount,
     CheckoutMode checkoutMode,
     std::optional<pid_t> clientPid,
-    folly::StringPiece thriftMethodName)
+    folly::StringPiece thriftMethodName,
+    const std::optional<std::unordered_map<std::string, std::string>>&
+        requestInfo)
     : checkoutMode_{checkoutMode},
       mount_{mount},
       fetchContext_{
           clientPid,
           ObjectFetchContext::Cause::Thrift,
-          thriftMethodName} {}
+          thriftMethodName,
+          requestInfo} {}
 
 CheckoutContext::~CheckoutContext() {}
 

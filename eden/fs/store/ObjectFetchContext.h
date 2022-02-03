@@ -7,6 +7,7 @@
 
 #pragma once
 #include <optional>
+#include <unordered_map>
 
 #include <folly/Range.h>
 
@@ -81,6 +82,11 @@ class ObjectFetchContext {
 
   virtual bool prefetchMetadata() const {
     return true;
+  }
+
+  virtual const std::optional<std::unordered_map<std::string, std::string>>&
+  getRequestInfo() const {
+    throw std::runtime_error("not implemented");
   }
 
   /**

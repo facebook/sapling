@@ -652,7 +652,11 @@ folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
              << " at path" << path << " on top of " << oldParent;
 
   auto ctx = std::make_shared<CheckoutContext>(
-      this, checkoutMode, std::nullopt, "setPathObjectId");
+      this,
+      checkoutMode,
+      std::nullopt,
+      "setPathObjectId",
+      context.getRequestInfo());
 
   /**
    * This will update the timestamp for the entire mount,

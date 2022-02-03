@@ -9,6 +9,7 @@
 
 #include <atomic>
 #include <optional>
+#include <unordered_map>
 
 #include "eden/fs/store/ObjectFetchContext.h"
 
@@ -44,7 +45,9 @@ class StatsFetchContext : public ObjectFetchContext {
   StatsFetchContext(
       std::optional<pid_t> pid,
       Cause cause,
-      folly::StringPiece causeDetail);
+      folly::StringPiece causeDetail,
+      const std::optional<std::unordered_map<std::string, std::string>>&
+          requestInfo);
   StatsFetchContext(const StatsFetchContext& other);
 
   void didFetch(ObjectType type, const ObjectId& id, Origin origin) override;
@@ -65,12 +68,18 @@ class StatsFetchContext : public ObjectFetchContext {
    */
   void merge(const StatsFetchContext& other);
 
+  const std::optional<std::unordered_map<std::string, std::string>>&
+  getRequestInfo() const override {
+    return requestInfo_;
+  }
+
  private:
   std::atomic<uint64_t> counts_[ObjectFetchContext::kObjectTypeEnumMax]
                                [ObjectFetchContext::kOriginEnumMax] = {};
   std::optional<pid_t> clientPid_ = std::nullopt;
   Cause cause_ = Cause::Unknown;
   folly::StringPiece causeDetail_;
+  std::optional<std::unordered_map<std::string, std::string>> requestInfo_;
 };
 
 } // namespace facebook::eden
