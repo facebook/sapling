@@ -1137,7 +1137,6 @@ impl LfsRemoteInner {
 
         let host_str = url.host_str().expect("No host in url").to_string();
 
-
         async move {
             let mut backoff = http_options.backoff_times.iter().copied();
             let mut throttle_backoff = http_options.throttle_backoff_times.iter().copied();
@@ -1979,10 +1978,6 @@ enum RetryStrategy {
 
 impl RetryStrategy {
     pub fn from_http_status(status: StatusCode) -> Self {
-        if status == StatusCode::SERVICE_UNAVAILABLE {
-            return Self::NoRetry;
-        }
-
         if status == StatusCode::TOO_MANY_REQUESTS {
             return Self::RetryThrottled;
         }
@@ -3270,7 +3265,7 @@ mod tests {
         );
         assert_eq!(
             RetryStrategy::from_http_status(StatusCode::SERVICE_UNAVAILABLE),
-            RetryStrategy::NoRetry
+            RetryStrategy::RetryError
         );
 
         assert_eq!(
