@@ -375,8 +375,17 @@ def _writevisibleheadrefs(repo, nodes):
 
 
 def _writerefs(repo, refnodes):
-    """write git references. refnodes is a list of (ref, node)."""
+    """write git references. refnodes is a list of (ref, node).
+
+    Only 'refs/heads/<name>' references are written (as local bookmarks).
+    Other references will be normalized to `refs/visibleheads/<hex>`.
+    """
     for (ref, node) in refnodes:
+        ref = str(ref)
+        if not ref.startswith("refs/heads/"):
+            # ref might be non-standard like "BUNDLE_HEAD".
+            # normalize it to a visiblehead ref.
+            ref = str(RefName.visiblehead(node))
         callgit(repo, ["update-ref", str(ref), hex(node)])
 
 
