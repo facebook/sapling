@@ -9,3 +9,11 @@ anyhow = "1.0.51"
 configparser = { path = "../configparser" }
 thiserror = "1.0.29"
 util = { path = "../util" }
+
+[dev-dependencies]
+regex = "1.5.4"
+tempfile = "3.2"
+
+[features]
+default = ["fb"]
+fb = []

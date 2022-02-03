@@ -13,6 +13,7 @@ use anyhow::Result;
 use configparser::config::ConfigSet;
 
 use crate::errors;
+use crate::init;
 
 pub struct Repo {
     path: PathBuf,
@@ -107,6 +108,10 @@ impl OptionalRepo {
 }
 
 impl Repo {
+    pub fn init(root_path: &Path, config: &mut ConfigSet) -> Result<(), errors::InitError> {
+        init::init_hg_repo(root_path, config)
+    }
+
     /// Load the repo from explicit path.
     ///
     /// Load repo configurations.
