@@ -53,6 +53,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
     m.add(py, "refencode", pyrefencode::init_module(py, &name)?)?;
     m.add(py, "regex", pyregex::init_module(py, &name)?)?;
     m.add(py, "renderdag", pyrenderdag::init_module(py, &name)?)?;
+    m.add(py, "repo", pyrepo::init_module(py, &name)?)?;
     m.add(
         py,
         "revisionstore",
