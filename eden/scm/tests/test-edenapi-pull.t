@@ -2,7 +2,7 @@
 
   $ configure modern
 
-  $ setconfig paths.default=test:e1 ui.traceback=1
+  $ setconfig paths.default=test:e1
   $ setconfig pull.httphashprefix=1
   $ setconfig pull.httpcommitgraph=1
   $ export LOG=exchange::httpcommitlookup=debug,pull
@@ -43,6 +43,9 @@ Pull Bookmark:
   $ newremoterepo
   $ setconfig paths.default=test:e1
   $ hg debugchangelog --migrate lazy
+  $ hg log -r master
+  abort: unknown revision 'master'!
+  [255]
   $ hg pull -B master
   pulling from test:e1
   DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': '178c10ffbc2f92d5407c14478ae9d9dea81f232e'}
@@ -72,7 +75,7 @@ C is known and E is unknown
   DEBUG exchange::httpcommitlookup: edenapi commitknown: {'hgid': b'\xe8\xe0\xa8\x1d\x95\x0f\xedk!}>\xc4U\xe6\x1a\xf1\xceN\xefH', 'known': {'Ok': False}}
   searching for changes
 C and E are known and F is unknown
-  $ hg pull -r 99dac869f01e09
+  $ hg pull -r 99dac869f01e0
   pulling from test:e1
   DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': '178c10ffbc2f92d5407c14478ae9d9dea81f232e'}
   DEBUG pull::fastpath: master: 178c10ffbc2f92d5407c14478ae9d9dea81f232e (unchanged)

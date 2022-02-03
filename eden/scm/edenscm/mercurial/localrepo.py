@@ -1047,6 +1047,12 @@ class localrepository(object):
                     self.ui.configbool("pull", "httphashprefix")
                     and self.nullableedenapi is not None
                 ):
+                    for name in headnames:
+                        # check if headname can be a hex hash prefix
+                        if any(n not in "abcdefg1234567890" for n in name.lower()):
+                            raise errormod.Abort(_("%s not found!") % name)
+                        if len(name) > len(nullhex):
+                            raise errormod.Abort(_("%s not found!") % name)
                     heads.update(self._http_prefix_lookup(headnames))
                 else:
                     batch = remote.iterbatch()
