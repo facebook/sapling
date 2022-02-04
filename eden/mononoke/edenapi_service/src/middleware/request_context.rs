@@ -18,8 +18,8 @@ use gotham_ext::{
     middleware::{ClientIdentity, Middleware},
     state_ext::StateExt,
 };
+use metadata::Metadata;
 use scuba_ext::MononokeScubaSampleBuilder;
-use sshrelay::Metadata;
 
 #[derive(StateData, Clone)]
 pub struct RequestContext {

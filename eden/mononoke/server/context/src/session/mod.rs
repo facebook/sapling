@@ -7,12 +7,12 @@
 
 use async_limiter::AsyncLimiter;
 use fbinit::FacebookInit;
+use metadata::Metadata;
 use permission_checker::MononokeIdentitySetExt;
 use rate_limiting::{BoxRateLimiter, LoadCost, Metric, RateLimitReason, RateLimiter};
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use sshrelay::Metadata;
 use std::sync::Arc;
 
 pub use self::builder::SessionContainerBuilder;

@@ -10,10 +10,10 @@ use blobstore::Blobstore;
 use context::{LoggingContainer, SessionContainer};
 use fbinit::FacebookInit;
 use metaconfig_types::RepoClientKnobs;
+use metadata::Metadata;
 use repo_client::{MononokeRepo, RepoClient, WireprotoLogging};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use sshrelay::Metadata;
 use std::sync::Arc;
 
 pub struct FastReplayDispatcher {

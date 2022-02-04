@@ -47,9 +47,10 @@ use tokio_openssl::SslStream;
 use tokio_util::codec::{FramedRead, FramedWrite};
 
 use cmdlib::monitoring::ReadyFlagService;
+use metadata::Metadata;
 use qps::Qps;
 use quiet_stream::QuietShutdownStream;
-use sshrelay::{IoStream, Metadata, SshDecoder, SshEncoder, SshMsg, Stdio};
+use sshrelay::{IoStream, SshDecoder, SshEncoder, SshMsg, Stdio};
 use stats::prelude::*;
 
 use crate::errors::ErrorKind;

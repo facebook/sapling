@@ -28,6 +28,7 @@ use ascii::AsciiString;
 use bookmarks_types::BookmarkName;
 use derive_more::{From, Into};
 use fbinit::FacebookInit;
+use metadata::Metadata;
 use mononoke_types::{BonsaiChangeset, ChangesetId, MPath, PrefixTrie, RepositoryId};
 use mysql_common::value::convert::{ConvIr, FromValue, ParseIr};
 use permission_checker::{BoxMembershipChecker, MembershipCheckerBuilder};
@@ -36,7 +37,6 @@ use scuba::ScubaValue;
 use serde_derive::Deserialize;
 use sql::mysql;
 use sql::mysql_async::{FromValueError, Value};
-use sshrelay::Metadata;
 
 /// A Regex that can be compared against other Regexes.
 ///

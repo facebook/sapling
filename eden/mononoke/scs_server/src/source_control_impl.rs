@@ -20,6 +20,7 @@ use futures_stats::{FutureStats, TimedFutureExt};
 use identity::Identity;
 use maplit::hashset;
 use megarepo_api::MegarepoApi;
+use metadata::Metadata;
 use mononoke_api::{
     ChangesetContext, ChangesetId, ChangesetSpecifier, CoreContext, FileContext, FileId, Mononoke,
     RepoContext, SessionContainer, TreeContext, TreeId,
@@ -34,7 +35,6 @@ use source_control as thrift;
 use source_control::server::SourceControlService;
 use source_control::services::source_control_service as service;
 use srserver::RequestContext;
-use sshrelay::Metadata;
 use stats::prelude::*;
 use time_ext::DurationExt;
 use tunables::tunables;

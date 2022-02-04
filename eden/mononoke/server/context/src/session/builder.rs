@@ -7,9 +7,9 @@
 
 use async_limiter::AsyncLimiter;
 use fbinit::FacebookInit;
+use metadata::Metadata;
 use rate_limiting::BoxRateLimiter;
 use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
-use sshrelay::Metadata;
 use std::num::NonZeroU32;
 use std::sync::Arc;
 

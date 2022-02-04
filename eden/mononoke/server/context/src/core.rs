@@ -6,11 +6,11 @@
  */
 
 use fbinit::FacebookInit;
+use metadata::Metadata;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use slog_glog_fmt::logger_that_can_work_in_tests;
-use sshrelay::Metadata;
 use std::sync::Arc;
 
 use crate::logging::{LoggingContainer, SamplingKey};
