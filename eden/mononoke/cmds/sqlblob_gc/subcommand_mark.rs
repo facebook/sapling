@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::{ops::Range, sync::Arc, time::Duration};
+use std::{ops::Range, sync::Arc};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
 use futures::{
@@ -15,9 +15,8 @@ use futures::{
     sink::SinkExt,
     stream::{self, StreamExt, TryStreamExt},
 };
-use rand::{thread_rng, Rng};
+use retry::retry;
 use slog::{info, Logger};
-use tokio::time::sleep;
 
 use sqlblob::Sqlblob;
 
@@ -26,8 +25,7 @@ const ARG_INITIAL_GENERATION_ONLY: &str = "initial-generation-only";
 const ARG_SKIP_INITIAL_GENERATION: &str = "skip-initial-generation";
 const ARG_SKIP_INLINE_SMALL_VALUES: &str = "skip-inline-small-values";
 
-const MIN_RETRY_DELAY: Duration = Duration::from_secs(1);
-const MAX_RETRY_DELAY: Duration = Duration::from_secs(3);
+const BASE_RETRY_DELAY_MS: u64 = 1000;
 const RETRIES: usize = 3;
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
@@ -56,44 +54,39 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-async fn handle_one_key(key: String, store: Arc<Sqlblob>, inline_small_values: bool) -> Result<()> {
-    for _retry in 0..RETRIES {
-        let res = store.set_generation(&key, inline_small_values).await;
-        if res.is_ok() {
-            return res;
-        }
-        let delay = thread_rng().gen_range(MIN_RETRY_DELAY..MAX_RETRY_DELAY);
-        eprintln!(
-            "Failure {:#?} on key {} - delaying for {:#?}",
-            res, &key, delay
-        );
-        sleep(delay).await;
-    }
-    Err(anyhow!(
-        "Failed to handle {} after {} retries",
-        &key,
-        RETRIES
-    ))
+async fn handle_one_key(
+    key: String,
+    store: Arc<Sqlblob>,
+    inline_small_values: bool,
+    logger: Arc<Logger>,
+) -> Result<()> {
+    retry(
+        &logger,
+        |_| store.set_generation(&key, inline_small_values),
+        BASE_RETRY_DELAY_MS,
+        RETRIES,
+    )
+    .await
+    .with_context(|| anyhow!("Failed to handle {} after {} retries", &key, RETRIES))?;
+    Ok(())
 }
 
-async fn handle_initial_generation(store: &Sqlblob, shard: usize) -> Result<()> {
-    for _retry in 0..RETRIES {
-        let res = store.set_initial_generation(shard).await;
-        if res.is_ok() {
-            return res;
-        }
-        let delay = thread_rng().gen_range(MIN_RETRY_DELAY..MAX_RETRY_DELAY);
-        eprintln!(
-            "Failure {:#?} on shard {} - delaying for {:#?}",
-            res, shard, delay
-        );
-        sleep(delay).await;
-    }
-    Err(anyhow!(
-        "Failed to handle initial generation on shard {} after {} retries",
-        &shard,
-        RETRIES
-    ))
+async fn handle_initial_generation(store: &Sqlblob, shard: usize, logger: &Logger) -> Result<()> {
+    retry(
+        logger,
+        |_| store.set_initial_generation(shard),
+        BASE_RETRY_DELAY_MS,
+        RETRIES,
+    )
+    .await
+    .with_context(|| {
+        anyhow!(
+            "Failed to handle initial generation on shard {} after {} retries",
+            &shard,
+            RETRIES
+        )
+    })?;
+    Ok(())
 }
 
 pub async fn subcommand_mark<'a>(
@@ -108,7 +101,7 @@ pub async fn subcommand_mark<'a>(
         info!(logger, "Starting initial generation set");
         let set_initial_generation_futures: Vec<_> = shard_range
             .clone()
-            .map(|shard| Ok(handle_initial_generation(&sqlblob, shard)))
+            .map(|shard| Ok(handle_initial_generation(&sqlblob, shard, &logger)))
             .collect();
         stream::iter(set_initial_generation_futures.into_iter())
             .try_for_each_concurrent(max_parallelism, |fut| fut)
@@ -121,6 +114,7 @@ pub async fn subcommand_mark<'a>(
     }
 
     let sqlblob = Arc::new(sqlblob);
+    let logger = Arc::new(logger);
 
     let inline_small_values = !sub_matches.is_present(ARG_SKIP_INLINE_SMALL_VALUES);
 
@@ -128,14 +122,17 @@ pub async fn subcommand_mark<'a>(
     // Set up a task to process each key in parallel in its own task.
     let (key_channel, processor) = {
         let sqlblob = Arc::clone(&sqlblob);
+        let logger = Arc::clone(&logger);
         let (tx, rx) = mpsc::channel(10);
         let task = tokio::spawn(async move {
             rx.map(Ok)
                 .try_for_each_concurrent(max_parallelism, {
                     |key| {
                         let sqlblob = sqlblob.clone();
+                        let logger = logger.clone();
                         async move {
-                            tokio::spawn(handle_one_key(key, sqlblob, inline_small_values)).await?
+                            tokio::spawn(handle_one_key(key, sqlblob, inline_small_values, logger))
+                                .await?
                         }
                     }
                 })
