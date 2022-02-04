@@ -16,7 +16,7 @@ the TARGETS file.
 Use:
 
 ```sh
-buck run //eden/mononoke/tests/integration/facebook:some_target -- TEST
+buck2 run //eden/mononoke/tests/integration/facebook:some_target -- TEST
 ```
 
 But! Keep reading: there are faster ways to run the tests if you're going to be
@@ -26,7 +26,7 @@ to complete.
 
 ## Running Tests Incrementally: a better way
 
-To run tests locally, a better way is to run the integration runner directly.
+To run tests locally, a better way is to our incremental helper scripts.
 This allows you to skip most build steps, and rebuild only what you need to
 re-run your test (e.g. if you're iterating on Mononoke server, then you won't
 need to rebuild blobimport more than once).
@@ -36,30 +36,34 @@ test target:
 
 e.g.
 ```sh
-buck build //eden/mononoke/tests/integration:server
+./incremental_integration_setup.sh server
 ```
 
-Then, run the tests by executing the integration runner directly. The
-integration runner relies on a manifest to find all the binaries it needs to run
-(the ones you built earlier), so you need to point it there. Note that each
-test rule has its own manifest. Here's an example for the `server` rule:
+Then, run the tests by executing the pre-built incremental setup. Notice this
+is done per rule, in this case `server`:
 
-```
-~/fbcode/buck-out/dev/gen/eden/mononoke/tests/integration/integration_runner_real.par \
-  ~/fbcode/buck-out/gen/eden/mononoke/tests/integration/facebook/server-manifest/server-manifest.json \
-  test1.t test2.t test3.t
+```sh
+./incremental_integration_run.sh server test1.t test2.t test3.t
 ```
 
-If you don't have `~/fbcode` symlink, create it, or update the instructions as
-needed. Note that you can run this from anywhere in fbsource tree (so you can
+If your test group lies in the `facebook/` subdirectory, simply use the `facebook/`
+prefix, for example:
+
+```sh
+./incremental_integration_setup.sh facebook/snapshot
+```
+
+Note that you can run this from anywhere in fbsource tree (so you can
 run it from the actual tests directory to get autocompletion or globbing on test
-names).
+names). The script defaults to using `buck2`, but you can set the `USEBUCK1` env
+var so it uses `buck1`.
 
-Every time you make changes to your code, `buck build` whatever you changed,
+Every time you make changes to your code, `buck2 build` whatever you changed,
 then re-run.
 
 Use `--interactive` when running your tests in order to accept (or reject)
-changes to your `.t` files.
+changes to your `.t` files, or `--keep-tmpdir` to be able to see the files edited
+by your test after it runs.
 
 
 ## Adding new tests:
