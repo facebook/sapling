@@ -20,7 +20,7 @@ Set up local hgrc and Mononoke config, with http pull
 
 Custom smartlog
   $ function sl {
-  >  hgedenapi log -G -T "{node|short} {phase} '{desc|firstline}' {bookmarks}"
+  >  hgedenapi log -G -T "{node|short} {phase} '{desc|firstline}' {bookmarks} {remotenames}"
   > }
 
 Initialize test repo.
@@ -50,7 +50,7 @@ Clone 1 and 2
   $ hgedenapi clone "mononoke://$(mononoke_address)/repo" client2 -q
   $ cd client1
   $ sl
-  @  8b2dca0c8a72 public 'base_commit'
+  @  8b2dca0c8a72 public 'base_commit'  remote/master_bookmark
   
   $ hgedenapi up remote/master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -60,7 +60,7 @@ Clone 1 and 2
   searching for changes
   updating bookmark master_bookmark
   $ sl
-  @  8ca8131de573 public 'new commit'
+  @  8ca8131de573 public 'new commit'  remote/master_bookmark
   │
   o  8b2dca0c8a72 public 'base_commit'
   
@@ -80,7 +80,7 @@ This is a hack, it seems WBC may be stale, causing the test to be flaky. It need
   $ hgedenapi up remote/master_bookmark 
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ sl
-  @  8ca8131de573 public 'new commit'
+  @  8ca8131de573 public 'new commit'  remote/master_bookmark
   │
   o  8b2dca0c8a72 public 'base_commit'
   
@@ -98,7 +98,7 @@ This is a hack, it seems WBC may be stale, causing the test to be flaky. It need
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   imported commit graph for 1 commit (1 segment)
   $ sl
-  o  6b51b03e4f04 public 'newer commit'
+  o  6b51b03e4f04 public 'newer commit'  remote/master_bookmark
   │
   @  8ca8131de573 public 'new commit'
   │
@@ -114,7 +114,7 @@ On clone 2 with tailer
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
   imported commit graph for 2 commits (1 segment)
   $ sl
-  o  6b51b03e4f04 public 'newer commit'
+  o  6b51b03e4f04 public 'newer commit'  remote/master_bookmark
   │
   o  8ca8131de573 public 'new commit'
   │
