@@ -14,6 +14,7 @@ bookmarks_types = { version = "0.1.0", path = "../../bookmarks/bookmarks_types" 
 derive_more = "0.99.3"
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+metadata = { version = "0.1.0", path = "../../server/metadata" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mysql_common = "0.26.0"
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
@@ -22,7 +23,6 @@ scuba = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-sshrelay = { version = "0.1.0", path = "../../sshrelay" }
 
 [patch.crates-io]
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }

@@ -27,6 +27,7 @@ http = "0.2"
 hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
 manifest = { version = "0.1.0", path = "../manifest" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
+metadata = { version = "0.1.0", path = "../server/metadata" }
 mime = "0.3.14"
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_api_hg = { version = "0.1.0", path = "../mononoke_api_hg" }
@@ -40,7 +41,6 @@ serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_cbor = "0.11"
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-sshrelay = { version = "0.1.0", path = "../sshrelay" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.29"
 tunables = { version = "0.1.0", path = "../tunables" }
