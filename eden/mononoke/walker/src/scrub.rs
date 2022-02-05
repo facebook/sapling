@@ -29,7 +29,7 @@ use crate::walk::{EmptyRoute, RepoWalkParams, RepoWalkTypeParams};
 use anyhow::{format_err, Error};
 use blobstore::BlobstoreGetData;
 use blobstore::SizeMetadata;
-use clap::ArgMatches;
+use clap_old::ArgMatches;
 use cloned::cloned;
 use cmdlib::args::MononokeMatches;
 use context::CoreContext;

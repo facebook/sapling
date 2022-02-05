@@ -25,7 +25,7 @@ use anyhow::Error;
 use async_compression::{metered::MeteredWrite, Compressor, CompressorType};
 use blobstore::BlobstoreGetData;
 use bytes::Bytes;
-use clap::ArgMatches;
+use clap_old::ArgMatches;
 use cloned::cloned;
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;

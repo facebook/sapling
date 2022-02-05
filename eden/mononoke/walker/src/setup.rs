@@ -26,7 +26,7 @@ use blobrepo::BlobRepo;
 use blobstore_factory::{ReadOnlyStorage, ScrubWriteMostly};
 use bookmarks::BookmarkName;
 use bulkops::Direction;
-use clap::{App, Arg, ArgMatches, SubCommand, Values};
+use clap_old::{App, Arg, ArgMatches, SubCommand, Values};
 use cloned::cloned;
 use cmdlib::args::{
     self, ArgType, CachelibSettings, MononokeClapApp, MononokeMatches, RepoRequirement,

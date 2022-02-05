@@ -24,7 +24,7 @@ use crate::walk::{RepoWalkParams, RepoWalkTypeParams};
 
 use anyhow::Error;
 use blobstore::BlobstoreGetData;
-use clap::ArgMatches;
+use clap_old::ArgMatches;
 use cloned::cloned;
 use cmdlib::args::MononokeMatches;
 use context::{CoreContext, SamplingKey};

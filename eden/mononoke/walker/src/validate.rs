@@ -33,7 +33,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
 use bulkops::Direction;
-use clap::ArgMatches;
+use clap_old::ArgMatches;
 use cloned::cloned;
 use cmdlib::args::MononokeMatches;
 use context::CoreContext;
