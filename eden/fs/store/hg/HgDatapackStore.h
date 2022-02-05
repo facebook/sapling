@@ -13,6 +13,7 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/scm/lib/backingstore/c_api/HgNativeBackingStore.h"
 
@@ -81,9 +82,28 @@ class HgDatapackStore {
    */
   void flush();
 
+  /**
+   * Get the metrics tracking the number of live batched blobs.
+   */
+  RequestMetricsScope::LockedRequestWatchList& getLiveBatchedBlobWatches()
+      const {
+    return liveBatchedBlobWatches_;
+  }
+
+  /**
+   * Get the metrics tracking the number of live batched trees.
+   */
+  RequestMetricsScope::LockedRequestWatchList& getLiveBatchedTreeWatches()
+      const {
+    return liveBatchedTreeWatches_;
+  }
+
  private:
   HgNativeBackingStore store_;
   std::shared_ptr<ReloadableConfig> config_;
+
+  mutable RequestMetricsScope::LockedRequestWatchList liveBatchedBlobWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList liveBatchedTreeWatches_;
 };
 
 } // namespace facebook::eden

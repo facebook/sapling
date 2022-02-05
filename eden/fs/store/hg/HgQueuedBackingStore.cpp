@@ -532,8 +532,10 @@ HgQueuedBackingStore::getPendingImportWatches(
     HgBackingStore::HgImportObject object) const {
   switch (object) {
     case HgBackingStore::HgImportObject::BLOB:
+    case HgBackingStore::HgImportObject::BATCHED_BLOB:
       return pendingImportBlobWatches_;
     case HgBackingStore::HgImportObject::TREE:
+    case HgBackingStore::HgImportObject::BATCHED_TREE:
       return pendingImportTreeWatches_;
     case HgBackingStore::HgImportObject::PREFETCH:
       return pendingImportPrefetchWatches_;

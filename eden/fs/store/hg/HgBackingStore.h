@@ -119,11 +119,13 @@ class HgBackingStore {
   /**
    * Objects that can be imported from Hg
    */
-  enum HgImportObject { BLOB, TREE, PREFETCH };
+  enum HgImportObject { BLOB, TREE, BATCHED_BLOB, BATCHED_TREE, PREFETCH };
 
-  constexpr static std::array<HgImportObject, 3> hgImportObjects{
+  constexpr static std::array<HgImportObject, 5> hgImportObjects{
       HgImportObject::BLOB,
       HgImportObject::TREE,
+      HgImportObject::BATCHED_BLOB,
+      HgImportObject::BATCHED_TREE,
       HgImportObject::PREFETCH};
 
   static folly::StringPiece stringOfHgImportObject(HgImportObject object);

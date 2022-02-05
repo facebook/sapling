@@ -733,6 +733,10 @@ folly::StringPiece HgBackingStore::stringOfHgImportObject(
       return "blob";
     case HgImportObject::TREE:
       return "tree";
+    case HgImportObject::BATCHED_BLOB:
+      return "batched_blob";
+    case HgImportObject::BATCHED_TREE:
+      return "batched_tree";
     case HgImportObject::PREFETCH:
       return "prefetch";
   }
@@ -748,6 +752,10 @@ HgBackingStore::getLiveImportWatches(HgImportObject object) const {
       return liveImportTreeWatches_;
     case HgImportObject::PREFETCH:
       return liveImportPrefetchWatches_;
+    case HgImportObject::BATCHED_BLOB:
+      return datapackStore_.getLiveBatchedBlobWatches();
+    case HgImportObject::BATCHED_TREE:
+      return datapackStore_.getLiveBatchedTreeWatches();
   }
   EDEN_BUG() << "unknown hg import object " << enumValue(object);
 }

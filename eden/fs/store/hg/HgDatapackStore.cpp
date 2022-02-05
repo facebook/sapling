@@ -122,9 +122,9 @@ std::unique_ptr<Tree> HgDatapackStore::getTreeLocal(
 
 void HgDatapackStore::getBlobBatch(
     const std::vector<std::shared_ptr<HgImportRequest>>& importRequests) {
-  std::vector<std::pair<folly::ByteRange, folly::ByteRange>> requests;
-
   size_t count = importRequests.size();
+
+  std::vector<std::pair<folly::ByteRange, folly::ByteRange>> requests;
   requests.reserve(count);
 
   for (const auto& importRequest : importRequests) {
@@ -134,10 +134,18 @@ void HgDatapackStore::getBlobBatch(
         folly::ByteRange{proxyHash.path().stringPiece()}, proxyHash.byteHash());
   }
 
+  std::vector<RequestMetricsScope> requestsWatches;
+  requestsWatches.reserve(count);
+
+  for (auto i = 0ul; i < count; i++) {
+    requestsWatches.emplace_back(&liveBatchedBlobWatches_);
+  }
+
   store_.getBlobBatch(
       requests,
       false,
-      [&importRequests, &requests](
+      // store_.getBlobBatch is blocking, hence we can take these by reference.
+      [&importRequests, &requests, &requestsWatches](
           size_t index, std::unique_ptr<folly::IOBuf> content) {
         XLOGF(
             DBG9,
@@ -150,6 +158,9 @@ void HgDatapackStore::getBlobBatch(
         auto blob = std::make_unique<Blob>(blobRequest->hash, *content);
         importRequest->getPromise<std::unique_ptr<Blob>>()->setValue(
             std::move(blob));
+
+        // Make sure that we're stopping this watch.
+        auto watch = std::move(requestsWatches[index]);
       });
 }
 
@@ -157,8 +168,10 @@ void HgDatapackStore::getTreeBatch(
     const std::vector<std::shared_ptr<HgImportRequest>>& importRequests,
     LocalStore::WriteBatch* writeBatch,
     std::vector<folly::Promise<std::unique_ptr<Tree>>>* promises) {
+  auto count = importRequests.size();
+
   std::vector<std::pair<folly::ByteRange, folly::ByteRange>> requests;
-  requests.reserve(importRequests.size());
+  requests.reserve(count);
 
   for (const auto& importRequest : importRequests) {
     auto& proxyHash =
@@ -166,13 +179,26 @@ void HgDatapackStore::getTreeBatch(
     requests.emplace_back(
         folly::ByteRange{proxyHash.path().stringPiece()}, proxyHash.byteHash());
   }
+
+  std::vector<RequestMetricsScope> requestsWatches;
+  requestsWatches.reserve(count);
+
+  for (auto i = 0ul; i < count; i++) {
+    requestsWatches.emplace_back(&liveBatchedTreeWatches_);
+  }
+
   auto directObjectId = config_->getEdenConfig()->directObjectId.getValue();
 
   store_.getTreeBatch(
       requests,
       false,
-      [directObjectId, promises, &requests, &importRequests, writeBatch](
-          size_t index, std::shared_ptr<RustTree> content) mutable {
+      // store_.getTreeBatch is blocking, hence we can take these by reference.
+      [directObjectId,
+       promises,
+       &requests,
+       &importRequests,
+       &requestsWatches,
+       writeBatch](size_t index, std::shared_ptr<RustTree> content) mutable {
         auto& promise = (*promises)[index];
         promise.setWith([&] {
           XLOGF(
@@ -191,6 +217,8 @@ void HgDatapackStore::getTreeBatch(
               treeRequest->proxyHash.path(),
               directObjectId ? nullptr : writeBatch);
         });
+        // Make sure that we're stopping this watch.
+        auto watch = std::move(requestsWatches[index]);
       });
 }
 
