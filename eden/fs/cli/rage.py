@@ -376,7 +376,10 @@ def print_prefetch_profiles_list(instance: EdenInstance, out: IO[bytes]) -> None
 
 def print_crashed_edenfs_logs(processor: str, out: IO[bytes]) -> None:
     if sys.platform == "darwin":
-        crashes_path = Path("/Library/Logs/DiagnosticReports")
+        crashes_paths = [
+            Path("/Library/Logs/DiagnosticReports"),
+            Path.home() / Path("Library/Logs/DiagnosticReports"),
+        ]
     elif sys.platform == "win32":
         import winreg
 
@@ -384,23 +387,23 @@ def print_crashed_edenfs_logs(processor: str, out: IO[bytes]) -> None:
             winreg.HKEY_LOCAL_MACHINE,
             "SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps",
         )
-        crashes_path = Path(winreg.QueryValueEx(key, "DumpFolder")[0])
+        crashes_paths = [Path(winreg.QueryValueEx(key, "DumpFolder")[0])]
     else:
         return
 
-    if not crashes_path.exists():
-        return
-
     section_title("EdenFS crashes:", out)
+    for crashes_path in crashes_paths:
+        if not crashes_path.exists():
+            continue
 
-    # Only upload crashes from the past week.
-    date_threshold = datetime.now() - timedelta(weeks=1)
-    for crash in crashes_path.iterdir():
-        if crash.name.startswith("edenfs"):
-            crash_time = datetime.fromtimestamp(crash.stat().st_mtime)
-            human_crash_time = crash_time.strftime("%b %d %H:%M:%S")
-            out.write(f"{str(crash.name)} from {human_crash_time}: ".encode())
-            if crash_time > date_threshold:
-                paste_file(crash, processor, out)
-            else:
-                out.write(" not uploaded due to being too old".encode())
+        # Only upload crashes from the past week.
+        date_threshold = datetime.now() - timedelta(weeks=1)
+        for crash in crashes_path.iterdir():
+            if crash.name.startswith("edenfs"):
+                crash_time = datetime.fromtimestamp(crash.stat().st_mtime)
+                human_crash_time = crash_time.strftime("%b %d %H:%M:%S")
+                out.write(f"{str(crash.name)} from {human_crash_time}: ".encode())
+                if crash_time > date_threshold:
+                    paste_file(crash, processor, out)
+                else:
+                    out.write(" not uploaded due to being too old".encode())
