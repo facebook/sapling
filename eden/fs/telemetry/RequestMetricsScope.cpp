@@ -114,14 +114,17 @@ size_t RequestMetricsScope::getMetricFromWatches(
 
 RequestMetricsScope::DefaultRequestDuration RequestMetricsScope::getMaxDuration(
     const LockedRequestWatchList& watches) {
-  DefaultRequestDuration maxDurationImport{0};
   {
     auto lockedWatches = watches.rlock();
-    for (const auto& watch : *lockedWatches) {
-      maxDurationImport = std::max(maxDurationImport, watch.elapsed());
+    if (lockedWatches->empty()) {
+      return RequestMetricsScope::DefaultRequestDuration{0};
     }
+
+    // By virtue of enqueing new watches at the end of the list, the front will
+    // always be the watch that has been in the list the longest, ie: the one
+    // with the max duration.
+    return lockedWatches->front().elapsed();
   }
-  return maxDurationImport;
 }
 
 } // namespace eden
