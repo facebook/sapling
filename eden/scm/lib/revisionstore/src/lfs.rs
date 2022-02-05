@@ -1581,7 +1581,7 @@ impl LfsRemote {
                 format!("EdenSCM/{}", ::version::VERSION)
             })?;
 
-            let concurrent_fetches = config.get_or("lfs", "concurrentfetches", || 1)?;
+            let concurrent_fetches = config.get_or("lfs", "concurrentfetches", || 4)?;
 
             let backoff_times = config.get_or("lfs", "backofftimes", || vec![1f32, 4f32, 8f32])?;
 
