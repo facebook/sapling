@@ -272,13 +272,20 @@ def wait_for_instance_healthy(instance: "EdenInstance", timeout: float) -> Healt
 
 
 def get_home_dir() -> Path:
+    # NOTE: Path.home() should work on all platforms, but we would want
+    # to be careful about making that change in case users have muddled with
+    # their HOME env var or if the resolution is weird in a containairzed
+    # environment. It would be worth having some external logging to count
+    # mismatches between the two approaches
     home_dir = None
     if sys.platform == "win32":
         home_dir = os.getenv("USERPROFILE")
+        if not home_dir:
+            return Path.home()
     else:
         home_dir = os.getenv("HOME")
-    if not home_dir:
-        home_dir = pwd.getpwuid(os.getuid()).pw_dir
+        if not home_dir:
+            home_dir = pwd.getpwuid(os.getuid()).pw_dir
     return Path(home_dir)
 
 
