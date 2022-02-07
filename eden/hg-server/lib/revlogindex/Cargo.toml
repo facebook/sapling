@@ -13,7 +13,7 @@ indexedlog = { path = "../indexedlog" }
 lz4-pyframe = { path = "../lz4-pyframe" }
 minibytes = { path = "../minibytes" }
 nonblocking = { path = "../nonblocking" }
-parking_lot = { version = "0.11.2", features = ["send_guard"] }
+parking_lot = { version = "0.12.0", features = ["send_guard"] }
 radixbuf = { path = "../radixbuf" }
 thiserror = "1.0.29"
 util = { path = "../util" }

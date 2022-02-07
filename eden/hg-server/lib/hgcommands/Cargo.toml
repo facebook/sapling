@@ -27,7 +27,7 @@ hgtime = { path = "../hgtime" }
 indexedlog = { path = "../indexedlog" }
 libc = "0.2.98"
 mincode = { path = "../mincode" }
-parking_lot = { version = "0.11.2", features = ["send_guard"] }
+parking_lot = { version = "0.12.0", features = ["send_guard"] }
 procinfo = { path = "../procinfo" }
 progress-model = { path = "../progress/model" }
 progress-render = { path = "../progress/render" }

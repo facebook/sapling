@@ -36,7 +36,7 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
-parking_lot = { version = "0.11.2", features = ["send_guard"] }
+parking_lot = { version = "0.12.0", features = ["send_guard"] }
 reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
