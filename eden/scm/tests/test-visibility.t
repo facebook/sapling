@@ -64,6 +64,13 @@ Simple creation and amending of draft commits
   $ hg debugvisibleheads
   bc066ca12b451d14668c7a3e38757449b7d6a104 draft1 amend1
 
+# Quick test of children revsets when there is a hidden child.
+  $ hg log -r 'desc("public2")~-1' -T '{desc}\n'
+  draft1 amend1
+  $ hg log -r 'children(desc("public2"))' -T '{desc}\n'
+  draft1 amend1
+
+
   $ mkcommit draft2a
   $ hg rebase -s ".^" -d 'desc(public1)'
   rebasing bc066ca12b45 "draft1 amend1"

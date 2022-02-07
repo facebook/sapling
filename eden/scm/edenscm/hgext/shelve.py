@@ -914,7 +914,8 @@ def _rebaserestoredcommit(
     # refresh ctx after rebase completes
     shelvectx = repo["tip"]
 
-    if not shelvectx in tmpwctx.children():
+    children = repo.changelog.children(tmpwctx.node())
+    if not shelvectx.node() in children:
         # rebase was a no-op, so it produced no child commit
         shelvectx = tmpwctx
     return shelvectx

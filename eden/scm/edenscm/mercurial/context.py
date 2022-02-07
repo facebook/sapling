@@ -642,7 +642,8 @@ class changectx(basectx):
         recursively walk children.
         """
         c = self._repo.changelog.children(self._node)
-        return [changectx(self._repo, x) for x in c]
+        children = [changectx(self._repo, x) for x in c]
+        return [ctx for ctx in children if ctx.phase() != phases.secret]
 
     def ancestors(self):
         for a in self._repo.changelog.ancestors([self._rev]):
