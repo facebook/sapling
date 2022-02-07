@@ -203,6 +203,12 @@ impl MPathElement {
     }
 
     #[inline]
+    pub fn new_from_slice(element: &[u8]) -> Result<MPathElement> {
+        Self::verify(element)?;
+        Ok(MPathElement(SmallVec::from(element)))
+    }
+
+    #[inline]
     pub fn from_thrift(element: thrift::MPathElement) -> Result<MPathElement> {
         Self::verify(&element.0).with_context(|| {
             ErrorKind::InvalidThrift("MPathElement".into(), "invalid path element".into())
@@ -242,6 +248,12 @@ impl MPathElement {
             bail!(ErrorKind::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "path elements cannot contain '\\n'".into(),
+            ));
+        }
+        if p == b"." || p == b".." {
+            bail!(ErrorKind::InvalidPath(
+                String::from_utf8_lossy(p).into_owned(),
+                "path elements cannot be . or .. to avoid traversal attacks".into(),
             ));
         }
         Self::check_len(p)?;
@@ -381,17 +393,10 @@ impl Extend<MPathElement> for Option<MPath> {
 impl MPath {
     pub fn new<P: AsRef<[u8]>>(p: P) -> Result<MPath> {
         let p = p.as_ref();
-        Self::verify(p)?;
         let elements: Vec<_> = p
             .split(|c| *c == b'/')
             .filter(|e| !e.is_empty())
-            .map(|e| {
-                // These instances have already been checked to contain null bytes and also
-                // are split on '/' bytes and non-empty, so they're valid by construction. We do
-                // however need to check the length of the individual components:
-                MPathElement::check_len(e)?;
-                Result::<_, Error>::Ok(MPathElement(SmallVec::from_slice(e)))
-            })
+            .map(MPathElement::new_from_slice)
             .collect::<Result<_, _>>()?;
         if elements.is_empty() {
             bail!(ErrorKind::InvalidPath(
@@ -425,28 +430,6 @@ impl MPath {
         } else {
             Ok(MPath { elements })
         }
-    }
-
-    fn verify(p: &[u8]) -> Result<()> {
-        if p.contains(&0) {
-            bail!(ErrorKind::InvalidPath(
-                String::from_utf8_lossy(p).into_owned(),
-                "paths cannot contain '\\0'".into(),
-            ));
-        }
-        if p.contains(&1) {
-            bail!(ErrorKind::InvalidPath(
-                String::from_utf8_lossy(p).into_owned(),
-                "paths cannot contain '\\1'".into(),
-            ));
-        }
-        if p.contains(&b'\n') {
-            bail!(ErrorKind::InvalidPath(
-                String::from_utf8_lossy(p).into_owned(),
-                "paths cannot contain '\\n'".into(),
-            ));
-        }
-        Ok(())
     }
 
     pub fn join<'a, Elements: IntoIterator<Item = &'a MPathElement>>(
@@ -910,9 +893,13 @@ impl Arbitrary for MPathElement {
         let size = cmp::max(g.size(), 1);
         let size = cmp::min(size, MPATH_ELEMENT_MAX_LENGTH);
         let mut element = SmallVec::with_capacity(size);
-        for _ in 0..size {
-            let c = g.choose(&COMPONENT_CHARS[..]).unwrap();
-            element.push(*c);
+        // Keep building possible MPathElements until we get a valid one
+        while MPathElement::verify(&element).is_err() {
+            element.clear();
+            for _ in 0..size {
+                let c = g.choose(&COMPONENT_CHARS[..]).unwrap();
+                element.push(*c);
+            }
         }
         MPathElement(element)
     }
@@ -922,31 +909,18 @@ impl Arbitrary for MPath {
     #[inline]
     fn arbitrary(g: &mut Gen) -> Self {
         let size = g.size();
-        // Up to sqrt(size) components, each with length from 1 to 2 *
-        // sqrt(size) -- don't generate zero-length components. (This isn't
-        // verified by MPath::verify() but is good to have as a real distribution
-        // of paths.)
-        //
-        // TODO: deal with or filter out '..' and friends.
+        // Up to size components
         //
         // TODO: do we really want a uniform distribution over component chars
         // here?
-        //
-        // TODO: this can generate zero-length paths. Consider having separate
-        // types for possibly-zero-length and non-zero-length paths.
-        let size_sqrt = cmp::max((size as f64).sqrt() as usize, 2);
-
         let mut path = Vec::new();
 
-        for i in 0..(1 + usize::arbitrary(g) % (size_sqrt - 1)) {
+        for i in 0..size {
             if i > 0 {
                 path.push(b'/');
             }
-            let range_max = cmp::min(MPATH_ELEMENT_MAX_LENGTH, 2 * size_sqrt);
-            path.extend(
-                (0..(1 + usize::arbitrary(g) % (range_max - 1)))
-                    .map(|_| *g.choose(&COMPONENT_CHARS[..]).unwrap()),
-            );
+            let element = MPathElement::arbitrary(g);
+            path.extend(&element.0);
         }
 
         MPath::new(path).unwrap()
@@ -1283,8 +1257,7 @@ mod test {
     quickcheck! {
         /// Verify that instances generated by quickcheck are valid.
         fn path_gen(p: MPath) -> bool {
-            let result = MPath::verify(&p.to_vec()).is_ok();
-            result && p.elements
+            p.elements
                 .iter()
                 .map(|elem| MPathElement::verify(&elem.as_ref()))
                 .all(|res| res.is_ok())
