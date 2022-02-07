@@ -90,10 +90,6 @@ wheel:
 getdepsbuild:
 	mkdir -p $(GETDEPS_BUILD_DIR)/eden_scm
 	ln -sfn $(GETDEPS_BUILD_DIR)/eden_scm build
-	ln -sfn $(GETDEPS_INSTALL_DIR)/fbthrift-source/thrift ../../thrift
-	ln -sfn $(GETDEPS_INSTALL_DIR)/fb303-source/fb303 ../../fb303
-	mkdir -p ../../common/rust
-	ln -sfn $(GETDEPS_INSTALL_DIR)/rust-shed/source/shed ../../common/rust/shed
 	GETDEPS_BUILD=1 \
 		PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
 		THRIFT="$(GETDEPS_INSTALL_DIR)/fbthrift/bin/thrift1" \

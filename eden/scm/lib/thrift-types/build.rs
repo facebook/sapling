@@ -113,23 +113,7 @@ tracing = "0.1"
 }
 
 fn main() -> io::Result<()> {
-    let thrift_units = [
-        ThriftUnit {
-            name: "fb303_core",
-            path: "fb303/thrift/fb303_core.thrift",
-            deps: vec![],
-        },
-        ThriftUnit {
-            name: "eden_config",
-            path: "eden/fs/config/eden_config.thrift",
-            deps: vec![],
-        },
-        ThriftUnit {
-            name: "eden",
-            path: "eden/fs/service/eden.thrift",
-            deps: vec!["eden_config", "fb303_core"],
-        },
-    ];
+    let thrift_units = [];
 
     generate_thrift_subcrates(&thrift_units)
 }

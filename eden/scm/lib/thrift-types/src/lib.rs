@@ -8,8 +8,8 @@
 // Buck target names are different from ".thrift" file names.
 // Re-export
 pub use anyhow;
-pub use eden as edenfs;
-pub use eden_config as edenfs_config;
+pub use edenfs;
+pub use edenfs_config;
 pub use fb303_core;
 pub use fbthrift;
 pub use futures;
