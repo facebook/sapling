@@ -75,7 +75,7 @@ class EdenTestCaseBase(IsolatedAsyncioTestCase):
             if method_name.startswith(strip_prefix):
                 method_name = method_name[len(strip_prefix) :]
                 break
-        return f"eden_test.{method_name[:20]}."
+        return f"eden_test.{method_name[:10]}."
 
     def setenv(self, name: str, value: Optional[str]) -> None:
         self.exit_stack.enter_context(env_module.setenv_scope(name, value))
