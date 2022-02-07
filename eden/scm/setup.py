@@ -107,6 +107,9 @@ from distutils_rust import RustBinary, BuildRustExt, InstallRustExt
 
 havefb = os.path.exists("fb")
 isgetdepsbuild = os.environ.get("GETDEPS_BUILD") == "1"
+if isgetdepsbuild:
+    # getdeps builds of hg client are OSS only
+    havefb = False
 
 iswindows = os.name == "nt"
 NOOPTIMIZATION = "/Od" if iswindows else "-O0"
