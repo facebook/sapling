@@ -3835,7 +3835,10 @@ def init(ui, dest=".", **opts):
     if opts.get("git"):
         git.clone(ui, "", destpath)
     else:
-        hg.repository(ui, destpath, create=True)
+        if util.url(destpath).scheme == "bundle":
+            hg.repository(ui, destpath, create=True)
+        else:
+            bindings.repo.repo.initialize(destpath, ui._rcfg._rcfg)
 
 
 @command(

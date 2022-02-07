@@ -16,7 +16,6 @@ Attach an object with `__del__` to learn whether repo, ui are dropped on not.
 No leak without extensions
 
   $ newrepo
-  __del__ called
 
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
@@ -25,7 +24,6 @@ No leak without extensions
 Fine extension: blackbox
 
   $ newrepo
-  __del__ called
   $ setconfig extensions.blackbox=
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
@@ -34,7 +32,6 @@ Fine extension: blackbox
 Fine extension: remotefilelog
 
   $ newrepo
-  __del__ called
   $ echo remotefilelog >> .hg/requires
   $ setconfig extensions.remotefilelog= remotefilelog.cachepath=$TESTTMP/cache
   $ hg log -r . -T '{manifest % "{node}"}\n'
@@ -44,7 +41,6 @@ Fine extension: remotefilelog
 Fine extension: treemanifest
 
   $ newrepo
-  __del__ called
   $ setconfig extensions.treemanifest= remotefilelog.reponame=x
   $ hg log -r . -T '{node}\n'
   0000000000000000000000000000000000000000
@@ -56,7 +52,6 @@ Fine extension: treemanifest
 Fine extension: treemanifest only
 
   $ newrepo
-  __del__ called
   $ setconfig extensions.treemanifest= treemanifest.treeonly=1 remotefilelog.reponame=x
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
@@ -65,7 +60,6 @@ Fine extension: treemanifest only
 Fine extension: sparse
 
   $ newrepo
-  __del__ called
   $ setconfig extensions.sparse=
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
@@ -74,7 +68,6 @@ Fine extension: sparse
 Fine extension: commitcloud
 
   $ newrepo
-  __del__ called
   $ setconfig extensions.infinitepush= extensions.commitcloud=
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
@@ -83,7 +76,6 @@ Fine extension: commitcloud
 Fine extension: sampling
 
   $ newrepo
-  __del__ called
   $ setconfig extensions.sampling=
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
@@ -92,7 +84,6 @@ Fine extension: sampling
 Somehow problematic: With many extensions
 
   $ newrepo
-  __del__ called
   $ echo remotefilelog >> .hg/requires
   $ cat >> .hg/hgrc <<EOF
   > [extensions]

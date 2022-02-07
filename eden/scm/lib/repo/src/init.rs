@@ -127,13 +127,20 @@ fn write_store_requirements(path: &Path, config: &ConfigSet) -> Result<(), InitE
     let store_path = path.join(STORE_PATH);
     let store_path = store_path.as_path();
     create_dir(store_path)?;
-    let mut requirements = HashSet::from(["narrowheads", "visibleheads"]);
+    let mut requirements = HashSet::from(["visibleheads"]);
     if config
         .get_or("format", "use-segmented-changelog", || false)
         .unwrap_or(false)
     {
         requirements.insert("invalidatelinkrev");
         requirements.insert("segmentedchangelog");
+    }
+
+    if config
+        .get_or("experimental", "narrow-heads", || true)
+        .unwrap_or(true)
+    {
+        requirements.insert("narrowheads");
     }
 
     write_requirements_file(store_path, requirements)
@@ -200,6 +207,12 @@ treestate
         expected.insert(0, "invalidatelinkrev");
         expected.insert(2, "segmentedchangelog");
         config.set("format", "use-segmented-changelog", Some("true"), &options);
+        write_store_requirements(tmp.path(), &config).unwrap();
+        assert_eq!(fs::read_to_string(path).unwrap(), expected.join("\n"));
+        fs::remove_dir_all(storepath.as_path()).unwrap();
+
+        config.set("experimental", "narrow-heads", Some("no"), &options);
+        expected.remove(1);
         write_store_requirements(tmp.path(), &config).unwrap();
         assert_eq!(fs::read_to_string(path).unwrap(), expected.join("\n"));
     }
