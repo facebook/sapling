@@ -11,46 +11,15 @@ use std::thread::{self};
 
 use anyhow::Error;
 use fbinit::FacebookInit;
-use services::{self, Fb303Service, FbStatus};
+pub use mononoke_app::fb303::ReadyFlagService;
+use services::{self, Fb303Service};
 use slog::{info, Logger};
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
 
 use crate::args::MononokeMatches;
 
 // Re-eport AliveService for convenience so callers do not have to get the services dependency to
 // get AliveService.
 pub use services::AliveService;
-
-/// A FB303 service that reports healthy once set_ready has been called.
-#[derive(Clone)]
-pub struct ReadyFlagService {
-    ready: Arc<AtomicBool>,
-}
-
-impl ReadyFlagService {
-    pub fn new() -> Self {
-        Self {
-            ready: Arc::new(AtomicBool::new(false)),
-        }
-    }
-
-    pub fn set_ready(&self) {
-        self.ready.store(true, Ordering::Relaxed);
-    }
-}
-
-impl Fb303Service for ReadyFlagService {
-    fn getStatus(&self) -> FbStatus {
-        if self.ready.load(Ordering::Relaxed) {
-            FbStatus::Alive
-        } else {
-            FbStatus::Starting
-        }
-    }
-}
 
 /// This is a lower-level function that requires you to spawn the stats aggregation future
 /// yourself. This is useful if you'd like to be able to drop it in order to cancel it.

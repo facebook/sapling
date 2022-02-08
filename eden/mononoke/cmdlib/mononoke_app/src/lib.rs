@@ -9,6 +9,7 @@ mod app;
 pub mod args;
 mod builder;
 mod extension;
+pub mod fb303;
 
 pub use app::MononokeApp;
 pub use builder::MononokeAppBuilder;

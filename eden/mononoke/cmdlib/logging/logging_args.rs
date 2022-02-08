@@ -11,7 +11,7 @@ use anyhow::{Context, Result};
 use cached_config::ConfigStore;
 use clap::{ArgEnum, Args};
 use fbinit::FacebookInit;
-use observability::{DynamicLevelDrain, ObservabilityContext};
+use observability::ObservabilityContext;
 use panichandler::{self, Fate};
 use slog::{debug, o, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
 use slog_ext::make_tag_filter_drain;
@@ -56,10 +56,6 @@ pub struct LoggingArgs {
     /// --log-level.
     #[clap(long, requires = "logview-category", possible_values = &slog::LOG_LEVEL_NAMES)]
     pub logview_additional_level_filter: Option<String>,
-
-    /// Port for fb303 service
-    #[clap(long, value_name = "PORT")]
-    pub fb303_thrift_port: Option<u32>,
 
     /// Fate of the process when a panic happens
     #[clap(long, arg_enum, default_value_t=PanicFate::Abort)]
@@ -190,14 +186,7 @@ impl LoggingArgs {
         observability_context: ObservabilityContext,
     ) -> Result<Logger> {
         let kv = FacebookKV::new().context("Failed to initialize FacebookKV")?;
-
-        let logger = if self.fb303_thrift_port.is_some() {
-            Logger::root(slog_stats::StatsDrain::new(root_log_drain), o![kv])
-        } else {
-            Logger::root(root_log_drain, o![kv])
-        };
-
-        Ok(logger)
+        Ok(Logger::root(root_log_drain, o![kv]))
     }
 
     pub fn create_observability_context(
