@@ -261,15 +261,15 @@ impl IdDagStore for IndexedLogStore {
         &'a self,
         parent_span: Span,
     ) -> Result<Box<dyn Iterator<Item = Result<(Id, SegmentWithWrongHead)>> + 'a>> {
-        let low = index_parent_key(Group::MASTER, parent_span.low);
-        let high = index_parent_key(Group::MASTER, parent_span.high);
+        let low = index_parent_key(Group::MASTER, parent_span.low, Id::MIN);
+        let high = index_parent_key(Group::MASTER, parent_span.high, Id::MAX);
         let range = &low[..]..=&high[..];
         let range_iter = self.log.lookup_range(Self::INDEX_PARENT, range)?;
         let mut result: Vec<(Id, SegmentWithWrongHead)> = Vec::new();
         for entry in range_iter {
             let (key, segments) = entry?;
             let parent_id = {
-                let bytes: [u8; 8] = key[1..].try_into().unwrap();
+                let bytes: [u8; 8] = key[1..9].try_into().unwrap();
                 Id(u64::from_be_bytes(bytes))
             };
             for segment in segments {
@@ -287,14 +287,23 @@ impl IdDagStore for IndexedLogStore {
         parent: Id,
     ) -> Result<Box<dyn Iterator<Item = Result<SegmentWithWrongHead>> + 'a>> {
         let get_iter = |group: Group| -> Result<_> {
-            let key = index_parent_key(group, parent);
-            let iter = self.log.lookup(Self::INDEX_PARENT, &key)?;
-            let iter = iter.map(move |result| {
-                match result {
-                    Ok(bytes) => Ok(SegmentWithWrongHead(self.segment_from_slice(bytes))),
-                    Err(err) => Err(err.into()),
-                }
-            });
+            let low = index_parent_key(group, parent, Id::MIN);
+            let high = index_parent_key(group, parent, Id::MAX);
+            let range = &low[..]..=&high[..];
+            let range_iter = self.log.lookup_range(Self::INDEX_PARENT, range)?;
+            let iter = range_iter.flat_map(
+                |entry| -> Box<dyn Iterator<Item = Result<SegmentWithWrongHead>>> {
+                    let (_key, bytes_iter) = match entry {
+                        Err(e) => return Box::new(std::iter::once(Err(e.into()))),
+                        Ok(e) => e,
+                    };
+                    let segments = bytes_iter.map(|bytes| match bytes {
+                        Ok(bytes) => Ok(SegmentWithWrongHead(self.segment_from_slice(bytes))),
+                        Err(e) => Err(e.into()),
+                    });
+                    Box::new(segments)
+                },
+            );
             Ok(iter)
         };
         let iter: Box<dyn Iterator<Item = Result<_>> + 'a> = if parent.group() == Group::MASTER {
@@ -491,10 +500,10 @@ impl IndexedLogStore {
                     )]
                 }
             })
-            .index("group-parent", |data| {
-                //  child-group parent -> child for flat segments
-                //  ^^^^^^^^^^^ ^^^^^^
-                //  u8          u64 BE
+            .index("group-parent-child", |data| {
+                //  child-group parent child  -> child for flat segments
+                //  ^^^^^^^^^^^ ^^^^^^ ^^^^^^
+                //  u8          u64 BE u64 BE
                 //
                 //  The "child-group" prefix is used for invalidating index when
                 //  non-master Ids get re-assigned.
@@ -537,8 +546,9 @@ impl IndexedLogStore {
                             span.high.group(),
                             "Cross-group segment is unexpected"
                         );
-                        for id in parents {
-                            let bytes = index_parent_key(group, id);
+                        let child_id = span.low;
+                        for parent_id in parents {
+                            let bytes = index_parent_key(group, parent_id, child_id);
                             result.push(log::IndexOutput::Owned(bytes.into()));
                         }
                     }
@@ -593,12 +603,13 @@ impl IndexedLogStore {
     }
 }
 
-// Build index key for the INDEX_PARENT (group-parent) index.
-fn index_parent_key(group: Group, id: Id) -> [u8; 9] {
-    let mut result = [0u8; 9];
+// Build index key for the INDEX_PARENT (group-parent-child) index.
+fn index_parent_key(group: Group, parent_id: Id, child_id: Id) -> [u8; 17] {
+    let mut result = [0u8; 1 + 8 + 8];
     debug_assert!(group.0 <= 0xff);
     result[0] = group.0 as u8;
-    result[1..].copy_from_slice(&id.0.to_be_bytes());
+    result[1..9].copy_from_slice(&parent_id.0.to_be_bytes());
+    result[9..].copy_from_slice(&child_id.0.to_be_bytes());
     result
 }
 
