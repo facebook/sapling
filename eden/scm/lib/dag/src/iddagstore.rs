@@ -922,6 +922,99 @@ P->C: 4->11, 12->N11, N4->N11"#
         assert_eq!(dump_store_state(store, &deleted_ids), "");
     }
 
+    pub(crate) fn test_resize_segment(store: &mut dyn IdDagStore) {
+        // Prepare segments, 3 segments per group.
+        let segs: Vec<(Id, Id, &[Id])> = vec![
+            (Id(0), Id(100), &[]),
+            (Id(200), Id(200), &[]),
+            (nid(100), nid(200), &[Id(50)]),
+            (nid(300), nid(400), &[Id(50)]),
+        ];
+        let mut segs: Vec<Segment> = segs
+            .into_iter()
+            .map(|(low, high, parents)| {
+                let flags = if parents.is_empty() { ROOT } else { EMPTY };
+                Segment::new(flags, 0, low, high, parents)
+            })
+            .collect();
+        // Also insert high-level segments.
+        segs.push(Segment::new(ROOT, 1, Id(0), Id(100), &[]));
+        segs.push(Segment::new(ROOT, 1, nid(100), nid(200), &[Id(50)]));
+        for seg in segs.clone() {
+            store.insert_segment(seg).unwrap();
+        }
+
+        let all_before_resize = store.all_ids_in_groups(&Group::ALL).unwrap();
+        assert_eq!(
+            format!("{:?}", &all_before_resize),
+            "0..=100 200 N100..=N200 N300..=N400"
+        );
+        assert_eq!(
+            dump_store_state(store, &all_before_resize),
+            r#"
+Lv0: R0-100[], R200-200[], N100-N200[50], N300-N400[50]
+Lv1: R0-100[], RN100-N200[50]
+P->C: 50->N100, 50->N300"#
+        );
+
+        // Check error cases.
+        let mut e = |i, id| -> String {
+            store
+                .resize_flat_segment(&segs[i], Some(id))
+                .unwrap_err()
+                .to_string()
+        };
+
+        // Cannot resize because of descendants.
+        assert_eq!(
+            e(0, Id(49)),
+            "ProgrammingError: resize_flat_segment requires a segment without descendants, got R0-100[] with child segment N100-N200[50]"
+        );
+
+        // Cannot resize because of overlap.
+        assert_eq!(
+            e(0, Id(200)),
+            "ProgrammingError: resize_flat_segment cannot overlap with existing segments (segment: R0-100[] new_high: Some(200), overlap: 200)"
+        );
+
+        // Cannot resize because of high < low.
+        assert_eq!(
+            e(1, Id(199)),
+            "ProgrammingError: with_high got invalid input (segment: R200-200[] new_high: 199)"
+        );
+
+        // Cannot resize because of high and new_high are in different groups.
+        assert_eq!(
+            e(1, nid(0)),
+            "ProgrammingError: with_high got invalid input (segment: R200-200[] new_high: N0)"
+        );
+
+        // Do resize.
+        let mut resize = |i, id| store.resize_flat_segment(&segs[i], Some(id)).unwrap();
+
+        // Shrink.
+        resize(0, Id(50));
+        resize(3, nid(350));
+
+        // Grow.
+        resize(1, Id(250));
+        resize(2, nid(250));
+
+        // Check state after resize.
+        let all_after_resize = store.all_ids_in_groups(&Group::ALL).unwrap();
+        assert_eq!(
+            format!("{:?}", &all_after_resize),
+            "0..=50 200..=250 N100..=N250 N300..=N350"
+        );
+        let all = all_after_resize.union(&all_before_resize);
+        assert_eq!(
+            dump_store_state(store, &all),
+            r#"
+Lv0: R0-50[], R200-250[], N100-N250[50], N300-N350[50]
+P->C: 50->N100, 50->N300"#
+        );
+    }
+
     /// Dump the store state in the given `id_set` as a string for testing.
     pub(crate) fn dump_store_state(store: &dyn IdDagStore, id_set: &IdSet) -> String {
         let mut output = Vec::new();
@@ -1060,5 +1153,10 @@ P->C: 4->11, 12->N11, N4->N11"#
     #[test]
     fn test_multi_stores_remove_segment() {
         for_each_empty_store(|store| test_remove_segment(store));
+    }
+
+    #[test]
+    fn test_multi_stores_resize_segment() {
+        for_each_empty_store(|store| test_resize_segment(store));
     }
 }
