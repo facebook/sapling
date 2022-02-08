@@ -103,6 +103,14 @@ pub async fn upload_snapshot(
             load_files(&root, rel_path.clone(), file_type, tracked)
                 .with_context(|| anyhow::anyhow!("Failed to load file {}", rel_path))
         })
+        // Let's ignore file not found errors, they might come from transient files that disappeared.
+        .filter_map(|res| match res {
+            Ok(ok) => Some(Ok(ok)),
+            Err(err) => match err.downcast_ref::<std::io::Error>() {
+                Some(io_error) if io_error.kind() == std::io::ErrorKind::NotFound => None,
+                _ => Some(Err(err)),
+            },
+        })
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()
         .unzip();
