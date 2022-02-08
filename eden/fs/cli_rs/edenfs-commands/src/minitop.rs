@@ -53,9 +53,10 @@ fn parse_refresh_rate(arg: &str) -> Duration {
     Duration::new(seconds, 0)
 }
 
-const COUNTER_REGEX: &str = r"store\.hg\..*";
-const PENDING_IMPORT_OBJECT_TYPES: &[&str] = &["blob", "tree"];
-const STATS_NOT_AVAILABLE: i64 = -1;
+const PENDING_COUNTER_REGEX: &str = r"store\.hg\.pending_import\..*";
+const LIVE_COUNTER_REGEX: &str = r"store\.hg\.live_import\..*";
+const IMPORT_OBJECT_TYPES: &[&str] = &["blob", "tree"];
+const STATS_NOT_AVAILABLE: i64 = 0;
 
 const UNKNOWN_COMMAND: &str = "<unknown>";
 const COLUMN_TITLES: &[&str] = &[
@@ -251,19 +252,19 @@ impl TrackedProcesses {
     }
 }
 
-struct PendingImportStat {
+struct ImportStat {
     count: i64,
     max_duration_us: i64,
 }
 
-async fn get_pending_import_counts(
-    client: &EdenFsClient,
-) -> Result<BTreeMap<String, PendingImportStat>> {
-    let mut imports = BTreeMap::<String, PendingImportStat>::new();
+async fn get_pending_import_counts(client: &EdenFsClient) -> Result<BTreeMap<String, ImportStat>> {
+    let mut imports = BTreeMap::<String, ImportStat>::new();
 
-    client.flushStatsNow();
-    let counters = client.getRegexCounters(COUNTER_REGEX).await.from_err()?;
-    for import_type in PENDING_IMPORT_OBJECT_TYPES {
+    let counters = client
+        .getRegexCounters(PENDING_COUNTER_REGEX)
+        .await
+        .from_err()?;
+    for import_type in IMPORT_OBJECT_TYPES {
         let counter_prefix = format!("store.hg.pending_import.{}", import_type);
         let number_requests = counters
             .get(&format!("{}.count", counter_prefix))
@@ -274,9 +275,46 @@ async fn get_pending_import_counts(
 
         imports.insert(
             import_type.to_string(),
-            PendingImportStat {
+            ImportStat {
                 count: *number_requests,
                 max_duration_us: *longest_outstanding_request_us,
+            },
+        );
+    }
+
+    Ok(imports)
+}
+
+async fn get_live_import_counts(client: &EdenFsClient) -> Result<BTreeMap<String, ImportStat>> {
+    let mut imports = BTreeMap::<String, ImportStat>::new();
+    let counters = client
+        .getRegexCounters(LIVE_COUNTER_REGEX)
+        .await
+        .from_err()?;
+    for import_type in IMPORT_OBJECT_TYPES {
+        let single_prefix = format!("store.hg.live_import.{}", import_type);
+        let batched_prefix = format!("store.hg.live_import.batched_{}", import_type);
+
+        let count = counters
+            .get(&format!("{}.count", single_prefix))
+            .unwrap_or(&STATS_NOT_AVAILABLE)
+            + counters
+                .get(&format!("{}.count", batched_prefix))
+                .unwrap_or(&STATS_NOT_AVAILABLE);
+        let max_duration_us = std::cmp::max(
+            counters
+                .get(&format!("{}.max_duration_us", single_prefix))
+                .unwrap_or(&STATS_NOT_AVAILABLE),
+            counters
+                .get(&format!("{}.max_duration_us", batched_prefix))
+                .unwrap_or(&STATS_NOT_AVAILABLE),
+        );
+
+        imports.insert(
+            import_type.to_string(),
+            ImportStat {
+                count,
+                max_duration_us: *max_duration_us,
             },
         );
     }
@@ -295,8 +333,13 @@ impl crate::Subcommand for MinitopCmd {
         execute!(stdout, terminal::DisableLineWrap).from_err()?;
 
         loop {
+            client.flushStatsNow();
+
             // Update pending imports summary stats
-            let pending_imports = get_pending_import_counts(&client).await?;
+            let (pending_imports, live_imports) = tokio::try_join!(
+                get_pending_import_counts(&client),
+                get_live_import_counts(&client)
+            )?;
 
             // Update currently tracked processes (and add new ones if they haven't been tracked yet)
             let counts = client
@@ -327,22 +370,33 @@ impl crate::Subcommand for MinitopCmd {
             }
 
             // Render pending trees/blobs
-            for import_type in PENDING_IMPORT_OBJECT_TYPES {
-                let pending_blob_counts = pending_imports
-                    .get(&import_type.to_string())
-                    .ok_or_else(|| {
-                        EdenFsError::Other(anyhow!("Did not fetch pending {} info", import_type))
-                    })?;
+            for import_type in IMPORT_OBJECT_TYPES {
+                let pending_counts =
+                    pending_imports
+                        .get(&import_type.to_string())
+                        .ok_or_else(|| {
+                            EdenFsError::Other(anyhow!(
+                                "Did not fetch pending {} info",
+                                import_type
+                            ))
+                        })?;
+                let live_counts = live_imports.get(&import_type.to_string()).ok_or_else(|| {
+                    EdenFsError::Other(anyhow!("Did not fetch live {} info", import_type))
+                })?;
+                let pending_string = format!(
+                    "total pending {}: {} ({:.3}s)",
+                    import_type,
+                    pending_counts.count,
+                    pending_counts.max_duration_us as f64 / 1000000.0
+                );
+                let live_string = format!(
+                    "total live {}: {} ({:.3}s)",
+                    import_type,
+                    live_counts.count,
+                    live_counts.max_duration_us as f64 / 1000000.0
+                );
                 stdout
-                    .write(
-                        format!(
-                            "total pending {}: {} ({:.3}s)\n",
-                            import_type,
-                            pending_blob_counts.count,
-                            pending_blob_counts.max_duration_us as f64 / 1000000.0,
-                        )
-                        .as_bytes(),
-                    )
+                    .write(format!("{:<40} {}\n", pending_string, live_string).as_bytes())
                     .from_err()?;
             }
 
