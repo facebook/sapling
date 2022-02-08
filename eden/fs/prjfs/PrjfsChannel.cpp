@@ -17,6 +17,7 @@
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/StaticAssert.h"
 #include "eden/fs/utils/StringConv.h"
 #include "eden/fs/utils/WinError.h"
 
@@ -25,6 +26,13 @@ namespace facebook::eden {
 using namespace std::literals::chrono_literals;
 
 namespace {
+// These static asserts exist to make explicit the memory usage of the per-mount
+// PrjfsTraceBus. TraceBus uses 2 * capacity * sizeof(TraceEvent) memory usage,
+// so limit total memory usage to around 1 MB per mount.
+constexpr size_t kTraceBusCapacity = 25000;
+static_assert(CheckSize<PrjfsTraceEvent, 48>());
+static_assert(
+    CheckEqual<1200000, kTraceBusCapacity * sizeof(PrjfsTraceEvent)>());
 
 detail::RcuLockedPtr getChannel(
     const PRJ_CALLBACK_DATA* callbackData) noexcept {
@@ -71,6 +79,7 @@ bool disallowMisbehavingApplications(PCWSTR fullAppName) noexcept {
 template <class Method, class... Args>
 HRESULT runCallback(
     Method method,
+    PrjfsTraceCallType callType,
     const PRJ_CALLBACK_DATA* callbackData,
     Args&&... args) noexcept {
   try {
@@ -87,8 +96,16 @@ HRESULT runCallback(
     auto channelPtr = channel.get();
     auto context = std::make_shared<PrjfsRequestContext>(
         std::move(channel), *callbackData);
+    auto liveRequest = std::make_unique<PrjfsLiveRequest>(PrjfsLiveRequest{
+        channelPtr->getTraceBusPtr(),
+        channelPtr->getTraceDetailedArguments(),
+        callType,
+        *callbackData});
     return (channelPtr->*method)(
-        std::move(context), callbackData, std::forward<Args>(args)...);
+        std::move(context),
+        callbackData,
+        std::move(liveRequest),
+        std::forward<Args>(args)...);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
   }
@@ -98,11 +115,12 @@ HRESULT runCallback(
  * Log on callbacks triggered by EdenFS.
  *
  * All callbacks besides the "notification" one are allowed to be called from
- * EdenFS itself, this is due to these only accessing data from the ObjectStore
- * which will never perform any disk IO to the working copy. To handle out of
- * order notifications about file/directory changes, the "notification"
- * callback may need to read the working copy, which may trigger some callbacks
- * to be triggered. These are OK due to the property described above.
+ * EdenFS itself, this is due to these only accessing data from the
+ * ObjectStore which will never perform any disk IO to the working copy. To
+ * handle out of order notifications about file/directory changes, the
+ * "notification" callback may need to read the working copy, which may
+ * trigger some callbacks to be triggered. These are OK due to the property
+ * described above.
  */
 void allowRecursiveCallbacks(const PRJ_CALLBACK_DATA* callbackData) {
   if (callbackData->TriggeringProcessId == GetCurrentProcessId()) {
@@ -116,7 +134,10 @@ HRESULT startEnumeration(
     const GUID* enumerationId) noexcept {
   allowRecursiveCallbacks(callbackData);
   return runCallback(
-      &PrjfsChannelInner::startEnumeration, callbackData, enumerationId);
+      &PrjfsChannelInner::startEnumeration,
+      PrjfsTraceCallType::START_ENUMERATION,
+      callbackData,
+      enumerationId);
 }
 
 HRESULT endEnumeration(
@@ -124,7 +145,10 @@ HRESULT endEnumeration(
     const GUID* enumerationId) noexcept {
   allowRecursiveCallbacks(callbackData);
   return runCallback(
-      &PrjfsChannelInner::endEnumeration, callbackData, enumerationId);
+      &PrjfsChannelInner::endEnumeration,
+      PrjfsTraceCallType::END_ENUMERATION,
+      callbackData,
+      enumerationId);
 }
 
 HRESULT getEnumerationData(
@@ -135,6 +159,7 @@ HRESULT getEnumerationData(
   allowRecursiveCallbacks(callbackData);
   return runCallback(
       &PrjfsChannelInner::getEnumerationData,
+      PrjfsTraceCallType::GET_ENUMERATION_DATA,
       callbackData,
       enumerationId,
       searchExpression,
@@ -143,12 +168,18 @@ HRESULT getEnumerationData(
 
 HRESULT getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   allowRecursiveCallbacks(callbackData);
-  return runCallback(&PrjfsChannelInner::getPlaceholderInfo, callbackData);
+  return runCallback(
+      &PrjfsChannelInner::getPlaceholderInfo,
+      PrjfsTraceCallType::GET_PLACEHOLDER_INFO,
+      callbackData);
 }
 
 HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   allowRecursiveCallbacks(callbackData);
-  return runCallback(&PrjfsChannelInner::queryFileName, callbackData);
+  return runCallback(
+      &PrjfsChannelInner::queryFileName,
+      PrjfsTraceCallType::QUERY_FILE_NAME,
+      callbackData);
 }
 
 HRESULT getFileData(
@@ -157,13 +188,35 @@ HRESULT getFileData(
     UINT32 length) noexcept {
   allowRecursiveCallbacks(callbackData);
   return runCallback(
-      &PrjfsChannelInner::getFileData, callbackData, byteOffset, length);
+      &PrjfsChannelInner::getFileData,
+      PrjfsTraceCallType::GET_FILE_DATA,
+      callbackData,
+      byteOffset,
+      length);
 }
 
 void cancelCommand(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   allowRecursiveCallbacks(callbackData);
   // TODO(T67329233): Interrupt the future.
 }
+
+namespace {
+const std::unordered_map<PRJ_NOTIFICATION, PrjfsTraceCallType>
+    notificationTypeMap = {
+        {PRJ_NOTIFICATION_NEW_FILE_CREATED,
+         PrjfsTraceCallType::NEW_FILE_CREATED},
+        {PRJ_NOTIFICATION_FILE_OVERWRITTEN,
+         PrjfsTraceCallType::FILE_OVERWRITTEN},
+        {PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED,
+         PrjfsTraceCallType::FILE_HANDLE_CLOSED_FILE_MODIFIED},
+        {PRJ_NOTIFICATION_FILE_RENAMED, PrjfsTraceCallType::FILE_RENAMED},
+        {PRJ_NOTIFICATION_PRE_RENAME, PrjfsTraceCallType::PRE_RENAME},
+        {PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED,
+         PrjfsTraceCallType::FILE_HANDLE_CLOSED_FILE_DELETED},
+        {PRJ_NOTIFICATION_PRE_SET_HARDLINK,
+         PrjfsTraceCallType::PRE_SET_HARDLINK},
+};
+} // namespace
 
 HRESULT notification(
     const PRJ_CALLBACK_DATA* callbackData,
@@ -178,16 +231,26 @@ HRESULT notification(
       // unmounted. At this point, we have no way to deal with this properly
       // and the next time this repository is mounted, there will be a
       // discrepency between what EdenFS thinks the state of the working copy
-      // should be and what it actually is. To solve this, we will need to scan
-      // the working copy at mount time to find these files and fixup EdenFS
-      // inodes.
-      // Once the above is done, refactor this code to use runCallback.
+      // should be and what it actually is. To solve this, we will need to
+      // scan the working copy at mount time to find these files and fixup
+      // EdenFS inodes. Once the above is done, refactor this code to use
+      // runCallback.
       EDEN_BUG() << "A notification was received while unmounting";
     }
 
     auto channelPtr = channel.get();
     auto context = std::make_shared<PrjfsRequestContext>(
         std::move(channel), *callbackData);
+    auto typeIt = notificationTypeMap.find(notificationType);
+    auto nType = PrjfsTraceCallType::INVALID;
+    if (typeIt != notificationTypeMap.end()) {
+      nType = typeIt->second;
+    }
+    auto liveRequest = PrjfsLiveRequest{
+        channelPtr->getTraceBusPtr(),
+        channelPtr->getTraceDetailedArguments(),
+        nType,
+        *callbackData};
     return channelPtr->notification(
         std::move(context),
         callbackData,
@@ -205,9 +268,12 @@ HRESULT notification(
  */
 void detachAndCompleteCallback(
     ImmediateFuture<folly::Unit> future,
-    std::shared_ptr<PrjfsRequestContext> context) {
-  auto completionFuture = context->catchErrors(std::move(future))
-                              .ensure([context = std::move(context)] {});
+    std::shared_ptr<PrjfsRequestContext> context,
+    std::unique_ptr<PrjfsLiveRequest> liveRequest) {
+  auto completionFuture =
+      context->catchErrors(std::move(future))
+          .ensure([context = std::move(context),
+                   liveRequest = std::move(liveRequest)] {});
   if (!completionFuture.isReady()) {
     folly::futures::detachOnGlobalCPUExecutor(
         std::move(completionFuture).semi());
@@ -222,7 +288,29 @@ PrjfsChannelInner::PrjfsChannelInner(
     ProcessAccessLog& processAccessLog)
     : dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
-      processAccessLog_(processAccessLog) {}
+      processAccessLog_(processAccessLog),
+      traceDetailedArguments_(std::atomic<size_t>(0)),
+      traceBus_(
+          TraceBus<PrjfsTraceEvent>::create("PrjfsTrace", kTraceBusCapacity)) {
+  traceSubscriptionHandles_.push_back(traceBus_->subscribeFunction(
+      "PrjFS request tracking", [this](const PrjfsTraceEvent& event) {
+        switch (event.getType()) {
+          case PrjfsTraceEvent::START: {
+            auto state = telemetryState_.wlock();
+            state->requests.emplace(
+                event.getData().commandId,
+                OutstandingRequest{event.getCallType(), event.getData()});
+            break;
+          }
+          case PrjfsTraceEvent::FINISH: {
+            auto state = telemetryState_.wlock();
+            auto erased = state->requests.erase(event.getData().commandId);
+            XCHECK(erased) << "duplicate prjfs finish event";
+            break;
+          }
+        }
+      }));
+}
 
 ImmediateFuture<folly::Unit> PrjfsChannelInner::waitForPendingNotifications() {
   return dispatcher_->waitForPendingNotifications();
@@ -231,10 +319,10 @@ ImmediateFuture<folly::Unit> PrjfsChannelInner::waitForPendingNotifications() {
 HRESULT PrjfsChannelInner::startEnumeration(
     std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
+    std::unique_ptr<PrjfsLiveRequest> liveRequest,
     const GUID* enumerationId) {
   auto guid = Guid(*enumerationId);
   auto path = RelativePath(callbackData->FilePathName);
-
   auto fut = makeImmediateFutureWith([this,
                                       context,
                                       guid = std::move(guid),
@@ -254,14 +342,16 @@ HRESULT PrjfsChannelInner::startEnumeration(
         });
   });
 
-  detachAndCompleteCallback(std::move(fut), std::move(context));
+  detachAndCompleteCallback(
+      std::move(fut), std::move(context), std::move(liveRequest));
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
 
 HRESULT PrjfsChannelInner::endEnumeration(
     std::shared_ptr<PrjfsRequestContext> /* context */,
-    const PRJ_CALLBACK_DATA* /*callbackData*/,
+    const PRJ_CALLBACK_DATA* /* callbackData */,
+    std::unique_ptr<PrjfsLiveRequest> /* liveRequest */,
     const GUID* enumerationId) {
   auto guid = Guid(*enumerationId);
   FB_LOGF(getStraceLogger(), DBG7, "closedir({})", guid.toString());
@@ -274,6 +364,7 @@ HRESULT PrjfsChannelInner::endEnumeration(
 HRESULT PrjfsChannelInner::getEnumerationData(
     std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
+    std::unique_ptr<PrjfsLiveRequest> liveRequest,
     const GUID* enumerationId,
     PCWSTR searchExpression,
     PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) {
@@ -372,14 +463,16 @@ HRESULT PrjfsChannelInner::getEnumerationData(
         });
   });
 
-  detachAndCompleteCallback(std::move(fut), std::move(context));
+  detachAndCompleteCallback(
+      std::move(fut), std::move(context), std::move(liveRequest));
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
 
 HRESULT PrjfsChannelInner::getPlaceholderInfo(
     std::shared_ptr<PrjfsRequestContext> context,
-    const PRJ_CALLBACK_DATA* callbackData) {
+    const PRJ_CALLBACK_DATA* callbackData,
+    std::unique_ptr<PrjfsLiveRequest> liveRequest) {
   auto path = RelativePath(callbackData->FilePathName);
   auto virtualizationContext = callbackData->NamespaceVirtualizationContext;
 
@@ -428,14 +521,16 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
         });
   });
 
-  detachAndCompleteCallback(std::move(fut), std::move(context));
+  detachAndCompleteCallback(
+      std::move(fut), std::move(context), std::move(liveRequest));
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
 
 HRESULT PrjfsChannelInner::queryFileName(
     std::shared_ptr<PrjfsRequestContext> context,
-    const PRJ_CALLBACK_DATA* callbackData) {
+    const PRJ_CALLBACK_DATA* callbackData,
+    std::unique_ptr<PrjfsLiveRequest> liveRequest) {
   auto path = RelativePath(callbackData->FilePathName);
 
   auto fut = makeImmediateFutureWith([this,
@@ -456,7 +551,8 @@ HRESULT PrjfsChannelInner::queryFileName(
         });
   });
 
-  detachAndCompleteCallback(std::move(fut), std::move(context));
+  detachAndCompleteCallback(
+      std::move(fut), std::move(context), std::move(liveRequest));
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -545,6 +641,7 @@ constexpr uint32_t kMaxChunkSize = 5 * 1024 * 1024; // 5 MiB
 HRESULT PrjfsChannelInner::getFileData(
     std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
+    std::unique_ptr<PrjfsLiveRequest> liveRequest,
     UINT64 byteOffset,
     UINT32 length) {
   auto fut = makeImmediateFutureWith(
@@ -639,10 +736,34 @@ HRESULT PrjfsChannelInner::getFileData(
             });
       });
 
-  detachAndCompleteCallback(std::move(fut), std::move(context));
+  detachAndCompleteCallback(
+      std::move(fut), std::move(context), std::move(liveRequest));
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
+
+std::vector<PrjfsChannelInner::OutstandingRequest>
+PrjfsChannelInner::getOutstandingRequests() {
+  std::vector<PrjfsChannelInner::OutstandingRequest> outstandingCalls;
+
+  for (const auto& entry : telemetryState_.rlock()->requests) {
+    outstandingCalls.push_back(entry.second);
+  }
+  return outstandingCalls;
+}
+
+TraceDetailedArgumentsHandle PrjfsChannelInner::traceDetailedArguments() {
+  // We could implement something fancier here that just copies the shared_ptr
+  // into a handle struct that increments upon taking ownership and decrements
+  // on destruction, but this code path is quite rare, so do the expedient
+  // thing.
+  auto handle =
+      std::shared_ptr<void>(nullptr, [&copy = traceDetailedArguments_](void*) {
+        copy.fetch_sub(1, std::memory_order_acq_rel);
+      });
+  traceDetailedArguments_.fetch_add(1, std::memory_order_acq_rel);
+  return handle;
+};
 
 namespace {
 typedef ImmediateFuture<folly::Unit> (PrjfsChannelInner::*NotificationHandler)(

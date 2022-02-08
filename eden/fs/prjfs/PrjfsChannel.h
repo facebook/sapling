@@ -12,8 +12,10 @@
 #include <folly/futures/Future.h>
 
 #include <ProjectedFSLib.h> // @manual
+#include <eden/fs/service/gen-cpp2/eden_types.h>
 #include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
+#include "eden/fs/telemetry/TraceBus.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
@@ -30,6 +32,139 @@ namespace detail {
 struct RcuTag;
 using RcuLockedPtr = RcuPtr<PrjfsChannelInner, RcuTag>::RcuLockedPtr;
 } // namespace detail
+
+using TraceDetailedArgumentsHandle = std::shared_ptr<void>;
+
+struct PrjfsTraceEvent : TraceEventBase {
+  enum Type : unsigned char {
+    START,
+    FINISH,
+  };
+
+  /**
+   * Contains the useful fields of PRJ_CALLBACK_DATA to save TraceBus memory.
+   */
+  struct PrjfsOperationData {
+    PrjfsOperationData(const PRJ_CALLBACK_DATA& data)
+        : commandId{data.CommandId}, pid{data.TriggeringProcessId} {}
+
+    PrjfsOperationData(const PrjfsOperationData& data) = default;
+    int32_t commandId;
+    uint32_t pid;
+  };
+
+  PrjfsTraceEvent() = delete;
+
+  static PrjfsTraceEvent start(
+      PrjfsTraceCallType callType,
+      const PrjfsOperationData& data) {
+    return PrjfsTraceEvent{
+        callType, data, StartDetails{std::unique_ptr<std::string>{}}};
+  }
+
+  static PrjfsTraceEvent start(
+      PrjfsTraceCallType callType,
+      const PrjfsOperationData& data,
+      std::string arguments) {
+    return PrjfsTraceEvent{
+        callType,
+        data,
+        StartDetails{std::make_unique<std::string>(std::move(arguments))}};
+  }
+
+  static PrjfsTraceEvent finish(
+      PrjfsTraceCallType callType,
+      const PrjfsOperationData& data) {
+    return PrjfsTraceEvent{callType, PrjfsOperationData{data}, FinishDetails{}};
+  }
+
+  Type getType() const {
+    return std::holds_alternative<StartDetails>(details_) ? Type::START
+                                                          : Type::FINISH;
+  }
+
+  PrjfsTraceCallType getCallType() const {
+    return type_;
+  }
+
+  const PrjfsOperationData& getData() const {
+    return data_;
+  }
+
+  const std::unique_ptr<std::string>& getArguments() const {
+    return std::get<StartDetails>(details_).arguments;
+  }
+
+ private:
+  struct StartDetails {
+    /**
+     * If detailed trace arguments have been requested, this field contains a
+     * human-readable representation of the Prjfs request arguments.
+     *
+     * It is heap-allocated to reduce memory usage in the common case that
+     * detailed argument tracing is disabled.
+     */
+    std::unique_ptr<std::string> arguments;
+  };
+
+  struct FinishDetails {};
+
+  using Details = std::variant<StartDetails, FinishDetails>;
+
+  PrjfsTraceEvent(
+      PrjfsTraceCallType callType,
+      const PrjfsOperationData& data,
+      Details&& details)
+      : type_{callType}, data_{data}, details_{std::move(details)} {}
+
+  PrjfsTraceCallType type_;
+  PrjfsTraceEvent::PrjfsOperationData data_;
+  Details details_;
+};
+
+namespace {
+struct PrjfsLiveRequest {
+  PrjfsLiveRequest(
+      std::shared_ptr<TraceBus<PrjfsTraceEvent>> traceBus,
+      const std::atomic<size_t>& traceDetailedArguments,
+      PrjfsTraceCallType callType,
+      const PRJ_CALLBACK_DATA& data)
+      : traceBus_{std::move(traceBus)}, type_{callType}, data_{data} {
+    if (traceDetailedArguments.load(std::memory_order_acquire)) {
+      traceBus_->publish(PrjfsTraceEvent::start(
+          callType, data_, formatTraceEventString(data)));
+    } else {
+      traceBus_->publish(PrjfsTraceEvent::start(callType, data_));
+    }
+  }
+
+  PrjfsLiveRequest(PrjfsLiveRequest&& that) noexcept = default;
+  PrjfsLiveRequest& operator=(PrjfsLiveRequest&&) = delete;
+
+  ~PrjfsLiveRequest() {
+    if (traceBus_) {
+      traceBus_->publish(PrjfsTraceEvent::finish(type_, data_));
+    }
+  }
+
+  std::string formatTraceEventString(const PRJ_CALLBACK_DATA& data) {
+    return fmt::format(
+        "{} from {}({}): {}({})",
+        data_.commandId,
+        data.TriggeringProcessImageFileName == nullptr
+            ? PathComponentPiece{"None"}
+            : AbsolutePath(data.TriggeringProcessImageFileName).basename(),
+        data_.pid,
+        type_,
+        data.FilePathName == nullptr ? RelativePath{}
+                                     : RelativePath(data.FilePathName));
+  }
+
+  std::shared_ptr<TraceBus<PrjfsTraceEvent>> traceBus_;
+  PrjfsTraceCallType type_;
+  PrjfsTraceEvent::PrjfsOperationData data_;
+};
+} // namespace
 
 class PrjfsChannelInner {
  public:
@@ -54,6 +189,7 @@ class PrjfsChannelInner {
   HRESULT startEnumeration(
       std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
+      std::unique_ptr<PrjfsLiveRequest> liveRequest,
       const GUID* enumerationId);
 
   /**
@@ -64,6 +200,7 @@ class PrjfsChannelInner {
   HRESULT endEnumeration(
       std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
+      std::unique_ptr<PrjfsLiveRequest> liveRequest,
       const GUID* enumerationId);
 
   /**
@@ -74,6 +211,7 @@ class PrjfsChannelInner {
   HRESULT getEnumerationData(
       std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
+      std::unique_ptr<PrjfsLiveRequest> liveRequest,
       const GUID* enumerationId,
       PCWSTR searchExpression,
       PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle);
@@ -85,7 +223,8 @@ class PrjfsChannelInner {
    */
   HRESULT getPlaceholderInfo(
       std::shared_ptr<PrjfsRequestContext> context,
-      const PRJ_CALLBACK_DATA* callbackData);
+      const PRJ_CALLBACK_DATA* callbackData,
+      std::unique_ptr<PrjfsLiveRequest> liveRequest);
 
   /**
    * Test whether a given file exist in the repository.
@@ -94,7 +233,8 @@ class PrjfsChannelInner {
    */
   HRESULT queryFileName(
       std::shared_ptr<PrjfsRequestContext> context,
-      const PRJ_CALLBACK_DATA* callbackData);
+      const PRJ_CALLBACK_DATA* callbackData,
+      std::unique_ptr<PrjfsLiveRequest> liveRequest);
 
   /**
    * Read the content of the given file.
@@ -104,6 +244,7 @@ class PrjfsChannelInner {
   HRESULT getFileData(
       std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
+      std::unique_ptr<PrjfsLiveRequest> liveRequest,
       UINT64 byteOffset,
       UINT32 length);
 
@@ -201,6 +342,32 @@ class PrjfsChannelInner {
 
   void sendError(int32_t commandId, HRESULT error);
 
+  struct OutstandingRequest {
+    PrjfsTraceCallType type;
+    PrjfsTraceEvent::PrjfsOperationData data;
+  };
+
+  /**
+   * Returns the approximate set of outstanding PrjFS requests. Since
+   * telemetry is tracked on a background thread, the result may very slightly
+   * lag reality.
+   */
+  std::vector<PrjfsChannelInner::OutstandingRequest> getOutstandingRequests();
+
+  /**
+   * While the returned handle is alive, PrjfsTraceEvents published on the
+   * TraceBus will have detailed argument strings.
+   */
+  TraceDetailedArgumentsHandle traceDetailedArguments();
+
+  std::shared_ptr<TraceBus<PrjfsTraceEvent>> getTraceBusPtr() {
+    return traceBus_;
+  }
+
+  const std::atomic<size_t>& getTraceDetailedArguments() const {
+    return traceDetailedArguments_;
+  }
+
  private:
   const folly::Logger& getStraceLogger() const {
     return *straceLogger_;
@@ -242,6 +409,17 @@ class PrjfsChannelInner {
   // Set of currently active directory enumerations.
   folly::Synchronized<folly::F14FastMap<Guid, std::shared_ptr<Enumerator>>>
       enumSessions_;
+
+  struct TelemetryState {
+    std::unordered_map<uint64_t, OutstandingRequest> requests;
+  };
+  folly::Synchronized<TelemetryState> telemetryState_;
+  std::vector<TraceSubscriptionHandle<PrjfsTraceEvent>>
+      traceSubscriptionHandles_;
+  std::atomic<size_t> traceDetailedArguments_;
+  // The TraceBus must be the last member because its subscribed functions may
+  // close over `this` and can run until the TraceBus itself is deallocated.
+  std::shared_ptr<TraceBus<PrjfsTraceEvent>> traceBus_;
 };
 
 class PrjfsChannel {
