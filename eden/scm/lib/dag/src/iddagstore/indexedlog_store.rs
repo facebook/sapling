@@ -24,6 +24,7 @@ use fs2::FileExt;
 use indexedlog::log;
 use indexedlog::log::Fold;
 use minibytes::Bytes;
+use parking_lot::Mutex;
 
 use super::IdDagStore;
 use crate::errors::bug;
@@ -47,29 +48,77 @@ pub struct IndexedLogStore {
 
 /// Fold (accumulator) that tracks IdSet covered in groups.
 /// The state is stored as part in `log`.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 struct CoveredIdSetFold {
+    inner: Mutex<CoveredIdSetInner>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct CoveredIdSetInner {
+    /// Covered id set, including pending removals.
+    /// Use `get_id_set_by_group` to get an up-to-date view without removals.
     id_set_by_group: [IdSet; Group::COUNT],
+
+    /// Pending removals. This avoids O(N*M) when there are N spans in id_set
+    /// and M segments are being removed.
+    ///
+    /// Changing this field from `CoveredIdSetFold` must take `&mut self` to
+    /// avoid race conditions.
+    id_set_pending_remove_by_group: [IdSet; Group::COUNT],
 }
 
 const MAX_LEVEL_UNKNOWN: u8 = 0;
+const LEVEL_BYTES: usize = std::mem::size_of::<Level>();
 
 impl Fold for CoveredIdSetFold {
     fn load(&mut self, bytes: &[u8]) -> io::Result<()> {
-        self.id_set_by_group = mincode::deserialize(bytes)
+        let id_sets = mincode::deserialize(bytes)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        let mut locked = self.inner.lock();
+        locked.id_set_by_group = id_sets;
+        locked.id_set_pending_remove_by_group = Default::default();
         Ok(())
     }
 
     fn dump(&self) -> io::Result<Vec<u8>> {
-        mincode::serialize(&self.id_set_by_group)
+        let mut inner = self.inner.lock();
+        inner.apply_removals();
+        mincode::serialize(&inner.id_set_by_group)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
     }
 
+    #[allow(clippy::for_loops_over_fallibles)]
     fn accumulate(&mut self, data: &[u8]) -> indexedlog::Result<()> {
+        let mut inner = self.inner.lock();
+        if data.starts_with(IndexedLogStore::MAGIC_REMOVE_SEGMENT) {
+            let data_start = IndexedLogStore::MAGIC_REMOVE_SEGMENT.len() + LEVEL_BYTES;
+            for seg_data in data.get(data_start..) {
+                let seg = Segment(Bytes::copy_from_slice(seg_data));
+                let span = match seg.span() {
+                    Ok(span) => span,
+                    Err(e) => return Err(("cannot decode segment", e).into()),
+                };
+                if let Some(set) = inner
+                    .id_set_pending_remove_by_group
+                    .get_mut(span.low.group().0)
+                {
+                    set.push(span);
+                } else {
+                    let msg = format!(
+                        "unsupported group {} in segment {:?}",
+                        span.low.group().0,
+                        seg
+                    );
+                    return Err(msg.as_str().into());
+                }
+            }
+            return Ok(());
+        }
+        inner.apply_removals();
+
         // See log_open_options for how other index functions read the entry.
         if data == IndexedLogStore::MAGIC_CLEAR_NON_MASTER {
-            self.id_set_by_group[Group::NON_MASTER.0] = IdSet::empty();
+            inner.id_set_by_group[Group::NON_MASTER.0] = IdSet::empty();
             return Ok(());
         }
         let data = if data.starts_with(IndexedLogStore::MAGIC_REWRITE_LAST_FLAT) {
@@ -85,7 +134,7 @@ impl Fold for CoveredIdSetFold {
             Ok(s) => s,
             Err(e) => return Err(("cannot parse segment in CoveredIdSetFold", e).into()),
         };
-        if let Some(set) = self.id_set_by_group.get_mut(span.low.group().0) {
+        if let Some(set) = inner.id_set_by_group.get_mut(span.low.group().0) {
             set.push(span);
         }
         Ok(())
@@ -96,7 +145,28 @@ impl Fold for CoveredIdSetFold {
     }
 
     fn clone_boxed(&self) -> Box<dyn Fold> {
-        Box::new(self.clone())
+        let mut inner = self.inner.lock();
+        inner.apply_removals();
+        let cloned_inner = inner.clone();
+        let cloned = CoveredIdSetFold {
+            inner: Mutex::new(cloned_inner),
+        };
+        Box::new(cloned)
+    }
+}
+
+impl CoveredIdSetInner {
+    /// Apply pending removals.
+    fn apply_removals(&mut self) {
+        for group in Group::ALL {
+            let group = group.0;
+            if !self.id_set_pending_remove_by_group[group].is_empty() {
+                let new_set = self.id_set_by_group[group]
+                    .difference(&self.id_set_pending_remove_by_group[group]);
+                self.id_set_by_group[group] = new_set;
+                self.id_set_pending_remove_by_group[group] = IdSet::empty();
+            }
+        }
     }
 }
 
@@ -177,8 +247,16 @@ impl IdDagStore for IndexedLogStore {
     }
 
     fn remove_flat_segment_unchecked(&mut self, segment: &Segment) -> Result<()> {
-        let _ = segment;
-        todo!()
+        let max_level = self.max_level()?;
+        let mut data =
+            Vec::with_capacity(segment.0.len() + Self::MAGIC_REMOVE_SEGMENT.len() + LEVEL_BYTES);
+        data.extend_from_slice(Self::MAGIC_REMOVE_SEGMENT);
+        data.push(max_level);
+        data.extend_from_slice(segment.0.as_ref());
+        // The actual remove operation is done by index functions.
+        // See log_open_options().
+        self.log.append(&data)?;
+        Ok(())
     }
 
     fn all_ids_in_groups(&self, groups: &[Group]) -> Result<IdSet> {
@@ -189,8 +267,11 @@ impl IdDagStore for IndexedLogStore {
             .downcast_ref::<CoveredIdSetFold>()
             .expect("should downcast to CoveredIdSetFold defined by OpenOptions");
         let mut result = IdSet::empty();
+        let mut inner = fold.inner.lock();
+        inner.apply_removals();
+        let id_sets = &inner.id_set_by_group;
         for group in groups {
-            result = result.union(&fold.id_set_by_group[group.0]);
+            result = result.union(&id_sets[group.0]);
         }
         Ok(result)
     }
@@ -392,6 +473,16 @@ pub fn describe_indexedlog_entry(data: &[u8]) -> String {
     let mut message = String::new();
     if data == IndexedLogStore::MAGIC_CLEAR_NON_MASTER {
         message += &format!("# {}: MAGIC_CLEAR_NON_MASTER\n", hex(data),);
+    } else if data.starts_with(IndexedLogStore::MAGIC_REMOVE_SEGMENT) {
+        message += &format!(
+            "# {}: MAGIC_REMOVE_SEGMENT\n",
+            hex(IndexedLogStore::MAGIC_REMOVE_SEGMENT)
+        );
+        if let Some(max_level) = data.get(IndexedLogStore::MAGIC_REMOVE_SEGMENT.len()) {
+            message += &format!("# {}: Max Level = {}\n", hex(&[*max_level]), max_level);
+            let end = IndexedLogStore::MAGIC_REMOVE_SEGMENT.len() + LEVEL_BYTES;
+            message += &describe_indexedlog_entry(&data[end..]);
+        }
     } else if data.starts_with(IndexedLogStore::MAGIC_REWRITE_LAST_FLAT) {
         message += &format!(
             "# {}: MAGIC_REWRITE_LAST_FLAT\n",
@@ -445,15 +536,26 @@ impl IndexedLogStore {
     /// `(level, head)` index.
     const MAGIC_REWRITE_LAST_FLAT: &'static [u8] = &[0xf0];
 
+    /// Magic prefix that indicates removing a segment and its related indexes.
+    ///
+    /// Format:
+    ///
+    /// ```plain,ignore
+    /// MAGIC_REMOVE_SEGMENT + MAX_LEVEL (u8) + SEGMENT
+    /// ```
+    const MAGIC_REMOVE_SEGMENT: &'static [u8] = &[0xf1];
+
     #[allow(clippy::assertions_on_constants)]
     pub fn log_open_options() -> log::OpenOptions {
         assert!(Self::MAGIC_CLEAR_NON_MASTER.len() < Segment::OFFSET_DELTA);
         assert!(Group::BITS == 8);
-        assert_ne!(
-            SegmentFlags::all().bits() & Self::MAGIC_REWRITE_LAST_FLAT[Segment::OFFSET_FLAGS],
-            Self::MAGIC_REWRITE_LAST_FLAT[Segment::OFFSET_FLAGS],
-            "MAGIC_REWRITE_LAST_FLAT should not conflict with possible flags"
-        );
+        for magic in [Self::MAGIC_REWRITE_LAST_FLAT, Self::MAGIC_REMOVE_SEGMENT] {
+            assert_ne!(
+                SegmentFlags::all().bits() & magic[Segment::OFFSET_FLAGS],
+                magic[Segment::OFFSET_FLAGS],
+                "magic prefix should not conflict with possible flags (first byte in Segment)"
+            )
+        }
         log::OpenOptions::new()
             .create(true)
             .index("level-head", |data| {
@@ -468,6 +570,24 @@ impl IndexedLogStore {
                             ]))
                         })
                         .collect()
+                } else if data.starts_with(Self::MAGIC_REMOVE_SEGMENT) {
+                    // data: 0xf1 + MAX_LEVEL (u8) + SEGMENT
+                    let mut index_output = Vec::new();
+                    for seg_data in data.get(Self::MAGIC_REMOVE_SEGMENT.len() + LEVEL_BYTES..) {
+                        let max_level = data[1];
+                        let seg = Segment(Bytes::copy_from_slice(seg_data));
+                        // Remove head indexes for all levels.
+                        index_output.reserve(max_level as usize + 1);
+                        let head = match seg.head() {
+                            Ok(id) => id,
+                            Err(_) => continue,
+                        };
+                        for level in 0..=max_level {
+                            let index_key = Self::serialize_head_level_lookup_key(head, level);
+                            index_output.push(log::IndexOutput::Remove(index_key.into()));
+                        }
+                    }
+                    index_output
                 } else if data.starts_with(Self::MAGIC_REWRITE_LAST_FLAT) {
                     // See MAGIC_REWRITE_LAST_FLAT for format.
                     let start = Self::MAGIC_REWRITE_LAST_FLAT.len();
@@ -498,6 +618,29 @@ impl IndexedLogStore {
                     return vec![log::IndexOutput::RemovePrefix(Box::new([
                         Group::NON_MASTER.0 as u8,
                     ]))];
+                }
+
+                if data.starts_with(Self::MAGIC_REMOVE_SEGMENT) {
+                    // data: 0xf1 + MAX_LEVEL (u8) + SEGMENT
+                    let mut index_output = Vec::new();
+                    for data in data.get(2..) {
+                        let seg = Segment(Bytes::copy_from_slice(data));
+                        let child = match seg.low() {
+                            Ok(id) => id,
+                            Err(_) => break,
+                        };
+                        let parents = match seg.parents() {
+                            Ok(parents) => parents,
+                            Err(_) => break,
+                        };
+                        // Remove parent->child indexes.
+                        index_output.reserve(parents.len());
+                        for parent in parents {
+                            let index_key = index_parent_key(parent, child);
+                            index_output.push(log::IndexOutput::Remove(index_key.into()));
+                        }
+                    }
+                    return index_output;
                 }
 
                 if data.starts_with(Self::MAGIC_REWRITE_LAST_FLAT) {
@@ -687,6 +830,21 @@ mod tests {
 # 00: Parent count = 0
 "#
         );
+        let seg = iddag.find_flat_segment_including_id(Id(10))?.unwrap();
+        iddag.remove_flat_segment(&seg)?;
+        let bytes = iddag.log.iter_dirty().nth(2).unwrap()?;
+        assert_eq!(
+            describe_indexedlog_entry(bytes),
+            r#"# f1: MAGIC_REMOVE_SEGMENT
+# 00: Max Level = 0
+# 01: Flags = HAS_ROOT
+# 00: Level = 0
+# 00 00 00 00 00 00 00 0a: High = 10
+# 0a: Delta = 10 (Low = 0)
+# 00: Parent count = 0
+"#
+        );
+
         Ok(())
     }
 

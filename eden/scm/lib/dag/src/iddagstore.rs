@@ -1056,4 +1056,9 @@ P->C: 4->11, 12->N11, N4->N11"#
     fn test_multi_stores_discontinuous_merges() {
         for_each_empty_store(|store| test_discontinuous_merges(store));
     }
+
+    #[test]
+    fn test_multi_stores_remove_segment() {
+        for_each_empty_store(|store| test_remove_segment(store));
+    }
 }
