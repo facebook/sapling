@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use async_trait::async_trait;
-use structopt::{clap::AppSettings, StructOpt};
+use clap::{AppSettings, Parser};
 use tracing::{event, Level};
 
 use edenfs_client::EdenFsInstance;
@@ -39,30 +39,29 @@ const DEFAULT_ETC_EDEN_DIR: &str = "C:\\ProgramData\\facebook\\eden";
 
 type ExitCode = i32;
 
-#[derive(StructOpt, Debug)]
-#[structopt(
+#[derive(Parser, Debug)]
+#[clap(
     name = "edenfsctl",
-    setting = AppSettings::DisableVersion,
-    setting = AppSettings::DisableHelpFlags,
-    setting = AppSettings::VersionlessSubcommands,
+    setting = AppSettings::DisableVersionFlag,
+    setting = AppSettings::DisableHelpFlag,
 )]
 pub struct MainCommand {
     /// The path to the directory where edenfs stores its internal state.
-    #[structopt(long, parse(from_str = expand_path))]
+    #[clap(long, parse(from_str = expand_path))]
     config_dir: Option<PathBuf>,
 
     /// Path to directory that holds the system configuration files.
-    #[structopt(long, parse(from_str = expand_path))]
+    #[clap(long, parse(from_str = expand_path))]
     etc_eden_dir: Option<PathBuf>,
 
     /// Path to directory where .edenrc config file is stored.
-    #[structopt(long, parse(from_str = expand_path))]
+    #[clap(long, parse(from_str = expand_path))]
     home_dir: Option<PathBuf>,
 
-    #[structopt(long)]
+    #[clap(long)]
     pub debug: bool,
 
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     subcommand: TopLevelSubcommand,
 }
 
@@ -75,9 +74,9 @@ pub trait Subcommand: Send + Sync {
 /**
  * The first level of edenfsctl subcommands.
  */
-#[derive(StructOpt, Debug)]
+#[derive(Parser, Debug)]
 pub enum TopLevelSubcommand {
-    #[structopt(alias = "health")]
+    #[clap(alias = "health")]
     Status(crate::status::StatusCmd),
     Pid(crate::pid::PidCmd),
     Uptime(crate::uptime::UptimeCmd),

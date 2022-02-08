@@ -10,7 +10,7 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
-use structopt::StructOpt;
+use clap::Parser;
 
 use edenfs_client::{DaemonHealthy, EdenFsInstance};
 use edenfs_error::Result;
@@ -18,8 +18,8 @@ use edenfs_utils::humantime::HumanTime;
 
 use crate::ExitCode;
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Determine uptime of running edenfs daemon")]
+#[derive(Parser, Debug)]
+#[clap(about = "Determine uptime of running edenfs daemon")]
 pub struct UptimeCmd {}
 
 #[async_trait]

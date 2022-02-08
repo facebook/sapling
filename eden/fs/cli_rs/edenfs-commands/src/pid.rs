@@ -8,15 +8,15 @@
 //! edenfsctl pid
 
 use async_trait::async_trait;
-use structopt::StructOpt;
+use clap::Parser;
 
 use edenfs_client::EdenFsInstance;
 use edenfs_error::Result;
 
 use crate::ExitCode;
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Print the daemon's process ID if running")]
+#[derive(Parser, Debug)]
+#[clap(about = "Print the daemon's process ID if running")]
 pub struct PidCmd {}
 
 #[async_trait]

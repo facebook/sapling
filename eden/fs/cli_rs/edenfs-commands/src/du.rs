@@ -9,6 +9,7 @@
 
 use anyhow::anyhow;
 use async_trait::async_trait;
+use clap::Parser;
 use colored::Colorize;
 use comfy_table::{Cell, CellAlignment, Color, Row, Table};
 use serde::Serialize;
@@ -16,7 +17,6 @@ use std::collections::HashSet;
 use std::fs;
 use std::fs::DirEntry;
 use std::path::{Path, PathBuf};
-use structopt::StructOpt;
 use subprocess::{Exec, Redirection};
 
 use edenfs_client::checkout::{find_checkout, EdenFsCheckout};
@@ -31,13 +31,13 @@ use edenfs_utils::{
 
 use crate::ExitCode;
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Show disk space usage for a checkout")]
+#[derive(Parser, Debug)]
+#[clap(about = "Show disk space usage for a checkout")]
 pub struct DiskUsageCmd {
-    #[structopt(help = "Names of the mount points")]
+    #[clap(help = "Names of the mount points")]
     mounts: Vec<PathBuf>,
 
-    #[structopt(
+    #[clap(
         long,
         help = "Performs automated cleanup",
         conflicts_with = "deep-clean",
@@ -45,7 +45,7 @@ pub struct DiskUsageCmd {
     )]
     clean: bool,
 
-    #[structopt(
+    #[clap(
         long,
         help = "Performs automated cleanup (--clean) and removes fsck dirs. \
         Unlike --clean this will destroy unrecoverable data. If you have any \
@@ -54,7 +54,7 @@ pub struct DiskUsageCmd {
     )]
     deep_clean: bool,
 
-    #[structopt(long, help = "Print the output in JSON format")]
+    #[clap(long, help = "Print the output in JSON format")]
     json: bool,
 }
 

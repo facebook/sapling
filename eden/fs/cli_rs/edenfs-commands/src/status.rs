@@ -10,7 +10,7 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
-use structopt::StructOpt;
+use clap::Parser;
 use tokio::time;
 use tracing::{event, Level};
 
@@ -19,11 +19,11 @@ use edenfs_error::Result;
 
 use crate::ExitCode;
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Check the health of the Eden service")]
+#[derive(Parser, Debug)]
+#[clap(about = "Check the health of the Eden service")]
 pub struct StatusCmd {
     /// Wait up to TIMEOUT seconds for the daemon to respond
-    #[structopt(long, default_value = "3")]
+    #[clap(long, default_value = "3")]
     timeout: u64,
 }
 

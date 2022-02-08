@@ -8,10 +8,10 @@
 //! edenfsctl top
 
 use async_trait::async_trait;
+use clap::Parser;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::RwLock;
 use std::time::Duration;
-use structopt::StructOpt;
 
 use once_cell::sync::Lazy;
 use termwiz::{
@@ -31,16 +31,16 @@ use edenfs_error::Result;
 
 use crate::ExitCode;
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Monitor EdenFS accesses by process.")]
+#[derive(Parser, Debug)]
+#[clap(about = "Monitor EdenFS accesses by process.")]
 pub struct TopCmd {
     /// Don't accumulate data; refresh the screen every update
     /// cycle.
-    #[structopt(short, long)]
+    #[clap(short, long)]
     ephemeral: bool,
 
     /// Specify the rate (in seconds) at which eden top updates.
-    #[structopt(short, long, default_value = "1")]
+    #[clap(short, long, default_value = "1")]
     refresh_rate: u64,
 }
 

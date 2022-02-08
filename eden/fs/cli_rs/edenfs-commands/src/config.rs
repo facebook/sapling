@@ -8,15 +8,15 @@
 //! edenfsctl config
 
 use async_trait::async_trait;
-use structopt::StructOpt;
+use clap::Parser;
 
 use edenfs_client::EdenFsInstance;
 use edenfs_error::Result;
 
 use crate::ExitCode;
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Query Eden configuration")]
+#[derive(Parser, Debug)]
+#[clap(about = "Query Eden configuration")]
 pub struct ConfigCmd {}
 
 #[async_trait]

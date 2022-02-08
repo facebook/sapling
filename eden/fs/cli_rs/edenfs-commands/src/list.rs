@@ -8,17 +8,17 @@
 //! edenfsctl list
 
 use async_trait::async_trait;
+use clap::Parser;
 use edenfs_client::checkout::get_mounts;
 use edenfs_client::EdenFsInstance;
 use edenfs_error::{Result, ResultExt};
-use structopt::StructOpt;
 
 use crate::ExitCode;
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "List available checkouts")]
+#[derive(Parser, Debug)]
+#[clap(about = "List available checkouts")]
 pub struct ListCmd {
-    #[structopt(long, help = "Print the output in JSON format")]
+    #[clap(long, help = "Print the output in JSON format")]
     json: bool,
 }
 

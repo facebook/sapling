@@ -8,6 +8,7 @@
 //! edenfsctl minitop
 
 use async_trait::async_trait;
+use clap::Parser;
 use comfy_table::Table;
 use crossterm::execute;
 use crossterm::terminal;
@@ -17,7 +18,6 @@ use std::io::{stdout, Write};
 use std::path::Path;
 use std::time::Duration;
 use std::time::SystemTime;
-use structopt::StructOpt;
 
 use anyhow::anyhow;
 use edenfs_client::{EdenFsClient, EdenFsInstance};
@@ -29,13 +29,13 @@ use thrift_types::edenfs::types::{pid_t, AccessCounts, GetAccessCountsResult};
 
 use crate::ExitCode;
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Simple monitoring of EdenFS accesses by process.")]
+#[derive(Parser, Debug)]
+#[clap(about = "Simple monitoring of EdenFS accesses by process.")]
 pub struct MinitopCmd {
     // TODO: For minitop, we may want to allow querying for < 1s, but this
     // requires modifying the thrift call and the eden service itself.
     // < 1s may be more useful for the realtime stats we see in minitop/top.
-    #[structopt(
+    #[clap(
         long,
         short,
         help = "Specify the rate (in seconds) at which eden top updates.",

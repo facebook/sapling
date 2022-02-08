@@ -8,15 +8,15 @@
 //! edenfsctl config
 
 use async_trait::async_trait;
-use structopt::StructOpt;
+use clap::Parser;
 
 use edenfs_client::EdenFsInstance;
 use edenfs_error::{Result, ResultExt};
 
 use crate::ExitCode;
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Clears local caches of objects stored in RocksDB")]
+#[derive(Parser, Debug)]
+#[clap(about = "Clears local caches of objects stored in RocksDB")]
 pub struct ClearLocalCachesCmd {}
 
 #[async_trait]

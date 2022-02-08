@@ -10,15 +10,15 @@
 use std::io::{stderr, Write};
 
 use async_trait::async_trait;
-use structopt::StructOpt;
+use clap::Parser;
 
 use edenfs_client::EdenFsInstance;
 use edenfs_error::{Result, ResultExt};
 
 use crate::ExitCode;
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Minimize disk and memory usage by freeing caches")]
+#[derive(Parser, Debug)]
+#[clap(about = "Minimize disk and memory usage by freeing caches")]
 pub struct GcCmd {}
 
 #[async_trait]

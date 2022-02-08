@@ -8,15 +8,15 @@
 //! edenfsctl config
 
 use async_trait::async_trait;
-use structopt::StructOpt;
+use clap::Parser;
 
 use edenfs_client::EdenFsInstance;
 use edenfs_error::{Result, ResultExt};
 
 use crate::ExitCode;
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Asks RocksDB to compact its storage")]
+#[derive(Parser, Debug)]
+#[clap(about = "Asks RocksDB to compact its storage")]
 pub struct CompactLocalStorageCmd {}
 
 #[async_trait]
