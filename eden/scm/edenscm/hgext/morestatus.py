@@ -82,6 +82,17 @@ def helpmessage(ui, continuecmd, abortcmd):
 
 def rebasemsg(repo, ui):
     helpmessage(ui, "hg rebase --continue", "hg rebase --abort")
+    dstnode, srcnode = repo.dirstate.parents()
+    if srcnode != nodeutil.nullid:
+        src = repo[srcnode]
+        dst = repo[dstnode]
+        msg = _("\nRebasing from %s (%s)\n           to %s (%s)") % (
+            src,
+            src.shortdescription(),
+            dst,
+            dst.shortdescription(),
+        )
+        ui.write_err(prefixlines(msg))
 
 
 def histeditmsg(repo, ui):

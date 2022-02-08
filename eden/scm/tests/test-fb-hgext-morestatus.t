@@ -34,6 +34,7 @@ Test status on histedit stop
   # To continue:                hg histedit --continue
   # To abort:                   hg histedit --abort
 
+
 Test disabling output. Nothing should be shown
   $ hg status --config morestatus.show=False
   $ HGPLAIN=1 hg status
@@ -51,6 +52,7 @@ Test bisect state
   # To mark the changeset good:    hg bisect --good
   # To mark the changeset bad:     hg bisect --bad
   # To abort:                      hg bisect --reset
+
 
 Verify that suppressing a morestatus state warning works with the config knob:
   $ hg status --config morestatus.skipstates=bisect
@@ -85,6 +87,7 @@ Test graft state
   # To continue:                hg graft --continue
   # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
 
+
 Test hg status is normal after graft abort
   $ hg up --clean -q
   $ hg status
@@ -113,6 +116,7 @@ Test unshelve state
   # To mark files as resolved:  hg resolve --mark FILE
   # To continue:                hg unshelve --continue
   # To abort:                   hg unshelve --abort
+
 
 Test hg status is normal after unshelve abort
   $ hg unshelve --abort
@@ -143,6 +147,10 @@ Test rebase state
   # To mark files as resolved:  hg resolve --mark FILE
   # To continue:                hg rebase --continue
   # To abort:                   hg rebase --abort
+  # 
+  # Rebasing from 2977a57ce863 (remove content)
+  #            to 79361b8cdbb5 (add content)
+
 
 Test status in rebase state with resolved files
   $ hg resolve --mark a
@@ -156,6 +164,10 @@ Test status in rebase state with resolved files
   # No unresolved merge conflicts.
   # To continue:                hg rebase --continue
   # To abort:                   hg rebase --abort
+  # 
+  # Rebasing from 2977a57ce863 (remove content)
+  #            to 79361b8cdbb5 (add content)
+
 
 Test hg status is normal after rebase abort
   $ hg rebase --abort -q
@@ -173,6 +185,7 @@ Test rebase with an interrupted update:
   # The repository is in an unfinished *rebase* state.
   # To continue:                hg rebase --continue
   # To abort:                   hg rebase --abort
+
   $ hg rebase --abort -q
   rebase aborted
 
@@ -193,6 +206,7 @@ Test conflicted merge state
   # To continue:                hg commit
   # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
 
+
 Test if listed files have a relative path to current location
   $ mkdir -p b/c
   $ cd b/c
@@ -208,6 +222,7 @@ Test if listed files have a relative path to current location
   # To mark files as resolved:  hg resolve --mark FILE
   # To continue:                hg commit
   # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
+
   $ cd ../..
 
 Test hg status is normal after merge abort
@@ -229,6 +244,7 @@ Test non-conflicted merge state
   # To continue:                hg commit
   # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
 
+
 Test hg status is normal after merge commit (no output)
   $ hg commit -m 'merge commit' -q
   $ hg status
@@ -242,6 +258,7 @@ Test interrupted update state, without active bookmark and REV is a hash
   # To continue:                hg update -C 2977a57ce863
   # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
 
+
 Test interrupted update state, with active bookmark and REV is a bookmark
   $ hg bookmark b1
   $ hg bookmark -r 79361b8cdbb5 b2
@@ -251,6 +268,7 @@ Test interrupted update state, with active bookmark and REV is a bookmark
   # The repository is in an unfinished *update* state.
   # To continue:                hg update b2
   # To abort:                   hg update --clean b1    (warning: this will discard uncommitted changes)
+
 
 Test update state can be reset using bookmark
   $ hg update b1 -q
@@ -267,6 +285,7 @@ Test interrupted update state, without active bookmark and REV is specified usin
   # To continue:                hg update --date 1970-1-1 -q
   # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
 
+
   $ unbreakupdate
 
 Test update state can be reset using .
@@ -282,6 +301,7 @@ Test args escaping in continue command
   # The repository is in an unfinished *update* state.
   # To continue:                hg --config 'extensions.fsmonitor=!' --config 'ui.ssh=ssh -oControlMaster=no' update -C 2977a57ce863
   # To abort:                   hg update --clean b1    (warning: this will discard uncommitted changes)
+
 
   $ unbreakupdate
   $ hg update --clean b1
@@ -307,6 +327,7 @@ Test bisect search status (after cleaning up previous setup)
   # To mark the changeset good:    hg bisect --good
   # To mark the changeset bad:     hg bisect --bad
   # To abort:                      hg bisect --reset
+
 
 Test hg status is normal after bisect reset
   $ hg bisect --reset
