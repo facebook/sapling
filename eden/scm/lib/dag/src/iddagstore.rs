@@ -7,9 +7,6 @@
 
 use std::cmp::Ordering;
 
-use serde::Deserialize;
-use serde::Serialize;
-
 use crate::errors::bug;
 use crate::errors::programming;
 use crate::id::Group;
@@ -367,13 +364,6 @@ pub(crate) fn get_deleted_inserted_spans(
         },
         None => (Some(span), None),
     }
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[derive(Serialize, Deserialize)]
-enum StoreId {
-    Master(usize),
-    NonMaster(usize),
 }
 
 #[cfg(test)]

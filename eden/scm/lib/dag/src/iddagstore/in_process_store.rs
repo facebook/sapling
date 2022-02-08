@@ -21,7 +21,6 @@ use serde::Serialize;
 use serde::Serializer;
 
 use super::IdDagStore;
-use super::StoreId;
 use crate::errors::bug;
 use crate::id::Group;
 use crate::id::Id;
@@ -45,6 +44,13 @@ pub struct InProcessStore {
     // Removed StoreIds.
     // Written by `remove_flat_segment_unchecked`. Read by `serialize`.
     removed_store_ids: BTreeSet<StoreId>,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Serialize, Deserialize)]
+enum StoreId {
+    Master(usize),
+    NonMaster(usize),
 }
 
 impl IdDagStore for InProcessStore {
