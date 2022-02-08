@@ -800,6 +800,7 @@ class FixupCmd(Subcmd):
                 "By default, paths with source of .eden-redirections will be fixed. "
                 "Setting this flag to true will fix paths from all sources."
             ),
+            default=True,
             action="store_true",
         )
 
