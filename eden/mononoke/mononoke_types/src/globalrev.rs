@@ -9,7 +9,8 @@ use crate::BonsaiChangeset;
 use abomonation_derive::Abomonation;
 use anyhow::{bail, Error, Result};
 use sql::mysql;
-use std::str;
+use std::fmt::{self, Display};
+use std::str::{self, FromStr};
 
 pub const GLOBALREV_EXTRA: &str = "global_rev";
 
@@ -72,5 +73,19 @@ impl Globalrev {
             }
             (None, None) => bail!("Bonsai cs {:?} without globalrev", bcs),
         }
+    }
+}
+
+impl Display for Globalrev {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.0, fmt)
+    }
+}
+
+impl FromStr for Globalrev {
+    type Err = <u64 as FromStr>::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        u64::from_str(s).map(Globalrev::new)
     }
 }

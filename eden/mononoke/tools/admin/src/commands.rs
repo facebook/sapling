@@ -8,6 +8,7 @@
 mononoke_app::subcommands! {
     mod blobstore;
     mod blobstore_unlink;
+    mod convert;
     mod fetch;
     mod list_repos;
     mod repo_info;

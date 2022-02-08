@@ -18,7 +18,9 @@ use metaconfig_types::{BlobConfig, BlobstoreId, StorageConfig};
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 
-/// Directly access blobstore keys
+/// Unlink blobstore keys
+///
+/// Currently only works for SqlBlob.
 #[derive(Parser)]
 pub struct CommandArgs {
     #[clap(flatten)]

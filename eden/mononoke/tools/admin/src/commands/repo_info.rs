@@ -13,7 +13,7 @@ use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use repo_identity::RepoIdentityRef;
 
-/// List configured repositories.
+/// Show information about a repository
 #[derive(Parser)]
 pub struct CommandArgs {
     #[clap(flatten)]
