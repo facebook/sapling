@@ -16,7 +16,9 @@ pub trait ArgExtension {
     type Args: clap::Args;
 
     /// Obtain default values for these arguments.
-    fn arg_defaults(&self) -> Vec<(&'static str, String)>;
+    fn arg_defaults(&self) -> Vec<(&'static str, String)> {
+        Vec::new()
+    }
 
     /// Process values for these arguments, optionally modifying the
     /// environment.
