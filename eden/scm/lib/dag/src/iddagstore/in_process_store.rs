@@ -25,7 +25,6 @@ use super::StoreId;
 use crate::errors::bug;
 use crate::id::Group;
 use crate::id::Id;
-use crate::iddagstore::SegmentWithWrongHead;
 use crate::ops::Persist;
 use crate::segment::Segment;
 use crate::spanset::Span;
@@ -39,8 +38,8 @@ pub struct InProcessStore {
     non_master_segments: Vec<Segment>,
     // level -> head -> serialized Segment
     level_head_index: Vec<BTreeMap<Id, StoreId>>,
-    // (child-group, parent) -> serialized Segment
-    parent_index: BTreeMap<(Group, Id), BTreeSet<StoreId>>,
+    // (child-group, parent) -> child (in a flat segment).
+    parent_index: BTreeMap<(Group, Id), BTreeSet<Id>>,
     // IdSet covered by flat segments in specified groups.
     id_set_by_group: [IdSet; Group::COUNT],
 }
@@ -131,7 +130,7 @@ impl IdDagStore for InProcessStore {
                     .parent_index
                     .entry((group, parent))
                     .or_insert_with(BTreeSet::new);
-                children.insert(store_id);
+                children.insert(span.low);
             }
             // Update "covered" IdSet.
             self.id_set_by_group[group.0].push(span);
@@ -217,18 +216,23 @@ impl IdDagStore for InProcessStore {
     fn iter_flat_segments_with_parent_span<'a>(
         &'a self,
         parent_span: Span,
-    ) -> Result<Box<dyn Iterator<Item = Result<(Id, SegmentWithWrongHead)>> + 'a>> {
-        let mut iter: Box<dyn Iterator<Item = Result<(Id, SegmentWithWrongHead)>> + 'a> =
+    ) -> Result<Box<dyn Iterator<Item = Result<(Id, Segment)>> + 'a>> {
+        let mut iter: Box<dyn Iterator<Item = Result<(Id, Segment)>> + 'a> =
             Box::new(std::iter::empty());
         for group in Group::ALL {
             let range = (group, parent_span.low)..=(group, parent_span.high);
             let group_iter =
                 self.parent_index
                     .range(range)
-                    .flat_map(move |((_group, parent_id), store_ids)| {
+                    .flat_map(move |((_group, parent_id), child_ids)| {
                         let parent_id = *parent_id;
-                        store_ids.iter().map(move |store_id| {
-                            Ok((parent_id, SegmentWithWrongHead(self.get_segment(store_id))))
+                        child_ids.iter().filter_map(move |&id| {
+                            let seg = match self.find_flat_segment_including_id(id) {
+                                Ok(Some(s)) => s,
+                                Err(e) => return Some(Err(e)),
+                                Ok(None) => return None,
+                            };
+                            Some(Ok((parent_id, seg)))
                         })
                     });
             iter = Box::new(iter.chain(group_iter));
@@ -239,14 +243,19 @@ impl IdDagStore for InProcessStore {
     fn iter_flat_segments_with_parent<'a>(
         &'a self,
         parent: Id,
-    ) -> Result<Box<dyn Iterator<Item = Result<SegmentWithWrongHead>> + 'a>> {
+    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
         let get_iter = |group: Group| -> Result<Box<dyn Iterator<Item = Result<_>> + 'a>> {
             match self.parent_index.get(&(group, parent)) {
                 None => Ok(Box::new(iter::empty())),
                 Some(children) => {
-                    let iter = children
-                        .iter()
-                        .map(move |store_id| Ok(SegmentWithWrongHead(self.get_segment(store_id))));
+                    let iter = children.iter().filter_map(move |&id| {
+                        let seg = match self.find_flat_segment_including_id(id) {
+                            Ok(Some(s)) => s,
+                            Err(e) => return Some(Err(e)),
+                            Ok(None) => return None,
+                        };
+                        Some(Ok(seg))
+                    });
                     Ok(Box::new(iter))
                 }
             }

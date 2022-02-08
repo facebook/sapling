@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt;
-
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -171,22 +169,16 @@ pub trait IdDagStore: Send + Sync + 'static {
 
     /// Iterate through `(parent_id, segment)` for master flat segments
     /// that have a parent in the given span.
-    ///
-    /// Warning: The returned segments might have incorrect `high`s.
-    /// See `indexedlog_store.rs` for details.
     fn iter_flat_segments_with_parent_span<'a>(
         &'a self,
         parent_span: Span,
-    ) -> Result<Box<dyn Iterator<Item = Result<(Id, SegmentWithWrongHead)>> + 'a>>;
+    ) -> Result<Box<dyn Iterator<Item = Result<(Id, Segment)>> + 'a>>;
 
     /// Iterate through flat segments that have the given parent.
-    ///
-    /// Warning: The returned segments might have incorrect `high`s.
-    /// See `indexedlog_store.rs` for details.
     fn iter_flat_segments_with_parent<'a>(
         &'a self,
         parent: Id,
-    ) -> Result<Box<dyn Iterator<Item = Result<SegmentWithWrongHead>> + 'a>>;
+    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>>;
 
     /// Remove all non master Group identifiers from the DAG.
     fn remove_non_master(&mut self) -> Result<()>;
@@ -271,38 +263,6 @@ pub trait IdDagStore: Send + Sync + 'static {
     }
 }
 
-/// Wrapper for `Segment` that prevents access to `high`.
-#[derive(Eq, PartialEq)]
-pub struct SegmentWithWrongHead(Segment);
-
-impl fmt::Debug for SegmentWithWrongHead {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let span = self.0.span().unwrap();
-        if self.0.has_root().unwrap() {
-            write!(f, "R")?;
-        }
-        if self.0.only_head().unwrap() {
-            write!(f, "H")?;
-        }
-        // Mask out the "high" part since it's incorrect.
-        let parents = self.parents().unwrap();
-        write!(f, "{}-x{:?}", span.low, parents)?;
-        Ok(())
-    }
-}
-
-impl SegmentWithWrongHead {
-    pub(crate) fn low(&self) -> Result<Id> {
-        self.0.low()
-    }
-    pub(crate) fn parent_count(&self) -> Result<usize> {
-        self.0.parent_count()
-    }
-    pub(crate) fn parents(&self) -> Result<Vec<Id>> {
-        self.0.parents()
-    }
-}
-
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[derive(Serialize, Deserialize)]
 enum StoreId {
@@ -312,6 +272,7 @@ enum StoreId {
 
 #[cfg(test)]
 mod tests {
+    use std::fmt;
     use std::ops::Deref;
 
     use once_cell::sync::Lazy;
@@ -638,7 +599,7 @@ mod tests {
 
         // Parent lookup.
         let iter = store.iter_flat_segments_with_parent(Id(5)).unwrap();
-        assert_eq!(fmt_iter(iter), ["20-x[5]"]);
+        assert_eq!(fmt_iter(iter), ["20-35[5]"]);
         let iter = store.iter_flat_segments_with_parent(Id(10)).unwrap();
         assert_eq!(fmt_iter(iter), [] as [String; 0]);
         let iter = store.iter_flat_segments_with_parent(Id(30)).unwrap();
@@ -739,22 +700,22 @@ mod tests {
             answer_str_list.join(" ")
         };
 
-        assert_eq!(query(Id(2).into()), "(2, 6-x[2])");
-        assert_eq!(query((Id(0)..=Id(3)).into()), "(2, 6-x[2])");
-        assert_eq!(query(Id(13).into()), "(13, N0-x[13])");
+        assert_eq!(query(Id(2).into()), "(2, 6-9[2])");
+        assert_eq!(query((Id(0)..=Id(3)).into()), "(2, 6-9[2])");
+        assert_eq!(query(Id(13).into()), "(13, N0-N2[13])");
         assert_eq!(query(Id(4).into()), "");
-        assert_eq!(query(nid(2).into()), "(N2, N5-x[N2, N4])");
+        assert_eq!(query(nid(2).into()), "(N2, N5-N6[N2, N4])");
     }
 
     fn test_store_iter_flat_segments_with_parent(store: &dyn IdDagStore) {
-        let lookup = |id: Id| -> Vec<_> {
+        let lookup = |id: Id| -> Vec<Segment> {
             let mut list = store
                 .iter_flat_segments_with_parent(id)
                 .unwrap()
                 .collect::<Result<Vec<_>>>()
                 .unwrap();
             list.sort_unstable_by_key(|seg| seg.low().unwrap());
-            list.into_iter().map(|s| s.0).collect()
+            list
         };
 
         let answer = lookup(Id(2));

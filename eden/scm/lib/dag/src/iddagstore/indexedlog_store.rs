@@ -29,7 +29,6 @@ use super::IdDagStore;
 use crate::errors::bug;
 use crate::id::Group;
 use crate::id::Id;
-use crate::iddagstore::SegmentWithWrongHead;
 use crate::ops::Persist;
 use crate::segment::describe_segment_bytes;
 use crate::segment::hex;
@@ -260,24 +259,25 @@ impl IdDagStore for IndexedLogStore {
     fn iter_flat_segments_with_parent_span<'a>(
         &'a self,
         parent_span: Span,
-    ) -> Result<Box<dyn Iterator<Item = Result<(Id, SegmentWithWrongHead)>> + 'a>> {
-        let mut result: Vec<(Id, SegmentWithWrongHead)> = Vec::new();
+    ) -> Result<Box<dyn Iterator<Item = Result<(Id, Segment)>> + 'a>> {
+        let mut result: Vec<(Id, Segment)> = Vec::new();
         for group in Group::ALL {
             let low = index_parent_key(group, parent_span.low, Id::MIN);
             let high = index_parent_key(group, parent_span.high, Id::MAX);
             let range = &low[..]..=&high[..];
             let range_iter = self.log.lookup_range(Self::INDEX_PARENT, range)?;
             for entry in range_iter {
-                let (key, segments) = entry?;
+                let (key, _segments) = entry?;
                 let parent_id = {
                     let bytes: [u8; 8] = key[1..9].try_into().unwrap();
                     Id(u64::from_be_bytes(bytes))
                 };
-                for segment in segments {
-                    result.push((
-                        parent_id,
-                        SegmentWithWrongHead(self.segment_from_slice(segment?)),
-                    ));
+                let child_id = {
+                    let bytes: [u8; 8] = key[9..].try_into().unwrap();
+                    Id(u64::from_be_bytes(bytes))
+                };
+                if let Some(seg) = self.find_flat_segment_including_id(child_id)? {
+                    result.push((parent_id, seg));
                 }
             }
         }
@@ -287,33 +287,9 @@ impl IdDagStore for IndexedLogStore {
     fn iter_flat_segments_with_parent<'a>(
         &'a self,
         parent: Id,
-    ) -> Result<Box<dyn Iterator<Item = Result<SegmentWithWrongHead>> + 'a>> {
-        let get_iter = |group: Group| -> Result<_> {
-            let low = index_parent_key(group, parent, Id::MIN);
-            let high = index_parent_key(group, parent, Id::MAX);
-            let range = &low[..]..=&high[..];
-            let range_iter = self.log.lookup_range(Self::INDEX_PARENT, range)?;
-            let iter = range_iter.flat_map(
-                |entry| -> Box<dyn Iterator<Item = Result<SegmentWithWrongHead>>> {
-                    let (_key, bytes_iter) = match entry {
-                        Err(e) => return Box::new(std::iter::once(Err(e.into()))),
-                        Ok(e) => e,
-                    };
-                    let segments = bytes_iter.map(|bytes| match bytes {
-                        Ok(bytes) => Ok(SegmentWithWrongHead(self.segment_from_slice(bytes))),
-                        Err(e) => Err(e.into()),
-                    });
-                    Box::new(segments)
-                },
-            );
-            Ok(iter)
-        };
-        let iter: Box<dyn Iterator<Item = Result<_>> + 'a> = if parent.group() == Group::MASTER {
-            Box::new(get_iter(Group::MASTER)?.chain(get_iter(Group::NON_MASTER)?))
-        } else {
-            Box::new(get_iter(Group::NON_MASTER)?)
-        };
-        Ok(iter)
+    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
+        let iter = self.iter_flat_segments_with_parent_span(parent.into())?;
+        Ok(Box::new(iter.map(|item| item.map(|(_, seg)| seg))))
     }
 
     /// Mark non-master ids as "removed".
@@ -517,17 +493,11 @@ impl IndexedLogStore {
                 }
 
                 if data.starts_with(Self::MAGIC_REWRITE_LAST_FLAT) {
-                    // XXX: Ideally we can change the old parent index to point to the new entry.
-                    // However, indexedlog does not provide APIs to edit the values of an index
-                    // yet.
+                    // NOTE: Segments this index points to will have wrong `high`.
                     //
-                    // This means that the `high` field of segments found by this index can be
-                    // wrong.  Practically, all users of the parent index (`to_first_ancestor_nth`
-                    // and `children_id`) do not use `high`. So we just leave the old wrong index
-                    // there for now.
-                    //
-                    // Note: If this were to be fixed, remember to change the index name to force a
-                    // rebuild of the index.
+                    // But we never use the segments from this index. Instead,
+                    // we use the index key to figure out (parent, child) and do
+                    // an extra lookup of `child` to figure out the segments.
                     return Vec::new();
                 }
 
@@ -655,11 +625,9 @@ mod tests {
             "[]"
         );
         // 3 -> 6 parent index only returns the new segment.
-        // XXX: This should be 6-20 instead of 6-10. But it does not
-        // affect correctness for now.
         assert_eq!(
             dbg_iter(iddag2.iter_flat_segments_with_parent(Id(3))?),
-            "[6-x[3]]"
+            "[H6-20[3]]"
         );
 
         // Check (level, head) -> segment index.

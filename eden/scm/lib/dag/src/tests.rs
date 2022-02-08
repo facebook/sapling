@@ -972,7 +972,7 @@ Lv1: R0-7[]"#
     assert_eq!(to_first_ancestor_nth(2), "Some((3, 1))");
     assert_eq!(
         to_first_ancestor_nth(3),
-        "ProgrammingError: cannot convert 3 to x~n form (x must be in `H + parents(ancestors(H) & merge())` where H = 11) (trace: in seg R2-3[], 3 has child seg (H4-x[1, 3]), child seg cannot be followed (3 is not p1))"
+        "ProgrammingError: cannot convert 3 to x~n form (x must be in `H + parents(ancestors(H) & merge())` where H = 11) (trace: in seg R2-3[], 3 has child seg (H4-7[1, 3]), child seg cannot be followed (3 is not p1))"
     );
     assert_eq!(to_first_ancestor_nth(4), "Some((9, 4))");
     assert_eq!(to_first_ancestor_nth(5), "Some((9, 3))");
@@ -981,7 +981,7 @@ Lv1: R0-7[]"#
     assert_eq!(to_first_ancestor_nth(8), "Some((9, 1))");
     assert_eq!(
         to_first_ancestor_nth(9),
-        "ProgrammingError: cannot convert 9 to x~n form (x must be in `H + parents(ancestors(H) & merge())` where H = 11) (trace: in seg 8-9[6], 9 has child seg (H10-x[7, 9]), child seg cannot be followed (9 is not p1))"
+        "ProgrammingError: cannot convert 9 to x~n form (x must be in `H + parents(ancestors(H) & merge())` where H = 11) (trace: in seg 8-9[6], 9 has child seg (H10-11[7, 9]), child seg cannot be followed (9 is not p1))"
     );
     assert_eq!(to_first_ancestor_nth(10), "Some((11, 1))");
     assert_eq!(to_first_ancestor_nth(11), "Some((11, 0))");
