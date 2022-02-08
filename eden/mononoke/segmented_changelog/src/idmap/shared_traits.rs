@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tunables::tunables;
 
+use crate::dag::errors::programming;
 use crate::dag::errors::{self, BackendError, DagError};
 use crate::dag::id::{Group, Id};
 use crate::dag::idmap::IdMapWrite;
@@ -394,6 +395,10 @@ impl IdMapWrite for IdMapWrapper {
             .insert(&self.ctx, id, cs_id)
             .await
             .map_err(BackendError::from)?)
+    }
+    async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>> {
+        let _ = (low, high);
+        programming("remove_range() is not implemented server-side")
     }
     async fn remove_non_master(&mut self) -> Result<()> {
         // We don't handle non-master in the server

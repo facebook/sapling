@@ -6,7 +6,6 @@
  */
 
 use std::collections::BTreeMap;
-use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::{self};
 
@@ -34,7 +33,7 @@ pub struct MemIdMap {
 /// or "version" concept.
 #[derive(Default, Clone)]
 pub(crate) struct CoreMemIdMap {
-    id2name: HashMap<Id, VertexName>,
+    id2name: BTreeMap<Id, VertexName>,
     name2id: BTreeMap<VertexName, Id>,
 }
 
@@ -99,6 +98,19 @@ impl CoreMemIdMap {
         self.name2id.insert(vertex_name.clone(), id);
         self.id2name.insert(id, vertex_name);
     }
+
+    pub fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>> {
+        let to_remove: Vec<(Id, VertexName)> = self
+            .id2name
+            .range(low..=high)
+            .map(|(i, n)| (*i, n.clone()))
+            .collect();
+        for (id, name) in &to_remove {
+            self.id2name.remove(id);
+            self.name2id.remove(name);
+        }
+        Ok(to_remove.into_iter().map(|(_, v)| v).collect())
+    }
 }
 
 #[async_trait::async_trait]
@@ -162,6 +174,10 @@ impl IdMapWrite for MemIdMap {
         self.core.insert_vertex_id_name(id, vertex_name);
         self.map_version.bump();
         Ok(())
+    }
+    async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>> {
+        self.map_version = VerLink::new();
+        self.core.remove_range(low, high)
     }
     async fn remove_non_master(&mut self) -> Result<()> {
         self.map_version = VerLink::new();

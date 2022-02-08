@@ -489,6 +489,10 @@ where
         self.map.insert(id, name).await
     }
 
+    async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>> {
+        self.map.remove_range(low, high).await
+    }
+
     async fn remove_non_master(&mut self) -> Result<()> {
         self.map.remove_non_master().await
     }

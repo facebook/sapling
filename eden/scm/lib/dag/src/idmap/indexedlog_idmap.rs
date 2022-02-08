@@ -16,6 +16,8 @@ use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use fs2::FileExt;
 use indexedlog::log;
+use vlqencoding::VLQDecode;
+use vlqencoding::VLQEncode;
 
 use super::IdMapWrite;
 use crate::errors::bug;
@@ -43,6 +45,15 @@ pub struct IdMap {
 }
 
 impl IdMap {
+    // Format:
+    //
+    // - Insertion:
+    //   id (8 bytes, BE) + group (1 byte) + name (n bytes)
+    // - Deletion:
+    //   u64::MAX (8 bytes, BE) + n (VLQ) + [id (VLQ) + len(name) (VLQ) + name ] * n
+    // - Clear non-master (only id->name mappings, being deprecated):
+    //   CLRNM
+
     const INDEX_ID_TO_NAME: usize = 0;
     const INDEX_GROUP_NAME_TO_ID: usize = 1;
 
@@ -50,6 +61,10 @@ impl IdMap {
     /// mappings". A valid entry has at least 8 bytes so does not conflict
     /// with this.
     const MAGIC_CLEAR_NON_MASTER: &'static [u8] = b"CLRNM";
+
+    /// Magic prefix for deletion. It's u64::MAX id, which does not conflict
+    /// with a valid id because it's > `Id::MAX`.
+    const MAGIC_DELETION_PREFIX: &'static [u8] = &u64::MAX.to_be_bytes();
 
     /// Start offset in an entry for "name".
     const NAME_OFFSET: usize = 8 + Group::BYTES;
@@ -92,12 +107,20 @@ impl IdMap {
     }
 
     pub(crate) fn log_open_options() -> log::OpenOptions {
+        assert!(Self::MAGIC_DELETION_PREFIX > &Id::MAX.0.to_be_bytes()[..]);
         log::OpenOptions::new()
             .create(true)
             .index("id", |data| {
                 assert!(Self::MAGIC_CLEAR_NON_MASTER.len() < 8);
                 assert!(Group::BITS == 8);
-                if data.len() < 8 {
+                if data.starts_with(Self::MAGIC_DELETION_PREFIX) {
+                    let items =
+                        decode_deletion_entry(data).expect("deletion entry should be valid");
+                    items
+                        .into_iter()
+                        .map(|(id, _name)| log::IndexOutput::Remove(id.0.to_be_bytes().into()))
+                        .collect()
+                } else if data.len() < 8 {
                     if data == Self::MAGIC_CLEAR_NON_MASTER {
                         vec![log::IndexOutput::RemovePrefix(Box::new([
                             Group::NON_MASTER.0 as u8,
@@ -110,7 +133,19 @@ impl IdMap {
                 }
             })
             .index("group-name", |data| {
-                if data.len() >= 8 {
+                if data.starts_with(Self::MAGIC_DELETION_PREFIX) {
+                    let items =
+                        decode_deletion_entry(data).expect("deletion entry should be valid");
+                    items
+                        .into_iter()
+                        .map(|(id, name)| {
+                            let mut key = Vec::with_capacity(name.len() + 1);
+                            key.extend_from_slice(&id.group().bytes());
+                            key.extend_from_slice(name);
+                            log::IndexOutput::Remove(key.into())
+                        })
+                        .collect()
+                } else if data.len() >= 8 {
                     vec![log::IndexOutput::Reference(8..(data.len() as u64))]
                 } else {
                     if data == Self::MAGIC_CLEAR_NON_MASTER {
@@ -233,7 +268,60 @@ impl IdMap {
         data.extend_from_slice(&name);
         self.log.append(data)?;
         self.map_version.bump();
+        #[cfg(debug_assertions)]
+        {
+            let items = self.find_range(id, id).unwrap();
+            assert_eq!(items[0], (id, name));
+        }
         Ok(())
+    }
+
+    /// Find all (id, name) pairs in the `low..=high` range.
+    fn find_range(&self, low: Id, high: Id) -> Result<Vec<(Id, &[u8])>> {
+        let low = low.0.to_be_bytes();
+        let high = high.0.to_be_bytes();
+        let range = &low[..]..=&high[..];
+        let mut items = Vec::new();
+        for entry in self.log.lookup_range(Self::INDEX_ID_TO_NAME, range)? {
+            let (key, values) = entry?;
+            let key: [u8; 8] = match key.as_ref().try_into() {
+                Ok(key) => key,
+                Err(_) => {
+                    return bug("find_range got non-u64 keys in INDEX_ID_TO_NAME");
+                }
+            };
+            let id = Id(u64::from_be_bytes(key));
+            for value in values {
+                let value = value?;
+                if value.len() < 8 {
+                    return bug(format!(
+                        "find_range got entry {:?} shorter than expected",
+                        &value
+                    ));
+                }
+                let name: &[u8] = &value[9..];
+                items.push((id, name));
+            }
+        }
+        Ok(items)
+    }
+
+    fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>> {
+        // Step 1: Find (id, name) pairs in the range.
+        let items = self.find_range(low, high)?;
+        let names = items
+            .iter()
+            .map(|(_, bytes)| VertexName::copy_from(bytes))
+            .collect();
+        // Step 2: Write a "delete" entry to delete those indexes.
+        // The indexedlog index function (defined by log_open_options())
+        // will handle it.
+        let data = encode_deletion_entry(&items);
+        self.log.append(data)?;
+        // New map is not an "append-only" version of the previous map.
+        // Re-create the VerLink to mark it as incompatible.
+        self.map_version = VerLink::new();
+        Ok(names)
     }
 
     /// Lookup names by hex prefix.
@@ -259,6 +347,44 @@ impl IdMap {
         }
         Ok(result)
     }
+}
+
+/// Encode a list of (id, name) pairs as an deletion entry.
+/// The deletion entry will be consumed by the index functions defined by
+/// `log_open_options()`.
+fn encode_deletion_entry(items: &[(Id, &[u8])]) -> Vec<u8> {
+    // Rough size for common 20-byte sha1 hashes.
+    let len = IdMap::MAGIC_DELETION_PREFIX.len() + 9 + items.len() * 30;
+    let mut data = Vec::with_capacity(len);
+    data.extend_from_slice(IdMap::MAGIC_DELETION_PREFIX);
+    data.write_vlq(items.len()).unwrap();
+    for (id, name) in items {
+        data.write_vlq(id.0).unwrap();
+        data.write_vlq(name.len()).unwrap();
+        data.extend_from_slice(name);
+    }
+    data
+}
+
+/// Decode `encode_deletion_entry` result.
+/// Used by index functions in `log_open_options()`.
+fn decode_deletion_entry(data: &[u8]) -> Result<Vec<(Id, &[u8])>> {
+    assert!(data.starts_with(IdMap::MAGIC_DELETION_PREFIX));
+    let mut data = &data[IdMap::MAGIC_DELETION_PREFIX.len()..];
+    let n = data.read_vlq()?;
+    let mut items = Vec::with_capacity(n);
+    for _ in 0..n {
+        let id: u64 = data.read_vlq()?;
+        let id = Id(id);
+        let name_len: usize = data.read_vlq()?;
+        if name_len > data.len() {
+            return bug("decode_deletion_id_names got incomplete input");
+        }
+        let (name, rest) = data.split_at(name_len);
+        data = rest;
+        items.push((id, name));
+    }
+    Ok(items)
 }
 
 impl fmt::Debug for IdMap {
@@ -333,6 +459,9 @@ impl IdMapWrite for IdMap {
     async fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
         IdMap::insert(self, id, name)
     }
+    async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>> {
+        IdMap::remove_range(self, low, high)
+    }
     async fn remove_non_master(&mut self) -> Result<()> {
         self.log.append(IdMap::MAGIC_CLEAR_NON_MASTER)?;
         self.map_version = VerLink::new();
@@ -388,5 +517,23 @@ impl PrefixLookup for IdMap {
         limit: usize,
     ) -> Result<Vec<VertexName>> {
         self.find_names_by_hex_prefix(hex_prefix, limit)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_encode_decode_deletion_entry() {
+        let items: &[(Id, &[u8])] = &[
+            (Id(0), b"a"),
+            (Id(1), b"bb"),
+            (Id(10), b"ccc"),
+            (Id(20), b"dd"),
+        ];
+        let data = encode_deletion_entry(items);
+        let decoded = decode_deletion_entry(&data).unwrap();
+        assert_eq!(&decoded, items);
     }
 }

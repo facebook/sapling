@@ -397,6 +397,9 @@ impl<T> IdMapAssignHead for T where T: IdConvert + IdMapWrite {}
 #[async_trait::async_trait]
 pub trait IdMapWrite {
     async fn insert(&mut self, id: Id, name: &[u8]) -> Result<()>;
+    /// Remove ids in the range `low..=high` and their associated names.
+    /// Return removed names.
+    async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>>;
     async fn remove_non_master(&mut self) -> Result<()>;
     async fn need_rebuild_non_master(&self) -> bool;
 }
@@ -477,5 +480,101 @@ mod tests {
 }
 "#
         );
+    }
+
+    #[test]
+    fn test_remove_range() {
+        let map = MemIdMap::new();
+        check_remove_range(map);
+
+        #[cfg(feature = "indexedlog-backend")]
+        {
+            let dir = tempdir().unwrap();
+            let path = dir.path();
+            let map = IdMap::open(path).unwrap();
+            check_remove_range(map);
+        }
+    }
+
+    fn check_remove_range(mut map: impl IdConvert + IdMapWrite) {
+        let items: &[(Id, &[u8])] = &[
+            (Id(0), b"z"),
+            (Id(1), b"a"),
+            (Id(2), b"bbb"),
+            (Id(3), b"bb"),
+            (Id(4), b"cc"),
+            (Id(5), b"ccc"),
+            (Id(9), b"ddd"),
+            (Id(11), b"e"),
+            (Id(13), b"ff"),
+            (nid(0), b"n"),
+            (nid(1), b"n1"),
+            (nid(2), b"n2"),
+            (nid(3), b"n3"),
+            (nid(4), b"n4"),
+            (nid(5), b"n5"),
+            (nid(12), b"n12"),
+            (nid(20), b"n20"),
+        ];
+        for (id, name) in items {
+            r(map.insert(*id, name)).unwrap();
+        }
+
+        // deleted ids in a string, with extra consistency checks.
+        let deleted = |map: &dyn IdConvert| -> String {
+            let mut deleted_ids = Vec::new();
+            for (id, name) in items {
+                let name = VertexName::copy_from(name);
+                let id = *id;
+                let has_id = r(map.contains_vertex_id_locally(&[id])).unwrap()[0];
+                let lookup_id = r(map.vertex_id_optional(&name)).unwrap();
+                let lookup_name = if has_id {
+                    Some(r(map.vertex_name(id)).unwrap())
+                } else {
+                    None
+                };
+
+                match (lookup_id, lookup_name) {
+                    (None, None) => deleted_ids.push(id),
+                    (None, Some(_)) => {
+                        panic!("name->id deleted but not id->name: ({:?} {:?})", id, name)
+                    }
+                    (Some(_), None) => {
+                        panic!("id->name deleted but not name->id: ({:?} {:?})", id, name)
+                    }
+                    (Some(lid), Some(lname)) => {
+                        assert_eq!(lid, id);
+                        assert_eq!(lname, name);
+                    }
+                }
+            }
+            format!("{:?}", deleted_ids)
+        };
+
+        let f = |vs: Vec<VertexName>| -> String {
+            let mut vs = vs;
+            vs.sort_unstable();
+            format!("{:?}", vs)
+        };
+
+        let removed = r(map.remove_range(Id(1), Id(3))).unwrap();
+        assert_eq!(f(removed), "[a, bb, bbb]");
+        assert_eq!(deleted(&map), "[1, 2, 3]");
+
+        let removed = r(map.remove_range(Id(8), Id(12))).unwrap();
+        assert_eq!(f(removed), "[ddd, e]");
+        assert_eq!(deleted(&map), "[1, 2, 3, 9, 11]");
+
+        let removed = r(map.remove_range(nid(2), nid(4))).unwrap();
+        assert_eq!(f(removed), "[n2, n3, n4]");
+        assert_eq!(deleted(&map), "[1, 2, 3, 9, 11, N2, N3, N4]");
+
+        let removed = r(map.remove_range(nid(20), nid(10000))).unwrap();
+        assert_eq!(f(removed), "[n20]");
+        assert_eq!(deleted(&map), "[1, 2, 3, 9, 11, N2, N3, N4, N20]");
+    }
+
+    fn nid(i: u64) -> Id {
+        Group::NON_MASTER.min_id() + i
     }
 }
