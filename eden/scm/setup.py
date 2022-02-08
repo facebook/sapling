@@ -759,7 +759,7 @@ class fetchbuilddeps(Command):
     pyassets += [
         fbsourcepylibrary(
             "thrift",
-            "../../thrift/lib/py",
+            "../../thrift/lib/py" if havefb else "../../../fbthrift/thrift/lib/py",
             excludes=[
                 "thrift/util/asyncio.py",
                 "thrift/util/inspect.py",
@@ -784,7 +784,7 @@ class fetchbuilddeps(Command):
                     "../../eden/fs/service/eden.thrift": "eden/fs/service/eden.thrift",
                     "../../eden/fs/config/eden_config.thrift": "eden/fs/config/eden_config.thrift",
                     "../../common/fb303/if/fb303.thrift": "common/fb303/if/fb303.thrift",
-                    "../../fb303/thrift/fb303_core.thrift": "fb303/thrift/fb303_core.thrift",
+                    "../../../fb303/fb303/thrift/fb303_core.thrift": "fb303/thrift/fb303_core.thrift",
                 },
             )
         ]

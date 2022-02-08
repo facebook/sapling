@@ -7,8 +7,8 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.51"
 const-cstr = "0.3.0"
-eden = { path = "eden" }
-eden_config = { path = "eden_config" }
+eden = { package = "thrift", path = "eden" }
+eden_config = { package = "config_thrift", path = "eden_config" }
 fb303 = { path = "fb303" }
 fb303_core = { path = "fb303_core" }
 fbthrift = { package = "fbthrift_eden_oss", path = "../third-party/rust/fbthrift" }
