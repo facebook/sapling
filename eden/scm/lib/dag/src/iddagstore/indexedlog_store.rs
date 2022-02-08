@@ -424,6 +424,9 @@ impl IndexedLogStore {
     const FOLD_COVERED_ID_SET: usize = 0;
     const KEY_LEVEL_HEAD_LEN: usize = Segment::OFFSET_DELTA - Segment::OFFSET_LEVEL;
 
+    // "Normal" format is just the plain bytes in `Segment`. See `Segment` for details.
+    // Basically, FLAG (1B) + LEVEL (1B) + HIGH (8B) + ...
+
     /// Magic bytes in `Log` that indicates "remove all non-master segments".
     /// A Segment entry has at least KEY_LEVEL_HEAD_LEN (9) bytes so it does
     /// not conflict with this.
@@ -442,19 +445,19 @@ impl IndexedLogStore {
     /// `(level, head)` index.
     const MAGIC_REWRITE_LAST_FLAT: &'static [u8] = &[0xf0];
 
+    #[allow(clippy::assertions_on_constants)]
     pub fn log_open_options() -> log::OpenOptions {
+        assert!(Self::MAGIC_CLEAR_NON_MASTER.len() < Segment::OFFSET_DELTA);
+        assert!(Group::BITS == 8);
+        assert_ne!(
+            SegmentFlags::all().bits() & Self::MAGIC_REWRITE_LAST_FLAT[Segment::OFFSET_FLAGS],
+            Self::MAGIC_REWRITE_LAST_FLAT[Segment::OFFSET_FLAGS],
+            "MAGIC_REWRITE_LAST_FLAT should not conflict with possible flags"
+        );
         log::OpenOptions::new()
             .create(true)
             .index("level-head", |data| {
                 // (level, high)
-                assert!(Self::MAGIC_CLEAR_NON_MASTER.len() < Segment::OFFSET_DELTA);
-                assert!(Group::BITS == 8);
-                assert_ne!(
-                    SegmentFlags::all().bits()
-                        & Self::MAGIC_REWRITE_LAST_FLAT[Segment::OFFSET_FLAGS],
-                    Self::MAGIC_REWRITE_LAST_FLAT[Segment::OFFSET_FLAGS],
-                    "MAGIC_REWRITE_LAST_FLAT should not conflict with possible flags"
-                );
                 if data == Self::MAGIC_CLEAR_NON_MASTER {
                     let max_level = 255;
                     (0..=max_level)
