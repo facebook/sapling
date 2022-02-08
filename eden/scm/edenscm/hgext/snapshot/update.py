@@ -144,5 +144,4 @@ def update(ui, repo, csid, clean=False):
                 if wctx[path].isexec():
                     wctx[path].setflags(l=False, x=False)
 
-        # TODO(yancouto): Also update bubble here, need to get it from server
-        storelatest(repo.metalog(), csid, None)
+        storelatest(repo.metalog(), csid, snapshot["bubble_id"])

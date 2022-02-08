@@ -443,6 +443,7 @@ impl EdenApiHandler for FetchSnapshotHandler {
                     ))
                 })
                 .collect::<Result<_, Error>>()?,
+            bubble_id: Some(bubble_id.into()),
         };
         Ok(stream::once(async move { Ok(response) }).boxed())
     }

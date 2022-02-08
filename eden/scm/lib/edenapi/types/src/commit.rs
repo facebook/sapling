@@ -519,6 +519,8 @@ pub struct FetchSnapshotResponse {
     pub time: i64,
     #[id(5)]
     pub tz: i32,
+    #[id(6)]
+    pub bubble_id: Option<NonZeroU64>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
@@ -604,6 +606,7 @@ impl Arbitrary for FetchSnapshotResponse {
             tz: Arbitrary::arbitrary(g),
             hg_parents: Arbitrary::arbitrary(g),
             file_changes: Arbitrary::arbitrary(g),
+            bubble_id: Arbitrary::arbitrary(g),
         }
     }
 }
