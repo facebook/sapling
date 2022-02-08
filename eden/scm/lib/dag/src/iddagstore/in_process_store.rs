@@ -42,6 +42,9 @@ pub struct InProcessStore {
     parent_index: BTreeMap<(Group, Id), BTreeSet<Id>>,
     // IdSet covered by flat segments in specified groups.
     id_set_by_group: [IdSet; Group::COUNT],
+    // Removed StoreIds.
+    // Written by `remove_flat_segment_unchecked`. Read by `serialize`.
+    removed_store_ids: BTreeSet<StoreId>,
 }
 
 impl IdDagStore for InProcessStore {
@@ -98,6 +101,12 @@ impl IdDagStore for InProcessStore {
                 None => return bug("last segment should exist if segments are mergeable"),
             };
 
+            // Sanity check. This should pass since `last_store_id` should not be
+            // obtained from indexes if it's already removed.
+            if self.removed_store_ids.contains(&last_store_id) {
+                return bug("insert_segment: reused removed store_id for segment merging");
+            }
+
             // Store the merged segment.
             self.set_segment(&last_store_id, merged);
 
@@ -136,12 +145,59 @@ impl IdDagStore for InProcessStore {
             self.id_set_by_group[group.0].push(span);
         }
         self.get_head_index_mut(level).insert(high, store_id);
+
+        // Sanity check. This should pass because `store_id` is auto incremental.
+        if self.removed_store_ids.contains(&store_id) {
+            return bug("insert_segment: reused removed store_id");
+        }
+
         Ok(())
     }
 
     fn remove_flat_segment_unchecked(&mut self, segment: &Segment) -> Result<()> {
-        let _ = segment;
-        todo!()
+        let span = segment.span()?;
+        for level in 0..=self.max_level()? {
+            // Remove from "level_head_index".
+            let index = match self.level_head_index.get_mut(level as usize) {
+                Some(index) => index,
+                None => continue,
+            };
+            let store_id = match index.remove(&span.high) {
+                Some(id) => id,
+                None => continue,
+            };
+            // Remove from "parent_index".
+            if level == 0 {
+                let parents = segment.parents()?;
+                let child = span.low;
+                let child_group = child.group();
+                for parent in parents {
+                    let index_key = (child_group, parent);
+                    let index = match self.parent_index.get_mut(&index_key) {
+                        Some(index) => index,
+                        None => continue,
+                    };
+                    index.remove(&child);
+                }
+            }
+            // Mark as removed.
+            self.removed_store_ids.insert(store_id);
+        }
+        // Update "id_set_by_group".
+        //
+        // PERF: This could be O(N^M) (N: len(id_set.spans), M:
+        // len(segments) to remove) when removing many segments.
+        // Practically N might be small so it might not be an issue.
+        // In case this becomes an issue, we should make `id_set_by_group`
+        // update lazy (i.e. track what id_set to remove, and update
+        // `id_set_by_group` only when `id_set_by_group` needs to
+        // be accessed.
+        let id_set = &mut self.id_set_by_group[span.low.group().0 as usize];
+        *id_set = id_set.difference(&span.into());
+        // Not updating self.non_master_segments and master_segments
+        // to keep existing StoreIds valid. Removed entries will be
+        // skipped during serialization.
+        Ok(())
     }
 
     fn remove_non_master(&mut self) -> Result<()> {
@@ -322,6 +378,7 @@ impl InProcessStore {
             level_head_index: Vec::new(),
             parent_index: BTreeMap::new(),
             id_set_by_group: [IdSet::empty(), IdSet::empty()],
+            removed_store_ids: Default::default(),
         }
     }
 }
@@ -332,13 +389,18 @@ impl Serialize for InProcessStore {
         S: Serializer,
     {
         let mut seq = serializer.serialize_seq(Some(
-            self.master_segments.len() + self.non_master_segments.len(),
+            self.master_segments.len() + self.non_master_segments.len()
+                - self.removed_store_ids.len(),
         ))?;
-        for e in &self.master_segments {
-            seq.serialize_element(e)?;
+        for (i, e) in self.master_segments.iter().enumerate() {
+            if !self.removed_store_ids.contains(&StoreId::Master(i)) {
+                seq.serialize_element(e)?;
+            }
         }
-        for e in &self.non_master_segments {
-            seq.serialize_element(e)?;
+        for (i, e) in self.non_master_segments.iter().enumerate() {
+            if !self.removed_store_ids.contains(&StoreId::NonMaster(i)) {
+                seq.serialize_element(e)?;
+            }
         }
         seq.end()
     }
@@ -370,5 +432,31 @@ impl<'de> Deserialize<'de> for InProcessStore {
         }
 
         deserializer.deserialize_seq(InProcessStoreVisitor)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::iddagstore::tests::dump_store_state;
+    use crate::iddagstore::tests::test_remove_segment;
+
+    #[test]
+    fn test_remove_segment_serialize() {
+        // Test remove_flat_segment is still effective after serialize->deserialize.
+        let mut store = InProcessStore::new();
+        test_remove_segment(&mut store);
+        assert!(!store.removed_store_ids.is_empty());
+
+        let all = store.all_ids_in_groups(&Group::ALL).unwrap();
+        let old_state = dump_store_state(&store, &all);
+
+        // Check store state after serialize -> deserialize round-trip.
+        let data = mincode::serialize(&store).unwrap();
+        let store: InProcessStore = mincode::deserialize(&data).unwrap();
+        assert!(store.removed_store_ids.is_empty());
+
+        let new_state = dump_store_state(&store, &all);
+        assert_eq!(old_state, new_state);
     }
 }

@@ -870,6 +870,112 @@ mod tests {
         );
     }
 
+    pub(crate) fn test_remove_segment(store: &mut dyn IdDagStore) {
+        // Prepare segments, 3 segments per group.
+        let parents_nid_3_4 = [nid(4), nid(3)];
+        let parents_id_12_nid_4 = [Id(12), nid(4)];
+        let segs: Vec<(Id, Id, &[Id])> = vec![
+            (Id(0), Id(5), &[]),
+            (Id(6), Id(10), &[Id(4), Id(3)]),
+            (Id(11), Id(15), &[Id(4)]),
+            (nid(0), nid(5), &[]),
+            (nid(6), nid(10), &parents_nid_3_4),
+            (nid(11), nid(15), &parents_id_12_nid_4),
+        ];
+        let mut segs: Vec<Segment> = segs
+            .into_iter()
+            .map(|(low, high, parents)| {
+                let flags = if parents.is_empty() { ROOT } else { EMPTY };
+                Segment::new(flags, 0, low, high, parents)
+            })
+            .collect();
+        // Also insert high-level segments.
+        segs.push(Segment::new(ROOT, 1, Id(0), Id(10), &[]));
+        segs.push(Segment::new(ROOT, 1, nid(0), nid(10), &[]));
+        for seg in segs.clone() {
+            store.insert_segment(seg).unwrap();
+        }
+
+        // Cannot remove segment with descendants, or high-level segments.
+        for i in [0, 2, 3, 6, 7] {
+            assert!(store.remove_flat_segment(&segs[i]).is_err());
+        }
+
+        let all_before_delete = store.all_ids_in_groups(&Group::ALL).unwrap();
+        assert_eq!(format!("{:?}", &all_before_delete), "0..=15 N0..=N15");
+        assert_eq!(
+            dump_store_state(store, &all_before_delete),
+            r#"
+Lv0: R0-5[], 6-10[4, 3], 11-15[4], RN0-N5[], N6-N10[N4, N3], N11-N15[12, N4]
+Lv1: R0-10[], RN0-N10[]
+P->C: 3->6, 4->6, 4->11, 12->N11, N3->N6, N4->N6, N4->N11"#
+        );
+
+        // Remove the "middle" segment per group.
+        for i in [1, 4] {
+            store.remove_flat_segment(&segs[i]).unwrap();
+        }
+
+        // Check that the removed segments are actually removed.
+        let all_after_delete = store.all_ids_in_groups(&Group::ALL).unwrap();
+        assert_eq!(
+            format!("{:?}", &all_after_delete),
+            "0..=5 11..=15 N0..=N5 N11..=N15"
+        );
+        assert_eq!(
+            dump_store_state(store, &all_before_delete),
+            r#"
+Lv0: R0-5[], 11-15[4], RN0-N5[], N11-N15[12, N4]
+P->C: 4->11, 12->N11, N4->N11"#
+        );
+        let deleted_ids = IdSet::from_spans(vec![Id(6)..=Id(10), nid(6)..=nid(10)]);
+        assert_eq!(dump_store_state(store, &deleted_ids), "");
+    }
+
+    /// Dump the store state in the given `id_set` as a string for testing.
+    pub(crate) fn dump_store_state(store: &dyn IdDagStore, id_set: &IdSet) -> String {
+        let mut output = Vec::new();
+        let max_level = store.max_level().unwrap();
+        // Segments per level. Exercises the "head" index.
+        for level in 0..=max_level {
+            let mut level_segments = Vec::new();
+            for &span in id_set.iter_span_asc() {
+                let segs = store.segments_in_span_ascending(span, level).unwrap();
+                for seg in segs {
+                    if seg.level().unwrap() == level {
+                        level_segments.push(format!("{:?}", seg));
+                    }
+                }
+            }
+            if !level_segments.is_empty() {
+                output.push(format!("\nLv{}: {}", level, level_segments.join(", ")));
+            }
+        }
+        // Parent indexes in the id_set. Exercises the "parent->child" index.
+        let mut parent_child_relations = Vec::new();
+        for &span in id_set.iter_span_asc() {
+            let parent_child_segs = store
+                .iter_flat_segments_with_parent_span(span)
+                .unwrap()
+                .collect::<Result<Vec<_>>>()
+                .unwrap();
+            let mut relations = parent_child_segs
+                .into_iter()
+                .map(|(parent_id, child_seg)| (parent_id, child_seg.low().unwrap()))
+                .collect::<Vec<_>>();
+            relations.sort_unstable();
+            let mut relations = relations
+                .into_iter()
+                .map(|(parent, child)| format!("{:?}->{:?}", parent, child))
+                .collect::<Vec<_>>();
+            parent_child_relations.append(&mut relations);
+        }
+        if !parent_child_relations.is_empty() {
+            output.push(format!("\nP->C: {}", parent_child_relations.join(", ")));
+        }
+        output.concat()
+    }
+
     fn for_each_empty_store(f: impl Fn(&mut dyn IdDagStore)) {
         let mut store = InProcessStore::new();
         tracing::debug!("testing InProcessStore");
