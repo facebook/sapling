@@ -9,6 +9,7 @@ use auth::MissingCerts;
 use auth::X509Error;
 use edenapi_types::wire::WireToApiConversionError;
 use edenapi_types::EdenApiServerError;
+use http::header::HeaderMap;
 use http::status::StatusCode;
 use http_client::HttpClientError;
 use thiserror::Error;
@@ -27,8 +28,12 @@ pub enum EdenApiError {
     BadCertificate(#[from] X509Error),
     #[error(transparent)]
     Http(#[from] HttpClientError),
-    #[error("Server reported an error ({status}): {message}")]
-    HttpError { status: StatusCode, message: String },
+    #[error("Server reported an error ({status}): {message}. Headers: {headers:#?}")]
+    HttpError {
+        status: StatusCode,
+        message: String,
+        headers: HeaderMap,
+    },
     #[error(transparent)]
     InvalidUrl(#[from] url::ParseError),
     #[error(transparent)]
@@ -60,7 +65,11 @@ impl EdenApiError {
                 Tls(_) => false,
                 _ => true,
             },
-            HttpError { status, message: _ } => {
+            HttpError {
+                status,
+                message: _,
+                headers: _,
+            } => {
                 // 300-399
                 if status.is_redirection() {
                     false

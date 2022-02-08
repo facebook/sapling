@@ -1326,7 +1326,8 @@ async fn raise_for_status(res: AsyncResponse) -> Result<AsyncResponse, EdenApiEr
         return Ok(res);
     }
 
-    let body = res.into_body().decoded().try_concat().await?;
+    let (head, body) = res.into_parts();
+    let body = body.decoded().try_concat().await?;
     let mut message = String::from_utf8_lossy(&body).into_owned();
 
     if message.len() >= 9 && &*message[..9].to_lowercase() == "<!doctype" {
@@ -1336,7 +1337,12 @@ async fn raise_for_status(res: AsyncResponse) -> Result<AsyncResponse, EdenApiEr
         message.push_str("... (truncated)")
     }
 
-    Err(EdenApiError::HttpError { status, message })
+    let headers = head.headers().clone();
+    Err(EdenApiError::HttpError {
+        status,
+        message,
+        headers,
+    })
 }
 
 async fn with_retry<'t, T>(
@@ -1350,8 +1356,12 @@ async fn with_retry<'t, T>(
             return result;
         }
         match result {
-            Err(EdenApiError::HttpError { status, message }) => {
-                tracing::warn!("Retrying http status {} {}", status, message);
+            Err(EdenApiError::HttpError {
+                status,
+                message,
+                headers,
+            }) => {
+                tracing::warn!("Retrying http status {} {} {:#?}", status, message, headers);
                 tokio::time::sleep(Duration::from_secs(1)).await;
             }
             Err(EdenApiError::Http(err)) => {

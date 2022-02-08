@@ -454,6 +454,7 @@ impl EagerRepo {
                 Err(EdenApiError::HttpError {
                     status: StatusCode::NOT_FOUND,
                     message: format!("{} cannot be found", id.to_hex()),
+                    headers: Default::default(),
                 })
             }
             Ok(Some(data)) => {
@@ -463,6 +464,7 @@ impl EagerRepo {
             Err(e) => Err(EdenApiError::HttpError {
                 status: StatusCode::INTERNAL_SERVER_ERROR,
                 message: format!("{:?}", e),
+                headers: Default::default(),
             }),
         }
     }
@@ -548,6 +550,7 @@ fn not_implemented_error(message: String) -> EdenApiError {
     EdenApiError::HttpError {
         status: StatusCode::NOT_IMPLEMENTED,
         message,
+        headers: Default::default(),
     }
 }
 

@@ -1063,21 +1063,6 @@ impl HgIdMutableDeltaStore for LfsMultiplexer {
     }
 }
 
-fn get_advice_header(headers: &HeaderMap) -> Option<String> {
-    for key in headers.keys() {
-        if key.as_str().starts_with("X-FB-Validated-X2PAuth-Advice") {
-            return Some(
-                headers
-                    .get(key)
-                    .and_then(|c| std::str::from_utf8(c.as_bytes()).ok())
-                    .unwrap_or("Failed to get X-FB-Validated-X2PAuth-Advice-* header.")
-                    .into(),
-            );
-        }
-    }
-    None
-}
-
 impl LfsRemoteInner {
     pub fn batch_fetch(
         &self,
@@ -1195,8 +1180,7 @@ impl LfsRemoteInner {
 
                     let status = head.status();
                     if !status.is_success() {
-                        let advice = get_advice_header(head.headers());
-                        return Err(TransferError::HttpStatus(status, advice.into()));
+                        return Err(TransferError::HttpStatus(status, head.headers().clone()));
                     }
 
                     check_status(status)?;

@@ -8,6 +8,7 @@
 use std::time::Duration;
 
 use anyhow::Error;
+use http::header::HeaderMap;
 use http::status::StatusCode;
 use http_client::HttpClientError;
 use http_client::Method;
@@ -47,8 +48,8 @@ impl From<Option<String>> for Advice {
 
 #[derive(Error, Debug)]
 pub enum TransferError {
-    #[error("HTTP status {}. {}", .0, .1)]
-    HttpStatus(StatusCode, Advice),
+    #[error("HTTP status {}. Returned headers: {:#?}", .0, .1)]
+    HttpStatus(StatusCode, HeaderMap),
 
     #[error("HTTP transfer failed")]
     HttpClientError(#[from] HttpClientError),
