@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp::Ordering;
+
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -56,6 +58,95 @@ pub trait IdDagStore: Send + Sync + 'static {
     }
 
     fn insert_segment(&mut self, segment: Segment) -> Result<()>;
+
+
+    /// Remove a flat segment. The segment cannot have descendants.
+    fn remove_flat_segment(&mut self, segment: &Segment) -> Result<()> {
+        self.resize_flat_segment(segment, None)
+    }
+
+    /// Remove or truncate a flat segment.
+    /// - If `new_high` is None, remove the flat segment. The segment cannot
+    ///   have descendants.
+    /// - If `new_high` is set, trucnate the flat segment by resetting `high` to
+    ///   the given value. If `new_high` is smaller than `high`, then
+    ///   `descendants(new_high+1:high)` must be empty.
+    fn resize_flat_segment(&mut self, segment: &Segment, new_high: Option<Id>) -> Result<()> {
+        // `segment` must be a flat segment.
+        if segment.level()? != 0 {
+            return programming(format!(
+                "resize_flat_segment requires a flat segment, got {:?}",
+                segment
+            ));
+        }
+
+        // Figure out deleted and inserted spans for checks.
+        let span = segment.span()?;
+        let (deleted_span, inserted_span) = get_deleted_inserted_spans(span, new_high);
+        if deleted_span.is_none() && inserted_span.is_none() {
+            // No need to do anything.
+            return Ok(());
+        }
+
+        // `segment` needs to match an existing flat segment?
+        if let Some(existing_segment) = self.find_flat_segment_including_id(span.high)? {
+            if &existing_segment != segment {
+                return programming(format!(
+                    "resize_flat_segment got {:?} which does not match the existing segment {:?}",
+                    segment, existing_segment
+                ));
+            }
+        } else {
+            return programming(format!(
+                "resize_flat_segment got a non-existed segment {:?}",
+                segment
+            ));
+        }
+
+        // When inserting a new span, the space cannot be taken.
+        if let Some(span) = inserted_span {
+            let taken = self.all_ids_in_groups(&[span.high.group()])?;
+            let overlap = taken.intersection(&span.into());
+            if !overlap.is_empty() {
+                return programming(format!(
+                    "resize_flat_segment cannot overlap with existing segments (segment: {:?} new_high: {:?}, overlap: {:?})",
+                    segment, new_high, overlap,
+                ));
+            }
+        }
+
+        // When deleting a span, it should have no descendants.
+        if let Some(span) = deleted_span {
+            if let Some(item) = self.iter_flat_segments_with_parent_span(span)?.next() {
+                let (_, child) = item?;
+                return programming(format!(
+                    "resize_flat_segment requires a segment without descendants, got {:?} with child segment {:?}",
+                    segment, child
+                ));
+            }
+        }
+
+        // Prepare the resized segment and check `new_high`.
+        let new_segment = match new_high {
+            Some(high) => Some(segment.with_high(high)?),
+            None => None,
+        };
+
+        // Check passed, call the low-level function.
+        self.remove_flat_segment_unchecked(segment)?;
+
+        // Need to insert a new segment.
+        if let Some(seg) = new_segment {
+            self.insert_segment(seg)?;
+        }
+
+        Ok(())
+    }
+
+    /// Actual implementation of the segment removal part of
+    /// `resize_flat_segment` without checks.
+    /// This should only be called via `resize_flat_segment` for integrity.
+    fn remove_flat_segment_unchecked(&mut self, segment: &Segment) -> Result<()>;
 
     /// Return all ids from given groups. This is useful to implement the
     /// `all()` operation.
@@ -260,6 +351,21 @@ pub trait IdDagStore: Send + Sync + 'static {
         );
 
         Ok(Some(merged))
+    }
+}
+
+/// Used by `resize_flat_segment` functions.
+pub(crate) fn get_deleted_inserted_spans(
+    span: Span,
+    new_high: Option<Id>,
+) -> (Option<Span>, Option<Span>) {
+    match new_high {
+        Some(new_high) => match new_high.cmp(&span.high) {
+            Ordering::Less => (Some(Span::from(new_high + 1..=span.high)), None),
+            Ordering::Equal => (None, None),
+            Ordering::Greater => (None, Some(Span::from(span.high + 1..=new_high))),
+        },
+        None => (Some(span), None),
     }
 }
 

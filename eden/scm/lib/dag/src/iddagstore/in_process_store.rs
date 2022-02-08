@@ -139,6 +139,11 @@ impl IdDagStore for InProcessStore {
         Ok(())
     }
 
+    fn remove_flat_segment_unchecked(&mut self, segment: &Segment) -> Result<()> {
+        let _ = segment;
+        todo!()
+    }
+
     fn remove_non_master(&mut self) -> Result<()> {
         for segment in self.non_master_segments.iter() {
             let level = segment.level()?;

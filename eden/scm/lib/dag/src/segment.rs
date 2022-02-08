@@ -29,6 +29,7 @@ use vlqencoding::VLQDecodeAt;
 use vlqencoding::VLQEncode;
 
 use crate::errors::bug;
+use crate::errors::programming;
 use crate::id::Id;
 use crate::IdSpan;
 use crate::Level;
@@ -163,6 +164,20 @@ impl Segment {
             result.push(Id(cur.read_vlq()?));
         }
         Ok(result)
+    }
+
+    /// Duplicate the segment with `high` set to a new value.
+    pub(crate) fn with_high(&self, high: Id) -> Result<Self> {
+        let span = self.span()?;
+        if high.group() != span.high.group() || high < span.low {
+            return programming(format!(
+                "with_high got invalid input (segment: {:?} new_high: {:?})",
+                self, high,
+            ));
+        }
+        let parents = self.parents()?;
+        let seg = Self::new(self.flags()?, self.level()?, span.low, high, &parents);
+        Ok(seg)
     }
 
     pub(crate) fn new(

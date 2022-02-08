@@ -176,6 +176,11 @@ impl IdDagStore for IndexedLogStore {
         Ok(())
     }
 
+    fn remove_flat_segment_unchecked(&mut self, segment: &Segment) -> Result<()> {
+        let _ = segment;
+        todo!()
+    }
+
     fn all_ids_in_groups(&self, groups: &[Group]) -> Result<IdSet> {
         let fold = self
             .log
