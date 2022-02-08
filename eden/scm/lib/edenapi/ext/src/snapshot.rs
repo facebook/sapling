@@ -19,7 +19,9 @@ use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BonsaiFileChange;
+use edenapi_types::ContentId;
 use edenapi_types::FileType;
+use edenapi_types::RepoPathBuf;
 use edenapi_types::SnapshotRawData;
 use edenapi_types::SnapshotRawFiles;
 use edenapi_types::UploadSnapshotResponse;
@@ -28,6 +30,43 @@ use futures::TryStreamExt;
 use minibytes::Bytes;
 
 use crate::util::calc_contentid;
+
+#[derive(PartialEq, Eq)]
+enum TrackedType {
+    Tracked,
+    Untracked,
+}
+use TrackedType::*;
+
+struct FileMetadata(RepoPathBuf, FileType, ContentId, TrackedType);
+struct FileData(ContentId, Bytes);
+
+fn load_files(
+    root: &RepoPathBuf,
+    rel_path: RepoPathBuf,
+    file_type: FileType,
+    tracked: TrackedType,
+) -> Result<(FileMetadata, FileData)> {
+    let mut abs_path = root.clone();
+    abs_path.push(&rel_path);
+    let abs_path = abs_path.as_repo_path().as_str();
+    let content = match file_type {
+        FileType::Symlink => {
+            let link = std::fs::read_link(abs_path)?;
+            let to = link
+                .to_str()
+                .context("symlink is not valid UTF-8")?
+                .as_bytes();
+            Bytes::copy_from_slice(to)
+        }
+        FileType::Regular | FileType::Executable => Bytes::from_owner(std::fs::read(abs_path)?),
+    };
+    let content_id = calc_contentid(&content);
+    Ok((
+        FileMetadata(rel_path, file_type, content_id, tracked),
+        FileData(content_id, content),
+    ))
+}
 
 pub async fn upload_snapshot(
     api: &(impl EdenApi + ?Sized),
@@ -51,12 +90,6 @@ pub async fn upload_snapshot(
         untracked,
         missing,
     } = files;
-    #[derive(PartialEq, Eq)]
-    enum Type {
-        Tracked,
-        Untracked,
-    }
-    use Type::*;
     let (need_upload, mut upload_data): (Vec<_>, Vec<_>) = modified
         .into_iter()
         .chain(added.into_iter())
@@ -67,27 +100,8 @@ pub async fn upload_snapshot(
         )
         // rel_path is relative to the repo root
         .map(|(rel_path, file_type, tracked)| -> anyhow::Result<_> {
-            let mut abs_path = root.clone();
-            abs_path.push(&rel_path);
-            let abs_path = abs_path.as_repo_path().as_str();
-            let content = match file_type {
-                FileType::Symlink => {
-                    let link = std::fs::read_link(abs_path)?;
-                    let to = link
-                        .to_str()
-                        .context("symlink is not valid UTF-8")?
-                        .as_bytes();
-                    Bytes::copy_from_slice(to)
-                }
-                FileType::Regular | FileType::Executable => {
-                    Bytes::from_owner(std::fs::read(abs_path)?)
-                }
-            };
-            let content_id = calc_contentid(&content);
-            Ok((
-                (rel_path, file_type, content_id, tracked),
-                (content_id, content),
-            ))
+            load_files(&root, rel_path.clone(), file_type, tracked)
+                .with_context(|| anyhow::anyhow!("Failed to load file {}", rel_path))
         })
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()
@@ -95,10 +109,10 @@ pub async fn upload_snapshot(
 
     // Deduplicate upload data
     let mut uniques = BTreeSet::new();
-    upload_data.retain(|(content_id, _)| uniques.insert(*content_id));
+    upload_data.retain(|FileData(content_id, _)| uniques.insert(*content_id));
     let upload_data = upload_data
         .into_iter()
-        .map(|(content_id, data)| (AnyFileContentId::ContentId(content_id), data))
+        .map(|FileData(content_id, data)| (AnyFileContentId::ContentId(content_id), data))
         .collect();
 
     let bubble_id = if let Some(id) = use_bubble {
@@ -140,7 +154,7 @@ pub async fn upload_snapshot(
                 extra: vec![],
                 file_changes: need_upload
                     .into_iter()
-                    .map(|(path, file_type, cid, tracked)| {
+                    .map(|FileMetadata(path, file_type, cid, tracked)| {
                         let upload_token = file_content_tokens
                             .get(&cid)
                             .with_context(|| {
