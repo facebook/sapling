@@ -267,8 +267,8 @@ impl IdDagStore for IndexedLogStore {
     ) -> Result<Box<dyn Iterator<Item = Result<(Id, Segment)>> + 'a>> {
         let mut result: Vec<(Id, Segment)> = Vec::new();
         for group in Group::ALL {
-            let low = index_parent_key(group, parent_span.low, Id::MIN);
-            let high = index_parent_key(group, parent_span.high, Id::MAX);
+            let low = index_parent_key(parent_span.low, group.min_id());
+            let high = index_parent_key(parent_span.high, group.max_id());
             let range = &low[..]..=&high[..];
             let range_iter = self.log.lookup_range(Self::INDEX_PARENT, range)?;
             for entry in range_iter {
@@ -520,7 +520,6 @@ impl IndexedLogStore {
                         "bug: MAGIC_CLEAR_NON_MASTER conflicts with data"
                     );
                     if let (Ok(parents), Ok(span)) = (seg.parents(), seg.span()) {
-                        let group = span.low.group();
                         assert_eq!(
                             span.low.group(),
                             span.high.group(),
@@ -528,7 +527,7 @@ impl IndexedLogStore {
                         );
                         let child_id = span.low;
                         for parent_id in parents {
-                            let bytes = index_parent_key(group, parent_id, child_id);
+                            let bytes = index_parent_key(parent_id, child_id);
                             result.push(log::IndexOutput::Owned(bytes.into()));
                         }
                     }
@@ -584,7 +583,8 @@ impl IndexedLogStore {
 }
 
 // Build index key for the INDEX_PARENT (group-parent-child) index.
-fn index_parent_key(group: Group, parent_id: Id, child_id: Id) -> [u8; 17] {
+fn index_parent_key(parent_id: Id, child_id: Id) -> [u8; 17] {
+    let group = child_id.group();
     let mut result = [0u8; 1 + 8 + 8];
     debug_assert!(group.0 <= 0xff);
     result[0] = group.0 as u8;
