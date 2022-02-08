@@ -18,10 +18,7 @@ use blobstore_factory::{
 use cached_config::{ConfigHandle, ConfigStore};
 use clap::{App, AppSettings, Args, FromArgMatches, IntoApp};
 use cmdlib_caching::{init_cachelib, CachelibArgs, CachelibSettings};
-use cmdlib_logging::{
-    create_log_level, create_logger, create_observability_context, create_root_log_drain,
-    LoggingArgs, ScubaLoggingArgs,
-};
+use cmdlib_logging::{LoggingArgs, ScubaLoggingArgs};
 use derived_data_remote::RemoteDerivationArgs;
 use environment::MononokeEnvironment;
 use fbinit::FacebookInit;
@@ -207,10 +204,11 @@ impl MononokeAppBuilder {
             tunables_args,
         } = env_args;
 
-        let log_level = create_log_level(&logging_args);
+        let log_level = logging_args.create_log_level();
         #[cfg(fbcode_build)]
-        cmdlib_logging::set_glog_log_level(self.fb, log_level)?;
-        let root_log_drain = create_root_log_drain(self.fb, &logging_args, log_level)
+        cmdlib_logging::glog::set_glog_log_level(self.fb, log_level)?;
+        let root_log_drain = logging_args
+            .create_root_log_drain(self.fb, log_level)
             .context("Failed to create root log drain")?;
 
         let config_store = create_config_store(
@@ -220,15 +218,12 @@ impl MononokeAppBuilder {
         )
         .context("Failed to create config store")?;
 
-        let observability_context =
-            create_observability_context(&logging_args, &config_store, log_level)
-                .context("Failed to initialize observability context")?;
+        let observability_context = logging_args
+            .create_observability_context(&config_store, log_level)
+            .context("Failed to initialize observability context")?;
 
-        let logger = create_logger(
-            &logging_args,
-            root_log_drain.clone(),
-            observability_context.clone(),
-        )?;
+        let logger =
+            logging_args.create_logger(root_log_drain.clone(), observability_context.clone())?;
 
         let scuba_sample_builder = scuba_logging_args
             .create_scuba_sample_builder(
