@@ -34,6 +34,8 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/nfs/Nfsd3.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
+#else
+#include "eden/fs/prjfs/PrjfsChannel.h" // @manual
 #endif // !_WIN32
 
 #ifdef EDEN_HAVE_USAGE_SERVICE
@@ -883,6 +885,24 @@ bool isEventMasked(int64_t eventCategoryMask, const NfsTraceEvent& event) {
 
 } // namespace
 
+#endif //!_WIN32
+
+#ifdef _WIN32
+PrjfsCall populatePrjfsCall(
+    const PrjfsTraceCallType callType,
+    const PrjfsTraceEvent::PrjfsOperationData& data) {
+  PrjfsCall prjfsCall;
+  prjfsCall.callType_ref() = callType;
+  prjfsCall.commandId_ref() = data.commandId;
+  prjfsCall.pid_ref() = data.pid;
+  return prjfsCall;
+}
+
+PrjfsCall populatePrjfsCall(const PrjfsTraceEvent& event) {
+  return populatePrjfsCall(event.getCallType(), event.getData());
+}
+#endif
+
 apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
     std::unique_ptr<std::string> mountPoint,
     int64_t eventCategoryMask) {
@@ -901,13 +921,27 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
     // While subscribed to FuseChannel's TraceBus, request detailed argument
     // strings.
     TraceDetailedArgumentsHandle argHandle;
+#ifdef _WIN32
+    TraceSubscriptionHandle<PrjfsTraceEvent> subHandle;
+#else
     std::variant<
         TraceSubscriptionHandle<FuseTraceEvent>,
         TraceSubscriptionHandle<NfsTraceEvent>>
         subHandle;
+#endif // _WIN32
   };
 
   auto context = std::make_shared<Context>();
+#ifdef _WIN32
+  auto prjfsChannel = edenMount->getPrjfsChannel()->getInner();
+  if (prjfsChannel) {
+    context->argHandle = prjfsChannel->traceDetailedArguments();
+  } else {
+    EDEN_BUG() << "tracing isn't supported yet for the "
+               << edenMount->getCheckoutConfig()->getMountProtocol()
+               << " filesystem type";
+  }
+#else
   auto* fuseChannel = edenMount->getFuseChannel();
   auto* nfsdChannel = edenMount->getNfsdChannel();
   if (fuseChannel) {
@@ -919,6 +953,7 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
                << edenMount->getCheckoutConfig()->getMountProtocol()
                << " filesystem type";
   }
+#endif // _WIN32
 
   auto [serverStream, publisher] =
       apache::thrift::ServerStream<FsEvent>::createPublisher([context] {
@@ -949,6 +984,41 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
     apache::thrift::ServerStreamPublisher<FsEvent> publisher;
   };
 
+#ifdef _WIN32
+  if (prjfsChannel) {
+    context->subHandle = prjfsChannel->getTraceBusPtr()->subscribeFunction(
+        folly::to<std::string>("strace-", edenMount->getPath().basename()),
+        [owner = PublisherOwner{std::move(publisher)},
+         serverState =
+             server_->getServerState()](const PrjfsTraceEvent& event) {
+          FsEvent te;
+          auto times = thriftTraceEventTimes(event);
+          te.times_ref() = times;
+
+          // Legacy timestamp fields.
+          te.timestamp_ref() = *times.timestamp_ref();
+          te.monotonic_time_ns_ref() = *times.monotonic_time_ns_ref();
+
+          te.prjfsRequest_ref() = populatePrjfsCall(event);
+
+          switch (event.getType()) {
+            case PrjfsTraceEvent::START:
+              te.type_ref() = FsEventType::START;
+              if (auto& arguments = event.getArguments()) {
+                te.arguments_ref() = *arguments;
+              }
+              break;
+            case PrjfsTraceEvent::FINISH:
+              te.type_ref() = FsEventType::FINISH;
+              break;
+          }
+
+          te.requestInfo_ref() = RequestInfo{};
+
+          owner.publisher.next(te);
+        });
+  }
+#else
   if (fuseChannel) {
     context->subHandle = fuseChannel->getTraceBus().subscribeFunction(
         folly::to<std::string>("strace-", edenMount->getPath().basename()),
@@ -1027,10 +1097,9 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
           owner.publisher.next(te);
         });
   }
+#endif // _WIN32
   return std::move(serverStream);
 }
-
-#endif // _WIN32
 
 apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
     std::unique_ptr<std::string> mountPoint) {
@@ -2230,6 +2299,26 @@ void EdenServiceHandler::debugOutstandingNfsCalls(
 #endif // !_WIN32
 }
 
+void EdenServiceHandler::debugOutstandingPrjfsCalls(
+    FOLLY_MAYBE_UNUSED std::vector<PrjfsCall>& outstandingCalls,
+    FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint) {
+#ifdef _WIN32
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
+
+  auto mountPath = AbsolutePathPiece{*mountPoint};
+  auto edenMount = server_->getMount(mountPath);
+
+  if (auto* prjfsChannel = edenMount->getPrjfsChannel()) {
+    for (const auto& call :
+         prjfsChannel->getInner()->getOutstandingRequests()) {
+      outstandingCalls.push_back(populatePrjfsCall(call.type, call.data));
+    }
+  }
+#else
+  NOT_IMPLEMENTED();
+#endif // _WIN32
+}
+
 void EdenServiceHandler::debugStartRecordingActivity(
     ActivityRecorderResult& result,
     std::unique_ptr<std::string> mountPoint,
@@ -2799,8 +2888,8 @@ std::optional<pid_t> EdenServiceHandler::getAndRegisterClientPid() {
   // on the thread which the request originates. This means this must be run
   // on the Thread in which a thrift request originates.
   auto connectionContext = getRequestContext();
-  // if connectionContext will be a null pointer in an async method, so we need
-  // to check for this
+  // if connectionContext will be a null pointer in an async method, so we
+  // need to check for this
   if (connectionContext) {
     pid_t clientPid =
         connectionContext->getConnectionContext()->getPeerEffectiveCreds()->pid;

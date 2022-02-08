@@ -18,6 +18,10 @@
 #include "eden/fs/service/gen-cpp2/streamingeden_constants.h"
 #include "eden/fs/utils/PathFuncs.h"
 
+#ifdef _WIN32
+#include "thrift/lib/cpp/util/EnumUtils.h"
+#endif
+
 using namespace facebook::eden;
 using namespace std::string_view_literals;
 
@@ -77,6 +81,20 @@ std::string formatNfsCall(
       call.get_procName(),
       call.get_procNumber(),
       arguments);
+}
+
+std::string formatPrjfsCall(
+    const PrjfsCall& call,
+    const std::string& arguments = std::string{}) {
+  if (arguments.empty()) {
+    return fmt::format(
+        "{} from {}: {}",
+        call.get_commandId(),
+        call.get_pid(),
+        apache::thrift::util::enumName(call.get_callType(), "(unknown)"));
+  } else {
+    return arguments;
+  }
 }
 
 int trace_hg(
@@ -218,6 +236,7 @@ int trace_fs(
   // live filesystem calls, with an optional FuseCall, optional NfsCall,
   // optional PrjfsCall, just like streamingeden's FsEvent.
   std::vector<folly::SemiFuture<folly::Unit>> outstandingCallFutures;
+#ifndef _WIN32
   outstandingCallFutures.emplace_back(
       client.semifuture_debugOutstandingFuseCalls(mountRoot.stringPiece().str())
           .via(evbThread.getEventBase())
@@ -247,6 +266,23 @@ int trace_fs(
             }
             fmt::print("{}\n", std::string(header.size(), '-'));
           }));
+#else
+  outstandingCallFutures.emplace_back(
+      client
+          .semifuture_debugOutstandingPrjfsCalls(mountRoot.stringPiece().str())
+          .via(evbThread.getEventBase())
+          .thenValue([](std::vector<PrjfsCall> outstandingCalls) {
+            if (outstandingCalls.empty()) {
+              return;
+            }
+            std::string_view header = "Outstanding PrjFS calls"sv;
+            fmt::print("{}\n{}\n", header, std::string(header.size(), '-'));
+            for (const auto& call : outstandingCalls) {
+              fmt::print("+ {}\n", formatPrjfsCall(call));
+            }
+            fmt::print("{}\n", std::string(header.size(), '-'));
+          }));
+#endif // !_WIN32
   folly::collectAll(outstandingCallFutures).wait(kTimeout);
 
   std::unordered_map<uint64_t, FsEvent> activeRequests;
@@ -262,34 +298,54 @@ int trace_fs(
     const FsEventType eventType = evt.get_type();
     const FuseCall* fuseRequest = evt.get_fuseRequest();
     const NfsCall* nfsRequest = evt.get_nfsRequest();
-    if (!fuseRequest && !nfsRequest) {
+    const PrjfsCall* prjfsRequest = evt.get_prjfsRequest();
+    if (!fuseRequest && !nfsRequest && !prjfsRequest) {
       fprintf(stderr, "Error: trace event must have a non-null *Request\n");
       return;
     }
 
-    const uint64_t unique = fuseRequest
-        ? fuseRequest->get_unique()
-        : static_cast<uint32_t>(nfsRequest->get_xid());
+    uint64_t unique = 0;
+    if (fuseRequest) {
+      unique = fuseRequest->get_unique();
+    } else if (nfsRequest) {
+      unique = static_cast<uint32_t>(nfsRequest->get_xid());
+    } else {
+      unique = prjfsRequest->get_commandId();
+    }
 
     switch (eventType) {
       case FsEventType::UNKNOWN:
         break;
       case FsEventType::START: {
         activeRequests[unique] = evt;
-        fmt::print(
-            "+ {}\n",
-            fuseRequest
-                ? formatFuseCall(*evt.get_fuseRequest(), evt.get_arguments())
-                : formatNfsCall(*evt.get_nfsRequest(), evt.get_arguments()));
+        std::string callString;
+        if (fuseRequest) {
+          callString =
+              formatFuseCall(*evt.get_fuseRequest(), evt.get_arguments());
+        } else if (nfsRequest) {
+          callString =
+              formatNfsCall(*evt.get_nfsRequest(), evt.get_arguments());
+        } else {
+          callString =
+              formatPrjfsCall(*evt.get_prjfsRequest(), evt.get_arguments());
+        }
+        fmt::print("+ {}\n", callString);
         break;
       }
       case FsEventType::FINISH: {
-        const std::string formatted_call = fuseRequest
-            ? formatFuseCall(
-                  *evt.get_fuseRequest(),
-                  "" /* arguments */,
-                  evt.get_result() ? std::to_string(*evt.get_result()) : "")
-            : formatNfsCall(*evt.get_nfsRequest(), evt.get_arguments());
+        std::string formattedCall;
+        if (fuseRequest) {
+          formattedCall = formatFuseCall(
+              *evt.get_fuseRequest(),
+              "" /* arguments */,
+              evt.get_result() ? std::to_string(*evt.get_result()) : "");
+        } else if (nfsRequest) {
+          formattedCall =
+              formatNfsCall(*evt.get_nfsRequest(), evt.get_arguments());
+        } else {
+          formattedCall =
+              formatPrjfsCall(*evt.get_prjfsRequest(), evt.get_arguments());
+        }
         const auto it = activeRequests.find(unique);
         if (it != activeRequests.end()) {
           auto& record = it->second;
@@ -297,17 +353,16 @@ int trace_fs(
               evt.get_monotonic_time_ns() - record.get_monotonic_time_ns();
           fmt::print(
               "- {} in {}\n",
-              formatted_call,
+              formattedCall,
               fmt::format("{:.3f} \u03BCs", double(elapsedTime) / 1000.0));
           activeRequests.erase(unique);
         } else {
-          fmt::print("- {}\n", formatted_call);
+          fmt::print("- {}\n", formattedCall);
         }
         break;
       }
     }
   });
-
   fmt::print("{} was unmounted\n", FLAGS_mountRoot);
   return 0;
 }

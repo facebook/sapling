@@ -8,6 +8,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import argparse
 import os
 import pathlib
+import subprocess
 import sys
 
 from . import subcmd as subcmd_mod
@@ -19,9 +20,12 @@ trace_cmd = subcmd_mod.Decorator()
 
 
 def get_trace_stream_command() -> pathlib.Path:
+    # TODO(T111405470) Rewrite in rust so we can avoid hardcoding these paths
     try:
         return pathlib.Path(os.environ["EDENFS_TRACE_STREAM"])
     except KeyError:
+        if sys.platform == "win32":
+            return pathlib.Path("C:/tools/eden/libexec/trace_stream.exe")
         return pathlib.Path("/usr/local/libexec/eden/eden_trace_stream")
 
 
@@ -33,20 +37,26 @@ class TraceHgCommand(Subcmd):
         )
 
     async def run(self, args: argparse.Namespace) -> int:
-        if sys.platform == "win32":
-            print("Not yet supported on Windows", file=sys.stderr)
-            return 1
         instance, checkout, _rel_path = require_checkout(args, args.checkout)
-
         trace_stream_command = get_trace_stream_command()
-        # TODO: Use subprocess.call on Windows.
-        os.execl(
-            trace_stream_command,
-            os.fsencode(trace_stream_command),
-            b"--mountRoot",
-            os.fsencode(checkout.path),
-            b"--trace=hg",
-        )
+        if sys.platform == "win32":
+            subprocess.call(
+                [
+                    trace_stream_command,
+                    f"--mountRoot={checkout.path}",
+                    "--trace=hg",
+                    f"--reads={'true' if args.reads else 'false'}",
+                    f"--writes={'true' if args.writes else 'false'}",
+                ]
+            )
+        else:
+            os.execl(
+                trace_stream_command,
+                os.fsencode(trace_stream_command),
+                b"--mountRoot",
+                os.fsencode(checkout.path),
+                b"--trace=hg",
+            )
 
 
 @trace_cmd("fs", "Monitor filesystem requests.")
@@ -69,18 +79,27 @@ class TraceFsCommand(Subcmd):
         )
 
     async def run(self, args: argparse.Namespace) -> int:
-        if sys.platform == "win32":
-            print("Not yet supported on Windows", file=sys.stderr)
-            return 1
         instance, checkout, _rel_path = require_checkout(args, args.checkout)
         trace_stream_command = get_trace_stream_command()
+        print(trace_stream_command)
         # TODO: Use subprocess.call on Windows.
-        os.execl(
-            trace_stream_command,
-            os.fsencode(trace_stream_command),
-            b"--mountRoot",
-            os.fsencode(checkout.path),
-            b"--trace=fs",
-            f"--reads={'true' if args.reads else 'false'}".encode(),
-            f"--writes={'true' if args.writes else 'false'}".encode(),
-        )
+        if sys.platform == "win32":
+            subprocess.call(
+                [
+                    trace_stream_command,
+                    f"--mountRoot={checkout.path}",
+                    "--trace=fs",
+                    f"--reads={'true' if args.reads else 'false'}",
+                    f"--writes={'true' if args.writes else 'false'}",
+                ]
+            )
+        else:
+            os.execl(
+                trace_stream_command,
+                os.fsencode(trace_stream_command),
+                b"--mountRoot",
+                os.fsencode(checkout.path),
+                b"--trace=fs",
+                f"--reads={'true' if args.reads else 'false'}".encode(),
+                f"--writes={'true' if args.writes else 'false'}".encode(),
+            )

@@ -147,11 +147,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   apache::thrift::ServerStream<JournalPosition> subscribeStreamTemporary(
       std::unique_ptr<std::string> mountPoint) override;
 
-#ifndef _WIN32
   apache::thrift::ServerStream<FsEvent> traceFsEvents(
       std::unique_ptr<std::string> mountPoint,
       int64_t eventCategoryMask) override;
-#endif
 
   apache::thrift::ServerStream<HgEvent> traceHgEvents(
       std::unique_ptr<std::string> mountPoint) override;
@@ -204,6 +202,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   void debugOutstandingNfsCalls(
       std::vector<NfsCall>& outstandingCalls,
+      std::unique_ptr<std::string> mountPoint) override;
+
+  void debugOutstandingPrjfsCalls(
+      std::vector<PrjfsCall>& outstandingCalls,
       std::unique_ptr<std::string> mountPoint) override;
 
   void debugStartRecordingActivity(

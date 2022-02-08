@@ -20,6 +20,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 #include "eden/fs/utils/Rcu.h"
+#include "thrift/lib/cpp/util/EnumUtils.h"
 
 namespace facebook {
 namespace eden {
@@ -155,7 +156,7 @@ struct PrjfsLiveRequest {
             ? PathComponentPiece{"None"}
             : AbsolutePath(data.TriggeringProcessImageFileName).basename(),
         data_.pid,
-        type_,
+        apache::thrift::util::enumName(type_, "(unknown)"),
         data.FilePathName == nullptr ? RelativePath{}
                                      : RelativePath(data.FilePathName));
   }
