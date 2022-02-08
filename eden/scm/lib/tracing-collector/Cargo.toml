@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 indexmap = { version = "1.8.0", features = ["rayon", "serde-1"] }
 libc = "0.2.98"
-parking_lot = { version = "0.12.0", features = ["send_guard"] }
+parking_lot = { version = "0.11.2", features = ["send_guard"] }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 tracing = "0.1.29"

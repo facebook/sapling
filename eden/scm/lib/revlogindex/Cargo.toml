@@ -14,7 +14,7 @@ indexedlog = { version = "0.1.0", path = "../indexedlog" }
 lz4-pyframe = { version = "0.1.0", path = "../lz4-pyframe" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 nonblocking = { version = "0.1.0", path = "../nonblocking" }
-parking_lot = { version = "0.12.0", features = ["send_guard"] }
+parking_lot = { version = "0.11.2", features = ["send_guard"] }
 radixbuf = { version = "0.1.0", path = "../radixbuf" }
 thiserror = "1.0.29"
 util = { version = "0.1.0", path = "../util" }

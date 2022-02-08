@@ -11,7 +11,7 @@ configmodel = { version = "0.1.0", path = "../configmodel" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../manifest", features = ["for-tests"] }
 minibytes = { version = "0.1.0", path = "../minibytes" }
-parking_lot = { version = "0.12.0", features = ["send_guard"] }
+parking_lot = { version = "0.11.2", features = ["send_guard"] }
 pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 progress-model = { version = "0.1.0", path = "../progress/model" }
 status = { version = "0.1.0", path = "../status" }

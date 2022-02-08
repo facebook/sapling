@@ -37,7 +37,7 @@ itertools = "0.10.3"
 mincode = { version = "0.1.0", path = "../mincode" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 nonblocking = { version = "0.1.0", path = "../nonblocking" }
-parking_lot = { version = "0.12.0", features = ["send_guard"] }
+parking_lot = { version = "0.11.2", features = ["send_guard"] }
 quickcheck = { version = "1.0", optional = true }
 rand = { version = "0.8", features = ["small_rng"] }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
