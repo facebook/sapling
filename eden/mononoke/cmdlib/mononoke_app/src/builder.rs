@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
@@ -16,15 +17,16 @@ use blobstore_factory::{
     PackOptions, ReadOnlyStorage, ReadOnlyStorageArgs, ThrottleOptions,
 };
 use cached_config::{ConfigHandle, ConfigStore};
-use clap::{App, AppSettings, Args, FromArgMatches, IntoApp};
+use clap::{App, AppSettings, ArgMatches, Args, FromArgMatches, IntoApp};
 use cmdlib_caching::{init_cachelib, CachelibArgs, CachelibSettings};
 use cmdlib_logging::{LoggingArgs, ScubaLoggingArgs};
 use derived_data_remote::RemoteDerivationArgs;
 use environment::MononokeEnvironment;
 use fbinit::FacebookInit;
 use megarepo_config::{MegarepoConfigsArgs, MononokeMegarepoConfigsOptions};
+use observability::DynamicLevelDrain;
 use rendezvous::RendezVousArgs;
-use slog::{debug, o, Logger};
+use slog::{debug, o, Logger, Never, SendSyncRefUnwindSafeDrain};
 use sql_ext::facebook::{MysqlOptions, PoolConfig, ReadConnectionType, SharedConnectionPool};
 use tokio::runtime::Runtime;
 use tunables;
@@ -177,7 +179,7 @@ impl MononokeAppBuilder {
         let args = app.get_matches();
         let env_args = EnvironmentArgs::from_arg_matches(&args)?;
         let config_mode = env_args.config_args.mode();
-        let mut env = self.build_environment(env_args)?;
+        let mut env = self.build_environment(env_args, &args)?;
 
         for ext in self.arg_extensions.iter() {
             ext.environment_hook(&args, &mut env)?;
@@ -186,7 +188,11 @@ impl MononokeAppBuilder {
         MononokeApp::new(self.fb, config_mode, args, env)
     }
 
-    fn build_environment(&self, env_args: EnvironmentArgs) -> Result<MononokeEnvironment> {
+    fn build_environment(
+        &self,
+        env_args: EnvironmentArgs,
+        args: &ArgMatches,
+    ) -> Result<MononokeEnvironment> {
         let EnvironmentArgs {
             blobstore_args,
             config_args,
@@ -222,8 +228,15 @@ impl MononokeAppBuilder {
             .create_observability_context(&config_store, log_level)
             .context("Failed to initialize observability context")?;
 
-        let logger =
-            logging_args.create_logger(root_log_drain.clone(), observability_context.clone())?;
+        let mut root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>> =
+            Arc::new(DynamicLevelDrain::new(
+                root_log_drain,
+                observability_context.clone(),
+            ));
+        for ext in self.arg_extensions.iter() {
+            root_log_drain = ext.log_drain_hook(args, root_log_drain)?;
+        }
+        let logger = logging_args.create_logger(root_log_drain, observability_context.clone())?;
 
         let scuba_sample_builder = scuba_logging_args
             .create_scuba_sample_builder(

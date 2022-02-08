@@ -184,19 +184,11 @@ impl LoggingArgs {
         Ok(root_log_drain)
     }
 
-    pub fn create_logger<T>(
+    pub fn create_logger(
         &self,
-        root_log_drain: T,
+        root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>,
         observability_context: ObservabilityContext,
-    ) -> Result<Logger>
-    where
-        T: SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>
-            + Clone
-            + std::panic::UnwindSafe
-            + 'static,
-    {
-        let root_log_drain = DynamicLevelDrain::new(root_log_drain, observability_context);
-
+    ) -> Result<Logger> {
         let kv = FacebookKV::new().context("Failed to initialize FacebookKV")?;
 
         let logger = if self.fb303_thrift_port.is_some() {
