@@ -23,7 +23,7 @@ pub struct McrouterArgExtension;
 impl ArgExtension for McrouterArgExtension {
     type Args = McrouterArgs;
 
-    fn process_args(&self, args: &McrouterArgs, env: &mut MononokeEnvironment) -> Result<()> {
+    fn environment_hook(&self, args: &McrouterArgs, env: &mut MononokeEnvironment) -> Result<()> {
         if !args.enable_mcrouter {
             return Ok(());
         }

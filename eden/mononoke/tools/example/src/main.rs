@@ -82,7 +82,7 @@ mod additional {
             }
         }
 
-        fn process_args(&self, args: &TestArgs, _env: &mut MononokeEnvironment) -> Result<()> {
+        fn environment_hook(&self, args: &TestArgs, _env: &mut MononokeEnvironment) -> Result<()> {
             if let Some(value) = args.test_arg {
                 println!("Test arg received: {}", value);
             }

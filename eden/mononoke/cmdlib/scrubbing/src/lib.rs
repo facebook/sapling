@@ -93,7 +93,7 @@ impl ArgExtension for ScrubArgExtension {
         defaults
     }
 
-    fn process_args(&self, args: &ScrubArgs, env: &mut MononokeEnvironment) -> Result<()> {
+    fn environment_hook(&self, args: &ScrubArgs, env: &mut MononokeEnvironment) -> Result<()> {
         if let Some(scrub_action) = args.blobstore_scrub_action {
             let scrub_options = ScrubOptions {
                 scrub_action,

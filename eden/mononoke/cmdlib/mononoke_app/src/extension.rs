@@ -20,16 +20,17 @@ pub trait ArgExtension {
         Vec::new()
     }
 
-    /// Process values for these arguments, optionally modifying the
-    /// environment.
-    fn process_args(&self, args: &Self::Args, env: &mut MononokeEnvironment) -> Result<()>;
+    /// Hook executed after creating the environment before initializing Mononoke.
+    fn environment_hook(&self, _args: &Self::Args, _env: &mut MononokeEnvironment) -> Result<()> {
+        Ok(())
+    }
 }
 
 /// Internal trait to hide the associated args type.
 pub(crate) trait ArgExtensionBox {
     fn augment_args<'help>(&self, app: App<'help>) -> App<'help>;
     fn arg_defaults(&self) -> Vec<(&'static str, String)>;
-    fn process_args(&self, args: &ArgMatches, env: &mut MononokeEnvironment) -> Result<()>;
+    fn environment_hook(&self, args: &ArgMatches, env: &mut MononokeEnvironment) -> Result<()>;
 }
 
 impl<Ext> ArgExtensionBox for Ext
@@ -44,8 +45,8 @@ where
         self.arg_defaults()
     }
 
-    fn process_args(&self, args: &ArgMatches, env: &mut MononokeEnvironment) -> Result<()> {
+    fn environment_hook(&self, args: &ArgMatches, env: &mut MononokeEnvironment) -> Result<()> {
         let args = Ext::Args::from_arg_matches(args)?;
-        self.process_args(&args, env)
+        self.environment_hook(&args, env)
     }
 }
