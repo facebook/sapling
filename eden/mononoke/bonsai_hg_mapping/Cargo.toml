@@ -55,4 +55,5 @@ quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb
 reqwest = { git = "https://github.com/vmagro/reqwest", rev = "b08239c2b6c837321a697c5bb2be394d276b59ca" }
 rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }
 shellexpand = { git = "https://github.com/fanzeyi/shellexpand.git", rev = "179447a3f8fccd765acfd2eed15a54c716c49cfe" }
+terminfo = { git = "https://github.com/rust-terminfo/terminfo", rev = "9b4e1c6aae79644c9da7a2e312e3c10ee4759930" }
 toml = { git = "https://github.com/fbsource/toml", branch = "dotted-table-0.5.8" }

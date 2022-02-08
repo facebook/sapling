@@ -18,7 +18,7 @@ configmodel = { version = "0.1.0", path = "../configmodel" }
 dirs = "2.0"
 filetime = { version = "0.2.9", optional = true }
 hgtime = { version = "0.1.0", path = "../hgtime", optional = true }
-hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", optional = true }
+hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hostname = "0.3"
 http-client = { version = "0.1.0", path = "../http-client", optional = true }
 indexmap = { version = "1.8.0", features = ["rayon", "serde-1"] }
@@ -47,4 +47,4 @@ tempfile = "3.2"
 
 [features]
 default = []
-fb = ["filetime", "hgtime", "hostcaps", "hostcaps/fb", "http-client", "os_info", "regex", "serde", "serde_json", "serde_urlencoded", "sha2", "sha2", "tempfile", "types", "zstd"]
+fb = ["filetime", "hgtime", "hostcaps/fb", "http-client", "os_info", "regex", "serde", "serde_json", "serde_urlencoded", "sha2", "sha2", "tempfile", "types", "zstd"]
