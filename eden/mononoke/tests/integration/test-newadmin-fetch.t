@@ -12,29 +12,37 @@ setup configuration
   $ mononoke_testtool drawdag -R repo --derive-all <<'EOF'
   > A-B-C
   > # bookmark: C main
+  > # extra: A example_extra "123\xff"
   > EOF
   *] Reloading redacted config from configerator (glob)
-  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
-  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
-  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
+  A=c1c5eb4a15a4c71edae31c84f8b23ec5008ad16be07fba5b872fe010184b16ba
+  B=749add4e33cf83fda6cce6f4fb4e3037a171dd8068acef09b336fd8ae027bf6f
+  C=93cd0903625ea3162047e2699c2ea20d531b634df84180dbeeeb4b62f8afa8cd
 
-  $ mononoke_newadmin fetch -R repo -i e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
+  $ mononoke_newadmin fetch -R repo -i 93cd0903625ea3162047e2699c2ea20d531b634df84180dbeeeb4b62f8afa8cd
   *] Reloading redacted config from configerator (glob)
-  BonsaiChangesetId: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
+  BonsaiChangesetId: 93cd0903625ea3162047e2699c2ea20d531b634df84180dbeeeb4b62f8afa8cd
   Author: author
   Message: C
   FileChanges:
   	 ADDED/MODIFIED: C 896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d
   
-  $ mononoke_newadmin fetch -R repo -i aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675 --json | jq -S .
+  $ mononoke_newadmin fetch -R repo -i c1c5eb4a15a4c71edae31c84f8b23ec5008ad16be07fba5b872fe010184b16ba --json | jq -S .
   *] Reloading redacted config from configerator (glob)
   {
     "author": "author",
     "author_date": "1970-01-01T00:00:00+00:00",
-    "changeset_id": "aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675",
+    "changeset_id": "c1c5eb4a15a4c71edae31c84f8b23ec5008ad16be07fba5b872fe010184b16ba",
     "committer": null,
     "committer_date": null,
-    "extra": {},
+    "extra": {
+      "example_extra": [
+        49,
+        50,
+        51,
+        255
+      ]
+    },
     "file_changes": {
       "A": {
         "Change": {

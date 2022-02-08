@@ -91,6 +91,7 @@ enum Action {
 enum ChangeAction {
     Modify { path: Vec<u8>, content: Vec<u8> },
     Delete { path: Vec<u8> },
+    Extra { key: String, value: Vec<u8> },
 }
 
 impl Action {
@@ -124,6 +125,15 @@ impl Action {
                     Ok(Action::Change {
                         name,
                         change: ChangeAction::Delete { path },
+                    })
+                }
+                ("extra", [name, key, value]) => {
+                    let name = name.to_string()?;
+                    let key = key.to_string()?;
+                    let value = value.to_bytes();
+                    Ok(Action::Change {
+                        name,
+                        change: ChangeAction::Extra { key, value },
                     })
                 }
                 _ => Err(anyhow!("Invalid spec for key: {}", key)),
@@ -336,6 +346,7 @@ fn apply_changes<'a>(
         match change {
             ChangeAction::Modify { path, content, .. } => c = c.add_file(path.as_slice(), content),
             ChangeAction::Delete { path, .. } => c = c.delete_file(path.as_slice()),
+            ChangeAction::Extra { key, value, .. } => c = c.add_extra(key, value),
         }
     }
     c
