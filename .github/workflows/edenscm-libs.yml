@@ -19,8 +19,6 @@ jobs:
       run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/backingstore/Cargo.toml
     - name: Run blackbox tests
       run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/blackbox/Cargo.toml
-    - name: Run bookmarkstore tests
-      run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/bookmarkstore/Cargo.toml
     # thrift-types does not build
     # - name: Run clidispatch tests
     #  run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/clidispatch/Cargo.toml
