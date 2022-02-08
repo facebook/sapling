@@ -10,19 +10,17 @@ use std::sync::Arc;
 
 #[cfg(fbcode_build)]
 use anyhow::format_err;
-use anyhow::{Context, Error, Result};
+use anyhow::{Context, Result};
 use cached_config::ConfigStore;
 use fbinit::FacebookInit;
 use observability::{DynamicLevelDrain, ObservabilityContext};
 use panichandler::{self, Fate};
-use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, o, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
 use slog_ext::make_tag_filter_drain;
 use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV, GlogFormat};
 use slog_term::TermDecorator;
-use tunables::tunables;
 
-use crate::args::{LoggingArgs, PanicFate, ScubaLoggingArgs};
+use crate::args::{LoggingArgs, PanicFate};
 
 pub fn create_log_level(logging_args: &LoggingArgs) -> Level {
     if logging_args.debug {
@@ -180,61 +178,4 @@ pub fn create_observability_context(
     } else {
         Ok(ObservabilityContext::new_static(log_level))
     }
-}
-
-pub fn create_scuba_sample_builder(
-    fb: FacebookInit,
-    scuba_args: &ScubaLoggingArgs,
-    observability_context: &ObservabilityContext,
-    default_scuba_set: &Option<String>,
-) -> Result<MononokeScubaSampleBuilder> {
-    let mut scuba_logger = if let Some(scuba_dataset) = &scuba_args.scuba_dataset {
-        MononokeScubaSampleBuilder::new(fb, scuba_dataset.as_str())
-    } else if let Some(default_scuba_dataset) = default_scuba_set {
-        if scuba_args.no_default_scuba_dataset {
-            MononokeScubaSampleBuilder::with_discard()
-        } else {
-            MononokeScubaSampleBuilder::new(fb, default_scuba_dataset)
-        }
-    } else {
-        MononokeScubaSampleBuilder::with_discard()
-    };
-    if let Some(scuba_log_file) = &scuba_args.scuba_log_file {
-        scuba_logger = scuba_logger.with_log_file(scuba_log_file.clone())?;
-    }
-    let mut scuba_logger = scuba_logger
-        .with_observability_context(observability_context.clone())
-        .with_seq("seq");
-
-    scuba_logger.add_common_server_data();
-
-    Ok(scuba_logger)
-}
-
-pub fn create_warm_bookmark_cache_scuba_sample_builder(
-    fb: FacebookInit,
-    scuba_args: &ScubaLoggingArgs,
-) -> Result<MononokeScubaSampleBuilder, Error> {
-    let maybe_scuba = match scuba_args.warm_bookmark_cache_scuba_dataset.clone() {
-        Some(scuba) => {
-            let tw_task_id =
-                std::env::var("TW_TASK_ID").context("failed to get TW_TASK_ID env var")?;
-            let tw_task_id: u32 = tw_task_id
-                .parse()
-                .context("failed to parse TW_TASK_ID env var")?;
-            let mut sampling = tunables().get_warm_bookmark_cache_loggin_tw_task_sampling() as u32;
-            if sampling == 0 {
-                sampling = 10;
-            }
-
-            if tw_task_id % sampling == 0 {
-                Some(scuba)
-            } else {
-                None
-            }
-        }
-        None => None,
-    };
-
-    Ok(MononokeScubaSampleBuilder::with_opt_table(fb, maybe_scuba))
 }

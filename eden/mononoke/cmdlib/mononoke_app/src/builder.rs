@@ -20,8 +20,7 @@ use clap::{App, AppSettings, Args, FromArgMatches, IntoApp};
 use cmdlib_caching::{init_cachelib, CachelibArgs, CachelibSettings};
 use cmdlib_logging::{
     create_log_level, create_logger, create_observability_context, create_root_log_drain,
-    create_scuba_sample_builder, create_warm_bookmark_cache_scuba_sample_builder, LoggingArgs,
-    ScubaLoggingArgs,
+    LoggingArgs, ScubaLoggingArgs,
 };
 use derived_data_remote::RemoteDerivationArgs;
 use environment::MononokeEnvironment;
@@ -231,16 +230,16 @@ impl MononokeAppBuilder {
             observability_context.clone(),
         )?;
 
-        let scuba_sample_builder = create_scuba_sample_builder(
-            self.fb,
-            &scuba_logging_args,
-            &observability_context,
-            &self.default_scuba_dataset,
-        )
-        .context("Failed to create scuba sample builder")?;
-        let warm_bookmarks_cache_scuba_sample_builder =
-            create_warm_bookmark_cache_scuba_sample_builder(self.fb, &scuba_logging_args)
-                .context("Failed to create warm bookmark cache scuba sample builder")?;
+        let scuba_sample_builder = scuba_logging_args
+            .create_scuba_sample_builder(
+                self.fb,
+                &observability_context,
+                &self.default_scuba_dataset,
+            )
+            .context("Failed to create scuba sample builder")?;
+        let warm_bookmarks_cache_scuba_sample_builder = scuba_logging_args
+            .create_warm_bookmark_cache_scuba_sample_builder(self.fb)
+            .context("Failed to create warm bookmark cache scuba sample builder")?;
 
         let caching = init_cachelib(self.fb, &self.cachelib_settings, &cachelib_args);
 

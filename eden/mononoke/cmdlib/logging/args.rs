@@ -65,24 +65,6 @@ pub struct LoggingArgs {
     pub with_dynamic_observability: bool,
 }
 
-/// Command line arguments that control scuba logging
-#[derive(Args, Debug)]
-pub struct ScubaLoggingArgs {
-    /// The name of the scuba dataset to log to
-    #[clap(long)]
-    pub scuba_dataset: Option<String>,
-    /// A log file to write JSON Scuba logs to (primarily useful in testing)
-    #[clap(long)]
-    pub scuba_log_file: Option<String>,
-    /// Do not use the default scuba dataset for this app
-    #[clap(long)]
-    pub no_default_scuba_dataset: bool,
-    /// Special dataset to be used by warm bookmark cache.  If a binary doesn't
-    /// use warm bookmark cache then this parameter is ignored
-    #[clap(long)]
-    pub warm_bookmark_cache_scuba_dataset: Option<String>,
-}
-
 #[derive(ArgEnum, Clone, Copy, Debug)]
 #[clap(rename_all = "lower")]
 pub enum PanicFate {
