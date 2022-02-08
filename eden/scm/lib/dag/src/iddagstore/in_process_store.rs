@@ -214,20 +214,25 @@ impl IdDagStore for InProcessStore {
         }
     }
 
-    fn iter_master_flat_segments_with_parent_span<'a>(
+    fn iter_flat_segments_with_parent_span<'a>(
         &'a self,
         parent_span: Span,
     ) -> Result<Box<dyn Iterator<Item = Result<(Id, SegmentWithWrongHead)>> + 'a>> {
-        let range = (Group::MASTER, parent_span.low)..=(Group::MASTER, parent_span.high);
-        let iter =
-            self.parent_index
-                .range(range)
-                .flat_map(move |((_group, parent_id), store_ids)| {
-                    let parent_id = *parent_id;
-                    store_ids.iter().map(move |store_id| {
-                        Ok((parent_id, SegmentWithWrongHead(self.get_segment(store_id))))
-                    })
-                });
+        let mut iter: Box<dyn Iterator<Item = Result<(Id, SegmentWithWrongHead)>> + 'a> =
+            Box::new(std::iter::empty());
+        for group in Group::ALL {
+            let range = (group, parent_span.low)..=(group, parent_span.high);
+            let group_iter =
+                self.parent_index
+                    .range(range)
+                    .flat_map(move |((_group, parent_id), store_ids)| {
+                        let parent_id = *parent_id;
+                        store_ids.iter().map(move |store_id| {
+                            Ok((parent_id, SegmentWithWrongHead(self.get_segment(store_id))))
+                        })
+                    });
+            iter = Box::new(iter.chain(group_iter));
+        }
         Ok(Box::new(iter))
     }
 

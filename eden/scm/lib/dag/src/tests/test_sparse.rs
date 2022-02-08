@@ -105,6 +105,30 @@ async fn test_sparse_dag() {
 }
 
 #[tokio::test]
+async fn test_lazy_hash_on_non_master_group() {
+    // In this test, we have 3 dags:
+    // - server1: A dag.
+    // - server2: A dag similar to server1 but in non-master group.
+    // - client: A sparse dag. Emulates client-side. Cloned from server1.
+    //   Speaks remote protocol with server2.
+    let ascii_graph = r#"
+        A--B--C--D--I
+                  /
+        E--F--G--H
+        "#;
+    let mut server1 = TestDag::new();
+    server1.drawdag(ascii_graph, &["I"]);
+
+    // server2 has a same graph but in the non-master group.
+    let server2 = TestDag::draw(ascii_graph);
+
+    // server2 can answer name->location queries.
+    let client = server1.client_cloned_data().await.with_remote(&server2);
+    assert_eq!(client.dag.vertex_id("C".into()).await.unwrap(), Id(2));
+    assert_eq!(client.dag.vertex_id("F".into()).await.unwrap(), Id(5));
+}
+
+#[tokio::test]
 async fn test_negative_cache() {
     let server = TestDag::draw("A-B  # master: B");
 

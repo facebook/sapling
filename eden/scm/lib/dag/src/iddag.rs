@@ -958,7 +958,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             // to `6~3`, not `4~3`. Needs to lookup parents in the range `1..=4`.
             let mut next_id_n = None;
             let parent_span = span.low.max(id)..=span.high;
-            for entry in self.iter_master_flat_segments_with_parent_span(parent_span.into())? {
+            for entry in self.iter_flat_segments_with_parent_span(parent_span.into())? {
                 let (parent_id, child_seg) = entry?;
                 trace(&|| format!("  {:?} has child seg ({:?})", parent_id, &child_seg));
                 let child_low = child_seg.low()?;

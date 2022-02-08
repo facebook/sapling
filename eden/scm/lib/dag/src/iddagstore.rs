@@ -174,7 +174,7 @@ pub trait IdDagStore: Send + Sync + 'static {
     ///
     /// Warning: The returned segments might have incorrect `high`s.
     /// See `indexedlog_store.rs` for details.
-    fn iter_master_flat_segments_with_parent_span<'a>(
+    fn iter_flat_segments_with_parent_span<'a>(
         &'a self,
         parent_span: Span,
     ) -> Result<Box<dyn Iterator<Item = Result<(Id, SegmentWithWrongHead)>> + 'a>>;
@@ -314,7 +314,6 @@ enum StoreId {
 mod tests {
     use std::ops::Deref;
 
-    use itertools::Itertools;
     use once_cell::sync::Lazy;
 
     use super::*;
@@ -731,47 +730,20 @@ mod tests {
         assert!(answer.next().is_none());
     }
 
-    fn test_store_iter_master_flat_segments_with_parent_span(store: &dyn IdDagStore) {
-        let mut answer = store
-            .iter_master_flat_segments_with_parent_span(Id(2).into())
-            .unwrap()
-            .map_ok(|(_p, s)| s)
-            .collect::<Result<Vec<_>>>()
-            .unwrap();
-        let mut answer2 = store
-            .iter_master_flat_segments_with_parent_span((Id(0)..=Id(3)).into())
-            .unwrap()
-            .map_ok(|(p, s)| {
-                assert_eq!(p, Id(2));
-                s
-            })
-            .collect::<Result<Vec<_>>>()
-            .unwrap();
-        // LEVEL0_HEAD5 is not in answer because it was merged into MERGED_LEVEL0_HEAD5
-        // and MERGED_LEVEL0_HEAD5 no longer has parent 2.
-        let expected = segments_to_owned(&[&LEVEL0_HEAD9])
-            .into_iter()
-            .map(SegmentWithWrongHead)
-            .collect::<Vec<_>>();
-        answer.sort_by_key(|s| s.low().unwrap());
-        assert_eq!(answer, expected);
-        answer2.sort_by_key(|s| s.low().unwrap());
-        assert_eq!(answer2, expected);
+    fn test_store_iter_flat_segments_with_parent_span(store: &dyn IdDagStore) {
+        let query = |span: Span| -> String {
+            let iter = store.iter_flat_segments_with_parent_span(span).unwrap();
+            let mut answer_str_list: Vec<String> =
+                iter.map(|s| format!("{:?}", s.unwrap())).collect();
+            answer_str_list.sort_unstable();
+            answer_str_list.join(" ")
+        };
 
-        let mut answer = store
-            .iter_master_flat_segments_with_parent_span(Id(13).into())
-            .unwrap();
-        assert!(answer.next().is_none());
-
-        let mut answer = store
-            .iter_master_flat_segments_with_parent_span(Id(4).into())
-            .unwrap();
-        assert!(answer.next().is_none());
-
-        let mut answer = store
-            .iter_master_flat_segments_with_parent_span(nid(2).into())
-            .unwrap();
-        assert!(answer.next().is_none());
+        assert_eq!(query(Id(2).into()), "(2, 6-x[2])");
+        assert_eq!(query((Id(0)..=Id(3)).into()), "(2, 6-x[2])");
+        assert_eq!(query(Id(13).into()), "(13, N0-x[13])");
+        assert_eq!(query(Id(4).into()), "");
+        assert_eq!(query(nid(2).into()), "(N2, N5-x[N2, N4])");
     }
 
     fn test_store_iter_flat_segments_with_parent(store: &dyn IdDagStore) {
@@ -824,7 +796,7 @@ mod tests {
         );
         assert!(
             store
-                .iter_master_flat_segments_with_parent_span(nid(2).into())
+                .iter_flat_segments_with_parent_span(nid(2).into())
                 .unwrap()
                 .next()
                 .is_none()
@@ -903,8 +875,8 @@ mod tests {
     }
 
     #[test]
-    fn test_multi_stores_iter_master_flat_segments_with_parent_span() {
-        for_each_store(|store| test_store_iter_master_flat_segments_with_parent_span(store));
+    fn test_multi_stores_iter_flat_segments_with_parent_span() {
+        for_each_store(|store| test_store_iter_flat_segments_with_parent_span(store));
     }
 
     #[test]

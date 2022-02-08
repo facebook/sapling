@@ -257,26 +257,28 @@ impl IdDagStore for IndexedLogStore {
         Ok(Box::new(iter))
     }
 
-    fn iter_master_flat_segments_with_parent_span<'a>(
+    fn iter_flat_segments_with_parent_span<'a>(
         &'a self,
         parent_span: Span,
     ) -> Result<Box<dyn Iterator<Item = Result<(Id, SegmentWithWrongHead)>> + 'a>> {
-        let low = index_parent_key(Group::MASTER, parent_span.low, Id::MIN);
-        let high = index_parent_key(Group::MASTER, parent_span.high, Id::MAX);
-        let range = &low[..]..=&high[..];
-        let range_iter = self.log.lookup_range(Self::INDEX_PARENT, range)?;
         let mut result: Vec<(Id, SegmentWithWrongHead)> = Vec::new();
-        for entry in range_iter {
-            let (key, segments) = entry?;
-            let parent_id = {
-                let bytes: [u8; 8] = key[1..9].try_into().unwrap();
-                Id(u64::from_be_bytes(bytes))
-            };
-            for segment in segments {
-                result.push((
-                    parent_id,
-                    SegmentWithWrongHead(self.segment_from_slice(segment?)),
-                ));
+        for group in Group::ALL {
+            let low = index_parent_key(group, parent_span.low, Id::MIN);
+            let high = index_parent_key(group, parent_span.high, Id::MAX);
+            let range = &low[..]..=&high[..];
+            let range_iter = self.log.lookup_range(Self::INDEX_PARENT, range)?;
+            for entry in range_iter {
+                let (key, segments) = entry?;
+                let parent_id = {
+                    let bytes: [u8; 8] = key[1..9].try_into().unwrap();
+                    Id(u64::from_be_bytes(bytes))
+                };
+                for segment in segments {
+                    result.push((
+                        parent_id,
+                        SegmentWithWrongHead(self.segment_from_slice(segment?)),
+                    ));
+                }
             }
         }
         Ok(Box::new(result.into_iter().map(Ok)))
