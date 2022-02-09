@@ -15,10 +15,6 @@ jobs:
     runs-on: macOS-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Fetch fb303-source
-      run: python3 build/fbcode_builder/getdeps.py fetch --no-tests fb303-source
-    - name: Fetch fbthrift-source
-      run: python3 build/fbcode_builder/getdeps.py fetch --no-tests fbthrift-source
     - name: Fetch openssl
       run: python3 build/fbcode_builder/getdeps.py fetch --no-tests openssl
     - name: Install Rust Stable
@@ -83,10 +79,6 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py fetch --no-tests rust-shed
     - name: Fetch fb303
       run: python3 build/fbcode_builder/getdeps.py fetch --no-tests fb303
-    - name: Build fb303-source
-      run: python3 build/fbcode_builder/getdeps.py build --no-tests fb303-source
-    - name: Build fbthrift-source
-      run: python3 build/fbcode_builder/getdeps.py build --no-tests fbthrift-source
     - name: Build openssl
       run: python3 build/fbcode_builder/getdeps.py build --no-tests openssl
     - name: Build ninja

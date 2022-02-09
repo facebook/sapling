@@ -107,7 +107,18 @@ from distutils_rust import RustBinary, BuildRustExt, InstallRustExt
 
 havefb = os.path.exists("fb")
 isgetdepsbuild = os.environ.get("GETDEPS_BUILD") == "1"
+
+# Find path for dependencies when not in havefb mode
+dep_build_dir = "../../.."
+dep_install_dir = "../../.."
 if isgetdepsbuild:
+    # when running from getdeps src-dir may be . so don't use .. to get from source to build and install
+    getdeps_build = os.environ.get("GETDEPS_BUILD_DIR", None)
+    if getdeps_build:
+        dep_build_dir = getdeps_build
+    getdeps_install = os.environ.get("GETDEPS_INSTALL_DIR", None)
+    if getdeps_install:
+        dep_install_dir = getdeps_install
     # getdeps builds of hg client are OSS only
     havefb = False
 
@@ -759,7 +770,9 @@ class fetchbuilddeps(Command):
     pyassets += [
         fbsourcepylibrary(
             "thrift",
-            "../../thrift/lib/py" if havefb else "../../../fbthrift/thrift/lib/py",
+            "../../thrift/lib/py"
+            if havefb
+            else f"{dep_build_dir}/fbthrift/thrift/lib/py",
             excludes=[
                 "thrift/util/asyncio.py",
                 "thrift/util/inspect.py",
@@ -783,8 +796,7 @@ class fetchbuilddeps(Command):
                 sourcemap={
                     "../../eden/fs/service/eden.thrift": "eden/fs/service/eden.thrift",
                     "../../eden/fs/config/eden_config.thrift": "eden/fs/config/eden_config.thrift",
-                    "../../common/fb303/if/fb303.thrift": "common/fb303/if/fb303.thrift",
-                    "../../../fb303/fb303/thrift/fb303_core.thrift": "fb303/thrift/fb303_core.thrift",
+                    f"{dep_install_dir}/fb303/include/thrift-files/fb303/thrift/fb303_core.thrift": "fb303/thrift/fb303_core.thrift",
                 },
             )
         ]

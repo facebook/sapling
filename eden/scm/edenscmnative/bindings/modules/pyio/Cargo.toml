@@ -11,5 +11,5 @@ pyconfigparser = { path = "../pyconfigparser" }
 
 [features]
 default = []
-python2 = ["cpython/python27-sys", "cpython_ext/python2", "clidispatch/python2"]
-python3 = ["cpython/python3-sys", "cpython_ext/python3", "clidispatch/python3"]
+python2 = ["cpython/python27-sys", "cpython_ext/python2"]
+python3 = ["cpython/python3-sys", "cpython_ext/python3"]
