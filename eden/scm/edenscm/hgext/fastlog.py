@@ -407,8 +407,7 @@ class LocalIteratorThread(Thread):
     def stopped(self):
         return self._stop.isSet()
 
-    def run(self):
-        # type: () -> None
+    def run(self) -> None:
         generator = self.generator
         match = self.localmatch
         dirs = self.dirs
@@ -523,8 +522,7 @@ class FastLogThread(Thread):
                 self.finishpath(path)
                 return
 
-    def run(self):
-        # type: () -> None
+    def run(self) -> None:
         revs = None
         paths = self.paths
 

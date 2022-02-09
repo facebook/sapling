@@ -218,8 +218,7 @@ class journalentry(
     """
 
     @classmethod
-    def fromstorage(cls, line):
-        # type: (bytes) -> journalentry
+    def fromstorage(cls, line: bytes) -> "journalentry":
         (
             time,
             user,
@@ -237,8 +236,7 @@ class journalentry(
             (timestamp, tz), user, command, namespace, name, oldhashes, newhashes
         )
 
-    def serialize(self):
-        # type: () -> bytes
+    def serialize(self) -> bytes:
         """String representation for storage"""
         time = " ".join(map(str, self.timestamp))
         oldhashes = ",".join([node.hex(hash) for hash in self.oldhashes])

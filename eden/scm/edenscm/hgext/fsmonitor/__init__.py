@@ -887,8 +887,9 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
         self._repo = weakref.proxy(repo)
         self._ui = repo.ui
 
-    def pendingchanges(self, match=None, listignored=False):
-        # type: (Optional[Callable[[str], bool]], bool) -> Iterable[Tuple[str, bool]]
+    def pendingchanges(
+        self, match: "Optional[Callable[[str], bool]]" = None, listignored: bool = False
+    ) -> "Iterable[Tuple[str, bool]]":
         def bail(reason):
             self._ui.debug("fsmonitor: fallback to core status, %s\n" % reason)
             return super(fsmonitorfilesystem, self).pendingchanges(

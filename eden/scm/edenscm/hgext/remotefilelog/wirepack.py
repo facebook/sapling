@@ -22,8 +22,12 @@ from .mutablestores import mutabledatastore, mutablehistorystore
 from .shallowutil import buildpackmeta, parsepackmeta, readexactly, readpath, readunpack
 
 
-def sendpackpart(filename, history, data, version=1):
-    # type: (str, Sequence[Tuple[bytes, bytes, bytes, bytes, Optional[str]]], Sequence[Tuple[bytes, bytes, bytes, int]], int) -> Iterable[bytes]
+def sendpackpart(
+    filename: str,
+    history: "Sequence[Tuple[bytes, bytes, bytes, bytes, Optional[str]]]",
+    data: "Sequence[Tuple[bytes, bytes, bytes, int]]",
+    version: int = 1,
+) -> "Iterable[bytes]":
     """A wirepack is formatted as follows:
 
     wirepack = <filename len: 2 byte unsigned int><filename>
@@ -82,13 +86,17 @@ def sendpackpart(filename, history, data, version=1):
             raise RuntimeError("Unsupported version %d", version)
 
 
-def closepart():
-    # type: () -> bytes
+def closepart() -> bytes:
     return b"\0" * 10
 
 
-def receivepack(ui, fh, dpack, hpack, version=1):
-    # type: (UI, IO[bytes], mutabledatastore, mutablehistorystore, int) -> Tuple[List[Tuple[bytes, bytes]], List[Tuple[bytes, bytes]]]
+def receivepack(
+    ui: "UI",
+    fh: "IO[bytes]",
+    dpack: "mutabledatastore",
+    hpack: "mutablehistorystore",
+    version: int = 1,
+) -> "Tuple[List[Tuple[bytes, bytes]], List[Tuple[bytes, bytes]]]":
     receiveddata = []
     receivedhistory = []
 
@@ -130,8 +138,9 @@ def receivepack(ui, fh, dpack, hpack, version=1):
     return receiveddata, receivedhistory
 
 
-def readhistory(fh):
-    # type: (IO[bytes]) -> Generator[Tuple[bytes, bytes, bytes, bytes, bytes], None, None]
+def readhistory(
+    fh: "IO[bytes]",
+) -> "Generator[Tuple[bytes, bytes, bytes, bytes, bytes], None, None]":
     count = readunpack(fh, "!I")[0]
     for i in range(count):
         entry = readunpack(fh, "!20s20s20s20sH")
@@ -143,8 +152,9 @@ def readhistory(fh):
         yield cast("Tuple[bytes, bytes, bytes, bytes, bytes]", entry)
 
 
-def readdeltas(fh, version=1):
-    # type: (IO[bytes], int) -> Generator[Tuple[bytes, bytes, bytes, Optional[Dict[str,int]]], None, None]
+def readdeltas(
+    fh: "IO[bytes]", version: int = 1
+) -> "Generator[Tuple[bytes, bytes, bytes, Optional[Dict[str, int]]], None, None]":
     count = readunpack(fh, "!I")[0]
     for i in range(count):
         node, deltabase, deltalen = readunpack(fh, "!20s20sQ")

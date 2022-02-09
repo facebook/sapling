@@ -402,8 +402,7 @@ def getpack(repo, proto, args, version=1):
     if not isinstance(proto, sshserver.sshserver):
         raise error.Abort(_("cannot fetch remote files over non-ssh protocol"))
 
-    def streamer():
-        # type: () -> Iterable[bytes]
+    def streamer() -> "Iterable[bytes]":
         """Request format:
 
         [<filerequest>,...]\0\0
@@ -489,8 +488,7 @@ def getpack(repo, proto, args, version=1):
     return wireproto.streamres(streamer())
 
 
-def _receivepackrequest(stream):
-    # type: (IO[bytes]) -> Dict[bytes, Set[List[bytes]]]
+def _receivepackrequest(stream: "IO[bytes]") -> "Dict[bytes, Set[List[bytes]]]":
     files = {}
     while True:
         filenamelen = shallowutil.readunpack(stream, constants.FILENAMESTRUCT)[0]
@@ -561,5 +559,5 @@ def _logwireprotorequest(repo, name, starttime, responselen, args):
         args=serializedargs,
         responselen=responselen,
         duration=int((time.time() - starttime) * 1000),
-        **kwargs
+        **kwargs,
     )

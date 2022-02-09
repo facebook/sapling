@@ -172,8 +172,7 @@ def _getnamespace(_repo):
     )
 
 
-def _phablookup(repo, phabrev):
-    # type: (Any, str) -> List[bytes]
+def _phablookup(repo: "Any", phabrev: str) -> "List[bytes]":
     # Is the given revset a phabricator hg hash (ie: rHGEXTaaacb34aacb34aa)
 
     def gittohg(githash):

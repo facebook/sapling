@@ -470,8 +470,7 @@ class remotefileslog(filelog.fileslog):
         self._memcachestore = None
         self._edenapistore = None
 
-        def needmaintenance(fname):
-            # type: (str) -> bool
+        def needmaintenance(fname: str) -> bool:
             if repo.svfs.exists(fname):
                 tstamp = int(repo.svfs.readutf8(fname))
                 return tstamp < repo.ui.configint(

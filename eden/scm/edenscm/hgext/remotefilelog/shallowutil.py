@@ -156,8 +156,7 @@ def reportpackmetrics(ui, prefix, *stores):
     ui.log(prefix + "_packsizes", **data)
 
 
-def _parsepackmeta(metabuf):
-    # type: (bytes) -> Dict[str, bytes]
+def _parsepackmeta(metabuf: bytes) -> "Dict[str, bytes]":
     """parse datapack meta, bytes (<metadata-list>) -> dict
 
     The dict contains raw content - both keys and values are strings.
@@ -184,8 +183,7 @@ def _parsepackmeta(metabuf):
     return metadict
 
 
-def _buildpackmeta(metadict):
-    # type: (Mapping[str, bytes]) -> bytes
+def _buildpackmeta(metadict: "Mapping[str, bytes]") -> bytes:
     """reverse of _parsepackmeta, dict -> bytes (<metadata-list>)
 
     The dict contains raw content - both keys and values are strings.
@@ -218,8 +216,7 @@ else:
 _metaitemtypes = {constants.METAKEYFLAG: inttype, constants.METAKEYSIZE: inttype}
 
 
-def buildpackmeta(metadict):
-    # type: (Mapping[str, int]) -> bytes
+def buildpackmeta(metadict: "Mapping[str, int]") -> bytes:
     """like _buildpackmeta, but typechecks metadict and normalize it.
 
     This means, METAKEYSIZE and METAKEYSIZE should have integers as values,
@@ -240,8 +237,7 @@ def buildpackmeta(metadict):
     return _buildpackmeta(newmeta)
 
 
-def parsepackmeta(metabuf):
-    # type: (bytes) -> (Dict[str, int])
+def parsepackmeta(metabuf: bytes) -> "Dict[str, int]":
     """like _parsepackmeta, but convert fields to desired types automatically.
 
     This means, METAKEYFLAG and METAKEYSIZE fields will be converted to
@@ -331,8 +327,7 @@ def sortnodes(nodes, parentfunc):
     return results
 
 
-def readexactly(stream, n):
-    # type: (IO[bytes], int) -> bytes
+def readexactly(stream: "IO[bytes]", n: int) -> bytes:
     """read n bytes from stream.read and abort if less was available"""
     s = stream.read(n)
     if len(s) < n:
@@ -340,14 +335,12 @@ def readexactly(stream, n):
     return s
 
 
-def readunpack(stream, fmt):
-    # type: (IO[bytes], str) -> tuple
+def readunpack(stream: "IO[bytes]", fmt: str) -> tuple:
     data = readexactly(stream, struct.calcsize(fmt))
     return struct.unpack(fmt, data)
 
 
-def readpath(stream):
-    # type: (IO[bytes]) -> str
+def readpath(stream: "IO[bytes]") -> str:
     rawlen = readexactly(stream, constants.FILENAMESIZE)
     pathlen = struct.unpack(constants.FILENAMESTRUCT, rawlen)[0]
     return decodeutf8(readexactly(stream, pathlen))

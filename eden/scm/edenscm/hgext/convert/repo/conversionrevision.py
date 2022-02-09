@@ -28,8 +28,7 @@ class conversionrevision(
     NONE = None
 
     @classmethod
-    def _classinit(cls):
-        # type: () -> None
+    def _classinit(cls) -> None:
         """Initialize class members"""
         cls.NONE = conversionrevision(
             conversionrevision.VARIANT_NONE, nodemod.nullhex, "", ""
@@ -45,8 +44,7 @@ class conversionrevision(
         destpath = revstring[separatorindex + 1 :]
         return conversionrevision(variant, sourcehash, sourceproject, destpath)
 
-    def __str__(self):
-        # type: () -> str
+    def __str__(self) -> str:
         return "%s%s%s:%s" % (
             self.variant,
             self.sourcehash,
