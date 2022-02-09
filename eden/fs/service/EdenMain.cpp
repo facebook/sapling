@@ -21,6 +21,7 @@
 #include <folly/ssl/Init.h>
 #include <folly/stop_watch.h>
 #include <gflags/gflags.h>
+#include <thrift/lib/cpp2/Flags.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include "eden/fs/config/EdenConfig.h"
@@ -41,6 +42,8 @@
 
 DEFINE_bool(edenfs, false, "This legacy argument is ignored.");
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
+
+THRIFT_FLAG_DECLARE_bool(server_header_reject_framed);
 
 // Set the default log level for all eden logs to DBG2
 // Also change the "default" log handler (which logs to stderr) to log
@@ -208,6 +211,9 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     XLOG(INFO) << "Running in experimental systemd mode";
   }
 #endif
+
+  // Temporary hack until client is migrated to supported channel
+  THRIFT_FLAG_SET_MOCK(server_header_reject_framed, false);
 
   std::shared_ptr<EdenConfig> edenConfig;
   try {
