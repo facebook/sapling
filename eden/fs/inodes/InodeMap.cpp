@@ -315,7 +315,7 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
   auto unloadedIter = data->unloadedInodes_.find(number);
   if (UNLIKELY(unloadedIter == data->unloadedInodes_.end())) {
     if (throwEstaleIfInodeIsMissing_) {
-      XLOG(DBG2) << "NFS inode " << number << " stale";
+      XLOG(DBG3) << "NFS inode " << number << " stale";
       // windows does not have ESTALE. We need some other error to turn into the
       // nfs stale error. For now let's just let it throw.
 #ifndef _WIN32
