@@ -77,7 +77,7 @@ def _reserved():
 
     these characters will be escaped by encodefunctions
     """
-    winreserved = [ord(x) for x in u'\\:*?"<>|']
+    winreserved = [ord(x) for x in '\\:*?"<>|']
     for x in range(32):
         yield x
     for x in range(126, 256):
@@ -687,8 +687,7 @@ class _fncachevfs(vfsmod.abstractvfs, vfsmod.proxyvfs, metavfs):
             self.fncache.add(path)
         return self.vfs(self.encode(path), mode, *args, **kw)
 
-    def join(self, path, *insidef):
-        # type: (Optional[str], str) -> str
+    def join(self, path: "Optional[str]", *insidef: str) -> str:
         if path:
             return self.vfs.join(self.encode(os.path.join(path, *insidef)))
         else:

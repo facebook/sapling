@@ -214,16 +214,13 @@ class basectx(object):
             modified, added, removed, deleted, unknown, ignored, clean
         )
 
-    def rev(self):
-        # type: () -> int
+    def rev(self) -> int:
         return self._rev
 
-    def node(self):
-        # type: () -> bytes
+    def node(self) -> bytes:
         return self._node
 
-    def hex(self):
-        # type: () -> str
+    def hex(self) -> str:
         return hex(self.node())
 
     def manifest(self):
@@ -235,31 +232,26 @@ class basectx(object):
     def repo(self):
         return self._repo
 
-    def phasestr(self):
-        # type: () -> str
+    def phasestr(self) -> str:
         return phases.phasenames[self.phase()]
 
-    def phase(self):
-        # type: () -> int
+    def phase(self) -> int:
         raise NotImplementedError()
 
-    def mutable(self):
-        # type: () -> bool
+    def mutable(self) -> bool:
         return self.phase() > phases.public
 
     def getfileset(self, expr):
         return fileset.getfileset(self, expr)
 
-    def invisible(self):
-        # type: () -> bool
+    def invisible(self) -> bool:
         repo = self.repo()
         if visibility.enabled(repo):
             return self.rev() in visibility.invisiblerevs(repo)
         else:
             return False
 
-    def obsolete(self):
-        # type: () -> bool
+    def obsolete(self) -> bool:
         """True if the changeset is obsolete"""
         if mutation.enabled(self._repo):
             return mutation.isobsolete(self._repo, self.node())
@@ -604,8 +596,7 @@ class changectx(basectx):
         """Return a list of byte bookmark names."""
         return self._repo.nodebookmarks(self._node)
 
-    def phase(self):
-        # type: () -> int
+    def phase(self) -> int:
         return self._repo._phasecache.phase(self._repo, self._rev)
 
     @propertycache
@@ -1329,8 +1320,7 @@ class filectx(basefilectx):
         """low-level revlog flags"""
         return self._filelog.flags(self._filerev)
 
-    def data(self):
-        # type: () -> bytes
+    def data(self) -> bytes:
         if self.flags() == "m":
             text = "Subproject commit %s\n" % hex(self._filenode)
             return text.encode("utf-8")
@@ -1544,8 +1534,7 @@ class committablectx(basectx):
             b.extend(p.bookmarks())
         return b
 
-    def phase(self):
-        # type: () -> int
+    def phase(self) -> int:
         phase = phases.draft  # default phase to draft
         for p in self.parents():
             phase = max(phase, p.phase())
@@ -1671,8 +1660,7 @@ class workingctx(committablectx):
     def __contains__(self, key):
         return self._repo.dirstate[key] not in "?r"
 
-    def hex(self):
-        # type: () -> str
+    def hex(self) -> str:
         return hex(wdirid)
 
     @propertycache

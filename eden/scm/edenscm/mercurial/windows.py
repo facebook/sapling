@@ -159,8 +159,7 @@ class fdproxy(object):
         return getattr(self._fp, name)
 
 
-def posixfile(name, mode="r", buffering=-1):
-    # type: (str, str, int) -> IO
+def posixfile(name: str, mode: str = "r", buffering: int = -1) -> "IO":
     """Open a file with even more POSIX-like semantics"""
     try:
         fp = osutil.posixfile(name, mode, buffering)  # may raise WindowsError
@@ -277,8 +276,7 @@ def sshargs(sshcmd, host, user, port):
     return args
 
 
-def setflags(f, l, x):
-    # type: (str, bool, bool) -> None
+def setflags(f: str, l: bool, x: bool) -> None:
     pass
 
 
@@ -286,13 +284,11 @@ def copymode(src, dst, mode=None):
     pass
 
 
-def checkexec(path):
-    # type: (str) -> bool
+def checkexec(path: str) -> bool:
     return False
 
 
-def checklink(path):
-    # type: (str) -> bool
+def checklink(path: str) -> bool:
     return False
 
 
@@ -478,8 +474,7 @@ def groupname(gid=None):
     return None
 
 
-def removedirs(name):
-    # type: (str) -> None
+def removedirs(name: str) -> None:
     """special version of os.removedirs that does not remove symlinked
     directories or junction points if they actually contain files"""
     if listdir(name):
@@ -498,8 +493,7 @@ def removedirs(name):
         head, tail = os.path.split(head)
 
 
-def rename(src, dst):
-    # type: (str, str) -> None
+def rename(src: str, dst: str) -> None:
     """Atomically rename file src to dst, replacing dst if it exists
 
     Note that this is only really atomic for files (not dirs) on the
@@ -629,8 +623,7 @@ def bindunixsocket(sock, path):
     raise NotImplementedError("unsupported platform")
 
 
-def _cleanuptemplockfiles(dirname, basename):
-    # type: (str, str) -> None
+def _cleanuptemplockfiles(dirname: str, basename: str) -> None:
     for susp in os.listdir(dirname):
         if not susp.startswith(basename) or not susp.endswith(".tmplock"):
             continue
@@ -654,8 +647,7 @@ def _cleanuptemplockfiles(dirname, basename):
             pass
 
 
-def makelock(info, pathname, checkdeadlock=None):
-    # type: (str, str, bool) -> Optional[int]
+def makelock(info: str, pathname: str, checkdeadlock: bool = None) -> "Optional[int]":
     dirname = os.path.dirname(pathname)
     basename = os.path.basename(pathname)
     _cleanuptemplockfiles(dirname, basename)
@@ -672,8 +664,7 @@ def makelock(info, pathname, checkdeadlock=None):
         raise
 
 
-def readlock(pathname):
-    # type: (str) -> str
+def readlock(pathname: str) -> str:
     try:
         return os.readlink(pathname)
     except OSError as why:
@@ -687,8 +678,7 @@ def readlock(pathname):
     return r
 
 
-def releaselock(_lockfd, pathname):
-    # type: (Optional[int], str) -> None
+def releaselock(_lockfd: "Optional[int]", pathname: str) -> None:
     os.unlink(pathname)
 
 

@@ -225,8 +225,7 @@ def newandmodified(chunks, originalchunks):
     return newlyaddedandmodifiedfiles
 
 
-def extractcopies(chunks):
-    # type: (...) -> Dict[str, str]
+def extractcopies(chunks) -> "Dict[str, str]":
     result = {}
     for chunk in chunks:
         if ishunk(chunk):
@@ -3210,7 +3209,7 @@ def displaygraph(
             ctx, copies=copies, matchfn=revmatchfn, _graphwidth=width, **props
         )
         # The Rust graph renderer works with unicode.
-        msg = u"".join(
+        msg = "".join(
             ensureunicode(encoding.unifromlocal(s), errors="replace")
             for s in displayer.hunk.pop(rev)
         )

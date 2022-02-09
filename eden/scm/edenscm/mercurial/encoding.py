@@ -170,7 +170,7 @@ else:
 
 def _colwidth(s):
     "Find the column width of a string for display in the local encoding"
-    return ucolwidth(s.decode(encoding, u"replace"))
+    return ucolwidth(s.decode(encoding, "replace"))
 
 
 def ucolwidth(d):
@@ -521,8 +521,7 @@ else:
 
 if sys.version_info[0] < 3:
 
-    def localtooutput(s):
-        # type: (bytes) -> bytes
+    def localtooutput(s: bytes) -> bytes:
         if outputencoding is not None and outputencoding != encoding:
             try:
                 return fromlocal(s).decode("utf-8").encode(outputencoding, "replace")

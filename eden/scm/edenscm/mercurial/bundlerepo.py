@@ -146,8 +146,12 @@ class bundlerevlog(revlog.revlog):
             self.revision(rev1, raw=True), self.revision(rev2, raw=True)
         )
 
-    def revision(self, nodeorrev, _df=None, raw=False):
-        # type: (Union[int, bytes], Optional[IO], bool) -> bytes
+    def revision(
+        self,
+        nodeorrev: "Union[int, bytes]",
+        _df: "Optional[IO]" = None,
+        raw: bool = False,
+    ) -> bytes:
         """return an uncompressed revision of a given node or revision
         number.
         """
@@ -295,8 +299,7 @@ class bundlefilelog(bundlerevlog, filelog.filelog):
 
 
 class bundlepeer(localrepo.localpeer):
-    def canpush(self):
-        # type: () -> bool
+    def canpush(self) -> bool:
         return False
 
 
@@ -502,8 +505,7 @@ class bundlerepository(localrepo.localrepository):
 
         return self.filestart
 
-    def url(self):
-        # type: () -> str
+    def url(self) -> str:
         return self._url
 
     def file(self, f):
@@ -519,8 +521,7 @@ class bundlerepository(localrepo.localrepository):
         else:
             return filelog.filelog(self.svfs, f)
 
-    def close(self):
-        # type: () -> None
+    def close(self) -> None:
         """Close assigned bundle file immediately."""
         self._bundlefile.close()
         if self.tempfile is not None:
@@ -529,21 +530,17 @@ class bundlerepository(localrepo.localrepository):
         if path is not None:
             shutil.rmtree(path, True)
 
-    def cancopy(self):
-        # type: () -> bool
+    def cancopy(self) -> bool:
         return False
 
-    def peer(self):
-        # type: () -> localrepo.localpeer
+    def peer(self) -> "localrepo.localpeer":
         return bundlepeer(self)
 
-    def getcwd(self):
-        # type: () -> str
+    def getcwd(self) -> str:
         return pycompat.getcwd()  # always outside the repo
 
     # Check if parents exist in localrepo before setting
-    def setparents(self, p1, p2=nullid):
-        # type: (bytes, bytes) -> None
+    def setparents(self, p1: bytes, p2: bytes = nullid) -> None:
         p1rev = self.changelog.rev(p1)
         p2rev = self.changelog.rev(p2)
         msg = _("setting parent to node %s that only exists in the bundle\n")

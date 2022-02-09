@@ -14,8 +14,9 @@ from .pycompat import decodeutf8
 
 
 class eden_filesystem(filesystem.physicalfilesystem):
-    def pendingchanges(self, match=None, listignored=False):
-        # type: (Optional[Callable[[str], bool]], bool) -> Iterable[Tuple[str, bool]]
+    def pendingchanges(
+        self, match: "Optional[Callable[[str], bool]]" = None, listignored: bool = False
+    ) -> "Iterable[Tuple[str, bool]]":
         if match is None:
             match = util.always
 

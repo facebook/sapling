@@ -127,8 +127,7 @@ def offset_type(offset, type):
 _nullhash = hashlib.sha1(nullid)
 
 
-def hash(text, p1, p2):
-    # type: (bytes, bytes, bytes) -> bytes
+def hash(text: bytes, p1: bytes, p2: bytes) -> bytes:
     """generate a hash from the given text and its parent hashes
 
     This hash combines both the current file contents and its history
@@ -154,8 +153,7 @@ def hash(text, p1, p2):
     return s.digest()
 
 
-def textwithheader(text, p1, p2):
-    # type: (bytes, bytes, bytes) -> bytes
+def textwithheader(text: bytes, p1: bytes, p2: bytes) -> bytes:
     """Similar to `hash`, but only return the content before calculating SHA1."""
     assert isinstance(p1, bytes)
     assert isinstance(p2, bytes)
@@ -490,15 +488,13 @@ class revlog(object):
     def _compressor(self):
         return util.compengines[self._compengine].revlogcompressor()
 
-    def tip(self):
-        # type: () -> bytes
+    def tip(self) -> bytes:
         return self.node(len(self.index) - 2)
 
     def __contains__(self, rev):
         return 0 <= rev < len(self)
 
-    def __len__(self):
-        # type: () -> int
+    def __len__(self) -> int:
         return len(self.index) - 1
 
     def __iter__(self):
@@ -597,8 +593,7 @@ class revlog(object):
         t = self.revision(rev, raw=True)
         return len(t)
 
-    def size(self, rev):
-        # type: (int) -> int
+    def size(self, rev: int) -> int:
         """length of non-raw text (processed by a "read" flag processor)"""
         # fast path: if no "read" flag processor could change the content,
         # size is rawsize. note: ELLIPSIS is known to not change the content.
@@ -1229,8 +1224,7 @@ class revlog(object):
             except (TypeError, binascii.Error):
                 pass
 
-    def lookup(self, id):
-        # type: (Union[int, str, bytes]) -> bytes
+    def lookup(self, id: "Union[int, str, bytes]") -> bytes:
         """locate a node based on:
         - revision number or str(revision number)
         - nodeid or subset of hex nodeid
@@ -1246,8 +1240,7 @@ class revlog(object):
 
         raise LookupError(id, self.indexfile, _("no match found"))
 
-    def shortest(self, hexnode, minlength=1):
-        # type: (str, int) -> str
+    def shortest(self, hexnode: str, minlength: int = 1) -> str:
         """Find the shortest unambiguous prefix that matches hexnode."""
 
         def isvalid(test):
@@ -1502,8 +1495,12 @@ class revlog(object):
             self.revision(rev1, raw=True), self.revision(rev2, raw=True)
         )
 
-    def revision(self, nodeorrev, _df=None, raw=False):
-        # type: (Union[int, bytes], Optional[IO], bool) -> bytes
+    def revision(
+        self,
+        nodeorrev: "Union[int, bytes]",
+        _df: "Optional[IO]" = None,
+        raw: bool = False,
+    ) -> bytes:
         """return an uncompressed revision of a given node or revision
         number.
 
@@ -1575,8 +1572,7 @@ class revlog(object):
 
         return text
 
-    def hash(self, text, p1, p2):
-        # type: (bytes, bytes, bytes) -> bytes
+    def hash(self, text: bytes, p1: bytes, p2: bytes) -> bytes:
         """Compute a node hash.
 
         Available as a function so that subclasses can replace the hash
@@ -1811,8 +1807,7 @@ class revlog(object):
                 dfh.close()
             ifh.close()
 
-    def compress(self, data):
-        # type: (bytes) -> Tuple[bytes, bytes]
+    def compress(self, data: bytes) -> "Tuple[bytes, bytes]":
         """Generate a possibly-compressed representation of data."""
         if not data:
             return b"", data
@@ -1827,8 +1822,7 @@ class revlog(object):
             return b"", data
         return b"u", data
 
-    def decompress(self, data):
-        # type: (bytes) -> bytes
+    def decompress(self, data: bytes) -> bytes:
         """Decompress a revlog chunk.
 
         The chunk is expected to begin with a header identifying the

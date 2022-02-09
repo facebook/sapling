@@ -13,8 +13,10 @@ from . import util
 from .node import wdirid
 
 
-def prefetchtextstream(repo, ctxstream):
-    # type: (edenscm.mercurial.localrepo.localrepository, Iterable[edenscm.mercurial.context.basectx]) -> Iterable[edenscm.mercurial.context.basectx]
+def prefetchtextstream(
+    repo: "edenscm.mercurial.localrepo.localrepository",
+    ctxstream: "Iterable[edenscm.mercurial.context.basectx]",
+) -> "Iterable[edenscm.mercurial.context.basectx]":
     """Prefetch commit text for a stream of ctx"""
 
     return _prefetchtextstream(repo, ctxstream)

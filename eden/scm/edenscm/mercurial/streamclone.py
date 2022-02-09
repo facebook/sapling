@@ -20,8 +20,9 @@ from .i18n import _
 from .pycompat import decodeutf8, encodeutf8, range
 
 
-def canperformstreamclone(pullop, bailifbundle2supported=False):
-    # type: (Any, bool) -> Tuple[bool, Optional[Set[str]]]
+def canperformstreamclone(
+    pullop: "Any", bailifbundle2supported: bool = False
+) -> "Tuple[bool, Optional[Set[str]]]":
     """Whether it is possible to perform a streaming clone as part of pull.
 
     ``bailifbundle2supported`` will cause the function to return False if
@@ -289,8 +290,9 @@ def generatev1wireproto(repo):
         yield chunk
 
 
-def generatebundlev1(repo, compression=b"UN"):
-    # type: (Any, bytes) -> Tuple[str, Iterable[bytes]]
+def generatebundlev1(
+    repo: "Any", compression: bytes = b"UN"
+) -> "Tuple[str, Iterable[bytes]]":
     """Emit content for version 1 of a stream clone bundle.
 
     The first 4 bytes of the output ("HGS1") denote this as stream clone
@@ -343,8 +345,7 @@ def generatebundlev1(repo, compression=b"UN"):
     return requirements, gen()
 
 
-def consumev1(repo, fp, filecount, bytecount):
-    # type: (Any, Any, int, int) -> None
+def consumev1(repo: "Any", fp: "Any", filecount: int, bytecount: int) -> None:
     """Apply the contents from version 1 of a streaming clone file handle.
 
     This takes the output from "stream_out" and applies it to the specified
@@ -445,8 +446,7 @@ def readbundle1header(fp):
     return filecount, bytecount, requirements
 
 
-def applybundlev1(repo, fp):
-    # type: (Any, Any) -> None
+def applybundlev1(repo: "Any", fp: "Any") -> None:
     """Apply the content from a stream clone bundle version 1.
 
     We assume the 4 byte header has been read and validated and the file handle

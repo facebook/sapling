@@ -54,20 +54,17 @@ class channeledoutput(object):
     data
     """
 
-    def __init__(self, out, channel):
-        # type: (BinaryIO, bytes) -> None
+    def __init__(self, out: "BinaryIO", channel: bytes) -> None:
         assert isinstance(channel, bytes)
         assert len(channel) == 1
         self.out = out
         self.channel = channel
 
     @property
-    def name(self):
-        # type: () -> str
+    def name(self) -> str:
         return "<%c-channel>" % self.channel
 
-    def write(self, data):
-        # type: (bytes) -> None
+    def write(self, data: bytes) -> None:
         if not data:
             return
         # single write() to guarantee the same atomicity as the underlying file
@@ -95,19 +92,16 @@ class channeledinput(object):
 
     maxchunksize = 4 * 1024
 
-    def __init__(self, in_, out, channel):
-        # type: (BinaryIO, BinaryIO, bytes) -> None
+    def __init__(self, in_: "BinaryIO", out: "BinaryIO", channel: bytes) -> None:
         self.in_ = in_
         self.out = out
         self.channel = channel
 
     @property
-    def name(self):
-        # type: () -> str
+    def name(self) -> str:
         return "<%c-channel>" % pycompat.decodeutf8(self.channel)
 
-    def read(self, size=-1):
-        # type: (int) -> bytes
+    def read(self, size: int = -1) -> bytes:
         if size < 0:
             # if we need to consume all the clients input, ask for 4k chunks
             # so the pipe doesn't fill up risking a deadlock
@@ -122,8 +116,7 @@ class channeledinput(object):
         else:
             return self._read(size, self.channel)
 
-    def _read(self, size, channel):
-        # type: (int, bytes) -> bytes
+    def _read(self, size: int, channel: bytes) -> bytes:
         if not size:
             return b""
         assert size > 0
@@ -139,8 +132,7 @@ class channeledinput(object):
         else:
             return self.in_.read(length)
 
-    def readline(self, size=-1):
-        # type: (int) -> bytes
+    def readline(self, size: int = -1) -> bytes:
         if size < 0:
             size = self.maxchunksize
             s = self._read(size, b"L")
@@ -155,12 +147,10 @@ class channeledinput(object):
         else:
             return self._read(size, b"L")
 
-    def __iter__(self):
-        # type: () -> channeledinput
+    def __iter__(self) -> "channeledinput":
         return self
 
-    def next(self):
-        # type: () -> bytes
+    def next(self) -> bytes:
         l = self.readline()
         if not l:
             raise StopIteration
@@ -178,8 +168,9 @@ class server(object):
     based stream to fout.
     """
 
-    def __init__(self, ui, repo, fin, fout):
-        # type: (Any, Any, BinaryIO, BinaryIO) -> None
+    def __init__(
+        self, ui: "Any", repo: "Any", fin: "BinaryIO", fout: "BinaryIO"
+    ) -> None:
         self.cwd = pycompat.getcwd()
 
         # developer config: cmdserver.log
@@ -212,8 +203,7 @@ class server(object):
     def cleanup(self):
         """release and restore resources taken during server session"""
 
-    def _read(self, size):
-        # type: (int) -> bytes
+    def _read(self, size: int) -> bytes:
         if not size:
             return b""
 
@@ -225,8 +215,7 @@ class server(object):
 
         return data
 
-    def _readstr(self):
-        # type: () -> bytes
+    def _readstr(self) -> bytes:
         """read a string from the channel
 
         format:
@@ -237,8 +226,7 @@ class server(object):
             return b""
         return self._read(length)
 
-    def _readlist(self):
-        # type: () -> List[str]
+    def _readlist(self) -> "List[str]":
         """read a list of NULL separated strings from the channel"""
         s = self._readstr()
         if s:
@@ -286,13 +274,11 @@ class server(object):
 
         self.cresult.write(struct.pack(">i", int(ret)))
 
-    def getencoding(self):
-        # type: () -> None
+    def getencoding(self) -> None:
         """writes the current encoding to the result channel"""
         self.cresult.write(pycompat.encodeutf8(encoding.encoding))
 
-    def serveone(self):
-        # type: () -> bool
+    def serveone(self) -> bool:
         cmd = self.client.readline()[:-1]
         cmd = pycompat.decodeutf8(cmd)
         if cmd:
@@ -308,8 +294,7 @@ class server(object):
 
     capabilities = {"runcommand": runcommand, "getencoding": getencoding}
 
-    def serve(self):
-        # type: () -> int
+    def serve(self) -> int:
         hellomsg = "capabilities: " + " ".join(sorted(self.capabilities))
         hellomsg += "\n"
         hellomsg += "encoding: " + encoding.encoding
@@ -337,8 +322,7 @@ class server(object):
         return 0
 
 
-def _protectio(ui):
-    # type: (Any) -> Tuple[BinaryIO, ...]
+def _protectio(ui: "Any") -> "Tuple[BinaryIO, ...]":
     """duplicates streams and redirect original to null if ui uses stdio"""
     ui.flush()
     newfiles = []
@@ -353,8 +337,7 @@ def _protectio(ui):
     return tuple(newfiles)
 
 
-def _restoreio(ui, fin, fout):
-    # type: (Any,BinaryIO,BinaryIO) -> None
+def _restoreio(ui: "Any", fin: "BinaryIO", fout: "BinaryIO") -> None:
     """restores streams from duplicated ones"""
     ui.flush()
     for f, uif in [(fin, ui.fin), (fout, ui.fout)]:
@@ -371,8 +354,7 @@ class pipeservice(object):
     def init(self):
         pass
 
-    def run(self):
-        # type: () -> int
+    def run(self) -> int:
         ui = self.ui
         # redirect stdio to null device so that broken extensions or in-process
         # hooks will never cause corruption of channel protocol.
@@ -385,8 +367,7 @@ class pipeservice(object):
             _restoreio(ui, fin, fout)
 
 
-def _initworkerprocess():
-    # type: () -> None
+def _initworkerprocess() -> None:
     # use a different process group from the master process, in order to:
     # 1. make the current process group no longer "orphaned" (because the
     #    parent of this process is in a different process group while

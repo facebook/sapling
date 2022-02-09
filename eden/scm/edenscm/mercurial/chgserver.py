@@ -98,24 +98,22 @@ def _newchgui(srcui, csystem, attachio):
 class channeledsystem(object):
     """Propagate ui.system() and ui._runpager() requests to the chg client"""
 
-    def __init__(self, in_, out):
-        # type: (BinaryIO, BinaryIO) -> None
+    def __init__(self, in_: "BinaryIO", out: "BinaryIO") -> None:
         self.in_ = in_
         self.out = out
 
-    def _send_request(self, channel, args):
-        # type: (bytes, List[str]) -> None
+    def _send_request(self, channel: bytes, args: "List[str]") -> None:
         data = pycompat.encodeutf8("\0".join(args) + "\0")
         self.out.write(struct.pack(">cI", channel, len(data)))
         self.out.write(data)
         self.out.flush()
 
-    def _environ_to_args(self, environ):
-        # type: (Dict[str,str]) -> List[str]
+    def _environ_to_args(self, environ: "Dict[str, str]") -> "List[str]":
         return ["%s=%s" % (k, v) for k, v in environ.items()]
 
-    def runsystem(self, cmd, environ, cwd=None):
-        # type: (str, Dict[str,str], Optional[str]) -> int
+    def runsystem(
+        self, cmd: str, environ: "Dict[str, str]", cwd: "Optional[str]" = None
+    ) -> int:
         """Send a request to run a system command.
 
         This request type is sent with the 's' channel code.
@@ -140,8 +138,13 @@ class channeledsystem(object):
         (rc,) = struct.unpack(">i", self.in_.read(4))
         return rc
 
-    def runpager(self, pagercmd, environ, redirectstderr, cmdtable):
-        # type: (str, Dict[str,str], BinaryIO, Dict[str, Callable]) -> None
+    def runpager(
+        self,
+        pagercmd: str,
+        environ: "Dict[str, str]",
+        redirectstderr: "BinaryIO",
+        cmdtable: "Dict[str, Callable]",
+    ) -> None:
         """Requests to run a pager command are sent using the 'p' channel code.
         The request contents are a series of null-terminated strings:
         - the first string is the pager command string, to be run with "sh -c"
@@ -193,8 +196,7 @@ class chgcmdserver(commandserver.server):
         # handled by dispatch._dispatch()
         self.ui.flush()
 
-    def attachio(self):
-        # type: () -> None
+    def attachio(self) -> None:
         """Attach to client's stdio passed via unix domain socket; all
         channels except cresult will no longer be used
         """
@@ -216,8 +218,7 @@ class chgcmdserver(commandserver.server):
         self.cresult.write(struct.pack(">i", len(clientfds)))
         self._ioattached = True
 
-    def chdir(self):
-        # type: () -> None
+    def chdir(self) -> None:
         """Change current directory
 
         Note that the behavior of --cwd option is bit different from this.
@@ -230,8 +231,7 @@ class chgcmdserver(commandserver.server):
         _log("chdir to %r\n" % path)
         os.chdir(path)
 
-    def setumask(self):
-        # type: () -> None
+    def setumask(self) -> None:
         """Change umask"""
         mask = struct.unpack(">I", self._read(4))[0]
         _log("setumask %r\n" % mask)
@@ -253,8 +253,7 @@ class chgcmdserver(commandserver.server):
         finally:
             uimod.ui = origui
 
-    def setenv(self):
-        # type: () -> None
+    def setenv(self) -> None:
         """Clear and update os.environ
 
         Note that not all variables can make an effect on the running process.
@@ -299,13 +298,11 @@ class chgcmdserver(commandserver.server):
         capabilities["setprocname"] = setprocname
 
 
-def _tempaddress(address):
-    # type: (str) -> str
+def _tempaddress(address: str) -> str:
     return "%s.%d.tmp" % (address, os.getpid())
 
 
-def _realaddress(address):
-    # type: (str) -> str
+def _realaddress(address: str) -> str:
     # if the basename of address contains '.', use only the left part. this
     # makes it possible for the client to pass 'server.tmp$PID' and follow by
     # an atomic rename to avoid locking when spawning new servers.

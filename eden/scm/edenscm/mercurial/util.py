@@ -769,7 +769,7 @@ class _lrucachenode(object):
     pair for the dictionary entry.
     """
 
-    __slots__ = (u"next", u"prev", u"key", u"value")
+    __slots__ = ("next", "prev", "key", "value")
 
     def __init__(self):
         self.next = None
@@ -980,19 +980,16 @@ T = TypeVar("T")
 
 
 class propertycache(Generic[C, T]):
-    def __init__(self, func):
-        # type: (Callable[[C], T]) -> None
+    def __init__(self, func: "Callable[[C], T]") -> None:
         self.func = func
         self.name = func.__name__
 
-    def __get__(self, obj, type=None):
-        # type: (C, Optional[Type[C]]) -> T
+    def __get__(self, obj: "C", type: "Optional[Type[C]]" = None) -> "T":
         result = self.func(obj)
         self.cachevalue(obj, result)
         return result
 
-    def cachevalue(self, obj, value):
-        # type: (C, T) -> None
+    def cachevalue(self, obj: "C", value: "T") -> None:
         # __dict__ assignment required to bypass __setattr__
         obj.__dict__[self.name] = value
 
@@ -1179,7 +1176,7 @@ def mainfrozen():
     return (
         safehasattr(sys, "frozen")
         or safehasattr(sys, "importers")  # new py2exe
-        or imp.is_frozen(u"__main__")  # old py2exe
+        or imp.is_frozen("__main__")  # old py2exe
     )  # tools/freeze
 
 
@@ -1595,12 +1592,10 @@ class stringwriter(object):
     def __init__(self, fp):
         self.fp = fp
 
-    def write(self, value):
-        # type: (str) -> None
+    def write(self, value: str) -> None:
         self.fp.write(pycompat.encodeutf8(value))
 
-    def writebytes(self, value):
-        # type: (bytes) -> None
+    def writebytes(self, value: bytes) -> None:
         self.fp.write(value)
 
 
@@ -1866,15 +1861,19 @@ class atomictempfile(BinaryIO):
     or repo.wlock).
     """
 
-    def __init__(self, name, mode="w+b", createmode=None, checkambig=False):
-        # type: (str, str, Optional[int], bool) -> None
+    def __init__(
+        self,
+        name: str,
+        mode: str = "w+b",
+        createmode: "Optional[int]" = None,
+        checkambig: bool = False,
+    ) -> None:
         self.__name = name  # permanent name
         self._tempname = mktempcopy(name, emptyok=("w" in mode), createmode=createmode)
         self._fp = posixfile(self._tempname, mode)
         self._checkambig = checkambig
 
-    def close(self):
-        # type: () -> None
+    def close(self) -> None:
         if not self._fp.closed:
             self._fp.close()
             filename = localpath(self.__name)
@@ -1889,8 +1888,7 @@ class atomictempfile(BinaryIO):
             else:
                 rename(self._tempname, filename)
 
-    def discard(self):
-        # type: () -> None
+    def discard(self) -> None:
         if not self._fp.closed:
             try:
                 os.unlink(self._tempname)
@@ -1898,108 +1896,86 @@ class atomictempfile(BinaryIO):
                 pass
             self._fp.close()
 
-    def __del__(self):
-        # type: () -> None
+    def __del__(self) -> None:
         if safehasattr(self, "_fp"):  # constructor actually did something
             self.discard()
 
-    def __enter__(self):
-        # type: () -> atomictempfile
+    def __enter__(self) -> "atomictempfile":
         return self
 
     # pyre-fixme[14]: `__exit__` overrides method defined in `IO` inconsistently.
     # pyre-fixme[14]: `__exit__` overrides method defined in `IO` inconsistently.
     def __exit__(
         self,
-        exctype,  # type: Optional[Type[BaseException]]
-        excvalue,  # type: Optional[BaseException]
-        traceback,  # type: Optional[types.TracebackType]
-    ):
-        # type: (...) -> None
+        exctype: "Optional[Type[BaseException]]",
+        excvalue: "Optional[BaseException]",
+        traceback: "Optional[types.TracebackType]",
+    ) -> None:
         if exctype is not None:
             self.discard()
         else:
             self.close()
 
     @property
-    def mode(self):
-        # type: () -> str
+    def mode(self) -> str:
         return self._fp.mode
 
     @property
-    def name(self):
-        # type: () -> str
+    def name(self) -> str:
         """Note that this returns the temporary name of the file."""
         return self._tempname
 
-    def closed(self):
-        # type: () -> bool
+    def closed(self) -> bool:
         return self._fp.closed()
 
-    def fileno(self):
-        # type: () -> int
+    def fileno(self) -> int:
         return self._fp.fileno()
 
-    def flush(self):
-        # type: () -> None
+    def flush(self) -> None:
         return self._fp.flush()
 
-    def isatty(self):
-        # type: () -> bool
+    def isatty(self) -> bool:
         return False
 
-    def readable(self):
-        # type: () -> bool
+    def readable(self) -> bool:
         return self._fp.readable()
 
-    def read(self, n=-1):
-        # type: (int) -> bytes
+    def read(self, n: int = -1) -> bytes:
         return self._fp.read(-1)
 
-    def readline(self, limit=-1):
-        # type: (int) -> bytes
+    def readline(self, limit: int = -1) -> bytes:
         return self._fp.readline(limit)
 
-    def readlines(self, hint=-1):
-        # type: (int) -> List[bytes]
+    def readlines(self, hint: int = -1) -> "List[bytes]":
         return self._fp.readlines(hint)
 
-    def seek(self, offset, whence=0):
-        # type: (int, int) -> int
+    def seek(self, offset: int, whence: int = 0) -> int:
         return self._fp.seek(offset, whence)
 
-    def seekable(self):
-        # type: () -> bool
+    def seekable(self) -> bool:
         return self._fp.seekable()
 
-    def tell(self):
-        # type: () -> int
+    def tell(self) -> int:
         return self._fp.tell()
 
-    def truncate(self, size=None):
-        # type: (Optional[int]) -> int
+    def truncate(self, size: "Optional[int]" = None) -> int:
         return self._fp.truncate(size)
 
-    def writable(self):
-        # type: () -> bool
+    def writable(self) -> bool:
         return self._fp.writable()
 
     # pyre-fixme[15]: `write` overrides method defined in `IO` inconsistently.
-    def write(self, s):
-        # type: (bytes) -> None
+    def write(self, s: bytes) -> None:
         return self._fp.write(s)
 
-    def writeutf8(self, s):
-        # type: (str) -> None
+    def writeutf8(self, s: str) -> None:
         return self.write(encodeutf8(s))
 
-    def writelines(self, lines):
-        # type: (Iterable[bytes]) -> None
+    def writelines(self, lines: "Iterable[bytes]") -> None:
         return self._fp.writelines(lines)
 
 
-def unlinkpath(f, ignoremissing=False):
-    # type: (str, bool) -> None
+def unlinkpath(f: str, ignoremissing: bool = False) -> None:
     """unlink and remove the directory if it is empty"""
     if ignoremissing:
         tryunlink(f)
@@ -2012,8 +1988,7 @@ def unlinkpath(f, ignoremissing=False):
         pass
 
 
-def tryunlink(f):
-    # type: (str) -> None
+def tryunlink(f: str) -> None:
     """Attempt to remove a file, ignoring ENOENT errors."""
     try:
         unlink(f)
@@ -2022,8 +1997,7 @@ def tryunlink(f):
             raise
 
 
-def makedirs(name, mode=None, notindexed=False):
-    # type: (str, Optional[int], bool) -> None
+def makedirs(name: str, mode: "Optional[int]" = None, notindexed: bool = False) -> None:
     """recursive directory creation with parent mode inheritance
 
     Newly created directories are marked as "not to be indexed by
@@ -2442,8 +2416,7 @@ def stringmatcher(pattern, casesensitive=True):
     return "literal", pattern, match
 
 
-def shortuser(user):
-    # type: (str) -> str
+def shortuser(user: str) -> str:
     """Return a short representation of a user name or email address."""
     f = user.find("@")
     if f >= 0:
@@ -2460,8 +2433,7 @@ def shortuser(user):
     return user
 
 
-def emailuser(user):
-    # type: (str) -> str
+def emailuser(user: str) -> str:
     """Return the user portion of an email address."""
     f = user.find("@")
     if f >= 0:
@@ -2472,8 +2444,7 @@ def emailuser(user):
     return user
 
 
-def email(author):
-    # type: (str) -> str
+def email(author: str) -> str:
     """get email of author."""
     r = author.find(">")
     if r == -1:
@@ -2481,8 +2452,7 @@ def email(author):
     return author[author.find("<") + 1 : r]
 
 
-def emaildomainuser(user, domains):
-    # type: (str, List[str]) -> str
+def emaildomainuser(user: str, domains: "List[str]") -> str:
     """get email of author, abbreviating users in the given domains."""
     useremail = email(user)
     for domain in domains:
@@ -2492,8 +2462,7 @@ def emaildomainuser(user, domains):
     return useremail
 
 
-def ellipsis(text, maxlength=400):
-    # type: (str, int) -> str
+def ellipsis(text: str, maxlength: int = 400) -> str:
     """Trim string to at most maxlength (default: 400) columns in display."""
     return encoding.trim(text, maxlength, ellipsis="...")
 
@@ -3490,7 +3459,7 @@ SERVERROLE = "server"
 CLIENTROLE = "client"
 
 compewireprotosupport = collections.namedtuple(
-    u"compenginewireprotosupport", (u"name", u"serverpriority", u"clientpriority")
+    "compenginewireprotosupport", ("name", "serverpriority", "clientpriority")
 )
 
 
@@ -4875,20 +4844,17 @@ def _fixup_time(st):
     st.st_ctime = st[statmod.ST_CTIME]
 
 
-def stat(path):
-    # type: (str) -> wrapped_stat_result
+def stat(path: str) -> "wrapped_stat_result":
     res = os.stat(path)
     return wrapped_stat_result(res)
 
 
-def lstat(path):
-    # type: (str) -> wrapped_stat_result
+def lstat(path: str) -> "wrapped_stat_result":
     res = os.lstat(path)
     return wrapped_stat_result(res)
 
 
-def fstat(fp):
-    # type: (Any) -> wrapped_stat_result
+def fstat(fp: "Any") -> "wrapped_stat_result":
     """stat file object that may not have fileno method."""
     try:
         res = os.fstat(fp)
@@ -5056,8 +5022,7 @@ def eachslice(iterable, n, maxtime=None):
         yield buf
 
 
-def fssize(path):
-    # type: (str) -> int
+def fssize(path: str) -> int:
     """Return bytes of a path (or directory)"""
     size = 0
     if os.path.isfile(path):

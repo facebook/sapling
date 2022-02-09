@@ -18,8 +18,7 @@ import struct
 from typing import List
 
 
-def splitnewlines(text):
-    # type: (bytes) -> List[bytes]
+def splitnewlines(text: bytes) -> List[bytes]:
     """like str.splitlines, but only split on newlines."""
     lines = [l + b"\n" for l in text.split(b"\n")]
     if lines:

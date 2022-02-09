@@ -302,8 +302,9 @@ def valideffect(ui, effect):
     )
 
 
-def _mergeeffects(text, start, stop, usebytes=False):
-    # type: (Union[str, bytes], str, str, bool) -> Union[str, bytes]
+def _mergeeffects(
+    text: "Union[str, bytes]", start: str, stop: str, usebytes: bool = False
+) -> "Union[str, bytes]":
     """Insert start sequence at every occurrence of stop sequence
 
     >>> s = _mergeeffects('cyan', '[C]', '|')

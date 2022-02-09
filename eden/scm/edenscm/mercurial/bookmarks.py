@@ -557,8 +557,7 @@ def unhexlifybookmarks(marks):
 _binaryentry = struct.Struct(">20sH")
 
 
-def binaryencode(bookmarks):
-    # type: (typing.Iterable[typing.Tuple[str, bytes]]) -> bytes
+def binaryencode(bookmarks: typing.Iterable[typing.Tuple[str, bytes]]) -> bytes:
     """encode a '(bookmark, node)' iterable into a binary stream
 
     the binary format is:
@@ -1251,8 +1250,7 @@ class lazyremotenamedict(pycompat.Mapping):
         else:
             return None
 
-    def keys(self):
-        # type: () -> typing.AbstractSet[str]
+    def keys(self) -> typing.AbstractSet[str]:
         """Get a list of bookmark names"""
         if not self.loaded:
             self._load()

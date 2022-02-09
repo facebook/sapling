@@ -43,8 +43,7 @@ def _string_escape(text):
     return text.replace("\0", "\\0")
 
 
-def decodeextra(text):
-    # type: (bytes) -> Dict[str, str]
+def decodeextra(text: bytes) -> "Dict[str, str]":
     """
     >>> sorted(decodeextra(encodeextra({'foo': 'bar', 'baz': '\\x002'}).encode("utf-8")
     ...                    ).items())
@@ -102,7 +101,7 @@ class changelogrevision(object):
     the parsed object.
     """
 
-    __slots__ = (u"_offsets", u"_text", u"_files")
+    __slots__ = ("_offsets", "_text", "_files")
 
     def __new__(cls, text):
         if not text:
@@ -202,8 +201,7 @@ class changelogrevision(object):
         return encoding.tolocalstr(self._text[self._offsets[3] + 2 :])
 
 
-def readfiles(text):
-    # type: (bytes) -> List[str]
+def readfiles(text: bytes) -> "List[str]":
     """
     >>> d = {'nl': chr(10)}
     >>> withfiles = 'commitnode%(nl)sAuthor%(nl)sMetadata and extras%(nl)sfile1%(nl)sfile2%(nl)sfile3%(nl)s%(nl)s' % d

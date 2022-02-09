@@ -390,8 +390,7 @@ class HTTPResponse(httplib.HTTPResponse):
 
     _raw_read = httplib.HTTPResponse.read
 
-    def close(self):
-        # type: () -> None
+    def close(self) -> None:
         httplib.HTTPResponse.close(self)
 
         handler = self._handler
@@ -402,16 +401,13 @@ class HTTPResponse(httplib.HTTPResponse):
         self._handler._remove_connection(self._host, self._connection, close=1)
         self.close()
 
-    def info(self):
-        # type: () -> email.message.Message
+    def info(self) -> "email.message.Message":
         return self.headers
 
-    def geturl(self):
-        # type: () -> str
+    def geturl(self) -> str:
         return self._url
 
-    def read(self, amt=None):
-        # type: (...) -> bytes
+    def read(self, amt=None) -> bytes:
         # the _rbuf test is only in this first if for speed.  It's not
         # logically necessary
         if amt:
@@ -484,8 +480,7 @@ class HTTPResponse(httplib.HTTPResponse):
         return "".join(parts)
 
     # pyre-fixme[14]: `readline` overrides method defined in `IOBase` inconsistently.
-    def readline(self, size=-1):
-        # type: (int) -> bytes
+    def readline(self, size: int = -1) -> bytes:
         # Fast path for a line is already available in read buffer.
         i = self._rbuf.find(b"\n")
         if i >= 0:
@@ -520,8 +515,7 @@ class HTTPResponse(httplib.HTTPResponse):
         chunks[-1] = chunks[-1][:i]
         return b"".join(chunks)
 
-    def readlines(self, hint=0):
-        # type: (int) -> List[bytes]
+    def readlines(self, hint: int = 0) -> "List[bytes]":
         total = 0
         list = []
         while True:

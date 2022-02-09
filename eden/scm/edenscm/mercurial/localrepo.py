@@ -212,7 +212,7 @@ class localpeer(repository.peer):
             heads=heads,
             common=common,
             bundlecaps=bundlecaps,
-            **kwargs
+            **kwargs,
         )
         cb = util.chunkbuffer(chunks)
 
@@ -1291,8 +1291,7 @@ class localrepository(object):
         return filelog.fileslog(self)
 
     @repofilecache(localpaths=["dirstate"])
-    def dirstate(self):
-        # type: () -> dirstate.dirstate
+    def dirstate(self) -> "dirstate.dirstate":
         if edenfs.requirement in self.requirements:
             return self._eden_dirstate
 
@@ -1339,8 +1338,7 @@ class localrepository(object):
         return ds
 
     @util.propertycache
-    def _eden_dirstate(self):
-        # type: () -> dirstate.dirstate
+    def _eden_dirstate(self) -> "dirstate.dirstate":
         # Disable demand import when pulling in the thrift runtime,
         # as it attempts to import missing modules and changes behavior
         # based on what it finds.  Demand import masks those and causes
@@ -1352,8 +1350,7 @@ class localrepository(object):
 
         return dirstate_reimplementation.eden_dirstate(self, self.ui, self.root)
 
-    def _dirstatevalidate(self, node):
-        # type: (bytes) -> bytes
+    def _dirstatevalidate(self, node: bytes) -> bytes:
         self.changelog.rev(node)
         return node
 
@@ -1673,8 +1670,9 @@ class localrepository(object):
             data = self.wvfs.read(filename)
         return self._filter(self._encodefilterpats, filename, data)
 
-    def wwrite(self, filename, data, flags, backgroundclose=False):
-        # type: (str, bytes, str, bool) -> int
+    def wwrite(
+        self, filename: str, data: bytes, flags: str, backgroundclose: bool = False
+    ) -> int:
         """write ``data`` into ``filename`` in the working directory
 
         This returns length of written (maybe decoded) data.

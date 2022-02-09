@@ -44,8 +44,7 @@ _winreservednames = {
 }
 
 
-def checkwinfilename(path):
-    # type: (str) -> Optional[str]
+def checkwinfilename(path: str) -> "Optional[str]":
     r"""Check that the base-relative path is a valid filename on Windows.
     Returns None if the path is ok, or a UI string describing the problem.
 

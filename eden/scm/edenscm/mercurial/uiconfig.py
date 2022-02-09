@@ -46,15 +46,15 @@ class localrcfg(object):
     def __init__(self, rcfg):
         self._rcfg = rcfg
 
-    def get(self, section, name):
-        # type: (str, str) -> Optional[str]
+    def get(self, section: str, name: str) -> "Optional[str]":
         usection = unifromlocal(section)
         uname = unifromlocal(name)
         uvalue = self._rcfg.get(usection, uname)
         return optional(unitolocal, uvalue)
 
-    def sources(self, section, name):
-        # type: (str, str) -> List[Tuple[Optional[str], Optional[Tuple[str, int, int, int]], str]]
+    def sources(
+        self, section: str, name: str
+    ) -> "List[Tuple[Optional[str], Optional[Tuple[str, int, int, int]], str]]":
         result = []
         for (uvalue, info, usource) in self._rcfg.sources(section, name):
             value = optional(unitolocal, uvalue)
@@ -62,25 +62,21 @@ class localrcfg(object):
             result.append((value, info, source))
         return result
 
-    def set(self, section, name, value, source):
-        # type: (str, str, Optional[str], str) -> None
+    def set(self, section: str, name: str, value: "Optional[str]", source: str) -> None:
         usection = unifromlocal(section)
         uname = unifromlocal(name)
         uvalue = optional(unifromlocal, value)
         usource = optional(unifromlocal, source)
         self._rcfg.set(usection, uname, uvalue, usource)
 
-    def sections(self):
-        # type: () -> List[str]
+    def sections(self) -> "List[str]":
         return [unitolocal(s) for s in self._rcfg.sections()]
 
-    def names(self, section):
-        # type: (str) -> List[str]
+    def names(self, section: str) -> "List[str]":
         usection = unifromlocal(section)
         return [unitolocal(s) for s in self._rcfg.names(usection)]
 
-    def clone(self):
-        # type: () -> localrcfg
+    def clone(self) -> "localrcfg":
         return localrcfg(self._rcfg.clone())
 
     def __getattr__(self, name):

@@ -26,7 +26,7 @@ def checklazychangelog(repo):
         return 0
 
     ui = repo.ui
-    commits = repo.changelog.inner  # type: bindings.dag.commits
+    commits: "bindings.dag.commits" = repo.changelog.inner
     problems = []
     missingids = commits.checkuniversalids()
     if missingids:

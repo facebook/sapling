@@ -40,8 +40,7 @@ textdiff = bdiff.bdiff
 wordsplitter = re.compile(br"(\t+| +|[a-zA-Z0-9_\x80-\xff]+|[^ \ta-zA-Z0-9_\x80-\xff])")
 
 # called by dispatch.py
-def init(ui):
-    # type: (UI) -> None
+def init(ui: "UI") -> None:
     if ui.configbool("experimental", "xdiff"):
         global blocks
         # pyre-fixme[9]: blocks has type `(a: str, b: str) -> List[Tuple[int, int,
@@ -49,8 +48,7 @@ def init(ui):
         blocks = xdiff.blocks
 
 
-def splitnewlines(text):
-    # type: (bytes) -> List[bytes]
+def splitnewlines(text: bytes) -> "List[bytes]":
     """like str.splitlines, but only split on newlines."""
     lines = [l + b"\n" for l in text.split(b"\n")]
     if lines:
@@ -163,8 +161,7 @@ def splitblock(base1, lines1, base2, lines2, opts):
         s2 = i2
 
 
-def hunkinrange(hunk, linerange):
-    # type: (Tuple[int, int], Tuple[int,int]) -> bool
+def hunkinrange(hunk: "Tuple[int, int]", linerange: "Tuple[int, int]") -> bool:
     """Return True if `hunk` defined as (start, length) is in `linerange`
     defined as (lowerbound, upperbound).
 
@@ -287,8 +284,7 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
     it has been done in advance. Files are expected to be text in this case.
     """
 
-    def datetag(date, fn=None):
-        # type: (str, Optional[str]) -> bytes
+    def datetag(date: str, fn: "Optional[str]" = None) -> bytes:
         if not opts.git and not opts.nodates:
             return b"\t%s" % encodeutf8(date)
         if fn and " " in fn:
@@ -367,8 +363,9 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
     return headerlines, hunks
 
 
-def _unidiff(t1, t2, opts=defaultopts):
-    # type: (bytes, bytes, diffopts) -> Iterator[Tuple[Tuple[int,int,int,int], List[bytes]]]
+def _unidiff(
+    t1: bytes, t2: bytes, opts: "diffopts" = defaultopts
+) -> "Iterator[Tuple[Tuple[int, int, int, int], List[bytes]]]":
     """Yield hunks of a headerless unified diff from t1 and t2 texts.
 
     Each hunk consists of a (hunkrange, hunklines) tuple where `hunkrange` is a
@@ -558,8 +555,7 @@ def b85diff(to, tn):
     return b"".join(ret)
 
 
-def patchtext(bin):
-    # type: (bytes) -> bytes
+def patchtext(bin: bytes) -> bytes:
     pos = 0
     t = []
     while pos < len(bin):
@@ -582,11 +578,9 @@ def get_matching_blocks(a, b):
     return [(d[0], d[2], d[1] - d[0]) for d in blocks(a, b)]
 
 
-def trivialdiffheader(length):
-    # type: (int) -> bytes
+def trivialdiffheader(length: int) -> bytes:
     return struct.pack(">lll", 0, 0, length) if length else b""
 
 
-def replacediffheader(oldlen, newlen):
-    # type: (int, int) -> bytes
+def replacediffheader(oldlen: int, newlen: int) -> bytes:
     return struct.pack(">lll", 0, oldlen, newlen)
