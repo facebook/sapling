@@ -146,6 +146,11 @@ pub async fn check_files(
 }
 
 async fn symlink(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<()> {
+    // Remove existing file in the way of symlink destination.
+    if tokio::fs::symlink_metadata(dst.as_ref()).await.is_ok() {
+        tokio::fs::remove_file(dst.as_ref()).await?;
+    }
+
     #[cfg(unix)]
     {
         tokio::fs::symlink(src, dst).await?;
@@ -207,7 +212,6 @@ pub async fn download_files(
             )
             .await?;
         }
-
 
         Ok(())
     }))
