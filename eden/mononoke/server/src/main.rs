@@ -9,121 +9,83 @@
 #![feature(never_type)]
 
 use anyhow::{Context, Result};
-use clap::Arg;
+use clap::FromArgMatches;
+use clap::Parser;
 use cloned::cloned;
-use cmdlib::{args, monitoring::ReadyFlagService};
+use cmdlib_logging::ScribeLoggingArgs;
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
 use futures_watchdog::WatchdogExt;
 use mononoke_api::{Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData};
+use mononoke_app::args::{Fb303Args, HooksArgs, McrouterArgExtension, ShutdownTimeoutArgs};
+use mononoke_app::fb303::{Fb303ArgExtension, ReadyFlagService};
+use mononoke_app::MononokeAppBuilder;
 use openssl::ssl::AlpnError;
-use repo_factory::RepoFactory;
 use slog::{error, info};
+use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
 
-const ARG_BOUND_ADDR_FILE: &str = "bound-address-file";
-const ARG_LISTENING_HOST_PORT: &str = "listening-host-port";
-const ARG_THRIFT_PORT: &str = "thrift_port";
-const ARG_CERT: &str = "cert";
-const ARG_PRIVATE_KEY: &str = "private-key";
-const ARG_CA_PEM: &str = "ca-pem";
-const ARG_TICKET_SEEDS: &str = "ssl-ticket-seeds";
-const ARG_CSLB_CONFIG: &str = "cslb-config";
-
-fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
-    args::MononokeAppBuilder::new("mononoke server")
-        .with_shutdown_timeout_args()
-        .with_all_repos()
-        .with_disabled_hooks_args()
-        .with_scuba_logging_args()
-        .with_mcrouter_args()
-        .with_scribe_args()
-        .with_default_scuba_dataset("mononoke_test_perf")
-        .build()
-        .about("serve repos")
-        .arg(
-            Arg::with_name(ARG_LISTENING_HOST_PORT)
-                .long(ARG_LISTENING_HOST_PORT)
-                .required(true)
-                .takes_value(true)
-                .help("tcp address to listen to in format `host:port`"),
-        )
-        .arg(
-            Arg::with_name(ARG_BOUND_ADDR_FILE)
-                .long(ARG_BOUND_ADDR_FILE)
-                .required(false)
-                .takes_value(true)
-                .help("path for file in which to write the bound tcp address in rust std::net::SocketAddr format"),
-        )
-        .arg(
-            Arg::with_name(ARG_THRIFT_PORT)
-                .long(ARG_THRIFT_PORT)
-                .short("-p")
-                .required(false)
-                .takes_value(true)
-                .help("if provided the thrift server will start on this port"),
-        )
-        .arg(
-            Arg::with_name(ARG_CERT)
-                .long(ARG_CERT)
-                .required(true)
-                .takes_value(true)
-                .help("path to a file with certificate"),
-        )
-        .arg(
-            Arg::with_name(ARG_PRIVATE_KEY)
-                .long(ARG_PRIVATE_KEY)
-                .required(true)
-                .takes_value(true)
-                .help("path to a file with private key"),
-        )
-        .arg(
-            Arg::with_name(ARG_CA_PEM)
-                .long(ARG_CA_PEM)
-                .takes_value(true)
-                .help("path to a file with CA certificate"),
-        )
-        .arg(
-            Arg::with_name(ARG_TICKET_SEEDS)
-                .long(ARG_TICKET_SEEDS)
-                .takes_value(true)
-                .help("path to a file with encryption keys for SSL tickets'"),
-        )
-        .arg(
-            Arg::with_name(ARG_CSLB_CONFIG)
-                .long(ARG_CSLB_CONFIG)
-                .takes_value(true)
-                .required(false)
-                .help("top level Mononoke tier where CSLB publishes routing table"),
-        )
+/// Mononoke Server
+#[derive(Parser)]
+struct MononokeServerArgs {
+    #[clap(flatten)]
+    hooks_args: HooksArgs,
+    #[clap(flatten)]
+    shutdown_timeout_args: ShutdownTimeoutArgs,
+    #[clap(flatten)]
+    scribe_logging_args: ScribeLoggingArgs,
+    /// TCP address to listen to in format `host:port
+    #[clap(long)]
+    listening_host_port: String,
+    /// Path for file in which to write the bound tcp address in rust std::net::SocketAddr format
+    #[clap(long)]
+    bound_address_file: Option<PathBuf>,
+    /// If provided the thrift server will start on this port
+    #[clap(long, short = 'p')]
+    thrift_port: Option<String>,
+    /// Path to a file with certificate
+    #[clap(long)]
+    cert: String,
+    /// Path to a file with private keyport
+    #[clap(long)]
+    private_key: String,
+    /// Path to a file with CA certificate
+    #[clap(long)]
+    ca_pem: String,
+    /// Path to a file with encryption keys for SSL tickets
+    #[clap(long)]
+    ssl_ticket_seeds: Option<String>,
+    /// Top level Mononoke tier where CSLB publishes routing table
+    #[clap(long)]
+    cslb_config: Option<String>,
 }
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let matches = setup_app().get_matches(fb)?;
+    let app = MononokeAppBuilder::new(fb)
+        .with_default_scuba_dataset("mononoke_test_perf")
+        .with_arg_extension(McrouterArgExtension {})
+        .with_arg_extension(Fb303ArgExtension {})
+        .build::<MononokeServerArgs>()?;
+    let args: MononokeServerArgs = app.args()?;
 
-    let root_log = matches.logger();
-    let runtime = matches.runtime();
-    let config_store = matches.config_store().clone();
+    let root_log = app.logger();
+    let runtime = app.runtime();
 
-    let cslb_config = matches.value_of(ARG_CSLB_CONFIG).map(|s| s.to_string());
+    let cslb_config = args.cslb_config.clone();
     info!(root_log, "Starting up");
 
-    let config = args::load_repo_configs(&config_store, &matches)?;
+    let configs = app.repo_configs().clone();
 
     let acceptor = {
-        let cert = matches.value_of(ARG_CERT).unwrap().to_string();
-        let private_key = matches.value_of(ARG_PRIVATE_KEY).unwrap().to_string();
-        let ca_pem = matches.value_of(ARG_CA_PEM).unwrap().to_string();
-
         let mut builder = secure_utils::SslConfig::new(
-            ca_pem,
-            cert,
-            private_key,
-            matches.value_of(ARG_TICKET_SEEDS),
+            args.ca_pem,
+            args.cert,
+            args.private_key,
+            args.ssl_ticket_seeds,
         )
         .tls_acceptor_builder(root_log.clone())
         .context("Failed to instantiate TLS Acceptor builder")?;
@@ -143,31 +105,29 @@ fn main(fb: FacebookInit) -> Result<()> {
     let service = ReadyFlagService::new();
     let (terminate_sender, terminate_receiver) = oneshot::channel::<()>();
 
-    let disabled_hooks = cmdlib::args::parse_disabled_hooks_with_repo_prefix(&matches, &root_log)?;
-    let scribe = cmdlib::args::get_scribe(fb, &matches)?;
-    let host_port = matches
-        .value_of(ARG_LISTENING_HOST_PORT)
-        .expect("listening path must be specified")
-        .to_string();
+    let disabled_hooks = args
+        .hooks_args
+        .process_disabled_with_repo_prefix(root_log)?;
+    let scribe = args.scribe_logging_args.get_scribe(fb)?;
+    let host_port = args.listening_host_port;
 
-    let bound_addr_file = matches.value_of(ARG_BOUND_ADDR_FILE).map(|v| v.into());
+    let bound_addr_file = args.bound_address_file;
 
-    let mysql_options = matches.mysql_options().clone();
-    let readonly_storage = matches.readonly_storage().clone();
-    let blobstore_options = matches.blobstore_options().clone();
-    let env = matches.environment();
+    let env = app.environment();
+    let mysql_options = env.mysql_options.clone();
+    let readonly_storage = env.readonly_storage.clone();
+    let blobstore_options = env.blobstore_options.clone();
 
-    let scuba = matches.scuba_sample_builder();
-    let warm_bookmarks_cache_scuba = matches.warm_bookmarks_cache_scuba_sample_builder();
+    let scuba = env.scuba_sample_builder.clone();
+    let warm_bookmarks_cache_scuba = env.warm_bookmarks_cache_scuba_sample_builder.clone();
 
     let will_exit = Arc::new(AtomicBool::new(false));
 
     let repo_listeners = {
         cloned!(root_log, service, will_exit, env);
+        let repo_factory = app.repo_factory();
         async move {
-            let repo_factory = RepoFactory::new(env, &config.common);
-
-            let env = MononokeApiEnvironment {
+            let api_env = MononokeApiEnvironment {
                 repo_factory,
                 disabled_hooks,
                 warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
@@ -176,14 +136,13 @@ fn main(fb: FacebookInit) -> Result<()> {
                 skiplist_enabled: true,
             };
 
-            let mononoke = Mononoke::new(&env, config.clone())
-                .watched(&root_log)
-                .await?;
+            let common = configs.common.clone();
+            let mononoke = Mononoke::new(&api_env, configs).watched(&root_log).await?;
             info!(&root_log, "Built Mononoke");
 
             repo_listener::create_repo_listeners(
                 fb,
-                config.common,
+                common,
                 mononoke,
                 &blobstore_options,
                 &mysql_options,
@@ -192,7 +151,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 acceptor,
                 service,
                 terminate_receiver,
-                &config_store,
+                &env.config_store,
                 readonly_storage,
                 scribe,
                 &scuba,
@@ -205,14 +164,15 @@ fn main(fb: FacebookInit) -> Result<()> {
     };
 
     // Thread with a thrift service is now detached
-    monitoring::start_thrift_service(fb, &root_log, &matches, service);
+    let fb303_args = Fb303Args::from_arg_matches(app.matches())?;
+    fb303_args.start_fb303_server(fb, "mononoke_server", root_log, service)?;
 
     cmdlib::helpers::serve_forever(
         runtime,
         repo_listeners,
         &root_log,
         move || will_exit.store(true, Ordering::Relaxed),
-        args::get_shutdown_grace_period(&matches)?,
+        args.shutdown_timeout_args.shutdown_grace_period,
         async {
             match terminate_sender.send(()) {
                 Err(err) => error!(root_log, "could not send termination signal: {:?}", err),
@@ -220,6 +180,6 @@ fn main(fb: FacebookInit) -> Result<()> {
             }
             repo_listener::wait_for_connections_closed(&root_log).await;
         },
-        args::get_shutdown_timeout(&matches)?,
+        args.shutdown_timeout_args.shutdown_timeout,
     )
 }

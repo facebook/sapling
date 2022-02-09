@@ -83,6 +83,11 @@ impl MononokeApp {
         self.args.subcommand()
     }
 
+    /// Returns the selected subcommand of the app (if this app
+    /// has subcommands).
+    pub fn matches(&self) -> &ArgMatches {
+        &self.args
+    }
     /// Returns a parsed args struct based on the arguments provided
     /// on the command line.
     pub fn args<Args>(&self) -> Result<Args, ClapError>
