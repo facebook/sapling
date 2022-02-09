@@ -469,8 +469,7 @@ class remotefileslog(filelog.fileslog):
         super(remotefileslog, self).__init__(repo)
         self._memcachestore = None
 
-        def needmaintenance(fname):
-            # type: (str) -> bool
+        def needmaintenance(fname: str) -> bool:
             if repo.svfs.exists(fname):
                 tstamp = int(repo.svfs.readutf8(fname))
                 return tstamp < repo.ui.configint(

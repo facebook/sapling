@@ -27,8 +27,7 @@ class repomanifest(object):
     change by version and branch."""
 
     @classmethod
-    def fromgit(cls, ui, gitpath, version, filepath):
-        # type: (Any, str, str, str) -> Any
+    def fromgit(cls, ui: "Any", gitpath: str, version: str, filepath: str) -> "Any":
         """Fetches the contents of a repo manifest
 
         ui: user interface context
@@ -39,8 +38,7 @@ class repomanifest(object):
         """
         # TODO: arg checking including path
 
-        def fetchfromgit(filename):
-            # type: (str) -> str
+        def fetchfromgit(filename: str) -> str:
             commandline = common.commandline(ui, "git")
             output, exitcode = commandline.run(
                 "-C", gitpath, "show", "%s:%s" % (version, filename)
@@ -53,8 +51,7 @@ class repomanifest(object):
         return repomanifest(filepath, fetchfn=fetchfromgit)
 
     @classmethod
-    def frompath(cls, path):
-        # type: (str) -> Any
+    def frompath(cls, path: str) -> "Any":
         def fetchpath(path):
             # type: (str) -> str
             with open(path, "r") as f:
@@ -64,8 +61,7 @@ class repomanifest(object):
         return repomanifest(path, fetchfn=fetchpath)
 
     @classmethod
-    def fromtext(cls, rootblobname, fileblobs):
-        # type: (str, Dict[str, str]) -> Any
+    def fromtext(cls, rootblobname: str, fileblobs: "Dict[str, str]") -> "Any":
         """Instantiates a manifest from one or more blobs of text. The root is treated as the root manifest and other blobs provided are available as includes.
 
         rootblobname: the name of blob in the dictionary to use as the root manifest
@@ -97,8 +93,7 @@ class repomanifest(object):
     DOM_ATTRIBUTE_SRC = "src"
     DOM_ATTRIBUTE_VALUE = "value"
 
-    def __init__(self, filename, fetchfn):
-        # type: (str, Callable[[str], str]) -> None
+    def __init__(self, filename: str, fetchfn: "Callable[[str], str]") -> None:
         self._dom = self._normalize(filename, fetchfn)
 
         # indexing
@@ -138,8 +133,7 @@ class repomanifest(object):
                 includenode.parentNode.removeChild(includenode)
         return dom
 
-    def _finddefaultelement(self):
-        # type: () -> Optional[Any]
+    def _finddefaultelement(self) -> "Optional[Any]":
         """Finds the DOM node representing the default element."""
         matches = self._dom.getElementsByTagName(self.DOM_ELEMENT_DEFAULT)
         if len(matches) == 0:
@@ -151,8 +145,7 @@ class repomanifest(object):
 
         return matches[0]
 
-    def _getprojectelement(self, projectname):
-        # type: (str) -> Optional[Any]
+    def _getprojectelement(self, projectname: str) -> "Optional[Any]":
         # TODO: Index this?
         matches = [
             projectelement
@@ -163,8 +156,7 @@ class repomanifest(object):
         ]
         return matches[-1] if matches else None
 
-    def _getremoteelement(self, remotename):
-        # type: (str) -> Optional[Any]
+    def _getremoteelement(self, remotename: str) -> "Optional[Any]":
         matches = [
             remoteelement
             for remoteelement in self._dom.getElementsByTagName(self.DOM_ELEMENT_REMOTE)
@@ -178,22 +170,21 @@ class repomanifest(object):
             )
         return matches[0]
 
-    def hasproject(self, projectname):
-        # type: (str) -> bool
+    def hasproject(self, projectname: str) -> bool:
         """Returns true if the project is defined in the manifest"""
         return self._getprojectelement(projectname) is not None
 
     @classmethod
-    def _trygetelementattribute(cls, element, attributename):
-        # type: (Optional[Any], str) -> Optional[str]
+    def _trygetelementattribute(
+        cls, element: "Optional[Any]", attributename: str
+    ) -> "Optional[str]":
         if element is None:
             return None
         if not element.hasAttribute(attributename):
             return None
         return element.getAttribute(attributename)
 
-    def _getprojectremotework(self, projectelement):
-        # type: (Any) -> Optional[str]
+    def _getprojectremotework(self, projectelement: "Any") -> "Optional[str]":
         if projectelement is None:
             raise ValueError(_("projectelement may not be None"))
 
@@ -206,8 +197,7 @@ class repomanifest(object):
     def _ishash(self, text):
         return len(text) == 40 and re.match("^[0-9a-fA-F]{40}$", text)
 
-    def _getprojectrevisionwork(self, projectelement):
-        # type: (Any) -> str
+    def _getprojectrevisionwork(self, projectelement: "Any") -> str:
         if projectelement is None:
             raise ValueError(_("projectelement may not be None"))
 
@@ -233,8 +223,7 @@ class repomanifest(object):
         else:
             return "%s/%s" % (remotename, revision)
 
-    def getprojects(self):
-        # type: () -> List[Tuple[str, str, str]]
+    def getprojects(self) -> "List[Tuple[str, str, str]]":
         projects = [
             (
                 projectelement.getAttribute(self.DOM_ATTRIBUTE_NAME),
@@ -247,14 +236,14 @@ class repomanifest(object):
         ]
         return projects
 
-    def getprojectrevision(self, projectname, path=None):
-        # type: (str, Union[None, str]) -> str
+    def getprojectrevision(
+        self, projectname: str, path: "Union[None, str]" = None
+    ) -> str:
         """Evaluates the version specified for the project either explicitly or with a default"""
         projectelement = self._getprojectelement(projectname)
         return self._getprojectrevisionwork(projectelement)
 
-    def getprojectpaths(self, projectname):
-        # type: (str) -> List[str]
+    def getprojectpaths(self, projectname: str) -> "List[str]":
         """Finds the list of all repo paths where a project is mounted"""
         # TODO: Index this?
         matches = [
@@ -269,8 +258,7 @@ class repomanifest(object):
             for projectelement in matches
         ]
 
-    def getprojectpathrevisions(self, projectname):
-        # type: (str) -> Dict[str, str]
+    def getprojectpathrevisions(self, projectname: str) -> "Dict[str, str]":
         """Finds the mapping of all repo paths where a project is mounted to their revisions"""
         # TODO: Index this?
         matches = [
@@ -287,8 +275,7 @@ class repomanifest(object):
             for projectelement in matches
         }
 
-    def getprojectnameforpath(self, projectpath):
-        # type: (str) -> Optional[str]
+    def getprojectnameforpath(self, projectpath: str) -> "Optional[str]":
         """Get the name of the Git project located at a particular repo path"""
         # TODO: Path normalization
         matches = [
@@ -300,8 +287,7 @@ class repomanifest(object):
         ]
         return matches[-1] if matches else None
 
-    def geturiforproject(self, projectname):
-        # type: (str) -> str
+    def geturiforproject(self, projectname: str) -> str:
         """Constructs the URI"""
         projectelement = self._getprojectelement(projectname)
         if projectelement is None:

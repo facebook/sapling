@@ -220,12 +220,10 @@ class overlaychangectx(context.changectx):
     def repo(self):
         return self._hgrepo
 
-    def node(self):
-        # type: () -> bytes
+    def node(self) -> bytes:
         return self._node
 
-    def rev(self):
-        # type: () -> int
+    def rev(self) -> int:
         return self._rev
 
     def date(self):
@@ -255,12 +253,10 @@ class overlaychangectx(context.changectx):
             parents = parents[:-1]
         return [self._hgrepo[sha] for sha in parents]
 
-    def manifestnode(self):
-        # type: () -> bytes
+    def manifestnode(self) -> bytes:
         return bin(self.commit.tree)
 
-    def hex(self):
-        # type: () -> str
+    def hex(self) -> str:
         return pycompat.decodeutf8(self.commit.id)
 
     def tags(self):
@@ -285,8 +281,7 @@ class overlaychangectx(context.changectx):
 
     __bool__ = __nonzero__
 
-    def phase(self):
-        # type: () -> int
+    def phase(self) -> int:
         try:
             from edenscm.mercurial import phases
 

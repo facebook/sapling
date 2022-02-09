@@ -25,8 +25,7 @@ class gitlfspointer(dict):
         super(gitlfspointer, self).__init__(*args, **kwargs)
 
     @classmethod
-    def deserialize(cls, text):
-        # type: (bytes) -> str
+    def deserialize(cls, text: bytes) -> str:
         try:
             decoded = pycompat.decodeutf8(text)
             return cls(l.split(" ", 1) for l in decoded.splitlines()).validate()
@@ -36,8 +35,7 @@ class gitlfspointer(dict):
                 % pycompat.decodeutf8(text, errors="replace")
             )
 
-    def serialize(self):
-        # type: () -> bytes
+    def serialize(self) -> bytes:
         sortkeyfunc = lambda x: (x[0] != "version", x)
         items = sorted(pycompat.iteritems(self.validate()), key=sortkeyfunc)
         return pycompat.encodeutf8("".join("%s %s\n" % (k, v) for k, v in items))

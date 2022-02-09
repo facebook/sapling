@@ -213,8 +213,7 @@ class gitnodemap(object):
         self.lastrev = int(repo.localvfs.tryread(LASTREVFILE) or "0")
         self.map = bindings.nodemap.nodemap(repo.localvfs.join(MAPFILE))
 
-    def build(self, repo):
-        # type: (...) -> int
+    def build(self, repo) -> int:
         """Build the nodemap incrementally.
         Assume there is no changelog truncation.
         Return number of revs built.
@@ -260,12 +259,10 @@ class gitnodemap(object):
             self.lastrev = repolen
             return len(revs)
 
-    def gethgnode(self, gitnode):
-        # type: (bytes) -> Optional[bytes]
+    def gethgnode(self, gitnode: bytes) -> "Optional[bytes]":
         return self.map.lookupbyfirst(gitnode)
 
-    def getgitnode(self, hgnode):
-        # type: (bytes) -> Optional[bytes]
+    def getgitnode(self, hgnode: bytes) -> "Optional[bytes]":
         return self.map.lookupbyfirst(hgnode)
 
 

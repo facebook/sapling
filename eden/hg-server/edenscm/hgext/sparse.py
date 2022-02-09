@@ -477,12 +477,11 @@ def _setuplog(ui):
 
 
 def _tracktelemetry(
-    runcommand,  # type: Callable[[uimod.ui, localrepo.localrepository, Any], Optional[int]]
-    lui,  # type: uimod.ui
-    repo,  # type: localrepo.localrepository
-    *args  # type: Any
-):
-    # type: (...) -> Optional[int]
+    runcommand: "Callable[[uimod.ui, localrepo.localrepository, Any], Optional[int]]",
+    lui: "uimod.ui",
+    repo: "localrepo.localrepository",
+    *args: "Any",
+) -> "Optional[int]":
     res = runcommand(lui, repo, *args)
     if repo is not None and repo.local():
         try:
@@ -497,8 +496,7 @@ def _tracktelemetry(
     return res
 
 
-def _tracksparseprofiles(lui, repo):
-    # type: (uimod.ui, localrepo.localrepository) -> None
+def _tracksparseprofiles(lui: "uimod.ui", repo: "localrepo.localrepository") -> None:
     # Reading the sparse profile from the repo can potentially trigger
     # tree or file fetchings that are quite expensive. Do not read
     # them. Only read the sparse file on the filesystem.
@@ -507,8 +505,7 @@ def _tracksparseprofiles(lui, repo):
         lui.log("sparse_profiles", "", active_profiles=pycompat.decodeutf8(profile))
 
 
-def _trackdirstatesizes(lui, repo):
-    # type: (uimod.ui, localrepo.localrepository) -> None
+def _trackdirstatesizes(lui: "uimod.ui", repo: "localrepo.localrepository") -> None:
     dirstate = repo.dirstate
     dirstatesize = None
     try:
@@ -2100,7 +2097,7 @@ def _explainprofile(ui, repo, *profiles, **opts):
                 profilestats["totalsize"] = ptotalsize
             fm.data(
                 stats=profilestats,
-                **sortedsets(attr.asdict(profile, retain_collection_types=True))
+                **sortedsets(attr.asdict(profile, retain_collection_types=True)),
             )
 
             if fm.isplain():

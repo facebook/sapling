@@ -33,22 +33,20 @@ def serialize(paramsdict):
                <file content>
     """
 
-    def packunsignedint(i):
-        # type: (int) -> bytes
+    def packunsignedint(i: int) -> bytes:
         return struct.pack("!I", i)
 
-    def packdata(data, utf8encode=True):
-        # type: (Any, bool) -> List[bytes]
+    def packdata(data: "Any", utf8encode: bool = True) -> "List[bytes]":
         if utf8encode:
             data = data.encode("utf-8")
         return [packunsignedint(len(data)), data]
 
     # Need to move the content out of the JSON representation because JSON can't
     # handle binary data.
-    fileout = []  # type: List[bytes]
-    numfiles = 0  # type: int
+    fileout: "List[bytes]" = []
+    numfiles: int = 0
     for path, fileinfo in paramsdict["changelist"]["files"].items():
-        content = fileinfo["content"]  # type: Optional[bytes]
+        content: "Optional[bytes]" = fileinfo["content"]
         if content:
             fileout.extend(packdata(path))
             fileout.extend(packdata(content, utf8encode=False))
@@ -57,8 +55,8 @@ def serialize(paramsdict):
 
     # Now that we have excluded the content from the dictionary, we can convert
     # it to JSON.
-    jsonstr = json.dumps(paramsdict)  # type: str
-    out = packdata(jsonstr)  # type: List[bytes]
+    jsonstr: str = json.dumps(paramsdict)
+    out: "List[bytes]" = packdata(jsonstr)
 
     # Add the information about the file contents as well.
     out.append(packunsignedint(numfiles))
@@ -66,38 +64,32 @@ def serialize(paramsdict):
     return b"".join(out)
 
 
-def deserialize(inputstream):
-    # type: (BinaryIO) -> Dict[str, Any]
+def deserialize(inputstream: "BinaryIO") -> "Dict[str, Any]":
     """deserialize inputstream to dictionary representing memcommit parameters"""
 
-    def readexactly(stream, n):
-        # type: (BinaryIO, int) -> bytes
+    def readexactly(stream: "BinaryIO", n: int) -> bytes:
         """read n bytes from stream.read and abort if less was available"""
-        s = stream.read(n)  # type: bytes
+        s: bytes = stream.read(n)
         if len(s) < n:
             raise EOFError(
                 "stream ended unexpectedly" " (got %d bytes, expected %d)" % (len(s), n)
             )
         return s
 
-    def readunpack(stream, fmt):
-        # type: (BinaryIO, str) -> Any
+    def readunpack(stream: "BinaryIO", fmt: str) -> "Any":
         data = readexactly(stream, struct.calcsize(fmt))  # type: bytes
         return struct.unpack(fmt, data)
 
-    def readunsignedint(stream):
-        # type: (BinaryIO) -> int
+    def readunsignedint(stream: "BinaryIO") -> int:
         return readunpack(stream, "!I")[0]
 
-    def unpackdata(stream, utf8decode=True):
-        # type: (BinaryIO, bool) -> Any
+    def unpackdata(stream: "BinaryIO", utf8decode: bool = True) -> "Any":
         data = readexactly(stream, readunsignedint(stream))
         if utf8decode:
             return data.decode("utf-8")
         return data
 
-    def tobytes(data):
-        # type: (str) -> bytes
+    def tobytes(data: str) -> bytes:
         if isinstance(data, unicode):
             return data.encode("utf-8")
 
@@ -110,17 +102,15 @@ def deserialize(inputstream):
         return data
 
     if sys.version_info[0] < 3:
-        d = json.loads(
-            unpackdata(inputstream), object_hook=tobytes
-        )  # type: Dict[str, Any]
+        d: "Dict[str, Any]" = json.loads(unpackdata(inputstream), object_hook=tobytes)
     else:
-        d = json.loads(unpackdata(inputstream))  # type: Dict[str, Any]
+        d: "Dict[str, Any]" = json.loads(unpackdata(inputstream))
 
-    numfiles = readunsignedint(inputstream)  # type: int
-    contents = {}  # type: Dict[str, bytes]
+    numfiles: int = readunsignedint(inputstream)
+    contents: "Dict[str, bytes]" = {}
     for _ in range(0, numfiles):
-        path = unpackdata(inputstream)  # type: str
-        content = unpackdata(inputstream, utf8decode=False)  # type: bytes
+        path: str = unpackdata(inputstream)
+        content: bytes = unpackdata(inputstream, utf8decode=False)
         contents[path] = content
 
     for path, fileinfo in d["changelist"]["files"].items():

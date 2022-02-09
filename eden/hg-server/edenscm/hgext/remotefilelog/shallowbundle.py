@@ -68,8 +68,13 @@ def shallowgroup(cls, self, nodelist, rlog, lookup, prog=None, reorder=None):
 
 @shallowutil.interposeclass(changegroup, "cg1packer")
 class shallowcg1packer(changegroup.cg1packer):
-    def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
-        # type: (Sequence[int], Sequence[bytes], bool, Any) -> Iterable[bytes]
+    def generate(
+        self,
+        commonrevs: "Sequence[int]",
+        clnodes: "Sequence[bytes]",
+        fastpathlinkrev: bool,
+        source: "Any",
+    ) -> "Iterable[bytes]":
         if "remotefilelog" in self._repo.requirements:
             fastpathlinkrev = False
 
@@ -109,9 +114,14 @@ class shallowcg1packer(changegroup.cg1packer):
         return True
 
     def generatemanifests(
-        self, commonrevs, clrevorder, fastpathlinkrev, mfs, fnodes, source
-    ):
-        # type: (Sequence[int], Mapping[bytes, int], bool, Any, MutableMapping[str, Any], Any) -> Iterable[bytes]
+        self,
+        commonrevs: "Sequence[int]",
+        clrevorder: "Mapping[bytes, int]",
+        fastpathlinkrev: bool,
+        mfs: "Any",
+        fnodes: "MutableMapping[str, Any]",
+        source: "Any",
+    ) -> "Iterable[bytes]":
         """
         - `commonrevs` is the set of known commits on both sides
         - `clrevorder` is a mapping from cl node to rev number, used for
