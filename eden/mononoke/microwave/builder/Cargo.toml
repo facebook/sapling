@@ -13,7 +13,7 @@ path = "main.rs"
 
 [dependencies]
 anyhow = "1.0.51"
-async-trait = "0.1.51"
+async-trait = "0.1.52"
 blobrepo_override = { version = "0.1.0", path = "../../blobrepo/override" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }

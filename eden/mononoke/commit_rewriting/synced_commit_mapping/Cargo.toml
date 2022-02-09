@@ -13,7 +13,7 @@ path = "test/main.rs"
 
 [dependencies]
 anyhow = "1.0.51"
-async-trait = "0.1.51"
+async-trait = "0.1.52"
 auto_impl = "0.4"
 context = { version = "0.1.0", path = "../../server/context" }
 futures-old = { package = "futures", version = "0.1.31" }

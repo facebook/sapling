@@ -12,7 +12,7 @@ path = "lib.rs"
 
 [dependencies]
 anyhow = "1.0.51"
-async-trait = "0.1.51"
+async-trait = "0.1.52"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_common = { version = "0.1.0", path = "../../blobrepo/common" }
 blobrepo_errors = { version = "0.1.0", path = "../../blobrepo/errors" }

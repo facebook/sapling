@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.51"
-async-trait = "0.1.51"
+async-trait = "0.1.52"
 clap = { version = "3.0.9", features = ["derive", "regex", "unicode", "wrap_help"] }
 colored = "1.9"
 comfy-table = "4.0.1"

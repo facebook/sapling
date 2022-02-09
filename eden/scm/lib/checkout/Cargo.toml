@@ -23,7 +23,7 @@ types = { version = "0.1.0", path = "../types" }
 vfs = { version = "0.1.0", path = "../vfs" }
 
 [dev-dependencies]
-async-trait = "0.1.51"
+async-trait = "0.1.52"
 manifest-tree = { version = "0.1.0", path = "../manifest-tree", features = ["for-tests"] }
 quickcheck = "1.0"
 tempfile = "3.2"

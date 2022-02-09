@@ -12,7 +12,7 @@ path = "lib.rs"
 
 [dependencies]
 anyhow = "1.0.51"
-async-trait = "0.1.51"
+async-trait = "0.1.52"
 blame = { version = "0.1.0", path = "../blame" }
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }

@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.51"
-async-trait = "0.1.51"
+async-trait = "0.1.52"
 dag = { version = "0.1.0", path = "../dag" }
 edenapi_trait = { version = "0.1.0", path = "../edenapi/trait" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }

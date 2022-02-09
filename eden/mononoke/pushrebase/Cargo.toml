@@ -32,7 +32,7 @@ thiserror = "1.0.29"
 tunables = { version = "0.1.0", path = "../tunables" }
 
 [dev-dependencies]
-async-trait = "0.1.51"
+async-trait = "0.1.52"
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }

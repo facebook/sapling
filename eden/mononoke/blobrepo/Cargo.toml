@@ -43,7 +43,7 @@ topo_sort = { version = "0.1.0", path = "../common/topo_sort" }
 [dev-dependencies]
 ascii = "1.0"
 assert_matches = "1.5"
-async-trait = "0.1.51"
+async-trait = "0.1.52"
 blobrepo_errors = { version = "0.1.0", path = "errors" }
 blobrepo_hg = { version = "0.1.0", path = "blobrepo_hg" }
 bytes = { version = "1.1", features = ["serde"] }

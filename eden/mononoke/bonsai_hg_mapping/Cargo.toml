@@ -15,7 +15,7 @@ path = "test/main.rs"
 abomonation = "0.7"
 abomonation_derive = "0.5"
 anyhow = "1.0.51"
-async-trait = "0.1.51"
+async-trait = "0.1.52"
 auto_impl = "0.4"
 bonsai_hg_mapping_entry_thrift = { version = "0.1.0", path = "if" }
 bytes = { version = "1.1", features = ["serde"] }
