@@ -571,8 +571,7 @@ def unhexlifybookmarks(marks):
 _binaryentry = struct.Struct(">20sH")
 
 
-def binaryencode(bookmarks):
-    # type: (typing.Iterable[typing.Tuple[str, bytes]]) -> bytes
+def binaryencode(bookmarks: "typing.Iterable[typing.Tuple[str, bytes]]") -> bytes:
     """encode a '(bookmark, node)' iterable into a binary stream
 
     the binary format is:
@@ -1155,8 +1154,7 @@ def saveremotenames(repo, remotebookmarks, override=True):
             repo.invalidatevolatilesets()
 
 
-def decoderemotenames(data):
-    # type: (bytes) -> typing.Dict[str, bytes]
+def decoderemotenames(data: bytes) -> "typing.Dict[str, bytes]":
     """Decode remotenames into {fullname: node}
 
     The fullname can further be split by `splitremotename`.
@@ -1284,8 +1282,7 @@ class lazyremotenamedict(pycompat.Mapping):
         else:
             return None
 
-    def keys(self):
-        # type: () -> typing.AbstractSet[str]
+    def keys(self) -> "typing.AbstractSet[str]":
         """Get a list of bookmark names"""
         if not self.loaded:
             self._load()

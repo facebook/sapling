@@ -44,8 +44,7 @@ def _string_escape(text):
     return text.replace("\0", "\\0")
 
 
-def decodeextra(text):
-    # type: (bytes) -> Dict[str, str]
+def decodeextra(text: bytes) -> "Dict[str, str]":
     """
     >>> from .pycompat import bytechr as chr
     >>> sorted(decodeextra(encodeextra({b'foo': b'bar', b'baz': chr(0) + b'2'})
@@ -185,7 +184,7 @@ class changelogrevision(object):
     the parsed object.
     """
 
-    __slots__ = (u"_offsets", u"_text", u"_files")
+    __slots__ = ("_offsets", "_text", "_files")
 
     def __new__(cls, text):
         if not text:
@@ -361,8 +360,7 @@ class changelog(revlog.revlog):
     def _loadvisibleheads(self, opener):
         return visibility.visibleheads(opener)
 
-    def tip(self):
-        # type: () -> bytes
+    def tip(self) -> bytes:
         """filtered version of revlog.tip"""
         for i in range(len(self) - 1, -2, -1):
             # pyre-fixme[7]: Expected `bytes` but got implicit return value of `None`.
@@ -570,7 +568,7 @@ class changelog(revlog.revlog):
         cachedelta,
         ifh,
         dfh,
-        **kwargs
+        **kwargs,
     ):
         # overlay over the standard revlog._addrevision to track the new
         # revision on the transaction.
@@ -586,7 +584,7 @@ class changelog(revlog.revlog):
             cachedelta,
             ifh,
             dfh,
-            **kwargs
+            **kwargs,
         )
 
         # Also write (key=node, data=''.join(sorted([p1,p2]))+text) to zstore
@@ -616,8 +614,12 @@ class changelog(revlog.revlog):
             nodes.append(node)
         return node
 
-    def revision(self, nodeorrev, _df=None, raw=False):
-        # type: (Union[int, bytes], Optional[IO], bool) -> bytes
+    def revision(
+        self,
+        nodeorrev: "Union[int, bytes]",
+        _df: "Optional[IO]" = None,
+        raw: bool = False,
+    ) -> bytes:
         # "revision" is the single API that reads `.d` from revlog.
         # Use zstore if possible.
         zstore = self.zstore
@@ -672,8 +674,7 @@ class nodemap(object):
         pass
 
 
-def readfiles(text):
-    # type: (bytes) -> List[str]
+def readfiles(text: bytes) -> "List[str]":
     """
     >>> from .pycompat import bytechr as chr
     >>> d = {'nl': chr(10)}

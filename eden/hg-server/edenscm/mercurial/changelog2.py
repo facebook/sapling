@@ -228,8 +228,7 @@ class changelog(object):
     def _loadvisibleheads(self, svfs):
         return visibility.visibleheads(svfs)
 
-    def tip(self):
-        # type: () -> bytes
+    def tip(self) -> bytes:
         tip = self.svfs.tryread("tip")
         if tip and self.hasnode(tip):
             return tip
@@ -420,8 +419,12 @@ class changelog(object):
         extra = self.read(rev)[5]
         return encoding.tolocal(extra.get("branch")), "close" in extra
 
-    def revision(self, nodeorrev, _df=None, raw=False):
-        # type: (Union[int, bytes], Optional[IO], bool) -> bytes
+    def revision(
+        self,
+        nodeorrev: "Union[int, bytes]",
+        _df: "Optional[IO]" = None,
+        raw: bool = False,
+    ) -> bytes:
         if nodeorrev in {nullid, nullrev}:
             return b""
         if isinstance(nodeorrev, bytes):

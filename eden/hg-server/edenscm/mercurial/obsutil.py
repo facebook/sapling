@@ -350,8 +350,7 @@ class _succs(list):
         super(_succs, self).__init__(*args, **kwargs)
         self.markers = set()
 
-    def copy(self):
-        # type: () -> _succs
+    def copy(self) -> "_succs":
         new = _succs(self)
         new.markers = self.markers.copy()
         return new

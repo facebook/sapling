@@ -37,8 +37,7 @@ def _serverquote(s):
     return "'%s'" % s.replace("'", "'\\''")
 
 
-def _writessherror(ui, s):
-    # type: (Any, bytes) -> None
+def _writessherror(ui: "Any", s: bytes) -> None:
     if s and not ui.quiet:
         for l in s.splitlines():
             if l.startswith(b"ssh:"):
@@ -62,8 +61,7 @@ class countingpipe(object):
         self._ui.metrics.gauge("ssh_write_bytes", len(data))
         return self._pipe.write(data)
 
-    def read(self, size):
-        # type: (int) -> bytes
+    def read(self, size: int) -> bytes:
         r = self._pipe.read(size)
         bufs = [r]
         # In Python 3 _pipe is a FileIO and is not guaranteed to return size
@@ -101,15 +99,13 @@ class threadedstderr(object):
         self._stderr = stderr
         self._thread = None
 
-    def start(self):
-        # type: () -> None
+    def start(self) -> None:
         thread = threading.Thread(target=self.run)
         thread.daemon = True
         thread.start()
         self._thread = thread
 
-    def run(self):
-        # type: () -> None
+    def run(self) -> None:
         while True:
             try:
                 buf = self._stderr.readline()

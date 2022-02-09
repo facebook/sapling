@@ -31,8 +31,9 @@ propertycache = util.propertycache
 
 
 class eden_dirstate(dirstate.dirstate):
-    def __init__(self, repo, ui, root):
-        # type: (localrepo.localrepository, ui_mod.ui, str) -> None
+    def __init__(
+        self, repo: "localrepo.localrepository", ui: "ui_mod.ui", root: str
+    ) -> None:
         self.eden_client = thrift.EdenThriftClient(repo)
 
         # We should override any logic in dirstate that uses self._validate.

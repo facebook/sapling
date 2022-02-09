@@ -119,8 +119,7 @@ def _threadedworker(ui, func, staticargs, args):
         def interrupt(self):
             self._interrupted = True
 
-        def run(self):
-            # type: () -> None
+        def run(self) -> None:
             try:
                 while not self._taskqueue.empty():
                     try:

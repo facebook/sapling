@@ -20,8 +20,7 @@ from .i18n import _
 from .pycompat import decodeutf8, encodeutf8
 
 
-def _writestderror(ui, s):
-    # type: (Any, bytes) -> None
+def _writestderror(ui: "Any", s: bytes) -> None:
     if s and not ui.quiet:
         for l in s.splitlines():
             if l.startswith(b"ssh:"):

@@ -57,8 +57,7 @@ _ugettext = lambda x: x
 _ungettext = lambda x, y, z: y
 
 
-def setdatapath(datapath):
-    # type: (str) -> None
+def setdatapath(datapath: str) -> None:
     localedir = os.path.join(datapath, "locale")
     t = gettextmod.translation("hg", localedir, _languages, fallback=True)
     global _ugettext
@@ -74,8 +73,7 @@ def setdatapath(datapath):
 _msgcache = {}  # encoding: {message: translation}
 
 
-def gettext(message):
-    # type: (str) -> str
+def gettext(message: str) -> str:
     """Translate message.
 
     The message is looked up in the catalog to get a Unicode string,
@@ -93,14 +91,14 @@ def gettext(message):
     if message not in cache:
         if type(message) is unicode:
             # goofy unicode docstrings in test
-            paragraphs = message.split(u"\n\n")
+            paragraphs = message.split("\n\n")
         else:
             if sys.version_info[0] == 3:
                 raise TypeError("expect message to be str: %r" % message)
             paragraphs = [p.decode("ascii") for p in message.split("\n\n")]
         # Be careful not to translate the empty string -- it holds the
         # meta data of the .po file.
-        u = u"\n\n".join([p and _ugettext(p) or u"" for p in paragraphs])
+        u = "\n\n".join([p and _ugettext(p) or "" for p in paragraphs])
         if sys.version_info[0] >= 3:
             cache[message] = identity.replace(u)
         else:
@@ -118,8 +116,7 @@ def gettext(message):
     return cache[message]
 
 
-def ngettext(singular, plural, count):
-    # type: (str, str, int) -> str
+def ngettext(singular: str, plural: str, count: int) -> str:
     """Translate pluralized message.
 
     The message is looked up in the catalog to get a Unicode string, pluralized
@@ -154,24 +151,21 @@ def _getplain():
     return "i18n" not in exceptions
 
 
-def _(message):
-    # type: (str) -> str
+def _(message: str) -> str:
     if _plain:
         return identity.replace(message)
     else:
         return gettext(message)
 
 
-def _n(singular, plural, count):
-    # type: (str, str, int) -> str
+def _n(singular: str, plural: str, count: int) -> str:
     if _plain:
         return identity.replace(singular if count == 1 else plural)
     else:
         return ngettext(singular, plural, count)
 
 
-def _x(message):
-    # type: (str) -> str
+def _x(message: str) -> str:
     return message
 
 

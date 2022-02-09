@@ -58,8 +58,7 @@ _CHANGEGROUPV2_DELTA_HEADER = b"20s20s20s20s20s"
 _CHANGEGROUPV3_DELTA_HEADER = b">20s20s20s20s20sH"
 
 
-def readexactly(stream, n):
-    # type: (BinaryIO, int) -> bytes
+def readexactly(stream: "BinaryIO", n: int) -> bytes:
     """read n bytes from stream.read and abort if less was available"""
     s = stream.read(n)
     if len(s) < n:
@@ -85,14 +84,14 @@ def chunkheader(length):
     return struct.pack(b">l", length + 4)
 
 
-def closechunk():
-    # type: () -> bytes
+def closechunk() -> bytes:
     """return a changegroup chunk header (string) for a zero-length chunk"""
     return struct.pack(b">l", 0)
 
 
-def writechunks(ui, chunks, filename, vfs=None):
-    # type: (Any, Iterable[bytes], Optional[str], Any) -> str
+def writechunks(
+    ui: "Any", chunks: "Iterable[bytes]", filename: "Optional[str]", vfs: "Any" = None
+) -> str:
     """Write chunks to a file and return its filename.
 
     The stream is assumed to be a bundle file.
@@ -127,8 +126,7 @@ def writechunks(ui, chunks, filename, vfs=None):
                 os.unlink(cleanup)
 
 
-def checkrevs(repo, revs):
-    # type: (Any, Sequence[bytes]) -> None
+def checkrevs(repo: "Any", revs: "Sequence[bytes]") -> None:
     # to be replaced by extensions
     # free from extension logic
     pass
@@ -158,8 +156,12 @@ class cg1unpacker(object):
     version = "01"
     _grouplistcount = 1  # One list of files after the manifests
 
-    def __init__(self, fh, alg, extras=None):
-        # type: (Any, Optional[str], Optional[Mapping[Any, Any]]) -> None
+    def __init__(
+        self,
+        fh: "Any",
+        alg: "Optional[str]",
+        extras: "Optional[Mapping[Any, Any]]" = None,
+    ) -> None:
         if alg is None:
             alg = "UN"
         if alg not in util.compengines.supportedbundletypes:
@@ -175,8 +177,7 @@ class cg1unpacker(object):
 
     # These methods (compressed, read, seek, tell) all appear to only
     # be used by bundlerepo, but it's a little hard to tell.
-    def compressed(self):
-        # type: () -> bool
+    def compressed(self) -> bool:
         return self._type is not None and self._type != "UN"
 
     def read(self, l):
@@ -187,16 +188,13 @@ class cg1unpacker(object):
         # type: int -> int
         return self._stream.seek(pos)
 
-    def tell(self):
-        # type: () -> int
+    def tell(self) -> int:
         return self._stream.tell()
 
-    def close(self):
-        # type: () -> None
+    def close(self) -> None:
         return self._stream.close()
 
-    def _chunklength(self):
-        # type: () -> int
+    def _chunklength(self) -> int:
         d = readexactly(self._stream, 4)
         l = struct.unpack(b">l", d)[0]
         if l <= 4:
@@ -208,18 +206,15 @@ class cg1unpacker(object):
             progress.value += 1
         return l - 4
 
-    def changelogheader(self):
-        # type: () -> Dict[Any, Any]
+    def changelogheader(self) -> "Dict[Any, Any]":
         """v10 does not have a changelog header chunk"""
         return {}
 
-    def manifestheader(self):
-        # type: () -> Dict[Any, Any]
+    def manifestheader(self) -> "Dict[Any, Any]":
         """v10 does not have a manifest header chunk"""
         return {}
 
-    def filelogheader(self):
-        # type: () -> Dict[str, str]
+    def filelogheader(self) -> "Dict[str, str]":
         """return the header of the filelogs chunk, v10 only has the filename"""
         l = self._chunklength()
         if not l:
@@ -227,8 +222,9 @@ class cg1unpacker(object):
         fname = decodeutf8(readexactly(self._stream, l))
         return {"filename": fname}
 
-    def _deltaheader(self, headertuple, prevnode):
-        # type: (Tuple[Any, ...], bytes) -> Tuple[bytes, bytes, bytes, bytes, bytes, int]
+    def _deltaheader(
+        self, headertuple: "Tuple[Any, ...]", prevnode: bytes
+    ) -> "Tuple[bytes, bytes, bytes, bytes, bytes, int]":
         node, p1, p2, cs = headertuple
         if prevnode is None:
             deltabase = p1
@@ -248,8 +244,7 @@ class cg1unpacker(object):
         node, p1, p2, deltabase, cs, flags = self._deltaheader(header, prevnode)
         return (node, p1, p2, cs, deltabase, delta, flags)
 
-    def getchunks(self):
-        # type: () -> Iterable[bytes]
+    def getchunks(self) -> "Iterable[bytes]":
         """returns all the chunks contains in the bundle
 
         Used when you need to forward the binary stream to a file or another
@@ -294,8 +289,13 @@ class cg1unpacker(object):
                     pos = next
             yield closechunk()
 
-    def _unpackmanifests(self, repo, revmap, trp, numchanges):
-        # type: (Any, Callable[[bytes], bytes], Any, int) -> Sequence[bytes]
+    def _unpackmanifests(
+        self,
+        repo: "Any",
+        revmap: "Callable[[bytes], bytes]",
+        trp: "Any",
+        numchanges: int,
+    ) -> "Sequence[bytes]":
         # We know that we'll never have more manifests than we had
         # changesets.
         with progress.bar(repo.ui, _("manifests"), total=numchanges) as prog:
@@ -469,8 +469,9 @@ class cg1unpacker(object):
         ret = 1
         return ret
 
-    def deltaiter(self):
-        # type: () -> Generator[Tuple[bytes, bytes, bytes, bytes, bytes, bytes, int], None, None]
+    def deltaiter(
+        self,
+    ) -> "Generator[Tuple[bytes, bytes, bytes, bytes, bytes, bytes, int], None, None]":
         """
         returns an iterator of the deltas in this changegroup
 
@@ -495,8 +496,9 @@ class cg2unpacker(cg1unpacker):
     deltaheadersize = struct.calcsize(deltaheader)
     version = "02"
 
-    def _deltaheader(self, headertuple, prevnode):
-        # type: (Tuple[Any, ...], bytes) -> Tuple[bytes, bytes, bytes, bytes, bytes, int]
+    def _deltaheader(
+        self, headertuple: "Tuple[Any, ...]", prevnode: bytes
+    ) -> "Tuple[bytes, bytes, bytes, bytes, bytes, int]":
         node, p1, p2, deltabase, cs = headertuple
         flags = 0
         return node, p1, p2, deltabase, cs, flags
@@ -515,13 +517,19 @@ class cg3unpacker(cg2unpacker):
     version = "03"
     _grouplistcount = 2  # One list of manifests and one list of files
 
-    def _deltaheader(self, headertuple, prevnode):
-        # type: (Tuple[Any, ...], bytes) -> Tuple[bytes, bytes, bytes, bytes, bytes, int]
+    def _deltaheader(
+        self, headertuple: "Tuple[Any, ...]", prevnode: bytes
+    ) -> "Tuple[bytes, bytes, bytes, bytes, bytes, int]":
         node, p1, p2, deltabase, cs, flags = headertuple
         return node, p1, p2, deltabase, cs, flags
 
-    def _unpackmanifests(self, repo, revmap, trp, numchanges):
-        # type: (Any, Callable[[bytes], bytes], Any, int) -> Sequence[bytes]
+    def _unpackmanifests(
+        self,
+        repo: "Any",
+        revmap: "Callable[[bytes], bytes]",
+        trp: "Any",
+        numchanges: int,
+    ) -> "Sequence[bytes]":
         mfnodes = super(cg3unpacker, self)._unpackmanifests(
             repo, revmap, trp, numchanges
         )
@@ -538,8 +546,7 @@ class cg3unpacker(cg2unpacker):
 
 
 class headerlessfixup(object):
-    def __init__(self, fh, h):
-        # type: (Any, bytes) -> None
+    def __init__(self, fh: "Any", h: bytes) -> None:
         self._h = h
         self._fh = fh
 
@@ -557,8 +564,12 @@ class cg1packer(object):
     deltaheader = _CHANGEGROUPV1_DELTA_HEADER
     version = "01"
 
-    def __init__(self, repo, bundlecaps=None, b2caps=None):
-        # type: (Any, Optional[AbstractSet[Any]], Optional[Mapping[Any, Any]]) -> None
+    def __init__(
+        self,
+        repo: "Any",
+        bundlecaps: "Optional[AbstractSet[Any]]" = None,
+        b2caps: "Optional[Mapping[Any, Any]]" = None,
+    ) -> None:
         """Given a source repo, construct a bundler.
 
         bundlecaps is optional and can be used to specify the set of
@@ -595,8 +606,7 @@ class cg1packer(object):
             cgdeltaconfig = CFG_CGDELTA_DEFAULT
         self._cgdeltaconfig = cgdeltaconfig
 
-    def close(self):
-        # type: () -> bytes
+    def close(self) -> bytes:
         return closechunk()
 
     def fileheader(self, fname):
@@ -605,8 +615,9 @@ class cg1packer(object):
         return chunkheader(len(fname)) + fname
 
     # Extracted both for clarity and for overriding in extensions.
-    def _sortgroup(self, revlog, nodelist, lookup):
-        # type: (Any, Sequence[bytes], Any) -> List[int]
+    def _sortgroup(
+        self, revlog: "Any", nodelist: "Sequence[bytes]", lookup: "Any"
+    ) -> "List[int]":
         """Sort nodes for change group and turn them into revnums."""
         # This used to do a "linearize" operation to make it harder to "jump
         # between branches" to reduce bundle size. It's less relevant with
@@ -616,8 +627,13 @@ class cg1packer(object):
         # of branches so we won't have bundles that jumps across branches.
         return sorted([revlog.rev(n) for n in nodelist])
 
-    def group(self, nodelist, revlog, lookup, prog=None):
-        # type: (Sequence[bytes], Any, Callable[..., Any], Optional[Any]) -> Iterable[bytes]
+    def group(
+        self,
+        nodelist: "Sequence[bytes]",
+        revlog: "Any",
+        lookup: "Callable[..., Any]",
+        prog: "Optional[Any]" = None,
+    ) -> "Iterable[bytes]":
         """Calculate a delta group, yielding a sequence of changegroup chunks
         (strings).
 
@@ -665,8 +681,12 @@ class cg1packer(object):
         rr, rl = revlog.rev, revlog.linkrev
         return [n for n in missing if rl(rr(n)) not in commonrevs]
 
-    def _packmanifests(self, dir, mfnodes, lookuplinknode):
-        # type: (Any, Sequence[bytes], Callable[..., Any]) -> Iterable[bytes]
+    def _packmanifests(
+        self,
+        dir: "Any",
+        mfnodes: "Sequence[bytes]",
+        lookuplinknode: "Callable[..., Any]",
+    ) -> "Iterable[bytes]":
         """Pack flat manifests into a changegroup stream."""
         assert not dir
         with progress.bar(self._repo.ui, _("bundling"), _("manifests")) as prog:
@@ -676,12 +696,16 @@ class cg1packer(object):
                 assert isinstance(chunk, bytes)
                 yield chunk
 
-    def _manifestsdone(self):
-        # type: () -> bytes
+    def _manifestsdone(self) -> bytes:
         return b""
 
-    def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
-        # type: (Sequence[int], Sequence[bytes], bool, Any) -> Iterable[bytes]
+    def generate(
+        self,
+        commonrevs: "Sequence[int]",
+        clnodes: "Sequence[bytes]",
+        fastpathlinkrev: bool,
+        source: "Any",
+    ) -> "Iterable[bytes]":
         """yield a sequence of changegroup chunks (strings)"""
         repo = self._repo
         cl = repo.changelog
@@ -772,9 +796,14 @@ class cg1packer(object):
             repo.hook("outgoing", node=hex(clnodes[0]), source=source)
 
     def generatemanifests(
-        self, commonrevs, clrevorder, fastpathlinkrev, mfs, fnodes, source
-    ):
-        # type: (Sequence[int], Mapping[bytes, int], bool, Any, MutableMapping[str, Any], Any) -> Iterable[bytes]
+        self,
+        commonrevs: "Sequence[int]",
+        clrevorder: "Mapping[bytes, int]",
+        fastpathlinkrev: bool,
+        mfs: "Any",
+        fnodes: "MutableMapping[str, Any]",
+        source: "Any",
+    ) -> "Iterable[bytes]":
         """Returns an iterator of changegroup chunks containing manifests.
 
         `source` is unused here, but is used by extensions like remotefilelog to
@@ -844,8 +873,13 @@ class cg1packer(object):
         yield self._manifestsdone()
 
     # The 'source' parameter is useful for extensions
-    def generatefiles(self, changedfiles, linknodes, commonrevs, source):
-        # type: (AbstractSet[str],  Callable[..., Any], Sequence[int], Any) -> Iterable[bytes]
+    def generatefiles(
+        self,
+        changedfiles: "AbstractSet[str]",
+        linknodes: "Callable[..., Any]",
+        commonrevs: "Sequence[int]",
+        source: "Any",
+    ) -> "Iterable[bytes]":
         repo = self._repo
         total = len(changedfiles)
         with progress.bar(repo.ui, _("bundling"), _("files"), total) as prog:
@@ -872,14 +906,14 @@ class cg1packer(object):
                         yield chunk
                     self._verbosenote(_("%8.i  %s\n") % (size, fname))
 
-    def deltaparent(self, revlog, rev, p1, p2, prev):
-        # type: (Any, int, int, int, int) -> int
+    def deltaparent(self, revlog: "Any", rev: int, p1: int, p2: int, prev: int) -> int:
         if not revlog.candelta(prev, rev) or self._cgdeltaconfig != CFG_CGDELTA_DEFAULT:
             raise error.ProgrammingError("cannot change deltabase for cg1")
         return prev
 
-    def revchunk(self, revlog, rev, prev, linknode):
-        # type: (Any, int, int, bytes) -> Iterable[bytes]
+    def revchunk(
+        self, revlog: "Any", rev: int, prev: int, linknode: bytes
+    ) -> "Iterable[bytes]":
         node = revlog.node(rev)
         p1, p2 = revlog.parentrevs(rev)
         base = self.deltaparent(revlog, rev, p1, p2, prev)
@@ -910,8 +944,15 @@ class cg1packer(object):
         yield meta
         yield delta
 
-    def builddeltaheader(self, node, p1n, p2n, basenode, linknode, flags):
-        # type: (bytes, bytes, bytes, bytes, bytes, int) -> bytes
+    def builddeltaheader(
+        self,
+        node: bytes,
+        p1n: bytes,
+        p2n: bytes,
+        basenode: bytes,
+        linknode: bytes,
+        flags: int,
+    ) -> bytes:
         # do nothing with basenode, it is implicitly the previous one in HG10
         # do nothing with flags, it is implicitly 0 for cg1 and cg2
         return struct.pack(self.deltaheader, node, p1n, p2n, linknode)
@@ -921,8 +962,12 @@ class cg2packer(cg1packer):
     version = "02"
     deltaheader = _CHANGEGROUPV2_DELTA_HEADER
 
-    def __init__(self, repo, bundlecaps=None, b2caps=None):
-        # type: (Any, Optional[AbstractSet[Any]], Optional[Mapping[Any, Any]]) -> None
+    def __init__(
+        self,
+        repo: "Any",
+        bundlecaps: "Optional[AbstractSet[Any]]" = None,
+        b2caps: "Optional[Mapping[Any, Any]]" = None,
+    ) -> None:
         super(cg2packer, self).__init__(repo, bundlecaps, b2caps=b2caps)
         if self._reorder is None:
             # Since generaldelta is directly supported by cg2, reordering
@@ -930,8 +975,7 @@ class cg2packer(cg1packer):
             # bundle.reorder=auto just like bundle.reorder=False).
             self._reorder = False
 
-    def deltaparent(self, revlog, rev, p1, p2, prev):
-        # type: (Any, int, int, int, int) -> int
+    def deltaparent(self, revlog: "Any", rev: int, p1: int, p2: int, prev: int) -> int:
         if self._cgdeltaconfig == CFG_CGDELTA_DEFAULT:
             dp = revlog.deltaparent(rev)
         else:
@@ -958,8 +1002,15 @@ class cg2packer(cg1packer):
             base = nullrev
         return base
 
-    def builddeltaheader(self, node, p1n, p2n, basenode, linknode, flags):
-        # type: (bytes, bytes, bytes, bytes, bytes, int) -> bytes
+    def builddeltaheader(
+        self,
+        node: bytes,
+        p1n: bytes,
+        p2n: bytes,
+        basenode: bytes,
+        linknode: bytes,
+        flags: int,
+    ) -> bytes:
         # Do nothing with flags, it is implicitly 0 in cg1 and cg2
         return struct.pack(self.deltaheader, node, p1n, p2n, basenode, linknode)
 
@@ -968,8 +1019,12 @@ class cg3packer(cg2packer):
     version = "03"
     deltaheader = _CHANGEGROUPV3_DELTA_HEADER
 
-    def _packmanifests(self, dir, mfnodes, lookuplinknode):
-        # type: (Any, Sequence[bytes], Callable[..., Any]) -> Iterable[bytes]
+    def _packmanifests(
+        self,
+        dir: "Any",
+        mfnodes: "Sequence[bytes]",
+        lookuplinknode: "Callable[..., Any]",
+    ) -> "Iterable[bytes]":
         if dir:
             yield self.fileheader(dir)
 
@@ -978,12 +1033,18 @@ class cg3packer(cg2packer):
             for chunk in self.group(mfnodes, dirlog, lookuplinknode, prog):
                 yield chunk
 
-    def _manifestsdone(self):
-        # type: () -> bytes
+    def _manifestsdone(self) -> bytes:
         return self.close()
 
-    def builddeltaheader(self, node, p1n, p2n, basenode, linknode, flags):
-        # type: (bytes, bytes, bytes, bytes, bytes, int) -> bytes
+    def builddeltaheader(
+        self,
+        node: bytes,
+        p1n: bytes,
+        p2n: bytes,
+        basenode: bytes,
+        linknode: bytes,
+        flags: int,
+    ) -> bytes:
         return struct.pack(self.deltaheader, node, p1n, p2n, basenode, linknode, flags)
 
 
@@ -1057,19 +1118,23 @@ def safeversion(repo):
     return min(versions)
 
 
-def getbundler(version, repo, bundlecaps=None, b2caps=None):
-    # type: (str, Any, Optional[AbstractSet[Any]], Optional[Mapping[Any, Any]]) -> Any
+def getbundler(
+    version: str,
+    repo: "Any",
+    bundlecaps: "Optional[AbstractSet[Any]]" = None,
+    b2caps: "Optional[Mapping[Any, Any]]" = None,
+) -> "Any":
     assert version in supportedoutgoingversions(repo)
     return _packermap[version][0](repo, bundlecaps, b2caps=b2caps)
 
 
-def getunbundler(version, fh, alg, extras=None):
-    # type: (str, Any, Optional[str], Any) -> Any
+def getunbundler(
+    version: str, fh: "Any", alg: "Optional[str]", extras: "Any" = None
+) -> "Any":
     return _packermap[version][1](fh, alg, extras=extras)
 
 
-def _changegroupinfo(repo, nodes, source):
-    # type: (Any, Sequence[bytes], str) -> None
+def _changegroupinfo(repo: "Any", nodes: "Sequence[bytes]", source: str) -> None:
     if repo.ui.verbose or source == "bundle":
         repo.ui.status_err(_("%d changesets found\n") % len(nodes))
     if repo.ui.debugflag:
@@ -1079,9 +1144,14 @@ def _changegroupinfo(repo, nodes, source):
 
 
 def makechangegroup(
-    repo, outgoing, version, source, fastpath=False, bundlecaps=None, b2caps=None
-):
-    # type: (Any, Any, str, Any, bool, Any, Any) -> Any
+    repo: "Any",
+    outgoing: "Any",
+    version: str,
+    source: "Any",
+    fastpath: bool = False,
+    bundlecaps: "Any" = None,
+    b2caps: "Any" = None,
+) -> "Any":
     cgstream = makestream(
         repo,
         outgoing,
@@ -1097,9 +1167,14 @@ def makechangegroup(
 
 
 def makestream(
-    repo, outgoing, version, source, fastpath=False, bundlecaps=None, b2caps=None
-):
-    # type: (Any, Any, str, Any, bool, Any, Any) -> Any
+    repo: "Any",
+    outgoing: "Any",
+    version: str,
+    source: "Any",
+    fastpath: bool = False,
+    bundlecaps: "Any" = None,
+    b2caps: "Any" = None,
+) -> "Any":
     if version == "01":
         repo.ui.develwarn("using deprecated bundlev1 format\n")
 

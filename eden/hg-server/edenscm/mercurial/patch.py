@@ -460,8 +460,13 @@ class abstractbackend(object):
         """
         raise NotImplementedError
 
-    def setfile(self, fname, data, mode, copysource):
-        # type: (str, bytes, Tuple[bool, bool], Optional[str]) -> None
+    def setfile(
+        self,
+        fname: str,
+        data: bytes,
+        mode: "Tuple[bool, bool]",
+        copysource: "Optional[str]",
+    ) -> None:
         """Write data to target file fname and set its mode. mode is a
         (islink, isexec) tuple. If data is None, the file content should
         be left unchanged. If the file is modified after being copied,
@@ -509,8 +514,13 @@ class fsbackend(abstractbackend):
                 raise
             return None, None
 
-    def setfile(self, fname, data, mode, copysource):
-        # type: (str, bytes, Tuple[bool, bool], Optional[str]) -> None
+    def setfile(
+        self,
+        fname: str,
+        data: bytes,
+        mode: "Tuple[bool, bool]",
+        copysource: "Optional[str]",
+    ) -> None:
         islink, isexec = mode
         if data is None:
             self.opener.setflags(fname, islink, isexec)
@@ -551,8 +561,13 @@ class workingbackend(fsbackend):
         if self.repo.dirstate[fname] == "?" and self.exists(fname):
             raise PatchError(_("cannot patch %s: file is not tracked") % fname)
 
-    def setfile(self, fname, data, mode, copysource):
-        # type: (str, bytes, Tuple[bool, bool], Optional[str]) -> None
+    def setfile(
+        self,
+        fname: str,
+        data: bytes,
+        mode: "Tuple[bool, bool]",
+        copysource: "Optional[str]",
+    ) -> None:
         self._checkknown(fname)
         super(workingbackend, self).setfile(fname, data, mode, copysource)
         if copysource is not None:
@@ -595,8 +610,13 @@ class filestore(object):
         self.size = 0
         self.data = {}
 
-    def setfile(self, fname, data, mode, copied=None):
-        # type: (str, bytes, Tuple[bool, bool], Optional[str]) -> None
+    def setfile(
+        self,
+        fname: str,
+        data: bytes,
+        mode: "Tuple[bool, bool]",
+        copied: "Optional[str]" = None,
+    ) -> None:
         if self.maxsize < 0 or (len(data) + self.size) <= self.maxsize:
             self.data[fname] = (data, mode, copied)
             self.size += len(data)
@@ -647,8 +667,13 @@ class repobackend(abstractbackend):
         flags = fctx.flags()
         return fctx.data(), ("l" in flags, "x" in flags)
 
-    def setfile(self, fname, data, mode, copysource):
-        # type: (str, bytes, Tuple[bool, bool], Optional[str]) -> None
+    def setfile(
+        self,
+        fname: str,
+        data: bytes,
+        mode: "Tuple[bool, bool]",
+        copysource: "Optional[str]",
+    ) -> None:
         if copysource:
             self._checkknown(copysource)
         if data is None:
@@ -956,8 +981,7 @@ class header(object):
                 for f in self.diff_re.match(self.header[0]).groups()
             ]
 
-    def filename(self):
-        # type: () -> str
+    def filename(self) -> str:
         return self.files()[-1]
 
     def __repr__(self):
@@ -966,8 +990,7 @@ class header(object):
     def isnewfile(self):
         return any(self.newfile_re.match(h) for h in self.header)
 
-    def copyfrom(self):
-        # type: () -> Optional[str]
+    def copyfrom(self) -> "Optional[str]":
         """Return the copy-from or rename-from from path, or None"""
         for h in self.header:
             matched = self.copyre.match(h)

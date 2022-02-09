@@ -38,8 +38,7 @@ from .cmdtable import command
 
 # This command has to be norepo since loading a repo might just fail.
 @command("doctor", norepo=True)
-def doctor(ui, **opts):
-    # type: (...) -> typing.Optional[int]
+def doctor(ui, **opts) -> "typing.Optional[int]":
     """attempt to check and fix issues
 
     Fix repo corruptions including:
@@ -119,8 +118,7 @@ def doctor(ui, **opts):
         runedenfsdoctor(ui)
 
 
-def repairsvfs(ui, svfs, name, fixobj):
-    # type: (..., ..., str, ...) -> None
+def repairsvfs(ui: "...", svfs: "...", name: str, fixobj: "...") -> None:
     """Attempt to repair path in repo.svfs"""
     path = svfs.join(name)
     repair(ui, name, path, fixobj.repair)
@@ -518,8 +516,7 @@ def checknoisybranches(repo):
         repo.changelog._visibleheads.setvisibleheads(repo, heads, tr)
 
 
-def fshash(path):
-    # type: (str) -> int
+def fshash(path: str) -> int:
     """Return an integer that is likely changed if content of the directory is changed"""
     value = 0
     for dirpath, dirnames, filenames in os.walk(path):
@@ -533,8 +530,7 @@ def fshash(path):
     return value
 
 
-def indent(message):
-    # type: (str) -> str
+def indent(message: str) -> str:
     return "".join(l and ("  %s" % l) or "\n" for l in message.splitlines(True)) + "\n"
 
 

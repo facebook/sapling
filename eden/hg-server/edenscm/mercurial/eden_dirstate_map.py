@@ -31,19 +31,17 @@ modefromflag = {
 class eden_dirstate_map(dirstate.dirstatemap):
     def __init__(
         self,
-        ui,  # type: ui_mod.ui
-        opener,  # type: vfs.abstractvfs
-        root,  # type: str
-        thrift_client,  # type: EdenThriftClient.EdenThriftClient
-        repo,  # type: localrepo.localrepository
-    ):
-        # type: (...) -> None
+        ui: "ui_mod.ui",
+        opener: "vfs.abstractvfs",
+        root: str,
+        thrift_client: "EdenThriftClient.EdenThriftClient",
+        repo: "localrepo.localrepository",
+    ) -> None:
         super(eden_dirstate_map, self).__init__(ui, opener, root)
         self._thrift_client = thrift_client
         self._repo = repo
 
-    def write(self, st, now):  # override
-        # type: (BinaryIO, int) -> None
+    def write(self, st: "BinaryIO", now: int) -> None:  # override
         parents = self.parents()
 
         # Filter out all "clean" entries when writing. (It's possible we should

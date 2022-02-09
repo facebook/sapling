@@ -155,8 +155,9 @@ class physicalfilesystem(object):
             # it's in the dirstate.
             return None
 
-    def pendingchanges(self, match=None, listignored=False):
-        # type: (Optional[Callable[[str], bool]], bool) -> Iterable[Tuple[str, bool]]
+    def pendingchanges(
+        self, match: "Optional[Callable[[str], bool]]" = None, listignored: bool = False
+    ) -> "Iterable[Tuple[str, bool]]":
         """Yields all the files that differ from the pristine tree.
 
         Returns an iterator of (string, bool), where the string is the

@@ -98,8 +98,7 @@ class branchcache(dict):
         for bn, heads in pycompat.iteritems(self):
             yield (bn, heads) + self._branchtip(heads)
 
-    def copy(self):
-        # type: () -> branchcache
+    def copy(self) -> "branchcache":
         """return an deep copy of the branchcache object"""
         return branchcache(self, self.tipnode, self.tiprev, self._closednodes)
 

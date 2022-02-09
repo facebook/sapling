@@ -103,8 +103,7 @@ def _locked(pathname):
         os.close(fd)
 
 
-def _issymlinklockstale(oldinfo, newinfo):
-    # type: (str, str) -> bool
+def _issymlinklockstale(oldinfo: str, newinfo: str) -> bool:
     """Test if the lock is stale (owned by dead process).
 
     Only works for symlink locks. Both oldinfo and newinfo have the form:
@@ -136,8 +135,7 @@ def _issymlinklockstale(oldinfo, newinfo):
     return not testpid(pid)
 
 
-def makelock(info, pathname, checkdeadlock=True):
-    # type: (str, str, bool) -> Optional[int]
+def makelock(info: str, pathname: str, checkdeadlock: bool = True) -> "Optional[int]":
     """Try to make a lock at given path. Write info inside it.
 
     Stale non-symlink or symlink locks are removed automatically. Symlink locks
@@ -279,8 +277,7 @@ def makelock(info, pathname, checkdeadlock=True):
             raise
 
 
-def readlock(pathname):
-    # type: (str) -> str
+def readlock(pathname: str) -> str:
     with _locked(os.path.dirname(pathname) or "."):
         try:
             return os.readlink(pathname)
@@ -295,8 +292,7 @@ def readlock(pathname):
         return r
 
 
-def releaselock(lockfd, pathname):
-    # type: (Optional[int], str) -> None
+def releaselock(lockfd: "Optional[int]", pathname: str) -> None:
     # Explicitly unlock. This avoids issues when a
     # forked process inherits the flock.
     assert lockfd is not None
@@ -371,8 +367,7 @@ def isexec(f):
     return os.lstat(f).st_mode & 0o100 != 0
 
 
-def setflags(f, l, x):
-    # type: (str, bool, bool) -> None
+def setflags(f: str, l: bool, x: bool) -> None:
     st = os.lstat(f)
     s = st.st_mode
     if l:
@@ -434,8 +429,7 @@ def copymode(src, dst, mode=None):
     os.chmod(dst, st_mode)
 
 
-def _checkexec(path):
-    # type: (str) -> bool
+def _checkexec(path: str) -> bool:
     """
     Check whether the given path is on a filesystem with UNIX-like exec flags
 
@@ -510,8 +504,7 @@ def _checkexec(path):
     return False
 
 
-def _checklink(path):
-    # type: (str) -> bool
+def _checklink(path: str) -> bool:
     """check whether the given path is on a symlink-capable filesystem"""
     cap = fscap.getfscap(getfstype(path), fscap.SYMLINK)
     if cap is not None:
@@ -750,15 +743,13 @@ elif pycompat.sysplatform == "cygwin":
     # but these translations are not supported by native
     # tools, so the exec bit tends to be set erroneously.
     # Therefore, disable executable bit access on Cygwin.
-    def checkexec(path):
-        # type: (str) -> bool
+    def checkexec(path: str) -> bool:
         return False
 
     # Similarly, Cygwin's symlink emulation is likely to create
     # problems when Mercurial is used from both Cygwin and native
     # Windows, with other native tools, or on shared volumes
-    def checklink(path):
-        # type: (str) -> bool
+    def checklink(path: str) -> bool:
         return False
 
 
@@ -921,8 +912,7 @@ def gethgcmd(argv=sys.argv):
     return argv[:1]
 
 
-def makedir(path, notindexed):
-    # type: (str, bool) -> None
+def makedir(path: str, notindexed: bool) -> None:
     try:
         os.mkdir(path)
     except OSError as err:

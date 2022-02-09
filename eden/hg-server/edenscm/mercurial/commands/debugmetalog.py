@@ -15,8 +15,7 @@ from .cmdtable import command
 
 
 @command("debugmetalog", [("t", "time-range", [], _("select time range"), _("TIME"))])
-def debugmetalog(ui, repo, **opts):
-    # type: (...) -> None
+def debugmetalog(ui, repo, **opts) -> None:
     """show changes in commit graph over time"""
 
     matchdatefuncs = []
@@ -68,8 +67,7 @@ def debugmetalog(ui, repo, **opts):
     cmdutil.displaygraph(ui, repo, revdag, displayer(nodenamesdict))
 
 
-def parsenodenames(meta):
-    # type: (...) -> Set[Tuple[bytes, str]]
+def parsenodenames(meta) -> "Set[Tuple[bytes, str]]":
     """Parse a metalog entry.  Return nodes and their names."""
 
     nodenames = set()

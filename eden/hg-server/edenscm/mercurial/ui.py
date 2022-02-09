@@ -571,8 +571,7 @@ class ui(object):
         self._bufferstates.append((error, subproc, labeled))
         self._bufferapplylabels = labeled
 
-    def popbuffer(self):
-        # type: () -> str
+    def popbuffer(self) -> str:
         """pop the last buffer and return the buffered output
 
         Throws if any element of the buffer is not str.
@@ -588,8 +587,7 @@ class ui(object):
             raise error.ProgrammingError("popbuffer cannot be used on bytes buffer")
         return "".join(buf)
 
-    def popbufferbytes(self):
-        # type: () -> bytes
+    def popbufferbytes(self) -> bytes:
         """pop the last buffer and return the buffered output
 
         Throws if any element of the buffer is not bytes.
@@ -605,8 +603,7 @@ class ui(object):
             raise error.ProgrammingError("popbufferbytes cannot be used on str buffer")
         return b"".join(buf)
 
-    def popbufferlist(self):
-        # type: () -> List[Union[str, bytes]]
+    def popbufferlist(self) -> "List[Union[str, bytes]]":
         """pop the last buffer and return the buffered output as a list
 
         May contain both str and bytes.
@@ -619,8 +616,13 @@ class ui(object):
 
         return self._buffers.pop()
 
-    def _addprefixesandlabels(self, args, opts, addlabels, usebytes=False):
-        # type: (Tuple[str, ...], Dict[str, Any], bool, bool) -> List[str]
+    def _addprefixesandlabels(
+        self,
+        args: "Tuple[str, ...]",
+        opts: "Dict[str, Any]",
+        addlabels: bool,
+        usebytes: bool = False,
+    ) -> "List[str]":
         msgs = []
         for item in r"error", r"notice", r"component":
             itemvalue = opts.get(item)
@@ -637,8 +639,7 @@ class ui(object):
             msgs = [self.label(m, label, usebytes=usebytes) for m in msgs]
         return msgs
 
-    def write(self, *args, **opts):
-        # type: (str, Any) -> None
+    def write(self, *args: str, **opts: "Any") -> None:
         """write args to output
 
         By default, this method simply writes to the buffer or stdout.
@@ -673,8 +674,7 @@ class ui(object):
             msgs = self._addprefixesandlabels(args, opts, bool(self._colormode))
             self._write(*msgs)
 
-    def _write(self, *msgs):
-        # type: (str) -> None
+    def _write(self, *msgs: str) -> None:
         starttime = util.timer()
         try:
             self.fout.write(encodeutf8("".join(msgs)))

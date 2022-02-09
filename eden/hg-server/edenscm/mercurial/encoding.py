@@ -180,7 +180,7 @@ def _tolocal(s):
             if encoding == "utf-8":
                 # fast path
                 return s
-            r = u.encode(encoding, u"replace")
+            r = u.encode(encoding, "replace")
             if u == r.decode(encoding):
                 # r is a safe, non-lossy encoding of s
                 return r
@@ -189,7 +189,7 @@ def _tolocal(s):
             # we should only get here if we're looking at an ancient changeset
             try:
                 u = s.decode(fallbackencoding)
-                r = u.encode(encoding, u"replace")
+                r = u.encode(encoding, "replace")
                 if u == r.decode(encoding):
                     # r is a safe, non-lossy encoding of s
                     return r
@@ -197,7 +197,7 @@ def _tolocal(s):
             except UnicodeDecodeError:
                 u = s.decode("utf-8", "replace")  # last ditch
                 # can't round-trip
-                return u.encode(encoding, u"replace")
+                return u.encode(encoding, "replace")
     except LookupError as k:
         raise error.Abort(k, hint="please check your locale settings")
 
@@ -264,7 +264,7 @@ else:
 
 def _colwidth(s):
     "Find the column width of a string for display in the local encoding"
-    return ucolwidth(s.decode(encoding, u"replace"))
+    return ucolwidth(s.decode(encoding, "replace"))
 
 
 def ucolwidth(d):
@@ -680,8 +680,7 @@ else:
 
 if sys.version_info[0] < 3:
 
-    def localtooutput(s):
-        # type: (bytes) -> bytes
+    def localtooutput(s: bytes) -> bytes:
         if outputencoding is not None and outputencoding != encoding:
             try:
                 return fromlocal(s).decode("utf-8").encode(outputencoding, "replace")

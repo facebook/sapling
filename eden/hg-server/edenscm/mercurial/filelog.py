@@ -37,8 +37,7 @@ def parsemeta(text):
     return meta, (s + 2)
 
 
-def packmeta(meta, text):
-    # type: (Dict[str, str], bytes) -> bytes
+def packmeta(meta: "Dict[str, str]", text: bytes) -> bytes:
     keys = sorted(meta)
     metatext = encodeutf8("".join("%s: %s\n" % (k, meta[k]) for k in keys))
     return b"".join((b"\1\n", metatext, b"\1\n", text))
@@ -74,8 +73,7 @@ class filelog(revlog.revlog):
             return (m["copy"], revlog.bin(m["copyrev"]))
         return False
 
-    def size(self, rev):
-        # type: (int) -> int
+    def size(self, rev: int) -> int:
         """return the size of a given revision"""
 
         # for revisions with renames, we have to go the slow way

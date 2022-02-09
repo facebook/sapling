@@ -45,7 +45,7 @@ empty = _queue.Empty
 # pyre-fixme[11]: Annotation `_queue` is not defined as a type.
 queue = _queue
 
-basestring = tuple({type(""), type(b""), type(u"")})
+basestring = tuple({type(""), type(b""), type("")})
 
 
 def identity(a):
@@ -105,7 +105,7 @@ if sys.version_info[0] >= 3:
         with _('')"""
         if isinstance(obj, str):
             return obj
-        doc = getattr(obj, u"__doc__", None)
+        doc = getattr(obj, "__doc__", None)
         return doc
 
     unicode = str
@@ -115,8 +115,7 @@ if sys.version_info[0] >= 3:
         # type: (str) -> bytes
         return s.encode("utf-8", errors=errors)
 
-    def decodeutf8(s, errors="strict"):
-        # type: (bytes, str) -> str
+    def decodeutf8(s: bytes, errors: str = "strict") -> str:
         return s.decode("utf-8", errors=errors)
 
     def iteritems(s):
@@ -142,8 +141,7 @@ if sys.version_info[0] >= 3:
             s = s.decode("utf-8", errors=errors)
         return s
 
-    def toutf8lossy(value):
-        # type: (str) -> str
+    def toutf8lossy(value: str) -> str:
         return value
 
     def inttobyte(value):
@@ -222,8 +220,7 @@ else:
 
         return s
 
-    def decodeutf8(s, errors="strict"):
-        # type: (bytes, str) -> bytes
+    def decodeutf8(s: bytes, errors: str = "strict") -> bytes:
         if istest():
             assert isinstance(s, bytes), "expected bytes, actual %s" % s.__class__
         return s
@@ -251,8 +248,7 @@ else:
             s = s.decode("utf-8", errors=errors)
         return s
 
-    def toutf8lossy(value):
-        # type: (str) -> str
+    def toutf8lossy(value: str) -> str:
         return value.decode("utf-8", "replace").encode("utf-8")
 
     def inttobyte(value):
