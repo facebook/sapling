@@ -26,6 +26,10 @@ impl PathLock {
         file.lock_exclusive()?;
         Ok(PathLock { file })
     }
+
+    pub fn as_file(&self) -> &File {
+        &self.file
+    }
 }
 
 impl Drop for PathLock {

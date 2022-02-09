@@ -347,6 +347,10 @@ impl VFS {
         //  ensures atomicity across lock acquisition and content
         //  writing.
         let _dir_lock = self.lock_dir()?;
+        #[cfg(unix)]
+        let _ = _dir_lock
+            .as_file()
+            .set_permissions(Permissions::from_mode(0o666));
 
         let name = sanitize_lock_name(name);
 
@@ -357,6 +361,10 @@ impl VFS {
             .write(true)
             .create(true)
             .open(path.with_extension("lock"))?;
+
+        #[cfg(unix)]
+        let _ = lock_file.set_permissions(Permissions::from_mode(0o666));
+
         match lock_file.try_lock_exclusive() {
             Ok(_) => {}
             Err(err) if err.kind() == fs2::lock_contended_error().kind() => {
@@ -366,7 +374,10 @@ impl VFS {
             Err(err) => return Err(err.into()),
         };
 
-        fs::write(&path, contents)?;
+        let mut contents_file = File::create(path)?;
+        #[cfg(unix)]
+        let _ = contents_file.set_permissions(Permissions::from_mode(0o666));
+        contents_file.write_all(contents.as_ref())?;
 
         Ok(lock_file)
     }
@@ -481,6 +492,34 @@ mod unix_tests {
         Ok(())
     }
 
+    #[test]
+    #[cfg(unix)]
+    fn test_try_lock_permissions() -> Result<()> {
+        let tmp = tempfile::tempdir()?;
+        let vfs = VFS::new(tmp.path().to_path_buf())?;
+
+        vfs.try_lock("foo", "some contents")?;
+
+        let assert_666 = |name: &str| {
+            assert_eq!(
+                tmp.path()
+                    .join(name)
+                    .metadata()
+                    .unwrap()
+                    .permissions()
+                    .mode()
+                    & 0o777,
+                0o666
+            );
+        };
+
+        assert_666(".dir_lock");
+        assert_666("foo.lock");
+        assert_666("foo.data");
+
+        Ok(())
+    }
+
     // Test readers never see incomplete or inconsistent lock data
     // contents.
     #[test]
@@ -506,7 +545,7 @@ mod unix_tests {
                         match vfs.try_lock("foo", &my_contents) {
                             Ok(_) => {}
                             Err(LockError::Contended(LockContendedError { contents, .. })) => {
-                                assert_eq!(other_contents.as_bytes(), contents,);
+                                assert_eq!(other_contents.as_bytes(), contents);
                             }
                             _ => panic!("unexpected result"),
                         }
