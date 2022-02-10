@@ -38,7 +38,7 @@ impl Connection {
 
         let mut addrs = host_port.as_ref().to_socket_addrs()?;
         let addr = addrs.next().expect("no address found");
-        let client = ThriftChannelBuilder::from_sock_addr(fb, addr)
+        let client = ThriftChannelBuilder::from_sock_addr(fb, addr)?
             .with_conn_timeout(CONN_TIMEOUT_MS)
             .with_recv_timeout(RECV_TIMEOUT_MS)
             .with_secure(true)
