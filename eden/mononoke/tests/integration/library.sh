@@ -1822,6 +1822,10 @@ if [ -z "$HAS_FB" ]; then
   function format_single_scuba_sample() {
     jq -S .
   }
+
+  function format_single_scuba_sample_strip_server_info {
+      jq -S 'del(.[].server_tier, .[].tw_task_id, .[].tw_handle)'
+  }
 fi
 
 function regenerate_hg_filenodes() {

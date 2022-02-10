@@ -28,7 +28,7 @@
 
 # Check that Scuba logs are present
   $ wait_for_json_record_count "$SCUBA" 5
-  $ format_single_scuba_sample < "$SCUBA"
+  $ format_single_scuba_sample_strip_server_info < "$SCUBA"
   {
     "int": {
       "BlobGets": 1,
