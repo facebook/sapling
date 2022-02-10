@@ -223,6 +223,7 @@ class ManifestParser(object):
         self.fbsource_path = self.get("manifest", "fbsource_path")
         self.shipit_project = self.get("manifest", "shipit_project")
         self.shipit_fbcode_builder = self.get("manifest", "shipit_fbcode_builder")
+        self.resolved_system_packages = {}
 
         if self.name != os.path.basename(file_name):
             raise Exception(

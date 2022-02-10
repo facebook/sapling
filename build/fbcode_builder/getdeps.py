@@ -976,13 +976,16 @@ jobs:
             allow_sys_arg = ""
             if (
                 build_opts.allow_system_packages
-                and build_opts.is_linux()
                 and build_opts.host_type.get_package_manager()
             ):
                 allow_sys_arg = " --allow-system-packages"
                 out.write("    - name: Install system deps\n")
+                sudo_arg = "sudo "
+                if build_opts.is_darwin():
+                    # brew is installed as regular user
+                    sudo_arg = ""
                 out.write(
-                    f"      run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive {manifest.name}\n"
+                    f"      run: {sudo_arg}python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive {manifest.name}\n"
                 )
 
             for m in projects:

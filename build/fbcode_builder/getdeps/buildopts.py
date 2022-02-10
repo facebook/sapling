@@ -103,6 +103,18 @@ class BuildOptions(object):
         self.allow_system_packages = allow_system_packages
         self.lfs_path = lfs_path
         self.shared_libs = shared_libs
+
+        lib_path = None
+        if self.is_darwin():
+            lib_path = "DYLD_LIBRARY_PATH"
+        elif self.is_linux():
+            lib_path = "LD_LIBRARY_PATH"
+        elif self.is_windows():
+            lib_path = "PATH"
+        else:
+            lib_path = None
+        self.lib_path = lib_path
+
         if vcvars_path is None and is_windows():
 
             try:
@@ -211,11 +223,23 @@ class BuildOptions(object):
             sdkroot = subprocess.check_output(["xcrun", "--show-sdk-path"])
             env["SDKROOT"] = sdkroot.decode().strip()
 
-        # MacOS includes a version of bison so homebrew won't automatically add
-        # its own version to PATH. Find where the homebrew bison is and prepend
-        # it to PATH.
-        if self.is_darwin() and self.host_type.get_package_manager() == "homebrew":
-            add_homebrew_package_to_path(env, "bison")
+        if (
+            self.is_darwin()
+            and self.allow_system_packages
+            and self.host_type.get_package_manager() == "homebrew"
+            and manifest
+            and manifest.resolved_system_packages
+        ):
+            # Homebrew packages may not be on the default PATHs
+            brew_packages = manifest.resolved_system_packages.get("homebrew", [])
+            for p in brew_packages:
+                found = self.add_homebrew_package_to_env(p, env)
+                # Try extra hard to find openssl, needed with homebrew on macOS
+                if found and p.startswith("openssl"):
+                    candidate = homebrew_package_prefix("openssl@1.1")
+                    if os.path.exists(candidate):
+                        os.environ["OPENSSL_ROOT_DIR"] = candidate
+                        env["OPENSSL_ROOT_DIR"] = os.environ["OPENSSL_ROOT_DIR"]
 
         if self.fbsource_dir:
             env["YARN_YARN_OFFLINE_MIRROR"] = os.path.join(
@@ -236,91 +260,88 @@ class BuildOptions(object):
             env["FBSOURCE_HASH"] = hash_data.hash
             env["FBSOURCE_DATE"] = hash_data.date
 
-        lib_path = None
-        if self.is_darwin():
-            lib_path = "DYLD_LIBRARY_PATH"
-        elif self.is_linux():
-            lib_path = "LD_LIBRARY_PATH"
-        elif self.is_windows():
-            lib_path = "PATH"
-        else:
-            lib_path = None
-
-        for d in install_dirs:
-            bindir = os.path.join(d, "bin")
-
-            pkgconfig = os.path.join(d, "lib/pkgconfig")
-            if os.path.exists(pkgconfig):
-                add_path_entry(env, "PKG_CONFIG_PATH", pkgconfig)
-
-            pkgconfig = os.path.join(d, "lib64/pkgconfig")
-            if os.path.exists(pkgconfig):
-                add_path_entry(env, "PKG_CONFIG_PATH", pkgconfig)
-
-            add_path_entry(env, "CMAKE_PREFIX_PATH", d)
-
-            # Tell the thrift compiler about includes it needs to consider
-            thriftdir = os.path.join(d, "include/thrift-files")
-            if os.path.exists(thriftdir):
-                add_path_entry(env, "THRIFT_INCLUDE_PATH", thriftdir)
-
-            # Allow resolving shared objects built earlier (eg: zstd
-            # doesn't include the full path to the dylib in its linkage
-            # so we need to give it an assist)
-            if lib_path:
-                for lib in ["lib", "lib64"]:
-                    libdir = os.path.join(d, lib)
-                    if os.path.exists(libdir):
-                        add_path_entry(env, lib_path, libdir)
-
-            # Allow resolving binaries (eg: cmake, ninja) and dlls
-            # built by earlier steps
-            if os.path.exists(bindir):
-                add_path_entry(env, "PATH", bindir, append=False)
-
-            # If rustc is present in the `bin` directory, set RUSTC to prevent
-            # cargo uses the rustc installed in the system.
-            if self.is_windows():
-                cargo_path = os.path.join(bindir, "cargo.exe")
-                rustc_path = os.path.join(bindir, "rustc.exe")
-                rustdoc_path = os.path.join(bindir, "rustdoc.exe")
-            else:
-                cargo_path = os.path.join(bindir, "cargo")
-                rustc_path = os.path.join(bindir, "rustc")
-                rustdoc_path = os.path.join(bindir, "rustdoc")
-
-            if os.path.isfile(rustc_path):
-                env["CARGO_BIN"] = cargo_path
-                env["RUSTC"] = rustc_path
-                env["RUSTDOC"] = rustdoc_path
-
-            openssl_include = os.path.join(d, "include/openssl")
-            if os.path.isdir(openssl_include) and any(
-                os.path.isfile(os.path.join(d, "lib", libcrypto))
-                for libcrypto in ("libcrypto.lib", "libcrypto.so", "libcrypto.a")
-            ):
-                # This must be the openssl library, let Rust know about it
-                env["OPENSSL_DIR"] = d
-                # And let openssl know to pick up the system certs if present
-                for system_ssl_cfg in ["/etc/pki/tls", "/etc/ssl"]:
-                    if os.path.isdir(system_ssl_cfg):
-                        cert_dir = system_ssl_cfg + "/certs"
-                        if os.path.isdir(cert_dir):
-                            env["SSL_CERT_DIR"] = cert_dir
-                        cert_file = system_ssl_cfg + "/cert.pem"
-                        if os.path.isfile(cert_file):
-                            env["SSL_CERT_FILE"] = cert_file
-
-        # Try extra hard to find openssl, needed with homebrew on macOS
-        if (
-            self.is_darwin()
-            and "OPENSSL_DIR" not in env
-            and "OPENSSL_ROOT_DIR" in os.environ
-        ):
-            env["OPENSSL_ROOT_DIR"] = os.environ["OPENSSL_ROOT_DIR"]
+        # reverse as we are prepending to the PATHs
+        for d in reversed(install_dirs):
+            self.add_prefix_to_env(d, env, append=False)
 
         return env
 
+    def add_homebrew_package_to_env(self, package, env):
+        prefix = homebrew_package_prefix(package)
+        if prefix and os.path.exists(prefix):
+            return self.add_prefix_to_env(prefix, env, append=False)
+        return False
+
+    def add_prefix_to_env(self, d, env, append=True):
+        bindir = os.path.join(d, "bin")
+        found = False
+        pkgconfig = os.path.join(d, "lib/pkgconfig")
+        if os.path.exists(pkgconfig):
+            found = True
+            add_path_entry(env, "PKG_CONFIG_PATH", pkgconfig, append=append)
+
+        pkgconfig = os.path.join(d, "lib64/pkgconfig")
+        if os.path.exists(pkgconfig):
+            found = True
+            add_path_entry(env, "PKG_CONFIG_PATH", pkgconfig, append=append)
+
+        add_path_entry(env, "CMAKE_PREFIX_PATH", d, append=append)
+
+        # Tell the thrift compiler about includes it needs to consider
+        thriftdir = os.path.join(d, "include/thrift-files")
+        if os.path.exists(thriftdir):
+            found = True
+            add_path_entry(env, "THRIFT_INCLUDE_PATH", thriftdir, append=append)
+
+        # Allow resolving shared objects built earlier (eg: zstd
+        # doesn't include the full path to the dylib in its linkage
+        # so we need to give it an assist)
+        if self.lib_path:
+            for lib in ["lib", "lib64"]:
+                libdir = os.path.join(d, lib)
+                if os.path.exists(libdir):
+                    found = True
+                    add_path_entry(env, self.lib_path, libdir, append=append)
+
+        # Allow resolving binaries (eg: cmake, ninja) and dlls
+        # built by earlier steps
+        if os.path.exists(bindir):
+            found = True
+            add_path_entry(env, "PATH", bindir, append=append)
+
+        # If rustc is present in the `bin` directory, set RUSTC to prevent
+        # cargo uses the rustc installed in the system.
+        if self.is_windows():
+            cargo_path = os.path.join(bindir, "cargo.exe")
+            rustc_path = os.path.join(bindir, "rustc.exe")
+            rustdoc_path = os.path.join(bindir, "rustdoc.exe")
+        else:
+            cargo_path = os.path.join(bindir, "cargo")
+            rustc_path = os.path.join(bindir, "rustc")
+            rustdoc_path = os.path.join(bindir, "rustdoc")
+
+        if os.path.isfile(rustc_path):
+            env["CARGO_BIN"] = cargo_path
+            env["RUSTC"] = rustc_path
+            env["RUSTDOC"] = rustdoc_path
+
+        openssl_include = os.path.join(d, "include/openssl")
+        if os.path.isdir(openssl_include) and any(
+            os.path.isfile(os.path.join(d, "lib", libcrypto))
+            for libcrypto in ("libcrypto.lib", "libcrypto.so", "libcrypto.a")
+        ):
+            # This must be the openssl library, let Rust know about it
+            env["OPENSSL_DIR"] = d
+            # And let openssl know to pick up the system certs if present
+            for system_ssl_cfg in ["/etc/pki/tls", "/etc/ssl"]:
+                if os.path.isdir(system_ssl_cfg):
+                    cert_dir = system_ssl_cfg + "/certs"
+                    if os.path.isdir(cert_dir):
+                        env["SSL_CERT_DIR"] = cert_dir
+                    cert_file = system_ssl_cfg + "/cert.pem"
+                    if os.path.isfile(cert_file):
+                        env["SSL_CERT_FILE"] = cert_file
+        return found
 
 def list_win32_subst_letters():
     output = subprocess.check_output(["subst"]).decode("utf-8")
@@ -511,9 +532,3 @@ def setup_build_options(args, host_type=None):
         facebook_internal=args.facebook_internal,
         **build_args,
     )
-
-
-def add_homebrew_package_to_path(env, package):
-    prefix = homebrew_package_prefix(package)
-    if prefix and os.path.exists(os.path.join(prefix, "bin")):
-        add_path_entry(env, "PATH", os.path.join(prefix, "bin"), append=False)
