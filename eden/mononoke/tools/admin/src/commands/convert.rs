@@ -6,7 +6,9 @@
  */
 
 use anyhow::{anyhow, Context, Result};
-use blobrepo::BlobRepo;
+use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_svnrev_mapping::RepoBonsaiSvnrevMappingRef;
 use clap::{ArgEnum, Parser};
 use mercurial_types::HgChangesetId;
@@ -15,6 +17,8 @@ use mononoke_app::MononokeApp;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::{ChangesetId, Globalrev, Svnrev};
 use repo_identity::RepoIdentityRef;
+
+use crate::repo::AdminRepo;
 
 #[derive(Copy, Clone, Eq, PartialEq, ArgEnum)]
 pub enum IdentityScheme {
@@ -55,7 +59,7 @@ pub struct CommandArgs {
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_context();
 
-    let repo: BlobRepo = app
+    let repo: AdminRepo = app
         .open_repo(&args.repo)
         .await
         .context("Failed to open repo")?;

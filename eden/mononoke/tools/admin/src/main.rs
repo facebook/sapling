@@ -12,6 +12,7 @@ use fbinit::FacebookInit;
 use mononoke_app::{MononokeApp, MononokeAppBuilder};
 
 mod commands;
+mod repo;
 
 /// Administrate Mononoke
 #[derive(Parser)]

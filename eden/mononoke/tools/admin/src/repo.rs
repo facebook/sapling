@@ -1,0 +1,44 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_svnrev_mapping::RepoBonsaiSvnrevMapping;
+use bookmarks::Bookmarks;
+use ephemeral_blobstore::RepoEphemeralStore;
+use repo_blobstore::RepoBlobstore;
+use repo_identity::RepoIdentity;
+
+/// Repository object for admin commands.
+#[facet::container]
+#[derive(Clone)]
+pub struct AdminRepo {
+    #[facet]
+    pub repo_identity: RepoIdentity,
+
+    #[facet]
+    pub bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    pub bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    pub bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+    #[facet]
+    pub repo_bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping,
+
+    #[facet]
+    pub bookmarks: dyn Bookmarks,
+
+    #[facet]
+    pub repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    pub repo_ephemeral_store: RepoEphemeralStore,
+}
