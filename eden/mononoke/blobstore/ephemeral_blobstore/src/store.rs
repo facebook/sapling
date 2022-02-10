@@ -133,10 +133,17 @@ impl RepoEphemeralStoreInner {
     }
 
     async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble> {
-        let rows = SelectBubbleById::query(&self.connections.read_connection, &bubble_id).await?;
+        let mut rows =
+            SelectBubbleById::query(&self.connections.read_connection, &bubble_id).await?;
 
         if rows.is_empty() {
-            return Err(EphemeralBlobstoreError::NoSuchBubble(bubble_id).into());
+            // Perhaps the bubble hasn't showed up yet due to replication lag.
+            // Let's retry on master just in case.
+            rows = SelectBubbleById::query(&self.connections.read_master_connection, &bubble_id)
+                .await?;
+            if rows.is_empty() {
+                return Err(EphemeralBlobstoreError::NoSuchBubble(bubble_id).into());
+            }
         }
 
         // TODO(mbthomas): check owner_identity
