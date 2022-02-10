@@ -45,8 +45,6 @@ class TraceHgCommand(Subcmd):
                     trace_stream_command,
                     f"--mountRoot={checkout.path}",
                     "--trace=hg",
-                    f"--reads={'true' if args.reads else 'false'}",
-                    f"--writes={'true' if args.writes else 'false'}",
                 ]
             )
         else:
