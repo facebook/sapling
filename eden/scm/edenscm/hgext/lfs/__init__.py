@@ -64,7 +64,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _, _x
 
-from . import blobstore, pointer, wrapper, placeholders
+from . import blobstore, pointer, wrapper
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
@@ -135,12 +135,8 @@ def wrapfilelog(ui, filelog):
     wrapfunction = extensions.wrapfunction
 
     wrapfunction(filelog, "renamed", wrapper.filelogrenamed)
-    if ui.configbool("experimental", "lfsplaceholders"):
-        wrapfunction(filelog, "addrevision", placeholders.filelogaddrevision)
-        wrapfunction(filelog, "size", placeholders.filelogsize)
-    else:
-        wrapfunction(filelog, "addrevision", wrapper.filelogaddrevision)
-        wrapfunction(filelog, "size", wrapper.filelogsize)
+    wrapfunction(filelog, "addrevision", wrapper.filelogaddrevision)
+    wrapfunction(filelog, "size", wrapper.filelogsize)
 
 
 def extsetup(ui):
@@ -163,24 +159,12 @@ def extsetup(ui):
 
     context.basefilectx.islfs = wrapper.filectxislfs
 
-    if ui.configbool("experimental", "lfsplaceholders"):
-        wrapfunction(context.basefilectx, "cmp", placeholders.filectxcmp)
-        wrapfunction(context.basefilectx, "isbinary", placeholders.filectxisbinary)
-        revlog.addflagprocessor(
-            revlog.REVIDX_EXTSTORED,
-            (
-                placeholders.readfromstore,
-                placeholders.writetostore,
-                wrapper.bypasscheckhash,
-            ),
-        )
-    else:
-        wrapfunction(context.basefilectx, "cmp", wrapper.filectxcmp)
-        wrapfunction(context.basefilectx, "isbinary", wrapper.filectxisbinary)
-        revlog.addflagprocessor(
-            revlog.REVIDX_EXTSTORED,
-            (wrapper.readfromstore, wrapper.writetostore, wrapper.bypasscheckhash),
-        )
+    wrapfunction(context.basefilectx, "cmp", wrapper.filectxcmp)
+    wrapfunction(context.basefilectx, "isbinary", wrapper.filectxisbinary)
+    revlog.addflagprocessor(
+        revlog.REVIDX_EXTSTORED,
+        (wrapper.readfromstore, wrapper.writetostore, wrapper.bypasscheckhash),
+    )
 
     wrapfunction(hg, "clonepreclose", wrapper.hgclone)
     wrapfunction(hg, "postshare", wrapper.hgpostshare)
