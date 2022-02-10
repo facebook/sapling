@@ -39,7 +39,7 @@ impl CachelibSettings {
         let mut defaults = vec![
             ("cache-size-gb", (self.cache_size / ONE_GIB).to_string()),
             (
-                "cachelib-rebalancing-interval",
+                "cachelib-rebalancing-interval-secs",
                 self.rebalancing_interval.as_secs().to_string(),
             ),
             (
@@ -115,7 +115,7 @@ impl CachelibSettings {
         self.cache_size = (args.cache_size_gb * ONE_GIB as f64) as usize;
         self.use_tupperware_shrinker = args.use_tupperware_shrinker;
         self.rebalancing_use_lru = args.cachelib_rebalancing_use_lru;
-        self.rebalancing_interval = Duration::from_secs(args.cachelib_rebalancing_interval);
+        self.rebalancing_interval = Duration::from_secs(args.cachelib_rebalancing_interval_secs);
 
         fn replace<T: Clone>(target: &mut Option<T>, value: &Option<T>) {
             if value.is_some() {

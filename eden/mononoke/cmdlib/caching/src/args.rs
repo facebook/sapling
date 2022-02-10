@@ -50,7 +50,7 @@ pub struct CachelibArgs {
 
     /// How often to rebalance across allocation classes, in secs
     #[clap(long)]
-    pub cachelib_rebalancing_interval: u64,
+    pub cachelib_rebalancing_interval_secs: u64,
 
     /// Override size of the blob cache
     #[clap(long, value_name = "SIZE", hide = true)]
