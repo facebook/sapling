@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-include "common/fb303/if/fb303.thrift"
+include "fb303/thrift/fb303_core.thrift"
 include "eden/mononoke/derived_data/changeset_info/if/changeset_info_thrift.thrift"
 include "eden/mononoke/git/git_types/if/git_types_thrift.thrift"
 include "eden/mononoke/filenodes/if/filenodes.thrift"
@@ -151,7 +151,7 @@ exception InternalError {
   1: string reason;
 } (rust.exhaustive)
 
-service DerivedDataService extends fb303.FacebookService {
+service DerivedDataService extends fb303_core.BaseService {
   # At first stage of the project this method requires that
   # parents of the commit have to be derived already
   DeriveResponse derive(1: DeriveRequest request) throws (

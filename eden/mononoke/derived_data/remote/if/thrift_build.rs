@@ -16,7 +16,7 @@ fn main() {
         out_dir.join("cratemap"),
         "changeset_info_thrift derived_data_thrift
 derived_data_service crate
-fb303 fb303
+fb303_core fb303_core
 filenodes filenodes_if
 git_types_thrift git_types_thrift
 mercurial_thrift mercurial_thrift
