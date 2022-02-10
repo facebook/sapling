@@ -1549,7 +1549,7 @@ pub struct SegmentedChangelogConfig {
     ///
     /// To explain why we might need `bonsai_changesets_to_include` - say we have a
     /// commit graph like this:
-    /// ```
+    /// ```text
     ///  B <- master
     ///  |
     ///  A
@@ -1559,7 +1559,7 @@ pub struct SegmentedChangelogConfig {
     /// Then we move a master bookmark backwards to A and create a new commit on top
     /// (this is a very rare situation, but it might happen during sevs)
     ///
-    /// ```
+    /// ```text
     ///  C <- master
     ///  |
     ///  |  B

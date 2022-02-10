@@ -17,6 +17,7 @@ use synced_commit_mapping::SyncedCommitMapping;
 /// This operation is useful immediately after a small repo is merged into a large repo.
 /// See example below
 ///
+/// ```text
 ///   B' <- manually synced commit from small repo (in small repo it is commit B)
 ///   |
 ///   BM <- "big merge"
@@ -29,6 +30,7 @@ use synced_commit_mapping::SyncedCommitMapping;
 /// its ancestors from small repo needs to be based on top of "big merge" commit in large repo rather than on top of
 /// commit A.
 /// The function below can be used to achieve exactly that.
+/// ```
 pub async fn manual_commit_sync<M: SyncedCommitMapping + Clone + 'static>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M>,

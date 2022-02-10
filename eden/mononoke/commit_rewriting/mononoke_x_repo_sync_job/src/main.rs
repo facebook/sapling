@@ -17,6 +17,8 @@ use crate::sync::SyncResult;
 /// 1) Syncing of some merge commits is not supported
 /// 2) Root commits and their descendants that are not merged into a main line
 /// aren't going to be synced. For example,
+///
+/// ```text
 ///   O <- main bookmark
 ///   |
 ///   O
@@ -39,6 +41,7 @@ use crate::sync::SyncResult;
 /// This job does tailing by following bookmark update log of the small repo and replaying
 /// each commit into the large repo. Note that some bookmarks called "common_pushrebase_bookmarks"
 /// are treated specially, see comments in the code for more details
+/// ```
 use anyhow::{format_err, Error, Result};
 use backsyncer::format_counter as format_backsyncer_counter;
 use blobrepo::BlobRepo;

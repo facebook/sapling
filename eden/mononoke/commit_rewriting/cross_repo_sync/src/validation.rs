@@ -352,12 +352,13 @@ async fn get_maybe_moved_contents_and_types<'a>(
 /// might be renamed to bookmark 'prefix/book' in target repo, and commit A to which bookmark 'book'
 /// points can be remapped to commit B in the target repo.
 ///
+/// ```text
 ///  Source repo                Target repo
 ///
 ///   A <- "book"      <----->    B <- "prefix/book"
 ///   |                           |
 ///  ...                         ...
-///
+/// ```
 pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
     commit_syncer: &CommitSyncer<M>,

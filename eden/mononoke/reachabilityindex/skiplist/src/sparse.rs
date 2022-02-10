@@ -26,6 +26,7 @@ use mononoke_types::{ChangesetId, Generation};
 /// 3) Each edge skips at most `max_skip` changesets
 /// 4) It tries to keep a majority of changesets unidexed
 ///
+/// ```text
 /// For example
 ///
 ///  max_skip = 3
@@ -49,6 +50,7 @@ use mononoke_types::{ChangesetId, Generation};
 /// This skiplist structure allows both quick traversal of the graph from an
 /// indexed node, and also it makes sure that from unindexed node one don't need to
 /// visit more than max_skip ancestors to find an indexed node.
+/// ```
 pub async fn update_sparse_skiplist(
     ctx: &CoreContext,
     heads: Vec<ChangesetId>,

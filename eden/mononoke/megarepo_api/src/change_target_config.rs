@@ -116,6 +116,7 @@ fn diff_configs(
 /// changed sources), merges them all together then merges them with current head
 /// of the target while removing all files belonging to removed sources.
 ///
+/// ```text
 ///        Tn+1
 ///       /    \
 ///      X      Tn
@@ -129,6 +130,7 @@ fn diff_configs(
 /// X - target merge commits
 /// M - move commits
 /// S - source commits that need to be merged
+/// ```
 pub struct ChangeTargetConfig<'a> {
     pub megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
     pub mononoke: &'a Arc<Mononoke>,

@@ -102,7 +102,7 @@ pub fn get_mover_and_reverse_mover(source_repo: &BlobRepo) -> Result<(Mover, Mov
         move |path: &MPath| Ok(Some(prefix.join(path)))
     });
 
-    let reverse_mover = Arc::new({ move |path: &MPath| Ok(path.remove_prefix_component(&prefix)) });
+    let reverse_mover = Arc::new(move |path: &MPath| Ok(path.remove_prefix_component(&prefix)));
 
     Ok((mover, reverse_mover))
 }

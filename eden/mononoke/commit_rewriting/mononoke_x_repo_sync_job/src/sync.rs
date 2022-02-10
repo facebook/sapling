@@ -208,6 +208,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>
 /// This function syncs commits via pushrebase with a caveat - some commits shouldn't be
 /// pushrebased! Consider pushing of a merge
 ///
+/// ```text
 ///  source repo (X - synced commit, O - unsynced commit)
 ///
 ///     O <- merge commit (this commit needs to be pushrebased in target repo)
@@ -218,6 +219,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>
 ///
 /// Just as normal pushrebase behaves while pushing merges, we rebase the actual merge
 /// commit and it's ancestors, but we don't rebase merge ancestors.
+/// ```
 pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'static>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M>,

@@ -235,7 +235,7 @@ impl TraversalOrder {
 }
 
 /// Returns a full history of the given path starting from the given unode in BFS order.
-///
+/// ```text
 /// Accepts a `Visitor` object which controls the flow by filtering out the unwanted changesets
 /// before they're added to the queue, see its docs for details. If you don't need to filter the
 /// history you can provide `()` instead for default implementation.
@@ -272,6 +272,7 @@ impl TraversalOrder {
 /// Why to pop all nodes on the same depth and not just one commit at a time?
 /// Because if history contains merges and parents for more than one node on the current depth
 /// haven't been fetched yet, we can fetch them at the same time using FuturesUnordered.
+/// ```
 pub async fn list_file_history(
     ctx: CoreContext,
     repo: BlobRepo,

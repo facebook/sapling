@@ -48,6 +48,7 @@ use synced_commit_mapping::SqlSyncedCommitMapping;
 /// The function syncs merge commit M from a small repo into a large repo.
 /// It's designed to handle a case described below
 ///
+/// ```text
 ///   Small repo state
 ///       M
 ///     |   \
@@ -88,6 +89,7 @@ use synced_commit_mapping::SqlSyncedCommitMapping;
 ///    c) Change parents
 /// 3) Save merge commit in large repo
 /// 4) Update the bookmark
+/// ```
 pub async fn do_sync_diamond_merge(
     ctx: CoreContext,
     small_repo: InnerRepo,
