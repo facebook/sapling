@@ -63,6 +63,11 @@ class RequestContext : public ObjectFetchContext {
     return ObjectFetchContext::Cause::Fs;
   }
 
+  const std::optional<std::unordered_map<std::string, std::string>>&
+  getRequestInfo() const override {
+    return requestInfo_;
+  }
+
   void startRequest(
       EdenStats* stats,
       ChannelThreadStats::StatPtr stat,
@@ -99,6 +104,7 @@ class RequestContext : public ObjectFetchContext {
       channelThreadLocalStats_;
   ProcessAccessLog& pal_;
   EdenTopStats edenTopStats_;
+  std::optional<std::unordered_map<std::string, std::string>> requestInfo_;
 
   /**
    * Normally, one requestData is created for only one fetch request,
