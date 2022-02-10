@@ -22,8 +22,12 @@ MERGE_STATE_BOTH_PARENTS = -1
 MERGE_STATE_OTHER_PARENT = -2
 
 
-def write(file, parents, tuples_dict, copymap):
-    # type: (IO[bytes], Tuple[bytes, bytes], Dict[str, Tuple[str, int, int]], Dict[str, str]) -> None
+def write(
+    file: "IO[bytes]",
+    parents: "Tuple[bytes, bytes]",
+    tuples_dict: "Dict[str, Tuple[str, int, int]]",
+    copymap: "Dict[str, str]",
+) -> None:
     #
     # The serialization format of the dirstate is as follows:
     # - The first 40 bytes are the hashes of the two parent pointers.
@@ -59,8 +63,7 @@ def write(file, parents, tuples_dict, copymap):
     #     remaining 32 bytes are used for the hash.
     sha = hashlib.sha256()
 
-    def hashing_write(data):
-        # type: (bytes) -> None
+    def hashing_write(data: bytes) -> None:
         sha.update(data)
         file.write(data)
 
@@ -82,8 +85,9 @@ def write(file, parents, tuples_dict, copymap):
     file.write(sha.digest())
 
 
-def read(fp, filename):  # noqa: C901
-    # type: (IO[bytes], str) -> Tuple[Tuple[bytes, bytes], Dict[str, Tuple[str, int, int]], Dict[str, str]]
+def read(
+    fp: "IO[bytes]", filename: str
+) -> "Tuple[Tuple[bytes, bytes], Dict[str, Tuple[str, int, int]], Dict[str, str]]":  # noqa: C901
     """Returns a tuple of (parents, tuples_dict, copymap) if successful.
 
     Any exception from create_file(), such as IOError with errno == ENOENT, will
@@ -116,7 +120,7 @@ def read(fp, filename):  # noqa: C901
         raise DirstateParseException(
             "Reached EOF while reading the version number in {}.\n".format(filename)
         )
-    version = struct.unpack(">I", binary_version)[0]  # type: int
+    version: int = struct.unpack(">I", binary_version)[0]
     if version != CURRENT_DIRSTATE_VERSION:
         raise DirstateParseException(
             "Unknown dirstate version in {}. Found {} but expected {}.\n".format(
@@ -137,9 +141,9 @@ def read(fp, filename):  # noqa: C901
                     + ". Aborting read().\n"
                 )
             path = _read_path(hashing_read, filename)
-            status = 0  # type: int
-            mode = 0  # type: int
-            merge = 0  # type: int
+            status: int = 0
+            mode: int = 0
+            merge: int = 0
             status, mode, merge = struct.unpack(">BIb", scalars)
             # TODO(mbolin): Verify status and merge?
             tuples_dict[path] = (chr(status), mode, merge)
@@ -184,8 +188,7 @@ def read(fp, filename):  # noqa: C901
     return parents, tuples_dict, copymap
 
 
-def _write_path(writer, path):
-    # type: (Callable[[bytes], None], str) -> None
+def _write_path(writer: "Callable[[bytes], None]", path: str) -> None:
     if sys.version_info[0] < 3:
         byte_path = path
     else:
@@ -194,15 +197,14 @@ def _write_path(writer, path):
     writer(byte_path)
 
 
-def _read_path(reader, filename):
-    # type: (Callable[[int], bytes], str) -> str
+def _read_path(reader: "Callable[[int], bytes]", filename: str) -> str:
     binary_path_len = reader(2)
     if len(binary_path_len) != 2:
         raise DirstateParseException(
             "Reached EOF while reading path length in {}.\n".format(filename)
         )
 
-    path_len = struct.unpack(">H", binary_path_len)[0]  # type: int
+    path_len: int = struct.unpack(">H", binary_path_len)[0]
     path = reader(path_len)
     if len(path) == path_len:
         if isinstance(path, str):

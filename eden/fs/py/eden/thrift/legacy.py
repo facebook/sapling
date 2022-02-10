@@ -30,8 +30,7 @@ SOCKET_PATH = "socket"
 
 
 class EdenNotRunningError(Exception):
-    def __init__(self, eden_dir):
-        # type: (str) -> None
+    def __init__(self, eden_dir: str) -> None:
         msg = "edenfs daemon does not appear to be running: tried %s" % eden_dir
         super(EdenNotRunningError, self).__init__(msg)
         self.eden_dir = eden_dir
@@ -40,8 +39,7 @@ class EdenNotRunningError(Exception):
 # Monkey-patch EdenService.EdenError's __str__() behavior to just return the
 # error message.  By default it returns the same data as __repr__(), which is
 # ugly to show to users.
-def _eden_thrift_error_str(ex):
-    # type: (EdenService.EdenError) -> str
+def _eden_thrift_error_str(ex: "EdenService.EdenError") -> str:
     return ex.message
 
 
@@ -59,25 +57,28 @@ class EdenClient(EdenService.Client):
       be used in with statements.
     """
 
-    def __init__(self, socket_path, transport, protocol):
-        # type: (str, THeaderTransport, THeaderProtocol) -> None
+    def __init__(
+        self,
+        socket_path: str,
+        transport: "THeaderTransport",
+        protocol: "THeaderProtocol",
+    ) -> None:
         self._socket_path = socket_path
-        self._transport = transport  # type: Optional[THeaderTransport]
+        self._transport: "Optional[THeaderTransport]" = transport
 
         super(EdenClient, self).__init__(protocol)
 
-    def __enter__(self):
-        # type: () -> EdenClient
+    def __enter__(self) -> "EdenClient":
         self.open()
         return self
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        # type: (Any, Any, Any) -> Optional[bool]
+    def __exit__(
+        self, exc_type: "Any", exc_value: "Any", exc_traceback: "Any"
+    ) -> "Optional[bool]":
         self.close()
         return False
 
-    def open(self):
-        # type: () -> None
+    def open(self) -> None:
         transport = self._transport
         assert transport is not None
         try:
@@ -91,14 +92,12 @@ class EdenClient(EdenService.Client):
             self.close()
             raise EdenNotRunningError(self._socket_path)
 
-    def close(self):
-        # type: () -> None
+    def close(self) -> None:
         if self._transport is not None:
             self._transport.close()
             self._transport = None
 
-    def getDaemonInfo(self):
-        # type: () -> DaemonInfo
+    def getDaemonInfo(self) -> "DaemonInfo":
         try:
             info = super(EdenClient, self).getDaemonInfo()
         except TApplicationException as ex:
@@ -114,8 +113,7 @@ class EdenClient(EdenService.Client):
             info.status = super(EdenClient, self).getStatus()
         return info
 
-    def getPid(self):
-        # type: () -> int
+    def getPid(self) -> int:
         try:
             return self.getDaemonInfo().pid
         except TApplicationException as ex:
@@ -127,8 +125,11 @@ class EdenClient(EdenService.Client):
                 raise
 
 
-def create_thrift_client(eden_dir=None, socket_path=None, timeout=None):
-    # type: (Optional[str], Optional[str], Optional[float]) -> EdenClient
+def create_thrift_client(
+    eden_dir: "Optional[str]" = None,
+    socket_path: "Optional[str]" = None,
+    timeout: "Optional[float]" = None,
+) -> "EdenClient":
     """
     Construct a thrift client to speak to the running eden server
     instance associated with the specified mount point.

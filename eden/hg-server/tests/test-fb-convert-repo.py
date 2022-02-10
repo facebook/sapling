@@ -141,7 +141,7 @@ class gitutiltest(unittest.TestCase):
 
     def test_parsegitcommitraw(self):
         commit_hash = "6c6677a7b5cf683a1883bc5e4ad47cad0a496904"
-        commit_string = u"""tree e2acedaa094c4b5f0606e2a5ff58c3648555cfd4
+        commit_string = """tree e2acedaa094c4b5f0606e2a5ff58c3648555cfd4
 parent c6c89b3401f3f6690e2307de7e2d079894c8147a
 parent 2051d0428d045796ded3764c4188249669d1fcf3
 author Linux Build Service Account <lnxbuild@localhost> 1521780995 -0700
@@ -195,8 +195,7 @@ had a great fall
 class conversionrevisiontest(unittest.TestCase):
     """Tests implementation of the conversionrevision class"""
 
-    def test_init(self):
-        # type: () -> None
+    def test_init(self) -> None:
         _ = conversionrevision(
             conversionrevision.VARIANT_UNIFIED,
             "1234567890123456789012345678901234567890",
@@ -205,8 +204,7 @@ class conversionrevisiontest(unittest.TestCase):
         )
         self.assertTrue(True)
 
-    def test_variant(self):
-        # type: () -> None
+    def test_variant(self) -> None:
         rev = conversionrevision(
             conversionrevision.VARIANT_ROOTED,
             "1234567890123456789012345678901234567890",
@@ -215,8 +213,7 @@ class conversionrevisiontest(unittest.TestCase):
         )
         self.assertEqual(rev.variant, conversionrevision.VARIANT_ROOTED)
 
-    def test_sourcehash(self):
-        # type: () -> None
+    def test_sourcehash(self) -> None:
         rev = conversionrevision(
             conversionrevision.VARIANT_UNIFIED,
             "1234567890123456789012345678901234567890",
@@ -225,8 +222,7 @@ class conversionrevisiontest(unittest.TestCase):
         )
         self.assertEqual(rev.sourcehash, "1234567890123456789012345678901234567890")
 
-    def test_sourceproject(self):
-        # type: () -> None
+    def test_sourceproject(self) -> None:
         rev = conversionrevision(
             conversionrevision.VARIANT_UNIFIED,
             "1234567890123456789012345678901234567890",
@@ -235,8 +231,7 @@ class conversionrevisiontest(unittest.TestCase):
         )
         self.assertEqual(rev.sourceproject, "aosp/bzip2")
 
-    def test_destpath(self):
-        # type: () -> None
+    def test_destpath(self) -> None:
         rev = conversionrevision(
             conversionrevision.VARIANT_UNIFIED,
             "1234567890123456789012345678901234567890",
@@ -245,8 +240,7 @@ class conversionrevisiontest(unittest.TestCase):
         )
         self.assertEqual(rev.destpath, "external/bzip2")
 
-    def test_parse(self):
-        # type: () -> None
+    def test_parse(self) -> None:
         revstring = "R1234567890123456789012345678901234567890foo/bar/baz:external/baz"
         rev = conversionrevision.parse(revstring)
         self.assertEqual(rev.variant, conversionrevision.VARIANT_ROOTED)
@@ -254,8 +248,7 @@ class conversionrevisiontest(unittest.TestCase):
         self.assertEqual(rev.sourceproject, "foo/bar/baz")
         self.assertEqual(rev.destpath, "external/baz")
 
-    def test_str(self):
-        # type: () -> None
+    def test_str(self) -> None:
         rev = conversionrevision(
             conversionrevision.VARIANT_UNIFIED,
             "1234567890123456789012345678901234567890",
@@ -265,8 +258,7 @@ class conversionrevisiontest(unittest.TestCase):
         revstring = "U1234567890123456789012345678901234567890aosp/bzip2:external/bzip2"
         self.assertEqual(str(rev), revstring)
 
-    def test_equals(self):
-        # type: () -> None
+    def test_equals(self) -> None:
         rev1 = conversionrevision(
             conversionrevision.VARIANT_UNIFIED,
             "1234567890123456789012345678901234567890",
@@ -290,8 +282,7 @@ class conversionrevisiontest(unittest.TestCase):
         self.assertFalse(rev1 == rev3)
         self.assertFalse(rev1 == conversionrevision.NONE)
 
-    def test_hash(self):
-        # type: () -> None
+    def test_hash(self) -> None:
         rev = conversionrevision(
             conversionrevision.VARIANT_UNIFIED,
             "1234567890123456789012345678901234567890",

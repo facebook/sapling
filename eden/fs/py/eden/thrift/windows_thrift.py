@@ -158,8 +158,7 @@ class SOCKADDR_UN(ctypes.Structure):
 
 
 class WindowsSocketException(Exception):
-    def __init__(self, code):
-        # type: (int) -> None
+    def __init__(self, code: int) -> None:
         super(WindowsSocketException, self).__init__(
             "Windows Socket Error: {}".format(code)
         )
@@ -170,8 +169,8 @@ class WindowsSocketHandle(object):
     SOCK_STREAM = 1
     IPPROTO_TCP = 6
 
-    fd = -1  # type: int
-    address = ""  # type: str
+    fd: int = -1
+    address: str = ""
 
     @staticmethod
     def _checkReturnCode(retcode):
@@ -213,12 +212,10 @@ class WindowsSocketHandle(object):
         self.family = self.AF_UNIX
         self.proto = self.IPPROTO_TCP
 
-    def fileno(self):
-        # type: () -> int
+    def fileno(self) -> int:
         return self.fd
 
-    def settimeout(self, timeout):
-        # type: (int) -> None
+    def settimeout(self, timeout: int) -> None:
         timeout = ctypes.wintypes.DWORD(0 if timeout is None else int(timeout * 1000))
         retcode = WinSetIntSockOpt(
             self.fd,
@@ -238,16 +235,14 @@ class WindowsSocketHandle(object):
         self._checkReturnCode(retcode)
         return None
 
-    def connect(self, address):
-        # type: (str) -> None
+    def connect(self, address: str) -> None:
         addr = SOCKADDR_UN(sun_family=self.AF_UNIX, sun_path=address.encode("utf-8"))
         self._checkReturnCode(
             connect(self.fd, ctypes.pointer(addr), ctypes.sizeof(addr))
         )
         self.address = address
 
-    def send(self, buff):
-        # type: (bytes|memoryview) -> int
+    def send(self, buff: "bytes | memoryview") -> int:
         size = len(buff)
 
         if isinstance(buff, memoryview):
@@ -259,8 +254,7 @@ class WindowsSocketHandle(object):
         self._checkReturnCode(retcode)
         return retcode
 
-    def sendall(self, buff):
-        # type: (bytes) -> None
+    def sendall(self, buff: bytes) -> None:
         while len(buff) > 0:
             x = self.send(buff)
             if x > 0:
@@ -269,8 +263,7 @@ class WindowsSocketHandle(object):
                 break
         return None
 
-    def recv(self, size):
-        # type: (int) -> bytes
+    def recv(self, size: int) -> bytes:
         buff = ctypes.create_string_buffer(size)
         retsize = recv(self.fd, buff, size, 0)
         self._checkReturnCode(retsize)
@@ -286,20 +279,16 @@ class WindowsSocketHandle(object):
 
         return retsize
 
-    def getpeername(self):
-        # type: () -> str
+    def getpeername(self) -> str:
         return self.address
 
-    def getsockname(self):
-        # type: () -> str
+    def getsockname(self) -> str:
         return self.address
 
-    def close(self):
-        # type: () -> int
+    def close(self) -> int:
         return closesocket(self.fd)
 
-    def setblocking(self, flag):
-        # type: (bool) -> int
+    def setblocking(self, flag: bool) -> int:
         mode = ctypes.wintypes.DWORD(0 if flag else 1)
         retcode = ioctlsocket(self.fd, FIONBIO, ctypes.pointer(mode))
         self._checkReturnCode(retcode)
@@ -308,12 +297,10 @@ class WindowsSocketHandle(object):
 
 class WinTSocket(TSocket):
     @property
-    def _shouldUseWinsocket(self):
-        # type: () -> bool
+    def _shouldUseWinsocket(self) -> bool:
         return sys.platform == "win32" and self._unix_socket
 
-    def open(self):
-        # type: () -> None
+    def open(self) -> None:
         # if we are not on Windows or the socktype is not unix socket, return
         # the parent TSocket
         if not self._shouldUseWinsocket:

@@ -104,7 +104,7 @@ class _StatfsType:
 
 # https://github.com/python/typeshed/pull/3945
 _libc = ctypes.CDLL(None, use_errno=True)
-_fsword_t = ctypes.c_int64  # type: Type[ctypes._CData]
+_fsword_t: "Type[ctypes._CData]" = ctypes.c_int64
 _fsblkcnt_t = ctypes.c_uint64
 _fsfilcnt_t = ctypes.c_uint64
 _fsid_t = ctypes.c_uint64

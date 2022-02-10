@@ -81,7 +81,7 @@ class EdenConfigParser:
     # interpolation)
     # Useful for updating configuration files in different formats.
     def to_raw_dict(self) -> collections.OrderedDict:
-        rslt = collections.OrderedDict()  # type: collections.OrderedDict
+        rslt: "collections.OrderedDict" = collections.OrderedDict()
         for section, options in self._sections.items():
             rslt[section] = collections.OrderedDict(options)
         return rslt
