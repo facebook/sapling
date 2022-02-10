@@ -29,6 +29,7 @@ use segmented_changelog::{seedheads_from_config, SegmentedChangelogTailer};
 const ONCE_ARG: &str = "once";
 const REPO_ARG: &str = "repo";
 const HEAD_ARG: &str = "head";
+const CONFIG_HEADS_ARG: &str = "include-config-heads";
 const FORCE_RESEED_ARG: &str = "force-reseed";
 const ARG_PREFETCHED_COMMITS_PATH: &str = "prefetched-commits-path";
 
@@ -76,6 +77,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .help(
                     "What heads to use for Segmented Changelog. If not provided, \
                 tailer will use the config to obtain heads.",
+                ),
+        )
+        .arg(
+            Arg::with_name(CONFIG_HEADS_ARG)
+                .long(CONFIG_HEADS_ARG)
+                .takes_value(false)
+                .help(
+                    "Force use of the configured heads, as well as any \
+                specified on the command line",
                 ),
         )
         .arg(
@@ -155,9 +165,17 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             }
         }));
 
-        let seed_heads = match matches.values_of(HEAD_ARG) {
-            Some(head_args) => {
-                let mut heads = vec![];
+        let seed_heads = {
+            let head_args = matches.values_of(HEAD_ARG);
+            let head_args_len = head_args.as_ref().map_or(0, |a| a.len());
+            let mut heads = if head_args.is_none() || matches.is_present(CONFIG_HEADS_ARG) {
+                let mut heads = seedheads_from_config(&ctx, &config.segmented_changelog_config)?;
+                heads.reserve(head_args_len);
+                heads
+            } else {
+                Vec::with_capacity(head_args_len)
+            };
+            if let Some(head_args) = head_args {
                 for head_arg in head_args.into_iter() {
                     let head = helpers::csid_resolve(&ctx, blobrepo.clone(), head_arg)
                         .await
@@ -167,9 +185,8 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                     info!(ctx.logger(), "using '{}' for head", head);
                     heads.push(head.into());
                 }
-                heads
             }
-            None => seedheads_from_config(&ctx, &config.segmented_changelog_config)?,
+            heads
         };
 
         let segmented_changelog_tailer = SegmentedChangelogTailer::build_from(
