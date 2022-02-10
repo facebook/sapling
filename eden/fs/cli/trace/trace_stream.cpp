@@ -11,16 +11,13 @@
 #include <folly/init/Init.h>
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <thrift/lib/cpp/util/EnumUtils.h>
 #include <thrift/lib/cpp2/async/RocketClientChannel.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/service/gen-cpp2/streamingeden_constants.h"
 #include "eden/fs/utils/PathFuncs.h"
-
-#ifdef _WIN32
-#include "thrift/lib/cpp/util/EnumUtils.h"
-#endif
 
 using namespace facebook::eden;
 using namespace std::string_view_literals;
@@ -85,7 +82,7 @@ std::string formatNfsCall(
 
 std::string formatPrjfsCall(
     const PrjfsCall& call,
-    const std::string& arguments = std::string{}) {
+    std::string arguments = std::string{}) {
   if (arguments.empty()) {
     return fmt::format(
         "{} from {}: {}",

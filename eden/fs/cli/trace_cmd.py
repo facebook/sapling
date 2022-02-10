@@ -10,6 +10,7 @@ import os
 import pathlib
 import subprocess
 import sys
+from typing import List, Union
 
 from . import subcmd as subcmd_mod
 from .cmd_util import require_checkout
@@ -29,6 +30,17 @@ def get_trace_stream_command() -> pathlib.Path:
         return pathlib.Path("/usr/local/libexec/eden/eden_trace_stream")
 
 
+def execute_cmd(arg_list: List[Union[pathlib.Path, str]]) -> int:
+    if sys.platform == "win32":
+        return subprocess.call(arg_list)
+    else:
+        encoded_args = [os.fsencode(arg) for arg in arg_list]
+        os.execv(
+            arg_list[0],
+            encoded_args,
+        )
+
+
 @trace_cmd("hg", "Trace hg object fetches")
 class TraceHgCommand(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -39,22 +51,14 @@ class TraceHgCommand(Subcmd):
     async def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = require_checkout(args, args.checkout)
         trace_stream_command = get_trace_stream_command()
-        if sys.platform == "win32":
-            subprocess.call(
-                [
-                    trace_stream_command,
-                    f"--mountRoot={checkout.path}",
-                    "--trace=hg",
-                ]
-            )
-        else:
-            os.execl(
+        return execute_cmd(
+            [
                 trace_stream_command,
-                os.fsencode(trace_stream_command),
-                b"--mountRoot",
-                os.fsencode(checkout.path),
-                b"--trace=hg",
-            )
+                "--mountRoot",
+                checkout.path,
+                "--trace=hg",
+            ]
+        )
 
 
 @trace_cmd("fs", "Monitor filesystem requests.")
@@ -79,25 +83,13 @@ class TraceFsCommand(Subcmd):
     async def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = require_checkout(args, args.checkout)
         trace_stream_command = get_trace_stream_command()
-        print(trace_stream_command)
-        # TODO: Use subprocess.call on Windows.
-        if sys.platform == "win32":
-            subprocess.call(
-                [
-                    trace_stream_command,
-                    f"--mountRoot={checkout.path}",
-                    "--trace=fs",
-                    f"--reads={'true' if args.reads else 'false'}",
-                    f"--writes={'true' if args.writes else 'false'}",
-                ]
-            )
-        else:
-            os.execl(
+        return execute_cmd(
+            [
                 trace_stream_command,
-                os.fsencode(trace_stream_command),
-                b"--mountRoot",
-                os.fsencode(checkout.path),
-                b"--trace=fs",
-                f"--reads={'true' if args.reads else 'false'}".encode(),
-                f"--writes={'true' if args.writes else 'false'}".encode(),
-            )
+                "--mountRoot",
+                checkout.path,
+                "--trace=fs",
+                f"--reads={'true' if args.reads else 'false'}",
+                f"--writes={'true' if args.writes else 'false'}",
+            ]
+        )

@@ -10,17 +10,17 @@
 #include <folly/portability/Windows.h>
 
 #include <folly/futures/Future.h>
+#include <thrift/lib/cpp/util/EnumUtils.h>
 
 #include <ProjectedFSLib.h> // @manual
-#include <eden/fs/service/gen-cpp2/eden_types.h>
 #include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/telemetry/TraceBus.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 #include "eden/fs/utils/Rcu.h"
-#include "thrift/lib/cpp/util/EnumUtils.h"
 
 namespace facebook {
 namespace eden {
