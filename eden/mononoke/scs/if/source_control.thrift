@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-include "common/fb303/if/fb303.thrift"
+include "fb303/thrift/fb303_core.thrift"
 include "configerator/structs/scm/mononoke/megarepo/megarepo_configs.thrift"
 
 namespace cpp2 facebook.scm.service
@@ -1535,7 +1535,7 @@ union MegarepoAsynchronousRequestError {
 
 /// Service Definition
 
-service SourceControlService extends fb303.FacebookService {
+service SourceControlService extends fb303_core.BaseService {
   /// Global methods
   /// ==============
 

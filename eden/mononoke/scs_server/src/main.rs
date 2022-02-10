@@ -20,7 +20,6 @@ use clap::Parser;
 use cloned::cloned;
 use cmdlib::helpers::serve_forever;
 use cmdlib_logging::ScribeLoggingArgs;
-use fb303::server::make_FacebookService_server;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
 use futures::future::FutureExt;
@@ -122,9 +121,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             make_BaseService_server(proto, facebook::BaseServiceImpl::new(will_exit.clone()))
         }
     };
-    let fb303 = move |proto| {
-        make_FacebookService_server(proto, facebook::FacebookServiceImpl, fb303_base.clone())
-    };
     let source_control_server = source_control_impl::SourceControlServiceImpl::new(
         fb,
         mononoke.clone(),
@@ -138,7 +134,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             make_SourceControlService_server(
                 proto,
                 source_control_server.thrift_server(),
-                fb303.clone(),
+                fb303_base.clone(),
             )
         }
     };

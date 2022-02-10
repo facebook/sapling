@@ -9,8 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use fb303::fb_status;
-use fb303::server::FacebookService;
+use fb303_core::fb303_status;
 use fb303_core::server::BaseService;
 use fb303_core::services::base_service::{GetNameExn, GetStatusDetailsExn, GetStatusExn};
 
@@ -31,11 +30,11 @@ impl BaseService for BaseServiceImpl {
         Ok("Mononoke Source Control Service Server".to_string())
     }
 
-    async fn getStatus(&self) -> Result<fb_status, GetStatusExn> {
+    async fn getStatus(&self) -> Result<fb303_status, GetStatusExn> {
         if !self.will_exit.load(Ordering::Relaxed) {
-            Ok(fb_status::ALIVE)
+            Ok(fb303_status::ALIVE)
         } else {
-            Ok(fb_status::STOPPING)
+            Ok(fb303_status::STOPPING)
         }
     }
 
@@ -47,7 +46,3 @@ impl BaseService for BaseServiceImpl {
         }
     }
 }
-
-pub struct FacebookServiceImpl;
-
-impl FacebookService for FacebookServiceImpl {}

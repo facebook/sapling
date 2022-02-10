@@ -14,7 +14,7 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "fb303 fb303
+        "fb303_core fb303_core
 megarepo_configs megarepo_configs
 source_control crate",
     ).expect("Failed to write cratemap");
