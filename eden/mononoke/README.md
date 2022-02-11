@@ -7,17 +7,17 @@ written in the [Rust programming language](https://www.rust-lang.org/en-US/).
 
 ## Caveat Emptor
 
-Mononoke is still in early stages of development. We are making it available now because we plan to
+Mononoke is still in development. We are making it available now because we plan to
 start making references to it from our other open source projects.
 
-**The version that we provide on GitHub does not build yet**.
+**The version that we provide on GitHub is omitting some functions**.
 
 This is because the code is exported verbatim from an internal repository at Facebook, and
 not all of the scaffolding from our internal repository can be easily extracted. The key areas
 where we need to shore things up are:
 
-* Full support for a standard `cargo build`.
-* Open source replacements for Facebook-internal services (blob store, logging etc).
+* Support for running thrift based apis.
+* Production metadata SQL support (e.g. something like a MySQL backend).  We provide sqlite in OSS for now.
+* Production blobstore storage backends (e.g. something like S3).  We provide SQL (on sqlite) and File System backends currently in OSS.
 
-The current goal is to get Mononoke working on Linux. Other Unix-like OSes may
-be supported in the future
+Linux is Mononoke's primary target plaform with OSS CI also running on MacOS. Other Unix-like OSes may be supported in the future.
