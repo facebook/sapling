@@ -41,7 +41,7 @@ pub fn init_hg_repo(root_path: &Path, config: &mut ConfigSet) -> Result<(), Init
 }
 
 fn create_dir(path: &Path) -> Result<(), InitError> {
-    match fs::create_dir(path) {
+    match fs::create_dir_all(path) {
         Err(err) => Err(InitError::DirectoryCreationError(
             path.to_str().unwrap().to_string(),
             err,
@@ -262,17 +262,26 @@ treestate
     }
 
     #[test]
-    fn test_create_dir() {
-        let tmp = tempfile::tempdir().unwrap();
-        let path = tmp.path().join("asht");
-        assert!(!create_dir(path.as_path()).is_err());
+    fn test_directory_creation() {
+        let tmpdir = tempfile::tempdir().unwrap();
 
-        let error_str = format!(
-            "unable to create directory at `{}`: `File exists (os error 17)`",
-            path.to_str().unwrap()
-        );
-        let err = create_dir(path.as_path()).err().unwrap();
+        // Test recursive directory creation
+        let new_dir_path = tmpdir.path().join("some").join("nested").join("directory");
+        create_dir(new_dir_path.as_path()).unwrap();
+        init_hg_repo(new_dir_path.as_path(), &mut ConfigSet::new()).unwrap();
+
+        // Test getting an error when unable to create directory
+        let new_dir_path = tmpdir.path().join("foo");
+        File::create(new_dir_path.as_path()).unwrap();
+        let err = init_hg_repo(new_dir_path.as_path(), &mut ConfigSet::new())
+            .err()
+            .unwrap();
+        let partial_error_str =
+            format!("unable to create directory at `{}", new_dir_path.display(),);
         assert!(matches!(err, InitError::DirectoryCreationError(_, _)));
-        assert_eq!(err.to_string(), error_str);
+        assert_eq!(
+            err.to_string()[..partial_error_str.len()],
+            partial_error_str
+        );
     }
 }
