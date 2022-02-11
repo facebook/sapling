@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::ArgExtension;
+use crate::AppExtension;
 use anyhow::{Error, Result};
 use clap::Args;
 use fbinit::FacebookInit;
@@ -92,9 +92,9 @@ impl Fb303Args {
     }
 }
 
-pub struct Fb303ArgExtension;
+pub struct Fb303AppExtension;
 
-impl ArgExtension for Fb303ArgExtension {
+impl AppExtension for Fb303AppExtension {
     type Args = Fb303Args;
 
     /// Hook executed after creating the log drain allowing for augmenting the logging.

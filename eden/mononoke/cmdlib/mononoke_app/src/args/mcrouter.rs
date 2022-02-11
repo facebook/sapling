@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::ArgExtension;
+use crate::AppExtension;
 use anyhow::Result;
 use clap::Args;
 use environment::MononokeEnvironment;
@@ -18,9 +18,9 @@ pub struct McrouterArgs {
     pub enable_mcrouter: bool,
 }
 
-pub struct McrouterArgExtension;
+pub struct McrouterAppExtension;
 
-impl ArgExtension for McrouterArgExtension {
+impl AppExtension for McrouterAppExtension {
     type Args = McrouterArgs;
 
     fn environment_hook(&self, args: &McrouterArgs, env: &mut MononokeEnvironment) -> Result<()> {

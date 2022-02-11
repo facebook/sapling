@@ -11,7 +11,7 @@ use anyhow::Result;
 use blobstore_factory::{ScrubAction, ScrubOptions, ScrubWriteMostly};
 use clap::Args;
 use environment::MononokeEnvironment;
-use mononoke_app::ArgExtension;
+use mononoke_app::AppExtension;
 
 #[derive(Args, Debug)]
 pub struct ScrubArgs {
@@ -51,20 +51,20 @@ pub struct ScrubArgs {
 }
 
 #[derive(Default, Debug)]
-pub struct ScrubArgExtension {
+pub struct ScrubAppExtension {
     action: Option<ScrubAction>,
     grace: Option<Duration>,
     queue_peek_bound: Option<Duration>,
     write_mostly_missing: Option<ScrubWriteMostly>,
 }
 
-impl ScrubArgExtension {
+impl ScrubAppExtension {
     pub fn new() -> Self {
-        ScrubArgExtension::default()
+        ScrubAppExtension::default()
     }
 }
 
-impl ArgExtension for ScrubArgExtension {
+impl AppExtension for ScrubAppExtension {
     type Args = ScrubArgs;
 
     fn arg_defaults(&self) -> Vec<(&'static str, String)> {

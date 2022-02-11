@@ -183,7 +183,6 @@ impl LoggingArgs {
     pub fn create_logger(
         &self,
         root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>,
-        observability_context: ObservabilityContext,
     ) -> Result<Logger> {
         let kv = FacebookKV::new().context("Failed to initialize FacebookKV")?;
         Ok(Logger::root(root_log_drain, o![kv]))

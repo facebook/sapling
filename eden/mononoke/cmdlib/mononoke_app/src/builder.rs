@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -17,7 +18,7 @@ use blobstore_factory::{
     PackOptions, ReadOnlyStorage, ReadOnlyStorageArgs, ThrottleOptions,
 };
 use cached_config::{ConfigHandle, ConfigStore};
-use clap::{App, AppSettings, ArgMatches, Args, FromArgMatches, IntoApp};
+use clap::{App, AppSettings, Args, FromArgMatches, IntoApp};
 use cmdlib_caching::{init_cachelib, CachelibArgs, CachelibSettings};
 use cmdlib_logging::{LoggingArgs, ScubaLoggingArgs};
 use derived_data_remote::RemoteDerivationArgs;
@@ -33,11 +34,11 @@ use tunables;
 
 use crate::app::MononokeApp;
 use crate::args::{parse_config_spec_to_path, ConfigArgs, MysqlArgs, RuntimeArgs, TunablesArgs};
-use crate::extension::{ArgExtension, ArgExtensionBox};
+use crate::extension::{AppExtension, AppExtensionBox, BoxedAppExtension, BoxedAppExtensionArgs};
 
 pub struct MononokeAppBuilder {
     fb: FacebookInit,
-    arg_extensions: Vec<Box<dyn ArgExtensionBox>>,
+    extensions: Vec<(TypeId, Box<dyn BoxedAppExtension>)>,
     cachelib_settings: CachelibSettings,
     readonly_storage: ReadOnlyStorage,
     default_scuba_dataset: Option<String>,
@@ -91,7 +92,7 @@ impl MononokeAppBuilder {
     pub fn new(fb: FacebookInit) -> Self {
         MononokeAppBuilder {
             fb,
-            arg_extensions: Vec::new(),
+            extensions: Vec::new(),
             cachelib_settings: CachelibSettings::default(),
             readonly_storage: ReadOnlyStorage(false),
             default_scuba_dataset: None,
@@ -114,11 +115,12 @@ impl MononokeAppBuilder {
         self
     }
 
-    pub fn with_arg_extension<Ext>(mut self, ext: Ext) -> Self
+    pub fn with_app_extension<Ext>(mut self, ext: Ext) -> Self
     where
-        Ext: ArgExtension + 'static,
+        Ext: AppExtension + 'static,
     {
-        self.arg_extensions.push(Box::new(ext));
+        self.extensions
+            .push((TypeId::of::<Ext>(), AppExtensionBox::new(ext)));
         self
     }
 
@@ -145,7 +147,7 @@ impl MononokeAppBuilder {
             }
         }
 
-        for ext in self.arg_extensions.iter() {
+        for (_type_id, ext) in self.extensions.iter() {
             for (arg, default) in ext.arg_defaults() {
                 self.defaults.insert(arg, default);
             }
@@ -158,7 +160,7 @@ impl MononokeAppBuilder {
         let long_about = app.get_long_about();
 
         app = EnvironmentArgs::augment_args_for_update(app);
-        for ext in self.arg_extensions.iter() {
+        for (_type_id, ext) in self.extensions.iter() {
             app = ext.augment_args(app);
         }
 
@@ -177,21 +179,37 @@ impl MononokeAppBuilder {
         }
 
         let args = app.get_matches();
+
+        let extension_args = self
+            .extensions
+            .iter()
+            .map(|(type_id, ext)| Ok((*type_id, ext.parse_args(&args)?)))
+            .collect::<Result<Vec<_>>>()?;
+
         let env_args = EnvironmentArgs::from_arg_matches(&args)?;
         let config_mode = env_args.config_args.mode();
-        let mut env = self.build_environment(env_args, &args)?;
+        let mut env = self.build_environment(
+            env_args,
+            extension_args.iter().map(|(_type_id, ext)| ext.as_ref()),
+        )?;
 
-        for ext in self.arg_extensions.iter() {
-            ext.environment_hook(&args, &mut env)?;
+        for (_type_id, ext) in extension_args.iter() {
+            ext.environment_hook(&mut env)?;
         }
 
-        MononokeApp::new(self.fb, config_mode, args, env)
+        MononokeApp::new(
+            self.fb,
+            config_mode,
+            args,
+            env,
+            extension_args.into_iter().collect(),
+        )
     }
 
-    fn build_environment(
+    fn build_environment<'a>(
         &self,
         env_args: EnvironmentArgs,
-        args: &ArgMatches,
+        extension_args: impl IntoIterator<Item = &'a dyn BoxedAppExtensionArgs> + Clone,
     ) -> Result<MononokeEnvironment> {
         let EnvironmentArgs {
             blobstore_args,
@@ -233,10 +251,11 @@ impl MononokeAppBuilder {
                 root_log_drain,
                 observability_context.clone(),
             ));
-        for ext in self.arg_extensions.iter() {
-            root_log_drain = ext.log_drain_hook(args, root_log_drain)?;
+        for ext in extension_args {
+            root_log_drain = ext.log_drain_hook(root_log_drain)?;
         }
-        let logger = logging_args.create_logger(root_log_drain, observability_context.clone())?;
+
+        let logger = logging_args.create_logger(root_log_drain)?;
 
         let scuba_sample_builder = scuba_logging_args
             .create_scuba_sample_builder(

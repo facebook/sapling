@@ -9,7 +9,6 @@
 #![feature(never_type)]
 
 use anyhow::{Context, Result};
-use clap::FromArgMatches;
 use clap::Parser;
 use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
@@ -17,8 +16,8 @@ use fbinit::FacebookInit;
 use futures::channel::oneshot;
 use futures_watchdog::WatchdogExt;
 use mononoke_api::{Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData};
-use mononoke_app::args::{Fb303Args, HooksArgs, McrouterArgExtension, ShutdownTimeoutArgs};
-use mononoke_app::fb303::{Fb303ArgExtension, ReadyFlagService};
+use mononoke_app::args::{HooksArgs, McrouterAppExtension, ShutdownTimeoutArgs};
+use mononoke_app::fb303::{Fb303AppExtension, ReadyFlagService};
 use mononoke_app::MononokeAppBuilder;
 use openssl::ssl::AlpnError;
 use slog::{error, info};
@@ -67,8 +66,8 @@ struct MononokeServerArgs {
 fn main(fb: FacebookInit) -> Result<()> {
     let app = MononokeAppBuilder::new(fb)
         .with_default_scuba_dataset("mononoke_test_perf")
-        .with_arg_extension(McrouterArgExtension {})
-        .with_arg_extension(Fb303ArgExtension {})
+        .with_app_extension(McrouterAppExtension {})
+        .with_app_extension(Fb303AppExtension {})
         .build::<MononokeServerArgs>()?;
     let args: MononokeServerArgs = app.args()?;
 
@@ -164,7 +163,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     };
 
     // Thread with a thrift service is now detached
-    let fb303_args = Fb303Args::from_arg_matches(app.matches())?;
+    let fb303_args = app.extension_args::<Fb303AppExtension>()?;
     fb303_args.start_fb303_server(fb, "mononoke_server", root_log, service)?;
 
     cmdlib::helpers::serve_forever(

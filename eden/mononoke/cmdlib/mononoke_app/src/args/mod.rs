@@ -23,7 +23,7 @@ pub use crate::fb303::Fb303Args;
 pub use changeset::ChangesetArgs;
 pub use config::{ConfigArgs, ConfigMode};
 pub use hooks::HooksArgs;
-pub use mcrouter::{McrouterArgExtension, McrouterArgs};
+pub use mcrouter::{McrouterAppExtension, McrouterArgs};
 pub use mysql::MysqlArgs;
 pub use repo::{RepoArg, RepoArgs};
 pub use repo_blobstore::RepoBlobstoreArgs;

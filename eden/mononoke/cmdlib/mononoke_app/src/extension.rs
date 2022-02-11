@@ -9,13 +9,15 @@ use anyhow::Result;
 use clap::{App, ArgMatches, Args, FromArgMatches};
 use environment::MononokeEnvironment;
 use slog::{Never, SendSyncRefUnwindSafeDrain};
+use std::any::Any;
 use std::sync::Arc;
 
-/// Trait implemented by things that need o extend arguments and modify the
-/// environment before it is used to start Mononoke.
-pub trait ArgExtension {
+/// Trait implemented by things that need to extend the app building process,
+/// including adding additional arguments and modifying the environment before
+/// it is used to start Mononoke.
+pub trait AppExtension: Send + Sync + 'static {
     /// Argument type to extend Mononoke arguments with.
-    type Args: clap::Args;
+    type Args: clap::Args + Send + Sync + 'static;
 
     /// Obtain default values for these arguments.
     fn arg_defaults(&self) -> Vec<(&'static str, String)> {
@@ -37,42 +39,83 @@ pub trait ArgExtension {
     }
 }
 
-/// Internal trait to hide the associated args type.
-pub(crate) trait ArgExtensionBox {
+// Internal trait to hide the concrete extension type.
+pub(crate) trait BoxedAppExtension: Send + Sync + 'static {
     fn augment_args<'help>(&self, app: App<'help>) -> App<'help>;
     fn arg_defaults(&self) -> Vec<(&'static str, String)>;
-    fn environment_hook(&self, args: &ArgMatches, env: &mut MononokeEnvironment) -> Result<()>;
-    fn log_drain_hook(
-        &self,
-        args: &ArgMatches,
-        drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>,
-    ) -> Result<Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>>;
+    fn parse_args(&self, args: &ArgMatches) -> Result<Box<dyn BoxedAppExtensionArgs>>;
 }
 
-impl<Ext> ArgExtensionBox for Ext
-where
-    Ext: ArgExtension,
-{
+// Box to store an app extension.
+#[derive(Clone)]
+pub(crate) struct AppExtensionBox<Ext: AppExtension> {
+    ext: Arc<Ext>,
+}
+
+impl<Ext: AppExtension> AppExtensionBox<Ext> {
+    pub(crate) fn new(ext: Ext) -> Box<dyn BoxedAppExtension> {
+        Box::new(AppExtensionBox { ext: Arc::new(ext) })
+    }
+}
+
+impl<Ext: AppExtension> BoxedAppExtension for AppExtensionBox<Ext> {
     fn augment_args<'help>(&self, app: App<'help>) -> App<'help> {
         Ext::Args::augment_args_for_update(app)
     }
 
     fn arg_defaults(&self) -> Vec<(&'static str, String)> {
-        self.arg_defaults()
+        self.ext.arg_defaults()
     }
 
-    fn environment_hook(&self, args: &ArgMatches, env: &mut MononokeEnvironment) -> Result<()> {
+    fn parse_args(&self, args: &ArgMatches) -> Result<Box<dyn BoxedAppExtensionArgs>> {
         let args = Ext::Args::from_arg_matches(args)?;
-        self.environment_hook(&args, env)
+        Ok(Box::new(AppExtensionArgsBox {
+            ext: self.ext.clone(),
+            args,
+        }))
+    }
+}
+
+pub(crate) trait Downcast: Any {
+    fn as_any(&self) -> &dyn Any;
+}
+
+impl<T: Any> Downcast for T {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+// Internal trait to hide the concrete extension args type.
+pub(crate) trait BoxedAppExtensionArgs: Downcast + Send + Sync + 'static {
+    fn environment_hook(&self, env: &mut MononokeEnvironment) -> Result<()>;
+    fn log_drain_hook(
+        &self,
+        drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>,
+    ) -> Result<Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>>;
+}
+
+// Box to store an app extension and its parsed args.
+pub(crate) struct AppExtensionArgsBox<Ext: AppExtension> {
+    ext: Arc<Ext>,
+    args: Ext::Args,
+}
+
+impl<Ext: AppExtension> AppExtensionArgsBox<Ext> {
+    pub(crate) fn args(&self) -> &Ext::Args {
+        &self.args
+    }
+}
+
+impl<Ext: AppExtension> BoxedAppExtensionArgs for AppExtensionArgsBox<Ext> {
+    fn environment_hook(&self, env: &mut MononokeEnvironment) -> Result<()> {
+        self.ext.environment_hook(&self.args, env)
     }
 
     fn log_drain_hook(
         &self,
-        args: &ArgMatches,
         drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>,
     ) -> Result<Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>> {
-        // TODO: avoid parsing args multiple times.
-        let args = Ext::Args::from_arg_matches(args)?;
-        self.log_drain_hook(&args, drain)
+        self.ext.log_drain_hook(&self.args, drain)
     }
 }

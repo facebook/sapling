@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use clap::Parser;
-use cmdlib_scrubbing::ScrubArgExtension;
+use cmdlib_scrubbing::ScrubAppExtension;
 use fbinit::FacebookInit;
 use mononoke_app::{MononokeApp, MononokeAppBuilder};
 
@@ -22,7 +22,7 @@ struct AdminArgs {}
 fn main(fb: FacebookInit) -> Result<()> {
     let subcommands = commands::subcommands();
     let app = MononokeAppBuilder::new(fb)
-        .with_arg_extension(ScrubArgExtension::new())
+        .with_app_extension(ScrubAppExtension::new())
         .build_with_subcommands::<AdminArgs>(subcommands)?;
     app.run(async_main)
 }

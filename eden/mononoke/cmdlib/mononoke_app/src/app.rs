@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::any::TypeId;
+use std::collections::HashMap;
 use std::future::Future;
 use std::sync::Arc;
 
@@ -28,12 +30,14 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use tokio::runtime::Handle;
 
 use crate::args::{ConfigArgs, ConfigMode, RepoArg, RepoArgs, RepoBlobstoreArgs};
+use crate::extension::{AppExtension, AppExtensionArgsBox, BoxedAppExtensionArgs};
 
 pub struct MononokeApp {
     pub fb: FacebookInit,
     config_mode: ConfigMode,
     args: ArgMatches,
     env: Arc<MononokeEnvironment>,
+    extension_args: HashMap<TypeId, Box<dyn BoxedAppExtensionArgs>>,
     storage_configs: StorageConfigs,
     repo_configs: RepoConfigs,
     repo_factory: RepoFactory,
@@ -45,6 +49,7 @@ impl MononokeApp {
         config_mode: ConfigMode,
         args: ArgMatches,
         env: MononokeEnvironment,
+        extension_args: HashMap<TypeId, Box<dyn BoxedAppExtensionArgs>>,
     ) -> Result<Self> {
         let env = Arc::new(env);
         let config_path = ConfigArgs::from_arg_matches(&args)?.config_path();
@@ -60,10 +65,26 @@ impl MononokeApp {
             config_mode,
             args,
             env,
+            extension_args,
             storage_configs,
             repo_configs,
             repo_factory,
         })
+    }
+
+    pub fn extension_args<Ext>(&self) -> Result<&Ext::Args>
+    where
+        Ext: AppExtension + 'static,
+    {
+        if let Some(ext) = self.extension_args.get(&TypeId::of::<Ext>()) {
+            if let Some(ext) = ext.as_any().downcast_ref::<AppExtensionArgsBox<Ext>>() {
+                return Ok(ext.args());
+            }
+        }
+        Err(anyhow!(
+            "Extension {} arguments not found (was it registered with MononokeApp?)",
+            std::any::type_name::<Ext>(),
+        ))
     }
 
     /// Execute a future on this app's runtime.

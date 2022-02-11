@@ -13,7 +13,7 @@ pub mod fb303;
 
 pub use app::MononokeApp;
 pub use builder::MononokeAppBuilder;
-pub use extension::ArgExtension;
+pub use extension::AppExtension;
 
 #[doc(hidden)]
 pub mod macro_export {

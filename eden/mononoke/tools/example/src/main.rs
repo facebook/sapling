@@ -27,15 +27,16 @@ struct Repo {
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let ext = additional::TestArgExtension { default: Some(42) };
+    let ext = additional::TestAppExtension { default: Some(42) };
     MononokeAppBuilder::new(fb)
-        .with_arg_extension(ext)
+        .with_app_extension(ext)
         .build::<ExampleArgs>()?
         .run(async_main)
 }
 
 async fn async_main(app: MononokeApp) -> Result<()> {
     let args: ExampleArgs = app.args()?;
+    let test_args = app.extension_args::<additional::TestAppExtension>()?;
 
     let repo: Repo = app.open_repo(&args.repo).await?;
 
@@ -44,6 +45,9 @@ async fn async_main(app: MononokeApp) -> Result<()> {
         repo.repo_identity().id(),
         repo.repo_identity().name(),
     );
+    if let Some(test_arg) = test_args.test_arg {
+        println!("Test arg: {}", test_arg);
+    }
 
     Ok(())
 }
@@ -51,10 +55,8 @@ async fn async_main(app: MononokeApp) -> Result<()> {
 /// Example module for hooking into command line arguments that modify the
 /// environment.
 mod additional {
-    use anyhow::Result;
     use clap::Args;
-    use environment::MononokeEnvironment;
-    use mononoke_app::ArgExtension;
+    use mononoke_app::AppExtension;
 
     // This struct defines the command line arguments, and is a normal
     // implementor of `clap::Args`.
@@ -67,11 +69,11 @@ mod additional {
 
     // This struct defines the extension.  It can be used to store default
     // values and other items necessary for the arguments to operate.
-    pub struct TestArgExtension {
+    pub struct TestAppExtension {
         pub default: Option<u32>,
     }
 
-    impl ArgExtension for TestArgExtension {
+    impl AppExtension for TestAppExtension {
         type Args = TestArgs;
 
         fn arg_defaults(&self) -> Vec<(&'static str, String)> {
@@ -80,13 +82,6 @@ mod additional {
             } else {
                 Vec::new()
             }
-        }
-
-        fn environment_hook(&self, args: &TestArgs, _env: &mut MononokeEnvironment) -> Result<()> {
-            if let Some(value) = args.test_arg {
-                println!("Test arg received: {}", value);
-            }
-            Ok(())
         }
     }
 }
