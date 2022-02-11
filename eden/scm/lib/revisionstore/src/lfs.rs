@@ -43,7 +43,6 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use hg_http::http_client;
 use hg_http::http_config;
-use http::header::HeaderMap;
 use http::status::StatusCode;
 use http_client::Encoding;
 use http_client::HttpClient;
@@ -1128,6 +1127,8 @@ impl LfsRemoteInner {
             let mut rng = thread_rng();
             let mut attempt = 0;
 
+            let mut seen_error_codes = HashSet::new();
+
             loop {
                 attempt += 1;
 
@@ -1214,12 +1215,23 @@ impl LfsRemoteInner {
                 .await;
 
                 let error = match res {
-                    Ok(res) => return Ok(res),
+                    Ok(res) => {
+                        for code in seen_error_codes {
+                            // Record that we saw this error code, but it went away on retry.
+                            hg_metrics::increment_counter(
+                                format!("lfs.transient_error.{}.{}", method, code),
+                                1,
+                            );
+                        }
+                        hg_metrics::increment_counter(format!("lfs.success.{}", method), 1);
+                        return Ok(res);
+                    }
                     Err(error) => error,
                 };
 
                 let retry_strategy = match &error {
                     TransferError::HttpStatus(status, _) => {
+                        seen_error_codes.insert(*status);
                         RetryStrategy::from_http_status(*status)
                     }
                     TransferError::HttpClientError(http_error) => {
@@ -1247,6 +1259,18 @@ impl LfsRemoteInner {
                     );
                     sleep(sleep_time).await;
                     continue;
+                }
+
+                if seen_error_codes.is_empty() {
+                    hg_metrics::increment_counter(format!("lfs.fatal_error.{}.other", method), 1);
+                }
+
+                for code in seen_error_codes {
+                    // Record that we saw this error code and ended up failing.
+                    hg_metrics::increment_counter(
+                        format!("lfs.fatal_error.{}.{}", method, code),
+                        1,
+                    );
                 }
 
                 return Err(FetchError { url, method, error });
