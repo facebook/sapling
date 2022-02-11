@@ -44,6 +44,7 @@ use crate::indexedlogdatastore::Entry;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::indexedlogutil::StoreType;
 use crate::lfs::lfs_from_hg_file_blob;
+use crate::lfs::LfsPointersEntry;
 use crate::lfs::LfsRemote;
 use crate::lfs::LfsStore;
 use crate::memcache::MEMCACHE_DELAY;
@@ -247,24 +248,19 @@ impl FileStore {
         FetchResults::new(Box::new(found_rx.into_iter()))
     }
 
-    fn write_lfsptr(&self, key: Key, bytes: Bytes, meta: Metadata) -> Result<()> {
+    fn write_lfsptr(&self, key: Key, bytes: Bytes) -> Result<()> {
         if !self.allow_write_lfs_ptrs {
             ensure!(
                 std::env::var("TESTTMP").is_ok(),
                 "writing LFS pointers directly is not allowed outside of tests"
             );
         }
-        // TODO(meyer): We should try to eliminate directly writing LFS pointers, so we're only supporting it
-        // via ContentStore for now.
-        let contentstore = self.contentstore.as_ref().ok_or_else(|| {
-            anyhow!("trying to write LFS pointer but no ContentStore is available")
+        let lfs_local = self.lfs_local.as_ref().ok_or_else(|| {
+            anyhow!("trying to write LFS pointer but no local LfsStore is available")
         })?;
-        let delta = Delta {
-            data: bytes,
-            base: None,
-            key,
-        };
-        contentstore.add(&delta, &meta)
+
+        let lfs_pointer = LfsPointersEntry::from_bytes(bytes, key.hgid)?;
+        lfs_local.add_pointer(lfs_pointer)
     }
 
     fn write_lfs(&self, key: Key, bytes: Bytes) -> Result<()> {
@@ -296,7 +292,7 @@ impl FileStore {
         for (key, bytes, meta) in entries {
             if meta.is_lfs() {
                 metrics.lfsptr.item(1);
-                if let Err(e) = self.write_lfsptr(key, bytes, meta) {
+                if let Err(e) = self.write_lfsptr(key, bytes) {
                     metrics.lfsptr.err(1);
                     return Err(e);
                 }
