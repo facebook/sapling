@@ -23,14 +23,27 @@ class RequestContext : public ObjectFetchContext {
  public:
   explicit RequestContext(ProcessAccessLog& pal) : pal_(pal) {}
 
+  /**
+   * Allocate a RequestContext.
+   *
+   * Sub-classes should call this instead of std::make_shared to make sure that
+   * finishRequest is called once the last shared_ptr holding the
+   * RequestContext is destroyed.
+   */
+  template <typename T, typename... Args>
+  static std::
+      enable_if_t<std::is_base_of_v<RequestContext, T>, std::shared_ptr<T>>
+      makeSharedRequestContext(Args&&... args) {
+    return std::shared_ptr<T>{new T(std::forward<Args>(args)...), [](T* ptr) {
+                                ptr->finishRequest();
+                                delete ptr;
+                              }};
+  }
+
   RequestContext(const RequestContext&) = delete;
   RequestContext& operator=(const RequestContext&) = delete;
   RequestContext(RequestContext&&) = delete;
   RequestContext& operator=(RequestContext&&) = delete;
-
-  ~RequestContext() override {
-    finishRequest();
-  }
 
   /**
    * Override of `ObjectFetchContext`

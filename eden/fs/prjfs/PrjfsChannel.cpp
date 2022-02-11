@@ -94,8 +94,9 @@ HRESULT runCallback(
     }
 
     auto channelPtr = channel.get();
-    auto context = std::make_shared<PrjfsRequestContext>(
-        std::move(channel), *callbackData);
+    auto context =
+        RequestContext::makeSharedRequestContext<PrjfsRequestContext>(
+            std::move(channel), *callbackData);
     auto liveRequest = std::make_unique<PrjfsLiveRequest>(PrjfsLiveRequest{
         channelPtr->getTraceBusPtr(),
         channelPtr->getTraceDetailedArguments(),
@@ -239,8 +240,9 @@ HRESULT notification(
     }
 
     auto channelPtr = channel.get();
-    auto context = std::make_shared<PrjfsRequestContext>(
-        std::move(channel), *callbackData);
+    auto context =
+        RequestContext::makeSharedRequestContext<PrjfsRequestContext>(
+            std::move(channel), *callbackData);
     auto typeIt = notificationTypeMap.find(notificationType);
     auto nType = PrjfsTraceCallType::INVALID;
     if (typeIt != notificationTypeMap.end()) {
