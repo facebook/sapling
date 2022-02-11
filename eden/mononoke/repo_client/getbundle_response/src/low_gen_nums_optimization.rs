@@ -96,6 +96,7 @@ impl PartialGetBundle {
 /// a commit with a low generation number, and this will later be processed by a second
 /// `low_gen_num_optimization` and make the overall getbundle call much faster.
 ///
+/// ```text
 ///   A <- head with largest generation
 ///   |
 ///   B
@@ -108,6 +109,7 @@ impl PartialGetBundle {
 /// partial result - [A, B]
 /// new_heads[ .., C, ...]
 /// new_common: common
+/// ```
 pub(crate) async fn compute_partial_getbundle(
     ctx: &CoreContext,
     changeset_fetcher: &Arc<dyn ChangesetFetcher>,
@@ -197,6 +199,7 @@ pub(crate) async fn compute_partial_getbundle(
 
 /// Optimization for the case when params.heads has values with very low generation number.
 ///
+/// ```text
 /// O <- head 1
 /// |
 /// O <- exclude 1
@@ -211,7 +214,7 @@ pub(crate) async fn compute_partial_getbundle(
 ///
 /// low_gen_num_optimization instead makes two separate DifferenceOfUnionsOfAncestorsNodeStream calls - one for heads
 /// with high generation number, and another for heads and excludes with low generation number.
-///
+/// ```
 pub(crate) async fn low_gen_num_optimization(
     ctx: &CoreContext,
     changeset_fetcher: &Arc<dyn ChangesetFetcher>,
@@ -343,6 +346,7 @@ struct SplitParams {
 ///
 /// In example below:
 ///
+/// ```text
 /// O <- head 1
 /// |
 /// O <- exclude 1
@@ -352,6 +356,7 @@ struct SplitParams {
 /// O     O <- exclude 2
 ///
 /// we'd get {head1}, {exclude1, exclude2} and {head2}, {exclude2}
+/// ```
 fn split_heads_excludes(ctx: &CoreContext, params: Params, threshold: u64) -> Option<SplitParams> {
     let Params { heads, excludes } = params;
     let (high_gen_heads, low_gen_heads): (Vec<_>, Vec<_>) = heads

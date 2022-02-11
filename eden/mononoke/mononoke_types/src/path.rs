@@ -311,6 +311,7 @@ impl MPathElement {
     }
 
     /// Returns whether this path element is a valid filename on Windows.
+    /// ```text
     ///
     /// Invalid filenames on Windows are:
     ///
@@ -319,6 +320,7 @@ impl MPathElement {
     /// * Any filename ending in a `.` or a space.
     /// * Any filename that is `CON`, `PRN`, `AUX`, `NUL`, `COM1-9` or
     ///   `LPT1-9`, with or without an extension.
+    /// ```
     pub fn is_valid_windows_filename(&self) -> bool {
         // File names containing any of <>:"/\|?* or control characters are invalid.
         let is_invalid = |c: &u8| *c < b' ' || b"<>:\"/\\|?*".iter().any(|i| i == c);

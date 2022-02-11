@@ -1,6 +1,8 @@
 # NOTE: Make sure you don't start any variables with HG_ here: the HG test
 # runner will strip those out...
 
+# The values here should correspond to both the name of binary as builded by
+# getdeps.py's Mononoke project and the buck target. Those names must be unique.
 MONONOKE_BINS = {
     "BACKSYNCER": "backsyncer_cmd",
     "BINARY_HG": "hg",

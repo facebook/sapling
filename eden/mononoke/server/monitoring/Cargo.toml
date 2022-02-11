@@ -13,16 +13,3 @@ cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 services = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-
-[patch.crates-io]
-daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }
-lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
-prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
-prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
-prost-types = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
-quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
-reqwest = { git = "https://github.com/vmagro/reqwest", rev = "b08239c2b6c837321a697c5bb2be394d276b59ca" }
-rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }
-shellexpand = { git = "https://github.com/fanzeyi/shellexpand.git", rev = "179447a3f8fccd765acfd2eed15a54c716c49cfe" }
-terminfo = { git = "https://github.com/rust-terminfo/terminfo", rev = "9b4e1c6aae79644c9da7a2e312e3c10ee4759930" }
-toml = { git = "https://github.com/fbsource/toml", branch = "dotted-table-0.5.8" }

@@ -33,7 +33,7 @@ pub mod macro_export {
 ///   that defines a subcommand, which should be placed in a `commands`
 ///   directory.
 ///
-/// ```
+/// ```text
 /// use mononoke_app::subcommands;
 ///
 /// subcommands! {

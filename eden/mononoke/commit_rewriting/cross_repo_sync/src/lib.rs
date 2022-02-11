@@ -861,7 +861,7 @@ where
     /// This is marked as unsafe since it might lead to repo corruption if used incorrectly.
     /// It can be used to import a merge commit from a new repo:
     ///
-    ///```text
+    /// ```text
     ///     source repo:
     ///
     ///     O  <- master (common bookmark). Points to a merge commit that imports a new repo
@@ -869,7 +869,7 @@ where
     ///     O   \
     ///          O  <- merge commit in the new repo we are trying to merge into master.
     ///         /  \   naive_sync_commit can be used to sync this commit
-    ///```
+    /// ```
     ///
     /// Normally this function is able to find the parents for the synced commit automatically
     /// but in case it can't then `maybe_parents` parameter allows us to overwrite parents of
