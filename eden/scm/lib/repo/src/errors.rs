@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::path::PathBuf;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -18,14 +19,14 @@ pub struct InvalidSharedPath(pub String);
 #[derive(Error, Debug)]
 pub enum InitError {
     #[error("repository `{0}` already exists")]
-    ExistingRepoError(String),
+    ExistingRepoError(PathBuf),
 
     #[error("unable to create directory at `{0}`: `{1}`")]
-    DirectoryCreationError(String, String),
+    DirectoryCreationError(String, std::io::Error),
 
     #[error("unable to create file at `{0}`: `{1}`")]
-    FileCreationError(String, String),
+    FileCreationError(PathBuf, std::io::Error),
 
     #[error("config loading error: `{0}`")]
-    ConfigLoadingError(String),
+    ConfigLoadingError(anyhow::Error),
 }

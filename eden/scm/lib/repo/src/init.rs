@@ -10,6 +10,7 @@ use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use std::path::PathBuf;
 
 use configparser::config::ConfigSet;
 use configparser::hg::ConfigSetHgExt;
@@ -24,9 +25,7 @@ pub fn init_hg_repo(root_path: &Path, config: &mut ConfigSet) -> Result<(), Init
     let hg_path = root_path.join(HG_PATH);
     let hg_path = hg_path.as_path();
     if hg_path.exists() {
-        return Err(InitError::ExistingRepoError(String::from(
-            root_path.to_string_lossy().as_ref(),
-        )));
+        return Err(InitError::ExistingRepoError(PathBuf::from(root_path)));
     }
     create_dir(hg_path)?;
 
@@ -45,7 +44,7 @@ fn create_dir(path: &Path) -> Result<(), InitError> {
     match fs::create_dir(path) {
         Err(err) => Err(InitError::DirectoryCreationError(
             path.to_str().unwrap().to_string(),
-            err.to_string(),
+            err,
         )),
         _ => Ok(()),
     }
@@ -55,20 +54,14 @@ fn create_file(path: &Path, contents: &[u8]) -> Result<(), InitError> {
     let mut file = match File::create(path) {
         Ok(file) => file,
         Err(err) => {
-            return Err(InitError::FileCreationError(
-                path.to_str().unwrap().to_string(),
-                err.to_string(),
-            ));
+            return Err(InitError::FileCreationError(PathBuf::from(path), err));
         }
     };
     match file.write_all(contents) {
         Ok(_) => Ok(()),
         Err(err) => {
             fs::remove_file(path).ok();
-            Err(InitError::FileCreationError(
-                path.to_str().unwrap().to_string(),
-                err.to_string(),
-            ))
+            Err(InitError::FileCreationError(PathBuf::from(path), err))
         }
     }
 }
@@ -94,7 +87,7 @@ fn write_changelog(path: &Path) -> Result<(), InitError> {
 fn write_configs(path: &Path, config: &mut ConfigSet) -> Result<(), InitError> {
     match config.load::<String, String>(Some(path), None) {
         Ok(_) => Ok(()),
-        Err(err) => Err(InitError::ConfigLoadingError(err.to_string())),
+        Err(err) => Err(InitError::ConfigLoadingError(err)),
     }
 }
 
