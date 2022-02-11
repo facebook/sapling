@@ -64,28 +64,17 @@ function base_commit_and_snapshot {
     hgedenapi snapshot create
 }
 
-BASE_STATUS="\
-M modified_file
-A added_file
-R deleted_file
-R deleted_file_then_untracked_modify
-! added_file_then_missing
-! missing_file
-? untracked_file"
-
 function assert_on_base_snapshot {
     # Using subshell to set pipefail
     (
     set -e -o pipefail
-    [[ "$(hg log -T "{node}" -r .)" = "$BASE_SNAPSHOT_COMMIT" ]]
-    [[ "$(hg st)" = "$BASE_STATUS" ]]
-    [[ "$(cat modified_file)" = "b" ]]
-    [[ "$(cat added_file)" = "b" ]]
-    [[ "$(cat deleted_file_then_untracked_modify)" = "b" ]]
-    [[ "$(cat untracked_file)" = "b" ]]
-    [[ ! -f deleted_file ]]
-    [[ ! -f added_file_then_missing ]]
-    [[ ! -f missing_file ]]
-    echo snapshot is correct!
+    [[ "$(hg log -T "{node}" -r .)" = "$BASE_SNAPSHOT_COMMIT" ]] || ( echo wrong parent && hg log -T "{node}" -r . )
+    [[ "$(cat modified_file)" = "b" ]] || echo wrong modified_file
+    [[ "$(cat added_file)" = "b" ]] || echo wrong added_file
+    [[ "$(cat deleted_file_then_untracked_modify)" = "b" ]] || wrong deleted_file_then_untracked_modify
+    [[ "$(cat untracked_file)" = "b" ]] || echo wrong untracked_file
+    [[ ! -f deleted_file ]] || echo Existing deleted_file
+    [[ ! -f added_file_then_missing ]] || echo Existing added_file_then_missing
+    [[ ! -f missing_file ]] || echo Existing missing_file
     )
 }
