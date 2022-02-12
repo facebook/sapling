@@ -20,6 +20,7 @@ use edenapi_types::FileSpec;
 use futures::StreamExt;
 use parking_lot::RwLock;
 use progress_model::AggregatingProgressBar;
+use tracing::debug;
 use tracing::field;
 use types::Key;
 use types::Sha256;
@@ -201,8 +202,8 @@ impl FetchState {
         memcache: Option<Arc<MemcacheStore>>,
     ) -> Result<LazyFile> {
         let cache_entry = file.indexedlog_cache_entry(key.clone())?.ok_or_else(|| {
-                anyhow!("expected LazyFile::EdenApi or LazyFile::Memcache, other LazyFile variants should not be written to cache")
-            })?;
+            anyhow!("expected LazyFile::EdenApi or LazyFile::Memcache, other LazyFile variants should not be written to cache")
+        })?;
         if let Some(memcache) = memcache.as_ref() {
             memcache.add_mcdata(cache_entry.clone().try_into()?);
         }
@@ -231,12 +232,32 @@ impl FetchState {
         if pending.is_empty() {
             return;
         }
+
+        debug!(
+            "Checking store Indexedlog ({cache}) - Count = {count}",
+            cache = match typ {
+                StoreType::Shared => "cache",
+                StoreType::Local => "local",
+            },
+            count = pending.len()
+        );
+
+        // Print an example key for the first store checked.
+        if typ == StoreType::Shared {
+            debug!("    Example key: {key}", key = pending[0]);
+        }
+
+        let mut found = 0;
+        let mut errors = 0;
+        let mut error: Option<String> = None;
+
         self.metrics.indexedlog.store(typ).fetch(pending.len());
         for key in pending.into_iter() {
             let res = store.get_raw_entry(&key);
             match res {
                 Ok(Some(entry)) => {
                     self.metrics.indexedlog.store(typ).hit(1);
+                    found += 1;
                     self.found_indexedlog(key, entry, typ)
                 }
                 Ok(None) => {
@@ -244,9 +265,24 @@ impl FetchState {
                 }
                 Err(err) => {
                     self.metrics.indexedlog.store(typ).err(1);
+                    errors += 1;
+                    if error.is_none() {
+                        error.replace(format!("{}: {}", key, err));
+                    }
                     self.errors.keyed_error(key, err)
                 }
             }
+        }
+
+        if found != 0 {
+            debug!("    Found = {found}", found = found);
+        }
+        if errors != 0 {
+            debug!(
+                "    Errors = {errors}, Error = {error:?}",
+                errors = errors,
+                error = error
+            );
         }
     }
 
@@ -260,6 +296,20 @@ impl FetchState {
         if pending.is_empty() {
             return;
         }
+
+        debug!(
+            "Checking store AUX ({cache}) - Count = {count}",
+            cache = match typ {
+                StoreType::Shared => "cache",
+                StoreType::Local => "local",
+            },
+            count = pending.len()
+        );
+
+        let mut found = 0;
+        let mut errors = 0;
+        let mut error: Option<String> = None;
+
         self.metrics.aux.store(typ).fetch(pending.len());
 
         for key in pending.into_iter() {
@@ -267,6 +317,7 @@ impl FetchState {
             match res {
                 Ok(Some(aux)) => {
                     self.metrics.aux.store(typ).hit(1);
+                    found += 1;
                     self.found_aux_indexedlog(key, aux, typ)
                 }
                 Ok(None) => {
@@ -274,9 +325,24 @@ impl FetchState {
                 }
                 Err(err) => {
                     self.metrics.aux.store(typ).err(1);
+                    errors += 1;
+                    if error.is_none() {
+                        error.replace(format!("{}: {}", key, err));
+                    }
                     self.errors.keyed_error(key, err)
                 }
             }
+        }
+
+        if found != 0 {
+            debug!("    Found = {found}", found = found);
+        }
+        if errors != 0 {
+            debug!(
+                "    Errors = {errors}, Error = {error:?}",
+                errors = errors,
+                error = error
+            );
         }
     }
 
@@ -294,6 +360,21 @@ impl FetchState {
         if pending.is_empty() {
             return;
         }
+
+        debug!(
+            "Checking store LFS ({cache}) - Count = {count}",
+            cache = match typ {
+                StoreType::Shared => "cache",
+                StoreType::Local => "local",
+            },
+            count = pending.len()
+        );
+
+        let mut found = 0;
+        let mut found_pointers = 0;
+        let mut errors = 0;
+        let mut error: Option<String> = None;
+
         self.metrics.lfs.store(typ).fetch(pending.len());
         for store_key in pending.into_iter() {
             let key = store_key.clone().maybe_into_key().expect(
@@ -303,6 +384,11 @@ impl FetchState {
                 Ok(Some(entry)) => {
                     // TODO(meyer): Make found behavior w/r/t LFS pointers and content consistent
                     self.metrics.lfs.store(typ).hit(1);
+                    if let LfsStoreEntry::PointerOnly(_) = &entry {
+                        found_pointers += 1;
+                    } else {
+                        found += 1;
+                    }
                     self.found_lfs(key, entry, typ)
                 }
                 Ok(None) => {
@@ -310,9 +396,30 @@ impl FetchState {
                 }
                 Err(err) => {
                     self.metrics.lfs.store(typ).err(1);
+                    errors += 1;
+                    if error.is_none() {
+                        error.replace(format!("{}: {}", key, err));
+                    }
                     self.errors.keyed_error(key, err)
                 }
             }
+        }
+
+        if found != 0 {
+            debug!("    Found = {found}", found = found);
+        }
+        if found_pointers != 0 {
+            debug!(
+                "    Found Pointers-Only = {found_pointers}",
+                found_pointers = found_pointers
+            );
+        }
+        if errors != 0 {
+            debug!(
+                "    Errors = {errors}, Error = {error:?}",
+                errors = errors,
+                error = error
+            );
         }
     }
 
@@ -353,6 +460,9 @@ impl FetchState {
         if pending.is_empty() {
             return Ok(());
         }
+
+        debug!("Fetching Memcache - Count = {count}", count = pending.len());
+
         self.fetch_logger
             .as_ref()
             .map(|fl| fl.report_keys(pending.iter()));
@@ -428,22 +538,19 @@ impl FetchState {
         memcache: Option<Arc<MemcacheStore>>,
     ) -> Result<()> {
         let fetchable = FileAttributes::CONTENT | FileAttributes::AUX;
-        let span = tracing::info_span!(
-            "fetch_edenapi",
-            downloaded = field::Empty,
-            uploaded = field::Empty,
-            requests = field::Empty,
-            time = field::Empty,
-            latency = field::Empty,
-            download_speed = field::Empty,
-            scmstore = true,
-        );
-        let _enter = span.enter();
 
         let pending = self.pending_nonlfs(fetchable);
         if pending.is_empty() {
             return Ok(());
         }
+
+        debug!("Fetching EdenAPI - Count = {count}", count = pending.len());
+
+        let mut found = 0;
+        let mut found_pointers = 0;
+        let mut errors = 0;
+        let mut error: Option<String> = None;
+
         self.fetch_logger
             .as_ref()
             .map(|fl| fl.report_keys(pending.iter()));
@@ -498,13 +605,51 @@ impl FetchState {
             match res {
                 Ok((file, maybe_lfsptr)) => {
                     if let Some(lfsptr) = maybe_lfsptr {
+                        found_pointers += 1;
                         self.found_pointer(key.clone(), lfsptr, StoreType::Shared, false);
+                    } else {
+                        found += 1;
                     }
                     self.found_attributes(key, file, Some(StoreType::Shared));
                 }
-                Err(err) => self.errors.keyed_error(key, err),
+                Err(err) => {
+                    errors += 1;
+                    if error.is_none() {
+                        error.replace(format!("{}: {}", key, err));
+                    }
+                    self.errors.keyed_error(key, err)
+                }
             }
         }
+
+        if found != 0 {
+            debug!("    Found = {found}", found = found);
+        }
+        if found_pointers != 0 {
+            debug!(
+                "    Found Pointers = {found_pointers}",
+                found_pointers = found_pointers
+            );
+        }
+        if errors != 0 {
+            debug!(
+                "    Errors = {errors}, Error = {error:?}",
+                errors = errors,
+                error = error
+            );
+        }
+
+        let span = tracing::info_span!(
+            "fetch_edenapi",
+            downloaded = field::Empty,
+            uploaded = field::Empty,
+            requests = field::Empty,
+            time = field::Empty,
+            latency = field::Empty,
+            download_speed = field::Empty,
+            scmstore = true,
+        );
+        let _enter = span.enter();
 
         util::record_edenapi_stats(&span, &block_on(response.stats)?);
 
@@ -550,6 +695,9 @@ impl FetchState {
         if pending.is_empty() {
             return Ok(());
         }
+
+        debug!("Fetching LFS - Count = {count}", count = pending.len());
+
         self.fetch_logger
             .as_ref()
             .map(|fl| fl.report_keys(self.lfs_pointers.keys()));
@@ -603,6 +751,7 @@ impl FetchState {
         cache: Option<Arc<LfsStore>>,
     ) {
         if let Err(err) = self.fetch_lfs_remote_inner(store, local, cache) {
+            debug!("LFS upper error - Error = {err:?}", err = err);
             self.errors.other_error(err);
         }
     }
@@ -633,7 +782,16 @@ impl FetchState {
         store: &ContentStore,
         pending: &mut Vec<StoreKey>,
     ) -> Result<()> {
+        debug!(
+            "ContentStore Fallback  - Count = {count}",
+            count = pending.len()
+        );
+        let mut found = 0;
+        let mut errors = 0;
+        let mut error: Option<String> = None;
+
         store.prefetch(&pending)?;
+
         for store_key in pending.drain(..) {
             let key = store_key.clone().maybe_into_key().expect(
                 "no Key present in StoreKey, even though this should be guaranteed by pending_storekey",
@@ -657,15 +815,33 @@ impl FetchState {
                 });
 
             match res {
-                Ok((Some(blob), Some(meta))) => self.found_contentstore(key, blob, meta),
+                Ok((Some(blob), Some(meta))) => {
+                    found += 1;
+                    self.found_contentstore(key, blob, meta)
+                }
                 Err(err) => {
                     self.metrics.contentstore.err(1);
+                    errors += 1;
+                    if error.is_none() {
+                        error.replace(format!("{}: {}", key, err));
+                    }
                     self.errors.keyed_error(key, err)
                 }
                 _ => {
                     self.metrics.contentstore.miss(1);
                 }
             }
+        }
+
+        if found != 0 {
+            debug!("    Found = {found}", found = found);
+        }
+        if errors != 0 {
+            debug!(
+                "    Errors = {errors}, Error = {error:?}",
+                errors = errors,
+                error = error
+            );
         }
 
         Ok(())
@@ -678,6 +854,7 @@ impl FetchState {
         }
         self.metrics.contentstore.fetch(pending.len());
         if let Err(err) = self.fetch_contentstore_inner(store, &mut pending) {
+            debug!("ContentStore upper error - Error = {err:?}", err = err);
             self.errors.other_error(err);
             self.metrics.contentstore.err(pending.len());
         }

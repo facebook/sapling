@@ -30,7 +30,7 @@ pub enum Store {
     Shared(RotateLog),
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StoreType {
     Local,
     Shared,
