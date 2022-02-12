@@ -336,13 +336,19 @@ def check_in_progress_checkout(tracker: ProblemTracker, checkout: EdenCheckout) 
         if proc_utils.new().is_edenfs_process(ex.pid):
             return
 
+        try:
+            from .facebook import reclone_remediation
+        except ImportError:
+
+            def reclone_remediation(checkout_path: Path) -> str:
+                return ""
+
         tracker.add_problem(
             Problem(
                 f"{str(ex)}",
-                remediation=(
-                    "EdenFS was killed or crashed during a checkout/update operation. "
-                    + "This is unfortunately not recoverable at this time and recloning the repository is necessary"
-                ),
+                remediation=f"""\
+EdenFS was killed or crashed during a checkout/update operation. This is unfortunately not recoverable at this time and recloning the repository is necessary.
+{reclone_remediation(checkout.path)}""",
             )
         )
 
