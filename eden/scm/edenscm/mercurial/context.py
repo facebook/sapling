@@ -1092,7 +1092,12 @@ class basefilectx(object):
         else:
             skipfunc = None
 
-        base, parents = _filelogbaseparents(self, follow)
+        repo = self.repo()
+        if git.isgitstore(repo) or repo.ui.configbool("experimental", "pathhistory"):
+            # git does not have filelog to answer history questions
+            base, parents = _pathhistorybaseparents(self, follow)
+        else:
+            base, parents = _filelogbaseparents(self, follow)
 
         annotatedlines, text = annotate.annotate(
             base, parents, decorate, diffopts, skipfunc
@@ -1167,6 +1172,76 @@ def _filelogbaseparents(
         base._ancestrycontext = ac
 
     return base, parents
+
+
+def _pathhistorybaseparents(
+    fctx: basefilectx, follow: bool
+) -> Tuple[basefilectx, Callable[[basefilectx], List[basefilectx]]]:
+    """Return (base, parents) useful for annotate history traversal.
+    This implementation is based on pathhistory.
+    """
+    cache = {}  # {path: pathhistoryparents}
+
+    repo = fctx.repo()
+    path = fctx.path()
+    pathparents = pathhistoryparents(repo, path)
+    intronode = pathparents.follow(fctx.node())
+    cache[path] = pathparents
+    base = repo[intronode][path]
+
+    def parents(fctx, repo=repo, cache=cache):
+        path = fctx.path()
+        node = fctx.node()
+        parentnodes = cache[path](node)
+        parents = [repo[n][path] for n in parentnodes]
+        # TODO: Consider following renames.
+        return parents
+
+    return base, parents
+
+
+class pathhistoryparents:
+    """parents for a sub-graph following (path, startnode)"""
+
+    def __init__(self, repo, path: str):
+        self.repo = repo
+        self.path = path
+
+        self.followed = {}
+
+        # [(nameset, parents)].
+        # If a file is renamed forth and back, there might need to be multiple
+        # pathhistory follows.
+        self.setparents = []
+
+    def follow(self, startnode):
+        """follow a node so history starting from that node is known
+        Return the 'intronode' - nearest node that touches the path.
+        Return nullid if the history is empty.
+        The 'intronode' can then be used in '__call__' to get parent
+        nodes.
+        """
+        intronode = self.followed.get(startnode)
+        if intronode:
+            return intronode
+        dag = self.repo.changelog.dag
+        ancestornodes = dag.ancestors([startnode])
+        nodes = list(self.repo.pathhistory([self.path], ancestornodes))
+        nameset = dag.sort(nodes)
+        parents = nameset.toparents()
+        self.setparents.append((nameset, parents))
+        intronode = nodes and nodes[0] or nullid
+        self.followed[startnode] = intronode
+        return intronode
+
+    def __call__(self, node):
+        """get parent nodes of node for path."""
+        if node == nullid:
+            return []
+        for (nameset, parents) in self.setparents:
+            if node in nameset:
+                return parents(node)
+        raise error.ProgrammingError("%s is not yet follow()-ed" % hex(node))
 
 
 @attr.s(slots=True, frozen=True)
