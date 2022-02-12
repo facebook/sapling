@@ -199,6 +199,7 @@ from edenscm.mercurial import (
     error,
     extensions,
     filesystem,
+    git,
     localrepo,
     match as matchmod,
     pathutil,
@@ -467,16 +468,18 @@ def _innerwalk(self, match, event, span):
         # Use the user-configured timeout for the query.
         # Add a little slack over the top of the user query to allow for
         # overheads while transferring the data
+        excludes = ["anyof", ["dirname", ".hg"], ["name", ".hg", "wholename"]]
+        # Exclude submodules.
+        if git.isgitformat(self._repo):
+            submods = git.parsesubmodules(self._repo[None])
+            excludes += [["dirname", s.path] for s in submods]
         self._watchmanclient.settimeout(state.timeout + 0.1)
         result = self._watchmanclient.command(
             "query",
             {
                 "fields": ["mode", "mtime", "size", "exists", "name"],
                 "since": clock,
-                "expression": [
-                    "not",
-                    ["anyof", ["dirname", ".hg"], ["name", ".hg", "wholename"]],
-                ],
+                "expression": ["not", excludes],
                 "sync_timeout": int(state.timeout * 1000),
                 "empty_on_fresh_instance": state.walk_on_invalidate,
             },
@@ -900,6 +903,8 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
             return bail("fsmonitor disabled")
         if listignored:
             return bail("listing ignored files")
+        if getattr(self._repo, "submodule", None):
+            return bail("submodule")
         if not self._watchmanclient.available():
             return bail("client unavailable")
 
