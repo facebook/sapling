@@ -22,6 +22,7 @@ use futures::stream::StreamExt;
 
 use crate::dagalgo::dagalgo;
 use crate::idmap::NULL_NODE;
+use crate::parents::parents;
 
 /// A wrapper around [`Set`] with Python integration added.
 ///
@@ -116,6 +117,16 @@ py_class!(pub class nameset |py| {
         match self.inner(py).dag() {
             Some(dag) => dagalgo::from_arc_dag(py, dag).map(Some),
             None => Ok(None),
+        }
+    }
+
+    /// Obtain "parents" information on this set.
+    /// "parents" is Callable[[bytes], List[bytes]].
+    def toparents(&self) -> PyResult<Option<parents>> {
+        let dag_parents = block_on(self.inner(py).to_parents()).map_pyerr(py)?;
+        match dag_parents {
+            None => Ok(None),
+            Some(dag_parents) => Ok(Some(parents::create_instance(py, Box::new(dag_parents))?))
         }
     }
 

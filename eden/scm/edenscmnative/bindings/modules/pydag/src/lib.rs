@@ -18,6 +18,7 @@ pub mod idmap;
 mod impl_into;
 pub mod nameset;
 pub mod spanset;
+mod parents;
 
 pub use nameset::Names;
 pub use spanset::spans;
@@ -33,6 +34,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     // "traits"
     m.add_class::<dagalgo::dagalgo>(py)?;
     m.add_class::<idmap::idmap>(py)?;
+    m.add_class::<parents::parents>(py)?;
 
     // smartset-like types
     m.add_class::<nameset::nameset>(py)?;
