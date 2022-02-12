@@ -1,9 +1,20 @@
+# Portions Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
+# Copyright Mercurial Contributors
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+
 from __future__ import absolute_import, print_function
 
 import unittest
 
 from edenscm.mercurial import mdiff
-from edenscm.mercurial.context import _annotatepair, annotateline
+from edenscm.mercurial.annotate import _annotatepair
+from edenscm.mercurial.context import annotateline
 from hghave import require
 
 
