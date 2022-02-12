@@ -19,6 +19,7 @@ import os
 import re
 import stat
 import sys
+from typing import Callable, List, Tuple
 
 from . import (
     annotate,
@@ -1083,40 +1084,6 @@ class basefilectx(object):
                 text = fctx.data()
                 return ([annotateline(fctx=fctx)] * lines(text), text)
 
-        getlog = util.lrucachefunc(lambda x: self._repo.file(x))
-
-        def parents(f):
-            # Cut _descendantrev here to mitigate the penalty of lazy linkrev
-            # adjustment. Otherwise, p._adjustlinkrev() would walk changelog
-            # from the topmost introrev (= srcrev) down to p.linkrev() if it
-            # isn't an ancestor of the srcrev.
-            f._changeid
-            pl = f.parents()
-
-            # Don't return renamed parents if we aren't following.
-            if not follow:
-                pl = [p for p in pl if p.path() == f.path()]
-
-            # renamed filectx won't have a filelog yet, so set it
-            # from the cache to save time
-            for p in pl:
-                if not "_filelog" in p.__dict__:
-                    p._filelog = getlog(p.path())
-
-            return pl
-
-        # use linkrev to find the first changeset where self appeared
-        base = self.introfilectx()
-        if getattr(base, "_ancestrycontext", None) is None:
-            cl = self._repo.changelog
-            if base.rev() is None:
-                # wctx is not inclusive, but works because _ancestrycontext
-                # is used to test filelog revisions
-                ac = cl.ancestors([p.rev() for p in base.parents()], inclusive=True)
-            else:
-                ac = cl.ancestors([base.rev()], inclusive=True)
-            base._ancestrycontext = ac
-
         if skiprevs is not None:
 
             def skipfunc(fctx, skiprevs=skiprevs):
@@ -1124,6 +1091,8 @@ class basefilectx(object):
 
         else:
             skipfunc = None
+
+        base, parents = _filelogbaseparents(self, follow)
 
         annotatedlines, text = annotate.annotate(
             base, parents, decorate, diffopts, skipfunc
@@ -1155,6 +1124,49 @@ class basefilectx(object):
         This is often equivalent to how the data would be expressed on disk.
         """
         return self._repo.wwritedata(self.path(), self.data())
+
+
+def _filelogbaseparents(
+    fctx: basefilectx, follow: bool
+) -> Tuple[basefilectx, Callable[[basefilectx], List[basefilectx]]]:
+    """Return (base, parents) useful for annotate history traversal.
+    This implementation is based on filelog.
+    """
+    getlog = util.lrucachefunc(lambda x: fctx._repo.file(x))
+
+    def parents(f):
+        # Cut _descendantrev here to mitigate the penalty of lazy linkrev
+        # adjustment. Otherwise, p._adjustlinkrev() would walk changelog
+        # from the topmost introrev (= srcrev) down to p.linkrev() if it
+        # isn't an ancestor of the srcrev.
+        f._changeid
+        pl = f.parents()
+
+        # Don't return renamed parents if we aren't following.
+        if not follow:
+            pl = [p for p in pl if p.path() == f.path()]
+
+        # renamed filectx won't have a filelog yet, so set it
+        # from the cache to save time
+        for p in pl:
+            if not "_filelog" in p.__dict__:
+                p._filelog = getlog(p.path())
+
+        return pl
+
+    # use linkrev to find the first changeset where self appeared
+    base = fctx.introfilectx()
+    if getattr(base, "_ancestrycontext", None) is None:
+        cl = fctx._repo.changelog
+        if base.rev() is None:
+            # wctx is not inclusive, but works because _ancestrycontext
+            # is used to test filelog revisions
+            ac = cl.ancestors([p.rev() for p in base.parents()], inclusive=True)
+        else:
+            ac = cl.ancestors([base.rev()], inclusive=True)
+        base._ancestrycontext = ac
+
+    return base, parents
 
 
 @attr.s(slots=True, frozen=True)
