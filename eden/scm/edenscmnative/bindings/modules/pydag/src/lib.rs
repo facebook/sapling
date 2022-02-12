@@ -17,8 +17,8 @@ pub mod dagalgo;
 pub mod idmap;
 mod impl_into;
 pub mod nameset;
-pub mod spanset;
 mod parents;
+pub mod spanset;
 
 pub use nameset::Names;
 pub use spanset::spans;
