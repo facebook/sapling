@@ -477,12 +477,21 @@ class EdenInstance:
         self, checkout: "EdenCheckout"
     ) -> typing.Mapping[str, str]:
         checkout_config = checkout.get_config()
-        snapshot = checkout.get_snapshot()
+
+        snapshot = None
+        error = None
+        try:
+            snapshot = checkout.get_snapshot()
+        except Exception as ex:
+            error = ex
+
         return collections.OrderedDict(
             [
                 ("mount", str(checkout.path)),
                 ("scm_type", checkout_config.scm_type),
-                ("snapshot", snapshot),
+                ("snapshot", snapshot)
+                if snapshot is not None
+                else ("error", str(error)),
                 ("state_dir", str(checkout.state_dir)),
                 ("mount_protocol", checkout_config.mount_protocol),
             ]
