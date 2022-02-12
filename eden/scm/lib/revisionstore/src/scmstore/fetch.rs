@@ -13,7 +13,6 @@ use anyhow::Error;
 use anyhow::Result;
 use crossbeam::channel::Sender;
 use thiserror::Error;
-use tracing::instrument;
 use types::Key;
 
 use crate::scmstore::attrs::StoreAttrs;
@@ -33,7 +32,6 @@ pub(crate) struct CommonFetchState<T: StoreValue> {
 }
 
 impl<T: StoreValue> CommonFetchState<T> {
-    #[instrument(skip(keys))]
     pub(crate) fn new(
         keys: impl Iterator<Item = Key>,
         attrs: T::Attrs,
@@ -51,7 +49,6 @@ impl<T: StoreValue> CommonFetchState<T> {
         self.pending.len()
     }
 
-    #[instrument(skip(self))]
     pub(crate) fn pending<'a>(
         &'a self,
         fetchable: T::Attrs,
@@ -67,7 +64,6 @@ impl<T: StoreValue> CommonFetchState<T> {
         })
     }
 
-    #[instrument(skip(self, value))]
     pub(crate) fn found(&mut self, key: Key, value: T) -> bool {
         use hash_map::Entry::*;
         match self.found.entry(key.clone()) {
@@ -103,7 +99,6 @@ impl<T: StoreValue> CommonFetchState<T> {
         return false;
     }
 
-    #[instrument(skip(self, errors))]
     pub(crate) fn results(mut self, errors: FetchErrors) {
         // Combine and collect errors
         let mut incomplete = errors.fetch_errors;
@@ -128,7 +123,6 @@ impl<T: StoreValue> CommonFetchState<T> {
         }
     }
 
-    #[instrument(level = "trace", skip(self))]
     pub(crate) fn actionable(
         &self,
         key: &Key,
@@ -175,7 +169,6 @@ impl FetchErrors {
         }
     }
 
-    #[instrument(level = "error", skip(self))]
     pub(crate) fn keyed_error(&mut self, key: Key, err: Error) {
         self.fetch_errors
             .entry(key)
@@ -183,7 +176,6 @@ impl FetchErrors {
             .push(err);
     }
 
-    #[instrument(level = "error", skip(self))]
     pub(crate) fn other_error(&mut self, err: Error) {
         self.other_errors.push(err);
     }

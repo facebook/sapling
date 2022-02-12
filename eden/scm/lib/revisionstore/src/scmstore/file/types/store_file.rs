@@ -10,7 +10,6 @@ use std::ops::BitOr;
 use anyhow::anyhow;
 use anyhow::Result;
 use minibytes::Bytes;
-use tracing::instrument;
 
 use crate::scmstore::file::LazyFile;
 use crate::scmstore::value::StoreValue;
@@ -50,7 +49,6 @@ impl StoreFile {
             .ok_or_else(|| anyhow!("no aux data available"))
     }
 
-    #[instrument(level = "debug", skip(self))]
     pub(crate) fn compute_aux_data(&mut self) -> Result<()> {
         self.aux_data = Some(
             self.content
@@ -61,7 +59,6 @@ impl StoreFile {
         Ok(())
     }
 
-    #[instrument(skip(self))]
     pub fn file_content(&mut self) -> Result<Bytes> {
         self.content
             .as_mut()

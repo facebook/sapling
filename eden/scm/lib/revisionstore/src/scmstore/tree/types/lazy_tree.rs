@@ -10,7 +10,6 @@ use edenapi_types::TreeEntry;
 use manifest_tree::TreeEntry as ManifestTreeEntry;
 use minibytes::Bytes;
 use storemodel::TreeFormat;
-use tracing::instrument;
 use types::HgId;
 use types::Key;
 
@@ -48,7 +47,6 @@ impl LazyTree {
     }
 
     /// The tree content, as would be encoded in the Mercurial blob
-    #[instrument(level = "debug", skip(self))]
     pub(crate) fn hg_content(&mut self) -> Result<Bytes> {
         use LazyTree::*;
         Ok(match self {
@@ -60,7 +58,6 @@ impl LazyTree {
     }
 
     /// Convert the LazyTree to an indexedlog Entry, if it should ever be written to IndexedLog cache
-    #[instrument(level = "debug", skip(self))]
     pub(crate) fn indexedlog_cache_entry(&self, key: Key) -> Result<Option<Entry>> {
         use LazyTree::*;
         Ok(match self {

@@ -25,7 +25,6 @@ use minibytes::Bytes;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use progress_model::AggregatingProgressBar;
-use tracing::instrument;
 
 pub(crate) use self::fetch::FetchState;
 pub use self::metrics::FileStoreFetchMetrics;
@@ -119,7 +118,6 @@ pub struct FileStore {
 }
 
 impl Drop for FileStore {
-    #[instrument(skip(self))]
     fn drop(&mut self) {
         if self.flush_on_drop {
             let _ = self.flush();
@@ -128,7 +126,6 @@ impl Drop for FileStore {
 }
 
 impl FileStore {
-    #[instrument(skip(self, keys))]
     pub fn fetch(
         &self,
         keys: impl Iterator<Item = Key>,
@@ -285,7 +282,6 @@ impl FileStore {
         Ok(())
     }
 
-    #[instrument(skip(self, entries))]
     pub fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {
         // TODO(meyer): Don't fail the whole batch for a single write error.
         let mut metrics = FileStoreWriteMetrics::default();
@@ -324,7 +320,6 @@ impl FileStore {
         Ok(())
     }
 
-    #[instrument(skip(self))]
     pub fn local(&self) -> Self {
         FileStore {
             extstored_policy: self.extstored_policy.clone(),
@@ -364,7 +359,6 @@ impl FileStore {
     }
 
     #[allow(unused_must_use)]
-    #[instrument(skip(self))]
     pub fn flush(&self) -> Result<()> {
         let mut result = Ok(());
         let mut handle_error = |error| {
@@ -373,38 +367,26 @@ impl FileStore {
         };
 
         if let Some(ref indexedlog_local) = self.indexedlog_local {
-            let span = tracing::info_span!("indexedlog_local");
-            let _guard = span.enter();
             indexedlog_local.flush_log().map_err(&mut handle_error);
         }
 
         if let Some(ref indexedlog_cache) = self.indexedlog_cache {
-            let span = tracing::info_span!("indexedlog_cache");
-            let _guard = span.enter();
             indexedlog_cache.flush_log().map_err(&mut handle_error);
         }
 
         if let Some(ref lfs_local) = self.lfs_local {
-            let span = tracing::info_span!("lfs_local");
-            let _guard = span.enter();
             lfs_local.flush().map_err(&mut handle_error);
         }
 
         if let Some(ref lfs_cache) = self.lfs_cache {
-            let span = tracing::info_span!("lfs_cache");
-            let _guard = span.enter();
             lfs_cache.flush().map_err(&mut handle_error);
         }
 
         if let Some(ref aux_local) = self.aux_local {
-            let span = tracing::info_span!("aux_local");
-            let _guard = span.enter();
             aux_local.flush().map_err(&mut handle_error);
         }
 
         if let Some(ref aux_cache) = self.aux_cache {
-            let span = tracing::info_span!("aux_cache");
-            let _guard = span.enter();
             aux_cache.flush().map_err(&mut handle_error);
         }
 
@@ -460,7 +442,6 @@ fn use_memcache(creation_time: Instant) -> bool {
 impl LegacyStore for FileStore {
     /// Returns only the local cache / shared stores, in place of the local-only stores, such that writes will go directly to the local cache.
     /// For compatibility with ContentStore::get_shared_mutable
-    #[instrument(skip(self))]
     fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore> {
         // this is infallible in ContentStore so panic if there are no shared/cache stores.
         assert!(
@@ -515,7 +496,6 @@ impl LegacyStore for FileStore {
         seen
     }
 
-    #[instrument(skip(self))]
     fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>> {
         self.metrics.write().api.hg_getfilecontent.call(0);
         self.fetch(std::iter::once(key.clone()), FileAttributes::CONTENT)

@@ -10,7 +10,6 @@ use anyhow::Error;
 use anyhow::Result;
 use edenapi_types::FileEntry;
 use minibytes::Bytes;
-use tracing::instrument;
 use types::HgId;
 use types::Key;
 
@@ -57,7 +56,6 @@ impl LazyFile {
     }
 
     /// Compute's the aux data associated with this file from the content.
-    #[instrument(level = "debug", skip(self))]
     pub(crate) fn aux_data(&mut self) -> Result<FileAuxData> {
         // TODO(meyer): Implement the rest of the aux data fields
         Ok(if let LazyFile::Lfs(content, ref ptr) = self {
@@ -79,7 +77,6 @@ impl LazyFile {
     }
 
     /// The file content, as would be found in the working copy (stripped of copy header)
-    #[instrument(level = "debug", skip(self))]
     pub(crate) fn file_content(&mut self) -> Result<Bytes> {
         use LazyFile::*;
         Ok(match self {
@@ -93,7 +90,6 @@ impl LazyFile {
     }
 
     /// The file content, as would be encoded in the Mercurial blob (with copy header)
-    #[instrument(level = "debug", skip(self))]
     pub(crate) fn hg_content(&mut self) -> Result<Bytes> {
         use LazyFile::*;
         Ok(match self {
@@ -105,7 +101,6 @@ impl LazyFile {
         })
     }
 
-    #[instrument(level = "debug", skip(self))]
     pub(crate) fn metadata(&self) -> Result<Metadata> {
         use LazyFile::*;
         Ok(match self {
@@ -121,7 +116,6 @@ impl LazyFile {
     }
 
     /// Convert the LazyFile to an indexedlog Entry, if it should ever be written to IndexedLog cache
-    #[instrument(level = "debug", skip(self))]
     pub(crate) fn indexedlog_cache_entry(&self, key: Key) -> Result<Option<Entry>> {
         use LazyFile::*;
         Ok(match self {

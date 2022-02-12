@@ -21,7 +21,6 @@ use futures::StreamExt;
 use parking_lot::RwLock;
 use progress_model::AggregatingProgressBar;
 use tracing::field;
-use tracing::instrument;
 use types::Key;
 use types::Sha256;
 
@@ -166,14 +165,12 @@ impl FetchState {
         }
     }
 
-    #[instrument(level = "debug", skip(self))]
     fn mark_complete(&mut self, key: &Key) {
         if let Some((ptr, _)) = self.lfs_pointers.remove(key) {
             self.pointer_origin.write().remove(&ptr.sha256());
         }
     }
 
-    #[instrument(level = "debug", skip(self, ptr))]
     fn found_pointer(&mut self, key: Key, ptr: LfsPointersEntry, typ: StoreType, write: bool) {
         let sha256 = ptr.sha256();
         // Overwrite StoreType::Local with StoreType::Shared, but not vice versa
@@ -188,7 +185,6 @@ impl FetchState {
         self.lfs_pointers.insert(key, (ptr, write));
     }
 
-    #[instrument(level = "debug", skip(self, sf))]
     fn found_attributes(&mut self, key: Key, sf: StoreFile, typ: Option<StoreType>) {
         self.key_origin
             .insert(key.clone(), typ.unwrap_or(StoreType::Shared));
@@ -198,7 +194,6 @@ impl FetchState {
         }
     }
 
-    #[instrument(level = "trace", skip(file, indexedlog_cache, memcache), fields(memcache = memcache.is_some()))]
     fn evict_to_cache(
         key: Key,
         file: LazyFile,
@@ -218,7 +213,6 @@ impl FetchState {
         Ok(LazyFile::IndexedLog(mmap_entry))
     }
 
-    #[instrument(level = "debug", skip(self, entry))]
     fn found_indexedlog(&mut self, key: Key, entry: Entry, typ: StoreType) {
         if entry.metadata().is_lfs() {
             if self.extstored_policy == ExtStoredPolicy::Use {
@@ -232,7 +226,6 @@ impl FetchState {
         }
     }
 
-    #[instrument(skip(self, store))]
     pub(crate) fn fetch_indexedlog(&mut self, store: &IndexedLogHgIdDataStore, typ: StoreType) {
         let pending = self.pending_nonlfs(FileAttributes::CONTENT);
         if pending.is_empty() {
@@ -257,13 +250,11 @@ impl FetchState {
         }
     }
 
-    #[instrument(level = "debug", skip(self, entry))]
     fn found_aux_indexedlog(&mut self, key: Key, entry: AuxDataEntry, typ: StoreType) {
         let aux_data: FileAuxData = entry.into();
         self.found_attributes(key, aux_data.into(), Some(typ));
     }
 
-    #[instrument(skip(self, store))]
     pub(crate) fn fetch_aux_indexedlog(&mut self, store: &AuxStore, typ: StoreType) {
         let pending = self.pending_all(FileAttributes::AUX);
         if pending.is_empty() {
@@ -289,7 +280,6 @@ impl FetchState {
         }
     }
 
-    #[instrument(level = "debug", skip(self, entry))]
     fn found_lfs(&mut self, key: Key, entry: LfsStoreEntry, typ: StoreType) {
         match entry {
             LfsStoreEntry::PointerAndBlob(ptr, blob) => {
@@ -299,7 +289,6 @@ impl FetchState {
         }
     }
 
-    #[instrument(skip(self, store))]
     pub(crate) fn fetch_lfs(&mut self, store: &LfsStore, typ: StoreType) {
         let pending = self.pending_storekey(FileAttributes::CONTENT);
         if pending.is_empty() {
@@ -327,7 +316,6 @@ impl FetchState {
         }
     }
 
-    #[instrument(level = "debug", skip(self, entry, indexedlog_cache))]
     fn found_memcache(
         &mut self,
         entry: McData,
@@ -378,7 +366,6 @@ impl FetchState {
         Ok(())
     }
 
-    #[instrument(skip(self, store, indexedlog_cache))]
     pub(crate) fn fetch_memcache(
         &mut self,
         store: &MemcacheStore,
@@ -389,10 +376,6 @@ impl FetchState {
         }
     }
 
-    #[instrument(
-        level = "debug",
-        skip(entry, indexedlog_cache, lfs_cache, aux_cache, memcache)
-    )]
     fn found_edenapi(
         entry: FileResponse,
         indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
@@ -613,7 +596,6 @@ impl FetchState {
         Ok(())
     }
 
-    #[instrument(skip(self, store, local, cache), fields(local = local.is_some(), cache = cache.is_some()))]
     pub(crate) fn fetch_lfs_remote(
         &mut self,
         store: &LfsRemoteInner,
@@ -625,7 +607,6 @@ impl FetchState {
         }
     }
 
-    #[instrument(level = "debug", skip(self, bytes))]
     fn found_contentstore(&mut self, key: Key, bytes: Vec<u8>, meta: Metadata) {
         if meta.is_lfs() {
             self.metrics.contentstore.hit_lfsptr(1);
@@ -690,7 +671,6 @@ impl FetchState {
         Ok(())
     }
 
-    #[instrument(skip(self, store))]
     pub(crate) fn fetch_contentstore(&mut self, store: &ContentStore) {
         let mut pending = self.pending_storekey(FileAttributes::CONTENT);
         if pending.is_empty() {
@@ -705,11 +685,6 @@ impl FetchState {
 
     // TODO(meyer): Improve how local caching works. At the very least do this in the background.
     // TODO(meyer): Log errors here instead of just ignoring.
-    #[instrument(
-        skip(self, aux_cache, aux_local),
-        fields(
-            aux_cache = aux_cache.is_some(),
-            aux_local = aux_local.is_some()))]
     pub(crate) fn derive_computable(
         &mut self,
         aux_cache: Option<&AuxStore>,
@@ -776,7 +751,6 @@ impl FetchState {
         }
     }
 
-    #[instrument(skip(self))]
     pub(crate) fn finish(self) {
         self.common.results(self.errors);
     }
