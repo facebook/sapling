@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::future::Future;
+use std::sync::Arc;
 
 use futures::future::BoxFuture;
 use futures::FutureExt;
@@ -17,8 +18,12 @@ use futures::TryStreamExt;
 use crate::namedag::MemNameDag;
 use crate::nameset::hints::Hints;
 use crate::ops::DagAddHeads;
+use crate::ops::IdConvert;
+use crate::ops::IdDagAlgorithm;
 use crate::ops::Parents;
 use crate::DagAlgorithm;
+use crate::Id;
+use crate::IdSet;
 use crate::NameSet;
 use crate::Result;
 use crate::VertexName;
@@ -178,6 +183,75 @@ pub(crate) async fn beautify(
     let mut dag = MemNameDag::new();
     dag.add_heads(&this.dag_snapshot()?, &heads.into()).await?;
     Ok(dag)
+}
+
+/// Convert `Set` to a `Parents` implementation that only returns vertexes in the set.
+pub(crate) async fn set_to_parents(set: &NameSet) -> Result<Option<impl Parents>> {
+    let (id_set, id_map) = match set.to_id_set_and_id_map_in_o1() {
+        Some(v) => v,
+        None => return Ok(None),
+    };
+    let dag = match set.dag() {
+        None => return Ok(None),
+        Some(dag) => dag,
+    };
+    let id_dag = dag.id_dag_snapshot()?;
+
+    // Pre-resolve ids to vertexes. Reduce remote lookup round-trips.
+    let ids: Vec<Id> = id_set.iter_desc().collect();
+    id_map.vertex_name_batch(&ids).await?;
+
+    struct IdParents {
+        id_set: IdSet,
+        id_dag: Arc<dyn IdDagAlgorithm + Send + Sync>,
+        id_map: Arc<dyn IdConvert + Send + Sync>,
+    }
+
+    #[async_trait::async_trait]
+    impl Parents for IdParents {
+        async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
+            tracing::debug!(
+                target: "dag::idparents",
+                "resolving parents for {:?}", &name,
+            );
+            let id = self.id_map.vertex_id(name).await?;
+            let direct_parent_ids = self.id_dag.parent_ids(id)?;
+            let parent_ids = if direct_parent_ids.iter().all(|&id| self.id_set.contains(id)) {
+                // Fast path. No "leaked" parents.
+                direct_parent_ids
+            } else {
+                // Slower path.
+                // PERF: There might be room to optimize (ex. dedicated API like
+                // reachable_roots).
+                let parent_id_set = IdSet::from_spans(direct_parent_ids);
+                let ancestors = self.id_dag.ancestors(parent_id_set)?;
+                let heads = ancestors.intersection(&self.id_set);
+                let heads = self.id_dag.heads_ancestors(heads)?;
+                heads.iter_desc().collect()
+            };
+
+            let vertexes = self.id_map.vertex_name_batch(&parent_ids).await?;
+            let parents = vertexes.into_iter().collect::<Result<Vec<_>>>()?;
+            Ok(parents)
+        }
+
+        async fn hint_subdag_for_insertion(&self, _heads: &[VertexName]) -> Result<MemNameDag> {
+            // The `IdParents` is not intended to be inserted to other graphs.
+            tracing::warn!(
+                target: "dag::idparents",
+                "IdParents does not implement hint_subdag_for_insertion() for efficient insertion"
+            );
+            Ok(MemNameDag::new())
+        }
+    }
+
+    let parents = IdParents {
+        id_set,
+        id_dag,
+        id_map,
+    };
+
+    Ok(Some(parents))
 }
 
 pub(crate) async fn parents(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -> Result<NameSet> {

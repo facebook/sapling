@@ -34,6 +34,9 @@ mod test_integrity;
 mod test_sparse;
 
 #[cfg(test)]
+mod test_to_parents;
+
+#[cfg(test)]
 mod test_discontinuous;
 
 #[cfg(test)]

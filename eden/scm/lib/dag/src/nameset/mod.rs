@@ -25,9 +25,11 @@ use futures::Stream;
 use futures::StreamExt;
 use nonblocking::non_blocking;
 
+use crate::default_impl;
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::ops::IdMapSnapshot;
+use crate::ops::Parents;
 use crate::Id;
 use crate::IdSet;
 use crate::Result;
@@ -371,6 +373,12 @@ impl NameSet {
         );
         result.hints().add_flags(Flags::FILTER);
         result
+    }
+
+    /// Convert the set to a graph containing only the vertexes in the set. This can be slow on
+    /// larger sets.
+    pub async fn to_parents(&self) -> Result<Option<impl Parents>> {
+        default_impl::set_to_parents(self).await
     }
 
     /// Obtain the attached dag if available.
