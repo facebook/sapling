@@ -90,6 +90,7 @@ impl ActionMap {
         mut self,
         old_matcher: M1,
         new_matcher: M2,
+        old_manifest: &impl Manifest,
         new_manifest: &impl Manifest,
     ) -> Result<Self> {
         let _prog = ProgressBar::register_new("sparse config", 0, "");
@@ -131,8 +132,11 @@ impl ActionMap {
                     },
                 }
             } else {
-                // by definition of xor matcher this means old_matcher.matches_file==true
-                self.map.insert(file.path, Action::Remove);
+                // By definition of xor matcher this means old_matcher.matches_file==true.
+                // Remove it if it existed before.
+                if old_manifest.get(&file.path)?.is_some() {
+                    self.map.insert(file.path, Action::Remove);
+                }
             }
         }
 
@@ -232,17 +236,18 @@ mod tests {
         let c = (rp("c"), FileMetadata::regular(hgid(3)));
         let ab_profile = Arc::new(TreeMatcher::from_rules(["a", "b"].iter())?);
         let ac_profile = Arc::new(TreeMatcher::from_rules(["a", "c"].iter())?);
+        let old_manifest = make_tree_manifest_from_meta(store.clone(), vec![]);
         let manifest = make_tree_manifest_from_meta(store, vec![a, b, c]);
 
         let actions = ActionMap::empty().with_sparse_profile_change(
             ab_profile.clone(),
             ab_profile.clone(),
+            &old_manifest,
             &manifest,
         )?;
         assert_eq!("", &actions.to_string());
 
         let mut expected_actions = ActionMap::empty();
-        expected_actions.map.insert(rp("b"), Action::Remove);
         expected_actions.map.insert(
             rp("c"),
             Action::Update(UpdateAction::new(None, FileMetadata::regular(hgid(3)))),
@@ -251,6 +256,7 @@ mod tests {
         let actions = ActionMap::empty().with_sparse_profile_change(
             ab_profile.clone(),
             ac_profile.clone(),
+            &old_manifest,
             &manifest,
         )?;
         assert_eq!(expected_actions, actions);
@@ -264,6 +270,7 @@ mod tests {
         let actions = actions.with_sparse_profile_change(
             ab_profile.clone(),
             ac_profile.clone(),
+            &old_manifest,
             &manifest,
         )?;
         assert_eq!(expected_actions, actions);
@@ -276,6 +283,7 @@ mod tests {
         let actions = actions.with_sparse_profile_change(
             ab_profile.clone(),
             ac_profile.clone(),
+            &old_manifest,
             &manifest,
         )?;
 

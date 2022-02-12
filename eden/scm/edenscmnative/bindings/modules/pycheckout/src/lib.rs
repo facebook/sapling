@@ -80,13 +80,15 @@ py_class!(class checkoutplan |py| {
             ActionMap::from_diff(diff)
         }).map_pyerr(py)?;
 
+        let current_lock = current_manifest.get_underlying(py);
         let target_lock = target_manifest.get_underlying(py);
         if let Some((old_sparse_matcher, new_sparse_matcher)) = sparse_change {
             let old_matcher = extract_matcher(py, old_sparse_matcher)?;
             let new_matcher = extract_matcher(py, new_sparse_matcher)?;
             actions = py.allow_threads(move || {
+                let current = current_lock.read();
                 let target = target_lock.read();
-                actions.with_sparse_profile_change(old_matcher, new_matcher, &*target)
+                actions.with_sparse_profile_change(old_matcher, new_matcher, &*current, &*target)
             }).map_pyerr(py)?;
         }
         let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
