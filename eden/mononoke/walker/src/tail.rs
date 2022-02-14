@@ -426,11 +426,7 @@ where
                 // bulk prepopulate the hg/bonsai mappings
                 let ids =
                     BonsaiOrHgChangesetIds::Bonsai(chunk_members.clone().into_iter().collect());
-                repo_params
-                    .repo
-                    .bonsai_hg_mapping()
-                    .get(&ctx, repo_id, ids)
-                    .await?
+                repo_params.repo.bonsai_hg_mapping().get(&ctx, ids).await?
             } else {
                 vec![]
             };

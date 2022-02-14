@@ -122,7 +122,7 @@ where
     if let Ok(hg_id) = HgChangesetId::from_str(&hash_or_bookmark) {
         if let Some(cs_id) = container
             .bonsai_hg_mapping()
-            .get_bonsai_from_hg(&ctx, container.repo_identity().id(), hg_id)
+            .get_bonsai_from_hg(ctx, hg_id)
             .await?
         {
             return Ok(cs_id);

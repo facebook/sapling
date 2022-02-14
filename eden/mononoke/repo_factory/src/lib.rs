@@ -576,18 +576,19 @@ impl RepoFactory {
 
     pub async fn bonsai_hg_mapping(
         &self,
+        repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcBonsaiHgMapping> {
-        let builder = self
+        let mut builder = self
             .open::<SqlBonsaiHgMappingBuilder>(&repo_config.storage_config.metadata)
             .await
             .context(RepoFactoryError::BonsaiHgMapping)?;
 
-        let bonsai_hg_mapping = if self.bonsai_hg_mapping_overwrite {
-            builder.build_with_overwrite(self.env.rendezvous_options)
-        } else {
-            builder.build(self.env.rendezvous_options)
-        };
+        if self.bonsai_hg_mapping_overwrite {
+            builder = builder.with_overwrite();
+        }
+
+        let bonsai_hg_mapping = builder.build(repo_identity.id(), self.env.rendezvous_options);
 
         if let Some(pool) = self.maybe_volatile_pool("bonsai_hg_mapping")? {
             Ok(Arc::new(CachingBonsaiHgMapping::new(

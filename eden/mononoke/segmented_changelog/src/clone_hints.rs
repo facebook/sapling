@@ -167,7 +167,7 @@ impl CloneHints {
 
         let csids: Vec<_> = idmap_entries.values().map(|&id| id).collect();
         let hg_mapping: HashMap<_, _> = bonsai_hg_mapping
-            .get(ctx, self.inner.repo_id, csids.into())
+            .get(ctx, csids.into())
             .await
             .context("error converting from bonsai to hg")?
             .into_iter()

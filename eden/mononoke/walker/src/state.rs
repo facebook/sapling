@@ -25,7 +25,7 @@ use itertools::Itertools;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{
     ChangesetId, ContentId, DeletedManifestId, FastlogBatchId, FileUnodeId, FsnodeId,
-    ManifestUnodeId, RepositoryId, SkeletonManifestId,
+    ManifestUnodeId, SkeletonManifestId,
 };
 use phases::{Phase, Phases};
 use slog::{info, Logger};
@@ -697,7 +697,6 @@ impl VisitOne for WalkState {
     async fn get_bonsai_from_hg(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         bonsai_hg_mapping: &dyn BonsaiHgMapping,
         hg_cs_id: &HgChangesetId,
     ) -> Result<ChangesetId, Error> {
@@ -706,7 +705,7 @@ impl VisitOne for WalkState {
             *bcs_id
         } else {
             let bcs_id = bonsai_hg_mapping
-                .get_bonsai_from_hg(ctx, repo_id, hg_cs_id.clone())
+                .get_bonsai_from_hg(ctx, hg_cs_id.clone())
                 .await?;
             if let Some(bcs_id) = bcs_id {
                 let bcs_int = self.bcs_ids.interned(&bcs_id);
@@ -723,7 +722,6 @@ impl VisitOne for WalkState {
     async fn defer_from_hg(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         bonsai_hg_mapping: &dyn BonsaiHgMapping,
         hg_cs_id: &HgChangesetId,
     ) -> Result<Option<ChangesetId>, Error> {
@@ -731,7 +729,7 @@ impl VisitOne for WalkState {
             return Ok(None);
         }
         let bcs_id = self
-            .get_bonsai_from_hg(ctx, repo_id, bonsai_hg_mapping, hg_cs_id)
+            .get_bonsai_from_hg(ctx, bonsai_hg_mapping, hg_cs_id)
             .await?;
         let id = self.bcs_ids.interned(&bcs_id);
         if self.chunk_bcs.contains_key(&id) {

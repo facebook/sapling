@@ -16,7 +16,7 @@ use bulkops::Direction;
 use context::{CoreContext, SamplingKey};
 use dashmap::DashMap;
 use mercurial_types::HgChangesetId;
-use mononoke_types::{datetime::DateTime, ChangesetId, RepositoryId};
+use mononoke_types::{datetime::DateTime, ChangesetId};
 use phases::Phases;
 use regex::Regex;
 use slog::Logger;
@@ -105,23 +105,21 @@ impl<T: Send + Sync> VisitOne for SamplingWalkVisitor<T> {
     async fn get_bonsai_from_hg(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         bonsai_hg_mapping: &dyn BonsaiHgMapping,
         hg_cs_id: &HgChangesetId,
     ) -> Result<ChangesetId, Error> {
         self.inner
-            .get_bonsai_from_hg(ctx, repo_id, bonsai_hg_mapping, hg_cs_id)
+            .get_bonsai_from_hg(ctx, bonsai_hg_mapping, hg_cs_id)
             .await
     }
     async fn defer_from_hg(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         bonsai_hg_mapping: &dyn BonsaiHgMapping,
         hg_cs_id: &HgChangesetId,
     ) -> Result<Option<ChangesetId>, Error> {
         self.inner
-            .defer_from_hg(ctx, repo_id, bonsai_hg_mapping, hg_cs_id)
+            .defer_from_hg(ctx, bonsai_hg_mapping, hg_cs_id)
             .await
     }
 }

@@ -20,7 +20,6 @@ use mononoke_app::args::{ChangesetArgs, RepoArgs};
 use mononoke_app::MononokeApp;
 use mononoke_types::{ChangesetId, MPath};
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreRef};
-use repo_identity::RepoIdentityRef;
 
 use crate::repo::AdminRepo;
 
@@ -120,7 +119,7 @@ async fn display_hg_entry(
 ) -> Result<()> {
     let hg_cs_id = repo
         .bonsai_hg_mapping()
-        .get_hg_from_bonsai(ctx, repo.repo_identity().id(), changeset_id)
+        .get_hg_from_bonsai(ctx, changeset_id)
         .await
         .context("Failed to get corresponding Hg changeset")?
         .ok_or_else(|| anyhow!("No Hg changeset for {}", changeset_id))?;

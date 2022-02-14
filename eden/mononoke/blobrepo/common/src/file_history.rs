@@ -68,7 +68,7 @@ async fn get_filenode_generation(
     let linknode = filenode_info.linknode;
     let bcs_id = match repo
         .bonsai_hg_mapping()
-        .get_bonsai_from_hg(ctx, repo.get_repoid(), linknode)
+        .get_bonsai_from_hg(ctx, linknode)
         .await?
     {
         Some(a) => a,

@@ -36,7 +36,6 @@ use std::sync::{
 async fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     let ctx = CoreContext::test_mock(fb);
     let entry = BonsaiHgMappingEntry {
-        repo_id: REPO_ZERO,
         hg_cs_id: hg::ONES_CSID,
         bcs_id: bonsai::ONES_CSID,
     };
@@ -56,23 +55,22 @@ async fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     );
 
     let result = mapping
-        .get(&ctx, REPO_ZERO, hg::ONES_CSID.into())
+        .get(&ctx, hg::ONES_CSID.into())
         .await
         .expect("Get failed");
     assert_eq!(result, vec![entry.clone()]);
     let result = mapping
-        .get_hg_from_bonsai(&ctx, REPO_ZERO, bonsai::ONES_CSID)
+        .get_hg_from_bonsai(&ctx, bonsai::ONES_CSID)
         .await
         .expect("Failed to get hg changeset by its bonsai counterpart");
     assert_eq!(result, Some(hg::ONES_CSID));
     let result = mapping
-        .get_bonsai_from_hg(&ctx, REPO_ZERO, hg::ONES_CSID)
+        .get_bonsai_from_hg(&ctx, hg::ONES_CSID)
         .await
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, Some(bonsai::ONES_CSID));
 
     let same_bc_entry = BonsaiHgMappingEntry {
-        repo_id: REPO_ZERO,
         hg_cs_id: hg::TWOS_CSID, // differ from entry.hg_cs_id
         bcs_id: bonsai::ONES_CSID,
     };
@@ -86,7 +84,6 @@ async fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     );
 
     let same_hg_entry = BonsaiHgMappingEntry {
-        repo_id: REPO_ZERO,
         hg_cs_id: hg::ONES_CSID,
         bcs_id: bonsai::TWOS_CSID, // differ from entry.bcs_id
     };
@@ -103,7 +100,7 @@ async fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
 async fn missing<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     let ctx = CoreContext::test_mock(fb);
     let result = mapping
-        .get(&ctx, REPO_ZERO, bonsai::ONES_CSID.into())
+        .get(&ctx, bonsai::ONES_CSID.into())
         .await
         .expect("Failed to fetch missing changeset (should succeed with None instead)");
     assert_eq!(result, vec![]);
@@ -113,22 +110,18 @@ async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M)
     let ctx = CoreContext::test_mock(fb);
 
     let entry1 = BonsaiHgMappingEntry {
-        repo_id: REPO_ZERO,
         hg_cs_id: hg::ONES_CSID,
         bcs_id: bonsai::ONES_CSID,
     };
     let entry2 = BonsaiHgMappingEntry {
-        repo_id: REPO_ZERO,
         hg_cs_id: hg::TWOS_CSID,
         bcs_id: bonsai::TWOS_CSID,
     };
     let entry3 = BonsaiHgMappingEntry {
-        repo_id: REPO_ZERO,
         hg_cs_id: hg::FS_ES_CSID,
         bcs_id: bonsai::FS_ES_CSID,
     };
     let entry4 = BonsaiHgMappingEntry {
-        repo_id: REPO_ZERO,
         hg_cs_id: hg::FS_CSID,
         bcs_id: bonsai::FS_CSID,
     };
@@ -166,7 +159,6 @@ async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M)
     let result = mapping
         .get_many_hg_by_prefix(
             &ctx,
-            REPO_ZERO,
             HgChangesetIdPrefix::from_bytes(&hg::ONES_CSID.as_ref()[0..8]).unwrap(),
             10,
         )
@@ -182,7 +174,6 @@ async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M)
     let result = mapping
         .get_many_hg_by_prefix(
             &ctx,
-            REPO_ZERO,
             HgChangesetIdPrefix::from_bytes(&hg::TWOS_CSID.as_ref()[0..10]).unwrap(),
             1,
         )
@@ -198,7 +189,6 @@ async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M)
     let result = mapping
         .get_many_hg_by_prefix(
             &ctx,
-            REPO_ZERO,
             HgChangesetIdPrefix::from_bytes(&hg::FS_CSID.as_ref()[0..8]).unwrap(),
             10,
         )
@@ -212,12 +202,7 @@ async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M)
 
     // found several changesets within the limit (try odd hex string prefix this time)
     let result = mapping
-        .get_many_hg_by_prefix(
-            &ctx,
-            REPO_ZERO,
-            HgChangesetIdPrefix::from_str(&"fff").unwrap(),
-            10,
-        )
+        .get_many_hg_by_prefix(&ctx, HgChangesetIdPrefix::from_str("fff").unwrap(), 10)
         .await
         .expect("Failed to get hg changeset by its prefix");
 
@@ -230,7 +215,6 @@ async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M)
     let result = mapping
         .get_many_hg_by_prefix(
             &ctx,
-            REPO_ZERO,
             HgChangesetIdPrefix::from_bytes(&hg::FS_CSID.as_ref()[0..8]).unwrap(),
             1,
         )
@@ -246,7 +230,6 @@ async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M)
     let result = mapping
         .get_many_hg_by_prefix(
             &ctx,
-            REPO_ZERO,
             HgChangesetIdPrefix::from_bytes(&hg::THREES_CSID.as_ref()[0..16]).unwrap(),
             10,
         )
@@ -260,17 +243,14 @@ async fn get_hg_in_range<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     let ctx = CoreContext::test_mock(fb);
 
     let entry1 = BonsaiHgMappingEntry {
-        repo_id: REPO_ZERO,
         hg_cs_id: hg::ONES_CSID,
         bcs_id: bonsai::ONES_CSID,
     };
     let entry2 = BonsaiHgMappingEntry {
-        repo_id: REPO_ZERO,
         hg_cs_id: hg::TWOS_CSID,
         bcs_id: bonsai::TWOS_CSID,
     };
     let entry3 = BonsaiHgMappingEntry {
-        repo_id: REPO_ZERO,
         hg_cs_id: hg::THREES_CSID,
         bcs_id: bonsai::THREES_CSID,
     };
@@ -281,7 +261,7 @@ async fn get_hg_in_range<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
 
     assert!(
         mapping
-            .get_hg_in_range(&ctx, REPO_ZERO, hg::AS_CSID, hg::BS_CSID, 10)
+            .get_hg_in_range(&ctx, hg::AS_CSID, hg::BS_CSID, 10)
             .await
             .unwrap()
             .is_empty(),
@@ -290,7 +270,7 @@ async fn get_hg_in_range<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     assert_eq!(
         vec![hg::ONES_CSID],
         mapping
-            .get_hg_in_range(&ctx, REPO_ZERO, hg::ONES_CSID, hg::ONES_CSID, 10)
+            .get_hg_in_range(&ctx, hg::ONES_CSID, hg::ONES_CSID, 10)
             .await
             .unwrap()
     );
@@ -298,7 +278,7 @@ async fn get_hg_in_range<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     assert_eq!(
         vec![hg::ONES_CSID, hg::TWOS_CSID],
         mapping
-            .get_hg_in_range(&ctx, REPO_ZERO, hg::ONES_CSID, hg::TWOS_CSID, 10)
+            .get_hg_in_range(&ctx, hg::ONES_CSID, hg::TWOS_CSID, 10)
             .await
             .unwrap()
     );
@@ -306,7 +286,7 @@ async fn get_hg_in_range<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     assert_eq!(
         vec![hg::ONES_CSID],
         mapping
-            .get_hg_in_range(&ctx, REPO_ZERO, hg::ONES_CSID, hg::TWOS_CSID, 1)
+            .get_hg_in_range(&ctx, hg::ONES_CSID, hg::TWOS_CSID, 1)
             .await
             .unwrap()
     );
@@ -314,7 +294,7 @@ async fn get_hg_in_range<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     assert_eq!(
         vec![hg::ONES_CSID, hg::TWOS_CSID, hg::THREES_CSID],
         mapping
-            .get_hg_in_range(&ctx, REPO_ZERO, hg::NULL_CSID, hg::FS_CSID, 10)
+            .get_hg_in_range(&ctx, hg::NULL_CSID, hg::FS_CSID, 10)
             .await
             .unwrap()
     );
@@ -345,6 +325,10 @@ impl CountedBonsaiHgMapping {
 
 #[async_trait]
 impl BonsaiHgMapping for CountedBonsaiHgMapping {
+    fn repo_id(&self) -> RepositoryId {
+        self.mapping.repo_id()
+    }
+
     async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error> {
         self.adds.fetch_add(1, Ordering::Relaxed);
         self.mapping.add(ctx, entry).await
@@ -353,25 +337,21 @@ impl BonsaiHgMapping for CountedBonsaiHgMapping {
     async fn get(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         cs_id: BonsaiOrHgChangesetIds,
     ) -> Result<Vec<BonsaiHgMappingEntry>, Error> {
         self.gets.fetch_add(1, Ordering::Relaxed);
-        self.mapping.get(ctx, repo_id, cs_id).await
+        self.mapping.get(ctx, cs_id).await
     }
 
     async fn get_hg_in_range(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         low: HgChangesetId,
         high: HgChangesetId,
         limit: usize,
     ) -> Result<Vec<HgChangesetId>, Error> {
         self.gets_many_hg_by_prefix.fetch_add(1, Ordering::Relaxed);
-        self.mapping
-            .get_hg_in_range(ctx, repo_id, low, high, limit)
-            .await
+        self.mapping.get_hg_in_range(ctx, low, high, limit).await
     }
 }
 
@@ -389,7 +369,6 @@ async fn caching<M: BonsaiHgMapping + 'static>(fb: FacebookInit, mapping: M) {
     let mapping = CachingBonsaiHgMapping::new_test(Arc::new(mapping));
 
     let entry = BonsaiHgMappingEntry {
-        repo_id: REPO_ZERO,
         hg_cs_id: hg::ONES_CSID,
         bcs_id: bonsai::ONES_CSID,
     };
@@ -402,21 +381,21 @@ async fn caching<M: BonsaiHgMapping + 'static>(fb: FacebookInit, mapping: M) {
     );
 
     let result = mapping
-        .get_bonsai_from_hg(&ctx, REPO_ZERO, hg::ONES_CSID)
+        .get_bonsai_from_hg(&ctx, hg::ONES_CSID)
         .await
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, Some(bonsai::ONES_CSID));
     assert_eq!(gets.load(Ordering::Relaxed), 1);
 
     let result = mapping
-        .get_bonsai_from_hg(&ctx, REPO_ZERO, hg::ONES_CSID)
+        .get_bonsai_from_hg(&ctx, hg::ONES_CSID)
         .await
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, Some(bonsai::ONES_CSID));
     assert_eq!(gets.load(Ordering::Relaxed), 1);
 
     let result = mapping
-        .get_bonsai_from_hg(&ctx, REPO_ZERO, hg::TWOS_CSID)
+        .get_bonsai_from_hg(&ctx, hg::TWOS_CSID)
         .await
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, None);
@@ -429,7 +408,7 @@ async fn test_add_and_get(fb: FacebookInit) {
         fb,
         SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
             .unwrap()
-            .build(RendezVousOptions::for_test()),
+            .build(REPO_ZERO, RendezVousOptions::for_test()),
     )
     .await;
 }
@@ -440,7 +419,7 @@ async fn test_missing(fb: FacebookInit) {
         fb,
         SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
             .unwrap()
-            .build(RendezVousOptions::for_test()),
+            .build(REPO_ZERO, RendezVousOptions::for_test()),
     )
     .await;
 }
@@ -451,7 +430,7 @@ async fn test_caching(fb: FacebookInit) {
         fb,
         SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
             .unwrap()
-            .build(RendezVousOptions::for_test()),
+            .build(REPO_ZERO, RendezVousOptions::for_test()),
     )
     .await;
 }
@@ -462,7 +441,7 @@ async fn test_get_many_hg_by_prefix(fb: FacebookInit) {
         fb,
         SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
             .unwrap()
-            .build(RendezVousOptions::for_test()),
+            .build(REPO_ZERO, RendezVousOptions::for_test()),
     )
     .await;
 }
@@ -473,7 +452,7 @@ async fn test_get_hg_in_range(fb: FacebookInit) {
         fb,
         SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
             .unwrap()
-            .build(RendezVousOptions::for_test()),
+            .build(REPO_ZERO, RendezVousOptions::for_test()),
     )
     .await;
 }
@@ -482,11 +461,11 @@ async fn test_get_hg_in_range(fb: FacebookInit) {
 async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
     let mapping = SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
         .unwrap()
-        .build_with_overwrite(RendezVousOptions::for_test());
+        .with_overwrite()
+        .build(REPO_ZERO, RendezVousOptions::for_test());
 
     let ctx = CoreContext::test_mock(fb);
     let entry = BonsaiHgMappingEntry {
-        repo_id: REPO_ZERO,
         hg_cs_id: hg::ONES_CSID,
         bcs_id: bonsai::ONES_CSID,
     };
@@ -500,7 +479,6 @@ async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
     );
 
     let entry = BonsaiHgMappingEntry {
-        repo_id: REPO_ZERO,
         hg_cs_id: hg::ONES_CSID,
         bcs_id: bonsai::TWOS_CSID,
     };
@@ -512,7 +490,7 @@ async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
             .expect("Adding new entry failed")
     );
 
-    let result = mapping.get(&ctx, REPO_ZERO, hg::ONES_CSID.into()).await?;
+    let result = mapping.get(&ctx, hg::ONES_CSID.into()).await?;
     assert_eq!(result, vec![entry.clone()]);
 
     Ok(())

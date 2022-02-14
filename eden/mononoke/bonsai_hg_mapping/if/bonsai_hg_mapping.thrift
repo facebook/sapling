@@ -15,7 +15,7 @@ const i32 MC_SITEVER = 3;
 
 typedef i32 RepoId (rust.newtype)
 
-struct BonsaiHgMappingEntry {
+struct BonsaiHgMappingCacheEntry {
   1: required RepoId repo_id;
   2: required mononoke_types_thrift.ChangesetId bcs_id;
   3: required mercurial_thrift.HgNodeHash hg_cs_id;

@@ -1330,7 +1330,6 @@ impl HgCommands for RepoClient {
                             repo.get_bonsai_hg_mapping()
                                 .get_many_hg_by_prefix(
                                     &ctx,
-                                    repo.get_repoid(),
                                     cs_prefix,
                                     MAX_NUMBER_OF_SUGGESTIONS_TO_FETCH,
                                 )
@@ -2652,7 +2651,7 @@ async fn maybe_validate_pushed_bonsais(
 
         let entries = repo
             .get_bonsai_hg_mapping()
-            .get(ctx, repo.get_repoid(), hg_cs_ids.into())
+            .get(ctx, hg_cs_ids.into())
             .await?;
 
         let actual_entries = entries

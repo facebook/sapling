@@ -754,10 +754,9 @@ impl HgRepoContext {
         high: HgChangesetId,
     ) -> Result<Vec<HgChangesetId>, MononokeError> {
         const LIMIT: usize = 10;
-        let repo_id = self.repo().repoid();
         let bonsai_hg_mapping = self.blob_repo().bonsai_hg_mapping();
         bonsai_hg_mapping
-            .get_hg_in_range(self.ctx(), repo_id, low, high, LIMIT)
+            .get_hg_in_range(self.ctx(), low, high, LIMIT)
             .await
             .map_err(|e| e.into())
     }

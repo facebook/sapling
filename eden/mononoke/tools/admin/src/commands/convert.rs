@@ -75,7 +75,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                 .parse::<HgChangesetId>()
                 .context("Invalid hg changeset id")?;
             repo.bonsai_hg_mapping()
-                .get_bonsai_from_hg(&ctx, repo.repo_identity().id(), hg_cs_id)
+                .get_bonsai_from_hg(&ctx, hg_cs_id)
                 .await?
                 .ok_or_else(|| anyhow!("hg-bonsai mapping not found for {}", hg_cs_id))?
         }
@@ -112,7 +112,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         IdentityScheme::Hg => {
             let hg_cs_id = repo
                 .bonsai_hg_mapping()
-                .get_hg_from_bonsai(&ctx, repo.repo_identity().id(), cs_id)
+                .get_hg_from_bonsai(&ctx, cs_id)
                 .await?
                 .ok_or_else(|| anyhow!("bonsai-hg mapping not found for {}", cs_id))?;
             println!("{}", hg_cs_id);

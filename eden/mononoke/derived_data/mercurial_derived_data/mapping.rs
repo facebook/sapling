@@ -158,7 +158,6 @@ impl BonsaiDerivable for MappedHgChangesetId {
             .add(
                 ctx,
                 BonsaiHgMappingEntry {
-                    repo_id: derivation_ctx.repo_id(),
                     hg_cs_id: self.0,
                     bcs_id: changeset_id,
                 },
@@ -186,7 +185,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
     ) -> Result<HashMap<ChangesetId, Self>> {
         Ok(derivation_ctx
             .bonsai_hg_mapping()?
-            .get(ctx, derivation_ctx.repo_id(), changeset_ids.to_vec().into())
+            .get(ctx, changeset_ids.to_vec().into())
             .await?
             .into_iter()
             .map(|entry| (entry.bcs_id, MappedHgChangesetId(entry.hg_cs_id)))

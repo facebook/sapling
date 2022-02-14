@@ -189,10 +189,10 @@ impl BenchmarkRepoFactory {
         Ok(sql_phases_builder.build(repo_identity.id(), changeset_fetcher.clone(), heads_fetcher))
     }
 
-    pub fn bonsai_hg_mapping(&self) -> Result<ArcBonsaiHgMapping> {
+    pub fn bonsai_hg_mapping(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcBonsaiHgMapping> {
         let mapping: Arc<dyn BonsaiHgMapping> = Arc::new(DelayedBonsaiHgMapping::new(
             SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()?
-                .build(RendezVousOptions::for_test()),
+                .build(repo_identity.id(), RendezVousOptions::for_test()),
             self.delay_settings.db_get_dist,
             self.delay_settings.db_put_dist,
         ));
@@ -468,6 +468,10 @@ impl<M> DelayedBonsaiHgMapping<M> {
 
 #[async_trait]
 impl<M: BonsaiHgMapping> BonsaiHgMapping for DelayedBonsaiHgMapping<M> {
+    fn repo_id(&self) -> RepositoryId {
+        self.inner.repo_id()
+    }
+
     async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error> {
         delay(self.put_dist).await;
         self.inner.add(ctx, entry).await
@@ -476,24 +480,20 @@ impl<M: BonsaiHgMapping> BonsaiHgMapping for DelayedBonsaiHgMapping<M> {
     async fn get(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         cs_id: BonsaiOrHgChangesetIds,
     ) -> Result<Vec<BonsaiHgMappingEntry>, Error> {
         delay(self.get_dist).await;
-        self.inner.get(ctx, repo_id, cs_id).await
+        self.inner.get(ctx, cs_id).await
     }
 
     async fn get_hg_in_range(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         low: HgChangesetId,
         high: HgChangesetId,
         limit: usize,
     ) -> Result<Vec<HgChangesetId>, Error> {
         delay(self.get_dist).await;
-        self.inner
-            .get_hg_in_range(ctx, repo_id, low, high, limit)
-            .await
+        self.inner.get_hg_in_range(ctx, low, high, limit).await
     }
 }

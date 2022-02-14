@@ -21,8 +21,8 @@ use std::sync::{
 };
 
 type Cache = (
-    HashMap<(RepositoryId, ChangesetId), HgChangesetId>,
-    HashMap<(RepositoryId, HgChangesetId), ChangesetId>,
+    HashMap<ChangesetId, HgChangesetId>,
+    HashMap<HgChangesetId, ChangesetId>,
 );
 
 #[derive(Clone)]
@@ -64,10 +64,9 @@ impl<T: BonsaiHgMapping + Clone + 'static> MemWritesBonsaiHgMapping<T> {
     async fn get_from_cache_and_inner<I, O>(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         cs_ids: Vec<I>,
-        get_cache: impl Fn(&Cache) -> &HashMap<(RepositoryId, I), O>,
-        make_entry: impl Fn(RepositoryId, I, O) -> BonsaiHgMappingEntry,
+        get_cache: impl Fn(&Cache) -> &HashMap<I, O>,
+        make_entry: impl Fn(I, O) -> BonsaiHgMappingEntry,
     ) -> Result<Vec<BonsaiHgMappingEntry>, Error>
     where
         Vec<I>: Into<BonsaiOrHgChangesetIds>,
@@ -81,15 +80,15 @@ impl<T: BonsaiHgMapping + Clone + 'static> MemWritesBonsaiHgMapping<T> {
             self.cache.with(|cache| {
                 let cache = get_cache(cache);
 
-                match cache.get(&(repo_id, i)).copied() {
-                    Some(o) => from_cache.push(make_entry(repo_id, i, o)),
+                match cache.get(&i).copied() {
+                    Some(o) => from_cache.push(make_entry(i, o)),
                     None => from_inner.push(i),
                 };
             });
         }
 
         if !self.no_access_to_inner.load(Ordering::Relaxed) {
-            let from_inner = self.inner.get(ctx, repo_id, from_inner.into()).await?;
+            let from_inner = self.inner.get(ctx, from_inner.into()).await?;
             from_cache.extend(from_inner);
         }
         Ok(from_cache)
@@ -98,6 +97,10 @@ impl<T: BonsaiHgMapping + Clone + 'static> MemWritesBonsaiHgMapping<T> {
 
 #[async_trait]
 impl<T: BonsaiHgMapping + Clone + 'static> BonsaiHgMapping for MemWritesBonsaiHgMapping<T> {
+    fn repo_id(&self) -> RepositoryId {
+        self.inner.repo_id()
+    }
+
     async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error> {
         if self.readonly.load(Ordering::Relaxed) {
             return Err(anyhow!(
@@ -107,19 +110,15 @@ impl<T: BonsaiHgMapping + Clone + 'static> BonsaiHgMapping for MemWritesBonsaiHg
 
         let this = self.clone();
 
-        let BonsaiHgMappingEntry {
-            repo_id,
-            hg_cs_id,
-            bcs_id,
-        } = entry;
+        let BonsaiHgMappingEntry { hg_cs_id, bcs_id } = entry;
 
-        let entry = this.get_hg_from_bonsai(ctx, repo_id, bcs_id).await?;
+        let entry = this.get_hg_from_bonsai(ctx, bcs_id).await?;
         if entry.is_some() && !self.save_noop_writes.load(Ordering::Relaxed) {
             Ok(false)
         } else {
             this.cache.with(|cache| {
-                cache.0.insert((repo_id, bcs_id), hg_cs_id);
-                cache.1.insert((repo_id, hg_cs_id), bcs_id);
+                cache.0.insert(bcs_id, hg_cs_id);
+                cache.1.insert(hg_cs_id, bcs_id);
             });
             Ok(true)
         }
@@ -128,35 +127,24 @@ impl<T: BonsaiHgMapping + Clone + 'static> BonsaiHgMapping for MemWritesBonsaiHg
     async fn get(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         cs_ids: BonsaiOrHgChangesetIds,
     ) -> Result<Vec<BonsaiHgMappingEntry>, Error> {
         match cs_ids {
             BonsaiOrHgChangesetIds::Bonsai(bcs_ids) => {
                 self.get_from_cache_and_inner(
                     ctx,
-                    repo_id,
                     bcs_ids,
                     |cache| &cache.0,
-                    |repo_id, bcs_id, hg_cs_id| BonsaiHgMappingEntry {
-                        repo_id,
-                        bcs_id,
-                        hg_cs_id,
-                    },
+                    |bcs_id, hg_cs_id| BonsaiHgMappingEntry { bcs_id, hg_cs_id },
                 )
                 .await
             }
             BonsaiOrHgChangesetIds::Hg(hg_cs_ids) => {
                 self.get_from_cache_and_inner(
                     ctx,
-                    repo_id,
                     hg_cs_ids,
                     |cache| &cache.1,
-                    |repo_id, hg_cs_id, bcs_id| BonsaiHgMappingEntry {
-                        repo_id,
-                        bcs_id,
-                        hg_cs_id,
-                    },
+                    |hg_cs_id, bcs_id| BonsaiHgMappingEntry { bcs_id, hg_cs_id },
                 )
                 .await
             }
@@ -166,7 +154,6 @@ impl<T: BonsaiHgMapping + Clone + 'static> BonsaiHgMapping for MemWritesBonsaiHg
     async fn get_hg_in_range(
         &self,
         _ctx: &CoreContext,
-        _repo_id: RepositoryId,
         _low: HgChangesetId,
         _high: HgChangesetId,
         _limit: usize,

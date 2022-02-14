@@ -300,10 +300,10 @@ impl TestRepoFactory {
     }
 
     /// Construct Bonsai Hg Mapping using the in-memory metadata database.
-    pub fn bonsai_hg_mapping(&self) -> Result<ArcBonsaiHgMapping> {
+    pub fn bonsai_hg_mapping(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcBonsaiHgMapping> {
         Ok(Arc::new(
             SqlBonsaiHgMappingBuilder::from_sql_connections(self.metadata_db.clone().into())
-                .build(RendezVousOptions::for_test()),
+                .build(repo_identity.id(), RendezVousOptions::for_test()),
         ))
     }
 

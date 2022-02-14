@@ -170,7 +170,7 @@ impl BlobRepoHg for BlobRepo {
     ) -> Result<Option<ChangesetId>, Error> {
         STATS::get_bonsai_from_hg.add_value(1);
         self.get_bonsai_hg_mapping()
-            .get_bonsai_from_hg(&ctx, self.get_repoid(), hg_cs_id)
+            .get_bonsai_from_hg(&ctx, hg_cs_id)
             .await
     }
 
@@ -188,7 +188,7 @@ impl BlobRepoHg for BlobRepo {
         let bonsai_or_hg_cs_ids = bonsai_or_hg_cs_ids.into();
         let hg_bonsai_list = self
             .get_bonsai_hg_mapping()
-            .get(&ctx, self.get_repoid(), bonsai_or_hg_cs_ids.clone())
+            .get(&ctx, bonsai_or_hg_cs_ids.clone())
             .await?
             .into_iter()
             .map(|entry| (entry.hg_cs_id, entry.bcs_id))

@@ -47,7 +47,7 @@ use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId, Repo
 use mononoke_types::{
     blame::BlameMaybeRejected, fsnode::FsnodeEntry, skeleton_manifest::SkeletonManifestEntry,
     unode::UnodeEntry, BlameId, ChangesetId, ContentId, DeletedManifestId, FastlogBatchId,
-    FileUnodeId, FsnodeId, MPath, ManifestUnodeId, RepositoryId, SkeletonManifestId,
+    FileUnodeId, FsnodeId, MPath, ManifestUnodeId, SkeletonManifestId,
 };
 use phases::{Phase, Phases, PhasesRef};
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -141,7 +141,6 @@ pub trait VisitOne {
     async fn get_bonsai_from_hg(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         bonsai_hg_mapping: &dyn BonsaiHgMapping,
         hg_cs_id: &HgChangesetId,
     ) -> Result<ChangesetId, Error>;
@@ -150,7 +149,6 @@ pub trait VisitOne {
     async fn defer_from_hg(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         bonsai_hg_mapping: &dyn BonsaiHgMapping,
         hg_cs_id: &HgChangesetId,
     ) -> Result<Option<ChangesetId>, Error>;
@@ -1638,7 +1636,6 @@ struct Checker<V: VisitOne> {
     visitor: V,
     phases_store: Arc<dyn Phases>,
     bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
-    repo_id: RepositoryId,
     with_blame: bool,
     with_fastlog: bool,
     with_filenodes: bool,
@@ -1669,7 +1666,7 @@ impl<V: VisitOne> Checker<V> {
         hg_cs_id: &HgChangesetId,
     ) -> Result<ChangesetId, Error> {
         self.visitor
-            .get_bonsai_from_hg(ctx, self.repo_id, self.bonsai_hg_mapping.as_ref(), hg_cs_id)
+            .get_bonsai_from_hg(ctx, self.bonsai_hg_mapping.as_ref(), hg_cs_id)
             .await
     }
 
@@ -1679,7 +1676,7 @@ impl<V: VisitOne> Checker<V> {
         hg_cs_id: &HgChangesetId,
     ) -> Result<Option<ChangesetId>, Error> {
         self.visitor
-            .defer_from_hg(ctx, self.repo_id, self.bonsai_hg_mapping.as_ref(), hg_cs_id)
+            .defer_from_hg(ctx, self.bonsai_hg_mapping.as_ref(), hg_cs_id)
             .await
     }
 
@@ -1853,7 +1850,6 @@ where
             required_node_data_types,
             phases_store: repo.phases().with_frozen_public_heads(heads),
             bonsai_hg_mapping: repo.get_bonsai_hg_mapping().clone(),
-            repo_id: repo.get_repoid(),
         });
 
         Ok(limited_by_key_shardable(

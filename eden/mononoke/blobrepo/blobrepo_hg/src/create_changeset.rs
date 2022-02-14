@@ -299,7 +299,6 @@ impl CreateChangeset {
             }
         });
 
-        let repoid = repo.get_repoid();
         let complete_changesets = repo.get_changesets_object();
         let bonsai_hg_mapping = repo.get_bonsai_hg_mapping().clone();
         let _repo = repo.clone();
@@ -319,7 +318,6 @@ impl CreateChangeset {
             // update bonsai mapping
             let bcs_id = bonsai_cs.get_changeset_id();
             let bonsai_hg_entry = BonsaiHgMappingEntry {
-                repo_id: repoid.clone(),
                 hg_cs_id: hg_cs.get_changeset_id(),
                 bcs_id,
             };

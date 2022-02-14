@@ -7,27 +7,22 @@
 
 #![deny(warnings)]
 
+use std::sync::Arc;
+
+use anyhow::{Error, Result};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-
-use sql::Connection;
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
-use sql_ext::SqlConnections;
-
-use abomonation_derive::Abomonation;
-use anyhow::{Error, Result};
 use context::{CoreContext, PerfCounterType};
 use fbinit::FacebookInit;
 use futures::future;
-use mercurial_types::{
-    HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgNodeHash,
-};
+use mercurial_types::{HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix};
 use mononoke_types::{ChangesetId, RepositoryId};
 use rand::Rng;
-use rendezvous::{
-    MultiRendezVous, RendezVousOptions, RendezVousStats, TunablesMultiRendezVousController,
-};
+use rendezvous::{RendezVous, RendezVousOptions, RendezVousStats, TunablesRendezVousController};
 use sql::queries;
+use sql::Connection;
+use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_ext::SqlConnections;
 use stats::prelude::*;
 
 mod caching;
@@ -46,37 +41,10 @@ define_stats! {
     get_many_hg_by_prefix: timeseries(Rate, Sum),
 }
 
-#[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct BonsaiHgMappingEntry {
-    pub repo_id: RepositoryId,
     pub hg_cs_id: HgChangesetId,
     pub bcs_id: ChangesetId,
-}
-
-impl BonsaiHgMappingEntry {
-    fn from_thrift(entry: bonsai_hg_mapping_entry_thrift::BonsaiHgMappingEntry) -> Result<Self> {
-        Ok(Self {
-            repo_id: RepositoryId::new(entry.repo_id.0),
-            hg_cs_id: HgChangesetId::new(HgNodeHash::from_thrift(entry.hg_cs_id)?),
-            bcs_id: ChangesetId::from_thrift(entry.bcs_id)?,
-        })
-    }
-
-    fn into_thrift(self) -> bonsai_hg_mapping_entry_thrift::BonsaiHgMappingEntry {
-        bonsai_hg_mapping_entry_thrift::BonsaiHgMappingEntry {
-            repo_id: bonsai_hg_mapping_entry_thrift::RepoId(self.repo_id.id()),
-            hg_cs_id: self.hg_cs_id.into_nodehash().into_thrift(),
-            bcs_id: self.bcs_id.into_thrift(),
-        }
-    }
-
-    pub fn new(repo_id: RepositoryId, hg_cs_id: HgChangesetId, bcs_id: ChangesetId) -> Self {
-        BonsaiHgMappingEntry {
-            repo_id,
-            hg_cs_id,
-            bcs_id,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -122,22 +90,22 @@ impl From<Vec<HgChangesetId>> for BonsaiOrHgChangesetIds {
 #[async_trait]
 #[auto_impl(&, Arc, Box)]
 pub trait BonsaiHgMapping: Send + Sync {
+    fn repo_id(&self) -> RepositoryId;
+
     async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error>;
 
     async fn get(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         cs_id: BonsaiOrHgChangesetIds,
     ) -> Result<Vec<BonsaiHgMappingEntry>, Error>;
 
     async fn get_hg_from_bonsai(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> Result<Option<HgChangesetId>, Error> {
-        let result = self.get(ctx, repo_id, cs_id.into()).await?;
+        let result = self.get(ctx, cs_id.into()).await?;
         let hg_cs_id = result.into_iter().next().map(|entry| entry.hg_cs_id);
         Ok(hg_cs_id)
     }
@@ -145,10 +113,9 @@ pub trait BonsaiHgMapping: Send + Sync {
     async fn get_bonsai_from_hg(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         cs_id: HgChangesetId,
     ) -> Result<Option<ChangesetId>, Error> {
-        let result = self.get(ctx, repo_id, cs_id.into()).await?;
+        let result = self.get(ctx, cs_id.into()).await?;
         let bcs_id = result.into_iter().next().map(|entry| entry.bcs_id);
         Ok(bcs_id)
     }
@@ -156,18 +123,11 @@ pub trait BonsaiHgMapping: Send + Sync {
     async fn get_many_hg_by_prefix(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         cs_prefix: HgChangesetIdPrefix,
         limit: usize,
     ) -> Result<HgChangesetIdsResolvedFromPrefix, Error> {
         let mut fetched_cs = self
-            .get_hg_in_range(
-                ctx,
-                repo_id,
-                cs_prefix.min_cs(),
-                cs_prefix.max_cs(),
-                limit + 1,
-            )
+            .get_hg_in_range(ctx, cs_prefix.min_cs(), cs_prefix.max_cs(), limit + 1)
             .await?;
         let res = match fetched_cs.len() {
             0 => HgChangesetIdsResolvedFromPrefix::NoMatch,
@@ -184,7 +144,6 @@ pub trait BonsaiHgMapping: Send + Sync {
     async fn get_hg_in_range(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         low: HgChangesetId,
         high: HgChangesetId,
         limit: usize,
@@ -193,8 +152,8 @@ pub trait BonsaiHgMapping: Send + Sync {
 
 #[derive(Clone)]
 struct RendezVousConnection {
-    bonsai: MultiRendezVous<RepositoryId, ChangesetId, HgChangesetId>,
-    hg: MultiRendezVous<RepositoryId, HgChangesetId, ChangesetId>,
+    bonsai: RendezVous<ChangesetId, HgChangesetId>,
+    hg: RendezVous<HgChangesetId, ChangesetId>,
     conn: Connection,
 }
 
@@ -202,13 +161,19 @@ impl RendezVousConnection {
     fn new(conn: Connection, name: &str, opts: RendezVousOptions) -> Self {
         Self {
             conn,
-            bonsai: MultiRendezVous::new(
-                TunablesMultiRendezVousController::new(opts),
-                RendezVousStats::new(format!("bonsai_hg_mapping.bonsai.{}", name,)),
+            bonsai: RendezVous::new(
+                TunablesRendezVousController::new(opts),
+                Arc::new(RendezVousStats::new(format!(
+                    "bonsai_hg_mapping.bonsai.{}",
+                    name,
+                ))),
             ),
-            hg: MultiRendezVous::new(
-                TunablesMultiRendezVousController::new(opts),
-                RendezVousStats::new(format!("bonsai_hg_mapping.hg.{}", name,)),
+            hg: RendezVous::new(
+                TunablesRendezVousController::new(opts),
+                Arc::new(RendezVousStats::new(format!(
+                    "bonsai_hg_mapping.hg.{}",
+                    name,
+                ))),
             ),
         }
     }
@@ -219,6 +184,7 @@ pub struct SqlBonsaiHgMapping {
     write_connection: Connection,
     read_connection: RendezVousConnection,
     read_master_connection: RendezVousConnection,
+    repo_id: RepositoryId,
     // Option that forces all `add()` method calls to overwrite values
     // that set in the database. This should be used only when we try to
     // fix broken entries in the db.
@@ -281,6 +247,7 @@ queries! {
 #[derive(Clone)]
 pub struct SqlBonsaiHgMappingBuilder {
     connections: SqlConnections,
+    overwrite: bool,
 }
 
 impl SqlConstruct for SqlBonsaiHgMappingBuilder {
@@ -289,21 +256,24 @@ impl SqlConstruct for SqlBonsaiHgMappingBuilder {
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-bonsai-hg-mapping.sql");
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
-        Self { connections }
+        Self {
+            connections,
+            overwrite: false,
+        }
     }
 }
 
 impl SqlBonsaiHgMappingBuilder {
-    pub fn build(self, opts: RendezVousOptions) -> SqlBonsaiHgMapping {
-        self.build_impl(opts, false)
+    pub fn with_overwrite(mut self) -> Self {
+        self.overwrite = true;
+        self
     }
 
-    pub fn build_with_overwrite(self, opts: RendezVousOptions) -> SqlBonsaiHgMapping {
-        self.build_impl(opts, true)
-    }
-
-    fn build_impl(self, opts: RendezVousOptions, overwrite: bool) -> SqlBonsaiHgMapping {
-        let connections = self.connections;
+    pub fn build(self, repo_id: RepositoryId, opts: RendezVousOptions) -> SqlBonsaiHgMapping {
+        let SqlBonsaiHgMappingBuilder {
+            connections,
+            overwrite,
+        } = self;
 
         SqlBonsaiHgMapping {
             write_connection: connections.write_connection,
@@ -313,6 +283,7 @@ impl SqlBonsaiHgMappingBuilder {
                 "read_master",
                 opts,
             ),
+            repo_id,
             overwrite,
         }
     }
@@ -322,20 +293,20 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiHgMappingBuilder {}
 
 impl SqlBonsaiHgMapping {
     async fn verify_consistency(&self, entry: BonsaiHgMappingEntry) -> Result<(), Error> {
-        let BonsaiHgMappingEntry {
-            repo_id,
-            hg_cs_id,
-            bcs_id,
-        } = entry.clone();
+        let BonsaiHgMappingEntry { hg_cs_id, bcs_id } = entry.clone();
 
         let tok: i32 = rand::thread_rng().gen();
         let hg_ids = &[hg_cs_id];
-        let by_hg =
-            SelectMappingByHg::query(&self.read_master_connection.conn, &repo_id, &tok, hg_ids);
+        let by_hg = SelectMappingByHg::query(
+            &self.read_master_connection.conn,
+            &self.repo_id,
+            &tok,
+            hg_ids,
+        );
         let bcs_ids = &[bcs_id];
         let by_bcs = SelectMappingByBonsai::query(
             &self.read_master_connection.conn,
-            &repo_id,
+            &self.repo_id,
             &tok,
             bcs_ids,
         );
@@ -350,11 +321,7 @@ impl SqlBonsaiHgMapping {
         {
             Some(entry) if entry == (hg_cs_id, bcs_id) => Ok(()),
             Some((hg_cs_id, bcs_id)) => Err(ErrorKind::ConflictingEntries(
-                BonsaiHgMappingEntry {
-                    repo_id,
-                    hg_cs_id,
-                    bcs_id,
-                },
+                BonsaiHgMappingEntry { hg_cs_id, bcs_id },
                 entry,
             )
             .into()),
@@ -365,27 +332,31 @@ impl SqlBonsaiHgMapping {
 
 #[async_trait]
 impl BonsaiHgMapping for SqlBonsaiHgMapping {
+    fn repo_id(&self) -> RepositoryId {
+        self.repo_id
+    }
+
     async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error> {
         STATS::adds.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
 
-        let BonsaiHgMappingEntry {
-            repo_id,
-            hg_cs_id,
-            bcs_id,
-        } = entry.clone();
+        let BonsaiHgMappingEntry { hg_cs_id, bcs_id } = entry.clone();
 
 
         if self.overwrite {
-            let result =
-                ReplaceMapping::query(&self.write_connection, &[(&repo_id, &hg_cs_id, &bcs_id)])
-                    .await?;
+            let result = ReplaceMapping::query(
+                &self.write_connection,
+                &[(&self.repo_id, &hg_cs_id, &bcs_id)],
+            )
+            .await?;
             Ok(result.affected_rows() >= 1)
         } else {
-            let result =
-                InsertMapping::query(&self.write_connection, &[(&repo_id, &hg_cs_id, &bcs_id)])
-                    .await?;
+            let result = InsertMapping::query(
+                &self.write_connection,
+                &[(&self.repo_id, &hg_cs_id, &bcs_id)],
+            )
+            .await?;
             if result.affected_rows() == 1 {
                 Ok(true)
             } else {
@@ -398,14 +369,13 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
     async fn get(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         ids: BonsaiOrHgChangesetIds,
     ) -> Result<Vec<BonsaiHgMappingEntry>, Error> {
         STATS::gets.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let (mut mappings, left_to_fetch) =
-            select_mapping(ctx.fb, &self.read_connection, repo_id, ids).await?;
+            select_mapping(ctx.fb, &self.read_connection, self.repo_id, ids).await?;
 
         if left_to_fetch.is_empty() {
             return Ok(mappings);
@@ -414,8 +384,13 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         STATS::gets_master.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
-        let (mut master_mappings, _) =
-            select_mapping(ctx.fb, &self.read_master_connection, repo_id, left_to_fetch).await?;
+        let (mut master_mappings, _) = select_mapping(
+            ctx.fb,
+            &self.read_master_connection,
+            self.repo_id,
+            left_to_fetch,
+        )
+        .await?;
 
         mappings.append(&mut master_mappings);
         Ok(mappings)
@@ -426,7 +401,6 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
     async fn get_hg_in_range(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         low: HgChangesetId,
         high: HgChangesetId,
         limit: usize,
@@ -438,7 +412,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let rows = SelectHgChangesetsByRange::query(
             &self.read_connection.conn,
-            &repo_id,
+            &self.repo_id,
             &low.as_bytes(),
             &high.as_bytes(),
             &limit,
@@ -450,7 +424,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
                 .increment_counter(PerfCounterType::SqlReadsMaster);
             let rows = SelectHgChangesetsByRange::query(
                 &self.read_master_connection.conn,
-                &repo_id,
+                &self.repo_id,
                 &low.as_bytes(),
                 &high.as_bytes(),
                 &limit,
@@ -478,7 +452,6 @@ async fn select_mapping(
         BonsaiOrHgChangesetIds::Bonsai(bcs_ids) => {
             let ret = connection
                 .bonsai
-                .get(repo_id)
                 .dispatch(fb, bcs_ids.into_iter().collect(), || {
                     let conn = connection.conn.clone();
                     move |bcs_ids| async move {
@@ -512,7 +485,6 @@ async fn select_mapping(
         BonsaiOrHgChangesetIds::Hg(hg_cs_ids) => {
             let ret = connection
                 .hg
-                .get(repo_id)
                 .dispatch(fb, hg_cs_ids.into_iter().collect(), || {
                     let conn = connection.conn.clone();
                     move |hg_cs_ids| async move {
@@ -547,11 +519,7 @@ async fn select_mapping(
     Ok((
         found
             .into_iter()
-            .map(move |(hg_cs_id, bcs_id)| BonsaiHgMappingEntry {
-                repo_id,
-                hg_cs_id,
-                bcs_id,
-            })
+            .map(move |(hg_cs_id, bcs_id)| BonsaiHgMappingEntry { hg_cs_id, bcs_id })
             .collect(),
         missing,
     ))
