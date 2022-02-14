@@ -221,6 +221,9 @@ pub struct MononokeTunables {
     segmented_changelog_idmap_log_sampling_rate: AtomicI64,
     segmented_changelog_tailer_log_sampling_rate: AtomicI64,
 
+    // How many commits to walk back from the client heads before failing to rebuild SC
+    segmented_changelog_client_max_commits_to_traverse: AtomicI64,
+
     // Use comprehensive mode for is_present method in multiplexed blobstore for edenapi lookup api.
     edenapi_lookup_use_comprehensive_mode: AtomicBool,
 

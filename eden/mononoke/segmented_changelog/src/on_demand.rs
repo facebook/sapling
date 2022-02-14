@@ -18,6 +18,9 @@ use rand::Rng;
 use tokio::sync::{Notify, RwLock};
 
 use cloned::cloned;
+use futures::compat::Stream01CompatExt;
+use futures::pin_mut;
+use futures::stream::{StreamExt, TryStreamExt};
 use futures_ext::future::{spawn_controlled, ControlledHandle, FbTryFutureExt, TryShared};
 use futures_stats::TimedFutureExt;
 use stats::prelude::*;
@@ -27,6 +30,7 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RepositoryId};
+use revset::AncestorsNodeStream;
 
 use crate::dag::ops::DagAddHeads;
 use crate::dag::VertexListWithOptions;
@@ -236,9 +240,55 @@ impl OnDemandUpdateSegmentedChangelog {
         self.build_up_to_vertex_list(&ctx, &vertex_list).await
     }
 
+    async fn are_descendants_of_known_commtis(
+        &self,
+        ctx: &CoreContext,
+        heads: &[ChangesetId],
+    ) -> Result<bool> {
+        let changeset_fetcher = self.changeset_fetcher.clone();
+        let id_map = self.namedag.read().await.map().clone_idmap();
+        let max_commits =
+            tunables::tunables().get_segmented_changelog_client_max_commits_to_traverse();
+        for cs_id in heads {
+            let ancestors =
+                AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, *cs_id).compat();
+            let ids = ancestors
+                .take(max_commits as usize)
+                .try_filter_map(|cs_id| {
+                    cloned!(ctx, id_map);
+                    async move { id_map.find_dag_id(&ctx, cs_id).await }
+                });
+            pin_mut!(ids);
+            if ids.try_next().await?.is_none() {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+
+    async fn build_up_to_client_heads(
+        &self,
+        ctx: &CoreContext,
+        client_heads: &[ChangesetId],
+    ) -> Result<()> {
+        if self
+            .are_descendants_of_known_commtis(ctx, client_heads)
+            .await?
+        {
+            let client_heads = client_heads.to_vec().into_iter().map(SeedHead::from);
+            let mut seed_heads = self.seed_heads.clone();
+            seed_heads.extend(client_heads);
+            let vertex_list =
+                vertexlist_from_seedheads(ctx, &seed_heads, self.bookmarks.as_ref()).await?;
+            self.build_up_to_vertex_list(ctx, &vertex_list).await
+        } else {
+            self.build_up_to_bookmark(ctx).await
+        }
+    }
+
     async fn build_up_to_heads(&self, ctx: &CoreContext, heads: &[ChangesetId]) -> Result<()> {
         if !self.are_heads_assigned(ctx, heads).await? {
-            self.build_up_to_bookmark(ctx).await?;
+            self.build_up_to_client_heads(ctx, heads).await?;
             // The IdDag has two groups, the MASTER group and the NON_MASTER group. The MASTER
             // group is reserved for the ancestors of the master bookmark. The MASTER group should
             // contain the ancestors of master. The NON_MASTER group can contain all other

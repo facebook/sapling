@@ -79,9 +79,19 @@ Check that bookmark moved correctly
   {"master": None,
    "master_bookmark": "26805aba1e600a82e93661149f2313866a221a7b"}
 
-Pull should fail, client master_bookmark is on more recent commit.
-  $ LOG=pull::fastpath=debug hgedenapi pull 2>&1 | grep "server cannot match the clients heads"
-  * client_heads: [ChangesetId(Blake2(830c5dcdb5335a4ecdda15afc927edd525c26d0a3d7f14c93ef5ecc48d0db532)), ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd))]* (glob)
+  $ merge_tunables <<EOF
+  > {
+  >   "ints": {
+  >     "segmented_changelog_client_max_commits_to_traverse": 100
+  >   }
+  > }
+  > EOF
+
+Pull should succeed and local bookmark should be moved back.
+  $ LOG=pull::fastpath=debug hgedenapi pull
+  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  DEBUG pull::fastpath: master: c2f72b3cb5e9ea5ce6b764fc5b4f7c7b23208217 => 26805aba1e600a82e93661149f2313866a221a7b
+  imported commit graph for 0 commits (0 segments)
 
 Check that segmented changelog IdMap in DB didn't change. 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select version, vertex, hex(cs_id) from segmented_changelog_idmap"
@@ -89,9 +99,9 @@ Check that segmented changelog IdMap in DB didn't change.
   1|1|459F16AE564C501CB408C1E5B60FC98A1E8B8E97B9409C7520658BFA1577FB66
   1|2|C3384961B16276F2DB77DF9D7C874BBE981CF0525BD6F84A502F919044F2DABD
   $ hgedenapi log -G -T '{node} {desc} {remotenames} {bookmarks}\n' -r "all()"
-  @  c2f72b3cb5e9ea5ce6b764fc5b4f7c7b23208217 D remote/master_bookmark
+  @  c2f72b3cb5e9ea5ce6b764fc5b4f7c7b23208217 D
   │
-  o  26805aba1e600a82e93661149f2313866a221a7b C
+  o  26805aba1e600a82e93661149f2313866a221a7b C remote/master_bookmark
   │
   o  112478962961147124edd43549aedd1a335e44bf B
   │

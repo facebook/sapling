@@ -25,12 +25,14 @@ use changeset_fetcher::PrefetchedChangesetsFetcher;
 use changesets::{ChangesetEntry, ChangesetsArc, ChangesetsRef};
 use context::CoreContext;
 use fixtures::{branch_even, linear, merge_even, merge_uneven, set_bookmark, unshared_merge_even};
+use maplit::hashmap;
 use mononoke_types::{ChangesetId, RepositoryId};
 use phases::{PhasesArc, PhasesRef};
 use revset::AncestorsNodeStream;
 use sql_construct::SqlConstruct;
 use sql_ext::replication::NoReplicaLagMonitor;
 use tests_utils::{resolve_cs_id, CreateCommitContext};
+use tunables::with_tunables_async;
 
 use crate::builder::SegmentedChangelogSqlConnections;
 use crate::iddag::IdDagSaveStore;
@@ -997,13 +999,35 @@ async fn test_mismatched_heads(fb: FacebookInit) -> Result<()> {
             .await?,
         Some(Location::new(h1, 1))
     );
+
+    // should fail with the small limit for traversing from client heads
     let h2 = resolve_cs_id(&ctx, &blobrepo, "16839021e338500b3cf7c9b871c8a07351697d68").await?;
-    let err = dag
-        .changeset_id_to_location(&ctx, vec![h1, h2], h1_parent)
+
+    let tunables = tunables::MononokeTunables::default();
+    tunables.update_ints(&hashmap! {
+        "segmented_changelog_client_max_commits_to_traverse".to_string() => 2,
+    });
+    let f = dag.changeset_id_to_location(&ctx, vec![h1, h2], h1_parent);
+
+    let err = with_tunables_async(tunables, f.boxed())
         .await
         .err()
         .unwrap();
     assert!(err.is::<crate::MismatchedHeadsError>());
+
+    // should succeed as the client head not far from the commits in SC IdMap
+    let h2 = resolve_cs_id(&ctx, &blobrepo, "16839021e338500b3cf7c9b871c8a07351697d68").await?;
+
+    let tunables = tunables::MononokeTunables::default();
+    tunables.update_ints(&hashmap! {
+        "segmented_changelog_client_max_commits_to_traverse".to_string() => 100,
+    });
+    let f = dag.changeset_id_to_location(&ctx, vec![h1, h2], h1_parent);
+
+    assert_eq!(
+        with_tunables_async(tunables, f.boxed()).await?,
+        Some(Location::new(h1, 1))
+    );
 
     Ok(())
 }
