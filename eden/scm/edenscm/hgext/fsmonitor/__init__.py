@@ -908,7 +908,7 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
         if not self._watchmanclient.available():
             return bail("client unavailable")
 
-        with progress.spinner(self._ui, "watchman query"), self._detectrace(match):
+        with self._detectrace(match):
             try:
                 # Ideally we'd return the result incrementally, but we need to
                 # be able to fall back if watchman fails. So let's consume the
@@ -976,22 +976,23 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
         if match is None:
             match = util.always
 
-        try:
-            startclock = self._watchmanclient.getcurrentclock()
-        except Exception as ex:
-            if self._ui.configbool("fsmonitor", "fallback-on-watchman-exception"):
-                raise fsmonitorfallback("exception while getting watchman clock")
-            else:
-                raise ex
+        with progress.spinner(self._ui, "watchman query"):
+            try:
+                startclock = self._watchmanclient.getcurrentclock()
+            except Exception as ex:
+                if self._ui.configbool("fsmonitor", "fallback-on-watchman-exception"):
+                    raise fsmonitorfallback("exception while getting watchman clock")
+                else:
+                    raise ex
 
-        self.dirstate._map.preload()
-        lookups = []
-        results = []
-        for fn, st in self._fsmonitorwalk(match):
-            changed = self._ischanged(fn, st, lookups)
-            if changed:
-                results.append(changed[0])
-                yield changed
+            self.dirstate._map.preload()
+            lookups = []
+            results = []
+            for fn, st in self._fsmonitorwalk(match):
+                changed = self._ischanged(fn, st, lookups)
+                if changed:
+                    results.append(changed[0])
+                    yield changed
 
         for changed in self._processlookups(lookups):
             results.append(changed[0])

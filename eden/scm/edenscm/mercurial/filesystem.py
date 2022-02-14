@@ -17,6 +17,7 @@ from typing import Callable, Iterable, Optional, Tuple
 
 from bindings import workingcopy
 from edenscm.mercurial import match as matchmod
+from edenscm.mercurial import progress
 
 from . import encoding, error, pathutil, util, vfs as vfsmod
 from .i18n import _
@@ -304,27 +305,33 @@ class physicalfilesystem(object):
         wctx = repo[None]
         pctx = repo[p1]
 
-        # Sort so we get deterministic ordering. This is important for tests.
-        for fn in sorted(lookups):
-            changed = self._compareondisk(fn, wctx, pctx)
-            if changed is None:
-                # File no longer exists
-                if self.dtolog > 0:
-                    self.dtolog -= 1
-                    self.ui.log("status", "R %s: checked in filesystem" % fn)
-                yield (fn, False)
-            elif changed is True:
-                # File exists and is modified
-                if self.mtolog > 0:
-                    self.mtolog -= 1
-                    self.ui.log("status", "M %s: checked in filesystem" % fn)
-                yield (fn, True)
-            else:
-                # File exists and is clean
-                if self.ftolog > 0:
-                    self.ftolog -= 1
-                    self.ui.log("status", "C %s: checked in filesystem" % fn)
-                self.cleanlookups.append(fn)
+        with progress.bar(
+            self.ui, _("checking changes"), _("files"), len(lookups)
+        ) as prog:
+            # Sort so we get deterministic ordering. This is important for tests.
+            count = 0
+            for fn in sorted(lookups):
+                count += 1
+                prog.value = (count, fn)
+                changed = self._compareondisk(fn, wctx, pctx)
+                if changed is None:
+                    # File no longer exists
+                    if self.dtolog > 0:
+                        self.dtolog -= 1
+                        self.ui.log("status", "R %s: checked in filesystem" % fn)
+                    yield (fn, False)
+                elif changed is True:
+                    # File exists and is modified
+                    if self.mtolog > 0:
+                        self.mtolog -= 1
+                        self.ui.log("status", "M %s: checked in filesystem" % fn)
+                    yield (fn, True)
+                else:
+                    # File exists and is clean
+                    if self.ftolog > 0:
+                        self.ftolog -= 1
+                        self.ui.log("status", "C %s: checked in filesystem" % fn)
+                    self.cleanlookups.append(fn)
 
     @util.timefunction("fswalk", 0, "ui")
     def _walk(self, match, listignored=False):
@@ -494,17 +501,23 @@ class physicalfilesystem(object):
         wctx = repo[None]
         pctx = repo[p1]
 
-        for f in cleanlookups:
-            # Only make something clean if it's already in a
-            # normal state. Things in other states, like 'm'
-            # merge state, should not be marked clean.
-            entry = newdmap[f]
-            if entry[0] == "n" and f not in newdmap.copymap and entry[2] != -2:
-                # It may have been a while since we added the
-                # file to cleanlookups, so double check that
-                # it's still clean.
-                if self._compareondisk(f, wctx, pctx) is False:
-                    normal(f)
+        with progress.bar(
+            self.ui, _("marking clean"), _("files"), len(cleanlookups)
+        ) as prog:
+            count = 0
+            for f in cleanlookups:
+                count += 1
+                prog.value = (count, f)
+                # Only make something clean if it's already in a
+                # normal state. Things in other states, like 'm'
+                # merge state, should not be marked clean.
+                entry = newdmap[f]
+                if entry[0] == "n" and f not in newdmap.copymap and entry[2] != -2:
+                    # It may have been a while since we added the
+                    # file to cleanlookups, so double check that
+                    # it's still clean.
+                    if self._compareondisk(f, wctx, pctx) is False:
+                        normal(f)
 
 
 def findthingstopurge(dirstate, match, findfiles, finddirs, includeignored):
