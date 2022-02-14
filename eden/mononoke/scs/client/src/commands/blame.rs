@@ -278,18 +278,25 @@ impl Render for BlameOut {
         }
     }
 
-    fn render_json(&self, _matches: &ArgMatches, w: &mut dyn Write) -> Result<(), Error> {
+    fn render_json(&self, matches: &ArgMatches, w: &mut dyn Write) -> Result<(), Error> {
         match self.blame {
             thrift::Blame::blame_compact(ref blame) => {
                 let mut lines = Vec::new();
+                let use_short_date = matches.is_present(ARG_DATE_SHORT);
                 for line in blame.lines.iter() {
+                    let blame_date = datetime(&blame.dates[line.date_index as usize]);
+                    let formatted_blame_date = if use_short_date {
+                        blame_date.format("%F")
+                    } else {
+                        blame_date.format("%+")
+                    };
                     let mut line_json = json!({
                         "contents": line.contents.as_deref().unwrap_or_default(),
                         "commit": map_commit_ids(blame.commit_ids[line.commit_id_index as usize].values()),
                         "path": blame.paths[line.path_index as usize],
                         "line": line.line,
                         "author": blame.authors[line.author_index as usize],
-                        "datetime": datetime(&blame.dates[line.date_index as usize]).to_rfc3339(),
+                        "datetime": formatted_blame_date.to_string(),
                         "origin_line": line.origin_line,
                     });
                     let mut insert = |key, value| {
