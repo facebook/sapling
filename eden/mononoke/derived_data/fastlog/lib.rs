@@ -33,6 +33,6 @@ mod thrift {
 pub use fastlog_impl::{fetch_fastlog_batch_by_unode_id, unode_entry_to_fastlog_batch_key};
 pub use mapping::{ErrorKind, FastlogParent, RootFastlog};
 pub use ops::{
-    list_file_history, CsAndPath, FastlogError, HistoryAcrossDeletions, NextChangeset,
-    TraversalOrder, Visitor,
+    list_file_history, CsAndPath, FastlogError, FollowMutableFileHistory, HistoryAcrossDeletions,
+    NextChangeset, TraversalOrder, Visitor,
 };

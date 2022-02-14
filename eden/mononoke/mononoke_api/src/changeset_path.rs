@@ -22,7 +22,8 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fastlog::{
-    list_file_history, CsAndPath, FastlogError, HistoryAcrossDeletions, TraversalOrder, Visitor,
+    list_file_history, CsAndPath, FastlogError, FollowMutableFileHistory, HistoryAcrossDeletions,
+    TraversalOrder, Visitor,
 };
 use filestore::FetchKey;
 use futures::future::{try_join_all, FutureExt, Shared, TryFutureExt};
@@ -58,6 +59,7 @@ pub struct ChangesetPathHistoryOptions {
     pub descendants_of: Option<ChangesetId>,
     pub exclude_changeset_and_ancestors: Option<ChangesetId>,
     pub follow_history_across_deletions: bool,
+    pub follow_mutable_file_history: bool,
 }
 
 pub enum PathEntry {
@@ -279,7 +281,6 @@ impl ChangesetPathHistoryContext {
         let path = path.into();
         Self { changeset, path }
     }
-
 
     /// The `RepoContext` for this query.
     pub fn repo(&self) -> &RepoContext {
@@ -578,6 +579,11 @@ impl ChangesetPathHistoryContext {
                 skiplist_index: self.repo().skiplist_index().clone(),
             },
             history_across_deletions,
+            if opts.follow_mutable_file_history {
+                FollowMutableFileHistory::MutableFileParents
+            } else {
+                FollowMutableFileHistory::ImmutableCommitParents
+            },
             self.repo().mutable_renames().clone(),
             traversal_order,
         )

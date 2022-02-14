@@ -477,6 +477,7 @@ impl SourceControlServiceImpl {
                 descendants_of,
                 exclude_changeset_and_ancestors,
                 follow_history_across_deletions: params.follow_history_across_deletions,
+                follow_mutable_file_history: params.follow_mutable_file_history.unwrap_or(false),
             })
             .await?;
         let history = collect_history(

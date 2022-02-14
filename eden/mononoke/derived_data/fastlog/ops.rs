@@ -60,6 +60,12 @@ pub enum HistoryAcrossDeletions {
     DontTrack,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum FollowMutableFileHistory {
+    MutableFileParents,
+    ImmutableCommitParents,
+}
+
 pub type CsAndPath = (ChangesetId, Arc<Option<MPath>>);
 
 pub enum NextChangeset {
@@ -280,6 +286,7 @@ pub async fn list_file_history(
     changeset_id: ChangesetId,
     mut visitor: impl Visitor,
     history_across_deletions: HistoryAcrossDeletions,
+    follow_mutable_renames: FollowMutableFileHistory,
     mutable_renames: Arc<MutableRenames>,
     mut order: TraversalOrder,
 ) -> Result<impl NewStream<Item = Result<ChangesetId, Error>>, FastlogError> {
@@ -341,6 +348,7 @@ pub async fn list_file_history(
                     repo.clone(),
                     state,
                     history_across_deletions,
+                    follow_mutable_renames,
                     &mutable_renames,
                 )
                 .await
@@ -527,6 +535,7 @@ async fn do_history_unfold<V>(
     repo: BlobRepo,
     state: TraversalState<V>,
     history_across_deletions: HistoryAcrossDeletions,
+    follow_mutable_renames: FollowMutableFileHistory,
     mutable_renames: &MutableRenames,
 ) -> Result<Option<(Vec<ChangesetId>, TraversalState<V>)>, Error>
 where
@@ -565,18 +574,35 @@ where
         match history_graph.get(&cs_and_path) {
             Some(Some(parents)) => {
                 // parents are fetched, ready to process
-                let ancestors = if parents.is_empty() {
+                let parents = parents.clone();
+                let mutable_ancestors =
+                    if follow_mutable_renames == FollowMutableFileHistory::MutableFileParents {
+                        find_mutable_renames(
+                            &ctx,
+                            &repo,
+                            cs_and_path.clone(),
+                            &mut history_graph,
+                            mutable_renames,
+                        )
+                        .await?
+                    } else {
+                        vec![]
+                    };
+                let ancestors = if !mutable_ancestors.is_empty() {
+                    mutable_ancestors
+                } else if parents.is_empty() {
                     try_continue_traversal_when_no_parents(
                         &ctx,
                         &repo,
                         cs_and_path.clone(),
                         history_across_deletions,
                         &mut history_graph,
-                        &mutable_renames,
+                        follow_mutable_renames,
+                        mutable_renames,
                     )
                     .await?
                 } else {
-                    parents.clone()
+                    parents
                 };
 
                 visit(
@@ -627,12 +653,39 @@ where
     )))
 }
 
+async fn find_mutable_renames(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    (cs_id, path): (ChangesetId, Arc<Option<MPath>>),
+    history_graph: &mut CommitGraph,
+    mutable_renames: &MutableRenames,
+) -> Result<Vec<CsAndPath>, FastlogError> {
+    if let Some(rename) = mutable_renames
+        .get_rename(ctx, cs_id, (path.as_ref()).clone())
+        .await?
+    {
+        let src_path = Arc::new(rename.src_path().clone());
+        // TODO(stash): this unode can be used to avoid unode manifest traversal
+        // later while doing prefetching
+        let src_unode = rename.get_src_unode().load(ctx, repo.blobstore()).await?;
+        let linknode = match src_unode {
+            Entry::Tree(tree_unode) => *tree_unode.linknode(),
+            Entry::Leaf(leaf_unode) => *leaf_unode.linknode(),
+        };
+        history_graph.insert((linknode, src_path.clone()), None);
+        Ok(vec![(linknode, src_path)])
+    } else {
+        Ok(vec![])
+    }
+}
+
 async fn try_continue_traversal_when_no_parents(
     ctx: &CoreContext,
     repo: &BlobRepo,
     (cs_id, path): (ChangesetId, Arc<Option<MPath>>),
     history_across_deletions: HistoryAcrossDeletions,
     history_graph: &mut CommitGraph,
+    follow_mutable_renames: FollowMutableFileHistory,
     mutable_renames: &MutableRenames,
 ) -> Result<Vec<CsAndPath>, FastlogError> {
     if history_across_deletions == HistoryAcrossDeletions::Track {
@@ -652,23 +705,10 @@ async fn try_continue_traversal_when_no_parents(
 
     if tunables::tunables()
         .get_by_repo_fastlog_use_mutable_renames(repo.name())
-        .unwrap_or(false)
+        .unwrap_or(follow_mutable_renames == FollowMutableFileHistory::MutableFileParents)
     {
-        if let Some(rename) = mutable_renames
-            .get_rename(ctx, cs_id, (path.as_ref()).clone())
-            .await?
-        {
-            let src_path = Arc::new(rename.src_path().clone());
-            // TODO(stash): this unode can be used to avoid unode manifest traversal
-            // later while doing prefetching
-            let src_unode = rename.get_src_unode().load(ctx, repo.blobstore()).await?;
-            let linknode = match src_unode {
-                Entry::Tree(tree_unode) => *tree_unode.linknode(),
-                Entry::Leaf(leaf_unode) => *leaf_unode.linknode(),
-            };
-            history_graph.insert((linknode, src_path.clone()), None);
-            return Ok(vec![(linknode, src_path)]);
-        }
+        return find_mutable_renames(ctx, repo, (cs_id, path), history_graph, mutable_renames)
+            .await;
     }
 
     Ok(vec![])
@@ -1112,6 +1152,7 @@ mod test {
             top,
             SingleBranchOfHistoryVisitor {},
             HistoryAcrossDeletions::Track,
+            FollowMutableFileHistory::ImmutableCommitParents,
             mutable_renames,
             TraversalOrder::new_bfs_order(),
         )
@@ -1709,6 +1750,7 @@ mod test {
             merge,
             (),
             HistoryAcrossDeletions::Track,
+            FollowMutableFileHistory::ImmutableCommitParents,
             mutable_renames.clone(),
             TraversalOrder::new_bfs_order(),
         )
@@ -1724,6 +1766,7 @@ mod test {
             merge,
             (),
             HistoryAcrossDeletions::Track,
+            FollowMutableFileHistory::ImmutableCommitParents,
             mutable_renames.clone(),
             TraversalOrder::new_gen_num_order(ctx, repo.get_changeset_fetcher()),
         )
@@ -1791,6 +1834,7 @@ mod test {
             bcs_id,
             (),
             HistoryAcrossDeletions::Track,
+            FollowMutableFileHistory::ImmutableCommitParents,
             mutable_renames.clone(),
             TraversalOrder::new_gen_num_order(ctx, Arc::new(cs_fetcher)),
         )
@@ -1949,6 +1993,7 @@ mod test {
             changeset_id,
             visitor.clone(),
             history_across_deletions,
+            FollowMutableFileHistory::ImmutableCommitParents,
             mutable_renames.clone(),
             TraversalOrder::new_bfs_order(),
         )
@@ -1964,6 +2009,7 @@ mod test {
             changeset_id,
             visitor,
             history_across_deletions,
+            FollowMutableFileHistory::ImmutableCommitParents,
             mutable_renames,
             TraversalOrder::new_gen_num_order(ctx.clone(), repo.get_changeset_fetcher()),
         )
