@@ -38,7 +38,7 @@ class ChownTest(testcase.EdenRepoTest):
         self.nobody_uid = pwd.getpwnam("nobody").pw_uid
         self.nobody_gid = grp.getgrnam("nobody").gr_gid
 
-    def assert_path(self, path: str):
+    def assert_path(self, path: str) -> None:
         stat = os.lstat(path)
         self.assertEqual(
             stat.st_uid,

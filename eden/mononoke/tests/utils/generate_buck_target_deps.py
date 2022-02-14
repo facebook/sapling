@@ -8,7 +8,7 @@ import argparse
 import subprocess
 
 
-def list_srcs(target_to_update):
+def list_srcs(target_to_update) -> filter[str]:
     output = subprocess.check_output(
         ["buck", "query", 'labels(srcs, "%s")' % target_to_update], shell=False
     )
@@ -34,7 +34,7 @@ def find_known_buck_targets():
     return external_targets, internal_targets
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--target-to-update", required=True)
     args = parser.parse_args()

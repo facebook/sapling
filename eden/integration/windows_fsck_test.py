@@ -48,17 +48,17 @@ class WindowsFsckTest(testcase.EdenRepoTest):
             )
             return status.status.entries
 
-    def _assertInStatus(self, *files):
+    def _assertInStatus(self, *files) -> None:
         status = self._eden_status(listIgnored=True).keys()
         for filename in files:
             self.assertIn(filename, status)
 
-    def _assertNotInStatus(self, *files):
+    def _assertNotInStatus(self, *files) -> None:
         status = self._eden_status(listIgnored=True).keys()
         for filename in files:
             self.assertNotIn(filename, status)
 
-    def test_detect_added_file_in_full_directory(self):
+    def test_detect_added_file_in_full_directory(self) -> None:
         """
         Create a new directory when EdenFS is running, then add files to it
         when EdenFS is not running.
@@ -76,7 +76,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
 
         self._assertInStatus(b"foobar/foo", b"foobar/barfoo/baz")
 
-    def test_detect_added_files_in_ignored_full_directory(self):
+    def test_detect_added_files_in_ignored_full_directory(self) -> None:
         """Create a file in Full ignored directory when EdenFS is not running."""
         foobar = self.mount_path / "ignored" / "foobar"
         foobar.parent.mkdir()
@@ -86,7 +86,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
 
         self._assertInStatus(b"ignored/foobar")
 
-    def test_detect_removed_file_from_full_directory(self):
+    def test_detect_removed_file_from_full_directory(self) -> None:
         """Remove a file in Full directory when EdenFS is not running."""
         foo = self.mount_path / "foobar" / "foo"
         foo.parent.mkdir()
@@ -98,7 +98,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.eden.start()
         self._assertNotInStatus(b"foobar/foo")
 
-    def test_fsck_not_readding_tombstone(self):
+    def test_fsck_not_readding_tombstone(self) -> None:
         """
         Negative case: after user removes an entry while EdenFS is running,
         ProjectedFS will place a special Tombstone marker in place of that
@@ -122,7 +122,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         # Tombstone should be invisible now
         self.assertFalse((self.mount_path / "hello").exists())
 
-    def test_fsck_not_removing_existing_entry_under_placehold(self):
+    def test_fsck_not_removing_existing_entry_under_placehold(self) -> None:
         """
         Negative case: ProjectedFS will remove untouched entries under
         DirtyPlaceholder directories when EdenFS is not running. As a result,

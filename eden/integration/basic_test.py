@@ -267,7 +267,7 @@ class PosixTest(BasicTestBase):
     and Unix-specific calls like mknod() and statvfs()
     """
 
-    def test_mkdir_umask(self):
+    def test_mkdir_umask(self) -> None:
         original_umask = os.umask(0o177)
         try:
             dirname = os.path.join(self.mount, "testd1")

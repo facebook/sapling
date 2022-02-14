@@ -47,18 +47,18 @@ class IsolatedAsyncioTestCase(TestCase):
     # should reset a policy in every test module
     # by calling asyncio.set_event_loop_policy(None) in tearDownModule()
 
-    def __init__(self, methodName='runTest'):
+    def __init__(self, methodName: str='runTest') -> None:
         super().__init__(methodName)
         self._asyncioTestLoop = None
         self._asyncioCallsQueue = None
 
-    async def asyncSetUp(self):
+    async def asyncSetUp(self) -> None:
         pass
 
-    async def asyncTearDown(self):
+    async def asyncTearDown(self) -> None:
         pass
 
-    def addAsyncCleanup(self, func, *args, **kwargs):
+    def addAsyncCleanup(self, func, *args, **kwargs) -> None:
         # A trivial trampoline to addCleanup()
         # the function exists because it has a different semantics
         # and signature:
@@ -73,18 +73,18 @@ class IsolatedAsyncioTestCase(TestCase):
         # 3. Regular "def func()" that returns awaitable object
         self.addCleanup(*(func, *args), **kwargs)
 
-    def _callSetUp(self):
+    def _callSetUp(self) -> None:
         self.setUp()
         self._callAsync(self.asyncSetUp)
 
-    def _callTestMethod(self, method):
+    def _callTestMethod(self, method) -> None:
         self._callMaybeAsync(method)
 
-    def _callTearDown(self):
+    def _callTearDown(self) -> None:
         self._callAsync(self.asyncTearDown)
         self.tearDown()
 
-    def _callCleanup(self, function, *args, **kwargs):
+    def _callCleanup(self, function, *args, **kwargs) -> None:
         self._callMaybeAsync(function, *args, **kwargs)
 
     def _callAsync(self, func, *args, **kwargs):
@@ -105,7 +105,7 @@ class IsolatedAsyncioTestCase(TestCase):
         else:
             return ret
 
-    async def _asyncioLoopRunner(self, fut):
+    async def _asyncioLoopRunner(self, fut) -> None:
         self._asyncioCallsQueue = queue = asyncio.Queue()
         fut.set_result(None)
         while True:
@@ -124,17 +124,19 @@ class IsolatedAsyncioTestCase(TestCase):
                 if not fut.cancelled():
                     fut.set_exception(ex)
 
-    def _setupAsyncioLoop(self):
+    def _setupAsyncioLoop(self) -> None:
         assert self._asyncioTestLoop is None
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.set_debug(True)
         self._asyncioTestLoop = loop
         fut = loop.create_future()
+        # pyre-fixme[16]: `IsolatedAsyncioTestCase` has no attribute
+        #  `_asyncioCallsTask`.
         self._asyncioCallsTask = loop.create_task(self._asyncioLoopRunner(fut))
         loop.run_until_complete(fut)
 
-    def _tearDownAsyncioLoop(self):
+    def _tearDownAsyncioLoop(self) -> None:
         assert self._asyncioTestLoop is not None
         loop = self._asyncioTestLoop
         self._asyncioTestLoop = None

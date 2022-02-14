@@ -145,7 +145,7 @@ class GlobTest(testcase.EdenRepoTest):
         self.assertIn("unterminated bracket sequence", str(ctx.exception))
         self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
-    def test_globs_may_not_include_dotdot(self):
+    def test_globs_may_not_include_dotdot(self) -> None:
         with self.assertRaises(EdenError) as ctx:
             self.client.globFiles(
                 GlobParams(self.mount_path_bytes, ["java/../java/com/**/*.java"])

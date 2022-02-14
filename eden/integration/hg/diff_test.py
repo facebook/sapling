@@ -19,7 +19,7 @@ class DiffTest(EdenHgTestCase):
         repo.write_file("dir1/a.txt", "original contents\n")
         repo.commit("Initial commit.")
 
-    def check_output(self, output: str, expected_lines: List[str]):
+    def check_output(self, output: str, expected_lines: List[str]) -> None:
         output_lines = output.splitlines()
         self.assertListEqual(output_lines, expected_lines)
 

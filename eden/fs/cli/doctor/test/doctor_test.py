@@ -69,7 +69,7 @@ class DoctorTest(DoctorTestBase):
     @patch("eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide")
     def test_end_to_end_test_with_various_scenarios(
         self, mock_get_roots_for_nuclide, mock_watchman
-    ):
+    ) -> None:
         side_effects: List[Dict[str, Any]] = []
         calls = []
         instance = FakeEdenInstance(self.make_temporary_directory())
@@ -139,6 +139,8 @@ class DoctorTest(DoctorTestBase):
         dry_run = False
 
         exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
             instance,
             dry_run,
             instance.mount_table,
@@ -199,7 +201,7 @@ https://fb.facebook.com/groups/eden.users/
     )
     def test_not_all_mounts_have_watchman_watcher(
         self, mock_get_roots_for_nuclide, mock_watchman
-    ):
+    ) -> None:
         instance = FakeEdenInstance(self.make_temporary_directory())
         edenfs_path = str(instance.create_test_mount("eden-mount", scm_type="git").path)
         edenfs_path_not_watched = str(
@@ -217,6 +219,8 @@ https://fb.facebook.com/groups/eden.users/
         out = TestOutput()
         dry_run = False
         exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
             instance,
             dry_run,
             mount_table=instance.mount_table,
@@ -237,7 +241,7 @@ https://fb.facebook.com/groups/eden.users/
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     @patch("eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide")
-    def test_eden_not_in_use(self, mock_get_roots_for_nuclide, mock_watchman):
+    def test_eden_not_in_use(self, mock_get_roots_for_nuclide, mock_watchman) -> None:
         instance = FakeEdenInstance(
             self.make_temporary_directory(), status=fb303_status.DEAD
         )
@@ -245,6 +249,8 @@ https://fb.facebook.com/groups/eden.users/
         out = TestOutput()
         dry_run = False
         exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
             instance,
             dry_run,
             FakeMountTable(),
@@ -259,7 +265,9 @@ https://fb.facebook.com/groups/eden.users/
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     @patch("eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide")
-    def test_edenfs_not_running(self, mock_get_roots_for_nuclide, mock_watchman):
+    def test_edenfs_not_running(
+        self, mock_get_roots_for_nuclide, mock_watchman
+    ) -> None:
         instance = FakeEdenInstance(
             self.make_temporary_directory(), status=fb303_status.DEAD
         )
@@ -268,6 +276,8 @@ https://fb.facebook.com/groups/eden.users/
         out = TestOutput()
         dry_run = False
         exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
             instance,
             dry_run,
             FakeMountTable(),
@@ -295,7 +305,7 @@ https://fb.facebook.com/groups/eden.users/
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     @patch("eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide")
-    def test_edenfs_starting(self, mock_get_roots_for_nuclide, mock_watchman):
+    def test_edenfs_starting(self, mock_get_roots_for_nuclide, mock_watchman) -> None:
         instance = FakeEdenInstance(
             self.make_temporary_directory(), status=fb303_status.STARTING
         )
@@ -304,6 +314,8 @@ https://fb.facebook.com/groups/eden.users/
         out = TestOutput()
         dry_run = False
         exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
             instance,
             dry_run,
             FakeMountTable(),
@@ -331,7 +343,7 @@ https://fb.facebook.com/groups/eden.users/
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     @patch("eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide")
-    def test_edenfs_stopping(self, mock_get_roots_for_nuclide, mock_watchman):
+    def test_edenfs_stopping(self, mock_get_roots_for_nuclide, mock_watchman) -> None:
         instance = FakeEdenInstance(
             self.make_temporary_directory(), status=fb303_status.STOPPING
         )
@@ -340,6 +352,8 @@ https://fb.facebook.com/groups/eden.users/
         out = TestOutput()
         dry_run = False
         exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
             instance,
             dry_run,
             FakeMountTable(),
@@ -366,7 +380,7 @@ https://fb.facebook.com/groups/eden.users/
         self.assertEqual(1, exit_code)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    def test_no_issue_when_watchman_using_eden_watcher(self, mock_watchman):
+    def test_no_issue_when_watchman_using_eden_watcher(self, mock_watchman) -> None:
         fixer, out = self._test_watchman_watcher_check(
             mock_watchman, initial_watcher="eden"
         )
@@ -374,7 +388,7 @@ https://fb.facebook.com/groups/eden.users/
         self.assert_results(fixer, num_problems=0)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    def test_fix_when_watchman_using_inotify_watcher(self, mock_watchman):
+    def test_fix_when_watchman_using_inotify_watcher(self, mock_watchman) -> None:
         fixer, out = self._test_watchman_watcher_check(
             mock_watchman, initial_watcher="inotify", new_watcher="eden", dry_run=False
         )
@@ -391,7 +405,7 @@ https://fb.facebook.com/groups/eden.users/
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    def test_dry_run_identifies_inotify_watcher_issue(self, mock_watchman):
+    def test_dry_run_identifies_inotify_watcher_issue(self, mock_watchman) -> None:
         fixer, out = self._test_watchman_watcher_check(
             mock_watchman, initial_watcher="inotify", dry_run=True
         )
@@ -410,7 +424,7 @@ https://fb.facebook.com/groups/eden.users/
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     def test_doctor_reports_failure_if_cannot_replace_inotify_watcher(
         self, mock_watchman
-    ):
+    ) -> None:
         fixer, out = self._test_watchman_watcher_check(
             mock_watchman,
             initial_watcher="inotify",
@@ -467,7 +481,9 @@ https://fb.facebook.com/groups/eden.users/
         return fixer, out.getvalue()
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    def test_no_issue_when_expected_nuclide_subscriptions_present(self, mock_watchman):
+    def test_no_issue_when_expected_nuclide_subscriptions_present(
+        self, mock_watchman
+    ) -> None:
         fixer, out = self._test_nuclide_check(
             mock_watchman=mock_watchman, include_filewatcher_subscriptions=True
         )
@@ -475,7 +491,7 @@ https://fb.facebook.com/groups/eden.users/
         self.assert_results(fixer, num_problems=0)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    def test_no_issue_when_path_not_in_nuclide_roots(self, mock_watchman):
+    def test_no_issue_when_path_not_in_nuclide_roots(self, mock_watchman) -> None:
         fixer, out = self._test_nuclide_check(
             mock_watchman=mock_watchman, include_path_in_nuclide_roots=False
         )
@@ -483,7 +499,7 @@ https://fb.facebook.com/groups/eden.users/
         self.assert_results(fixer, num_problems=0)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    def test_watchman_subscriptions_are_missing(self, mock_watchman):
+    def test_watchman_subscriptions_are_missing(self, mock_watchman) -> None:
         fixer, out = self._test_nuclide_check(
             mock_watchman=mock_watchman, include_hg_subscriptions=False, dry_run=False
         )
@@ -517,7 +533,9 @@ command palette in Atom.
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    def test_filewatcher_watchman_subscription_has_duplicate(self, mock_watchman):
+    def test_filewatcher_watchman_subscription_has_duplicate(
+        self, mock_watchman
+    ) -> None:
         fixer, out = self._test_nuclide_check(
             mock_watchman=mock_watchman,
             include_hg_subscriptions=False,
@@ -557,7 +575,7 @@ command palette in Atom.
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    def test_filewatcher_subscription_is_missing_dry_run(self, mock_watchman):
+    def test_filewatcher_subscription_is_missing_dry_run(self, mock_watchman) -> None:
         fixer, out = self._test_nuclide_check(mock_watchman=mock_watchman)
         self.assertEqual(
             f"""\
@@ -626,14 +644,14 @@ command palette in Atom.
         mock_watchman.assert_has_calls(watchman_calls)
         return fixer, out.getvalue()
 
-    def test_snapshot_and_dirstate_file_match(self):
+    def test_snapshot_and_dirstate_file_match(self) -> None:
         dirstate_hash_hex = "12345678" * 5
         snapshot_hex = "12345678" * 5
         _checkout, fixer, out = self._test_hash_check(dirstate_hash_hex, snapshot_hex)
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
-    def test_snapshot_and_dirstate_file_differ(self):
+    def test_snapshot_and_dirstate_file_differ(self) -> None:
         dirstate_hash_hex = "12000000" * 5
         snapshot_hex = "12345678" * 5
         checkout, fixer, out = self._test_hash_check(dirstate_hash_hex, snapshot_hex)
@@ -652,11 +670,13 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         # The dirstate file should have been updated to use the snapshot hash
         self.assertEqual(
-            checkout.instance.get_thrift_client_legacy().set_parents_calls, []
+            # pyre-fixme[16]: `EdenClient` has no attribute `set_parents_calls`.
+            checkout.instance.get_thrift_client_legacy().set_parents_calls,
+            [],
         )
         self.assert_dirstate_p0(checkout, snapshot_hex)
 
-    def test_snapshot_and_dirstate_file_differ_and_snapshot_invalid(self):
+    def test_snapshot_and_dirstate_file_differ_and_snapshot_invalid(self) -> None:
         def check_commit_validity(commit: str) -> bool:
             if commit == "12345678" * 5:
                 return False
@@ -680,6 +700,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         # Make sure resetParentCommits() was called once with the expected arguments
         self.assertEqual(
+            # pyre-fixme[16]: `EdenClient` has no attribute `set_parents_calls`.
             checkout.instance.get_thrift_client_legacy().set_parents_calls,
             [
                 ResetParentsCommitsArgs(
@@ -697,7 +718,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
     )
     def test_snapshot_and_dirstate_file_differ_and_all_commit_hash_invalid(
         self, mock_get_tip_commit_hash
-    ):
+    ) -> None:
         def check_commit_validity(commit: str) -> bool:
             null_commit = "00000000" * 5
             if commit == null_commit:
@@ -725,6 +746,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         # Make sure resetParentCommits() was called once with the expected arguments
         self.assertEqual(
+            # pyre-fixme[16]: `EdenClient` has no attribute `set_parents_calls`.
             checkout.instance.get_thrift_client_legacy().set_parents_calls,
             [
                 ResetParentsCommitsArgs(
@@ -743,7 +765,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
     )
     def test_snapshot_and_dirstate_file_differ_and_all_parents_invalid(
         self, mock_get_tip_commit_hash
-    ):
+    ) -> None:
         def check_commit_validity(commit: str) -> bool:
             return False
 
@@ -773,6 +795,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         # Make sure resetParentCommits() was called once with the expected arguments
         self.assertEqual(
+            # pyre-fixme[16]: `EdenClient` has no attribute `set_parents_calls`.
             checkout.instance.get_thrift_client_legacy().set_parents_calls,
             [
                 ResetParentsCommitsArgs(
@@ -785,7 +808,9 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         )
         self.assert_dirstate_p0(checkout, valid_commit_hash)
 
-    def test_snapshot_and_dirstate_file_differ_and_dirstate_commit_hash_invalid(self):
+    def test_snapshot_and_dirstate_file_differ_and_dirstate_commit_hash_invalid(
+        self,
+    ) -> None:
         def check_commit_validity(commit: str) -> bool:
             if commit == "12000000" * 5:
                 return False
@@ -810,7 +835,9 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         # The dirstate file should have been updated to use the snapshot hash
         self.assertEqual(
-            checkout.instance.get_thrift_client_legacy().set_parents_calls, []
+            # pyre-fixme[16]: `EdenClient` has no attribute `set_parents_calls`.
+            checkout.instance.get_thrift_client_legacy().set_parents_calls,
+            [],
         )
         self.assert_dirstate_p0(checkout, snapshot_hex)
 
@@ -843,19 +870,22 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         return checkout, fixer, out.getvalue()
 
     @patch("eden.fs.cli.version.get_current_version_parts")
-    def test_edenfs_when_installed_and_running_match(self, mock_getver):
+    def test_edenfs_when_installed_and_running_match(self, mock_getver) -> None:
+        # pyre-fixme[6]: For 2nd param expected `str` but got `Tuple[str, str]`.
         fixer, out = self._test_edenfs_version(mock_getver, ("20171213", "165642"))
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
     @patch("eden.fs.cli.version.get_current_version_parts")
-    def test_edenfs_when_installed_and_running_recent(self, mock_getver):
+    def test_edenfs_when_installed_and_running_recent(self, mock_getver) -> None:
+        # pyre-fixme[6]: For 2nd param expected `str` but got `Tuple[str, str]`.
         fixer, out = self._test_edenfs_version(mock_getver, ("20171220", "165643"))
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
     @patch("eden.fs.cli.version.get_current_version_parts")
-    def test_edenfs_when_installed_and_running_old(self, mock_getver):
+    def test_edenfs_when_installed_and_running_old(self, mock_getver) -> None:
+        # pyre-fixme[6]: For 2nd param expected `str` but got `Tuple[str, str]`.
         fixer, out = self._test_edenfs_version(mock_getver, ("20171227", "246561"))
         self.assertEqual(
             """\
@@ -897,7 +927,7 @@ which may have important bug fixes or performance improvements.
     @patch(
         "eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide", return_value=set()
     )
-    def test_unconfigured_mounts_dont_crash(self, mock_get_roots_for_nuclide):
+    def test_unconfigured_mounts_dont_crash(self, mock_get_roots_for_nuclide) -> None:
         # If Eden advertises that a mount is active, but it is not in the
         # configuration, then at least don't throw an exception.
         instance = FakeEdenInstance(self.make_temporary_directory())
@@ -909,6 +939,8 @@ which may have important bug fixes or performance improvements.
         dry_run = False
         out = TestOutput()
         exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
             instance,
             dry_run,
             instance.mount_table,
@@ -1024,7 +1056,7 @@ Would remount {mounts[1]}
         return exit_code, out.getvalue(), mounts
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    def test_watchman_fails(self, mock_watchman):
+    def test_watchman_fails(self, mock_watchman) -> None:
         tmp_dir = self.make_temporary_directory()
         instance = FakeEdenInstance(tmp_dir)
 
@@ -1129,12 +1161,16 @@ Checking {mount}
         "eden.fs.cli.doctor.test.lib.fake_eden_instance.FakeEdenInstance.check_privhelper_connection",
         return_value=False,
     )
-    def test_privhelper_check_not_accessible(self, mock_check_privhelper_connection):
+    def test_privhelper_check_not_accessible(
+        self, mock_check_privhelper_connection
+    ) -> None:
         instance = FakeEdenInstance(self.make_temporary_directory())
         mount = instance.create_test_mount("path1").path
         dry_run = False
         out = TestOutput()
         exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
             instance,
             dry_run,
             instance.mount_table,
@@ -1163,12 +1199,16 @@ https://fb.facebook.com/groups/eden.users/
         "eden.fs.cli.doctor.test.lib.fake_eden_instance.FakeEdenInstance.check_privhelper_connection",
         return_value=True,
     )
-    def test_privhelper_check_accessible(self, mock_check_privhelper_connection):
+    def test_privhelper_check_accessible(
+        self, mock_check_privhelper_connection
+    ) -> None:
         instance = FakeEdenInstance(self.make_temporary_directory())
         mount = instance.create_test_mount("path1").path
         dry_run = False
         out = TestOutput()
         exit_code = doctor.cure_what_ails_you(
+            # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+            #  `FakeEdenInstance`.
             instance,
             dry_run,
             instance.mount_table,

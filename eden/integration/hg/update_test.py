@@ -639,7 +639,7 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
         repo.write_file("dir/file2", "new two")
         self.commit4 = repo.commit("Change file2")
 
-    def _populate_kernel_caches(self):
+    def _populate_kernel_caches(self) -> None:
         # Populate the kernel's readdir caches.
         for _dirpath, _dirnames, _filenames in os.walk(self.repo.path):
             pass
@@ -652,7 +652,7 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
         entries.sort(key=lambda entry: entry.name)
         return entries
 
-    def test_update_adding_file_invalidates_tree_inode_caches(self):
+    def test_update_adding_file_invalidates_tree_inode_caches(self) -> None:
         self.repo.update(self.commit2)
         self._populate_kernel_caches()
         self.assertEqual({"file2"}, self._list_contents("dir"))
@@ -661,7 +661,7 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
         self.repo.update(self.commit3)
         self.assertEqual({"file2", "file3"}, self._list_contents("dir"))
 
-    def test_update_removing_file_invalidates_tree_inode_caches(self):
+    def test_update_removing_file_invalidates_tree_inode_caches(self) -> None:
         self.repo.update(self.commit1)
         self._populate_kernel_caches()
 
@@ -671,7 +671,7 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
         self.repo.update(self.commit2)
         self.assertEqual({"file2"}, self._list_contents("dir"))
 
-    def test_changing_file_contents_creates_new_inode_and_flushes_dcache(self):
+    def test_changing_file_contents_creates_new_inode_and_flushes_dcache(self) -> None:
         self.repo.update(self.commit1)
         self._populate_kernel_caches()
 

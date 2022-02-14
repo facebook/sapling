@@ -69,15 +69,15 @@ subcmd = subcmd_mod.Decorator()
 
 # For a non-unix system (like Windows), we will define our own error codes.
 try:
-    EX_OK = os.EX_OK
-    EX_USAGE = os.EX_USAGE
-    EX_SOFTWARE = os.EX_SOFTWARE
-    EX_OSFILE = os.EX_OSFILE
+    EX_OK: int = os.EX_OK
+    EX_USAGE: int = os.EX_USAGE
+    EX_SOFTWARE: int = os.EX_SOFTWARE
+    EX_OSFILE: int = os.EX_OSFILE
 except AttributeError:  # On a non-unix system
-    EX_OK = 0
-    EX_USAGE = 64
-    EX_SOFTWARE = 70
-    EX_OSFILE = 72
+    EX_OK: int = 0
+    EX_USAGE: int = 64
+    EX_SOFTWARE: int = 70
+    EX_OSFILE: int = 72
 
 
 def do_version(args: argparse.Namespace, format_json: bool = False) -> int:
@@ -310,7 +310,7 @@ space by running:
 
         return 0
 
-    def make_summary(self, clean, deep_clean):
+    def make_summary(self, clean, deep_clean) -> None:
         self.write_ui(util.underlined("Summary"))
         type_labels = {
             "materialized": "Materialized files",
@@ -1257,7 +1257,7 @@ class ChownCmd(Subcmd):
 
             return pwd.getpwnam(uid_str).pw_uid
 
-    def resolve_gid(self, gid_str) -> int:
+    def resolve_gid(self, gid_str: str) -> int:
         try:
             return int(gid_str)
         except ValueError:

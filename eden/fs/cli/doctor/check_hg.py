@@ -325,7 +325,7 @@ class AbandonedTransactionChecker(HgChecker):
             ]
         return []
 
-    def repair(self):
+    def repair(self) -> None:
         self.backing_repo._run_hg(["recover"])
 
 

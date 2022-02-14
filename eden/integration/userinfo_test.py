@@ -14,7 +14,7 @@ from .lib.find_executables import FindExe
 
 class UserInfoTest(testcase.IntegrationTestCase):
     @unittest.skipIf(not edenclient.can_run_sudo(), "unable to run sudo")
-    def test_drop_privs(self):
+    def test_drop_privs(self) -> None:
         try:
             expected_user = os.environ["USER"]
         except KeyError:

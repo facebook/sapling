@@ -14,7 +14,7 @@ import struct
 MAIN_VERSION = "4.4.2"
 
 
-def main():
+def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--version", required=True)
     ap.add_argument("--release", required=True)
@@ -57,6 +57,7 @@ pub static VERSION_HASH: u64 = %s;
             raise
 
     with open(args.output_path, "w") as f:
+        # pyre-fixme[61]: `contents` is undefined, or not always defined.
         f.write(contents)
 
 

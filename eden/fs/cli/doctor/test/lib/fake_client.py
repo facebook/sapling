@@ -19,17 +19,19 @@ class ResetParentsCommitsArgs(NamedTuple):
 
 
 class FakeClient:
-    def __init__(self):
+    def __init__(self) -> None:
         self._mounts = []
         self.set_parents_calls: List[ResetParentsCommitsArgs] = []
 
-    def __enter__(self):
+    def __enter__(self) -> "FakeClient":
         return self
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
+    def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
         pass
 
-    def change_mount_state(self, path: Path, state: Optional[eden_ttypes.MountState]):
+    def change_mount_state(
+        self, path: Path, state: Optional[eden_ttypes.MountState]
+    ) -> None:
         """This function allows tests to change the reported state of mounts."""
         path_bytes = bytes(path)
         for mount in self._mounts:
@@ -46,7 +48,7 @@ class FakeClient:
         mountPoint: bytes,
         parents: eden_ttypes.WorkingDirectoryParents,
         params: eden_ttypes.ResetParentCommitsParams,
-    ):
+    ) -> None:
         self.set_parents_calls.append(
             ResetParentsCommitsArgs(
                 mount=mountPoint,

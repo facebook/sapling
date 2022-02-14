@@ -244,7 +244,10 @@ class SnapshotTestBase(
             )
 
     def _verify_orphans_extracted(
-        self, log_dir: Path, expected_errors: List[ExpectedError], new_fsck=False
+        self,
+        log_dir: Path,
+        expected_errors: List[ExpectedError],
+        new_fsck: bool = False,
     ) -> None:
         # Build the state that we expect to find in the lost+found directory
         expected = verify_mod.ExpectedFileSet()
@@ -275,7 +278,7 @@ class SnapshotTestBase(
         expected: verify_mod.ExpectedFileSet,
         orphan_errors: OrphanInodes,
         new_fsck: bool,
-    ):
+    ) -> None:
         # All of the orphan files should be extracted as regular files using their inode
         # number as the path.  We cannot tell if the inodes were originally regular
         # files, symlinks, or sockets, so everything just gets extracted as a regular

@@ -72,5 +72,5 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    rc = main()
+    rc: int = main()
     sys.exit(rc)

@@ -194,11 +194,11 @@ class RemountTest(testcase.EdenRepoTest):
         self.eden.start()
         self._verify_not_mounted(5)
 
-    def _clone_checkouts(self, num_mounts):
+    def _clone_checkouts(self, num_mounts) -> None:
         for i in range(num_mounts):
             self.eden.clone(self.repo.path, self.mount + "-" + str(i))
 
-    def _verify_not_mounted(self, num_mounts, main_mounted=False):
+    def _verify_not_mounted(self, num_mounts, main_mounted: bool = False) -> None:
         # Verify that no clients are remounted. No errors should be thrown here
         for i in range(num_mounts):
             entries = sorted(os.listdir(self.mount + "-" + str(i)))

@@ -132,7 +132,7 @@ class FakeMountTable(mtab.MountTable):
             if mount_info.mount_point != mount_point
         ]
 
-    def create_bind_mount(self, source_path, dest_path) -> bool:
+    def create_bind_mount(self, source_path: str, dest_path) -> bool:
         if (
             source_path in self.bind_mount_success_paths
             and dest_path == self.bind_mount_success_paths[source_path]

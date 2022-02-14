@@ -36,7 +36,7 @@ class DebugClearLocalCachesTest(EdenHgTestCase):
         self.repo.update(self.commit1)
         self.repo.update(self.commit2)
 
-    def read_all(self, *components):
+    def read_all(self, *components) -> str:
         with open(os.path.join(self.mount, *components)) as f:
             return f.read()
 

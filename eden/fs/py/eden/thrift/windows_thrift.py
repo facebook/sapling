@@ -42,8 +42,8 @@ FIONBIO = 2147772030
 #     WORD      wVersionRequired,
 #     LPWSADATA lpWSAData
 # );
-WSADESCRIPTION_LEN = 256 + 1
-WSASYS_STATUS_LEN = 128 + 1
+WSADESCRIPTION_LEN: int = 256 + 1
+WSASYS_STATUS_LEN: int = 128 + 1
 
 
 class WSAData64(ctypes.Structure):

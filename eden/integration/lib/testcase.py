@@ -328,7 +328,7 @@ class EdenTestCase(EdenTestCaseBase):
         else:
             return fn
 
-    def use_nfs(self):
+    def use_nfs(self) -> bool:
         """
         Should this test case mount the repo using NFS. This is used by the
         test replication logic to run our integration tests using the default

@@ -275,7 +275,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
 
     def assert_dirstate(
         self, expected: Dict[str, Tuple[str, int, str]], msg: Optional[str] = None
-    ):
+    ) -> None:
         """Asserts the output of `hg debugdirstate` matches the expected state.
 
         `expected` is a dict where keys are paths relative to the repo
@@ -305,11 +305,11 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
 
         self.assertDictEqual(expected, actual_dirstate, msg=msg)
 
-    def assert_dirstate_empty(self, msg: Optional[str] = None):
+    def assert_dirstate_empty(self, msg: Optional[str] = None) -> None:
         """Ensures that `hg debugdirstate` reports no entries."""
         self.assert_dirstate({}, msg=msg)
 
-    def assert_copy_map(self, expected):
+    def assert_copy_map(self, expected) -> None:
         stdout = self.eden.run_cmd("debug", "hg_copy_map_get_all", cwd=self.mount)
         observed_map = {}
         for line in stdout.split("\n"):
@@ -339,7 +339,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         self.assertEqual(actual_unresolved, set(unresolved))
         self.assertEqual(actual_resolved, set(resolved or []))
 
-    def assert_file_regex(self, path, expected_regex, dedent=True):
+    def assert_file_regex(self, path: str, expected_regex, dedent: bool = True) -> None:
         if dedent:
             expected_regex = textwrap.dedent(expected_regex)
         contents = self.read_file(path)

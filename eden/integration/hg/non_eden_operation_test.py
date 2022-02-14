@@ -16,7 +16,7 @@ class NonEdenOperationTest(EdenHgTestCase):
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file("hello.txt", "hola")
 
-    def test_hg_clone_non_eden_repo_within_eden_repo(self):
+    def test_hg_clone_non_eden_repo_within_eden_repo(self) -> None:
         """Regression test to ensure that running `hg` commands from an
         Eden-backed Hg repo on a non-Eden-backed Hg repo work as expected."""
         non_eden_hg_repo = os.path.join(self.tmp_dir, "non-eden-hg-repo")

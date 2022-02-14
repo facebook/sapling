@@ -38,7 +38,7 @@ DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
 }
 
 
-def is_libfb_present():
+def is_libfb_present() -> bool:
     try:
         import libfb.py.log  # noqa: F401
 
@@ -107,7 +107,7 @@ def facebook_test_root(manifest_env: ManifestEnv) -> Optional[str]:
     return manifest_env.get("TEST_ROOT_FACEBOOK")
 
 
-def maybe_use_local_test_paths(manifest_env: ManifestEnv):
+def maybe_use_local_test_paths(manifest_env: ManifestEnv) -> None:
     # If we are running outside of Buck, then update the test paths to use the
     # actual files. This makes --interactive work, and allows for adding new
     # tests, etc., without rebuilding the runner.
@@ -136,7 +136,7 @@ def maybe_use_local_test_paths(manifest_env: ManifestEnv):
 
 
 def _hg_runner(
-    root,
+    root: int,
     manifest_env: ManifestEnv,
     extra_args: Args,
     extra_env: Env,
@@ -144,7 +144,7 @@ def _hg_runner(
     chg: bool = False,
     interactive: bool = False,
     quiet: bool = False,
-):
+) -> None:
     if "SANDCASTLE" in os.environ and os.path.exists("/dev/shm"):
         # Sandcastle's /tmp might be mounted on a slow device
         # In that case let's move the test tmp dir to /dev/shm
@@ -194,20 +194,29 @@ def _hg_runner(
         stderr: Any = subprocess.DEVNULL if quiet else sys.stderr.buffer
 
         subprocess.check_call(
-            args, cwd=root, env=env, stdin=stdin, stdout=stderr, stderr=stderr
+            args,
+            # pyre-fixme[6]: For 2nd param expected `Union[None, PathLike[bytes],
+            #  PathLike[str], bytes, str]` but got `int`.
+            cwd=root,
+            env=env,
+            stdin=stdin,
+            stdout=stderr,
+            stderr=stderr,
         )
 
 
-def hg_runner_public(manifest_env: Env, *args, **kwargs):
+def hg_runner_public(manifest_env: Env, *args, **kwargs) -> bool:
+    # pyre-fixme[6]: For 1st param expected `int` but got `str`.
     _hg_runner(public_test_root(manifest_env), manifest_env, *args, **kwargs)
     return True
 
 
-def hg_runner_facebook(manifest_env: Env, *args, **kwargs):
+def hg_runner_facebook(manifest_env: Env, *args, **kwargs) -> bool:
     fb_root = facebook_test_root(manifest_env)
     if fb_root is None:
         return False
     else:
+        # pyre-fixme[6]: For 1st param expected `int` but got `str`.
         _hg_runner(fb_root, manifest_env, *args, **kwargs)
         return True
 
@@ -232,7 +241,7 @@ def format_discovered_tests(
     tests: List[str],
     ctx: Any,
     xunit_output: str,
-):
+) -> None:
     if xunit_output is None:
         print("\n".join(tests))
         return
@@ -258,7 +267,7 @@ def run_tests(
     tests: List[str],
     test_flags: TestFlags,
     test_env: Env,
-):
+) -> None:
     # If junit output has been requested, then that means testpilot is calling
     # us, and if testpilot is calling us, we shouldn't be running more than one
     # test at a time. Since we don't want to try and have to do anything smart
@@ -370,17 +379,17 @@ def run(
     ctx,
     manifest,
     tests,
-    dry_run,
+    dry_run: bool,
     interactive,
-    output,
+    output: str,
     verbose,
     debug,
     simple_test_selector,
     keep_tmpdir,
     tmpdir,
-    mysql_client,
+    mysql_client: bool,
     mysql_schemas,
-    devdb,
+    devdb: str,
     discovered_tests,
 ):
     manifest = os.path.abspath(manifest)
