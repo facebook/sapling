@@ -42,6 +42,7 @@ class NonEdenOperationTest(EdenHgTestCase):
         self.hg(
             "clone",
             "--config=remotefilelog.reponame=dummy",
+            f"--config=remotefilelog.cachepath={os.path.join(self.tmp_dir, 'hgcache')}",
             "--pull",
             non_eden_hg_repo,
             clone_of_non_eden_hg_repo,

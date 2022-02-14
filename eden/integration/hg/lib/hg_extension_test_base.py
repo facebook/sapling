@@ -49,6 +49,7 @@ def get_default_hgrc() -> configparser.ConfigParser:
         "directaccess": "",
         "fbhistedit": "",
         "histedit": "",
+        "journal": "",
         "purge": "",
         "rebase": "",
         "reset": "",
@@ -58,6 +59,7 @@ def get_default_hgrc() -> configparser.ConfigParser:
         "undo": "",
     }
     hgrc["directaccess"] = {"loadsafter": "tweakdefaults"}
+    hgrc["diff"] = {"git": "True"}
     return hgrc
 
 

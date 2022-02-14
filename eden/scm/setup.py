@@ -587,6 +587,13 @@ class asset(object):
             # via external URL
             assert self.url, "Cannot download %s - no URL provided" % self.name
             args = ["curl", "-L", self.url, "-o", destpath]
+            cert_dir = os.environ.get("SSL_CERT_DIR", None)
+            if cert_dir:
+                args += ["--capath", cert_dir]
+            ca_file = os.environ.get("SSL_CERT_FILE", None)
+            if ca_file:
+                args += ["--cacert", ca_file]
+            print(f"downloading with: {' '.join(args)}")
         subprocess.check_call(args)
 
     def _extract(self):
@@ -772,7 +779,7 @@ class fetchbuilddeps(Command):
             "thrift",
             "../../thrift/lib/py"
             if havefb
-            else f"{dep_build_dir}/fbthrift/thrift/lib/py",
+            else f"{dep_build_dir}/fbthrift/thrift/lib/py/thrift_py.lib_install/thrift_py/thrift",
             excludes=[
                 "thrift/util/asyncio.py",
                 "thrift/util/inspect.py",
@@ -1091,6 +1098,9 @@ class buildpyzip(Command):
             zippath = pjoin(builddir, "edenscmdeps3.zip")
         else:
             zippath = appendzippath
+
+        print(f"Packaging assets into {zippath}")
+
         # Perform a mtime check so we can skip building if possible
         if os.path.exists(zippath):
             depmtime = max(os.stat(d).st_mtime for d in depdirs)

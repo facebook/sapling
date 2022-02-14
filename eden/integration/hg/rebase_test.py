@@ -182,21 +182,21 @@ class RebaseTest(EdenHgTestCase):
         self.assert_file_regex(
             "numbers/1/11",
             """\
-            <<<<<<< dest: .*
+            <<<<<<< dest.*
             11
             =======
             new 11
-            >>>>>>> source: .*
+            >>>>>>> source.*
             """,
         )
         self.assert_file_regex(
             "numbers/1/12",
             """\
-            <<<<<<< dest: .*
+            <<<<<<< dest.*
             12
             =======
             new 12
-            >>>>>>> source: .*
+            >>>>>>> source.*
             """,
         )
 
@@ -220,31 +220,31 @@ class RebaseTest(EdenHgTestCase):
         self.assert_file_regex(
             "numbers/1/12",
             """\
-            <<<<<<< dest: .*
+            <<<<<<< dest.*
             12 merged.
             =======
             change 12 again
-            >>>>>>> source: .*
+            >>>>>>> source.*
             """,
         )
         self.assert_file_regex(
             "numbers/1/13",
             """\
-            <<<<<<< dest: .*
+            <<<<<<< dest.*
             13
             =======
             new 13
-            >>>>>>> source: .*
+            >>>>>>> source.*
             """,
         )
         self.assert_file_regex(
             "numbers/1/14",
             """\
-            <<<<<<< dest: .*
+            <<<<<<< dest.*
             14
             =======
             new 14
-            >>>>>>> source: .*
+            >>>>>>> source.*
             """,
         )
 
