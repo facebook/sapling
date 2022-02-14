@@ -9,7 +9,7 @@
 
 use async_trait::async_trait;
 use clap::Parser;
-use comfy_table::Table;
+use comfy_table::{presets::UTF8_BORDERS_ONLY, Table};
 use crossterm::execute;
 use crossterm::terminal;
 use shlex::quote;
@@ -403,6 +403,7 @@ impl crate::Subcommand for MinitopCmd {
             // Render aggregated processes
             let mut table = Table::new();
             table.set_header(COLUMN_TITLES);
+            table.load_preset(UTF8_BORDERS_ONLY);
             for aggregated_process in tracked_processes.aggregated_processes() {
                 table.add_row(vec![
                     aggregated_process.pid.to_string(),
