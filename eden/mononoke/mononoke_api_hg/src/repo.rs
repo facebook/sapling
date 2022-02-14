@@ -124,7 +124,8 @@ impl HgRepoContext {
     ) -> Result<Option<ChangesetId>, MononokeError> {
         Ok(self
             .blob_repo()
-            .get_bonsai_from_hg(self.ctx().clone(), hgid)
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(self.ctx(), hgid)
             .await?)
     }
 
@@ -506,7 +507,8 @@ impl HgRepoContext {
         let cs_location = location
             .and_then_descendant(|descendant| async move {
                 self.blob_repo()
-                    .get_bonsai_from_hg(self.ctx().clone(), descendant)
+                    .bonsai_hg_mapping()
+                    .get_bonsai_from_hg(self.ctx(), descendant)
                     .await?
                     .ok_or_else(|| {
                         MononokeError::InvalidRequest(format!(

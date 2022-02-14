@@ -1012,7 +1012,8 @@ async fn verify_bookmarks(
                     ));
 
                 let source_bcs_id = source_repo
-                    .get_bonsai_from_hg(ctx.clone(), source_hg_cs_id)
+                    .bonsai_hg_mapping()
+                    .get_bonsai_from_hg(&ctx, source_hg_cs_id)
                     .await?
                     .unwrap();
 
@@ -1281,8 +1282,9 @@ async fn init_repos(
 
     // Sync first commit manually
     let initial_bcs_id = source_repo
+        .bonsai_hg_mapping()
         .get_bonsai_from_hg(
-            ctx.clone(),
+            &ctx,
             HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
         )
         .await?

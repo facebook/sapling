@@ -1176,64 +1176,20 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo = Arc::new(linear::getrepo(fb).await);
         let sli = SkiplistIndex::new();
-        let master_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-        )
-        .await;
+        let master_node =
+            string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await;
         sli.add_node(&ctx, &repo.get_changeset_fetcher(), master_node, 100)
             .await
             .unwrap();
         let ordered_hashes = vec![
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "cb15ca4a43a59acff5388cea9648c162afde8372",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "607314ef579bd2407752361ba1b0c1729d08b281",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "3e0e761030db6e479a7fb58b12881883f9f8c63f",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
-            )
-            .await,
+            string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await,
+            string_to_bonsai(&ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await,
+            string_to_bonsai(&ctx, &repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b").await,
+            string_to_bonsai(&ctx, &repo, "cb15ca4a43a59acff5388cea9648c162afde8372").await,
+            string_to_bonsai(&ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await,
+            string_to_bonsai(&ctx, &repo, "607314ef579bd2407752361ba1b0c1729d08b281").await,
+            string_to_bonsai(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await,
+            string_to_bonsai(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await,
         ];
         assert_eq!(sli.indexed_node_count(), ordered_hashes.len());
         for node in ordered_hashes.into_iter() {
@@ -1246,75 +1202,26 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo = Arc::new(linear::getrepo(fb).await);
         let sli = SkiplistIndex::new();
-        let master_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-        )
-        .await;
+        let master_node =
+            string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await;
         sli.add_node(&ctx, &repo.get_changeset_fetcher(), master_node, 100)
             .await
             .unwrap();
         let ordered_hashes = vec![
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "cb15ca4a43a59acff5388cea9648c162afde8372",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "607314ef579bd2407752361ba1b0c1729d08b281",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "3e0e761030db6e479a7fb58b12881883f9f8c63f",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
-            )
-            .await,
+            string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await,
+            string_to_bonsai(&ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await,
+            string_to_bonsai(&ctx, &repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b").await,
+            string_to_bonsai(&ctx, &repo, "cb15ca4a43a59acff5388cea9648c162afde8372").await,
+            string_to_bonsai(&ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await,
+            string_to_bonsai(&ctx, &repo, "607314ef579bd2407752361ba1b0c1729d08b281").await,
+            string_to_bonsai(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await,
+            string_to_bonsai(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await,
         ];
         assert_eq!(sli.indexed_node_count(), ordered_hashes.len());
         for node in ordered_hashes.into_iter() {
             assert!(sli.is_node_indexed(node));
             if node
-                != string_to_bonsai(
-                    ctx.clone(),
-                    &repo,
-                    "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
-                )
-                .await
+                != string_to_bonsai(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await
             {
                 let skip_edges: Vec<_> = sli
                     .get_skip_edges(node)
@@ -1324,12 +1231,8 @@ mod test {
                     .collect();
                 assert!(
                     skip_edges.contains(
-                        &string_to_bonsai(
-                            ctx.clone(),
-                            &repo,
-                            "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"
-                        )
-                        .await
+                        &string_to_bonsai(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")
+                            .await
                     )
                 );
             }
@@ -1341,12 +1244,8 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo = Arc::new(linear::getrepo(fb).await);
         let sli = SkiplistIndex::new();
-        let master_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-        )
-        .await;
+        let master_node =
+            string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await;
         sli.add_node(&ctx, &repo.get_changeset_fetcher(), master_node, 100)
             .await
             .unwrap();
@@ -1373,30 +1272,10 @@ mod test {
             .map(|(node, _)| node)
             .collect();
         let expected_hashes = vec![
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
-            )
-            .await,
+            string_to_bonsai(&ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await,
+            string_to_bonsai(&ctx, &repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b").await,
+            string_to_bonsai(&ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await,
+            string_to_bonsai(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await,
         ];
         assert_eq!(skip_edges, expected_hashes);
     }
@@ -1405,93 +1284,30 @@ mod test {
     async fn test_skip_edges_reach_end_in_merge(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let repo = Arc::new(merge_uneven::getrepo(fb).await);
-        let root_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "15c40d0abc36d47fb51c8eaec51ac7aad31f669c",
-        )
-        .await;
+        let root_node =
+            string_to_bonsai(&ctx, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await;
 
         // order is oldest to newest
         let branch_1 = vec![
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "3cda5c78aa35f0f5b09780d971197b51cad4613a",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "16839021e338500b3cf7c9b871c8a07351697d68",
-            )
-            .await,
+            string_to_bonsai(&ctx, &repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a").await,
+            string_to_bonsai(&ctx, &repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5").await,
+            string_to_bonsai(&ctx, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await,
         ];
 
         // order is oldest to newest
         let branch_2 = vec![
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "d7542c9db7f4c77dab4b315edd328edf1514952f",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "b65231269f651cfe784fd1d97ef02a049a37b8a0",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "795b8133cf375f6d68d27c6c23db24cd5d0cd00f",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "bc7b4d0f858c19e2474b03e442b8495fd7aeef33",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "fc2cef43395ff3a7b28159007f63d6529d2f41ca",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "5d43888a3c972fe68c224f93d41b30e9f888df7c",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "264f01429683b3dd8042cb3979e8bf37007118bc",
-            )
-            .await,
+            string_to_bonsai(&ctx, &repo, "d7542c9db7f4c77dab4b315edd328edf1514952f").await,
+            string_to_bonsai(&ctx, &repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await,
+            string_to_bonsai(&ctx, &repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await,
+            string_to_bonsai(&ctx, &repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f").await,
+            string_to_bonsai(&ctx, &repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33").await,
+            string_to_bonsai(&ctx, &repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca").await,
+            string_to_bonsai(&ctx, &repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c").await,
+            string_to_bonsai(&ctx, &repo, "264f01429683b3dd8042cb3979e8bf37007118bc").await,
         ];
 
-        let merge_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "d35b1875cdd1ed2c687e86f1604b9d7e989450cb",
-        )
-        .await;
+        let merge_node =
+            string_to_bonsai(&ctx, &repo, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await;
         let sli = SkiplistIndex::new();
         sli.add_node(&ctx, &repo.get_changeset_fetcher(), merge_node, 100)
             .await
@@ -1523,106 +1339,35 @@ mod test {
     async fn test_partial_index_in_merge(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let repo = Arc::new(merge_uneven::getrepo(fb).await);
-        let root_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "15c40d0abc36d47fb51c8eaec51ac7aad31f669c",
-        )
-        .await;
+        let root_node =
+            string_to_bonsai(&ctx, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await;
 
         // order is oldest to newest
         let branch_1 = vec![
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "3cda5c78aa35f0f5b09780d971197b51cad4613a",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "16839021e338500b3cf7c9b871c8a07351697d68",
-            )
-            .await,
+            string_to_bonsai(&ctx, &repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a").await,
+            string_to_bonsai(&ctx, &repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5").await,
+            string_to_bonsai(&ctx, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await,
         ];
 
-        let branch_1_head = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "16839021e338500b3cf7c9b871c8a07351697d68",
-        )
-        .await;
+        let branch_1_head =
+            string_to_bonsai(&ctx, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await;
 
         // order is oldest to newest
         let branch_2 = vec![
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "d7542c9db7f4c77dab4b315edd328edf1514952f",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "b65231269f651cfe784fd1d97ef02a049a37b8a0",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "795b8133cf375f6d68d27c6c23db24cd5d0cd00f",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "bc7b4d0f858c19e2474b03e442b8495fd7aeef33",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "fc2cef43395ff3a7b28159007f63d6529d2f41ca",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "5d43888a3c972fe68c224f93d41b30e9f888df7c",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "264f01429683b3dd8042cb3979e8bf37007118bc",
-            )
-            .await,
+            string_to_bonsai(&ctx, &repo, "d7542c9db7f4c77dab4b315edd328edf1514952f").await,
+            string_to_bonsai(&ctx, &repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await,
+            string_to_bonsai(&ctx, &repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await,
+            string_to_bonsai(&ctx, &repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f").await,
+            string_to_bonsai(&ctx, &repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33").await,
+            string_to_bonsai(&ctx, &repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca").await,
+            string_to_bonsai(&ctx, &repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c").await,
+            string_to_bonsai(&ctx, &repo, "264f01429683b3dd8042cb3979e8bf37007118bc").await,
         ];
-        let branch_2_head = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "264f01429683b3dd8042cb3979e8bf37007118bc",
-        )
-        .await;
+        let branch_2_head =
+            string_to_bonsai(&ctx, &repo, "264f01429683b3dd8042cb3979e8bf37007118bc").await;
 
-        let _merge_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "d35b1875cdd1ed2c687e86f1604b9d7e989450cb",
-        )
-        .await;
+        let _merge_node =
+            string_to_bonsai(&ctx, &repo, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await;
         let sli = SkiplistIndex::new();
 
         // index just one branch first
@@ -1661,49 +1406,15 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         // this repo has no merges but many branches
         let repo = Arc::new(branch_wide::getrepo(fb).await);
-        let root_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "ecba698fee57eeeef88ac3dcc3b623ede4af47bd",
-        )
-        .await;
+        let root_node =
+            string_to_bonsai(&ctx, &repo, "ecba698fee57eeeef88ac3dcc3b623ede4af47bd").await;
 
-        let b1 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "9e8521affb7f9d10e9551a99c526e69909042b20",
-        )
-        .await;
-        let b2 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "4685e9e62e4885d477ead6964a7600c750e39b03",
-        )
-        .await;
-        let b1_1 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "b6a8169454af58b4b72b3665f9aa0d25529755ff",
-        )
-        .await;
-        let b1_2 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12",
-        )
-        .await;
-        let b2_1 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "04decbb0d1a65789728250ddea2fe8d00248e01c",
-        )
-        .await;
-        let b2_2 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "49f53ab171171b3180e125b918bd1cf0af7e5449",
-        )
-        .await;
+        let b1 = string_to_bonsai(&ctx, &repo, "9e8521affb7f9d10e9551a99c526e69909042b20").await;
+        let b2 = string_to_bonsai(&ctx, &repo, "4685e9e62e4885d477ead6964a7600c750e39b03").await;
+        let b1_1 = string_to_bonsai(&ctx, &repo, "b6a8169454af58b4b72b3665f9aa0d25529755ff").await;
+        let b1_2 = string_to_bonsai(&ctx, &repo, "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12").await;
+        let b2_1 = string_to_bonsai(&ctx, &repo, "04decbb0d1a65789728250ddea2fe8d00248e01c").await;
+        let b2_2 = string_to_bonsai(&ctx, &repo, "49f53ab171171b3180e125b918bd1cf0af7e5449").await;
 
         let sli = SkiplistIndex::new();
         let changeset_fetcher = repo.get_changeset_fetcher();
@@ -1793,54 +1504,14 @@ mod test {
         sli: SkiplistIndex,
     ) {
         let mut ordered_hashes_oldest_to_newest = vec![
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "cb15ca4a43a59acff5388cea9648c162afde8372",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "607314ef579bd2407752361ba1b0c1729d08b281",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "3e0e761030db6e479a7fb58b12881883f9f8c63f",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
-            )
-            .await,
+            string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await,
+            string_to_bonsai(&ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await,
+            string_to_bonsai(&ctx, &repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b").await,
+            string_to_bonsai(&ctx, &repo, "cb15ca4a43a59acff5388cea9648c162afde8372").await,
+            string_to_bonsai(&ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await,
+            string_to_bonsai(&ctx, &repo, "607314ef579bd2407752361ba1b0c1729d08b281").await,
+            string_to_bonsai(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await,
+            string_to_bonsai(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await,
         ];
         ordered_hashes_oldest_to_newest.reverse();
         // indexing doesn't even take place if the query can conclude true or false right away
@@ -1895,54 +1566,14 @@ mod test {
         sli: SkiplistIndex,
     ) {
         let mut ordered_hashes_oldest_to_newest = vec![
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "cb15ca4a43a59acff5388cea9648c162afde8372",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "607314ef579bd2407752361ba1b0c1729d08b281",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "3e0e761030db6e479a7fb58b12881883f9f8c63f",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
-            )
-            .await,
+            string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await,
+            string_to_bonsai(&ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await,
+            string_to_bonsai(&ctx, &repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b").await,
+            string_to_bonsai(&ctx, &repo, "cb15ca4a43a59acff5388cea9648c162afde8372").await,
+            string_to_bonsai(&ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await,
+            string_to_bonsai(&ctx, &repo, "607314ef579bd2407752361ba1b0c1729d08b281").await,
+            string_to_bonsai(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await,
+            string_to_bonsai(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await,
         ];
         ordered_hashes_oldest_to_newest.reverse();
 
@@ -1972,70 +1603,22 @@ mod test {
                 get_gen_number_count,
             ));
 
-        let src_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-        )
-        .await;
-        let dst_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
-        )
-        .await;
+        let src_node =
+            string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await;
+        let dst_node =
+            string_to_bonsai(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await;
         sli.query_reachability(&ctx, &cs_fetcher, src_node, dst_node)
             .await
             .unwrap();
         let ordered_hashes = vec![
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "cb15ca4a43a59acff5388cea9648c162afde8372",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "607314ef579bd2407752361ba1b0c1729d08b281",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "3e0e761030db6e479a7fb58b12881883f9f8c63f",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
-            )
-            .await,
+            string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await,
+            string_to_bonsai(&ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await,
+            string_to_bonsai(&ctx, &repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b").await,
+            string_to_bonsai(&ctx, &repo, "cb15ca4a43a59acff5388cea9648c162afde8372").await,
+            string_to_bonsai(&ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await,
+            string_to_bonsai(&ctx, &repo, "607314ef579bd2407752361ba1b0c1729d08b281").await,
+            string_to_bonsai(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await,
+            string_to_bonsai(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await,
         ];
         // Nothing is indexed by default
         assert_eq!(sli.indexed_node_count(), 0);
@@ -2068,18 +1651,10 @@ mod test {
     }
 
     async fn query_from_indexed_merge_node(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
-        let merge_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "d592490c4386cdb3373dd93af04d563de199b2fb",
-        )
-        .await;
-        let commit_after_merge = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "7fe9947f101acb4acf7d945e69f0d6ce76a81113",
-        )
-        .await;
+        let merge_node =
+            string_to_bonsai(&ctx, &repo, "d592490c4386cdb3373dd93af04d563de199b2fb").await;
+        let commit_after_merge =
+            string_to_bonsai(&ctx, &repo, "7fe9947f101acb4acf7d945e69f0d6ce76a81113").await;
         let cs_fetcher = repo.get_changeset_fetcher();
         // Indexing starting from a merge node
         sli.add_node(&ctx, &repo.get_changeset_fetcher(), commit_after_merge, 10)
@@ -2089,23 +1664,15 @@ mod test {
         assert!(f.await.unwrap());
 
         // perform a query from the merge to the start of branch 1
-        let dst_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "1700524113b1a3b1806560341009684b4378660b",
-        )
-        .await;
+        let dst_node =
+            string_to_bonsai(&ctx, &repo, "1700524113b1a3b1806560341009684b4378660b").await;
         // performing this query should index all the nodes inbetween
         let f = sli.query_reachability(&ctx, &cs_fetcher, merge_node, dst_node);
         assert!(f.await.unwrap());
 
         // perform a query from the merge to the start of branch 2
-        let dst_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "1700524113b1a3b1806560341009684b4378660b",
-        )
-        .await;
+        let dst_node =
+            string_to_bonsai(&ctx, &repo, "1700524113b1a3b1806560341009684b4378660b").await;
         let f = sli.query_reachability(&ctx, &cs_fetcher, merge_node, dst_node);
         assert!(f.await.unwrap());
     }
@@ -2137,54 +1704,14 @@ mod test {
 
     async fn advance_node_linear(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
         let mut ordered_hashes_oldest_to_newest = vec![
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "cb15ca4a43a59acff5388cea9648c162afde8372",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "607314ef579bd2407752361ba1b0c1729d08b281",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "3e0e761030db6e479a7fb58b12881883f9f8c63f",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
-            )
-            .await,
+            string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await,
+            string_to_bonsai(&ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await,
+            string_to_bonsai(&ctx, &repo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b").await,
+            string_to_bonsai(&ctx, &repo, "cb15ca4a43a59acff5388cea9648c162afde8372").await,
+            string_to_bonsai(&ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await,
+            string_to_bonsai(&ctx, &repo, "607314ef579bd2407752361ba1b0c1729d08b281").await,
+            string_to_bonsai(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await,
+            string_to_bonsai(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await,
         ];
         ordered_hashes_oldest_to_newest.reverse();
 
@@ -2244,92 +1771,29 @@ mod test {
     }
 
     async fn advance_node_uneven_merge(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
-        let root_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "15c40d0abc36d47fb51c8eaec51ac7aad31f669c",
-        )
-        .await;
+        let root_node =
+            string_to_bonsai(&ctx, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await;
 
         // order is oldest to newest
         let branch_1 = vec![
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "3cda5c78aa35f0f5b09780d971197b51cad4613a",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "16839021e338500b3cf7c9b871c8a07351697d68",
-            )
-            .await,
+            string_to_bonsai(&ctx, &repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a").await,
+            string_to_bonsai(&ctx, &repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5").await,
+            string_to_bonsai(&ctx, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await,
         ];
 
         // order is oldest to newest
         let branch_2 = vec![
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "d7542c9db7f4c77dab4b315edd328edf1514952f",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "b65231269f651cfe784fd1d97ef02a049a37b8a0",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "795b8133cf375f6d68d27c6c23db24cd5d0cd00f",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "bc7b4d0f858c19e2474b03e442b8495fd7aeef33",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "fc2cef43395ff3a7b28159007f63d6529d2f41ca",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "5d43888a3c972fe68c224f93d41b30e9f888df7c",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "264f01429683b3dd8042cb3979e8bf37007118bc",
-            )
-            .await,
+            string_to_bonsai(&ctx, &repo, "d7542c9db7f4c77dab4b315edd328edf1514952f").await,
+            string_to_bonsai(&ctx, &repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await,
+            string_to_bonsai(&ctx, &repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await,
+            string_to_bonsai(&ctx, &repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f").await,
+            string_to_bonsai(&ctx, &repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33").await,
+            string_to_bonsai(&ctx, &repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca").await,
+            string_to_bonsai(&ctx, &repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c").await,
+            string_to_bonsai(&ctx, &repo, "264f01429683b3dd8042cb3979e8bf37007118bc").await,
         ];
-        let merge_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "d35b1875cdd1ed2c687e86f1604b9d7e989450cb",
-        )
-        .await;
+        let merge_node =
+            string_to_bonsai(&ctx, &repo, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await;
 
         // This test tries to advance the merge node forward.
         // It should test the part of `advance_node_forward` for when the node doesn't
@@ -2412,93 +1876,30 @@ mod test {
     }
 
     async fn advance_node_on_partial_index(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
-        let root_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "15c40d0abc36d47fb51c8eaec51ac7aad31f669c",
-        )
-        .await;
+        let root_node =
+            string_to_bonsai(&ctx, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await;
 
         // order is oldest to newest
         let branch_1 = vec![
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "3cda5c78aa35f0f5b09780d971197b51cad4613a",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "16839021e338500b3cf7c9b871c8a07351697d68",
-            )
-            .await,
+            string_to_bonsai(&ctx, &repo, "3cda5c78aa35f0f5b09780d971197b51cad4613a").await,
+            string_to_bonsai(&ctx, &repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5").await,
+            string_to_bonsai(&ctx, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await,
         ];
 
         // order is oldest to newest
         let branch_2 = vec![
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "d7542c9db7f4c77dab4b315edd328edf1514952f",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "b65231269f651cfe784fd1d97ef02a049a37b8a0",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "795b8133cf375f6d68d27c6c23db24cd5d0cd00f",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "bc7b4d0f858c19e2474b03e442b8495fd7aeef33",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "fc2cef43395ff3a7b28159007f63d6529d2f41ca",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "5d43888a3c972fe68c224f93d41b30e9f888df7c",
-            )
-            .await,
-            string_to_bonsai(
-                ctx.clone(),
-                &repo,
-                "264f01429683b3dd8042cb3979e8bf37007118bc",
-            )
-            .await,
+            string_to_bonsai(&ctx, &repo, "d7542c9db7f4c77dab4b315edd328edf1514952f").await,
+            string_to_bonsai(&ctx, &repo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await,
+            string_to_bonsai(&ctx, &repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await,
+            string_to_bonsai(&ctx, &repo, "795b8133cf375f6d68d27c6c23db24cd5d0cd00f").await,
+            string_to_bonsai(&ctx, &repo, "bc7b4d0f858c19e2474b03e442b8495fd7aeef33").await,
+            string_to_bonsai(&ctx, &repo, "fc2cef43395ff3a7b28159007f63d6529d2f41ca").await,
+            string_to_bonsai(&ctx, &repo, "5d43888a3c972fe68c224f93d41b30e9f888df7c").await,
+            string_to_bonsai(&ctx, &repo, "264f01429683b3dd8042cb3979e8bf37007118bc").await,
         ];
 
-        let merge_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "d35b1875cdd1ed2c687e86f1604b9d7e989450cb",
-        )
-        .await;
+        let merge_node =
+            string_to_bonsai(&ctx, &repo, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await;
 
         // This test partially indexes the top few of the graph.
         // Then it does a query that traverses from indexed to unindexed nodes.
@@ -2591,49 +1992,15 @@ mod test {
         repo: BlobRepo,
         sli: SkiplistIndex,
     ) {
-        let root_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "ecba698fee57eeeef88ac3dcc3b623ede4af47bd",
-        )
-        .await;
+        let root_node =
+            string_to_bonsai(&ctx, &repo, "ecba698fee57eeeef88ac3dcc3b623ede4af47bd").await;
 
-        let _b1 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "9e8521affb7f9d10e9551a99c526e69909042b20",
-        )
-        .await;
-        let _b2 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "4685e9e62e4885d477ead6964a7600c750e39b03",
-        )
-        .await;
-        let b1_1 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "b6a8169454af58b4b72b3665f9aa0d25529755ff",
-        )
-        .await;
-        let b1_2 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12",
-        )
-        .await;
-        let b2_1 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "04decbb0d1a65789728250ddea2fe8d00248e01c",
-        )
-        .await;
-        let b2_2 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "49f53ab171171b3180e125b918bd1cf0af7e5449",
-        )
-        .await;
+        let _b1 = string_to_bonsai(&ctx, &repo, "9e8521affb7f9d10e9551a99c526e69909042b20").await;
+        let _b2 = string_to_bonsai(&ctx, &repo, "4685e9e62e4885d477ead6964a7600c750e39b03").await;
+        let b1_1 = string_to_bonsai(&ctx, &repo, "b6a8169454af58b4b72b3665f9aa0d25529755ff").await;
+        let b1_2 = string_to_bonsai(&ctx, &repo, "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12").await;
+        let b2_1 = string_to_bonsai(&ctx, &repo, "04decbb0d1a65789728250ddea2fe8d00248e01c").await;
+        let b2_2 = string_to_bonsai(&ctx, &repo, "49f53ab171171b3180e125b918bd1cf0af7e5449").await;
 
         let advance_to_root_futures =
             vec![b1_1, b1_2, b2_1, b2_2]
@@ -2660,49 +2027,15 @@ mod test {
     }
 
     async fn process_frontier_on_wide_branch(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
-        let root_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "ecba698fee57eeeef88ac3dcc3b623ede4af47bd",
-        )
-        .await;
+        let root_node =
+            string_to_bonsai(&ctx, &repo, "ecba698fee57eeeef88ac3dcc3b623ede4af47bd").await;
 
-        let b1 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "9e8521affb7f9d10e9551a99c526e69909042b20",
-        )
-        .await;
-        let b2 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "4685e9e62e4885d477ead6964a7600c750e39b03",
-        )
-        .await;
-        let b1_1 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "b6a8169454af58b4b72b3665f9aa0d25529755ff",
-        )
-        .await;
-        let b1_2 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12",
-        )
-        .await;
-        let b2_1 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "04decbb0d1a65789728250ddea2fe8d00248e01c",
-        )
-        .await;
-        let b2_2 = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "49f53ab171171b3180e125b918bd1cf0af7e5449",
-        )
-        .await;
+        let b1 = string_to_bonsai(&ctx, &repo, "9e8521affb7f9d10e9551a99c526e69909042b20").await;
+        let b2 = string_to_bonsai(&ctx, &repo, "4685e9e62e4885d477ead6964a7600c750e39b03").await;
+        let b1_1 = string_to_bonsai(&ctx, &repo, "b6a8169454af58b4b72b3665f9aa0d25529755ff").await;
+        let b1_2 = string_to_bonsai(&ctx, &repo, "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12").await;
+        let b2_1 = string_to_bonsai(&ctx, &repo, "04decbb0d1a65789728250ddea2fe8d00248e01c").await;
+        let b2_2 = string_to_bonsai(&ctx, &repo, "49f53ab171171b3180e125b918bd1cf0af7e5449").await;
 
         let mut starting_frontier_map = HashMap::new();
         starting_frontier_map.insert(
@@ -2763,10 +2096,10 @@ mod test {
         b2: &'static str,
         lca: Option<&'static str>,
     ) {
-        let b1 = string_to_bonsai(ctx.clone(), &repo, b1).await;
-        let b2 = string_to_bonsai(ctx.clone(), &repo, b2).await;
+        let b1 = string_to_bonsai(&ctx, &repo, b1).await;
+        let b2 = string_to_bonsai(&ctx, &repo, b2).await;
         let expected = if let Some(lca) = lca {
-            Some(string_to_bonsai(ctx.clone(), &repo, lca).await)
+            Some(string_to_bonsai(&ctx, &repo, lca).await)
         } else {
             None
         };
@@ -2786,10 +2119,10 @@ mod test {
         descendant: &'static str,
         merge_commit: Option<&'static str>,
     ) {
-        let ba = string_to_bonsai(ctx.clone(), &repo, ancestor).await;
-        let bd = string_to_bonsai(ctx.clone(), &repo, descendant).await;
+        let ba = string_to_bonsai(&ctx, &repo, ancestor).await;
+        let bd = string_to_bonsai(&ctx, &repo, descendant).await;
         let expected = if let Some(merge_commit) = merge_commit {
-            Some(string_to_bonsai(ctx.clone(), &repo, merge_commit).await)
+            Some(string_to_bonsai(&ctx, &repo, merge_commit).await)
         } else {
             None
         };
@@ -3032,18 +2365,10 @@ mod test {
         let repo = Arc::new(linear::getrepo(fb).await);
         let sli = SkiplistIndex::with_skip_edge_count(4);
 
-        let old_head = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "3c15267ebf11807f3d772eb891272b911ec68759",
-        )
-        .await;
-        let new_head = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "79a13814c5ce7330173ec04d279bf95ab3f652fb",
-        )
-        .await;
+        let old_head =
+            string_to_bonsai(&ctx, &repo, "3c15267ebf11807f3d772eb891272b911ec68759").await;
+        let new_head =
+            string_to_bonsai(&ctx, &repo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await;
 
         // This test simulates incremental index update by indexing up to the old_head first and
         // then updating to a new_head
@@ -3072,18 +2397,10 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo = Arc::new(linear::getrepo(fb).await);
         let sli = SkiplistIndex::new();
-        let src_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-        )
-        .await;
-        let dst_node = string_to_bonsai(
-            ctx.clone(),
-            &repo,
-            "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
-        )
-        .await;
+        let src_node =
+            string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await;
+        let dst_node =
+            string_to_bonsai(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await;
         let cs_fetcher = repo.get_changeset_fetcher();
         sli.add_node(&ctx, &cs_fetcher, src_node, 10).await?;
 

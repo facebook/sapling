@@ -347,7 +347,8 @@ async fn maybe_unbundle(
             .into_iter()
             .map(|(hg_cs_id, ts)| async move {
                 let bonsai_cs_id = repo
-                    .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+                    .bonsai_hg_mapping()
+                    .get_bonsai_from_hg(ctx, hg_cs_id)
                     .await?
                     .ok_or(format_err!(
                         "Hg Changeset is missing after unbundle: {:?}",

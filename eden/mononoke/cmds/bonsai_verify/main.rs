@@ -312,7 +312,8 @@ fn subcommmand_hg_manifest_verify(
             .and_then(HgChangesetId::from_str)?;
         let repo: &BlobRepo = &args::open_repo(ctx.fb, &logger, matches).await?;
         let csid = repo
-            .get_bonsai_from_hg(ctx.clone(), hg_csid)
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(ctx, hg_csid)
             .await?
             .ok_or(format_err!("failed to fetch bonsai changeset"))?;
 

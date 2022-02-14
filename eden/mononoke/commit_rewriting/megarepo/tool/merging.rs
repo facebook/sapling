@@ -26,8 +26,8 @@ async fn fail_on_path_conflicts(
 ) -> Result<(), Error> {
     info!(ctx.logger(), "Checking if there are any path conflicts");
     let (bcs_1, bcs_2) = try_join!(
-        repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id_1),
-        repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id_2)
+        repo.bonsai_hg_mapping().get_bonsai_from_hg(ctx, hg_cs_id_1),
+        repo.bonsai_hg_mapping().get_bonsai_from_hg(ctx, hg_cs_id_2)
     )?;
     let collisions =
         get_colliding_paths_between_commits(&ctx, &repo, bcs_1.unwrap(), bcs_2.unwrap()).await?;

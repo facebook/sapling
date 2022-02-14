@@ -27,7 +27,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobrepo_errors::ErrorKind;
-use bonsai_hg_mapping::{ArcBonsaiHgMapping, BonsaiHgMapping, BonsaiOrHgChangesetIds};
+use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiOrHgChangesetIds};
 use bookmarks::{
     Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness,
 };
@@ -49,17 +49,9 @@ use std::collections::{HashMap, HashSet};
 /// mercurial specific methods.
 #[async_trait]
 pub trait BlobRepoHg {
-    fn get_bonsai_hg_mapping(&self) -> &ArcBonsaiHgMapping;
-
     fn get_filenodes(&self) -> &ArcFilenodes;
 
     fn hg_mutation_store(&self) -> &ArcHgMutationStore;
-
-    async fn get_bonsai_from_hg(
-        &self,
-        ctx: CoreContext,
-        hg_cs_id: HgChangesetId,
-    ) -> Result<Option<ChangesetId>, Error>;
 
     async fn get_hg_bonsai_mapping<'a>(
         &'a self,
@@ -139,7 +131,6 @@ define_stats! {
     prefix = "mononoke.blobrepo";
     changeset_exists: timeseries(Rate, Sum),
     get_all_filenodes: timeseries(Rate, Sum),
-    get_bonsai_from_hg: timeseries(Rate, Sum),
     get_bookmark: timeseries(Rate, Sum),
     get_bookmarks_by_prefix_maybe_stale: timeseries(Rate, Sum),
     get_changeset_parents: timeseries(Rate, Sum),
@@ -151,27 +142,12 @@ define_stats! {
 
 #[async_trait]
 impl BlobRepoHg for BlobRepo {
-    fn get_bonsai_hg_mapping(&self) -> &ArcBonsaiHgMapping {
-        self.bonsai_hg_mapping()
-    }
-
     fn get_filenodes(&self) -> &ArcFilenodes {
         self.filenodes()
     }
 
     fn hg_mutation_store(&self) -> &ArcHgMutationStore {
         self.hg_mutation_store()
-    }
-
-    async fn get_bonsai_from_hg(
-        &self,
-        ctx: CoreContext,
-        hg_cs_id: HgChangesetId,
-    ) -> Result<Option<ChangesetId>, Error> {
-        STATS::get_bonsai_from_hg.add_value(1);
-        self.get_bonsai_hg_mapping()
-            .get_bonsai_from_hg(&ctx, hg_cs_id)
-            .await
     }
 
     // Returns only the mapping for valid changests that are known to the server.
@@ -187,7 +163,7 @@ impl BlobRepoHg for BlobRepo {
         STATS::get_hg_bonsai_mapping.add_value(1);
         let bonsai_or_hg_cs_ids = bonsai_or_hg_cs_ids.into();
         let hg_bonsai_list = self
-            .get_bonsai_hg_mapping()
+            .bonsai_hg_mapping()
             .get(&ctx, bonsai_or_hg_cs_ids.clone())
             .await?
             .into_iter()
@@ -270,7 +246,10 @@ impl BlobRepoHg for BlobRepo {
         changesetid: HgChangesetId,
     ) -> Result<bool, Error> {
         STATS::changeset_exists.add_value(1);
-        let csid = self.get_bonsai_from_hg(ctx.clone(), changesetid).await?;
+        let csid = self
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(&ctx, changesetid)
+            .await?;
         match csid {
             Some(bonsai) => {
                 let res = self.get_changesets_object().get(ctx, bonsai).await?;
@@ -288,7 +267,8 @@ impl BlobRepoHg for BlobRepo {
         STATS::get_changeset_parents.add_value(1);
 
         let csid = self
-            .get_bonsai_from_hg(ctx.clone(), changesetid)
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(&ctx, changesetid)
             .await?
             .ok_or(ErrorKind::BonsaiMappingNotFound(changesetid))?;
 

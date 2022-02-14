@@ -918,7 +918,8 @@ impl RepoContext {
                 .then(|| cs_id),
             ChangesetSpecifier::Hg(hg_cs_id) => {
                 self.blob_repo()
-                    .get_bonsai_from_hg(self.ctx.clone(), hg_cs_id)
+                    .bonsai_hg_mapping()
+                    .get_bonsai_from_hg(&self.ctx, hg_cs_id)
                     .await?
             }
             ChangesetSpecifier::Globalrev(rev) => {
@@ -982,7 +983,7 @@ impl RepoContext {
         let resolved = match prefix {
             ChangesetPrefixSpecifier::Hg(prefix) => ChangesetSpecifierPrefixResolution::from(
                 self.blob_repo()
-                    .get_bonsai_hg_mapping()
+                    .bonsai_hg_mapping()
                     .get_many_hg_by_prefix(&self.ctx, prefix, MAX_LIMIT_AMBIGUOUS_IDS)
                     .await?,
             ),

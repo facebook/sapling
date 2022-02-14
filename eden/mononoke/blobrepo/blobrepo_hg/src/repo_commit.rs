@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::BlobRepoHg;
 use anyhow::{format_err, Context, Error, Result};
 use cloned::cloned;
 use futures::{
@@ -96,7 +95,8 @@ impl ChangesetHandle {
             cloned!(ctx, repo);
             async move {
                 let csid = repo
-                    .get_bonsai_from_hg(ctx.clone(), hg_cs)
+                    .bonsai_hg_mapping()
+                    .get_bonsai_from_hg(&ctx, hg_cs)
                     .await?
                     .ok_or(ErrorKind::BonsaiMappingNotFound(hg_cs))?;
                 let bonsai_cs = csid.load(&ctx, repo.blobstore()).await?;

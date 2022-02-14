@@ -22,7 +22,7 @@ use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::{Loadable, LoadableError};
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
+use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingArc, BonsaiHgMappingEntry};
 use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness};
 use bounded_traversal::limited_by_key_shardable;
 use changeset_info::ChangesetInfo;
@@ -1849,7 +1849,7 @@ where
             visitor: visitor.clone(),
             required_node_data_types,
             phases_store: repo.phases().with_frozen_public_heads(heads),
-            bonsai_hg_mapping: repo.get_bonsai_hg_mapping().clone(),
+            bonsai_hg_mapping: repo.bonsai_hg_mapping_arc().clone(),
         });
 
         Ok(limited_by_key_shardable(

@@ -219,7 +219,8 @@ pub async fn subcommand_fetch_phase_impl<'a>(
         ChangesetId::from_str(&hash)?
     } else if ty == "hg" {
         let maybe_bonsai = repo
-            .get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(&hash)?)
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(&ctx, HgChangesetId::from_str(&hash)?)
             .await?;
         maybe_bonsai.ok_or(format_err!("bonsai not found for {}", hash))?
     } else {

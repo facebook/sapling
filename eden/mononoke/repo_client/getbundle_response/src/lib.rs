@@ -614,7 +614,8 @@ async fn hg_to_bonsai_stream(
         .map({
             move |node| async move {
                 let bcs_id = repo
-                    .get_bonsai_from_hg(ctx.clone(), node)
+                    .bonsai_hg_mapping()
+                    .get_bonsai_from_hg(ctx, node)
                     .await?
                     .ok_or(ErrorKind::BonsaiNotFoundForHgChangeset(node))?;
 

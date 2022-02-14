@@ -12,7 +12,6 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{future, TryFutureExt, TryStreamExt};
 
-use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use fbinit::FacebookInit;
 use fixtures::linear;
@@ -50,7 +49,8 @@ async fn set_bookmark(
     cs_id: &str,
 ) -> Result<(), Error> {
     let head = repo
-        .get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(cs_id)?)
+        .bonsai_hg_mapping()
+        .get_bonsai_from_hg(ctx, HgChangesetId::from_str(cs_id)?)
         .await?
         .ok_or_else(|| Error::msg("cs does not exit"))?;
 
@@ -114,24 +114,27 @@ async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
     .await?;
 
     let public_commit = repo
+        .bonsai_hg_mapping()
         .get_bonsai_from_hg(
-            ctx.clone(),
+            &ctx,
             HgChangesetId::from_str("d0a361e9022d226ae52f689667bd7d212a19cfe0")?,
         )
         .await?
         .ok_or_else(|| Error::msg("Invalid cs: public_commit"))?;
 
     let other_public_commit = repo
+        .bonsai_hg_mapping()
         .get_bonsai_from_hg(
-            ctx.clone(),
+            &ctx,
             HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
         )
         .await?
         .ok_or_else(|| Error::msg("Invalid cs: other_public_commit"))?;
 
     let draft_commit = repo
+        .bonsai_hg_mapping()
         .get_bonsai_from_hg(
-            ctx.clone(),
+            &ctx,
             HgChangesetId::from_str("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157")?,
         )
         .await?
@@ -139,16 +142,18 @@ async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
 
 
     let other_draft_commit = repo
+        .bonsai_hg_mapping()
         .get_bonsai_from_hg(
-            ctx.clone(),
+            &ctx,
             HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")?,
         )
         .await?
         .ok_or_else(|| Error::msg("Invalid cs: other_draft_commit"))?;
 
     let public_bookmark_commit = repo
+        .bonsai_hg_mapping()
         .get_bonsai_from_hg(
-            ctx.clone(),
+            &ctx,
             HgChangesetId::from_str("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b")?,
         )
         .await?
@@ -262,7 +267,8 @@ async fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
             .map({
                 |hgcs| async move {
                     let bcs = repo
-                        .get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(hgcs)?)
+                        .bonsai_hg_mapping()
+                        .get_bonsai_from_hg(ctx, HgChangesetId::from_str(hgcs)?)
                         .await?
                         .ok_or_else(|| format_err!("Invalid hgcs: {}", hgcs))?;
                     Result::<_, Error>::Ok(bcs)

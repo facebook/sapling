@@ -1327,7 +1327,7 @@ impl HgCommands for RepoClient {
                     Ok(cs_prefix) => {
                         cloned!(repo, ctx);
                         async move {
-                            repo.get_bonsai_hg_mapping()
+                            repo.bonsai_hg_mapping()
                                 .get_many_hg_by_prefix(
                                     &ctx,
                                     cs_prefix,
@@ -2567,7 +2567,8 @@ impl GitLookup {
             }
             HgToGit(hg_changeset_id) => {
                 let maybe_bcs_id = repo
-                    .get_bonsai_from_hg(ctx.clone(), *hg_changeset_id)
+                    .bonsai_hg_mapping()
+                    .get_bonsai_from_hg(ctx, *hg_changeset_id)
                     .await?;
                 let bonsai_git_mapping = repo.bonsai_git_mapping();
 
@@ -2649,10 +2650,7 @@ async fn maybe_validate_pushed_bonsais(
     for chunk in hgbonsaimapping.chunks(100) {
         let hg_cs_ids: Vec<_> = chunk.iter().map(|(hg_cs_id, _)| *hg_cs_id).collect();
 
-        let entries = repo
-            .get_bonsai_hg_mapping()
-            .get(ctx, hg_cs_ids.into())
-            .await?;
+        let entries = repo.bonsai_hg_mapping().get(ctx, hg_cs_ids.into()).await?;
 
         let actual_entries = entries
             .into_iter()

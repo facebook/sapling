@@ -1544,7 +1544,10 @@ async fn bonsai_from_hg_opt(
     match cs_id {
         None => Ok(None),
         Some(cs_id) => {
-            let maybe_bcs_id = repo.get_bonsai_from_hg(ctx.clone(), cs_id).await?;
+            let maybe_bcs_id = repo
+                .bonsai_hg_mapping()
+                .get_bonsai_from_hg(ctx, cs_id)
+                .await?;
             if maybe_bcs_id.is_none() {
                 Err(format_err!("No bonsai mapping found for {}", cs_id))
             } else {
@@ -1594,7 +1597,7 @@ async fn infinite_hg_bookmark_push_to_bonsai(
 
     let (old, new) = try_join!(
         bonsai_from_hg_opt(ctx, &repo, old),
-        repo.get_bonsai_from_hg(ctx.clone(), new)
+        repo.bonsai_hg_mapping().get_bonsai_from_hg(ctx, new)
     )?;
     let new = match new {
         Some(new) => new,

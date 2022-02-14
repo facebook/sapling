@@ -286,7 +286,8 @@ async fn check_bonsai_creation(fb: FacebookInit) {
     let commit = commit.get_completed_changeset().await.unwrap();
     let commit = &commit.1;
     let bonsai_cs_id = repo
-        .get_bonsai_from_hg(ctx.clone(), commit.get_changeset_id())
+        .bonsai_hg_mapping()
+        .get_bonsai_from_hg(&ctx, commit.get_changeset_id())
         .await
         .unwrap();
     assert!(bonsai_cs_id.is_some());
@@ -362,13 +363,15 @@ async fn check_bonsai_creation_with_rename(fb: FacebookInit) {
     let child_cs = &child_cs.1;
 
     let parent_bonsai_cs_id = repo
-        .get_bonsai_from_hg(ctx.clone(), parent_cs.get_changeset_id())
+        .bonsai_hg_mapping()
+        .get_bonsai_from_hg(&ctx, parent_cs.get_changeset_id())
         .await
         .unwrap()
         .unwrap();
 
     let bonsai_cs_id = repo
-        .get_bonsai_from_hg(ctx.clone(), child_cs.get_changeset_id())
+        .bonsai_hg_mapping()
+        .get_bonsai_from_hg(&ctx, child_cs.get_changeset_id())
         .await
         .unwrap();
     let bonsai = bonsai_cs_id
@@ -792,7 +795,11 @@ async fn test_hg_commit_generation_simple(fb: FacebookInit) {
         ))
     );
     // make sure bonsai hg mapping is updated
-    let map_bcs_id = repo.get_bonsai_from_hg(ctx, hg_cs_id).await.unwrap();
+    let map_bcs_id = repo
+        .bonsai_hg_mapping()
+        .get_bonsai_from_hg(&ctx, hg_cs_id)
+        .await
+        .unwrap();
     assert_eq!(map_bcs_id, Some(bcs_id));
 }
 

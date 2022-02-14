@@ -11,7 +11,6 @@ use ascii::AsciiString;
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use commit_transformation::upload_commits;
@@ -253,7 +252,10 @@ pub async fn init_small_large_repo(
     )
     .await?;
 
-    let maybe_move_bcs_id = megarepo.get_bonsai_from_hg(ctx.clone(), move_hg_cs).await?;
+    let maybe_move_bcs_id = megarepo
+        .bonsai_hg_mapping()
+        .get_bonsai_from_hg(ctx, move_hg_cs)
+        .await?;
     let move_bcs_id = maybe_move_bcs_id.unwrap();
 
     bookmark(&ctx, &megarepo, "megarepo_start")

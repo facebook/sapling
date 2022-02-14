@@ -9,7 +9,6 @@ use anyhow::{anyhow, Error};
 use args::MononokeClapApp;
 use ascii::AsciiStr;
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use clap::{Arg, ArgGroup};
 use cloned::cloned;
@@ -68,7 +67,8 @@ pub async fn backfill<P: AsRef<Path>>(
             cloned!(ctx, repo);
             async move {
                 let id = repo
-                    .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+                    .bonsai_hg_mapping()
+                    .get_bonsai_from_hg(&ctx, hg_cs_id)
                     .await?
                     .ok_or(anyhow!("hg commit {} is missing", hg_cs_id))?;
                 Ok(id)

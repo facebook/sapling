@@ -87,8 +87,8 @@ pub async fn subcommand_hg_changeset<'a>(
 
             let repo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
             let (start_cs_opt, stop_cs_opt) = futures::try_join!(
-                repo.get_bonsai_from_hg(ctx.clone(), start_cs),
-                repo.get_bonsai_from_hg(ctx.clone(), stop_cs),
+                repo.bonsai_hg_mapping().get_bonsai_from_hg(&ctx, start_cs),
+                repo.bonsai_hg_mapping().get_bonsai_from_hg(&ctx, stop_cs),
             )?;
             let start_cs = start_cs_opt.ok_or_else(|| Error::msg("failed to resolve changeset"))?;
             let stop_cs = stop_cs_opt.ok_or_else(|| Error::msg("failed to resovle changeset"))?;

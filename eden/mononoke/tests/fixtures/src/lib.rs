@@ -87,7 +87,8 @@ async fn create_bonsai_changeset_from_test_data(
             borrowed!(ctx, blobrepo);
             async move {
                 blobrepo
-                    .get_bonsai_from_hg(ctx.clone(), p)
+                    .bonsai_hg_mapping()
+                    .get_bonsai_from_hg(ctx, p)
                     .await
                     .map(|maybe_cs| maybe_cs.unwrap())
             }
@@ -135,7 +136,8 @@ pub async fn set_bookmark(
     let ctx = CoreContext::test_mock(fb);
     let hg_cs_id = HgChangesetId::from_str(hg_cs_id).unwrap();
     let bcs_id = blobrepo
-        .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+        .bonsai_hg_mapping()
+        .get_bonsai_from_hg(&ctx, hg_cs_id)
         .await
         .unwrap();
     let mut txn = blobrepo.update_bookmark_transaction(ctx.clone());

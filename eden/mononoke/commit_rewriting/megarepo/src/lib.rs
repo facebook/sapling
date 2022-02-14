@@ -209,7 +209,8 @@ where
         .await?;
 
         parent_bcs_id = repo
-            .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(ctx, hg_cs_id)
             .await?
             .ok_or(anyhow!("not found bonsai commit for {}", hg_cs_id))?;
         res.push(hg_cs_id)
@@ -222,7 +223,6 @@ where
 mod test {
     use super::*;
     use anyhow::Result;
-    use blobrepo_hg::BlobRepoHg;
     use cloned::cloned;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs};
@@ -284,7 +284,8 @@ mod test {
 
         let hg_cs_id = HgChangesetId::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
         let bcs_id: ChangesetId = repo
-            .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(&ctx, hg_cs_id)
             .await
             .unwrap()
             .unwrap();
@@ -304,7 +305,8 @@ mod test {
         hg_cs_id: HgChangesetId,
     ) -> BonsaiChangeset {
         let bcs_id = repo
-            .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(&ctx, hg_cs_id)
             .await
             .unwrap()
             .unwrap();

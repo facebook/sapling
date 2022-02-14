@@ -108,7 +108,6 @@ impl_bonsai_derived_via_manager!(ChangesetInfo);
 mod test {
     use super::*;
 
-    use blobrepo_hg::BlobRepoHg;
     use blobstore::Loadable;
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
@@ -131,7 +130,8 @@ mod test {
 
         let hg_cs_id = HgChangesetId::from_str("3c15267ebf11807f3d772eb891272b911ec68759").unwrap();
         let bcs_id = repo
-            .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(&ctx, hg_cs_id)
             .await?
             .unwrap();
         let bcs = bcs_id.load(&ctx, repo.blobstore()).await?;

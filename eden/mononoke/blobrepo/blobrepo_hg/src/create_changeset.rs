@@ -7,12 +7,12 @@
 
 use crate::bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
 use crate::repo_commit::*;
-use crate::{BlobRepoHg, ErrorKind};
+use crate::ErrorKind;
 use ::manifest::Entry;
 use anyhow::{anyhow, format_err, Context, Error, Result};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
+use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingArc, BonsaiHgMappingEntry};
 use changesets::{ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
@@ -63,7 +63,8 @@ async fn verify_bonsai_changeset_with_origin(
             // To make the blobimported backup repos exactly the same, we will
             // fetch bonsai from the prod in case of mismatch
             let origin_bonsai_id = origin_repo
-                .get_bonsai_from_hg(ctx.clone(), cs.get_changeset_id())
+                .bonsai_hg_mapping()
+                .get_bonsai_from_hg(&ctx, cs.get_changeset_id())
                 .await?;
             match origin_bonsai_id {
                 Some(id) if id != bcs.get_changeset_id() => {
@@ -300,7 +301,7 @@ impl CreateChangeset {
         });
 
         let complete_changesets = repo.get_changesets_object();
-        let bonsai_hg_mapping = repo.get_bonsai_hg_mapping().clone();
+        let bonsai_hg_mapping = repo.bonsai_hg_mapping_arc().clone();
         let _repo = repo.clone();
         let changeset_complete_fut = async move {
             let ((hg_cs, bonsai_cs), _) = future::try_join(changeset, parents_complete).await?;

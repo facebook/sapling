@@ -205,7 +205,7 @@ where
 }
 
 async fn get_bcs_id<M>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     config: &CommitSyncer<M>,
     source_hg_cs: HgChangesetId,
 ) -> ChangesetId
@@ -214,6 +214,7 @@ where
 {
     config
         .get_source_repo()
+        .bonsai_hg_mapping()
         .get_bonsai_from_hg(ctx, source_hg_cs)
         .await
         .unwrap()
@@ -382,7 +383,7 @@ async fn test_sync_parentage(fb: FacebookInit) -> Result<(), Error> {
     // Take 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536 from linear, and rewrite it as a child of master
     // As this is the first commit from linear, it'll rewrite cleanly
     let linear_base_bcs_id = get_bcs_id(
-        ctx.clone(),
+        &ctx,
         &config,
         HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
     )
@@ -399,7 +400,7 @@ async fn test_sync_parentage(fb: FacebookInit) -> Result<(), Error> {
 
     // Finally, sync another commit
     let linear_second_bcs_id = get_bcs_id(
-        ctx.clone(),
+        &ctx,
         &config,
         HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
     )
@@ -541,7 +542,7 @@ async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
 
     // Take 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536 from linear, and rewrite it as a child of master
     let linear_base_bcs_id = get_bcs_id(
-        ctx.clone(),
+        &ctx,
         &linear_config,
         HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
     )
@@ -553,7 +554,7 @@ async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
 
     // Finally, sync another commit over master_file - this should fail
     let linear_second_bcs_id = get_bcs_id(
-        ctx.clone(),
+        &ctx,
         &master_file_config,
         HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f")?,
     )
@@ -606,7 +607,7 @@ async fn test_sync_empty_commit(fb: FacebookInit) -> Result<(), Error> {
     // Take 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536 from linear, and rewrite it as a child of master
     // As this is the first commit from linear, it'll rewrite cleanly
     let linear_base_bcs_id = get_bcs_id(
-        ctx.clone(),
+        &ctx,
         &stl_config,
         HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
     )
@@ -711,7 +712,7 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
     // Take 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536 from linear, and rewrite it as a child of master
     // As this is the first commit from linear, it'll rewrite cleanly
     let linear_base_bcs_id = get_bcs_id(
-        ctx.clone(),
+        &ctx,
         &stl_config,
         HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
     )
@@ -826,7 +827,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
 
     // Insert a fake mapping entry, so that syncs succeed
     let repo_initial_bcs_id = get_bcs_id(
-        ctx.clone(),
+        &ctx,
         &commit_syncer,
         HgChangesetId::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap(),
     )
@@ -847,7 +848,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     // - "dir1/subdir1/subsubdir2/file_1"
     // - "dir1/subdir1/subsubdir2/file_2"
     let repo_base_bcs_id = get_bcs_id(
-        ctx.clone(),
+        &ctx,
         &commit_syncer,
         HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4").unwrap(),
     )
@@ -861,7 +862,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     // entire "dir1" directory with a file, which implicitly deletes
     // "dir1/subdir1/subsubdir1" and "dir1/subdir1/subsubdir2".
     let repo_implicit_delete_bcs_id = get_bcs_id(
-        ctx.clone(),
+        &ctx,
         &commit_syncer,
         HgChangesetId::from_str("051946ed218061e925fb120dac02634f9ad40ae2").unwrap(),
     )
@@ -961,7 +962,7 @@ async fn test_sync_parent_search(fb: FacebookInit) -> Result<(), Error> {
 
     // Take 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536 from linear, and rewrite it as a child of master
     let linear_base_bcs_id = get_bcs_id(
-        ctx.clone(),
+        &ctx,
         &config,
         HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
     )

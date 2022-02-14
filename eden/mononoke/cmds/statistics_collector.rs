@@ -625,7 +625,8 @@ mod tests {
             // */
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
-                .get_bonsai_from_hg(ctx.clone(), root)
+                .bonsai_hg_mapping()
+                .get_bonsai_from_hg(ctx, root)
                 .await
                 .unwrap()
                 .unwrap();
@@ -677,7 +678,8 @@ mod tests {
             // */
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
-                .get_bonsai_from_hg(ctx.clone(), root)
+                .bonsai_hg_mapping()
+                .get_bonsai_from_hg(ctx, root)
                 .await
                 .unwrap()
                 .unwrap();

@@ -1298,7 +1298,8 @@ mod tests {
             let hg_cs_id = *hg_cs_id;
             async move {
                 let bcs_id = repo
-                    .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+                    .bonsai_hg_mapping()
+                    .get_bonsai_from_hg(ctx, hg_cs_id)
                     .await?
                     .ok_or(Error::from(
                         PushrebaseInternalError::BonsaiNotFoundForHgChangeset(hg_cs_id),
@@ -1349,7 +1350,8 @@ mod tests {
     ) -> Result<(), Error> {
         let head = HgChangesetId::from_str(cs_id)?;
         let head = repo
-            .get_bonsai_from_hg(ctx.clone(), head)
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(&ctx, head)
             .await?
             .ok_or(Error::msg(format_err!("Head not found: {:?}", cs_id)))?;
 
@@ -1594,7 +1596,8 @@ mod tests {
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
-                .get_bonsai_from_hg(ctx.clone(), root)
+                .bonsai_hg_mapping()
+                .get_bonsai_from_hg(&ctx, root)
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
             let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![p])
@@ -1649,7 +1652,8 @@ mod tests {
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
-                .get_bonsai_from_hg(ctx.clone(), root)
+                .bonsai_hg_mapping()
+                .get_bonsai_from_hg(&ctx, root)
                 .await?
                 .ok_or(Error::msg("p is missing"))?;
             let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![p])
@@ -1719,16 +1723,18 @@ mod tests {
             let config = PushrebaseFlags::default();
 
             let root0 = repo
+                .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
-                    ctx.clone(),
+                    &ctx,
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
                 .await?
                 .ok_or(Error::msg("root0 is missing"))?;
 
             let root1 = repo
+                .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
-                    ctx.clone(),
+                    &ctx,
                     HgChangesetId::from_str("607314ef579bd2407752361ba1b0c1729d08b281")?,
                 )
                 .await?
@@ -1757,8 +1763,9 @@ mod tests {
             )
             .await?;
             let bcs_id_master = repo
+                .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
-                    ctx.clone(),
+                    &ctx,
                     HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")?,
                 )
                 .await?
@@ -1830,8 +1837,9 @@ mod tests {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             let root = repo
+                .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
-                    ctx.clone(),
+                    &ctx,
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
                 .await?
@@ -1900,8 +1908,9 @@ mod tests {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             let root = repo
+                .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
-                    ctx.clone(),
+                    &ctx,
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
                 .await?
@@ -1951,8 +1960,9 @@ mod tests {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             let root = repo
+                .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
-                    ctx.clone(),
+                    &ctx,
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
                 .await?
@@ -1998,8 +2008,9 @@ mod tests {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             let root = repo
+                .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
-                    ctx.clone(),
+                    &ctx,
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
                 .await?
@@ -2081,8 +2092,9 @@ mod tests {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             let root = repo
+                .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
-                    ctx.clone(),
+                    &ctx,
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
                 .await?
@@ -2138,8 +2150,9 @@ mod tests {
             let ctx = CoreContext::test_mock(fb);
             let repo = many_files_dirs::getrepo(fb).await;
             let root = repo
+                .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
-                    ctx.clone(),
+                    &ctx,
                     HgChangesetId::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8")?,
                 )
                 .await?
@@ -2236,7 +2249,8 @@ mod tests {
 
             // crate filechange with with same content as "1" but set executable bit
             let root = repo
-                .get_bonsai_from_hg(ctx.clone(), root_hg)
+                .bonsai_hg_mapping()
+                .get_bonsai_from_hg(&ctx, root_hg)
                 .await?
                 .ok_or(Error::msg("Root missing"))?;
             let root_bcs = root.load(&ctx, repo.blobstore()).await?;
@@ -2313,7 +2327,8 @@ mod tests {
         descendant: BookmarkName,
     ) -> Result<usize, Error> {
         let ancestor = repo
-            .get_bonsai_from_hg(ctx.clone(), ancestor)
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(&ctx, ancestor)
             .await?
             .ok_or(Error::msg("ancestor not found"))?;
 
@@ -2323,7 +2338,8 @@ mod tests {
             .ok_or(Error::msg("bookmark not found"))?;
 
         let descendant = repo
-            .get_bonsai_from_hg(ctx.clone(), descendant)
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(&ctx, descendant)
             .await?
             .ok_or(Error::msg("bonsai not found"))?;
 
@@ -2388,7 +2404,8 @@ mod tests {
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
-                .get_bonsai_from_hg(ctx.clone(), root)
+                .bonsai_hg_mapping()
+                .get_bonsai_from_hg(&ctx, root)
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
             let parents = vec![p];
@@ -2463,7 +2480,8 @@ mod tests {
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
-                .get_bonsai_from_hg(ctx.clone(), root)
+                .bonsai_hg_mapping()
+                .get_bonsai_from_hg(&ctx, root)
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
             let parents = vec![p];
@@ -2500,7 +2518,8 @@ mod tests {
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
-                .get_bonsai_from_hg(ctx.clone(), root)
+                .bonsai_hg_mapping()
+                .get_bonsai_from_hg(&ctx, root)
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
             let parents = vec![p];
@@ -2565,7 +2584,8 @@ mod tests {
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
-                .get_bonsai_from_hg(ctx.clone(), root)
+                .bonsai_hg_mapping()
+                .get_bonsai_from_hg(&ctx, root)
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
             let parents = vec![p];
@@ -2616,7 +2636,8 @@ mod tests {
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
-                .get_bonsai_from_hg(ctx.clone(), root)
+                .bonsai_hg_mapping()
+                .get_bonsai_from_hg(&ctx, root)
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
             let parents = vec![p];
@@ -2677,8 +2698,9 @@ mod tests {
             let repo = linear::getrepo(fb).await;
 
             let root = repo
+                .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
-                    ctx.clone(),
+                    &ctx,
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
                 .await?
@@ -2822,8 +2844,9 @@ mod tests {
             // 4dcf230cd2f20577cb3e88ba52b73b376a2b3f69 - is a merge commit,
             // 3cda5c78aa35f0f5b09780d971197b51cad4613a is one of the ancestors
             let root = repo
+                .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
-                    ctx.clone(),
+                    &ctx,
                     HgChangesetId::from_str("3cda5c78aa35f0f5b09780d971197b51cad4613a")?,
                 )
                 .await?

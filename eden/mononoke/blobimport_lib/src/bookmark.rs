@@ -109,7 +109,7 @@ pub fn upload_bookmarks(
                             cloned!(ctx, blobrepo, logger);
                             move |(key, cs_id, exists)| async move {
                                 if exists {
-                                    let bcs_id = blobrepo.get_bonsai_from_hg(ctx, cs_id)
+                                    let bcs_id = blobrepo.bonsai_hg_mapping().get_bonsai_from_hg(&ctx, cs_id)
                                         .await?
                                         .ok_or_else(|| format_err!("failed to resolve hg to bonsai: {}", cs_id))?;
                                     Ok(Some((key, bcs_id)))

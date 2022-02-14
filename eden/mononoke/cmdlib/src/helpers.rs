@@ -111,7 +111,7 @@ async fn csid_resolve_impl<C>(
     hash_or_bookmark: impl ToString,
 ) -> Result<ChangesetId, Error>
 where
-    C: RepoIdentityRef + BonsaiHgMappingRef + BookmarksRef,
+    C: BonsaiHgMappingRef + BookmarksRef,
 {
     let hash_or_bookmark = hash_or_bookmark.to_string();
     if let Ok(name) = BookmarkName::new(hash_or_bookmark.clone()) {

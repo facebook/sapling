@@ -78,8 +78,9 @@ async fn convert_to_bonsai(
 ) -> Result<ChangesetId, Error> {
     if from == "hg" {
         let maybebonsai = repo
+            .bonsai_hg_mapping()
             .get_bonsai_from_hg(
-                ctx.clone(),
+                ctx,
                 HgChangesetId::from_str(&hash).expect("source hash is not valid hg changeset id"),
             )
             .await?;

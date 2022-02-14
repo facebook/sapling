@@ -604,7 +604,10 @@ pub async fn resolve_cs_id(
     match cs_ident.into() {
         Bonsai(cs_id) => Ok(cs_id),
         Hg(hg_cs_id) => {
-            let maybe_cs_id = repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id).await?;
+            let maybe_cs_id = repo
+                .bonsai_hg_mapping()
+                .get_bonsai_from_hg(ctx, hg_cs_id)
+                .await?;
             maybe_cs_id.ok_or(format_err!("{} not found", hg_cs_id))
         }
         Bookmark(bookmark) => {
@@ -619,7 +622,11 @@ pub async fn resolve_cs_id(
             }
 
             if let Ok(hg_cs_id) = HgChangesetId::from_str(&hash_or_bookmark) {
-                if let Ok(Some(cs_id)) = repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id).await {
+                if let Ok(Some(cs_id)) = repo
+                    .bonsai_hg_mapping()
+                    .get_bonsai_from_hg(ctx, hg_cs_id)
+                    .await
+                {
                     return Ok(cs_id);
                 }
             }

@@ -7,7 +7,6 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{compat::Stream01CompatExt, FutureExt, StreamExt, TryFutureExt};
@@ -42,7 +41,8 @@ pub fn string_to_nodehash(hash: &str) -> HgNodeHash {
 pub async fn string_to_bonsai(fb: FacebookInit, repo: &BlobRepo, s: &str) -> ChangesetId {
     let ctx = CoreContext::test_mock(fb);
     let node = string_to_nodehash(s);
-    repo.get_bonsai_from_hg(ctx, HgChangesetId::new(node))
+    repo.bonsai_hg_mapping()
+        .get_bonsai_from_hg(&ctx, HgChangesetId::new(node))
         .await
         .unwrap()
         .unwrap()

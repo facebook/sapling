@@ -16,7 +16,6 @@
 /// to verify Mononoke's correctness and/or use hg as a disaster recovery mechanism.
 use anyhow::{bail, format_err, Error, Result};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateLogEntry, Freshness};
 use borrowed::borrowed;
 use bundle_generator::FilenodeVerifier;
@@ -811,8 +810,10 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                     .map(|(book, hg_cs_id)| {
                         cloned!(repo);
                         async move {
-                            let maybe_bcs_id =
-                                repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id).await?;
+                            let maybe_bcs_id = repo
+                                .bonsai_hg_mapping()
+                                .get_bonsai_from_hg(ctx, hg_cs_id)
+                                .await?;
                             Result::<_, Error>::Ok(maybe_bcs_id.map(|bcs_id| (book, bcs_id)))
                         }
                     })

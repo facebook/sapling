@@ -239,7 +239,8 @@ mod tests {
         // See tests/fixtures/src/lib.rs
         let hg_cs_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
         let bcs_id = repo
-            .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(&ctx, hg_cs_id)
             .await
             .unwrap()
             .unwrap();
@@ -271,7 +272,8 @@ mod tests {
 
         let hg_cs_id = HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb").unwrap();
         let bcs_id = repo
-            .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(&ctx, hg_cs_id)
             .await
             .unwrap()
             .unwrap();
@@ -687,7 +689,8 @@ mod tests {
         let manager = repo.repo_derived_data().manager();
         let hg_cs_id = HgChangesetId::from_str(hg_cs)?;
         let bcs_id = repo
-            .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(ctx, hg_cs_id)
             .await?
             .unwrap();
         let root_unode = manager

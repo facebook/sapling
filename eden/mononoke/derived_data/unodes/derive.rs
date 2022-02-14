@@ -1118,7 +1118,8 @@ mod tests {
                 .map(|filenode| filenode.linknode)
                 .do_not_handle_disabled_filenodes()?;
             let linknode = repo
-                .get_bonsai_from_hg(ctx.clone(), hg_linknode)
+                .bonsai_hg_mapping()
+                .get_bonsai_from_hg(&ctx, hg_linknode)
                 .await?
                 .unwrap();
             history.push(linknode);

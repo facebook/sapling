@@ -7,7 +7,6 @@
 
 use anyhow::{anyhow, Error, Result};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bounded_traversal::bounded_traversal_stream;
 use context::CoreContext;
@@ -24,7 +23,8 @@ pub async fn bonsai_changeset_from_hg(
 ) -> Result<(ChangesetId, BonsaiChangeset)> {
     let hg_cs_id = s.parse::<HgChangesetId>()?;
     let bcs_id = repo
-        .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+        .bonsai_hg_mapping()
+        .get_bonsai_from_hg(ctx, hg_cs_id)
         .await?
         .ok_or_else(|| anyhow!("Failed to find bonsai changeset id for {}", hg_cs_id))?;
     let bcs = bcs_id.load(ctx, repo.blobstore()).await?;

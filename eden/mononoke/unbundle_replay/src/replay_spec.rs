@@ -7,7 +7,6 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateLogEntry};
 use bytes::Bytes;
@@ -169,7 +168,8 @@ impl OntoRev {
         match self {
             Self::Hg(hg_cs_id) => {
                 let cs_id = repo
-                    .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+                    .bonsai_hg_mapping()
+                    .get_bonsai_from_hg(ctx, hg_cs_id)
                     .await?
                     .ok_or_else(|| format_err!("Bonsai changeset missing for {:?}", hg_cs_id))?;
 
