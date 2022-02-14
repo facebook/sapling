@@ -71,6 +71,7 @@ build
 debbuild/
 .pytype/
 rpmbuild/
+getdeps_build.log
 
 # Rust libraries and extensions
 Cargo.lock

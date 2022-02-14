@@ -156,11 +156,11 @@ class HisteditTest(EdenHgTestCase):
         self.assert_file_regex(
             "will_have_confict.txt",
             """\
-            <<<<<<< local: .*
+            <<<<<<< local.*
             original
             =======
             2
-            >>>>>>> histedit: .*
+            >>>>>>> histedit.*
             """,
         )
 

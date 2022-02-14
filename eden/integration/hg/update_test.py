@@ -197,11 +197,11 @@ class UpdateTest(EdenHgTestCase):
         self.assert_file_regex(
             "foo/bar.txt",
             """\
-            <<<<<<< working copy: .*
+            <<<<<<< working copy.*
             changing yet again
             =======
             test
-            >>>>>>> destination: .*
+            >>>>>>> destination.*
             """,
         )
 
@@ -297,11 +297,11 @@ class UpdateTest(EdenHgTestCase):
         self.assert_status({"some_new_file.txt": "M"}, op="updatemerge")
         merge_contents = dedent(
             """\
-        <<<<<<< working copy: .*
+        <<<<<<< working copy.*
         Re-create the file with different contents.
         =======
         Original contents.
-        >>>>>>> destination: .*
+        >>>>>>> destination.*
         """
         )
         self.assertRegex(self.read_file("some_new_file.txt"), merge_contents)

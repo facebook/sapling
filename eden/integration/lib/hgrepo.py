@@ -100,12 +100,19 @@ class HgRepository(repobase.Repository):
             system_hgrc = os.path.join(
                 os.environ["PROGRAMDATA"], "Facebook", "Mercurial", "system.rc"
             )
+            whoami_path = os.path.join("C:", "etc", "fbwhoami")
         else:
             system_hgrc = "/etc/mercurial/system.rc"
-        if not os.path.exists(system_hgrc):
+            whoami_path = "/etc/fbwhoami"
+
+        if os.path.exists(whoami_path) and not os.path.exists(system_hgrc):
+            # Only error on FB machines,  can't expect system mercurial elsewhere
             raise Exception("unable to find the Mercurial system config file")
 
-        return "%include {system_hgrc}\n" + common_suffix
+        if os.path.exists(system_hgrc):
+            return "%include {system_hgrc}\n" + common_suffix
+        else:
+            return common_suffix
 
     @classmethod
     def find_hgrc_dir_from_repo(cls) -> Optional[Path]:
