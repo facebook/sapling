@@ -1461,91 +1461,106 @@ impl MemRoot {
 }
 
 impl MemChecksum {
-    fn read_from(index: &impl IndexBuf, offset: u64) -> crate::Result<(Self, usize)> {
-        if offset == 0 {
-            // Special case: an empty checksum.
-            return Ok((Self::default(), 0));
+    fn read_from(index: &impl IndexBuf, start_offset: u64) -> crate::Result<(Self, usize)> {
+        let mut result = Self::default();
+        let mut size: usize = 0;
+
+        let mut offset = start_offset as usize;
+        while offset > 0 {
+            let mut cur: usize = offset;
+
+            check_type(&index, cur, TYPE_CHECKSUM)?;
+            cur += TYPE_BYTES;
+
+            let (previous_offset, vlq_len): (u64, _) = index
+                .buf()
+                .read_vlq_at(cur)
+                .context(index.path(), "cannot read previous_checksum_offset")
+                .corruption()?;
+            cur += vlq_len;
+
+            let (chunk_size_logarithm, vlq_len): (u32, _) = index
+                .buf()
+                .read_vlq_at(cur)
+                .context(index.path(), "cannot read chunk_size_logarithm")
+                .corruption()?;
+
+            if chunk_size_logarithm > 31 {
+                return Err(crate::Error::corruption(
+                    index.path(),
+                    format!(
+                        "invalid chunk_size_logarithm {} at {}",
+                        chunk_size_logarithm, cur
+                    ),
+                ));
+            }
+            cur += vlq_len;
+
+            let chunk_size = 1usize << chunk_size_logarithm;
+            let chunk_needed = (offset + chunk_size - 1) >> chunk_size_logarithm;
+
+            let is_initial_checksum = start_offset == offset as u64;
+
+            // Initialize our Self result in our first iteration.
+            if is_initial_checksum {
+                result.set_chunk_size_logarithm(index.buf(), chunk_size_logarithm)?;
+
+                result.xxhash_list.resize(chunk_needed, 0);
+                result.start = previous_offset;
+                result.end = offset as u64;
+
+                let checked_needed = (result.xxhash_list.len() + 63) / 64;
+                result.checked.resize_with(checked_needed, Default::default);
+            }
+
+            //    0     1     2     3     4     5
+            // |chunk|chunk|chunk|chunk|chunk|chunk|
+            // |--------------|-----------------|---
+            // 0              ^ previous        ^ offset
+            //
+            // The previous Checksum entry covers chunk 0,1,2(incomplete).
+            // This Checksum entry covers chunk 2(complete),3,4,5(incomplete).
+
+            // Read the new chunksums.
+            let start_chunk_index = (previous_offset >> chunk_size_logarithm) as usize;
+            for i in start_chunk_index..chunk_needed {
+                let incomplete_chunk = offset % chunk_size > 0 && i == chunk_needed - 1;
+
+                // Don't record incomplete chunk hashes for previous checksums
+                // since the "next" checksum (i.e. previous loop iteration) will
+                // have already written the complete chunk's hash.
+                if is_initial_checksum || !incomplete_chunk {
+                    result.xxhash_list[i] = (&index.buf()[cur..])
+                        .read_u64::<LittleEndian>()
+                        .context(index.path(), "cannot read xxhash for checksum")?;
+                }
+                cur += 8;
+            }
+
+            // Check the checksum buffer itself.
+            let xx32_read = (&index.buf()[cur..])
+                .read_u32::<LittleEndian>()
+                .context(index.path(), "cannot read xxhash32 for checksum")?;
+            let xx32_self = xxhash32(&index.buf()[offset as usize..cur as usize]);
+            if xx32_read != xx32_self {
+                return Err(crate::Error::corruption(
+                    index.path(),
+                    format!(
+                        "checksum at {} fails integrity check ({} != {})",
+                        offset, xx32_read, xx32_self
+                    ),
+                ));
+            }
+            cur += 4;
+
+            if is_initial_checksum {
+                size = cur - offset;
+            }
+
+            offset = previous_offset as usize;
         }
 
-        let offset = offset as usize;
-        let mut cur = offset;
-        check_type(&index, offset, TYPE_CHECKSUM)?;
-        cur += TYPE_BYTES;
-
-        let (previous_offset, vlq_len): (u64, _) = index
-            .buf()
-            .read_vlq_at(cur)
-            .context(index.path(), "cannot read previous_checksum_offset")
-            .corruption()?;
-        cur += vlq_len;
-
-        let (chunk_size_logarithm, vlq_len): (u32, _) = index
-            .buf()
-            .read_vlq_at(cur)
-            .context(index.path(), "cannot read chunk_size_logarithm")
-            .corruption()?;
-        if chunk_size_logarithm > 31 {
-            return Err(crate::Error::corruption(
-                index.path(),
-                format!(
-                    "invalid chunk_size_logarithm {} at {}",
-                    chunk_size_logarithm, cur
-                ),
-            ));
-        }
-        cur += vlq_len;
-
-        // Load the previous chunk.
-        // This is currently bounded to O(file_len / chunk_size). If the index
-        // is too large it might stack overflow.
-        // NOTE: Consider switching to a non-recursive implementation, or
-        // limit the chain length.
-        let mut result = Self::read_from(index, previous_offset)?.0;
-        result.set_chunk_size_logarithm(index.buf(), chunk_size_logarithm)?;
-        result.start = previous_offset;
-        result.end = offset as u64;
-
-        let chunk_size = 1usize << chunk_size_logarithm;
-        let chunk_needed = (offset + chunk_size - 1) >> chunk_size_logarithm;
-        result.xxhash_list.resize(chunk_needed, 0);
-
-        //    0     1     2     3     4     5
-        // |chunk|chunk|chunk|chunk|chunk|chunk|
-        // |--------------|-----------------|---
-        // 0              ^ previous        ^ offset
-        //
-        // The previous Checksum entry covers chunk 0,1,2(incomplete).
-        // This Checksum entry covers chunk 2(complete),3,4,5(incomplete).
-
-        // Read the new chunksums.
-        let start_chunk_index = (previous_offset >> chunk_size_logarithm) as usize;
-        for i in start_chunk_index..result.xxhash_list.len() {
-            result.xxhash_list[i] = (&index.buf()[cur..])
-                .read_u64::<LittleEndian>()
-                .context(index.path(), "cannot read xxhash for checksum")?;
-            cur += 8;
-        }
-
-        // Check the checksum buffer itself.
-        let xx32_read = (&index.buf()[cur..])
-            .read_u32::<LittleEndian>()
-            .context(index.path(), "cannot read xxhash32 for checksum")?;
-        let xx32_self = xxhash32(&index.buf()[offset as usize..cur as usize]);
-        if xx32_read != xx32_self {
-            return Err(crate::Error::corruption(
-                index.path(),
-                format!(
-                    "checksum at {} fails integrity check ({} != {})",
-                    offset, xx32_read, xx32_self
-                ),
-            ));
-        }
-        cur += 4;
-
-        let checked_needed = (result.xxhash_list.len() + 63) / 64;
-        result.checked.resize_with(checked_needed, Default::default);
-
-        Ok((result, cur - offset))
+        Ok((result, size))
     }
 
     /// Incrementally update the checksums so it covers the file content + `append_buf`.
