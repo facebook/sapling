@@ -53,7 +53,7 @@ count-objects, shallow, bonsai only.  No parents, expect just one of each node t
   Walking edge types [AliasContentMappingToFileContent, BookmarkToChangeset, ChangesetToFileContent, ChangesetToFsnodeMapping, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeMappingToRootFsnode, FsnodeToChildFsnode]
   Walking node types [AliasContentMapping, Bookmark, Changeset, FileContent, FileContentMetadata, Fsnode, FsnodeMapping]
   Seen,Loaded: 9,9
-  * Type:Walked,Checks,Children AliasContentMapping:3,3,0 Bookmark:1,1,2 Changeset:1,1,3 FileContent:1,1,0 FileContentMetadata:1,0,3 Fsnode:1,1,0 FsnodeMapping:1,1,1 (glob)
+  * Type:Walked,Checks,Children AliasContentMapping:3,3,0 Bookmark:1,1,2 Changeset:1,1,3 FileContent:1,*,0 FileContentMetadata:1,0,3 Fsnode:1,1,0 FsnodeMapping:1,1,1 (glob)
 
 count-objects, hg only. total nodes is HGCOUNT plus 1 for the root bookmark step, plus 1 for mapping from bookmark to hg. plus 3 for filenode (same blob as envelope)
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I hg 2>&1 | strip_glog
