@@ -300,6 +300,8 @@ def get_edenfs_environment() -> Dict[str, str]:
         "EDENSCM_EDENAPI",
         "RUST_BACKTRACE",
         "RUST_LIB_BACKTRACE",
+        # Useful for environments that look like prod, but are actually corp
+        "CONFIGERATOR_PRETEND_NOT_PROD",
     ]
 
     if sys.platform == "win32":
