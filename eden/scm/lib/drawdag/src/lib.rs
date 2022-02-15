@@ -57,21 +57,17 @@ enum Direction {
 /// "#);
 /// assert_eq!(format!("{:?}", edges), expected);
 /// ```
-pub fn parse(text: impl AsRef<str>) -> BTreeMap<String, BTreeSet<String>> {
+pub fn parse(text: &str) -> BTreeMap<String, BTreeSet<String>> {
     use Direction::BottomTop;
     use Direction::LeftRight;
 
     // Detect direction.
-    let direction = if "|:".chars().any(|c| text.as_ref().contains(c)) {
+    let direction = if "|:".chars().any(|c| text.contains(c)) {
         BottomTop
     } else {
         LeftRight
     };
-    let lines: Vec<Vec<char>> = text
-        .as_ref()
-        .lines()
-        .map(|line| line.chars().collect())
-        .collect();
+    let lines: Vec<Vec<char>> = text.lines().map(|line| line.chars().collect()).collect();
 
     // (y, x) -> char. Return a space if (y, x) is out of range.
     let get = |y: isize, x: isize| -> char {
@@ -272,10 +268,7 @@ pub fn commit(
 }
 
 /// Parse the ASCII DAG and commit it. See [`parse`] and [`commit`] for details.
-pub fn drawdag(
-    text: impl AsRef<str>,
-    commit_func: impl FnMut(String, Vec<Box<[u8]>>) -> Box<[u8]>,
-) {
+pub fn drawdag(text: &str, commit_func: impl FnMut(String, Vec<Box<[u8]>>) -> Box<[u8]>) {
     commit(&parse(text), commit_func)
 }
 
