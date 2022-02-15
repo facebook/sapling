@@ -25,6 +25,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
     m.add(py, "dag", pydag::init_module(py, &name)?)?;
     m.add(py, "diffhelpers", pydiffhelpers::init_module(py, &name)?)?;
     m.add(py, "dirs", pydirs::init_module(py, &name)?)?;
+    m.add(py, "drawdag", pydrawdag::init_module(py, &name)?)?;
     m.add(py, "eagerepo", pyeagerepo::init_module(py, &name)?)?;
     m.add(py, "edenapi", pyedenapi::init_module(py, &name)?)?;
     m.add(py, "error", pyerror::init_module(py, &name)?)?;

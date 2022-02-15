@@ -29,6 +29,7 @@ pyconfigparser = { path = "modules/pyconfigparser" }
 pydag = { path = "modules/pydag" }
 pydiffhelpers = { path = "modules/pydiffhelpers" }
 pydirs = { path = "modules/pydirs" }
+pydrawdag = { path = "modules/pydrawdag" }
 pyeagerepo = { path = "modules/pyeagerepo" }
 pyedenapi = { path = "modules/pyedenapi" }
 pyerror = { path = "modules/pyerror" }
