@@ -2030,3 +2030,24 @@ function derived_data_client() {
   -h "localhost:$PORT_2DS" \
   "$@"
 }
+
+function verify_integrity_service_health() {
+  $THRIFTDBG sendRequest getStatus "{}" --host "localhost" --port "$VI_SERVICE_PORT"
+}
+
+function verify_integrity_service() {
+  export VI_SERVICE_PORT
+  local VI_SERVICE_ADDR_FILE
+  VI_SERVICE_ADDR_FILE="$TESTTMP/verify_integrity_service_addr.txt"
+  "$VERIFY_INTEGRITY_SERVICE" "$@" \
+    --service.port 0 \
+    --bound-address-file "$VI_SERVICE_ADDR_FILE" \
+    >> "$TESTTMP/verify_integrity_service.out" 2>&1 &
+
+  pid=$!
+  echo "$pid" >> "$DAEMON_PIDS"
+
+  wait_for_server "Verify Integrity service" VI_SERVICE_PORT "$TESTTMP/verify_integrity_service.out" \
+    "30" "$VI_SERVICE_ADDR_FILE" \
+    verify_integrity_service_health
+}
