@@ -11,23 +11,22 @@ use anyhow::Error;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_types_mocks::changesetid as bonsai;
-use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
+use mononoke_types_mocks::repo::REPO_ZERO;
 use mononoke_types_mocks::svnrev::*;
 use sql_construct::SqlConstruct;
 use std::sync::Arc;
 
 use bonsai_svnrev_mapping::{
     BonsaiSvnrevMapping, BonsaiSvnrevMappingEntry, BonsaisOrSvnrevs, CachingBonsaiSvnrevMapping,
-    SqlBonsaiSvnrevMapping,
+    SqlBonsaiSvnrevMappingBuilder,
 };
 
 #[fbinit::test]
 async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiSvnrevMapping::with_sqlite_in_memory()?;
+    let mapping = SqlBonsaiSvnrevMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
 
     let entry = BonsaiSvnrevMappingEntry {
-        repo_id: REPO_ZERO,
         bcs_id: bonsai::ONES_CSID,
         svnrev: SVNREV_ZERO,
     };
@@ -35,20 +34,14 @@ async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
     mapping.bulk_import(&ctx, &[entry.clone()]).await?;
 
     let result = mapping
-        .get(
-            &ctx,
-            REPO_ZERO,
-            BonsaisOrSvnrevs::Bonsai(vec![bonsai::ONES_CSID]),
-        )
+        .get(&ctx, BonsaisOrSvnrevs::Bonsai(vec![bonsai::ONES_CSID]))
         .await?;
     assert_eq!(result, vec![entry.clone()]);
     let result = mapping
-        .get_svnrev_from_bonsai(&ctx, REPO_ZERO, bonsai::ONES_CSID)
+        .get_svnrev_from_bonsai(&ctx, bonsai::ONES_CSID)
         .await?;
     assert_eq!(result, Some(SVNREV_ZERO));
-    let result = mapping
-        .get_bonsai_from_svnrev(&ctx, REPO_ZERO, SVNREV_ZERO)
-        .await?;
+    let result = mapping.get_bonsai_from_svnrev(&ctx, SVNREV_ZERO).await?;
     assert_eq!(result, Some(bonsai::ONES_CSID));
 
     Ok(())
@@ -57,20 +50,17 @@ async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_bulk_import(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiSvnrevMapping::with_sqlite_in_memory()?;
+    let mapping = SqlBonsaiSvnrevMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
 
     let entry1 = BonsaiSvnrevMappingEntry {
-        repo_id: REPO_ZERO,
         bcs_id: bonsai::ONES_CSID,
         svnrev: SVNREV_ZERO,
     };
     let entry2 = BonsaiSvnrevMappingEntry {
-        repo_id: REPO_ZERO,
         bcs_id: bonsai::TWOS_CSID,
         svnrev: SVNREV_ONE,
     };
     let entry3 = BonsaiSvnrevMappingEntry {
-        repo_id: REPO_ZERO,
         bcs_id: bonsai::THREES_CSID,
         svnrev: SVNREV_TWO,
     };
@@ -85,14 +75,10 @@ async fn test_bulk_import(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_missing(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiSvnrevMapping::with_sqlite_in_memory()?;
+    let mapping = SqlBonsaiSvnrevMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
 
     let result = mapping
-        .get(
-            &ctx,
-            REPO_ZERO,
-            BonsaisOrSvnrevs::Bonsai(vec![bonsai::ONES_CSID]),
-        )
+        .get(&ctx, BonsaisOrSvnrevs::Bonsai(vec![bonsai::ONES_CSID]))
         .await?;
 
     assert_eq!(result, vec![]);
@@ -103,7 +89,8 @@ async fn test_missing(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_caching(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mapping = Arc::new(SqlBonsaiSvnrevMapping::with_sqlite_in_memory()?);
+    let mapping =
+        Arc::new(SqlBonsaiSvnrevMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO));
     let caching = CachingBonsaiSvnrevMapping::new_test(mapping.clone());
 
     let store = caching
@@ -112,28 +99,20 @@ async fn test_caching(fb: FacebookInit) -> Result<(), Error> {
         .expect("new_test gives us a MockStore");
 
     let e0 = BonsaiSvnrevMappingEntry {
-        repo_id: REPO_ZERO,
         bcs_id: bonsai::ONES_CSID,
         svnrev: SVNREV_ONE,
     };
 
     let e1 = BonsaiSvnrevMappingEntry {
-        repo_id: REPO_ZERO,
         bcs_id: bonsai::TWOS_CSID,
         svnrev: SVNREV_TWO,
     };
 
-    let ex = BonsaiSvnrevMappingEntry {
-        repo_id: REPO_ONE,
-        bcs_id: bonsai::TWOS_CSID,
-        svnrev: SVNREV_ONE,
-    };
-
-    mapping.bulk_import(&ctx, &[e0, e1, ex]).await?;
+    mapping.bulk_import(&ctx, &[e0, e1]).await?;
 
     assert_eq!(
         caching
-            .get_svnrev_from_bonsai(&ctx, REPO_ZERO, bonsai::ONES_CSID)
+            .get_svnrev_from_bonsai(&ctx, bonsai::ONES_CSID)
             .await?,
         Some(SVNREV_ONE)
     );
@@ -144,7 +123,7 @@ async fn test_caching(fb: FacebookInit) -> Result<(), Error> {
 
     assert_eq!(
         caching
-            .get_svnrev_from_bonsai(&ctx, REPO_ZERO, bonsai::ONES_CSID)
+            .get_svnrev_from_bonsai(&ctx, bonsai::ONES_CSID)
             .await?,
         Some(SVNREV_ONE)
     );
@@ -155,36 +134,18 @@ async fn test_caching(fb: FacebookInit) -> Result<(), Error> {
 
     assert_eq!(
         caching
-            .get_svnrev_from_bonsai(&ctx, REPO_ZERO, bonsai::TWOS_CSID)
+            .get_svnrev_from_bonsai(&ctx, bonsai::TWOS_CSID)
             .await?,
         Some(SVNREV_TWO)
     );
 
     assert_eq!(
-        caching
-            .get_svnrev_from_bonsai(&ctx, REPO_ONE, bonsai::TWOS_CSID)
-            .await?,
-        Some(SVNREV_ONE)
-    );
-
-    assert_eq!(
-        caching
-            .get_bonsai_from_svnrev(&ctx, REPO_ZERO, SVNREV_ONE)
-            .await?,
+        caching.get_bonsai_from_svnrev(&ctx, SVNREV_ONE).await?,
         Some(bonsai::ONES_CSID)
     );
 
     assert_eq!(
-        caching
-            .get_bonsai_from_svnrev(&ctx, REPO_ZERO, SVNREV_TWO)
-            .await?,
-        Some(bonsai::TWOS_CSID)
-    );
-
-    assert_eq!(
-        caching
-            .get_bonsai_from_svnrev(&ctx, REPO_ONE, SVNREV_ONE)
-            .await?,
+        caching.get_bonsai_from_svnrev(&ctx, SVNREV_TWO).await?,
         Some(bonsai::TWOS_CSID)
     );
 

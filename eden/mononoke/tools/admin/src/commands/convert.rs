@@ -9,7 +9,7 @@ use anyhow::{anyhow, Context, Result};
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bonsai_svnrev_mapping::RepoBonsaiSvnrevMappingRef;
+use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use clap::{ArgEnum, Parser};
 use mercurial_types::HgChangesetId;
 use mononoke_app::args::RepoArgs;
@@ -97,7 +97,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         IdentityScheme::Svnrev => {
             let svnrev = args.id.parse::<Svnrev>().context("Invalid svnrev")?;
-            repo.repo_bonsai_svnrev_mapping()
+            repo.bonsai_svnrev_mapping()
                 .get_bonsai_from_svnrev(&ctx, svnrev)
                 .await?
                 .ok_or_else(|| anyhow!("svnrev-bonsai mapping not found for {}", svnrev))?
@@ -134,7 +134,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         IdentityScheme::Svnrev => {
             let svnrev = repo
-                .repo_bonsai_svnrev_mapping()
+                .bonsai_svnrev_mapping()
                 .get_svnrev_from_bonsai(&ctx, cs_id)
                 .await?
                 .ok_or_else(|| anyhow!("bonsai-svnrev mapping not found for {}", cs_id))?;

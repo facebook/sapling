@@ -51,30 +51,43 @@ queries! {
 
 #[derive(Clone)]
 pub struct SqlBonsaiSvnrevMapping {
-    write_connection: Connection,
-    read_connection: Connection,
-    read_master_connection: Connection,
+    connections: SqlConnections,
+    repo_id: RepositoryId,
 }
 
-impl SqlConstruct for SqlBonsaiSvnrevMapping {
+#[derive(Clone)]
+pub struct SqlBonsaiSvnrevMappingBuilder {
+    connections: SqlConnections,
+}
+
+impl SqlConstruct for SqlBonsaiSvnrevMappingBuilder {
     const LABEL: &'static str = "bonsai_svnrev_mapping";
 
     const CREATION_QUERY: &'static str =
         include_str!("../schemas/sqlite-bonsai-svnrev-mapping.sql");
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
-        Self {
-            write_connection: connections.write_connection,
-            read_connection: connections.read_connection,
-            read_master_connection: connections.read_master_connection,
+        Self { connections }
+    }
+}
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiSvnrevMappingBuilder {}
+
+impl SqlBonsaiSvnrevMappingBuilder {
+    pub fn build(self, repo_id: RepositoryId) -> SqlBonsaiSvnrevMapping {
+        SqlBonsaiSvnrevMapping {
+            connections: self.connections,
+            repo_id,
         }
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiSvnrevMapping {}
-
 #[async_trait]
 impl BonsaiSvnrevMapping for SqlBonsaiSvnrevMapping {
+    fn repo_id(&self) -> RepositoryId {
+        self.repo_id
+    }
+
     async fn bulk_import(
         &self,
         ctx: &CoreContext,
@@ -85,18 +98,10 @@ impl BonsaiSvnrevMapping for SqlBonsaiSvnrevMapping {
 
         let entries: Vec<_> = entries
             .iter()
-            .map(
-                |
-                    BonsaiSvnrevMappingEntry {
-                        repo_id,
-                        bcs_id,
-                        svnrev,
-                    },
-                | (repo_id, bcs_id, svnrev),
-            )
+            .map(|entry| (&self.repo_id, &entry.bcs_id, &entry.svnrev))
             .collect();
 
-        DangerouslyAddSvnrevs::query(&self.write_connection, &entries[..]).await?;
+        DangerouslyAddSvnrevs::query(&self.connections.write_connection, &entries[..]).await?;
 
         Ok(())
     }
@@ -104,13 +109,13 @@ impl BonsaiSvnrevMapping for SqlBonsaiSvnrevMapping {
     async fn get(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         objects: BonsaisOrSvnrevs,
     ) -> Result<Vec<BonsaiSvnrevMappingEntry>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let mut mappings = select_mapping(&self.read_connection, repo_id, &objects).await?;
+        let mut mappings =
+            select_mapping(&self.connections.read_connection, self.repo_id, &objects).await?;
 
         let left_to_fetch = filter_fetched_objects(objects, &mappings[..]);
 
@@ -121,8 +126,12 @@ impl BonsaiSvnrevMapping for SqlBonsaiSvnrevMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
 
-        let mut master_mappings =
-            select_mapping(&self.read_master_connection, repo_id, &left_to_fetch).await?;
+        let mut master_mappings = select_mapping(
+            &self.connections.read_master_connection,
+            self.repo_id,
+            &left_to_fetch,
+        )
+        .await?;
         mappings.append(&mut master_mappings);
         Ok(mappings)
     }
@@ -189,11 +198,7 @@ async fn select_mapping(
 
     Ok(rows
         .into_iter()
-        .map(move |(bcs_id, svnrev)| BonsaiSvnrevMappingEntry {
-            repo_id,
-            bcs_id,
-            svnrev,
-        })
+        .map(move |(bcs_id, svnrev)| BonsaiSvnrevMappingEntry { bcs_id, svnrev })
         .collect())
 }
 
@@ -201,7 +206,6 @@ async fn select_mapping(
 /// they are correct.
 pub async fn bulk_import_svnrevs<'a>(
     ctx: &'a CoreContext,
-    repo_id: RepositoryId,
     svnrevs_store: &'a impl BonsaiSvnrevMapping,
     changesets: impl IntoIterator<Item = &'a BonsaiChangeset>,
 ) -> Result<(), Error> {
@@ -209,7 +213,7 @@ pub async fn bulk_import_svnrevs<'a>(
     for bcs in changesets.into_iter() {
         match Svnrev::from_bcs(bcs) {
             Ok(svnrev) => {
-                let entry = BonsaiSvnrevMappingEntry::new(repo_id, bcs.get_changeset_id(), svnrev);
+                let entry = BonsaiSvnrevMappingEntry::new(bcs.get_changeset_id(), svnrev);
                 entries.push(entry);
             }
             Err(e) => {

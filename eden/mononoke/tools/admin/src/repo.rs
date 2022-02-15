@@ -8,7 +8,7 @@
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
-use bonsai_svnrev_mapping::RepoBonsaiSvnrevMapping;
+use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::Bookmarks;
 use ephemeral_blobstore::RepoEphemeralStore;
 use repo_blobstore::RepoBlobstore;
@@ -31,7 +31,7 @@ pub struct AdminRepo {
     pub bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
 
     #[facet]
-    pub repo_bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping,
+    pub bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
 
     #[facet]
     pub bookmarks: dyn Bookmarks,

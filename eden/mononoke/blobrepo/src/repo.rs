@@ -10,7 +10,7 @@ use blobstore::Blobstore;
 use bonsai_git_mapping::{ArcBonsaiGitMapping, BonsaiGitMapping};
 use bonsai_globalrev_mapping::{ArcBonsaiGlobalrevMapping, BonsaiGlobalrevMapping};
 use bonsai_hg_mapping::{ArcBonsaiHgMapping, BonsaiHgMapping};
-use bonsai_svnrev_mapping::RepoBonsaiSvnrevMapping;
+use bonsai_svnrev_mapping::{ArcBonsaiSvnrevMapping, BonsaiSvnrevMapping};
 use bookmarks::{
     self, ArcBookmarkUpdateLog, ArcBookmarks, Bookmark, BookmarkKind, BookmarkName,
     BookmarkPagination, BookmarkPrefix, BookmarkTransaction, BookmarkUpdateLog,
@@ -91,10 +91,10 @@ pub struct BlobRepoInner {
     pub bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
 
     #[facet]
-    pub pushrebase_mutation_mapping: dyn PushrebaseMutationMapping,
+    pub bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
 
     #[facet]
-    pub repo_bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping,
+    pub pushrebase_mutation_mapping: dyn PushrebaseMutationMapping,
 
     #[facet]
     pub bookmarks: dyn Bookmarks,
@@ -129,7 +129,8 @@ pub struct BlobRepo {
         dyn BonsaiHgMapping,
         dyn BonsaiGitMapping,
         dyn BonsaiGlobalrevMapping,
-        RepoBonsaiSvnrevMapping,
+        dyn BonsaiSvnrevMapping,
+        dyn PushrebaseMutationMapping,
         dyn Bookmarks,
         dyn BookmarkUpdateLog,
         dyn Phases,
@@ -265,8 +266,8 @@ impl BlobRepo {
         &self.inner.bonsai_globalrev_mapping
     }
 
-    pub fn bonsai_svnrev_mapping(&self) -> &RepoBonsaiSvnrevMapping {
-        self.inner.repo_bonsai_svnrev_mapping.as_ref()
+    pub fn bonsai_svnrev_mapping(&self) -> &ArcBonsaiSvnrevMapping {
+        &self.inner.bonsai_svnrev_mapping
     }
 
     pub fn pushrebase_mutation_mapping(&self) -> &ArcPushrebaseMutationMapping {

@@ -16,9 +16,7 @@ use blobstore::Blobstore;
 use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingConnection};
 use bonsai_globalrev_mapping::{ArcBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMappingBuilder};
 use bonsai_hg_mapping::{ArcBonsaiHgMapping, SqlBonsaiHgMappingBuilder};
-use bonsai_svnrev_mapping::{
-    ArcRepoBonsaiSvnrevMapping, RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping,
-};
+use bonsai_svnrev_mapping::{ArcBonsaiSvnrevMapping, SqlBonsaiSvnrevMappingBuilder};
 use bookmarks::{bookmark_heads_fetcher, ArcBookmarkUpdateLog, ArcBookmarks};
 use cacheblob::{InProcessLease, LeaseOps};
 use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
@@ -149,7 +147,7 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlChangesetsBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiGitMappingConnection::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiGlobalrevMappingBuilder::CREATION_QUERY)?;
-        metadata_con.execute_batch(SqlBonsaiSvnrevMapping::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlBonsaiSvnrevMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiHgMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlPhasesBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlPushrebaseMutationMappingConnection::CREATION_QUERY)?;
@@ -330,6 +328,18 @@ impl TestRepoFactory {
         ))
     }
 
+    /// Construct Bonsai Svnrev Mapping using the in-memory metadata
+    /// database.
+    pub fn bonsai_svnrev_mapping(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcBonsaiSvnrevMapping> {
+        Ok(Arc::new(
+            SqlBonsaiSvnrevMappingBuilder::from_sql_connections(self.metadata_db.clone().into())
+                .build(repo_identity.id()),
+        ))
+    }
+
     /// Construct Pushrebase Mutation Mapping using the in-memory metadata
     /// database.
     pub fn pushrebase_mutation_mapping(
@@ -342,20 +352,6 @@ impl TestRepoFactory {
             )
             .with_repo_id(repo_identity.id()),
         ))
-    }
-
-    /// Construct Repo Bonsai Svnrev Mapping using the in-memory metadata
-    /// database.
-    pub fn repo_bonsai_svnrev_mapping(
-        &self,
-        repo_identity: &ArcRepoIdentity,
-    ) -> Result<ArcRepoBonsaiSvnrevMapping> {
-        Ok(Arc::new(RepoBonsaiSvnrevMapping::new(
-            repo_identity.id(),
-            Arc::new(SqlBonsaiSvnrevMapping::from_sql_connections(
-                self.metadata_db.clone().into(),
-            )),
-        )))
     }
 
     /// Construct Filenodes.

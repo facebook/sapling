@@ -27,8 +27,7 @@ use bonsai_globalrev_mapping::{
 };
 use bonsai_hg_mapping::{ArcBonsaiHgMapping, CachingBonsaiHgMapping, SqlBonsaiHgMappingBuilder};
 use bonsai_svnrev_mapping::{
-    ArcRepoBonsaiSvnrevMapping, BonsaiSvnrevMapping, CachingBonsaiSvnrevMapping,
-    RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping,
+    ArcBonsaiSvnrevMapping, CachingBonsaiSvnrevMapping, SqlBonsaiSvnrevMappingBuilder,
 };
 use bookmarks::{bookmark_heads_fetcher, ArcBookmarkUpdateLog, ArcBookmarks, CachedBookmarks};
 use cacheblob::{
@@ -646,6 +645,28 @@ impl RepoFactory {
         }
     }
 
+    pub async fn bonsai_svnrev_mapping(
+        &self,
+        repo_config: &ArcRepoConfig,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcBonsaiSvnrevMapping> {
+        let bonsai_svnrev_mapping = self
+            .open::<SqlBonsaiSvnrevMappingBuilder>(&repo_config.storage_config.metadata)
+            .await
+            .context(RepoFactoryError::BonsaiSvnrevMapping)?
+            .build(repo_identity.id());
+        if let Some(pool) = self.maybe_volatile_pool("bonsai_svnrev_mapping")? {
+            Ok(Arc::new(CachingBonsaiSvnrevMapping::new(
+                self.env.fb,
+                Arc::new(bonsai_svnrev_mapping),
+                pool,
+            )))
+        } else {
+            Ok(Arc::new(bonsai_svnrev_mapping))
+        }
+    }
+
+
     pub async fn pushrebase_mutation_mapping(
         &self,
         repo_config: &ArcRepoConfig,
@@ -657,30 +678,6 @@ impl RepoFactory {
         Ok(Arc::new(conn.with_repo_id(repo_config.repoid)))
     }
 
-    pub async fn repo_bonsai_svnrev_mapping(
-        &self,
-        repo_config: &ArcRepoConfig,
-        repo_identity: &ArcRepoIdentity,
-    ) -> Result<ArcRepoBonsaiSvnrevMapping> {
-        let bonsai_svnrev_mapping = self
-            .open::<SqlBonsaiSvnrevMapping>(&repo_config.storage_config.metadata)
-            .await
-            .context(RepoFactoryError::BonsaiSvnrevMapping)?;
-        let bonsai_svnrev_mapping: Arc<dyn BonsaiSvnrevMapping + Send + Sync> =
-            if let Some(pool) = self.maybe_volatile_pool("bonsai_svnrev_mapping")? {
-                Arc::new(CachingBonsaiSvnrevMapping::new(
-                    self.env.fb,
-                    Arc::new(bonsai_svnrev_mapping),
-                    pool,
-                ))
-            } else {
-                Arc::new(bonsai_svnrev_mapping)
-            };
-        Ok(Arc::new(RepoBonsaiSvnrevMapping::new(
-            repo_identity.id(),
-            bonsai_svnrev_mapping,
-        )))
-    }
 
     pub async fn filenodes(
         &self,

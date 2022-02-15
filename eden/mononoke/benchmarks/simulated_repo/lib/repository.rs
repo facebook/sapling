@@ -18,9 +18,7 @@ use bonsai_hg_mapping::{
     ArcBonsaiHgMapping, BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds,
     CachingBonsaiHgMapping, SqlBonsaiHgMappingBuilder,
 };
-use bonsai_svnrev_mapping::{
-    ArcRepoBonsaiSvnrevMapping, RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping,
-};
+use bonsai_svnrev_mapping::{ArcBonsaiSvnrevMapping, SqlBonsaiSvnrevMappingBuilder};
 use bookmarks::{bookmark_heads_fetcher, ArcBookmarkUpdateLog, ArcBookmarks};
 use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, CachelibBlobstoreOptions};
 use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
@@ -222,6 +220,15 @@ impl BenchmarkRepoFactory {
         ))
     }
 
+    pub fn bonsai_svnrev_mapping(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcBonsaiSvnrevMapping> {
+        Ok(Arc::new(
+            SqlBonsaiSvnrevMappingBuilder::with_sqlite_in_memory()?.build(repo_identity.id()),
+        ))
+    }
+
     pub fn pushrebase_mutation_mapping(
         &self,
         repo_identity: &ArcRepoIdentity,
@@ -230,16 +237,6 @@ impl BenchmarkRepoFactory {
             SqlPushrebaseMutationMappingConnection::with_sqlite_in_memory()?
                 .with_repo_id(repo_identity.id()),
         ))
-    }
-
-    pub fn repo_bonsai_svnrev_mapping(
-        &self,
-        repo_identity: &ArcRepoIdentity,
-    ) -> Result<ArcRepoBonsaiSvnrevMapping> {
-        Ok(Arc::new(RepoBonsaiSvnrevMapping::new(
-            repo_identity.id(),
-            Arc::new(SqlBonsaiSvnrevMapping::with_sqlite_in_memory()?),
-        )))
     }
 
     pub fn filenodes(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcFilenodes> {
