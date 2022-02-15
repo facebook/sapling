@@ -58,26 +58,6 @@ The result (`hg log -G -T "{desc}"`) will look like::
     |/
     o  a
 
-Note that if you take the above `hg log` output directly as input. It will work
-as expected - the result would be an isomorphic graph::
-
-    o    foo
-    |\
-    | | o  d
-    | |/
-    | | o  c
-    | |/
-    | | o  bar
-    | |/|
-    | o |  b
-    | |/
-    o /  baz
-     /
-    o  a
-
-This is because 'o' is specially handled in the input: instead of using 'o' as
-the node name, the word to the right will be used.
-
 Some special comments could have side effects:
 
     - Create obsmarkers
@@ -91,6 +71,8 @@ import collections
 import itertools
 import re
 
+import bindings
+
 from . import (
     bookmarks,
     context,
@@ -103,18 +85,6 @@ from . import (
 )
 from .i18n import _
 from .node import hex
-
-
-_pipechars = "\\/+-|"
-_nonpipechars = "".join(
-    chr(i) for i in range(33, 127) if pycompat.bytechr(i) not in _pipechars
-)
-
-
-def _isname(ch):
-    """char -> bool. return True if ch looks like part of a name, False
-    otherwise"""
-    return ch in _nonpipechars
 
 
 def _parseasciigraph(text):
@@ -140,133 +110,10 @@ def _parseasciigraph(text):
      'G': ['F'],
      'H': ['A'],
      'I': ['H']}
-    >>> pprint.pprint({k: [vv for vv in v]
-    ...  for k, v in _parseasciigraph(r'''
-    ...  o    foo
-    ...  |\
-    ...  +---o  bar
-    ...  | | |
-    ...  | o |  baz
-    ...  |  /
-    ...  +---o  d
-    ...  | |
-    ...  +---o  c
-    ...  | |
-    ...  o |  b
-    ...  |/
-    ...  o  a
-    ... ''').items()})
-    {'a': [],
-     'b': ['a'],
-     'bar': ['b', 'a'],
-     'baz': [],
-     'c': ['b'],
-     'd': ['b'],
-     'foo': ['baz', 'b']}
     """
-    lines = text.splitlines()
-    edges = collections.defaultdict(list)  # {node: []}
-
-    def get(y, x):
-        """(int, int) -> char. give a coordinate, return the char. return a
-        space for anything out of range"""
-        if x < 0 or y < 0:
-            return " "
-        try:
-            return lines[y][x : x + 1] or " "
-        except IndexError:
-            return " "
-
-    def getname(y, x):
-        """(int, int) -> str. like get(y, x) but concatenate left and right
-        parts. if name is an 'o', try to replace it to the right"""
-        result = ""
-        for i in itertools.count(0):
-            ch = get(y, x - i)
-            if not _isname(ch):
-                break
-            result = ch + result
-        for i in itertools.count(1):
-            ch = get(y, x + i)
-            if not _isname(ch):
-                break
-            result += ch
-        if result == "o":
-            # special handling, find the name to the right
-            result = ""
-            for i in itertools.count(2):
-                ch = get(y, x + i)
-                if ch == " " or ch in _pipechars:
-                    if result or x + i >= len(lines[y]):
-                        break
-                else:
-                    result += ch
-            return result or "o"
-        return result
-
-    def parents(y, x):
-        """(int, int) -> [str]. follow the ASCII edges at given position,
-        return a list of parents"""
-        visited = {(y, x)}
-        visit = []
-        result = []
-
-        def follow(y, x, expected):
-            """conditionally append (y, x) to visit array, if it's a char
-            in excepted. 'o' in expected means an '_isname' test.
-            if '-' (or '+') is not in excepted, and get(y, x) is '-' (or '+'),
-            the next line (y + 1, x) will be checked instead."""
-            ch = get(y, x)
-            if any(ch == c and c not in expected for c in ("-", "+")):
-                y += 1
-                return follow(y + 1, x, expected)
-            if ch in expected or ("o" in expected and _isname(ch)):
-                visit.append((y, x))
-
-        #  -o-  # starting point:
-        #  /|\ # follow '-' (horizontally), and '/|\' (to the bottom)
-        follow(y + 1, x, "|")
-        follow(y + 1, x - 1, "/")
-        follow(y + 1, x + 1, "\\")
-        follow(y, x - 1, "-")
-        follow(y, x + 1, "-")
-
-        while visit:
-            y, x = visit.pop()
-            if (y, x) in visited:
-                continue
-            visited.add((y, x))
-            ch = get(y, x)
-            if _isname(ch):
-                result.append(getname(y, x))
-                continue
-            elif ch == "|":
-                follow(y + 1, x, "/|o")
-                follow(y + 1, x - 1, "/")
-                follow(y + 1, x + 1, "\\")
-            elif ch == "+":
-                follow(y, x - 1, "-")
-                follow(y, x + 1, "-")
-                follow(y + 1, x - 1, "/")
-                follow(y + 1, x + 1, "\\")
-                follow(y + 1, x, "|")
-            elif ch == "\\":
-                follow(y + 1, x + 1, "\\|o")
-            elif ch == "/":
-                follow(y + 1, x - 1, "/|o")
-            elif ch == "-":
-                follow(y, x - 1, "-+o")
-                follow(y, x + 1, "-+o")
-        return result
-
-    for y, line in enumerate(lines):
-        for x, ch in enumerate(pycompat.bytestr(line)):
-            if ch == "#":  # comment
-                break
-            if _isname(ch):
-                edges[getname(y, x)] += parents(y, x)
-
-    return dict(edges)
+    # strip comments
+    text = "\n".join(line.split("#", 1)[0] for line in text.splitlines())
+    return bindings.drawdag.parse(text)
 
 
 class simplefilectx(object):

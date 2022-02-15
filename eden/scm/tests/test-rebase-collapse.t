@@ -9,21 +9,21 @@ Create repo a:
 
   $ newrepo a
   $ drawdag <<'EOS'
-  > o  H
+  > H
   > |
-  > | o  G
+  > | G
   > |/|
-  > o |  F
+  > F |
   > | |
-  > | o  E
+  > | E
   > |/
-  > | o  D
+  > | D
   > | |
-  > | o  C
+  > | C
   > | |
-  > | o  B
+  > | B
   > |/
-  > o  A
+  > A
   > EOS
 
   $ cd $TESTTMP
@@ -167,21 +167,21 @@ Create repo b:
 
   $ newrepo b
   $ drawdag <<'EOS'
-  > o  H
+  > H
   > |
-  > | o    G
+  > | G
   > | |\
-  > | | o  F
+  > | | F
   > | | |
-  > | | o  E
+  > | | E
   > | | |
-  > | o |  D  # D/D=D
+  > | D |  # D/D=D
   > | |\|
-  > | o |  C
+  > | C |
   > |/ /
-  > | o  B
+  > | B
   > |/
-  > o  A
+  > A
   > EOS
   $ cd $TESTTMP
 
@@ -229,23 +229,23 @@ Create repo c:
 
   $ newrepo c
   $ drawdag <<'EOS'
-  > o I
+  > I
   > |
-  > | o    H
+  > | H
   > | |\
-  > | | o  G
+  > | | G
   > | | |
-  > | | o  F  # F/E=F\n
-  > | | |     # F/F=(removed)
-  > | | o  E
+  > | | F  # F/E=F\n
+  > | | |  # F/F=(removed)
+  > | | E
   > | | |
-  > | o |  D  # D/D=D
+  > | D |  # D/D=D
   > | |\|
-  > | o |  C
+  > | C |
   > |/ /
-  > | o  B
+  > | B
   > |/
-  > o  A
+  > A
   > EOS
   $ cd $TESTTMP
 
@@ -293,17 +293,17 @@ Create repo d:
 
   $ newrepo d
   $ drawdag <<'EOS'
-  > o  F
+  > F
   > |
-  > | o    E
+  > | E
   > | |\
-  > | | o  D
+  > | | D
   > | | |
-  > | o |  C
+  > | C |
   > | |/
-  > | o    B
+  > | B
   > |/
-  > o  A
+  > A
   > EOS
   $ cd $TESTTMP
 

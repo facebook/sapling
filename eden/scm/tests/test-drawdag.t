@@ -51,52 +51,19 @@ Test what said in drawdag.py docstring
   $ reinit
 
   $ hg debugdrawdag <<'EOS'
-  > o    foo
+  > foo
   > |\
-  > +---o  bar
-  > | | |
-  > | o |  baz
-  > |  /
-  > +---o  d
-  > | |
-  > +---o  c
-  > | |
-  > o |  b
-  > |/
-  > o  a
-  > EOS
-
-  $ hg log -G -T '{desc}'
-  o    foo
-  ├─╮
-  │ │ o  d
-  │ ├─╯
-  │ │ o  c
-  │ ├─╯
-  │ │ o  bar
-  │ ╭─┤
-  │ o │  b
-  │ ├─╯
-  o │  baz
-    │
-    o  a
-  
-  $ reinit
-
-  $ hg debugdrawdag <<'EOS'
-  > o    foo
-  > |\
-  > | | o  d
+  > | | d
   > | |/
-  > | | o  c
+  > | | c
   > | |/
-  > | | o  bar
+  > | | bar
   > | |/|
-  > | o |  b
+  > | b |
   > | |/
-  > o /  baz
-  >  /
-  > o  a
+  > | a
+  > |
+  > baz
   > EOS
 
   $ hg log -G -T '{desc}'
@@ -167,7 +134,7 @@ Node with more than 2 parents are disallowed
   >  /|\
   > D B C
   > EOS
-  abort: A: too many parents: C D B
+  abort: A: too many parents: B C D
   [255]
 
 Cycles are disallowed
@@ -380,3 +347,25 @@ Special comments: "X has date 1 0"
   112478962961 B
   $ hg bookmarks
   no bookmarks set
+
+Horizontal graph with ranges:
+
+  $ newrepo
+  $ hg debugdrawdag << 'EOS'
+  > A--S--D..G--Z
+  > EOS
+  $ hg log -Gr: -T '{desc}'
+  o  Z
+  │
+  o  G
+  │
+  o  F
+  │
+  o  E
+  │
+  o  D
+  │
+  o  S
+  │
+  o  A
+  

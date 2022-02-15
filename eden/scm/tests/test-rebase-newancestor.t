@@ -80,21 +80,21 @@ The branches are emulated using commit messages.
   $ cd ancestor-merge
 
   $ drawdag <<'EOS'
-  > o    default4
-  > |
-  > | o  devmerge2
-  > |/|
-  > o |  default3
-  > | |
-  > | o  devmerge1
-  > |/|
-  > o |  default2
-  > | |
-  > | o  dev2
-  > | |
-  > | o  dev1
-  > |/
-  > o    default1
+  >        default4
+  >        |
+  >        | devmerge2
+  >        |/|
+  > default3 |
+  >        | |
+  >        | devmerge1
+  >        |/|
+  > default2 |
+  >        | |
+  >        | dev2
+  >        | |
+  >        | dev1
+  >        |/
+  >        default1
   > EOS
   $ hg clone -qU . ../ancestor-merge-2
 
