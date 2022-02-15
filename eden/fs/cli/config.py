@@ -1483,6 +1483,19 @@ class EdenCheckout:
         self.save_config(new_config)
         return 0
 
+    def migrate_mount_protocol(self, new_mount_protocol: str) -> None:
+        """
+        Migrate this checkout to the new_mount_protocol. This will only take
+        effect if EdenFS is restarted. It is recommended to only run this while
+        EdenFS is stopped.
+        """
+
+        old_config = self.get_config()
+
+        new_config = old_config._replace(mount_protocol=new_mount_protocol)
+
+        self.save_config(new_config)
+
 
 def detect_nested_checkout(
     path: Union[str, Path],

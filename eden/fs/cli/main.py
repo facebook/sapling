@@ -60,6 +60,15 @@ from .stats_print import format_size
 from .subcmd import Subcmd
 from .util import ShutdownError, print_stderr, get_environment_suitable_for_subprocess
 
+try:
+    from .facebook.util import migration_restart_help, get_migration_success_message
+except ImportError:
+
+    migration_restart_help = "This migrates ALL your mounts to a new mount protocol."
+
+    def get_migration_success_message(migrate_to) -> str:
+        return f"Successfully migrated all your mounts to {migrate_to}."
+
 
 if sys.platform != "win32":
     from . import fsck as fsck_mod
@@ -1720,12 +1729,36 @@ class RestartCmd(Subcmd):
             help="Only perform a restart if there is already an EdenFS instance"
             "running.",
         )
+        migration_group = parser.add_mutually_exclusive_group()
+        migration_group.add_argument(
+            "--migrate-to",
+            type=str,
+            default=None,
+            choices=["fuse", "nfs"],
+            help=migration_restart_help,
+        )
 
     async def run(self, args: argparse.Namespace) -> int:
         self.args = args
         if args.restart_type is None:
             # Default to a full restart for now
             args.restart_type = RESTART_MODE_FULL
+
+        if args.migrate_to is not None:
+            if args.restart_type == RESTART_MODE_GRACEFUL:
+                print("Migration cannot be performed with a graceful restart.")
+                return 1
+
+            if sys.platform == "win32":
+                print("Migration not supported on Windows.")
+                return 1
+
+            if sys.platform != "darwin":
+                print("Migration only intended for macOS. ")
+                if sys.stdin.isatty():
+                    if not prompt_confirmation("Proceed?"):
+                        print("Not confirmed.")
+                        return 1
 
         instance = get_eden_instance(self.args)
 
@@ -1736,7 +1769,7 @@ class RestartCmd(Subcmd):
             if self.args.restart_type == RESTART_MODE_GRACEFUL:
                 return await self._graceful_restart(instance)
             else:
-                status = await self._full_restart(instance, edenfs_pid)
+                status = await self._full_restart(instance, edenfs_pid, args.migrate_to)
                 success = status == 0
                 instance.log_sample("full_restart", success=success)
                 return status
@@ -1881,7 +1914,9 @@ class RestartCmd(Subcmd):
             instance, daemon_binary=self.args.daemon_binary
         )
 
-    async def _full_restart(self, instance: EdenInstance, old_pid: int) -> int:
+    async def _full_restart(
+        self, instance: EdenInstance, old_pid: int, migrate_to: Optional[str]
+    ) -> int:
         print(
             """\
 About to perform a full restart of EdenFS.
@@ -1896,6 +1931,8 @@ re-open these files after EdenFS is restarted.
                 return 1
 
         self._do_stop(instance, old_pid, timeout=15)
+        if migrate_to is not None:
+            self._do_migration(instance, migrate_to)
         return await self._finish_restart(instance)
 
     async def _force_restart(
@@ -1933,6 +1970,12 @@ re-open these files after EdenFS is restarted.
                 print("Sending SIGTERM...")
                 os.kill(pid, signal.SIGTERM)
         self._wait_for_stop(instance, pid, timeout)
+
+    def _do_migration(self, instance: EdenInstance, migrate_to: str) -> None:
+        for checkout in instance.get_checkouts():
+            checkout.migrate_mount_protocol(migrate_to)
+
+        print(get_migration_success_message(migrate_to))
 
     async def _finish_restart(self, instance: EdenInstance) -> int:
         exit_code = await daemon.start_edenfs_service(
