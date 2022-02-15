@@ -283,7 +283,7 @@ impl BlobRepo {
         let maybe_changesetid = self
             .inner
             .bonsai_globalrev_mapping
-            .get_bonsai_from_globalrev(ctx, self.get_repoid(), globalrev)
+            .get_bonsai_from_globalrev(ctx, globalrev)
             .await?;
         Ok(maybe_changesetid)
     }
@@ -296,7 +296,7 @@ impl BlobRepo {
         let maybe_globalrev = self
             .inner
             .bonsai_globalrev_mapping
-            .get_globalrev_from_bonsai(ctx, self.get_repoid(), bcs)
+            .get_globalrev_from_bonsai(ctx, bcs)
             .await?;
         Ok(maybe_globalrev)
     }
@@ -309,7 +309,7 @@ impl BlobRepo {
         let entries = self
             .inner
             .bonsai_globalrev_mapping
-            .get(ctx, self.get_repoid(), bonsai_or_globalrev_ids.into())
+            .get(ctx, bonsai_or_globalrev_ids.into())
             .await?;
         Ok(entries
             .into_iter()

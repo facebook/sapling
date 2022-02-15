@@ -218,8 +218,7 @@ impl<'a> Blobimport<'a> {
 
             let globalrevs_work = async {
                 if has_globalrev {
-                    bulk_import_globalrevs(&ctx, repo_id, &globalrevs_store, changesets.iter())
-                        .await
+                    bulk_import_globalrevs(ctx, &globalrevs_store, changesets.iter()).await
                 } else {
                     Ok(())
                 }

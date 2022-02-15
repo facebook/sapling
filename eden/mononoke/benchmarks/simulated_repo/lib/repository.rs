@@ -13,7 +13,7 @@ use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingConnection};
-use bonsai_globalrev_mapping::{ArcBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping};
+use bonsai_globalrev_mapping::{ArcBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMappingBuilder};
 use bonsai_hg_mapping::{
     ArcBonsaiHgMapping, BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds,
     CachingBonsaiHgMapping, SqlBonsaiHgMappingBuilder,
@@ -213,8 +213,13 @@ impl BenchmarkRepoFactory {
         ))
     }
 
-    pub fn bonsai_globalrev_mapping(&self) -> Result<ArcBonsaiGlobalrevMapping> {
-        Ok(Arc::new(SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?))
+    pub fn bonsai_globalrev_mapping(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcBonsaiGlobalrevMapping> {
+        Ok(Arc::new(
+            SqlBonsaiGlobalrevMappingBuilder::with_sqlite_in_memory()?.build(repo_identity.id()),
+        ))
     }
 
     pub fn pushrebase_mutation_mapping(

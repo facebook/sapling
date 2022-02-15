@@ -16,7 +16,6 @@ use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::{ChangesetId, Globalrev, Svnrev};
-use repo_identity::RepoIdentityRef;
 
 use crate::repo::AdminRepo;
 
@@ -92,7 +91,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         IdentityScheme::Globalrev => {
             let globalrev = args.id.parse::<Globalrev>().context("Invalid globalrev")?;
             repo.bonsai_globalrev_mapping()
-                .get_bonsai_from_globalrev(&ctx, repo.repo_identity().id(), globalrev)
+                .get_bonsai_from_globalrev(&ctx, globalrev)
                 .await?
                 .ok_or_else(|| anyhow!("globalrev-bonsai mapping not found for {}", globalrev))?
         }
@@ -128,7 +127,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         IdentityScheme::Globalrev => {
             let globalrev = repo
                 .bonsai_globalrev_mapping()
-                .get_globalrev_from_bonsai(&ctx, repo.repo_identity().id(), cs_id)
+                .get_globalrev_from_bonsai(&ctx, cs_id)
                 .await?
                 .ok_or_else(|| anyhow!("bonsai-globalrev mapping not found for {}", cs_id))?;
             println!("{}", globalrev);

@@ -71,30 +71,43 @@ queries! {
 
 #[derive(Clone)]
 pub struct SqlBonsaiGlobalrevMapping {
-    write_connection: Connection,
-    read_connection: Connection,
-    read_master_connection: Connection,
+    connections: SqlConnections,
+    repo_id: RepositoryId,
 }
 
-impl SqlConstruct for SqlBonsaiGlobalrevMapping {
+#[derive(Clone)]
+pub struct SqlBonsaiGlobalrevMappingBuilder {
+    connections: SqlConnections,
+}
+
+impl SqlConstruct for SqlBonsaiGlobalrevMappingBuilder {
     const LABEL: &'static str = "bonsai_globalrev_mapping";
 
     const CREATION_QUERY: &'static str =
         include_str!("../schemas/sqlite-bonsai-globalrev-mapping.sql");
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
-        Self {
-            write_connection: connections.write_connection,
-            read_connection: connections.read_connection,
-            read_master_connection: connections.read_master_connection,
+        Self { connections }
+    }
+}
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiGlobalrevMappingBuilder {}
+
+impl SqlBonsaiGlobalrevMappingBuilder {
+    pub fn build(self, repo_id: RepositoryId) -> SqlBonsaiGlobalrevMapping {
+        SqlBonsaiGlobalrevMapping {
+            connections: self.connections,
+            repo_id,
         }
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiGlobalrevMapping {}
-
 #[async_trait]
 impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
+    fn repo_id(&self) -> RepositoryId {
+        self.repo_id
+    }
+
     async fn bulk_import(
         &self,
         ctx: &CoreContext,
@@ -102,21 +115,14 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
     ) -> Result<(), Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
+        let repo_id = self.repo_id;
 
         let entries: Vec<_> = entries
             .iter()
-            .map(
-                |
-                    BonsaiGlobalrevMappingEntry {
-                        repo_id,
-                        bcs_id,
-                        globalrev,
-                    },
-                | (repo_id, bcs_id, globalrev),
-            )
+            .map(|entry| (&repo_id, &entry.bcs_id, &entry.globalrev))
             .collect();
 
-        DangerouslyAddGlobalrevs::query(&self.write_connection, &entries[..]).await?;
+        DangerouslyAddGlobalrevs::query(&self.connections.write_connection, &entries[..]).await?;
 
         Ok(())
     }
@@ -124,13 +130,13 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
     async fn get(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         objects: BonsaisOrGlobalrevs,
     ) -> Result<Vec<BonsaiGlobalrevMappingEntry>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let mut mappings = select_mapping(&self.read_connection, repo_id, &objects).await?;
+        let mut mappings =
+            select_mapping(&self.connections.read_connection, self.repo_id, &objects).await?;
 
         let left_to_fetch = filter_fetched_objects(objects, &mappings[..]);
 
@@ -141,8 +147,12 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
 
-        let mut master_mappings =
-            select_mapping(&self.read_master_connection, repo_id, &left_to_fetch).await?;
+        let mut master_mappings = select_mapping(
+            &self.connections.read_master_connection,
+            self.repo_id,
+            &left_to_fetch,
+        )
+        .await?;
         mappings.append(&mut master_mappings);
         Ok(mappings)
     }
@@ -150,29 +160,28 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
     async fn get_closest_globalrev(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         globalrev: Globalrev,
     ) -> Result<Option<Globalrev>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let row = SelectClosestGlobalrev::query(&self.read_connection, &repo_id, &globalrev)
-            .await?
-            .into_iter()
-            .next();
+        let row = SelectClosestGlobalrev::query(
+            &self.connections.read_connection,
+            &self.repo_id,
+            &globalrev,
+        )
+        .await?
+        .into_iter()
+        .next();
 
         Ok(row.map(|r| r.0))
     }
 
-    async fn get_max(
-        &self,
-        ctx: &CoreContext,
-        repo_id: RepositoryId,
-    ) -> Result<Option<Globalrev>, Error> {
+    async fn get_max(&self, ctx: &CoreContext) -> Result<Option<Globalrev>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
 
-        let row = SelectMaxEntry::query(&self.read_master_connection, &repo_id)
+        let row = SelectMaxEntry::query(&self.connections.read_master_connection, &self.repo_id)
             .await?
             .into_iter()
             .next();
@@ -242,11 +251,7 @@ async fn select_mapping(
 
     Ok(rows
         .into_iter()
-        .map(move |(bcs_id, globalrev)| BonsaiGlobalrevMappingEntry {
-            repo_id,
-            bcs_id,
-            globalrev,
-        })
+        .map(move |(bcs_id, globalrev)| BonsaiGlobalrevMappingEntry { bcs_id, globalrev })
         .collect())
 }
 
@@ -254,7 +259,6 @@ async fn select_mapping(
 /// they are correct. Don't use this to assign new Globalrevs.
 pub async fn bulk_import_globalrevs<'a>(
     ctx: &'a CoreContext,
-    repo_id: RepositoryId,
     globalrevs_store: &'a impl BonsaiGlobalrevMapping,
     changesets: impl IntoIterator<Item = &'a BonsaiChangeset>,
 ) -> Result<(), Error> {
@@ -262,8 +266,7 @@ pub async fn bulk_import_globalrevs<'a>(
     for bcs in changesets.into_iter() {
         match Globalrev::from_bcs(bcs) {
             Ok(globalrev) => {
-                let entry =
-                    BonsaiGlobalrevMappingEntry::new(repo_id, bcs.get_changeset_id(), globalrev);
+                let entry = BonsaiGlobalrevMappingEntry::new(bcs.get_changeset_id(), globalrev);
                 entries.push(entry);
             }
             Err(e) => {
@@ -295,19 +298,12 @@ pub enum AddGlobalrevsErrorKind {
 // it contain any connections (instead, they should be passed on by callers).
 pub async fn add_globalrevs(
     transaction: Transaction,
+    repo_id: RepositoryId,
     entries: impl IntoIterator<Item = &BonsaiGlobalrevMappingEntry>,
 ) -> Result<Transaction, AddGlobalrevsErrorKind> {
     let rows: Vec<_> = entries
         .into_iter()
-        .map(
-            |
-                BonsaiGlobalrevMappingEntry {
-                    repo_id,
-                    bcs_id,
-                    globalrev,
-                },
-            | (repo_id, bcs_id, globalrev),
-        )
+        .map(|BonsaiGlobalrevMappingEntry { bcs_id, globalrev }| (&repo_id, bcs_id, globalrev))
         .collect();
 
     // It'd be really nice if we could rely on the error from an index conflict here, but our SQL

@@ -9,7 +9,7 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bonsai_globalrev_mapping::{
-    bulk_import_globalrevs, BonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping,
+    bulk_import_globalrevs, BonsaiGlobalrevMapping, SqlBonsaiGlobalrevMappingBuilder,
 };
 use bytes::Bytes;
 use changesets::{deserialize_cs_entries, ChangesetEntry};
@@ -68,10 +68,9 @@ pub fn upload<P: AsRef<Path>>(
                 .chunks(chunk_size)
                 .and_then(move |chunk| {
                     let ctx = ctx.clone();
-                    let repo_id = repo.get_repoid();
                     let store = globalrevs_store.clone();
 
-                    async move { bulk_import_globalrevs(&ctx, repo_id, &store, chunk.iter()).await }
+                    async move { bulk_import_globalrevs(&ctx, &store, chunk.iter()).await }
                         .boxed()
                         .compat()
                 })
@@ -86,14 +85,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let logger = matches.logger();
     let config_store = matches.config_store();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let globalrevs_store = Arc::new(args::open_sql::<SqlBonsaiGlobalrevMapping>(
-        fb,
-        config_store,
-        &matches,
-    )?);
 
     let run = async {
-        let repo = args::open_repo(fb, logger, &matches).await?;
+        let repo: BlobRepo = args::open_repo(fb, logger, &matches).await?;
+        let globalrevs_store = Arc::new(
+            args::open_sql::<SqlBonsaiGlobalrevMappingBuilder>(fb, config_store, &matches)?
+                .build(repo.get_repoid()),
+        );
         let in_filename = matches.value_of("IN_FILENAME").unwrap();
         upload(ctx, repo, in_filename, globalrevs_store)
             .compat()

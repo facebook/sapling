@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context as _, Error};
+use abomonation_derive::Abomonation;
+use anyhow::{anyhow, Context, Error, Result};
 use async_trait::async_trait;
 use bytes::Bytes;
 use cachelib::VolatileLruCachePool;
@@ -24,9 +25,44 @@ use bonsai_globalrev_mapping_thrift as thrift;
 
 use super::{BonsaiGlobalrevMapping, BonsaiGlobalrevMappingEntry, BonsaisOrGlobalrevs};
 
+#[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
+pub struct BonsaiGlobalrevMappingCacheEntry {
+    pub repo_id: RepositoryId,
+    pub bcs_id: ChangesetId,
+    pub globalrev: Globalrev,
+}
+
+impl BonsaiGlobalrevMappingCacheEntry {
+    fn into_entry(self, repo_id: RepositoryId) -> Result<BonsaiGlobalrevMappingEntry> {
+        if self.repo_id == repo_id {
+            Ok(BonsaiGlobalrevMappingEntry {
+                bcs_id: self.bcs_id,
+                globalrev: self.globalrev,
+            })
+        } else {
+            Err(anyhow!(
+                "Cache returned invalid entry: repo {} returned for query to repo {}",
+                self.repo_id,
+                repo_id
+            ))
+        }
+    }
+
+    fn from_entry(
+        entry: BonsaiGlobalrevMappingEntry,
+        repo_id: RepositoryId,
+    ) -> BonsaiGlobalrevMappingCacheEntry {
+        BonsaiGlobalrevMappingCacheEntry {
+            repo_id,
+            bcs_id: entry.bcs_id,
+            globalrev: entry.globalrev,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct CachingBonsaiGlobalrevMapping<T> {
-    cachelib: CachelibHandler<BonsaiGlobalrevMappingEntry>,
+    cachelib: CachelibHandler<BonsaiGlobalrevMappingCacheEntry>,
     memcache: MemcacheHandler,
     keygen: KeyGen,
     inner: T,
@@ -63,7 +99,7 @@ impl<T> CachingBonsaiGlobalrevMapping<T> {
         )
     }
 
-    pub fn cachelib(&self) -> &CachelibHandler<BonsaiGlobalrevMappingEntry> {
+    pub fn cachelib(&self) -> &CachelibHandler<BonsaiGlobalrevMappingCacheEntry> {
         &self.cachelib
     }
 }
@@ -73,6 +109,10 @@ impl<T> BonsaiGlobalrevMapping for CachingBonsaiGlobalrevMapping<T>
 where
     T: BonsaiGlobalrevMapping + Clone + Sync + Send + 'static,
 {
+    fn repo_id(&self) -> RepositoryId {
+        self.inner.repo_id()
+    }
+
     async fn bulk_import(
         &self,
         ctx: &CoreContext,
@@ -84,25 +124,27 @@ where
     async fn get(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         objects: BonsaisOrGlobalrevs,
     ) -> Result<Vec<BonsaiGlobalrevMappingEntry>, Error> {
-        let ctx = (ctx, repo_id, self);
+        let cache_request = (ctx, self);
+        let repo_id = self.repo_id();
 
         let res = match objects {
-            BonsaisOrGlobalrevs::Bonsai(cs_ids) => get_or_fill(ctx, cs_ids.into_iter().collect())
-                .await
-                .with_context(|| "Error fetching globalrevs via cache")?
-                .into_iter()
-                .map(|(_, val)| val)
-                .collect(),
+            BonsaisOrGlobalrevs::Bonsai(cs_ids) => {
+                get_or_fill(cache_request, cs_ids.into_iter().collect())
+                    .await
+                    .with_context(|| "Error fetching globalrevs via cache")?
+                    .into_iter()
+                    .map(|(_, val)| val.into_entry(repo_id))
+                    .collect::<Result<_>>()?
+            }
             BonsaisOrGlobalrevs::Globalrev(globalrevs) => {
-                get_or_fill(ctx, globalrevs.into_iter().collect())
+                get_or_fill(cache_request, globalrevs.into_iter().collect())
                     .await
                     .with_context(|| "Error fetching bonsais via cache")?
                     .into_iter()
-                    .map(|(_, val)| val)
-                    .collect()
+                    .map(|(_, val)| val.into_entry(repo_id))
+                    .collect::<Result<_>>()?
             }
         };
 
@@ -113,24 +155,17 @@ where
     async fn get_closest_globalrev(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         globalrev: Globalrev,
     ) -> Result<Option<Globalrev>, Error> {
-        self.inner
-            .get_closest_globalrev(ctx, repo_id, globalrev)
-            .await
+        self.inner.get_closest_globalrev(ctx, globalrev).await
     }
 
-    async fn get_max(
-        &self,
-        ctx: &CoreContext,
-        repo_id: RepositoryId,
-    ) -> Result<Option<Globalrev>, Error> {
-        self.inner.get_max(ctx, repo_id).await
+    async fn get_max(&self, ctx: &CoreContext) -> Result<Option<Globalrev>, Error> {
+        self.inner.get_max(ctx).await
     }
 }
 
-impl MemcacheEntity for BonsaiGlobalrevMappingEntry {
+impl MemcacheEntity for BonsaiGlobalrevMappingCacheEntry {
     fn serialize(&self) -> Bytes {
         let entry = thrift::BonsaiGlobalrevMappingEntry {
             repo_id: self.repo_id.id(),
@@ -155,7 +190,7 @@ impl MemcacheEntity for BonsaiGlobalrevMappingEntry {
         let bcs_id = ChangesetId::from_thrift(bcs_id).map_err(|_| ())?;
         let globalrev = Globalrev::new(globalrev.try_into().map_err(|_| ())?);
 
-        Ok(BonsaiGlobalrevMappingEntry {
+        Ok(BonsaiGlobalrevMappingCacheEntry {
             repo_id,
             bcs_id,
             globalrev,
@@ -163,29 +198,25 @@ impl MemcacheEntity for BonsaiGlobalrevMappingEntry {
     }
 }
 
-type CacheRequest<'a, T> = (
-    &'a CoreContext,
-    RepositoryId,
-    &'a CachingBonsaiGlobalrevMapping<T>,
-);
+type CacheRequest<'a, T> = (&'a CoreContext, &'a CachingBonsaiGlobalrevMapping<T>);
 
-impl<T> EntityStore<BonsaiGlobalrevMappingEntry> for CacheRequest<'_, T> {
-    fn cachelib(&self) -> &CachelibHandler<BonsaiGlobalrevMappingEntry> {
-        let (_, _, mapping) = self;
+impl<T> EntityStore<BonsaiGlobalrevMappingCacheEntry> for CacheRequest<'_, T> {
+    fn cachelib(&self) -> &CachelibHandler<BonsaiGlobalrevMappingCacheEntry> {
+        let (_, mapping) = self;
         &mapping.cachelib
     }
 
     fn keygen(&self) -> &KeyGen {
-        let (_, _, mapping) = self;
+        let (_, mapping) = self;
         &mapping.keygen
     }
 
     fn memcache(&self) -> &MemcacheHandler {
-        let (_, _, mapping) = self;
+        let (_, mapping) = self;
         &mapping.memcache
     }
 
-    fn cache_determinator(&self, _: &BonsaiGlobalrevMappingEntry) -> CacheDisposition {
+    fn cache_determinator(&self, _: &BonsaiGlobalrevMappingCacheEntry) -> CacheDisposition {
         CacheDisposition::Cache(CacheTtl::NoTtl)
     }
 
@@ -193,61 +224,76 @@ impl<T> EntityStore<BonsaiGlobalrevMappingEntry> for CacheRequest<'_, T> {
 }
 
 #[async_trait]
-impl<T> KeyedEntityStore<ChangesetId, BonsaiGlobalrevMappingEntry> for CacheRequest<'_, T>
+impl<T> KeyedEntityStore<ChangesetId, BonsaiGlobalrevMappingCacheEntry> for CacheRequest<'_, T>
 where
-    T: BonsaiGlobalrevMapping,
+    T: BonsaiGlobalrevMapping + Send + Sync + Clone + 'static,
 {
     fn get_cache_key(&self, key: &ChangesetId) -> String {
-        let (_, repo_id, _) = self;
-        format!("{}.bonsai.{}", repo_id, key)
+        let (_, mapping) = self;
+        format!("{}.bonsai.{}", mapping.repo_id(), key)
     }
 
     async fn get_from_db(
         &self,
         keys: HashSet<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, BonsaiGlobalrevMappingEntry>, Error> {
-        let (ctx, repo_id, mapping) = self;
+    ) -> Result<HashMap<ChangesetId, BonsaiGlobalrevMappingCacheEntry>, Error> {
+        let (ctx, mapping) = self;
+        let repo_id = mapping.repo_id();
 
         let res = mapping
             .inner
-            .get(
-                ctx,
-                *repo_id,
-                BonsaisOrGlobalrevs::Bonsai(keys.into_iter().collect()),
-            )
+            .get(ctx, BonsaisOrGlobalrevs::Bonsai(keys.into_iter().collect()))
             .await
             .with_context(|| "Error fetching globalrevs from bonsais from SQL")?;
 
-        Result::<_, Error>::Ok(res.into_iter().map(|e| (e.bcs_id, e)).collect())
+        Result::<_, Error>::Ok(
+            res.into_iter()
+                .map(|e| {
+                    (
+                        e.bcs_id,
+                        BonsaiGlobalrevMappingCacheEntry::from_entry(e, repo_id),
+                    )
+                })
+                .collect(),
+        )
     }
 }
 
 #[async_trait]
-impl<T> KeyedEntityStore<Globalrev, BonsaiGlobalrevMappingEntry> for CacheRequest<'_, T>
+impl<T> KeyedEntityStore<Globalrev, BonsaiGlobalrevMappingCacheEntry> for CacheRequest<'_, T>
 where
-    T: BonsaiGlobalrevMapping,
+    T: BonsaiGlobalrevMapping + Send + Sync + Clone + 'static,
 {
     fn get_cache_key(&self, key: &Globalrev) -> String {
-        let (_, repo_id, _) = self;
-        format!("{}.globalrev.{}", repo_id, key.id())
+        let (_, mapping) = self;
+        format!("{}.globalrev.{}", mapping.repo_id(), key.id())
     }
 
     async fn get_from_db(
         &self,
         keys: HashSet<Globalrev>,
-    ) -> Result<HashMap<Globalrev, BonsaiGlobalrevMappingEntry>, Error> {
-        let (ctx, repo_id, mapping) = self;
+    ) -> Result<HashMap<Globalrev, BonsaiGlobalrevMappingCacheEntry>, Error> {
+        let (ctx, mapping) = self;
+        let repo_id = mapping.repo_id();
 
         let res = mapping
             .inner
             .get(
                 ctx,
-                *repo_id,
                 BonsaisOrGlobalrevs::Globalrev(keys.into_iter().collect()),
             )
             .await
             .with_context(|| "Error fetching bonsais from globalrevs from SQL")?;
 
-        Result::<_, Error>::Ok(res.into_iter().map(|e| (e.globalrev, e)).collect())
+        Result::<_, Error>::Ok(
+            res.into_iter()
+                .map(|e| {
+                    (
+                        e.globalrev,
+                        BonsaiGlobalrevMappingCacheEntry::from_entry(e, repo_id),
+                    )
+                })
+                .collect(),
+        )
     }
 }

@@ -23,7 +23,7 @@ use blobstore_factory::{
 };
 use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingConnection};
 use bonsai_globalrev_mapping::{
-    ArcBonsaiGlobalrevMapping, CachingBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping,
+    ArcBonsaiGlobalrevMapping, CachingBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMappingBuilder,
 };
 use bonsai_hg_mapping::{ArcBonsaiHgMapping, CachingBonsaiHgMapping, SqlBonsaiHgMappingBuilder};
 use bonsai_svnrev_mapping::{
@@ -628,11 +628,13 @@ impl RepoFactory {
     pub async fn bonsai_globalrev_mapping(
         &self,
         repo_config: &ArcRepoConfig,
+        repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcBonsaiGlobalrevMapping> {
         let bonsai_globalrev_mapping = self
-            .open::<SqlBonsaiGlobalrevMapping>(&repo_config.storage_config.metadata)
+            .open::<SqlBonsaiGlobalrevMappingBuilder>(&repo_config.storage_config.metadata)
             .await
-            .context(RepoFactoryError::BonsaiGlobalrevMapping)?;
+            .context(RepoFactoryError::BonsaiGlobalrevMapping)?
+            .build(repo_identity.id());
         if let Some(pool) = self.maybe_volatile_pool("bonsai_globalrev_mapping")? {
             Ok(Arc::new(CachingBonsaiGlobalrevMapping::new(
                 self.env.fb,

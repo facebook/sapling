@@ -11,7 +11,7 @@ use anyhow::{bail, format_err, Context, Error, Result};
 use ascii::AsciiString;
 use blobimport_lib;
 use blobrepo::BlobRepo;
-use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
+use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
 use clap::{Arg, ArgGroup};
 use cmdlib::{
     args::{self, MononokeClapApp, MononokeMatches, RepoRequirement},
@@ -366,7 +366,8 @@ async fn run_blobimport<'a>(
 
     let small_repo_id = args::get_source_repo_id_opt(config_store, matches)?;
 
-    let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, config_store, matches)?;
+    let globalrevs_store_builder =
+        args::open_sql::<SqlBonsaiGlobalrevMappingBuilder>(fb, config_store, matches)?;
     let synced_commit_mapping =
         args::open_sql::<SqlSyncedCommitMapping>(fb, config_store, matches)?;
     let mutable_counters = args::open_sql::<SqlMutableCounters>(fb, config_store, matches)?;
@@ -390,7 +391,7 @@ async fn run_blobimport<'a>(
             None
         };
 
-    let globalrevs_store = Arc::new(globalrevs_store);
+    let globalrevs_store = Arc::new(globalrevs_store_builder.build(blobrepo.get_repoid()));
     let synced_commit_mapping = Arc::new(synced_commit_mapping);
 
     let find_latest_imported_rev_only = matches.is_present(ARG_FIND_ALREADY_IMPORTED_REV_ONLY);

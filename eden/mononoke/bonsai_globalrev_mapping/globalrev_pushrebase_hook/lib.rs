@@ -51,7 +51,7 @@ impl GlobalrevPushrebaseHook {
 #[async_trait]
 impl PushrebaseHook for GlobalrevPushrebaseHook {
     async fn prepushrebase(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
-        let max = self.mapping.get_max(&self.ctx, self.repository_id).await?;
+        let max = self.mapping.get_max(&self.ctx).await?;
 
         let next_rev = match max {
             None => START_COMMIT_GLOBALREV,
@@ -116,7 +116,6 @@ impl PushrebaseCommitHook for GlobalrevCommitHook {
                     .0;
 
                 Ok(BonsaiGlobalrevMappingEntry::new(
-                    self.repository_id,
                     replacement_bcs_id,
                     *globalrev,
                 ))
@@ -133,11 +132,15 @@ impl PushrebaseCommitHook for GlobalrevCommitHook {
             ));
         }
 
-        Ok(Box::new(GlobalrevTransactionHook { entries }) as Box<dyn PushrebaseTransactionHook>)
+        Ok(Box::new(GlobalrevTransactionHook {
+            repo_id: self.repository_id,
+            entries,
+        }) as Box<dyn PushrebaseTransactionHook>)
     }
 }
 
 struct GlobalrevTransactionHook {
+    repo_id: RepositoryId,
     entries: Vec<BonsaiGlobalrevMappingEntry>,
 }
 
@@ -148,7 +151,7 @@ impl PushrebaseTransactionHook for GlobalrevTransactionHook {
         _ctx: &CoreContext,
         txn: Transaction,
     ) -> Result<Transaction, BookmarkTransactionError> {
-        let txn = add_globalrevs(txn, &self.entries[..])
+        let txn = add_globalrevs(txn, self.repo_id, &self.entries[..])
             .await
             .map_err(|e| match e {
                 AddGlobalrevsErrorKind::Conflict => BookmarkTransactionError::LogicError,

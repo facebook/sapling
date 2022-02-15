@@ -14,7 +14,7 @@ use anyhow::Result;
 use blame::BlameRoot;
 use blobstore::Blobstore;
 use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingConnection};
-use bonsai_globalrev_mapping::{ArcBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping};
+use bonsai_globalrev_mapping::{ArcBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMappingBuilder};
 use bonsai_hg_mapping::{ArcBonsaiHgMapping, SqlBonsaiHgMappingBuilder};
 use bonsai_svnrev_mapping::{
     ArcRepoBonsaiSvnrevMapping, RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping,
@@ -148,7 +148,7 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlChangesetsBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiGitMappingConnection::CREATION_QUERY)?;
-        metadata_con.execute_batch(SqlBonsaiGlobalrevMapping::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlBonsaiGlobalrevMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiSvnrevMapping::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiHgMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlPhasesBuilder::CREATION_QUERY)?;
@@ -320,10 +320,14 @@ impl TestRepoFactory {
 
     /// Construct Bonsai Globalrev Mapping using the in-memory metadata
     /// database.
-    pub fn bonsai_globalrev_mapping(&self) -> Result<ArcBonsaiGlobalrevMapping> {
-        Ok(Arc::new(SqlBonsaiGlobalrevMapping::from_sql_connections(
-            self.metadata_db.clone().into(),
-        )))
+    pub fn bonsai_globalrev_mapping(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcBonsaiGlobalrevMapping> {
+        Ok(Arc::new(
+            SqlBonsaiGlobalrevMappingBuilder::from_sql_connections(self.metadata_db.clone().into())
+                .build(repo_identity.id()),
+        ))
     }
 
     /// Construct Pushrebase Mutation Mapping using the in-memory metadata

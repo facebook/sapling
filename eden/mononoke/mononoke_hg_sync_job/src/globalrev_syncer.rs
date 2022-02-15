@@ -92,7 +92,6 @@ impl DarkstormGlobalrevSyncer {
         let entries = bcs_id_to_globalrev
             .into_iter()
             .map(|(bcs_id, globalrev)| BonsaiGlobalrevMappingEntry {
-                repo_id: self.darkstorm_repo.get_repoid(),
                 bcs_id: *bcs_id,
                 globalrev,
             })
@@ -116,7 +115,6 @@ mod test {
     use mercurial_types_mocks::nodehash::{ONES_CSID as ONES_HG_CSID, TWOS_CSID as TWOS_HG_CSID};
     use mononoke_types::RepositoryId;
     use mononoke_types_mocks::changesetid::{ONES_CSID, TWOS_CSID};
-    use mononoke_types_mocks::repo::REPO_ZERO;
     use test_repo_factory::TestRepoFactory;
 
     #[fbinit::test]
@@ -131,13 +129,11 @@ mod test {
             .build()?;
 
         let e1 = BonsaiGlobalrevMappingEntry {
-            repo_id: REPO_ZERO,
             bcs_id: ONES_CSID,
             globalrev: GLOBALREV_ONE,
         };
 
         let e2 = BonsaiGlobalrevMappingEntry {
-            repo_id: REPO_ZERO,
             bcs_id: TWOS_CSID,
             globalrev: GLOBALREV_TWO,
         };
@@ -154,14 +150,14 @@ mod test {
         assert!(
             darkstorm_repo
                 .bonsai_globalrev_mapping()
-                .get_globalrev_from_bonsai(&ctx, darkstorm_repo.get_repoid(), ONES_CSID)
+                .get_globalrev_from_bonsai(&ctx, ONES_CSID)
                 .await?
                 .is_none()
         );
         assert!(
             darkstorm_repo
                 .bonsai_globalrev_mapping()
-                .get_globalrev_from_bonsai(&ctx, darkstorm_repo.get_repoid(), TWOS_CSID)
+                .get_globalrev_from_bonsai(&ctx, TWOS_CSID)
                 .await?
                 .is_none()
         );
@@ -179,14 +175,14 @@ mod test {
             Some(GLOBALREV_ONE),
             darkstorm_repo
                 .bonsai_globalrev_mapping()
-                .get_globalrev_from_bonsai(&ctx, darkstorm_repo.get_repoid(), ONES_CSID)
+                .get_globalrev_from_bonsai(&ctx, ONES_CSID)
                 .await?
         );
         assert_eq!(
             Some(GLOBALREV_TWO),
             darkstorm_repo
                 .bonsai_globalrev_mapping()
-                .get_globalrev_from_bonsai(&ctx, darkstorm_repo.get_repoid(), TWOS_CSID)
+                .get_globalrev_from_bonsai(&ctx, TWOS_CSID)
                 .await?
         );
         Ok(())
