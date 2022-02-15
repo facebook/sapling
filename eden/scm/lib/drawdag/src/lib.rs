@@ -13,6 +13,8 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashSet;
 
+mod succ;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Direction {
     /// From bottom to top. Roots are at the bottom.
