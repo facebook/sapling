@@ -10,6 +10,7 @@ anyhow = "1.0.51"
 async-trait = "0.1.52"
 dag = { version = "0.1.0", path = "../dag" }
 edenapi_trait = { version = "0.1.0", path = "../edenapi/trait" }
+fail = { version = "0.4", features = ["failpoints"] }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 http = "0.2"
 metalog = { version = "0.1.0", path = "../metalog" }

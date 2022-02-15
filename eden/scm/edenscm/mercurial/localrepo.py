@@ -1068,7 +1068,14 @@ class localrepository(object):
             fastpathheads = set()
             fastpathcommits, fastpathsegments = 0, 0
             for (old, new) in fastpath:
-                fastpulldata = self.edenapi.pullfastforwardmaster(old, new)
+                try:
+                    fastpulldata = self.edenapi.pullfastforwardmaster(old, new)
+                except Exception as e:
+                    self.ui.status_err(
+                        _("failed to get fast pull data (%s), using fallback path\n")
+                        % (e,)
+                    )
+                    continue
                 vertexopts = {
                     "reserve_size": 0,
                     "highest_group": 0,

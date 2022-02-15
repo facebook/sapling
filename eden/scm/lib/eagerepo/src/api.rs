@@ -236,6 +236,10 @@ impl EdenApi for EagerRepo {
         common: Vec<HgId>,
         missing: Vec<HgId>,
     ) -> Result<dag::CloneData<HgId>, EdenApiError> {
+        ::fail::fail_point!("eagerepo::api::pulllazy", |_| {
+            Err(EdenApiError::NotSupported)
+        });
+
         debug!("pull_lazy");
         let common = to_vec_vertex(&common);
         let missing = to_vec_vertex(&missing);
