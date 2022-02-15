@@ -18,6 +18,7 @@ use crossbeam::channel::Sender;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use futures::StreamExt;
+use parking_lot::Mutex;
 use parking_lot::RwLock;
 use progress_model::AggregatingProgressBar;
 use tracing::debug;
@@ -678,7 +679,7 @@ impl FetchState {
         cache: Option<Arc<LfsStore>>,
     ) -> Result<()> {
         let errors = &mut self.errors;
-        let pending: HashSet<_> = self
+        let (key_map, pending): (HashMap<_, _>, HashSet<_>) = self
             .lfs_pointers
             .iter()
             .map(|(key, (ptr, write))| {
@@ -689,9 +690,10 @@ impl FetchState {
                         }
                     }
                 }
-                (ptr.sha256(), ptr.size() as usize)
+                ((ptr.sha256(), key), (ptr.sha256(), ptr.size() as usize))
             })
-            .collect();
+            .unzip();
+
         if pending.is_empty() {
             return Ok(());
         }
@@ -704,30 +706,56 @@ impl FetchState {
 
         let prog = self.lfs_progress.create_or_extend(pending.len() as u64);
 
-        // Fetch & write to local LFS stores
-        store.batch_fetch(&pending, {
-            let lfs_local = local.clone();
-            let lfs_cache = cache.clone();
-            let pointer_origin = self.pointer_origin.clone();
-            move |sha256, data| -> Result<()> {
-                prog.increase_position(1);
+        let keyed_errors = Arc::new(Mutex::new(Vec::new()));
+        let other_errors = Arc::new(Mutex::new(Vec::new()));
 
-                match pointer_origin.read().get(&sha256).ok_or_else(|| {
-                    anyhow!(
-                        "no source found for Sha256; received unexpected Sha256 from LFS server"
-                    )
-                })? {
-                    StoreType::Local => lfs_local
-                        .as_ref()
-                        .expect("no lfs_local present when handling local LFS pointer")
-                        .add_blob(&sha256, data),
-                    StoreType::Shared => lfs_cache
-                        .as_ref()
-                        .expect("no lfs_cache present when handling cache LFS pointer")
-                        .add_blob(&sha256, data),
+        // Fetch & write to local LFS stores
+        store.batch_fetch(
+            &pending,
+            {
+                let lfs_local = local.clone();
+                let lfs_cache = cache.clone();
+                let pointer_origin = self.pointer_origin.clone();
+                move |sha256, data| -> Result<()> {
+                    prog.increase_position(1);
+
+                    match pointer_origin.read().get(&sha256).ok_or_else(|| {
+                        anyhow!(
+                            "no source found for Sha256; received unexpected Sha256 from LFS server"
+                        )
+                    })? {
+                        StoreType::Local => lfs_local
+                            .as_ref()
+                            .expect("no lfs_local present when handling local LFS pointer")
+                            .add_blob(&sha256, data),
+                        StoreType::Shared => lfs_cache
+                            .as_ref()
+                            .expect("no lfs_cache present when handling cache LFS pointer")
+                            .add_blob(&sha256, data),
+                    }
                 }
-            }
-        })?;
+            },
+            {
+                let keyed_errors = keyed_errors.clone();
+                let other_errors = other_errors.clone();
+                move |sha256, error| {
+                    if let Some(key) = key_map.get(&sha256) {
+                        keyed_errors.lock().push(((*key).clone(), error));
+                    } else {
+                        other_errors.lock().push(error);
+                    }
+                }
+            },
+        )?;
+
+        let keyed_errors = std::mem::take(&mut *keyed_errors.lock());
+        for (key, error) in keyed_errors.into_iter() {
+            self.errors.keyed_error(key, error);
+        }
+        let other_errors = std::mem::take(&mut *other_errors.lock());
+        for error in other_errors.into_iter() {
+            self.errors.other_error(error);
+        }
 
         // After prefetching into the local LFS stores, retry fetching from them. The returned Bytes will then be mmaps rather
         // than large files stored in memory.

@@ -31,6 +31,7 @@ use anyhow::bail;
 use anyhow::ensure;
 use anyhow::format_err;
 use anyhow::Context;
+use anyhow::Error;
 use anyhow::Result;
 use async_runtime::block_on;
 use auth::AuthSection;
@@ -1067,6 +1068,7 @@ impl LfsRemoteInner {
         &self,
         objs: &HashSet<(Sha256, usize)>,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
+        error_handler: impl Fn(Sha256, Error),
     ) -> Result<()> {
         let read_from_store = |_sha256, _size| unreachable!();
         match self {
@@ -1076,6 +1078,7 @@ impl LfsRemoteInner {
                 Operation::Download,
                 read_from_store,
                 write_to_store,
+                error_handler,
             ),
             LfsRemoteInner::File(file) => Self::batch_fetch_file(file, objs, write_to_store),
         }
@@ -1085,6 +1088,7 @@ impl LfsRemoteInner {
         &self,
         objs: &HashSet<(Sha256, usize)>,
         read_from_store: impl Fn(Sha256, u64) -> Result<Option<Bytes>> + Send + Clone + 'static,
+        error_handler: impl Fn(Sha256, Error),
     ) -> Result<()> {
         let write_to_store = |_, _| unreachable!();
         match self {
@@ -1094,6 +1098,7 @@ impl LfsRemoteInner {
                 Operation::Upload,
                 read_from_store,
                 write_to_store,
+                error_handler,
             ),
             LfsRemoteInner::File(file) => Self::batch_upload_file(file, objs, read_from_store),
         }
@@ -1430,7 +1435,9 @@ impl LfsRemoteInner {
                 TransferError::HttpStatus(http::StatusCode::GONE, _) => {
                     Bytes::from_static(redacted::REDACTED_CONTENT)
                 }
-                _ => return Err(err.into()),
+                _ => {
+                    return Err(err.into());
+                }
             },
         };
 
@@ -1451,6 +1458,7 @@ impl LfsRemoteInner {
         operation: Operation,
         read_from_store: impl Fn(Sha256, u64) -> Result<Option<Bytes>> + Send + Clone + 'static,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
+        error_handler: impl Fn(Sha256, Error),
     ) -> Result<()> {
         let response = LfsRemoteInner::send_batch_request(http, objs, operation)?;
         let response = match response {
@@ -1467,16 +1475,12 @@ impl LfsRemoteInner {
                     authenticated: _,
                     actions,
                 } => Some(actions),
-                // If the server returns a 404 and we were trying to download, then we don't take
-                // any action here. This will result in us not writing anything, which will simply
-                // yield a KeyError for this Sha256 when we try to read it later.
-                ObjectStatus::Err { error: e }
-                    if operation == Operation::Download && e.code == 404 =>
-                {
-                    None
-                }
                 ObjectStatus::Err { error: e } => {
-                    bail!("Couldn't {} oid {}: {:?}", operation, oid, e)
+                    error_handler(
+                        Sha256::from(oid.0),
+                        anyhow!("LFS fetch error {} - {}", e.code, e.message),
+                    );
+                    None
                 }
             };
 
@@ -1664,16 +1668,19 @@ impl LfsRemote {
         &self,
         objs: &HashSet<(Sha256, usize)>,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
+        error_handler: impl Fn(Sha256, Error),
     ) -> Result<()> {
-        self.remote.batch_fetch(objs, write_to_store)
+        self.remote.batch_fetch(objs, write_to_store, error_handler)
     }
 
     fn batch_upload(
         &self,
         objs: &HashSet<(Sha256, usize)>,
         read_from_store: impl Fn(Sha256, u64) -> Result<Option<Bytes>> + Send + Clone + 'static,
+        error_handler: impl Fn(Sha256, Error),
     ) -> Result<()> {
-        self.remote.batch_upload(objs, read_from_store)
+        self.remote
+            .batch_upload(objs, read_from_store, error_handler)
     }
 }
 
@@ -1779,26 +1786,30 @@ impl RemoteDataStore for LfsRemoteStore {
 
         let size = Arc::new(AtomicUsize::new(0));
         let obj_set = Arc::new(Mutex::new(obj_set));
-        self.remote.batch_fetch(&objs, {
-            let remote = self.remote.clone();
-            let size = size.clone();
-            let obj_set = obj_set.clone();
+        self.remote.batch_fetch(
+            &objs,
+            {
+                let remote = self.remote.clone();
+                let size = size.clone();
+                let obj_set = obj_set.clone();
 
-            move |sha256, data| {
-                size.fetch_add(data.len(), Ordering::Relaxed);
-                let (_, is_local) = obj_set
-                    .lock()
-                    .remove(&sha256)
-                    .ok_or_else(|| format_err!("Cannot find {}", sha256))?;
+                move |sha256, data| {
+                    size.fetch_add(data.len(), Ordering::Relaxed);
+                    let (_, is_local) = obj_set
+                        .lock()
+                        .remove(&sha256)
+                        .ok_or_else(|| format_err!("Cannot find {}", sha256))?;
 
-                if is_local {
-                    // Safe to unwrap as the sha256 is coming from a local LFS pointer.
-                    remote.local.as_ref().unwrap().blobs.add(&sha256, data)
-                } else {
-                    remote.shared.blobs.add(&sha256, data)
+                    if is_local {
+                        // Safe to unwrap as the sha256 is coming from a local LFS pointer.
+                        remote.local.as_ref().unwrap().blobs.add(&sha256, data)
+                    } else {
+                        remote.shared.blobs.add(&sha256, data)
+                    }
                 }
-            }
-        })?;
+            },
+            |_, _| {},
+        )?;
         span.record("size", &size.load(Ordering::Relaxed));
 
         let obj_set = mem::take(&mut *obj_set.lock());
@@ -1843,21 +1854,25 @@ impl RemoteDataStore for LfsRemoteStore {
 
             let size = Arc::new(AtomicUsize::new(0));
 
-            self.remote.batch_upload(&objs, {
-                let local_store = local_store.clone();
-                let size = size.clone();
-                move |sha256, _size| {
-                    let key = StoreKey::from(ContentHash::Sha256(sha256));
+            self.remote.batch_upload(
+                &objs,
+                {
+                    let local_store = local_store.clone();
+                    let size = size.clone();
+                    move |sha256, _size| {
+                        let key = StoreKey::from(ContentHash::Sha256(sha256));
 
-                    match local_store.blob(key)? {
-                        StoreResult::Found(blob) => {
-                            size.fetch_add(blob.len(), Ordering::Relaxed);
-                            Ok(Some(blob))
+                        match local_store.blob(key)? {
+                            StoreResult::Found(blob) => {
+                                size.fetch_add(blob.len(), Ordering::Relaxed);
+                                Ok(Some(blob))
+                            }
+                            StoreResult::NotFound(_) => Ok(None),
                         }
-                        StoreResult::NotFound(_) => Ok(None),
                     }
-                }
-            })?;
+                },
+                |_, _| {},
+            )?;
 
             span.record("size", &size.load(Ordering::Relaxed));
         }
@@ -2695,7 +2710,7 @@ mod tests {
                 .iter()
                 .cloned()
                 .collect::<HashSet<_>>();
-            remote.batch_fetch(&objs, sentinel.as_callback())?;
+            remote.batch_fetch(&objs, sentinel.as_callback(), |_, _| {})?;
             assert!(sentinel.get());
 
             Ok(())
@@ -2720,7 +2735,7 @@ mod tests {
                 .iter()
                 .cloned()
                 .collect::<HashSet<_>>();
-            let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
+            let resp = remote.batch_fetch(&objs, |_, _| unreachable!(), |_, _| {});
             // ex. [56] Failure when receiving data from the peer (Proxy CONNECT aborted)
             // But not necessarily that message in all cases.
             assert!(resp.is_err());
@@ -2747,7 +2762,7 @@ mod tests {
                 .iter()
                 .cloned()
                 .collect::<HashSet<_>>();
-            let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
+            let resp = remote.batch_fetch(&objs, |_, _| unreachable!(), |_, _| {});
             assert!(resp.is_err());
 
             Ok(())
@@ -2777,7 +2792,7 @@ mod tests {
                 .iter()
                 .cloned()
                 .collect::<HashSet<_>>();
-            remote.batch_fetch(&objs, sentinel.as_callback())?;
+            remote.batch_fetch(&objs, sentinel.as_callback(), |_, _| {})?;
             assert!(sentinel.get());
 
             Ok(())
@@ -2811,13 +2826,17 @@ mod tests {
             .collect::<HashSet<_>>();
 
             let out = Arc::new(Mutex::new(Vec::new()));
-            remote.batch_fetch(&objs, {
-                let out = out.clone();
-                move |sha256, blob| {
-                    out.lock().push((sha256, blob));
-                    Ok(())
-                }
-            })?;
+            remote.batch_fetch(
+                &objs,
+                {
+                    let out = out.clone();
+                    move |sha256, blob| {
+                        out.lock().push((sha256, blob));
+                        Ok(())
+                    }
+                },
+                |_, _| {},
+            )?;
             out.lock().sort();
 
             let mut expected_res = vec![
@@ -2927,7 +2946,7 @@ mod tests {
             );
 
             let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
-            let res = remote.batch_fetch(&objs, |_, _| unreachable!());
+            let res = remote.batch_fetch(&objs, |_, _| unreachable!(), |_, _| {});
             assert!(res.is_err());
 
             Ok(())
@@ -3012,10 +3031,14 @@ mod tests {
                 .iter()
                 .cloned()
                 .collect::<HashSet<_>>();
-            remote.batch_fetch(&objs, |_, data| {
-                assert!(is_redacted(&data));
-                Ok(())
-            })?;
+            remote.batch_fetch(
+                &objs,
+                |_, data| {
+                    assert!(is_redacted(&data));
+                    Ok(())
+                },
+                |_, _| {},
+            )?;
 
             Ok(())
         }
@@ -3059,13 +3082,17 @@ mod tests {
             .cloned()
             .collect::<HashSet<_>>();
         let out = Arc::new(Mutex::new(Vec::new()));
-        remote.batch_fetch(&objs, {
-            let out = out.clone();
-            move |sha256, blob| {
-                out.lock().push((sha256, blob));
-                Ok(())
-            }
-        })?;
+        remote.batch_fetch(
+            &objs,
+            {
+                let out = out.clone();
+                move |sha256, blob| {
+                    out.lock().push((sha256, blob));
+                    Ok(())
+                }
+            },
+            |_, _| {},
+        )?;
         out.lock().sort();
 
         let mut expected_res = vec![(blob1.0, blob1.2), (blob2.0, blob2.2)];
@@ -3114,9 +3141,11 @@ mod tests {
             .iter()
             .cloned()
             .collect::<HashSet<_>>();
-        remote.batch_upload(&objs, move |sha256, size| {
-            local_lfs.blobs.get(&sha256, size)
-        })?;
+        remote.batch_upload(
+            &objs,
+            move |sha256, size| local_lfs.blobs.get(&sha256, size),
+            |_, _| {},
+        )?;
 
         assert_eq!(
             remote_lfs_file_store.get(&blob1.0, blob1.1 as u64)?,
