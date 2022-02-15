@@ -126,15 +126,17 @@ impl CloneHints {
             ctx.logger(),
             "Adding hints for idmap_version {}", idmap_version.0
         );
-        let universal_ids: Vec<_> = namedag
-            .dag()
-            .universal_ids()
-            .context("error computing universal ids")?
-            .into_iter()
-            .collect();
-        let universal_ids_len = universal_ids.len();
+
+        // Similar to `export_pull_data` in the dag crate.
+        let id_dag = namedag.dag();
+        let all_ids = id_dag.all().context("error computing all() ids")?;
+        let flat_segments = id_dag
+            .idset_to_flat_segments(all_ids)
+            .context("error getting segments for all()")?;
+        let ids: Vec<_> = flat_segments.parents_head_and_roots().into_iter().collect();
+        let universal_ids_len = ids.len();
         let existing_hints = self.fetch(ctx, idmap_version).await?;
-        let new_ids: Vec<_> = universal_ids
+        let new_ids: Vec<_> = ids
             .into_iter()
             .filter(|id| !existing_hints.contains_key(&id))
             .collect();
