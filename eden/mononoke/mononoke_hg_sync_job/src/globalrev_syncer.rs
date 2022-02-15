@@ -77,6 +77,7 @@ impl DarkstormGlobalrevSyncer {
         let bcs_id_to_globalrev = stream::iter(commits.iter().map(|(_, bcs_id)| async move {
             let maybe_globalrev = self
                 .orig_repo
+                .bonsai_globalrev_mapping()
                 .get_globalrev_from_bonsai(ctx, *bcs_id)
                 .await?;
             Result::<_, Error>::Ok((bcs_id, maybe_globalrev))

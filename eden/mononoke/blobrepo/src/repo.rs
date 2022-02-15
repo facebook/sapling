@@ -8,9 +8,7 @@
 use anyhow::{format_err, Error};
 use blobstore::Blobstore;
 use bonsai_git_mapping::{ArcBonsaiGitMapping, BonsaiGitMapping};
-use bonsai_globalrev_mapping::{
-    ArcBonsaiGlobalrevMapping, BonsaiGlobalrevMapping, BonsaisOrGlobalrevs,
-};
+use bonsai_globalrev_mapping::{ArcBonsaiGlobalrevMapping, BonsaiGlobalrevMapping};
 use bonsai_hg_mapping::{ArcBonsaiHgMapping, BonsaiHgMapping};
 use bonsai_svnrev_mapping::RepoBonsaiSvnrevMapping;
 use bookmarks::{
@@ -35,7 +33,7 @@ use futures::{
 use mercurial_mutation::{ArcHgMutationStore, HgMutationStore};
 use metaconfig_types::{DerivedDataConfig, DerivedDataTypesConfig};
 use mononoke_types::{
-    BlobstoreValue, BonsaiChangeset, ChangesetId, Generation, Globalrev, MononokeId, RepositoryId,
+    BlobstoreValue, BonsaiChangeset, ChangesetId, Generation, MononokeId, RepositoryId,
 };
 use phases::Phases;
 use pushrebase_mutation_mapping::{ArcPushrebaseMutationMapping, PushrebaseMutationMapping};
@@ -273,48 +271,6 @@ impl BlobRepo {
 
     pub fn pushrebase_mutation_mapping(&self) -> &ArcPushrebaseMutationMapping {
         &self.inner.pushrebase_mutation_mapping
-    }
-
-    pub async fn get_bonsai_from_globalrev(
-        &self,
-        ctx: &CoreContext,
-        globalrev: Globalrev,
-    ) -> Result<Option<ChangesetId>, Error> {
-        let maybe_changesetid = self
-            .inner
-            .bonsai_globalrev_mapping
-            .get_bonsai_from_globalrev(ctx, globalrev)
-            .await?;
-        Ok(maybe_changesetid)
-    }
-
-    pub async fn get_globalrev_from_bonsai(
-        &self,
-        ctx: &CoreContext,
-        bcs: ChangesetId,
-    ) -> Result<Option<Globalrev>, Error> {
-        let maybe_globalrev = self
-            .inner
-            .bonsai_globalrev_mapping
-            .get_globalrev_from_bonsai(ctx, bcs)
-            .await?;
-        Ok(maybe_globalrev)
-    }
-
-    pub async fn get_bonsai_globalrev_mapping(
-        &self,
-        ctx: &CoreContext,
-        bonsai_or_globalrev_ids: impl Into<BonsaisOrGlobalrevs>,
-    ) -> Result<Vec<(ChangesetId, Globalrev)>, Error> {
-        let entries = self
-            .inner
-            .bonsai_globalrev_mapping
-            .get(ctx, bonsai_or_globalrev_ids.into())
-            .await?;
-        Ok(entries
-            .into_iter()
-            .map(|entry| (entry.bcs_id, entry.globalrev))
-            .collect())
     }
 
     pub fn read_next_bookmark_log_entries(

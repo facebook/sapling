@@ -182,6 +182,7 @@ impl ChangesetContext {
         let mapping = self
             .repo()
             .blob_repo()
+            .bonsai_globalrev_mapping()
             .get_globalrev_from_bonsai(&self.ctx(), self.id)
             .await?;
         Ok(mapping.into_iter().next())

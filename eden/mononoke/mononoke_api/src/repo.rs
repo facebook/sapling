@@ -924,6 +924,7 @@ impl RepoContext {
             }
             ChangesetSpecifier::Globalrev(rev) => {
                 self.blob_repo()
+                    .bonsai_globalrev_mapping()
                     .get_bonsai_from_globalrev(&self.ctx, rev)
                     .await?
             }
@@ -1068,9 +1069,11 @@ impl RepoContext {
     ) -> Result<Vec<(ChangesetId, Globalrev)>, MononokeError> {
         let mapping = self
             .blob_repo()
-            .get_bonsai_globalrev_mapping(&self.ctx, changesets)
+            .bonsai_globalrev_mapping()
+            .get(&self.ctx, changesets.into())
             .await?
             .into_iter()
+            .map(|entry| (entry.bcs_id, entry.globalrev))
             .collect();
         Ok(mapping)
     }
