@@ -17,7 +17,7 @@ use std::time::Duration;
 
 use anyhow::{bail, format_err, Context, Error, Result};
 use cached_config::{ConfigHandle, ConfigStore};
-use clap::{ArgMatches, Values};
+use clap::{ArgMatches, OsValues, Values};
 use derived_data_remote::RemoteDerivationOptions;
 use fbinit::FacebookInit;
 use maybe_owned::MaybeOwned;
@@ -231,6 +231,10 @@ impl<'a> MononokeMatches<'a> {
 
     pub fn values_of<S: AsRef<str>>(&'a self, name: S) -> Option<Values<'a>> {
         self.matches.values_of(name)
+    }
+
+    pub fn values_of_os<S: AsRef<str>>(&'a self, name: S) -> Option<OsValues<'a>> {
+        self.matches.values_of_os(name)
     }
 }
 
