@@ -12,7 +12,7 @@ use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
-use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingConnection};
+use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingBuilder};
 use bonsai_globalrev_mapping::{ArcBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMappingBuilder};
 use bonsai_hg_mapping::{
     ArcBonsaiHgMapping, BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds,
@@ -206,8 +206,7 @@ impl BenchmarkRepoFactory {
         repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcBonsaiGitMapping> {
         Ok(Arc::new(
-            SqlBonsaiGitMappingConnection::with_sqlite_in_memory()?
-                .with_repo_id(repo_identity.id()),
+            SqlBonsaiGitMappingBuilder::with_sqlite_in_memory()?.build(repo_identity.id()),
         ))
     }
 

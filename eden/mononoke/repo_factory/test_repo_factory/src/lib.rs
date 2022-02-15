@@ -13,7 +13,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use blame::BlameRoot;
 use blobstore::Blobstore;
-use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingConnection};
+use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingBuilder};
 use bonsai_globalrev_mapping::{ArcBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMappingBuilder};
 use bonsai_hg_mapping::{ArcBonsaiHgMapping, SqlBonsaiHgMappingBuilder};
 use bonsai_svnrev_mapping::{ArcBonsaiSvnrevMapping, SqlBonsaiSvnrevMappingBuilder};
@@ -145,7 +145,7 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlMutableCounters::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlChangesetsBuilder::CREATION_QUERY)?;
-        metadata_con.execute_batch(SqlBonsaiGitMappingConnection::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlBonsaiGitMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiGlobalrevMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiSvnrevMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiHgMappingBuilder::CREATION_QUERY)?;
@@ -311,8 +311,8 @@ impl TestRepoFactory {
         repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcBonsaiGitMapping> {
         Ok(Arc::new(
-            SqlBonsaiGitMappingConnection::from_sql_connections(self.metadata_db.clone().into())
-                .with_repo_id(repo_identity.id()),
+            SqlBonsaiGitMappingBuilder::from_sql_connections(self.metadata_db.clone().into())
+                .build(repo_identity.id()),
         ))
     }
 

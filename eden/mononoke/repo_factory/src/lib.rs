@@ -21,7 +21,7 @@ use blobstore_factory::{
     default_scrub_handler, make_blobstore, make_metadata_sql_factory, ComponentSamplingHandler,
     MetadataSqlFactory, ScrubHandler,
 };
-use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingConnection};
+use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingBuilder};
 use bonsai_globalrev_mapping::{
     ArcBonsaiGlobalrevMapping, CachingBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMappingBuilder,
 };
@@ -606,10 +606,10 @@ impl RepoFactory {
         repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcBonsaiGitMapping> {
         let bonsai_git_mapping = self
-            .open::<SqlBonsaiGitMappingConnection>(&repo_config.storage_config.metadata)
+            .open::<SqlBonsaiGitMappingBuilder>(&repo_config.storage_config.metadata)
             .await
             .context(RepoFactoryError::BonsaiGitMapping)?
-            .with_repo_id(repo_identity.id());
+            .build(repo_identity.id());
         Ok(Arc::new(bonsai_git_mapping))
     }
 
