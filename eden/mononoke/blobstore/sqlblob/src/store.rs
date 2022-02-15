@@ -453,6 +453,10 @@ impl ChunkSqlStore {
         }
     }
 
+    pub(crate) fn get_mark_generation(&self) -> u64 {
+        self.gc_generations.get().mark_generation as u64
+    }
+
     // Store an entry for value_len eagerly if it was missing on ChunkSqlStore::put()'s UpdateGeneration
     // Saves lazy computing it with associated MySQL read bandwidth from length(chunk.value) later.
     pub(crate) async fn put_chunk_generation(
@@ -530,10 +534,12 @@ impl ChunkSqlStore {
         key: &str,
         chunk_num: u32,
         chunking_method: ChunkingMethod,
+        // Take the mark generation as param, so that marking for an entire run is consistent
+        mark_generation: u64,
     ) -> Result<Option<u64>, Error> {
         if let Some(shard_id) = self.shard(key, chunk_num, chunking_method) {
+            // Take latest value for put generation
             let put_generation = self.gc_generations.get().put_generation as u64;
-            let mark_generation = self.gc_generations.get().mark_generation as u64;
 
             // Short-circuit if we have a generation and that generation is >= mark_generation
             let found_generation = GetChunkGeneration::query(&self.read_connection[shard_id], &key)

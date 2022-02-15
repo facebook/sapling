@@ -344,12 +344,12 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
                 assert_eq!(generations, vec![], "No generations expected");
             }
 
-            set_test_generations(test_source.as_ref(), 4, 3, 0, INITIAL_VERSION + 1);
+            let mark_gen = set_test_generations(test_source.as_ref(), 4, 3, 0, INITIAL_VERSION + 1);
 
             tokio::time::sleep(UPDATE_WAIT_TIME).await;
 
             // Set the generation and confirm
-            bs.set_generation(&key1, true).await?;
+            bs.set_generation(&key1, true, mark_gen).await?;
             let generations = bs.get_chunk_generations(&key1).await?;
             if value_len > MAX_INLINE_LEN {
                 assert_eq!(generations, vec![Some(3)], "Generation set to 3");
@@ -371,9 +371,10 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
 
                 // Now update via the route GC uses, confirm it updates nicely and doesn't leap to
                 // the wrong version.
-                set_test_generations(test_source.as_ref(), 999, 10, 3, INITIAL_VERSION + 3);
+                let mark_gen =
+                    set_test_generations(test_source.as_ref(), 999, 10, 3, INITIAL_VERSION + 3);
                 tokio::time::sleep(UPDATE_WAIT_TIME).await;
-                bs.set_generation(&key1, true).await?;
+                bs.set_generation(&key1, true, mark_gen).await?;
                 let generations = bs.get_chunk_generations(&key1).await?;
                 assert_eq!(generations, vec![Some(10)], "key1 generation not updated");
                 let generations = bs.get_chunk_generations(&key2).await?;

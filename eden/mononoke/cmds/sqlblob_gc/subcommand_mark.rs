@@ -36,14 +36,14 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .long(ARG_INITIAL_GENERATION_ONLY)
                 .takes_value(false)
                 .required(false)
-                .help("Only set generation on blobs that have no generation set yet. Do not do a full sweep.")
+                .help("Only set generation on blobs that have no generation set yet. Do not do a full mark.")
         )
         .arg(
             Arg::with_name(ARG_SKIP_INITIAL_GENERATION)
                 .long(ARG_SKIP_INITIAL_GENERATION)
                 .takes_value(false)
                 .required(false)
-                .help("Only do the sweep; do not set generation on blobs with no generation set yet.")
+                .help("Only do the mark; do not set generation on blobs with no generation set yet.")
         )
         .arg(
             Arg::with_name(ARG_SKIP_INLINE_SMALL_VALUES)
@@ -59,10 +59,11 @@ async fn handle_one_key(
     store: Arc<Sqlblob>,
     inline_small_values: bool,
     logger: Arc<Logger>,
+    mark_generation: u64,
 ) -> Result<()> {
     retry(
         &logger,
-        |_| store.set_generation(&key, inline_small_values),
+        |_| store.set_generation(&key, inline_small_values, mark_generation),
         BASE_RETRY_DELAY_MS,
         RETRIES,
     )
@@ -118,7 +119,10 @@ pub async fn subcommand_mark<'a>(
 
     let inline_small_values = !sub_matches.is_present(ARG_SKIP_INLINE_SMALL_VALUES);
 
-    info!(logger, "Starting sweep");
+    // Hold mark generation constant for run
+    let mark_generation = sqlblob.get_mark_generation();
+
+    info!(logger, "Starting marking generation {}", mark_generation);
     // Set up a task to process each key in parallel in its own task.
     let (key_channel, processor) = {
         let sqlblob = Arc::clone(&sqlblob);
@@ -131,8 +135,14 @@ pub async fn subcommand_mark<'a>(
                         let sqlblob = sqlblob.clone();
                         let logger = logger.clone();
                         async move {
-                            tokio::spawn(handle_one_key(key, sqlblob, inline_small_values, logger))
-                                .await?
+                            tokio::spawn(handle_one_key(
+                                key,
+                                sqlblob,
+                                inline_small_values,
+                                logger,
+                                mark_generation,
+                            ))
+                            .await?
                         }
                     }
                 })
@@ -143,7 +153,7 @@ pub async fn subcommand_mark<'a>(
 
     // Foreach shard in shard_range
     for shard in shard_range {
-        info!(logger, "Starting sweep on data keys from shard {}", shard);
+        info!(logger, "Starting mark on data keys from shard {}", shard);
         let res = sqlblob
             .get_keys_from_shard(shard)
             .forward(key_channel.clone().sink_err_into())
@@ -160,6 +170,6 @@ pub async fn subcommand_mark<'a>(
     std::mem::drop(key_channel);
 
     processor.await??;
-    info!(logger, "Completed all sweeps");
+    info!(logger, "Completed marking generation {}", mark_generation);
     Ok(())
 }

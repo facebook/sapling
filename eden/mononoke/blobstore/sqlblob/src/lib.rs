@@ -400,15 +400,30 @@ impl Sqlblob {
         }
     }
 
+    pub fn get_mark_generation(&self) -> u64 {
+        self.chunk_store.get_mark_generation()
+    }
+
     /// Mark the generation for a key
     /// If its value was small enough to inline, then also inline it if requested
-    pub async fn set_generation(&self, key: &str, inline_small_values: bool) -> Result<()> {
+    pub async fn set_generation(
+        &self,
+        key: &str,
+        inline_small_values: bool,
+        // Take the mark generation as param, so that marking for an entire run is consistent
+        mark_generation: u64,
+    ) -> Result<()> {
         let chunked = self.data_store.get(key).await?;
         if let Some(chunked) = chunked {
             let set_chunk_generations: FuturesUnordered<_> = (0..chunked.count)
                 .map(|chunk_num| {
                     self.chunk_store
-                        .set_generation(&chunked.id, chunk_num, chunked.chunking_method)
+                        .set_generation(
+                            &chunked.id,
+                            chunk_num,
+                            chunked.chunking_method,
+                            mark_generation,
+                        )
                         .map_ok(|value_len| {
                             if let Some(value_len) = value_len {
                                 // Should not be chunked at all, request the key is inlined
@@ -724,7 +739,7 @@ pub fn set_test_generations(
     mark_generation: i64,
     delete_generation: i64,
     mod_time: u64,
-) {
+) -> u64 {
     source.insert_config(
         GC_GENERATION_PATH,
         &serde_json::to_string(&XdbGc {
@@ -736,6 +751,7 @@ pub fn set_test_generations(
         ModificationTime::UnixTimestamp(mod_time),
     );
     source.insert_to_refresh(GC_GENERATION_PATH.to_string());
+    mark_generation as u64
 }
 
 pub fn get_test_config_store() -> (Arc<TestSource>, ConfigStore) {
