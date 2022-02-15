@@ -91,11 +91,15 @@ pub fn parse(text: impl AsRef<str>) -> BTreeMap<String, BTreeSet<String>> {
         (0..x)
             .rev()
             .map(|x| get(y, x))
-            .take_while(|&ch| is_name(ch))
+            .take_while(|&ch| is_name(ch, direction))
             .collect::<Vec<_>>()
             .into_iter()
             .rev()
-            .chain((x..).map(|x| get(y, x)).take_while(|&ch| is_name(ch)))
+            .chain(
+                (x..)
+                    .map(|x| get(y, x))
+                    .take_while(|&ch| is_name(ch, direction)),
+            )
             .collect()
     };
 
@@ -120,7 +124,7 @@ pub fn parse(text: impl AsRef<str>) -> BTreeMap<String, BTreeSet<String>> {
                 let x = state.x;
                 let expected = state.expected;
                 let ch = get(y, x);
-                if is_name(ch) && expected.contains('t') {
+                if is_name(ch, direction) && expected.contains('t') {
                     // t: text
                     parents.push((get_name(y, x), state.is_range));
                     return;
@@ -205,7 +209,7 @@ pub fn parse(text: impl AsRef<str>) -> BTreeMap<String, BTreeSet<String>> {
     for y in 0..lines.len() as isize {
         for x in 0..lines[y as usize].len() as isize {
             let ch = get(y, x);
-            if is_name(ch) {
+            if is_name(ch, direction) {
                 let name = get_name(y, x);
                 edges.entry(name.clone()).or_default();
                 for (parent, is_range) in get_parents(y, x) {
@@ -275,8 +279,11 @@ pub fn drawdag(
     commit(&parse(text), commit_func)
 }
 
-fn is_name(ch: char) -> bool {
-    ch.is_alphanumeric()
+fn is_name(ch: char, direction: Direction) -> bool {
+    match (ch, direction) {
+        ('.', Direction::BottomTop) => true,
+        _ => ch.is_alphanumeric() || ",()_'\"".contains(ch),
+    }
 }
 
 #[cfg(test)]
@@ -445,6 +452,25 @@ I D C F
                 "B10 -> [B09, C]",
                 "C -> [B08]"
             ]
+        );
+    }
+
+    #[test]
+    fn test_parse_special_names() {
+        assert_eq!(
+            p("ancestor(desc(\"D\"),desc('_A'))--B"),
+            [
+                "B -> [ancestor(desc(\"D\"),desc('_A'))]",
+                "ancestor(desc(\"D\"),desc('_A')) -> []"
+            ]
+        );
+        assert_eq!(
+            p(r#"
+                B
+                |
+                .
+              "#),
+            [". -> []", "B -> [.]"]
         );
     }
 }
