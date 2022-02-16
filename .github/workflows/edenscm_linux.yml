@@ -67,10 +67,10 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests python
     - name: Fetch bison
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests bison
-    - name: Fetch libsodium
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests libsodium
     - name: Fetch flex
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests flex
+    - name: Fetch libsodium
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests libsodium
     - name: Fetch folly
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests folly
     - name: Fetch fizz
@@ -79,10 +79,10 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests wangle
     - name: Fetch fbthrift
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests fbthrift
-    - name: Fetch rust-shed
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests rust-shed
     - name: Fetch fb303
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests fb303
+    - name: Fetch rust-shed
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests rust-shed
     - name: Build bz2
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests bz2
     - name: Build ninja
@@ -127,10 +127,10 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests python
     - name: Build bison
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests bison
-    - name: Build libsodium
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests libsodium
     - name: Build flex
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests flex
+    - name: Build libsodium
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests libsodium
     - name: Build folly
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests folly
     - name: Build fizz
@@ -139,10 +139,10 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests wangle
     - name: Build fbthrift
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests fbthrift
-    - name: Build rust-shed
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests rust-shed
     - name: Build fb303
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests fb303
+    - name: Build rust-shed
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests rust-shed
     - name: Build eden_scm
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --src-dir=. eden_scm  --project-install-prefix eden_scm:/usr/local
     - name: Copy artifacts
