@@ -241,6 +241,9 @@ rocksdb::Options getRocksdbOptions() {
   // Automatically create column families as we define new ones.
   options.create_missing_column_families = true;
 
+  // Make sure we never hold more than 128MB onto the WAL
+  options.max_total_wal_size = 128 * 1024 * 1024;
+
   return options;
 }
 
