@@ -505,6 +505,23 @@ def clone(
         # username overrides (unlikely).
         destrepo.ui.reloadconfigs(destrepo.root)
 
+        if shallow:
+            from edenscm.hgext.remotefilelog.shallowrepo import requirement
+
+            if requirement not in destrepo.requirements:
+                with destrepo.lock():
+                    destrepo.requirements.add(requirement)
+                    destrepo._writerequirements()
+                # Reopen the repo so reposetup in extensions can see the added
+                # requirement.
+                # To keep command line config overrides, reuse the ui from the
+                # old repo object. A cleaner way might be figuring out the
+                # overrides and then set them, in case extensions changes the
+                # class of the ui object.
+                origui = destrepo.ui
+                destrepo = repository(ui, dest)
+                destrepo.ui = origui
+
     # Construct the srcpeer after the destpeer, so we can use the destrepo.ui
     # configs.
     try:
