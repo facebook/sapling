@@ -1885,7 +1885,7 @@ Future<Unit> EdenServer::createThriftServer() {
   auto procFactory =
       std::make_shared<ThriftServerAsyncProcessorFactory<EdenServiceHandler>>(
           handler_);
-  server_->setProcessorFactory(procFactory);
+  server_->setInterface(procFactory);
 
   // Get the path to the thrift socket.
   auto thriftSocketPath = edenDir_.getThriftSocketPath();
