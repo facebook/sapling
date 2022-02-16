@@ -14,9 +14,8 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
 use blobstore::Loadable;
-use clap_old::{Arg, ArgMatches, SubCommand};
+use clap::{Parser, Subcommand};
 use cloned::cloned;
-use cmdlib::args::{self, MononokeClapApp, MononokeMatches};
 use context::CoreContext;
 use failure_ext::DisplayChain;
 use fbinit::FacebookInit;
@@ -32,13 +31,13 @@ use futures_old::{
 use lock_ext::LockExt;
 use mercurial_derived_data::get_manifest_from_bonsai;
 use mercurial_types::HgChangesetId;
+use mononoke_app::{args::RepoArgs, MononokeAppBuilder};
 use revset::AncestorsNodeStream;
 use slog::{debug, error, info, warn, Logger};
 use std::{
     collections::HashSet,
     io::Write,
-    process, result,
-    str::FromStr,
+    process,
     sync::{
         atomic::{AtomicU64, AtomicUsize, Ordering},
         Arc, Mutex,
@@ -46,83 +45,87 @@ use std::{
     time::Instant,
 };
 
-fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
-    args::MononokeAppBuilder::new("bonsai roundtrip verification")
-        .build()
-        .subcommand(
-            SubCommand::with_name("round-trip")
-                .about("Verify that bonsai changesets roundtrip correctly.")
-                .args_from_usage(
-                    r#"
-                    --limit [LIMIT] 'how many changesets to follow before stopping [default: 1024]'
-                    --changes       'print list of changed entries between manifests'
-                    --config [TOML] 'configuration file, see source code for spec'
-                    "#,
-                )
-                .arg(
-                    Arg::with_name("start-points")
-                        .takes_value(true)
-                        .multiple(true)
-                        .required(true)
-                        .help("changesets from which to start traversing"),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name("hg-manifest")
-                .about("verify generation of various things")
-                .arg(
-                    Arg::with_name("hg-changeset-id")
-                        .help("starting point of traversal")
-                        .required(true)
-                        .index(1),
-                )
-                .arg(
-                    Arg::with_name("count")
-                        .help("count of changset to traverse")
-                        .required(true)
-                        .index(2),
-                ),
-        )
+#[derive(Parser)]
+struct CommandArgs {
+    #[clap(flatten)]
+    repo: RepoArgs,
+
+    #[clap(subcommand)]
+    subcmd: BonsaiSubCommand,
 }
 
-fn get_start_points<'a>(matches: &ArgMatches<'a>) -> Vec<HgChangesetId> {
-    let res: result::Result<_, _> = matches
-        .values_of("start-points")
-        .expect("at least one start point must be specified")
-        .map(|hash| hash.parse::<HgChangesetId>())
-        .collect();
+#[derive(Subcommand)]
+enum BonsaiSubCommand {
+    RoundTrip(RoundTrip),
+    HgManifest(HgManifest),
+}
 
-    res.expect("failed to parse start points as hashes")
+/// Verify that bonsai changesets roundtrip correctly
+#[derive(Parser)]
+struct RoundTrip {
+    /// How many changesets to follow before stopping
+    #[clap(long, default_value_t = 1024)]
+    limit: usize,
+
+    /// Print list of changed entries between manifests
+    #[clap(long)]
+    changes: bool,
+
+    /// Debug mode
+    #[clap(long)]
+    debug: bool,
+
+    /// Configuration file, see source code for spec
+    #[clap(long, value_name = "TOML")]
+    config: Option<String>,
+
+    /// Changesets from which to start traversing
+    #[clap(required = true, parse(try_from_str))]
+    start_points: Vec<HgChangesetId>,
+}
+
+/// Verify generation of various things
+#[derive(Parser)]
+struct HgManifest {
+    /// Starting point of traversal
+    #[clap(parse(try_from_str))]
+    hg_changeset_id: HgChangesetId,
+
+    /// Count of changeset to traverse
+    count: usize,
 }
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let matches = setup_app().get_matches(fb)?;
-    let logger = matches.logger();
+    let app = MononokeAppBuilder::new(fb).build::<CommandArgs>()?;
+    let args: CommandArgs = app.args()?;
+    let runtime = app.runtime();
+    let repo = runtime.block_on(app.open_repo(&args.repo))?;
+    let logger = app.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    match matches.subcommand() {
-        ("round-trip", Some(sub_m)) => subcommand_round_trip(ctx, logger.clone(), &matches, sub_m),
-        ("hg-manifest", Some(sub_m)) => {
-            subcommmand_hg_manifest_verify(&ctx, logger, &matches, sub_m)
+
+    match args.subcmd {
+        BonsaiSubCommand::RoundTrip(args) => {
+            subcommand_round_trip(ctx, logger.clone(), runtime, repo, args)
         }
-        (subcommand, _) => Err(format_err!("unhandled subcommand {}", subcommand)),
+        BonsaiSubCommand::HgManifest(args) => {
+            subcommmand_hg_manifest_verify(&ctx, runtime, &repo, args)
+        }
     }
 }
 
 fn subcommand_round_trip(
     ctx: CoreContext,
     logger: Logger,
-    matches: &MononokeMatches<'_>,
-    sub_m: &ArgMatches<'_>,
+    runtime: &tokio::runtime::Handle,
+    repo: BlobRepo,
+    args: RoundTrip,
 ) -> Result<()> {
-    let runtime = matches.runtime();
-    let repo = runtime.block_on(args::open_repo(ctx.fb, &logger, matches))?;
-
-    let config = config::get_config(matches).expect("getting configuration failed");
-    let start_points = get_start_points(sub_m);
-    let follow_limit = args::get_usize(sub_m, "limit", 1024);
-    let print_changes = sub_m.is_present("changes");
-    let debug_bonsai_diff = matches.is_present("debug") && sub_m.is_present("changes");
+    let config = config::get_config(args.config).expect("getting configuration failed");
+    let start_points = args.start_points;
+    let follow_limit = args.limit;
+    let print_changes = args.changes;
+    let debug_bonsai_diff = args.debug && args.changes;
 
     let valid = Arc::new(AtomicUsize::new(0));
     let invalid = Arc::new(AtomicUsize::new(0));
@@ -291,26 +294,17 @@ fn summarize(
 
 fn subcommmand_hg_manifest_verify(
     ctx: &CoreContext,
-    logger: &Logger,
-    matches: &MononokeMatches<'_>,
-    sub_m: &ArgMatches<'_>,
+    runtime: &tokio::runtime::Handle,
+    repo: &BlobRepo,
+    args: HgManifest,
 ) -> Result<()> {
     let total = &AtomicUsize::new(0);
     let total_millis = &AtomicU64::new(0);
     let bad = &Mutex::new(HashSet::new());
 
     let run = async move {
-        let count: usize = sub_m
-            .value_of("count")
-            .ok_or(Error::msg("required parameter `count` is not set"))
-            .and_then(|count_str| Ok(count_str.parse()?))?;
-        let hg_csid = sub_m
-            .value_of("hg-changeset-id")
-            .ok_or(Error::msg(
-                "required parameter `hg-changeset-id` is not set",
-            ))
-            .and_then(HgChangesetId::from_str)?;
-        let repo: &BlobRepo = &args::open_repo(ctx.fb, &logger, matches).await?;
+        let count = args.count;
+        let hg_csid = args.hg_changeset_id;
         let csid = repo
             .bonsai_hg_mapping()
             .get_bonsai_from_hg(ctx, hg_csid)
@@ -408,5 +402,5 @@ fn subcommmand_hg_manifest_verify(
             .await
     };
 
-    matches.runtime().block_on(run)
+    runtime.block_on(run)
 }

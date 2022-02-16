@@ -91,12 +91,10 @@
 # Now, check that various Mononoke verification binaries work properly on this commit
   $ hghash="$(hg log -r . -T '{node}')"
   $ RUST_BACKTRACE=1 bonsai_verify hg-manifest "$hghash" 1
-  * using repo "repo" repoid RepositoryId(0) (glob)
   *Reloading redacted config from configerator* (glob)
   * 0ade4c953b0844653456906f5aaf8d3b1da94c37 total:1 bad:0 * (glob)
 
   $ bonsai_verify round-trip "$hghash"
-  * using repo "repo" repoid RepositoryId(0) (glob)
   *Reloading redacted config from configerator* (glob)
   * 100.00% valid, summary: , total: *, valid: *, errors: 0, ignored: 0 (glob)
 
