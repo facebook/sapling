@@ -134,9 +134,6 @@ impl Default for ServerConfig {
             enforce_acl_check: false,
             loadshedding_limits: vec![],
             object_popularity: None,
-            // TODO: Remove those once they're gone from Thrift configs.
-            object_popularity_category: Default::default(),
-            object_popularity_threshold: Default::default(),
             tasks_per_content: 1,
             disable_compression: false,
             disable_compression_identities: vec![],

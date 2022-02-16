@@ -35,8 +35,6 @@
     "enforce_authentication": false,
     "loadshedding_limits": [],
     "object_popularity": null,
-    "object_popularity_category": "",
-    "object_popularity_threshold": 0,
     "tasks_per_content": 1,
     "track_bytes_sent": true
   }
@@ -68,8 +66,6 @@
     "enforce_authentication": false,
     "loadshedding_limits": [],
     "object_popularity": null,
-    "object_popularity_category": "",
-    "object_popularity_threshold": 0,
     "tasks_per_content": 1,
     "track_bytes_sent": false
   }
