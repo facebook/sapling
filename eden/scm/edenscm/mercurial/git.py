@@ -413,15 +413,25 @@ def _urlremote(ui, source):
     return (url, remote)
 
 
+@cached
+def _supportwritefetchhead(repo):
+    """Test if 'git fetch' supports the --write-fetch-head flag"""
+    # Do not use --help - it pops up a browser on Windows.
+    # -h shows help in stdout and exits with code 129.
+    out = callgit(repo, ["fetch", "-h"], checkreturncode=False)
+    return b"--write-fetch-head" in out
+
+
 def pullrefspecs(repo, url, refspecs):
     """Run `git fetch` on the backing repo to perform a pull"""
     if not refspecs:
         # Nothing to pull
         return 0
-    ret = rungit(
-        repo,
-        ["fetch", "--no-write-fetch-head", "--no-tags", "--prune", url] + refspecs,
-    )
+    args = ["fetch", "--no-tags", "--prune"]
+    if _supportwritefetchhead(repo):
+        args.append("--no-write-fetch-head")
+    args += [url] + refspecs
+    ret = rungit(repo, args)
     _syncfromgit(repo)
     return ret
 
@@ -681,11 +691,11 @@ class Submodule:
         return dirstate.fastreadp1(repopath)
 
 
-def callgit(repo, args):
+def callgit(repo, args, checkreturncode=True):
     """Run git command in the backing git repo, return its output"""
     gitdir = readgitdir(repo)
     ret = callgitnorepo(repo.ui, args, gitdir=gitdir)
-    if ret.returncode != 0:
+    if checkreturncode and ret.returncode != 0:
         cmdstr = " ".join(util.shellquote(c) for c in ret.args)
         raise error.Abort(
             _("git command (%s) failed with exit code %s:\n%s%s")
