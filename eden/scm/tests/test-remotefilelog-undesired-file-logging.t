@@ -50,5 +50,3 @@
   1 trees fetched over 0.00s
   fetching tree '' 05bd2758dd7a25912490d0633b8975bf52bfab06
   fetching tree 'dir' 8a87e5128a9877c501d5a20c32dbd2103a54afad
-  undesired_file_fetches:  (filename=dir/y, reponame=master)
-  undesired_file_fetches:  (filename=x, reponame=master)

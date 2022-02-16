@@ -169,6 +169,8 @@
   $TESTTMP/default-hgcache/master/manifests/lfs/pointers/0/rlock
   $TESTTMP/default-hgcache/master/manifests/lfs/pointers/latest
   $TESTTMP/default-hgcache/master/manifests/lfs/pointers/rlock
+  $TESTTMP/default-hgcache/master/packs/cdd6b0d104ad718cec29643359c67c56c91e483e.histidx
+  $TESTTMP/default-hgcache/master/packs/cdd6b0d104ad718cec29643359c67c56c91e483e.histpack
   $TESTTMP/default-hgcache/master/packs/manifests/9bb7cc2e0e433f3564cbef21705ff896d9be2473.histidx
   $TESTTMP/default-hgcache/master/packs/manifests/9bb7cc2e0e433f3564cbef21705ff896d9be2473.histpack
 

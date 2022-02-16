@@ -452,8 +452,12 @@ def onetimeclientsetup(ui):
                 elif m == "dg":
                     f2 = actionargs[0]
                     files.append((f2, hex(mctx.filenode(f2))))
-            # batch fetch the needed files from the server
-            repo.fileservice.prefetch(files, fetchhistory=False)
+            # We need history for the files so we can compute the sha(p1, p2,
+            # text) for the files on disk. This will unfortunately fetch all the
+            # history for the files, which is excessive. In the future we should
+            # change this to fetch the sha256 and size, then we can avoid p1, p2
+            # entirely.
+            repo.fileservice.prefetch(files, fetchdata=False, fetchhistory=True)
         return orig(repo, wctx, mctx, force, actions, *args, **kwargs)
 
     wrapfunction(merge, "_checkunknownfiles", checkunknownfiles)

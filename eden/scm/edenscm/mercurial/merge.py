@@ -737,11 +737,12 @@ def _checkunknownfile(repo, wctx, mctx, f, f2=None):
 
     if f2 is None:
         f2 = f
+    mfctx = mctx[f2]
     return (
         repo.wvfs.audit.check(f)
         and repo.wvfs.isfileorlink(f)
         and repo.dirstate.normalize(f) not in repo.dirstate
-        and mctx[f2].cmp(wctx[f])
+        and mfctx.filelog().cmp(mfctx.filenode(), wctx[f].data())
     )
 
 
