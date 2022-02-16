@@ -12,7 +12,7 @@ use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use cacheblob::new_memcache_blobstore;
 use cached_config::ConfigStore;
-use clap::Arg;
+use clap_old::Arg;
 use cmdlib::{
     args::{self, MononokeMatches},
     helpers,

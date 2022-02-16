@@ -10,7 +10,7 @@
 use anyhow::{bail, Context, Result};
 use blobstore_factory::make_packblob;
 use borrowed::borrowed;
-use clap::Arg;
+use clap_old::Arg;
 use cmdlib::args::{self, MononokeClapApp};
 use context::CoreContext;
 use fbinit::FacebookInit;

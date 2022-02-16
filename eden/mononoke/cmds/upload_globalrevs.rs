@@ -13,7 +13,7 @@ use bonsai_globalrev_mapping::{
 };
 use bytes::Bytes;
 use changesets::{deserialize_cs_entries, ChangesetEntry};
-use clap::Arg;
+use clap_old::Arg;
 use cloned::cloned;
 use cmdlib::{
     args::{self, MononokeClapApp},

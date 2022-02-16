@@ -10,7 +10,7 @@ use anyhow::{anyhow, format_err, Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::{Loadable, Storable};
-use clap::{App, Arg, ArgGroup, ArgMatches, SubCommand};
+use clap_old::{App, Arg, ArgGroup, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{
     args::{self, MononokeMatches},

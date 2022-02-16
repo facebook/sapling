@@ -7,7 +7,7 @@
 
 use anyhow::anyhow;
 use blobrepo::BlobRepo;
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap_old::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::{
     args::{self, MononokeMatches},
     helpers,

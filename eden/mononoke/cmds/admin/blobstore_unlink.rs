@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use anyhow::{format_err, Error, Result};
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap_old::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
 
 use blobstore::BlobstoreWithLink;

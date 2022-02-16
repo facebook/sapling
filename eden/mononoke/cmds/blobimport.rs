@@ -12,7 +12,7 @@ use ascii::AsciiString;
 use blobimport_lib;
 use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
-use clap::{Arg, ArgGroup};
+use clap_old::{Arg, ArgGroup};
 use cmdlib::{
     args::{self, MononokeClapApp, MononokeMatches, RepoRequirement},
     helpers::block_execute,

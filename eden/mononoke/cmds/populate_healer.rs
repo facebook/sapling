@@ -8,7 +8,7 @@
 use std::{sync::Arc, time::Instant};
 
 use anyhow::{bail, format_err, Error};
-use clap::Arg;
+use clap_old::Arg;
 use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};

@@ -8,7 +8,7 @@
 use std::{ops::Range, sync::Arc};
 
 use anyhow::{anyhow, Context, Result};
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap_old::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
 use futures::{
     channel::mpsc,

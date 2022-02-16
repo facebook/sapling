@@ -9,7 +9,7 @@ use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use cacheblob::{dummy::DummyLease, LeaseOps};
-use clap::{App, Arg, ArgMatches};
+use clap_old::{App, Arg, ArgMatches};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;

@@ -10,7 +10,7 @@ use blobrepo::BlobRepo;
 use bulkops::{Direction, PublicChangesetBulkFetch};
 use bytes::Bytes;
 use changesets::{deserialize_cs_entries, serialize_cs_entries, ChangesetEntry};
-use clap::{Arg, ArgGroup};
+use clap_old::{Arg, ArgGroup};
 use cmdlib::args::{self, RepoRequirement};
 use cmdlib::helpers::csid_resolve;
 use context::CoreContext;

@@ -11,7 +11,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobrepo_override::DangerousOverride;
 use blobstore::Loadable;
 use cacheblob::{dummy::DummyLease, LeaseOps};
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap_old::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::{
     args::{self, MononokeMatches},
     helpers::{self, csid_resolve},

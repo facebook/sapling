@@ -12,7 +12,7 @@ use std::time::Duration;
 use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
 use bytes::Bytes;
-use clap::Arg;
+use clap_old::Arg;
 use futures::future::join_all;
 use futures::stream;
 use slog::{error, info, o};

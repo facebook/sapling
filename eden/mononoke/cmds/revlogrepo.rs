@@ -7,7 +7,7 @@
 
 #![deny(warnings)]
 
-use clap::{App, SubCommand};
+use clap_old::{App, SubCommand};
 use mercurial_revlog::{revlog::Revlog, RevlogChangeset};
 use mercurial_types::HgNodeHash;
 use std::{path::PathBuf, str::FromStr};

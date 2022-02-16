@@ -10,7 +10,7 @@ use std::io::Read;
 
 use anyhow::{anyhow, format_err, Error};
 use blobrepo::BlobRepo;
-use clap::{App, ArgMatches, SubCommand};
+use clap_old::{App, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;

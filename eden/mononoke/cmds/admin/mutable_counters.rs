@@ -8,7 +8,7 @@
 use crate::error::SubcommandError;
 use anyhow::{format_err, Context, Error};
 
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap_old::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;

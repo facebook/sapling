@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap_old::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
 use std::str::FromStr;
 

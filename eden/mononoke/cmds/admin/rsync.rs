@@ -6,7 +6,7 @@
  */
 
 use anyhow::{anyhow, Context, Error};
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap_old::{App, Arg, ArgMatches, SubCommand};
 use copy_utils::{copy, remove_excessive_files, Limits, Options};
 use fbinit::FacebookInit;
 use futures::future::try_join;

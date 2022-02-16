@@ -6,7 +6,7 @@
  */
 
 use anyhow::{bail, format_err, Error};
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap_old::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
 use futures::{stream, StreamExt, TryStreamExt};
 use std::{

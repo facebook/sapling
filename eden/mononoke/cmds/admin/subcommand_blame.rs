@@ -13,7 +13,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bounded_traversal::{bounded_traversal_dag, Iter};
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap_old::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{
     args::{self, MononokeMatches},

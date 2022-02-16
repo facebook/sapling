@@ -8,7 +8,7 @@
 use anyhow::Context;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
-use clap::{App, ArgMatches, SubCommand};
+use clap_old::{App, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use ephemeral_blobstore::BubbleId;

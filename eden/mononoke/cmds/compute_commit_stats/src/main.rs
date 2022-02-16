@@ -10,7 +10,7 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use bulkops::{Direction, PublicChangesetBulkFetch};
-use clap::{Arg, ArgGroup};
+use clap_old::{Arg, ArgGroup};
 use cmdlib::{
     args::{self, MononokeMatches},
     helpers,

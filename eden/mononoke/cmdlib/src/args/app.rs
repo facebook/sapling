@@ -13,7 +13,7 @@ use super::cache::{add_cachelib_args, CachelibSettings};
 use super::matches::MononokeMatches;
 use anyhow::{Error, Result};
 use blobstore_factory::{PutBehaviour, ScrubAction, ScrubWriteMostly, DEFAULT_PUT_BEHAVIOUR};
-use clap::{App, Arg, ArgGroup};
+use clap_old::{App, Arg, ArgGroup};
 use fbinit::FacebookInit;
 use once_cell::sync::OnceCell;
 use repo_factory::ReadOnlyStorage;

@@ -9,7 +9,7 @@ use anyhow::{format_err, Error, Result};
 use blobstore_factory::ReadOnlyStorage;
 use bookmarks::BookmarkName;
 use borrowed::borrowed;
-use clap::ArgMatches;
+use clap_old::ArgMatches;
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use cross_repo_sync::types::{Large, Small};

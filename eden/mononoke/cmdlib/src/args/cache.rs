@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use clap::{App, Arg, ArgMatches};
+use clap_old::{App, Arg, ArgMatches};
 use environment::Caching;
 use fbinit::FacebookInit;
 use once_cell::sync::{Lazy, OnceCell};

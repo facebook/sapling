@@ -7,7 +7,7 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
-use clap::ArgMatches;
+use clap_old::ArgMatches;
 use cmdlib::{args::MononokeMatches, helpers};
 use context::CoreContext;
 use mononoke_types::ChangesetId;

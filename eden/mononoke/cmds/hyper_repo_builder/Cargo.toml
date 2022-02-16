@@ -12,7 +12,7 @@ anyhow = "1.0.51"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
-clap = "2.33"
+clap-old = { package = "clap", version = "2.33" }
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 commit_transformation = { version = "0.1.0", path = "../../megarepo_api/commit_transformation" }
 context = { version = "0.1.0", path = "../../server/context" }

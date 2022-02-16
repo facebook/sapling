@@ -8,7 +8,7 @@
 #![deny(warnings)]
 use anyhow::Result;
 use check_git_wc::check_git_wc;
-use clap::Arg;
+use clap_old::Arg;
 use cmdlib::{
     args::{self, MononokeClapApp, MononokeMatches},
     helpers::block_execute,

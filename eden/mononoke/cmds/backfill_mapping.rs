@@ -10,7 +10,7 @@ use args::MononokeClapApp;
 use ascii::AsciiStr;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use clap::{Arg, ArgGroup};
+use clap_old::{Arg, ArgGroup};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;

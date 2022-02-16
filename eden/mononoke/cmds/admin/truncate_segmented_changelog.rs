@@ -9,7 +9,7 @@ use anyhow::Context;
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
-use clap::{App, ArgMatches, SubCommand};
+use clap_old::{App, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use cmdlib::helpers;
 use context::CoreContext;

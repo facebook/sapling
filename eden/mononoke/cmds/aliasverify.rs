@@ -15,7 +15,7 @@ use std::sync::{
 
 use anyhow::{format_err, Error, Result};
 use bytes::Bytes;
-use clap::Arg;
+use clap_old::Arg;
 use fbinit::FacebookInit;
 use futures::future::TryFutureExt;
 use futures::stream::{self, StreamExt, TryStreamExt};

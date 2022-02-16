@@ -12,7 +12,7 @@ use blobstore::Blobstore;
 use bulkops::{Direction, PublicChangesetBulkFetch};
 use changeset_fetcher::ChangesetFetcher;
 use changesets::ChangesetEntry;
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap_old::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::{CoreContext, SessionClass};
 use fbinit::FacebookInit;

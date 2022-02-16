@@ -18,10 +18,11 @@ use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
 use borrowed::borrowed;
 use cached_config::ConfigStore;
 use chrono::Duration as ChronoDuration;
-use clap::{value_t, Arg};
+use clap_old::Arg;
 use cmdlib::{
     args::{self, MononokeClapApp},
     helpers::block_execute,
+    value_t,
 };
 use context::{CoreContext, SessionContainer};
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};

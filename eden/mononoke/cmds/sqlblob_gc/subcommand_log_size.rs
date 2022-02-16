@@ -9,7 +9,7 @@ use std::{collections::HashMap, ops::Range};
 
 use anyhow::Result;
 use bytesize::ByteSize;
-use clap::{App, ArgMatches, SubCommand};
+use clap_old::{App, ArgMatches, SubCommand};
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::TryFutureExt;
 use scuba_ext::MononokeScubaSampleBuilder;

@@ -20,7 +20,7 @@ use bookmarks::{
 use bytes::Bytes;
 use cacheblob::{dummy::DummyLease, InProcessLease, LeaseOps};
 use changesets::{deserialize_cs_entries, ChangesetEntry};
-use clap::{Arg, ArgMatches, SubCommand};
+use clap_old::{Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{
     args::{self, MononokeMatches, RepoRequirement},

@@ -6,7 +6,7 @@
  */
 
 use anyhow::{bail, Context, Error, Result};
-use clap::App;
+use clap_old::App;
 use mercurial_revlog::revlog::Revlog;
 use std::{fs::File, io::Write, str::FromStr};
 

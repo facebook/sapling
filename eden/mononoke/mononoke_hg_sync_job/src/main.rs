@@ -21,7 +21,7 @@ use borrowed::borrowed;
 use bundle_generator::FilenodeVerifier;
 use bundle_preparer::{maybe_adjust_batch, BundlePreparer};
 use cached_config::ConfigStore;
-use clap::{Arg, ArgGroup, SubCommand};
+use clap_old::{Arg, ArgGroup, SubCommand};
 use cloned::cloned;
 use cmdlib::{
     args::{self, MononokeMatches},

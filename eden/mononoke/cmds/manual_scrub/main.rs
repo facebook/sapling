@@ -9,7 +9,7 @@
 
 use anyhow::{Context, Error, Result};
 use async_compression::{tokio::write::ZstdEncoder, Level};
-use clap::Arg;
+use clap_old::Arg;
 use futures::{
     channel::mpsc,
     stream::{FuturesUnordered, StreamExt, TryStreamExt},

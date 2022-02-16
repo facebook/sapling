@@ -14,7 +14,7 @@ use blobstore::{Blobstore, Loadable};
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use changesets::{deserialize_cs_entries, ChangesetEntry};
-use clap::{Arg, SubCommand};
+use clap_old::{Arg, SubCommand};
 use cmdlib::{
     args::{self, MononokeClapApp, MononokeMatches},
     helpers::block_execute,

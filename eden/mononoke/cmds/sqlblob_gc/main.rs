@@ -10,7 +10,7 @@
 use std::ops::Range;
 
 use anyhow::{anyhow, bail, Context, Result};
-use clap::Arg;
+use clap_old::Arg;
 use fbinit::FacebookInit;
 
 use blobstore_factory::make_sql_blobstore;

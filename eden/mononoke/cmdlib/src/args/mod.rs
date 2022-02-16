@@ -20,7 +20,7 @@ use std::time::Duration;
 
 use anyhow::{bail, format_err, Error, Result};
 use cached_config::ConfigStore;
-use clap::ArgMatches;
+use clap_old::ArgMatches;
 use fbinit::FacebookInit;
 use scribe_ext::Scribe;
 use slog::{info, warn, Logger};
@@ -739,4 +739,25 @@ pub fn parse_disabled_hooks_no_repo_prefix<'a>(
     }
 
     disabled_hooks
+}
+
+/// Fxed macro from clap2 so it refers to clap_old
+#[macro_export]
+macro_rules! value_t {
+    ($m:ident, $v:expr, $t:ty) => {
+        value_t!($m.value_of($v), $t)
+    };
+    ($m:ident.value_of($v:expr), $t:ty) => {
+        if let Some(v) = $m.value_of($v) {
+            match v.parse::<$t>() {
+                Ok(val) => Ok(val),
+                Err(_) => Err(::clap_old::Error::value_validation_auto(format!(
+                    "The argument '{}' isn't a valid value",
+                    v
+                ))),
+            }
+        } else {
+            Err(::clap_old::Error::argument_not_found_auto($v))
+        }
+    };
 }

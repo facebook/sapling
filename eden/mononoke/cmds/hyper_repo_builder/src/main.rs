@@ -24,7 +24,7 @@
 use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
-use clap::{Arg, ArgMatches, SubCommand};
+use clap_old::{Arg, ArgMatches, SubCommand};
 use cmdlib::{
     args::{self, MononokeMatches},
     helpers,

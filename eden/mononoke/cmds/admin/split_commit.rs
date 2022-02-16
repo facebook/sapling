@@ -10,7 +10,7 @@ use crate::error::SubcommandError;
 use anyhow::{anyhow, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Loadable;
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap_old::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::{
     args::{self, MononokeMatches},
     helpers::csid_resolve,

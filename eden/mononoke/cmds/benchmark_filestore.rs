@@ -13,7 +13,7 @@ use blobstore_factory::{make_sql_blobstore_xdb, ReadOnlyStorage};
 use bytes::{Bytes, BytesMut};
 use cacheblob::new_memcache_blobstore_no_lease;
 use cached_config::ConfigStore;
-use clap::{Arg, SubCommand};
+use clap_old::{Arg, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;

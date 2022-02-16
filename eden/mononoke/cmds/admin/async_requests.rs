@@ -8,8 +8,9 @@
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Error};
-use clap::{value_t, App, Arg, ArgMatches, SubCommand};
+use clap_old::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
+use cmdlib::value_t;
 use context::CoreContext;
 use context::SessionContainer;
 use fbinit::FacebookInit;

@@ -9,7 +9,7 @@ use anyhow::{anyhow, format_err, Error, Result};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bytes::BytesMut;
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap_old::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use ephemeral_blobstore::BubbleId;

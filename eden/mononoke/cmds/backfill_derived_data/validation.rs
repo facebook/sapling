@@ -12,7 +12,7 @@ use blobstore::{Blobstore, StoreLoadable};
 use bonsai_hg_mapping::{ArcBonsaiHgMapping, MemWritesBonsaiHgMapping};
 use borrowed::borrowed;
 use cacheblob::MemWritesBlobstore;
-use clap::ArgMatches;
+use clap_old::ArgMatches;
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use derived_data::BonsaiDerived;

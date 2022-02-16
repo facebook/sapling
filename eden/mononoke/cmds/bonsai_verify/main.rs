@@ -14,7 +14,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
 use blobstore::Loadable;
-use clap::{Arg, ArgMatches, SubCommand};
+use clap_old::{Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::args::{self, MononokeClapApp, MononokeMatches};
 use context::CoreContext;

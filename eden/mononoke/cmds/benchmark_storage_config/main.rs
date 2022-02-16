@@ -10,7 +10,7 @@
 use std::{sync::Arc, time::Duration};
 
 use anyhow::{anyhow, Context, Error};
-use clap::Arg;
+use clap_old::Arg;
 use criterion::Criterion;
 use tokio::runtime::Handle;
 

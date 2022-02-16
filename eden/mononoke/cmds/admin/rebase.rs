@@ -7,7 +7,7 @@
 
 use anyhow::{anyhow, Error};
 use blobstore::Loadable;
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap_old::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
 use futures::{
     compat::Stream01CompatExt,

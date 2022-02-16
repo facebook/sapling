@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use clap::{Arg, SubCommand};
+use clap_old::{Arg, SubCommand};
 use cmdlib::args::{self, MononokeClapApp};
 
 pub const ARG_ONCE: &str = "once";

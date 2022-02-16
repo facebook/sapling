@@ -47,7 +47,7 @@ use backsyncer::format_counter as format_backsyncer_counter;
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, Freshness};
 use cached_config::ConfigStore;
-use clap::ArgMatches;
+use clap_old::ArgMatches;
 use cmdlib::{
     args::{self, MononokeClapApp, MononokeMatches},
     helpers, monitoring,

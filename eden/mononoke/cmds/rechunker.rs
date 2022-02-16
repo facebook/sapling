@@ -10,7 +10,7 @@
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::{Loadable, PutBehaviour};
-use clap::Arg;
+use clap_old::Arg;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;

@@ -17,7 +17,7 @@ use std::time::Duration;
 
 use anyhow::{bail, format_err, Context, Error, Result};
 use cached_config::{ConfigHandle, ConfigStore};
-use clap::{ArgMatches, OsValues, Values};
+use clap_old::{ArgMatches, OsValues, Values};
 use derived_data_remote::RemoteDerivationOptions;
 use fbinit::FacebookInit;
 use maybe_owned::MaybeOwned;

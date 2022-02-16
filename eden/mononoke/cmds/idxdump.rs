@@ -6,7 +6,7 @@
  */
 
 use anyhow::{bail, Result};
-use clap::App;
+use clap_old::App;
 use mercurial_revlog::revlog::{RevIdx, Revlog};
 use std::str::FromStr;
 

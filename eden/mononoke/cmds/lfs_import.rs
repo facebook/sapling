@@ -9,7 +9,7 @@ use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use borrowed::borrowed;
 use bytes::Bytes;
-use clap::Arg;
+use clap_old::Arg;
 use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use fbinit::FacebookInit;

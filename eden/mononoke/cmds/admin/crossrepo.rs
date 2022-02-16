@@ -12,7 +12,7 @@ use blobstore::Loadable;
 use bookmark_renaming::get_small_to_large_renamer;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
 use cached_config::ConfigStore;
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap_old::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::{
     args::{self, MononokeMatches},
     helpers,

@@ -17,7 +17,7 @@ ascii = "1.0"
 blobimport_lib = { version = "0.1.0", path = "../blobimport_lib" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }
-clap = "2.33"
+clap-old = { package = "clap", version = "2.33" }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
 derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }
