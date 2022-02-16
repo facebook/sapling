@@ -12,6 +12,4 @@ use thiserror::Error;
 pub(crate) enum ErrorKind {
     #[error("Error while uploading data for changesets, hashes: {0:?}")]
     WhileUploadingData(Vec<HgChangesetId>),
-    #[error("Repo is marked as read-only: {0}")]
-    RepoReadOnly(String),
 }

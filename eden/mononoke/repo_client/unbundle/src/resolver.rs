@@ -30,7 +30,7 @@ use mercurial_bundles::{
 use mercurial_mutation::HgMutationEntry;
 use mercurial_revlog::changeset::RevlogChangeset;
 use mercurial_types::HgChangesetId;
-use metaconfig_types::{PushrebaseFlags, RepoReadOnly};
+use metaconfig_types::PushrebaseFlags;
 use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, RawBundle2, RawBundle2Id};
 use pushrebase::HgReplayData;
 use rate_limiting::RateLimitBody;
@@ -253,7 +253,6 @@ pub async fn resolve<'a>(
     repo: &'a BlobRepo,
     infinitepush_writes_allowed: bool,
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
-    readonly: RepoReadOnly,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     pure_push_allowed: bool,
     pushrebase_flags: PushrebaseFlags,
@@ -264,7 +263,6 @@ pub async fn resolve<'a>(
         repo,
         infinitepush_writes_allowed,
         bundle2,
-        readonly,
         maybe_full_content,
         pure_push_allowed,
         pushrebase_flags,
@@ -280,7 +278,6 @@ async fn resolve_impl<'a>(
     repo: &'a BlobRepo,
     infinitepush_writes_allowed: bool,
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
-    readonly: RepoReadOnly,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     pure_push_allowed: bool,
     pushrebase_flags: PushrebaseFlags,
@@ -297,22 +294,6 @@ async fn resolve_impl<'a>(
         .maybe_resolve_pushvars(bundle2)
         .await
         .context("While resolving Pushvars")?;
-
-    let mut bypass_readonly = false;
-    // check the bypass condition
-    if let Some(ref pushvars) = maybe_pushvars {
-        bypass_readonly = pushvars
-            .get("BYPASS_READONLY")
-            .map(|s| s.to_ascii_lowercase())
-            == Some("true".into());
-    }
-
-    if let RepoReadOnly::ReadOnly(reason) = readonly {
-        if bypass_readonly == false {
-            let e = Error::from(ErrorKind::RepoReadOnly(reason));
-            return Err(e.into());
-        }
-    }
 
     let (pushkey_next, bundle2) = resolver.is_next_part_pushkey(bundle2).await?;
 

@@ -34,7 +34,7 @@ use futures_old::stream::Stream as OldStream;
 use futures_stats::{FutureStats, TimedFutureExt};
 use hooks_content_stores::blobrepo_text_only_fetcher;
 use mercurial_bundles::bundle2::{Bundle2Stream, StreamEvent};
-use metaconfig_types::{BookmarkAttrs, RepoConfig, RepoReadOnly};
+use metaconfig_types::{BookmarkAttrs, RepoConfig};
 use mononoke_types::{BonsaiChangeset, ChangesetId, Timestamp};
 use repo_factory::RepoFactory;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -262,7 +262,6 @@ async fn maybe_unbundle(
                 &repo,
                 false, // infinitepush_writes_allowed
                 bundle_stream.compat().boxed(),
-                RepoReadOnly::ReadWrite,
                 None,  // maybe_full_content
                 false, // pure_push_allowed
                 pushrebase_flags,
