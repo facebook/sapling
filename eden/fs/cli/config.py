@@ -1348,19 +1348,8 @@ class EdenCheckout:
         new_active_profiles = old_active_profiles.copy()
         new_active_profiles.append(profile)
 
-        new_config = CheckoutConfig(
-            backing_repo=old_config.backing_repo,
-            scm_type=old_config.scm_type,
-            guid=old_config.guid,
-            case_sensitive=old_config.case_sensitive,
-            require_utf8_path=old_config.require_utf8_path,
-            mount_protocol=old_config.mount_protocol,
-            redirections=old_config.redirections,
-            default_revision=old_config.default_revision,
+        new_config = old_config._replace(
             active_prefetch_profiles=new_active_profiles,
-            predictive_prefetch_profiles_active=old_config.predictive_prefetch_profiles_active,
-            predictive_prefetch_num_dirs=old_config.predictive_prefetch_num_dirs,
-            enable_tree_overlay=old_config.enable_tree_overlay,
         )
 
         self.save_config(new_config)
@@ -1386,19 +1375,8 @@ class EdenCheckout:
         new_active_profiles = old_active_profiles.copy()
         new_active_profiles.remove(profile)
 
-        new_config = CheckoutConfig(
-            backing_repo=old_config.backing_repo,
-            scm_type=old_config.scm_type,
-            guid=old_config.guid,
-            case_sensitive=old_config.case_sensitive,
-            require_utf8_path=old_config.require_utf8_path,
-            mount_protocol=old_config.mount_protocol,
-            redirections=old_config.redirections,
-            default_revision=old_config.default_revision,
+        new_config = old_config._replace(
             active_prefetch_profiles=new_active_profiles,
-            predictive_prefetch_profiles_active=old_config.predictive_prefetch_profiles_active,
-            predictive_prefetch_num_dirs=old_config.predictive_prefetch_num_dirs,
-            enable_tree_overlay=old_config.enable_tree_overlay,
         )
 
         self.save_config(new_config)
@@ -1429,19 +1407,9 @@ class EdenCheckout:
             telemetry_sample.fail(msg)
             return 1
 
-        new_config = CheckoutConfig(
-            backing_repo=old_config.backing_repo,
-            scm_type=old_config.scm_type,
-            guid=old_config.guid,
-            case_sensitive=old_config.case_sensitive,
-            require_utf8_path=old_config.require_utf8_path,
-            mount_protocol=old_config.mount_protocol,
-            redirections=old_config.redirections,
-            default_revision=old_config.default_revision,
-            active_prefetch_profiles=old_config.active_prefetch_profiles,
+        new_config = old_config._replace(
             predictive_prefetch_profiles_active=True,
             predictive_prefetch_num_dirs=num_dirs,
-            enable_tree_overlay=old_config.enable_tree_overlay,
         )
 
         self.save_config(new_config)
@@ -1465,19 +1433,8 @@ class EdenCheckout:
             )
             return 1
 
-        new_config = CheckoutConfig(
-            backing_repo=old_config.backing_repo,
-            scm_type=old_config.scm_type,
-            guid=old_config.guid,
-            case_sensitive=old_config.case_sensitive,
-            require_utf8_path=old_config.require_utf8_path,
-            mount_protocol=old_config.mount_protocol,
-            redirections=old_config.redirections,
-            default_revision=old_config.default_revision,
-            active_prefetch_profiles=old_config.active_prefetch_profiles,
-            predictive_prefetch_profiles_active=False,
-            predictive_prefetch_num_dirs=0,
-            enable_tree_overlay=old_config.enable_tree_overlay,
+        new_config = old_config._replace(
+            predictive_prefetch_profiles_active=False, predictive_prefetch_num_dirs=0
         )
 
         self.save_config(new_config)

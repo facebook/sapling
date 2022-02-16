@@ -618,19 +618,8 @@ def apply_redirection_configs_to_checkout_config(
                 # python-toml doesn't escape them correctly when used as key
                 normalized = normalized.replace("\\", "/")
             redirections[normalized] = r.type
-    return CheckoutConfig(
-        backing_repo=config.backing_repo,
-        scm_type=config.scm_type,
-        guid=config.guid,
-        mount_protocol=config.mount_protocol,
-        case_sensitive=config.case_sensitive,
-        require_utf8_path=config.require_utf8_path,
-        default_revision=config.default_revision,
+    return config._replace(
         redirections=redirections,
-        active_prefetch_profiles=config.active_prefetch_profiles,
-        predictive_prefetch_profiles_active=config.predictive_prefetch_profiles_active,
-        predictive_prefetch_num_dirs=config.predictive_prefetch_num_dirs,
-        enable_tree_overlay=config.enable_tree_overlay,
     )
 
 
