@@ -778,7 +778,6 @@ mod test {
             [infinitepush]
             allow_writes = true
             namespace_pattern = "foobar/.+"
-            bookmarks_filler = 0
 
             [filestore]
             chunk_size = 768
@@ -1049,10 +1048,7 @@ mod test {
                     allow_writes: true,
                     namespace: Some(InfinitepushNamespace::new(Regex::new("foobar/.+").unwrap())),
                     hydrate_getbundle_response: false,
-                    populate_reverse_filler_queue: false,
                     commit_scribe_category: None,
-                    bookmarks_filler: Default::default(),
-                    populate_reverse_bookmarks_filler_queue: false,
                 },
                 list_keys_patterns_max: 123,
                 hook_max_file_size: 456,

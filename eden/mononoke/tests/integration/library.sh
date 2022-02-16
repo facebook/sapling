@@ -1087,9 +1087,7 @@ function write_infinitepush_config {
   local reponame="$1"
   if [[ -n "${INFINITEPUSH_ALLOW_WRITES:-}" ]] || \
      [[ -n "${INFINITEPUSH_NAMESPACE_REGEX:-}" ]] || \
-     [[ -n "${INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE:-}" ]] || \
-     [[ -n "${INFINITEPUSH_POPULATE_REVERSE_FILLER_QUEUE:-}" ]] || \
-     [[ -n "${INFINITEPUSH_POPULATE_REVERSE_BOOKMARK_FILLER_QUEUE:-}" ]];
+     [[ -n "${INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE:-}" ]];
   then
     namespace=""
     if [[ -n "${INFINITEPUSH_NAMESPACE_REGEX:-}" ]]; then
@@ -1100,9 +1098,6 @@ function write_infinitepush_config {
 [infinitepush]
 allow_writes = ${INFINITEPUSH_ALLOW_WRITES:-true}
 hydrate_getbundle_response = ${INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE:-false}
-populate_reverse_filler_queue = ${INFINITEPUSH_POPULATE_REVERSE_FILLER_QUEUE:-false}
-populate_reverse_bookmarks_filler_queue =  ${INFINITEPUSH_POPULATE_REVERSE_BOOKMARK_FILLER_QUEUE:-false}
-bookmarks_filler = 3
 ${namespace}
 CONFIG
   fi

@@ -13,18 +13,18 @@ use anyhow::{anyhow, Context, Result};
 use bookmarks_types::BookmarkName;
 use metaconfig_types::{
     BlameVersion, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
-    CommitcloudBookmarksFillerMode, ComparableRegex, DerivedDataConfig, DerivedDataTypesConfig,
-    HookBypass, HookConfig, HookManagerParams, HookParams, InfinitepushNamespace,
-    InfinitepushParams, LfsParams, PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs,
-    SegmentedChangelogConfig, ServiceWriteRestrictions, SourceControlServiceMonitoring,
-    SourceControlServiceParams, StorageConfig, UnodeVersion, WireprotoLoggingConfig,
+    ComparableRegex, DerivedDataConfig, DerivedDataTypesConfig, HookBypass, HookConfig,
+    HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams,
+    PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs, SegmentedChangelogConfig,
+    ServiceWriteRestrictions, SourceControlServiceMonitoring, SourceControlServiceParams,
+    StorageConfig, UnodeVersion, WireprotoLoggingConfig,
 };
 use mononoke_types::{ChangesetId, MPath, PrefixTrie};
 use regex::Regex;
 use repos::{
-    RawBookmarkConfig, RawBundle2ReplayParams, RawCacheWarmupConfig, RawCommitcloudBookmarksFiller,
-    RawDerivedDataConfig, RawDerivedDataTypesConfig, RawHookConfig, RawHookManagerParams,
-    RawInfinitepushParams, RawLfsParams, RawPushParams, RawPushrebaseParams, RawRepoClientKnobs,
+    RawBookmarkConfig, RawBundle2ReplayParams, RawCacheWarmupConfig, RawDerivedDataConfig,
+    RawDerivedDataTypesConfig, RawHookConfig, RawHookManagerParams, RawInfinitepushParams,
+    RawLfsParams, RawPushParams, RawPushrebaseParams, RawRepoClientKnobs,
     RawSegmentedChangelogConfig, RawServiceWriteRestrictions, RawSourceControlServiceMonitoring,
     RawSourceControlServiceParams, RawWireprotoLoggingConfig,
 };
@@ -280,22 +280,7 @@ impl Convert for RawInfinitepushParams {
                 .namespace_pattern
                 .and_then(|ns| Regex::new(&ns).ok().map(InfinitepushNamespace::new)),
             hydrate_getbundle_response: self.hydrate_getbundle_response.unwrap_or(false),
-            populate_reverse_filler_queue: self.populate_reverse_filler_queue.unwrap_or(false),
             commit_scribe_category: self.commit_scribe_category,
-            bookmarks_filler: match self.bookmarks_filler {
-                RawCommitcloudBookmarksFiller::DISABLED => CommitcloudBookmarksFillerMode::DISABLED,
-                RawCommitcloudBookmarksFiller::BACKFILL => CommitcloudBookmarksFillerMode::BACKFILL,
-                RawCommitcloudBookmarksFiller::FORWARDFILL => {
-                    CommitcloudBookmarksFillerMode::FORWARDFILL
-                }
-                RawCommitcloudBookmarksFiller::BIDIRECTIONAL => {
-                    CommitcloudBookmarksFillerMode::BIDIRECTIONAL
-                }
-                _ => return Err(anyhow!("unknown bookmarks filler operation mode!")),
-            },
-            populate_reverse_bookmarks_filler_queue: self
-                .populate_reverse_bookmarks_filler_queue
-                .unwrap_or(false),
         })
     }
 }

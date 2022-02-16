@@ -25,8 +25,6 @@ use rand::Rng;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use repo_read_write_status::RepoReadWriteFetcher;
-use reverse_filler_queue::ReverseFillerQueue;
-use reverse_filler_queue::SqlReverseFillerQueue;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use std::fmt::{self, Debug};
@@ -52,9 +50,6 @@ pub struct MononokeRepo {
     streaming_clone: SqlStreamingCloneConfig,
     #[allow(dead_code)]
     mutable_counters: Arc<dyn MutableCounters>,
-    // Reverse filler queue for recording accepted infinitepush bundles
-    // This field is `None` if we don't want recording to happen
-    maybe_reverse_filler_queue: Option<Arc<dyn ReverseFillerQueue>>,
 }
 
 impl MononokeRepo {
@@ -85,35 +80,7 @@ impl MononokeRepo {
             readonly_storage.0,
         )?;
 
-        let maybe_reverse_filler_queue = {
-            let record_infinitepush_writes: bool =
-                repo.config().infinitepush.populate_reverse_filler_queue
-                    && repo.config().infinitepush.allow_writes;
-
-            if record_infinitepush_writes {
-                let reverse_filler_queue = SqlReverseFillerQueue::with_metadata_database_config(
-                    fb,
-                    &storage_config.metadata,
-                    mysql_options,
-                    readonly_storage.0,
-                )?;
-
-                let reverse_filler_queue: Arc<dyn ReverseFillerQueue> =
-                    Arc::new(reverse_filler_queue);
-                Some(reverse_filler_queue)
-            } else {
-                None
-            }
-        };
-
-        Self::new_from_parts(
-            fb,
-            repo,
-            streaming_clone,
-            mutable_counters,
-            maybe_reverse_filler_queue,
-        )
-        .await
+        Self::new_from_parts(fb, repo, streaming_clone, mutable_counters).await
     }
 
     pub async fn new_from_parts(
@@ -121,7 +88,6 @@ impl MononokeRepo {
         repo: Arc<Repo>,
         streaming_clone: SqlStreamingCloneConfig,
         mutable_counters: Arc<dyn MutableCounters>,
-        maybe_reverse_filler_queue: Option<Arc<dyn ReverseFillerQueue>>,
     ) -> Result<Self, Error> {
         // TODO: Update Metaconfig so we just have this in config:
         let bookmark_attrs = BookmarkAttrs::new(fb, repo.config().bookmarks.clone()).await?;
@@ -130,7 +96,6 @@ impl MononokeRepo {
             repo,
             streaming_clone,
             mutable_counters,
-            maybe_reverse_filler_queue,
             bookmark_attrs,
         })
     }
@@ -165,10 +130,6 @@ impl MononokeRepo {
 
     pub fn streaming_clone(&self) -> &SqlStreamingCloneConfig {
         &self.streaming_clone
-    }
-
-    pub fn maybe_reverse_filler_queue(&self) -> Option<&dyn ReverseFillerQueue> {
-        self.maybe_reverse_filler_queue.as_deref()
     }
 
     pub fn force_lfs_if_threshold_set(&self) -> SessionLfsParams {

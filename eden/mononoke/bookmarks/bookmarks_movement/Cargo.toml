@@ -42,7 +42,6 @@ repo_read_write_status = { version = "0.1.0", path = "../../repo_client/repo_rea
 revset = { version = "0.1.0", path = "../../revset" }
 scribe_commit_queue = { version = "0.1.0", path = "../../repo_client/scribe_commit_queue" }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
-slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.29"
 tunables = { version = "0.1.0", path = "../../tunables" }

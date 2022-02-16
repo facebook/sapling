@@ -168,7 +168,6 @@ impl PushRedirector {
             &puhsrebase_params,
             &push_params,
             self.repo.hook_manager().as_ref(),
-            self.repo.maybe_reverse_filler_queue(),
             self.repo.readonly_fetcher(),
             large_repo_action,
             CrossRepoPushSource::PushRedirected,
@@ -421,7 +420,6 @@ impl PushRedirector {
             maybe_raw_bundle2_id,
             uploaded_bonsais,
             uploaded_hg_changeset_ids: _,
-            is_cross_backend_sync,
         } = orig;
         let uploaded_bonsais = self
             .sync_uploaded_changesets(ctx, uploaded_bonsais, None)
@@ -442,7 +440,6 @@ impl PushRedirector {
             maybe_raw_bundle2_id,
             uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
             uploaded_hg_changeset_ids: Default::default(),
-            is_cross_backend_sync,
         })
     }
 

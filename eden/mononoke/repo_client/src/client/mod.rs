@@ -1719,8 +1719,6 @@ impl HgCommands for RepoClient {
                                     .await?
                             }
                             None => {
-                                let maybe_reverse_filler_queue =
-                                    client.repo.maybe_reverse_filler_queue();
                                 let readonly_fetcher = client.repo.readonly_fetcher();
                                 run_post_resolve_action(
                                     &ctx,
@@ -1731,7 +1729,6 @@ impl HgCommands for RepoClient {
                                     &pushrebase_params,
                                     &push_params,
                                     hook_manager.as_ref(),
-                                    maybe_reverse_filler_queue,
                                     readonly_fetcher,
                                     action,
                                     CrossRepoPushSource::NativeToThisRepo,

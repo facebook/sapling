@@ -16,8 +16,6 @@ use thiserror::Error;
 mod affected_changesets;
 mod create;
 mod delete;
-#[cfg(fbcode_build)]
-mod facebook;
 mod git_mapping;
 mod hook_running;
 mod pushrebase_onto;

@@ -11,7 +11,6 @@ setup configuration
   $ export READ_ONLY_REPO=1
   $ INFINITEPUSH_ALLOW_WRITES=true \
   >   ENABLE_PRESERVE_BUNDLE2=true \
-  >   INFINITEPUSH_POPULATE_REVERSE_FILLER_QUEUE=true \
   >   setup_common_config
   $ cd $TESTTMP
 
@@ -87,10 +86,6 @@ start mononoke
   $ hgmn up master_bookmark -q
 
 
-Make sure reversefillerqueue is empty
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT COUNT(*) FROM reversefillerqueue"
-  0
-
 Make commits in the first client, and sync it
   $ cd ../client1
   $ mkcommit "commit1"
@@ -111,10 +106,6 @@ Make commits in the first client, and sync it
   │
   o  8b2dca0c8a72 public 'base_commit'
   
-Make sure these commits end up in reversefillerqueue
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT bundle FROM reversefillerqueue"
-  rawbundle2.blake2.* (glob)
-
 Sync from the second client - the commits should appear
   $ cd ../client2
   $ hgmn cloud sync

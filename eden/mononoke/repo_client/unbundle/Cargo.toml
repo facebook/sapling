@@ -51,7 +51,6 @@ rate_limiting = { version = "0.1.0", path = "../../rate_limiting" }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 remotefilelog = { version = "0.1.0", path = "../remotefilelog" }
 repo_read_write_status = { version = "0.1.0", path = "../repo_read_write_status" }
-reverse_filler_queue = { version = "0.1.0", path = "../reverse_filler_queue" }
 scribe_commit_queue = { version = "0.1.0", path = "../scribe_commit_queue" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 sha2 = "0.8"

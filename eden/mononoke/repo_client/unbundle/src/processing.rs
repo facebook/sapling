@@ -22,14 +22,13 @@ use context::CoreContext;
 use hooks::HookManager;
 use mercurial_bundle_replay_data::BundleReplayData;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushParams, PushrebaseParams};
-use mononoke_types::{BonsaiChangeset, ChangesetId, RawBundle2Id};
+use mononoke_types::{BonsaiChangeset, ChangesetId};
 use phases::PhasesRef;
 use pushrebase::PushrebaseError;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::RepoReadWriteFetcher;
-use reverse_filler_queue::ReverseFillerQueue;
 use scribe_commit_queue::ChangedFilesInfo;
-use slog::{debug, warn};
+use slog::debug;
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -60,7 +59,6 @@ pub async fn run_post_resolve_action(
     pushrebase_params: &PushrebaseParams,
     push_params: &PushParams,
     hook_manager: &HookManager,
-    maybe_reverse_filler_queue: Option<&dyn ReverseFillerQueue>,
     readonly_fetcher: &RepoReadWriteFetcher,
     action: PostResolveAction,
     cross_repo_push_source: CrossRepoPushSource,
@@ -94,7 +92,6 @@ pub async fn run_post_resolve_action(
             hook_manager,
             infinitepush_params,
             pushrebase_params,
-            maybe_reverse_filler_queue,
             readonly_fetcher,
             action,
             cross_repo_push_source,
@@ -248,35 +245,6 @@ async fn run_push(
     })
 }
 
-async fn save_to_reverse_filler_queue(
-    ctx: &CoreContext,
-    reponame: &String,
-    maybe_reverse_filler_queue: Option<&dyn ReverseFillerQueue>,
-    maybe_raw_bundle2_id: Option<RawBundle2Id>,
-) -> Result<(), Error> {
-    if let Some(reverse_filler_queue) = maybe_reverse_filler_queue {
-        if let Some(ref raw_bundle2_id) = maybe_raw_bundle2_id {
-            debug!(
-                ctx.logger(),
-                "saving infinitepush bundle {:?} into the reverse filler queue", raw_bundle2_id
-            );
-            reverse_filler_queue
-                .insert_bundle(reponame, raw_bundle2_id)
-                .await?;
-            ctx.scuba()
-                .clone()
-                .log_with_msg("Saved into ReverseFillerQueue", None);
-        } else {
-            warn!(
-                ctx.logger(),
-                "reverse filler queue enabled, but bundle preservation is not!"
-            );
-        }
-    }
-
-    Ok(())
-}
-
 async fn run_infinitepush(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -285,7 +253,6 @@ async fn run_infinitepush(
     hook_manager: &HookManager,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
-    maybe_reverse_filler_queue: Option<&dyn ReverseFillerQueue>,
     readonly_fetcher: &RepoReadWriteFetcher,
     action: PostResolveInfinitePush,
     cross_repo_push_source: CrossRepoPushSource,
@@ -298,18 +265,7 @@ async fn run_infinitepush(
         maybe_raw_bundle2_id,
         uploaded_bonsais,
         uploaded_hg_changeset_ids,
-        is_cross_backend_sync,
     } = action;
-
-    if !is_cross_backend_sync {
-        save_to_reverse_filler_queue(
-            ctx,
-            repo.name(),
-            maybe_reverse_filler_queue,
-            maybe_raw_bundle2_id,
-        )
-        .await?;
-    }
 
     if tunables().get_mutation_accept_for_infinitepush() {
         repo.hg_mutation_store()

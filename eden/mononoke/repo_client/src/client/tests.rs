@@ -422,7 +422,6 @@ async fn run_and_check_if_lfs(
             repoid: blob_repo.get_repoid(),
         },
         Arc::new(SqlMutableCounters::with_sqlite_in_memory()?),
-        Default::default(),
     )
     .await?;
 

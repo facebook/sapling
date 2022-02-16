@@ -224,24 +224,7 @@ impl<'op> UpdateBookmarkOp<'op> {
 
         let commits_to_log = match kind {
             BookmarkKind::Scratch => {
-                // TODO: remove this once hg->mononoke migration is done
-                // as we won't need any syncing between hg and mononoke then.
-                #[cfg(fbcode_build)]
-                {
-                    txn_hook =
-                        crate::facebook::bookmarks_filler::populate_bookmarks_filler_txn_hook(
-                            ctx,
-                            repo,
-                            infinitepush_params,
-                            self.bookmark,
-                            self.targets.new,
-                        )
-                        .await?;
-                }
-                #[cfg(not(fbcode_build))]
-                {
-                    txn_hook = None;
-                }
+                txn_hook = None;
 
                 ctx.scuba()
                     .clone()
