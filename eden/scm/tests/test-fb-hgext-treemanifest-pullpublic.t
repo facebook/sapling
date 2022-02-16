@@ -29,7 +29,7 @@ Clone it
                                                      getmeta : { calls : 2},
                                                      getmissing : { calls : 1,
                                                                     keys : 2},
-                                                     prefetch : { calls : 3,
+                                                     prefetch : { calls : 2,
                                                                   keys : 4}}},
                                       fetch : { contentstore : { hits : 2,
                                                                  keys : 2,

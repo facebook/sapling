@@ -132,16 +132,18 @@ class physicalfilesystem(object):
         try:
             # This will return True for a file that got replaced by a
             # directory in the interim, but fixing that is pretty hard.
-            if (
-                path not in pctx
-                or wctx.flags(path) != pctx.flags(path)
-                or pctx[path].cmp(wctx[path])
-            ):
+            if path not in pctx or wctx.flags(path) != pctx.flags(path):
                 # Has changed
                 return True
-            else:
-                # Has not changed
-                return False
+
+            pfctx = pctx[path]
+            # Normally we would use pfctx.cmp(wctx[path]) instead of the filelog
+            # cmp() function. Unfortunately filectx.cmp accesses the file size,
+            # and getting the size with the current data store requires fetching
+            # the whole file content. For now let's avoid that and go straight
+            # to the filelog.cmp. Later we will fix this comparison to be pure
+            # content sha comparisons, which will remove the need for this hack.
+            return pfctx.filelog().cmp(pfctx.filenode(), wctx[path].data())
         except (IOError, OSError):
             # A file become inaccessible in between? Mark it as deleted,
             # matching dirstate behavior (issue5584).
@@ -297,9 +299,15 @@ class physicalfilesystem(object):
         if util.safehasattr(repo, "fileservice"):
             p1mf = repo[p1].manifest()
             lookupmatcher = matchmod.exact(repo.root, repo.root, lookups)
+            # We fetch history because we know _compareondisk() uses
+            # filelog.cmp() which computes the sha(p1, p2, text), which requires
+            # the history of the file. Later we'll move to comparing content
+            # hashes, and we can prefetch those hashes instead.
+            # Note, this may be slow for files with long histories.
             repo.fileservice.prefetch(
                 list((f, hex(p1mf[f])) for f in p1mf.matches(lookupmatcher)),
-                fetchhistory=False,
+                fetchdata=False,
+                fetchhistory=True,
             )
 
         wctx = repo[None]

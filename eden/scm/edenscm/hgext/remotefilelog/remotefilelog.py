@@ -13,7 +13,7 @@ import os
 from bindings import revisionstore
 from edenscm.mercurial import ancestor, error, filelog, mdiff, pycompat, revlog, util
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin, nullid
+from edenscm.mercurial.node import bin, hex, nullid
 from edenscm.mercurial.pycompat import isint
 
 from .. import clienttelemetry
@@ -180,8 +180,33 @@ class remotefilelog(object):
         if node == nullid:
             return True
 
-        nodetext = self.read(node)
-        return nodetext != text
+        # If it appears to be a redacted file, do a full comparison. Normally
+        # we'd do a flags comparison, but the flags coming from Mononoke in the
+        # tests don't seem to include the redacted flag.
+        if text == constants.REDACTED_MESSAGE:
+            return self.read(node) != text
+
+        # remotefilectx.cmp uses the size as a shortcircuit. Unfortunately the
+        # size comparison is expensive for lfs files, since reading the size
+        # from the store currently also involves reading the content.
+        #
+        # The content comparison is expensive as well, since we have to load
+        # the content from the store and from disk. Let's just check the
+        # node instead.
+        p1, p2, linknode, copyfrom = self.repo.fileslog.metadatastore.getnodeinfo(
+            self.filename, node
+        )
+
+        if copyfrom or text.startswith(b"\1\n"):
+            meta = {}
+            if copyfrom:
+                meta["copy"] = copyfrom
+                meta["copyrev"] = hex(p1)
+                p1 = nullid
+            text = filelog.packmeta(meta, text)
+
+        newnode = revlog.hash(text, p1, p2)
+        return node != newnode
 
     def __nonzero__(self):
         return True
