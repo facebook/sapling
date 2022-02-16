@@ -52,9 +52,9 @@ print("os =", f(os))
 from edenscm.mercurial import util
 
 print("util =", f(util))
-print("util.system =", f(util.system))
+print("util.system =", f(util.rawsystem))
 print("util =", f(util))
-print("util.system =", f(util.system))
+print("util.system =", f(util.rawsystem))
 
 from edenscm.mercurial import hgweb
 

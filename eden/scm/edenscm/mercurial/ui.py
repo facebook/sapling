@@ -1417,7 +1417,7 @@ class ui(object):
     def _runsystem(self, cmd, environ, cwd, out):
         """actually execute the given shell command (can be overridden by
         extensions like chg)"""
-        return util.system(cmd, environ=environ, cwd=cwd, out=out)
+        return util.rawsystem(cmd, environ=environ, cwd=cwd, out=out)
 
     def traceback(self, exc=None, force=False):
         """print exception traceback if traceback printing enabled or forced.

@@ -1242,8 +1242,12 @@ def shellenviron(environ=None):
     return env
 
 
-def system(cmd, environ=None, cwd=None, out=None):
-    """enhanced shell command execution.
+def rawsystem(cmd, environ=None, cwd=None, out=None):
+    """low-level shell command execution that lacks of bookkeepings.
+
+    Use 'ui.system' instead to get proper progress suspension,
+    and proper chg + ctty handling in common cases.
+
     run with environment maybe modified, maybe in different dir.
 
     if out is specified, it is assumed to be a file-like object that has a

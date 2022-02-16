@@ -78,7 +78,7 @@ def _newchgui(srcui, csystem, attachio):
             # (e.g. stderr, cStringIO), because the chg client is not aware of
             # these situations and will behave differently (write to stdout).
             if out is not self.fout or self._buffers:
-                return util.system(cmd, environ=environ, cwd=cwd, out=out)
+                return util.rawsystem(cmd, environ=environ, cwd=cwd, out=out)
             self.flush()
             return self._csystem.runsystem(cmd, util.shellenviron(environ), cwd)
 
