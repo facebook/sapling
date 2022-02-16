@@ -12,6 +12,8 @@ use edenapi_types::EdenApiServerError;
 use http::header::HeaderMap;
 use http::status::StatusCode;
 use http_client::HttpClientError;
+use http_client::TlsError;
+use http_client::TlsErrorKind;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -62,7 +64,7 @@ impl EdenApiError {
         use EdenApiError::*;
         match self {
             Http(client_error) => match client_error {
-                Tls(_) => false,
+                Tls(TlsError { kind, .. }) => kind == &TlsErrorKind::RecvError,
                 _ => true,
             },
             HttpError {

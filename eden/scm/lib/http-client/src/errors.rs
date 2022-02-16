@@ -85,7 +85,7 @@ impl TryFrom<curl::Error> for TlsError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum TlsErrorKind {
     RecvError = curl_sys::CURLE_RECV_ERROR as isize,
     CaCert = curl_sys::CURLE_SSL_CACERT as isize,
