@@ -24,7 +24,9 @@ use crate::affected_changesets::{
     find_draft_ancestors, log_bonsai_commits_to_scribe, AdditionalChangesets, AffectedChangesets,
 };
 use crate::repo_lock::check_repo_lock;
-use crate::restrictions::{BookmarkKind, BookmarkKindRestrictions, BookmarkMoveAuthorization};
+use crate::restrictions::{
+    check_bookmark_sync_config, BookmarkKind, BookmarkKindRestrictions, BookmarkMoveAuthorization,
+};
 use crate::BookmarkMovementError;
 use crate::Repo;
 
@@ -131,6 +133,8 @@ impl<'op> CreateBookmarkOp<'op> {
         self.auth
             .check_authorized(ctx, bookmark_attrs, self.bookmark)
             .await?;
+
+        check_bookmark_sync_config(repo, self.bookmark, kind)?;
 
         self.affected_changesets
             .check_restrictions(

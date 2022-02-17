@@ -21,6 +21,7 @@ use phases::PhasesRef;
 use pushrebase::PushrebaseError;
 use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_cross_repo::RepoCrossRepoRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use thiserror::Error;
@@ -62,6 +63,7 @@ pub trait Repo = AsBlobRepo
     + PushrebaseMutationMappingRef
     + RepoDerivedDataRef
     + RepoBlobstoreRef
+    + RepoCrossRepoRef
     + RepoIdentityRef;
 
 /// An error encountered during an attempt to move a bookmark.
@@ -153,6 +155,14 @@ pub enum BookmarkMovementError {
         bookmark: BookmarkName,
         descendant_bookmark: BookmarkName,
     },
+
+    #[error("Bookmark '{bookmark}' cannot be moved because public bookmarks are being redirected")]
+    PushRedirectorEnabledForPublic { bookmark: BookmarkName },
+
+    #[error(
+        "Bookmark '{bookmark}' cannot be moved because scratch bookmarks are being redirected"
+    )]
+    PushRedirectorEnabledForScratch { bookmark: BookmarkName },
 
     #[error(transparent)]
     Error(#[from] anyhow::Error),

@@ -31,7 +31,9 @@ use repo_read_write_status::RepoReadWriteFetcher;
 
 use crate::affected_changesets::{AdditionalChangesets, AffectedChangesets};
 use crate::repo_lock::{check_repo_lock, RepoLockPushrebaseHook};
-use crate::restrictions::{BookmarkKindRestrictions, BookmarkMoveAuthorization};
+use crate::restrictions::{
+    check_bookmark_sync_config, BookmarkKindRestrictions, BookmarkMoveAuthorization,
+};
 use crate::{BookmarkMovementError, Repo};
 
 pub struct PushrebaseOntoBookmarkOp<'op> {
@@ -115,6 +117,8 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         self.auth
             .check_authorized(ctx, bookmark_attrs, self.bookmark)
             .await?;
+
+        check_bookmark_sync_config(repo, self.bookmark, kind)?;
 
         if pushrebase_params.block_merges {
             let any_merges = self

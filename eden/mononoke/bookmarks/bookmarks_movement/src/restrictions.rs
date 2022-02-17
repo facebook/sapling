@@ -185,3 +185,35 @@ pub(crate) async fn ensure_ancestor_of(
             .is_ancestor(ctx, &repo.changeset_fetcher_arc(), target, descendant_cs_id)
             .await?)
 }
+
+pub(crate) fn check_bookmark_sync_config(
+    repo: &impl Repo,
+    bookmark: &BookmarkName,
+    kind: BookmarkKind,
+) -> Result<(), BookmarkMovementError> {
+    match kind {
+        BookmarkKind::Public => {
+            if repo
+                .repo_cross_repo()
+                .live_commit_sync_config()
+                .push_redirector_enabled_for_public(repo.repo_identity().id())
+            {
+                return Err(BookmarkMovementError::PushRedirectorEnabledForPublic {
+                    bookmark: bookmark.clone(),
+                });
+            }
+        }
+        BookmarkKind::Scratch => {
+            if repo
+                .repo_cross_repo()
+                .live_commit_sync_config()
+                .push_redirector_enabled_for_draft(repo.repo_identity().id())
+            {
+                return Err(BookmarkMovementError::PushRedirectorEnabledForScratch {
+                    bookmark: bookmark.clone(),
+                });
+            }
+        }
+    }
+    Ok(())
+}

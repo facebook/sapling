@@ -16,7 +16,9 @@ use mononoke_types::ChangesetId;
 use repo_read_write_status::RepoReadWriteFetcher;
 
 use crate::repo_lock::check_repo_lock;
-use crate::restrictions::{BookmarkKind, BookmarkKindRestrictions, BookmarkMoveAuthorization};
+use crate::restrictions::{
+    check_bookmark_sync_config, BookmarkKind, BookmarkKindRestrictions, BookmarkMoveAuthorization,
+};
 use crate::{BookmarkMovementError, Repo};
 
 pub struct DeleteBookmarkOp<'op> {
@@ -93,6 +95,8 @@ impl<'op> DeleteBookmarkOp<'op> {
         self.auth
             .check_authorized(ctx, bookmark_attrs, self.bookmark)
             .await?;
+
+        check_bookmark_sync_config(repo, self.bookmark, kind)?;
 
         if bookmark_attrs.is_fast_forward_only(self.bookmark) {
             // Cannot delete fast-forward-only bookmarks.
