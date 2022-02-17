@@ -8,7 +8,7 @@
 use crate::setcommon::{add_generations_by_bonsai, BonsaiInputStream};
 use crate::BonsaiNodeStream;
 use anyhow::Error;
-use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::ArcChangesetFetcher;
 use context::CoreContext;
 use futures_ext::StreamExt;
 use futures_old::stream::Stream;
@@ -16,7 +16,6 @@ use futures_old::{Async, Poll};
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use std::collections::HashSet;
-use std::sync::Arc;
 
 /// A wrapper around a NodeStream that asserts that the two revset invariants hold:
 /// 1. The generation number never increases
@@ -32,7 +31,7 @@ impl ValidateNodeStream {
     pub fn new(
         ctx: CoreContext,
         wrapped: BonsaiNodeStream,
-        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: &ArcChangesetFetcher,
     ) -> ValidateNodeStream {
         ValidateNodeStream {
             wrapped: add_generations_by_bonsai(ctx, wrapped, changeset_fetcher.clone()).boxify(),
@@ -84,7 +83,7 @@ mod test {
     async fn validate_accepts_single_node(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
-        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+        let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
 
@@ -103,8 +102,7 @@ mod test {
         // Tests that we handle an input staying at NotReady for a while without panicking
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
-        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-            Arc::new(TestChangesetFetcher::new(repo));
+        let changeset_fetcher: ArcChangesetFetcher = Arc::new(TestChangesetFetcher::new(repo));
 
         let mut nodestream = ValidateNodeStream::new(
             ctx,
@@ -127,7 +125,7 @@ mod test {
         let nodestream = single_changeset_id(ctx.clone(), head_csid.clone(), &repo)
             .chain(single_changeset_id(ctx.clone(), head_csid.clone(), &repo));
 
-        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+        let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new((*repo).clone()));
 
         let mut nodestream =
@@ -160,7 +158,7 @@ mod test {
             &repo,
         ));
 
-        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+        let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new((*repo).clone()));
 
         let mut nodestream =

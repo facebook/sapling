@@ -7,7 +7,7 @@
 
 use crate::{call_difference_of_union_of_ancestors_revset, Params};
 use anyhow::{anyhow, Error, Result};
-use blobrepo::ChangesetFetcher;
+use changeset_fetcher::ArcChangesetFetcher;
 use context::{CoreContext, PerfCounterType};
 use futures::{
     future::{try_join_all, TryFutureExt},
@@ -112,7 +112,7 @@ impl PartialGetBundle {
 /// ```
 pub(crate) async fn compute_partial_getbundle(
     ctx: &CoreContext,
-    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: &ArcChangesetFetcher,
     heads: Vec<(ChangesetId, Generation)>,
     excludes: Vec<(ChangesetId, Generation)>,
     low_gen_num_checker: &LowGenNumChecker,
@@ -217,7 +217,7 @@ pub(crate) async fn compute_partial_getbundle(
 /// ```
 pub(crate) async fn low_gen_num_optimization(
     ctx: &CoreContext,
-    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: &ArcChangesetFetcher,
     params: Params,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     low_gen_num_checker: &LowGenNumChecker,
@@ -292,7 +292,7 @@ pub(crate) async fn low_gen_num_optimization(
 
 async fn process_low_gen_params(
     ctx: &CoreContext,
-    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: &ArcChangesetFetcher,
     low_gens_params: Vec<Params>,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     limit: u64,

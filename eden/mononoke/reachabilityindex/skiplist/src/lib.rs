@@ -26,7 +26,7 @@ use maplit::{hashmap, hashset};
 use slog::{info, Logger};
 use tokio::task;
 
-use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
 use mononoke_types::{ChangesetId, Generation, FIRST_GENERATION};
 
 use common::{
@@ -213,7 +213,7 @@ impl SkiplistEdgeMapping {
 /// without assuming its completeness.
 async fn compute_single_skip_edge(
     ctx: &CoreContext,
-    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: &ArcChangesetFetcher,
     skip_list_edges: &Arc<SkiplistEdgeMapping>,
     (node, gen): (ChangesetId, Generation),
     target_gen: Generation,
@@ -256,7 +256,7 @@ fn nth_node_or_last<T: Clone>(v: &Vec<T>, i: usize) -> Option<T> {
 /// skip pointers instead of trusting the data from ancestor's skiplits.
 async fn compute_skip_edges(
     ctx: CoreContext,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: ArcChangesetFetcher,
     start_node: (ChangesetId, Generation),
     skip_edge_mapping: Arc<SkiplistEdgeMapping>,
 ) -> Result<Vec<(ChangesetId, Generation)>, Error> {
@@ -339,7 +339,7 @@ pub struct SkiplistIndex {
 // Then it orders them topologically using their generation numbers and returns them.
 async fn find_nodes_to_index(
     ctx: &CoreContext,
-    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: &ArcChangesetFetcher,
     skip_list_edges: &Arc<SkiplistEdgeMapping>,
     (start_node, start_gen): (ChangesetId, Generation),
     depth: u64,
@@ -375,7 +375,7 @@ async fn find_nodes_to_index(
 /// If a previously indexed node is reached, indexing will stop there.
 async fn lazy_index_node(
     ctx: &CoreContext,
-    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: &ArcChangesetFetcher,
     skip_edge_mapping: &Arc<SkiplistEdgeMapping>,
     node: ChangesetId,
     max_depth: u64,
@@ -534,7 +534,7 @@ impl SkiplistIndex {
     pub async fn add_node(
         &self,
         ctx: &CoreContext,
-        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: &ArcChangesetFetcher,
         node: ChangesetId,
         max_index_depth: u64,
     ) -> Result<(), Error> {
@@ -631,7 +631,7 @@ impl ReachabilityIndex for SkiplistIndex {
     async fn query_reachability(
         &self,
         ctx: &CoreContext,
-        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: &ArcChangesetFetcher,
         desc_hash: ChangesetId,
         anc_hash: ChangesetId,
     ) -> Result<bool, Error> {
@@ -748,7 +748,7 @@ fn move_skippable_nodes(
 // their generations.
 async fn move_nonskippable_nodes(
     ctx: &CoreContext,
-    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: &ArcChangesetFetcher,
     cs_ids: Vec<ChangesetId>,
     trace: &Option<&SkiplistTraversalTrace>,
 ) -> Result<Vec<(ChangesetId, Generation)>, Error> {
@@ -794,7 +794,7 @@ async fn move_nonskippable_nodes(
 /// As long as the max_gen in IN > max_gen,  N is greater than 0
 async fn process_frontier_single_skip(
     ctx: &CoreContext,
-    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: &ArcChangesetFetcher,
     skip_edges: &Arc<SkiplistEdgeMapping>,
     mut node_frontier: NodeFrontier,
     target_gen: Generation,
@@ -854,7 +854,7 @@ async fn process_frontier_single_skip(
 /// - Any ancestor of "node_frontier" with generation <= "max_gen" is also an ancestor of "C"
 async fn process_frontier(
     ctx: &CoreContext,
-    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: &ArcChangesetFetcher,
     skip_edges: &Arc<SkiplistEdgeMapping>,
     node_frontier: NodeFrontier,
     max_gen: Generation,
@@ -897,7 +897,7 @@ impl LeastCommonAncestorsHint for SkiplistIndex {
     async fn lca_hint(
         &self,
         ctx: &CoreContext,
-        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: &ArcChangesetFetcher,
         node_frontier: NodeFrontier,
         gen: Generation,
     ) -> Result<NodeFrontier, Error> {
@@ -917,7 +917,7 @@ impl LeastCommonAncestorsHint for SkiplistIndex {
     async fn is_ancestor(
         &self,
         ctx: &CoreContext,
-        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: &ArcChangesetFetcher,
         ancestor: ChangesetId,
         descendant: ChangesetId,
     ) -> Result<bool, Error> {
@@ -935,7 +935,7 @@ impl SkiplistIndex {
     async fn process_frontiers(
         &self,
         ctx: &CoreContext,
-        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: &ArcChangesetFetcher,
         frontier1: &NodeFrontier,
         frontier2: &NodeFrontier,
         gen: Generation,
@@ -952,7 +952,7 @@ impl SkiplistIndex {
     pub async fn lca(
         &self,
         ctx: CoreContext,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: ArcChangesetFetcher,
         node1: ChangesetId,
         node2: ChangesetId,
     ) -> Result<Vec<ChangesetId>, Error> {
@@ -1074,7 +1074,7 @@ impl SkiplistIndex {
     pub async fn find_merges_between(
         &self,
         ctx: &CoreContext,
-        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: &ArcChangesetFetcher,
         ancestor: ChangesetId,
         descendant: ChangesetId,
     ) -> Result<Vec<ChangesetId>, Error> {
@@ -1460,12 +1460,12 @@ mod test {
     struct CountingChangesetFetcher {
         pub get_parents_count: Arc<AtomicUsize>,
         pub get_gen_number_count: Arc<AtomicUsize>,
-        cs_fetcher: Arc<dyn ChangesetFetcher>,
+        cs_fetcher: ArcChangesetFetcher,
     }
 
     impl CountingChangesetFetcher {
         fn new(
-            cs_fetcher: Arc<dyn ChangesetFetcher>,
+            cs_fetcher: ArcChangesetFetcher,
             get_parents_count: Arc<AtomicUsize>,
             get_gen_number_count: Arc<AtomicUsize>,
         ) -> Self {
@@ -1596,12 +1596,11 @@ mod test {
         let sli = SkiplistIndex::new();
         let get_parents_count = Arc::new(AtomicUsize::new(0));
         let get_gen_number_count = Arc::new(AtomicUsize::new(0));
-        let cs_fetcher: Arc<(dyn changeset_fetcher::ChangesetFetcher + 'static)> =
-            Arc::new(CountingChangesetFetcher::new(
-                repo.get_changeset_fetcher(),
-                get_parents_count.clone(),
-                get_gen_number_count,
-            ));
+        let cs_fetcher: ArcChangesetFetcher = Arc::new(CountingChangesetFetcher::new(
+            repo.get_changeset_fetcher(),
+            get_parents_count.clone(),
+            get_gen_number_count,
+        ));
 
         let src_node =
             string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await;
@@ -1679,7 +1678,7 @@ mod test {
 
     fn advance_node_forward(
         ctx: CoreContext,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: ArcChangesetFetcher,
         skip_list_edges: Arc<SkiplistEdgeMapping>,
         (node, gen): (ChangesetId, Generation),
         max_gen: Generation,

@@ -9,7 +9,6 @@ use std::collections::hash_set::IntoIter;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::iter;
 use std::mem::replace;
-use std::sync::Arc;
 
 use anyhow::Error;
 use cloned::cloned;
@@ -19,7 +18,7 @@ use futures_old::future::Future;
 use futures_old::stream::{self, iter_ok, Stream};
 use futures_old::{Async, Poll};
 
-use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
@@ -40,7 +39,7 @@ struct ParentChild {
 
 pub struct RangeNodeStream {
     ctx: CoreContext,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: ArcChangesetFetcher,
     start_node: ChangesetId,
     start_generation: Box<dyn Stream<Item = Generation, Error = Error> + Send>,
     children: HashMap<HashGen, HashSet<HashGen>>,
@@ -52,7 +51,7 @@ pub struct RangeNodeStream {
 
 fn make_pending(
     ctx: CoreContext,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: ArcChangesetFetcher,
     child: HashGen,
 ) -> BoxStream<ParentChild, Error> {
     {
@@ -94,7 +93,7 @@ impl RangeNodeStream {
     // otherwise stream will be empty
     pub fn new(
         ctx: CoreContext,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: ArcChangesetFetcher,
         start_node: ChangesetId,
         end_node: ChangesetId,
     ) -> Self {
@@ -266,6 +265,7 @@ mod test {
     use mercurial_types::HgChangesetId;
     use revset_test_helper::assert_changesets_sequence;
     use revset_test_helper::string_to_nodehash;
+    use std::sync::Arc;
 
     async fn string_to_bonsai<'a>(
         ctx: &'a CoreContext,

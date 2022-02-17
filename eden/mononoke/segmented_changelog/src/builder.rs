@@ -10,7 +10,7 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use blobstore::Blobstore;
 use bookmarks::Bookmarks;
-use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::ArcChangesetFetcher;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::SegmentedChangelogConfig;
@@ -51,7 +51,7 @@ pub async fn new_server_segmented_changelog<'a>(
     repo_identity: &'a RepoIdentity,
     config: SegmentedChangelogConfig,
     connections: SegmentedChangelogSqlConnections,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: ArcChangesetFetcher,
     bookmarks: Arc<dyn Bookmarks>,
     blobstore: Arc<dyn Blobstore>,
     cache_pool: Option<cachelib::VolatileLruCachePool>,

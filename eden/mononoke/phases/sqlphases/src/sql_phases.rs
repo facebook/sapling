@@ -13,7 +13,7 @@ use abomonation_derive::Abomonation;
 use anyhow::{Error, Result};
 use ascii::AsciiString;
 use async_trait::async_trait;
-use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
 use context::CoreContext;
 use futures::future::{try_join, BoxFuture, FutureExt};
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -101,7 +101,7 @@ pub type HeadsFetcher =
 #[derive(Clone)]
 pub struct SqlPhases {
     phases_store: SqlPhasesStore,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: ArcChangesetFetcher,
     heads_fetcher: HeadsFetcher,
     repo_id: RepositoryId,
 }
@@ -184,7 +184,7 @@ impl SqlPhases {
     pub fn new(
         phases_store: SqlPhasesStore,
         repo_id: RepositoryId,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: ArcChangesetFetcher,
         heads_fetcher: HeadsFetcher,
     ) -> Self {
         Self {

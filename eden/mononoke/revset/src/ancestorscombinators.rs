@@ -37,7 +37,7 @@ use futures_old::{try_ready, Async, IntoFuture, Poll};
 use futures_util::future::{FutureExt, TryFutureExt};
 use maplit::hashset;
 
-use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
@@ -86,7 +86,7 @@ use crate::UniqueHeap;
 pub struct DifferenceOfUnionsOfAncestorsNodeStream {
     ctx: CoreContext,
 
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: ArcChangesetFetcher,
 
     // Given a set "nodes", and a maximum generation "gen",
     // return a set of nodes "C" which satisfies:
@@ -119,7 +119,7 @@ pub struct DifferenceOfUnionsOfAncestorsNodeStream {
 
 fn make_pending(
     ctx: CoreContext,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: ArcChangesetFetcher,
     hash: ChangesetId,
 ) -> BoxStream<(ChangesetId, Generation), Error> {
     let new_repo_changesets = changeset_fetcher.clone();
@@ -153,7 +153,7 @@ fn make_pending(
 impl DifferenceOfUnionsOfAncestorsNodeStream {
     pub fn new(
         ctx: CoreContext,
-        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: &ArcChangesetFetcher,
         lca_hint_index: Arc<dyn LeastCommonAncestorsHint>,
         hash: ChangesetId,
     ) -> BonsaiNodeStream {
@@ -162,7 +162,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
 
     pub fn new_union(
         ctx: CoreContext,
-        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: &ArcChangesetFetcher,
         lca_hint_index: Arc<dyn LeastCommonAncestorsHint>,
         hashes: Vec<ChangesetId>,
     ) -> BonsaiNodeStream {
@@ -171,7 +171,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
 
     pub fn new_with_excludes(
         ctx: CoreContext,
-        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: &ArcChangesetFetcher,
         lca_hint_index: Arc<dyn LeastCommonAncestorsHint>,
         hashes: Vec<ChangesetId>,
         excludes: Vec<ChangesetId>,
@@ -208,7 +208,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
 
     pub fn new_with_excludes_gen_num(
         ctx: CoreContext,
-        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: &ArcChangesetFetcher,
         lca_hint_index: Arc<dyn LeastCommonAncestorsHint>,
         hashes_generations: Vec<(ChangesetId, Generation)>,
         exclude_generations: Vec<(ChangesetId, Generation)>,
@@ -399,7 +399,7 @@ mod test {
     async fn empty_ancestors_combinators(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
-        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+        let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
 
@@ -432,7 +432,7 @@ mod test {
     async fn linear_ancestors_with_excludes(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
-        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+        let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
 
@@ -458,7 +458,7 @@ mod test {
     async fn linear_ancestors_with_excludes_empty(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
-        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+        let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
 
@@ -478,7 +478,7 @@ mod test {
     async fn ancestors_union(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let repo = merge_uneven::getrepo(fb).await;
-        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+        let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
 
@@ -516,7 +516,7 @@ mod test {
     async fn merge_ancestors_from_merge_excludes(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let repo = merge_uneven::getrepo(fb).await;
-        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+        let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
 
@@ -549,7 +549,7 @@ mod test {
     async fn merge_ancestors_from_merge_excludes_union(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let repo = merge_uneven::getrepo(fb).await;
-        let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+        let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
 

@@ -313,7 +313,7 @@ impl BlobRepo {
         Ok(result.map(|res| Generation::new(res.gen)))
     }
 
-    pub fn get_changeset_fetcher(&self) -> Arc<dyn ChangesetFetcher> {
+    pub fn get_changeset_fetcher(&self) -> ArcChangesetFetcher {
         self.changeset_fetcher().clone()
     }
 

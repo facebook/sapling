@@ -9,7 +9,7 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::{Loadable, LoadableError};
-use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
 use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::{resolve_path_state, PathState};
@@ -85,7 +85,7 @@ pub enum TraversalOrder {
     SimpleGenNumOrder {
         next: Option<NextChangeset>,
         ctx: CoreContext,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: ArcChangesetFetcher,
     },
     GenNumOrder {
         front_queue: VecDeque<NextChangeset>,
@@ -93,7 +93,7 @@ pub enum TraversalOrder {
         // and won't work correctly in all cases.
         heap: BinaryHeap<(Generation, Reverse<ParentOrder>, CsAndPath)>,
         ctx: CoreContext,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: ArcChangesetFetcher,
     },
 }
 
@@ -102,10 +102,7 @@ impl TraversalOrder {
         Self::BfsOrder(VecDeque::new())
     }
 
-    pub fn new_gen_num_order(
-        ctx: CoreContext,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
-    ) -> Self {
+    pub fn new_gen_num_order(ctx: CoreContext, changeset_fetcher: ArcChangesetFetcher) -> Self {
         Self::SimpleGenNumOrder {
             next: None,
             ctx,
@@ -223,7 +220,7 @@ impl TraversalOrder {
 
     async fn convert_cs_ids(
         ctx: &CoreContext,
-        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: &ArcChangesetFetcher,
         cs_ids: &[CsAndPath],
     ) -> Result<Vec<(Generation, Reverse<ParentOrder>, CsAndPath)>, Error> {
         let cs_ids = future::try_join_all(cs_ids.iter().enumerate().map(
@@ -1849,15 +1846,12 @@ mod test {
     }
 
     struct CountingChangesetFetcher {
-        cs_fetcher: Arc<dyn ChangesetFetcher>,
+        cs_fetcher: ArcChangesetFetcher,
         pub get_gen_number_count: Arc<AtomicUsize>,
     }
 
     impl CountingChangesetFetcher {
-        fn new(
-            cs_fetcher: Arc<dyn ChangesetFetcher>,
-            get_gen_number_count: Arc<AtomicUsize>,
-        ) -> Self {
+        fn new(cs_fetcher: ArcChangesetFetcher, get_gen_number_count: Arc<AtomicUsize>) -> Self {
             Self {
                 cs_fetcher,
                 get_gen_number_count,

@@ -9,10 +9,9 @@ use anyhow::{anyhow, Error};
 use slog::debug;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::num::NonZeroU64;
-use std::sync::Arc;
 
 use crate::{NodeFrontier, SkiplistNodeType};
-use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::ArcChangesetFetcher;
 use common::{fetch_generations, fetch_parents_and_generations};
 use context::CoreContext;
 use mononoke_types::{ChangesetId, Generation};
@@ -56,7 +55,7 @@ pub async fn update_sparse_skiplist(
     heads: Vec<ChangesetId>,
     index: &mut HashMap<ChangesetId, SkiplistNodeType>,
     max_skip: NonZeroU64,
-    cs_fetcher: &Arc<dyn ChangesetFetcher>,
+    cs_fetcher: &ArcChangesetFetcher,
 ) -> Result<(), Error> {
     let heads_with_gens = fetch_generations(ctx, cs_fetcher, heads.clone()).await?;
 
@@ -95,7 +94,7 @@ async fn index_changeset(
     mut edge_start: (ChangesetId, Generation),
     index: &mut HashMap<ChangesetId, SkiplistNodeType>,
     max_skip: NonZeroU64,
-    cs_fetcher: &Arc<dyn ChangesetFetcher>,
+    cs_fetcher: &ArcChangesetFetcher,
 ) -> Result<Vec<(ChangesetId, Generation)>, Error> {
     if index.contains_key(&edge_start.0) {
         return Ok(vec![]);

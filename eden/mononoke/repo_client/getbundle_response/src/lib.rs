@@ -9,11 +9,12 @@
 
 use crate::errors::ErrorKind;
 use anyhow::{anyhow, Error, Result};
-use blobrepo::{BlobRepo, ChangesetFetcher};
+use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
+use changeset_fetcher::ArcChangesetFetcher;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use derived_data::BonsaiDerived;
@@ -426,7 +427,7 @@ impl Params {
 
 async fn call_difference_of_union_of_ancestors_revset(
     ctx: &CoreContext,
-    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: &ArcChangesetFetcher,
     params: Params,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     limit: Option<u64>,

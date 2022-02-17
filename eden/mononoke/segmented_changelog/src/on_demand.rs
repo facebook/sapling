@@ -26,7 +26,7 @@ use futures_stats::TimedFutureExt;
 use stats::prelude::*;
 
 use bookmarks::Bookmarks;
-use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::ArcChangesetFetcher;
 use context::CoreContext;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -96,7 +96,7 @@ mod actual_update {
 pub struct OnDemandUpdateSegmentedChangelog {
     repo_id: RepositoryId,
     namedag: Arc<RwLock<ServerNameDag>>,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: ArcChangesetFetcher,
     bookmarks: Arc<dyn Bookmarks>,
     seed_heads: Vec<SeedHead>,
     clone_hints: Option<CloneHints>,
@@ -109,7 +109,7 @@ impl OnDemandUpdateSegmentedChangelog {
         repo_id: RepositoryId,
         iddag: InProcessIdDag,
         idmap: Arc<dyn IdMap>,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: ArcChangesetFetcher,
         bookmarks: Arc<dyn Bookmarks>,
         seed_heads: Vec<SeedHead>,
         clone_hints: Option<CloneHints>,
@@ -335,7 +335,7 @@ async fn the_actual_update(
     ctx: CoreContext,
     repo_id: RepositoryId,
     namedag: Arc<RwLock<ServerNameDag>>,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: ArcChangesetFetcher,
     heads: &VertexListWithOptions,
 ) -> Result<()> {
     let monitored = async {

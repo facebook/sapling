@@ -12,9 +12,10 @@ use crate::errors::{
 };
 use crate::{bind_sync_err, BookmarkOverlay, CombinedBookmarkUpdateLogEntry, CommitsInBundle};
 use anyhow::{anyhow, Error};
-use blobrepo::{BlobRepo, ChangesetFetcher};
+use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateLogEntry, BookmarkUpdateReason, RawBundleReplayData};
+use changeset_fetcher::ArcChangesetFetcher;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
@@ -491,7 +492,7 @@ impl BookmarkLogEntryBatch {
         &mut self,
         ctx: &CoreContext,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
-        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: &ArcChangesetFetcher,
         entry: BookmarkUpdateLogEntry,
     ) -> Result<Result<(), BookmarkUpdateLogEntry>, Error> {
         // Combine two bookmark update log entries only if bookmark names are the same
@@ -568,7 +569,7 @@ impl BookmarkLogEntryBatch {
 async fn split_in_batches(
     ctx: &CoreContext,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
-    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: &ArcChangesetFetcher,
     entries: Vec<BookmarkUpdateLogEntry>,
 ) -> Result<Vec<BookmarkLogEntryBatch>, Error> {
     let mut batches: Vec<BookmarkLogEntryBatch> = vec![];

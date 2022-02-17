@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use bulkops::{Direction, PublicChangesetBulkFetch};
-use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
 use changesets::ChangesetEntry;
 use clap_old::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
@@ -207,7 +207,7 @@ async fn build_skiplist_index<'a, S: ToString>(
 async fn fetch_all_public_changesets_and_build_changeset_fetcher(
     ctx: &CoreContext,
     repo: &BlobRepo,
-) -> Result<Arc<dyn ChangesetFetcher>, Error> {
+) -> Result<ArcChangesetFetcher, Error> {
     let fetcher = PublicChangesetBulkFetch::new(repo.get_changesets_object(), repo.phases_arc());
     let fetched_changesets = fetcher
         .fetch(&ctx, Direction::OldestFirst)
@@ -218,7 +218,7 @@ async fn fetch_all_public_changesets_and_build_changeset_fetcher(
         .into_iter()
         .map(|cs_entry| (cs_entry.cs_id, cs_entry))
         .collect();
-    let cs_fetcher: Arc<dyn ChangesetFetcher> = Arc::new(InMemoryChangesetFetcher {
+    let cs_fetcher: ArcChangesetFetcher = Arc::new(InMemoryChangesetFetcher {
         fetched_changesets: Arc::new(fetched_changesets),
         inner: repo.get_changeset_fetcher(),
     });
@@ -251,7 +251,7 @@ async fn read_skiplist_index<S: ToString>(
 #[derive(Clone)]
 struct InMemoryChangesetFetcher {
     fetched_changesets: Arc<HashMap<ChangesetId, ChangesetEntry>>,
-    inner: Arc<dyn ChangesetFetcher>,
+    inner: ArcChangesetFetcher,
 }
 
 #[async_trait]

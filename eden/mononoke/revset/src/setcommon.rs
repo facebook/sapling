@@ -5,14 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::ArcChangesetFetcher;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{FutureExt, TryFutureExt};
 use futures_ext::{BoxStream, StreamExt};
 use futures_old::{future::Future, stream::Stream};
 use mononoke_types::{ChangesetId, Generation};
-use std::sync::Arc;
 
 use crate::errors::*;
 use crate::BonsaiNodeStream;
@@ -26,7 +25,7 @@ pub type BonsaiInputStream = GenericStream<ChangesetId>;
 pub fn add_generations_by_bonsai(
     ctx: CoreContext,
     stream: BonsaiNodeStream,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: ArcChangesetFetcher,
 ) -> BonsaiInputStream {
     stream
         .map(move |changesetid| {

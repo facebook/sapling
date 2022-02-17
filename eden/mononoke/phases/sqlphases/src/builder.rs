@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use cachelib::VolatileLruCachePool;
-use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::ArcChangesetFetcher;
 use fbinit::FacebookInit;
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::RepositoryId;
@@ -50,7 +50,7 @@ impl SqlPhasesBuilder {
     pub fn build(
         self,
         repo_id: RepositoryId,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: ArcChangesetFetcher,
         heads_fetcher: HeadsFetcher,
     ) -> ArcPhases {
         let phases_store = self.phases_store();

@@ -15,7 +15,7 @@ use async_trait::async_trait;
 use futures_stats::TimedFutureExt;
 
 use bookmarks::Bookmarks;
-use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::ArcChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 
@@ -33,7 +33,7 @@ pub struct SegmentedChangelogManager {
     sc_version_store: SegmentedChangelogVersionStore,
     iddag_save_store: IdDagSaveStore,
     idmap_factory: IdMapFactory,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: ArcChangesetFetcher,
     bookmarks: Arc<dyn Bookmarks>,
     seed_heads: Vec<SeedHead>,
     update_to_master_bookmark_period: Option<Duration>,
@@ -46,7 +46,7 @@ impl SegmentedChangelogManager {
         sc_version_store: SegmentedChangelogVersionStore,
         iddag_save_store: IdDagSaveStore,
         idmap_factory: IdMapFactory,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: ArcChangesetFetcher,
         bookmarks: Arc<dyn Bookmarks>,
         seed_heads: Vec<SeedHead>,
         update_to_master_bookmark_period: Option<Duration>,

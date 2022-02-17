@@ -6,14 +6,13 @@
  */
 
 use std::collections::{hash_map, HashMap, HashSet};
-use std::sync::Arc;
 
 use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use maplit::{hashmap, hashset};
 
-use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
 use context::CoreContext;
 use mononoke_types::{ChangesetId, Generation};
 use uniqueheap::UniqueHeap;
@@ -80,7 +79,7 @@ impl NodeFrontier {
 
     pub async fn new_from_single_node(
         ctx: &CoreContext,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: ArcChangesetFetcher,
         node: ChangesetId,
     ) -> Result<Self, Error> {
         let gen = changeset_fetcher
@@ -163,7 +162,7 @@ pub trait ReachabilityIndex {
     async fn query_reachability(
         &self,
         ctx: &CoreContext,
-        repo: &Arc<dyn ChangesetFetcher>,
+        repo: &ArcChangesetFetcher,
         src: ChangesetId,
         dst: ChangesetId,
     ) -> Result<bool, Error>;
@@ -181,7 +180,7 @@ pub trait LeastCommonAncestorsHint: Send + Sync {
     async fn lca_hint(
         &self,
         ctx: &CoreContext,
-        repo: &Arc<dyn ChangesetFetcher>,
+        repo: &ArcChangesetFetcher,
         node_frontier: NodeFrontier,
         gen: Generation,
     ) -> Result<NodeFrontier, Error>;
@@ -191,7 +190,7 @@ pub trait LeastCommonAncestorsHint: Send + Sync {
     async fn is_ancestor(
         &self,
         ctx: &CoreContext,
-        repo: &Arc<dyn ChangesetFetcher>,
+        repo: &ArcChangesetFetcher,
         ancestor: ChangesetId,
         descendant: ChangesetId,
     ) -> Result<bool, Error>;

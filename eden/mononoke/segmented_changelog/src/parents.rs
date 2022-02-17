@@ -5,9 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Arc;
-
-use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
 use context::CoreContext;
 
 use crate::dag::errors::BackendError;
@@ -18,11 +16,11 @@ use crate::idmap::{cs_id_from_vertex_name, vertex_name_from_cs_id};
 
 pub struct FetchParents {
     ctx: CoreContext,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: ArcChangesetFetcher,
 }
 
 impl FetchParents {
-    pub fn new(ctx: CoreContext, changeset_fetcher: Arc<dyn ChangesetFetcher>) -> Self {
+    pub fn new(ctx: CoreContext, changeset_fetcher: ArcChangesetFetcher) -> Self {
         Self {
             ctx,
             changeset_fetcher,

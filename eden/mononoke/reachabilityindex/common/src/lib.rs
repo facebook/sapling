@@ -8,21 +8,20 @@
 #![deny(warnings)]
 
 use std::collections::HashSet;
-use std::sync::Arc;
 
 use anyhow::Error;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures::stream::{iter, StreamExt, TryStreamExt};
 
-use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
 use mononoke_types::{ChangesetId, Generation};
 use reachabilityindex::errors::*;
 
 /// Fetches parents of the commit together with their generation numbers
 pub async fn fetch_parents_and_generations(
     ctx: &CoreContext,
-    cs_fetcher: &Arc<dyn ChangesetFetcher>,
+    cs_fetcher: &ArcChangesetFetcher,
     cs_id: ChangesetId,
 ) -> Result<Vec<(ChangesetId, Generation)>, Error> {
     let parents = cs_fetcher.get_parents(ctx.clone(), cs_id).await?;
@@ -31,7 +30,7 @@ pub async fn fetch_parents_and_generations(
 
 pub async fn fetch_generations(
     ctx: &CoreContext,
-    cs_fetcher: &Arc<dyn ChangesetFetcher>,
+    cs_fetcher: &ArcChangesetFetcher,
     cs_ids: Vec<ChangesetId>,
 ) -> Result<Vec<(ChangesetId, Generation)>, Error> {
     let cs_ids_with_gens = iter(cs_ids)
@@ -50,7 +49,7 @@ pub async fn fetch_generations(
 /// of the node if the node exists, else fails with ErrorKind::NodeNotFound.
 pub async fn fetch_generation(
     ctx: &CoreContext,
-    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: &ArcChangesetFetcher,
     node: ChangesetId,
 ) -> Result<Generation, Error> {
     changeset_fetcher
@@ -62,7 +61,7 @@ pub async fn fetch_generation(
 /// Succeeds with the void value () if the node exists, else fails with ErrorKind::NodeNotFound.
 pub async fn check_if_node_exists(
     ctx: &CoreContext,
-    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: &ArcChangesetFetcher,
     node: ChangesetId,
 ) -> Result<(), Error> {
     changeset_fetcher
@@ -75,7 +74,7 @@ pub async fn check_if_node_exists(
 /// Convert a collection of ChangesetId to a collection of (ChangesetId, Generation)
 pub async fn changesets_with_generation_numbers(
     ctx: &CoreContext,
-    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: &ArcChangesetFetcher,
     nodes: Vec<ChangesetId>,
 ) -> Result<Vec<(ChangesetId, Generation)>, Error> {
     try_join_all(nodes.into_iter().map(|node| async move {
@@ -88,7 +87,7 @@ pub async fn changesets_with_generation_numbers(
 /// and cast into the appropriate ErrorKind if it fails
 pub async fn get_parents(
     ctx: &CoreContext,
-    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: &ArcChangesetFetcher,
     node: ChangesetId,
 ) -> Result<Vec<ChangesetId>, Error> {
     changeset_fetcher.get_parents(ctx.clone(), node).await
@@ -102,7 +101,7 @@ pub async fn get_parents(
 // - return the parents as the next bfs layer, and the updated seen as the new seen set
 pub async fn advance_bfs_layer(
     ctx: &CoreContext,
-    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: &ArcChangesetFetcher,
     curr_layer: HashSet<(ChangesetId, Generation)>,
     mut curr_seen: HashSet<(ChangesetId, Generation)>,
 ) -> Result<

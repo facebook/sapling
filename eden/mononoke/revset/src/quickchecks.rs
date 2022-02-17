@@ -27,7 +27,7 @@ mod test {
     use crate::BonsaiNodeStream;
     use anyhow::Error;
     use blobrepo::BlobRepo;
-    use changeset_fetcher::ChangesetFetcher;
+    use changeset_fetcher::ArcChangesetFetcher;
     use cloned::cloned;
     use context::CoreContext;
     use fbinit::FacebookInit;
@@ -134,7 +134,7 @@ mod test {
 
         pub fn as_revset(&self, ctx: CoreContext, repo: BlobRepo) -> BonsaiNodeStream {
             let mut output: Vec<BonsaiNodeStream> = Vec::with_capacity(self.rp_entries.len());
-            let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+            let changeset_fetcher: ArcChangesetFetcher =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
             for entry in self.rp_entries.iter() {
                 let next_node = ValidateNodeStream::new(
@@ -399,7 +399,7 @@ mod test {
                 let ctx = CoreContext::test_mock(fb);
 
                 let repo = $repo::getrepo(fb).await;
-                let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+                let changeset_fetcher: ArcChangesetFetcher =
                     Arc::new(TestChangesetFetcher::new(repo.clone()));
                 let repo = Arc::new(repo);
 
