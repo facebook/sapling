@@ -16,6 +16,7 @@ mod bubble;
 mod builder;
 mod changesets;
 mod error;
+mod file;
 mod handle;
 mod store;
 mod view;

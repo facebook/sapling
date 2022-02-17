@@ -42,22 +42,32 @@ async fn maybe_copy_file(
     bubble_id: Option<BubbleId>,
     copy_from_bubble_id: BubbleId,
 ) -> Result<Lookup> {
-    let copy_blobstore = repo.bubble_blobstore(Some(copy_from_bubble_id)).await?;
-    let lookup = match filestore::fetch_with_size(&copy_blobstore, repo.ctx(), &id.into()).await? {
-        Some((file_data, content_size)) => {
-            // Possible improvement: Use linking/copying instead, so we don't need to
-            // load the file on memory. There are plenty of difficulties:
-            // - Blobstore trait doesn't support linking
-            // - This is actually linking from one blobstore to a different one by
-            // changing the prefix (or even to persistent blobstore)
-            // - We'd also need to care about metadata/aliases, not only the blob.
-            repo.store_file(id, content_size, file_data, bubble_id)
-                .await?;
-            Lookup::Present(Some(FileContentTokenMetadata { content_size }.into()))
+    Ok(if let Some(bubble_id) = bubble_id {
+        let blob_repo = repo.repo().blob_repo();
+        match repo
+            .open_bubble(copy_from_bubble_id)
+            .await?
+            .copy_file_to_bubble(
+                repo.ctx(),
+                blob_repo.get_repoid(),
+                blob_repo.blobstore().clone(),
+                bubble_id,
+                blob_repo.filestore_config(),
+                id.into(),
+            )
+            .await?
+        {
+            None => Lookup::NotPresent,
+            Some(data) => Lookup::Present(Some(
+                FileContentTokenMetadata {
+                    content_size: data.total_size,
+                }
+                .into(),
+            )),
         }
-        None => Lookup::NotPresent,
-    };
-    Ok(lookup)
+    } else {
+        Lookup::NotPresent
+    })
 }
 
 async fn check_file(

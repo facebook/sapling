@@ -131,7 +131,7 @@ impl BubbleId {
     }
 
     /// Generate the blobstore prefix for this bubble.
-    fn prefix(&self) -> String {
+    pub(crate) fn prefix(&self) -> String {
         format!("{}{}{}", EPH_ID_PREFIX, self.0, EPH_ID_SUFFIX,)
     }
 }
@@ -152,7 +152,7 @@ pub struct Bubble {
 
     /// Blobstore to use for accessing blobs in this bubble, without redaction
     /// or repo prefix wrappers.
-    blobstore: RawBubbleBlobstore,
+    pub(crate) blobstore: RawBubbleBlobstore,
 
     /// SQL connection
     #[derivative(Debug = "ignore")]
@@ -182,7 +182,7 @@ impl Bubble {
         }
     }
 
-    fn check_unexpired(&self) -> Result<()> {
+    pub(crate) fn check_unexpired(&self) -> Result<()> {
         if self.expires_at >= DateTime::now() {
             Ok(())
         } else {
