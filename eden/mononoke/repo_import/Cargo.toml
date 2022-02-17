@@ -13,14 +13,20 @@ backsyncer = { version = "0.1.0", path = "../commit_rewriting/backsyncer" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
+bonsai_git_mapping = { version = "0.1.0", path = "../bonsai_git_mapping" }
+bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
+changesets = { version = "0.1.0", path = "../changesets" }
 clap = "2.33"
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../commit_rewriting/cross_repo_sync" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 import_tools = { version = "0.1.0", path = "../git/import_tools" }
@@ -34,7 +40,13 @@ mononoke_hg_sync_job_helper_lib = { version = "0.1.0", path = "../mononoke_hg_sy
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 movers = { version = "0.1.0", path = "../commit_rewriting/movers" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
+phases = { version = "0.1.0", path = "../phases" }
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
+pushrebase_mutation_mapping = { version = "0.1.0", path = "../pushrebase_mutation_mapping" }
+repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
+repo_cross_repo = { version = "0.1.0", path = "../repo_attributes/repo_cross_repo" }
+repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
+repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }

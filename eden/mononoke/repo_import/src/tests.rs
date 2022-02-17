@@ -11,13 +11,15 @@ mod tests {
         back_sync_commits_to_small_repo, check_dependent_systems, derive_bonsais_single_repo,
         find_mapping_version, get_large_repo_config_if_pushredirected, get_large_repo_setting,
         merge_imported_commit, move_bookmark, push_merge_commit, rewrite_file_paths, ChangesetArgs,
-        CheckerFlags, ImportStage, RecoveryFields, RepoImportSetting,
+        CheckerFlags, ImportStage, RecoveryFields, Repo, RepoImportSetting,
     };
     use anyhow::Result;
     use ascii::AsciiString;
-    use blobrepo::BlobRepo;
+    use blobrepo::AsBlobRepo;
     use blobstore::Loadable;
-    use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
+    use bookmarks::{
+        BookmarkName, BookmarkUpdateLogRef, BookmarkUpdateReason, BookmarksRef, Freshness,
+    };
     use cacheblob::InProcessLease;
     use cached_config::{ConfigStore, ModificationTime, TestSource};
     use context::CoreContext;
@@ -47,6 +49,7 @@ mod tests {
     use mononoke_types_mocks::changesetid::{ONES_CSID as MON_CSID, TWOS_CSID};
     use movers::{DefaultAction, Mover};
     use mutable_counters::{MutableCounters, SqlMutableCounters};
+    use repo_blobstore::RepoBlobstoreRef;
     use sql_construct::SqlConstruct;
     use std::collections::HashMap;
     use std::str::FromStr;
@@ -67,8 +70,8 @@ mod tests {
         MPath::new(s).unwrap()
     }
 
-    fn create_repo(id: i32) -> Result<BlobRepo> {
-        let repo: BlobRepo = TestRepoFactory::new()?
+    fn create_repo(id: i32) -> Result<Repo> {
+        let repo: Repo = TestRepoFactory::new()?
             .with_config_override(|config| {
                 config
                     .derived_data_config
@@ -116,7 +119,7 @@ mod tests {
     #[fbinit::test]
     async fn test_move_bookmark(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blob_repo = test_repo_factory::build_empty()?;
+        let repo: Repo = test_repo_factory::build_empty()?;
         let mut recovery_fields = create_mock_recovery_fields();
         let call_sign = Some("FBS".to_string());
         let checker_flags = CheckerFlags {
@@ -127,7 +130,7 @@ mod tests {
         let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
         let changesets = create_from_dag(
             &ctx,
-            &blob_repo,
+            repo.as_blob_repo(),
             r##"
                 A-B-C-D-E-F-G
             "##,
@@ -138,7 +141,7 @@ mod tests {
         let importing_bookmark = BookmarkName::new("repo_import_test_repo")?;
         move_bookmark(
             &ctx,
-            &blob_repo,
+            &repo,
             &bcs_ids,
             &importing_bookmark,
             &checker_flags,
@@ -149,7 +152,7 @@ mod tests {
         )
         .await?;
         // Check the bookmark moves created BookmarkLogUpdate entries
-        let entries = blob_repo
+        let entries = repo
             .bookmark_update_log()
             .list_bookmark_log_entries(
                 ctx.clone(),
@@ -178,7 +181,7 @@ mod tests {
     #[fbinit::test]
     async fn test_move_bookmark_with_existing_bookmark(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blob_repo = test_repo_factory::build_empty()?;
+        let repo: Repo = test_repo_factory::build_empty()?;
         let mut recovery_fields = create_mock_recovery_fields();
         let checker_flags = CheckerFlags {
             phab_check_disabled: true,
@@ -188,7 +191,7 @@ mod tests {
         let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
         let changesets = create_from_dag(
             &ctx,
-            &blob_repo,
+            repo.as_blob_repo(),
             r##"
                 A-B-C-D-E-F-G
             "##,
@@ -197,7 +200,7 @@ mod tests {
 
         let bcs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
         let importing_bookmark = BookmarkName::new("repo_import_test_repo")?;
-        let mut txn = blob_repo.update_bookmark_transaction(ctx.clone());
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         txn.create(
             &importing_bookmark,
             bcs_ids.first().unwrap().clone(),
@@ -207,7 +210,7 @@ mod tests {
         txn.commit().await.unwrap();
         move_bookmark(
             &ctx,
-            &blob_repo,
+            &repo,
             &bcs_ids,
             &importing_bookmark,
             &checker_flags,
@@ -218,7 +221,7 @@ mod tests {
         )
         .await?;
         // Check the bookmark moves created BookmarkLogUpdate entries
-        let entries = blob_repo
+        let entries = repo
             .bookmark_update_log()
             .list_bookmark_log_entries(
                 ctx.clone(),
@@ -255,7 +258,7 @@ mod tests {
     #[fbinit::test]
     async fn test_hg_sync_check(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: Repo = test_repo_factory::build_empty()?;
         let checker_flags = CheckerFlags {
             phab_check_disabled: true,
             x_repo_check_disabled: true,
@@ -264,7 +267,7 @@ mod tests {
         let call_sign = None;
         let sleep_time = 1;
         let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
-        let repo_id = repo.get_repoid();
+        let repo_id = repo.repo_id();
         let bookmark = create_bookmark_name("book");
 
         assert!(
@@ -281,7 +284,7 @@ mod tests {
             .is_err()
         );
 
-        let mut txn = repo.update_bookmark_transaction(ctx.clone());
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         txn.create(&bookmark, MON_CSID, BookmarkUpdateReason::TestMove, None)?;
         txn.commit().await.unwrap();
         assert!(
@@ -314,7 +317,7 @@ mod tests {
         )
         .await?;
 
-        let mut txn = repo.update_bookmark_transaction(ctx.clone());
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         txn.update(
             &bookmark,
             TWOS_CSID,
@@ -363,16 +366,18 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         let repo = create_repo(1)?;
 
-        let master_cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        let master_cs_id = CreateCommitContext::new_root(&ctx, repo.as_blob_repo())
             .add_file("a", "a")
             .commit()
             .await?;
-        let imported_cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        let imported_cs_id = CreateCommitContext::new_root(&ctx, repo.as_blob_repo())
             .add_file("b", "b")
             .commit()
             .await?;
 
-        let dest_bookmark = bookmark(&ctx, &repo, "master").set_to(master_cs_id).await?;
+        let dest_bookmark = bookmark(&ctx, repo.as_blob_repo(), "master")
+            .set_to(master_cs_id)
+            .await?;
 
         let changeset_args = ChangesetArgs {
             author: "user".to_string(),
@@ -392,7 +397,7 @@ mod tests {
 
         let pushed_cs_id =
             push_merge_commit(&ctx, &repo, merged_cs_id, &dest_bookmark, &repo_config).await?;
-        let pushed_cs = pushed_cs_id.load(&ctx, repo.blobstore()).await?;
+        let pushed_cs = pushed_cs_id.load(&ctx, repo.repo_blobstore()).await?;
 
         assert_eq!(
             Globalrev::new(START_COMMIT_GLOBALREV),
@@ -632,8 +637,8 @@ mod tests {
         let live_commit_sync_config = get_large_repo_live_commit_sync_config();
         let syncers_1 = create_commit_syncers(
             &ctx,
-            small_repo_1.clone(),
-            large_repo.clone(),
+            small_repo_1.as_blob_repo().clone(),
+            large_repo.as_blob_repo().clone(),
             mapping.clone(),
             live_commit_sync_config.clone(),
             Arc::new(InProcessLease::new()),
@@ -658,8 +663,8 @@ mod tests {
 
         let syncers_2 = create_commit_syncers(
             &ctx,
-            small_repo_2.clone(),
-            large_repo.clone(),
+            small_repo_2.as_blob_repo().clone(),
+            large_repo.as_blob_repo().clone(),
             mapping.clone(),
             live_commit_sync_config,
             Arc::new(InProcessLease::new()),
@@ -699,7 +704,7 @@ mod tests {
         let small_repo = create_repo(1)?;
         let changesets = create_from_dag(
             &ctx,
-            &large_repo,
+            large_repo.as_blob_repo(),
             r##"
                 A-B
             "##,
@@ -711,8 +716,8 @@ mod tests {
         let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
         let syncers = create_commit_syncers(
             &ctx,
-            small_repo.clone(),
-            large_repo.clone(),
+            small_repo.as_blob_repo().clone(),
+            large_repo.as_blob_repo().clone(),
             mapping.clone(),
             live_commit_sync_config,
             Arc::new(InProcessLease::new()),
@@ -748,7 +753,7 @@ mod tests {
             rewrite_file_paths(&ctx, &large_repo, &combined_mover, &cs_ids).await?;
 
         let large_repo_cs_a = &shifted_bcs_ids[0]
-            .load(&ctx, &large_repo.get_blobstore())
+            .load(&ctx, large_repo.repo_blobstore())
             .await?;
         let large_repo_cs_a_mpaths = get_file_changes_mpaths(&large_repo_cs_a);
         assert_eq!(
@@ -757,7 +762,7 @@ mod tests {
         );
 
         let large_repo_cs_b = &shifted_bcs_ids[1]
-            .load(&ctx, &large_repo.get_blobstore())
+            .load(&ctx, large_repo.repo_blobstore())
             .await?;
         let large_repo_cs_b_mpaths = get_file_changes_mpaths(&large_repo_cs_b);
         assert_eq!(vec![mp("random_dir/B")], large_repo_cs_b_mpaths);
@@ -772,13 +777,13 @@ mod tests {
         .await?;
 
         let small_repo_cs_a = &synced_bcs_ids[0]
-            .load(&ctx, &small_repo.get_blobstore())
+            .load(&ctx, small_repo.repo_blobstore())
             .await?;
         let small_repo_cs_a_mpaths = get_file_changes_mpaths(&small_repo_cs_a);
         assert_eq!(vec![mp("dest_path_prefix/A")], small_repo_cs_a_mpaths);
 
         let small_repo_cs_b = &synced_bcs_ids[1]
-            .load(&ctx, &small_repo.get_blobstore())
+            .load(&ctx, small_repo.repo_blobstore())
             .await?;
         let small_repo_cs_b_mpaths = get_file_changes_mpaths(&small_repo_cs_b);
         assert_eq!(vec![mp("dest_path_prefix/B")], small_repo_cs_b_mpaths);
@@ -788,15 +793,16 @@ mod tests {
 
     async fn check_no_pending_commits(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &Repo,
         cs_ids: &[ChangesetId],
     ) -> Result<()> {
-        let derived_data_types = &repo.get_active_derived_data_types_config().types;
+        let blob_repo = repo.as_blob_repo();
+        let derived_data_types = &blob_repo.get_active_derived_data_types_config().types;
 
         for derived_data_type in derived_data_types {
-            let derived_utils = derived_data_utils(ctx.fb, repo, derived_data_type)?;
+            let derived_utils = derived_data_utils(ctx.fb, blob_repo, derived_data_type)?;
             let pending = derived_utils
-                .pending(ctx.clone(), repo.clone(), cs_ids.to_vec())
+                .pending(ctx.clone(), repo.as_blob_repo().clone(), cs_ids.to_vec())
                 .await?;
             assert!(pending.is_empty());
         }
@@ -815,7 +821,7 @@ mod tests {
 
         let repo_0_commits = create_from_dag(
             &ctx,
-            &repo_0,
+            repo_0.as_blob_repo(),
             r##"
                 A-B
             "##,
@@ -827,7 +833,7 @@ mod tests {
         let repo_1 = create_repo(1)?;
         let repo_1_commits = create_from_dag(
             &ctx,
-            &repo_1,
+            repo_1.as_blob_repo(),
             r##"
                 C-D
             "##,
@@ -856,7 +862,7 @@ mod tests {
         let small_repo = create_repo(1)?;
         let changesets = create_from_dag(
             &ctx,
-            &large_repo,
+            large_repo.as_blob_repo(),
             r##"
                 A-B
             "##,
@@ -869,8 +875,8 @@ mod tests {
         let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
         let syncers = create_commit_syncers(
             &ctx,
-            small_repo.clone(),
-            large_repo.clone(),
+            small_repo.as_blob_repo().clone(),
+            large_repo.as_blob_repo().clone(),
             mapping.clone(),
             live_commit_sync_config,
             Arc::new(InProcessLease::new()),
@@ -927,17 +933,17 @@ mod tests {
         let large_repo = create_repo(0)?;
         let small_repo = create_repo(1)?;
 
-        let root = CreateCommitContext::new_root(&ctx, &large_repo)
+        let root = CreateCommitContext::new_root(&ctx, large_repo.as_blob_repo())
             .add_file("random_dir/B/file", "text")
             .commit()
             .await?;
 
-        let first_commit = CreateCommitContext::new(&ctx, &large_repo, vec![root])
+        let first_commit = CreateCommitContext::new(&ctx, large_repo.as_blob_repo(), vec![root])
             .add_file("large_repo/justfile", "justtext")
             .commit()
             .await?;
 
-        bookmark(&ctx, &large_repo, "before_mapping_change")
+        bookmark(&ctx, large_repo.as_blob_repo(), "before_mapping_change")
             .set_to(first_commit)
             .await?;
 
@@ -945,8 +951,8 @@ mod tests {
         let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
         let syncers = create_commit_syncers(
             &ctx,
-            small_repo.clone(),
-            large_repo.clone(),
+            small_repo.as_blob_repo().clone(),
+            large_repo.as_blob_repo().clone(),
             mapping.clone(),
             live_commit_sync_config,
             Arc::new(InProcessLease::new()),
@@ -963,7 +969,8 @@ mod tests {
         )
         .await?;
 
-        let wc = list_working_copy_utf8(&ctx, &small_repo, small_repo_cs_ids[0]).await?;
+        let wc =
+            list_working_copy_utf8(&ctx, small_repo.as_blob_repo(), small_repo_cs_ids[0]).await?;
         assert_eq!(
             wc,
             hashmap! {
@@ -971,7 +978,8 @@ mod tests {
             }
         );
 
-        let wc = list_working_copy_utf8(&ctx, &small_repo, small_repo_cs_ids[1]).await?;
+        let wc =
+            list_working_copy_utf8(&ctx, small_repo.as_blob_repo(), small_repo_cs_ids[1]).await?;
         assert_eq!(
             wc,
             hashmap! {
@@ -981,10 +989,11 @@ mod tests {
         );
 
         // Change mapping
-        let change_mapping_cs_id = CreateCommitContext::new(&ctx, &large_repo, vec![first_commit])
-            .commit()
-            .await?;
-        bookmark(&ctx, &large_repo, "after_mapping_change")
+        let change_mapping_cs_id =
+            CreateCommitContext::new(&ctx, large_repo.as_blob_repo(), vec![first_commit])
+                .commit()
+                .await?;
+        bookmark(&ctx, large_repo.as_blob_repo(), "after_mapping_change")
             .set_to(change_mapping_cs_id)
             .await?;
 

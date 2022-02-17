@@ -8,10 +8,10 @@
 #![type_length_limit = "4522397"]
 use anyhow::{format_err, Context, Error};
 use backsyncer::{backsync_latest, open_backsyncer_dbs, BacksyncLimit, TargetRepoDbs};
-use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobrepo::{save_bonsai_changesets, AsBlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bookmarks::{BookmarkName, BookmarkUpdateReason, BookmarksRef};
 use borrowed::borrowed;
 use clap::ArgMatches;
 use cmdlib::args::{self, MononokeMatches};
@@ -43,6 +43,7 @@ use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime}
 use movers::{DefaultAction, Mover};
 use mutable_counters::SqlMutableCounters;
 use pushrebase::do_pushrebase_bonsai;
+use repo_blobstore::RepoBlobstoreRef;
 use segmented_changelog::{seedheads_from_config, SeedHead, SegmentedChangelogTailer};
 use serde::{Deserialize, Serialize};
 use serde_json;
@@ -60,12 +61,14 @@ use tokio::{
 use topo_sort::sort_topological;
 
 mod cli;
+mod repo;
 mod tests;
 
 use crate::cli::{
     setup_app, setup_import_args, ARG_BOOKMARK_SUFFIX, ARG_DEST_BOOKMARK, ARG_PHAB_CHECK_DISABLED,
     CHECK_ADDITIONAL_SETUP_STEPS, IMPORT, RECOVER_PROCESS, SAVED_RECOVERY_FILE_PATH,
 };
+use crate::repo::Repo;
 
 #[derive(Deserialize, Clone, Debug)]
 struct GraphqlQueryObj {
@@ -110,7 +113,7 @@ struct SmallRepoBackSyncVars {
     large_to_small_syncer: CommitSyncer<SqlSyncedCommitMapping>,
     target_repo_dbs: TargetRepoDbs,
     small_repo_bookmark: BookmarkName,
-    small_repo: BlobRepo,
+    small_repo: Repo,
     maybe_call_sign: Option<String>,
     version: CommitSyncConfigVersion,
 }
@@ -159,7 +162,7 @@ pub struct RecoveryFields {
 
 async fn rewrite_file_paths(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     mover: &Mover,
     gitimport_bcs_ids: &[ChangesetId],
 ) -> Result<Vec<ChangesetId>, Error> {
@@ -168,7 +171,7 @@ async fn rewrite_file_paths(
 
     let len = gitimport_bcs_ids.len();
     let gitimport_changesets = stream::iter(gitimport_bcs_ids.iter().map(|bcs_id| async move {
-        let bcs = bcs_id.load(ctx, &repo.get_blobstore()).await?;
+        let bcs = bcs_id.load(ctx, repo.repo_blobstore()).await?;
         Result::<_, Error>::Ok(bcs)
     }))
     .buffered(len)
@@ -182,7 +185,7 @@ async fn rewrite_file_paths(
             bcs.clone().into_mut(),
             &remapped_parents,
             mover.clone(),
-            repo.clone(),
+            repo.as_blob_repo().clone(),
             CommitRewrittenToEmpty::Discard,
         )
         .await?;
@@ -227,7 +230,7 @@ async fn find_mapping_version(
 
 async fn back_sync_commits_to_small_repo(
     ctx: &CoreContext,
-    small_repo: &BlobRepo,
+    small_repo: &Repo,
     large_to_small_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
     bcs_ids: &[ChangesetId],
     version: &CommitSyncConfigVersion,
@@ -323,14 +326,17 @@ async fn wait_until_backsynced_and_return_version(
 
 async fn derive_bonsais_single_repo(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     bcs_ids: &[ChangesetId],
 ) -> Result<(), Error> {
-    let derived_data_types = &repo.get_active_derived_data_types_config().types;
+    let derived_data_types = &repo
+        .as_blob_repo()
+        .get_active_derived_data_types_config()
+        .types;
 
     let derived_utils: Vec<_> = derived_data_types
         .iter()
-        .map(|ty| derived_data_utils(ctx.fb, repo, ty))
+        .map(|ty| derived_data_utils(ctx.fb, repo.as_blob_repo(), ty))
         .collect::<Result<_, _>>()?;
 
     stream::iter(derived_utils)
@@ -338,7 +344,7 @@ async fn derive_bonsais_single_repo(
         .try_for_each_concurrent(derived_data_types.len(), |derived_util| async move {
             for csid in bcs_ids {
                 derived_util
-                    .derive(ctx.clone(), repo.clone(), csid.clone())
+                    .derive(ctx.clone(), repo.as_blob_repo().clone(), csid.clone())
                     .map_ok(|_| ())
                     .await?;
             }
@@ -349,7 +355,7 @@ async fn derive_bonsais_single_repo(
 
 async fn move_bookmark(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     shifted_bcs_ids: &[ChangesetId],
     bookmark: &BookmarkName,
     checker_flags: &CheckerFlags,
@@ -372,7 +378,7 @@ async fn move_bookmark(
         }
     };
 
-    let maybe_old_csid = repo.get_bonsai_bookmark(ctx.clone(), bookmark).await?;
+    let maybe_old_csid = repo.bookmarks().get(ctx.clone(), bookmark).await?;
 
     /* If the bookmark already exists, we should continue moving the
     bookmark from the last commit it points to */
@@ -381,7 +387,7 @@ async fn move_bookmark(
         None => first_csid,
     };
 
-    let mut transaction = repo.update_bookmark_transaction(ctx.clone());
+    let mut transaction = repo.bookmarks().create_transaction(ctx.clone());
     if maybe_old_csid.is_none() {
         transaction.create(
             &bookmark,
@@ -407,7 +413,7 @@ async fn move_bookmark(
         .chunks(batch_size)
         .into_iter()
     {
-        transaction = repo.update_bookmark_transaction(ctx.clone());
+        transaction = repo.bookmarks().create_transaction(ctx.clone());
         let (shifted_index, curr_csid) = match chunk.last() {
             Some(tuple) => tuple,
             None => {
@@ -434,6 +440,7 @@ async fn move_bookmark(
 
         let check_repo = async move {
             let hg_csid = repo
+                .as_blob_repo()
                 .get_hg_from_bonsai_changeset(ctx.clone(), curr_csid.clone())
                 .await?;
             check_dependent_systems(
@@ -465,7 +472,8 @@ async fn move_bookmark(
             .await?;
             let small_repo_cs_id = small_repo_back_sync_vars
                 .small_repo
-                .get_bonsai_bookmark(ctx.clone(), &small_repo_back_sync_vars.small_repo_bookmark)
+                .bookmarks()
+                .get(ctx.clone(), &small_repo_back_sync_vars.small_repo_bookmark)
                 .await?
                 .ok_or_else(|| {
                     format_err!(
@@ -476,6 +484,7 @@ async fn move_bookmark(
 
             let small_repo_hg_csid = small_repo_back_sync_vars
                 .small_repo
+                .as_blob_repo()
                 .get_hg_from_bonsai_changeset(ctx.clone(), small_repo_cs_id)
                 .await?;
 
@@ -507,7 +516,7 @@ async fn move_bookmark(
 
 async fn merge_imported_commit(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     imported_cs_id: ChangesetId,
     dest_bookmark: &BookmarkName,
     changeset_args: ChangesetArgs,
@@ -516,7 +525,7 @@ async fn merge_imported_commit(
         ctx.logger(),
         "Merging the imported commits into given bookmark, {}", dest_bookmark
     );
-    let master_cs_id = match repo.get_bonsai_bookmark(ctx.clone(), dest_bookmark).await? {
+    let master_cs_id = match repo.bookmarks().get(ctx.clone(), dest_bookmark).await? {
         Some(id) => id,
         None => {
             return Err(format_err!(
@@ -580,14 +589,14 @@ async fn merge_imported_commit(
 
 async fn push_merge_commit(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     merged_cs_id: ChangesetId,
     bookmark_to_merge_into: &BookmarkName,
     repo_config: &RepoConfig,
 ) -> Result<ChangesetId, Error> {
     info!(ctx.logger(), "Running pushrebase");
 
-    let merged_cs = merged_cs_id.load(ctx, repo.blobstore()).await?;
+    let merged_cs = merged_cs_id.load(ctx, repo.repo_blobstore()).await?;
     let pushrebase_flags = repo_config.pushrebase.flags;
     let bookmark_attrs = BookmarkAttrs::new(ctx.fb, repo_config.bookmarks.clone()).await?;
     let pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
@@ -600,7 +609,7 @@ async fn push_merge_commit(
 
     let pushrebase_res = do_pushrebase_bonsai(
         ctx,
-        repo,
+        repo.as_blob_repo(),
         &pushrebase_flags,
         bookmark_to_merge_into,
         &hashset![merged_cs],
@@ -619,16 +628,17 @@ async fn push_merge_commit(
 
 async fn get_leaf_entries(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     cs_id: ChangesetId,
 ) -> Result<HashSet<MPath>, Error> {
     let hg_cs_id = repo
+        .as_blob_repo()
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
         .await?;
-    let hg_cs = hg_cs_id.load(ctx, &repo.get_blobstore()).await?;
+    let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
     hg_cs
         .manifestid()
-        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
         .map_ok(|(path, (_file_type, _filenode_id))| path)
         .try_collect::<HashSet<_>>()
         .await
@@ -636,7 +646,7 @@ async fn get_leaf_entries(
 
 async fn check_dependent_systems(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     checker_flags: &CheckerFlags,
     hg_csid: HgChangesetId,
     sleep_time: u64,
@@ -661,7 +671,8 @@ async fn check_dependent_systems(
     }
 
     if !passed_hg_sync_check {
-        wait_for_latest_log_id_to_be_synced(ctx, repo, mutable_counters, sleep_time).await?;
+        wait_for_latest_log_id_to_be_synced(ctx, repo.as_blob_repo(), mutable_counters, sleep_time)
+            .await?;
     }
 
     Ok(())
@@ -758,11 +769,11 @@ fn get_importing_bookmark(bookmark_suffix: &str) -> Result<BookmarkName, Error> 
 
 // Note: pushredirection only works from small repo to large repo.
 async fn get_large_repo_config_if_pushredirected<'a>(
-    repo: &BlobRepo,
+    repo: &Repo,
     live_commit_sync_config: &CfgrLiveCommitSyncConfig,
     repos: &HashMap<String, RepoConfig>,
 ) -> Result<Option<RepoConfig>, Error> {
-    let repo_id = repo.get_repoid();
+    let repo_id = repo.repo_id();
     let enabled = live_commit_sync_config.push_redirector_enabled_for_public(repo_id);
 
     if enabled {
@@ -846,18 +857,18 @@ where
 
 async fn get_pushredirected_vars(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     repo_import_setting: &RepoImportSetting,
     large_repo_config: &RepoConfig,
     matches: &MononokeMatches<'_>,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
-) -> Result<(BlobRepo, RepoImportSetting, Syncers<SqlSyncedCommitMapping>), Error> {
+) -> Result<(Repo, RepoImportSetting, Syncers<SqlSyncedCommitMapping>), Error> {
     let caching = matches.caching();
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
     let config_store = matches.config_store();
     let large_repo_id = large_repo_config.repoid;
-    let large_repo: BlobRepo =
+    let large_repo: Repo =
         args::open_repo_with_repo_id(ctx.fb, &ctx.logger(), large_repo_id, &matches).await?;
     let common_commit_sync_config = live_commit_sync_config.get_common_config(large_repo_id)?;
 
@@ -871,8 +882,8 @@ async fn get_pushredirected_vars(
     let mapping = args::open_sql::<SqlSyncedCommitMapping>(ctx.fb, config_store, &matches)?;
     let syncers = create_commit_syncers(
         ctx,
-        repo.clone(),
-        large_repo.clone(),
+        repo.as_blob_repo().clone(),
+        large_repo.as_blob_repo().clone(),
         mapping.clone(),
         Arc::new(live_commit_sync_config),
         x_repo_syncer_lease,
@@ -911,7 +922,7 @@ async fn fetch_recovery_state(
 
 async fn repo_import(
     ctx: CoreContext,
-    mut repo: BlobRepo,
+    mut repo: Repo,
     recovery_fields: &mut RecoveryFields,
     matches: &MononokeMatches<'_>,
 ) -> Result<(), Error> {
@@ -936,8 +947,7 @@ async fn repo_import(
         importing_bookmark,
         dest_bookmark,
     };
-    let (_, mut repo_config) =
-        args::get_config_by_repoid(config_store, &matches, repo.get_repoid())?;
+    let (_, mut repo_config) = args::get_config_by_repoid(config_store, matches, repo.repo_id())?;
     let mut call_sign = repo_config.phabricator_callsign.clone();
     if !recovery_fields.phab_check_disabled && call_sign.is_none() {
         return Err(format_err!(
@@ -979,7 +989,7 @@ async fn repo_import(
         .await?;
         let target_repo_dbs = open_backsyncer_dbs(
             ctx.clone(),
-            repo.clone(),
+            repo.as_blob_repo().clone(),
             repo_config.storage_config.metadata,
             mysql_options.clone(),
             *readonly_storage,
@@ -1049,7 +1059,8 @@ async fn repo_import(
         let prefs = GitimportPreferences::default();
         let target = FullRepoImport {};
         info!(ctx.logger(), "Started importing git commits to Mononoke");
-        let import_map = import_tools::gitimport(&ctx, &repo, &path, &target, prefs).await?;
+        let import_map =
+            import_tools::gitimport(&ctx, repo.as_blob_repo(), path, &target, prefs).await?;
         info!(ctx.logger(), "Added commits to Mononoke");
 
         let bonsai_values: Vec<(ChangesetId, BonsaiChangeset)> =
@@ -1201,7 +1212,7 @@ async fn repo_import(
 
 async fn tail_segmented_changelog(
     ctx: &CoreContext,
-    blobrepo: &BlobRepo,
+    repo: &Repo,
     imported_cs_id: &ChangesetId,
     storage_config_metadata: &MetadataDatabaseConfig,
     mysql_options: &MysqlOptions,
@@ -1212,7 +1223,7 @@ async fn tail_segmented_changelog(
 
     let segmented_changelog_tailer = SegmentedChangelogTailer::build_from(
         ctx,
-        blobrepo,
+        repo.as_blob_repo(),
         storage_config_metadata,
         mysql_options,
         seed_heads,
@@ -1221,7 +1232,7 @@ async fn tail_segmented_changelog(
     )
     .await?;
 
-    let repo_id = blobrepo.get_repoid();
+    let repo_id = repo.repo_id();
 
     info!(
         ctx.logger(),
@@ -1241,7 +1252,7 @@ async fn tail_segmented_changelog(
 
 async fn check_additional_setup_steps(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     sub_arg_matches: &ArgMatches<'_>,
     matches: &MononokeMatches<'_>,
 ) -> Result<(), Error> {
@@ -1288,7 +1299,7 @@ async fn check_additional_setup_steps(
         importing_bookmark,
         dest_bookmark,
     };
-    let (_, repo_config) = args::get_config_by_repoid(config_store, &matches, repo.get_repoid())?;
+    let (_, repo_config) = args::get_config_by_repoid(config_store, matches, repo.repo_id())?;
 
     let call_sign = repo_config.phabricator_callsign;
     let phab_check_disabled = sub_arg_matches.is_present(ARG_PHAB_CHECK_DISABLED);

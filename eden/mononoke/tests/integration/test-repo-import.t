@@ -63,6 +63,8 @@
   > --dest-bookmark master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
   *Reloading redacted config from configerator* (glob)
+  *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
+  *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   * The importing bookmark name is: repo_import_new_repo. * (glob)
   * The destination bookmark name is: master_bookmark. * (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
@@ -89,6 +91,8 @@
   > --dest-bookmark master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
   *Reloading redacted config from configerator* (glob)
+  *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
+  *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   * The importing bookmark name is: repo_import_new_repo. * (glob)
   * The destination bookmark name is: master_bookmark. * (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
@@ -122,6 +126,8 @@
   > --recovery-file-path "$GIT_REPO/recovery_file.json"
   * using repo "repo" repoid RepositoryId(0) (glob)
   *Reloading redacted config from configerator* (glob)
+  *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
+  *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * Started importing git commits to Mononoke (glob)
