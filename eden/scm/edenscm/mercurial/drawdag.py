@@ -75,6 +75,8 @@ Some special comments could have side effects:
       # C has date 1 0
     - Disabling creating default files
       # drawdag.defaultfiles=false
+    - Create bookmarks
+      # bookmark BOOK_A = A
 """
 from __future__ import absolute_import, print_function
 
@@ -303,15 +305,16 @@ def _drawdagintransaction(repo, text, tr, **opts):
     # parse comments to get extra file content instructions
     files = collections.defaultdict(dict)  # {(name, path): content}
     comments = list(_getcomments(text))
+    commenttext = "\n".join(comments)
     filere = re.compile(r"^(\w+)/([\w/]+)\s*=\s*(.*)$", re.M)
-    for name, path, content in filere.findall("\n".join(comments)):
+    for name, path, content in filere.findall(commenttext):
         content = content.replace(r"\n", "\n").replace(r"\1", "\1")
         files[name][path] = content
 
     # parse commits like "X has date 1 0" to specify dates
     dates = {}
     datere = re.compile(r"^(\w+) has date\s*[= ]([0-9 ]+)$", re.M)
-    for name, date in datere.findall("\n".join(comments)):
+    for name, date in datere.findall(commenttext):
         dates[name] = date
 
     # do not create default files? (ex. commit A has file "A")
@@ -448,6 +451,14 @@ def _drawdagintransaction(repo, text, tr, **opts):
         committed[name] = n
         if name not in mutationpreds and opts.get("bookmarks"):
             bookmarks.addbookmarks(repo, tr, [name], hex(n), True, True)
+
+    # parse commits like "bookmark book_A=A" to specify bookmarks
+    dates = {}
+    bookmarkre = re.compile(r"^bookmark (\S+)\s*=\s*(\w+)$", re.M)
+    for book, name in bookmarkre.findall(commenttext):
+        node = committed.get(name)
+        if node:
+            bookmarks.addbookmarks(repo, tr, [book], hex(node), True, True)
 
     # update visibility (hide commits)
     hidenodes = [committed[n] for n in tohide]

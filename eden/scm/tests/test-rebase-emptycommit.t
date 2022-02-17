@@ -9,17 +9,13 @@
   >   F
   >   |
   >   E
-  >   |
-  >   D
-  >   |
-  > B C
+  >   |  # bookmark BOOK-F=F
+  >   D  # bookmark BOOK-E=E
+  >   |  # bookmark BOOK-D=D
+  > B C  # bookmark BOOK-C=C
   > |/
   > A
   > EOS
-
-  $ for i in C D E F; do
-  >   hg bookmark -r `hg log -r $i -T '{node}'` -i BOOK-$i
-  > done
 
   $ hg debugdrawdag<<'EOS'
   > E
@@ -109,14 +105,10 @@ Merge and its ancestors all become empty
   $ hg debugdrawdag<<'EOS'
   >     E
   >    /|
-  > B C D
-  >  \|/
-  >   A
+  > B C D   # bookmark BOOK-E=E
+  >  \|/    # bookmark BOOK-D=D
+  >   A     # bookmark BOOK-C=C
   > EOS
-
-  $ for i in C D E; do
-  >   hg bookmark -r `hg log -r $i -T '{node}'` -i BOOK-$i
-  > done
 
   $ hg debugdrawdag<<'EOS'
   > H
@@ -156,16 +148,12 @@ Part of ancestors of a merge become empty
   $ hg debugdrawdag<<'EOS'
   >     G
   >    /|
-  >   E F
-  >   | |
-  > B C D
-  >  \|/
-  >   A
+  >   E F  # bookmark BOOK-G=G
+  >   | |  # bookmark BOOK-F=F
+  > B C D  # bookmark BOOK-E=E
+  >  \|/   # bookmark BOOK-D=D
+  >   A    # bookmark BOOK-C=C
   > EOS
-
-  $ for i in C D E F G; do
-  >   hg bookmark -r `hg log -r $i -T '{node}'` -i BOOK-$i
-  > done
 
   $ hg debugdrawdag<<'EOS'
   > H

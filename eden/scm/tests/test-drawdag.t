@@ -348,6 +348,18 @@ Special comments: "X has date 1 0"
   $ hg bookmarks
   no bookmarks set
 
+Bookmarks:
+
+  $ newrepo
+  $ hg debugdrawdag --no-bookmarks << 'EOS'
+  > B   # bookmark BOOK_B = B
+  > |   # bookmark BOOK-A = A
+  > A
+  > EOS
+  $ hg bookmarks
+     BOOK-A                    426bada5c675
+     BOOK_B                    112478962961
+
 Horizontal graph with ranges:
 
   $ newrepo
