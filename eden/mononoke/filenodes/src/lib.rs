@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use context::CoreContext;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, RepoPath};
 use mononoke_types::hash;
-use quickcheck::{Arbitrary, Gen};
+use quickcheck_arbitrary_derive::Arbitrary;
 
 pub mod thrift {
     pub use filenodes_if::*;
@@ -30,7 +30,7 @@ pub struct PreparedFilenode {
     pub info: FilenodeInfo,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
 pub struct FilenodeInfo {
     pub filenode: HgFileNodeId,
     pub p1: Option<HgFileNodeId>,
@@ -129,18 +129,6 @@ impl FilenodeInfo {
                 filenode: copyfrom.1.into_nodehash().into_thrift(),
             }),
             linknode: self.linknode.into_nodehash().into_thrift(),
-        }
-    }
-}
-
-impl Arbitrary for FilenodeInfo {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            filenode: HgFileNodeId::arbitrary(g),
-            p1: <Option<HgFileNodeId>>::arbitrary(g),
-            p2: <Option<HgFileNodeId>>::arbitrary(g),
-            copyfrom: <Option<(RepoPath, HgFileNodeId)>>::arbitrary(g),
-            linknode: HgChangesetId::arbitrary(g),
         }
     }
 }
