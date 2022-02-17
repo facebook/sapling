@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use types::hgid::HgId;
@@ -115,6 +116,7 @@ impl From<HistoryEntry> for WireHistoryEntry {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct HistoryRequest {
     pub keys: Vec<Key>,
     pub length: Option<u32>,
@@ -149,6 +151,7 @@ impl IntoIterator for HistoryResponse {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct HistoryResponseChunk {
     pub path: RepoPathBuf,
     pub entries: Vec<WireHistoryEntry>,
@@ -230,26 +233,6 @@ impl Arbitrary for WireHistoryEntry {
             parents,
             linknode: HgId::arbitrary(g),
             copyfrom,
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for HistoryRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            keys: Arbitrary::arbitrary(g),
-            length: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for HistoryResponseChunk {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            path: Arbitrary::arbitrary(g),
-            entries: Arbitrary::arbitrary(g),
         }
     }
 }

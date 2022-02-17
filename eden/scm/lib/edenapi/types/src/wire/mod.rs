@@ -72,6 +72,8 @@ use std::num::NonZeroU64;
 use dag_types::id::Id as DagId;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck_arbitrary_derive::Arbitrary;
 use revisionstore_types::Metadata as RevisionstoreMetadata;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -349,6 +351,7 @@ impl ToApi for WrapNonZero<u64> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum WireEdenApiServerError {
     #[serde(rename = "1")]
     OpaqueError(String),
@@ -508,6 +511,7 @@ impl Default for WireParents {
 }
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct WireRevisionstoreMetadata {
     #[serde(rename = "0", default, skip_serializing_if = "is_default")]
     size: Option<u64>,
@@ -579,29 +583,9 @@ impl Arbitrary for WireKey {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireEdenApiServerError {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        match bool::arbitrary(g) {
-            true => WireEdenApiServerError::Unknown,
-            false => WireEdenApiServerError::OpaqueError(Arbitrary::arbitrary(g)),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireParents {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Parents::arbitrary(g).to_wire()
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireRevisionstoreMetadata {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            size: Arbitrary::arbitrary(g),
-            flags: Arbitrary::arbitrary(g),
-        }
     }
 }
 

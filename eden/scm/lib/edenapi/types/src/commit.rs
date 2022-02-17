@@ -12,9 +12,9 @@ use anyhow::Result;
 use bytes::Bytes;
 use dag_types::Location;
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
+use quickcheck::{Arbitrary, Gen};
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Gen;
+use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use type_macros::auto_wire;
@@ -44,6 +44,7 @@ use crate::UploadToken;
 #[auto_wire]
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct CommitLocationToHashRequest {
     #[id(1)]
     pub location: Location<HgId>,
@@ -54,6 +55,7 @@ pub struct CommitLocationToHashRequest {
 #[auto_wire]
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct CommitLocationToHashResponse {
     #[id(1)]
     pub location: Location<HgId>,
@@ -66,43 +68,15 @@ pub struct CommitLocationToHashResponse {
 #[auto_wire]
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct CommitLocationToHashRequestBatch {
     #[id(1)]
     pub requests: Vec<CommitLocationToHashRequest>,
 }
 
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for CommitLocationToHashRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        CommitLocationToHashRequest {
-            location: Arbitrary::arbitrary(g),
-            count: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for CommitLocationToHashResponse {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        CommitLocationToHashResponse {
-            location: Arbitrary::arbitrary(g),
-            count: Arbitrary::arbitrary(g),
-            hgids: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for CommitLocationToHashRequestBatch {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        CommitLocationToHashRequestBatch {
-            requests: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct CommitHashToLocationRequestBatch {
     pub master_heads: Vec<HgId>,
     pub hgids: Vec<HgId>,
@@ -111,6 +85,7 @@ pub struct CommitHashToLocationRequestBatch {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Serialize)] // used to convert to Python
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct CommitHashToLocationResponse {
     pub hgid: HgId,
     pub result: Result<Option<Location<HgId>>, ServerError>,
@@ -127,8 +102,8 @@ pub struct CommitKnownResponse {
 }
 
 #[auto_wire]
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-#[derive(Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct CommitGraphEntry {
     #[id(1)]
     pub hgid: HgId,
@@ -139,6 +114,7 @@ pub struct CommitGraphEntry {
 #[auto_wire]
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct CommitGraphRequest {
     #[id(1)]
     pub common: Vec<HgId>,
@@ -146,61 +122,12 @@ pub struct CommitGraphRequest {
     pub heads: Vec<HgId>,
 }
 
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for CommitGraphEntry {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        CommitGraphEntry {
-            hgid: Arbitrary::arbitrary(g),
-            parents: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for CommitGraphRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        CommitGraphRequest {
-            common: Arbitrary::arbitrary(g),
-            heads: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for CommitHashToLocationRequestBatch {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        CommitHashToLocationRequestBatch {
-            master_heads: Arbitrary::arbitrary(g),
-            hgids: Arbitrary::arbitrary(g),
-            unfiltered: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for CommitHashToLocationResponse {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        CommitHashToLocationResponse {
-            hgid: Arbitrary::arbitrary(g),
-            result: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
 /// The list of Mercurial commit identifiers for which we want the commit data to be returned.
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct CommitRevlogDataRequest {
     pub hgids: Vec<HgId>,
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for CommitRevlogDataRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        CommitRevlogDataRequest {
-            hgids: Arbitrary::arbitrary(g),
-        }
-    }
 }
 
 /// A mercurial commit entry as it was serialized in the revlog.
@@ -222,6 +149,7 @@ impl CommitRevlogData {
 // Note: limit is implied to be 10.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum CommitHashLookupRequest {
     InclusiveRange(HgId, HgId),
 }
@@ -246,33 +174,18 @@ pub fn make_hash_lookup_request(prefix: String) -> Result<CommitHashLookupReques
     Ok(CommitHashLookupRequest::InclusiveRange(low_id, high_id))
 }
 
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for CommitHashLookupRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        CommitHashLookupRequest::InclusiveRange(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g))
-    }
-}
-
 /// Commit hashes that are known to the server in the described range.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct CommitHashLookupResponse {
     pub request: CommitHashLookupRequest,
     pub hgids: Vec<HgId>,
 }
 
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for CommitHashLookupResponse {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        CommitHashLookupResponse {
-            request: Arbitrary::arbitrary(g),
-            hgids: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct Extra {
     #[id(1)]
     pub key: Vec<u8>,
@@ -282,6 +195,7 @@ pub struct Extra {
 
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct HgChangesetContent {
     #[id(1)]
     pub parents: Parents,
@@ -303,6 +217,7 @@ pub struct HgChangesetContent {
 
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct UploadHgChangeset {
     #[id(1)]
     pub node_id: HgId,
@@ -312,6 +227,7 @@ pub struct UploadHgChangeset {
 
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct HgMutationEntryContent {
     #[id(1)]
     pub successor: HgId,
@@ -333,6 +249,7 @@ pub struct HgMutationEntryContent {
 
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct UploadHgChangesetsRequest {
     /// list of changesets to upload, changesets must be sorted topologically (use dag.sort)
     #[id(1)]
@@ -342,70 +259,9 @@ pub struct UploadHgChangesetsRequest {
     pub mutations: Vec<HgMutationEntryContent>,
 }
 
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for HgMutationEntryContent {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            successor: Arbitrary::arbitrary(g),
-            predecessors: Arbitrary::arbitrary(g),
-            split: Arbitrary::arbitrary(g),
-            op: Arbitrary::arbitrary(g),
-            user: Arbitrary::arbitrary(g),
-            time: Arbitrary::arbitrary(g),
-            tz: Arbitrary::arbitrary(g),
-            extras: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for UploadHgChangesetsRequest {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            changesets: Arbitrary::arbitrary(g),
-            mutations: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for UploadHgChangeset {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            node_id: Arbitrary::arbitrary(g),
-            changeset_content: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for HgChangesetContent {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            parents: Arbitrary::arbitrary(g),
-            manifestid: Arbitrary::arbitrary(g),
-            user: Arbitrary::arbitrary(g),
-            time: Arbitrary::arbitrary(g),
-            tz: Arbitrary::arbitrary(g),
-            extras: Arbitrary::arbitrary(g),
-            files: Arbitrary::arbitrary(g),
-            message: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for Extra {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            key: Arbitrary::arbitrary(g),
-            value: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct BonsaiExtra {
     #[id(1)]
     pub key: String,
@@ -429,6 +285,7 @@ pub enum BonsaiFileChange {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct BonsaiChangesetContent {
     pub hg_parents: Parents,
     pub author: String,
@@ -442,35 +299,11 @@ pub struct BonsaiChangesetContent {
 
 #[auto_wire]
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct UploadBonsaiChangesetRequest {
     /// changeset to upload
     #[id(1)]
     pub changeset: BonsaiChangesetContent,
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for BonsaiChangesetContent {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            hg_parents: Arbitrary::arbitrary(g),
-            author: Arbitrary::arbitrary(g),
-            time: Arbitrary::arbitrary(g),
-            tz: Arbitrary::arbitrary(g),
-            extra: Arbitrary::arbitrary(g),
-            file_changes: Arbitrary::arbitrary(g),
-            message: Arbitrary::arbitrary(g),
-            is_snapshot: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for UploadBonsaiChangesetRequest {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            changeset: Arbitrary::arbitrary(g),
-        }
-    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
@@ -501,6 +334,7 @@ pub struct SnapshotRawData {
 
 #[auto_wire]
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FetchSnapshotRequest {
     #[id(1)]
     pub cs_id: BonsaiChangesetId,
@@ -508,6 +342,7 @@ pub struct FetchSnapshotRequest {
 
 #[auto_wire]
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FetchSnapshotResponse {
     #[id(1)]
     pub hg_parents: Parents,
@@ -531,42 +366,16 @@ pub struct UploadSnapshotResponse {
 
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct EphemeralPrepareRequest {
     #[id(1)]
     pub custom_duration_secs: Option<u64>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct EphemeralPrepareResponse {
     pub bubble_id: NonZeroU64,
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for EphemeralPrepareRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        EphemeralPrepareRequest {
-            custom_duration_secs: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for EphemeralPrepareResponse {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        EphemeralPrepareResponse {
-            bubble_id: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for BonsaiExtra {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            key: Arbitrary::arbitrary(g),
-            value: Arbitrary::arbitrary(g),
-        }
-    }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
@@ -588,31 +397,9 @@ impl Arbitrary for BonsaiFileChange {
     }
 }
 
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for FetchSnapshotRequest {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            cs_id: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for FetchSnapshotResponse {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            author: Arbitrary::arbitrary(g),
-            time: Arbitrary::arbitrary(g),
-            tz: Arbitrary::arbitrary(g),
-            hg_parents: Arbitrary::arbitrary(g),
-            file_changes: Arbitrary::arbitrary(g),
-            bubble_id: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
 #[auto_wire]
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct CommitMutationsRequest {
     #[id(1)]
     pub commits: Vec<HgId>,
@@ -620,27 +407,10 @@ pub struct CommitMutationsRequest {
 
 #[auto_wire]
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct CommitMutationsResponse {
     #[id(1)]
     pub mutation: HgMutationEntryContent,
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for CommitMutationsRequest {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            commits: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for CommitMutationsResponse {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            mutation: Arbitrary::arbitrary(g),
-        }
-    }
 }
 
 #[cfg(test)]

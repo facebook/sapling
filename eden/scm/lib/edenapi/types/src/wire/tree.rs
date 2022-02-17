@@ -8,6 +8,8 @@
 use bytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
@@ -169,11 +171,13 @@ impl ToApi for WireTreeChildEntry {
 }
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct WireTreeKeysQuery {
     pub keys: Vec<WireKey>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum WireTreeQuery {
     #[serde(rename = "1")]
     ByKeys(WireTreeKeysQuery),
@@ -183,6 +187,7 @@ pub enum WireTreeQuery {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct WireTreeAttributesRequest {
     #[serde(rename = "0", default, skip_serializing_if = "is_default")]
     with_data: bool,
@@ -220,6 +225,7 @@ impl ToApi for WireTreeAttributesRequest {
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct WireTreeRequest {
     #[serde(rename = "0", default, skip_serializing_if = "is_default")]
     query: Option<WireTreeQuery>,
@@ -278,46 +284,6 @@ impl Arbitrary for WireTreeEntry {
             children: None,
             // TODO
             error: None,
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireTreeAttributesRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            with_data: Arbitrary::arbitrary(g),
-            with_parents: Arbitrary::arbitrary(g),
-            with_child_metadata: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireTreeKeysQuery {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            keys: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireTreeQuery {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        match bool::arbitrary(g) {
-            true => WireTreeQuery::Other,
-            false => WireTreeQuery::ByKeys(Arbitrary::arbitrary(g)),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireTreeRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            query: Arbitrary::arbitrary(g),
-            attributes: Arbitrary::arbitrary(g),
         }
     }
 }

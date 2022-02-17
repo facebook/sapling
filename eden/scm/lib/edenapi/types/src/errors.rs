@@ -10,6 +10,10 @@ use thiserror::Error;
 
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
 #[derive(Serialize)] // used to convert to Python
+#[cfg_attr(
+    any(test, feature = "for-tests"),
+    derive(quickcheck_arbitrary_derive::Arbitrary)
+)]
 #[error("server error (code {code}): {message}")]
 /// Common error structure between Mononoke and Mercurial.
 /// The `message` field is self explanatory, a natural language description of the issue that was
@@ -41,13 +45,6 @@ impl ServerError {
 
     pub fn generic<M: Into<String>>(m: M) -> Self {
         Self::new(m, 0)
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl quickcheck::Arbitrary for ServerError {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        ServerError::new(String::arbitrary(g), u64::arbitrary(g))
     }
 }
 

@@ -10,7 +10,7 @@ use std::num::NonZeroU64;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Gen;
+use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use type_macros::auto_wire;
@@ -20,6 +20,7 @@ use crate::AnyId;
 #[auto_wire]
 /// Token metadata for file content token type.
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileContentTokenMetadata {
     #[id(1)]
     pub content_size: u64,
@@ -29,6 +30,7 @@ pub struct FileContentTokenMetadata {
 /// A signed token guarantee the metadata has been verified.
 #[auto_wire]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum UploadTokenMetadata {
     #[id(1)]
     FileContentTokenMetadata(FileContentTokenMetadata),
@@ -60,6 +62,7 @@ pub struct UploadTokenData {
 
 #[auto_wire]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct UploadTokenSignature {
     #[id(1)]
     pub signature: Vec<u8>,
@@ -69,6 +72,7 @@ pub struct UploadTokenSignature {
 /// Can be used as a key in maps/sets.
 #[auto_wire]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct IndexableId {
     #[id(1)]
     pub id: AnyId,
@@ -78,6 +82,7 @@ pub struct IndexableId {
 
 #[auto_wire]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct UploadToken {
     #[id(1)]
     pub data: UploadTokenData,
@@ -126,57 +131,12 @@ impl UploadToken {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for UploadToken {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            data: Arbitrary::arbitrary(g),
-            signature: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for IndexableId {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            id: Arbitrary::arbitrary(g),
-            bubble_id: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for UploadTokenData {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             id: Arbitrary::arbitrary(g),
             bubble_id: Arbitrary::arbitrary(g),
             metadata: None,
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for UploadTokenMetadata {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self::FileContentTokenMetadata(Arbitrary::arbitrary(g))
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for FileContentTokenMetadata {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            content_size: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for UploadTokenSignature {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            signature: Arbitrary::arbitrary(g),
         }
     }
 }

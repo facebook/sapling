@@ -10,6 +10,7 @@ use edenapi_types::ToWire;
 use edenapi_types::WireToApiConversionError;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
+use quickcheck_arbitrary_derive::Arbitrary;
 use type_macros::auto_wire;
 
 // Simulating edenapi wire crate
@@ -21,6 +22,7 @@ pub mod wire {
 
 #[auto_wire]
 #[derive(
+    Arbitrary,
     Default,
     Debug,
     serde::Serialize,
@@ -39,7 +41,7 @@ struct ApiObj {
 }
 
 #[auto_wire]
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Arbitrary, Default, Debug, Clone, PartialEq, Eq)]
 struct ComplexObj {
     #[id(1)]
     inner: ApiObj,
@@ -48,7 +50,7 @@ struct ComplexObj {
 }
 
 #[auto_wire]
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Arbitrary, Clone, Debug, PartialEq, Eq)]
 enum MyEnum {
     #[id(1)]
     A,
@@ -59,34 +61,6 @@ enum MyEnum {
 impl Default for MyEnum {
     fn default() -> Self {
         Self::A
-    }
-}
-
-impl Arbitrary for ApiObj {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            a: Arbitrary::arbitrary(g),
-            b: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-impl Arbitrary for ComplexObj {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            inner: Arbitrary::arbitrary(g),
-            b: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-impl Arbitrary for MyEnum {
-    fn arbitrary(g: &mut Gen) -> Self {
-        if Arbitrary::arbitrary(g) {
-            Self::A
-        } else {
-            Self::B(Arbitrary::arbitrary(g))
-        }
     }
 }
 

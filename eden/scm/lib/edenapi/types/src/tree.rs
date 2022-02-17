@@ -9,7 +9,7 @@ use bytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Gen;
+use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use thiserror::Error;
@@ -135,18 +135,21 @@ impl TreeEntry {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum TreeChildEntry {
     File(TreeChildFileEntry),
     Directory(TreeChildDirectoryEntry),
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct TreeChildFileEntry {
     pub key: Key,
     pub file_metadata: Option<FileMetadata>,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct TreeChildDirectoryEntry {
     pub key: Key,
     pub directory_metadata: Option<DirectoryMetadata>,
@@ -182,43 +185,15 @@ impl Arbitrary for TreeEntry {
     }
 }
 
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for TreeChildEntry {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        match bool::arbitrary(g) {
-            true => TreeChildEntry::File(Arbitrary::arbitrary(g)),
-            false => TreeChildEntry::Directory(Arbitrary::arbitrary(g)),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for TreeChildFileEntry {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            key: Arbitrary::arbitrary(g),
-            file_metadata: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for TreeChildDirectoryEntry {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            key: Arbitrary::arbitrary(g),
-            directory_metadata: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct TreeRequest {
     pub keys: Vec<Key>,
     pub attributes: TreeAttributes,
 }
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct TreeAttributes {
     #[serde(default = "get_true")]
     pub manifest_blob: bool,
@@ -252,29 +227,9 @@ impl Default for TreeAttributes {
     }
 }
 
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for TreeAttributes {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            manifest_blob: Arbitrary::arbitrary(g),
-            parents: Arbitrary::arbitrary(g),
-            child_metadata: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for TreeRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            keys: Arbitrary::arbitrary(g),
-            attributes: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
 #[auto_wire]
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct UploadTreeEntry {
     #[id(0)]
     pub node_id: HgId,
@@ -286,6 +241,7 @@ pub struct UploadTreeEntry {
 
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct UploadTreeRequest {
     #[id(0)]
     pub entry: UploadTreeEntry,
@@ -293,36 +249,8 @@ pub struct UploadTreeRequest {
 
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct UploadTreeResponse {
     #[id(1)]
     pub token: UploadToken,
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for UploadTreeResponse {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            token: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for UploadTreeEntry {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            node_id: Arbitrary::arbitrary(g),
-            data: Arbitrary::arbitrary(g),
-            parents: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for UploadTreeRequest {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            entry: Arbitrary::arbitrary(g),
-        }
-    }
 }

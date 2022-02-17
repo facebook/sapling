@@ -6,7 +6,7 @@
  */
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
+use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use type_macros::auto_wire;
@@ -16,23 +16,15 @@ use crate::land::PushVar;
 
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct BookmarkRequest {
     #[id(0)]
     pub bookmarks: Vec<String>,
 }
 
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for BookmarkRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        BookmarkRequest {
-            bookmarks: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
 #[auto_wire]
-#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct BookmarkEntry {
     #[id(1)]
     pub bookmark: String,
@@ -40,18 +32,9 @@ pub struct BookmarkEntry {
     pub hgid: Option<HgId>,
 }
 
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for BookmarkEntry {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        BookmarkEntry {
-            bookmark: Arbitrary::arbitrary(g),
-            hgid: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct SetBookmarkRequest {
     #[id(0)]
     pub bookmark: String,
@@ -64,16 +47,4 @@ pub struct SetBookmarkRequest {
 
     #[id(4)]
     pub pushvars: Vec<PushVar>,
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for SetBookmarkRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        SetBookmarkRequest {
-            bookmark: Arbitrary::arbitrary(g),
-            to: Arbitrary::arbitrary(g),
-            from: Arbitrary::arbitrary(g),
-            pushvars: Arbitrary::arbitrary(g),
-        }
-    }
 }

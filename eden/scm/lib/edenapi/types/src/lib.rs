@@ -46,7 +46,7 @@ pub use dag_types::FlatSegment;
 pub use dag_types::Location as CommitLocation;
 pub use dag_types::PreparedFlatSegments;
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
+use quickcheck_arbitrary_derive::Arbitrary;
 use thiserror::Error;
 pub use types::hgid::HgId;
 pub use types::key::Key;
@@ -154,6 +154,7 @@ pub struct InvalidHgId {
 
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
 #[error("Error fetching key {key:?}: {err}")]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct EdenApiServerError {
     pub err: EdenApiServerErrorKind,
     pub key: Option<Key>,
@@ -196,24 +197,8 @@ impl EdenApiServerError {
 }
 
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum EdenApiServerErrorKind {
     #[error("EdenAPI server returned an error with message: {0}")]
     OpaqueError(String),
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for EdenApiServerError {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            err: Arbitrary::arbitrary(g),
-            key: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for EdenApiServerErrorKind {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        EdenApiServerErrorKind::OpaqueError(Arbitrary::arbitrary(g))
-    }
 }

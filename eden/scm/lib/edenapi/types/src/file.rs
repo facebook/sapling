@@ -10,6 +10,8 @@ use bytes::Bytes;
 use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Gen;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck_arbitrary_derive::Arbitrary;
 use revisionstore_types::Metadata;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -65,6 +67,7 @@ impl FileError {
 /// File "aux data", requires an additional mononoke blobstore lookup. See mononoke_types::ContentMetadata.
 #[auto_wire]
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileAuxData {
     #[id(0)]
     pub total_size: u64,
@@ -155,6 +158,7 @@ pub struct FileResponse {
 /// Includes the information required to add the data to a mutable store,
 /// along with the parents for hash validation.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileEntry {
     pub key: Key,
     pub parents: Parents,
@@ -213,20 +217,9 @@ impl FileEntry {
     }
 }
 
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for FileEntry {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            key: Arbitrary::arbitrary(g),
-            parents: Arbitrary::arbitrary(g),
-            content: Arbitrary::arbitrary(g),
-            aux_data: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
 #[auto_wire]
 #[derive(Clone, Default, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileAttributes {
     #[id(0)]
     pub content: bool,
@@ -234,18 +227,9 @@ pub struct FileAttributes {
     pub aux_data: bool,
 }
 
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for FileAttributes {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            content: Arbitrary::arbitrary(g),
-            aux_data: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
 #[auto_wire]
 #[derive(Clone, Default, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileSpec {
     #[id(0)]
     pub key: Key,
@@ -253,46 +237,15 @@ pub struct FileSpec {
     pub attrs: FileAttributes,
 }
 
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for FileSpec {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            key: Arbitrary::arbitrary(g),
-            attrs: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
 #[auto_wire]
 #[derive(Clone, Default, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileRequest {
     // TODO(meyer): Deprecate keys field
     #[id(0)]
     pub keys: Vec<Key>,
     #[id(1)]
     pub reqs: Vec<FileSpec>,
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for FileRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            keys: Arbitrary::arbitrary(g),
-            reqs: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for FileAuxData {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            total_size: Arbitrary::arbitrary(g),
-            content_id: Arbitrary::arbitrary(g),
-            sha1: Arbitrary::arbitrary(g),
-            sha256: Arbitrary::arbitrary(g),
-        }
-    }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
@@ -308,6 +261,7 @@ impl Arbitrary for FileContent {
 
 #[auto_wire]
 #[derive(Clone, Default, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct HgFilenodeData {
     #[id(0)]
     pub node_id: HgId,
@@ -321,6 +275,7 @@ pub struct HgFilenodeData {
 
 #[auto_wire]
 #[derive(Clone, Default, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct UploadHgFilenodeRequest {
     #[id(0)]
     pub data: HgFilenodeData,
@@ -328,37 +283,8 @@ pub struct UploadHgFilenodeRequest {
 
 #[auto_wire]
 #[derive(Clone, Default, Serialize, Deserialize, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct UploadTokensResponse {
     #[id(2)]
     pub token: UploadToken,
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for UploadHgFilenodeRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            data: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for HgFilenodeData {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            node_id: Arbitrary::arbitrary(g),
-            parents: Arbitrary::arbitrary(g),
-            file_content_upload_token: Arbitrary::arbitrary(g),
-            metadata: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for UploadTokensResponse {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            token: Arbitrary::arbitrary(g),
-        }
-    }
 }

@@ -9,7 +9,7 @@ use std::fmt;
 use std::str::FromStr;
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
+use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use type_macros::auto_wire;
@@ -19,6 +19,7 @@ use crate::ServerError;
 /// Directory entry metadata
 #[auto_wire]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct DirectoryMetadata {
     #[id(0)]
     pub fsnode_id: Option<FsnodeId>,
@@ -40,6 +41,7 @@ pub struct DirectoryMetadata {
 
 #[auto_wire]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct DirectoryMetadataRequest {
     #[id(0)]
     pub with_fsnode_id: bool,
@@ -62,6 +64,7 @@ pub struct DirectoryMetadataRequest {
 /// File entry metadata
 #[auto_wire]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileMetadata {
     #[id(0)]
     pub revisionstore_flags: Option<u64>,
@@ -79,6 +82,7 @@ pub struct FileMetadata {
 
 #[auto_wire]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileMetadataRequest {
     #[id(0)]
     pub with_revisionstore_flags: bool,
@@ -101,6 +105,7 @@ blake2_hash!(FsnodeId);
 
 #[auto_wire]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum FileType {
     #[id(1)]
     Regular,
@@ -118,6 +123,7 @@ impl Default for FileType {
 
 #[auto_wire]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum AnyFileContentId {
     #[id(1)]
     ContentId(ContentId),
@@ -165,96 +171,6 @@ impl fmt::Display for AnyFileContentId {
             AnyFileContentId::ContentId(id) => write!(f, "{}", id),
             AnyFileContentId::Sha1(id) => write!(f, "{}", id),
             AnyFileContentId::Sha256(id) => write!(f, "{}", id),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for DirectoryMetadata {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            fsnode_id: Arbitrary::arbitrary(g),
-            simple_format_sha1: Arbitrary::arbitrary(g),
-            simple_format_sha256: Arbitrary::arbitrary(g),
-            child_files_count: Arbitrary::arbitrary(g),
-            child_files_total_size: Arbitrary::arbitrary(g),
-            child_dirs_count: Arbitrary::arbitrary(g),
-            descendant_files_count: Arbitrary::arbitrary(g),
-            descendant_files_total_size: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for DirectoryMetadataRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            with_fsnode_id: Arbitrary::arbitrary(g),
-            with_simple_format_sha1: Arbitrary::arbitrary(g),
-            with_simple_format_sha256: Arbitrary::arbitrary(g),
-            with_child_files_count: Arbitrary::arbitrary(g),
-            with_child_files_total_size: Arbitrary::arbitrary(g),
-            with_child_dirs_count: Arbitrary::arbitrary(g),
-            with_descendant_files_count: Arbitrary::arbitrary(g),
-            with_descendant_files_total_size: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for FileMetadata {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            revisionstore_flags: Arbitrary::arbitrary(g),
-            content_id: Arbitrary::arbitrary(g),
-            file_type: Arbitrary::arbitrary(g),
-            size: Arbitrary::arbitrary(g),
-            content_sha1: Arbitrary::arbitrary(g),
-            content_sha256: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for FileMetadataRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            with_revisionstore_flags: Arbitrary::arbitrary(g),
-            with_content_id: Arbitrary::arbitrary(g),
-            with_file_type: Arbitrary::arbitrary(g),
-            with_size: Arbitrary::arbitrary(g),
-            with_content_sha1: Arbitrary::arbitrary(g),
-            with_content_sha256: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for FileType {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        use FileType::*;
-
-        let variant = g.choose(&[0, 1, 2]).unwrap();
-        match variant {
-            0 => Regular,
-            1 => Executable,
-            2 => Symlink,
-            _ => unreachable!(),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for AnyFileContentId {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        use AnyFileContentId::*;
-
-        let variant = g.choose(&[0, 1, 2]).unwrap();
-        match variant {
-            0 => ContentId(Arbitrary::arbitrary(g)),
-            1 => Sha1(Arbitrary::arbitrary(g)),
-            2 => Sha256(Arbitrary::arbitrary(g)),
-            _ => unreachable!(),
         }
     }
 }

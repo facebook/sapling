@@ -6,7 +6,7 @@
  */
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
+use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
@@ -23,6 +23,7 @@ use crate::WireHistoryEntry;
 
 // TODO: attributes in this file aren't renamed to 0, 1, ...
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct WireHistoryRequest {
     keys: Vec<WireKey>,
     length: Option<u32>,
@@ -52,6 +53,7 @@ impl ToApi for WireHistoryRequest {
 }
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 // TODO: Rename, move more functionality to wire types?
 pub struct WireWireHistoryEntry {
     node: Option<WireHgId>,
@@ -94,6 +96,7 @@ impl ToApi for WireWireHistoryEntry {
 }
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct WireHistoryResponseChunk {
     path: Option<WireRepoPathBuf>,
     entries: Vec<WireWireHistoryEntry>,
@@ -121,38 +124,6 @@ impl ToApi for WireHistoryResponseChunk {
             )?,
             entries: self.entries.to_api()?,
         })
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireHistoryRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            keys: Arbitrary::arbitrary(g),
-            length: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireWireHistoryEntry {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            node: Arbitrary::arbitrary(g),
-            parents: Arbitrary::arbitrary(g),
-            linknode: Arbitrary::arbitrary(g),
-            copyfrom: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireHistoryResponseChunk {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            path: Arbitrary::arbitrary(g),
-            entries: Arbitrary::arbitrary(g),
-        }
     }
 }
 
