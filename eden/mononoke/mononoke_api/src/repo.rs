@@ -13,7 +13,7 @@ use std::{
 };
 
 use anyhow::{format_err, Error};
-use blobrepo::BlobRepo;
+use blobrepo::{AsBlobRepo, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
@@ -112,6 +112,12 @@ pub struct Repo {
     pub(crate) hook_manager: Arc<HookManager>,
     pub(crate) readonly_fetcher: RepoReadWriteFetcher,
     pub(crate) x_repo_sync_lease: Arc<dyn LeaseOps>,
+}
+
+impl AsBlobRepo for Repo {
+    fn as_blob_repo(&self) -> &BlobRepo {
+        self.inner.as_blob_repo()
+    }
 }
 
 #[derive(Clone)]

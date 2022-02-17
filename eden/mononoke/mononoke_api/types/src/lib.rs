@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use blobrepo::BlobRepo;
+use blobrepo::{AsBlobRepo, BlobRepo};
 use bookmarks::{BookmarkUpdateLog, Bookmarks};
 use ephemeral_blobstore::RepoEphemeralStore;
 use mutable_renames::MutableRenames;
@@ -35,4 +35,10 @@ pub struct InnerRepo {
 
     #[facet]
     pub mutable_renames: MutableRenames,
+}
+
+impl AsBlobRepo for InnerRepo {
+    fn as_blob_repo(&self) -> &BlobRepo {
+        &self.blob_repo
+    }
 }
