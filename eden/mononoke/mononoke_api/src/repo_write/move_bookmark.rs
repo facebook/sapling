@@ -80,7 +80,7 @@ impl RepoWriteContext {
 
         op.run(
             self.ctx(),
-            self.blob_repo(),
+            self.inner_repo(),
             &lca_hint,
             &self.config().infinitepush,
             &self.config().pushrebase,

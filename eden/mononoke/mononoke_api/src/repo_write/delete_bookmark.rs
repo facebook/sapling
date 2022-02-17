@@ -60,7 +60,7 @@ impl RepoWriteContext {
 
         op.run(
             self.ctx(),
-            self.blob_repo(),
+            self.inner_repo(),
             &self.config().infinitepush,
             &bookmark_attrs,
             self.readonly_fetcher(),
