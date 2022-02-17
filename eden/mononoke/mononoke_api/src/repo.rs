@@ -124,7 +124,6 @@ impl AsBlobRepo for Repo {
 pub struct RepoContext {
     ctx: CoreContext,
     repo: Arc<Repo>,
-    blob_repo: BlobRepo,
 }
 
 impl fmt::Debug for RepoContext {
@@ -289,6 +288,28 @@ impl Repo {
         })
     }
 
+    /// Construct a new Repo based on an existing one with a bubble opened.
+    pub fn with_bubble(&self, bubble: Bubble) -> Self {
+        let blob_repo = self.inner.blob_repo.with_bubble(bubble);
+        let inner = InnerRepo {
+            blob_repo,
+            ..self.inner.clone()
+        };
+        Self {
+            name: self.name.clone(),
+            inner,
+            warm_bookmarks_cache: self.warm_bookmarks_cache.clone(),
+            synced_commit_mapping: self.synced_commit_mapping.clone(),
+            config: self.config.clone(),
+            repo_permission_checker: self.repo_permission_checker.clone(),
+            service_permission_checker: self.service_permission_checker.clone(),
+            live_commit_sync_config: self.live_commit_sync_config.clone(),
+            hook_manager: self.hook_manager.clone(),
+            readonly_fetcher: self.readonly_fetcher.clone(),
+            x_repo_sync_lease: self.x_repo_sync_lease.clone(),
+        }
+    }
+
     /// Construct a Repo from a test BlobRepo
     pub async fn new_test(ctx: CoreContext, blob_repo: BlobRepo) -> Result<Self, Error> {
         Self::new_test_common(
@@ -407,6 +428,11 @@ impl Repo {
     /// The internal id of the repo. Used for comparing the repo objects with each other.
     pub fn repoid(&self) -> RepositoryId {
         self.blob_repo().get_repoid()
+    }
+
+    /// The underlying `InnerRepo`.
+    pub fn inner_repo(&self) -> &InnerRepo {
+        &self.inner
     }
 
     /// The underlying `BlobRepo`.
@@ -754,18 +780,14 @@ impl RepoContext {
     {
         // Check the user is permitted to access this repo.
         repo.check_permissions(&ctx, "read").await?;
-        let blob_repo =
+        let repo =
             if let Some(bubble_id) = bubble_fetcher((**repo.ephemeral_store()).clone()).await? {
                 let bubble = repo.ephemeral_store().open_bubble(bubble_id).await?;
-                repo.blob_repo().with_bubble(bubble)
+                Arc::new(repo.with_bubble(bubble))
             } else {
-                repo.blob_repo().clone()
+                repo.clone()
             };
-        Ok(Self {
-            repo,
-            ctx,
-            blob_repo,
-        })
+        Ok(Self { repo, ctx })
     }
 
     /// Initializes the repo without the ACL check.
@@ -776,12 +798,7 @@ impl RepoContext {
         ctx: CoreContext,
         repo: Arc<Repo>,
     ) -> Result<Self, MononokeError> {
-        let blob_repo = repo.blob_repo().clone();
-        Ok(Self {
-            repo,
-            ctx,
-            blob_repo,
-        })
+        Ok(Self { repo, ctx })
     }
 
     /// The context for this query.
@@ -799,9 +816,14 @@ impl RepoContext {
         self.repo.repoid()
     }
 
+    /// The underlying `InnerRepo`.
+    pub fn inner_repo(&self) -> &InnerRepo {
+        self.repo.inner_repo()
+    }
+
     /// The underlying `BlobRepo`.
     pub fn blob_repo(&self) -> &BlobRepo {
-        &self.blob_repo
+        self.repo.blob_repo()
     }
 
     /// `LiveCommitSyncConfig` instance to query current state of sync configs.
