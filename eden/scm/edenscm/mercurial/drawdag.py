@@ -89,13 +89,12 @@ from . import (
     context,
     error,
     mutation,
-    node,
     pycompat,
     scmutil,
     visibility,
 )
 from .i18n import _
-from .node import hex
+from .node import hex, nullid, short
 
 
 def _parseasciigraph(text):
@@ -154,7 +153,7 @@ class simplefilectx(object):
 
     def renamed(self):
         if self._renamed:
-            return (self._renamed, node.nullid)
+            return (self._renamed, nullid)
         return None
 
     def flags(self):
@@ -207,7 +206,7 @@ class simplecommitctx(context.committablectx):
         self._filemap = filemap
         self._parents = parentctxs
         while len(self._parents) < 2:
-            self._parents.append(repo[node.nullid])
+            self._parents.append(repo[nullid])
 
     def filectx(self, key):
         data = self._filemap[key]
@@ -318,7 +317,7 @@ def _drawdagintransaction(repo, text, tr, **opts):
     # do not create default files? (ex. commit A has file "A")
     defaultfiles = not any("drawdag.defaultfiles=false" in c for c in comments)
 
-    committed = {None: node.nullid}  # {name: node}
+    committed = {None: nullid}  # {name: node}
     existed = {None}
 
     # for leaf nodes, try to find existing nodes in repo
@@ -458,10 +457,10 @@ def _drawdagintransaction(repo, text, tr, **opts):
     if opts.get("print"):
         for name, n in sorted(committed.items()):
             if name:
-                repo.ui.write("%s %s\n" % (node.short(n), name))
+                repo.ui.write("%s %s\n" % (short(n), name))
     if opts.get("write_env"):
         path = opts.get("write_env")
         with open(path, "w") as f:
             for name, n in sorted(committed.items()):
                 if name and name not in existed:
-                    f.write("%s=%s\n" % (name, node.hex(n)))
+                    f.write("%s=%s\n" % (name, hex(n)))
