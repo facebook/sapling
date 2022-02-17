@@ -60,10 +60,21 @@ The result (`hg log -G -T "{desc}"`) will look like::
 
 Some special comments could have side effects:
 
-    - Create obsmarkers
+    - Create mutations
       # replace: A -> B -> C -> D  # chained 1 to 1 replacements
       # split: A -> B, C           # 1 to many
       # prune: A, B, C             # many to nothing
+    - Create files
+      # A/dir/file = line1\nline2\n
+    - Remove files
+      # C/A = (removed)
+    - Mark as copied or renamed
+      # B/B = A\n (copied from A)
+      # C/C = A\n (renamed from A)
+    - Specify commit dates
+      # C has date 1 0
+    - Disabling creating default files
+      # drawdag.defaultfiles=false
 """
 from __future__ import absolute_import, print_function
 
@@ -293,7 +304,7 @@ def drawdag(repo, text, **opts):
         content = content.replace(r"\n", "\n").replace(r"\1", "\1")
         files[name][path] = content
 
-    # parse commits like "X: date=1 0" to specify dates
+    # parse commits like "X has date 1 0" to specify dates
     dates = {}
     datere = re.compile(r"^(\w+) has date\s*[= ]([0-9 ]+)$", re.M)
     for name, date in datere.findall("\n".join(comments)):
@@ -314,11 +325,10 @@ def drawdag(repo, text, **opts):
             except error.RepoLookupError:
                 pass
 
-    # parse special comments
-    obsmarkers = []
+    # parse mutation comments like amend: A -> B -> C
+    tohide = set()
     mutations = {}
     for comment in comments:
-        rels = []  # mutation relationships
         args = comment.split(":", 1)
         if len(args) <= 1:
             continue
@@ -330,18 +340,17 @@ def drawdag(repo, text, **opts):
             nodes = [n.strip() for n in arg.split("->")]
             for i in range(len(nodes) - 1):
                 pred, succ = nodes[i], nodes[i + 1]
-                rels.append((pred, (succ,)))
                 if succ in mutations:
                     raise error.Abort(
                         _("%s: multiple mutations: from %s and %s")
                         % (succ, pred, mutations[succ][0])
                     )
                 mutations[succ] = ([pred], cmd, None)
+                tohide.add(pred)
         elif cmd in ("split",):
             pred, succs = arg.split("->")
             pred = pred.strip()
             succs = [s.strip() for s in succs.split(",")]
-            rels.append((pred, succs))
             for succ in succs:
                 if succ in mutations:
                     raise error.Abort(
@@ -357,12 +366,11 @@ def drawdag(repo, text, **opts):
                         % (pred, parent, child)
                     )
             mutations[succs[-1]] = ([pred], cmd, succs[:-1])
+            tohide.add(pred)
         elif cmd in ("fold",):
             preds, succ = arg.split("->")
             preds = [p.strip() for p in preds.split(",")]
             succ = succ.strip()
-            for pred in preds:
-                rels.append((pred, (succ,)))
             if succ in mutations:
                 raise error.Abort(
                     _("%s: multiple mutations: from %s and %s")
@@ -377,14 +385,15 @@ def drawdag(repo, text, **opts):
                         % (succ, parent, child)
                     )
             mutations[succ] = (preds, cmd, None)
+            tohide.update(preds)
         elif cmd in ("prune",):
             for n in arg.split(","):
-                rels.append((n.strip(), ()))
+                n = n.strip()
+                tohide.add(n)
         elif cmd in ("revive",):
             for n in arg.split(","):
-                rels.append((n.strip(), (n.strip(),)))
-        if rels:
-            obsmarkers.append((cmd, rels))
+                n = n.strip()
+                tohide -= {n}
 
     # Only record mutations if mutation is enabled.
     mutationedges = {}
@@ -437,19 +446,10 @@ def drawdag(repo, text, **opts):
             with repo.wlock(), repo.lock(), repo.transaction("bookmark") as tr:
                 bookmarks.addbookmarks(repo, tr, [name], hex(n), True, True)
 
-    # handle special comments
+    # update visibility (hide commits)
     with repo.wlock(), repo.lock(), repo.transaction("drawdag"):
-        getctx = lambda x: repo[committed[x.strip()]]
-        if visibility.tracking(repo):
-            hidenodes = set()
-            revivenodes = set()
-            for cmd, markers in obsmarkers:
-                for p, ss in markers:
-                    if cmd == "revive":
-                        revivenodes.add(getctx(p).node())
-                    else:
-                        hidenodes.add(getctx(p).node())
-            visibility.remove(repo, hidenodes - revivenodes)
+        hidenodes = [committed[n] for n in tohide]
+        visibility.remove(repo, hidenodes)
 
     del committed[None]
     if opts.get("print"):

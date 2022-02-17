@@ -157,7 +157,7 @@ Cycles are disallowed
   abort: the graph has cycles
   [255]
 
-Create obsmarkers via comments
+Create mutations or hide commits via comments
 
   $ reinit
 
