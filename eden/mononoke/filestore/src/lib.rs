@@ -24,6 +24,7 @@ use mononoke_types::{hash, ContentId, ContentMetadata, FileContents, MononokeId}
 
 mod alias;
 mod chunk;
+mod copy;
 mod errors;
 mod expected_size;
 mod fetch;
@@ -36,6 +37,7 @@ mod prepare;
 mod rechunk;
 mod streamhash;
 
+pub use copy::{copy, BlobCopier};
 pub use fetch::Range;
 pub use fetch_key::{Alias, AliasBlob, FetchKey};
 pub use rechunk::{force_rechunk, rechunk};
