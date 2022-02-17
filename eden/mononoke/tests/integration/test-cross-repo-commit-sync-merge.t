@@ -76,7 +76,11 @@ insert sync mapping entry
 run the sync again
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit fbsource_master |& grep -v "using repo"
   *Reloading redacted config from configerator* (glob)
+  *] Initializing CfgrLiveCommitSyncConfig, repo: fbs-mon (glob)
+  *] Done initializing CfgrLiveCommitSyncConfig, repo: fbs-mon (glob)
   *Reloading redacted config from configerator* (glob)
+  *] Initializing CfgrLiveCommitSyncConfig, repo: meg-mon (glob)
+  *] Done initializing CfgrLiveCommitSyncConfig, repo: meg-mon (glob)
   *Reloading redacted config from configerator* (glob)
   *Reloading redacted config from configerator* (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)

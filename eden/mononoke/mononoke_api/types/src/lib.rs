@@ -18,6 +18,7 @@ use mutable_renames::MutableRenames;
 use phases::Phases;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
 use repo_blobstore::RepoBlobstore;
+use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use segmented_changelog_types::SegmentedChangelog;
@@ -57,6 +58,9 @@ pub struct InnerRepo {
 
     #[facet]
     pub mutable_renames: MutableRenames,
+
+    #[facet]
+    pub repo_cross_repo: RepoCrossRepo,
 }
 
 impl AsBlobRepo for InnerRepo {

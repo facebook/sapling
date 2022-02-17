@@ -32,6 +32,7 @@ filenodes = { version = "0.1.0", path = "../../filenodes" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
+live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
 maplit = "1.0"
 megarepo_mapping = { version = "0.1.0", path = "../../megarepo_api/mapping" }
 memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
@@ -47,6 +48,7 @@ pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_muta
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_cross_repo = { version = "0.1.0", path = "../../repo_attributes/repo_cross_repo" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 requests_table = { version = "0.1.0", path = "../../megarepo_api/requests_table" }

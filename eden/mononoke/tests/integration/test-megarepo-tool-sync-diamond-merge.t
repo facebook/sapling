@@ -202,6 +202,8 @@ Now sync with the tool
   $ cd "$TESTTMP"
   $ megarepo_tool_multirepo --source-repo-id 1 --target-repo-id 0 sync-diamond-merge with_merge_master --bookmark master_bookmark |& grep -v "using repo"
   *Reloading redacted config from configerator* (glob)
+  *] Initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
+  *] Done initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
   *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(46c0f70c6300f4168cb70321839ac0079c74b6d3295adb81eeb1932be4f80e9d)) (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
@@ -290,7 +292,11 @@ Merge with preserved ancestors
   $ cd "$TESTTMP"
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit $(hg log -T "{node}" -r pre_merge_p1 --cwd "$TESTTMP/with_merge_hg") |& grep -v "using repo"
   * Reloading redacted config from configerator* (glob)
+  *] Initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
+  *] Done initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
   * Reloading redacted config from configerator* (glob)
+  *] Initializing CfgrLiveCommitSyncConfig, repo: meg_mon (glob)
+  *] Done initializing CfgrLiveCommitSyncConfig, repo: meg_mon (glob)
   * Reloading redacted config from configerator* (glob)
   * Reloading redacted config from configerator* (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
@@ -318,6 +324,8 @@ Merge with preserved ancestors
   $ megarepo_tool_multirepo --source-repo-id 1 --target-repo-id 0 sync-diamond-merge with_merge_master --bookmark master_bookmark
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   *Reloading redacted config from configerator* (glob)
+  *] Initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
+  *] Done initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
   *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c)) (glob)

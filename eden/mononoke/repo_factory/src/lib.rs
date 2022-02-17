@@ -39,6 +39,7 @@ use changesets::ArcChangesets;
 use changesets_impl::{CachingChangesets, SqlChangesetsBuilder};
 use context::CoreContext;
 use context::SessionContainer;
+use cross_repo_sync::create_commit_syncer_lease;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
 #[cfg(fbcode_build)]
 use derived_data_client_library::Client as DerivationServiceClient;
@@ -50,6 +51,7 @@ use fbinit::FacebookInit;
 use filenodes::ArcFilenodes;
 use filestore::{ArcFilestoreConfig, FilestoreConfig};
 use futures_watchdog::WatchdogExt;
+use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use mercurial_mutation::{ArcHgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
     ArcRepoConfig, BlobConfig, CensoredScubaParams, CommonConfig, MetadataDatabaseConfig,
@@ -66,6 +68,7 @@ use readonlyblob::ReadOnlyBlobstore;
 use redactedblobstore::{ArcRedactionConfigBlobstore, RedactionConfigBlobstore};
 use redactedblobstore::{RedactedBlobs, SqlRedactedContentStore};
 use repo_blobstore::{ArcRepoBlobstore, RepoBlobstore};
+use repo_cross_repo::{ArcRepoCrossRepo, RepoCrossRepo};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
 use requests_table::{ArcLongRunningRequestsQueue, SqlLongRunningRequestsQueue};
@@ -77,6 +80,7 @@ use slog::o;
 use sql::SqlConnectionsWithSchema;
 use sql_construct::{SqlConstruct, SqlConstructFromDatabaseConfig};
 use sqlphases::SqlPhasesBuilder;
+use synced_commit_mapping::SqlSyncedCommitMapping;
 use thiserror::Error;
 use tunables::tunables;
 use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
@@ -478,6 +482,9 @@ pub enum RepoFactoryError {
 
     #[error("Error opening mutable renames")]
     MutableRenames,
+
+    #[error("Error opening cross repo sync mapping")]
+    RepoCrossRepo,
 }
 
 #[facet::factory(name: String, config: RepoConfig)]
@@ -901,6 +908,33 @@ impl RepoFactory {
             config,
             derivation_service_client,
         )?))
+    }
+
+    pub async fn repo_cross_repo(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcRepoCrossRepo> {
+        let synced_commit_mapping = Arc::new(
+            self.open::<SqlSyncedCommitMapping>(&repo_config.storage_config.metadata)
+                .await
+                .context(RepoFactoryError::RepoCrossRepo)?,
+        );
+        let sync_lease = create_commit_syncer_lease(self.env.fb, self.env.caching)?;
+        let logger = self
+            .env
+            .logger
+            .new(o!("repo" => repo_identity.name().to_string()));
+        let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(
+            &logger,
+            &self.env.config_store,
+        )?);
+
+        Ok(Arc::new(RepoCrossRepo::new(
+            synced_commit_mapping,
+            live_commit_sync_config,
+            sync_lease,
+        )))
     }
 }
 

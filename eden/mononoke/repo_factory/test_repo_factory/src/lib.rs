@@ -33,6 +33,7 @@ use filenodes::ArcFilenodes;
 use filestore::{ArcFilestoreConfig, FilestoreConfig};
 use fsnodes::RootFsnodeId;
 use git_types::TreeHandle;
+use live_commit_sync_config::TestLiveCommitSyncConfig;
 use maplit::{hashmap, hashset};
 use megarepo_mapping::MegarepoMapping;
 use memblob::Memblob;
@@ -52,6 +53,7 @@ use pushrebase_mutation_mapping::{
 use redactedblobstore::RedactedBlobs;
 use rendezvous::RendezVousOptions;
 use repo_blobstore::{ArcRepoBlobstore, RepoBlobstore};
+use repo_cross_repo::{ArcRepoCrossRepo, RepoCrossRepo};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
 use requests_table::SqlLongRunningRequestsQueue;
@@ -450,5 +452,19 @@ impl TestRepoFactory {
         let sql_store =
             SqlMutableRenamesStore::from_sql_connections(self.metadata_db.clone().into());
         Ok(Arc::new(MutableRenames::new(repo_identity.id(), sql_store)))
+    }
+
+    /// Cross-repo sync manager for this repo
+    pub fn repo_cross_repo(&self) -> Result<ArcRepoCrossRepo> {
+        let synced_commit_mapping = Arc::new(SqlSyncedCommitMapping::from_sql_connections(
+            self.metadata_db.clone().into(),
+        ));
+        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
+        let sync_lease = Arc::new(InProcessLease::new());
+        Ok(Arc::new(RepoCrossRepo::new(
+            synced_commit_mapping,
+            live_commit_sync_config,
+            sync_lease,
+        )))
     }
 }

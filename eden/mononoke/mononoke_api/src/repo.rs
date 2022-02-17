@@ -24,8 +24,7 @@ use changeset_info::ChangesetInfo;
 use changesets::{Changesets, ChangesetsArc, ChangesetsRef};
 use context::CoreContext;
 use cross_repo_sync::{
-    create_commit_syncer_lease, types::Target, CandidateSelectionHint, CommitSyncContext,
-    CommitSyncRepos, CommitSyncer,
+    types::Target, CandidateSelectionHint, CommitSyncContext, CommitSyncRepos, CommitSyncer,
 };
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use ephemeral_blobstore::RepoEphemeralStore;
@@ -39,8 +38,7 @@ use futures_watchdog::WatchdogExt;
 use hook_manager_factory::make_hook_manager;
 use hooks::HookManager;
 use itertools::Itertools;
-use live_commit_sync_config::TestLiveCommitSyncConfig;
-use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use live_commit_sync_config::{LiveCommitSyncConfig, TestLiveCommitSyncConfig};
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::Globalrev;
 use metaconfig_types::{
@@ -57,6 +55,7 @@ use permission_checker::{ArcPermissionChecker, PermissionCheckerBuilder};
 use phases::PhasesRef;
 use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
+use repo_cross_repo::RepoCrossRepo;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use revset::AncestorsNodeStream;
 use segmented_changelog::{CloneData, DisabledSegmentedChangelog, Location, SegmentedChangelog};
@@ -103,15 +102,11 @@ pub struct Repo {
     pub(crate) inner: InnerRepo,
     pub(crate) name: String,
     pub(crate) warm_bookmarks_cache: Arc<dyn BookmarksCache>,
-    // This doesn't really belong here, but until we have production mappings, we can't do a better job
-    pub(crate) synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
     pub(crate) config: RepoConfig,
     pub(crate) repo_permission_checker: ArcPermissionChecker,
     pub(crate) service_permission_checker: ArcPermissionChecker,
-    pub(crate) live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub(crate) hook_manager: Arc<HookManager>,
     pub(crate) readonly_fetcher: RepoReadWriteFetcher,
-    pub(crate) x_repo_sync_lease: Arc<dyn LeaseOps>,
 }
 
 impl AsBlobRepo for Repo {
@@ -162,19 +157,6 @@ impl Repo {
         }
         let logger = env.repo_factory.env.logger.new(o!("repo" => name.clone()));
         let disabled_hooks = env.disabled_hooks.get(&name).cloned().unwrap_or_default();
-
-        let synced_commit_mapping = open_synced_commit_mapping(
-            fb,
-            config.clone(),
-            &env.repo_factory.env.mysql_options,
-            env.repo_factory.env.readonly_storage,
-        )
-        .await?;
-
-        let x_repo_sync_lease = create_commit_syncer_lease(fb, env.repo_factory.caching())?;
-        let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> = Arc::new(
-            CfgrLiveCommitSyncConfig::new(&logger, &env.repo_factory.env.config_store)?,
-        );
 
         let inner: InnerRepo = env
             .repo_factory
@@ -277,14 +259,11 @@ impl Repo {
             name,
             inner,
             warm_bookmarks_cache,
-            synced_commit_mapping,
             config,
             repo_permission_checker,
             service_permission_checker,
-            live_commit_sync_config,
             hook_manager,
             readonly_fetcher,
-            x_repo_sync_lease,
         })
     }
 
@@ -299,14 +278,11 @@ impl Repo {
             name: self.name.clone(),
             inner,
             warm_bookmarks_cache: self.warm_bookmarks_cache.clone(),
-            synced_commit_mapping: self.synced_commit_mapping.clone(),
             config: self.config.clone(),
             repo_permission_checker: self.repo_permission_checker.clone(),
             service_permission_checker: self.service_permission_checker.clone(),
-            live_commit_sync_config: self.live_commit_sync_config.clone(),
             hook_manager: self.hook_manager.clone(),
             readonly_fetcher: self.readonly_fetcher.clone(),
-            x_repo_sync_lease: self.x_repo_sync_lease.clone(),
         }
     }
 
@@ -354,6 +330,12 @@ impl Repo {
                 repo_id,
                 SqlMutableRenamesStore::with_sqlite_in_memory()?,
             )),
+            repo_cross_repo: Arc::new(RepoCrossRepo::new(
+                synced_commit_mapping,
+                live_commit_sync_config
+                    .unwrap_or_else(|| Arc::new(TestLiveCommitSyncConfig::new_empty())),
+                Arc::new(InProcessLease::new()),
+            )),
         };
 
         let config = RepoConfig {
@@ -374,18 +356,12 @@ impl Repo {
             ..Default::default()
         };
 
-        let x_repo_sync_lease = Arc::new(InProcessLease::new());
         let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(ctx.clone(), &inner);
         warm_bookmarks_cache_builder.add_all_warmers()?;
         // We are constructing a test repo, so ensure the warm bookmark cache
         // is fully warmed, so that tests see up-to-date bookmarks.
         warm_bookmarks_cache_builder.wait_until_warmed();
         let warm_bookmarks_cache = warm_bookmarks_cache_builder.build().await?;
-
-        let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> = match live_commit_sync_config {
-            Some(live_commit_sync_config) => live_commit_sync_config,
-            None => Arc::new(TestLiveCommitSyncConfig::new_empty()),
-        };
 
         let hook_manager = Arc::new(
             make_hook_manager(
@@ -405,7 +381,6 @@ impl Repo {
             name: String::from("test"),
             inner,
             warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
-            synced_commit_mapping,
             config,
             repo_permission_checker: ArcPermissionChecker::from(
                 PermissionCheckerBuilder::always_allow(),
@@ -413,10 +388,8 @@ impl Repo {
             service_permission_checker: ArcPermissionChecker::from(
                 PermissionCheckerBuilder::always_allow(),
             ),
-            live_commit_sync_config,
             hook_manager,
             readonly_fetcher,
-            x_repo_sync_lease,
         })
     }
 
@@ -446,7 +419,7 @@ impl Repo {
 
     /// `LiveCommitSyncConfig` instance to query current state of sync configs.
     pub fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
-        self.live_commit_sync_config.clone()
+        self.inner.repo_cross_repo.live_commit_sync_config().clone()
     }
 
     /// The skiplist index for the referenced repository.
@@ -459,9 +432,14 @@ impl Repo {
         &self.inner.ephemeral_store
     }
 
-    /// The commit sync mapping for the referenced repository
+    /// The commit sync mapping for the referenced repository.
     pub fn synced_commit_mapping(&self) -> &Arc<dyn SyncedCommitMapping> {
-        &self.synced_commit_mapping
+        self.inner.repo_cross_repo.synced_commit_mapping()
+    }
+
+    /// The commit sync lease for the referenced repository.
+    pub fn x_repo_sync_lease(&self) -> &Arc<dyn LeaseOps> {
+        self.inner.repo_cross_repo.sync_lease()
     }
 
     /// The warm bookmarks cache for the referenced repository.
@@ -487,10 +465,6 @@ impl Repo {
     /// A mutable reference to this repository's config. This is typically only useful for tests.
     pub fn config_mut(&mut self) -> &mut RepoConfig {
         &mut self.config
-    }
-
-    pub fn x_repo_sync_lease(&self) -> &Arc<dyn LeaseOps> {
-        &self.x_repo_sync_lease
     }
 
     pub fn mutable_renames(&self) -> &Arc<MutableRenames> {
