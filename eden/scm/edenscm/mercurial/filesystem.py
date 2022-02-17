@@ -164,8 +164,13 @@ class physicalfilesystem(object):
         """
         if self.ui.configbool("workingcopy", "rustpendingchanges"):
             physicalfs = workingcopy.physicalfilesystem(self.opener.join(""))
+            threadcount = self.ui.configint("workingcopy", "rustwalkerthreads")
             pendingchanges = physicalfs.pendingchanges(
-                self.dirstate._map._tree, match, False, self.dirstate._lastnormaltime
+                self.dirstate._map._tree,
+                match,
+                False,
+                self.dirstate._lastnormaltime,
+                threadcount,
             )
             for fn in pendingchanges:
                 yield fn

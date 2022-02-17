@@ -149,40 +149,6 @@ impl Matcher for ThreadPythonMatcher {
     }
 }
 
-// Matcher which does not store py. Should only be used when py cannot be stored in PythonMatcher
-// struct and it is known that the GIL is acquired when calling matcher methods.
-// Otherwise use PythonMatcher struct above
-pub struct UnsafePythonMatcher {
-    py_matcher: PyObject,
-}
-
-impl UnsafePythonMatcher {
-    pub fn new(py_matcher: PyObject) -> Self {
-        UnsafePythonMatcher { py_matcher }
-    }
-}
-
-impl Clone for UnsafePythonMatcher {
-    fn clone(&self) -> Self {
-        let gil = Python::acquire_gil();
-        UnsafePythonMatcher {
-            py_matcher: self.py_matcher.clone_ref(gil.python()),
-        }
-    }
-}
-
-impl<'a> Matcher for UnsafePythonMatcher {
-    fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
-        let assumed_py = unsafe { Python::assume_gil_acquired() };
-        matches_directory_impl(assumed_py, &self.py_matcher, &path).into_anyhow_result()
-    }
-
-    fn matches_file(&self, path: &RepoPath) -> Result<bool> {
-        let assumed_py = unsafe { Python::assume_gil_acquired() };
-        matches_file_impl(assumed_py, &self.py_matcher, &path).into_anyhow_result()
-    }
-}
-
 fn matches_directory_impl(
     py: Python,
     py_matcher: &PyObject,

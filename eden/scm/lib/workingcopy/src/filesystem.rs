@@ -79,8 +79,14 @@ impl PhysicalFileSystem {
         matcher: M,
         include_directories: bool,
         last_write: HgModifiedTime,
+        num_threads: u8,
     ) -> Result<PendingChanges<M>> {
-        let walker = Walker::new(self.vfs.root().to_path_buf(), matcher.clone(), false, 0)?;
+        let walker = Walker::new(
+            self.vfs.root().to_path_buf(),
+            matcher.clone(),
+            false,
+            num_threads,
+        )?;
         let pending_changes = PendingChanges {
             vfs: self.vfs.clone(),
             walker,

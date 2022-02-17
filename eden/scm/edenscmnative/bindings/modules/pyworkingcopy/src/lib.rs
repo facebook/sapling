@@ -16,7 +16,6 @@ use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyPathBuf;
 use pathmatcher::Matcher;
 use pypathmatcher::extract_matcher;
-use pypathmatcher::UnsafePythonMatcher;
 use pytreestate::treestate;
 use workingcopy::filesystem::ChangeType;
 use workingcopy::filesystem::PendingChangeResult;
@@ -41,20 +40,20 @@ py_class!(class physicalfilesystem |py| {
         physicalfilesystem::create_instance(py, RefCell::new(PhysicalFileSystem::new(root.to_path_buf()).map_pyerr(py)?))
     }
 
-    def pendingchanges(&self, pytreestate: treestate, pymatcher: PyObject, include_directories: bool, last_write: u32) -> PyResult<pendingchanges> {
-        let matcher = UnsafePythonMatcher::new(pymatcher);
+    def pendingchanges(&self, pytreestate: treestate, pymatcher: PyObject, include_directories: bool, last_write: u32, thread_count: u8) -> PyResult<pendingchanges> {
+        let matcher = extract_matcher(py, pymatcher)?;
         let fs = self.filesystem(py);
         let treestate = pytreestate.get_state(py);
         let last_write = last_write.into();
         let pending = fs.borrow()
-            .pending_changes(treestate, matcher, include_directories, last_write)
+            .pending_changes(treestate, matcher, include_directories, last_write, thread_count)
             .map_pyerr(py)?;
         pendingchanges::create_instance(py, RefCell::new(pending))
     }
 });
 
 py_class!(class pendingchanges |py| {
-    data inner: RefCell<PendingChanges<UnsafePythonMatcher>>;
+    data inner: RefCell<PendingChanges<Arc<dyn Matcher + Sync + Send>>>;
 
     def __iter__(&self) -> PyResult<Self> {
         Ok(self.clone_ref(py))
