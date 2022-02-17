@@ -35,6 +35,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
 percent-encoding = "2.1"
 quickcheck = "1.0"
+quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 rand = { version = "0.8", features = ["small_rng"] }
 rand_distr = "0.4"
 serde = { version = "1.0.126", features = ["derive", "rc"] }

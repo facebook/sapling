@@ -10,6 +10,7 @@
 use anyhow::{format_err, Error};
 use ascii::{AsciiChar, AsciiString};
 use quickcheck::{Arbitrary, Gen};
+use quickcheck_arbitrary_derive::Arbitrary;
 use sql::mysql;
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
@@ -24,37 +25,16 @@ use std::str::FromStr;
 /// MaybeStale will go to a replica, which might lag behind the master (there is no SLA on
 /// replication lag). MaybeStale reads might also be served from a local cache.
 
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+#[derive(Arbitrary, Debug, Eq, PartialEq, Clone, Copy)]
 pub enum Freshness {
     MostRecent,
     MaybeStale,
 }
 
-impl Arbitrary for Freshness {
-    fn arbitrary(g: &mut Gen) -> Self {
-        use Freshness::*;
-
-        match bool::arbitrary(g) {
-            true => MostRecent,
-            false => MaybeStale,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Arbitrary, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Bookmark {
     pub name: BookmarkName,
     pub kind: BookmarkKind,
-}
-
-impl Arbitrary for Bookmark {
-    fn arbitrary(g: &mut Gen) -> Self {
-        let name = BookmarkName::arbitrary(g);
-        Self {
-            name,
-            kind: Arbitrary::arbitrary(g),
-        }
-    }
 }
 
 impl Bookmark {
@@ -204,7 +184,16 @@ impl From<BookmarkPrefix> for Value {
 }
 
 /// Describes the behavior of a Bookmark in Mercurial operations.
-#[derive(Clone, Debug, Eq, Hash, PartialEq, Copy, mysql::OptTryFromRowField)]
+#[derive(
+    Arbitrary,
+    Clone,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    Copy,
+    mysql::OptTryFromRowField
+)]
 pub enum BookmarkKind {
     Scratch,
     Publishing,
@@ -275,15 +264,6 @@ impl From<BookmarkKind> for Value {
             Publishing => Value::Bytes(PUBLISHING_KIND.to_vec()),
             PullDefaultPublishing => Value::Bytes(PULL_DEFAULT_KIND.to_vec()),
         }
-    }
-}
-
-impl Arbitrary for BookmarkKind {
-    fn arbitrary(g: &mut Gen) -> Self {
-        use BookmarkKind::*;
-
-        *g.choose(&[Scratch, Publishing, PullDefaultPublishing])
-            .unwrap()
     }
 }
 

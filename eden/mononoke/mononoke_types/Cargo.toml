@@ -31,6 +31,7 @@ lazy_static = "1.0"
 lfs_protocol = { version = "0.1.0", path = "../lfs_protocol" }
 mononoke_types_thrift = { version = "0.1.0", path = "if" }
 quickcheck = "1.0"
+quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 regex = "1.5.4"
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"

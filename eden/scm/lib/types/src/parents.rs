@@ -31,6 +31,10 @@ use crate::hgid::NULL_ID;
     Serialize,
     Deserialize
 )]
+#[cfg_attr(
+    any(test, feature = "for-tests"),
+    derive(quickcheck_arbitrary_derive::Arbitrary)
+)]
 #[serde(untagged)]
 pub enum Parents {
     None,
@@ -127,23 +131,6 @@ impl Iterator for ParentIter {
                 self.0 = Parents::One(p2);
                 Some(p1)
             }
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
-#[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Gen;
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for Parents {
-    fn arbitrary(g: &mut Gen) -> Self {
-        match u64::arbitrary(g) % 3 {
-            0 => Parents::None,
-            1 => Parents::One(HgId::arbitrary(g)),
-            2 => Parents::Two(HgId::arbitrary(g), HgId::arbitrary(g)),
-            _ => unreachable!(),
         }
     }
 }

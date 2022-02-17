@@ -20,6 +20,8 @@ use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
 use memmap::Mmap;
 use memmap::MmapOptions;
+#[cfg(test)]
+use quickcheck_arbitrary_derive::Arbitrary;
 use sha1::Digest;
 use sha1::Sha1;
 use thiserror::Error;
@@ -81,12 +83,14 @@ impl HistoryIndexOptions {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct FileSectionLocation {
     pub offset: u64,
     pub size: u64,
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct NodeLocation {
     pub offset: u64,
 }
@@ -409,25 +413,6 @@ fn sha1(value: &[u8]) -> HgId {
     hasher.input(value);
     let buf: [u8; 20] = hasher.result().into();
     (&buf).into()
-}
-
-#[cfg(test)]
-impl quickcheck::Arbitrary for FileSectionLocation {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        FileSectionLocation {
-            offset: u64::arbitrary(g),
-            size: u64::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(test)]
-impl quickcheck::Arbitrary for NodeLocation {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        NodeLocation {
-            offset: u64::arbitrary(g),
-        }
-    }
 }
 
 #[cfg(test)]

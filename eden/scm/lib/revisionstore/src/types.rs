@@ -10,6 +10,8 @@ use std::io::Write;
 use edenapi_types::ContentId;
 use edenapi_types::Sha1;
 use minibytes::Bytes;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use types::Key;
@@ -28,11 +30,13 @@ use types::Sha256;
     PartialOrd,
     Clone
 )]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum ContentHash {
     Sha256(#[serde(with = "types::serde_with::sha256::tuple")] Sha256),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Ord, PartialOrd)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum StoreKey {
     HgId(Key),
     /// The Key is a temporary workaround to being able to fallback from the LFS protocol to the
@@ -135,23 +139,5 @@ impl From<ContentHash> for StoreKey {
 impl<'a> From<&'a ContentHash> for StoreKey {
     fn from(hash: &'a ContentHash) -> Self {
         StoreKey::Content(hash.clone(), None)
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl quickcheck::Arbitrary for ContentHash {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        ContentHash::Sha256(Sha256::arbitrary(g))
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl quickcheck::Arbitrary for StoreKey {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        if bool::arbitrary(g) {
-            StoreKey::HgId(Key::arbitrary(g))
-        } else {
-            StoreKey::Content(ContentHash::arbitrary(g), Option::arbitrary(g))
-        }
     }
 }

@@ -13,23 +13,16 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct Metadata {
     pub size: Option<u64>,
     pub flags: Option<u64>,
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl quickcheck::Arbitrary for Metadata {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            size: quickcheck::Arbitrary::arbitrary(g),
-            flags: quickcheck::Arbitrary::arbitrary(g),
-        }
-    }
 }
 
 impl Metadata {

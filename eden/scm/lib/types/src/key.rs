@@ -25,6 +25,10 @@ use crate::path::RepoPathBuf;
     Serialize,
     Deserialize
 )]
+#[cfg_attr(
+    any(test, feature = "for-tests"),
+    derive(quickcheck_arbitrary_derive::Arbitrary)
+)]
 pub struct Key {
     // Name is usually a file or directory path
     pub path: RepoPathBuf,
@@ -43,16 +47,6 @@ impl Key {
 impl fmt::Display for Key {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} {}", &self.hgid, self.path)
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for Key {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Key::new(RepoPathBuf::arbitrary(g), HgId::arbitrary(g))
     }
 }
 

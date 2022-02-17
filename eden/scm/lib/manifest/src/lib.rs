@@ -17,6 +17,8 @@ pub mod testutil;
 
 use anyhow::Result;
 use pathmatcher::Matcher;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck_arbitrary_derive::Arbitrary;
 use types::HgId;
 use types::PathComponentBuf;
 use types::RepoPath;
@@ -175,6 +177,7 @@ impl File {
 /// * hgid: used to determine the revision of the file in the repository.
 /// * file_type: determines the type of the file.
 #[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct FileMetadata {
     pub hgid: HgId,
     pub file_type: FileType,
@@ -291,14 +294,5 @@ impl quickcheck::Arbitrary for FileType {
         g.choose(&[FileType::Regular, FileType::Executable, FileType::Symlink])
             .unwrap()
             .to_owned()
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl quickcheck::Arbitrary for FileMetadata {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        let hgid = HgId::arbitrary(g);
-        let file_type = FileType::arbitrary(g);
-        FileMetadata::new(hgid, file_type)
     }
 }

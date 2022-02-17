@@ -24,7 +24,7 @@ use mononoke_types_mocks::changesetid::{
     FIVES_CSID, FOURS_CSID, ONES_CSID, SIXES_CSID, THREES_CSID, TWOS_CSID,
 };
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_TWO, REPO_ZERO};
-use quickcheck::{Arbitrary, Gen};
+use quickcheck_arbitrary_derive::Arbitrary;
 use sql::mysql_async::{prelude::ConvIr, Value};
 use sql_construct::SqlConstruct;
 use std::collections::HashMap;
@@ -1433,23 +1433,13 @@ async fn bookmark_subscription_updates(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Arbitrary, Clone, Copy, Debug)]
 enum TestBookmark {
     Book1,
     Book2,
 }
 
-impl Arbitrary for TestBookmark {
-    fn arbitrary(g: &mut Gen) -> Self {
-        if bool::arbitrary(g) {
-            Self::Book1
-        } else {
-            Self::Book2
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
+#[derive(Arbitrary, Clone, Copy, Debug)]
 enum BookmarkOp {
     /// Set this bookmark.
     Set(ChangesetId),
@@ -1459,19 +1449,8 @@ enum BookmarkOp {
     Delete,
 }
 
-impl Arbitrary for BookmarkOp {
-    fn arbitrary(g: &mut Gen) -> Self {
-        match g.choose(&[0, 1, 2]).unwrap() {
-            0 => Self::Set(Arbitrary::arbitrary(g)),
-            1 => Self::ForceSet(Arbitrary::arbitrary(g)),
-            2 => Self::Delete,
-            _ => unreachable!(),
-        }
-    }
-}
-
 /// Use Quickcheck to produce a test scenario of bookmark updates.
-#[derive(Clone, Copy, Debug)]
+#[derive(Arbitrary, Clone, Copy, Debug)]
 enum TestOp {
     /// Update one of our test bookmarks
     Bookmark(TestBookmark, BookmarkOp),
@@ -1479,17 +1458,6 @@ enum TestOp {
     Noop,
     /// Update the BookmarksSubscription and check that it returns the right bookmark values.
     Refresh,
-}
-
-impl Arbitrary for TestOp {
-    fn arbitrary(g: &mut Gen) -> Self {
-        match g.choose(&[0, 1, 2]).unwrap() {
-            0 => Self::Bookmark(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            1 => Self::Noop,
-            2 => Self::Refresh,
-            _ => unreachable!(),
-        }
-    }
 }
 
 /// Verify bookmark subscriptions using Quickcheck. We create a test scenario and verify that the

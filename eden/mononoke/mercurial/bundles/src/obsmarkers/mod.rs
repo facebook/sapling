@@ -8,9 +8,10 @@
 pub mod packer;
 
 #[cfg(test)]
-mod quickcheck_types;
+use quickcheck_arbitrary_derive::Arbitrary;
 
 #[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct MetadataEntry {
     key: String,
     value: String,

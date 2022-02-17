@@ -16,6 +16,7 @@ use std::slice::Iter;
 use anyhow::{bail, Context as _, Error, Result};
 use lazy_static::lazy_static;
 use quickcheck::{Arbitrary, Gen};
+use quickcheck_arbitrary_derive::Arbitrary;
 use regex::bytes::Regex as BytesRegex;
 use regex::Regex;
 use serde_derive::{Deserialize, Serialize};
@@ -32,7 +33,7 @@ const MPATH_ELEMENT_MAX_LENGTH: usize = 255;
 
 /// A path or filename within Mononoke, with information about whether
 /// it's the root of the repo, a directory or a file.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Arbitrary, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum RepoPath {
     // It is now *completely OK* to create a RepoPath directly. All MPaths are valid once
     // constructed.
@@ -926,18 +927,6 @@ impl Arbitrary for MPath {
         }
 
         MPath::new(path).unwrap()
-    }
-}
-
-impl Arbitrary for RepoPath {
-    #[inline]
-    fn arbitrary(g: &mut Gen) -> Self {
-        match g.choose(&[0, 1, 2]).unwrap() {
-            0 => RepoPath::RootPath,
-            1 => RepoPath::DirectoryPath(MPath::arbitrary(g)),
-            2 => RepoPath::FilePath(MPath::arbitrary(g)),
-            _ => panic!("Unexpected number in RepoPath::arbitrary"),
-        }
     }
 }
 

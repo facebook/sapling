@@ -11,7 +11,7 @@ use abomonation_derive::Abomonation;
 use anyhow::Result;
 use ascii::{AsciiStr, AsciiString};
 use mononoke_types::FileType;
-use quickcheck::{Arbitrary, Gen};
+use quickcheck_arbitrary_derive::Arbitrary;
 use sql::mysql;
 use std::{
     fmt::{self, Display},
@@ -35,7 +35,7 @@ pub const NULL_CSID: HgChangesetId = HgChangesetId(NULL_HASH);
 /// structure is private outside this crate to keep it an implementation detail.
 /// This is why the main constructors to create this structure are from_bytes and from_ascii_str
 /// which parses raw bytes or hex string to create HgNodeHash.
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+#[derive(Arbitrary, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Abomonation)]
 pub struct HgNodeHash(pub(crate) Sha1);
 
@@ -206,13 +206,7 @@ impl Display for HgNodeHash {
     }
 }
 
-impl Arbitrary for HgNodeHash {
-    fn arbitrary(g: &mut Gen) -> Self {
-        HgNodeHash(Sha1::arbitrary(g))
-    }
-}
-
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+#[derive(Arbitrary, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Abomonation, mysql::OptTryFromRowField)]
 pub struct HgChangesetId(HgNodeHash);
 
@@ -319,12 +313,6 @@ impl<'de> serde::de::Deserialize<'de> for HgChangesetId {
     }
 }
 
-impl Arbitrary for HgChangesetId {
-    fn arbitrary(g: &mut Gen) -> Self {
-        HgChangesetId(HgNodeHash::arbitrary(g))
-    }
-}
-
 impl From<HgId> for HgChangesetId {
     fn from(hgid: HgId) -> Self {
         HgChangesetId::new(HgNodeHash::from(hgid))
@@ -403,7 +391,7 @@ pub enum HgChangesetIdsResolvedFromPrefix {
     NoMatch,
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+#[derive(Arbitrary, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct HgManifestId(HgNodeHash);
 
 impl HgManifestId {
@@ -454,13 +442,7 @@ impl Display for HgManifestId {
     }
 }
 
-impl Arbitrary for HgManifestId {
-    fn arbitrary(g: &mut Gen) -> Self {
-        HgManifestId(HgNodeHash::arbitrary(g))
-    }
-}
-
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+#[derive(Arbitrary, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Abomonation, mysql::OptTryFromRowField)]
 pub struct HgFileNodeId(HgNodeHash);
 
@@ -520,12 +502,6 @@ impl FromStr for HgFileNodeId {
 impl Display for HgFileNodeId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(fmt)
-    }
-}
-
-impl Arbitrary for HgFileNodeId {
-    fn arbitrary(g: &mut Gen) -> Self {
-        HgFileNodeId(HgNodeHash::arbitrary(g))
     }
 }
 

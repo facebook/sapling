@@ -9,8 +9,6 @@ use bytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Gen;
-#[cfg(any(test, feature = "for-tests"))]
 use quickcheck_arbitrary_derive::Arbitrary;
 use revisionstore_types::Metadata;
 use serde_derive::Deserialize;
