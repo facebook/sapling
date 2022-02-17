@@ -13,7 +13,7 @@ mod errors;
 pub mod macros;
 
 use abomonation_derive::Abomonation;
-use anyhow::{Error, Result};
+use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use bytes::Bytes;
@@ -362,6 +362,21 @@ pub trait Blobstore: fmt::Display + fmt::Debug + Send + Sync {
             BlobstoreIsPresent::Absent
         })
     }
+    /// Copy the value from one key to another. The default behaviour is to `get` and `put` the
+    /// value, though some blobstores might have more efficient implementations that avoid
+    /// transferring data.
+    async fn copy<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        old_key: &'a str,
+        new_key: String,
+    ) -> Result<()> {
+        let value = self
+            .get(ctx, old_key)
+            .await?
+            .with_context(|| format!("key {} not present", old_key))?;
+        Ok(self.put(ctx, new_key, value.bytes).await?)
+    }
 }
 
 /// Mononoke binaries will not overwrite existing blobstore keys by default
@@ -411,7 +426,7 @@ impl PutBehaviour {
 }
 
 /// For use from logging blobstores so they can record the overwrite status
-/// `BlobstorePutOps::put_with_status`, and eventually `BlobstoreWithLink::link()` will return this.
+/// `BlobstorePutOps::put_with_status`, and eventually `Blobstore::copy()` will return this.
 #[derive(AsRefStr, Clone, Copy, Debug, Eq, PartialEq)]
 pub enum OverwriteStatus {
     // We did not check if the key existed before writing it
@@ -448,19 +463,10 @@ pub trait BlobstorePutOps: Blobstore {
     ) -> Result<OverwriteStatus>;
 }
 
-/// Mixin trait for blobstores that support the `link()` operation
-/// TODO(ahornby) rename to BlobstoreLinkOps for consistency with BlobstorePutOps
+/// Mixin trait for blobstores that support the `unlink()` operation
 #[async_trait]
 #[auto_impl(Arc, Box)]
-pub trait BlobstoreWithLink: Blobstore + BlobstorePutOps {
-    // TODO(ahornby) return OverwriteStatus for logging
-    async fn link<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        existing_key: &'a str,
-        link_key: String,
-    ) -> Result<()>;
-
+pub trait BlobstoreUnlinkOps: Blobstore + BlobstorePutOps {
     /// Similar to unlink(2), this removes a key, resulting in content being removed if its the last key pointing to it.
     /// An error is returned if the key does not exist
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()>;

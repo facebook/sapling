@@ -11,7 +11,7 @@ use anyhow::{format_err, Error, Result};
 use clap_old::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
 
-use blobstore::BlobstoreWithLink;
+use blobstore::BlobstoreUnlinkOps;
 use blobstore_factory::{make_sql_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use cached_config::ConfigStore;
 use cmdlib::args::{self, MononokeMatches};
@@ -77,7 +77,7 @@ async fn get_blobstore(
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &BlobstoreOptions,
     config_store: &ConfigStore,
-) -> Result<Arc<dyn BlobstoreWithLink>, Error> {
+) -> Result<Arc<dyn BlobstoreUnlinkOps>, Error> {
     let blobconfig = get_blobconfig(storage_config.blobstore, inner_blobstore_id)?;
 
     // TODO: Do this for all blobstores that can support unlink, not just SQLBlob
@@ -90,7 +90,7 @@ async fn get_blobstore(
     )
     .await?;
 
-    Ok(Arc::new(sql_blob) as Arc<dyn BlobstoreWithLink>)
+    Ok(Arc::new(sql_blob) as Arc<dyn BlobstoreUnlinkOps>)
 }
 
 pub async fn subcommand_blobstore_unlink<'a>(

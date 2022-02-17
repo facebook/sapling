@@ -6,7 +6,7 @@
  */
 
 use anyhow::{anyhow, Error, Result};
-use blobstore::{Blobstore, BlobstoreBytes, BlobstoreWithLink};
+use blobstore::{Blobstore, BlobstoreBytes, BlobstoreUnlinkOps};
 use context::CoreContext;
 use futures::future::FutureExt;
 use futures::stream::{FuturesUnordered, TryStreamExt};
@@ -66,7 +66,7 @@ async fn find_best_pack(mut blobs: BlobsWithKeys, zstd_level: i32) -> Result<Opt
         .await
 }
 
-async fn fetch_blobs<T: BlobstoreWithLink>(
+async fn fetch_blobs<T: BlobstoreUnlinkOps>(
     ctx: &CoreContext,
     blobstore: &PackBlob<T>,
     repo_prefix: &str,
@@ -91,7 +91,7 @@ async fn fetch_blobs<T: BlobstoreWithLink>(
 }
 
 /// Given a list of keys to repack, convert them to a single pack
-pub async fn repack_keys<T: BlobstoreWithLink>(
+pub async fn repack_keys<T: BlobstoreUnlinkOps>(
     ctx: &CoreContext,
     blobstore: &PackBlob<T>,
     pack_prefix: &str,

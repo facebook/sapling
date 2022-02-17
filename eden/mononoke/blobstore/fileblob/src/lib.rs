@@ -19,7 +19,7 @@ use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 
 use blobstore::{
     Blobstore, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreIsPresent, BlobstoreKeyParam,
-    BlobstoreKeySource, BlobstoreMetadata, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus,
+    BlobstoreKeySource, BlobstoreMetadata, BlobstorePutOps, BlobstoreUnlinkOps, OverwriteStatus,
     PutBehaviour,
 };
 use context::CoreContext;
@@ -193,21 +193,18 @@ impl Blobstore for Fileblob {
         BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
         Ok(())
     }
-}
 
-#[async_trait]
-impl BlobstoreWithLink for Fileblob {
     // This uses hardlink semantics as the production blobstores also have hardlink like semantics
     // (i.e. you can't discover a canonical link source when loading by the target)
-    async fn link<'a>(
+    async fn copy<'a>(
         &'a self,
         _ctx: &'a CoreContext,
-        existing_key: &'a str,
-        link_key: String,
+        old_key: &'a str,
+        new_key: String,
     ) -> Result<()> {
         // from std::fs::hard_link: The dst path will be a link pointing to the src path
-        let src_path = self.path(existing_key);
-        let dst_path = self.path(&link_key);
+        let src_path = self.path(old_key);
+        let dst_path = self.path(&new_key);
         // hard_link will fail if dst_path exists. Race it in a task of its own
         Ok(tokio::task::spawn(async move {
             let _ = remove_file(&dst_path).await;
@@ -215,7 +212,10 @@ impl BlobstoreWithLink for Fileblob {
         })
         .await??)
     }
+}
 
+#[async_trait]
+impl BlobstoreUnlinkOps for Fileblob {
     async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
         let path = self.path(key);
         Ok(remove_file(path).await?)

@@ -15,7 +15,7 @@ use futures::future::{BoxFuture, FutureExt};
 
 use blobstore::{
     Blobstore, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreKeyParam, BlobstoreKeySource,
-    BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour, DEFAULT_PUT_BEHAVIOUR,
+    BlobstorePutOps, BlobstoreUnlinkOps, OverwriteStatus, PutBehaviour, DEFAULT_PUT_BEHAVIOUR,
 };
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
@@ -168,22 +168,22 @@ impl Blobstore for Memblob {
         BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
         Ok(())
     }
-}
 
-#[async_trait]
-impl BlobstoreWithLink for Memblob {
-    async fn link<'a>(
+    async fn copy<'a>(
         &'a self,
         _ctx: &'a CoreContext,
-        existing_key: &'a str,
-        link_key: String,
+        old_key: &'a str,
+        new_key: String,
     ) -> Result<()> {
         let state = self.state.clone();
 
         let mut inner = state.lock().expect("lock poison");
-        inner.link(existing_key, link_key)
+        inner.link(old_key, new_key)
     }
+}
 
+#[async_trait]
+impl BlobstoreUnlinkOps for Memblob {
     async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
         let state = self.state.clone();
         let mut inner = state.lock().expect("lock poison");

@@ -7,7 +7,7 @@
 
 use anyhow::{bail, Context, Error};
 use blobstore::{
-    Blobstore, BlobstorePutOps, BlobstoreWithLink, DisabledBlob, ErrorKind, PutBehaviour,
+    Blobstore, BlobstorePutOps, BlobstoreUnlinkOps, DisabledBlob, ErrorKind, PutBehaviour,
     DEFAULT_PUT_BEHAVIOUR,
 };
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
@@ -261,7 +261,7 @@ pub async fn make_packblob<'a>(
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,
     config_store: &'a ConfigStore,
-) -> Result<PackBlob<Arc<dyn BlobstoreWithLink>>, Error> {
+) -> Result<PackBlob<Arc<dyn BlobstoreUnlinkOps>>, Error> {
     if let BlobConfig::Pack {
         pack_config,
         blobconfig,
@@ -297,7 +297,7 @@ async fn make_manifold_blobstore(
     fb: FacebookInit,
     blobconfig: BlobConfig,
     blobstore_options: &BlobstoreOptions,
-) -> Result<Arc<dyn BlobstoreWithLink>, Error> {
+) -> Result<Arc<dyn BlobstoreUnlinkOps>, Error> {
     use BlobConfig::*;
     let (bucket, prefix, ttl) = match blobconfig {
         Manifold { bucket, prefix } => (bucket, prefix, None),
@@ -323,7 +323,7 @@ async fn make_manifold_blobstore(
     _fb: FacebookInit,
     _blobconfig: BlobConfig,
     _blobstore_options: &BlobstoreOptions,
-) -> Result<Arc<dyn BlobstoreWithLink>, Error> {
+) -> Result<Arc<dyn BlobstoreUnlinkOps>, Error> {
     unimplemented!("This is implemented only for fbcode_build")
 }
 
@@ -346,7 +346,7 @@ async fn make_blobstore_with_link<'a>(
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,
     config_store: &'a ConfigStore,
-) -> Result<Arc<dyn BlobstoreWithLink>, Error> {
+) -> Result<Arc<dyn BlobstoreUnlinkOps>, Error> {
     use BlobConfig::*;
     match blobconfig {
         Sqlite { .. } | Mysql { .. } => make_sql_blobstore(
@@ -358,7 +358,7 @@ async fn make_blobstore_with_link<'a>(
         )
         .watched(logger)
         .await
-        .map(|store| Arc::new(store) as Arc<dyn BlobstoreWithLink>),
+        .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>),
         Manifold { .. } | ManifoldWithTtl { .. } => {
             make_manifold_blobstore(fb, blobconfig, blobstore_options)
                 .watched(logger)
@@ -366,7 +366,7 @@ async fn make_blobstore_with_link<'a>(
         }
         Files { .. } => make_files_blobstore(blobconfig, blobstore_options)
             .await
-            .map(|store| Arc::new(store) as Arc<dyn BlobstoreWithLink>),
+            .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>),
         _ => bail!("Not a physical blobstore"),
     }
 }

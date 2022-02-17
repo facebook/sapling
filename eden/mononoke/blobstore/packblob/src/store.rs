@@ -12,7 +12,7 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use blobstore::{
     Blobstore, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreIsPresent, BlobstoreKeyParam,
-    BlobstoreKeySource, BlobstoreMetadata, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus,
+    BlobstoreKeySource, BlobstoreMetadata, BlobstorePutOps, BlobstoreUnlinkOps, OverwriteStatus,
     PutBehaviour,
 };
 use context::CoreContext;
@@ -182,7 +182,7 @@ impl<B: BlobstoreKeySource + BlobstorePutOps> BlobstoreKeySource for PackBlob<B>
     }
 }
 
-impl<T: Blobstore + BlobstoreWithLink> PackBlob<T> {
+impl<T: Blobstore + BlobstoreUnlinkOps> PackBlob<T> {
     /// Put packed content, returning the pack's key if successful.
     ///
     /// `key_prefix` is prefixed to all keys within the pack and used to
@@ -208,7 +208,7 @@ impl<T: Blobstore + BlobstoreWithLink> PackBlob<T> {
         let links = FuturesUnordered::new();
         for key in link_keys {
             let key = format!("{}{}{}", key_prefix, key, ENVELOPE_SUFFIX);
-            links.push(self.inner.link(ctx, &pack_key, key));
+            links.push(self.inner.copy(ctx, &pack_key, key));
         }
         links.try_collect().await?;
 

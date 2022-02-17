@@ -115,4 +115,12 @@ impl Blobstore for RepoBlobstore {
     ) -> Result<BlobstoreIsPresent> {
         self.0.0.is_present(ctx, key).await
     }
+    async fn copy<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        old_key: &'a str,
+        new_key: String,
+    ) -> Result<()> {
+        self.0.0.copy(ctx, old_key, new_key).await
+    }
 }

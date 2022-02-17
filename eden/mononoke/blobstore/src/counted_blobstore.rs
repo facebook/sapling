@@ -15,7 +15,7 @@ use context::CoreContext;
 
 use crate::{
     Blobstore, BlobstoreBytes, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreIsPresent,
-    BlobstoreKeyParam, BlobstoreKeySource, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus,
+    BlobstoreKeyParam, BlobstoreKeySource, BlobstorePutOps, BlobstoreUnlinkOps, OverwriteStatus,
     PutBehaviour,
 };
 
@@ -34,9 +34,9 @@ define_stats_struct! {
     is_present: timeseries(Rate, Sum),
     is_present_ok: timeseries(Rate, Sum),
     is_present_err: timeseries(Rate, Sum),
-    link: timeseries(Rate, Sum),
-    link_ok: timeseries(Rate, Sum),
-    link_err: timeseries(Rate, Sum),
+    copy: timeseries(Rate, Sum),
+    copy_ok: timeseries(Rate, Sum),
+    copy_err: timeseries(Rate, Sum),
     unlink: timeseries(Rate, Sum),
     unlink_ok: timeseries(Rate, Sum),
     unlink_err: timeseries(Rate, Sum),
@@ -118,6 +118,21 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
         }
         res
     }
+
+    async fn copy<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        old_key: &'a str,
+        new_key: String,
+    ) -> Result<()> {
+        self.stats.copy.add_value(1);
+        let res = self.blobstore.copy(ctx, old_key, new_key).await;
+        match res {
+            Ok(()) => self.stats.copy_ok.add_value(1),
+            Err(_) => self.stats.copy_err.add_value(1),
+        }
+        res
+    }
 }
 
 impl<T: BlobstorePutOps> CountedBlobstore<T> {
@@ -175,22 +190,7 @@ impl<T: BlobstorePutOps> BlobstorePutOps for CountedBlobstore<T> {
 }
 
 #[async_trait]
-impl<T: BlobstoreWithLink> BlobstoreWithLink for CountedBlobstore<T> {
-    async fn link<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        existing_key: &'a str,
-        link_key: String,
-    ) -> Result<()> {
-        self.stats.link.add_value(1);
-        let res = self.blobstore.link(ctx, existing_key, link_key).await;
-        match res {
-            Ok(()) => self.stats.link_ok.add_value(1),
-            Err(_) => self.stats.link_err.add_value(1),
-        }
-        res
-    }
-
+impl<T: BlobstoreUnlinkOps> BlobstoreUnlinkOps for CountedBlobstore<T> {
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
         self.stats.unlink.add_value(1);
         let res = self.blobstore.unlink(ctx, key).await;

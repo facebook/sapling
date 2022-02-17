@@ -15,7 +15,7 @@ use context::CoreContext;
 
 use blobstore::{
     Blobstore, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreIsPresent, BlobstoreKeyParam,
-    BlobstoreKeyRange, BlobstoreKeySource, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus,
+    BlobstoreKeyRange, BlobstoreKeySource, BlobstorePutOps, BlobstoreUnlinkOps, OverwriteStatus,
     PutBehaviour,
 };
 use mononoke_types::BlobstoreBytes;
@@ -94,6 +94,17 @@ impl<T: Blobstore> Blobstore for PrefixBlobstore<T> {
     ) -> Result<BlobstoreIsPresent> {
         self.blobstore.is_present(ctx, &self.prepend(key)).await
     }
+
+    async fn copy<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        old_key: &'a str,
+        new_key: String,
+    ) -> Result<()> {
+        self.blobstore
+            .copy(ctx, &self.prepend(old_key), self.prepend(new_key))
+            .await
+    }
 }
 
 #[async_trait]
@@ -123,18 +134,7 @@ impl<T: BlobstorePutOps> BlobstorePutOps for PrefixBlobstore<T> {
 }
 
 #[async_trait]
-impl<T: BlobstoreWithLink> BlobstoreWithLink for PrefixBlobstore<T> {
-    async fn link<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        existing_key: &'a str,
-        link_key: String,
-    ) -> Result<()> {
-        self.blobstore
-            .link(ctx, &self.prepend(existing_key), self.prepend(link_key))
-            .await
-    }
-
+impl<T: BlobstoreUnlinkOps> BlobstoreUnlinkOps for PrefixBlobstore<T> {
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
         self.blobstore.unlink(ctx, &self.prepend(key)).await
     }

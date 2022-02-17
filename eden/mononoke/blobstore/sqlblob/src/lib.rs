@@ -26,7 +26,7 @@ use anyhow::{bail, format_err, Error, Result};
 use async_trait::async_trait;
 use blobstore::{
     Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstoreMetadata, BlobstorePutOps,
-    BlobstoreWithLink, CountedBlobstore, OverwriteStatus, PutBehaviour,
+    BlobstoreUnlinkOps, CountedBlobstore, OverwriteStatus, PutBehaviour,
 };
 use bytes::{Bytes, BytesMut};
 use cached_config::{ConfigHandle, ConfigStore, ModificationTime, TestSource};
@@ -554,6 +554,28 @@ impl Blobstore for Sqlblob {
         BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
         Ok(())
     }
+
+    async fn copy<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        old_key: &'a str,
+        new_key: String,
+    ) -> Result<()> {
+        let existing_data = self
+            .data_store
+            .get(old_key)
+            .await?
+            .ok_or_else(|| format_err!("Key {} does not exist in the blobstore", old_key))?;
+        self.data_store
+            .put(
+                &new_key,
+                existing_data.ctime,
+                &existing_data.id,
+                existing_data.count,
+                existing_data.chunking_method,
+            )
+            .await
+    }
 }
 
 #[async_trait]
@@ -700,28 +722,7 @@ impl BlobstorePutOps for Sqlblob {
 }
 
 #[async_trait]
-impl BlobstoreWithLink for Sqlblob {
-    async fn link<'a>(
-        &'a self,
-        _ctx: &'a CoreContext,
-        existing_key: &'a str,
-        link_key: String,
-    ) -> Result<()> {
-        let existing_data =
-            self.data_store.get(existing_key).await?.ok_or_else(|| {
-                format_err!("Key {} does not exist in the blobstore", existing_key)
-            })?;
-        self.data_store
-            .put(
-                &link_key,
-                existing_data.ctime,
-                &existing_data.id,
-                existing_data.count,
-                existing_data.chunking_method,
-            )
-            .await
-    }
-
+impl BlobstoreUnlinkOps for Sqlblob {
     async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
         if !self.data_store.is_present(key).await? {
             bail!(

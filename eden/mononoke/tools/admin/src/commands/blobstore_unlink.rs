@@ -9,7 +9,7 @@ use std::io::Write;
 use std::sync::Arc;
 
 use anyhow::{format_err, Context, Error, Result};
-use blobstore::BlobstoreWithLink;
+use blobstore::BlobstoreUnlinkOps;
 use blobstore_factory::{make_sql_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use cached_config::ConfigStore;
 use clap::Parser;
@@ -75,7 +75,7 @@ async fn get_blobstore(
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &BlobstoreOptions,
     config_store: &ConfigStore,
-) -> Result<Arc<dyn BlobstoreWithLink>, Error> {
+) -> Result<Arc<dyn BlobstoreUnlinkOps>, Error> {
     let blobconfig = get_blobconfig(storage_config.blobstore, inner_blobstore_id)?;
 
     // TODO: Do this for all blobstores that can support unlink, not just SQLBlob
@@ -88,7 +88,7 @@ async fn get_blobstore(
     )
     .await?;
 
-    Ok(Arc::new(sql_blob) as Arc<dyn BlobstoreWithLink>)
+    Ok(Arc::new(sql_blob) as Arc<dyn BlobstoreUnlinkOps>)
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {

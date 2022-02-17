@@ -259,7 +259,7 @@ async fn link(fb: FacebookInit) -> Result<(), Error> {
         // Write a fresh blob
         bs.put(ctx, key1.clone(), blobstore_bytes.clone()).await?;
         // Link to a different key
-        bs.link(ctx, &key1, key2.clone()).await?;
+        bs.copy(ctx, &key1, key2.clone()).await?;
 
         // Check that reads from the two keys match
         let bytes1 = bs.get(ctx, &key1).await?;

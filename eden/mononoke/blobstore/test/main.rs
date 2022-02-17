@@ -19,7 +19,7 @@ use fbinit::FacebookInit;
 use strum::IntoEnumIterator;
 use tempdir::TempDir;
 
-use blobstore::{Blobstore, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour};
+use blobstore::{Blobstore, BlobstorePutOps, BlobstoreUnlinkOps, OverwriteStatus, PutBehaviour};
 use context::CoreContext;
 use fileblob::Fileblob;
 use memblob::Memblob;
@@ -96,7 +96,7 @@ async fn overwrite<B: Blobstore + BlobstorePutOps>(
     Ok(())
 }
 
-async fn roundtrip_and_link<B: BlobstoreWithLink>(
+async fn roundtrip_and_link<B: BlobstoreUnlinkOps>(
     fb: FacebookInit,
     blobstore: B,
     has_ctime: bool,
@@ -120,7 +120,7 @@ async fn roundtrip_and_link<B: BlobstoreWithLink>(
     let newkey = "newkey";
 
     // And now the link
-    blobstore.link(ctx, key, newkey.to_owned()).await?;
+    blobstore.copy(ctx, key, newkey.to_owned()).await?;
 
     let newvalue = blobstore.get(ctx, newkey).await?.unwrap();
 

@@ -216,6 +216,17 @@ impl<T: Blobstore> Blobstore for RedactedBlobstoreInner<T> {
     ) -> Result<BlobstoreIsPresent> {
         self.blobstore.is_present(ctx, key).await
     }
+
+    async fn copy<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        old_key: &'a str,
+        new_key: String,
+    ) -> Result<()> {
+        let blobstore = self.access_blobstore(ctx, old_key, config::GET_OPERATION)?;
+        self.access_blobstore(ctx, &new_key, config::PUT_OPERATION)?;
+        blobstore.copy(ctx, old_key, new_key).await
+    }
 }
 
 #[async_trait]
