@@ -91,9 +91,58 @@ impl AsRef<RepoPath> for WalkEntry {
     }
 }
 
+/// [`Walker`] traverses the working copy, starting at the root of the repo, finding
+/// files matched by the matcher.
+pub struct Walker<M>(WalkerType<M>);
+
+impl<M> Walker<M>
+where
+    M: Matcher + Clone + Send + Sync + 'static,
+{
+    /// Create a new Walker.
+    ///
+    /// If `num_threads` is 0, a single-threaded Walker will be created. Otherwise, a
+    /// multi-threaded walker will be created.
+    pub fn new(
+        root: PathBuf,
+        matcher: M,
+        include_directories: bool,
+        num_threads: u8,
+    ) -> Result<Self> {
+        let inner = match NonZeroU8::new(num_threads) {
+            Some(num_threads) => WalkerType::Multi(MultiWalker::new(
+                root,
+                matcher,
+                include_directories,
+                num_threads,
+            )?),
+            None => WalkerType::Single(SingleWalker::new(root, matcher, include_directories)?),
+        };
+        Ok(Walker(inner))
+    }
+}
+
+impl<M> Iterator for Walker<M>
+where
+    M: Matcher + Clone + Send + Sync + 'static,
+{
+    type Item = Result<WalkEntry>;
+    fn next(&mut self) -> Option<Self::Item> {
+        match &mut self.0 {
+            WalkerType::Single(w) => w.next(),
+            WalkerType::Multi(w) => w.next(),
+        }
+    }
+}
+
+enum WalkerType<M> {
+    Single(SingleWalker<M>),
+    Multi(MultiWalker<M>),
+}
+
 /// SingleWalker traverses the working copy, starting at the root of the repo,
 /// finding files matched by matcher
-pub struct SingleWalker<M> {
+struct SingleWalker<M> {
     root: PathBuf,
     dir_matches: Vec<RepoPathBuf>,
     results: Vec<Result<WalkEntry>>,
@@ -216,7 +265,7 @@ impl<M> WalkerData<M> {
     }
 }
 
-pub struct MultiWalker<M> {
+struct MultiWalker<M> {
     threads: Vec<JoinHandle<Result<()>>>,
     results: Vec<Result<WalkEntry>>,
     result_receiver: Receiver<Result<WalkEntry>>,
