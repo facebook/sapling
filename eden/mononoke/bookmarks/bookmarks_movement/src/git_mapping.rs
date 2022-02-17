@@ -12,7 +12,6 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use anyhow::{Context, Error, Result};
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bonsai_git_mapping::{
     extract_git_sha1_from_bonsai_extra, BonsaiGitMapping, BonsaiGitMappingEntry,
@@ -25,7 +24,7 @@ use futures::stream::{FuturesOrdered, StreamExt};
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 
-use crate::BookmarkMovementError;
+use crate::{BookmarkMovementError, Repo};
 
 /// New mapping entries that should be added to the mapping.
 struct NewMappingEntries {
@@ -56,7 +55,7 @@ struct ChangesetMappingNeeded<'a> {
 /// have a git mapping entry set in db, and generate their mapping entries.
 async fn new_mapping_entries(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     start: ChangesetId,
     new_changesets: &HashMap<ChangesetId, BonsaiChangeset>,
 ) -> Result<NewMappingEntries> {
@@ -80,7 +79,7 @@ async fn new_mapping_entries(
                         cloned!(ctx, repo);
                         async move {
                             cs_id
-                                .load(&ctx, &repo.get_blobstore())
+                                .load(&ctx, repo.repo_blobstore())
                                 .map_err(Error::from)
                                 .await
                         }
@@ -198,7 +197,7 @@ fn upload_mapping_entries_bookmark_txn_hook(
 /// fetching the bonsai changeset.
 pub(crate) async fn populate_git_mapping_txn_hook(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     pushrebase_params: &PushrebaseParams,
     new_head: ChangesetId,
     new_changesets: &HashMap<ChangesetId, BonsaiChangeset>,
@@ -206,7 +205,7 @@ pub(crate) async fn populate_git_mapping_txn_hook(
     if pushrebase_params.populate_git_mapping {
         let entries = new_mapping_entries(ctx, repo, new_head, new_changesets).await?;
         Ok(Some(upload_mapping_entries_bookmark_txn_hook(
-            repo.bonsai_git_mapping().clone(),
+            repo.bonsai_git_mapping_arc(),
             entries,
         )))
     } else {
@@ -218,16 +217,19 @@ pub(crate) async fn populate_git_mapping_txn_hook(
 mod tests {
     use super::*;
     use anyhow::Result;
+    use blobrepo::AsBlobRepo;
     use bonsai_git_mapping::{CONVERT_REVISION_EXTRA, HGGIT_SOURCE_EXTRA};
-    use bookmarks::{BookmarkName, BookmarkUpdateReason};
+    use bookmarks::{BookmarkName, BookmarkUpdateReason, BookmarksRef};
     use borrowed::borrowed;
     use fbinit::FacebookInit;
     use maplit::{hashmap, hashset};
+    use mononoke_api_types::InnerRepo;
     use mononoke_types::hash::GitSha1;
     use mononoke_types_mocks::hash::{
         FIVES_GIT_SHA1, FOURS_GIT_SHA1, ONES_GIT_SHA1, SIXES_GIT_SHA1, THREES_GIT_SHA1,
         TWOS_GIT_SHA1,
     };
+    use repo_blobstore::RepoBlobstoreRef;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::drawdag::{changes, create_from_dag_with_changes};
     use tests_utils::CreateCommitContext;
@@ -250,13 +252,13 @@ mod tests {
 
     async fn apply_entries(
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         bookmark: &BookmarkName,
         old_target: ChangesetId,
         new_target: ChangesetId,
         entries: NewMappingEntries,
     ) -> Result<()> {
-        let mut txn = repo.update_bookmark_transaction(ctx.clone());
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         txn.update(
             bookmark,
             new_target,
@@ -266,7 +268,7 @@ mod tests {
         )?;
         let ok = txn
             .commit_with_hook(upload_mapping_entries_bookmark_txn_hook(
-                repo.bonsai_git_mapping().clone(),
+                repo.bonsai_git_mapping_arc(),
                 entries,
             ))
             .await?;
@@ -277,13 +279,13 @@ mod tests {
     #[fbinit::test]
     async fn test_new_mapping_entries(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = TestRepoFactory::new()?.build()?;
+        let repo: InnerRepo = TestRepoFactory::new()?.build()?;
         let bookmark = BookmarkName::new("main")?;
         borrowed!(ctx, repo);
 
         let dag = create_from_dag_with_changes(
             ctx,
-            repo,
+            repo.as_blob_repo(),
             r##"
                 Z-A-B-C-D
                      \
@@ -310,12 +312,12 @@ mod tests {
         let f = *dag.get("F").unwrap();
         let y = *dag.get("Y").unwrap();
         let z = *dag.get("Z").unwrap();
-        let a_bcs = a.load(ctx, repo.blobstore()).await?;
-        let b_bcs = b.load(ctx, repo.blobstore()).await?;
-        let f_bcs = f.load(ctx, repo.blobstore()).await?;
-        let y_bcs = y.load(ctx, repo.blobstore()).await?;
+        let a_bcs = a.load(ctx, repo.repo_blobstore()).await?;
+        let b_bcs = b.load(ctx, repo.repo_blobstore()).await?;
+        let f_bcs = f.load(ctx, repo.repo_blobstore()).await?;
+        let y_bcs = y.load(ctx, repo.repo_blobstore()).await?;
 
-        let mut txn = repo.update_bookmark_transaction(ctx.clone());
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         txn.create(&bookmark, z, BookmarkUpdateReason::TestMove, None)?;
         let ok = txn.commit().await?;
         assert!(ok);

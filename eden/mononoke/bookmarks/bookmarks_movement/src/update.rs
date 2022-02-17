@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use bookmarks::{BookmarkUpdateReason, BundleReplay};
 use bookmarks_types::BookmarkName;
 use bytes::Bytes;
@@ -27,7 +26,7 @@ use crate::affected_changesets::{
 };
 use crate::repo_lock::check_repo_lock;
 use crate::restrictions::{BookmarkKind, BookmarkKindRestrictions, BookmarkMoveAuthorization};
-use crate::BookmarkMovementError;
+use crate::{BookmarkMovementError, Repo};
 
 /// The old and new changeset during a bookmark update.
 ///
@@ -52,7 +51,7 @@ impl BookmarkUpdatePolicy {
     async fn check_update_permitted(
         &self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         lca_hint: &dyn LeastCommonAncestorsHint,
         bookmark_attrs: &BookmarkAttrs,
         bookmark: &BookmarkName,
@@ -65,7 +64,12 @@ impl BookmarkUpdatePolicy {
         if fast_forward_only && targets.old != targets.new {
             // Check that this move is a fast-forward move.
             let is_ancestor = lca_hint
-                .is_ancestor(ctx, &repo.get_changeset_fetcher(), targets.old, targets.new)
+                .is_ancestor(
+                    ctx,
+                    &repo.changeset_fetcher_arc().clone(),
+                    targets.old,
+                    targets.new,
+                )
                 .await?;
             if !is_ancestor {
                 return Err(BookmarkMovementError::NonFastForwardMove {
@@ -169,7 +173,7 @@ impl<'op> UpdateBookmarkOp<'op> {
     pub async fn run(
         mut self,
         ctx: &'op CoreContext,
-        repo: &'op BlobRepo,
+        repo: &'op impl Repo,
         lca_hint: &'op Arc<dyn LeastCommonAncestorsHint>,
         infinitepush_params: &'op InfinitepushParams,
         pushrebase_params: &'op PushrebaseParams,
@@ -219,7 +223,7 @@ impl<'op> UpdateBookmarkOp<'op> {
 
         check_repo_lock(repo_read_write_fetcher, kind, self.pushvars).await?;
 
-        let mut txn = repo.update_bookmark_transaction(ctx.clone());
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         let txn_hook;
 
         let commits_to_log = match kind {
@@ -256,7 +260,7 @@ impl<'op> UpdateBookmarkOp<'op> {
 
                 let to_log = async {
                     if self.log_new_public_commits_to_scribe {
-                        let res = find_draft_ancestors(&ctx, &repo, self.targets.new).await;
+                        let res = find_draft_ancestors(ctx, repo, self.targets.new).await;
                         match res {
                             Ok(bcss) => bcss,
                             Err(err) => {

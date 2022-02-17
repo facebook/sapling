@@ -9,7 +9,8 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use blobrepo::BlobRepo;
+use bonsai_git_mapping::BonsaiGitMappingArc;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkName;
 use bytes::Bytes;
@@ -23,13 +24,15 @@ use metaconfig_types::{
 };
 use mononoke_types::BonsaiChangeset;
 use pushrebase_hook::PushrebaseHook;
+use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_identity::RepoIdentityRef;
 use repo_read_write_status::RepoReadWriteFetcher;
 
 use crate::affected_changesets::{AdditionalChangesets, AffectedChangesets};
 use crate::repo_lock::{check_repo_lock, RepoLockPushrebaseHook};
 use crate::restrictions::{BookmarkKindRestrictions, BookmarkMoveAuthorization};
-use crate::BookmarkMovementError;
+use crate::{BookmarkMovementError, Repo};
 
 pub struct PushrebaseOntoBookmarkOp<'op> {
     bookmark: &'op BookmarkName,
@@ -97,7 +100,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
     pub async fn run(
         mut self,
         ctx: &'op CoreContext,
-        repo: &'op BlobRepo,
+        repo: &'op impl Repo,
         lca_hint: &'op Arc<dyn LeastCommonAncestorsHint>,
         infinitepush_params: &'op InfinitepushParams,
         pushrebase_params: &'op PushrebaseParams,
@@ -173,7 +176,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             .log_with_msg("Pushrebase started", None);
         let (stats, result) = pushrebase::do_pushrebase_bonsai(
             ctx,
-            repo,
+            repo.as_blob_repo(),
             &flags,
             self.bookmark,
             self.affected_changesets.source_changesets(),
@@ -199,11 +202,16 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
     }
 }
 
-/// Get a Vec of the relevant pushrebase hooks for PushrebaseParams, using this BlobRepo when
+/// Get a Vec of the relevant pushrebase hooks for PushrebaseParams, using this repo when
 /// required by those hooks.
 pub fn get_pushrebase_hooks(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(
+         impl BonsaiGitMappingArc
+         + BonsaiGlobalrevMappingArc
+         + PushrebaseMutationMappingRef
+         + RepoIdentityRef
+     ),
     bookmark: &BookmarkName,
     bookmark_attrs: &BookmarkAttrs,
     params: &PushrebaseParams,
@@ -214,8 +222,8 @@ pub fn get_pushrebase_hooks(
         Some(globalrevs_publishing_bookmark) if globalrevs_publishing_bookmark == bookmark => {
             let hook = GlobalrevPushrebaseHook::new(
                 ctx.clone(),
-                repo.bonsai_globalrev_mapping().clone(),
-                repo.get_repoid(),
+                repo.bonsai_globalrev_mapping_arc().clone(),
+                repo.repo_identity().id(),
             );
             pushrebase_hooks.push(hook);
         }
@@ -242,7 +250,7 @@ pub fn get_pushrebase_hooks(
     }
 
     if params.populate_git_mapping {
-        let hook = GitMappingPushrebaseHook::new(repo.bonsai_git_mapping().clone());
+        let hook = GitMappingPushrebaseHook::new(repo.bonsai_git_mapping_arc().clone());
         pushrebase_hooks.push(hook);
     }
 

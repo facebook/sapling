@@ -591,16 +591,16 @@ async fn push_merge_commit(
     let pushrebase_flags = repo_config.pushrebase.flags;
     let bookmark_attrs = BookmarkAttrs::new(ctx.fb, repo_config.bookmarks.clone()).await?;
     let pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
-        &ctx,
-        &repo,
+        ctx,
+        repo,
         &bookmark_to_merge_into,
         &bookmark_attrs,
         &repo_config.pushrebase,
     )?;
 
     let pushrebase_res = do_pushrebase_bonsai(
-        &ctx,
-        &repo,
+        ctx,
+        repo,
         &pushrebase_flags,
         bookmark_to_merge_into,
         &hashset![merged_cs],

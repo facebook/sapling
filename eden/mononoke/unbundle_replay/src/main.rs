@@ -525,8 +525,8 @@ async fn do_main(
 
             let bookmark_attrs = BookmarkAttrs::new(fb, repo_config.bookmarks.clone()).await?;
             let mut pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
-                &ctx,
-                &repo,
+                ctx,
+                repo,
                 &onto_bookmark,
                 &bookmark_attrs,
                 &repo_config.pushrebase,
@@ -539,8 +539,8 @@ async fn do_main(
             ));
 
             let (pushrebase_stats, res) = pushrebase::do_pushrebase_bonsai(
-                &ctx,
-                &repo,
+                ctx,
+                repo,
                 &repo_config.pushrebase.flags,
                 &onto_bookmark,
                 &changesets,

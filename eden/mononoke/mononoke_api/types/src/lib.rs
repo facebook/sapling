@@ -6,10 +6,18 @@
  */
 
 use blobrepo::{AsBlobRepo, BlobRepo};
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::{BookmarkUpdateLog, Bookmarks};
+use changeset_fetcher::ChangesetFetcher;
+use changesets::Changesets;
 use ephemeral_blobstore::RepoEphemeralStore;
+use mercurial_mutation::HgMutationStore;
 use mutable_renames::MutableRenames;
 use phases::Phases;
+use pushrebase_mutation_mapping::PushrebaseMutationMapping;
+use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use segmented_changelog_types::SegmentedChangelog;
@@ -21,7 +29,21 @@ use skiplist::SkiplistIndex;
 #[facet::container]
 #[derive(Clone)]
 pub struct InnerRepo {
-    #[delegate(dyn Bookmarks, dyn BookmarkUpdateLog, dyn Phases, RepoDerivedData, RepoIdentity)]
+    #[delegate(
+        RepoBlobstore,
+        RepoDerivedData,
+        RepoIdentity,
+        dyn BonsaiGitMapping,
+        dyn BonsaiGlobalrevMapping,
+        dyn BonsaiHgMapping,
+        dyn BookmarkUpdateLog,
+        dyn Bookmarks,
+        dyn ChangesetFetcher,
+        dyn Changesets,
+        dyn Phases,
+        dyn PushrebaseMutationMapping,
+        dyn HgMutationStore,
+    )]
     pub blob_repo: BlobRepo,
 
     #[facet]

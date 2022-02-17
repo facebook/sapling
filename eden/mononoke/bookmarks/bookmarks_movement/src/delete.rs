@@ -7,7 +7,6 @@
 
 use std::collections::HashMap;
 
-use blobrepo::BlobRepo;
 use bookmarks::{BookmarkUpdateReason, BundleReplay};
 use bookmarks_types::BookmarkName;
 use bytes::Bytes;
@@ -18,7 +17,7 @@ use repo_read_write_status::RepoReadWriteFetcher;
 
 use crate::repo_lock::check_repo_lock;
 use crate::restrictions::{BookmarkKind, BookmarkKindRestrictions, BookmarkMoveAuthorization};
-use crate::BookmarkMovementError;
+use crate::{BookmarkMovementError, Repo};
 
 pub struct DeleteBookmarkOp<'op> {
     bookmark: &'op BookmarkName,
@@ -82,7 +81,7 @@ impl<'op> DeleteBookmarkOp<'op> {
     pub async fn run(
         self,
         ctx: &'op CoreContext,
-        repo: &'op BlobRepo,
+        repo: &'op impl Repo,
         infinitepush_params: &'op InfinitepushParams,
         bookmark_attrs: &'op BookmarkAttrs,
         repo_read_write_fetcher: &'op RepoReadWriteFetcher,
@@ -108,7 +107,7 @@ impl<'op> DeleteBookmarkOp<'op> {
             .clone()
             .add("bookmark", self.bookmark.to_string())
             .log_with_msg("Deleting bookmark", None);
-        let mut txn = repo.update_bookmark_transaction(ctx.clone());
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         match kind {
             BookmarkKind::Scratch => {
                 txn.delete_scratch(self.bookmark, self.old_target)?;

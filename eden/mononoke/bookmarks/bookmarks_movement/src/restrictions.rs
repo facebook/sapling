@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use blobrepo::BlobRepo;
 use bookmarks_types::BookmarkName;
 use context::CoreContext;
 use futures::{stream, StreamExt, TryStreamExt};
@@ -15,7 +14,7 @@ use metaconfig_types::{
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 
-use crate::BookmarkMovementError;
+use crate::{BookmarkMovementError, Repo};
 
 /// How authorization for the bookmark move should be determined.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -114,7 +113,7 @@ impl BookmarkKindRestrictions {
 
 pub(crate) async fn check_restriction_ensure_ancestor_of(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bookmark_to_move: &BookmarkName,
     bookmark_attrs: &BookmarkAttrs,
     pushrebase_params: &PushrebaseParams,
@@ -163,14 +162,15 @@ pub(crate) async fn check_restriction_ensure_ancestor_of(
 
 pub(crate) async fn ensure_ancestor_of(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bookmark_to_move: &BookmarkName,
     lca_hint: &dyn LeastCommonAncestorsHint,
     descendant_bookmark: &BookmarkName,
     target: ChangesetId,
 ) -> Result<bool, BookmarkMovementError> {
     let descendant_cs_id = repo
-        .get_bonsai_bookmark(ctx.clone(), descendant_bookmark)
+        .bookmarks()
+        .get(ctx.clone(), descendant_bookmark)
         .await?
         .ok_or_else(|| {
             anyhow::anyhow!(
@@ -182,6 +182,6 @@ pub(crate) async fn ensure_ancestor_of(
 
     Ok(target == descendant_cs_id
         || lca_hint
-            .is_ancestor(ctx, &repo.get_changeset_fetcher(), target, descendant_cs_id)
+            .is_ancestor(ctx, &repo.changeset_fetcher_arc(), target, descendant_cs_id)
             .await?)
 }

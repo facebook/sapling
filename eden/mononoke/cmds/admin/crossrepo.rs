@@ -469,8 +469,8 @@ async fn change_mapping_via_extras<'a>(
     let pushrebase_flags = repo_config.pushrebase.flags;
     let bookmark_attrs = BookmarkAttrs::new(ctx.fb, repo_config.bookmarks.clone()).await?;
     let pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
-        &ctx,
-        &large_repo,
+        ctx,
+        large_repo,
         &large_bookmark,
         &bookmark_attrs,
         &repo_config.pushrebase,
@@ -481,8 +481,8 @@ async fn change_mapping_via_extras<'a>(
         .map_err(Error::from)
         .await?;
     let pushrebase_res = do_pushrebase_bonsai(
-        &ctx,
-        &large_repo,
+        ctx,
+        large_repo,
         &pushrebase_flags,
         &large_bookmark,
         &hashset![bcs],

@@ -8,7 +8,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use blobrepo::BlobRepo;
 use bookmarks::{BookmarkUpdateReason, BundleReplay};
 use bookmarks_types::BookmarkName;
 use bytes::Bytes;
@@ -27,6 +26,7 @@ use crate::affected_changesets::{
 use crate::repo_lock::check_repo_lock;
 use crate::restrictions::{BookmarkKind, BookmarkKindRestrictions, BookmarkMoveAuthorization};
 use crate::BookmarkMovementError;
+use crate::Repo;
 
 pub struct CreateBookmarkOp<'op> {
     bookmark: &'op BookmarkName,
@@ -116,7 +116,7 @@ impl<'op> CreateBookmarkOp<'op> {
     pub async fn run(
         mut self,
         ctx: &'op CoreContext,
-        repo: &'op BlobRepo,
+        repo: &'op impl Repo,
         lca_hint: &'op Arc<dyn LeastCommonAncestorsHint>,
         infinitepush_params: &'op InfinitepushParams,
         pushrebase_params: &'op PushrebaseParams,
@@ -152,7 +152,7 @@ impl<'op> CreateBookmarkOp<'op> {
 
         check_repo_lock(repo_read_write_fetcher, kind, self.pushvars).await?;
 
-        let mut txn = repo.update_bookmark_transaction(ctx.clone());
+        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         let txn_hook;
 
         let commits_to_log = match kind {
@@ -189,7 +189,7 @@ impl<'op> CreateBookmarkOp<'op> {
 
                 let to_log = async {
                     if self.log_new_public_commits_to_scribe {
-                        let res = find_draft_ancestors(&ctx, &repo, self.target).await;
+                        let res = find_draft_ancestors(ctx, repo, self.target).await;
                         match res {
                             Ok(bcss) => bcss,
                             Err(err) => {

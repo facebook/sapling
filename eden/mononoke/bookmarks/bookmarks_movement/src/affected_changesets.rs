@@ -10,7 +10,6 @@ use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Error, Result};
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkName;
@@ -19,7 +18,6 @@ use changesets::ChangesetsRef;
 use chrono::Utc;
 use context::CoreContext;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
-use derived_data::BonsaiDerived;
 use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::stream::{self, StreamExt, TryStreamExt};
@@ -27,7 +25,6 @@ use futures_ext::FbStreamExt;
 use hooks::{CrossRepoPushSource, HookManager};
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId, Generation};
-use phases::PhasesRef;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_identity::RepoIdentityRef;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
@@ -38,6 +35,7 @@ use tunables::tunables;
 use crate::hook_running::run_hooks;
 use crate::restrictions::{BookmarkKind, BookmarkMoveAuthorization};
 use crate::BookmarkMovementError;
+use crate::Repo;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub(crate) enum AdditionalChangesets {
@@ -110,7 +108,7 @@ impl AffectedChangesets {
     async fn load_additional_changesets(
         &mut self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         bookmark_attrs: &BookmarkAttrs,
         bookmark: &BookmarkName,
@@ -147,7 +145,7 @@ impl AffectedChangesets {
 
         let range = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
             ctx.clone(),
-            &repo.get_changeset_fetcher(),
+            &repo.changeset_fetcher_arc(),
             lca_hint.clone(),
             vec![head],
             excludes.into_iter().collect(),
@@ -182,7 +180,7 @@ impl AffectedChangesets {
                 })
                 .map(|res| async move {
                     match res {
-                        Ok(bcs_id) => Ok(bcs_id.load(ctx, repo.blobstore()).await?),
+                        Ok(bcs_id) => Ok(bcs_id.load(ctx, repo.repo_blobstore()).await?),
                         Err(e) => Err(e),
                     }
                 })
@@ -237,7 +235,7 @@ impl AffectedChangesets {
     pub(crate) async fn check_restrictions(
         &mut self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         pushrebase_params: &PushrebaseParams,
         bookmark_attrs: &BookmarkAttrs,
@@ -307,7 +305,7 @@ impl AffectedChangesets {
     async fn check_extras(
         &mut self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         bookmark_attrs: &BookmarkAttrs,
         bookmark: &BookmarkName,
@@ -354,7 +352,7 @@ impl AffectedChangesets {
     async fn check_case_conflicts(
         &mut self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         pushrebase_params: &PushrebaseParams,
         bookmark_attrs: &BookmarkAttrs,
@@ -377,22 +375,26 @@ impl AffectedChangesets {
             stream::iter(self.iter().map(Ok))
                 .try_for_each_concurrent(100, |bcs| async move {
                     let bcs_id = bcs.get_changeset_id();
-                    let sk_mf = RootSkeletonManifestId::derive(ctx, repo, bcs_id)
+
+                    let sk_mf = repo
+                        .repo_derived_data()
+                        .derive::<RootSkeletonManifestId>(ctx, bcs_id)
                         .await
                         .map_err(Error::from)?
                         .into_skeleton_manifest_id()
-                        .load(ctx, repo.blobstore())
+                        .load(ctx, repo.repo_blobstore())
                         .await
                         .map_err(Error::from)?;
                     if sk_mf.has_case_conflicts() {
                         // We only reject a commit if it introduces new case
                         // conflicts compared to its parents.
                         let parents = stream::iter(bcs.parents().map(|parent_bcs_id| async move {
-                            RootSkeletonManifestId::derive(ctx, repo, parent_bcs_id)
+                            repo.repo_derived_data()
+                                .derive::<RootSkeletonManifestId>(ctx, parent_bcs_id)
                                 .await
                                 .map_err(Error::from)?
                                 .into_skeleton_manifest_id()
-                                .load(ctx, repo.blobstore())
+                                .load(ctx, repo.repo_blobstore())
                                 .await
                                 .map_err(Error::from)
                         }))
@@ -401,7 +403,7 @@ impl AffectedChangesets {
                         .await?;
 
                         if let Some((path1, path2)) = sk_mf
-                            .first_new_case_conflict(ctx, repo.blobstore(), parents)
+                            .first_new_case_conflict(ctx, repo.repo_blobstore(), parents)
                             .await?
                         {
                             return Err(BookmarkMovementError::CaseConflict {
@@ -423,7 +425,7 @@ impl AffectedChangesets {
     async fn check_hooks(
         &mut self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         bookmark_attrs: &BookmarkAttrs,
         hook_manager: &HookManager,
@@ -500,7 +502,7 @@ impl AffectedChangesets {
     async fn check_service_write_restrictions(
         &mut self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         bookmark_attrs: &BookmarkAttrs,
         bookmark: &BookmarkName,
@@ -538,7 +540,7 @@ impl AffectedChangesets {
 
 pub async fn find_draft_ancestors(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     to_cs_id: ChangesetId,
 ) -> Result<Vec<BonsaiChangeset>, Error> {
     ctx.scuba()
@@ -563,7 +565,8 @@ pub async fn find_draft_ancestors(
         drafts.push(cs_id);
 
         let parents = repo
-            .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
+            .changeset_fetcher()
+            .get_parents(ctx.clone(), cs_id)
             .await?;
         for p in parents {
             if visited.insert(p) {
@@ -574,7 +577,7 @@ pub async fn find_draft_ancestors(
 
     let drafts = stream::iter(drafts)
         .map(Ok)
-        .map_ok(|cs_id| async move { cs_id.load(&ctx, &repo.get_blobstore()).await })
+        .map_ok(|cs_id| async move { cs_id.load(ctx, repo.repo_blobstore()).await })
         .try_buffer_unordered(100)
         .try_collect::<Vec<_>>()
         .await?;
@@ -587,7 +590,7 @@ pub async fn find_draft_ancestors(
 
 pub(crate) async fn log_bonsai_commits_to_scribe(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bookmark: Option<&BookmarkName>,
     commits_to_log: Vec<BonsaiChangeset>,
     kind: BookmarkKind,
@@ -694,18 +697,20 @@ pub async fn log_commits_to_scribe(
 #[cfg(test)]
 mod test {
     use super::*;
+    use blobrepo::AsBlobRepo;
     use fbinit::FacebookInit;
     use maplit::hashset;
+    use mononoke_api_types::InnerRepo;
     use std::collections::HashSet;
     use tests_utils::{bookmark, drawdag::create_from_dag};
 
     #[fbinit::test]
     async fn test_find_draft_ancestors_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = test_repo_factory::build_empty()?;
+        let repo: InnerRepo = test_repo_factory::build_empty()?;
         let mapping = create_from_dag(
             &ctx,
-            &repo,
+            repo.as_blob_repo(),
             r##"
             A-B-C-D
             "##,
@@ -714,7 +719,9 @@ mod test {
 
         let cs_id = mapping.get("A").unwrap();
         let to_cs_id = mapping.get("D").unwrap();
-        bookmark(&ctx, &repo, "book").set_to(*cs_id).await?;
+        bookmark(&ctx, repo.as_blob_repo(), "book")
+            .set_to(*cs_id)
+            .await?;
         let drafts = find_draft_ancestors(&ctx, &repo, *to_cs_id).await?;
 
         let drafts = drafts
@@ -731,7 +738,7 @@ mod test {
             }
         );
 
-        bookmark(&ctx, &repo, "book")
+        bookmark(&ctx, repo.as_blob_repo(), "book")
             .set_to(*mapping.get("B").unwrap())
             .await?;
         let drafts = find_draft_ancestors(&ctx, &repo, *to_cs_id).await?;
@@ -754,10 +761,10 @@ mod test {
     #[fbinit::test]
     async fn test_find_draft_ancestors_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = test_repo_factory::build_empty()?;
+        let repo: InnerRepo = test_repo_factory::build_empty()?;
         let mapping = create_from_dag(
             &ctx,
-            &repo,
+            repo.as_blob_repo(),
             r##"
               B
              /  \
@@ -770,7 +777,9 @@ mod test {
 
         let cs_id = mapping.get("B").unwrap();
         let to_cs_id = mapping.get("D").unwrap();
-        bookmark(&ctx, &repo, "book").set_to(*cs_id).await?;
+        bookmark(&ctx, repo.as_blob_repo(), "book")
+            .set_to(*cs_id)
+            .await?;
         let drafts = find_draft_ancestors(&ctx, &repo, *to_cs_id).await?;
 
         let drafts = drafts

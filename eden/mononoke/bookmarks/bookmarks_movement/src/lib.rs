@@ -7,11 +7,24 @@
 
 #![deny(warnings)]
 
+use blobrepo::AsBlobRepo;
+use bonsai_git_mapping::BonsaiGitMappingArc;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bookmarks::BookmarksRef;
 use bookmarks_types::BookmarkName;
+use changeset_fetcher::ChangesetFetcherArc;
+use changesets::ChangesetsRef;
 use itertools::Itertools;
 use mononoke_types::{ChangesetId, MPath};
+use phases::PhasesRef;
 use pushrebase::PushrebaseError;
+use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use thiserror::Error;
+use trait_alias::trait_alias;
 
 mod affected_changesets;
 mod create;
@@ -32,6 +45,24 @@ pub use crate::delete::DeleteBookmarkOp;
 pub use crate::hook_running::run_hooks;
 pub use crate::pushrebase_onto::{get_pushrebase_hooks, PushrebaseOntoBookmarkOp};
 pub use crate::update::{BookmarkUpdatePolicy, BookmarkUpdateTargets, UpdateBookmarkOp};
+
+/// Trait alias for bookmarks movement repositories.
+///
+/// These are the repo attributes that are necessary to call most functions in
+/// bookmarks movement.
+#[trait_alias]
+pub trait Repo = AsBlobRepo
+    + BonsaiHgMappingRef
+    + BonsaiGitMappingArc
+    + BonsaiGlobalrevMappingArc
+    + BookmarksRef
+    + ChangesetFetcherArc
+    + ChangesetsRef
+    + PhasesRef
+    + PushrebaseMutationMappingRef
+    + RepoDerivedDataRef
+    + RepoBlobstoreRef
+    + RepoIdentityRef;
 
 /// An error encountered during an attempt to move a bookmark.
 #[derive(Debug, Error)]

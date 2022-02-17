@@ -14,9 +14,12 @@ blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
+bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = ".." }
 bookmarks_types = { version = "0.1.0", path = "../bookmarks_types" }
 bytes = { version = "1.1", features = ["serde"] }
+changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../../changesets" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -36,7 +39,10 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 phases = { version = "0.1.0", path = "../../phases" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_hook = { version = "0.1.0", path = "../../pushrebase/pushrebase_hook" }
+pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
+repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 repo_read_write_status = { version = "0.1.0", path = "../../repo_client/repo_read_write_status" }
 revset = { version = "0.1.0", path = "../../revset" }
@@ -44,6 +50,7 @@ scribe_commit_queue = { version = "0.1.0", path = "../../repo_client/scribe_comm
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.29"
+trait_alias = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]
@@ -51,6 +58,7 @@ borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"
+mononoke_api_types = { version = "0.1.0", path = "../../mononoke_api/types" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
