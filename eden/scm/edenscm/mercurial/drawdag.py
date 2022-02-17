@@ -290,6 +290,11 @@ def drawdag(repo, text, **opts):
     Note that the revset cannot have confusing characters which can be seen as
     the part of the graph edges, like `|/+-\`.
     """
+    with repo.wlock(), repo.lock(), repo.transaction("drawdag") as tr:
+        return _drawdagintransaction(repo, text, tr, **opts)
+
+
+def _drawdagintransaction(repo, text, tr, **opts):
     # parse the graph and make sure len(parents) <= 2 for each node
     edges = _parseasciigraph(text)
     for k, v in edges.items():
@@ -443,13 +448,11 @@ def drawdag(repo, text, **opts):
         n = ctx.commit()
         committed[name] = n
         if name not in mutationpreds and opts.get("bookmarks"):
-            with repo.wlock(), repo.lock(), repo.transaction("bookmark") as tr:
-                bookmarks.addbookmarks(repo, tr, [name], hex(n), True, True)
+            bookmarks.addbookmarks(repo, tr, [name], hex(n), True, True)
 
     # update visibility (hide commits)
-    with repo.wlock(), repo.lock(), repo.transaction("drawdag"):
-        hidenodes = [committed[n] for n in tohide]
-        visibility.remove(repo, hidenodes)
+    hidenodes = [committed[n] for n in tohide]
+    visibility.remove(repo, hidenodes)
 
     del committed[None]
     if opts.get("print"):

@@ -3479,8 +3479,7 @@ def debugdrawdag(ui, repo, **opts):
     the part of the graph edges, like `|/+-\`.
     """
     text = decodeutf8(ui.fin.read())
-    with repo.wlock(), repo.lock(), repo.transaction("drawdag"):
-        return drawdag.drawdag(repo, text, **opts)
+    return drawdag.drawdag(repo, text, **opts)
 
 
 @command(
