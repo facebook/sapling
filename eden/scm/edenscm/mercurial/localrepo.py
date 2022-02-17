@@ -407,6 +407,9 @@ class localrepository(object):
     _lockfreeprefix = set()
 
     def __init__(self, baseui, path, create=False):
+        if create and baseui.configbool("init", "use-rust"):
+            bindings.repo.repo.initialize(path, baseui._rcfg._rcfg)
+            create = False
         self._containscount = 0
         self.requirements = set()
         self.storerequirements = set()
