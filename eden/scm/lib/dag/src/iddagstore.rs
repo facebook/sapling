@@ -367,7 +367,7 @@ pub(crate) fn get_deleted_inserted_spans(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use std::fmt;
     use std::ops::Deref;
 

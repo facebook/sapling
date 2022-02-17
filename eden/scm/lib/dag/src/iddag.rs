@@ -1751,6 +1751,102 @@ impl<Store: IdDagStore> IdDag<Store> {
         self.version = VerLink::new();
         self.store.remove_non_master()
     }
+
+    /// Remove `set` and their descendants. Return `descendents(set)`.
+    ///
+    /// The returned `descendants(set)` is usually used to remove
+    /// related entries in the `IdMap` to keep the IdMap and IdDag
+    /// in sync.
+    pub(crate) fn strip(&mut self, set: IdSet) -> Result<IdSet> {
+        fn trace(msg: &dyn Fn() -> String) {
+            trace!(target: "dag::iddag::remove", "{}", msg());
+        }
+
+        let set = self.descendants(set)?;
+        trace(&|| format!("descendants(set) = {:?}", &set));
+
+        if set.is_empty() {
+            return Ok(set);
+        }
+
+        // [(segment, new_high)]
+        let mut to_resize: Vec<(Segment, Option<Id>)> = Vec::new();
+
+        for span in set.iter_span_desc() {
+            trace(&|| format!(" visiting span {:?}", &span));
+
+            // span:   (low)    [------------] (high)
+            // [seg]:       [-------][---][--]
+            // new_seg:     [--]
+            for seg in self.iter_segments_descending(span.high, 0)? {
+                let seg = seg?;
+                let seg_span = seg.span()?;
+                debug_assert!(seg_span.high <= span.high); // by iter_segments_descending
+                if seg_span.high < span.low {
+                    break;
+                }
+
+                let new_high = if seg_span.low < span.low {
+                    let new_high = span.low - 1;
+                    trace(&|| format!("  truncate flat seg {:?} at {}", &seg, new_high));
+                    Some(new_high)
+                } else {
+                    trace(&|| format!("  remove flat seg {:?}", &seg));
+                    None
+                };
+                // It's not possible to truncate a segment twice iterating different `span`s.
+                // seg:     [------------]
+                // [span]:     [---]  [--] <- not possible
+                // This is because "descendants" are selected. If `i` is in the `set`, and `i`
+                // is in a flat `seg` then `i..=seg.high` should all be in the `set` to remove.
+                debug_assert!(to_resize.iter().all(|(s, _)| s != &seg));
+                to_resize.push((seg, new_high));
+            }
+        }
+
+        // Notes about why we can keep existing SegmentFlags when resizing:
+        //
+        // There are only 2 flags: HAS_ROOT, and ONLY_HEAD.
+        // - HAS_ROOT flag can be preserved. It's based on `parents.is_empty()`
+        //   which is not changed by resizing.
+        // - ONLY_HEAD flag can be perserved. Suppose the current flat segment
+        //   has ONLY_HEAD set (i.e. heads(0:high) = [high]) and is being truncated
+        //   from low..=high to low..=mid:
+        //
+        //          |<-new seg->|<-span (to remove)->|
+        //          |<-------seg-------->|
+        //          low-------mid-----high
+        //
+        //   descendants(set) is noted as `X` for removal. Now we prove that all
+        //   `X`s must be > mid. Suppose there is an X that is <= mid, X cannot
+        //   be in the low--high flat segment otherwise mid will be removed.
+        //   X must be an ancestor of "high" by ONLY_HEAD definition (otherwise
+        //   there will be more than 1 heads in 0:high). So there must be a path
+        //   from X to high but the path does not go through mid. The graph looks
+        //   like:
+        //
+        //          low-------mid--Y--high   (a flat segment)
+        //                        /
+        //              X--...----           (X:: are to be removed)
+        //
+        //   The problem is that Y, min(X::high & mid::high), is a merge. It
+        //   contradicts flat segment defination that only "low" can be a merge.
+        //
+        //   Therefore X (to be removed) must be > mid. Nothing in 0:mid is removed.
+        //   Because low..=high is a flat segment, removing `(mid+1):high`
+        //   is removing a linear sub-graph and cannot increase number of heads.
+        //   Therefore the new truncated segment low..=mid can still have the
+        //   ONLY_HEAD flag.
+
+        for (seg, new_high) in to_resize {
+            self.store.resize_flat_segment(&seg, new_high)?;
+        }
+
+        // strip() is not an append-only change. Use an incompatible version.
+        self.version = VerLink::new();
+
+        Ok(set)
+    }
 }
 
 impl<Store: Persist> Persist for IdDag<Store> {
@@ -1854,6 +1950,7 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
+    use crate::iddagstore::tests::dump_store_state;
 
     #[test]
     fn test_segment_basic_lookups() {
@@ -2080,6 +2177,57 @@ mod tests {
 
         let roots = iddag.roots(all).unwrap();
         assert_eq!(format!("{:?}", roots), "0 N0 N5 N10 N15");
+    }
+
+    #[test]
+    fn test_strip() {
+        let mut iddag = IdDag::new_in_process();
+        let mut prepared = PreparedFlatSegments::default();
+        prepared.segments.insert(FlatSegment {
+            low: Id(0),
+            high: Id(100),
+            parents: Vec::new(),
+        });
+        prepared.segments.insert(FlatSegment {
+            low: Id(101),
+            high: Id(200),
+            parents: vec![Id(50)],
+        });
+        prepared.segments.insert(FlatSegment {
+            low: Id(201),
+            high: Id(300),
+            parents: vec![Id(90)],
+        });
+        prepared.segments.insert(FlatSegment {
+            low: nid(0),
+            high: nid(100),
+            parents: vec![Id(50), Id(250)],
+        });
+        prepared.segments.insert(FlatSegment {
+            low: nid(101),
+            high: nid(200),
+            parents: vec![Id(50)],
+        });
+        iddag.set_new_segment_size(2);
+        iddag
+            .build_segments_from_prepared_flat_segments(&prepared)
+            .unwrap();
+        let all_before_remove = iddag.all().unwrap();
+        let removed = iddag.strip(Id(70).into()).unwrap();
+        let all_after_remove = iddag.all().unwrap();
+        assert_eq!(
+            all_before_remove.difference(&removed).as_spans(),
+            all_after_remove.as_spans()
+        );
+        assert_eq!(
+            all_after_remove.union(&removed).as_spans(),
+            all_before_remove.as_spans()
+        );
+        assert_eq!(format!("{:?}", &removed), "70..=100 201..=300 N0..=N100");
+        assert_eq!(
+            dump_store_state(&iddag.store, &all_before_remove),
+            "\nLv0: RH0-69[], 101-200[50], N101-N200[50]\nP->C: 50->101, 50->N101"
+        );
     }
 
     #[test]
