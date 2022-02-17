@@ -11,7 +11,6 @@ use crate::{
     PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
 use anyhow::{anyhow, Context, Error, Result};
-use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplay};
 use bookmarks_movement::{
     log_commits_to_scribe, BookmarkMovementError, BookmarkUpdatePolicy, BookmarkUpdateTargets,
@@ -21,17 +20,19 @@ use bytes::Bytes;
 use context::CoreContext;
 use hooks::HookManager;
 use mercurial_bundle_replay_data::BundleReplayData;
+use mercurial_mutation::HgMutationStoreRef;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
-use phases::PhasesRef;
 use pushrebase::PushrebaseError;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_identity::RepoIdentityRef;
 use repo_read_write_status::RepoReadWriteFetcher;
 use scribe_commit_queue::ChangedFilesInfo;
 use slog::debug;
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use trait_alias::trait_alias;
 use tunables::tunables;
 
 use crate::hook_running::{map_hook_rejections, HookRejectionRemapper};
@@ -50,9 +51,12 @@ define_stats! {
     infinitepush: dynamic_timeseries("{}.infinitepush", (reponame: String); Rate, Sum),
 }
 
+#[trait_alias]
+pub trait Repo = bookmarks_movement::Repo + HgMutationStoreRef;
+
 pub async fn run_post_resolve_action(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bookmark_attrs: &BookmarkAttrs,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     infinitepush_params: &InfinitepushParams,
@@ -129,12 +133,12 @@ pub async fn run_post_resolve_action(
         .context("While doing a bookmark-only pushrebase")
         .map(UnbundleResponse::BookmarkOnlyPushRebase)?,
     };
-    report_unbundle_type(&repo, &unbundle_response);
+    report_unbundle_type(repo, &unbundle_response);
     Ok(unbundle_response)
 }
 
-fn report_unbundle_type(repo: &BlobRepo, unbundle_response: &UnbundleResponse) {
-    let repo_name = repo.name().clone();
+fn report_unbundle_type(repo: &impl RepoIdentityRef, unbundle_response: &UnbundleResponse) {
+    let repo_name = repo.repo_identity().name().to_string();
     match unbundle_response {
         UnbundleResponse::Push(_) => STATS::push.add_value(1, (repo_name,)),
         UnbundleResponse::PushRebase(_) => STATS::pushrebase.add_value(1, (repo_name,)),
@@ -147,7 +151,7 @@ fn report_unbundle_type(repo: &BlobRepo, unbundle_response: &UnbundleResponse) {
 
 async fn run_push(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bookmark_attrs: &BookmarkAttrs,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
@@ -247,7 +251,7 @@ async fn run_push(
 
 async fn run_infinitepush(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bookmark_attrs: &BookmarkAttrs,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
@@ -322,7 +326,7 @@ async fn run_infinitepush(
 
 async fn run_pushrebase(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bookmark_attrs: &BookmarkAttrs,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     infinitepush_params: &InfinitepushParams,
@@ -447,7 +451,7 @@ async fn run_pushrebase(
 
 async fn run_bookmark_only_pushrebase(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bookmark_attrs: &BookmarkAttrs,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
@@ -505,7 +509,7 @@ async fn run_bookmark_only_pushrebase(
 
 async fn normal_pushrebase<'a>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a impl Repo,
     pushrebase_params: &'a PushrebaseParams,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     changesets: HashSet<BonsaiChangeset>,
@@ -552,7 +556,7 @@ async fn normal_pushrebase<'a>(
 
 async fn force_pushrebase(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     pushrebase_params: &PushrebaseParams,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
@@ -612,7 +616,7 @@ async fn force_pushrebase(
 
 async fn plain_push_bookmark(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
@@ -742,7 +746,7 @@ async fn plain_push_bookmark(
 
 async fn infinitepush_scratch_bookmark(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,

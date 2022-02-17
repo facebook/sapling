@@ -24,7 +24,6 @@ context = { version = "0.1.0", path = "../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo_sync" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1.31" }
 futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 getbundle_response = { version = "0.1.0", path = "../getbundle_response" }
@@ -50,6 +49,7 @@ quickcheck = "1.0"
 rate_limiting = { version = "0.1.0", path = "../../rate_limiting" }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 remotefilelog = { version = "0.1.0", path = "../remotefilelog" }
+repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 repo_read_write_status = { version = "0.1.0", path = "../repo_read_write_status" }
 scribe_commit_queue = { version = "0.1.0", path = "../scribe_commit_queue" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
@@ -61,6 +61,7 @@ thiserror = "1.0.29"
 time_window_counter = { version = "0.1.0", path = "../../time_window_counter" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
+trait_alias = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tunables = { version = "0.1.0", path = "../../tunables" }
 wirepack = { version = "0.1.0", path = "../wirepack" }
 

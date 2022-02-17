@@ -19,6 +19,7 @@ use metaconfig_types::{
     BookmarkAttrs, InfinitepushParams, MetadataDatabaseConfig, PushParams, PushrebaseParams,
 };
 use mononoke_api::Repo;
+use mononoke_api_types::InnerRepo;
 use mononoke_types::RepositoryId;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use rand::Rng;
@@ -102,6 +103,10 @@ impl MononokeRepo {
 
     pub fn blobrepo(&self) -> &BlobRepo {
         &self.repo.blob_repo()
+    }
+
+    pub fn inner_repo(&self) -> &InnerRepo {
+        self.repo.inner_repo()
     }
 
     pub fn pushrebase_params(&self) -> &PushrebaseParams {

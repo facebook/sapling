@@ -13,7 +13,7 @@ use unbundle::{
 };
 
 use anyhow::{format_err, Context, Error, Result};
-use blobrepo::BlobRepo;
+use blobrepo::{AsBlobRepo, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
@@ -1660,7 +1660,7 @@ impl HgCommands for RepoClient {
         repoclient
             .command_future(ops::UNBUNDLE, UNSAMPLED, move |ctx, command_logger| {
                 async move {
-                    let blobrepo = client.repo.blobrepo();
+                    let repo = client.repo.inner_repo();
                     let bookmark_attrs = client.repo.bookmark_attrs();
                     let lca_hint = client.repo.lca_hint().clone();
                     let infinitepush_params = client.repo.infinitepush().clone();
@@ -1674,7 +1674,7 @@ impl HgCommands for RepoClient {
                     let pushrebase_flags = pushrebase_params.flags.clone();
                     let action = unbundle::resolve(
                         &ctx,
-                        blobrepo,
+                        repo.as_blob_repo(),
                         infinitepush_writes_allowed,
                         stream.compat().boxed(),
                         maybe_full_content,
@@ -1685,7 +1685,8 @@ impl HgCommands for RepoClient {
                     .await?;
 
                     let unbundle_future = async {
-                        maybe_validate_pushed_bonsais(&ctx, blobrepo, &maybereplaydata).await?;
+                        maybe_validate_pushed_bonsais(&ctx, repo.as_blob_repo(), &maybereplaydata)
+                            .await?;
 
                         match client.maybe_get_pushredirector_for_action(&ctx, &action)? {
                             Some(push_redirector) => {
@@ -1695,7 +1696,7 @@ impl HgCommands for RepoClient {
                                 // in the small repo.
                                 run_hooks(
                                     &ctx,
-                                    blobrepo,
+                                    repo.as_blob_repo(),
                                     hook_manager.as_ref(),
                                     &action,
                                     CrossRepoPushSource::NativeToThisRepo,
@@ -1722,7 +1723,7 @@ impl HgCommands for RepoClient {
                                 let readonly_fetcher = client.repo.readonly_fetcher();
                                 run_post_resolve_action(
                                     &ctx,
-                                    blobrepo,
+                                    repo,
                                     &bookmark_attrs,
                                     &lca_hint,
                                     &infinitepush_params,
@@ -1738,7 +1739,7 @@ impl HgCommands for RepoClient {
                         }
                         .generate_bytes(
                             &ctx,
-                            &blobrepo,
+                            repo.as_blob_repo(),
                             &reponame,
                             pushrebase_params,
                             &lca_hint,

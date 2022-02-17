@@ -13,13 +13,13 @@ blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-futures-old = { package = "futures", version = "0.1.31" }
 futures_01_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 getbundle_response = { version = "0.1.0", path = "../getbundle_response" }
 hooks = { version = "0.1.0", path = "../../hooks" }
 live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
+mononoke_api_types = { version = "0.1.0", path = "../../mononoke_api/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 rand = { version = "0.8", features = ["small_rng"] }
