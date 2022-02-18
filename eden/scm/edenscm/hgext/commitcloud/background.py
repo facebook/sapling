@@ -132,7 +132,9 @@ def _runcommand(orig, lui, repo, cmd, fullargs, *args):
             "CHGINTERNALMARK" not in encoding.environ
             and repo is not None
             and autobackupenabled(repo)
-            and getattr(repo, "txnwasopened", False)
+            and getattr(repo, "_orig_metalog_root", False)
+            # Make sure the transaction actually did something.
+            and repo._orig_metalog_root != repo.metalog().root()
             and not getattr(repo, "ignoreautobackup", False)
             and "emergencychangelog" not in repo.storerequirements
         ):
@@ -146,7 +148,7 @@ def _transaction(orig, self, *args, **kwargs):
     If a transaction was opened then we want to start a background backup or
     cloud sync.  Record the fact that transaction was opened.
     """
-    self.txnwasopened = True
+    self._orig_metalog_root = self.metalog().root()
     return orig(self, *args, **kwargs)
 
 

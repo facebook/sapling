@@ -273,6 +273,9 @@ Create logs directory and set correct permissions
   ffeec75ec60331057b875fc5356c57c3ff204500 backed up
   1ef11233b74dfa8b57e8285fd6f546096af8f4c2 backed up
 
+Throw in an empty transaction - this should not trigger a backup.
+  $ hg debugshell --command "l = repo.lock(); repo.transaction('backup-test')" --config infinitepushbackup.autobackup=True --config infinitepushbackup.logdir=$TESTTMP/logs
+
 Check the logs, make sure just one process was started
   $ cat $TESTTMP/logs/test/*
   
