@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use futures::StreamExt;
+use futures::TryStreamExt;
 use nonblocking::non_blocking;
 use nonblocking::non_blocking_result;
 use parking_lot::Mutex;
@@ -21,6 +22,7 @@ use crate::ops::DagExportPullData;
 use crate::ops::DagImportCloneData;
 use crate::ops::DagImportPullData;
 use crate::ops::DagPersistent;
+use crate::ops::DagStrip;
 use crate::ops::IdConvert;
 use crate::protocol;
 use crate::protocol::RemoteIdConvertProtocol;
@@ -30,6 +32,7 @@ use crate::Group;
 use crate::Level;
 use crate::NameDag;
 use crate::Result;
+use crate::Set;
 use crate::Vertex;
 use crate::VertexListWithOptions;
 
@@ -63,6 +66,32 @@ impl TestDag {
         };
         dag.drawdag(text, &master);
         dag
+    }
+
+    /// Similar to `draw` but creates a lazy client so all vertexes
+    /// in the master group are lazy.
+    pub async fn draw_client(text: &str) -> Self {
+        let server = Self::draw(text);
+        // clone data won't include non-master group.
+        let mut client = server.client_cloned_data().await;
+        tracing::debug!("CLIENT");
+        #[cfg(test)]
+        tracing::debug!("CLIENT: {}", client.dump_state().await);
+        let non_master_heads = {
+            let all = server.dag.all().await.unwrap();
+            let non_master = all.difference(&server.dag.master_group().await.unwrap());
+            let heads = server.dag.heads(non_master).await.unwrap();
+            let iter = heads.iter().await.unwrap();
+            iter.try_collect::<Vec<_>>().await.unwrap()
+        };
+        let heads =
+            VertexListWithOptions::from(non_master_heads).with_highest_group(Group::NON_MASTER);
+        client
+            .dag
+            .add_heads_and_flush(&server.dag.dag_snapshot().unwrap(), &heads)
+            .await
+            .unwrap();
+        client
     }
 
     /// Creates a `TestDag` with a specific segment size.
@@ -205,6 +234,7 @@ impl TestDag {
     pub async fn client_cloned_data(&self) -> TestDag {
         let mut client = self.client().await;
         let data = self.dag.export_clone_data().await.unwrap();
+        tracing::debug!("clone data: {:?}", &data);
         client.dag.import_clone_data(data).await.unwrap();
         client
     }
@@ -227,6 +257,12 @@ impl TestDag {
         let heads = VertexListWithOptions::from(vec![new_master]).with_highest_group(Group::MASTER);
         self.dag.import_pull_data(data, &heads).await?;
         Ok(())
+    }
+
+    /// Strip space-separated vertexes.
+    pub async fn strip(&mut self, names: &'static str) {
+        let set = Set::from_static_names(names.split(' ').map(|s| s.into()));
+        self.dag.strip(&set).await.unwrap();
     }
 
     /// Remote protocol used to resolve Id <-> Vertex remotely using the test dag
@@ -270,6 +306,43 @@ impl TestDag {
     /// Check that a vertex exists locally.
     pub fn contains_vertex_locally(&self, name: impl Into<Vertex>) -> bool {
         non_blocking_result(self.dag.contains_vertex_name_locally(&[name.into()])).unwrap()[0]
+    }
+
+    #[cfg(test)]
+    /// Dump Dag state as a string.
+    pub async fn dump_state(&self) -> String {
+        use crate::iddagstore::tests::dump_store_state;
+        use crate::Id;
+        let iddag = &self.dag.dag;
+        let all = iddag.all().unwrap();
+        let iddag_state = dump_store_state(&iddag.store, &all);
+        let all_str = format!("{:?}", &self.dag.all().await.unwrap());
+        let idmap_state: String = {
+            let all: Vec<Id> = all.iter_asc().collect();
+            let contains = self.dag.contains_vertex_id_locally(&all).await.unwrap();
+            let local_ids: Vec<Id> = all
+                .into_iter()
+                .zip(contains)
+                .filter(|(_, c)| *c)
+                .map(|(i, _)| i)
+                .collect();
+            let local_vertexes = self
+                .dag
+                .vertex_name_batch(&local_ids)
+                .await
+                .unwrap()
+                .into_iter()
+                .collect::<Result<Vec<_>>>()
+                .unwrap();
+            local_ids
+                .into_iter()
+                .zip(local_vertexes)
+                .map(|(i, v)| format!("{:?}->{:?}", i, v))
+                .collect::<Vec<_>>()
+                .join(" ")
+        };
+
+        format!("{}{}\n{}", all_str, iddag_state, idmap_state)
     }
 
     async fn validate(&self) {

@@ -292,6 +292,20 @@ pub trait DagAddHeads {
     ) -> Result<bool>;
 }
 
+/// Remove vertexes and their descendants from the DAG.
+#[async_trait::async_trait]
+pub trait DagStrip {
+    /// Remove the given `set` and their descendants.
+    ///
+    /// This will reload the DAG from its source (ex. filesystem) and writes
+    /// changes back with a lock so there are no other processes adding
+    /// new descendants of the stripped set.
+    ///
+    /// After strip, the `self` graph might contain new vertexes because of
+    /// the reload.
+    async fn strip(&mut self, set: &NameSet) -> Result<()>;
+}
+
 /// Import a generated `CloneData` object into an empty DAG.
 #[async_trait::async_trait]
 pub trait DagImportCloneData {

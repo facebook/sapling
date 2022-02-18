@@ -51,6 +51,7 @@ use crate::ops::DagExportPullData;
 use crate::ops::DagImportCloneData;
 use crate::ops::DagImportPullData;
 use crate::ops::DagPersistent;
+use crate::ops::DagStrip;
 use crate::ops::IdConvert;
 use crate::ops::IdMapSnapshot;
 use crate::ops::IntVersion;
@@ -499,6 +500,98 @@ where
             .build_segments_from_prepared_flat_segments(&outcome)?;
 
         Ok(outcome.segment_count() > 0)
+    }
+}
+
+#[async_trait::async_trait]
+impl<IS, M, P, S> DagStrip for AbstractNameDag<IdDag<IS>, M, P, S>
+where
+    IS: IdDagStore + Persist,
+    IdDag<IS>: TryClone,
+    M: TryClone + Persist + IdMapWrite + IdConvert + Send + Sync + 'static,
+    P: TryClone + Open<OpenTarget = Self> + Send + Sync + 'static,
+    S: TryClone + IntVersion + Persist + Send + Sync + 'static,
+{
+    async fn strip(&mut self, set: &NameSet) -> Result<()> {
+        if !self.pending_heads.is_empty() {
+            return programming(format!(
+                "strip does not support pending heads ({:?})",
+                &self.pending_heads.vertexes(),
+            ));
+        }
+
+        // Do strip with a lock to avoid cases where descendants are added to
+        // the stripped segments.
+        let mut new: Self = self.path.open()?;
+        let (lock, map_lock, dag_lock) = new.reload()?;
+        new.set_remote_protocol(self.remote_protocol.clone());
+        new.maybe_reuse_caches_from(self);
+
+        new.strip_with_lock(set, &map_lock).await?;
+        new.persist(lock, map_lock, dag_lock)?;
+
+        *self = new;
+        Ok(())
+    }
+}
+
+impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
+where
+    IS: IdDagStore,
+    IdDag<IS>: TryClone,
+    M: TryClone + Persist + IdMapWrite + IdConvert + Send + Sync + 'static,
+    P: TryClone + Send + Sync + 'static,
+    S: TryClone + Send + Sync + 'static,
+{
+    /// Internal impelementation of "strip".
+    async fn strip_with_lock(&mut self, set: &NameSet, map_lock: &M::Lock) -> Result<()> {
+        if !self.pending_heads.is_empty() {
+            return programming(format!(
+                "strip does not support pending heads ({:?})",
+                &self.pending_heads.vertexes(),
+            ));
+        }
+
+        let id_set = self.to_id_set(set).await?;
+
+        // Heads in the master group must be known. Strip might "create" heads that are not
+        // currently known. Resolve them to ensure graph integrity.
+        let head_ids: Vec<Id> = {
+            // strip will include descendants.
+            let to_strip = self.dag.descendants(id_set.clone())?;
+            // only vertexes in the master group can be lazy.
+            let master_group = self.dag.master_group()?;
+            let master_group_after_strip = master_group.difference(&to_strip);
+            let heads_before_strip = self.dag.heads_ancestors(master_group)?;
+            let heads_after_strip = self.dag.heads_ancestors(master_group_after_strip)?;
+            let new_heads = heads_after_strip.difference(&heads_before_strip);
+            new_heads.iter_desc().collect()
+        };
+        let heads_after_strip = self.vertex_name_batch(&head_ids).await?;
+        tracing::debug!(target: "dag::strip", "heads after strip: {:?}", &heads_after_strip);
+        // Write IdMap cache first, they will become problematic to write
+        // after "remove" because the `VerLink`s might become incompatible.
+        self.flush_cached_idmap_with_lock(map_lock).await?;
+
+        let removed_id_set = self.dag.strip(id_set)?;
+        tracing::debug!(target: "dag::strip", "removed id set: {:?}", &removed_id_set);
+
+        let mut removed_vertexes = Vec::new();
+        for span in removed_id_set.iter_span_desc() {
+            let vertexes = self.map.remove_range(span.low, span.high).await?;
+            removed_vertexes.extend(vertexes);
+        }
+        tracing::debug!(target: "dag::strip", "removed vertexes: {:?}", &removed_vertexes);
+
+        // Add removed names to missing cache.
+        self.missing_vertexes_confirmed_by_remote
+            .write()
+            .extend(removed_vertexes);
+
+        // Snapshot cannot be reused.
+        self.invalidate_snapshot();
+
+        Ok(())
     }
 }
 
