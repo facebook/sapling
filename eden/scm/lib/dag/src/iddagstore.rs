@@ -257,12 +257,18 @@ pub trait IdDagStore: Send + Sync + 'static {
 
     /// Iterate through `(parent_id, segment)` for master flat segments
     /// that have a parent in the given span.
+    ///
+    /// The order of returned segments is implementation-specific.
+    /// Different stores might return different order.
     fn iter_flat_segments_with_parent_span<'a>(
         &'a self,
         parent_span: Span,
     ) -> Result<Box<dyn Iterator<Item = Result<(Id, Segment)>> + 'a>>;
 
     /// Iterate through flat segments that have the given parent.
+    ///
+    /// The order of returned segments is implementation-specific.
+    /// Different stores might return different order.
     fn iter_flat_segments_with_parent<'a>(
         &'a self,
         parent: Id,
