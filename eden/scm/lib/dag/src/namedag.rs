@@ -210,14 +210,6 @@ where
         self.map.reload(&map_lock)?;
         self.dag.reload(&dag_lock)?;
 
-        // Populate vertex negative cache to reduce round-trips doing remote lookups.
-        // Release `self` from being mut borrowed while keeping the lock.
-        if self.is_vertex_lazy() {
-            let heads: Vec<VertexName> = heads.vertexes();
-            self.populate_missing_vertexes_for_add_heads(parent_names_func, &heads)
-                .await?;
-        }
-
         // Build.
         self.build(parent_names_func, heads).await?;
 
@@ -2281,12 +2273,6 @@ where
             self.dag.remove_non_master()?;
             self.map.remove_non_master().await?;
 
-            // Populate vertex negative cache to reduce round-trips doing remote lookups.
-            if self.is_vertex_lazy() {
-                self.populate_missing_vertexes_for_add_heads(&parents, &heads)
-                    .await?;
-            }
-
             // Rebuild them.
             let heads: VertexListWithOptions = heads[..].into();
             debug_assert!(
@@ -2308,6 +2294,13 @@ where
         parent_names_func: &dyn Parents,
         heads: &VertexListWithOptions,
     ) -> Result<()> {
+        // Populate vertex negative cache to reduce round-trips doing remote lookups.
+        if self.is_vertex_lazy() {
+            let heads: Vec<VertexName> = heads.vertexes();
+            self.populate_missing_vertexes_for_add_heads(parent_names_func, &heads)
+                .await?;
+        }
+
         // Update IdMap.
         let mut outcome = PreparedFlatSegments::default();
         let mut covered = self.dag().all_ids_in_groups(&Group::ALL)?;
