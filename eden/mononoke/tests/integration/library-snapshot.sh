@@ -61,6 +61,7 @@ function base_commit_and_snapshot {
     hg rm deleted_file
     hg rm deleted_file_then_untracked_modify
     echo b > deleted_file_then_untracked_modify
+    ln -s symlink_target symlink_file
     hgedenapi snapshot create
 }
 
@@ -73,6 +74,7 @@ function assert_on_base_snapshot {
     [[ "$(cat added_file)" = "b" ]] || echo wrong added_file
     [[ "$(cat deleted_file_then_untracked_modify)" = "b" ]] || wrong deleted_file_then_untracked_modify
     [[ "$(cat untracked_file)" = "b" ]] || echo wrong untracked_file
+    [[ "$(readlink symlink_file)" = "symlink_target" ]] || echo wrong symlink target
     [[ ! -f deleted_file ]] || echo Existing deleted_file
     [[ ! -f added_file_then_missing ]] || echo Existing added_file_then_missing
     [[ ! -f missing_file ]] || echo Existing missing_file

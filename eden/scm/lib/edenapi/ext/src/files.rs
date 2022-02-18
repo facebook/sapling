@@ -28,6 +28,12 @@ use vfs::VFS;
 
 use crate::calc_contentid;
 
+fn abs_path(root: &RepoPathBuf, rel_path: &RepoPathBuf) -> RepoPathBuf {
+    let mut abs_path = root.clone();
+    abs_path.push(rel_path);
+    abs_path
+}
+
 /// If the desired file is already on disk, usually, from a previous snapshot restore,
 /// we can just read it from disk and filter the paths based on which are still outdated.
 async fn on_disk_optimization(
@@ -52,8 +58,7 @@ async fn on_disk_optimization(
     let filtered_paths = stream::iter(paths)
         .map(Result::<_>::Ok)
         .try_filter_map(|(rel_path, file_type)| {
-            let mut abs_path = root.clone();
-            abs_path.push(&rel_path);
+            let abs_path = abs_path(root, &rel_path);
             let send = send.clone();
             async move {
                 let future = {
@@ -208,7 +213,7 @@ pub async fn download_files(
         for ((path, _), content) in symlink_paths {
             symlink(
                 String::from_utf8(content.to_vec())?,
-                AsRef::<str>::as_ref(&path),
+                AsRef::<str>::as_ref(&abs_path(root, &path)),
             )
             .await?;
         }
