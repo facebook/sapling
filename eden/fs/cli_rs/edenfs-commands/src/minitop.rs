@@ -10,8 +10,8 @@
 use async_trait::async_trait;
 use clap::Parser;
 use comfy_table::{presets::UTF8_BORDERS_ONLY, Table};
-use crossterm::execute;
-use crossterm::terminal;
+use crossterm::queue;
+use crossterm::{style, terminal};
 use shlex::quote;
 use std::collections::BTreeMap;
 use std::io::{stdout, Write};
@@ -330,7 +330,7 @@ impl crate::Subcommand for MinitopCmd {
 
         // Setup rendering
         let mut stdout = stdout();
-        execute!(stdout, terminal::DisableLineWrap).from_err()?;
+        queue!(stdout, terminal::DisableLineWrap).from_err()?;
 
         loop {
             client.flushStatsNow();
@@ -395,9 +395,11 @@ impl crate::Subcommand for MinitopCmd {
                     live_counts.count,
                     live_counts.max_duration_us as f64 / 1000000.0
                 );
-                stdout
-                    .write(format!("{:<40} {}\n", pending_string, live_string).as_bytes())
-                    .from_err()?;
+                queue!(
+                    stdout,
+                    style::Print(format!("{:<40} {}\n", pending_string, live_string))
+                )
+                .from_err()?;
             }
 
             // Render aggregated processes
@@ -438,8 +440,9 @@ impl crate::Subcommand for MinitopCmd {
                 ]);
             }
 
-            stdout.write(table.to_string().as_bytes()).from_err()?;
-            stdout.write("\n\n".as_bytes()).from_err()?;
+            queue!(stdout, style::Print(table.to_string())).from_err()?;
+            queue!(stdout, style::Print("\n\n")).from_err()?;
+            stdout.flush().from_err()?;
 
             tokio::time::sleep(self.refresh_rate).await;
         }
