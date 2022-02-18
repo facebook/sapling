@@ -21,7 +21,7 @@ mod compact_local_storage;
 #[derive(Parser, Debug)]
 #[clap(
     about = "Internal commands for examining eden state",
-    setting = AppSettings::DisableHelpFlags,
+    setting = AppSettings::DisableHelpFlag,
 )]
 pub struct DebugCmd {
     #[clap(subcommand)]
