@@ -11,13 +11,14 @@ import os
 import platform
 import re
 import shlex
+import shutil
 import socket
 import subprocess
 import sys
 import traceback
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Generator, IO, List, Tuple
+from typing import Callable, Generator, IO, List, Tuple
 
 from . import (
     debug as debug_mod,
@@ -68,13 +69,34 @@ def print_diagnostic_info(
     processor = instance.get_config_value("rage.reporter", default="")
     if not dry_run and processor:
         section_title("Verbose EdenFS logs:", out)
-        paste_file(instance.get_log_path(), processor, out)
+        paste_output(
+            lambda sink: print_log_file(
+                instance.get_log_path(), sink, whole_file=False
+            ),
+            processor,
+            out,
+        )
     print_tail_of_log_file(instance.get_log_path(), out)
     print_running_eden_process(out)
     print_crashed_edenfs_logs(processor, out)
 
-    if health_status.is_healthy() and health_status.pid is not None:
-        print_edenfs_process_tree(health_status.pid, out)
+    if health_status.is_healthy():
+        # assign to variable to make type checker happy :(
+        edenfs_instance_pid = health_status.pid
+        if edenfs_instance_pid is not None:
+            print_edenfs_process_tree(edenfs_instance_pid, out)
+            if sys.platform == "darwin" and not dry_run and processor:
+                section_title("EdenFS process trace", out)
+                try:
+                    paste_output(
+                        lambda sink: print_trace(edenfs_instance_pid, sink),
+                        processor,
+                        out,
+                    )
+                except Exception as e:
+                    out.write(
+                        b"Error getting `sample $(eden pid)`: %s.\n" % str(e).encode()
+                    )
 
     print_eden_redirections(instance, out)
 
@@ -184,7 +206,9 @@ def print_log_file(
         out.write(b"Error reading the log file: %s\n" % str(e).encode())
 
 
-def paste_file(path: Path, processor: str, out: IO[bytes]) -> None:
+def paste_output(
+    output_generator: Callable[[IO[bytes]], None], processor: str, out: IO[bytes]
+) -> None:
     try:
         proc = subprocess.Popen(
             shlex.split(processor), stdin=subprocess.PIPE, stdout=subprocess.PIPE
@@ -194,7 +218,7 @@ def paste_file(path: Path, processor: str, out: IO[bytes]) -> None:
 
         # pyre-fixme[6]: Expected `IO[bytes]` for 2nd param but got
         #  `Optional[typing.IO[typing.Any]]`.
-        print_log_file(path, sink, whole_file=False)
+        output_generator(sink)
 
         # pyre-fixme[16]: `Optional` has no attribute `close`.
         sink.close()
@@ -402,6 +426,31 @@ def print_crashed_edenfs_logs(processor: str, out: IO[bytes]) -> None:
                 human_crash_time = crash_time.strftime("%b %d %H:%M:%S")
                 out.write(f"{str(crash.name)} from {human_crash_time}: ".encode())
                 if crash_time > date_threshold:
-                    paste_file(crash, processor, out)
+                    paste_output(
+                        lambda sink: print_log_file(crash, sink, whole_file=False),
+                        processor,
+                        out,
+                    )
                 else:
                     out.write(" not uploaded due to being too old".encode())
+
+
+def print_trace(pid: int, sink: IO[bytes]) -> None:
+    # "sample" is specific to MacOS. Check if it exists before running.
+    stack_trace_cmd = []
+
+    sample_full_path = shutil.which("sample")
+    if sample_full_path is None:
+        return
+
+    if util_mod.is_apple_silicon():
+        stack_trace_cmd += ["arch", "-arm64"]
+
+    stack_trace_cmd += [sample_full_path, str(pid), "1", "100"]
+
+    subprocess.run(
+        stack_trace_cmd,
+        check=True,
+        stderr=subprocess.STDOUT,
+        stdout=sink,
+    )
