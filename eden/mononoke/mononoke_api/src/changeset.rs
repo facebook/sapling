@@ -8,7 +8,6 @@
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use std::fmt;
 use std::future::Future;
-use std::pin::Pin;
 
 use anyhow::anyhow;
 use blobrepo_hg::BlobRepoHg;
@@ -20,9 +19,11 @@ use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerived;
+use derived_data_manager::BonsaiDerivable;
 use fsnodes::RootFsnodeId;
-use futures::future::{self, try_join, try_join_all, FutureExt, Shared};
+use futures::future::{self, try_join, try_join_all};
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
+use futures_lazy_shared::LazyShared;
 use manifest::{
     Diff as ManifestDiff, Entry as ManifestEntry, ManifestOps, ManifestOrderedOps, PathOrPrefix,
 };
@@ -34,7 +35,8 @@ use mononoke_types::{
 };
 use rand;
 use reachabilityindex::ReachabilityIndex;
-use repo_derived_data::RepoDerivedDataRef;
+use repo_blobstore::RepoBlobstoreArc;
+use repo_derived_data::RepoDerivedDataArc;
 use skeleton_manifest::RootSkeletonManifestId;
 use sorted_vector_map::SortedVectorMap;
 use tunables::tunables;
@@ -53,18 +55,12 @@ use crate::specifiers::{ChangesetId, GitSha1, HgChangesetId};
 pub struct ChangesetContext {
     repo: RepoContext,
     id: ChangesetId,
-    bonsai_changeset:
-        Shared<Pin<Box<dyn Future<Output = Result<BonsaiChangeset, MononokeError>> + Send>>>,
-    changeset_info:
-        Shared<Pin<Box<dyn Future<Output = Result<ChangesetInfo, MononokeError>> + Send>>>,
-    root_unode_manifest_id:
-        Shared<Pin<Box<dyn Future<Output = Result<RootUnodeManifestId, MononokeError>> + Send>>>,
-    root_fsnode_id:
-        Shared<Pin<Box<dyn Future<Output = Result<RootFsnodeId, MononokeError>> + Send>>>,
-    root_skeleton_manifest_id:
-        Shared<Pin<Box<dyn Future<Output = Result<RootSkeletonManifestId, MononokeError>> + Send>>>,
-    root_deleted_manifest_id:
-        Shared<Pin<Box<dyn Future<Output = Result<RootDeletedManifestId, MononokeError>> + Send>>>,
+    bonsai_changeset: LazyShared<Result<BonsaiChangeset, MononokeError>>,
+    changeset_info: LazyShared<Result<ChangesetInfo, MononokeError>>,
+    root_unode_manifest_id: LazyShared<Result<RootUnodeManifestId, MononokeError>>,
+    root_fsnode_id: LazyShared<Result<RootFsnodeId, MononokeError>>,
+    root_skeleton_manifest_id: LazyShared<Result<RootSkeletonManifestId, MononokeError>>,
+    root_deleted_manifest_id: LazyShared<Result<RootDeletedManifestId, MononokeError>>,
 }
 
 #[derive(Default)]
@@ -101,67 +97,12 @@ impl ChangesetContext {
     /// Construct a new `MononokeChangeset`.  The changeset must exist
     /// in the repo.
     pub(crate) fn new(repo: RepoContext, id: ChangesetId) -> Self {
-        let manager = repo.blob_repo().repo_derived_data().manager().clone();
-
-        let bonsai_changeset = {
-            cloned!(repo);
-            async move {
-                id.load(repo.ctx(), repo.blob_repo().blobstore())
-                    .await
-                    .map_err(MononokeError::from)
-            }
-        };
-        let bonsai_changeset = bonsai_changeset.boxed().shared();
-        let changeset_info = {
-            cloned!(repo, manager);
-            async move {
-                manager
-                    .derive::<ChangesetInfo>(repo.ctx(), id, None)
-                    .await
-                    .map_err(MononokeError::from)
-            }
-        };
-        let changeset_info = changeset_info.boxed().shared();
-        let root_unode_manifest_id = {
-            cloned!(repo, manager);
-            async move {
-                manager
-                    .derive::<RootUnodeManifestId>(repo.ctx(), id, None)
-                    .await
-                    .map_err(MononokeError::from)
-            }
-        };
-        let root_unode_manifest_id = root_unode_manifest_id.boxed().shared();
-        let root_fsnode_id = {
-            cloned!(repo, manager);
-            async move {
-                manager
-                    .derive::<RootFsnodeId>(repo.ctx(), id, None)
-                    .await
-                    .map_err(MononokeError::from)
-            }
-        };
-        let root_fsnode_id = root_fsnode_id.boxed().shared();
-        let root_skeleton_manifest_id = {
-            cloned!(repo, manager);
-            async move {
-                manager
-                    .derive::<RootSkeletonManifestId>(repo.ctx(), id, None)
-                    .await
-                    .map_err(MononokeError::from)
-            }
-        };
-        let root_skeleton_manifest_id = root_skeleton_manifest_id.boxed().shared();
-        let root_deleted_manifest_id = {
-            cloned!(repo, manager);
-            async move {
-                manager
-                    .derive::<RootDeletedManifestId>(repo.ctx(), id, None)
-                    .await
-                    .map_err(MononokeError::from)
-            }
-        };
-        let root_deleted_manifest_id = root_deleted_manifest_id.boxed().shared();
+        let bonsai_changeset = LazyShared::new_empty();
+        let changeset_info = LazyShared::new_empty();
+        let root_unode_manifest_id = LazyShared::new_empty();
+        let root_fsnode_id = LazyShared::new_empty();
+        let root_skeleton_manifest_id = LazyShared::new_empty();
+        let root_deleted_manifest_id = LazyShared::new_empty();
         Self {
             repo,
             id,
@@ -237,26 +178,50 @@ impl ChangesetContext {
             .await?)
     }
 
+    /// Derive a derivable data type for this changeset.
+    // Desugared async syntax so we can return a future with static lifetime.
+    fn derive<Derivable: BonsaiDerivable>(
+        &self,
+    ) -> impl Future<Output = Result<Derivable, MononokeError>> + Send + 'static {
+        let ctx = self.ctx().clone();
+        let repo_derived_data = self.repo.blob_repo().repo_derived_data_arc();
+        let id = self.id;
+        async move {
+            repo_derived_data
+                .derive::<Derivable>(&ctx, id)
+                .await
+                .map_err(MononokeError::from)
+        }
+    }
+
     pub(crate) async fn root_unode_manifest_id(
         &self,
     ) -> Result<RootUnodeManifestId, MononokeError> {
-        self.root_unode_manifest_id.clone().await
+        self.root_unode_manifest_id
+            .get_or_init(|| self.derive::<RootUnodeManifestId>())
+            .await
     }
 
     pub(crate) async fn root_fsnode_id(&self) -> Result<RootFsnodeId, MononokeError> {
-        self.root_fsnode_id.clone().await
+        self.root_fsnode_id
+            .get_or_init(|| self.derive::<RootFsnodeId>())
+            .await
     }
 
     pub(crate) async fn root_skeleton_manifest_id(
         &self,
     ) -> Result<RootSkeletonManifestId, MononokeError> {
-        self.root_skeleton_manifest_id.clone().await
+        self.root_skeleton_manifest_id
+            .get_or_init(|| self.derive::<RootSkeletonManifestId>())
+            .await
     }
 
     pub(crate) async fn root_deleted_manifest_id(
         &self,
     ) -> Result<RootDeletedManifestId, MononokeError> {
-        self.root_deleted_manifest_id.clone().await
+        self.root_deleted_manifest_id
+            .get_or_init(|| self.derive::<RootDeletedManifestId>())
+            .await
     }
 
     /// Query the root directory in the repository at this changeset revision.
@@ -444,13 +409,22 @@ impl ChangesetContext {
 
     /// Get the `BonsaiChangeset` information for this changeset.
     async fn bonsai_changeset(&self) -> Result<BonsaiChangeset, MononokeError> {
-        self.bonsai_changeset.clone().await
+        self.bonsai_changeset
+            .get_or_init(|| {
+                let ctx = self.ctx().clone();
+                let blobstore = self.repo.blob_repo().repo_blobstore_arc();
+                let id = self.id;
+                async move { id.load(&ctx, &blobstore).await.map_err(MononokeError::from) }
+            })
+            .await
     }
 
     /// Get the `ChangesetInfo` for this changeset.
     async fn changeset_info(&self) -> Result<ChangesetInfo, MononokeError> {
         if self.repo.derive_changeset_info_enabled() {
-            self.changeset_info.clone().await
+            self.changeset_info
+                .get_or_init(|| self.derive::<ChangesetInfo>())
+                .await
         } else {
             let bonsai = self.bonsai_changeset().await?;
             Ok(ChangesetInfo::new(self.id(), bonsai))

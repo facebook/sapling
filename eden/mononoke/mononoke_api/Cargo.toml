@@ -35,6 +35,7 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 filestore = { version = "0.1.0", path = "../filestore" }
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures_lazy_shared = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 hook_manager_factory = { version = "0.1.0", path = "../hooks/hook_manager_factory" }

@@ -6,13 +6,11 @@
  */
 
 use std::fmt;
-use std::future::Future;
-use std::pin::Pin;
 
 use anyhow::Error;
 use blobstore::{Loadable, LoadableError};
 use cloned::cloned;
-use futures::future::{FutureExt, Shared};
+use futures_lazy_shared::LazyShared;
 use mononoke_types::fsnode::Fsnode;
 
 use crate::errors::MononokeError;
@@ -31,7 +29,7 @@ pub use mononoke_types::fsnode::FsnodeSummary as TreeSummary;
 pub struct TreeContext {
     repo: RepoContext,
     id: TreeId,
-    fsnode: Shared<Pin<Box<dyn Future<Output = Result<Fsnode, MononokeError>> + Send>>>,
+    fsnode: LazyShared<Result<Fsnode, MononokeError>>,
 }
 
 impl fmt::Debug for TreeContext {
@@ -52,17 +50,11 @@ impl TreeContext {
     /// To construct a `TreeContext` for a tree that might not exist, use
     /// `new_check_exists`.
     pub(crate) fn new(repo: RepoContext, id: TreeId) -> Self {
-        let fsnode = {
-            cloned!(repo);
-            async move {
-                id.load(repo.ctx(), repo.blob_repo().blobstore())
-                    .await
-                    .map_err(Error::from)
-                    .map_err(MononokeError::from)
-            }
-        };
-        let fsnode = fsnode.boxed().shared();
-        Self { repo, id, fsnode }
+        Self {
+            repo,
+            id,
+            fsnode: LazyShared::new_empty(),
+        }
     }
 
     /// Create a new TreeContext using an ID that might not exist. Returns
@@ -74,11 +66,11 @@ impl TreeContext {
         // Try to load the fsnode immediately to see if it exists. Unlike
         // `new`, if the fsnode is missing, we simply return `Ok(None)`.
         match id.load(repo.ctx(), repo.blob_repo().blobstore()).await {
-            Ok(fsnode) => {
-                let fsnode = async move { Ok(fsnode) };
-                let fsnode = fsnode.boxed().shared();
-                Ok(Some(Self { repo, id, fsnode }))
-            }
+            Ok(fsnode) => Ok(Some(Self {
+                repo,
+                id,
+                fsnode: LazyShared::new_ready(Ok(fsnode)),
+            })),
             Err(LoadableError::Missing(_)) => Ok(None),
             Err(e) => Err(MononokeError::from(Error::from(e))),
         }
@@ -90,7 +82,17 @@ impl TreeContext {
     }
 
     async fn fsnode(&self) -> Result<Fsnode, MononokeError> {
-        self.fsnode.clone().await
+        self.fsnode
+            .get_or_init(|| {
+                cloned!(self.repo, self.id);
+                async move {
+                    id.load(repo.ctx(), repo.blob_repo().blobstore())
+                        .await
+                        .map_err(Error::from)
+                        .map_err(MononokeError::from)
+                }
+            })
+            .await
     }
 
     pub fn id(&self) -> &TreeId {

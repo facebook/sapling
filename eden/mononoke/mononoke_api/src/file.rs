@@ -6,17 +6,15 @@
  */
 
 use std::fmt;
-use std::future::Future;
-use std::pin::Pin;
 
 use anyhow::format_err;
 use bytes::{Bytes, BytesMut};
 use cloned::cloned;
 use context::CoreContext;
 use filestore::{self, get_metadata, FetchKey};
-use futures::future::{FutureExt, Shared};
 use futures::stream::TryStreamExt;
 use futures::try_join;
+use futures_lazy_shared::LazyShared;
 
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
@@ -34,7 +32,7 @@ pub use mononoke_types::ContentMetadata as FileMetadata;
 pub struct FileContext {
     repo: RepoContext,
     fetch_key: FetchKey,
-    metadata: Shared<Pin<Box<dyn Future<Output = Result<FileMetadata, MononokeError>> + Send>>>,
+    metadata: LazyShared<Result<FileMetadata, MononokeError>>,
 }
 
 impl fmt::Debug for FileContext {
@@ -62,22 +60,10 @@ impl FileContext {
     /// To construct a `FileContext` for a file that might not exist, use
     /// `new_check_exists`.
     pub(crate) fn new(repo: RepoContext, fetch_key: FetchKey) -> Self {
-        let metadata = {
-            cloned!(repo, fetch_key);
-            async move {
-                get_metadata(repo.blob_repo().blobstore(), repo.ctx(), &fetch_key)
-                    .await
-                    .map_err(MononokeError::from)
-                    .and_then(|metadata| {
-                        metadata.ok_or_else(|| content_not_found_error(&fetch_key))
-                    })
-            }
-        };
-        let metadata = metadata.boxed().shared();
         Self {
             repo,
             fetch_key,
-            metadata,
+            metadata: LazyShared::new_empty(),
         }
     }
 
@@ -90,14 +76,10 @@ impl FileContext {
         // Try to get the file metadata immediately to see if it exists.
         let file = get_metadata(repo.blob_repo().blobstore(), repo.ctx(), &fetch_key)
             .await?
-            .map(|metadata| {
-                let metadata = async move { Ok(metadata) };
-                let metadata = metadata.boxed().shared();
-                Self {
-                    repo,
-                    fetch_key,
-                    metadata,
-                }
+            .map(|metadata| Self {
+                repo,
+                fetch_key,
+                metadata: LazyShared::new_ready(Ok(metadata)),
             });
         Ok(file)
     }
@@ -120,7 +102,19 @@ impl FileContext {
 
     /// Return the metadata for a file.
     pub async fn metadata(&self) -> Result<FileMetadata, MononokeError> {
-        self.metadata.clone().await
+        self.metadata
+            .get_or_init(|| {
+                cloned!(self.repo, self.fetch_key);
+                async move {
+                    get_metadata(repo.blob_repo().blobstore(), repo.ctx(), &fetch_key)
+                        .await
+                        .map_err(MononokeError::from)
+                        .and_then(|metadata| {
+                            metadata.ok_or_else(|| content_not_found_error(&fetch_key))
+                        })
+                }
+            })
+            .await
     }
 
     /// Return the content for the file.
