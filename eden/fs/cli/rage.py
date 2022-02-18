@@ -325,7 +325,7 @@ def print_eden_redirections(instance: EdenInstance, out: IO[bytes]) -> None:
 def print_thrift_counters(instance: EdenInstance, out: IO[bytes]) -> None:
     try:
         out.write(util_mod.underlined("EdenFS counters:").encode())
-        with instance.get_thrift_client_legacy() as client:
+        with instance.get_thrift_client_legacy(timeout=3) as client:
             counters = client.getRegexCounters(top_mod.COUNTER_REGEX)
             for key, value in counters.items():
                 out.write(f"{key}: {value}\n".encode())

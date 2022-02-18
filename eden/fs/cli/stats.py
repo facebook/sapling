@@ -50,7 +50,7 @@ class StatsGeneralOptions(NamedTuple):
 def do_stats_general(instance: EdenInstance, options: StatsGeneralOptions) -> None:
     out, basic, json = options
 
-    with instance.get_thrift_client_legacy() as client:
+    with instance.get_thrift_client_legacy(timeout=20) as client:
         statsMask = STATS_MOUNTS_STATS | STATS_RSS_BYTES if basic else STATS_ALL
         stat_info = client.getStatInfo(GetStatInfoParams(statsMask=statsMask))
 

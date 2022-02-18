@@ -988,12 +988,12 @@ figure out which process, please try `handle.exe` from sysinternals:
         return self._config_dir / CLIENTS_DIR
 
     def get_server_build_info(self) -> Dict[str, str]:
-        with self.get_thrift_client_legacy() as client:
+        with self.get_thrift_client_legacy(timeout=3) as client:
             return client.getRegexExportedValues("^build_.*")
 
     def get_uptime(self) -> datetime.timedelta:
         now = datetime.datetime.now()
-        with self.get_thrift_client_legacy() as client:
+        with self.get_thrift_client_legacy(timeout=3) as client:
             since_in_seconds = client.aliveSince()
         since = datetime.datetime.fromtimestamp(since_in_seconds)
         return now - since
