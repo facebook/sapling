@@ -308,6 +308,7 @@ class WinTSocket(TSocket):
 
         handle = WindowsSocketHandle()
         self.setHandle(handle)
+        handle.settimeout(self._timeout)
         try:
             handle.connect(self._unix_socket)
         except OSError as e:
