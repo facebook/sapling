@@ -21,6 +21,7 @@ use std::sync::Arc;
 use dag_types::FlatSegment;
 use futures::future::join_all;
 use futures::future::BoxFuture;
+use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use nonblocking::non_blocking_result;
@@ -69,6 +70,7 @@ use crate::protocol::RemoteIdConvertProtocol;
 use crate::segment::PreparedFlatSegments;
 use crate::segment::SegmentFlags;
 use crate::types_ext::PreparedFlatSegmentsExt;
+use crate::utils;
 use crate::Error::NeedSlowPath;
 use crate::IdSet;
 use crate::IdSpan;
@@ -1344,76 +1346,26 @@ where
     }
 
     // Figure out unassigned (missing) vertexes that do need to be inserted.
-    //
-    // remaining:  vertexes to query.
-    // unassigned: vertexes known unassigned.
-    // assigned:   vertexes known assigned.
-    //
-    // This is similar to hg pull/push exchange. In short, loop until "remaining" becomes empty:
-    // - Take a subset of "remaining".
-    // - Check the subset. Divide it into (subset_assigned, subset_unassigned).
-    // - Include ancestors(subset_assigned) in "assigned".
-    // - Include descendants(subset_unassigned) in "unassigned".
-    // - Exclude "assigned" and "unassigned" from "remaining".
-
-    for i in 1usize.. {
-        let remaining_old_len = remaining.count().await?;
-        if remaining_old_len == 0 {
-            break;
+    // This is done via utils::filter_known.
+    let filter_known = |sample: &[VertexName]| -> BoxFuture<Result<Vec<VertexName>>> {
+        let sample = sample.to_vec();
+        async {
+            let known_bools: Vec<bool> = {
+                let ids = this.vertex_id_batch(&sample).await?;
+                ids.into_iter().map(|i| i.is_ok()).collect()
+            };
+            debug_assert_eq!(sample.len(), known_bools.len());
+            let known = sample
+                .into_iter()
+                .zip(known_bools)
+                .filter_map(|(v, b)| if b { Some(v) } else { None })
+                .collect();
+            Ok(known)
         }
-
-        // Sample: heads, roots, and the "middle point" from "remaining".
-        let sample = if i <= 2 {
-            // But for the first few queries, let's just check the roots.
-            // This could reduce remote lookups, when we only need to
-            // query the roots to rule out all `remaining` vertexes.
-            subdag.roots(remaining.clone()).await?
-        } else {
-            subdag
-                .roots(remaining.clone())
-                .await?
-                .union(&subdag.heads(remaining.clone()).await?)
-                .union(&remaining.skip((remaining_old_len as u64) / 2).take(1))
-        };
-        let sample: Vec<VertexName> = sample.iter().await?.try_collect().await?;
-        let assigned_bools: Vec<bool> = {
-            let ids = this.vertex_id_batch(&sample).await?;
-            ids.into_iter().map(|i| i.is_ok()).collect()
-        };
-        debug_assert_eq!(sample.len(), assigned_bools.len());
-
-        let mut new_assigned = Vec::with_capacity(sample.len());
-        let mut new_unassigned = Vec::with_capacity(sample.len());
-        for (v, b) in sample.into_iter().zip(assigned_bools) {
-            if b {
-                new_assigned.push(v);
-            } else {
-                new_unassigned.push(v);
-            }
-        }
-        let new_assigned = NameSet::from_static_names(new_assigned);
-        let new_unassigned = NameSet::from_static_names(new_unassigned);
-
-        let new_assigned = subdag.ancestors(new_assigned).await?;
-        let new_unassigned = subdag.descendants(new_unassigned).await?;
-
-        remaining = remaining.difference(&new_assigned.union(&new_unassigned));
-        let remaining_new_len = remaining.count().await?;
-
-        let unassigned_old_len = unassigned.count().await?;
-        unassigned = unassigned.union(&subdag.descendants(new_unassigned).await?);
-        let unassigned_new_len = unassigned.count().await?;
-
-        tracing::trace!(
-            target: "dag::definitelymissing",
-            "#{} remaining {} => {}, unassigned: {} => {}",
-            i,
-            remaining_old_len,
-            remaining_new_len,
-            unassigned_old_len,
-            unassigned_new_len
-        );
-    }
+        .boxed()
+    };
+    let assigned = utils::filter_known(remaining.clone(), &filter_known).await?;
+    unassigned = unassigned.union(&remaining.difference(&assigned));
     tracing::debug!(target: "dag::definitelymissing", "unassigned (missing): {:?}", &unassigned);
 
     let unassigned = unassigned.iter().await?.try_collect().await?;

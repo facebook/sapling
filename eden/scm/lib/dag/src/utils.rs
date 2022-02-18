@@ -9,7 +9,12 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Mutex;
 
+use futures::future::BoxFuture;
+use futures::TryStreamExt;
+
+use crate::errors::programming;
 use crate::Result;
+use crate::Set;
 use crate::Vertex;
 
 /// Pre-process a parent function that might have cycles.
@@ -66,6 +71,109 @@ where
         state.known.insert(v, result.clone());
         Ok(result)
     }
+}
+
+/// Given a `set` (sub-graph) and a filter function that selects "known"
+/// subset of its input, apply filter to `set`.
+///
+/// The filter funtion must have following properties:
+/// - filter(xs) + filter(ys) = filter(xs + ys)
+/// - If its input contains both X and Y and X is an ancestor of Y in the
+///   sub-graph, and its output contains Y, then its output must also
+///   contain Y's ancestor X.
+///   In other words, if vertex X is considered known, then ancestors
+///   of X are also known.
+///
+/// This function has a similar signature with `filter`, but it utilizes
+/// the above properties to test (much) less vertexes for a large input
+/// set.
+///
+/// The idea of the algorithm comes from Mercurial's `setdiscovery.py`,
+/// introduced by [1]. `setdiscovery.py` is used to figure out what
+/// commits are needed to be pushed or pulled.
+///
+/// [1]: https://www.mercurial-scm.org/repo/hg/rev/cb98fed52495
+pub async fn filter_known<'a>(
+    set: Set,
+    filter_known_func: &(
+         dyn (Fn(&[Vertex]) -> BoxFuture<'a, Result<Vec<Vertex>>>) + Send + Sync + 'a
+     ),
+) -> Result<Set> {
+    // Figure out unassigned (missing) vertexes that do need to be inserted.
+    //
+    // remaining:  subset not categorized.
+    // known:      subset categorized as "known"
+    // unknown:    subset categorized as "unknown"
+    //
+    // See [1] for the algorithm, basically:
+    // - Take a subset (sample) of "remaining".
+    // - Check the subset (sample). Divide it into (new_known, new_unknown).
+    // - known   |= ancestors(new_known)
+    // - unknown |= descendants(new_unknown)
+    // - remaining -= known | unknown
+    // - Repeat until "remaining" becomes empty.
+    let mut remaining = set;
+    let subdag = match remaining.dag() {
+        Some(dag) => dag,
+        None => return programming("filter_known requires set to associate to a Dag"),
+    };
+    let mut known = Set::empty();
+
+    for i in 1usize.. {
+        let remaining_old_len = remaining.count().await?;
+        if remaining_old_len == 0 {
+            break;
+        }
+
+        // Sample: heads, roots, and the "middle point" from "remaining".
+        let sample = if i <= 2 {
+            // But for the first few queries, let's just check the roots.
+            // This could reduce remote lookups, when we only need to
+            // query the roots to rule out all `remaining` vertexes.
+            subdag.roots(remaining.clone()).await?
+        } else {
+            subdag
+                .roots(remaining.clone())
+                .await?
+                .union(&subdag.heads(remaining.clone()).await?)
+                .union(&remaining.skip((remaining_old_len as u64) / 2).take(1))
+        };
+        let sample: Vec<Vertex> = sample.iter().await?.try_collect().await?;
+        let new_known = filter_known_func(&sample).await?;
+        let new_unknown: Vec<Vertex> = {
+            let filtered_set: HashSet<Vertex> = new_known.iter().cloned().collect();
+            sample
+                .iter()
+                .filter(|v| !filtered_set.contains(v))
+                .cloned()
+                .collect()
+        };
+
+        let new_known = Set::from_static_names(new_known);
+        let new_unknown = Set::from_static_names(new_unknown);
+
+        let new_known = subdag.ancestors(new_known).await?;
+        let new_unknown = subdag.descendants(new_unknown).await?;
+
+        remaining = remaining.difference(&new_known.union(&new_unknown));
+        let remaining_new_len = remaining.count().await?;
+
+        let known_old_len = known.count().await?;
+        known = known.union(&new_known);
+        let known_new_len = known.count().await?;
+
+        tracing::trace!(
+            target: "dag::utils::filter_known",
+            "#{} remaining {} => {}, known: {} => {}",
+            i,
+            remaining_old_len,
+            remaining_new_len,
+            known_old_len,
+            known_new_len
+        );
+    }
+
+    Ok(known)
 }
 
 #[cfg(test)]
