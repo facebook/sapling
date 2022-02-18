@@ -685,6 +685,7 @@ void InodeMap::forgetStaleInodes() {
   auto cutoff = std::chrono::system_clock::now() -
       config_->getEdenConfig()->postCheckoutDelayToUnloadInodes.getValue();
   auto cutoff_ts = folly::to<timespec>(cutoff);
+  std::vector<InodeNumber> unloadedInodesToClearFSRef;
 
   {
     auto data = data_.wlock();
@@ -692,19 +693,25 @@ void InodeMap::forgetStaleInodes() {
     for (auto& inode : data->unloadedInodes_) {
       XLOG(DBG9) << "Considering forgetting unloaded inode " << inode.first;
       if (inode.second.isUnlinked) {
-        auto inodePtr = decFsRefcountHelper(
-            data,
-            inode.first,
-            /*count=*/0, // Doesn't matter what we set this to because we are
-                         // going to clear the ref count.
-            /*clearRefCount=*/true);
-        XCHECK(!inodePtr)
-            << "decFsRefcountHelper should not return a loaded inode that  "
-            << "needs to be dereferenced for an inode we know to be unloaded.";
+        // We can't directly call decFsRefcountHelper here because it will
+        // invalidate the iterator we are using for this for loop.
+        unloadedInodesToClearFSRef.push_back(inode.first);
       } else {
         XLOG(DBG9) << "Not forgetting unloaded inode " << inode.first
                    << " because inode is still linked";
       }
+    }
+
+    for (auto& inodeNumber : unloadedInodesToClearFSRef) {
+      auto inodePtr = decFsRefcountHelper(
+          data,
+          inodeNumber,
+          /*count=*/0, // Doesn't matter what we set this to because we are
+                       // going to clear the ref count.
+          /*clearRefCount=*/true);
+      XCHECK(!inodePtr)
+          << "decFsRefcountHelper should not return a loaded inode that  "
+          << "needs to be dereferenced for an inode we know to be unloaded.";
     }
 
     // we do this second because dereferencing a loaded inode will cause it to
