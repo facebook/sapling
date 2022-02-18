@@ -302,10 +302,38 @@ where
         new.map.reload(&map_lock)?;
         new.dag.reload(&dag_lock)?;
         new.maybe_reuse_caches_from(self);
+        std::mem::swap(&mut to_insert, &mut *new.overlay_map_paths.lock());
+        new.flush_cached_idmap_with_lock(&map_lock).await?;
 
-        let id_names =
-            calculate_id_name_from_paths(&new.map, &*new.dag, &new.overlay_map_id_set, &to_insert)
-                .await?;
+        new.state.persist(&lock)?;
+
+        Ok(())
+    }
+}
+
+impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
+where
+    IS: IdDagStore,
+    IdDag<IS>: TryClone + 'static,
+    M: TryClone + IdConvert + IdMapWrite + Persist + Send + Sync + 'static,
+    P: Send + Sync + 'static,
+    S: TryClone + Send + Sync + 'static,
+{
+    /// Implementation detail. Must be protected by a lock.
+    async fn flush_cached_idmap_with_lock(&mut self, map_lock: &M::Lock) -> Result<()> {
+        let mut to_insert: Vec<(AncestorPath, Vec<VertexName>)> = Vec::new();
+        std::mem::swap(&mut to_insert, &mut *self.overlay_map_paths.lock());
+        if to_insert.is_empty() {
+            return Ok(());
+        }
+
+        let id_names = calculate_id_name_from_paths(
+            &self.map,
+            &*self.dag,
+            &self.overlay_map_id_set,
+            &to_insert,
+        )
+        .await?;
 
         // For testing purpose, skip inserting certain vertexes.
         let mut skip_vertexes: Option<HashSet<VertexName>> = None;
@@ -332,12 +360,10 @@ where
                 }
             }
             tracing::debug!(target: "dag::cache", "insert {:?}-{} to IdMap", &name, id);
-            new.map.insert(id, name.as_ref()).await?;
+            self.map.insert(id, name.as_ref()).await?;
         }
 
-        new.map.persist(&map_lock)?;
-        new.state.persist(&lock)?;
-
+        self.map.persist(map_lock)?;
         Ok(())
     }
 }
