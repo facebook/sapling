@@ -70,6 +70,10 @@ impl AddScubaResponse for thrift::CommitPathInfoResponse {}
 
 impl AddScubaResponse for thrift::CommitMultiplePathInfoResponse {}
 
+impl AddScubaResponse for thrift::CommitPathLastChangedResponse {}
+
+impl AddScubaResponse for thrift::CommitMultiplePathLastChangedResponse {}
+
 impl AddScubaResponse for thrift::FileChunk {}
 
 impl AddScubaResponse for thrift::FileInfo {}

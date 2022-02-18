@@ -635,6 +635,16 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitPathHistoryParams,
         ) -> Result<thrift::CommitPathHistoryResponse, service::CommitPathHistoryExn>;
 
+        async fn commit_path_last_changed(
+            commit_path: thrift::CommitPathSpecifier,
+            params: thrift::CommitPathLastChangedParams,
+        ) -> Result<thrift::CommitPathLastChangedResponse, service::CommitPathLastChangedExn>;
+
+        async fn commit_multiple_path_last_changed(
+            commit_path: thrift::CommitSpecifier,
+            params: thrift::CommitMultiplePathLastChangedParams,
+        ) -> Result<thrift::CommitMultiplePathLastChangedResponse, service::CommitMultiplePathLastChangedExn>;
+
         async fn tree_exists(
             tree: thrift::TreeSpecifier,
             params: thrift::TreeExistsParams,

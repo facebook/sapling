@@ -111,10 +111,6 @@ struct CommitPathSpecifier {
   2: Path path;
 }
 
-struct CommitMultiplePathInfoParams {
-  1: list<Path> paths;
-}
-
 /// Specifies a tree by its ID.
 struct TreeIdSpecifier {
   /// The repository that contains the tree.
@@ -939,6 +935,13 @@ struct CommitPathExistsParams {}
 
 struct CommitPathInfoParams {}
 
+struct CommitMultiplePathInfoParams {
+  /// List of paths to query.
+  ///
+  /// Note: paths that do not exist will be omitted from the response.
+  1: list<Path> paths;
+}
+
 const i64 TREE_LIST_MAX_LIMIT = 10000;
 
 struct CommitPathBlameParams {
@@ -987,6 +990,21 @@ struct CommitPathHistoryParams {
   /// Use mutable copy information to identify ancestry, instead of
   /// using commit parents to identify ancestry
   10: optional bool follow_mutable_file_history;
+}
+
+struct CommitPathLastChangedParams {
+  /// Commit identity schemes to return.
+  1: set<CommitIdentityScheme> identity_schemes;
+}
+
+struct CommitMultiplePathLastChangedParams {
+  /// List of paths to query.
+  ///
+  /// Note: paths that have never existed will be omitted from the response.
+  1: list<Path> paths;
+
+  /// Commit identity schemes to return.
+  2: set<CommitIdentityScheme> identity_schemes;
 }
 
 struct TreeExistsParams {}
@@ -1343,6 +1361,9 @@ struct CommitPathInfoResponse {
 }
 
 struct CommitMultiplePathInfoResponse {
+  /// Path info for the requested paths.
+  ///
+  /// Note: requested paths that do not exist are omitted from the map.
   1: map<Path, CommitPathInfoResponse> path_info;
 }
 
@@ -1352,6 +1373,32 @@ struct CommitPathBlameResponse {
 
 struct CommitPathHistoryResponse {
   1: History history;
+}
+
+struct CommitPathLastChange {
+  /// Whether anything exists at this path in this commit.
+  1: bool exists;
+
+  /// The commit that last changed this path.
+  ///
+  /// If something exists at this path, this contains the commit in which it
+  /// was last changed.
+  ///
+  /// If nothing exists at this path, but something used to and has been
+  /// deleted, this is the commit it was deleted in.
+  2: map<CommitIdentityScheme, CommitId> last_changed_commit;
+}
+
+struct CommitPathLastChangedResponse {
+  /// The last change for this path.  Not present if the path never existed.
+  1: optional CommitPathLastChange last_change;
+}
+
+struct CommitMultiplePathLastChangedResponse {
+  /// Last change for the requested paths.
+  ///
+  /// Requested paths that have never existed are omitted.
+  1: map<Path, CommitPathLastChange> path_last_change;
 }
 
 struct TreeListResponse {
@@ -1718,6 +1765,16 @@ service SourceControlService extends fb303_core.BaseService {
   CommitPathHistoryResponse commit_path_history(
     1: CommitPathSpecifier commit_path,
     2: CommitPathHistoryParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
+  CommitPathLastChangedResponse commit_path_last_changed(
+    1: CommitPathSpecifier commit_path,
+    2: CommitPathLastChangedParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
+  CommitMultiplePathLastChangedResponse commit_multiple_path_last_changed(
+    1: CommitSpecifier commit,
+    2: CommitMultiplePathLastChangedParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
 
   /// Tree Methods

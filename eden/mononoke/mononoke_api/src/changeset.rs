@@ -18,6 +18,7 @@ use changesets::ChangesetsRef;
 use chrono::{DateTime, FixedOffset};
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
+use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::future::{self, try_join, try_join_all, FutureExt, Shared};
@@ -37,6 +38,7 @@ use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use sorted_vector_map::SortedVectorMap;
 use tunables::tunables;
+use unodes::RootUnodeManifestId;
 
 use crate::changeset_path::{
     ChangesetPathContentContext, ChangesetPathContext, ChangesetPathHistoryContext,
@@ -55,10 +57,14 @@ pub struct ChangesetContext {
         Shared<Pin<Box<dyn Future<Output = Result<BonsaiChangeset, MononokeError>> + Send>>>,
     changeset_info:
         Shared<Pin<Box<dyn Future<Output = Result<ChangesetInfo, MononokeError>> + Send>>>,
+    root_unode_manifest_id:
+        Shared<Pin<Box<dyn Future<Output = Result<RootUnodeManifestId, MononokeError>> + Send>>>,
     root_fsnode_id:
         Shared<Pin<Box<dyn Future<Output = Result<RootFsnodeId, MononokeError>> + Send>>>,
     root_skeleton_manifest_id:
         Shared<Pin<Box<dyn Future<Output = Result<RootSkeletonManifestId, MononokeError>> + Send>>>,
+    root_deleted_manifest_id:
+        Shared<Pin<Box<dyn Future<Output = Result<RootDeletedManifestId, MononokeError>> + Send>>>,
 }
 
 #[derive(Default)]
@@ -116,6 +122,16 @@ impl ChangesetContext {
             }
         };
         let changeset_info = changeset_info.boxed().shared();
+        let root_unode_manifest_id = {
+            cloned!(repo, manager);
+            async move {
+                manager
+                    .derive::<RootUnodeManifestId>(repo.ctx(), id, None)
+                    .await
+                    .map_err(MononokeError::from)
+            }
+        };
+        let root_unode_manifest_id = root_unode_manifest_id.boxed().shared();
         let root_fsnode_id = {
             cloned!(repo, manager);
             async move {
@@ -136,13 +152,25 @@ impl ChangesetContext {
             }
         };
         let root_skeleton_manifest_id = root_skeleton_manifest_id.boxed().shared();
+        let root_deleted_manifest_id = {
+            cloned!(repo, manager);
+            async move {
+                manager
+                    .derive::<RootDeletedManifestId>(repo.ctx(), id, None)
+                    .await
+                    .map_err(MononokeError::from)
+            }
+        };
+        let root_deleted_manifest_id = root_deleted_manifest_id.boxed().shared();
         Self {
             repo,
             id,
             changeset_info,
             bonsai_changeset,
+            root_unode_manifest_id,
             root_fsnode_id,
             root_skeleton_manifest_id,
+            root_deleted_manifest_id,
         }
     }
 
@@ -209,6 +237,12 @@ impl ChangesetContext {
             .await?)
     }
 
+    pub(crate) async fn root_unode_manifest_id(
+        &self,
+    ) -> Result<RootUnodeManifestId, MononokeError> {
+        self.root_unode_manifest_id.clone().await
+    }
+
     pub(crate) async fn root_fsnode_id(&self) -> Result<RootFsnodeId, MononokeError> {
         self.root_fsnode_id.clone().await
     }
@@ -219,6 +253,12 @@ impl ChangesetContext {
         self.root_skeleton_manifest_id.clone().await
     }
 
+    pub(crate) async fn root_deleted_manifest_id(
+        &self,
+    ) -> Result<RootDeletedManifestId, MononokeError> {
+        self.root_deleted_manifest_id.clone().await
+    }
+
     /// Query the root directory in the repository at this changeset revision.
     pub fn root(&self) -> ChangesetPathContentContext {
         ChangesetPathContentContext::new(self.clone(), None)
@@ -226,6 +266,9 @@ impl ChangesetContext {
 
     /// Query a path within the respository. This could be a file or a
     /// directory.
+    ///
+    /// Returns a path content context, which is a context suitable for
+    /// queries about the content at this path.
     pub fn path_with_content<P>(
         &self,
         path: P,
@@ -240,6 +283,11 @@ impl ChangesetContext {
         ))
     }
 
+    /// Query a path within the respository. This could be a file or a
+    /// directory.
+    ///
+    /// Returns a path history context, which is a context suitable for
+    /// queries about the history of this path.
     pub fn path_with_history<P>(
         &self,
         path: P,
@@ -254,6 +302,14 @@ impl ChangesetContext {
         ))
     }
 
+    /// Query a path within the respository. This could be a file or a
+    /// directory.
+    ///
+    /// Returns a path context, which is a context that is only suitable for
+    /// queries about the type of item that exists at this path.
+    ///
+    /// If you need to query the content or history of a path, use
+    /// `path_with_content` or `path_with_history` instead.
     pub fn path<P>(&self, path: P) -> Result<ChangesetPathContext, MononokeError>
     where
         P: TryInto<MononokePath>,
@@ -262,6 +318,41 @@ impl ChangesetContext {
         Ok(ChangesetPathContext::new(self.clone(), path.try_into()?))
     }
 
+    /// Returns a stream of path history contexts for a set of paths.
+    ///
+    /// This performs an efficient manifest traversal, and as such returns
+    /// contexts only for **paths which exist**.
+    pub async fn paths_with_history(
+        &self,
+        paths: impl Iterator<Item = MononokePath>,
+    ) -> Result<impl Stream<Item = Result<ChangesetPathHistoryContext, MononokeError>>, MononokeError>
+    {
+        Ok(self
+            .root_unode_manifest_id()
+            .await?
+            .manifest_unode_id()
+            .find_entries(
+                self.ctx().clone(),
+                self.repo().blob_repo().get_blobstore(),
+                paths.map(|path| path.into_mpath()),
+            )
+            .map_ok({
+                let changeset = self.clone();
+                move |(mpath, entry)| {
+                    ChangesetPathHistoryContext::new_with_unode_entry(
+                        changeset.clone(),
+                        MononokePath::new(mpath),
+                        entry,
+                    )
+                }
+            })
+            .map_err(MononokeError::from))
+    }
+
+    /// Returns a stream of path content contexts for a set of paths.
+    ///
+    /// This performs an efficient manifest traversal, and as such returns
+    /// contexts only for **paths which exist**.
     pub async fn paths_with_content(
         &self,
         paths: impl Iterator<Item = MononokePath>,
@@ -289,6 +380,10 @@ impl ChangesetContext {
             .map_err(MononokeError::from))
     }
 
+    /// Returns a stream of path contexts for a set of paths.
+    ///
+    /// This performs an efficient manifest traversal, and as such returns
+    /// contexts only for **paths which exist**.
     pub async fn paths(
         &self,
         paths: impl Iterator<Item = MononokePath>,
@@ -314,6 +409,37 @@ impl ChangesetContext {
                 }
             })
             .map_err(MononokeError::from))
+    }
+
+    /// Returns a stream of path history contexts for a set of paths.
+    ///
+    /// This performs an efficient manifest traversal, and as such returns
+    /// contexts only for **deleted paths which have existed previously**.
+    pub async fn deleted_paths(
+        &self,
+        paths: impl Iterator<Item = MononokePath>,
+    ) -> Result<impl Stream<Item = Result<ChangesetPathHistoryContext, MononokeError>>, MononokeError>
+    {
+        Ok(deleted_files_manifest::find_entries(
+            self.ctx().clone(),
+            self.repo().blob_repo().get_blobstore(),
+            self.root_deleted_manifest_id()
+                .await?
+                .deleted_manifest_id()
+                .clone(),
+            paths.map(|path| path.into_mpath()),
+        )
+        .map_ok({
+            let changeset = self.clone();
+            move |(mpath, entry)| {
+                ChangesetPathHistoryContext::new_with_deleted_manifest(
+                    changeset.clone(),
+                    MononokePath::new(mpath),
+                    entry,
+                )
+            }
+        })
+        .map_err(MononokeError::from))
     }
 
     /// Get the `BonsaiChangeset` information for this changeset.

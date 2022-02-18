@@ -12,13 +12,14 @@ use dedupmap::DedupMap;
 use futures::stream::TryStreamExt;
 use futures::{future, try_join};
 use maplit::btreeset;
-use mononoke_api::MononokePath;
-use mononoke_api::{ChangesetPathHistoryOptions, ChangesetSpecifier, MononokeError, PathEntry};
+use mononoke_api::{
+    ChangesetPathHistoryOptions, ChangesetSpecifier, MononokeError, MononokePath, PathEntry,
+};
 use source_control as thrift;
 use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use crate::commit_id::map_commit_identities;
+use crate::commit_id::{map_commit_identities, map_commit_identity};
 use crate::errors;
 use crate::from_request::{check_range_and_convert, validate_timestamp};
 use crate::history::collect_history;
@@ -493,6 +494,136 @@ impl SourceControlServiceImpl {
 
         Ok(thrift::CommitPathHistoryResponse {
             history,
+            ..Default::default()
+        })
+    }
+
+    pub(crate) async fn commit_path_last_changed(
+        &self,
+        ctx: CoreContext,
+        commit_path: thrift::CommitPathSpecifier,
+        params: thrift::CommitPathLastChangedParams,
+    ) -> Result<thrift::CommitPathLastChangedResponse, errors::ServiceError> {
+        let (_repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
+        let path = changeset.path_with_history(&commit_path.path)?;
+        match path.last_modified().await? {
+            Some(last_modified) => {
+                let last_modified =
+                    map_commit_identity(&last_modified, &params.identity_schemes).await?;
+                Ok(thrift::CommitPathLastChangedResponse {
+                    last_change: Some(thrift::CommitPathLastChange {
+                        exists: true,
+                        last_changed_commit: last_modified,
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+            }
+            None => match path.last_deleted().await? {
+                Some(last_deleted) => {
+                    let last_deleted =
+                        map_commit_identity(&last_deleted, &params.identity_schemes).await?;
+                    Ok(thrift::CommitPathLastChangedResponse {
+                        last_change: Some(thrift::CommitPathLastChange {
+                            exists: false,
+                            last_changed_commit: last_deleted,
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    })
+                }
+                None => Ok(thrift::CommitPathLastChangedResponse {
+                    last_change: None,
+                    ..Default::default()
+                }),
+            },
+        }
+    }
+
+    pub(crate) async fn commit_multiple_path_last_changed(
+        &self,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitMultiplePathLastChangedParams,
+    ) -> Result<thrift::CommitMultiplePathLastChangedResponse, errors::ServiceError> {
+        let (repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        let mut paths = HashSet::with_capacity(params.paths.len());
+        for path in params.paths {
+            let strpath = path.as_str();
+            let mpath = MononokePath::try_from(strpath)?;
+            paths.insert(mpath);
+        }
+
+        let path_last_modified = changeset
+            .paths_with_history(paths.iter().cloned())
+            .await?
+            .map_ok(|context| async move {
+                let context_path = context.path().clone();
+                let last_modified = context.last_modified().await?;
+                Ok::<_, errors::ServiceError>((context_path, last_modified))
+            })
+            .map_err(errors::ServiceError::from)
+            .try_buffer_unordered(100)
+            .try_filter_map(|(path, maybe_last_changed)| async move {
+                Ok(maybe_last_changed.map(move |last_changed| (path, last_changed.id())))
+            })
+            .try_collect::<BTreeMap<_, _>>()
+            .await?;
+
+        paths.retain(|path| !path_last_modified.contains_key(path));
+
+        let path_last_deleted = changeset
+            .deleted_paths(paths.into_iter())
+            .await?
+            .map_ok(|context| async move {
+                let context_path = context.path().clone();
+                let last_deleted = context.last_deleted().await?;
+                Ok::<_, errors::ServiceError>((context_path, last_deleted))
+            })
+            .map_err(errors::ServiceError::from)
+            .try_buffer_unordered(100)
+            .try_filter_map(|(path, maybe_last_changed)| async move {
+                Ok(maybe_last_changed.map(move |last_changed| (path, last_changed.id())))
+            })
+            .try_collect::<BTreeMap<_, _>>()
+            .await?;
+
+        let changesets = path_last_modified
+            .values()
+            .chain(path_last_deleted.values())
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .copied()
+            .collect::<Vec<_>>();
+
+        let commit_identities =
+            map_commit_identities(&repo, changesets, &params.identity_schemes).await?;
+
+        let path_last_modified = path_last_modified
+            .into_iter()
+            .map(|(path, last_changed)| (true, path, last_changed));
+        let path_last_deleted = path_last_deleted
+            .into_iter()
+            .map(|(path, last_changed)| (false, path, last_changed));
+        let path_last_change = path_last_modified
+            .chain(path_last_deleted)
+            .map(|(exists, path, last_changed)| {
+                let last_changed_commit = commit_identities
+                    .get(&last_changed)
+                    .cloned()
+                    .unwrap_or_default();
+                let last_change = thrift::CommitPathLastChange {
+                    exists,
+                    last_changed_commit,
+                    ..Default::default()
+                };
+
+                (path.to_string(), last_change)
+            })
+            .collect();
+
+        Ok(thrift::CommitMultiplePathLastChangedResponse {
+            path_last_change,
             ..Default::default()
         })
     }

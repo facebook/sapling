@@ -11,7 +11,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use anyhow::{format_err, Error};
+use anyhow::{anyhow, Error};
 use async_trait::async_trait;
 use blame::{fetch_blame_compat, fetch_content_for_blame, BlameError, CompatBlame};
 use blobrepo::BlobRepo;
@@ -32,7 +32,8 @@ use futures::try_join;
 use manifest::{Entry, ManifestOps};
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::{
-    ChangesetId, FileType, FileUnodeId, FsnodeId, Generation, SkeletonManifestId,
+    ChangesetId, DeletedManifestId, FileType, FileUnodeId, FsnodeId, Generation, ManifestUnodeId,
+    SkeletonManifestId,
 };
 use reachabilityindex::ReachabilityIndex;
 use skiplist::SkiplistIndex;
@@ -76,8 +77,10 @@ pub struct UnifiedDiff {
     pub is_binary: bool,
 }
 
+type UnodeResult = Result<Option<Entry<ManifestUnodeId, FileUnodeId>>, MononokeError>;
 type FsnodeResult = Result<Option<Entry<FsnodeId, FsnodeFile>>, MononokeError>;
 type SkeletonResult = Result<Option<Entry<SkeletonManifestId, ()>>, MononokeError>;
+type DeletedResult = Result<Option<DeletedManifestId>, MononokeError>;
 
 /// Context that makes it cheap to fetch content info about a path within a changeset.
 ///
@@ -106,6 +109,8 @@ impl fmt::Debug for ChangesetPathContentContext {
 pub struct ChangesetPathHistoryContext {
     changeset: ChangesetContext,
     path: MononokePath,
+    unode_id: Shared<Pin<Box<dyn Future<Output = UnodeResult> + Send>>>,
+    deleted_manifest_id: Shared<Pin<Box<dyn Future<Output = DeletedResult> + Send>>>,
 }
 
 impl fmt::Debug for ChangesetPathHistoryContext {
@@ -277,9 +282,86 @@ impl ChangesetPathContentContext {
 }
 
 impl ChangesetPathHistoryContext {
-    pub fn new(changeset: ChangesetContext, path: impl Into<MononokePath>) -> Self {
+    fn new_impl(
+        changeset: ChangesetContext,
+        path: impl Into<MononokePath>,
+        unode_entry: Option<Entry<ManifestUnodeId, FileUnodeId>>,
+        deleted_manifest_id: Option<DeletedManifestId>,
+    ) -> Self {
         let path = path.into();
-        Self { changeset, path }
+        let unode_id = if let Some(unode_entry) = unode_entry {
+            async move { Ok(Some(unode_entry)) }.boxed()
+        } else {
+            cloned!(changeset, path);
+            async move {
+                let ctx = changeset.ctx().clone();
+                let blobstore = changeset.repo().blob_repo().get_blobstore();
+                let root_unode_manifest_id = changeset.root_unode_manifest_id().await?;
+                if let Some(mpath) = path.into() {
+                    root_unode_manifest_id
+                        .manifest_unode_id()
+                        .find_entry(ctx, blobstore, Some(mpath))
+                        .await
+                        .map_err(MononokeError::from)
+                } else {
+                    Ok(Some(Entry::Tree(
+                        root_unode_manifest_id.manifest_unode_id().clone(),
+                    )))
+                }
+            }
+            .boxed()
+        };
+        let unode_id = unode_id.shared();
+        let deleted_manifest_id = if let Some(deleted_manifest_id) = deleted_manifest_id {
+            async move { Ok(Some(deleted_manifest_id)) }.boxed()
+        } else {
+            cloned!(changeset, path);
+            async move {
+                let ctx = changeset.ctx();
+                let blobstore = changeset.repo().blob_repo().get_blobstore();
+                let root_deleted_manifest_id = changeset.root_deleted_manifest_id().await?;
+                if let Some(mpath) = path.into() {
+                    deleted_files_manifest::find_entry(
+                        ctx,
+                        blobstore,
+                        root_deleted_manifest_id.deleted_manifest_id().clone(),
+                        Some(mpath),
+                    )
+                    .await
+                    .map_err(MononokeError::from)
+                } else {
+                    Ok(Some(root_deleted_manifest_id.deleted_manifest_id().clone()))
+                }
+            }
+            .boxed()
+        };
+        let deleted_manifest_id = deleted_manifest_id.shared();
+        Self {
+            changeset,
+            path,
+            unode_id,
+            deleted_manifest_id,
+        }
+    }
+
+    pub(crate) fn new(changeset: ChangesetContext, path: impl Into<MononokePath>) -> Self {
+        Self::new_impl(changeset, path, None, None)
+    }
+
+    pub(crate) fn new_with_unode_entry(
+        changeset: ChangesetContext,
+        path: impl Into<MononokePath>,
+        unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
+    ) -> Self {
+        Self::new_impl(changeset, path, Some(unode_entry), None)
+    }
+
+    pub(crate) fn new_with_deleted_manifest(
+        changeset: ChangesetContext,
+        path: impl Into<MononokePath>,
+        deleted_manifest: DeletedManifestId,
+    ) -> Self {
+        Self::new_impl(changeset, path, None, Some(deleted_manifest))
     }
 
     /// The `RepoContext` for this query.
@@ -295,6 +377,54 @@ impl ChangesetPathHistoryContext {
     /// The path for this query.
     pub fn path(&self) -> &MononokePath {
         &self.path
+    }
+
+    async fn unode_id(&self) -> Result<Option<Entry<ManifestUnodeId, FileUnodeId>>, MononokeError> {
+        self.unode_id.clone().await
+    }
+
+    async fn deleted_manifest_id(&self) -> Result<Option<DeletedManifestId>, MononokeError> {
+        self.deleted_manifest_id.clone().await
+    }
+
+    /// Returns the last commit that modified this path.  If there is nothing
+    /// at this path, returns `None`.
+    pub async fn last_modified(&self) -> Result<Option<ChangesetContext>, MononokeError> {
+        match self.unode_id().await? {
+            Some(Entry::Tree(manifest_unode_id)) => {
+                let ctx = self.changeset.ctx();
+                let repo = self.changeset.repo().blob_repo();
+                let manifest_unode = manifest_unode_id.load(ctx, repo.blobstore()).await?;
+                let cs_id = manifest_unode.linknode().clone();
+                Ok(Some(ChangesetContext::new(self.repo().clone(), cs_id)))
+            }
+            Some(Entry::Leaf(file_unode_id)) => {
+                let ctx = self.changeset.ctx();
+                let repo = self.changeset.repo().blob_repo();
+                let file_unode = file_unode_id.load(ctx, repo.blobstore()).await?;
+                let cs_id = file_unode.linknode().clone();
+                Ok(Some(ChangesetContext::new(self.repo().clone(), cs_id)))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// Returns the last commit that deleted this path.  If something exists
+    /// at this path, or nothing ever existed at this path, returns `None`.
+    pub async fn last_deleted(&self) -> Result<Option<ChangesetContext>, MononokeError> {
+        match self.deleted_manifest_id().await? {
+            Some(deleted_manifest_id) => {
+                let ctx = self.changeset.ctx();
+                let repo = self.changeset.repo().blob_repo();
+                let deleted_manifest = deleted_manifest_id.load(ctx, repo.blobstore()).await?;
+                if let Some(cs_id) = deleted_manifest.linknode() {
+                    Ok(Some(ChangesetContext::new(self.repo().clone(), *cs_id)))
+                } else {
+                    Ok(None)
+                }
+            }
+            None => Ok(None),
+        }
     }
 
     async fn blame_impl(&self) -> Result<(CompatBlame, FileUnodeId), MononokeError> {
@@ -589,7 +719,7 @@ impl ChangesetPathHistoryContext {
         )
         .await
         .map_err(|error| match error {
-            FastlogError::InternalError(e) => MononokeError::from(format_err!(e)),
+            FastlogError::InternalError(e) => MononokeError::from(anyhow!(e)),
             FastlogError::DeriveError(e) => MononokeError::from(e),
             FastlogError::LoadableError(e) => MononokeError::from(e),
             FastlogError::Error(e) => MononokeError::from(e),
