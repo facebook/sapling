@@ -52,6 +52,9 @@ def print_diagnostic_info(
         # and will continue reporting the rest of the rage data.
         print_rpm_version(out)
     print_os_version(out)
+    if sys.platform == "darwin":
+        cpu = "arm64" if util_mod.is_apple_silicon() else "x86_64"
+        out.write(f"Architecture            : {cpu}\n".encode())
 
     health_status = instance.check_health()
     if health_status.is_healthy():
