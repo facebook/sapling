@@ -1258,7 +1258,7 @@ class ChownCmd(Subcmd):
             help="Are redirections also chowned",
         )
 
-    def resolve_uid(self, uid_str) -> int:
+    def resolve_uid(self, uid_str: str) -> int:
         try:
             return int(uid_str)
         except ValueError:

@@ -391,7 +391,7 @@ def run(
     mysql_schemas,
     devdb: str,
     discovered_tests,
-):
+) -> None:
     manifest = os.path.abspath(manifest)
     if is_libfb_present():
         from eden.mononoke.tests.integration.facebook.lib_buck import find_buck_out
