@@ -63,9 +63,7 @@ def print_diagnostic_info(
         out.write(b"uptime: ")
         instance.do_uptime(pretty=False, out=out)
 
-    if sys.platform != "win32":
-        # TODO(zeyi): fix `eden doctor` on Windows
-        print_eden_doctor_report(instance, out)
+    print_eden_doctor_report(instance, out)
 
     processor = instance.get_config_value("rage.reporter", default="")
     if not dry_run and processor:
@@ -89,7 +87,7 @@ def print_diagnostic_info(
         out.write(b"\nMount point info for path %s:\n" % checkout_path.encode())
         for k, v in instance.get_checkout_info(checkout_path).items():
             out.write("{:>20} : {}\n".format(k, v).encode())
-    if health_status.is_healthy() and sys.platform != "win32":
+    if health_status.is_healthy():
         # TODO(zeyi): enable this when memory usage collecting is implemented on Windows
         with io.StringIO() as stats_stream:
             stats_mod.do_stats_general(
@@ -305,9 +303,6 @@ def print_edenfs_process_tree(pid: int, out: IO[bytes]) -> None:
 
 
 def print_eden_redirections(instance: EdenInstance, out: IO[bytes]) -> None:
-    if sys.platform == "win32":
-        # TODO(zeyi): fix this once eden redirect is working on Windows
-        return
     try:
         section_title("EdenFS redirections:", out)
         checkouts = instance.get_checkouts()
