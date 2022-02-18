@@ -182,7 +182,7 @@ class WindowsSocketHandle(object):
                     "Windows UDS: Connection refused",
                 )
             elif errcode == WSAETIMEDOUT:
-                raise socket.timeout()
+                raise TimeoutError(errno.ETIMEDOUT, "Windows UDS: Socket timeout")
             elif errcode == WSAEWOULDBLOCK:
                 raise OSError(
                     errno.EWOULDBLOCK,
