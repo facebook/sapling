@@ -21,31 +21,41 @@ def check_using_nfs_path(tracker: ProblemTracker, mount_path: Path) -> None:
     check_shared_path(tracker, mount_path)
 
 
+class StateDirOnNFS(Problem):
+    def __init__(self, instance: EdenInstance) -> None:
+        msg = (
+            f"Eden's state directory is on an NFS file system: {instance.state_dir}\n"
+            f"  This will likely cause performance problems and/or other errors."
+        )
+
+        # On FB devservers the default Eden state directory path is ~/local/.eden
+        # Normally ~/local is expected to be a symlink to local disk (for users who are
+        # still using NFS home directories in the first place).  The most common cause of
+        # the Eden state directory being on NFS is for users that somehow have a regular
+        # directory at ~/local rather than a symlink.  Suggest checking this as a
+        # remediation.
+        remediation = (
+            "The most common cause for this is if your ~/local symlink does not point "
+            "to local disk.  Make sure that ~/local is a symlink pointing to local disk "
+            "and then restart Eden."
+        )
+        super().__init__(msg, remediation)
+
+
 def check_eden_directory(tracker: ProblemTracker, instance: EdenInstance) -> None:
     if not is_nfs_mounted(str(instance.state_dir)):
         return
 
-    msg = (
-        f"Eden's state directory is on an NFS file system: {instance.state_dir}\n"
-        f"  This will likely cause performance problems and/or other errors."
-    )
-
-    # On FB devservers the default Eden state directory path is ~/local/.eden
-    # Normally ~/local is expected to be a symlink to local disk (for users who are
-    # still using NFS home directories in the first place).  The most common cause of
-    # the Eden state directory being on NFS is for users that somehow have a regular
-    # directory at ~/local rather than a symlink.  Suggest checking this as a
-    # remediation.
-    remediation = (
-        "The most common cause for this is if your ~/local symlink does not point "
-        "to local disk.  Make sure that ~/local is a symlink pointing to local disk "
-        "and then restart Eden."
-    )
-    tracker.add_problem(Problem(msg, remediation))
+    tracker.add_problem(StateDirOnNFS(instance))
 
 
 def get_shared_path(mount_path: Path) -> Path:
     return mount_path / ".hg" / "sharedpath"
+
+
+class UnreadableSharedpath(Problem):
+    def __init__(self, e: Exception) -> None:
+        super().__init__(f"Failed to read .hg/sharedpath: {e}")
 
 
 def read_shared_path(tracker: ProblemTracker, shared_path: Path) -> str:
@@ -54,8 +64,18 @@ def read_shared_path(tracker: ProblemTracker, shared_path: Path) -> str:
     except (FileNotFoundError, IsADirectoryError):
         raise
     except Exception as e:
-        tracker.add_problem(Problem(f"Failed to read .hg/sharedpath: {e}"))
+        tracker.add_problem(UnreadableSharedpath(e))
         raise
+
+
+class MercurialDataOnNFS(Problem):
+    def __init__(self, shared_path: Path, dst_shared_path: str) -> None:
+        msg = (
+            f"The Mercurial data directory for {shared_path} is at"
+            f" {dst_shared_path} which is on a NFS filesystem."
+            f" Accessing files and directories in this repository will be slow."
+        )
+        super().__init__(msg, severity=ProblemSeverity.ADVICE)
 
 
 def check_shared_path(tracker: ProblemTracker, mount_path: Path) -> None:
@@ -66,13 +86,7 @@ def check_shared_path(tracker: ProblemTracker, mount_path: Path) -> None:
         return
 
     if is_nfs_mounted(dst_shared_path):
-        msg = (
-            f"The Mercurial data directory for {shared_path} is at"
-            f" {dst_shared_path} which is on a NFS filesystem."
-            f" Accessing files and directories in this repository will be slow."
-        )
-        problem = Problem(msg, severity=ProblemSeverity.ADVICE)
-        tracker.add_problem(problem)
+        tracker.add_problem(MercurialDataOnNFS(shared_path, dst_shared_path))
 
 
 def fstype_for_path(path: str) -> str:
@@ -138,6 +152,11 @@ def get_mount_pts_set(
     return {get_mountpt(eden_location) for eden_location in eden_locations}
 
 
+class LowDiskSpace(Problem):
+    def __init__(self, message: str, severity: ProblemSeverity) -> None:
+        super().__init__(message, severity=severity)
+
+
 def check_disk_usage(
     tracker: ProblemTracker,
     mount_paths: List[str],
@@ -173,7 +192,7 @@ def check_disk_usage(
 
             if avail <= prob_error_absolute_space_used_threshold:
                 tracker.add_problem(
-                    Problem(
+                    LowDiskSpace(
                         f"{eden_mount_pt} "
                         f"has only {str(avail)} bytes available. "
                         f"{message}",
@@ -182,7 +201,7 @@ def check_disk_usage(
                 )
             elif used_percent >= prob_advice_space_used_ratio_threshold:
                 tracker.add_problem(
-                    Problem(
+                    LowDiskSpace(
                         f"{eden_mount_pt} "
                         f"is {used_percent:.2%} full. "
                         f"{message}",

@@ -401,6 +401,56 @@ class EdenfsUnexpectedStatus(Problem):
         super().__init__(msg, remediation=remediation)
 
 
+class CheckoutIsStartingUp(Problem):
+    def __init__(self, checkout: CheckoutInfo) -> None:
+        super().__init__(
+            f"Checkout {checkout.path} is currently starting up.",
+            "If this checkout does not successfully finish starting soon, "
+            'try running "eden restart"',
+            severity=ProblemSeverity.ADVICE,
+        )
+
+
+class CheckoutIsShuttingDown(Problem):
+    def __init__(self, checkout: CheckoutInfo) -> None:
+        super().__init__(
+            f"Checkout {checkout.path} is currently shutting down.",
+            "If this checkout does not successfully finish shutting down soon, "
+            'try running "eden restart"',
+        )
+
+
+class CheckoutFailedDuetoFuseError(Problem):
+    def __init__(self, checkout: CheckoutInfo) -> None:
+        super().__init__(
+            f"Checkout {checkout.path} encountered a FUSE error while mounting"
+        )
+
+
+class CheckoutInUnknownState(Problem):
+    def __init__(self, checkout: CheckoutInfo) -> None:
+        super().__init__(
+            f"edenfs reports that checkout {checkout.path} is in "
+            "unknown state {checkout.state}"
+        )
+
+
+class NestedCheckout(Problem):
+    def __init__(
+        self, checkout: CheckoutInfo, existing_checkout: config_mod.EdenCheckout
+    ) -> None:
+        super().__init__(
+            f"""\
+edenfs reports that checkout {checkout.path} is nested within an existing checkout {existing_checkout.path}
+Nested checkouts are usually not intended and can cause spurious behavior.\n"""
+        )
+
+
+class ConfigurationParsingProblem(Problem):
+    def __init__(self, checkout: CheckoutInfo, ex: Exception) -> None:
+        super().__init__(f"error parsing the configuration for {checkout.path}: {ex}")
+
+
 def check_mount(
     out: ui.Output,
     tracker: ProblemTracker,
@@ -427,53 +477,27 @@ def check_mount(
         MountState.INITIALIZED,
         MountState.STARTING,
     ):
-        tracker.add_problem(
-            Problem(
-                f"Checkout {checkout.path} is currently starting up.",
-                "If this checkout does not successfully finish starting soon, "
-                'try running "eden restart"',
-                severity=ProblemSeverity.ADVICE,
-            )
-        )
+        tracker.add_problem(CheckoutIsStartingUp(checkout))
     elif checkout.state in (
         MountState.SHUTTING_DOWN,
         MountState.SHUT_DOWN,
         MountState.DESTROYING,
     ):
-        tracker.add_problem(
-            Problem(
-                f"Checkout {checkout.path} is currently shutting down.",
-                "If this checkout does not successfully finish shutting down soon, "
-                'try running "eden restart"',
-            )
-        )
+        tracker.add_problem(CheckoutIsShuttingDown(checkout))
     elif checkout.state == MountState.FUSE_ERROR:
         # TODO: We could potentially try automatically unmounting and remounting.
         # In general mounts shouldn't remain in this state for long, so we probably
         # don't need to worry too much about this case.
-        tracker.add_problem(
-            Problem(f"Checkout {checkout.path} encountered a FUSE error while mounting")
-        )
+        tracker.add_problem(CheckoutFailedDuetoFuseError(checkout))
     else:
-        tracker.add_problem(
-            Problem(
-                f"edenfs reports that checkout {checkout.path} is in "
-                "unknown state {checkout.state}"
-            )
-        )
+        tracker.add_problem(CheckoutInUnknownState(checkout))
     # Check if this checkout is nested inside another one
     existing_checkout, rel_path = config_mod.detect_nested_checkout(
         checkout.path,
         instance,
     )
     if existing_checkout is not None and rel_path is not None:
-        tracker.add_problem(
-            Problem(
-                f"""\
-edenfs reports that checkout {checkout.path} is nested within an existing checkout {existing_checkout.path}
-Nested checkouts are usually not intended and can cause spurious behavior.\n"""
-            )
-        )
+        tracker.add_problem(NestedCheckout(checkout, existing_checkout))
 
 
 def check_mount_overlay_type(
@@ -502,9 +526,7 @@ def check_running_mount(
     try:
         config = checkout.get_config()
     except Exception as ex:
-        tracker.add_problem(
-            Problem(f"error parsing the configuration for {checkout_info.path}: {ex}")
-        )
+        tracker.add_problem(ConfigurationParsingProblem(checkout_info, ex))
         # Just skip the remaining checks.
         # Most of them rely on values from the configuration.
         return
@@ -698,6 +720,11 @@ the old directory from before the Eden checkouts were mounted.
     return StaleWorkingDirectory(msg)
 
 
+class OutOfDateVersion(Problem):
+    def __init__(self, help_string: str) -> None:
+        super().__init__(help_string, severity=ProblemSeverity.ADVICE)
+
+
 def check_edenfs_version(tracker: ProblemTracker, instance: EdenInstance) -> None:
     def date_from_version(version: str) -> date:
         return datetime.strptime(version, "%Y%m%d").date()
@@ -742,4 +769,4 @@ but the version of EdenFS that is currently running is:
 Consider running `edenfsctl restart --graceful` to migrate to the newer version,
 which may have important bug fixes or performance improvements.
 """
-    tracker.add_problem(Problem(dedent(help_string), severity=ProblemSeverity.ADVICE))
+    tracker.add_problem(OutOfDateVersion(dedent(help_string)))

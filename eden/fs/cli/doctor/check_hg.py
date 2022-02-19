@@ -23,6 +23,13 @@ from eden.fs.cli.doctor.problem import (
 )
 from eden.fs.cli.util import get_tip_commit_hash
 
+try:
+    from .facebook import reclone_remediation
+except ImportError:
+
+    def reclone_remediation(checkout_path: Path) -> str:
+        return ""
+
 
 class HgChecker:
     errors: List[str] = []
@@ -329,6 +336,16 @@ class AbandonedTransactionChecker(HgChecker):
         self.backing_repo._run_hg(["recover"])
 
 
+class PreviousEdenFSCrashedDuringCheckout(Problem):
+    def __init__(self, checkout: EdenCheckout, ex: InProgressCheckoutError) -> None:
+        super().__init__(
+            f"{str(ex)}",
+            remediation=f"""\
+EdenFS was killed or crashed during a checkout/update operation. This is unfortunately not recoverable at this time and recloning the repository is necessary.
+{reclone_remediation(checkout.path)}""",
+        )
+
+
 def check_in_progress_checkout(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
     try:
         checkout.get_snapshot()
@@ -336,21 +353,7 @@ def check_in_progress_checkout(tracker: ProblemTracker, checkout: EdenCheckout) 
         if proc_utils.new().is_edenfs_process(ex.pid):
             return
 
-        try:
-            from .facebook import reclone_remediation
-        except ImportError:
-
-            def reclone_remediation(checkout_path: Path) -> str:
-                return ""
-
-        tracker.add_problem(
-            Problem(
-                f"{str(ex)}",
-                remediation=f"""\
-EdenFS was killed or crashed during a checkout/update operation. This is unfortunately not recoverable at this time and recloning the repository is necessary.
-{reclone_remediation(checkout.path)}""",
-            )
-        )
+        tracker.add_problem(PreviousEdenFSCrashedDuringCheckout(checkout, ex))
 
 
 def check_hg(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
