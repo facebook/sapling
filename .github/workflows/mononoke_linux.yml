@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
+    - name: Update system package info
+      run: sudo apt-get update
     - name: Install system deps
       run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive mononoke
     - name: Install Rust Stable
@@ -79,10 +81,10 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests wangle
     - name: Fetch fbthrift
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests fbthrift
-    - name: Fetch rust-shed
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests rust-shed
     - name: Fetch fb303
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests fb303
+    - name: Fetch rust-shed
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests rust-shed
     - name: Build ninja
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests ninja
     - name: Build cmake
@@ -139,10 +141,10 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests wangle
     - name: Build fbthrift
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests fbthrift
-    - name: Build rust-shed
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests rust-shed
     - name: Build fb303
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests fb303
+    - name: Build rust-shed
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests rust-shed
     - name: Build mononoke
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --src-dir=. mononoke  --project-install-prefix mononoke:/usr/local
     - name: Copy artifacts
