@@ -168,6 +168,9 @@ def _hg_runner(
             *extra_args,
         ]
 
+        if os.environ.get("GETDEPS_INSTALL_DIR", None):
+            args.append("--getdeps-build")
+
         if chg:
             args.append("--chg")
 
@@ -193,6 +196,7 @@ def _hg_runner(
         stdin = None
         stderr: Any = subprocess.DEVNULL if quiet else sys.stderr.buffer
 
+        print(f"Running {args}")
         subprocess.check_call(
             args,
             # pyre-fixme[6]: For 2nd param expected `Union[None, PathLike[bytes],
