@@ -368,6 +368,7 @@ impl HgRepoContext {
         for (node, revlog_cs) in changesets {
             uploaded_changesets = upload_changeset(
                 self.ctx().clone(),
+                self.config().infinitepush.commit_scribe_category.clone(),
                 self.blob_repo().clone(),
                 self.ctx().scuba().clone(),
                 node,
