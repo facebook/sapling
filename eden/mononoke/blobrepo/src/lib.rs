@@ -8,6 +8,7 @@
 #![deny(warnings)]
 
 mod repo;
+pub mod scribe;
 
 pub use crate::repo::{save_bonsai_changesets, AsBlobRepo, BlobRepo, BlobRepoInner};
 pub use changeset_fetcher::ChangesetFetcher;

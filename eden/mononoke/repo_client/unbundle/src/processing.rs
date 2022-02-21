@@ -11,11 +11,9 @@ use crate::{
     PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
 use anyhow::{anyhow, Context, Error, Result};
+use blobrepo::scribe::{log_commits_to_scribe_raw, ScribeCommitInfo};
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplay};
-use bookmarks_movement::{
-    log_commits_to_scribe, BookmarkMovementError, BookmarkUpdatePolicy, BookmarkUpdateTargets,
-    ScribeCommitInfo,
-};
+use bookmarks_movement::{BookmarkMovementError, BookmarkUpdatePolicy, BookmarkUpdateTargets};
 use bytes::Bytes;
 use context::CoreContext;
 use hooks::HookManager;
@@ -234,7 +232,7 @@ async fn run_push(
         maybe_bookmark = Some(bookmark_push.name);
     }
 
-    log_commits_to_scribe(
+    log_commits_to_scribe_raw(
         ctx,
         repo,
         maybe_bookmark.as_ref(),
@@ -305,7 +303,7 @@ async fn run_infinitepush(
         None => None,
     };
 
-    log_commits_to_scribe(
+    log_commits_to_scribe_raw(
         ctx,
         repo,
         bookmark.as_ref(),
@@ -377,7 +375,7 @@ async fn run_pushrebase(
             .await?;
             let new_commits: Vec<ChangesetId> =
                 pushrebased_changesets.iter().map(|p| p.id_new).collect();
-            log_commits_to_scribe(
+            log_commits_to_scribe_raw(
                 ctx,
                 repo,
                 Some(&bookmark),
@@ -423,7 +421,7 @@ async fn run_pushrebase(
             )
             .await
             .context("While doing a force pushrebase")?;
-            log_commits_to_scribe(
+            log_commits_to_scribe_raw(
                 ctx,
                 repo,
                 Some(&bookmark),

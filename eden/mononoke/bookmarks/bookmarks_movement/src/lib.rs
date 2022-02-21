@@ -40,7 +40,6 @@ mod update;
 pub use hooks::{CrossRepoPushSource, HookRejection};
 pub use pushrebase::PushrebaseOutcome;
 
-pub use crate::affected_changesets::{log_commits_to_scribe, ScribeCommitInfo};
 pub use crate::create::CreateBookmarkOp;
 pub use crate::delete::DeleteBookmarkOp;
 pub use crate::hook_running::run_hooks;
