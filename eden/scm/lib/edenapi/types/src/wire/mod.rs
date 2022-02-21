@@ -254,21 +254,22 @@ impl<W: ToApi> ToApi for Option<W> {
 #[serde(transparent)]
 pub struct WireMap<K, V>(Vec<(K, V)>);
 
-impl<K: ToWire + Eq + std::hash::Hash, V: ToWire> ToWire for HashMap<K, V> {
+// This is a bit more restrictive than usual hashmap, as we require Ord
+// That is because in tests we want the order of keys to be consistent
+impl<K: ToWire + Eq + std::hash::Hash + Ord, V: ToWire> ToWire for HashMap<K, V> {
     type Wire = WireMap<<K as ToWire>::Wire, <V as ToWire>::Wire>;
 
     fn to_wire(self) -> Self::Wire {
-        WireMap(
-            self.into_iter()
-                .map(|(k, v)| (k.to_wire(), v.to_wire()))
-                .collect(),
-        )
+        let iter = self.into_iter();
+        #[cfg(test)]
+        let iter = std::collections::BTreeMap::from_iter(iter).into_iter();
+        WireMap(iter.map(|(k, v)| (k.to_wire(), v.to_wire())).collect())
     }
 }
 
 impl<K: ToApi, V: ToApi> ToApi for WireMap<K, V>
 where
-    <K as ToApi>::Api: Eq + std::hash::Hash,
+    <K as ToApi>::Api: Eq + std::hash::Hash + Ord,
 {
     type Api = HashMap<<K as ToApi>::Api, <V as ToApi>::Api>;
     type Error = WireToApiConversionError;
