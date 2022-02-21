@@ -1556,7 +1556,7 @@ impl Default for SegmentedChangelogConfig {
         SegmentedChangelogConfig {
             enabled: false,
             master_bookmark: None,
-            tailer_update_period: Some(Duration::from_secs(60)),
+            tailer_update_period: Some(Duration::from_secs(45)),
             skip_dag_load_at_startup: false,
             reload_dag_save_period: Some(Duration::from_secs(3600)),
             update_to_master_bookmark_period: Some(Duration::from_secs(60)),
