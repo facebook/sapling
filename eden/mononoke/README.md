@@ -21,3 +21,11 @@ where we need to shore things up are:
 * Production blobstore storage backends (e.g. something like S3).  We provide SQL (on sqlite) and File System backends currently in OSS.
 
 Linux is Mononoke's primary target plaform with OSS CI also running on MacOS. Other Unix-like OSes may be supported in the future.
+
+## Subsystem Docs
+
+Most of our documentation is in internal systems, however a few subsystems have in-repo markdown docs available:
+
+* [Integration Tests](tests/integration/README.md)
+* [Packblob Storage](blobstore/packblob/README.md) how Mononoke compressed store works
+* [Graph Walker](walker/src/README.md) used to check/scrub storage

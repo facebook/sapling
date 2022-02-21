@@ -37,7 +37,7 @@ as per the [Build Notes](#Build_Notes)
 
 # Mononoke
 
-Mononoke is the server-side component of EdenSCM.
+[Mononoke](eden/mononoke/README.md) is the server-side component of EdenSCM.
 
 Despite having originally evolved from Mercurial, EdenSCM is not a distributed
 source control system.  In order to support massive repositories, not all
@@ -49,11 +49,8 @@ necessary, and then fetch additional data from the server as it is needed.
 
 The Mononoke code lives under `eden/mononoke`
 
-Mononoke currently builds and runs only on Linux, and is not yet buildable
-outside of Facebook's internal environment.  Mononoke is built using 
-Rust's `cargo` build system however to prepare and install all the dependencies 
+Mononoke is built using Rust's `cargo` build system however to prepare and install all the dependencies 
 its recommended to start off with a getdeps.py build as per the [Build Notes](#Build_Notes)
-
 
 # EdenFS
 
