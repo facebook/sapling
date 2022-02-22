@@ -215,5 +215,5 @@ where
 macro_rules! dependencies {
     () => { () };
     ($dep:ty) => { ( $dep , () ) };
-    ($dep:ty, $( $rest:tt )*) => { ( $dep , deps!($( $rest )*) ) };
+    ($dep:ty, $( $rest:tt )*) => { ( $dep , dependencies!($( $rest )*) ) };
 }
