@@ -5,53 +5,38 @@
  * GNU General Public License version 2.
  */
 
-use std::{ops::Range, sync::Arc};
+use std::sync::Arc;
 
+use crate::utils;
+use crate::MononokeSQLBlobGCArgs;
 use anyhow::{anyhow, Context, Result};
-use clap_old::{App, Arg, ArgMatches, SubCommand};
-use fbinit::FacebookInit;
+use clap::Parser;
 use futures::{
     channel::mpsc,
     sink::SinkExt,
     stream::{self, StreamExt, TryStreamExt},
 };
+use mononoke_app::MononokeApp;
 use retry::retry;
 use slog::{info, Logger};
 
 use sqlblob::Sqlblob;
 
-pub const MARK_SAFE: &str = "mark";
-const ARG_INITIAL_GENERATION_ONLY: &str = "initial-generation-only";
-const ARG_SKIP_INITIAL_GENERATION: &str = "skip-initial-generation";
-const ARG_SKIP_INLINE_SMALL_VALUES: &str = "skip-inline-small-values";
-
 const BASE_RETRY_DELAY_MS: u64 = 1000;
 const RETRIES: usize = 3;
 
-pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
-    SubCommand::with_name(MARK_SAFE)
-        .about("mark referenced blobs as not safe to delete")
-        .arg(
-            Arg::with_name(ARG_INITIAL_GENERATION_ONLY)
-                .long(ARG_INITIAL_GENERATION_ONLY)
-                .takes_value(false)
-                .required(false)
-                .help("Only set generation on blobs that have no generation set yet. Do not do a full mark.")
-        )
-        .arg(
-            Arg::with_name(ARG_SKIP_INITIAL_GENERATION)
-                .long(ARG_SKIP_INITIAL_GENERATION)
-                .takes_value(false)
-                .required(false)
-                .help("Only do the mark; do not set generation on blobs with no generation set yet.")
-        )
-        .arg(
-            Arg::with_name(ARG_SKIP_INLINE_SMALL_VALUES)
-                .long(ARG_SKIP_INLINE_SMALL_VALUES)
-                .takes_value(false)
-                .required(false)
-                .help("Only set the generation, don't inline small values")
-        )
+/// mark referenced blobs as not safe to delete
+#[derive(Parser)]
+pub struct CommandArgs {
+    /// Only set generation on blobs that have no generation set yet. Do not do a full mark.
+    #[clap(long)]
+    initial_generation_only: bool,
+    /// Only do the mark; do not set generation on blobs with no generation set yet.
+    #[clap(long)]
+    skip_initial_generation: bool,
+    /// Only set the generation, don't inline small values
+    #[clap(long)]
+    skip_inline_small_values: bool,
 }
 
 async fn handle_one_key(
@@ -90,15 +75,16 @@ async fn handle_initial_generation(store: &Sqlblob, shard: usize, logger: &Logge
     Ok(())
 }
 
-pub async fn subcommand_mark<'a>(
-    _fb: FacebookInit,
-    logger: Logger,
-    sub_matches: &'a ArgMatches<'_>,
-    max_parallelism: usize,
-    sqlblob: Sqlblob,
-    shard_range: Range<usize>,
-) -> Result<()> {
-    if !sub_matches.is_present(ARG_SKIP_INITIAL_GENERATION) {
+pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
+    let common_args: MononokeSQLBlobGCArgs = app.args()?;
+
+    let logger: Logger = app.logger().clone();
+
+    let max_parallelism: usize = common_args.scheduled_max;
+
+    let (sqlblob, shard_range) = utils::get_sqlblob_and_shard_range(&app).await?;
+
+    if !args.skip_initial_generation {
         info!(logger, "Starting initial generation set");
         let set_initial_generation_futures: Vec<_> = shard_range
             .clone()
@@ -110,14 +96,14 @@ pub async fn subcommand_mark<'a>(
         info!(logger, "Completed initial generation set");
     }
 
-    if sub_matches.is_present(ARG_INITIAL_GENERATION_ONLY) {
+    if args.initial_generation_only {
         return Ok(());
     }
 
     let sqlblob = Arc::new(sqlblob);
     let logger = Arc::new(logger);
 
-    let inline_small_values = !sub_matches.is_present(ARG_SKIP_INLINE_SMALL_VALUES);
+    let inline_small_values = !args.skip_inline_small_values;
 
     // Hold mark generation constant for run
     let mark_generation = sqlblob.get_mark_generation();

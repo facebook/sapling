@@ -5,23 +5,20 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashMap, ops::Range};
+use std::collections::HashMap;
 
+use crate::utils;
+use crate::MononokeSQLBlobGCArgs;
 use anyhow::Result;
 use bytesize::ByteSize;
-use clap_old::{App, ArgMatches, SubCommand};
+use clap::Parser;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::TryFutureExt;
-use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
+use mononoke_app::MononokeApp;
 
-use sqlblob::Sqlblob;
-
-pub const LOG_SIZE: &str = "generation-size";
-
-pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
-    SubCommand::with_name(LOG_SIZE).about("measure generation sizes")
-}
+/// measure generation sizes
+#[derive(Parser)]
+pub struct CommandArgs {}
 
 fn print_sizes(sizes: &HashMap<Option<u64>, u64>) {
     let generations = {
@@ -43,14 +40,15 @@ fn print_sizes(sizes: &HashMap<Option<u64>, u64>) {
     }
 }
 
-pub async fn subcommand_log_size(
-    _logger: Logger,
-    _sub_matches: &'_ ArgMatches<'_>,
-    max_parallelism: usize,
-    sqlblob: Sqlblob,
-    shard_range: Range<usize>,
-    scuba_sample_builder: MononokeScubaSampleBuilder,
-) -> Result<()> {
+pub async fn run(app: MononokeApp, _args: CommandArgs) -> Result<()> {
+    let common_args: MononokeSQLBlobGCArgs = app.args()?;
+
+    let max_parallelism: usize = common_args.scheduled_max;
+
+    let (sqlblob, shard_range) = utils::get_sqlblob_and_shard_range(&app).await?;
+
+    let scuba_sample_builder = app.environment().scuba_sample_builder.clone();
+
     let shard_sizes: Vec<(usize, HashMap<Option<u64>, (u64, u64)>)> = stream::iter(shard_range)
         .map(|shard| {
             sqlblob
