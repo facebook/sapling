@@ -45,11 +45,10 @@ setup configuration
   $ blobimport repo-hg/.hg repo
 
 build the skiplist that will be used to slice the repository
-  $ mononoke_admin skiplist build skiplist_4 --exponent 2
-  *] using repo "repo" repoid RepositoryId(0) (glob)
+  $ mononoke_newadmin skiplist -R repo -k skiplist_4 build --exponent 2
   *Reloading redacted config from configerator* (glob)
   *] creating a skiplist from scratch (glob)
-  *] build 5 skiplist nodes (glob)
+  *] built 5 skiplist nodes (glob)
 
 enable some more derived data types for normal usage and backfilling
   $ SKIPLIST_INDEX_BLOBSTORE_KEY=skiplist_4 \

@@ -12,4 +12,5 @@ mononoke_app::subcommands! {
     mod fetch;
     mod list_repos;
     mod repo_info;
+    mod skiplist;
 }

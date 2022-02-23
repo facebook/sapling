@@ -9,8 +9,11 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
-use bookmarks::Bookmarks;
+use bookmarks::{self, Bookmarks};
+use changeset_fetcher::ChangesetFetcher;
+use changesets::Changesets;
 use ephemeral_blobstore::RepoEphemeralStore;
+use phases::Phases;
 use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
 
@@ -41,4 +44,13 @@ pub struct AdminRepo {
 
     #[facet]
     pub repo_ephemeral_store: RepoEphemeralStore,
+
+    #[facet]
+    pub changeset_fetcher: dyn ChangesetFetcher,
+
+    #[facet]
+    pub changesets: dyn Changesets,
+
+    #[facet]
+    pub phases: dyn Phases,
 }
