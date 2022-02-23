@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.51"
-clap = { version = "3.0.9", features = ["derive", "regex", "unicode", "wrap_help"] }
+clap = { version = "3.1.2", features = ["derive", "regex", "unicode", "wrap_help"] }
 environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

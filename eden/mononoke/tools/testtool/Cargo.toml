@@ -17,7 +17,7 @@ bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
-clap = { version = "3.0.9", features = ["derive", "regex", "unicode", "wrap_help"] }
+clap = { version = "3.1.2", features = ["derive", "regex", "unicode", "wrap_help"] }
 cmdlib_displaying = { version = "0.1.0", path = "../../cmdlib/displaying" }
 cmdlib_scrubbing = { version = "0.1.0", path = "../../cmdlib/scrubbing" }
 context = { version = "0.1.0", path = "../../server/context" }
