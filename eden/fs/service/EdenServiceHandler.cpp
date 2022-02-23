@@ -1503,8 +1503,8 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
                            // check for exceptions. if found, return EdenError
                            // early
                            if (tryMetadata.hasException()) {
-                             file_res.set_error(
-                                 newEdenError(tryMetadata.exception()));
+                             file_res.error_ref() =
+                                 newEdenError(tryMetadata.exception());
                            } else { /* No exceptions, fill in data */
                              FileAttributeData file_data;
                              const auto& metadata = tryMetadata.value();
