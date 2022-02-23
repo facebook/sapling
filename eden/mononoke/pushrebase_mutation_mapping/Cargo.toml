@@ -27,6 +27,7 @@ borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"
+metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }

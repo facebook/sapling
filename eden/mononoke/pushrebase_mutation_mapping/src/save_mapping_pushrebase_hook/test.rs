@@ -12,6 +12,7 @@ use borrowed::borrowed;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use maplit::hashset;
+use metaconfig_types::PushrebaseFlags;
 use mononoke_types_mocks::repo;
 use pushrebase::do_pushrebase_bonsai;
 use test_repo_factory::TestRepoFactory;
@@ -47,7 +48,10 @@ async fn pushrebase_saves_mapping(fb: FacebookInit) -> Result<()> {
     do_pushrebase_bonsai(
         ctx,
         repo,
-        &Default::default(),
+        &PushrebaseFlags {
+            rewritedates: false,
+            ..Default::default()
+        },
         &master,
         &hashset![cs.clone()],
         None,
@@ -58,7 +62,10 @@ async fn pushrebase_saves_mapping(fb: FacebookInit) -> Result<()> {
     let rebased = do_pushrebase_bonsai(
         ctx,
         repo,
-        &Default::default(),
+        &PushrebaseFlags {
+            rewritedates: false,
+            ..Default::default()
+        },
         &main,
         &hashset![cs.clone()],
         None,
