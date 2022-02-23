@@ -149,7 +149,6 @@ fn parse_with_repo_definition(
         push,
         pushrebase,
         lfs,
-        wireproto_logging,
         hash_validation_percentage,
         skiplist_index_blobstore_key,
         bundle2_replay_params,
@@ -196,11 +195,6 @@ fn parse_with_repo_definition(
         &named_storage_config
             .ok_or_else(|| anyhow!("missing storage_config from configuration"))?,
     )?;
-
-    let wireproto_logging = wireproto_logging
-        .map(|raw| crate::convert::repo::convert_wireproto_logging_config(raw, get_storage))
-        .transpose()?
-        .unwrap_or_default();
 
     let cache_warmup = cache_warmup.convert()?;
 
@@ -287,7 +281,6 @@ fn parse_with_repo_definition(
         push,
         pushrebase,
         lfs,
-        wireproto_logging,
         hash_validation_percentage,
         readonly,
         redaction,
@@ -460,7 +453,7 @@ mod test {
         PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, RepoClientKnobs,
         SegmentedChangelogConfig, ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig,
         SmallRepoCommitSyncConfig, SourceControlServiceMonitoring, SourceControlServiceParams,
-        UnodeVersion, WireprotoLoggingConfig,
+        UnodeVersion,
     };
     use mononoke_types::MPath;
     use nonzero_ext::nonzero;
@@ -709,10 +702,6 @@ mod test {
             hook_max_file_size=456
             repo_client_use_warm_bookmarks_cache=true
             phabricator_callsign="FBS"
-
-            [wireproto_logging]
-            scribe_category="category"
-            storage_config="main"
 
             [cache_warmup]
             bookmark="master"
@@ -1029,14 +1018,6 @@ mod test {
                     rollout_percentage: 56,
                     generate_lfs_blob_in_hg_sync_job: true,
                 },
-                wireproto_logging: WireprotoLoggingConfig {
-                    scribe_category: Some("category".to_string()),
-                    storage_config_and_threshold: Some((
-                        main_storage_config.clone(),
-                        crate::convert::repo::DEFAULT_ARG_SIZE_THRESHOLD,
-                    )),
-                    local_path: None,
-                },
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
                 redaction: Redaction::Enabled,
@@ -1143,7 +1124,6 @@ mod test {
                 push: Default::default(),
                 pushrebase: Default::default(),
                 lfs: Default::default(),
-                wireproto_logging: Default::default(),
                 hash_validation_percentage: 0,
                 readonly: RepoReadOnly::ReadWrite,
                 redaction: Redaction::Enabled,

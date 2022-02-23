@@ -13,7 +13,7 @@
 mod client;
 mod errors;
 
-pub use client::{fetch_treepack_part_input, gettreepack_entries, RepoClient, WireprotoLogging};
+pub use client::{fetch_treepack_part_input, gettreepack_entries, RepoClient};
 pub use getbundle_response::{
     find_commits_to_send, find_new_draft_commits_and_derive_filenodes_for_public_roots,
 };

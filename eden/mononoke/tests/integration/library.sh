@@ -878,27 +878,6 @@ list_keys_patterns_max=$LIST_KEYS_PATTERNS_MAX
 CONFIG
 fi
 
-if [[ -n "${WIREPROTO_LOGGING_PATH:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
-[wireproto_logging]
-local_path="$WIREPROTO_LOGGING_PATH"
-CONFIG
-
-  if [[ -n "${WIREPROTO_LOGGING_BLOBSTORE:-}" ]]; then
-    cat >> "repos/$reponame/server.toml" <<CONFIG
-storage_config="traffic_replay_blobstore"
-remote_arg_size_threshold=0
-
-[storage.traffic_replay_blobstore.metadata.local]
-local_db_path="$TESTTMP/monsql"
-
-[storage.traffic_replay_blobstore.blobstore.blob_files]
-path = "$WIREPROTO_LOGGING_BLOBSTORE"
-CONFIG
-  fi
-fi
-# path = "$TESTTMP/traffic-replay-blobstore"
-
 if [[ -n "${ONLY_FAST_FORWARD_BOOKMARK:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [[bookmarks]]

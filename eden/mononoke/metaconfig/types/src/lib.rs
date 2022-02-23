@@ -163,9 +163,6 @@ pub struct RepoConfig {
     pub pushrebase: PushrebaseParams,
     /// LFS configuration options
     pub lfs: LfsParams,
-    /// Configuration for logging all wireproto requests with full arguments.
-    /// Used for replay on shadow tier.
-    pub wireproto_logging: WireprotoLoggingConfig,
     /// What percent of read request verifies that returned content matches the hash
     pub hash_validation_percentage: usize,
     /// Should this repo reject write attempts
@@ -1290,33 +1287,6 @@ pub struct CommonCommitSyncConfig {
 pub struct SmallRepoPermanentConfig {
     /// Prefix of the bookmark
     pub bookmark_prefix: AsciiString,
-}
-
-/// Configuration for logging wireproto commands and arguments
-/// This is used by traffic replay script to replay on prod traffic on shadow tier
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct WireprotoLoggingConfig {
-    /// Scribe category to log to
-    pub scribe_category: Option<String>,
-    /// Storage config to store wireproto arguments. The arguments can be quite big,
-    /// so storing separately would make sense.
-    /// Second parameter is threshold. If wireproto arguments are bigger than this threshold
-    /// then they will be stored in remote storage defined by first parameter. Note that if
-    /// `storage_config_and_threshold` is not specified then wireproto wireproto arguments will
-    /// be inlined
-    pub storage_config_and_threshold: Option<(StorageConfig, u64)>,
-    /// Local path where to log replay data that would be sent to Scribe.
-    pub local_path: Option<String>,
-}
-
-impl Default for WireprotoLoggingConfig {
-    fn default() -> Self {
-        Self {
-            scribe_category: None,
-            storage_config_and_threshold: None,
-            local_path: None,
-        }
-    }
 }
 
 /// Source Control Service options

@@ -115,7 +115,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let env = app.environment();
     let mysql_options = env.mysql_options.clone();
     let readonly_storage = env.readonly_storage.clone();
-    let blobstore_options = env.blobstore_options.clone();
 
     let scuba = env.scuba_sample_builder.clone();
     let warm_bookmarks_cache_scuba = env.warm_bookmarks_cache_scuba_sample_builder.clone();
@@ -143,7 +142,6 @@ fn main(fb: FacebookInit) -> Result<()> {
                 fb,
                 common,
                 mononoke,
-                &blobstore_options,
                 &mysql_options,
                 root_log,
                 host_port,

@@ -5,28 +5,23 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-use std::sync::Arc;
-
 use anyhow::{format_err, Context, Error};
 use backsyncer::{open_backsyncer_dbs, TargetRepoDbs};
 use blobrepo::BlobRepo;
-use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
+use blobstore_factory::ReadOnlyStorage;
 use cache_warmup::cache_warmup;
-use cached_config::ConfigStore;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use metaconfig_types::{
-    BackupRepoConfig, CommonCommitSyncConfig, RepoClientKnobs, WireprotoLoggingConfig,
-};
+use metaconfig_types::{BackupRepoConfig, CommonCommitSyncConfig, RepoClientKnobs};
 use mononoke_api::Mononoke;
 use mononoke_types::RepositoryId;
-use repo_client::{MononokeRepo, PushRedirectorArgs, WireprotoLogging};
+use repo_client::{MononokeRepo, PushRedirectorArgs};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info, o, Logger};
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
+use std::collections::HashMap;
 
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
@@ -42,7 +37,6 @@ use crate::errors::ErrorKind;
 struct IncompleteRepoHandler {
     logger: Logger,
     scuba: MononokeScubaSampleBuilder,
-    wireproto_logging: Arc<WireprotoLogging>,
     repo: MononokeRepo,
     preserve_raw_bundle2: bool,
     maybe_incomplete_push_redirector_args: Option<IncompletePushRedirectorArgs>,
@@ -95,7 +89,6 @@ impl IncompleteRepoHandler {
         let IncompleteRepoHandler {
             logger,
             scuba,
-            wireproto_logging,
             repo,
             preserve_raw_bundle2,
             maybe_incomplete_push_redirector_args,
@@ -124,7 +117,6 @@ impl IncompleteRepoHandler {
         Ok(RepoHandler {
             logger,
             scuba,
-            wireproto_logging,
             repo,
             preserve_raw_bundle2,
             maybe_push_redirector_args,
@@ -152,7 +144,6 @@ fn try_find_repo_by_name<'a>(
 pub struct RepoHandler {
     pub logger: Logger,
     pub scuba: MononokeScubaSampleBuilder,
-    pub wireproto_logging: Arc<WireprotoLogging>,
     pub repo: MononokeRepo,
     pub preserve_raw_bundle2: bool,
     pub maybe_push_redirector_args: Option<PushRedirectorArgs>,
@@ -163,11 +154,9 @@ pub struct RepoHandler {
 pub async fn repo_handlers<'a>(
     fb: FacebookInit,
     mononoke: &'a Mononoke,
-    blobstore_options: &'a BlobstoreOptions,
     mysql_options: &'a MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     root_log: &Logger,
-    config_store: &'a ConfigStore,
     scuba: &MononokeScubaSampleBuilder,
 ) -> Result<HashMap<String, RepoHandler>, Error> {
     let futs = mononoke.repos().map(|repo| async move {
@@ -184,7 +173,6 @@ pub async fn repo_handlers<'a>(
         let cache_warmup_params = config.cache_warmup.clone();
         let db_config = config.storage_config.metadata.clone();
         let preserve_raw_bundle2 = config.bundle2_replay_params.preserve_raw_bundle2.clone();
-        let wireproto_logging = config.wireproto_logging.clone();
 
         let common_commit_sync_config = repo
             .live_commit_sync_config()
@@ -212,17 +200,6 @@ pub async fn repo_handlers<'a>(
             readonly_storage.0,
         )?;
 
-        let wireproto_logging = create_wireproto_logging(
-            fb,
-            reponame.clone(),
-            blobstore_options,
-            mysql_options,
-            readonly_storage,
-            wireproto_logging,
-            logger.clone(),
-            config_store,
-        );
-
         let backsyncer_dbs = open_backsyncer_dbs(
             ctx.clone(),
             blobrepo.clone(),
@@ -233,15 +210,15 @@ pub async fn repo_handlers<'a>(
 
         info!(
             logger,
-            "Creating MononokeRepo, CommitSyncMapping, WireprotoLogging, TargetRepoDbs, \
+            "Creating MononokeRepo, CommitSyncMapping, TargetRepoDbs, \
                 WarmBookmarksCache"
         );
 
         let mononoke_repo =
             MononokeRepo::new(ctx.fb, repo.clone(), mysql_options, readonly_storage);
 
-        let (mononoke_repo, wireproto_logging, backsyncer_dbs) =
-            futures::future::try_join3(mononoke_repo, wireproto_logging, backsyncer_dbs).await?;
+        let (mononoke_repo, backsyncer_dbs) =
+            futures::future::try_join(mononoke_repo, backsyncer_dbs).await?;
 
         let maybe_incomplete_push_redirector_args = common_commit_sync_config.and_then({
             cloned!(logger);
@@ -277,7 +254,6 @@ pub async fn repo_handlers<'a>(
             IncompleteRepoHandler {
                 logger,
                 scuba: scuba.clone(),
-                wireproto_logging: Arc::new(wireproto_logging),
                 repo: mononoke_repo,
                 preserve_raw_bundle2,
                 maybe_incomplete_push_redirector_args,
@@ -311,54 +287,4 @@ async fn build_repo_handlers(
         res.insert(reponame, repo_handler);
     }
     Ok(res)
-}
-
-async fn create_wireproto_logging<'a>(
-    fb: FacebookInit,
-    reponame: String,
-    blobstore_options: &'a BlobstoreOptions,
-    mysql_options: &'a MysqlOptions,
-    readonly_storage: ReadOnlyStorage,
-    wireproto_logging_config: WireprotoLoggingConfig,
-    logger: Logger,
-    config_store: &'a ConfigStore,
-) -> Result<WireprotoLogging, Error> {
-    let WireprotoLoggingConfig {
-        storage_config_and_threshold,
-        scribe_category,
-        local_path,
-    } = wireproto_logging_config;
-    let blobstore_and_threshold = match storage_config_and_threshold {
-        Some((storage_config, threshold)) => {
-            if readonly_storage.0 {
-                return Err(format_err!(
-                    "failed to create blobstore for wireproto logging because storage is readonly",
-                ));
-            }
-
-            let blobstore = make_blobstore(
-                fb,
-                storage_config.blobstore,
-                mysql_options,
-                readonly_storage,
-                blobstore_options,
-                &logger,
-                config_store,
-                &blobstore_factory::default_scrub_handler(),
-                None,
-            )
-            .await?;
-
-            Some((blobstore, threshold))
-        }
-        None => None,
-    };
-
-    WireprotoLogging::new(
-        fb,
-        reponame,
-        scribe_category,
-        blobstore_and_threshold,
-        local_path.as_ref().map(|p| p.as_ref()),
-    )
 }

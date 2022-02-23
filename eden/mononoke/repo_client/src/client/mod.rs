@@ -92,7 +92,6 @@ mod monitor;
 mod session_bookmarks_cache;
 mod tests;
 
-pub use logging::WireprotoLogging;
 use logging::{
     debug_format_manifest, debug_format_path, log_getpack_params_verbose,
     log_gettreepack_params_verbose, CommandLogger,
@@ -164,10 +163,6 @@ fn gettreepack_scuba_sampling_rate(params: &GettreepackArgs) -> SamplingRate {
     }
 }
 
-fn debug_format_nodes<'a>(nodes: impl IntoIterator<Item = &'a HgChangesetId>) -> String {
-    nodes.into_iter().map(|node| format!("{}", node)).join(" ")
-}
-
 fn debug_format_manifests<'a>(nodes: impl IntoIterator<Item = &'a HgManifestId>) -> String {
     nodes.into_iter().map(debug_format_manifest).join(" ")
 }
@@ -195,18 +190,6 @@ fn debug_format_directories<'a, T: AsRef<[u8]> + 'a>(
     // NOTE: This normally shouldn't happen, but this is just a debug function, so if it does we
     // just ignore it.
     String::from_utf8_lossy(out.as_ref()).to_string()
-}
-
-// Generic for HashSet, Vec, etc...
-fn format_utf8_bytes_list<T, C>(entries: C) -> String
-where
-    T: AsRef<[u8]>,
-    C: IntoIterator<Item = T>,
-{
-    entries
-        .into_iter()
-        .map(|entry| String::from_utf8_lossy(entry.as_ref()).into_owned())
-        .join(",")
 }
 
 lazy_static! {
@@ -412,7 +395,6 @@ pub struct RepoClient {
     // We currently fix it by caching bookmarks at the beginning of discovery.
     // TODO: T45411456 Fix this by teaching the client to expect extra commits to correspond to the bookmarks.
     session_bookmarks_cache: Arc<SessionBookmarkCache>,
-    wireproto_logging: Arc<WireprotoLogging>,
     maybe_push_redirector_args: Option<PushRedirectorArgs>,
     force_lfs: Arc<AtomicBool>,
     unhydrated_commits: Arc<AtomicBool>,
@@ -429,7 +411,6 @@ impl RepoClient {
         session: SessionContainer,
         logging: LoggingContainer,
         preserve_raw_bundle2: bool,
-        wireproto_logging: Arc<WireprotoLogging>,
         maybe_push_redirector_args: Option<PushRedirectorArgs>,
         knobs: RepoClientKnobs,
         maybe_backup_repo_source: Option<BlobRepo>,
@@ -442,7 +423,6 @@ impl RepoClient {
             logging,
             preserve_raw_bundle2,
             session_bookmarks_cache,
-            wireproto_logging,
             maybe_push_redirector_args,
             force_lfs: Arc::new(AtomicBool::new(false)),
             unhydrated_commits: Arc::new(AtomicBool::new(false)),
@@ -506,12 +486,7 @@ impl RepoClient {
             self.session
                 .new_context_with_scribe(logger, scuba, self.logging.scribe().clone());
 
-        let command_logger = CommandLogger::new(
-            ctx.clone(),
-            command.to_owned(),
-            self.wireproto_logging.clone(),
-            self.request_perf_counters.clone(),
-        );
+        let command_logger = CommandLogger::new(ctx.clone(), self.request_perf_counters.clone());
 
         (ctx, command_logger)
     }
@@ -920,8 +895,7 @@ impl RepoClient {
                             );
 
                             log_getpack_params_verbose(&ctx, &encoded_params);
-                            let json_params = json! {encoded_params};
-                            command_logger.finalize_command(ctx, &stats, Some(&json_params));
+                            command_logger.finalize_command(&stats);
 
                             future::ready(())
                         }
@@ -1487,14 +1461,6 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('getbundle', '*')
     fn getbundle(&self, args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
         self.command_stream(ops::GETBUNDLE, UNSAMPLED, |ctx, command_logger| {
-            let value = json!({
-                "bundlecaps": format_utf8_bytes_list(&args.bundlecaps),
-                "common": debug_format_nodes(&args.common),
-                "heads": debug_format_nodes(&args.heads),
-                "listkeys": format_utf8_bytes_list(&args.listkeys),
-            });
-            let value = json!(vec![value]);
-
             let s = self
                 .create_bundle(ctx.clone(), args)
                 .compat()
@@ -1502,11 +1468,10 @@ impl HgCommands for RepoClient {
                 .yield_periodically()
                 .flatten_err()
                 .timed({
-                    cloned!(ctx);
                     move |stats| {
                         STATS::getbundle_ms
                             .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                        command_logger.finalize_command(ctx, &stats, Some(&value));
+                        command_logger.finalize_command(&stats);
                         future::ready(())
                     }
                 })
@@ -1871,14 +1836,13 @@ impl HgCommands for RepoClient {
                         }
                     })
                     .timed({
-                        cloned!(ctx);
                         move |stats| {
                             if stats.completion_time > *SLOW_REQUEST_THRESHOLD {
                                 command_logger.add_trimmed_scuba_extra("command_args", &args);
                             }
                             STATS::gettreepack_ms
                                 .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                            command_logger.finalize_command(ctx, &stats, Some(&args));
+                            command_logger.finalize_command(&stats);
                             future::ready(())
                         }
                     })
@@ -2023,7 +1987,7 @@ impl HgCommands for RepoClient {
                 .flatten_err()
                 .map_ok(bytes_ext::copy_from_new)
                 .timed(|stats| {
-                    command_logger.finalize_command(ctx, &stats, None);
+                    command_logger.finalize_command(&stats);
                     future::ready(())
                 })
                 .boxed()
@@ -2114,7 +2078,7 @@ impl HgCommands for RepoClient {
                     }
                     STATS::getcommitdata_ms
                         .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                    command_logger.finalize_command(ctx, &stats, Some(&args));
+                    command_logger.finalize_command(&stats);
                     future::ready(())
                 })
                 .boxed()

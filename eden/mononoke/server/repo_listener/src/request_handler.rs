@@ -81,7 +81,6 @@ pub async fn request_handler(
     let RepoHandler {
         logger,
         mut scuba,
-        wireproto_logging,
         repo,
         preserve_raw_bundle2,
         maybe_push_redirector_args,
@@ -150,7 +149,6 @@ pub async fn request_handler(
         session.clone(),
         logging,
         preserve_raw_bundle2,
-        wireproto_logging,
         maybe_push_redirector_args,
         repo_client_knobs,
         maybe_backup_repo_source,

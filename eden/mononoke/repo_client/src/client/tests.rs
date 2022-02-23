@@ -431,16 +431,12 @@ async fn run_and_check_if_lfs(
         MononokeScubaSampleBuilder::with_discard(),
     );
 
-    let noop_wireproto =
-        WireprotoLogging::new(ctx.fb, mononoke_repo.reponame().clone(), None, None, None)?;
-
     let repo_client = RepoClient::new(
         mononoke_repo,
         ctx.session().clone(),
         logging,
         false, // Don't preserve raw bundle 2 (we don't push)
-        Arc::new(noop_wireproto),
-        None, // No PushRedirectorArgs
+        None,  // No PushRedirectorArgs
         Default::default(),
         None, // No backup repo source
     );

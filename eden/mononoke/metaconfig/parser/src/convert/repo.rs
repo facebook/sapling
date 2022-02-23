@@ -17,7 +17,7 @@ use metaconfig_types::{
     HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams,
     PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs, SegmentedChangelogConfig,
     ServiceWriteRestrictions, SourceControlServiceMonitoring, SourceControlServiceParams,
-    StorageConfig, UnodeVersion, WireprotoLoggingConfig,
+    UnodeVersion,
 };
 use mononoke_types::{ChangesetId, MPath, PrefixTrie};
 use regex::Regex;
@@ -26,48 +26,11 @@ use repos::{
     RawDerivedDataTypesConfig, RawHookConfig, RawHookManagerParams, RawInfinitepushParams,
     RawLfsParams, RawPushParams, RawPushrebaseParams, RawRepoClientKnobs,
     RawSegmentedChangelogConfig, RawServiceWriteRestrictions, RawSourceControlServiceMonitoring,
-    RawSourceControlServiceParams, RawWireprotoLoggingConfig,
+    RawSourceControlServiceParams,
 };
 
 use crate::convert::Convert;
 use crate::errors::ConfigurationError;
-
-pub(crate) const DEFAULT_ARG_SIZE_THRESHOLD: u64 = 500_000;
-
-pub(crate) fn convert_wireproto_logging_config(
-    raw: RawWireprotoLoggingConfig,
-    get_storage: impl Fn(&str) -> Result<StorageConfig>,
-) -> Result<WireprotoLoggingConfig> {
-    let RawWireprotoLoggingConfig {
-        scribe_category,
-        storage_config: wireproto_storage_config,
-        remote_arg_size_threshold,
-        local_path,
-    } = raw;
-
-    let storage_config_and_threshold = match (wireproto_storage_config, remote_arg_size_threshold) {
-        (Some(storage_config), Some(threshold)) => Some((storage_config, threshold as u64)),
-        (None, Some(_threshold)) => {
-            return Err(anyhow!(
-                "Invalid configuration: wireproto threshold is specified, but storage config is not"
-            ));
-        }
-        (Some(storage_config), None) => Some((storage_config, DEFAULT_ARG_SIZE_THRESHOLD)),
-        (None, None) => None,
-    };
-
-    let storage_config_and_threshold = storage_config_and_threshold
-        .map(|(storage_config, threshold)| {
-            get_storage(&storage_config).map(|config| (config, threshold))
-        })
-        .transpose()?;
-
-    Ok(WireprotoLoggingConfig {
-        scribe_category,
-        storage_config_and_threshold,
-        local_path,
-    })
-}
 
 impl Convert for RawCacheWarmupConfig {
     type Output = CacheWarmupParams;
