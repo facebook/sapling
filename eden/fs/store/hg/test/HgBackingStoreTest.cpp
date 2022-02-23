@@ -30,8 +30,6 @@ using namespace facebook::eden;
 using namespace std::chrono_literals;
 
 namespace {
-const auto kTestTimeout = 10s;
-
 constexpr size_t kTreeCacheMaximumSize = 1000; // bytes
 constexpr size_t kTreeCacheMinimumEntries = 0;
 } // namespace
@@ -150,28 +148,4 @@ TEST_F(
   ASSERT_THAT(
       tree1->getEntryNames(),
       ::testing::ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
-}
-
-TEST_F(HgBackingStoreTest, skipMetadataPrefetch) {
-  auto metadataImporter = dynamic_cast<TestMetadataImporter*>(
-      &(backingStore->getHgBackingStore().getMetadataImporter()));
-  // The Metadata importer should be a TestMetadataImporter, so this should
-  // never be null
-  EXPECT_TRUE(metadataImporter);
-
-  auto tree =
-      objectStore->getRootTree(commit1, ObjectFetchContext::getNullContext())
-          .get(0ms);
-  auto context = SkipMetadatPrefetchFetchContext{};
-
-  // Metadata prefetch should not be called here
-  metadataImporter->getTreeMetadataCalled = false;
-  backingStore->getTree(tree->getHash(), context).get(kTestTimeout);
-  EXPECT_FALSE(metadataImporter->getTreeMetadataCalled);
-
-  // Metadata prefetch should be called here
-  metadataImporter->getTreeMetadataCalled = false;
-  backingStore->getTree(tree->getHash(), ObjectFetchContext::getNullContext())
-      .get(kTestTimeout);
-  EXPECT_TRUE(metadataImporter->getTreeMetadataCalled);
 }

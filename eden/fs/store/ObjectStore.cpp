@@ -262,7 +262,7 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
     }
   }
 
-  if (edenConfig_->useAuxMetadata.getValue()) {
+  if (backingStore_ && edenConfig_->useAuxMetadata.getValue()) {
     // if configured, check hg cache for aux metadata
     auto localMetadata = backingStore_->getLocalBlobMetadata(id, context);
     if (localMetadata) {
