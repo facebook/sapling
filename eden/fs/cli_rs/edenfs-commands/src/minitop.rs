@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use clap::Parser;
 use comfy_table::{presets::UTF8_BORDERS_ONLY, Table};
 use crossterm::queue;
-use crossterm::{style, terminal};
+use crossterm::{cursor, style, terminal};
 use shlex::quote;
 use std::collections::BTreeMap;
 use std::io::{stdout, Write};
@@ -464,7 +464,9 @@ impl crate::Subcommand for MinitopCmd {
                 );
                 queue!(
                     stdout,
-                    style::Print(format!("{:<40} {}\n", pending_string, live_string))
+                    style::Print(format!("{:<40} {}", pending_string, live_string)),
+                    terminal::ScrollUp(1),
+                    cursor::MoveToColumn(0),
                 )
                 .from_err()?;
             }
@@ -507,8 +509,16 @@ impl crate::Subcommand for MinitopCmd {
                 ]);
             }
 
-            queue!(stdout, style::Print(table.to_string())).from_err()?;
-            queue!(stdout, style::Print("\n\n")).from_err()?;
+            for line in table.lines() {
+                queue!(
+                    stdout,
+                    style::Print(line),
+                    terminal::ScrollUp(1),
+                    cursor::MoveToColumn(0)
+                )
+                .from_err()?;
+            }
+            queue!(stdout, terminal::ScrollUp(2), cursor::MoveToColumn(0)).from_err()?;
             stdout.flush().from_err()?;
 
             tokio::time::sleep(self.refresh_rate).await;
