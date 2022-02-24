@@ -86,7 +86,10 @@ def createremote(ui, repo, **opts):
     lifetime = _parselifetime(opts)
     maxuntrackedsize = parsemaxuntracked(opts)
     reusestorage = opts.get("reuse_storage") is True
-    with repo.lock():
+    overrides = {}
+    if ui.plain():
+        overrides[("ui", "quiet")] = True
+    with repo.lock(), ui.configoverride(overrides):
         _backupcurrentcommit(repo)
 
         # Current working context
