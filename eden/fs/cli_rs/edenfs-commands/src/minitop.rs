@@ -65,7 +65,7 @@ const STATS_NOT_AVAILABLE: i64 = 0;
 
 const UNKNOWN_COMMAND: &str = "<unknown>";
 const COLUMN_TITLES: &[&str] = &[
-    "TOP PID",
+    "PID",
     "MOUNT",
     "READS",
     "WRITES",
