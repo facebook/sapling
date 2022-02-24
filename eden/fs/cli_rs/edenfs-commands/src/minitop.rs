@@ -328,6 +328,7 @@ async fn get_live_import_counts(client: &EdenFsClient) -> Result<BTreeMap<String
 struct TerminalAttributes {
     line_wrap_disabled: bool,
     alt_screen_entered: bool,
+    raw_mode_entered: bool,
     stdout: std::io::Stdout,
 }
 
@@ -337,6 +338,7 @@ impl TerminalAttributes {
         Self {
             line_wrap_disabled: false,
             alt_screen_entered: false,
+            raw_mode_entered: false,
             stdout,
         }
     }
@@ -352,6 +354,12 @@ impl TerminalAttributes {
         self.alt_screen_entered = true;
         Ok(self)
     }
+
+    fn enter_raw_mode(mut self) -> Result<TerminalAttributes> {
+        terminal::enable_raw_mode().from_err()?;
+        self.raw_mode_entered = true;
+        Ok(self)
+    }
 }
 
 impl Drop for TerminalAttributes {
@@ -362,6 +370,10 @@ impl Drop for TerminalAttributes {
 
         if self.alt_screen_entered {
             let _ = queue!(self.stdout, terminal::LeaveAlternateScreen);
+        }
+
+        if self.raw_mode_entered {
+            let _ = terminal::disable_raw_mode();
         }
 
         let _ = self.stdout.flush();
@@ -375,7 +387,9 @@ impl crate::Subcommand for MinitopCmd {
         let mut tracked_processes = TrackedProcesses::new();
 
         // Setup rendering
-        let mut attributes = TerminalAttributes::new().disable_line_wrap()?;
+        let mut attributes = TerminalAttributes::new()
+            .disable_line_wrap()?
+            .enter_raw_mode()?;
         if self.interactive {
             attributes = attributes.enter_alt_screen()?;
         }
