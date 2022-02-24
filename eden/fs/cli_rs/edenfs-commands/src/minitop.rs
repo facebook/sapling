@@ -325,6 +325,49 @@ async fn get_live_import_counts(client: &EdenFsClient) -> Result<BTreeMap<String
     Ok(imports)
 }
 
+struct TerminalAttributes {
+    line_wrap_disabled: bool,
+    alt_screen_entered: bool,
+    stdout: std::io::Stdout,
+}
+
+impl TerminalAttributes {
+    fn new() -> TerminalAttributes {
+        let stdout = stdout();
+        Self {
+            line_wrap_disabled: false,
+            alt_screen_entered: false,
+            stdout,
+        }
+    }
+
+    fn disable_line_wrap(mut self) -> Result<TerminalAttributes> {
+        queue!(self.stdout, terminal::DisableLineWrap).from_err()?;
+        self.line_wrap_disabled = true;
+        Ok(self)
+    }
+
+    fn enter_alt_screen(mut self) -> Result<TerminalAttributes> {
+        queue!(self.stdout, terminal::EnterAlternateScreen).from_err()?;
+        self.alt_screen_entered = true;
+        Ok(self)
+    }
+}
+
+impl Drop for TerminalAttributes {
+    fn drop(&mut self) {
+        if self.line_wrap_disabled {
+            let _ = queue!(self.stdout, terminal::EnableLineWrap);
+        }
+
+        if self.alt_screen_entered {
+            let _ = queue!(self.stdout, terminal::LeaveAlternateScreen);
+        }
+
+        let _ = self.stdout.flush();
+    }
+}
+
 #[async_trait]
 impl crate::Subcommand for MinitopCmd {
     async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
@@ -332,13 +375,13 @@ impl crate::Subcommand for MinitopCmd {
         let mut tracked_processes = TrackedProcesses::new();
 
         // Setup rendering
-        let mut stdout = stdout();
-        queue!(stdout, terminal::DisableLineWrap).from_err()?;
-
+        let mut attributes = TerminalAttributes::new().disable_line_wrap()?;
         if self.interactive {
-            queue!(stdout, terminal::EnterAlternateScreen).from_err()?;
+            attributes = attributes.enter_alt_screen()?;
         }
+        let _ = attributes; // silence warning
 
+        let mut stdout = stdout();
         loop {
             if self.interactive {
                 queue!(stdout, terminal::Clear(terminal::ClearType::All)).from_err()?;
