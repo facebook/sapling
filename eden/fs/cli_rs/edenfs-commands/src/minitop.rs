@@ -43,6 +43,9 @@ pub struct MinitopCmd {
         parse(from_str = parse_refresh_rate),
     )]
     refresh_rate: Duration,
+
+    #[clap(long, help = "Enable minitop interactive mode.")]
+    interactive: bool,
 }
 
 fn parse_refresh_rate(arg: &str) -> Duration {
@@ -332,7 +335,14 @@ impl crate::Subcommand for MinitopCmd {
         let mut stdout = stdout();
         queue!(stdout, terminal::DisableLineWrap).from_err()?;
 
+        if self.interactive {
+            queue!(stdout, terminal::EnterAlternateScreen).from_err()?;
+        }
+
         loop {
+            if self.interactive {
+                queue!(stdout, terminal::Clear(terminal::ClearType::All)).from_err()?;
+            }
             client.flushStatsNow();
 
             // Update pending imports summary stats
