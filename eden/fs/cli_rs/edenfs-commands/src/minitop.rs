@@ -10,8 +10,10 @@
 use async_trait::async_trait;
 use clap::Parser;
 use comfy_table::{presets::UTF8_BORDERS_ONLY, Table};
+use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::queue;
 use crossterm::{cursor, style, terminal};
+use futures::{FutureExt, StreamExt};
 use shlex::quote;
 use std::collections::BTreeMap;
 use std::io::{stdout, Write};
@@ -396,6 +398,8 @@ impl crate::Subcommand for MinitopCmd {
         let _ = attributes; // silence warning
 
         let mut stdout = stdout();
+        let mut events = EventStream::new();
+
         loop {
             if self.interactive {
                 queue!(stdout, terminal::Clear(terminal::ClearType::All)).from_err()?;
@@ -521,7 +525,28 @@ impl crate::Subcommand for MinitopCmd {
             queue!(stdout, terminal::ScrollUp(2), cursor::MoveToColumn(0)).from_err()?;
             stdout.flush().from_err()?;
 
-            tokio::time::sleep(self.refresh_rate).await;
+            loop {
+                let delay = tokio::time::sleep(self.refresh_rate);
+                let event = events.next().fuse();
+
+                tokio::select! {
+                    _ = delay => { break }
+                    maybe_event = event => {
+                        match maybe_event {
+                            Some(event) => {
+                                let event = event.from_err()?;
+
+                                let q = Event::Key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE));
+                                let ctrlc = Event::Key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL));
+                                if event == q || event == ctrlc {
+                                    return Ok(0);
+                                }
+                            },
+                            None => break,
+                        }
+                    }
+                };
+            }
         }
     }
 }
