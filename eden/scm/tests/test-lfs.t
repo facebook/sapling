@@ -209,7 +209,7 @@
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo7
-  $ hg config extensions --debug | grep lfs
+  $ hg config extensions --debug | grep ':.*lfs'
   $TESTTMP/repo7/.hg/hgrc:*: extensions.lfs= (glob)
   $ cat large
   LARGE-BECAUSE-IT-IS-MORE-THAN-30-BYTES
@@ -221,7 +221,7 @@
   $ hg --config extensions.share= share repo7 sharedrepo
   updating working directory
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R sharedrepo config extensions --debug | grep lfs
+  $ hg -R sharedrepo config extensions --debug | grep ':.*lfs'
   $TESTTMP/sharedrepo/.hg/hgrc:*: extensions.lfs= (glob)
 
 # Test rename and status
@@ -670,7 +670,7 @@ This convert is trickier, because it contains deleted files (via `hg mv`)
   size 39
   x-is-binary 0
 
-  $ hg -R convert_lfs2 config --debug extensions | grep lfs
+  $ hg -R convert_lfs2 config --debug extensions | grep ':.*lfs'
   $TESTTMP/convert_lfs2/.hg/hgrc:*: extensions.lfs= (glob)
 
 Committing deleted files works:
