@@ -18,7 +18,7 @@ use blobstore_factory::{
     PackOptions, ReadOnlyStorage, ReadOnlyStorageArgs, ThrottleOptions,
 };
 use cached_config::{ConfigHandle, ConfigStore};
-use clap::{App, AppSettings, Args, FromArgMatches, IntoApp};
+use clap::{Args, Command, FromArgMatches, IntoApp};
 use cmdlib_caching::{init_cachelib, CachelibArgs, CachelibSettings};
 use cmdlib_logging::{LoggingArgs, ScubaLoggingArgs};
 use derived_data_remote::RemoteDerivationArgs;
@@ -47,44 +47,44 @@ pub struct MononokeAppBuilder {
 
 #[derive(Args, Debug)]
 pub struct EnvironmentArgs {
-    #[clap(flatten, help_heading = "CONFIG OPTIONS")]
+    #[clap(flatten, next_help_heading = "CONFIG OPTIONS")]
     config_args: ConfigArgs,
 
-    #[clap(flatten, help_heading = "RUNTIME OPTIONS")]
+    #[clap(flatten, next_help_heading = "RUNTIME OPTIONS")]
     runtime_args: RuntimeArgs,
 
-    #[clap(flatten, help_heading = "LOGGING OPTIONS")]
+    #[clap(flatten, next_help_heading = "LOGGING OPTIONS")]
     logging_args: LoggingArgs,
 
-    #[clap(flatten, help_heading = "SCUBA LOGGING OPTIONS")]
+    #[clap(flatten, next_help_heading = "SCUBA LOGGING OPTIONS")]
     scuba_logging_args: ScubaLoggingArgs,
 
-    #[clap(flatten, help_heading = "CACHELIB OPTIONS")]
+    #[clap(flatten, next_help_heading = "CACHELIB OPTIONS")]
     cachelib_args: CachelibArgs,
 
-    #[clap(flatten, help_heading = "MYSQL OPTIONS")]
+    #[clap(flatten, next_help_heading = "MYSQL OPTIONS")]
     mysql_args: MysqlArgs,
 
-    #[clap(flatten, help_heading = "TUNABLES OPTIONS")]
+    #[clap(flatten, next_help_heading = "TUNABLES OPTIONS")]
     tunables_args: TunablesArgs,
 
-    #[clap(flatten, help_heading = "BLOBSTORE OPTIONS")]
+    #[clap(flatten, next_help_heading = "BLOBSTORE OPTIONS")]
     blobstore_args: BlobstoreArgs,
 
     #[cfg(fbcode_build)]
-    #[clap(flatten, help_heading = "MANIFOLD OPTIONS")]
+    #[clap(flatten, next_help_heading = "MANIFOLD OPTIONS")]
     manifold_args: ManifoldArgs,
 
-    #[clap(flatten, help_heading = "REMOTE DERIVATION OPTIONS")]
+    #[clap(flatten, next_help_heading = "REMOTE DERIVATION OPTIONS")]
     remote_derivation_args: RemoteDerivationArgs,
 
-    #[clap(flatten, help_heading = "STORAGE OPTIONS")]
+    #[clap(flatten, next_help_heading = "STORAGE OPTIONS")]
     readonly_storage_args: ReadOnlyStorageArgs,
 
-    #[clap(flatten, help_heading = "RENDEZ-VOUS OPTIONS")]
+    #[clap(flatten, next_help_heading = "RENDEZ-VOUS OPTIONS")]
     rendezvous_args: RendezVousArgs,
 
-    #[clap(flatten, help_heading = "MEGAREPO OPTIONS")]
+    #[clap(flatten, next_help_heading = "MEGAREPO OPTIONS")]
     megarepo_configs_args: MegarepoConfigsArgs,
 }
 
@@ -133,7 +133,7 @@ impl MononokeAppBuilder {
 
     pub fn build_with_subcommands<'sub, AppArgs>(
         &'sub mut self,
-        subcommands: Vec<App<'sub>>,
+        subcommands: Vec<Command<'sub>>,
     ) -> Result<MononokeApp>
     where
         AppArgs: IntoApp,
@@ -153,7 +153,7 @@ impl MononokeAppBuilder {
             }
         }
 
-        let mut app = AppArgs::into_app();
+        let mut app = AppArgs::command();
 
         // Save app-generated about so we can restore it.
         let about = app.get_about();
@@ -171,7 +171,8 @@ impl MononokeAppBuilder {
         if !subcommands.is_empty() {
             app = app
                 .subcommands(subcommands)
-                .setting(AppSettings::SubcommandRequiredElseHelp);
+                .subcommand_required(true)
+                .arg_required_else_help(true);
         }
 
         for (name, default) in self.defaults.iter() {

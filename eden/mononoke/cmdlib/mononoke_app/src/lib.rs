@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![deny(warnings)]
+
 mod app;
 pub mod args;
 mod builder;
@@ -64,12 +66,12 @@ macro_rules! subcommands {
         $( mod $command; )*
 
         /// Add args for all commands.
-        pub(crate) fn subcommands<'help>() -> Vec<$crate::macro_export::clap::App<'help>> {
+        pub(crate) fn subcommands<'help>() -> Vec<$crate::macro_export::clap::Command<'help>> {
             use $crate::macro_export::clap::IntoApp;
             use $crate::macro_export::heck::KebabCase;
             vec![
                 $(
-                    $command::CommandArgs::into_app()
+                    $command::CommandArgs::command()
                         .name(stringify!($command).to_kebab_case()),
                 )*
             ]

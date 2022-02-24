@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use clap::{App, ArgMatches, Args, FromArgMatches};
+use clap::{ArgMatches, Args, Command, FromArgMatches};
 use environment::MononokeEnvironment;
 use slog::{Never, SendSyncRefUnwindSafeDrain};
 use std::any::Any;
@@ -41,7 +41,7 @@ pub trait AppExtension: Send + Sync + 'static {
 
 // Internal trait to hide the concrete extension type.
 pub(crate) trait BoxedAppExtension: Send + Sync + 'static {
-    fn augment_args<'help>(&self, app: App<'help>) -> App<'help>;
+    fn augment_args<'help>(&self, app: Command<'help>) -> Command<'help>;
     fn arg_defaults(&self) -> Vec<(&'static str, String)>;
     fn parse_args(&self, args: &ArgMatches) -> Result<Box<dyn BoxedAppExtensionArgs>>;
 }
@@ -59,8 +59,8 @@ impl<Ext: AppExtension> AppExtensionBox<Ext> {
 }
 
 impl<Ext: AppExtension> BoxedAppExtension for AppExtensionBox<Ext> {
-    fn augment_args<'help>(&self, app: App<'help>) -> App<'help> {
-        Ext::Args::augment_args_for_update(app)
+    fn augment_args<'help>(&self, command: Command<'help>) -> Command<'help> {
+        Ext::Args::augment_args_for_update(command)
     }
 
     fn arg_defaults(&self) -> Vec<(&'static str, String)> {
