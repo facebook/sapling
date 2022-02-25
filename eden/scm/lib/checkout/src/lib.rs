@@ -306,6 +306,7 @@ impl CheckoutPlan {
         manifest: &impl Manifest,
         store: &dyn ReadFileContents<Error = anyhow::Error>,
         tree_state: &mut TreeState,
+        status: &Status,
     ) -> Result<Vec<RepoPathBuf>> {
         let vfs = &self.checkout.vfs;
         let mut check_content = vec![];
@@ -319,6 +320,11 @@ impl CheckoutPlan {
 
         for file_action in new_files {
             let file = &file_action.path;
+
+            if !matches!(status.status(file), Some(FileStatus::Unknown)) {
+                continue;
+            }
+
             let state = if vfs.case_sensitive() {
                 tree_state.get(file)?
             } else {

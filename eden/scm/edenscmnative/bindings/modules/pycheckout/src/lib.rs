@@ -100,16 +100,23 @@ py_class!(class checkoutplan |py| {
         checkoutplan::create_instance(py, plan)
     }
 
-    def check_unknown_files(&self, manifest: &treemanifest, store: ImplInto<ArcReadFileContents>, state: &PyTreeState) -> PyResult<Vec<String>> {
+    def check_unknown_files(
+        &self,
+        manifest: &treemanifest,
+        store: ImplInto<ArcReadFileContents>,
+        state: &PyTreeState,
+        status: &PyStatus,
+    ) -> PyResult<Vec<String>> {
         let plan = self.plan(py);
         let state = state.get_state(py);
         let manifest = manifest.get_underlying(py);
         let store = store.into();
+        let status = status.extract_inner_ref(py);
         let unknown = py.allow_threads(move || -> Result<_> {
             let mut state = state.lock();
             let manifest = manifest.read();
             try_block_unless_interrupted(
-            plan.check_unknown_files(&*manifest, store.as_ref(), &mut state))
+            plan.check_unknown_files(&*manifest, store.as_ref(), &mut state, status))
         }).map_pyerr(py)?;
         Ok(unknown.into_iter().map(|p|p.to_string()).collect())
     }

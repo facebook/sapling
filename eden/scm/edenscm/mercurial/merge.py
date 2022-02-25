@@ -2719,10 +2719,13 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
             store = repo.fileslog.contentstore
         else:
             store = repo.fileslog.filescmstore
+
+        status = nativestatus.status(repo.status(unknown=True))
         unknown = plan.check_unknown_files(
             p2.manifest(),
             store,
             repo.dirstate._map._tree,
+            status,
         )
         if unknown:
             for f in unknown:
@@ -2735,7 +2738,6 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
                 )
             )
 
-        status = nativestatus.status(repo.status())
         conflicts = plan.check_conflicts(status)
         if conflicts:
             msg = _("%d conflicting file changes:\n") % len(conflicts)
