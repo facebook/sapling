@@ -839,7 +839,7 @@ mod tests {
             content
         );
 
-        assert_eq!(missing[&lfs_key].len(), 0);
+        assert_eq!(missing[&lfs_key].len(), 1);
         Ok(())
     }
 }

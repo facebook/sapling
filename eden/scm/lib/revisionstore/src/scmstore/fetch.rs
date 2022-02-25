@@ -9,6 +9,7 @@ use std::collections::hash_map;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use crossbeam::channel::Sender;
@@ -104,7 +105,11 @@ impl<T: StoreValue> CommonFetchState<T> {
         let mut incomplete = errors.fetch_errors;
         for key in self.pending.into_iter() {
             self.found.remove(&key);
-            incomplete.entry(key).or_insert_with(Vec::new);
+            incomplete.entry(key).or_insert_with(|| {
+                // This should really never happen. If a key fails to fetch, it should've been
+                // associated with a keyed error and put in incomplete already.
+                vec![anyhow!("unknown error while fetching")]
+            });
         }
 
         for (key, _) in self.found.iter_mut() {
