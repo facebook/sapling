@@ -197,11 +197,15 @@ class physicalfilesystem(object):
             walkfn = self._rustwalk
 
         lookups = []
-        for fn, st in walkfn(match, listignored):
-            seen.add(fn)
-            changed = self._ischanged(fn, st, lookups)
-            if changed:
-                yield changed
+        with progress.bar(self.ui, _("scanning files"), _("files")) as prog:
+            count = 0
+            for fn, st in walkfn(match, listignored):
+                count += 1
+                prog.value = (count, fn)
+                seen.add(fn)
+                changed = self._ischanged(fn, st, lookups)
+                if changed:
+                    yield changed
 
         auditpath = pathutil.pathauditor(self.root, cached=True)
 
