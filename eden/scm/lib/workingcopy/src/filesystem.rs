@@ -262,7 +262,10 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
         let tracked = tracked.unwrap();
 
         for path in tracked.into_iter() {
+            // Skip this path if we've seen it or it doesn't match the matcher.
             if self.seen.contains(&path) {
+                continue;
+            } else {
                 match self.matcher.matches_file(&path) {
                     Err(e) => {
                         results.push(Err(e));
