@@ -531,20 +531,22 @@ impl FetchState {
         Ok((file, lfsptr))
     }
 
-    fn fetch_edenapi_inner(
+    pub(crate) fn fetch_edenapi(
         &mut self,
         store: &EdenApiFileStore,
         indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
         lfs_cache: Option<Arc<LfsStore>>,
         aux_cache: Option<Arc<AuxStore>>,
         memcache: Option<Arc<MemcacheStore>>,
-    ) -> Result<()> {
+    ) {
         let fetchable = FileAttributes::CONTENT | FileAttributes::AUX;
 
         let pending = self.pending_nonlfs(fetchable);
         if pending.is_empty() {
-            return Ok(());
+            return;
         }
+
+        let mut fetching_keys: HashSet<Key> = pending.iter().cloned().collect();
 
         debug!("Fetching EdenAPI - Count = {count}", count = pending.len());
 
@@ -569,7 +571,17 @@ impl FetchState {
             })
             .collect();
 
-        let response = block_on(store.files_attrs(pending_attrs))?;
+        let response = match block_on(store.files_attrs(pending_attrs)) {
+            Ok(r) => r,
+            Err(err) => {
+                let err = ClonableError::new(err.into());
+                for key in fetching_keys.into_iter() {
+                    self.errors.keyed_error(key, err.clone().into());
+                }
+                return;
+            }
+        };
+
         let entries = response
             .entries
             .map(move |res_entry| {
@@ -601,9 +613,31 @@ impl FetchState {
             .buffer_unordered(4);
 
         // Record found entries
+        let mut unknown_error: Option<ClonableError> = None;
         for res in stream_to_iter(entries) {
             // TODO(meyer): This outer EdenApi error with no key sucks
-            let (key, res) = res??;
+            let (key, res) = match res {
+                Ok(result) => match result {
+                    // (Key, Result<(StoreFile, Option<LfsPointersEntry), anyhow::Error)>
+                    Ok(result) => result,
+                    // EdenApiError
+                    Err(err) => {
+                        if unknown_error.is_none() {
+                            unknown_error.replace(ClonableError::new(err.into()));
+                        }
+                        continue;
+                    }
+                },
+                // JoinError
+                Err(err) => {
+                    if unknown_error.is_none() {
+                        unknown_error.replace(ClonableError::new(err.into()));
+                    }
+                    continue;
+                }
+            };
+
+            fetching_keys.remove(&key);
             match res {
                 Ok((file, maybe_lfsptr)) => {
                     if let Some(lfsptr) = maybe_lfsptr {
@@ -622,6 +656,19 @@ impl FetchState {
                     self.errors.keyed_error(key, err)
                 }
             }
+        }
+
+        for missing_key in fetching_keys.into_iter() {
+            match &unknown_error {
+                Some(error) => self.errors.keyed_error(missing_key, error.clone().into()),
+                None => {
+                    // This should never happen.
+                    self.errors.keyed_error(
+                        missing_key,
+                        anyhow!("key not returned from files_attr request"),
+                    )
+                }
+            };
         }
 
         if found != 0 {
@@ -653,23 +700,8 @@ impl FetchState {
         );
         let _enter = span.enter();
 
-        util::record_edenapi_stats(&span, &block_on(response.stats)?);
-
-        Ok(())
-    }
-
-    pub(crate) fn fetch_edenapi(
-        &mut self,
-        store: &EdenApiFileStore,
-        indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
-        lfs_cache: Option<Arc<LfsStore>>,
-        aux_cache: Option<Arc<AuxStore>>,
-        memcache: Option<Arc<MemcacheStore>>,
-    ) {
-        if let Err(err) =
-            self.fetch_edenapi_inner(store, indexedlog_cache, lfs_cache, aux_cache, memcache)
-        {
-            self.errors.other_error(err);
+        if let Ok(stats) = block_on(response.stats) {
+            util::record_edenapi_stats(&span, &stats);
         }
     }
 
