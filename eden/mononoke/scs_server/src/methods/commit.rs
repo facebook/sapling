@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
 
 use context::CoreContext;
@@ -16,7 +16,7 @@ use maplit::btreeset;
 use mononoke_api::{
     unified_diff, CandidateSelectionHintArgs, ChangesetContext, ChangesetDiffItem,
     ChangesetFileOrdering, ChangesetHistoryOptions, ChangesetId, ChangesetPathDiffContext,
-    ChangesetSpecifier, CopyInfo, MononokeError, MononokePath, UnifiedDiffMode,
+    ChangesetSpecifier, CopyInfo, MononokeError, MononokePath, RepoContext, UnifiedDiffMode,
 };
 use source_control as thrift;
 
@@ -141,6 +141,25 @@ async fn into_compare_path(
         }));
     }
     Err(errors::internal_error("programming error, diff is neither tree nor file").into())
+}
+
+/// Helper for commit_compare to add mutable rename information if appropriate
+async fn add_mutable_renames(
+    base_changeset: &mut ChangesetContext,
+    params: &thrift::CommitCompareParams,
+) -> Result<(), errors::ServiceError> {
+    if params.follow_mutable_file_history {
+        if let Some(paths) = &params.paths {
+            let paths: Vec<_> = paths
+                .iter()
+                .map(MononokePath::try_from)
+                .collect::<Result<_, MononokeError>>()?;
+            base_changeset
+                .add_mutable_renames(paths.into_iter())
+                .await?;
+        }
+    }
+    Ok(())
 }
 
 impl SourceControlServiceImpl {
@@ -400,7 +419,61 @@ impl SourceControlServiceImpl {
         Ok(is_ancestor_of)
     }
 
-    // Diff two commits
+    /// Given a base changeset, find the "other" changeset from parent information
+    /// including mutable history if appropriate
+    ///
+    /// This is entirely a heuristic to guess the "right" thing if the client
+    /// doesn't provide an "other" changeset - errors would normally be fed back
+    /// to a human and not handled automatically.
+    async fn find_commit_compare_parent(
+        &self,
+        repo: &RepoContext,
+        base_changeset: &mut ChangesetContext,
+        params: &thrift::CommitCompareParams,
+    ) -> Result<Option<ChangesetContext>, errors::ServiceError> {
+        let commit_parents = base_changeset.parents().await?;
+        let mut other_changeset_id = commit_parents.get(0).copied();
+
+        if params.follow_mutable_file_history {
+            let commit_parents: HashSet<_> = commit_parents.into_iter().collect();
+            let mut mutable_parents = base_changeset.mutable_parents();
+
+            // If a mutable history entry does not override a path, then we will only
+            // consider commit parents - otherwise, it's ambiguous what the user wanted
+            let must_be_commit_parent = mutable_parents.remove(&None);
+
+            // If there are multiple choices to make, then bail - the user needs to be
+            // clear to avoid the ambiguity
+            if mutable_parents.len() > 1 {
+                return Err(errors::invalid_request(
+                    "multiple different mutable parents in supplied paths",
+                )
+                .into());
+            }
+            if let Some(Some(parent)) = mutable_parents.into_iter().next() {
+                if must_be_commit_parent && !commit_parents.contains(&parent) {
+                    return Err(errors::invalid_request(
+                        "some paths have a mutable parent, others do not, and the mutable parent is not a commit parent",
+                    )
+                    .into());
+                }
+                other_changeset_id = Some(parent);
+            }
+        }
+
+        match other_changeset_id {
+            None => Ok(None),
+            Some(other_changeset_id) => {
+                let other_changeset = repo
+                    .changeset(ChangesetSpecifier::Bonsai(other_changeset_id))
+                    .await?
+                    .ok_or_else(|| errors::internal_error("other changeset is missing"))?;
+                Ok(Some(other_changeset))
+            }
+        }
+    }
+
+    /// Diff two commits
     pub(crate) async fn commit_compare(
         &self,
         ctx: CoreContext,
@@ -409,24 +482,18 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::CommitCompareResponse, errors::ServiceError> {
         let (base_changeset, other_changeset) = match &params.other_commit_id {
             Some(id) => {
-                let (_repo, base_changeset, other_changeset) =
+                let (_repo, mut base_changeset, other_changeset) =
                     self.repo_changeset_pair(ctx, &commit, &id).await?;
+                add_mutable_renames(&mut base_changeset, &params).await?;
                 (base_changeset, Some(other_changeset))
             }
             None => {
-                let (repo, base_changeset) = self.repo_changeset(ctx, &commit).await?;
-                let other_changeset_id = base_changeset.parents().await?.into_iter().next();
-
-                match other_changeset_id {
-                    None => (base_changeset, None),
-                    Some(other_changeset_id) => {
-                        let other_changeset = repo
-                            .changeset(ChangesetSpecifier::Bonsai(other_changeset_id))
-                            .await?
-                            .ok_or_else(|| errors::internal_error("other changeset is missing"))?;
-                        (base_changeset, Some(other_changeset))
-                    }
-                }
+                let (repo, mut base_changeset) = self.repo_changeset(ctx, &commit).await?;
+                add_mutable_renames(&mut base_changeset, &params).await?;
+                let other_changeset = self
+                    .find_commit_compare_parent(&repo, &mut base_changeset, &params)
+                    .await?;
+                (base_changeset, other_changeset)
             }
         };
 

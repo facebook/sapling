@@ -51,6 +51,44 @@ use crate::path::{is_related_to, MononokePath};
 use crate::repo::RepoContext;
 use crate::specifiers::{ChangesetId, GitSha1, HgChangesetId};
 
+#[derive(Clone, Debug)]
+enum PathMutableHistory {
+    /// Checking the mutable history datastore shows no changes
+    NoChange,
+    /// Change of parent but not path
+    ChangesetOnly(ChangesetId),
+    /// Change of parent and path
+    PathAndChangeset(ChangesetId, MPath),
+}
+
+impl PathMutableHistory {
+    /// Get the mutable parents (if any) of this path
+    pub fn get_parent_cs_id(&self) -> Option<ChangesetId> {
+        match self {
+            Self::NoChange => None,
+            Self::ChangesetOnly(cs_id) | Self::PathAndChangeset(cs_id, _) => Some(*cs_id),
+        }
+    }
+
+    /// Is this path overridden by mutable history?
+    fn is_override(&self) -> bool {
+        match self {
+            Self::NoChange => false,
+            Self::ChangesetOnly(_) => true,
+            Self::PathAndChangeset(_, _) => true,
+        }
+    }
+
+    /// Extract the copy_from information relating to this entry, if any
+    fn get_copy_from(&self) -> Option<(ChangesetId, &MPath)> {
+        match self {
+            Self::NoChange => None,
+            Self::ChangesetOnly(_) => None,
+            Self::PathAndChangeset(cs_id, path) => Some((*cs_id, path)),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct ChangesetContext {
     repo: RepoContext,
@@ -61,6 +99,8 @@ pub struct ChangesetContext {
     root_fsnode_id: LazyShared<Result<RootFsnodeId, MononokeError>>,
     root_skeleton_manifest_id: LazyShared<Result<RootSkeletonManifestId, MononokeError>>,
     root_deleted_manifest_id: LazyShared<Result<RootDeletedManifestId, MononokeError>>,
+    /// None if no mutable history, else map from supplied paths to data fetched
+    mutable_history: Option<HashMap<MPath, PathMutableHistory>>,
 }
 
 #[derive(Default)]
@@ -112,12 +152,45 @@ impl ChangesetContext {
             root_fsnode_id,
             root_skeleton_manifest_id,
             root_deleted_manifest_id,
+            mutable_history: None,
         }
     }
 
     /// The context for this query.
     pub(crate) fn ctx(&self) -> &CoreContext {
         &self.repo.ctx()
+    }
+
+    /// Adds copy information from mutable renames as an override to replace
+    /// the Bonsai copy information
+    pub async fn add_mutable_renames(
+        &mut self,
+        paths: impl Iterator<Item = MononokePath>,
+    ) -> Result<(), MononokeError> {
+        let mutable_renames = self.repo.mutable_renames();
+        let mut copy_info = HashMap::new();
+
+        for path in paths {
+            if let Some(mpath) = path.into_mpath() {
+                let maybe_rename_entry = mutable_renames
+                    .get_rename(self.repo.ctx(), self.id, Some(mpath.clone()))
+                    .await?;
+                let rename = match maybe_rename_entry {
+                    Some(entry) => {
+                        let cs_id = entry.src_cs_id();
+                        match entry.src_path() {
+                            None => PathMutableHistory::ChangesetOnly(cs_id),
+                            Some(path) => PathMutableHistory::PathAndChangeset(cs_id, path.clone()),
+                        }
+                    }
+                    None => PathMutableHistory::NoChange,
+                };
+                copy_info.insert(mpath, rename);
+            }
+        }
+
+        self.mutable_history = Some(copy_info);
+        Ok(())
     }
 
     /// The `RepoContext` for this query.
@@ -436,6 +509,22 @@ impl ChangesetContext {
         Ok(self.changeset_info().await?.parents().collect())
     }
 
+    /// The IDs of mutable parents of the changeset, if any.
+    ///
+    /// The value can be `None` to indicate that we were given a path
+    /// to check, but it had no mutable parents of its own.
+    ///
+    /// Only returns a non-empty set if add_mutable_renames has been called
+    pub fn mutable_parents(&self) -> HashSet<Option<ChangesetId>> {
+        if let Some(info) = &self.mutable_history {
+            info.values()
+                .map(PathMutableHistory::get_parent_cs_id)
+                .collect()
+        } else {
+            HashSet::new()
+        }
+    }
+
     /// The author of the changeset.
     pub async fn author(&self) -> Result<String, MononokeError> {
         Ok(self.changeset_info().await?.author().to_string())
@@ -628,10 +717,39 @@ impl ChangesetContext {
         // map from to_path to from_path
         let mut inv_copy_path_map = HashMap::new();
         let file_changes = self.file_changes().await?;
-        // For now we only consider copies when comparing with parent.
-        if include_copies_renames && self.parents().await?.contains(&other.id) {
+        // For now we only consider copies when comparing with parent, or using mutable history
+        if include_copies_renames
+            && (self.mutable_history.is_some() || self.parents().await?.contains(&other.id))
+        {
             let mut to_paths = HashSet::new();
+            if let Some(overrides) = &self.mutable_history {
+                for (dst_path, mutable_history) in overrides {
+                    if let Some((cs_id, path)) = mutable_history.get_copy_from() {
+                        if cs_id == other.id() {
+                            copy_path_map
+                                .entry(path)
+                                .or_insert_with(Vec::new)
+                                .push(dst_path);
+                            to_paths.insert(dst_path);
+                        }
+                    }
+                }
+            }
+
             for (to_path, file_change) in file_changes.iter() {
+                let path_is_overriden = self
+                    .mutable_history
+                    .as_ref()
+                    .and_then(|history_map| {
+                        history_map
+                            .get(to_path)
+                            .map(PathMutableHistory::is_override)
+                    })
+                    .unwrap_or(false);
+                if path_is_overriden {
+                    // Mutable history overrides immutable if present
+                    continue;
+                }
                 match file_change {
                     FileChange::Change(tc) => {
                         if let Some((from_path, csid)) = tc.copy_from() {
