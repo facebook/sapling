@@ -52,6 +52,8 @@ use http_client::HttpVersion;
 use http_client::Method;
 use http_client::MinTransferSpeed;
 use http_client::Request;
+use http_client::TlsError;
+use http_client::TlsErrorKind;
 use indexedlog::log::IndexOutput;
 use indexedlog::rotate;
 use indexedlog::DefaultOpenOptions;
@@ -2005,6 +2007,10 @@ impl RetryStrategy {
             return Self::RetryThrottled;
         }
 
+        if status == StatusCode::REQUEST_TIMEOUT {
+            return Self::RetryError;
+        }
+
         if status.is_server_error() {
             return Self::RetryError;
         }
@@ -2013,17 +2019,17 @@ impl RetryStrategy {
     }
 
     pub fn from_http_error(error: &HttpClientError) -> Self {
-        if let HttpClientError::Curl(ref e) = error {
-            if e.is_couldnt_resolve_host()
-                || e.is_operation_timedout()
-                || e.is_send_error()
-                || e.is_recv_error()
-            {
-                return Self::RetryError;
-            }
-        }
+        use HttpClientError::*;
+        let retry = match error {
+            Tls(TlsError { kind, .. }) => kind == &TlsErrorKind::RecvError,
+            _ => true,
+        };
 
-        Self::NoRetry
+        if retry {
+            Self::RetryError
+        } else {
+            Self::NoRetry
+        }
     }
 }
 
