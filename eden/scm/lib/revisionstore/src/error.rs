@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Error;
@@ -26,6 +27,20 @@ pub struct FetchError {
     pub method: Method,
     #[source]
     pub error: TransferError,
+}
+
+#[derive(Clone, Debug, Error)]
+#[error(transparent)]
+pub struct ClonableError {
+    pub error: Arc<Error>,
+}
+
+impl ClonableError {
+    pub fn new(error: Error) -> Self {
+        ClonableError {
+            error: Arc::new(error),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

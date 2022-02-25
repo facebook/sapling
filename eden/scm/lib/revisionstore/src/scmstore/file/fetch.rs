@@ -28,6 +28,7 @@ use types::Sha256;
 
 use crate::datastore::HgIdDataStore;
 use crate::datastore::RemoteDataStore;
+use crate::error::ClonableError;
 use crate::fetch_logger::FetchLogger;
 use crate::indexedlogauxstore::AuxStore;
 use crate::indexedlogauxstore::Entry as AuxDataEntry;
@@ -672,12 +673,12 @@ impl FetchState {
         }
     }
 
-    fn fetch_lfs_remote_inner(
+    pub(crate) fn fetch_lfs_remote(
         &mut self,
         store: &LfsRemoteInner,
         local: Option<Arc<LfsStore>>,
         cache: Option<Arc<LfsStore>>,
-    ) -> Result<()> {
+    ) {
         let errors = &mut self.errors;
         let (key_map, pending): (HashMap<_, _>, HashSet<_>) = self
             .lfs_pointers
@@ -695,7 +696,7 @@ impl FetchState {
             .unzip();
 
         if pending.is_empty() {
-            return Ok(());
+            return;
         }
 
         debug!("Fetching LFS - Count = {count}", count = pending.len());
@@ -710,7 +711,7 @@ impl FetchState {
         let other_errors = Arc::new(Mutex::new(Vec::new()));
 
         // Fetch & write to local LFS stores
-        store.batch_fetch(
+        let top_level_error = store.batch_fetch(
             &pending,
             {
                 let lfs_local = local.clone();
@@ -721,8 +722,8 @@ impl FetchState {
 
                     match pointer_origin.read().get(&sha256).ok_or_else(|| {
                         anyhow!(
-                            "no source found for Sha256; received unexpected Sha256 from LFS server"
-                        )
+                        "no source found for Sha256; received unexpected Sha256 from LFS server"
+                    )
                     })? {
                         StoreType::Local => lfs_local
                             .as_ref()
@@ -746,7 +747,14 @@ impl FetchState {
                     }
                 }
             },
-        )?;
+        );
+
+        if let Err(err) = top_level_error {
+            let err = ClonableError::new(err);
+            for (key, (_ptr, _write)) in self.lfs_pointers.iter() {
+                self.errors.keyed_error(key.clone(), err.clone().into());
+            }
+        }
 
         let keyed_errors = std::mem::take(&mut *keyed_errors.lock());
         for (key, error) in keyed_errors.into_iter() {
@@ -767,20 +775,6 @@ impl FetchState {
 
         if let Some(ref lfs_local) = local {
             self.fetch_lfs(lfs_local, StoreType::Local)
-        }
-
-        Ok(())
-    }
-
-    pub(crate) fn fetch_lfs_remote(
-        &mut self,
-        store: &LfsRemoteInner,
-        local: Option<Arc<LfsStore>>,
-        cache: Option<Arc<LfsStore>>,
-    ) {
-        if let Err(err) = self.fetch_lfs_remote_inner(store, local, cache) {
-            debug!("LFS upper error - Error = {err:?}", err = err);
-            self.errors.other_error(err);
         }
     }
 
