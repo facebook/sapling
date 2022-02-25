@@ -667,7 +667,7 @@ def _compute_can_run_eden(require_fuse: bool = True) -> bool:
         return os.path.exists(projfs_dll)
 
     # FUSE must be available
-    if require_fuse and not os.path.exists("/dev/fuse"):
+    if sys.platform == "linux" and require_fuse and not os.path.exists("/dev/fuse"):
         return False
 
     # We must be able to start eden as root.
@@ -694,7 +694,7 @@ def _compute_can_run_sudo() -> bool:
     if sys.platform == "win32":
         return False
 
-    cmd = ["/usr/bin/sudo", "-E", "/bin/true"]
+    cmd = ["/usr/bin/sudo", "-E", "/usr/bin/true"]
     with open("/dev/null", "r") as dev_null:
         # Close stdout, stderr, and stdin, and call setsid() to make
         # sure we are detached from any controlling terminal.  This makes

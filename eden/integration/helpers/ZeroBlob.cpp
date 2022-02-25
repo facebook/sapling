@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#include <sysexits.h>
-
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
@@ -35,7 +33,7 @@ int main(int argc, char* argv[]) {
   folly::init(&argc, &argv);
   if (FLAGS_edenDir.empty()) {
     fprintf(stderr, "error: the --edenDir argument is required\n");
-    return EX_USAGE;
+    return 1;
   }
 
   ObjectId blobID(FLAGS_blobID);
@@ -49,5 +47,5 @@ int main(int argc, char* argv[]) {
   Blob blob(blobID, IOBuf());
   localStore.putBlob(blobID, &blob);
 
-  return EX_OK;
+  return 0;
 }
