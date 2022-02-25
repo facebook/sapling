@@ -131,7 +131,7 @@ static PROGRESS_REPORTING_STATE: Lazy<Box<dyn Send + Sync>> = Lazy::new(|| {
         let mut is_single_bar = false;
         let bar = if url.ends_with("/trees") {
             trees_bar.create_or_extend(0)
-        } else if url.ends_with("/files") {
+        } else if url.ends_with("/files") || url.ends_with("/files2") {
             files_bar.create_or_extend(0)
         } else {
             is_single_bar = true;
