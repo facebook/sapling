@@ -722,8 +722,8 @@ impl FetchState {
 
                     match pointer_origin.read().get(&sha256).ok_or_else(|| {
                         anyhow!(
-                        "no source found for Sha256; received unexpected Sha256 from LFS server"
-                    )
+                            "no source found for Sha256; received unexpected Sha256 from LFS server"
+                        )
                     })? {
                         StoreType::Local => lfs_local
                             .as_ref()
@@ -743,7 +743,9 @@ impl FetchState {
                     if let Some(key) = key_map.get(&sha256) {
                         keyed_errors.lock().push(((*key).clone(), error));
                     } else {
-                        other_errors.lock().push(error);
+                        other_errors
+                            .lock()
+                            .push(anyhow!("invalid other lfs error: {:?}", error));
                     }
                 }
             },
