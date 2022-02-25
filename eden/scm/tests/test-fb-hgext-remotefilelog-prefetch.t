@@ -175,21 +175,19 @@
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd shallow2
-  $ hg up -q null
-  $ echo x > x
-  $ echo y > y
-  $ echo z > z
+  $ hg up -q 97b1645a8f26
+  $ echo yy > y
   $ clearcache
   $ hg up tip
-  x: untracked file differs
-  abort: untracked files in working directory differ from files in requested revision
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob) (?)
+  y: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
   [255]
   $ hg revert --all
 
 # Test batch fetching of lookup files during hg status
   $ hg up --clean tip
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugrebuilddirstate
   $ clearcache
   $ hg status

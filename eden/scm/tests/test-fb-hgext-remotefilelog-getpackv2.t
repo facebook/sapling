@@ -55,7 +55,7 @@ Now try prefetchchunksize option, and expect that two getpackv2 calls were made
   [2]
   $ hg up tip --config remotefilelog.prefetchchunksize=1 --debug
   resolving manifests
-   branchmerge: False, force: False, partial: False
+   branchmerge: False, force: True, partial: False
    ancestor: 000000000000, local: 000000000000+, remote: 79c51fb96423
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

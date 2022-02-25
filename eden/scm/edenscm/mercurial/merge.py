@@ -2365,12 +2365,19 @@ def update(
         # If we're doing the initial checkout from null, let's use the new fancier
         # nativecheckout, since it has more efficient fetch mechanics.
         # git backend only supports nativecheckout at present.
+        isclonecheckout = repo["."].node() == nullid
+
+        # If the user is attempting to checkout for the first time, let's assume
+        # they don't have any pending changes and let's do a force checkout.
+        # This makes it much faster, by skipping the entire "check for unknown
+        # files" and "check for conflicts" code paths, and makes it so they
+        # aren't blocked by pending files and have to purge+clone over and over.
+        if isclonecheckout:
+            force = True
+
         if (
             repo.ui.configbool("experimental", "nativecheckout")
-            or (
-                repo.ui.configbool("clone", "nativecheckout")
-                and repo["."].node() == nullid
-            )
+            or (repo.ui.configbool("clone", "nativecheckout") and isclonecheckout)
             or git.isgitstore(repo)
         ):
             if branchmerge:
@@ -2379,8 +2386,10 @@ def update(
                 fallbackcheckout = "ancestor is not supported: %s" % ancestor
             elif wc is not None and wc.isinmemory():
                 fallbackcheckout = "Native checkout does not work inmemory"
-            elif (force or updatecheck != "noconflict") and (
-                wc.dirty(missing=True) or mergestate.read(repo).active()
+            elif (
+                not isclonecheckout
+                and (force or updatecheck != "noconflict")
+                and (wc.dirty(missing=True) or mergestate.read(repo).active())
             ):
                 fallbackcheckout = (
                     "Working copy is dirty and --clean specified - not supported yet"
