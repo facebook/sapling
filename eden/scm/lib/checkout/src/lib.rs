@@ -318,12 +318,15 @@ impl CheckoutPlan {
             new_files.collect()
         };
 
+        let bar = ProgressBar::register_new("Checking untracked", new_files.len() as u64, "files");
         for file_action in new_files {
-            let file = &file_action.path;
+            let file: &RepoPathBuf = &file_action.path;
 
+            bar.increase_position(1);
             if !matches!(status.status(file), Some(FileStatus::Unknown)) {
                 continue;
             }
+            bar.set_message(file.to_string());
 
             let state = if vfs.case_sensitive() {
                 tree_state.get(file)?
@@ -648,13 +651,17 @@ impl CheckoutProgress {
         actions: impl Iterator<Item = &'a UpdateContentAction>,
     ) -> Vec<&'a UpdateContentAction> {
         // TODO: This should be done in parallel. Maybe with the new vfs async batch APIs?
+        let bar = ProgressBar::register_new("Filtering existing", 1, "filtered/total");
         actions
-            .filter(|action| {
+            .filter(move |action| {
                 let path = &action.path;
+                bar.increase_total(1);
                 if let Some((hgid, time, size)) = &self.state.get(path) {
                     if *hgid != action.content_hgid {
                         return true;
                     }
+
+                    bar.set_message(path.to_string());
 
                     if let Ok(stat) = self.vfs.metadata(path) {
                         let time_matches = stat
@@ -666,6 +673,7 @@ impl CheckoutProgress {
                             })
                             .unwrap_or(false);
                         if time_matches && &stat.len() == size {
+                            bar.increase_position(1);
                             return false;
                         }
                     }

@@ -464,95 +464,98 @@ def _innerwalk(self, match, event, span):
         normalize = None
 
     # step 2: query Watchman
-    try:
-        # Use the user-configured timeout for the query.
-        # Add a little slack over the top of the user query to allow for
-        # overheads while transferring the data
-        excludes = ["anyof", ["dirname", ".hg"], ["name", ".hg", "wholename"]]
-        # Exclude submodules.
-        if git.isgitformat(self._repo):
-            submods = git.parsesubmodules(self._repo[None])
-            excludes += [["dirname", s.path] for s in submods]
-        self._watchmanclient.settimeout(state.timeout + 0.1)
-        result = self._watchmanclient.command(
-            "query",
-            {
-                "fields": ["mode", "mtime", "size", "exists", "name"],
-                "since": clock,
-                "expression": ["not", excludes],
-                "sync_timeout": int(state.timeout * 1000),
-                "empty_on_fresh_instance": state.walk_on_invalidate,
-            },
-        )
-    except Exception as ex:
-        event["is_error"] = True
-        span.record(error=ex)
-        _handleunavailable(self._ui, state, ex)
-        self._watchmanclient.clearconnection()
-        # XXX: Legacy scuba logging. Remove this once the source of truth
-        # is moved to the Rust Event.
-        self._ui.log("fsmonitor_status", fsmonitor_status="exception")
-        if self._ui.configbool("fsmonitor", "fallback-on-watchman-exception"):
-            raise fsmonitorfallback("exception during run")
-        else:
-            raise ex
-    else:
-        # We need to propagate the last observed clock up so that we
-        # can use it for our next query
-        event["new_clock"] = result["clock"]
-        event["is_fresh"] = result["is_fresh_instance"]
-        span.record(newclock=result["clock"], isfresh=result["is_fresh_instance"])
-        state.setlastclock(result["clock"])
-        state.setlastisfresh(result["is_fresh_instance"])
-
-        files = list(filter(lambda x: _isutf8(self._ui, x["name"]), result["files"]))
-
-        if result["is_fresh_instance"]:
-            if not self._ui.plain() and self._ui.configbool(
-                "fsmonitor", "warn-fresh-instance"
-            ):
-                oldpid = _watchmanpid(event["old_clock"])
-                newpid = _watchmanpid(event["new_clock"])
-                if oldpid is not None and newpid is not None and oldpid != newpid:
-                    self._ui.warn(
-                        _(
-                            "warning: watchman has recently restarted (old pid %s, new pid %s) - operation will be slower than usual\n"
-                        )
-                        % (oldpid, newpid)
-                    )
-                elif oldpid is None and newpid is not None:
-                    self._ui.warn(
-                        _(
-                            "warning: watchman has recently started (pid %s) - operation will be slower than usual\n"
-                        )
-                        % (newpid,)
-                    )
-                else:
-                    self._ui.warn(
-                        _(
-                            "warning: watchman failed to catch up with file change events and requires a full scan - operation will be slower than usual\n"
-                        )
-                    )
-
-            if state.walk_on_invalidate:
-                state.invalidate(reason="fresh_instance")
-                raise fsmonitorfallback("fresh instance")
-            fresh_instance = True
-            # Ignore any prior noteable files from the state info
-            notefiles = []
-        else:
-            count = len(files)
-            state.setwatchmanchangedfilecount(count)
-            event["new_files"] = blackbox.shortlist(
-                sorted(e["name"] for e in files), count
+    with progress.spinner(self._ui, "watchman query"):
+        try:
+            # Use the user-configured timeout for the query.
+            # Add a little slack over the top of the user query to allow for
+            # overheads while transferring the data
+            excludes = ["anyof", ["dirname", ".hg"], ["name", ".hg", "wholename"]]
+            # Exclude submodules.
+            if git.isgitformat(self._repo):
+                submods = git.parsesubmodules(self._repo[None])
+                excludes += [["dirname", s.path] for s in submods]
+            self._watchmanclient.settimeout(state.timeout + 0.1)
+            result = self._watchmanclient.command(
+                "query",
+                {
+                    "fields": ["mode", "mtime", "size", "exists", "name"],
+                    "since": clock,
+                    "expression": ["not", excludes],
+                    "sync_timeout": int(state.timeout * 1000),
+                    "empty_on_fresh_instance": state.walk_on_invalidate,
+                },
             )
-            span.record(newfileslen=len(files))
-        # XXX: Legacy scuba logging. Remove this once the source of truth
-        # is moved to the Rust Event.
-        if event["is_fresh"]:
-            self._ui.log("fsmonitor_status", fsmonitor_status="fresh")
+        except Exception as ex:
+            event["is_error"] = True
+            span.record(error=ex)
+            _handleunavailable(self._ui, state, ex)
+            self._watchmanclient.clearconnection()
+            # XXX: Legacy scuba logging. Remove this once the source of truth
+            # is moved to the Rust Event.
+            self._ui.log("fsmonitor_status", fsmonitor_status="exception")
+            if self._ui.configbool("fsmonitor", "fallback-on-watchman-exception"):
+                raise fsmonitorfallback("exception during run")
+            else:
+                raise ex
         else:
-            self._ui.log("fsmonitor_status", fsmonitor_status="normal")
+            # We need to propagate the last observed clock up so that we
+            # can use it for our next query
+            event["new_clock"] = result["clock"]
+            event["is_fresh"] = result["is_fresh_instance"]
+            span.record(newclock=result["clock"], isfresh=result["is_fresh_instance"])
+            state.setlastclock(result["clock"])
+            state.setlastisfresh(result["is_fresh_instance"])
+
+            files = list(
+                filter(lambda x: _isutf8(self._ui, x["name"]), result["files"])
+            )
+
+            if result["is_fresh_instance"]:
+                if not self._ui.plain() and self._ui.configbool(
+                    "fsmonitor", "warn-fresh-instance"
+                ):
+                    oldpid = _watchmanpid(event["old_clock"])
+                    newpid = _watchmanpid(event["new_clock"])
+                    if oldpid is not None and newpid is not None and oldpid != newpid:
+                        self._ui.warn(
+                            _(
+                                "warning: watchman has recently restarted (old pid %s, new pid %s) - operation will be slower than usual\n"
+                            )
+                            % (oldpid, newpid)
+                        )
+                    elif oldpid is None and newpid is not None:
+                        self._ui.warn(
+                            _(
+                                "warning: watchman has recently started (pid %s) - operation will be slower than usual\n"
+                            )
+                            % (newpid,)
+                        )
+                    else:
+                        self._ui.warn(
+                            _(
+                                "warning: watchman failed to catch up with file change events and requires a full scan - operation will be slower than usual\n"
+                            )
+                        )
+
+                if state.walk_on_invalidate:
+                    state.invalidate(reason="fresh_instance")
+                    raise fsmonitorfallback("fresh instance")
+                fresh_instance = True
+                # Ignore any prior noteable files from the state info
+                notefiles = []
+            else:
+                count = len(files)
+                state.setwatchmanchangedfilecount(count)
+                event["new_files"] = blackbox.shortlist(
+                    sorted(e["name"] for e in files), count
+                )
+                span.record(newfileslen=len(files))
+            # XXX: Legacy scuba logging. Remove this once the source of truth
+            # is moved to the Rust Event.
+            if event["is_fresh"]:
+                self._ui.log("fsmonitor_status", fsmonitor_status="fresh")
+            else:
+                self._ui.log("fsmonitor_status", fsmonitor_status="normal")
 
     results = {}
 
@@ -571,49 +574,51 @@ def _innerwalk(self, match, event, span):
     # for name case changes.
     ignorelist = []
     ignorelistappend = ignorelist.append
-    for entry in files:
-        fname = entry["name"]
+    with progress.bar(self.ui, _("Watchman results"), _("files"), len(files)) as prog:
+        for entry in files:
+            prog.value += 1
+            fname = entry["name"]
 
-        if _fixencoding:
-            fname = _watchmantofsencoding(fname)
-        if switch_slashes:
-            fname = fname.replace("\\", "/")
-        if normalize:
-            normed = normcase(fname)
-            fname = normalize(fname, True, True)
-            foldmap[normed] = fname
-        fmode = entry["mode"]
-        fexists = entry["exists"]
-        kind = getkind(fmode)
+            if _fixencoding:
+                fname = _watchmantofsencoding(fname)
+            if switch_slashes:
+                fname = fname.replace("\\", "/")
+            if normalize:
+                normed = normcase(fname)
+                fname = normalize(fname, True, True)
+                foldmap[normed] = fname
+            fmode = entry["mode"]
+            fexists = entry["exists"]
+            kind = getkind(fmode)
 
-        if not fexists:
-            # if marked as deleted and we don't already have a change
-            # record, mark it as deleted.  If we already have an entry
-            # for fname then it was either part of walkexplicit or was
-            # an earlier result that was a case change
-            if (
-                fname not in results
-                and fname in dmap
-                and (matchalways or matchfn(fname))
-            ):
+            if not fexists:
+                # if marked as deleted and we don't already have a change
+                # record, mark it as deleted.  If we already have an entry
+                # for fname then it was either part of walkexplicit or was
+                # an earlier result that was a case change
+                if (
+                    fname not in results
+                    and fname in dmap
+                    and (matchalways or matchfn(fname))
+                ):
+                    results[fname] = None
+            elif kind == dirkind:
+                if fname in dmap and (matchalways or matchfn(fname)):
+                    results[fname] = None
+            elif kind == regkind or kind == lnkkind:
+                if fname in dmap:
+                    if matchalways or matchfn(fname):
+                        results[fname] = entry
+                else:
+                    ignored = ignore(fname)
+                    if ignored:
+                        ignorelistappend(fname)
+                    if (matchalways or matchfn(fname)) and not ignored:
+                        results[fname] = entry
+            elif fname in dmap and (matchalways or matchfn(fname)):
                 results[fname] = None
-        elif kind == dirkind:
-            if fname in dmap and (matchalways or matchfn(fname)):
-                results[fname] = None
-        elif kind == regkind or kind == lnkkind:
-            if fname in dmap:
-                if matchalways or matchfn(fname):
-                    results[fname] = entry
-            else:
-                ignored = ignore(fname)
-                if ignored:
-                    ignorelistappend(fname)
-                if (matchalways or matchfn(fname)) and not ignored:
-                    results[fname] = entry
-        elif fname in dmap and (matchalways or matchfn(fname)):
-            results[fname] = None
-        elif fname in match.files():
-            match.bad(fname, filesystem.badtype(kind))
+            elif fname in match.files():
+                match.bad(fname, filesystem.badtype(kind))
 
     # step 3: query notable files we don't already know about
     # XXX try not to iterate over the entire dmap
@@ -649,8 +654,14 @@ def _innerwalk(self, match, event, span):
     # audit returns False for paths with one of its parent directories being a
     # symlink.
     audit = pathutil.pathauditor(self.dirstate._root, cached=True).check
-    auditpass = [f for f in visit if audit(f)]
-    auditpass.sort()
+    with progress.bar(self.ui, _("Auditing paths"), _("files"), len(visit)) as prog:
+        auditpass = []
+        for f in visit:
+            prog.value += 1
+            if audit(f):
+                auditpass.append(f)
+        auditpass.sort()
+
     auditfail = visit.difference(auditpass)
     droplist = []
     droplistappend = droplist.append
@@ -672,20 +683,28 @@ def _innerwalk(self, match, event, span):
     def nf():
         return next(auditpassiter)
 
-    for st in util.statfiles([join(f) for f in auditpass]):
-        f = nf()
-        if (st and not ignore(f)) or f in dmap:
-            results[f] = st
-        elif not st:
-            # '?' (untracked) file was deleted from the filesystem - remove it
-            # from treestate.
-            #
-            # We can only update the dirstate (and treestate) while holding the
-            # wlock. That happens inside poststatus.__call__ -> state.set. So
-            # buffer what files to "drop" so state.set can clean them up.
-            entry = dmap.get(f, None)
-            if entry and entry[0] == "?":
-                droplistappend(f)
+    with progress.bar(
+        self.ui, _("Getting metadata"), _("files"), len(auditpass)
+    ) as prog:
+        # Break it into chunks so we get some progress information
+        for i in range(0, len(auditpass), 5000):
+            chunk = auditpass[i : i + 5000]
+            for st in util.statfiles([join(f) for f in chunk]):
+                prog.value += 1
+                f = nf()
+                if (st and not ignore(f)) or f in dmap:
+                    results[f] = st
+                elif not st:
+                    # '?' (untracked) file was deleted from the filesystem - remove it
+                    # from treestate.
+                    #
+                    # We can only update the dirstate (and treestate) while holding the
+                    # wlock. That happens inside poststatus.__call__ -> state.set. So
+                    # buffer what files to "drop" so state.set can clean them up.
+                    entry = dmap.get(f, None)
+                    if entry and entry[0] == "?":
+                        droplistappend(f)
+
     # The droplist and ignorelist need to match setlastclock()
     state.setdroplist(droplist)
     state.setignorelist(ignorelist)
@@ -976,23 +995,22 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
         if match is None:
             match = util.always
 
-        with progress.spinner(self._ui, "watchman query"):
-            try:
-                startclock = self._watchmanclient.getcurrentclock()
-            except Exception as ex:
-                if self._ui.configbool("fsmonitor", "fallback-on-watchman-exception"):
-                    raise fsmonitorfallback("exception while getting watchman clock")
-                else:
-                    raise ex
+        try:
+            startclock = self._watchmanclient.getcurrentclock()
+        except Exception as ex:
+            if self._ui.configbool("fsmonitor", "fallback-on-watchman-exception"):
+                raise fsmonitorfallback("exception while getting watchman clock")
+            else:
+                raise ex
 
-            self.dirstate._map.preload()
-            lookups = []
-            results = []
-            for fn, st in self._fsmonitorwalk(match):
-                changed = self._ischanged(fn, st, lookups)
-                if changed:
-                    results.append(changed[0])
-                    yield changed
+        self.dirstate._map.preload()
+        lookups = []
+        results = []
+        for fn, st in self._fsmonitorwalk(match):
+            changed = self._ischanged(fn, st, lookups)
+            if changed:
+                results.append(changed[0])
+                yield changed
 
         for changed in self._processlookups(lookups):
             results.append(changed[0])
