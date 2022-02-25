@@ -74,6 +74,7 @@ pub struct CheckoutPlan {
     remove: Vec<RepoPathBuf>,
     /// Files that needs their content updated.
     update_content: Vec<UpdateContentAction>,
+    filtered_update_content: Vec<UpdateContentAction>,
     /// Files that only need X flag updated.
     update_meta: Vec<UpdateMetaAction>,
     progress: Option<Mutex<CheckoutProgress>>,
@@ -88,7 +89,7 @@ struct CheckoutProgress {
 }
 
 /// Update content and (possibly) metadata on the file
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct UpdateContentAction {
     /// Path to file.
     path: RepoPathBuf,
@@ -163,9 +164,11 @@ impl CheckoutPlan {
                 }
             }
         }
+        let filtered_update_content = update_content.clone();
         Self {
             remove,
             update_content,
+            filtered_update_content,
             update_meta,
             progress: None,
             checkout,
@@ -185,6 +188,7 @@ impl CheckoutPlan {
         } else {
             CheckoutProgress::new(&path, vfs.clone())?
         };
+        self.filtered_update_content = progress.filter_already_written(&self.update_content);
         self.progress = Some(Mutex::new(progress));
         Ok(())
     }
@@ -208,16 +212,11 @@ impl CheckoutPlan {
         store: &dyn ReadFileContents<Error = anyhow::Error>,
     ) -> Result<CheckoutStats> {
         let vfs = &self.checkout.vfs;
-        let filtered_update_content: Vec<_> = self
-            .progress
-            .as_ref()
-            .map(|p| p.lock().filter_already_written(self.update_content.iter()))
-            .unwrap_or_else(|| self.update_content.iter().collect());
         debug!(
             "Skipping checking out {} files since they're already written",
-            self.update_content.len() - filtered_update_content.len()
+            self.update_content.len() - self.filtered_update_content.len()
         );
-        let total = filtered_update_content.len() + self.remove.len() + self.update_meta.len();
+        let total = self.filtered_update_content.len() + self.remove.len() + self.update_meta.len();
         let bar = &ProgressBar::new("Updating", total as u64, "files");
         Registry::main().register_progress_bar(bar);
         let async_vfs = &AsyncVfsWriter::spawn_new(vfs.clone(), 16);
@@ -231,9 +230,10 @@ impl CheckoutPlan {
 
         Self::process_work_stream(remove_files).await?;
 
-        let actions: HashMap<_, _> = filtered_update_content
+        let actions: HashMap<_, _> = self
+            .filtered_update_content
             .iter()
-            .map(|u| (u.make_key(), *u))
+            .map(|u| (u.make_key(), u.clone()))
             .collect();
         let keys: Vec<_> = actions.keys().cloned().collect();
 
@@ -277,7 +277,7 @@ impl CheckoutPlan {
         store: &dyn ReadFileContents<Error = anyhow::Error>,
     ) -> Result<(usize, u64)> {
         let keys = self
-            .update_content
+            .filtered_update_content
             .iter()
             .map(UpdateContentAction::make_key);
         let mut stream = store.read_file_contents(keys.collect()).await;
@@ -311,12 +311,7 @@ impl CheckoutPlan {
         let vfs = &self.checkout.vfs;
         let mut check_content = vec![];
 
-        let new_files = self.new_file_actions();
-        let new_files = if let Some(progress) = self.progress.as_ref() {
-            progress.lock().filter_already_written(new_files)
-        } else {
-            new_files.collect()
-        };
+        let new_files: Vec<_> = self.new_file_actions().collect();
 
         let bar = ProgressBar::register_new("Checking untracked", new_files.len() as u64, "files");
         for file_action in new_files {
@@ -518,7 +513,7 @@ impl CheckoutPlan {
 
     fn new_file_actions(&self) -> impl Iterator<Item = &UpdateContentAction> {
         // todo - index new files so that this function don't need to be O(total_files_changed)test-update-names.t.err
-        self.update_content.iter().filter(|u| u.new_file)
+        self.filtered_update_content.iter().filter(|u| u.new_file)
     }
 
     pub fn all_files(&self) -> impl Iterator<Item = &RepoPathBuf> {
@@ -546,6 +541,7 @@ impl CheckoutPlan {
         Self {
             remove: vec![],
             update_content: vec![],
+            filtered_update_content: vec![],
             update_meta: vec![],
             progress: None,
             checkout: Checkout::default_config(vfs),
@@ -648,19 +644,20 @@ impl CheckoutProgress {
 
     fn filter_already_written<'a>(
         &self,
-        actions: impl Iterator<Item = &'a UpdateContentAction>,
-    ) -> Vec<&'a UpdateContentAction> {
+        actions: &[UpdateContentAction],
+    ) -> Vec<UpdateContentAction> {
         // TODO: This should be done in parallel. Maybe with the new vfs async batch APIs?
-        let bar = ProgressBar::register_new("Filtering existing", 1, "filtered/total");
+        let bar = ProgressBar::register_new("Filtering existing", actions.len() as u64, "files");
         actions
+            .iter()
             .filter(move |action| {
                 let path = &action.path;
-                bar.increase_total(1);
                 if let Some((hgid, time, size)) = &self.state.get(path) {
                     if *hgid != action.content_hgid {
                         return true;
                     }
 
+                    bar.increase_position(1);
                     bar.set_message(path.to_string());
 
                     if let Ok(stat) = self.vfs.metadata(path) {
@@ -673,13 +670,13 @@ impl CheckoutProgress {
                             })
                             .unwrap_or(false);
                         if time_matches && &stat.len() == size {
-                            bar.increase_position(1);
                             return false;
                         }
                     }
                 }
                 true
             })
+            .map(|a| a.clone())
             .collect()
     }
 }
