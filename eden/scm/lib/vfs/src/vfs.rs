@@ -300,7 +300,15 @@ impl VFS {
     // Reads file content
     pub fn read(&self, path: &RepoPath) -> Result<Bytes> {
         let filepath = self.inner.auditor.audit(path)?;
-        let content = std::fs::read(filepath)?;
+        let metadata = self.metadata(path)?;
+        let content = if metadata.is_symlink() {
+            match std::fs::read_link(&filepath)?.to_str() {
+                Some(p) => p.as_bytes().iter().map(|u| *u).collect(),
+                None => bail!("invalid path during vfs::read '{:?}'", filepath),
+            }
+        } else {
+            std::fs::read(filepath)?
+        };
         Ok(content.into())
     }
 
@@ -441,6 +449,16 @@ mod unix_tests {
         buf.push("a");
         let metadata = fs::symlink_metadata(buf).unwrap();
         assert!(metadata.file_type().is_file())
+    }
+
+    #[test]
+    fn test_symlink_read() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("a").unwrap();
+        vfs.write(path, b"abc", UpdateFlag::Symlink).unwrap();
+        let buf = vfs.read(path).unwrap();
+        assert_eq!(buf, b"abc")
     }
 
     #[test]
