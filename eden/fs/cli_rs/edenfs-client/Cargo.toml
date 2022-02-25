@@ -18,7 +18,7 @@ regex = "1.5.4"
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 subprocess = "0.2.7"
-sysinfo = "=0.17.2"
+sysinfo = "0.20.4"
 thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

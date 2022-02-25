@@ -13,7 +13,7 @@ pub fn get_executable(pid: sysinfo::Pid) -> Option<PathBuf> {
     let mut system = sysinfo::System::new();
 
     if system.refresh_process(pid) {
-        if let Some(process) = system.get_process(pid) {
+        if let Some(process) = system.process(pid) {
             let executable = process.exe();
             trace!(pid, ?executable, "found process executable");
 
