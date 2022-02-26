@@ -20,6 +20,7 @@ use std::io::{stdout, Write};
 use std::path::Path;
 use std::time::Duration;
 use std::time::SystemTime;
+use sysinfo::{Pid, System, SystemExt};
 
 use anyhow::anyhow;
 use edenfs_client::{EdenFsClient, EdenFsInstance};
@@ -80,12 +81,12 @@ const COLUMN_TITLES: &[&str] = &[
 ];
 
 trait GetAccessCountsResultExt {
-    fn get_cmd_for_pid(&self, pid: &i32) -> Result<String>;
+    fn get_cmd_for_pid(&self, pid: pid_t) -> Result<String>;
 }
 
 impl GetAccessCountsResultExt for GetAccessCountsResult {
-    fn get_cmd_for_pid(&self, pid: &i32) -> Result<String> {
-        match self.cmdsByPid.get(pid) {
+    fn get_cmd_for_pid(&self, pid: pid_t) -> Result<String> {
+        match self.cmdsByPid.get(&pid) {
             Some(cmd) => {
                 let cmd = String::from_utf8(cmd.to_vec()).from_err()?;
 
@@ -140,7 +141,7 @@ impl AccessCountsExt for AccessCounts {
 
 #[derive(Clone)]
 struct Process {
-    pid: u32,
+    pid: pid_t,
     mount: String,
     cmd: String,
     access_counts: AccessCounts,
@@ -149,19 +150,19 @@ struct Process {
 }
 
 impl Process {
-    fn is_running(&self) -> bool {
-        Path::new(&format!("/proc/{}", self.pid)).is_dir()
+    fn is_running(&self, system: &System) -> bool {
+        system.process(self.pid as Pid).is_some()
     }
 }
 
 struct TrackedProcesses {
-    processes: BTreeMap<u32, Process>,
+    processes: BTreeMap<pid_t, Process>,
 }
 
 impl TrackedProcesses {
     fn new() -> Self {
         TrackedProcesses {
-            processes: BTreeMap::<u32, Process>::new(),
+            processes: BTreeMap::<pid_t, Process>::new(),
         }
     }
 
@@ -183,15 +184,14 @@ impl TrackedProcesses {
     /// At any given time, a single pid may have multiple access logs.
     fn update_process(
         &mut self,
-        pid: &pid_t,
+        pid: pid_t,
         mount: &[u8],
         cmd: String,
-        access_counts: AccessCounts,
-        fetch_counts: &i64,
+        access_counts: &AccessCounts,
+        fetch_counts: i64,
     ) -> Result<()> {
-        let pid = u32::try_from(*pid).from_err()?;
         let mount = TrackedProcesses::extract_mount(mount)?;
-        let fetch_counts = u64::try_from(*fetch_counts).from_err()?;
+        let fetch_counts = u64::try_from(fetch_counts).from_err()?;
 
         match self.processes.get_mut(&pid) {
             Some(existing_proc) => {
@@ -211,7 +211,7 @@ impl TrackedProcesses {
                         pid,
                         mount,
                         cmd,
-                        access_counts,
+                        access_counts: access_counts.clone(),
                         fetch_counts,
                         last_access_time: SystemTime::now(),
                     },
@@ -225,7 +225,7 @@ impl TrackedProcesses {
     /// We aggregate all tracked processes in a separate step right before rendering
     /// (as opposed to aggregating eagerly as we receive process logs in `update_process`)
     /// because tracked processes could stop running which may change the top_pid.
-    fn aggregated_processes(&self) -> Vec<Process> {
+    fn aggregated_processes(&self, system: &System) -> Vec<Process> {
         // Technically, it's more correct to aggregate this by TGID
         // Because that's hard to get, we instead aggregate by mount & cmd
         // (mount, cmd) => Process
@@ -239,7 +239,8 @@ impl TrackedProcesses {
                     agg_proc.access_counts.add(&process.access_counts);
 
                     // Figure out what the most relevant process id is
-                    if process.is_running() || agg_proc.last_access_time < process.last_access_time
+                    if process.is_running(system)
+                        || agg_proc.last_access_time < process.last_access_time
                     {
                         agg_proc.pid = process.pid;
                         agg_proc.last_access_time = process.last_access_time;
@@ -388,6 +389,8 @@ impl crate::Subcommand for MinitopCmd {
         let client = instance.connect(None).await?;
         let mut tracked_processes = TrackedProcesses::new();
 
+        let mut system = System::new();
+
         // Setup rendering
         let mut attributes = TerminalAttributes::new()
             .disable_line_wrap()?
@@ -405,6 +408,7 @@ impl crate::Subcommand for MinitopCmd {
                 queue!(stdout, terminal::Clear(terminal::ClearType::All)).from_err()?;
             }
             client.flushStatsNow();
+            system.refresh_processes();
 
             // Update pending imports summary stats
             let (pending_imports, live_imports) = tokio::try_join!(
@@ -421,21 +425,21 @@ impl crate::Subcommand for MinitopCmd {
             for (mount, accesses) in &counts.accessesByMount {
                 for (pid, access_counts) in &accesses.accessCountsByPid {
                     tracked_processes.update_process(
-                        pid,
+                        *pid,
                         mount,
-                        counts.get_cmd_for_pid(pid)?,
-                        access_counts.clone(),
-                        accesses.fetchCountsByPid.get(pid).unwrap_or(&0),
+                        counts.get_cmd_for_pid(*pid)?,
+                        access_counts,
+                        *accesses.fetchCountsByPid.get(pid).unwrap_or(&0),
                     )?;
                 }
 
                 for (pid, fetch_counts) in &accesses.fetchCountsByPid {
                     tracked_processes.update_process(
-                        pid,
+                        *pid,
                         mount,
-                        counts.get_cmd_for_pid(pid)?,
-                        AccessCounts::default(),
-                        fetch_counts,
+                        counts.get_cmd_for_pid(*pid)?,
+                        &AccessCounts::default(),
+                        *fetch_counts,
                     )?;
                 }
             }
@@ -479,7 +483,7 @@ impl crate::Subcommand for MinitopCmd {
             let mut table = Table::new();
             table.set_header(COLUMN_TITLES);
             table.load_preset(UTF8_BORDERS_ONLY);
-            for aggregated_process in tracked_processes.aggregated_processes() {
+            for aggregated_process in tracked_processes.aggregated_processes(&system) {
                 table.add_row(vec![
                     aggregated_process.pid.to_string(),
                     aggregated_process.mount.clone(),
