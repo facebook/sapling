@@ -2002,15 +2002,13 @@ void EdenServiceHandler::debugGetScmTree(
   auto edenMount = server_->getMount(mountPath);
   auto id = ObjectId::fromHex(*idStr);
 
-  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-      "EdenServiceHandler::debugGetScmTree");
   std::shared_ptr<const Tree> tree;
   auto store = edenMount->getObjectStore();
   if (localStoreOnly) {
     auto localStore = store->getLocalStore();
     tree = localStore->getTree(id).get();
   } else {
-    tree = store->getTree(id, *context).get();
+    tree = store->getTree(id, helper->getFetchContext()).get();
   }
 
   if (!tree) {
@@ -2037,15 +2035,13 @@ void EdenServiceHandler::debugGetScmBlob(
   auto edenMount = server_->getMount(mountPath);
   auto id = ObjectId::fromHex(*idStr);
 
-  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-      "EdenServiceHandler::debugGetScmBlob");
   std::shared_ptr<const Blob> blob;
   auto store = edenMount->getObjectStore();
   if (localStoreOnly) {
     auto localStore = store->getLocalStore();
     blob = localStore->getBlob(id).get();
   } else {
-    blob = store->getBlob(id, *context).get();
+    blob = store->getBlob(id, helper->getFetchContext()).get();
   }
 
   if (!blob) {
@@ -2066,16 +2062,15 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
   auto edenMount = server_->getMount(mountPath);
   auto id = ObjectId::fromHex(*idStr);
 
-  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-      "EdenServiceHandler::debugGetScmBlobMetadata");
   std::optional<BlobMetadata> metadata;
   auto store = edenMount->getObjectStore();
   if (localStoreOnly) {
     auto localStore = store->getLocalStore();
     metadata = localStore->getBlobMetadata(id).get();
   } else {
-    auto sha1 = store->getBlobSha1(id, *context).get();
-    auto size = store->getBlobSize(id, *context).get();
+    auto& fetchContext = helper->getFetchContext();
+    auto sha1 = store->getBlobSha1(id, fetchContext).get();
+    auto size = store->getBlobSize(id, fetchContext).get();
     metadata.emplace(sha1, size);
   }
 
