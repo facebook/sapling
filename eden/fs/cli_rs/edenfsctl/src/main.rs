@@ -99,7 +99,7 @@ fn wrapper_main() -> Result<i32> {
             // help flag has been disabled for the main command and debug subcommand so they
             // will fallback correct while we still show help message for enabled commands
             // correctly.
-            Err(e) if e.kind == clap::ErrorKind::DisplayHelp => e.exit(),
+            Err(e) if e.kind() == clap::ErrorKind::DisplayHelp => e.exit(),
             Err(_) => fallback(),
         }
     }

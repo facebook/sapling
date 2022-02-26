@@ -8,7 +8,7 @@
 //! edenfsctl config
 
 use async_trait::async_trait;
-use clap::{AppSettings, Parser};
+use clap::Parser;
 
 use edenfs_client::EdenFsInstance;
 use edenfs_error::Result;
@@ -21,7 +21,7 @@ mod compact_local_storage;
 #[derive(Parser, Debug)]
 #[clap(
     about = "Internal commands for examining eden state",
-    setting = AppSettings::DisableHelpFlag,
+    disable_help_flag = true
 )]
 pub struct DebugCmd {
     #[clap(subcommand)]

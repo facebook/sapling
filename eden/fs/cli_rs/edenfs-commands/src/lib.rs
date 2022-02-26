@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use async_trait::async_trait;
-use clap::{AppSettings, Parser};
+use clap::Parser;
 use tracing::{event, Level};
 
 use edenfs_client::EdenFsInstance;
@@ -42,8 +42,8 @@ type ExitCode = i32;
 #[derive(Parser, Debug)]
 #[clap(
     name = "edenfsctl",
-    setting = AppSettings::DisableVersionFlag,
-    setting = AppSettings::DisableHelpFlag,
+    disable_version_flag = true,
+    disable_help_flag = true
 )]
 pub struct MainCommand {
     /// The path to the directory where edenfs stores its internal state.
