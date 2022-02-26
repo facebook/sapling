@@ -45,7 +45,6 @@ use edenapi_types::EphemeralPrepareRequest;
 use edenapi_types::EphemeralPrepareResponse;
 use edenapi_types::FetchSnapshotRequest;
 use edenapi_types::FetchSnapshotResponse;
-use edenapi_types::FileEntry;
 use edenapi_types::FileRequest;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
@@ -127,7 +126,6 @@ static FILES_ATTRS_INFLIGHT: Counter = Counter::new("edenapi.files_attrs_infligh
 
 mod paths {
     pub const HEALTH_CHECK: &str = "health_check";
-    pub const FILES: &str = "files";
     pub const FILES2: &str = "files2";
     pub const HISTORY: &str = "history";
     pub const TREES: &str = "trees";
@@ -414,37 +412,14 @@ impl Client {
 
         let guards = vec![FILES_INFLIGHT.entrance_guard(keys.len())];
 
-        let use_files2 = self.config().use_files2;
-        let path = if use_files2 {
-            paths::FILES2
-        } else {
-            paths::FILES
-        };
-
-        let url = self.build_url(path)?;
+        let url = self.build_url(paths::FILES2)?;
         let requests = self.prepare_requests(&url, keys, self.config().max_files, |keys| {
             let req = FileRequest { keys, reqs: vec![] };
             self.log_request(&req, "files");
             req
         })?;
 
-        if use_files2 {
-            Ok(self.fetch_guard::<FileResponse>(requests, guards)?)
-        } else {
-            // Convert files v1's FileEntry response into a files v2 FileResponse.
-            let response = self.fetch_guard::<FileEntry>(requests, guards)?;
-            let entries = response
-                .entries
-                .map_ok(|file_entry| FileResponse {
-                    key: file_entry.key.clone(),
-                    result: Ok(file_entry),
-                })
-                .boxed();
-            Ok(Response {
-                entries,
-                stats: response.stats,
-            })
-        }
+        Ok(self.fetch_guard::<FileResponse>(requests, guards)?)
     }
 
     pub(crate) async fn fetch_trees(
@@ -483,37 +458,14 @@ impl Client {
 
         let guards = vec![FILES_ATTRS_INFLIGHT.entrance_guard(reqs.len())];
 
-        let use_files2 = self.config().use_files2;
-        let path = if use_files2 {
-            paths::FILES2
-        } else {
-            paths::FILES
-        };
-
-        let url = self.build_url(path)?;
+        let url = self.build_url(paths::FILES2)?;
         let requests = self.prepare_requests(&url, reqs, self.config().max_files, |reqs| {
             let req = FileRequest { reqs, keys: vec![] };
             self.log_request(&req, "files");
             req
         })?;
 
-        if use_files2 {
-            Ok(self.fetch_guard::<FileResponse>(requests, guards)?)
-        } else {
-            // Convert files v1's FileEntry response into a files v2 FileResponse.
-            let response = self.fetch_guard::<FileEntry>(requests, guards)?;
-            let entries = response
-                .entries
-                .map_ok(|file_entry| FileResponse {
-                    key: file_entry.key.clone(),
-                    result: Ok(file_entry),
-                })
-                .boxed();
-            Ok(Response {
-                entries,
-                stats: response.stats,
-            })
-        }
+        Ok(self.fetch_guard::<FileResponse>(requests, guards)?)
     }
 
     /// Upload a single file

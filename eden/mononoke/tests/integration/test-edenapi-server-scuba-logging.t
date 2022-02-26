@@ -25,13 +25,11 @@ Send a request
   > EOF
 
   $ hgedenapi debugapi -e files -f req
-  []
-
-Check the logging
-
-  $ wait_for_json_record_count "$SCUBA" 1
-
-  $ jq -r .normal.edenapi_error < "$SCUBA"
-  Key does not exist: Key { path: RepoPathBuf(""), hgid: HgId("*") } (glob)
-  $ jq -r .int.edenapi_error_count < "$SCUBA"
-  2
+  [{"key": {"node": bin("1111111111111111111111111111111111111111"),
+            "path": ""},
+    "result": {"Err": {"code": 0,
+                       "message": "Key does not exist: Key { path: RepoPathBuf(\"\"), hgid: HgId(\"1111111111111111111111111111111111111111\") }"}}},
+   {"key": {"node": bin("2222222222222222222222222222222222222222"),
+            "path": ""},
+    "result": {"Err": {"code": 0,
+                       "message": "Key does not exist: Key { path: RepoPathBuf(\"\"), hgid: HgId(\"2222222222222222222222222222222222222222\") }"}}}]
