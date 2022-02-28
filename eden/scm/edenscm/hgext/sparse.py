@@ -844,6 +844,7 @@ class SparseConfig(object):
     mainrules = attr.ib(convert=list)
     profiles = attr.ib(convert=tuple)
     metadata = attr.ib(default=attr.Factory(dict))
+    isroot = attr.ib(default=False)
 
     def toincludeexclude(self):
         include = []
@@ -1111,6 +1112,7 @@ def _wraprepo(ui, repo):
             if rev is None:
                 raise error.Abort(_("cannot parse sparse patterns from working copy"))
 
+            isroot = False
             if rawconfig is None:
                 if not self.localvfs.exists("sparse"):
                     self._warnfullcheckout()
@@ -1120,6 +1122,7 @@ def _wraprepo(ui, repo):
                 rawconfig = self.readsparseconfig(
                     raw, filename=self.localvfs.join("sparse")
                 )
+                isroot = True
             elif not isinstance(rawconfig, RawSparseConfig):
                 raise error.ProgrammingError(
                     "getsparsepatterns.rawconfig must "
@@ -1178,6 +1181,7 @@ def _wraprepo(ui, repo):
                 rules,
                 profiles,
                 rawconfig.metadata,
+                isroot,
             )
 
         def readsparseprofile(self, rev, name, profileconfigs):
@@ -1360,10 +1364,7 @@ def _wraprepo(ui, repo):
                         rev, rawconfig=rawconfig, debugversion=debugversion
                     )
 
-                    if config.mainrules:
-                        matchers.append(
-                            matchmod.rulesmatch(self.root, "", config.mainrules)
-                        )
+                    matchrules = config.mainrules
 
                     if config.profiles:
                         # Keep each profile separate, so the end result is a
@@ -1377,9 +1378,18 @@ def _wraprepo(ui, repo):
                             # mainrules above.
                             version = debugversion or profile.version()
                             if version != "1":
-                                matchers.append(
-                                    matchmod.rulesmatch(self.root, "", profile.rules)
-                                )
+                                # Only union the profiles if we are the root level .hg/sparse profile.
+                                if config.isroot:
+                                    matchers.append(
+                                        matchmod.rulesmatch(
+                                            self.root, "", profile.rules
+                                        )
+                                    )
+                                else:
+                                    matchrules.extend(profile.rules)
+
+                    if matchrules:
+                        matchers.append(matchmod.rulesmatch(self.root, "", matchrules))
 
                     if not config.mainrules and not config.profiles:
                         isalways = True

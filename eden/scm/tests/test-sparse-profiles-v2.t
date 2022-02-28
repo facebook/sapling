@@ -18,8 +18,12 @@ test sparse
   > glob:*.sparse
   > path:file.txt
   > path:inc/
+  > 
   > [exclude]
   > path:inc/exc
+  > 
+  > [metadata]
+  > version: 2
   > EOF
   $ cat > main.sparse <<EOF
   > %include base.sparse
@@ -64,6 +68,24 @@ test sparse
   V1 includes 4 files
   V2 includes 5 files
   + inc/exc/incfile.txt
+
+Do not union profiles outside the root .hg/sparse config.
+  $ cat > temp.sparse <<EOF
+  > [metadata]
+  > version: 2
+  > 
+  > %include main.sparse
+  > %include base.sparse
+  > EOF
+  $ hg debugsparsematch -s temp.sparse inc/exc/incfile.txt
+  considering 1 file(s)
+  $ rm temp.sparse
+
+Do union profiles in root .hg/sparse config.
+  $ hg sparse enable base.sparse
+  $ ls inc/exc/incfile.txt
+  inc/exc/incfile.txt
+  $ hg sparse disable base.sparse
 
 Test that multiple profiles do not clobber each others includes
 # Exclude inc/exc/incfile.txt which main.sparse includes and
