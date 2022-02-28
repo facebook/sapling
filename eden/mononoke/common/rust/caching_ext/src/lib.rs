@@ -81,34 +81,54 @@ pub type McResult<T> = Result<T, McErrorKind>;
 struct CachelibKey(String);
 struct MemcacheKey(String);
 
+/// TTL for caching an item
 #[derive(Copy, Clone)]
 pub enum CacheTtl {
+    /// The item is valid forever, and can be cached indefinitely
     NoTtl,
+    /// Fetch from backing store once the duration given expires
     Ttl(Duration),
 }
 
+/// Whether or not to cache an item
 #[derive(Copy, Clone)]
 pub enum CacheDisposition {
+    /// Cache this item with the given TTL
     Cache(CacheTtl),
+    /// Do not cache this item; re-fetch from backing store if it's requested again
     Ignore,
 }
 
+/// Implement this for a data item that can be cached. You will also need
+/// #[derive(Abomonation)] on the data item.
 pub trait MemcacheEntity: Sized {
+    /// Convert the item to bytes that can live in Memcache and be deserialized
+    /// in another process
     fn serialize(&self) -> Bytes;
 
+    /// Deserialize the item from bytes into an object, or fail to do so
     fn deserialize(bytes: Bytes) -> Result<Self, ()>;
 }
 
+/// Implement this trait to indicate that you can cache values retrived through you
 #[auto_impl(&)]
 pub trait EntityStore<V> {
+    /// Get the cachelib handler. This can be created with `.into()` on a `VolatileLruCachePool`
     fn cachelib(&self) -> &CachelibHandler<V>;
 
+    /// Get the Memcache KeyGen, for creating Memcache keys. This has both code and site versions,
+    /// as well as a prefix.
     fn keygen(&self) -> &KeyGen;
 
+    /// Get the Memcache handler. This can be created with `into()` on a `MemcacheClient`.
     fn memcache(&self) -> &MemcacheHandler;
 
+    /// Given a value `v`, decide whether or not to cache it.
     fn cache_determinator(&self, v: &V) -> CacheDisposition;
 
+    /// Finds the cache stats for this handler
+    ///
+    /// Implement this method with `caching_ext::impl_singleton_stats!` macro, instead of by hand
     fn stats(&self) -> &CacheStats;
 
     /// Whether Memcache writes should run in the background. This is normally the desired behavior
@@ -119,14 +139,21 @@ pub trait EntityStore<V> {
     }
 }
 
+/// Implement this to make it possible to fetch keys via the cache
 #[async_trait]
 #[auto_impl(&)]
 pub trait KeyedEntityStore<K, V>: EntityStore<V> {
+    /// Given an item key, return the cachelib key to use.
     fn get_cache_key(&self, key: &K) -> String;
 
+    /// Given a set of keys to fetch from backing store, return a map from keys to fetched values
+    ///
+    /// If a key has no value in the backing store, omit it from the result map. Only use an
+    /// Error for a failure to fetch, not absence
     async fn get_from_db(&self, keys: HashSet<K>) -> Result<HashMap<K, V>, Error>;
 }
 
+/// Utility function to fetch all keys in a single chunk without parallelism
 pub fn get_or_fill<K, V>(
     store: impl KeyedEntityStore<K, V>,
     keys: HashSet<K>,
@@ -139,6 +166,18 @@ where
     get_or_fill_chunked(store, keys, usize::MAX, 1)
 }
 
+/// The core of caching with this module. Takes a store that implements
+/// `KeyedEntityStore`, and a set of keys to fetch. Returns a map
+/// of fetched values.
+///
+/// Your accessor functions for consumers should call this to get values
+/// from cache or backing store, as this will do the job of keeping
+/// cachelib filled from memcache, and memcache filled from your backing store
+///
+/// fetch_chunk and parallel_chunks are used to implement chunked
+/// and parallel fetching. Keys to fetch from the backing store
+/// will be split into `fetch_chunk` size groups, and at most `parallel_chunks`
+/// groups will be in flight at once.
 pub async fn get_or_fill_chunked<K, V>(
     store: impl KeyedEntityStore<K, V>,
     keys: HashSet<K>,
@@ -272,6 +311,8 @@ where
     Ok(data)
 }
 
+/// Directly fill a cache from data you've prefetched outside the caching system
+/// Allows things like microwave to avoid any backing store fetches
 pub async fn fill_cache<'a, K, V>(
     store: impl KeyedEntityStore<K, V>,
     data: impl IntoIterator<Item = (&'a K, &'a V)>,
