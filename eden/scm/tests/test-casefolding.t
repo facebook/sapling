@@ -89,6 +89,7 @@ test case collision between revisions (issue912)
   adding a
   $ hg rm a
   $ hg ci -Am removea
+  $ echo B > B
   $ echo A > A
 
 on linux hfs keeps the old case stored, force it
@@ -97,26 +98,27 @@ on linux hfs keeps the old case stored, force it
   $ mv aa A
   $ hg ci -Am addA
   adding A
+  adding B
 
 used to fail under case insensitive fs
 
   $ hg up -C 0
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg up -C
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 no clobbering of untracked files with wrong casing
 
-  $ hg up -r null
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ echo gold > a
+  $ hg up -r 0
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ echo gold > b
   $ hg up
-  A: untracked file differs
+  B: untracked file differs
   abort: untracked files in working directory differ from files in requested revision
   [255]
-  $ cat a
+  $ cat b
   gold
-  $ rm a
+  $ rm b
 
   $ cd ..
 
