@@ -10,6 +10,7 @@ import errno
 import inspect
 import json
 import os
+import platform
 import shlex
 import shutil
 import signal
@@ -2304,6 +2305,10 @@ except AttributeError:
 def main() -> int:
     parser = create_parser()
     args = parser.parse_args()
+
+    if platform.system() == "Windows":
+        # pyre-fixme[16]: Windows only
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     try:
         return asyncio_run(async_main(parser, args))
