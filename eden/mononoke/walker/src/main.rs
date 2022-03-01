@@ -14,23 +14,7 @@ use futures::future::{self, FutureExt};
 
 use cmdlib::{args::CachelibSettings, helpers::block_execute};
 
-mod blobstore;
-mod checkpoint;
-mod corpus;
-#[macro_use]
-mod graph;
-mod log;
-mod pack;
-mod parse_node;
-mod progress;
-mod sampling;
-mod scrub;
-mod setup;
-mod sizing;
-mod state;
-mod tail;
-mod validate;
-mod walk;
+use walker_commands_impl::{corpus, scrub, setup, sizing, validate};
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {

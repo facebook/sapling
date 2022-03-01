@@ -196,7 +196,8 @@ pub struct SqlCheckpoints {
 impl SqlConstruct for SqlCheckpoints {
     const LABEL: &'static str = "walker_checkpoints";
 
-    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-walker_checkpoints.sql");
+    const CREATION_QUERY: &'static str =
+        include_str!("../../../schemas/sqlite-walker_checkpoints.sql");
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
         Self { connections }
