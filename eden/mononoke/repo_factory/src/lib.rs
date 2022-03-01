@@ -37,6 +37,7 @@ use cacheblob::{
 use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
 use changesets::ArcChangesets;
 use changesets_impl::{CachingChangesets, SqlChangesetsBuilder};
+use cloned::cloned;
 use context::CoreContext;
 use context::SessionContainer;
 use cross_repo_sync::create_commit_syncer_lease;
@@ -694,9 +695,15 @@ impl RepoFactory {
         let sql_factory = self
             .sql_factory(&repo_config.storage_config.metadata)
             .await?;
-        let mut filenodes_builder = sql_factory
-            .open_shardable::<NewFilenodesBuilder>()
-            .context(RepoFactoryError::Filenodes)?;
+        let mut filenodes_builder = tokio::task::spawn_blocking({
+            cloned!(sql_factory);
+            move || {
+                sql_factory
+                    .open_shardable::<NewFilenodesBuilder>()
+                    .context(RepoFactoryError::Filenodes)
+            }
+        })
+        .await??;
         if let Caching::Enabled(_) = self.env.caching {
             let filenodes_tier = sql_factory.tier_info_shardable::<NewFilenodesBuilder>()?;
             let filenodes_pool = self
