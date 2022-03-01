@@ -36,6 +36,7 @@ impl AppExtension for McrouterAppExtension {
 
         #[cfg(not(fbcode_build))]
         {
+            let _ = env;
             unimplemented!("Passed --enable-mcrouter but it is supported only for fbcode builds",);
         }
     }
