@@ -1830,7 +1830,8 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
         serverState_->getThreadPool().get(),
         reloadableConfig,
         getSharedStats(),
-        metadataImporterFactory_);
+        metadataImporterFactory_,
+        serverState_->getStructuredLogger());
     return std::make_shared<LocalStoreCachedBackingStore>(
         make_shared<HgQueuedBackingStore>(
             localStore_,

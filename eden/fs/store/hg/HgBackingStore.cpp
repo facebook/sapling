@@ -39,7 +39,9 @@
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/store/hg/MetadataImporter.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
+#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
@@ -152,7 +154,8 @@ HgBackingStore::HgBackingStore(
     UnboundedQueueExecutor* serverThreadPool,
     std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<EdenStats> stats,
-    MetadataImporterFactory metadataImporterFactory)
+    MetadataImporterFactory metadataImporterFactory,
+    std::shared_ptr<StructuredLogger> logger)
     : localStore_(std::move(localStore)),
       stats_(stats),
       importThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
@@ -174,11 +177,13 @@ HgBackingStore::HgBackingStore(
           std::make_shared<HgImporterThreadFactory>(repository, stats))),
       config_(config),
       serverThreadPool_(serverThreadPool),
+      useEdenApi_(config->getEdenConfig()->useEdenApi.getValue()),
       datapackStore_(
           repository,
-          config->getEdenConfig()->useEdenApi.getValue(),
+          useEdenApi_,
           config->getEdenConfig()->useAuxMetadata.getValue(),
-          config) {
+          config),
+      logger_(logger) {
   HgImporter importer(repository, stats);
   const auto& options = importer.getOptions();
   repoName_ = options.repoName;
@@ -217,7 +222,9 @@ HgBackingStore::HgBackingStore(
       importThreadPool_{std::make_unique<HgImporterTestExecutor>(importer)},
       config_(std::move(config)),
       serverThreadPool_{importThreadPool_.get()},
-      datapackStore_(repository, false, false, config_) {
+      useEdenApi_{false},
+      datapackStore_(repository, false, false, config_),
+      logger_(nullptr) {
   const auto& options = importer->getOptions();
   repoName_ = options.repoName;
   metadataImporter_ = metadataImporterFactory(config_, repoName_, localStore_);
@@ -431,14 +438,22 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
   auto fut =
       folly::via(
           importThreadPool_.get(),
-          [path,
+          [this,
+           path,
            manifestNode,
            stats = stats_,
            &liveImportTreeWatches = liveImportTreeWatches_] {
             Importer& importer = getThreadLocalImporter();
             folly::stop_watch<std::chrono::milliseconds> watch;
             RequestMetricsScope queueTracker{&liveImportTreeWatches};
-
+            if (useEdenApi_ && logger_) {
+              logger_->logEvent(EdenApiMiss{
+                  repoName_,
+                  EdenApiMiss::Tree,
+                  path.stringPiece().toString(),
+                  manifestNode.toString(),
+              });
+            }
             auto serializedTree = importer.fetchTree(path, manifestNode);
             stats->getHgBackingStoreStatsForCurrentThread()
                 .hgBackingStoreImportTree.addValue(watch.elapsed().count());
@@ -699,12 +714,21 @@ SemiFuture<std::unique_ptr<Blob>> HgBackingStore::fetchBlobFromHgImporter(
     HgProxyHash hgInfo) {
   return folly::via(
       importThreadPool_.get(),
-      [stats = stats_,
+      [this,
+       stats = stats_,
        hgInfo = std::move(hgInfo),
        &liveImportBlobWatches = liveImportBlobWatches_] {
         Importer& importer = getThreadLocalImporter();
         folly::stop_watch<std::chrono::milliseconds> watch;
         RequestMetricsScope queueTracker{&liveImportBlobWatches};
+        if (useEdenApi_ && logger_) {
+          logger_->logEvent(EdenApiMiss{
+              repoName_,
+              EdenApiMiss::Blob,
+              hgInfo.path().stringPiece().toString(),
+              hgInfo.revHash().toString(),
+          });
+        }
         auto blob =
             importer.importFileContents(hgInfo.path(), hgInfo.revHash());
         stats->getHgBackingStoreStatsForCurrentThread()

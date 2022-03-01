@@ -244,5 +244,30 @@ struct ServerDataFetch {
   }
 };
 
+struct EdenApiMiss {
+  enum MissType : bool {
+    Blob = 0,
+    Tree = 1,
+  };
+
+  static constexpr const char* type = "edenapi_miss";
+
+  std::string repo_name;
+  MissType miss_type;
+  std::string path;
+  std::string hash;
+
+  void populate(DynamicEvent& event) const {
+    event.addString("repo_source", repo_name);
+    if (miss_type == Blob) {
+      event.addString("edenapi_miss_type", "blob");
+    } else {
+      event.addString("edenapi_miss_type", "tree");
+    }
+    event.addString("path", path);
+    event.addString("hash", hash);
+  }
+};
+
 } // namespace eden
 } // namespace facebook

@@ -32,6 +32,7 @@ class LocalStore;
 class UnboundedQueueExecutor;
 class ReloadableConfig;
 class HgProxyHash;
+class StructuredLogger;
 
 /**
  * An implementation class for HgQueuedBackingStore that loads data out of a
@@ -48,7 +49,8 @@ class HgBackingStore {
       UnboundedQueueExecutor* serverThreadPool,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<EdenStats> edenStats,
-      MetadataImporterFactory metadataImporter);
+      MetadataImporterFactory metadataImporter,
+      std::shared_ptr<StructuredLogger> logger);
 
   /**
    * Create an HgBackingStore suitable for use in unit tests. It uses an inline
@@ -201,9 +203,11 @@ class HgBackingStore {
   folly::Executor* serverThreadPool_;
 
   std::string repoName_;
+  const bool useEdenApi_;
   HgDatapackStore datapackStore_;
 
   std::unique_ptr<MetadataImporter> metadataImporter_;
+  std::shared_ptr<StructuredLogger> logger_;
 
   // Track metrics for imports currently fetching data from hg
   mutable RequestMetricsScope::LockedRequestWatchList liveImportBlobWatches_;
