@@ -18,8 +18,9 @@ use crate::sampling::{
 };
 use crate::setup::{
     parse_node_types, parse_pack_info_log_args, parse_progress_args, parse_sampling_args,
-    setup_common, JobWalkParams, OutputFormat, RepoSubcommandParams, EXCLUDE_OUTPUT_NODE_TYPE_ARG,
-    INCLUDE_OUTPUT_NODE_TYPE_ARG, LIMIT_DATA_FETCH_ARG, OUTPUT_FORMAT_ARG, SCRUB,
+    setup_common, JobParams, JobWalkParams, OutputFormat, RepoSubcommandParams,
+    EXCLUDE_OUTPUT_NODE_TYPE_ARG, INCLUDE_OUTPUT_NODE_TYPE_ARG, LIMIT_DATA_FETCH_ARG,
+    OUTPUT_FORMAT_ARG, SCRUB,
 };
 use crate::sizing::SizingSample;
 use crate::tail::walk_exact_tail;
@@ -415,7 +416,7 @@ impl ProgressReporterUnprotected for ProgressStateCountByType<ScrubStats, ScrubS
 }
 
 #[derive(Clone)]
-struct ScrubCommand {
+pub struct ScrubCommand {
     limit_data_fetch: bool,
     output_format: OutputFormat,
     output_node_types: HashSet<NodeType>,
@@ -432,16 +433,15 @@ impl ScrubCommand {
     }
 }
 
-// Starts from the graph, (as opposed to walking from blobstore enumeration)
-pub async fn scrub_objects<'a>(
+pub async fn parse_args<'a>(
     fb: FacebookInit,
     logger: Logger,
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
-) -> Result<(), Error> {
+) -> Result<(JobParams, ScrubCommand), Error> {
     let component_sampler = Arc::new(WalkSampleMapping::<Node, ScrubSample>::new());
 
-    let (job_params, per_repo) = setup_common(
+    let job_params = setup_common(
         SCRUB,
         fb,
         &logger,
@@ -472,13 +472,27 @@ pub async fn scrub_objects<'a>(
         sampler: component_sampler,
     };
 
+    Ok((job_params, command))
+}
+
+// Starts from the graph, (as opposed to walking from blobstore enumeration)
+pub async fn scrub_objects(
+    fb: FacebookInit,
+    job_params: JobParams,
+    command: ScrubCommand,
+) -> Result<(), Error> {
+    let JobParams {
+        walk_params,
+        per_repo,
+    } = job_params;
+
     let mut all_walks = Vec::new();
     for (sub_params, repo_params) in per_repo {
-        cloned!(mut command, job_params);
+        cloned!(mut command, walk_params);
 
         command.apply_repo(&repo_params);
 
-        let walk = run_one(fb, job_params, sub_params, repo_params, command);
+        let walk = run_one(fb, walk_params, sub_params, repo_params, command);
         all_walks.push(walk);
     }
     try_join_all(all_walks).await.map(|_| ())

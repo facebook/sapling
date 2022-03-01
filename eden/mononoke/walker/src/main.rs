@@ -32,16 +32,30 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let sub_matches = &matches.subcommand();
     let future = match sub_matches {
-        (setup::COMPRESSION_BENEFIT, Some(sub_m)) => {
-            sizing::compression_benefit(fb, logger.clone(), &matches, sub_m).boxed()
+        (setup::COMPRESSION_BENEFIT, Some(sub_m)) => async {
+            let (job_params, command) =
+                sizing::parse_args(fb, logger.clone(), &matches, sub_m).await?;
+            sizing::compression_benefit(fb, job_params, command).await
         }
-        (setup::CORPUS, Some(sub_m)) => corpus::corpus(fb, logger.clone(), &matches, sub_m).boxed(),
-        (setup::SCRUB, Some(sub_m)) => {
-            scrub::scrub_objects(fb, logger.clone(), &matches, sub_m).boxed()
+        .boxed(),
+        (setup::CORPUS, Some(sub_m)) => async {
+            let (job_params, command) =
+                corpus::parse_args(fb, logger.clone(), &matches, sub_m).await?;
+            corpus::corpus(fb, job_params, command).await
         }
-        (setup::VALIDATE, Some(sub_m)) => {
-            validate::validate(fb, logger.clone(), &matches, sub_m).boxed()
+        .boxed(),
+        (setup::SCRUB, Some(sub_m)) => async {
+            let (job_params, command) =
+                scrub::parse_args(fb, logger.clone(), &matches, sub_m).await?;
+            scrub::scrub_objects(fb, job_params, command).await
         }
+        .boxed(),
+        (setup::VALIDATE, Some(sub_m)) => async {
+            let (job_params, command) =
+                validate::parse_args(fb, logger.clone(), &matches, sub_m).await?;
+            validate::validate(fb, job_params, command).await
+        }
+        .boxed(),
         _ => {
             future::err::<_, Error>(Error::msg("Invalid Arguments, pass --help for usage.")).boxed()
         }

@@ -19,8 +19,8 @@ use crate::progress::{
     ProgressRecorderUnprotected, ProgressReporter, ProgressReporterUnprotected, ProgressStateMutex,
 };
 use crate::setup::{
-    parse_progress_args, setup_common, JobWalkParams, RepoSubcommandParams, EXCLUDE_CHECK_TYPE_ARG,
-    INCLUDE_CHECK_TYPE_ARG, VALIDATE,
+    parse_progress_args, setup_common, JobParams, JobWalkParams, RepoSubcommandParams,
+    EXCLUDE_CHECK_TYPE_ARG, INCLUDE_CHECK_TYPE_ARG, VALIDATE,
 };
 use crate::state::{InternedType, StepStats, WalkState};
 use crate::tail::walk_exact_tail;
@@ -831,7 +831,7 @@ impl ProgressReporterUnprotected for ValidateProgressState {
 }
 
 #[derive(Clone)]
-struct ValidateCommand {
+pub struct ValidateCommand {
     include_check_types: HashSet<CheckType>,
     progress_options: ProgressOptions,
 }
@@ -843,28 +843,40 @@ impl ValidateCommand {
     }
 }
 
-// Subcommand entry point for validation of mononoke commit graph and dependent data
-pub async fn validate<'a>(
+pub async fn parse_args<'a>(
     fb: FacebookInit,
     logger: Logger,
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
-) -> Result<(), Error> {
-    let (job_params, per_repo) =
-        setup_common(VALIDATE, fb, &logger, None, None, matches, sub_m).await?;
+) -> Result<(JobParams, ValidateCommand), Error> {
+    let job_params = setup_common(VALIDATE, fb, &logger, None, None, matches, sub_m).await?;
 
     let command = ValidateCommand {
         include_check_types: parse_check_types(sub_m)?,
         progress_options: parse_progress_args(&sub_m),
     };
 
+    Ok((job_params, command))
+}
+
+// Subcommand entry point for validation of mononoke commit graph and dependent data
+pub async fn validate(
+    fb: FacebookInit,
+    job_params: JobParams,
+    command: ValidateCommand,
+) -> Result<(), Error> {
+    let JobParams {
+        walk_params,
+        per_repo,
+    } = job_params;
+
     let mut all_walks = Vec::new();
     for (sub_params, repo_params) in per_repo {
-        cloned!(mut command, job_params);
+        cloned!(mut command, walk_params);
 
         command.apply_repo(&repo_params);
 
-        let walk = run_one(fb, job_params, sub_params, repo_params, command);
+        let walk = run_one(fb, walk_params, sub_params, repo_params, command);
         all_walks.push(walk);
     }
     try_join_all(all_walks).await.map(|_| ())

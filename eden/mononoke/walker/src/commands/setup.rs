@@ -76,6 +76,11 @@ pub struct JobWalkParams {
     pub repo_count: usize,
 }
 
+pub struct JobParams {
+    pub walk_params: JobWalkParams,
+    pub per_repo: Vec<(RepoSubcommandParams, RepoWalkParams)>,
+}
+
 const PROGRESS_SAMPLE_RATE: u64 = 1000;
 const PROGRESS_SAMPLE_DURATION_S: u64 = 5;
 
@@ -1308,7 +1313,7 @@ pub async fn setup_common<'a>(
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
-) -> Result<(JobWalkParams, Vec<(RepoSubcommandParams, RepoWalkParams)>), Error> {
+) -> Result<JobParams, Error> {
     let config_store = matches.config_store();
 
     let quiet = sub_m.is_present(QUIET_ARG);
@@ -1557,8 +1562,8 @@ pub async fn setup_common<'a>(
         per_repo.push(one_repo);
     }
 
-    Ok((
-        JobWalkParams {
+    Ok(JobParams {
+        walk_params: JobWalkParams {
             enable_derive,
             quiet,
             error_as_data_node_types,
@@ -1566,7 +1571,7 @@ pub async fn setup_common<'a>(
             repo_count,
         },
         per_repo,
-    ))
+    })
 }
 
 // Setup for just one repo. Try and keep clap parsing out of here, should be done beforehand

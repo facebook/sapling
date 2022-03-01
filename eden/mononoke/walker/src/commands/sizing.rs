@@ -15,8 +15,8 @@ use crate::sampling::{
     WalkSampleMapping,
 };
 use crate::setup::{
-    parse_progress_args, parse_sampling_args, setup_common, JobWalkParams, RepoSubcommandParams,
-    COMPRESSION_BENEFIT, COMPRESSION_LEVEL_ARG,
+    parse_progress_args, parse_sampling_args, setup_common, JobParams, JobWalkParams,
+    RepoSubcommandParams, COMPRESSION_BENEFIT, COMPRESSION_LEVEL_ARG,
 };
 use crate::tail::walk_exact_tail;
 use crate::walk::{RepoWalkParams, RepoWalkTypeParams};
@@ -280,7 +280,7 @@ impl SamplingHandler for WalkSampleMapping<Node, SizingSample> {
 }
 
 #[derive(Clone)]
-struct SizingCommand {
+pub struct SizingCommand {
     compression_level: i32,
     progress_options: ProgressOptions,
     sampling_options: SamplingOptions,
@@ -294,16 +294,15 @@ impl SizingCommand {
     }
 }
 
-// Subcommand entry point for estimate of file compression benefit
-pub async fn compression_benefit<'a>(
+pub async fn parse_args<'a>(
     fb: FacebookInit,
     logger: Logger,
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
-) -> Result<(), Error> {
+) -> Result<(JobParams, SizingCommand), Error> {
     let sampler = Arc::new(WalkSampleMapping::<Node, SizingSample>::new());
 
-    let (job_params, per_repo) = setup_common(
+    let job_params = setup_common(
         COMPRESSION_BENEFIT,
         fb,
         &logger,
@@ -321,13 +320,27 @@ pub async fn compression_benefit<'a>(
         sampler,
     };
 
+    Ok((job_params, command))
+}
+
+// Subcommand entry point for estimate of file compression benefit
+pub async fn compression_benefit(
+    fb: FacebookInit,
+    job_params: JobParams,
+    command: SizingCommand,
+) -> Result<(), Error> {
+    let JobParams {
+        walk_params,
+        per_repo,
+    } = job_params;
+
     let mut all_walks = Vec::new();
     for (sub_params, repo_params) in per_repo {
-        cloned!(mut command, job_params);
+        cloned!(mut command, walk_params);
 
         command.apply_repo(&repo_params);
 
-        let walk = run_one(fb, job_params, sub_params, repo_params, command);
+        let walk = run_one(fb, walk_params, sub_params, repo_params, command);
         all_walks.push(walk);
     }
     try_join_all(all_walks).await.map(|_| ())

@@ -16,8 +16,8 @@ use crate::sampling::{
 };
 use crate::scrub::ScrubStats;
 use crate::setup::{
-    parse_progress_args, parse_sampling_args, setup_common, JobWalkParams, RepoSubcommandParams,
-    CORPUS, OUTPUT_DIR_ARG, SAMPLE_PATH_REGEX_ARG,
+    parse_progress_args, parse_sampling_args, setup_common, JobParams, JobWalkParams,
+    RepoSubcommandParams, CORPUS, OUTPUT_DIR_ARG, SAMPLE_PATH_REGEX_ARG,
 };
 use crate::tail::walk_exact_tail;
 use crate::walk::{RepoWalkParams, RepoWalkTypeParams};
@@ -345,7 +345,7 @@ impl SamplingHandler for CorpusSamplingHandler<CorpusSample> {
 }
 
 #[derive(Clone)]
-struct CorpusCommand {
+pub struct CorpusCommand {
     output_dir: Option<String>,
     progress_options: ProgressOptions,
     sampling_options: SamplingOptions,
@@ -360,19 +360,18 @@ impl CorpusCommand {
     }
 }
 
-// Subcommand entry point for dumping a corpus of blobs to disk
-pub async fn corpus<'a>(
+pub async fn parse_args<'a>(
     fb: FacebookInit,
     logger: Logger,
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
-) -> Result<(), Error> {
+) -> Result<(JobParams, CorpusCommand), Error> {
     let output_dir = sub_m.value_of(OUTPUT_DIR_ARG).map(|s| s.to_string());
     let sampler = Arc::new(CorpusSamplingHandler::<CorpusSample>::new(
         output_dir.clone(),
     ));
 
-    let (job_params, per_repo) = setup_common(
+    let job_params = setup_common(
         CORPUS,
         fb,
         &logger,
@@ -402,13 +401,27 @@ pub async fn corpus<'a>(
         sampler,
     };
 
+    Ok((job_params, command))
+}
+
+// Subcommand entry point for dumping a corpus of blobs to disk
+pub async fn corpus(
+    fb: FacebookInit,
+    job_params: JobParams,
+    command: CorpusCommand,
+) -> Result<(), Error> {
+    let JobParams {
+        walk_params,
+        per_repo,
+    } = job_params;
+
     let mut all_walks = Vec::new();
     for (sub_params, repo_params) in per_repo {
-        cloned!(mut command, job_params);
+        cloned!(mut command, walk_params);
 
         command.apply_repo(&repo_params);
 
-        let walk = run_one(fb, job_params, sub_params, repo_params, command);
+        let walk = run_one(fb, walk_params, sub_params, repo_params, command);
         all_walks.push(walk);
     }
     try_join_all(all_walks).await.map(|_| ())
