@@ -413,7 +413,7 @@ bool TestMount::hasOverlayData(InodeNumber ino) const {
   return edenMount_->getOverlay()->hasOverlayData(ino);
 }
 
-bool TestMount::hasMetadata(InodeNumber ino) const {
+bool TestMount::hasMetadata(FOLLY_MAYBE_UNUSED InodeNumber ino) const {
 #ifndef _WIN32
   return edenMount_->getInodeMetadataTable()->getOptional(ino).has_value();
 #else
