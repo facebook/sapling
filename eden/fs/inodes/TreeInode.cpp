@@ -3655,7 +3655,7 @@ void TreeInode::prefetch(ObjectFetchContext& context) {
   // So when metadata prefetching is turned on we can
   // just skip this.
   auto config = getMount()->getServerState()->getEdenConfig();
-  if (config->useScs.getValue() || config->useAuxMetadata.getValue()) {
+  if (config->useAuxMetadata.getValue()) {
     XLOG(DBG4) << "skipping prefetch for " << getLogPath()
                << ": metadata prefetching is turned on in the backing store";
     return;

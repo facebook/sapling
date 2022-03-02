@@ -127,7 +127,6 @@ class GlobCmd(Subcmd):
                     includeDotfiles=args.include_dot_files,
                     prefetchFiles=False,
                     suppressFileList=False,
-                    prefetchMetadata=False,
                     searchRoot=os.fsencode(checkout_and_patterns.rel_path),
                     listOnlyFiles=args.list_only_files,
                 )
@@ -161,10 +160,7 @@ class PrefetchCmd(Subcmd):
         )
         parser.add_argument(
             "--prefetch-metadata",
-            help="Prefetch file metadata (sha1 and size) for each file in a "
-            + "tree when we fetch trees during this prefetch. This may send a "
-            + "large amount of requests to the server and should only be used if "
-            + "you understand the risks.",
+            help="Does nothing, do not use.",
             default=False,
             action="store_true",
         )
@@ -200,7 +196,6 @@ class PrefetchCmd(Subcmd):
                         includeDotfiles=args.include_dot_files,
                         prefetchFiles=not args.no_prefetch,
                         suppressFileList=args.silent,
-                        prefetchMetadata=args.prefetch_metadata,
                         background=args.background,
                         listOnlyFiles=args.list_only_files,
                     )

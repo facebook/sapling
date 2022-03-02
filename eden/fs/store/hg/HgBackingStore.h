@@ -19,7 +19,6 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/hg/HgDatapackStore.h"
-#include "eden/fs/store/hg/MetadataImporter.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -49,7 +48,6 @@ class HgBackingStore {
       UnboundedQueueExecutor* serverThreadPool,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<EdenStats> edenStats,
-      MetadataImporterFactory metadataImporter,
       std::shared_ptr<StructuredLogger> logger);
 
   /**
@@ -63,27 +61,14 @@ class HgBackingStore {
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<EdenStats>);
-  HgBackingStore(
-      AbsolutePathPiece repository,
-      HgImporter* importer,
-      std::shared_ptr<ReloadableConfig> config,
-      std::shared_ptr<LocalStore> localStore,
-      std::shared_ptr<EdenStats>,
-      MetadataImporterFactory metadataImporter);
 
   ~HgBackingStore();
 
-  folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(
-      const RootId& rootId,
-      bool prefetchMetadata);
+  folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(const RootId& rootId);
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const std::shared_ptr<HgImportRequest>& request);
   void getTreeBatch(
-      const std::vector<std::shared_ptr<HgImportRequest>>& requests,
-      bool prefetchMetadata);
-  void processTreeMetadata(
-      folly::SemiFuture<std::unique_ptr<TreeMetadata>>&& treeMetadataFuture,
-      const Tree& tree);
+      const std::vector<std::shared_ptr<HgImportRequest>>& requests);
 
   /**
    * Retrieve a tree from hgcache. This function may return `nullptr` when it
@@ -91,8 +76,7 @@ class HgBackingStore {
    */
   std::unique_ptr<Tree> getTreeFromHgCache(
       const ObjectId& edenTreeId,
-      const HgProxyHash& proxyHash,
-      bool prefetchMetadata);
+      const HgProxyHash& proxyHash);
 
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> prefetchBlobs(
       std::vector<HgProxyHash> ids,
@@ -107,16 +91,14 @@ class HgBackingStore {
    */
   folly::Future<folly::Unit> importTreeManifestForRoot(
       const RootId& rootId,
-      const Hash20& manifestId,
-      bool prefetchMetadata);
+      const Hash20& manifestId);
 
   /**
    * Import the manifest for the specified revision using mercurial
    * treemanifest data.
    */
   folly::Future<std::unique_ptr<Tree>> importTreeManifest(
-      const ObjectId& commitId,
-      bool prefetchMetadata);
+      const ObjectId& commitId);
 
   /**
    * Objects that can be imported from Hg
@@ -151,10 +133,6 @@ class HgBackingStore {
     return datapackStore_;
   }
 
-  MetadataImporter& getMetadataImporter() {
-    return *metadataImporter_;
-  }
-
   std::optional<folly::StringPiece> getRepoName() {
     return std::optional<folly::StringPiece>{repoName_};
   }
@@ -165,15 +143,13 @@ class HgBackingStore {
   HgBackingStore& operator=(HgBackingStore const&) = delete;
 
   folly::Future<std::unique_ptr<Tree>> importTreeManifestImpl(
-      Hash20 manifestNode,
-      bool prefetchMetadata);
+      Hash20 manifestNode);
 
   void initializeDatapackImport(AbsolutePathPiece repository);
   folly::Future<std::unique_ptr<Tree>> importTreeImpl(
       const Hash20& manifestNode,
       const ObjectId& edenTreeID,
-      RelativePathPiece path,
-      bool prefetchMetadata);
+      RelativePathPiece path);
   folly::Future<std::unique_ptr<Tree>> fetchTreeFromHgCacheOrImporter(
       Hash20 manifestNode,
       ObjectId edenTreeID,
@@ -206,7 +182,6 @@ class HgBackingStore {
   const bool useEdenApi_;
   HgDatapackStore datapackStore_;
 
-  std::unique_ptr<MetadataImporter> metadataImporter_;
   std::shared_ptr<StructuredLogger> logger_;
 
   // Track metrics for imports currently fetching data from hg

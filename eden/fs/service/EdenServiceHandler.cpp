@@ -211,18 +211,9 @@ class PrefetchFetchContext : public ObjectFetchContext {
     return endpoint_;
   }
 
-  bool prefetchMetadata() const override {
-    return prefetchMetadata_;
-  }
-
-  void setPrefetchMetadata(bool prefetchMetadata) {
-    prefetchMetadata_ = prefetchMetadata;
-  }
-
  private:
   std::optional<pid_t> pid_;
   folly::StringPiece endpoint_;
-  bool prefetchMetadata_ = false;
 };
 
 // Helper class to log where the request completes in Future
@@ -1568,7 +1559,6 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
       : nullptr;
 
   auto& fetchContext = helper->getPrefetchFetchContext();
-  fetchContext.setPrefetchMetadata(globOptions.prefetchMetadata);
 
   // These hashes must outlive the GlobResult created by evaluate as the
   // GlobResults will hold on to references to these hashes
@@ -1784,7 +1774,6 @@ EdenServiceHandler::GlobOptions::GlobOptions(const GlobParams& params)
       prefetchFiles{*params.prefetchFiles_ref()},
       suppressFileList{*params.suppressFileList_ref()},
       wantDtype{*params.wantDtype_ref()},
-      prefetchMetadata{*params.prefetchMetadata_ref()},
       background{*params.background_ref()},
       listOnlyFiles{*params.listOnlyFiles_ref()} {}
 

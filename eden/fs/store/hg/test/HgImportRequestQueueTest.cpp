@@ -74,7 +74,7 @@ std::pair<ObjectId, std::shared_ptr<HgImportRequest>> makeTreeImportRequest(
   return std::make_pair(
       hash,
       HgImportRequest::makeTreeImportRequest(
-          hash, std::move(proxyHash), priority, true));
+          hash, std::move(proxyHash), priority));
 }
 
 ObjectId insertBlobImportRequest(

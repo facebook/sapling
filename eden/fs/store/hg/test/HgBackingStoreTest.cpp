@@ -55,36 +55,6 @@ struct TestRepo {
   }
 };
 
-/**
- * Stubbed out MetadataImporter
- */
-class TestMetadataImporter : public MetadataImporter {
- public:
-  TestMetadataImporter(
-      std::shared_ptr<ReloadableConfig> /*config*/,
-      std::string /*repoName*/,
-      std::shared_ptr<LocalStore> /*localStore*/) {}
-
-  folly::SemiFuture<std::unique_ptr<TreeMetadata>> getTreeMetadata(
-      const ObjectId& /*edenId*/,
-      const Hash20& /*manifestId*/) override {
-    getTreeMetadataCalled = true;
-    return folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
-  }
-
-  bool metadataFetchingAvailable() override {
-    return true;
-  }
-
-  bool getTreeMetadataCalled = false;
-};
-
-class SkipMetadatPrefetchFetchContext : public ObjectFetchContext {
-  bool prefetchMetadata() const override {
-    return false;
-  }
-};
-
 struct HgBackingStoreTest : TestRepo, ::testing::Test {
   HgBackingStoreTest() {
     rawEdenConfig->inMemoryTreeCacheSize.setValue(
@@ -112,20 +82,19 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
       std::make_shared<ReloadableConfig>(
           rawEdenConfig,
           ConfigReloadBehavior::NoReload)};
-  std::shared_ptr<HgQueuedBackingStore> backingStore{std::make_shared<
-      HgQueuedBackingStore>(
-      localStore,
-      stats,
-      std::make_unique<HgBackingStore>(
-          repo.path(),
-          &importer,
-          edenConfig,
+  std::shared_ptr<HgQueuedBackingStore> backingStore{
+      std::make_shared<HgQueuedBackingStore>(
           localStore,
           stats,
-          MetadataImporter::getMetadataImporterFactory<TestMetadataImporter>()),
-      edenConfig,
-      std::make_shared<NullStructuredLogger>(),
-      nullptr)};
+          std::make_unique<HgBackingStore>(
+              repo.path(),
+              &importer,
+              edenConfig,
+              localStore,
+              stats),
+          edenConfig,
+          std::make_shared<NullStructuredLogger>(),
+          nullptr)};
   std::shared_ptr<ObjectStore> objectStore;
 };
 

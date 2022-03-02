@@ -158,10 +158,8 @@ void HgQueuedBackingStore::processTreeImportRequests(
     std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
   folly::stop_watch<std::chrono::milliseconds> watch;
 
-  bool prefetchMetadata = false;
   for (auto& request : requests) {
     auto* treeImport = request->getRequest<HgImportRequest::TreeImport>();
-    prefetchMetadata |= treeImport->prefetchMetadata;
 
     traceBus_->publish(HgImportTraceEvent::start(
         request->getUnique(), HgImportTraceEvent::TREE, treeImport->proxyHash));
@@ -169,7 +167,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
     XLOGF(DBG4, "Processing tree request for {}", treeImport->hash);
   }
 
-  backingStore_->getTreeBatch(requests, prefetchMetadata);
+  backingStore_->getTreeBatch(requests);
 
   {
     std::vector<folly::SemiFuture<folly::Unit>> futures;
@@ -277,8 +275,7 @@ folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTree(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::Tree);
 
-  if (auto tree = backingStore_->getTreeFromHgCache(
-          id, proxyHash, context.prefetchMetadata())) {
+  if (auto tree = backingStore_->getTreeFromHgCache(id, proxyHash)) {
     return folly::makeSemiFuture(BackingStore::GetTreeRes{
         std::move(tree), ObjectFetchContext::Origin::FromDiskCache});
   }
@@ -307,7 +304,7 @@ folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTreeImpl(
     ObjectFetchContext& context) {
   auto getTreeFuture = folly::makeFutureWith([&] {
     auto request = HgImportRequest::makeTreeImportRequest(
-        id, proxyHash, context.getPriority(), context.prefetchMetadata());
+        id, proxyHash, context.getPriority());
     uint64_t unique = request->getUnique();
 
     auto importTracker =
@@ -397,8 +394,8 @@ folly::SemiFuture<BackingStore::GetBlobRes> HgQueuedBackingStore::getBlobImpl(
 
 folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getRootTree(
     const RootId& rootId,
-    ObjectFetchContext& context) {
-  return backingStore_->getRootTree(rootId, context.prefetchMetadata());
+    ObjectFetchContext& /*context*/) {
+  return backingStore_->getRootTree(rootId);
 }
 
 folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
@@ -565,9 +562,7 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
   //
   // When the local store is populated with metadata for newly-created
   // manifests then we can update this so that is true when appropriate.
-  bool prefetchMetadata = false;
-  return backingStore_->importTreeManifestForRoot(
-      root, manifest, prefetchMetadata);
+  return backingStore_->importTreeManifestForRoot(root, manifest);
 }
 
 void HgQueuedBackingStore::periodicManagementTask() {

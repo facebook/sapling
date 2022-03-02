@@ -80,10 +80,6 @@ class ObjectFetchContext {
     return ImportPriority::kNormal();
   }
 
-  virtual bool prefetchMetadata() const {
-    return true;
-  }
-
   virtual const std::optional<std::unordered_map<std::string, std::string>>&
   getRequestInfo() const {
     throw std::runtime_error("not implemented");

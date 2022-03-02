@@ -37,7 +37,6 @@
 #include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
-#include "eden/fs/store/hg/MetadataImporter.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
@@ -154,7 +153,6 @@ HgBackingStore::HgBackingStore(
     UnboundedQueueExecutor* serverThreadPool,
     std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<EdenStats> stats,
-    MetadataImporterFactory metadataImporterFactory,
     std::shared_ptr<StructuredLogger> logger)
     : localStore_(std::move(localStore)),
       stats_(stats),
@@ -187,7 +185,6 @@ HgBackingStore::HgBackingStore(
   HgImporter importer(repository, stats);
   const auto& options = importer.getOptions();
   repoName_ = options.repoName;
-  metadataImporter_ = metadataImporterFactory(config_, repoName_, localStore_);
 }
 
 /**
@@ -201,22 +198,6 @@ HgBackingStore::HgBackingStore(
     std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<LocalStore> localStore,
     std::shared_ptr<EdenStats> stats)
-    : HgBackingStore(
-          repository,
-          std::move(importer),
-          std::move(config),
-          std::move(localStore),
-          stats,
-          MetadataImporter::getMetadataImporterFactory<
-              DefaultMetadataImporter>()) {}
-
-HgBackingStore::HgBackingStore(
-    AbsolutePathPiece repository,
-    HgImporter* importer,
-    std::shared_ptr<ReloadableConfig> config,
-    std::shared_ptr<LocalStore> localStore,
-    std::shared_ptr<EdenStats> stats,
-    MetadataImporterFactory metadataImporterFactory)
     : localStore_{std::move(localStore)},
       stats_{std::move(stats)},
       importThreadPool_{std::make_unique<HgImporterTestExecutor>(importer)},
@@ -227,24 +208,21 @@ HgBackingStore::HgBackingStore(
       logger_(nullptr) {
   const auto& options = importer->getOptions();
   repoName_ = options.repoName;
-  metadataImporter_ = metadataImporterFactory(config_, repoName_, localStore_);
 }
 
 HgBackingStore::~HgBackingStore() = default;
 
-SemiFuture<unique_ptr<Tree>> HgBackingStore::getRootTree(
-    const RootId& rootId,
-    bool prefetchMetadata) {
+SemiFuture<unique_ptr<Tree>> HgBackingStore::getRootTree(const RootId& rootId) {
   ObjectId commitId = hashFromRootId(rootId);
 
   return localStore_
       ->getFuture(KeySpace::HgCommitToTreeFamily, commitId.getBytes())
       .thenValue(
-          [this, commitId, prefetchMetadata](
+          [this, commitId](
               StoreResult result) -> folly::SemiFuture<unique_ptr<Tree>> {
             if (!result.isValid()) {
-              return importTreeManifest(commitId, prefetchMetadata)
-                  .thenValue([this, commitId](std::unique_ptr<Tree> rootTree) {
+              return importTreeManifest(commitId).thenValue(
+                  [this, commitId](std::unique_ptr<Tree> rootTree) {
                     XLOG(DBG1) << "imported mercurial commit " << commitId
                                << " as tree " << rootTree->getHash();
 
@@ -258,8 +236,7 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getRootTree(
 
             auto rootTreeHash = HgProxyHash::load(
                 localStore_.get(), ObjectId{result.bytes()}, "getRootTree");
-            return importTreeManifestImpl(
-                rootTreeHash.revHash(), prefetchMetadata);
+            return importTreeManifestImpl(rootTreeHash.revHash());
           });
 }
 
@@ -269,67 +246,21 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
   return importTreeImpl(
       treeImport->proxyHash.revHash(), // this is really the manifest node
       treeImport->hash,
-      treeImport->proxyHash.path(),
-      treeImport->prefetchMetadata);
+      treeImport->proxyHash.path());
 }
 
 void HgBackingStore::getTreeBatch(
-    const std::vector<std::shared_ptr<HgImportRequest>>& requests,
-    bool prefetchMetadata) {
-  std::vector<folly::Promise<std::unique_ptr<Tree>>> innerPromises;
-  innerPromises.reserve(requests.size());
-  std::vector<folly::SemiFuture<std::unique_ptr<TreeMetadata>>> metadataFutures;
-  metadataFutures.reserve(requests.size());
-
-  // When aux metadata is enabled hg fetches file metadata along with get tree
-  // request, no need for separate network call!
-  bool useAuxMetadata = config_->getEdenConfig()->useAuxMetadata.getValue();
-  bool metadataEnabled = metadataImporter_->metadataFetchingAvailable() &&
-      prefetchMetadata && !useAuxMetadata;
-
-  // Kick off all the fetching
-  for (const auto& request : requests) {
-    innerPromises.emplace_back(folly::Promise<std::unique_ptr<Tree>>());
-
-    auto treeMetadataFuture =
-        folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
-    if (metadataEnabled) {
-      auto* treeImport = request->getRequest<HgImportRequest::TreeImport>();
-      treeMetadataFuture = metadataImporter_->getTreeMetadata(
-          treeImport->hash, treeImport->proxyHash.revHash());
-    }
-    metadataFutures.push_back(std::move(treeMetadataFuture));
-  }
-
+    const std::vector<std::shared_ptr<HgImportRequest>>& requests) {
   {
     auto writeBatch = localStore_->beginWrite();
-    datapackStore_.getTreeBatch(requests, writeBatch.get(), &innerPromises);
-  }
-
-  // Receive the fetches and tie the content and metadata together if needed.
-  auto requestIt = requests.begin();
-  auto treeMetadataFuture = std::make_move_iterator(metadataFutures.begin());
-  for (auto innerPromise = innerPromises.begin();
-       innerPromise != innerPromises.end();
-       ++innerPromise, ++treeMetadataFuture, ++requestIt) {
-    // This innerPromise pattern is so we can retrieve the tree from the
-    // innerPromise and use it for tree metadata prefetching, without
-    // invalidating the passed in Promise.
-    if (innerPromise->isFulfilled()) {
-      (*requestIt)->getPromise<std::unique_ptr<Tree>>()->setWith([&]() mutable {
-        std::unique_ptr<Tree> tree = innerPromise->getSemiFuture().get();
-        this->processTreeMetadata(std::move(*treeMetadataFuture), *tree);
-        return tree;
-      });
-    }
+    datapackStore_.getTreeBatch(requests, writeBatch.get());
   }
 }
 
 Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     const Hash20& manifestNode,
     const ObjectId& edenTreeID,
-    RelativePathPiece path,
-    bool prefetchMetadata) {
+    RelativePathPiece path) {
   XLOG(DBG6) << "importing tree " << edenTreeID << ": hg manifest "
              << manifestNode << " for path \"" << path << "\"";
 
@@ -347,12 +278,6 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
       folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
   // When aux metadata is enabled hg fetches file metadata along with get tree
   // request, no need for separate network call!
-  bool useAuxMetadata = config_->getEdenConfig()->useAuxMetadata.getValue();
-  if (metadataImporter_->metadataFetchingAvailable() && prefetchMetadata &&
-      !useAuxMetadata) {
-    treeMetadataFuture =
-        metadataImporter_->getTreeMetadata(edenTreeID, manifestNode);
-  }
   return fetchTreeFromHgCacheOrImporter(manifestNode, edenTreeID, path.copy())
       .thenValue([this,
                   watch,
@@ -362,48 +287,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
             stats_->getHgBackingStoreStatsForCurrentThread();
         currentThreadStats.hgBackingStoreGetTree.addValue(
             watch.elapsed().count());
-        this->processTreeMetadata(std::move(treeMetadataFuture), *result);
         return std::move(result);
-      });
-}
-
-void HgBackingStore::processTreeMetadata(
-    folly::SemiFuture<std::unique_ptr<TreeMetadata>>&& treeMetadataFuture,
-    const Tree& tree) {
-  if (!treeMetadataFuture.valid()) {
-    return;
-  }
-
-  // metadata fetching will need the eden ids of each of the
-  // children of the the tree, to store the metadata for each of the
-  // children in the local store. Thus we make a copy of this and
-  // pass it along to metadata storage.
-  std::move(treeMetadataFuture)
-      .via(serverThreadPool_)
-      .thenValue([localStore = localStore_, tree = tree](
-                     std::unique_ptr<TreeMetadata>&& treeMetadata) mutable {
-        // note this may throw if the localStore has already been
-        // closed
-        localStore->putTreeMetadata(*treeMetadata, tree);
-      })
-      .thenError([config = config_](folly::exception_wrapper&& error) {
-#ifdef EDEN_HAVE_SERVICEROUTER
-        if (TServiceRouterException* serviceRouterError =
-                error.get_exception<TServiceRouterException>()) {
-          if (config &&
-              serviceRouterError->getErrorReason() ==
-                  ErrorReason::THROTTLING_REQUEST) {
-            XLOG_EVERY_N_THREAD(
-                WARN,
-                config->getEdenConfig()->scsThrottleErrorSampleRatio.getValue())
-                << "Error during metadata pre-fetching or storage: "
-                << error.what();
-            return;
-          }
-        }
-#endif
-        XLOG(WARN) << "Error during metadata pre-fetching or storage: "
-                   << error.what();
       });
 }
 
@@ -611,20 +495,19 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
 
 folly::Future<folly::Unit> HgBackingStore::importTreeManifestForRoot(
     const RootId& rootId,
-    const Hash20& manifestId,
-    bool prefetchMetadata) {
+    const Hash20& manifestId) {
   auto commitId = hashFromRootId(rootId);
   return localStore_
       ->getFuture(KeySpace::HgCommitToTreeFamily, commitId.getBytes())
       .thenValue(
-          [this, commitId, manifestId, prefetchMetadata](
+          [this, commitId, manifestId](
               StoreResult result) -> folly::Future<folly::Unit> {
             if (result.isValid()) {
               // We have already imported this commit, nothing to do.
               return folly::unit;
             }
 
-            return importTreeManifestImpl(manifestId, prefetchMetadata)
+            return importTreeManifestImpl(manifestId)
                 .thenValue([this, commitId, manifestId](
                                std::unique_ptr<Tree> rootTree) {
                   XLOG(DBG3) << "imported mercurial commit " << commitId
@@ -640,8 +523,7 @@ folly::Future<folly::Unit> HgBackingStore::importTreeManifestForRoot(
 }
 
 folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
-    const ObjectId& commitId,
-    bool prefetchMetadata) {
+    const ObjectId& commitId) {
   return folly::via(
              importThreadPool_.get(),
              [commitId] {
@@ -649,16 +531,15 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
                    commitId.asHexString());
              })
       .via(serverThreadPool_)
-      .thenValue([this, commitId, prefetchMetadata](auto manifestNode) {
+      .thenValue([this, commitId](auto manifestNode) {
         XLOG(DBG2) << "revision " << commitId << " has manifest node "
                    << manifestNode;
-        return importTreeManifestImpl(manifestNode, prefetchMetadata);
+        return importTreeManifestImpl(manifestNode);
       });
 }
 
 folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifestImpl(
-    Hash20 manifestNode,
-    bool prefetchMetadata) {
+    Hash20 manifestNode) {
   // Record that we are at the root for this node
   RelativePathPiece path{};
   auto directObjectId = config_->getEdenConfig()->directObjectId.getValue();
@@ -671,7 +552,7 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifestImpl(
     computedPair = HgProxyHash::prepareToStoreLegacy(path, manifestNode);
     objectId = computedPair.first;
   }
-  auto futTree = importTreeImpl(manifestNode, objectId, path, prefetchMetadata);
+  auto futTree = importTreeImpl(manifestNode, objectId, path);
   if (directObjectId) {
     return futTree;
   } else {
@@ -688,22 +569,11 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifestImpl(
 
 unique_ptr<Tree> HgBackingStore::getTreeFromHgCache(
     const ObjectId& edenTreeId,
-    const HgProxyHash& proxyHash,
-    bool prefetchMetadata) {
+    const HgProxyHash& proxyHash) {
   if (auto tree =
           datapackStore_.getTreeLocal(edenTreeId, proxyHash, *localStore_)) {
     XLOG(DBG5) << "imported tree of '" << proxyHash.path() << "', "
                << proxyHash.revHash().toString() << " from hgcache";
-
-    auto treeMetadataFuture =
-        folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
-    bool useAuxMetadata = config_->getEdenConfig()->useAuxMetadata.getValue();
-    if (metadataImporter_->metadataFetchingAvailable() && prefetchMetadata &&
-        !useAuxMetadata) {
-      treeMetadataFuture =
-          metadataImporter_->getTreeMetadata(edenTreeId, proxyHash.revHash());
-    }
-    this->processTreeMetadata(std::move(treeMetadataFuture), *tree);
     return tree;
   }
 

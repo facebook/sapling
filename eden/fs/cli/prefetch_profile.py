@@ -37,12 +37,6 @@ def should_prefetch_predictive_profiles(instance: EdenInstance) -> bool:
     )
 
 
-# consults the global kill switch to check if this user should prefetch the
-# metadata for the specified prefetch profile(s).
-def should_prefetch_metadata(instance: EdenInstance) -> bool:
-    return instance.get_config_bool("prefetch-profiles.prefetch-metadata", False)
-
-
 # find the profile inside the given checkout and return a set of its contents.
 def get_contents_for_profile(
     checkout: EdenCheckout, profile: str, silent: bool
@@ -72,7 +66,6 @@ def make_prefetch_request(
     silent: bool,
     revisions: Optional[List[str]],
     predict_revisions: bool,
-    prefetch_metadata: bool,
     background: bool,
     predictive: bool,
     predictive_num_dirs: int,
@@ -158,7 +151,6 @@ def make_prefetch_request(
                     prefetchFiles=enable_prefetch,
                     suppressFileList=silent,
                     revisions=byte_revisions,
-                    prefetchMetadata=prefetch_metadata,
                     background=background,
                     predictiveGlob=predictiveParams,
                 )
@@ -172,7 +164,6 @@ def make_prefetch_request(
                     prefetchFiles=enable_prefetch,
                     suppressFileList=silent,
                     revisions=byte_revisions,
-                    prefetchMetadata=prefetch_metadata,
                     background=background,
                 )
             )
@@ -188,7 +179,6 @@ def prefetch_profiles(
     silent: bool,
     revisions: Optional[List[str]],
     predict_revisions: bool,
-    prefetch_metadata: bool,
     predictive: bool,
     predictive_num_dirs: int,
 ) -> Optional[Glob]:
@@ -210,15 +200,6 @@ def prefetch_profiles(
             )
         return None
 
-    if should_prefetch_metadata(instance):
-        if not silent and not prefetch_metadata:
-            print(
-                "Prefetching file metadata due to global eden config. "
-                "This means prefetch-profiles.prefetch_metadata is set in the "
-                "EdenFS configs."
-            )
-        prefetch_metadata = True
-
     all_profile_contents = set()
 
     if not predictive:
@@ -232,7 +213,6 @@ def prefetch_profiles(
         silent=silent,
         revisions=revisions,
         predict_revisions=predict_revisions,
-        prefetch_metadata=prefetch_metadata,
         background=background,
         predictive=predictive,
         predictive_num_dirs=predictive_num_dirs,
@@ -365,15 +345,6 @@ def add_common_args(
         default=False,
         action="store_true",
     )
-    parser.add_argument(
-        "--prefetch-metadata",
-        help="Prefetch file metadata (sha1 and size) for each file in a "
-        + "tree when we fetch trees during this prefetch. This may send a "
-        + "large amount of requests to the server and should only be used if "
-        + "you understand the risks.",
-        default=False,
-        action="store_true",
-    )
     return parser
 
 
@@ -419,7 +390,6 @@ class ActivateProfileCmd(Subcmd):
                     silent=not args.verbose,
                     revisions=None,
                     predict_revisions=False,
-                    prefetch_metadata=args.prefetch_metadata,
                     predictive=False,
                     predictive_num_dirs=0,
                 )
@@ -480,7 +450,6 @@ class ActivatePredictiveProfileCmd(Subcmd):
                         silent=not args.verbose,
                         revisions=None,
                         predict_revisions=False,
-                        prefetch_metadata=args.prefetch_metadata,
                         predictive=True,
                         predictive_num_dirs=args.num_dirs,
                     )
@@ -622,7 +591,6 @@ class FetchProfileCmd(Subcmd):
             silent=not args.verbose,
             revisions=args.commits,
             predict_revisions=args.predict_commits,
-            prefetch_metadata=args.prefetch_metadata,
             predictive=False,
             predictive_num_dirs=0,
         )
@@ -697,7 +665,6 @@ class FetchPredictiveProfileCmd(Subcmd):
                 silent=not args.verbose,
                 revisions=args.commits,
                 predict_revisions=args.predict_commits,
-                prefetch_metadata=args.prefetch_metadata,
                 predictive=True,
                 predictive_num_dirs=predictive_num_dirs,
             )

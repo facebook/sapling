@@ -60,7 +60,6 @@
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
-#include "eden/fs/store/hg/MetadataImporter.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
@@ -326,13 +325,11 @@ EdenServer::EdenServer(
     SessionInfo sessionInfo,
     std::unique_ptr<PrivHelper> privHelper,
     std::shared_ptr<const EdenConfig> edenConfig,
-    MetadataImporterFactory metadataImporterFactory,
     ActivityRecorderFactory activityRecorderFactory,
     std::shared_ptr<IHiveLogger> hiveLogger,
     std::string version)
     : originalCommandLine_{std::move(originalCommandLine)},
       edenDir_{edenConfig->edenDir.getValue()},
-      metadataImporterFactory_(std::move(metadataImporterFactory)),
       activityRecorderFactory_(std::move(activityRecorderFactory)),
       blobCache_{BlobCache::create(
           FLAGS_maximumBlobCacheSize,
@@ -1830,7 +1827,6 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
         serverState_->getThreadPool().get(),
         reloadableConfig,
         getSharedStats(),
-        metadataImporterFactory_,
         serverState_->getStructuredLogger());
     return std::make_shared<LocalStoreCachedBackingStore>(
         make_shared<HgQueuedBackingStore>(

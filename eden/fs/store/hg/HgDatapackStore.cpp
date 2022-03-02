@@ -166,8 +166,7 @@ void HgDatapackStore::getBlobBatch(
 
 void HgDatapackStore::getTreeBatch(
     const std::vector<std::shared_ptr<HgImportRequest>>& importRequests,
-    LocalStore::WriteBatch* writeBatch,
-    std::vector<folly::Promise<std::unique_ptr<Tree>>>* promises) {
+    LocalStore::WriteBatch* writeBatch) {
   auto count = importRequests.size();
 
   std::vector<std::pair<folly::ByteRange, folly::ByteRange>> requests;
@@ -194,29 +193,28 @@ void HgDatapackStore::getTreeBatch(
       false,
       // store_.getTreeBatch is blocking, hence we can take these by reference.
       [directObjectId,
-       promises,
        &requests,
        &importRequests,
        &requestsWatches,
        writeBatch](size_t index, std::shared_ptr<RustTree> content) mutable {
-        auto& promise = (*promises)[index];
-        promise.setWith([&] {
-          XLOGF(
-              DBG4,
-              "Imported tree name={} node={}",
-              folly::StringPiece{requests[index].first},
-              folly::hexlify(requests[index].second));
+        XLOGF(
+            DBG4,
+            "Imported tree name={} node={}",
+            folly::StringPiece{requests[index].first},
+            folly::hexlify(requests[index].second));
+        auto& importRequest = importRequests[index];
+        auto* treeRequest =
+            importRequest->getRequest<HgImportRequest::TreeImport>();
 
-          auto& importRequest = importRequests[index];
-          auto* treeRequest =
-              importRequest->getRequest<HgImportRequest::TreeImport>();
+        auto tree = fromRawTree(
+            content.get(),
+            treeRequest->hash,
+            treeRequest->proxyHash.path(),
+            directObjectId ? nullptr : writeBatch);
 
-          return fromRawTree(
-              content.get(),
-              treeRequest->hash,
-              treeRequest->proxyHash.path(),
-              directObjectId ? nullptr : writeBatch);
-        });
+        importRequest->getPromise<std::unique_ptr<Tree>>()->setValue(
+            std::move(tree));
+
         // Make sure that we're stopping this watch.
         auto watch = std::move(requestsWatches[index]);
       });

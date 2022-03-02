@@ -33,7 +33,6 @@
 #include "eden/fs/service/EdenServiceHandler.h" // for kServiceName
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/Systemd.h"
-#include "eden/fs/store/hg/MetadataImporter.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
@@ -127,12 +126,6 @@ void DefaultEdenMain::didFollyInit() {}
 
 void DefaultEdenMain::prepare(const EdenServer& /*server*/) {
   fb303::registerFollyLoggingOptionHandlers();
-}
-
-MetadataImporterFactory DefaultEdenMain::getMetadataImporterFactory(
-    std::shared_ptr<EdenConfig> /*edenConfig*/) {
-  return MetadataImporter::getMetadataImporterFactory<
-      DefaultMetadataImporter>();
 }
 
 ActivityRecorderFactory DefaultEdenMain::getActivityRecorderFactory() {
@@ -267,7 +260,6 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         identity, main.getLocalHostname(), main.getEdenfsVersion());
 
     auto hiveLogger = main.getHiveLogger(sessionInfo, edenConfig);
-    auto metadataImporter = main.getMetadataImporterFactory(edenConfig);
 
     server.emplace(
         std::move(originalCommandLine),
@@ -275,7 +267,6 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         std::move(sessionInfo),
         std::move(privHelper),
         std::move(edenConfig),
-        std::move(metadataImporter),
         main.getActivityRecorderFactory(),
         std::move(hiveLogger),
         main.getEdenfsVersion());

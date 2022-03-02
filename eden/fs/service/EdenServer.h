@@ -32,7 +32,6 @@
 #include "eden/fs/service/EdenStateDir.h"
 #include "eden/fs/service/PeriodicTask.h"
 #include "eden/fs/service/StartupLogger.h"
-#include "eden/fs/store/hg/MetadataImporter.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -114,7 +113,6 @@ class EdenServer : private TakeoverHandler {
       SessionInfo sessionInfo,
       std::unique_ptr<PrivHelper> privHelper,
       std::shared_ptr<const EdenConfig> edenConfig,
-      MetadataImporterFactory metadataImporterFactory,
       ActivityRecorderFactory activityRecorderFactory,
       std::shared_ptr<IHiveLogger> hiveLogger,
       std::string version = "");
@@ -594,7 +592,6 @@ class EdenServer : private TakeoverHandler {
   std::shared_ptr<apache::thrift::ThriftServer> server_;
   std::shared_ptr<ThriftServerEventHandler> serverEventHandler_;
 
-  MetadataImporterFactory metadataImporterFactory_;
   ActivityRecorderFactory activityRecorderFactory_;
   std::shared_ptr<LocalStore> localStore_;
   folly::Synchronized<BackingStoreMap> backingStores_;

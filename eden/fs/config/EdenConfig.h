@@ -261,25 +261,6 @@ class EdenConfig : private ConfigSettingManager {
 
   ConfigSetting<bool> useMononoke{"mononoke:use-mononoke", false, this};
 
-  // [scs]
-
-  /**
-   * Source Control Service (scs) tier
-   */
-  ConfigSetting<bool> useScs{"scs:use-mononoke-scs", false, this};
-
-  ConfigSetting<std::string> scsTierName{
-      "scs:tier",
-      "mononoke-scs-server",
-      this};
-  /**
-   * Log 1 in `scsThrottleErrorSampleRatio` throttling errors to save log space.
-   */
-  ConfigSetting<size_t> scsThrottleErrorSampleRatio{
-      "scs:throttle-error-sample-ratio",
-      1000,
-      this};
-
   // [store]
 
   /**

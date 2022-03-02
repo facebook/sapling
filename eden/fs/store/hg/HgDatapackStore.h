@@ -60,8 +60,7 @@ class HgDatapackStore {
 
   void getTreeBatch(
       const std::vector<std::shared_ptr<HgImportRequest>>& requests,
-      LocalStore::WriteBatch* writeBatch,
-      std::vector<folly::Promise<std::unique_ptr<Tree>>>* promises);
+      LocalStore::WriteBatch* writeBatch);
 
   std::unique_ptr<Tree> getTree(
       const RelativePath& path,

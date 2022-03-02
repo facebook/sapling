@@ -45,19 +45,11 @@ class HgImportRequest {
 
   struct TreeImport {
     using Response = std::unique_ptr<Tree>;
-    TreeImport(
-        ObjectId hash,
-        HgProxyHash proxyHash,
-        bool prefetchMetadata = true)
-        : hash(hash),
-          proxyHash(proxyHash),
-          prefetchMetadata(prefetchMetadata) {}
+    TreeImport(ObjectId hash, HgProxyHash proxyHash)
+        : hash(hash), proxyHash(proxyHash) {}
 
     ObjectId hash;
     HgProxyHash proxyHash;
-    // we normally want to prefetch metadata, there are only a few cases where
-    // we do not want to
-    bool prefetchMetadata;
 
     // See the comment above for BlobImport::promises
     std::vector<folly::Promise<Response>> promises;
@@ -83,8 +75,7 @@ class HgImportRequest {
   static std::shared_ptr<HgImportRequest> makeTreeImportRequest(
       ObjectId hash,
       HgProxyHash proxyHash,
-      ImportPriority priority,
-      bool prefetchMetadata);
+      ImportPriority priority);
 
   /**
    * Allocate a prefetch request.

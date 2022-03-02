@@ -326,7 +326,6 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
     bool prefetchFiles;
     bool suppressFileList;
     bool wantDtype;
-    bool prefetchMetadata;
     bool background;
     bool listOnlyFiles;
   };
