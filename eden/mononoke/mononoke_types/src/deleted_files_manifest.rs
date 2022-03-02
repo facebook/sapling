@@ -10,6 +10,7 @@ use fbthrift::compact_protocol;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::blob::{Blob, BlobstoreValue, DeletedManifestBlob};
+use crate::deleted_manifest_common::DeletedManifestCommon;
 use crate::errors::ErrorKind;
 use crate::path::MPathElement;
 use crate::thrift;
@@ -90,6 +91,29 @@ pub struct DeletedManifest {
     subentries: SortedVectorMap<MPathElement, DeletedManifestId>,
 }
 
+impl DeletedManifestCommon for DeletedManifest {
+    type Id = DeletedManifestId;
+
+    fn new(
+        linknode: Option<ChangesetId>,
+        subentries: SortedVectorMap<MPathElement, DeletedManifestId>,
+    ) -> Self {
+        Self::new(linknode, subentries)
+    }
+
+    fn is_deleted(&self) -> bool {
+        self.is_deleted()
+    }
+
+    fn into_subentries(self) -> Box<dyn Iterator<Item = (MPathElement, Self::Id)>> {
+        Box::new(self.into_subentries())
+    }
+
+    fn id(&self) -> Self::Id {
+        self.get_manifest_id()
+    }
+}
+
 impl DeletedManifest {
     pub fn new(
         linknode: Option<ChangesetId>,
@@ -105,8 +129,8 @@ impl DeletedManifest {
         self.subentries.get(basename)
     }
 
-    pub fn list(&self) -> impl Iterator<Item = (&MPathElement, &DeletedManifestId)> {
-        self.subentries.iter()
+    pub fn into_subentries(self) -> impl Iterator<Item = (MPathElement, DeletedManifestId)> {
+        self.subentries.into_iter()
     }
 
     pub fn linknode(&self) -> &Option<ChangesetId> {

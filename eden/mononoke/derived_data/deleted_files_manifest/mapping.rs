@@ -13,7 +13,10 @@ use bytes::Bytes;
 use context::CoreContext;
 use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
-use mononoke_types::{BlobstoreBytes, BonsaiChangeset, ChangesetId, DeletedManifestId};
+use mononoke_types::{
+    deleted_files_manifest::DeletedManifest, BlobstoreBytes, BonsaiChangeset, ChangesetId,
+    DeletedManifestId,
+};
 use unodes::RootUnodeManifestId;
 
 use derived_data_service_if::types as thrift;
@@ -67,7 +70,7 @@ impl BonsaiDerivable for RootDeletedManifestId {
     ) -> Result<Self, Error> {
         let bcs_id = bonsai.get_changeset_id();
         let changes = get_changes(ctx, derivation_ctx, bonsai).await?;
-        let id = derive_deleted_files_manifest(
+        let id = derive_deleted_files_manifest::<DeletedManifest>(
             ctx,
             derivation_ctx.blobstore(),
             bcs_id,

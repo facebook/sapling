@@ -17,6 +17,7 @@ pub mod content_chunk;
 pub mod content_metadata;
 pub mod datetime;
 pub mod deleted_files_manifest;
+pub mod deleted_manifest_common;
 pub mod errors;
 pub mod fastlog_batch;
 pub mod file_change;

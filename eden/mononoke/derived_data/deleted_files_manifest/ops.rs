@@ -269,9 +269,9 @@ where
                         Selector::Recursive => {
                             // collect subentries to recurse into
                             let mut recurse = Vec::new();
-                            for (name, mf_id) in mf.list() {
+                            for (name, mf_id) in mf.into_subentries() {
                                 let next_path = MPath::join_opt_element(path.as_ref(), &name);
-                                recurse.push((Some(next_path), Selector::Recursive, mf_id.clone()));
+                                recurse.push((Some(next_path), Selector::Recursive, mf_id));
                             }
 
                             Ok((return_entry, recurse))
@@ -283,13 +283,13 @@ where
                                 Some(Pattern::Prefix) => {
                                     // collect subentries to recurse into
                                     let mut recurse = Vec::new();
-                                    for (name, mf_id) in mf.list() {
+                                    for (name, mf_id) in mf.into_subentries() {
                                         let next_path =
                                             MPath::join_opt_element(path.as_ref(), &name);
                                         recurse.push((
                                             Some(next_path),
                                             Selector::Recursive,
-                                            mf_id.clone(),
+                                            mf_id,
                                         ));
                                     }
 
@@ -373,10 +373,10 @@ pub fn list_all_entries<'a>(
                     vec![]
                 };
                 let recurse_subentries = manifest
-                    .list()
+                    .into_subentries()
                     .map(|(name, mf_id)| {
                         let full_path = MPath::join_opt_element(path.as_ref(), &name);
-                        (Some(full_path), mf_id.clone())
+                        (Some(full_path), mf_id)
                     })
                     .collect::<Vec<_>>();
 
@@ -403,7 +403,8 @@ mod tests {
     use manifest::PathOrPrefix;
     use maplit::btreemap;
     use mononoke_types::{
-        BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, MPath,
+        deleted_files_manifest::DeletedManifest, BonsaiChangeset, BonsaiChangesetMut, ChangesetId,
+        DateTime, FileChange, MPath,
     };
     use repo_derived_data::RepoDerivedDataRef;
     use sorted_vector_map::SortedVectorMap;
@@ -592,7 +593,7 @@ mod tests {
         )
         .await
         .unwrap();
-        derive_deleted_files_manifest(
+        derive_deleted_files_manifest::<DeletedManifest>(
             &ctx,
             &repo.blobstore().boxed(),
             bcs_id,

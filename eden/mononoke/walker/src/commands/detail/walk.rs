@@ -1476,14 +1476,14 @@ async fn deleted_manifest_step<V: VisitOne>(
         });
     }
 
-    for (child_path, deleted_manifest_id) in deleted_manifest.list() {
+    for (child_path, deleted_manifest_id) in deleted_manifest.clone().into_subentries() {
         checker.add_edge_with_path(
             &mut edges,
             EdgeType::DeletedManifestToDeletedManifestChild,
-            || Node::DeletedManifest(*deleted_manifest_id),
+            || Node::DeletedManifest(deleted_manifest_id),
             || {
                 path.map(|p| {
-                    WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child_path)))
+                    WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(&child_path)))
                 })
             },
         );
