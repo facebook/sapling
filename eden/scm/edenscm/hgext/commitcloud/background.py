@@ -46,7 +46,6 @@ from . import util as ccutil, workspace
 
 def extsetup(ui):
     extensions.wrapfunction(dispatch, "runcommand", _runcommand)
-    extensions.wrapfunction(localrepo.localrepository, "transaction", _transaction)
 
 
 # Autobackup state
@@ -119,9 +118,12 @@ def _runcommand(orig, lui, repo, cmd, fullargs, *args):
     """start an automatic backup or cloud sync after every command
 
     Since we don't want to start auto backup after read-only commands,
-    then this wrapper checks if this command opened at least one transaction.
-    If yes then background backup will be started.
+    this wrapper records the metalog root before the command is run.
+    If it has changed after the command completes, then background backup will
+    be started.
     """
+    if repo is not None:
+        oldmetalogroot = repo.metalog().root()
     try:
         return orig(lui, repo, cmd, fullargs, *args)
     finally:
@@ -132,24 +134,12 @@ def _runcommand(orig, lui, repo, cmd, fullargs, *args):
             "CHGINTERNALMARK" not in encoding.environ
             and repo is not None
             and autobackupenabled(repo)
-            and getattr(repo, "_orig_metalog_root", False)
-            # Make sure the transaction actually did something.
-            and repo._orig_metalog_root != repo.metalog().root()
+            and repo.metalog().root() != oldmetalogroot
             and not getattr(repo, "ignoreautobackup", False)
             and "emergencychangelog" not in repo.storerequirements
         ):
             lui.debug("starting commit cloud autobackup in the background\n")
             backgroundbackup(repo, reason=cmd)
-
-
-def _transaction(orig, self, *args, **kwargs):
-    """record if a transaction was opened
-
-    If a transaction was opened then we want to start a background backup or
-    cloud sync.  Record the fact that transaction was opened.
-    """
-    self._orig_metalog_root = self.metalog().root()
-    return orig(self, *args, **kwargs)
 
 
 def backgroundbackup(repo, reason=None):
