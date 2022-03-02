@@ -159,12 +159,6 @@ class PrefetchCmd(Subcmd):
             action="store_true",
         )
         parser.add_argument(
-            "--prefetch-metadata",
-            help="Does nothing, do not use.",
-            default=False,
-            action="store_true",
-        )
-        parser.add_argument(
             "--background",
             help="Run the prefetch in the background",
             default=False,
@@ -182,7 +176,6 @@ class PrefetchCmd(Subcmd):
             )
             telemetry_sample.add_bool("skip_prefetch", args.no_prefetch)
             telemetry_sample.add_bool("background", args.background)
-            telemetry_sample.add_bool("prefetch_metadata", args.prefetch_metadata)
             if args.pattern_file:
                 telemetry_sample.add_string("pattern_file", args.pattern_file)
             if args.PATTERN:
