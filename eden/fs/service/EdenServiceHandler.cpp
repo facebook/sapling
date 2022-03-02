@@ -1911,7 +1911,7 @@ void EdenServiceHandler::async_tm_getScmStatusV2(
     auto rootId = mount->getObjectStore()->parseRootId(*params->commit_ref());
     const auto& enforceParents = server_->getServerState()
                                      ->getReloadableConfig()
-                                     .getEdenConfig()
+                                     ->getEdenConfig()
                                      ->enforceParents.getValue();
     return wrapFuture(
         std::move(helper),

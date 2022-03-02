@@ -40,12 +40,12 @@ class FsEventLogger {
   };
 
   FsEventLogger(
-      ReloadableConfig& edenConfig,
+      std::shared_ptr<ReloadableConfig> edenConfig,
       std::shared_ptr<IHiveLogger> logger);
   void log(Event event);
 
  private:
-  ReloadableConfig& edenConfig_;
+  std::shared_ptr<ReloadableConfig> edenConfig_;
   std::shared_ptr<IHiveLogger> logger_;
 
   std::atomic<uint32_t> samplesCount_{0};

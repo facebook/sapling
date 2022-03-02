@@ -115,7 +115,8 @@ TestMount::TestMount()
       make_shared<ProcessNameCache>(),
       make_shared<NullStructuredLogger>(),
       make_shared<NullHiveLogger>(),
-      edenConfig_,
+      make_shared<ReloadableConfig>(edenConfig_),
+      *edenConfig_,
       nullptr,
       /*enableFaultInjection=*/true)};
 }

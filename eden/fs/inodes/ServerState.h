@@ -50,7 +50,8 @@ class ServerState {
       std::shared_ptr<ProcessNameCache> processNameCache,
       std::shared_ptr<StructuredLogger> structuredLogger,
       std::shared_ptr<IHiveLogger> hiveLogger,
-      std::shared_ptr<const EdenConfig> edenConfig,
+      std::shared_ptr<ReloadableConfig> reloadableConfig,
+      const EdenConfig& initialConfig,
       std::shared_ptr<NfsServer> nfs,
       bool enableFaultInjection = false);
   ~ServerState();
@@ -81,10 +82,7 @@ class ServerState {
     return edenStats_;
   }
 
-  ReloadableConfig& getReloadableConfig() {
-    return config_;
-  }
-  const ReloadableConfig& getReloadableConfig() const {
+  const std::shared_ptr<ReloadableConfig>& getReloadableConfig() const {
     return config_;
   }
 
@@ -96,7 +94,7 @@ class ServerState {
    */
   std::shared_ptr<const EdenConfig> getEdenConfig(
       ConfigReloadBehavior reload = ConfigReloadBehavior::AutoReload) {
-    return config_.getEdenConfig(reload);
+    return config_->getEdenConfig(reload);
   }
 
   /**
@@ -198,7 +196,7 @@ class ServerState {
   std::unique_ptr<FaultInjector> const faultInjector_;
   std::shared_ptr<NfsServer> nfs_;
 
-  ReloadableConfig config_;
+  std::shared_ptr<ReloadableConfig> config_;
   folly::Synchronized<CachedParsedFileMonitor<GitIgnoreFileParser>>
       userIgnoreFileMonitor_;
   folly::Synchronized<CachedParsedFileMonitor<GitIgnoreFileParser>>

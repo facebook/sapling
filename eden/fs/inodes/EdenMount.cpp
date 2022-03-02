@@ -214,9 +214,7 @@ EdenMount::EdenMount(
       shouldUseNFSMount_{shouldUseNFSMount()},
       inodeMap_{new InodeMap(
           this,
-          shared_ptr<ReloadableConfig>(
-              serverState_,
-              &serverState_->getReloadableConfig()),
+          serverState_->getReloadableConfig(),
           shouldUseNFSMount_)},
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
@@ -874,7 +872,7 @@ const shared_ptr<UnboundedQueueExecutor>& EdenMount::getInvalidationThreadPool()
 #endif
 
 std::shared_ptr<const EdenConfig> EdenMount::getEdenConfig() const {
-  return serverState_->getReloadableConfig().getEdenConfig();
+  return serverState_->getReloadableConfig()->getEdenConfig();
 }
 
 #ifndef _WIN32

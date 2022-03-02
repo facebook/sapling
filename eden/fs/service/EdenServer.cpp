@@ -334,6 +334,7 @@ EdenServer::EdenServer(
       blobCache_{BlobCache::create(
           FLAGS_maximumBlobCacheSize,
           FLAGS_minimumBlobCacheEntryCount)},
+      config_{std::make_shared<ReloadableConfig>(edenConfig)},
       // Store a pointer to the EventBase that will be used to drive
       // the main thread.  The runServer() code will end up driving this
       // EventBase.
@@ -346,7 +347,8 @@ EdenServer::EdenServer(
           std::make_shared<ProcessNameCache>(),
           makeDefaultStructuredLogger(*edenConfig, std::move(sessionInfo)),
           std::move(hiveLogger),
-          edenConfig,
+          config_,
+          *edenConfig,
 #ifndef _WIN32
           edenConfig->enableNfsServer.getValue()
               ? std::make_shared<NfsServer>(
@@ -361,8 +363,7 @@ EdenServer::EdenServer(
       progressManager_{std::make_unique<
           folly::Synchronized<EdenServer::ProgressManager>>()} {
 
-  treeCache_ = TreeCache::create(shared_ptr<ReloadableConfig>(
-      serverState_, &serverState_->getReloadableConfig()));
+  treeCache_ = TreeCache::create(serverState_->getReloadableConfig());
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->registerCallback(kBlobCacheMemory, [this] {
     return this->getBlobCache()->getStats().totalSizeInBytes;
@@ -639,7 +640,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
 void EdenServer::startPeriodicTasks() {
   // Report memory usage stats once every 30 seconds
   memoryStatsTask_.updateInterval(30s);
-  auto config = serverState_->getReloadableConfig().getEdenConfig();
+  auto config = serverState_->getReloadableConfig()->getEdenConfig();
   updatePeriodicTaskIntervals(*config);
 
 #ifndef _WIN32
@@ -1427,7 +1428,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       serverState_->getThreadPool().get(),
       serverState_->getProcessNameCache(),
       serverState_->getStructuredLogger(),
-      serverState_->getReloadableConfig().getEdenConfig());
+      serverState_->getReloadableConfig()->getEdenConfig());
   auto journal = std::make_unique<Journal>(getSharedStats());
 
   // Create the EdenMount object and insert the mount into the mountPoints_ map.
@@ -1710,7 +1711,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
         // so we run a delayed cleanup after checkout.
         if (edenMount->isNfsdChannel() &&
             serverState_->getReloadableConfig()
-                .getEdenConfig()
+                ->getEdenConfig()
                 ->unloadUnlinkedInodes.getValue()) {
           // During whole Eden Process shutdown, this function can only be run
           // before the mount is destroyed.
@@ -1723,7 +1724,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
           // However, the mount pont might have been unmounted before this
           // function is run outside of shutdown.
           auto delay = serverState_->getReloadableConfig()
-                           .getEdenConfig()
+                           ->getEdenConfig()
                            ->postCheckoutDelayToUnloadInodes.getValue();
           XLOG(DBG9) << "Scheduling unlinked inode cleanup for mount "
                      << mountPath << " in " << durationStr(delay)
@@ -1819,8 +1820,7 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
     return make_shared<EmptyBackingStore>();
   } else if (type == "hg") {
     const auto repoPath = realpath(name);
-    auto reloadableConfig = shared_ptr<ReloadableConfig>(
-        serverState_, &serverState_->getReloadableConfig());
+    auto reloadableConfig = serverState_->getReloadableConfig();
     auto store = std::make_unique<HgBackingStore>(
         repoPath,
         localStore_,
@@ -2109,7 +2109,7 @@ void EdenServer::reportMemoryStats() {
 }
 
 void EdenServer::manageLocalStore() {
-  auto config = serverState_->getReloadableConfig().getEdenConfig(
+  auto config = serverState_->getReloadableConfig()->getEdenConfig(
       ConfigReloadBehavior::NoReload);
   localStore_->periodicManagementTask(*config);
 }
@@ -2130,7 +2130,7 @@ void EdenServer::refreshBackingStore() {
 
 void EdenServer::reloadConfig() {
   // Get the config, forcing a reload now.
-  auto config = serverState_->getReloadableConfig().getEdenConfig(
+  auto config = serverState_->getReloadableConfig()->getEdenConfig(
       ConfigReloadBehavior::ForceReload);
 
   // Update all periodic tasks that are controlled by config settings.

@@ -48,7 +48,8 @@ ServerState::ServerState(
     std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::shared_ptr<IHiveLogger> hiveLogger,
-    std::shared_ptr<const EdenConfig> edenConfig,
+    std::shared_ptr<ReloadableConfig> reloadableConfig,
+    const EdenConfig& initialConfig,
     std::shared_ptr<NfsServer> nfs,
     bool enableFaultDetection)
     : userInfo_{std::move(userInfo)},
@@ -60,15 +61,15 @@ ServerState::ServerState(
       hiveLogger_{std::move(hiveLogger)},
       faultInjector_{std::make_unique<FaultInjector>(enableFaultDetection)},
       nfs_{std::move(nfs)},
-      config_{edenConfig},
+      config_{std::move(reloadableConfig)},
       userIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
-          edenConfig->userIgnoreFile.getValue(),
+          initialConfig.userIgnoreFile.getValue(),
           kUserIgnoreMinPollSeconds}},
       systemIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
-          edenConfig->systemIgnoreFile.getValue(),
+          initialConfig.systemIgnoreFile.getValue(),
           kSystemIgnoreMinPollSeconds}},
       fsEventLogger_{
-          (kHasHiveLogger && edenConfig->requestSamplesPerMinute.getValue())
+          (kHasHiveLogger && initialConfig.requestSamplesPerMinute.getValue())
               ? std::make_shared<FsEventLogger>(config_, hiveLogger_)
               : nullptr} {
   // It would be nice if we eventually built a more generic mechanism for

@@ -596,6 +596,7 @@ class EdenServer : private TakeoverHandler {
   folly::Synchronized<BackingStoreMap> backingStores_;
   const std::shared_ptr<BlobCache> blobCache_;
   std::shared_ptr<TreeCache> treeCache_;
+  std::shared_ptr<ReloadableConfig> config_;
 
   folly::Synchronized<MountMap> mountPoints_{kPathMapDefaultCaseSensitive};
 

@@ -43,12 +43,12 @@ std::string getConfigsString(std::shared_ptr<const EdenConfig> config) {
 } // namespace
 
 FsEventLogger::FsEventLogger(
-    ReloadableConfig& edenConfig,
+    std::shared_ptr<ReloadableConfig> edenConfig,
     std::shared_ptr<IHiveLogger> logger)
-    : edenConfig_{edenConfig},
+    : edenConfig_{std::move(edenConfig)},
       logger_{std::move(logger)},
       counterStartTime_{std::chrono::steady_clock::now()},
-      configsString_{getConfigsString(edenConfig_.getEdenConfig())},
+      configsString_{getConfigsString(edenConfig_->getEdenConfig())},
       configsStringUpdateTime_{std::chrono::steady_clock::now()} {}
 
 void FsEventLogger::log(Event event) {
@@ -56,7 +56,7 @@ void FsEventLogger::log(Event event) {
     return;
   }
 
-  auto config = edenConfig_.getEdenConfig(ConfigReloadBehavior::NoReload);
+  auto config = edenConfig_->getEdenConfig(ConfigReloadBehavior::NoReload);
 
   const auto& denominators =
       config->requestSamplingGroupDenominators.getValue();
@@ -90,7 +90,7 @@ void FsEventLogger::log(Event event) {
 
   if ((now - configsStringUpdateTime_.load()) > kConfigsStringRefreshInterval) {
     configsStringUpdateTime_.store(now);
-    *configsString_.wlock() = getConfigsString(edenConfig_.getEdenConfig());
+    *configsString_.wlock() = getConfigsString(edenConfig_->getEdenConfig());
   }
 
   auto configString = configsString_.rlock();
