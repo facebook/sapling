@@ -157,14 +157,6 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
   BlobMetadata putBlobMetadata(const ObjectId& id, const Blob* blob);
 
   /**
-   * Store metadata for each of the entries in the Tree. This stores the
-   * blob metadata for each entry under the identifing hash of that entry and
-   * stores a copy of metadata for each entry under the identifying hash
-   * of the tree.
-   */
-  void putTreeMetadata(const TreeMetadata& treeMetadata, const Tree& tree);
-
-  /**
    * Put arbitrary data in the store.
    */
   virtual void
@@ -262,18 +254,6 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * two phase import.
    */
   static folly::IOBuf serializeTree(const Tree& tree);
-
-  /**
-   * Store metadata for each of the entries in the Tree. This stores the
-   * blob metadata for each entry under the identifing hash of that entry and
-   * stores a copy of metadata for each entry under the identifying hash
-   * of the tree.
-   *
-   * note: this assumes `treeMetadata` contains HashIndexedEntryMetadata
-   */
-  void putNormalizedTreeMetadata(
-      const ObjectId& hash,
-      const TreeMetadata& treeMetadata);
 };
 
 } // namespace facebook::eden
