@@ -167,7 +167,10 @@ void HgQueuedBackingStore::processTreeImportRequests(
     XLOGF(DBG4, "Processing tree request for {}", treeImport->hash);
   }
 
-  backingStore_->getTreeBatch(requests);
+  {
+    auto writeBatch = localStore_->beginWrite();
+    backingStore_->getDatapackStore().getTreeBatch(requests, writeBatch.get());
+  }
 
   {
     std::vector<folly::SemiFuture<folly::Unit>> futures;

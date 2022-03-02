@@ -249,14 +249,6 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
       treeImport->proxyHash.path());
 }
 
-void HgBackingStore::getTreeBatch(
-    const std::vector<std::shared_ptr<HgImportRequest>>& requests) {
-  {
-    auto writeBatch = localStore_->beginWrite();
-    datapackStore_.getTreeBatch(requests, writeBatch.get());
-  }
-}
-
 Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     const Hash20& manifestNode,
     const ObjectId& edenTreeID,

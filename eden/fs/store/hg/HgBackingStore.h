@@ -67,8 +67,6 @@ class HgBackingStore {
   folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(const RootId& rootId);
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const std::shared_ptr<HgImportRequest>& request);
-  void getTreeBatch(
-      const std::vector<std::shared_ptr<HgImportRequest>>& requests);
 
   /**
    * Retrieve a tree from hgcache. This function may return `nullptr` when it
