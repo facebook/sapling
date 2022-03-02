@@ -1703,7 +1703,7 @@ std::unique_ptr<FuseChannel, FuseChannelDeleter> makeFuseChannel(
       mount->getServerState()->getFsEventLogger(),
       std::chrono::duration_cast<folly::Duration>(
           edenConfig->fuseRequestTimeout.getValue()),
-      mount->getServerState()->getNotifications(),
+      mount->getServerState()->getNotifier(),
       mount->getCheckoutConfig()->getCaseSensitive(),
       mount->getCheckoutConfig()->getRequireUtf8Path(),
       edenConfig->fuseMaximumRequests.getValue())};
@@ -1729,7 +1729,7 @@ folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
                    mount->getServerState()->getFsEventLogger(),
                    std::chrono::duration_cast<folly::Duration>(
                        edenConfig->nfsRequestTimeout.getValue()),
-                   mount->getServerState()->getNotifications(),
+                   mount->getServerState()->getNotifier(),
                    mount->getCheckoutConfig()->getCaseSensitive(),
                    iosize);
              })

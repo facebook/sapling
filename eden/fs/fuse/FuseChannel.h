@@ -40,7 +40,7 @@ struct Unit;
 
 namespace facebook::eden {
 
-class Notifications;
+class Notifier;
 class FsEventLogger;
 class FuseRequestContext;
 
@@ -229,7 +229,7 @@ class FuseChannel {
       std::shared_ptr<ProcessNameCache> processNameCache,
       std::shared_ptr<FsEventLogger> fsEventLogger,
       folly::Duration requestTimeout,
-      Notifications* FOLLY_NULLABLE notifications,
+      std::shared_ptr<Notifier> notifier,
       CaseSensitivity caseSensitive,
       bool requireUtf8Path,
       int32_t maximumBackgroundRequests);
@@ -455,8 +455,8 @@ class FuseChannel {
     return processAccessLog_;
   }
 
-  Notifications* FOLLY_NULLABLE getNotifications() const {
-    return notifications_;
+  std::shared_ptr<Notifier> getNotifier() const {
+    return notifier_;
   }
 
   size_t getRequestMetric(RequestMetricsScope::RequestMetric metric) const;
@@ -743,7 +743,7 @@ class FuseChannel {
   const folly::Logger* const straceLogger_;
   const AbsolutePath mountPath_;
   const folly::Duration requestTimeout_;
-  Notifications* const notifications_;
+  std::shared_ptr<Notifier> const notifier_;
   CaseSensitivity caseSensitive_;
   bool requireUtf8Path_;
   int32_t maximumBackgroundRequests_;

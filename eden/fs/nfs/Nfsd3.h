@@ -24,7 +24,7 @@ class Executor;
 
 namespace facebook::eden {
 
-class Notifications;
+class Notifier;
 class ProcessNameCache;
 class FsEventLogger;
 
@@ -133,7 +133,7 @@ class Nfsd3 {
       std::shared_ptr<ProcessNameCache> processNameCache,
       std::shared_ptr<FsEventLogger> fsEventLogger,
       folly::Duration requestTimeout,
-      Notifications* FOLLY_NULLABLE notifications,
+      std::shared_ptr<Notifier> notifications,
       CaseSensitivity caseSensitive,
       uint32_t iosize);
 

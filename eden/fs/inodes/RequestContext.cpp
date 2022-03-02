@@ -9,7 +9,6 @@
 
 #include <folly/logging/xlog.h>
 
-#include "eden/fs/notifications/Notifications.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/SystemError.h"
 

@@ -807,7 +807,7 @@ FuseChannel::FuseChannel(
     std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<FsEventLogger> fsEventLogger,
     folly::Duration requestTimeout,
-    Notifications* notifications,
+    std::shared_ptr<Notifier> notifier,
     CaseSensitivity caseSensitive,
     bool requireUtf8Path,
     int32_t maximumBackgroundRequests)
@@ -817,7 +817,7 @@ FuseChannel::FuseChannel(
       straceLogger_(straceLogger),
       mountPath_(mountPath),
       requestTimeout_(requestTimeout),
-      notifications_(notifications),
+      notifier_(std::move(notifier)),
       caseSensitive_{caseSensitive},
       requireUtf8Path_{requireUtf8Path},
       maximumBackgroundRequests_{maximumBackgroundRequests},
@@ -1779,7 +1779,7 @@ void FuseChannel::processSession() {
                         .via(&folly::QueuedImmediateExecutor::instance());
                   }).ensure([request] {
                     }).within(requestTimeout_),
-                  notifications_)
+                  notifier_.get())
               .ensure([this, request, requestId, headerCopy] {
                 traceBus_->publish(FuseTraceEvent::finish(
                     requestId, headerCopy, request->getResult()));

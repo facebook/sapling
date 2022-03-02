@@ -11,7 +11,7 @@
 
 #include <folly/logging/xlog.h>
 
-#include "eden/fs/notifications/Notifications.h"
+#include "eden/fs/notifications/Notifier.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/SystemError.h"
 
@@ -43,36 +43,36 @@ const fuse_in_header& FuseRequestContext::getReq() const {
 
 void FuseRequestContext::systemErrorHandler(
     const std::system_error& err,
-    Notifications* FOLLY_NULLABLE notifications) {
+    Notifier* FOLLY_NULLABLE notifier) {
   int errnum = EIO;
   if (isErrnoError(err)) {
     errnum = err.code().value();
   }
   XLOG(DBG5) << folly::exceptionStr(err);
   replyError(errnum);
-  if (notifications) {
-    notifications->showGenericErrorNotification(err);
+  if (notifier) {
+    notifier->showNetworkNotification(err);
   }
 }
 
 void FuseRequestContext::genericErrorHandler(
     const std::exception& err,
-    Notifications* FOLLY_NULLABLE notifications) {
+    Notifier* FOLLY_NULLABLE notifier) {
   XLOG(DBG5) << folly::exceptionStr(err);
   replyError(EIO);
-  if (notifications) {
-    notifications->showGenericErrorNotification(err);
+  if (notifier) {
+    notifier->showNetworkNotification(err);
   }
 }
 
 void FuseRequestContext::timeoutErrorHandler(
     const folly::FutureTimeout& err,
-    Notifications* FOLLY_NULLABLE notifications) {
+    Notifier* FOLLY_NULLABLE notifier) {
   XLOG_EVERY_MS(WARN, 1000)
       << "FUSE request timed out: " << folly::exceptionStr(err);
   replyError(ETIMEDOUT);
-  if (notifications) {
-    notifications->showGenericErrorNotification(err);
+  if (notifier) {
+    notifier->showNetworkNotification(err);
   }
 }
 

@@ -67,7 +67,6 @@ ServerState::ServerState(
       systemIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
           edenConfig->systemIgnoreFile.getValue(),
           kSystemIgnoreMinPollSeconds}},
-      notifications_(config_),
       fsEventLogger_{
           (kHasHiveLogger && edenConfig->requestSamplesPerMinute.getValue())
               ? std::make_shared<FsEventLogger>(config_, hiveLogger_)

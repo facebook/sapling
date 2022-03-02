@@ -5,29 +5,15 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/notifications/Notifications.h"
+#include "eden/fs/notifications/CommandNotifier.h"
 
 #include <folly/futures/Future.h>
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 #include "eden/fs/utils/SystemError.h"
 
 namespace facebook {
 namespace eden {
-
-bool Notifications::canShowNotification() {
-  auto now = std::chrono::steady_clock::now();
-  auto last = lastShown_.wlock();
-  if (*last) {
-    auto expiry = last->value() +
-        config_.getEdenConfig()->notificationInterval.getValue();
-    if (now < expiry) {
-      return false;
-    }
-  }
-  return true;
-}
 
 namespace {
 bool isGenericConnectivityError(const std::exception& err) {
@@ -43,7 +29,7 @@ bool isGenericConnectivityError(const std::exception& err) {
 }
 } // namespace
 
-void Notifications::showGenericErrorNotification(const std::exception& err) {
+void CommandNotifier::showNetworkNotification(const std::exception& err) {
   if (!isGenericConnectivityError(err)) {
     return;
   }

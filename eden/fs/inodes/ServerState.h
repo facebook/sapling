@@ -15,7 +15,7 @@
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/model/git/GitIgnoreFileParser.h"
-#include "eden/fs/notifications/Notifications.h"
+#include "eden/fs/notifications/Notifier.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UserInfo.h"
@@ -181,8 +181,8 @@ class ServerState {
     return *faultInjector_;
   }
 
-  Notifications* getNotifications() {
-    return &notifications_;
+  std::shared_ptr<Notifier> getNotifier() {
+    return notifier_;
   }
 
  private:
@@ -203,7 +203,7 @@ class ServerState {
       userIgnoreFileMonitor_;
   folly::Synchronized<CachedParsedFileMonitor<GitIgnoreFileParser>>
       systemIgnoreFileMonitor_;
-  Notifications notifications_;
+  std::shared_ptr<Notifier> notifier_;
   std::shared_ptr<FsEventLogger> fsEventLogger_;
 };
 } // namespace eden

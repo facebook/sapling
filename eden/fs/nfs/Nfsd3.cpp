@@ -1856,7 +1856,7 @@ Nfsd3::Nfsd3(
     std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<FsEventLogger> fsEventLogger,
     folly::Duration /*requestTimeout*/,
-    Notifications* /*notifications*/,
+    std::shared_ptr<Notifier> /*notifier*/,
     CaseSensitivity caseSensitive,
     uint32_t iosize)
     : server_(RpcServer::create(

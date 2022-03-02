@@ -44,7 +44,7 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
     std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<FsEventLogger> fsEventLogger,
     folly::Duration requestTimeout,
-    Notifications* FOLLY_NULLABLE notifications,
+    std::shared_ptr<Notifier> notifier,
     CaseSensitivity caseSensitive,
     uint32_t iosize) {
   auto nfsd = std::make_unique<Nfsd3>(
@@ -55,7 +55,7 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
       std::move(processNameCache),
       std::move(fsEventLogger),
       requestTimeout,
-      notifications,
+      std::move(notifier),
       caseSensitive,
       iosize);
   mountd_.registerMount(path, rootIno);

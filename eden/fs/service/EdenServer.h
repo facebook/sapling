@@ -69,7 +69,6 @@ class Dirstate;
 class EdenServiceHandler;
 class LocalStore;
 class MountInfo;
-class Notifications;
 struct SessionInfo;
 class StartupLogger;
 class UserInfo;

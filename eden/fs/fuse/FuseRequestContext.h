@@ -71,20 +71,20 @@ class FuseRequestContext : public RequestContext {
    */
   folly::Future<folly::Unit> catchErrors(
       folly::Future<folly::Unit>&& fut,
-      Notifications* FOLLY_NULLABLE notifications) {
-    return std::move(fut).thenTryInline([this, notifications](
+      Notifier* FOLLY_NULLABLE notifier) {
+    return std::move(fut).thenTryInline([this, notifier](
                                             folly::Try<folly::Unit>&& try_) {
       if (try_.hasException()) {
         if (auto* err = try_.tryGetExceptionObject<folly::FutureTimeout>()) {
-          timeoutErrorHandler(*err, notifications);
+          timeoutErrorHandler(*err, notifier);
         } else if (
             auto* err = try_.tryGetExceptionObject<std::system_error>()) {
-          systemErrorHandler(*err, notifications);
+          systemErrorHandler(*err, notifier);
         } else if (auto* err = try_.tryGetExceptionObject<std::exception>()) {
-          genericErrorHandler(*err, notifications);
+          genericErrorHandler(*err, notifier);
         } else {
           genericErrorHandler(
-              std::runtime_error{"unknown exception type"}, notifications);
+              std::runtime_error{"unknown exception type"}, notifier);
         }
       }
     });
@@ -92,13 +92,13 @@ class FuseRequestContext : public RequestContext {
 
   void systemErrorHandler(
       const std::system_error& err,
-      Notifications* FOLLY_NULLABLE notifications);
+      Notifier* FOLLY_NULLABLE notifier);
   void genericErrorHandler(
       const std::exception& err,
-      Notifications* FOLLY_NULLABLE notifications);
+      Notifier* FOLLY_NULLABLE notifier);
   void timeoutErrorHandler(
       const folly::FutureTimeout& err,
-      Notifications* FOLLY_NULLABLE notifications);
+      Notifier* FOLLY_NULLABLE notifier);
 
   template <typename... T>
   void sendReply(T&&... payload) {
