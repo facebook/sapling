@@ -24,12 +24,12 @@ Send a request
   > ]
   > EOF
 
-  $ hgedenapi debugapi -e files -f req
-  [{"key": {"node": bin("1111111111111111111111111111111111111111"),
+  $ hgedenapi debugapi -e files -f req --sort
+  [{"key": {"node": bin("2222222222222222222222222222222222222222"),
             "path": ""},
     "result": {"Err": {"code": 0,
-                       "message": "Key does not exist: Key { path: RepoPathBuf(\"\"), hgid: HgId(\"1111111111111111111111111111111111111111\") }"}}},
-   {"key": {"node": bin("2222222222222222222222222222222222222222"),
+                       "message": "Key does not exist: Key { path: RepoPathBuf(\"\"), hgid: HgId(\"2222222222222222222222222222222222222222\") }"}}},
+   {"key": {"node": bin("1111111111111111111111111111111111111111"),
             "path": ""},
     "result": {"Err": {"code": 0,
-                       "message": "Key does not exist: Key { path: RepoPathBuf(\"\"), hgid: HgId(\"2222222222222222222222222222222222222222\") }"}}}]
+                       "message": "Key does not exist: Key { path: RepoPathBuf(\"\"), hgid: HgId(\"1111111111111111111111111111111111111111\") }"}}}]
