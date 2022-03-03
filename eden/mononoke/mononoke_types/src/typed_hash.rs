@@ -6,6 +6,7 @@
  */
 
 use std::fmt::{self, Display};
+use std::hash::Hash;
 use std::{result, str::FromStr};
 
 use abomonation_derive::Abomonation;
@@ -40,7 +41,7 @@ use crate::{
 // Option type, or perhaps a list as desired.
 
 /// An identifier used throughout Mononoke.
-pub trait MononokeId: Copy + Eq + Sync + Send + 'static {
+pub trait MononokeId: Copy + Eq + Hash + Sync + Send + 'static {
     /// Blobstore value type associated with given MononokeId type
     type Value: BlobstoreValue<Key = Self>;
 

@@ -84,7 +84,8 @@ enum DeletedManifestChange<Manifest: DeletedManifestCommon> {
 struct DeletedManifestUnfoldNode<Manifest: DeletedManifestCommon> {
     path_element: Option<MPathElement>,
     changes: PathTree<Option<PathChange>>,
-    parents: Vec<Manifest::Id>,
+    // set is used to automatically deduplicate parents that have equal ancestors
+    parents: HashSet<Manifest::Id>,
 }
 
 impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
@@ -107,7 +108,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 DeletedManifestUnfoldNode {
                     path_element: None,
                     changes,
-                    parents,
+                    parents: parents.into_iter().collect(),
                 },
                 // unfold
                 {
@@ -207,7 +208,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
         ctx: &CoreContext,
         blobstore: &Arc<dyn Blobstore>,
         changes: PathTree<Option<PathChange>>,
-        parents: Vec<Manifest::Id>,
+        parents: HashSet<Manifest::Id>,
     ) -> Result<
         (
             DeletedManifestChange<Manifest>,
@@ -243,7 +244,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                     // if parent manifests are equal, we can reuse them
                     let mut it = parents.into_iter();
                     if let Some(id) = it.next() {
-                        if it.all(|mf| mf == id) {
+                        if it.next().is_none() {
                             return Ok((DeletedManifestChange::Reuse(Some(id)), vec![]));
                         }
                         // parent manifests are different, we need to merge them
@@ -287,7 +288,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 DeletedManifestUnfoldNode {
                     path_element: Some(path),
                     changes: change_tree,
-                    parents: vec![],
+                    parents: HashSet::new(),
                 },
             );
         }
@@ -300,9 +301,9 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                         .or_insert(DeletedManifestUnfoldNode {
                             path_element: Some(path),
                             changes: Default::default(),
-                            parents: vec![],
+                            parents: HashSet::new(),
                         });
-                entry.parents.push(mf_id);
+                entry.parents.insert(mf_id);
             }
         }
 
