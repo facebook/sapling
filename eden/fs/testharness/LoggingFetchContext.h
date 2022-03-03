@@ -34,6 +34,11 @@ class LoggingFetchContext : public ObjectFetchContext {
     return Cause::Unknown;
   }
 
+  const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE
+  getRequestInfo() const override {
+    return nullptr;
+  }
+
   std::vector<Request> requests;
 };
 

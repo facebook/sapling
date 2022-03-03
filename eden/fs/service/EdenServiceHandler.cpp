@@ -173,23 +173,25 @@ class ThriftFetchContext : public ObjectFetchContext {
     return endpoint_;
   }
 
-  const std::optional<std::unordered_map<std::string, std::string>>&
+  const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE
   getRequestInfo() const override {
-    return requestInfo_;
+    return &requestInfo_;
   }
 
+  /**
+   * Update the request info map.
+   *
+   * This is not thread safe and the caller should make sure that this function
+   * isn't called in an unsafe manner.
+   */
   void updateRequestInfo(const std::map<std::string, std::string>& another) {
-    if (!requestInfo_.has_value()) {
-      requestInfo_ =
-          std::make_optional(std::unordered_map<std::string, std::string>());
-    }
-    requestInfo_.value().insert(another.begin(), another.end());
+    requestInfo_.insert(another.begin(), another.end());
   }
 
  private:
   std::optional<pid_t> pid_;
   folly::StringPiece endpoint_;
-  std::optional<std::unordered_map<std::string, std::string>> requestInfo_;
+  std::unordered_map<std::string, std::string> requestInfo_;
 };
 
 class PrefetchFetchContext : public ObjectFetchContext {
@@ -209,6 +211,11 @@ class PrefetchFetchContext : public ObjectFetchContext {
 
   std::optional<folly::StringPiece> getCauseDetail() const override {
     return endpoint_;
+  }
+
+  const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE
+  getRequestInfo() const override {
+    return nullptr;
   }
 
  private:

@@ -230,6 +230,11 @@ class PidFetchContext : public ObjectFetchContext {
     return pid_;
   }
 
+  const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE
+  getRequestInfo() const override {
+    return nullptr;
+  }
+
  private:
   pid_t pid_;
 };

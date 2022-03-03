@@ -76,9 +76,9 @@ class RequestContext : public ObjectFetchContext {
     return ObjectFetchContext::Cause::Fs;
   }
 
-  const std::optional<std::unordered_map<std::string, std::string>>&
+  const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE
   getRequestInfo() const override {
-    return requestInfo_;
+    return nullptr;
   }
 
   void startRequest(
@@ -117,7 +117,6 @@ class RequestContext : public ObjectFetchContext {
       channelThreadLocalStats_;
   ProcessAccessLog& pal_;
   EdenTopStats edenTopStats_;
-  std::optional<std::unordered_map<std::string, std::string>> requestInfo_;
 
   /**
    * Normally, one requestData is created for only one fetch request,

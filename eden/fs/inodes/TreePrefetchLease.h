@@ -40,6 +40,10 @@ class TreePrefetchLease {
     ObjectFetchContext::Cause getCause() const override {
       return cause_;
     }
+    const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE
+    getRequestInfo() const override {
+      return nullptr;
+    }
 
    private:
     std::optional<pid_t> clientPid_ = std::nullopt;

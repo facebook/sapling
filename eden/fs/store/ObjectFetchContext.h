@@ -80,10 +80,8 @@ class ObjectFetchContext {
     return ImportPriority::kNormal();
   }
 
-  virtual const std::optional<std::unordered_map<std::string, std::string>>&
-  getRequestInfo() const {
-    throw std::runtime_error("not implemented");
-  }
+  virtual const std::unordered_map<std::string, std::string>* getRequestInfo()
+      const = 0;
 
   /**
    * Support deprioritizing in sub-classes.

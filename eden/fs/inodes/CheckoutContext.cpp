@@ -26,8 +26,7 @@ CheckoutContext::CheckoutContext(
     CheckoutMode checkoutMode,
     std::optional<pid_t> clientPid,
     folly::StringPiece thriftMethodName,
-    const std::optional<std::unordered_map<std::string, std::string>>&
-        requestInfo)
+    const std::unordered_map<std::string, std::string>* requestInfo)
     : checkoutMode_{checkoutMode},
       mount_{mount},
       fetchContext_{

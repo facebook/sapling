@@ -20,14 +20,13 @@ class NullObjectFetchContext : public ObjectFetchContext {
     return causeDetail_;
   }
 
-  const std::optional<std::unordered_map<std::string, std::string>>&
+  const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE
   getRequestInfo() const override {
-    return requestInfo_;
+    return nullptr;
   }
 
  private:
   std::optional<folly::StringPiece> causeDetail_;
-  std::optional<std::unordered_map<std::string, std::string>> requestInfo_;
 };
 } // namespace
 
