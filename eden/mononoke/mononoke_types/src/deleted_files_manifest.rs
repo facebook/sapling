@@ -8,6 +8,7 @@
 use anyhow::{Context, Result};
 use fbthrift::compact_protocol;
 use sorted_vector_map::SortedVectorMap;
+use std::collections::BTreeMap;
 
 use crate::blob::{Blob, BlobstoreValue, DeletedManifestBlob};
 use crate::deleted_manifest_common::DeletedManifestCommon;
@@ -94,13 +95,6 @@ pub struct DeletedManifest {
 impl DeletedManifestCommon for DeletedManifest {
     type Id = DeletedManifestId;
 
-    fn new(
-        linknode: Option<ChangesetId>,
-        subentries: SortedVectorMap<MPathElement, DeletedManifestId>,
-    ) -> Self {
-        Self::new(linknode, subentries)
-    }
-
     fn is_deleted(&self) -> bool {
         self.is_deleted()
     }
@@ -111,6 +105,32 @@ impl DeletedManifestCommon for DeletedManifest {
 
     fn id(&self) -> Self::Id {
         self.get_manifest_id()
+    }
+
+    fn lookup(&self, basename: &MPathElement) -> Option<&Self::Id> {
+        self.lookup(basename)
+    }
+
+    fn copy_and_update_subentries(
+        current: Option<Self>,
+        linknode: Option<ChangesetId>,
+        subentries_to_update: impl IntoIterator<Item = (MPathElement, Option<Self::Id>)>,
+    ) -> Self {
+        let mut subentries = current
+            .map(|manifest| manifest.subentries.into_iter().collect::<BTreeMap<_, _>>())
+            .unwrap_or_default();
+        for (path, maybe_id) in subentries_to_update {
+            if let Some(id) = maybe_id {
+                subentries.insert(path, id);
+            } else {
+                subentries.remove(&path);
+            }
+        }
+        Self::new(linknode, subentries.into_iter().collect())
+    }
+
+    fn is_empty(&self) -> bool {
+        self.subentries.is_empty()
     }
 }
 
