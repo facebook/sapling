@@ -186,6 +186,18 @@ void InodeMap::initializeFromTakeover(
       throw std::runtime_error(message);
     }
 
+    std::optional<ObjectId> hash;
+    if (entry.hash_ref().has_value()) {
+      const std::string& value = entry.hash_ref().value();
+      if (value.empty()) {
+        // LEGACY: Old versions of EdenFS sent the empty string to mean
+        // materialized. When a BackingStore wants to support the empty ObjectId
+        // as a valid identifier, remove this code path.
+        hash = std::nullopt;
+      } else {
+        hash = ObjectId{value};
+      }
+    }
     initializeUnloadedInode(
         data,
         InodeNumber::fromThrift(*entry.parentInode_ref()),
@@ -193,9 +205,7 @@ void InodeMap::initializeFromTakeover(
         PathComponentPiece{*entry.name_ref()},
         *entry.isUnlinked_ref(),
         *entry.mode_ref(),
-        entry.hash_ref()->empty() ? std::nullopt
-                                  : std::optional<ObjectId>{folly::ByteRange{
-                                        folly::StringPiece{*entry.hash_ref()}}},
+        std::move(hash),
         folly::to<uint32_t>(*entry.numFsReferences_ref()));
   }
 
@@ -889,7 +899,10 @@ Future<SerializedInodeMap> InodeMap::shutdown(
       serializedEntry.name_ref() = entry.name.stringPiece().str();
       serializedEntry.isUnlinked_ref() = entry.isUnlinked;
       serializedEntry.numFsReferences_ref() = entry.numFsReferences;
-      serializedEntry.hash_ref() = thriftHash(entry.hash);
+      if (entry.hash.has_value()) {
+        serializedEntry.hash_ref() = entry.hash.value().asString();
+      }
+      // If entry.hash is empty, the inode is not materialized.
       serializedEntry.mode_ref() = entry.mode;
 
       result.unloadedInodes_ref()->emplace_back(std::move(serializedEntry));
