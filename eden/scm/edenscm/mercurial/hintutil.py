@@ -32,11 +32,6 @@ hinttable = {
         "Please use commit hashes instead."
     )
     % rev,
-    "metalog-root-override": lambda root: _(
-        "MetaLog root was overridden to %s by an environment variable. "
-        "This should only be used for debugging."
-    )
-    % root,
     "old-version": lambda: _(
         "WARNING! You are running an old version of Mercurial. Please upgrade your installation."
     ),
