@@ -40,6 +40,14 @@ py_class!(pub class metalog |py| {
         Self::create_instance(py, RefCell::new(log), path)
     }
 
+    /// Initializes a new metalog at the given path. It obtains the root id from
+    /// certain environment variables if they are set.
+    @staticmethod
+    def openfromenv(path: String) -> PyResult<Self> {
+        let log = MetaLog::open_from_env(Path::new(path.as_str())).map_pyerr(py)?;
+        Self::create_instance(py, RefCell::new(log), path)
+    }
+
     /// List all roots.
     def roots(&self) -> PyResult<Vec<Bytes>> {
         let path = self.fspath(py);

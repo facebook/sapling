@@ -6,6 +6,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::env;
 use std::fmt;
 use std::fs;
 use std::io::Write;
@@ -23,6 +24,7 @@ use minibytes::Bytes;
 use parking_lot::RwLock;
 use serde::Deserialize;
 use serde::Serialize;
+use serde_json::Value;
 pub use zstore::Id20;
 use zstore::Zstore;
 
@@ -122,6 +124,31 @@ impl MetaLog {
         };
         tracing::debug!("opened with root {}", orig_root_id.to_hex());
         Ok(metalog)
+    }
+
+    /// Similar to open, but tries to get `root_id` from environment variables
+    pub fn open_from_env(metalog_path: &Path) -> Result<MetaLog> {
+        let metalog_root = if let Ok(forced_metalog_root) = env::var("HGFORCEMETALOGROOT") {
+            Some(forced_metalog_root)
+        } else if let Ok(pending_metalog) = env::var("HG_PENDING_METALOG") {
+            if let Some(metalog_path) = metalog_path.to_str() {
+                decode_pending_metalog(pending_metalog, metalog_path)?
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        let root = if let Some(metalog_root) = metalog_root {
+            if let Ok(decoded_root) = hex::decode(&metalog_root) {
+                Some(Id20::from_slice(&decoded_root)?)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        MetaLog::open(metalog_path, root)
     }
 
     /// Obtain a new `MetaLog` with a different `root_id`.
@@ -463,6 +490,15 @@ fn resolve_compaction_epoch(path: &Path) -> Result<(PathBuf, Option<u64>)> {
     }
 }
 
+fn decode_pending_metalog(pending_metalog: String, metalog_path: &str) -> Result<Option<String>> {
+    let decoded_json = serde_json::from_str(pending_metalog.as_str());
+    let decoded_json: Value = decoded_json.context("Failed to parse pending metalog")?;
+    if let Value::String(s) = &decoded_json[metalog_path] {
+        return Ok(Some(String::from(s)));
+    }
+    Ok(None)
+}
+
 pub(crate) fn load_root(blobs: &Zstore, id: Id20) -> Result<Root> {
     if id == EMPTY_ROOT_ID.clone() {
         return Ok(EMPTY_ROOT.clone());
@@ -560,6 +596,7 @@ mod tests {
     use tempfile::TempDir;
 
     use super::*;
+    use crate::ENV_LOCK;
 
     #[test]
     fn test_root_id() {
@@ -600,6 +637,31 @@ mod tests {
         assert_eq!(metalog.get("foo").unwrap().unwrap(), b"bar");
         assert_eq!(metalog.message(), "commit 1");
         assert_eq!(metalog.timestamp(), 11);
+    }
+
+    #[test]
+    fn test_open_from_env() {
+        let _guard = ENV_LOCK.lock();
+        let dir = TempDir::new().unwrap();
+        let mut orig_metalog = MetaLog::open(&dir, None).unwrap();
+        orig_metalog.set("a", b"1").unwrap();
+        orig_metalog.commit(commit_opt("first_commit", 11)).unwrap();
+        orig_metalog.set("b", b"2").unwrap();
+        orig_metalog
+            .commit(commit_opt("second_commit", 22))
+            .unwrap();
+        orig_metalog.set("c", b"3").unwrap();
+        orig_metalog.commit(commit_opt("third_commit", 33)).unwrap();
+        let root_ids = MetaLog::list_roots(&dir).unwrap();
+
+        std::env::set_var("HGFORCEMETALOGROOT", hex::encode(root_ids[2]));
+        let metalog = MetaLog::open_from_env(dir.as_ref()).unwrap();
+        assert_eq!(metalog.message(), "second_commit");
+        assert_eq!(metalog.get("a").unwrap().unwrap(), b"1");
+
+        std::env::remove_var("HGFORCEMETALOGROOT");
+        let metalog = MetaLog::open_from_env(dir.as_ref()).unwrap();
+        assert_eq!(metalog.message(), "third_commit");
     }
 
     #[test]

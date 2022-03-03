@@ -8,12 +8,14 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.51"
 git2 = "0.13"
+hex = "0.4.3"
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
 lazy_static = "1.0"
 mincode = { version = "0.1.0", path = "../mincode" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
+serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 tracing = "0.1.29"
 types = { version = "0.1.0", path = "../types" }
 zstore = { version = "0.1.0", path = "../zstore" }

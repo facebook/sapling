@@ -89,10 +89,7 @@ sh % "HGFORCEMETALOGROOT=26f65c1b1661193443c11c5e5a4c32232936b306 hg log -G -r '
     ├─╯
     o  B B
     │
-    o  A A
-
-    hint[metalog-root-override]: MetaLog root was overridden to 26f65c1b1661193443c11c5e5a4c32232936b306 by an environment variable. This should only be used for debugging.
-    hint[hint-ack]: use 'hg hint --ack metalog-root-override' to silence these hints"""
+    o  A A"""
 
 sh % "hg debugcompactmetalog" == ""
 
