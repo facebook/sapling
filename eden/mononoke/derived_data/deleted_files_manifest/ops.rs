@@ -396,7 +396,7 @@ pub fn list_all_entries<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::derive::{derive_deleted_files_manifest, get_changes};
+    use crate::derive::{get_changes, DeletedManifestDeriver};
     use blobrepo::{save_bonsai_changesets, BlobRepo};
     use fbinit::FacebookInit;
     use fixtures::store_files;
@@ -593,7 +593,7 @@ mod tests {
         )
         .await
         .unwrap();
-        derive_deleted_files_manifest::<DeletedManifest>(
+        DeletedManifestDeriver::<DeletedManifest>::derive(
             &ctx,
             &repo.blobstore().boxed(),
             bcs_id,

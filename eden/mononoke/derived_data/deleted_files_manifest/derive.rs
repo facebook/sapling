@@ -64,125 +64,314 @@ use unodes::RootUnodeManifestId;
 ///    recurse to the parent subentries and the current subpaths' changes
 ///   - if there are subentries, create a live manifest or mark the existing node as live.
 ///
-pub(crate) async fn derive_deleted_files_manifest<Manifest: DeletedManifestCommon>(
-    ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
-    cs_id: ChangesetId,
-    parents: Vec<Manifest::Id>,
-    changes: PathTree<Option<PathChange>>,
-) -> Result<Manifest::Id, Error> {
-    let (result_sender, result_receiver) = oneshot::channel();
-    // Stream is used to batch writes to blobstore
-    let (sender, receiver) = mpsc::unbounded();
-    let created = Arc::new(Mutex::new(HashSet::new()));
-    cloned!(blobstore, ctx);
-    let f = async move {
-        borrowed!(ctx, blobstore);
-        let manifest_opt = bounded_traversal(
-            256,
-            DeletedManifestUnfoldNode {
-                path_element: None,
-                changes,
-                parents,
-            },
-            // unfold
-            {
-                move |
-                    DeletedManifestUnfoldNode {
-                        path_element,
-                        changes,
-                        parents,
-                    },
-                | {
-                    async move {
-                        let (mf_change, next_states) =
-                            do_derive_unfold::<Manifest>(ctx, blobstore, changes, parents).await?;
-                        Ok(((path_element, mf_change), next_states))
-                    }
-                    .boxed()
-                }
-            },
-            // fold
-            {
-                cloned!(sender, created);
-                move |
-                    (path, manifest_change),
-                    // impl Iterator<Out>
-                    subentries_iter,
-                    // -> Out = Option<(Option<MPathElement>, Manifest::Id)>
-                    // None means a leaf node was deleted because the file was recreated
-                    // Option<MPathElement> is a possibly empty path (None if empty)
-                |  {
-                    cloned!(cs_id, sender, created);
-                    async move {
-                        let mut subentries = SortedVectorMap::new();
-                        for entry in subentries_iter {
-                            match entry {
-                                Some((Some(path), mf_id)) => {
-                                    subentries.insert(path, mf_id);
-                                }
-                                Some((None, _)) => {
-                                    return Err(anyhow!(concat!(
-                                        "Failed to create deleted files manifest: ",
-                                        "subentry must have a path"
-                                    )));
-                                }
-                                None => {}
-                            }
-                        }
-
-                        Ok(do_derive_create::<Manifest>(
-                            ctx,
-                            blobstore,
-                            cs_id.clone(),
-                            manifest_change,
-                            subentries,
-                            sender.clone(),
-                            created.clone(),
-                        )
-                        .await?
-                        .map(|mf_id| (path, mf_id)))
-                    }
-                    .boxed()
-                }
-            },
-        )
-        .await?;
-
-        let res = match manifest_opt {
-            Some((_, mf_id)) => Ok(mf_id),
-            None => {
-                // there are no deleted files, need to create an empty root manifest
-                create_manifest::<Manifest>(
-                    ctx,
-                    blobstore,
-                    None,
-                    Default::default(),
-                    sender.clone(),
-                    created.clone(),
-                )
-                .await
-            }
-        };
-
-        let _ = result_sender.send(res);
-        Result::<_, Error>::Ok(())
-    };
-
-    tokio::spawn(f);
-
-    receiver
-        .buffered(1024)
-        .try_for_each(|_| async { Ok(()) })
-        .await?;
-    result_receiver.await?
-}
+pub(crate) struct DeletedManifestDeriver<Manifest: DeletedManifestCommon>(
+    std::marker::PhantomData<Manifest>,
+);
 
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) enum PathChange {
     Add,
     Remove,
     FileDirConflict,
+}
+
+enum DeletedManifestChange<Manifest: DeletedManifestCommon> {
+    CreateDeleted,
+    RemoveOrKeepLive,
+    Reuse(Option<Manifest::Id>),
+}
+
+struct DeletedManifestUnfoldNode<Manifest: DeletedManifestCommon> {
+    path_element: Option<MPathElement>,
+    changes: PathTree<Option<PathChange>>,
+    parents: Vec<Manifest::Id>,
+}
+
+impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
+    pub(crate) async fn derive(
+        ctx: &CoreContext,
+        blobstore: &Arc<dyn Blobstore>,
+        cs_id: ChangesetId,
+        parents: Vec<Manifest::Id>,
+        changes: PathTree<Option<PathChange>>,
+    ) -> Result<Manifest::Id, Error> {
+        let (result_sender, result_receiver) = oneshot::channel();
+        // Stream is used to batch writes to blobstore
+        let (sender, receiver) = mpsc::unbounded();
+        let created = Arc::new(Mutex::new(HashSet::new()));
+        cloned!(blobstore, ctx);
+        let f = async move {
+            borrowed!(ctx, blobstore);
+            let manifest_opt = bounded_traversal(
+                256,
+                DeletedManifestUnfoldNode {
+                    path_element: None,
+                    changes,
+                    parents,
+                },
+                // unfold
+                {
+                    move |
+                        DeletedManifestUnfoldNode {
+                            path_element,
+                            changes,
+                            parents,
+                        },
+                    | {
+                        async move {
+                            let (mf_change, next_states) =
+                                Self::do_unfold(ctx, blobstore, changes, parents).await?;
+                            Ok(((path_element, mf_change), next_states))
+                        }
+                        .boxed()
+                    }
+                },
+                // fold
+                {
+                    cloned!(sender, created);
+                    move |
+                        (path, manifest_change),
+                    // impl Iterator<Out>
+                    subentries_iter,
+                    // -> Out = Option<(Option<MPathElement>, Manifest::Id)>
+                    // None means a leaf node was deleted because the file was recreated
+                    // Option<MPathElement> is a possibly empty path (None if empty)
+                    | {
+                        cloned!(cs_id, sender, created);
+                        async move {
+                            let mut subentries = SortedVectorMap::new();
+                            for entry in subentries_iter {
+                                match entry {
+                                    Some((Some(path), mf_id)) => {
+                                        subentries.insert(path, mf_id);
+                                    }
+                                    Some((None, _)) => {
+                                        return Err(anyhow!(concat!(
+                                            "Failed to create deleted files manifest: ",
+                                            "subentry must have a path"
+                                        )));
+                                    }
+                                    None => {}
+                                }
+                            }
+
+                            Ok(Self::do_create(
+                                ctx,
+                                blobstore,
+                                cs_id.clone(),
+                                manifest_change,
+                                subentries,
+                                sender.clone(),
+                                created.clone(),
+                            )
+                            .await?
+                            .map(|mf_id| (path, mf_id)))
+                        }
+                        .boxed()
+                    }
+                },
+            )
+            .await?;
+
+            let res = match manifest_opt {
+                Some((_, mf_id)) => Ok(mf_id),
+                None => {
+                    // there are no deleted files, need to create an empty root manifest
+                    Self::create_manifest(
+                        ctx,
+                        blobstore,
+                        None,
+                        Default::default(),
+                        sender.clone(),
+                        created.clone(),
+                    )
+                    .await
+                }
+            };
+
+            let _ = result_sender.send(res);
+            Result::<_, Error>::Ok(())
+        };
+
+        tokio::spawn(f);
+
+        receiver
+            .buffered(1024)
+            .try_for_each(|_| async { Ok(()) })
+            .await?;
+        result_receiver.await?
+    }
+
+
+    async fn do_unfold(
+        ctx: &CoreContext,
+        blobstore: &Arc<dyn Blobstore>,
+        changes: PathTree<Option<PathChange>>,
+        parents: Vec<Manifest::Id>,
+    ) -> Result<
+        (
+            DeletedManifestChange<Manifest>,
+            Vec<DeletedManifestUnfoldNode<Manifest>>,
+        ),
+        Error,
+    > {
+        let PathTree {
+            value: change,
+            subentries,
+        } = changes;
+
+        let parent_manifests =
+            future::try_join_all(parents.iter().map(|mf_id| mf_id.load(ctx, blobstore))).await?;
+
+        let check_consistency = |manifests: &Vec<Manifest>| {
+            let mut it = manifests.iter().map(|mf| mf.is_deleted());
+            if let Some(status) = it.next() {
+                if it.all(|st| st == status) {
+                    return Ok(status);
+                }
+                return Err(format_err!(
+                    "parent deleted manifests have different node status, but no changes were provided"
+                ));
+            }
+            Ok(false)
+        };
+
+        let fold_node = match change {
+            None => {
+                if subentries.is_empty() {
+                    // nothing changed in the current node and in the subentries
+                    // if parent manifests are equal, we can reuse them
+                    let mut it = parents.into_iter();
+                    if let Some(id) = it.next() {
+                        if it.all(|mf| mf == id) {
+                            return Ok((DeletedManifestChange::Reuse(Some(id)), vec![]));
+                        }
+                        // parent manifests are different, we need to merge them
+                        // let's check that the node status is consistent across parents
+                        let is_deleted = check_consistency(&parent_manifests)?;
+                        if is_deleted {
+                            DeletedManifestChange::CreateDeleted
+                        } else {
+                            DeletedManifestChange::RemoveOrKeepLive
+                        }
+                    } else {
+                        return Ok((DeletedManifestChange::Reuse(None), vec![]));
+                    }
+                } else {
+                    // some paths might be added/deleted
+                    DeletedManifestChange::RemoveOrKeepLive
+                }
+            }
+            Some(PathChange::Add) => {
+                // the path was added
+                DeletedManifestChange::RemoveOrKeepLive
+            }
+            Some(PathChange::Remove) => {
+                // the path was removed
+                DeletedManifestChange::CreateDeleted
+            }
+            Some(PathChange::FileDirConflict) => {
+                // This is a file/dir conflict: either a file was replaced by directory or other way
+                // round. In both cases one of the paths is being deleted and recreated as other
+                // type. To keep this in history, we need to mark the path as deleted in the deleted
+                // files manifest.
+                DeletedManifestChange::RemoveOrKeepLive
+            }
+        };
+
+        // some files might be added/removed in subentries, need to traverse the subentries
+        let mut recurse_entries = BTreeMap::new();
+        for (path, change_tree) in subentries {
+            recurse_entries.insert(
+                path.clone(),
+                DeletedManifestUnfoldNode {
+                    path_element: Some(path),
+                    changes: change_tree,
+                    parents: vec![],
+                },
+            );
+        }
+
+        for parent in parent_manifests {
+            for (path, mf_id) in parent.into_subentries() {
+                let entry =
+                    recurse_entries
+                        .entry(path.clone())
+                        .or_insert(DeletedManifestUnfoldNode {
+                            path_element: Some(path),
+                            changes: Default::default(),
+                            parents: vec![],
+                        });
+                entry.parents.push(mf_id);
+            }
+        }
+
+        Ok((
+            fold_node,
+            recurse_entries
+                .into_iter()
+                .map(|(_, node)| node)
+                .collect::<Vec<_>>(),
+        ))
+    }
+
+    async fn create_manifest(
+        ctx: &CoreContext,
+        blobstore: &Arc<dyn Blobstore>,
+        linknode: Option<ChangesetId>,
+        subentries: SortedVectorMap<MPathElement, Manifest::Id>,
+        sender: mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>,
+        created: Arc<Mutex<HashSet<String>>>,
+    ) -> Result<Manifest::Id, Error> {
+        let manifest = Manifest::new(linknode, subentries);
+        let mf_id = manifest.id();
+
+        let key = mf_id.blobstore_key();
+        let mut created = created.lock().await;
+        if created.insert(key.clone()) {
+            let blob = manifest.into_blob();
+            cloned!(ctx, blobstore);
+            let f = async move { blobstore.put(&ctx, key, blob.into()).await }.boxed();
+
+            sender
+                .unbounded_send(f)
+                .map(move |()| mf_id)
+                .map_err(|err| anyhow!("failed to send manifest future {}", err))
+        } else {
+            Ok(mf_id)
+        }
+    }
+
+    async fn do_create(
+        ctx: &CoreContext,
+        blobstore: &Arc<dyn Blobstore>,
+        cs_id: ChangesetId,
+        change: DeletedManifestChange<Manifest>,
+        subentries: SortedVectorMap<MPathElement, Manifest::Id>,
+        sender: mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>,
+        created: Arc<Mutex<HashSet<String>>>,
+    ) -> Result<Option<Manifest::Id>, Error> {
+        match change {
+            DeletedManifestChange::Reuse(mb_mf_id) => Ok(mb_mf_id),
+            DeletedManifestChange::CreateDeleted => {
+                Self::create_manifest(ctx, blobstore, Some(cs_id), subentries, sender, created)
+                    .await
+                    .map(Some)
+            }
+            DeletedManifestChange::RemoveOrKeepLive => {
+                if subentries.is_empty() {
+                    // there are no subentries, no need to create a new node
+                    Ok(None)
+                } else {
+                    // some of the subentries were deleted, creating a new node but there is no need to
+                    // mark it as deleted
+                    Self::create_manifest(ctx, blobstore, None, subentries, sender, created)
+                        .await
+                        .map(Some)
+                }
+            }
+        }
+    }
 }
 
 pub(crate) async fn get_changes(
@@ -278,187 +467,6 @@ async fn diff_against_parents(
     }
     let res: Vec<_> = changes.into_iter().collect();
     Ok(res)
-}
-
-enum DeletedManifestChange<Manifest: DeletedManifestCommon> {
-    CreateDeleted,
-    RemoveOrKeepLive,
-    Reuse(Option<Manifest::Id>),
-}
-
-struct DeletedManifestUnfoldNode<Manifest: DeletedManifestCommon> {
-    path_element: Option<MPathElement>,
-    changes: PathTree<Option<PathChange>>,
-    parents: Vec<Manifest::Id>,
-}
-
-async fn do_derive_unfold<Manifest: DeletedManifestCommon>(
-    ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
-    changes: PathTree<Option<PathChange>>,
-    parents: Vec<Manifest::Id>,
-) -> Result<
-    (
-        DeletedManifestChange<Manifest>,
-        Vec<DeletedManifestUnfoldNode<Manifest>>,
-    ),
-    Error,
-> {
-    let PathTree {
-        value: change,
-        subentries,
-    } = changes;
-
-    let parent_manifests =
-        future::try_join_all(parents.iter().map(|mf_id| mf_id.load(ctx, blobstore))).await?;
-
-    let check_consistency = |manifests: &Vec<Manifest>| {
-        let mut it = manifests.iter().map(|mf| mf.is_deleted());
-        if let Some(status) = it.next() {
-            if it.all(|st| st == status) {
-                return Ok(status);
-            }
-            return Err(format_err!(
-                "parent deleted manifests have different node status, but no changes were provided"
-            ));
-        }
-        Ok(false)
-    };
-
-    let fold_node = match change {
-        None => {
-            if subentries.is_empty() {
-                // nothing changed in the current node and in the subentries
-                // if parent manifests are equal, we can reuse them
-                let mut it = parents.into_iter();
-                if let Some(id) = it.next() {
-                    if it.all(|mf| mf == id) {
-                        return Ok((DeletedManifestChange::Reuse(Some(id)), vec![]));
-                    }
-                    // parent manifests are different, we need to merge them
-                    // let's check that the node status is consistent across parents
-                    let is_deleted = check_consistency(&parent_manifests)?;
-                    if is_deleted {
-                        DeletedManifestChange::CreateDeleted
-                    } else {
-                        DeletedManifestChange::RemoveOrKeepLive
-                    }
-                } else {
-                    return Ok((DeletedManifestChange::Reuse(None), vec![]));
-                }
-            } else {
-                // some paths might be added/deleted
-                DeletedManifestChange::RemoveOrKeepLive
-            }
-        }
-        Some(PathChange::Add) => {
-            // the path was added
-            DeletedManifestChange::RemoveOrKeepLive
-        }
-        Some(PathChange::Remove) => {
-            // the path was removed
-            DeletedManifestChange::CreateDeleted
-        }
-        Some(PathChange::FileDirConflict) => {
-            // This is a file/dir conflict: either a file was replaced by directory or other way
-            // round. In both cases one of the paths is being deleted and recreated as other
-            // type. To keep this in history, we need to mark the path as deleted in the deleted
-            // files manifest.
-            DeletedManifestChange::RemoveOrKeepLive
-        }
-    };
-
-    // some files might be added/removed in subentries, need to traverse the subentries
-    let mut recurse_entries = BTreeMap::new();
-    for (path, change_tree) in subentries {
-        recurse_entries.insert(
-            path.clone(),
-            DeletedManifestUnfoldNode {
-                path_element: Some(path),
-                changes: change_tree,
-                parents: vec![],
-            },
-        );
-    }
-
-    for parent in parent_manifests {
-        for (path, mf_id) in parent.into_subentries() {
-            let entry = recurse_entries
-                .entry(path.clone())
-                .or_insert(DeletedManifestUnfoldNode {
-                    path_element: Some(path),
-                    changes: Default::default(),
-                    parents: vec![],
-                });
-            entry.parents.push(mf_id);
-        }
-    }
-
-    Ok((
-        fold_node,
-        recurse_entries
-            .into_iter()
-            .map(|(_, node)| node)
-            .collect::<Vec<_>>(),
-    ))
-}
-
-async fn create_manifest<Manifest: DeletedManifestCommon>(
-    ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
-    linknode: Option<ChangesetId>,
-    subentries: SortedVectorMap<MPathElement, Manifest::Id>,
-    sender: mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>,
-    created: Arc<Mutex<HashSet<String>>>,
-) -> Result<Manifest::Id, Error> {
-    let manifest = Manifest::new(linknode, subentries);
-    let mf_id = manifest.id();
-
-    let key = mf_id.blobstore_key();
-    let mut created = created.lock().await;
-    if created.insert(key.clone()) {
-        let blob = manifest.into_blob();
-        cloned!(ctx, blobstore);
-        let f = async move { blobstore.put(&ctx, key, blob.into()).await }.boxed();
-
-        sender
-            .unbounded_send(f)
-            .map(move |()| mf_id)
-            .map_err(|err| anyhow!("failed to send manifest future {}", err))
-    } else {
-        Ok(mf_id)
-    }
-}
-
-async fn do_derive_create<Manifest: DeletedManifestCommon>(
-    ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
-    cs_id: ChangesetId,
-    change: DeletedManifestChange<Manifest>,
-    subentries: SortedVectorMap<MPathElement, Manifest::Id>,
-    sender: mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>,
-    created: Arc<Mutex<HashSet<String>>>,
-) -> Result<Option<Manifest::Id>, Error> {
-    match change {
-        DeletedManifestChange::Reuse(mb_mf_id) => Ok(mb_mf_id),
-        DeletedManifestChange::CreateDeleted => {
-            create_manifest::<Manifest>(ctx, blobstore, Some(cs_id), subentries, sender, created)
-                .await
-                .map(Some)
-        }
-        DeletedManifestChange::RemoveOrKeepLive => {
-            if subentries.is_empty() {
-                // there are no subentries, no need to create a new node
-                Ok(None)
-            } else {
-                // some of the subentries were deleted, creating a new node but there is no need to
-                // mark it as deleted
-                create_manifest::<Manifest>(ctx, blobstore, None, subentries, sender, created)
-                    .await
-                    .map(Some)
-            }
-        }
-    }
 }
 
 #[cfg(test)]
@@ -1007,7 +1015,7 @@ mod tests {
         )
         .await
         .unwrap();
-        let f = derive_deleted_files_manifest::<DeletedManifest>(
+        let f = DeletedManifestDeriver::<DeletedManifest>::derive(
             ctx,
             &blobstore,
             bcs_id,

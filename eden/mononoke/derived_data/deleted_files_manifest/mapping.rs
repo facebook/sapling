@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::derive::{derive_deleted_files_manifest, get_changes};
+use crate::derive::{get_changes, DeletedManifestDeriver};
 use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData};
@@ -70,7 +70,7 @@ impl BonsaiDerivable for RootDeletedManifestId {
     ) -> Result<Self, Error> {
         let bcs_id = bonsai.get_changeset_id();
         let changes = get_changes(ctx, derivation_ctx, bonsai).await?;
-        let id = derive_deleted_files_manifest::<DeletedManifest>(
+        let id = DeletedManifestDeriver::<DeletedManifest>::derive(
             ctx,
             derivation_ctx.blobstore(),
             bcs_id,
