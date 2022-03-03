@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fs;
 use std::io;
@@ -28,22 +29,30 @@ pub struct FileStore {
     // A lock file indicating we are still running.
     #[allow(dead_code)]
     lock_file: PathLock,
+
+    // Boring commands we don't want to update the watchfile for.
+    skip_watchfile_commands: HashSet<String>,
 }
 
 const LOCK_EXT: &str = "lock";
 const JSON_EXT: &str = "json";
+const WATCHFILE: &str = "watchfile";
 
 /// FileStore is a simple runlog storage that writes JSON entries to a
 /// specified directory.
 impl FileStore {
     // Create a new FileStore that writes files to directory dir. dir
     // is created automatically if it doesn't exist.
-    pub(crate) fn new(dir: PathBuf, entry_id: &str) -> Result<Self> {
+    pub(crate) fn new(dir: PathBuf, entry_id: &str, boring_commands: Vec<String>) -> Result<Self> {
         create_shared_dir(&dir)?;
 
         let lock_file = PathLock::exclusive(dir.join(entry_id).with_extension(LOCK_EXT))?;
 
-        Ok(FileStore { dir, lock_file })
+        Ok(FileStore {
+            dir,
+            lock_file,
+            skip_watchfile_commands: boring_commands.into_iter().collect(),
+        })
     }
 
     pub(crate) fn save(&self, e: &Entry) -> Result<()> {
@@ -56,6 +65,12 @@ impl FileStore {
                 Ok(())
             },
         )?;
+
+        if !e.command.is_empty() && !self.skip_watchfile_commands.contains(&e.command[0]) {
+            // Contents aren't important, but it makes it easier to test.
+            fs::write(self.dir.join(WATCHFILE), &e.command[0])?;
+        }
+
         Ok(())
     }
 
@@ -64,6 +79,11 @@ impl FileStore {
 
         for dir_entry in fs::read_dir(dir)? {
             let path = dir_entry?.path();
+
+            // Don't delete watchfile.
+            if Some(WATCHFILE.as_ref()) == path.file_name() {
+                continue;
+            }
 
             let ext = match path.extension().and_then(OsStr::to_str) {
                 Some(ext) => ext,
@@ -154,7 +174,7 @@ mod tests {
         let td = tempdir()?;
 
         let fs_dir = td.path().join("banana");
-        let fs = FileStore::new(fs_dir.clone(), "some_id")?;
+        let fs = FileStore::new(fs_dir.clone(), "some_id", vec![])?;
         // Make sure FileStore creates directory automatically.
         assert!(fs_dir.exists());
 
@@ -188,7 +208,7 @@ mod tests {
         let entry_path = td.path().join(&e.id).with_extension(JSON_EXT);
 
         {
-            let fs = FileStore::new(td.path().into(), &e.id)?;
+            let fs = FileStore::new(td.path().into(), &e.id, vec![])?;
             fs.save(&e)?;
 
             // Still locked, don't clean up.
@@ -204,6 +224,9 @@ mod tests {
         FileStore::cleanup(&td, Duration::ZERO)?;
         assert!(!entry_path.exists());
 
+        // Don't delete the watchfile.
+        assert!(td.path().join(WATCHFILE).exists());
+
         Ok(())
     }
 
@@ -212,13 +235,13 @@ mod tests {
         let td = tempdir()?;
 
         let a = Entry::new(vec!["a".to_string()]);
-        let a_fs = FileStore::new(td.path().into(), &a.id)?;
+        let a_fs = FileStore::new(td.path().into(), &a.id, vec![])?;
         a_fs.save(&a)?;
 
 
         let b = Entry::new(vec!["b".to_string()]);
         {
-            let b_fs = FileStore::new(td.path().into(), &b.id)?;
+            let b_fs = FileStore::new(td.path().into(), &b.id, vec![])?;
             b_fs.save(&b)?;
         }
 
@@ -228,6 +251,41 @@ mod tests {
         got.sort_by(|a, b| a.0.command[0].cmp(&b.0.command[0]));
 
         assert_eq!(vec![(a, true), (b, false)], got);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_watchfile() -> Result<()> {
+        let td = tempdir()?;
+
+        // Should write out watchfile.
+        {
+            let e = Entry::new(vec!["exciting".to_string()]);
+            let fs = FileStore::new(td.path().into(), &e.id, vec!["boring".to_string()])?;
+            fs.save(&e)?;
+        }
+
+        let watchfile_path = td.path().join(WATCHFILE);
+        assert_eq!(fs::read_to_string(&watchfile_path)?, "exciting");
+
+        // Boring command, don't touch watchfile.
+        {
+            let e = Entry::new(vec!["boring".to_string()]);
+            let fs = FileStore::new(td.path().into(), &e.id, vec!["boring".to_string()])?;
+            fs.save(&e)?;
+        }
+
+        assert_eq!(fs::read_to_string(&watchfile_path)?, "exciting");
+
+        // Should touch watchfile.
+        {
+            let e = Entry::new(vec!["amazing".to_string()]);
+            let fs = FileStore::new(td.path().into(), &e.id, vec!["boring".to_string()])?;
+            fs.save(&e)?;
+        }
+
+        assert_eq!(fs::read_to_string(&watchfile_path)?, "amazing");
 
         Ok(())
     }

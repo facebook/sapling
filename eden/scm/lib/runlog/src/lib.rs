@@ -51,7 +51,11 @@ impl Logger {
                     FileStore::cleanup(&dir, Duration::from_secs_f64(threshold))?;
                 }
 
-                storage = Some(Mutex::new(FileStore::new(dir, &entry.id)?))
+                storage = Some(Mutex::new(FileStore::new(
+                    dir,
+                    &entry.id,
+                    repo.config().get_or_default("runlog", "boring-commands")?,
+                )?))
             }
         }
 

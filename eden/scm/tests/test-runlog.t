@@ -286,13 +286,13 @@ Test we don't clean up entries with chance=0
   $ rm -f .hg/runlog/*
   $ hg root > /dev/null
   $ hg root > /dev/null
-  $ ls .hg/runlog/* | wc -l | sed -e 's/ //g'
+  $ ls .hg/runlog/* | grep -v watchfile | wc -l | sed -e 's/ //g'
   4
 
 Test we always clean up with chance=1
   $ setconfig runlog.cleanup_chance=1
   $ hg root > /dev/null
-  $ ls .hg/runlog/* | wc -l | sed -e 's/ //g'
+  $ ls .hg/runlog/* | grep -v watchfile | wc -l | sed -e 's/ //g'
   2
 
 Test runlog CLI command
