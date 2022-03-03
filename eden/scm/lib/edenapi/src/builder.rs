@@ -400,6 +400,7 @@ pub(crate) struct Config {
     pub(crate) max_location_to_hash: Option<usize>,
     pub(crate) max_commit_mutations: Option<usize>,
     pub(crate) timeout: Option<Duration>,
+    #[allow(dead_code)]
     pub(crate) debug: bool,
     pub(crate) correlator: Option<String>,
     pub(crate) http_version: Option<HttpVersion>,

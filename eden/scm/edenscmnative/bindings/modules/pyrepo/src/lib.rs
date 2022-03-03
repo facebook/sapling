@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![allow(non_camel_case_types)]
+
 use cpython::*;
 use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyNone;
