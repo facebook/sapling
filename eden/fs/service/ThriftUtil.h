@@ -47,17 +47,6 @@ inline std::string thriftHash(const std::optional<ObjectId>& hash) {
 }
 
 /**
- * Convert an optional<Hash> to a std::string to be returned via thrift
- * as a thrift BinaryHash data type.
- */
-inline std::string thriftHash20(const std::optional<Hash20>& hash) {
-  if (hash.has_value()) {
-    return thriftHash20(hash.value());
-  }
-  return std::string{};
-}
-
-/**
  * Convert thrift BinaryHash data type into a Hash20 object.
  *
  * This allows the input to be either a 20-byte binary string, or a 40-byte
