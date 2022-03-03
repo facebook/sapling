@@ -76,8 +76,12 @@ pub(crate) enum PathChange {
 }
 
 enum DeletedManifestChange<Manifest: DeletedManifestCommon> {
+    /// Path was deleted, we create a node if not present.
     CreateDeleted,
-    RemoveOrKeepLive,
+    /// Path now exists, delete if it doesn't have any subentries that were
+    /// previous deleted.
+    RemoveIfNowEmpty,
+    /// No changes to the path which has a single parent, reuse the parent.
     Reuse(Option<Manifest::Id>),
 }
 
@@ -253,19 +257,19 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                         if is_deleted {
                             DeletedManifestChange::CreateDeleted
                         } else {
-                            DeletedManifestChange::RemoveOrKeepLive
+                            DeletedManifestChange::RemoveIfNowEmpty
                         }
                     } else {
                         return Ok((DeletedManifestChange::Reuse(None), vec![]));
                     }
                 } else {
                     // some paths might be added/deleted
-                    DeletedManifestChange::RemoveOrKeepLive
+                    DeletedManifestChange::RemoveIfNowEmpty
                 }
             }
             Some(PathChange::Add) => {
                 // the path was added
-                DeletedManifestChange::RemoveOrKeepLive
+                DeletedManifestChange::RemoveIfNowEmpty
             }
             Some(PathChange::Remove) => {
                 // the path was removed
@@ -276,7 +280,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 // round. In both cases one of the paths is being deleted and recreated as other
                 // type. To keep this in history, we need to mark the path as deleted in the deleted
                 // files manifest.
-                DeletedManifestChange::RemoveOrKeepLive
+                DeletedManifestChange::RemoveIfNowEmpty
             }
         };
 
@@ -359,7 +363,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                     .await
                     .map(Some)
             }
-            DeletedManifestChange::RemoveOrKeepLive => {
+            DeletedManifestChange::RemoveIfNowEmpty => {
                 if subentries.is_empty() {
                     // there are no subentries, no need to create a new node
                     Ok(None)
