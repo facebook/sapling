@@ -2017,7 +2017,8 @@ void EdenServiceHandler::debugGetScmTree(
     auto& out = entries.back();
     out.name_ref() = entry.getName().stringPiece().str();
     out.mode_ref() = modeFromTreeEntryType(entry.getType());
-    out.id_ref() = thriftHash(entry.getHash());
+    // TODO: BackingStore should renderObjectId
+    out.id_ref() = entry.getHash().asString();
   }
 }
 
@@ -2105,7 +2106,8 @@ class InodeStatusCallbacks : public TraversalCallbacks {
     info.path_ref() = path.stringPiece().str();
     info.materialized_ref() = !hash.has_value();
     if (hash.has_value()) {
-      info.treeHash_ref() = thriftHash(hash.value());
+      // TODO: BackingStore should renderObjectId
+      info.treeHash_ref() = hash.value().asString();
     }
     info.refcount_ref() = fsRefcount;
 
@@ -2132,7 +2134,8 @@ class InodeStatusCallbacks : public TraversalCallbacks {
       entryInfo.loaded_ref() = entry.loadedChild != nullptr;
       entryInfo.materialized_ref() = !entry.hash.has_value();
       if (entry.hash.has_value()) {
-        entryInfo.hash_ref() = thriftHash(entry.hash.value());
+        // TODO: BackingStore should renderObjectId
+        entryInfo.hash_ref() = entry.hash.value().asString();
       }
 
       if ((flags_ & eden_constants::DIS_COMPUTE_BLOB_SIZES_) &&

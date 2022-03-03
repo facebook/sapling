@@ -9,7 +9,7 @@
 #include <optional>
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
-#include "eden/fs/model/Hash.h"
+#include "eden/fs/model/ObjectId.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathMap.h"

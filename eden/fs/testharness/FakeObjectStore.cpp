@@ -9,7 +9,6 @@
 
 #include <folly/String.h>
 #include <folly/futures/Future.h>
-#include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 
 using folly::Future;

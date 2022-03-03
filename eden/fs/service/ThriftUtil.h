@@ -8,24 +8,14 @@
 #pragma once
 
 #include <folly/Range.h>
-#include <optional>
+#include <folly/String.h>
 #include <string>
 
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/RootId.h"
-#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/utils/EdenError.h"
-#include "folly/String.h"
 
 namespace facebook::eden {
-
-/**
- * Convert a Hash to a std::string to be returned via thrift as a thrift
- * BinaryHash data type.
- */
-inline std::string thriftHash(const ObjectId& hash) {
-  return folly::StringPiece{hash.getBytes()}.str();
-}
 
 /**
  * Convert a Hash to a std::string to be returned via thrift as a thrift

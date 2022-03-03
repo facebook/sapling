@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <folly/portability/SysTypes.h>
+#include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/store/ImportPriority.h"
 

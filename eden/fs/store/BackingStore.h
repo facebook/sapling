@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "eden/fs/model/BlobMetadata.h"
+#include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"

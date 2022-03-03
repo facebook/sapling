@@ -8,7 +8,6 @@
 #pragma once
 #include <ostream>
 #include "eden/fs/inodes/InodePtrFwd.h"
-#include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GlobMatcher.h"
 #include "eden/fs/store/ObjectStore.h"

@@ -16,7 +16,7 @@
 
 #include "eden/fs/inodes/overlay/FsOverlay.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
-#include "eden/fs/model/Hash.h"
+#include "eden/fs/model/ObjectId.h"
 #include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/FileUtils.h"

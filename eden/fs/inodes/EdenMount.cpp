@@ -46,6 +46,7 @@
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
+#include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/FsChannelTypes.h"
 #include "eden/fs/utils/Future.h"

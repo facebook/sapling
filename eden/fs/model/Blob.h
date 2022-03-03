@@ -10,6 +10,7 @@
 #include <folly/io/IOBuf.h>
 #include <string>
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/model/ObjectId.h"
 
 namespace facebook::eden {
 

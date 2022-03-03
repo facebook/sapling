@@ -16,7 +16,6 @@
 #include <unordered_map>
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/model/RootId.h"
-#include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/telemetry/EdenStats.h"
 

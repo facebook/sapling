@@ -10,7 +10,7 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
-#include "eden/fs/model/Hash.h"
+#include "eden/fs/model/ObjectId.h"
 
 using namespace facebook::eden;
 

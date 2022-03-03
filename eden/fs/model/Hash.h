@@ -12,7 +12,6 @@
 #include <stdint.h>
 #include <array>
 #include <iosfwd>
-#include "eden/fs/model/ObjectId.h" // fixme: remove from here and include in individual .h
 
 namespace folly {
 class IOBuf;
