@@ -92,18 +92,16 @@ def hash_str(value: bytes) -> str:
     return binascii.hexlify(value).decode("utf-8")
 
 
+def object_id_str(value: bytes) -> str:
+    # While we migrate the representation of object IDs, continue to support
+    # older versions of EdenFS returning 20-byte binary hashes.
+    if len(value) == 20:
+        return hash_str(value)
+    return value.decode("utf-8", errors="replace")
+
+
 def parse_object_id(value: str) -> bytes:
-    """
-    Parse an object ID as a 40-byte hexadecimal string, and return a 20-byte
-    binary value.
-    """
-    try:
-        binary = binascii.unhexlify(value)
-        if len(binary) != 20:
-            raise ValueError()
-    except ValueError:
-        raise ValueError("blob ID must be a 40-byte hexadecimal value")
-    return binary
+    return value.encode()
 
 
 @debug_cmd("parents", "Show EdenFS's current working copy parent")
@@ -169,11 +167,18 @@ class TreeCmd(Subcmd):
                 bytes(checkout.path), tree_id, localStoreOnly=local_only
             )
 
+        max_object_id_len = max(
+            (len(object_id_str(entry.id)) for entry in entries), default=0
+        )
         for entry in entries:
             file_type_flags, perms = _parse_mode(entry.mode)
             print(
-                "{} {:4o} {:40} {}".format(
-                    file_type_flags, perms, hash_str(entry.id), escape_path(entry.name)
+                "{} {:4o} {:<{}} {}".format(
+                    file_type_flags,
+                    perms,
+                    object_id_str(entry.id),
+                    max_object_id_len,
+                    escape_path(entry.name),
                 )
             )
 
@@ -794,8 +799,13 @@ def _print_inode_info(inode_info: TreeInodeDebugInfo, out: IO[bytes]) -> None:
     out.write(b"  Inode number:  %d\n" % inode_info.inodeNumber)
     out.write(b"  Ref count:     %d\n" % inode_info.refcount)
     out.write(b"  Materialized?: %s\n" % str(inode_info.materialized).encode())
-    out.write(b"  Object ID:     %s\n" % hash_str(inode_info.treeHash).encode())
+    out.write(b"  Object ID:     %s\n" % object_id_str(inode_info.treeHash).encode())
     out.write(b"  Entries (%d total):\n" % len(inode_info.entries))
+
+    max_object_id_len = max(
+        (len(object_id_str(entry.hash)) for entry in inode_info.entries), default=0
+    )
+
     for entry in inode_info.entries:
         if entry.loaded:
             loaded_flag = "L"
@@ -803,12 +813,13 @@ def _print_inode_info(inode_info: TreeInodeDebugInfo, out: IO[bytes]) -> None:
             loaded_flag = "-"
 
         file_type_str, perms = _parse_mode(entry.mode)
-        line = "    {:9} {} {:4o} {} {:40} {}\n".format(
+        line = "    {:9} {} {:4o} {} {:<{}} {}\n".format(
             entry.inodeNumber,
             file_type_str,
             perms,
             loaded_flag,
-            hash_str(entry.hash),
+            object_id_str(entry.hash),
+            max_object_id_len,
             escape_path(entry.name),
         )
         out.write(line.encode())
