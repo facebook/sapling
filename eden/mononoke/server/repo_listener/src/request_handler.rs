@@ -205,9 +205,14 @@ pub async fn request_handler(
             scuba.log_with_msg("Request finished - Success", None)
         }
         Err(err) => {
-            STATS::request_failure.add_value(1);
-            STATS::request_outcome_permille.add_value(0);
-            scuba.log_with_msg("Request finished - Failure", format!("{:#?}", err));
+            if err.is::<mpsc::SendError<Bytes>>() {
+                STATS::request_outcome_permille.add_value(0);
+                scuba.log_with_msg("Request finished - Client Disconnected", format!("{}", err));
+            } else {
+                STATS::request_failure.add_value(1);
+                STATS::request_outcome_permille.add_value(0);
+                scuba.log_with_msg("Request finished - Failure", format!("{:#?}", err));
+            }
         }
     }
 
