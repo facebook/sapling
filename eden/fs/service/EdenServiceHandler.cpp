@@ -1751,6 +1751,7 @@ EdenServiceHandler::future_setPathObjectId(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1, mountPoint);
   auto mountPath = AbsolutePathPiece{mountPoint};
   auto edenMount = server_->getMount(mountPath);
+  // TODO: This function should operate with ObjectId instead of RootId.
   auto parsedRootId =
       edenMount->getObjectStore()->parseRootId(params->get_objectId());
   auto& fetchContext = helper->getFetchContext();
@@ -1996,7 +1997,7 @@ void EdenServiceHandler::debugGetScmTree(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
-  auto id = ObjectId::fromHex(*idStr);
+  auto id = edenMount->getObjectStore()->parseObjectId(*idStr);
 
   std::shared_ptr<const Tree> tree;
   auto store = edenMount->getObjectStore();
@@ -2017,8 +2018,7 @@ void EdenServiceHandler::debugGetScmTree(
     auto& out = entries.back();
     out.name_ref() = entry.getName().stringPiece().str();
     out.mode_ref() = modeFromTreeEntryType(entry.getType());
-    // TODO: BackingStore should renderObjectId
-    out.id_ref() = entry.getHash().asString();
+    out.id_ref() = edenMount->getObjectStore()->renderObjectId(entry.getHash());
   }
 }
 
@@ -2030,7 +2030,7 @@ void EdenServiceHandler::debugGetScmBlob(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
-  auto id = ObjectId::fromHex(*idStr);
+  auto id = edenMount->getObjectStore()->parseObjectId(*idStr);
 
   std::shared_ptr<const Blob> blob;
   auto store = edenMount->getObjectStore();
@@ -2057,7 +2057,7 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
-  auto id = ObjectId::fromHex(*idStr);
+  auto id = edenMount->getObjectStore()->parseObjectId(*idStr);
 
   std::optional<BlobMetadata> metadata;
   auto store = edenMount->getObjectStore();
@@ -2106,8 +2106,8 @@ class InodeStatusCallbacks : public TraversalCallbacks {
     info.path_ref() = path.stringPiece().str();
     info.materialized_ref() = !hash.has_value();
     if (hash.has_value()) {
-      // TODO: BackingStore should renderObjectId
-      info.treeHash_ref() = hash.value().asString();
+      info.treeHash_ref() =
+          mount_->getObjectStore()->renderObjectId(hash.value());
     }
     info.refcount_ref() = fsRefcount;
 
@@ -2134,8 +2134,8 @@ class InodeStatusCallbacks : public TraversalCallbacks {
       entryInfo.loaded_ref() = entry.loadedChild != nullptr;
       entryInfo.materialized_ref() = !entry.hash.has_value();
       if (entry.hash.has_value()) {
-        // TODO: BackingStore should renderObjectId
-        entryInfo.hash_ref() = entry.hash.value().asString();
+        entryInfo.hash_ref() =
+            mount_->getObjectStore()->renderObjectId(entry.hash.value());
       }
 
       if ((flags_ & eden_constants::DIS_COMPUTE_BLOB_SIZES_) &&

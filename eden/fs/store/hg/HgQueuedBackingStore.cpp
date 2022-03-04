@@ -262,6 +262,48 @@ std::string HgQueuedBackingStore::renderRootId(const RootId& rootId) {
   }
 }
 
+ObjectId HgQueuedBackingStore::staticParseObjectId(
+    folly::StringPiece objectId) {
+  if (objectId.startsWith("proxy-")) {
+    if (objectId.size() != 46) {
+      throw std::invalid_argument(
+          fmt::format("invalid proxy hash length: {}", objectId.size()));
+    }
+
+    return ObjectId{folly::unhexlify<folly::fbstring>(objectId.subpiece(6))};
+  }
+
+  if (objectId.size() == 40) {
+    return HgProxyHash::makeEmbeddedProxyHash2(Hash20{objectId});
+  }
+
+  if (objectId.size() < 41) {
+    throw std::invalid_argument(
+        fmt::format("hg object ID too short: {}", objectId));
+  }
+
+  if (objectId[40] != ':') {
+    throw std::invalid_argument(
+        fmt::format("missing separator colon in hg object ID: {}", objectId));
+  }
+
+  Hash20 hgRevHash{objectId.subpiece(0, 40)};
+  RelativePathPiece path{objectId.subpiece(41)};
+  return HgProxyHash::makeEmbeddedProxyHash1(hgRevHash, path);
+}
+
+std::string HgQueuedBackingStore::staticRenderObjectId(
+    const ObjectId& objectId) {
+  if (auto proxyHash = HgProxyHash::tryParseEmbeddedProxyHash(objectId)) {
+    if (proxyHash->path().empty()) {
+      return folly::hexlify(proxyHash->byteHash());
+    }
+    return fmt::format(
+        "{}:{}", folly::hexlify(proxyHash->byteHash()), proxyHash->path());
+  }
+  return fmt::format("proxy-{}", folly::hexlify(objectId.getBytes()));
+}
+
 folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTree(
     const ObjectId& id,
     ObjectFetchContext& context) {

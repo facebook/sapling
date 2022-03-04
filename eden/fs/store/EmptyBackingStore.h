@@ -24,6 +24,8 @@ class EmptyBackingStore final : public BackingStore {
 
   RootId parseRootId(folly::StringPiece rootId) override;
   std::string renderRootId(const RootId& rootId) override;
+  ObjectId parseObjectId(folly::StringPiece objectId) override;
+  std::string renderObjectId(const ObjectId& objectId) override;
 
   folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(
       const RootId& rootId,

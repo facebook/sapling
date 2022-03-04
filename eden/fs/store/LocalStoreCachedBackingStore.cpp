@@ -142,6 +142,16 @@ std::string LocalStoreCachedBackingStore::renderRootId(const RootId& rootId) {
   return backingStore_->renderRootId(rootId);
 }
 
+ObjectId LocalStoreCachedBackingStore::parseObjectId(
+    folly::StringPiece objectId) {
+  return backingStore_->parseObjectId(objectId);
+}
+
+std::string LocalStoreCachedBackingStore::renderObjectId(
+    const ObjectId& objectId) {
+  return backingStore_->renderObjectId(objectId);
+}
+
 std::optional<folly::StringPiece> LocalStoreCachedBackingStore::getRepoName() {
   return backingStore_->getRepoName();
 }

@@ -69,6 +69,7 @@ struct PidFetchCounts {
  */
 class ObjectStore : public IObjectStore,
                     public RootIdCodec,
+                    public ObjectIdCodec,
                     public std::enable_shared_from_this<ObjectStore> {
  public:
   static std::shared_ptr<ObjectStore> create(
@@ -119,6 +120,19 @@ class ObjectStore : public IObjectStore,
    * the chance to render a root ID to Thrift.
    */
   std::string renderRootId(const RootId& rootId) override;
+
+  /**
+   * Each BackingStore implementation defines its interpretation of object IDs.
+   * This function gives the BackingStore a chance to parse and canonicalize the
+   * object ID at API boundaries such as Thrift.
+   */
+  ObjectId parseObjectId(folly::StringPiece objectId) override;
+
+  /**
+   * Each BackingStore defines the meaning and encoding of its object ID. Give
+   * it the chance to render a object ID to Thrift.
+   */
+  std::string renderObjectId(const ObjectId& objectId) override;
 
   /**
    * Get a root Tree.

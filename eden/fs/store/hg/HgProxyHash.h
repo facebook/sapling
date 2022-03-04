@@ -37,6 +37,9 @@ namespace facebook::eden {
  */
 class HgProxyHash {
  public:
+  static std::optional<HgProxyHash> tryParseEmbeddedProxyHash(
+      const ObjectId& edenObjectId);
+
   /**
    * An uninitialized hash that contains a kZeroHash and an empty path.
    */
@@ -195,9 +198,6 @@ class HgProxyHash {
     // that do not take a path parameter.
     TYPE_HG_ID_NO_PATH = 0x02,
   };
-
-  static std::optional<HgProxyHash> tryParseEmbeddedProxyHash(
-      const ObjectId& edenObjectId);
 
   /**
    * The serialized data as written in the LocalStore.

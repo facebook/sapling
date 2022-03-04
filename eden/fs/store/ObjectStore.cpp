@@ -115,6 +115,14 @@ std::string ObjectStore::renderRootId(const RootId& rootId) {
   return backingStore_->renderRootId(rootId);
 }
 
+ObjectId ObjectStore::parseObjectId(folly::StringPiece objectId) {
+  return backingStore_->parseObjectId(objectId);
+}
+
+std::string ObjectStore::renderObjectId(const ObjectId& objectId) {
+  return backingStore_->renderObjectId(objectId);
+}
+
 Future<shared_ptr<const Tree>> ObjectStore::getRootTree(
     const RootId& rootId,
     ObjectFetchContext& context) const {

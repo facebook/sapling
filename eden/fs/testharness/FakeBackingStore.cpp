@@ -43,6 +43,14 @@ std::string FakeBackingStore::renderRootId(const RootId& rootId) {
   return rootId.value();
 }
 
+ObjectId FakeBackingStore::parseObjectId(folly::StringPiece objectId) {
+  return ObjectId{objectId.str()};
+}
+
+std::string FakeBackingStore::renderObjectId(const ObjectId& objectId) {
+  return objectId.asString();
+}
+
 folly::SemiFuture<std::unique_ptr<TreeEntry>>
 FakeBackingStore::getTreeEntryForRootId(
     const RootId& commitID,

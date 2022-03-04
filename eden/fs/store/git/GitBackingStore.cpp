@@ -81,6 +81,14 @@ std::string GitBackingStore::renderRootId(const RootId& rootId) {
   return folly::unhexlify(rootId.value());
 }
 
+ObjectId GitBackingStore::parseObjectId(folly::StringPiece objectId) {
+  return ObjectId{hash20FromThrift(objectId).toString()};
+}
+
+std::string GitBackingStore::renderObjectId(const ObjectId& objectId) {
+  return objectId.asHexString();
+}
+
 SemiFuture<unique_ptr<Tree>> GitBackingStore::getRootTree(
     const RootId& rootId,
     ObjectFetchContext& /*context*/) {

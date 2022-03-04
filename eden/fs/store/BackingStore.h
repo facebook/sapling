@@ -39,7 +39,7 @@ enum class TreeEntryType : uint8_t;
  * BackingStore implementations must be thread-safe, and perform their own
  * internal locking.
  */
-class BackingStore : public RootIdCodec {
+class BackingStore : public RootIdCodec, public ObjectIdCodec {
  public:
   BackingStore() {}
   virtual ~BackingStore() {}

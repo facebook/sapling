@@ -31,6 +31,14 @@ std::string EmptyBackingStore::renderRootId(const RootId& /*rootId*/) {
   throw std::domain_error("empty backing store");
 }
 
+ObjectId EmptyBackingStore::parseObjectId(folly::StringPiece /*objectId*/) {
+  throw std::domain_error("empty backing store");
+}
+
+std::string EmptyBackingStore::renderObjectId(const ObjectId& /*objectId*/) {
+  throw std::domain_error("empty backing store");
+}
+
 SemiFuture<unique_ptr<Tree>> EmptyBackingStore::getRootTree(
     const RootId& /* rootId */,
     ObjectFetchContext& /* context */) {

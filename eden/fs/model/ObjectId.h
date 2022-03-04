@@ -148,6 +148,18 @@ std::ostream& operator<<(std::ostream& os, const ObjectId& hash);
 /* Define toAppend() so folly::to<string>(Hash) will work */
 void toAppend(const ObjectId& hash, std::string* result);
 
+/**
+ * The meaning of an ObjectId is defined by the BackingStore implementation.
+ * Allow it to also define how object IDs are parsed and rendered at API
+ * boundaries such as Thrift.
+ */
+class ObjectIdCodec {
+ public:
+  virtual ~ObjectIdCodec() = default;
+  virtual ObjectId parseObjectId(folly::StringPiece objectId) = 0;
+  virtual std::string renderObjectId(const ObjectId& objectId) = 0;
+};
+
 } // namespace facebook::eden
 
 namespace std {

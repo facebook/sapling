@@ -24,7 +24,6 @@ using namespace std::chrono_literals;
 
 namespace {
 const auto kTestTimeout = 10s;
-}
 
 struct TestRepo {
   folly::test::TemporaryDirectory testDir{"eden_queued_hg_backing_store_test"};
@@ -77,6 +76,8 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
   }
 };
 
+} // namespace
+
 TEST_F(HgQueuedBackingStoreTest, getTree) {
   auto queuedStore = makeQueuedStore();
   auto tree1 =
@@ -118,5 +119,47 @@ TEST_F(HgQueuedBackingStoreTest, getBlob) {
 
       EXPECT_EQ(blob->getContents().cloneAsValue().moveToFbString(), "bar\n");
     }
+  }
+}
+
+TEST(HgQueuedBackingStore_ObjectId, round_trip_object_IDs) {
+  Hash20 testHash{
+      folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
+
+  {
+    ObjectId legacy{testHash.toByteString()};
+    EXPECT_EQ(
+        "proxy-0123456789abcdef0123456789abcdef01234567",
+        HgQueuedBackingStore::staticRenderObjectId(legacy));
+
+    EXPECT_EQ(
+        legacy,
+        HgQueuedBackingStore::staticParseObjectId(
+            HgQueuedBackingStore::staticRenderObjectId(legacy)));
+  }
+
+  {
+    ObjectId with_path{HgProxyHash::makeEmbeddedProxyHash1(
+        testHash, RelativePathPiece{"foo/bar/baz"})};
+    EXPECT_EQ(
+        "0123456789abcdef0123456789abcdef01234567:foo/bar/baz",
+        HgQueuedBackingStore::staticRenderObjectId(with_path));
+
+    EXPECT_EQ(
+        with_path,
+        HgQueuedBackingStore::staticParseObjectId(
+            HgQueuedBackingStore::staticRenderObjectId(with_path)));
+  }
+
+  {
+    ObjectId hash_only{HgProxyHash::makeEmbeddedProxyHash2(testHash)};
+    EXPECT_EQ(
+        "0123456789abcdef0123456789abcdef01234567",
+        HgQueuedBackingStore::staticRenderObjectId(hash_only));
+
+    EXPECT_EQ(
+        hash_only,
+        HgQueuedBackingStore::staticParseObjectId(
+            HgQueuedBackingStore::staticRenderObjectId(hash_only)));
   }
 }

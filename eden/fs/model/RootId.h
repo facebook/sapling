@@ -59,8 +59,8 @@ void toAppend(const RootId&, std::string* result);
 
 /**
  * The meaning of a RootId is defined by the BackingStore implementation. Allow
- * it to also define how how root IDs are parsed and rendered at API boundaries
- * such as Thrift.
+ * it to also define how root IDs are parsed and rendered at API boundaries such
+ * as Thrift.
  */
 class RootIdCodec {
  public:
