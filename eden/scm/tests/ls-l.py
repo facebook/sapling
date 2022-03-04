@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
 
 # like ls -l, but do not print date, user, or non-common mode bit, to avoid
 # using globs in tests.

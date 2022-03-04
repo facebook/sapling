@@ -1,10 +1,8 @@
 /*
- * Copyright 2016-present Facebook. All Rights Reserved.
- *
- * linelogcli.c: a simple CLI tool manipulating a linelog file
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2 or any later version.
+ * GNU General Public License version 2.
  */
 
 /* this tool is mainly for testing and debugging purpose. it does not have

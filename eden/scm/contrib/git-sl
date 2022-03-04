@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 #
-# Copyright 2004-present Facebook. All rights reserved.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
 #
 # Emulate the output of smartlog.py atop git, instead of Mercurial.
 #

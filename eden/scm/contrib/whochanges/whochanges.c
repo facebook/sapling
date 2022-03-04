@@ -1,14 +1,18 @@
-/* whochanges - show processes accessing specified files
+/*
+ * Portions Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * Largely based on the example of fanotify (7) Linux manpage.
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+/* whochanges - show processes accessing specified files
  *
  * Copyright (C) 2013, Heinrich Schuchardt <xypron.glpk@gmx.de>
  * Copyright (C) 2014, Michael Kerrisk <mtk.manpages@gmail.com>
- * Copyright (C) 2018, Facebook, Inc.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2 or any later version.
+ * Largely based on the example of fanotify (7) Linux manpage.
  */
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif

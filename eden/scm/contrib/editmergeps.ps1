@@ -1,3 +1,8 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # A simple script for opening merge conflicts in editor
 # A loose translation of contrib/editmerge to powershell
 # Please make sure that both editmergeps.bat and editmerge.ps1 are available

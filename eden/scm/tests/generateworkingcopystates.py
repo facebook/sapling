@@ -1,3 +1,8 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # Helper script used for generating history and working copy files and content.
 # The file's name corresponds to its history. The number of changesets can
 # be specified on the command line. With 2 changesets, files with names like
