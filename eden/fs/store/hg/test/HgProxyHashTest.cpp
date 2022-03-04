@@ -81,3 +81,34 @@ TEST(HgProxyHashTest, test_moved_from_and_empty_hash_compare_the_same) {
   EXPECT_EQ(HgProxyHash{}.revHash(), zero.revHash());
   EXPECT_EQ(HgProxyHash{}.sha1(), zero.sha1());
 }
+
+TEST(HgProxyHashTest, round_trip_version_1) {
+  Hash20 hash{folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
+
+  {
+    auto proxy1 = HgProxyHash::load(
+        nullptr,
+        HgProxyHash::makeEmbeddedProxyHash1(hash, RelativePathPiece{}),
+        "test");
+    EXPECT_EQ(hash, proxy1.revHash());
+    EXPECT_EQ(RelativePathPiece{}, proxy1.path());
+  }
+  {
+    auto proxy2 = HgProxyHash::load(
+        nullptr,
+        HgProxyHash::makeEmbeddedProxyHash1(
+            hash, RelativePathPiece{"some/longish/path"}),
+        "test");
+    EXPECT_EQ(hash, proxy2.revHash());
+    EXPECT_EQ(RelativePathPiece{"some/longish/path"}, proxy2.path());
+  }
+}
+
+TEST(HgProxyHashTest, round_trip_version_2) {
+  Hash20 hash{folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
+
+  auto proxy = HgProxyHash::load(
+      nullptr, HgProxyHash::makeEmbeddedProxyHash2(hash), "test");
+  EXPECT_EQ(hash, proxy.revHash());
+  EXPECT_EQ(RelativePathPiece{}, proxy.path());
+}

@@ -553,8 +553,12 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifestImpl(
       objectId = computedPair->first;
       break;
 
+    case HgObjectIdFormat::WithPath:
+      objectId = HgProxyHash::makeEmbeddedProxyHash1(manifestNode, path);
+      break;
+
     case HgObjectIdFormat::HashOnly:
-      objectId = HgProxyHash::makeEmbeddedProxyHash(manifestNode);
+      objectId = HgProxyHash::makeEmbeddedProxyHash2(manifestNode);
       break;
   }
 

@@ -125,7 +125,7 @@ class HgProxyHash {
    */
   static ObjectId store(
       RelativePathPiece path,
-      Hash20 hgRevHash,
+      const Hash20& hgRevHash,
       HgObjectIdFormat hgObjectIdFormat,
       LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch);
 
@@ -151,9 +151,16 @@ class HgProxyHash {
       LocalStore::WriteBatch* writeBatch);
 
   /**
-   * Make ObjectId that contains hgRevHash directly
+   * Generate an ObjectId that contains both the hgRevHash and a path.
    */
-  static ObjectId makeEmbeddedProxyHash(Hash20 hgRevHash);
+  static ObjectId makeEmbeddedProxyHash1(
+      const Hash20& hgRevHash,
+      RelativePathPiece path);
+
+  /**
+   * Generate an ObjectId that contains hgRevHash directly without a path.
+   */
+  static ObjectId makeEmbeddedProxyHash2(const Hash20& hgRevHash);
 
  private:
   HgProxyHash(
@@ -177,7 +184,17 @@ class HgProxyHash {
    */
   void validate(ObjectId edenBlobHash);
 
-  static constexpr char TYPE_HG_ID_NO_PATH = 0x01;
+  enum Type : uint8_t {
+    // If the Object ID's type is 1, then it contains a 20-byte manifest ID
+    // followed by the path. This is a temporary scheme until HgImporter is
+    // gone.
+    TYPE_HG_ID_WITH_PATH = 0x01,
+
+    // If the Object ID's type is 2, its length is 21, and the remaining bytes
+    // are the manifest ID. This scheme requires use of EdenSCM/EdenAPI fetches
+    // that do not take a path parameter.
+    TYPE_HG_ID_NO_PATH = 0x02,
+  };
 
   static std::optional<HgProxyHash> tryParseEmbeddedProxyHash(
       const ObjectId& edenObjectId);

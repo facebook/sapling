@@ -15,7 +15,7 @@ enum class HgObjectIdFormat {
   /// 20 bytes that index into LocalStore's hgproxyhash keyspace
   ProxyHash,
   /// '1' followed by 20 bytes of hg manifest hash and then a path
-  // WithPath,
+  WithPath,
   /// '2' followed by 20 bytes of hg manifest hash
   HashOnly,
 };

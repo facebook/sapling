@@ -12,7 +12,7 @@ namespace facebook::eden {
 namespace {
 constexpr std::pair<HgObjectIdFormat, folly::StringPiece> kMapping[] = {
     {HgObjectIdFormat::ProxyHash, "proxyhash"},
-    //{HgObjectIdFormat::WithPath, "withpath"},
+    {HgObjectIdFormat::WithPath, "withpath"},
     {HgObjectIdFormat::HashOnly, "hashonly"},
 };
 }

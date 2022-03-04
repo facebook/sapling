@@ -6,13 +6,15 @@
  */
 
 #include "eden/fs/store/hg/HgProxyHash.h"
-#include <fmt/core.h>
 
+#include <fmt/core.h>
+#include <folly/String.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/utils/Bug.h"
 
 using folly::ByteRange;
 using folly::Endian;
@@ -28,20 +30,40 @@ HgProxyHash::HgProxyHash(RelativePathPiece path, const Hash20& hgRevHash) {
 
 std::optional<HgProxyHash> HgProxyHash::tryParseEmbeddedProxyHash(
     const ObjectId& edenObjectId) {
-  if (edenObjectId.size() > Hash20::RAW_SIZE) {
-    auto type = edenObjectId[0];
-    if (edenObjectId.size() == Hash20::RAW_SIZE + 1 &&
-        type == TYPE_HG_ID_NO_PATH) {
-      auto hash = Hash20{edenObjectId.getBytes().subpiece(1, Hash20::RAW_SIZE)};
-      return HgProxyHash{RelativePathPiece{}, hash};
-    } else {
-      throw std::invalid_argument(fmt::format(
-          "Unknown proxy hash type: size {}, type {}",
-          edenObjectId.size(),
-          type));
-    }
+  if (edenObjectId.size() == 20) {
+    // Legacy proxy hash encoding. Fall back to fetching from LocalStore.
+    return std::nullopt;
   }
-  return std::nullopt;
+
+  if (edenObjectId.size() < 20) {
+    throw std::invalid_argument{fmt::format(
+        "unsupported proxy hash format: {}",
+        folly::hexlify(edenObjectId.getBytes()))};
+  }
+
+  auto bytes = edenObjectId.getBytes();
+  auto type = bytes[0];
+  switch (type) {
+    case TYPE_HG_ID_WITH_PATH:
+      if (bytes.size() < 21) {
+        throw std::invalid_argument(fmt::format(
+            "Invalid proxy hash size for TYPE_HG_ID_WITH_PATH: size {}",
+            edenObjectId.size()));
+      }
+      return HgProxyHash{
+          RelativePathPiece{folly::StringPiece{bytes.subpiece(21)}},
+          Hash20{bytes.subpiece(1, 20)}};
+
+    case TYPE_HG_ID_NO_PATH:
+      if (bytes.size() != 21) {
+        throw std::invalid_argument(fmt::format(
+            "Invalid proxy hash size for TYPE_HG_ID_NO_PATH: size {}",
+            edenObjectId.size()));
+      }
+      return HgProxyHash{RelativePathPiece{}, Hash20{bytes.subpiece(1)}};
+  }
+  throw std::invalid_argument(fmt::format(
+      "Unknown proxy hash type: size {}, type {}", edenObjectId.size(), type));
 }
 
 folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(
@@ -57,7 +79,7 @@ folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(
     }
   }
   if (byteRanges.empty()) {
-    return embedded_results;
+    return std::move(embedded_results);
   }
   return store->getBatch(KeySpace::HgProxyHashFamily, byteRanges)
       .thenValue([embedded_results,
@@ -93,7 +115,7 @@ HgProxyHash HgProxyHash::load(
 
 ObjectId HgProxyHash::store(
     RelativePathPiece path,
-    Hash20 hgRevHash,
+    const Hash20& hgRevHash,
     HgObjectIdFormat hgObjectIdFormat,
     LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch) {
   switch (hgObjectIdFormat) {
@@ -103,19 +125,36 @@ ObjectId HgProxyHash::store(
       HgProxyHash::storeLegacy(computedPair, writeBatch);
       return computedPair.first;
     }
+    case HgObjectIdFormat::WithPath:
+      XCHECK(!writeBatch) << "non-ProxyHash does not need a WriteBatch";
+      return makeEmbeddedProxyHash1(hgRevHash, path);
     case HgObjectIdFormat::HashOnly:
       XCHECK(!writeBatch) << "non-ProxyHash does not need a WriteBatch";
-      return makeEmbeddedProxyHash(hgRevHash);
+      return makeEmbeddedProxyHash2(hgRevHash);
   }
-  throw std::invalid_argument(
-      fmt::format("Unsupported hgObjectIdFormat: {}", hgObjectIdFormat));
+  EDEN_BUG() << "Unsupported hgObjectIdFormat: " << hgObjectIdFormat;
 }
 
-ObjectId HgProxyHash::makeEmbeddedProxyHash(Hash20 hgRevHash) {
+ObjectId HgProxyHash::makeEmbeddedProxyHash1(
+    const Hash20& hgRevHash,
+    RelativePathPiece path) {
+  folly::StringPiece hashPiece{hgRevHash.getBytes()};
+  folly::StringPiece pathPiece{path};
+
   folly::fbstring str;
-  str.reserve(Hash20::RAW_SIZE + 1);
+  str.reserve(21 + pathPiece.size());
+  str.push_back(TYPE_HG_ID_WITH_PATH);
+  str.append(hashPiece.data(), hashPiece.size());
+  str.append(pathPiece.data(), pathPiece.size());
+  return ObjectId{std::move(str)};
+}
+
+ObjectId HgProxyHash::makeEmbeddedProxyHash2(const Hash20& hgRevHash) {
+  folly::fbstring str;
+  str.reserve(21);
   str.push_back(TYPE_HG_ID_NO_PATH);
-  str += hgRevHash.toByteString();
+  auto bytes = folly::StringPiece{hgRevHash.getBytes()};
+  str.append(bytes.data(), bytes.size());
   return ObjectId{std::move(str)};
 }
 
