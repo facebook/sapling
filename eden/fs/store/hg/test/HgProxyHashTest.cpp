@@ -26,11 +26,13 @@ TEST(HgProxyHashTest, testCopyMove) {
     hash1 = HgProxyHash::store(
         RelativePathPiece{"foobar"},
         Hash20{folly::StringPiece{"1111111111111111111111111111111111111111"}},
+        HgObjectIdFormat::ProxyHash,
         write.get());
 
     hash2 = HgProxyHash::store(
         RelativePathPiece{"barfoo"},
         Hash20{folly::StringPiece{"DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD"}},
+        HgObjectIdFormat::ProxyHash,
         write.get());
 
     write->flush();

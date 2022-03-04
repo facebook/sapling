@@ -471,7 +471,7 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
     LocalStore::WriteBatch* writeBatch) {
   auto manifest = Manifest(std::move(content));
   std::vector<TreeEntry> entries;
-  auto directObjectId = config_->getEdenConfig()->directObjectId.getValue();
+  auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
 
   for (auto& entry : manifest) {
     XLOG(DBG9) << "tree: " << manifestNode << " " << entry.name
@@ -479,7 +479,11 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
 
     auto relPath = path + entry.name;
     auto proxyHash = HgProxyHash::store(
-        relPath, entry.node, directObjectId ? nullptr : writeBatch);
+        relPath,
+        entry.node,
+        hgObjectIdFormat,
+        (hgObjectIdFormat != HgObjectIdFormat::ProxyHash) ? nullptr
+                                                          : writeBatch);
 
     entries.emplace_back(proxyHash, std::move(entry.name), entry.type);
   }
@@ -538,22 +542,29 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifestImpl(
     Hash20 manifestNode) {
   // Record that we are at the root for this node
   RelativePathPiece path{};
-  auto directObjectId = config_->getEdenConfig()->directObjectId.getValue();
+  auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
+
   ObjectId objectId;
-  std::pair<ObjectId, std::string> computedPair;
-  if (directObjectId) { // unfortunately we have to know about internals of
-                        // proxy hash here
-    objectId = HgProxyHash::makeEmbeddedProxyHash(manifestNode);
-  } else {
-    computedPair = HgProxyHash::prepareToStoreLegacy(path, manifestNode);
-    objectId = computedPair.first;
+  std::optional<std::pair<ObjectId, std::string>> computedPair;
+
+  switch (hgObjectIdFormat) {
+    case HgObjectIdFormat::ProxyHash:
+      computedPair = HgProxyHash::prepareToStoreLegacy(path, manifestNode);
+      objectId = computedPair->first;
+      break;
+
+    case HgObjectIdFormat::HashOnly:
+      objectId = HgProxyHash::makeEmbeddedProxyHash(manifestNode);
+      break;
   }
+
   auto futTree = importTreeImpl(manifestNode, objectId, path);
-  if (directObjectId) {
+  if (!computedPair) {
     return futTree;
   } else {
     return std::move(futTree).thenValue(
-        [computedPair, batch = localStore_->beginWrite()](auto tree) {
+        [computedPair = std::move(computedPair.value()),
+         batch = localStore_->beginWrite()](auto tree) {
           // Only write the proxy hash value for this once we've imported
           // the root.
           HgProxyHash::storeLegacy(computedPair, batch.get());

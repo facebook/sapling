@@ -20,6 +20,7 @@
 #include "common/rust/shed/hostcaps/hostcaps.h"
 #include "eden/fs/config/ConfigSetting.h"
 #include "eden/fs/config/FileChangeMonitor.h"
+#include "eden/fs/config/HgObjectIdFormat.h"
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/model/Hash.h"
@@ -498,10 +499,12 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> useAuxMetadata{"hg:use-aux-metadata", true, this};
 
   /**
-   * If this config is set, embed HgId into ObjectId, instead of using proxy
-   * hash.
+   * Which object ID format should the HgBackingStore use?
    */
-  ConfigSetting<bool> directObjectId{"hg:use-direct-object-id", false, this};
+  ConfigSetting<HgObjectIdFormat> hgObjectIdFormat{
+      "hg:object-id-format",
+      HgObjectIdFormat::ProxyHash,
+      this};
 
   /**
    * Controls the number of blob or prefetch import requests we batch in

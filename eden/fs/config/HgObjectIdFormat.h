@@ -11,20 +11,23 @@
 
 namespace facebook::eden {
 
-enum class MountProtocol {
-  FUSE,
-  PRJFS,
-  NFS,
+enum class HgObjectIdFormat {
+  /// 20 bytes that index into LocalStore's hgproxyhash keyspace
+  ProxyHash,
+  /// '1' followed by 20 bytes of hg manifest hash and then a path
+  // WithPath,
+  /// '2' followed by 20 bytes of hg manifest hash
+  HashOnly,
 };
 
 template <>
-class FieldConverter<MountProtocol> {
+class FieldConverter<HgObjectIdFormat> {
  public:
-  folly::Expected<MountProtocol, std::string> fromString(
+  folly::Expected<HgObjectIdFormat, std::string> fromString(
       folly::StringPiece value,
       const std::map<std::string, std::string>& convData) const;
 
-  std::string toDebugString(MountProtocol value) const;
+  std::string toDebugString(HgObjectIdFormat value) const;
 };
 
 } // namespace facebook::eden

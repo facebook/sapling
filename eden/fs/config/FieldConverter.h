@@ -21,7 +21,6 @@
 #include <folly/Range.h>
 #include <folly/String.h>
 
-#include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
@@ -193,16 +192,6 @@ class FieldConverter<std::shared_ptr<re2::RE2>> {
       const std::map<std::string, std::string>& convData) const;
 
   std::string toDebugString(std::shared_ptr<re2::RE2> value) const;
-};
-
-template <>
-class FieldConverter<MountProtocol> {
- public:
-  folly::Expected<MountProtocol, std::string> fromString(
-      folly::StringPiece value,
-      const std::map<std::string, std::string>& convData) const;
-
-  std::string toDebugString(MountProtocol value) const;
 };
 
 } // namespace facebook::eden

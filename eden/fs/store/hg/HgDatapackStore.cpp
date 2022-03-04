@@ -43,6 +43,7 @@ TreeEntryType fromRawTreeEntryType(RustTreeEntryType type) {
 TreeEntry fromRawTreeEntry(
     RustTreeEntry entry,
     RelativePathPiece path,
+    HgObjectIdFormat hgObjectIdFormat,
     LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch) {
   std::optional<uint64_t> size;
   std::optional<Hash20> contentSha1;
@@ -59,7 +60,8 @@ TreeEntry fromRawTreeEntry(
   auto hash = Hash20{entry.hash};
 
   auto fullPath = path + name;
-  auto proxyHash = HgProxyHash::store(fullPath, hash, writeBatch);
+  auto proxyHash =
+      HgProxyHash::store(fullPath, hash, hgObjectIdFormat, writeBatch);
 
   return TreeEntry{
       proxyHash,
@@ -69,16 +71,18 @@ TreeEntry fromRawTreeEntry(
       contentSha1};
 }
 
-FOLLY_MAYBE_UNUSED std::unique_ptr<Tree> fromRawTree(
+std::unique_ptr<Tree> fromRawTree(
     const RustTree* tree,
     const ObjectId& edenTreeId,
     RelativePathPiece path,
+    HgObjectIdFormat hgObjectIdFormat,
     LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch) {
   std::vector<TreeEntry> entries;
 
   for (uintptr_t i = 0; i < tree->length; i++) {
     try {
-      auto entry = fromRawTreeEntry(tree->entries[i], path, writeBatch);
+      auto entry = fromRawTreeEntry(
+          tree->entries[i], path, hgObjectIdFormat, writeBatch);
       entries.push_back(entry);
     } catch (const PathComponentContainsDirectorySeparator& ex) {
       XLOG(WARN) << "Ignoring directory entry: " << ex.what();
@@ -108,13 +112,16 @@ std::unique_ptr<Tree> HgDatapackStore::getTreeLocal(
     const HgProxyHash& proxyHash,
     LocalStore& localStore) {
   auto tree = store_.getTree(proxyHash.byteHash(), /*local=*/true);
-  auto directObjectId = config_->getEdenConfig()->directObjectId.getValue();
+  auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
   if (tree) {
     return fromRawTree(
         tree.get(),
         edenTreeId,
         proxyHash.path(),
-        directObjectId ? nullptr : localStore.beginWrite().get());
+        hgObjectIdFormat,
+        (hgObjectIdFormat != HgObjectIdFormat::ProxyHash)
+            ? nullptr
+            : localStore.beginWrite().get());
   }
 
   return nullptr;
@@ -178,7 +185,6 @@ void HgDatapackStore::getTreeBatch(
     requests.emplace_back(
         folly::ByteRange{proxyHash.path().stringPiece()}, proxyHash.byteHash());
   }
-
   std::vector<RequestMetricsScope> requestsWatches;
   requestsWatches.reserve(count);
 
@@ -186,13 +192,13 @@ void HgDatapackStore::getTreeBatch(
     requestsWatches.emplace_back(&liveBatchedTreeWatches_);
   }
 
-  auto directObjectId = config_->getEdenConfig()->directObjectId.getValue();
+  auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
 
   store_.getTreeBatch(
       requests,
       false,
       // store_.getTreeBatch is blocking, hence we can take these by reference.
-      [directObjectId,
+      [hgObjectIdFormat,
        &requests,
        &importRequests,
        &requestsWatches,
@@ -210,7 +216,9 @@ void HgDatapackStore::getTreeBatch(
             content.get(),
             treeRequest->hash,
             treeRequest->proxyHash.path(),
-            directObjectId ? nullptr : writeBatch);
+            hgObjectIdFormat,
+            (hgObjectIdFormat != HgObjectIdFormat::ProxyHash) ? nullptr
+                                                              : writeBatch);
 
         importRequest->getPromise<std::unique_ptr<Tree>>()->setValue(
             std::move(tree));
@@ -240,9 +248,15 @@ std::unique_ptr<Tree> HgDatapackStore::getTree(
     tree = store_.getTree(manifestId.getBytes(), false);
   }
   if (tree) {
-    auto directObjectId = config_->getEdenConfig()->directObjectId.getValue();
+    auto hgObjectIdFormat =
+        config_->getEdenConfig()->hgObjectIdFormat.getValue();
     return fromRawTree(
-        tree.get(), edenTreeId, path, directObjectId ? nullptr : writeBatch);
+        tree.get(),
+        edenTreeId,
+        path,
+        hgObjectIdFormat,
+        (hgObjectIdFormat != HgObjectIdFormat::ProxyHash) ? nullptr
+                                                          : writeBatch);
   }
   return nullptr;
 }

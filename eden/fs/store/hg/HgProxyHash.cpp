@@ -94,13 +94,21 @@ HgProxyHash HgProxyHash::load(
 ObjectId HgProxyHash::store(
     RelativePathPiece path,
     Hash20 hgRevHash,
+    HgObjectIdFormat hgObjectIdFormat,
     LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch) {
-  if (!writeBatch) {
-    return makeEmbeddedProxyHash(hgRevHash);
+  switch (hgObjectIdFormat) {
+    case HgObjectIdFormat::ProxyHash: {
+      XCHECK(writeBatch) << "ProxyHash requires LocalStore writes";
+      auto computedPair = prepareToStoreLegacy(path, hgRevHash);
+      HgProxyHash::storeLegacy(computedPair, writeBatch);
+      return computedPair.first;
+    }
+    case HgObjectIdFormat::HashOnly:
+      XCHECK(!writeBatch) << "non-ProxyHash does not need a WriteBatch";
+      return makeEmbeddedProxyHash(hgRevHash);
   }
-  auto computedPair = prepareToStoreLegacy(path, hgRevHash);
-  HgProxyHash::storeLegacy(computedPair, writeBatch);
-  return computedPair.first;
+  throw std::invalid_argument(
+      fmt::format("Unsupported hgObjectIdFormat: {}", hgObjectIdFormat));
 }
 
 ObjectId HgProxyHash::makeEmbeddedProxyHash(Hash20 hgRevHash) {

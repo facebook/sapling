@@ -9,6 +9,7 @@
 
 #include <string>
 #include <vector>
+#include "eden/fs/config/HgObjectIdFormat.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -125,6 +126,7 @@ class HgProxyHash {
   static ObjectId store(
       RelativePathPiece path,
       Hash20 hgRevHash,
+      HgObjectIdFormat hgObjectIdFormat,
       LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch);
 
   /**
