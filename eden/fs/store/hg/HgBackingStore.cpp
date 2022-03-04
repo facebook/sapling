@@ -87,8 +87,7 @@ static folly::ThreadLocalPtr<Importer> threadLocalImporter;
  */
 Importer& getThreadLocalImporter() {
   if (!threadLocalImporter) {
-    throw std::logic_error(
-        "Attempting to get HgImporter from non-HgImporter thread");
+    EDEN_BUG() << "Attempting to get HgImporter from non-HgImporter thread";
   }
   return *threadLocalImporter;
 }
@@ -135,13 +134,19 @@ class HgImporterThreadFactory : public folly::ThreadFactory {
  */
 class HgImporterTestExecutor : public folly::InlineExecutor {
  public:
-  explicit HgImporterTestExecutor(Importer* importer) {
-    threadLocalImporter.reset(importer);
+  explicit HgImporterTestExecutor(Importer* importer) : importer_{importer} {}
+
+  void add(folly::Func f) override {
+    // This is an InlineExecutor, so we may run on an arbitrary thread.
+    threadLocalImporter.reset(importer_);
+    SCOPE_EXIT {
+      threadLocalImporter.release();
+    };
+    folly::InlineExecutor::add(std::move(f));
   }
 
-  ~HgImporterTestExecutor() override {
-    threadLocalImporter.release();
-  }
+ private:
+  Importer* importer_;
 };
 
 } // namespace
