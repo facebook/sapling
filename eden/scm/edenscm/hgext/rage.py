@@ -632,4 +632,7 @@ def rage(ui, repo, *pats, **opts):
     ui.write(ui.config("rage", "advice", "") + "\n")
 
 
-colortable = {"rage.link": "blue bold"}
+if pycompat.iswindows:
+    colortable = {"rage.link": "yellow bold"}
+else:
+    colortable = {"rage.link": "blue bold"}
