@@ -193,14 +193,13 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 (_, Some(mf_id)) => Ok(mf_id),
                 (_, None) => {
                     // there are no deleted files, need to create an empty root manifest
-                    Self::save_manifest(
-                        Manifest::copy_and_update_subentries(None, None, BTreeMap::new()),
-                        ctx,
-                        blobstore,
-                        sender.clone(),
-                        created.clone(),
-                    )
-                    .await
+                    match Manifest::copy_and_update_subentries(None, None, BTreeMap::new()).await {
+                        Ok(mf) => {
+                            Self::save_manifest(mf, ctx, blobstore, sender.clone(), created.clone())
+                                .await
+                        }
+                        Err(err) => Err(err),
+                    }
                 }
             };
 
@@ -334,7 +333,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 // and modify only a few fields. Important if we're doing few
                 // changes on a big node and need to optimise.
                 for (path, node) in &mut recurse_entries {
-                    if let Some(subentry_id) = parent.lookup(path) {
+                    if let Some(subentry_id) = parent.lookup(path).await? {
                         node.parents.insert(*subentry_id);
                     }
                 }
@@ -348,16 +347,20 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 // If there are multiple parents and they're different, we need to
                 // merge all different subentries. So let's just look at all of them.
                 for parent in parent_manifests {
-                    for (path, mf_id) in parent.into_subentries() {
-                        let entry = recurse_entries.entry(path.clone()).or_insert_with(|| {
-                            DeletedManifestUnfoldNode {
-                                path_element: Some(path),
-                                changes: Default::default(),
-                                parents: HashSet::new(),
-                            }
-                        });
-                        entry.parents.insert(mf_id);
-                    }
+                    parent
+                        .into_subentries()
+                        .try_for_each(|(path, mf_id)| {
+                            let entry = recurse_entries.entry(path.clone()).or_insert_with(|| {
+                                DeletedManifestUnfoldNode {
+                                    path_element: Some(path),
+                                    changes: Default::default(),
+                                    parents: HashSet::new(),
+                                }
+                            });
+                            entry.parents.insert(mf_id);
+                            async { Ok(()) }
+                        })
+                        .await?;
                 }
                 DeletedManifestChange {
                     change_type,
@@ -416,7 +419,8 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                     change.copy_subentries_from,
                     Some(cs_id),
                     subentries_to_update,
-                ),
+                )
+                .await?,
                 ctx,
                 blobstore,
                 sender,
@@ -429,7 +433,8 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                     change.copy_subentries_from,
                     None,
                     subentries_to_update,
-                );
+                )
+                .await?;
                 // some of the subentries were deleted, creating a new node but there is no need to
                 // mark it as deleted
                 if !manifest.is_empty() {

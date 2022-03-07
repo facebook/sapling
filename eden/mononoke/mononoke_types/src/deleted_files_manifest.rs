@@ -7,6 +7,7 @@
 
 use anyhow::{Context, Result};
 use fbthrift::compact_protocol;
+use futures::stream::{self, BoxStream, StreamExt};
 use sorted_vector_map::SortedVectorMap;
 use std::collections::BTreeMap;
 
@@ -92,6 +93,7 @@ pub struct DeletedManifest {
     subentries: SortedVectorMap<MPathElement, DeletedManifestId>,
 }
 
+#[async_trait::async_trait]
 impl DeletedManifestCommon for DeletedManifest {
     type Id = DeletedManifestId;
 
@@ -99,23 +101,23 @@ impl DeletedManifestCommon for DeletedManifest {
         self.is_deleted()
     }
 
-    fn into_subentries(self) -> Box<dyn Iterator<Item = (MPathElement, Self::Id)>> {
-        Box::new(self.into_subentries())
+    fn into_subentries(self) -> BoxStream<'static, Result<(MPathElement, Self::Id)>> {
+        stream::iter(self.into_subentries().map(Ok)).boxed()
     }
 
     fn id(&self) -> Self::Id {
         self.get_manifest_id()
     }
 
-    fn lookup(&self, basename: &MPathElement) -> Option<&Self::Id> {
-        self.lookup(basename)
+    async fn lookup(&self, basename: &MPathElement) -> Result<Option<&Self::Id>> {
+        Ok(self.lookup(basename))
     }
 
-    fn copy_and_update_subentries(
+    async fn copy_and_update_subentries(
         current: Option<Self>,
         linknode: Option<ChangesetId>,
-        subentries_to_update: impl IntoIterator<Item = (MPathElement, Option<Self::Id>)>,
-    ) -> Self {
+        subentries_to_update: BTreeMap<MPathElement, Option<Self::Id>>,
+    ) -> Result<Self> {
         let mut subentries = current
             .map(|manifest| manifest.subentries.into_iter().collect::<BTreeMap<_, _>>())
             .unwrap_or_default();
@@ -126,7 +128,7 @@ impl DeletedManifestCommon for DeletedManifest {
                 subentries.remove(&path);
             }
         }
-        Self::new(linknode, subentries.into_iter().collect())
+        Ok(Self::new(linknode, subentries.into_iter().collect()))
     }
 
     fn is_empty(&self) -> bool {

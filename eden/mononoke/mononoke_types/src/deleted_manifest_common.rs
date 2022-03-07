@@ -5,29 +5,35 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
 use blobstore::Loadable;
+use futures::stream::BoxStream;
+use std::collections::BTreeMap;
 
 use crate::{blob::BlobstoreValue, ChangesetId, MPathElement, MononokeId};
 
 /// This trait has common behaviour that should be shared among all versions
 /// of deleted manifest, and should be used to generalize usage of them.
-pub trait DeletedManifestCommon: BlobstoreValue<Key = Self::Id> + Clone + Send {
+#[async_trait::async_trait]
+pub trait DeletedManifestCommon:
+    BlobstoreValue<Key = Self::Id> + Clone + Send + Sync + 'static
+{
     type Id: MononokeId<Value = Self> + Loadable<Value = Self>;
 
     /// Create a new deleted manifest by copying subentries from `current` and then
     /// adding the subentries from `subentries_to_add` (where `None` means "remove")
-    fn copy_and_update_subentries(
+    async fn copy_and_update_subentries(
         current: Option<Self>,
         linknode: Option<ChangesetId>,
-        subentries_to_add: impl IntoIterator<Item = (MPathElement, Option<Self::Id>)>,
-    ) -> Self;
+        subentries_to_add: BTreeMap<MPathElement, Option<Self::Id>>,
+    ) -> Result<Self>;
 
     /// Lookup a specific subentry on this manifest.
-    fn lookup(&self, basename: &MPathElement) -> Option<&Self::Id>;
+    async fn lookup(&self, basename: &MPathElement) -> Result<Option<&Self::Id>>;
 
     /// List all subentries on this manifest. Use with care, some manifests can
     /// have hundreds of thousands of subentries.
-    fn into_subentries(self) -> Box<dyn Iterator<Item = (MPathElement, Self::Id)>>;
+    fn into_subentries(self) -> BoxStream<'static, Result<(MPathElement, Self::Id)>>;
 
     /// Returns whether this node has no subentries.
     fn is_empty(&self) -> bool;
