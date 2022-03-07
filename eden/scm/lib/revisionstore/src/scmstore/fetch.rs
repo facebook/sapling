@@ -235,12 +235,8 @@ impl<T> FetchResults<T> {
             match result {
                 Ok(_) => {}
                 Err(err) => match err {
-                    KeyFetchError::KeyedError { key, mut errors } => {
-                        if let Some(err) = errors.pop() {
-                            return Err(err);
-                        } else {
-                            missing.push(key.clone());
-                        }
+                    KeyFetchError::KeyedError { key, .. } => {
+                        missing.push(key.clone());
                     }
                     KeyFetchError::Other(err) => {
                         return Err(err);
