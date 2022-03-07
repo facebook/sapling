@@ -20,23 +20,17 @@ use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
-use dag::ops::CheckIntegrity;
 use dag::ops::DagExportCloneData;
 use dag::ops::DagImportCloneData;
 use dag::ops::DagPersistent;
-use dag::ops::IdConvert;
-use dag::ops::IdMapSnapshot;
 use dag::ops::Parents;
-use dag::ops::PrefixLookup;
 use dag::ops::ToIdSet;
-use dag::ops::ToSet;
 use dag::CloneData;
 use dag::Dag;
 use dag::DagAlgorithm;
 use dag::Vertex;
 use dag::VertexListWithOptions;
-use hgcommits::AppendCommits;
-use hgcommits::DescribeBackend;
+use hgcommits::DagCommits;
 use hgcommits::DoubleWriteCommits;
 use hgcommits::GitSegmentedCommits;
 use hgcommits::GraphNode;
@@ -44,9 +38,7 @@ use hgcommits::HgCommit;
 use hgcommits::HgCommits;
 use hgcommits::HybridCommits;
 use hgcommits::MemHgCommits;
-use hgcommits::ReadCommitText;
 use hgcommits::RevlogCommits;
-use hgcommits::StripCommits;
 use minibytes::Bytes;
 use pyedenapi::PyClient;
 use pymetalog::metalog as PyMetaLog;
@@ -57,31 +49,8 @@ use crate::idmap;
 use crate::Names;
 use crate::Spans;
 
-/// A combination of other traits: commit read/write + DAG algorithms.
-pub trait Commits:
-    ReadCommitText
-    + StripCommits
-    + AppendCommits
-    + CheckIntegrity
-    + DescribeBackend
-    + DagAlgorithm
-    + IdConvert
-    + IdMapSnapshot
-    + PrefixLookup
-    + ToIdSet
-    + ToSet
-{
-}
-
-impl Commits for HgCommits {}
-impl Commits for HybridCommits {}
-impl Commits for MemHgCommits {}
-impl Commits for RevlogCommits {}
-impl Commits for DoubleWriteCommits {}
-impl Commits for GitSegmentedCommits {}
-
 py_class!(pub class commits |py| {
-    data inner: RefCell<Box<dyn Commits + Send + 'static>>;
+    data inner: RefCell<Box<dyn DagCommits + Send + 'static>>;
 
     /// Add a list of commits (node, [parent], text) in-memory.
     def addcommits(&self, commits: Vec<(PyBytes, Vec<PyBytes>, PyBytes)>) -> PyResult<PyNone> {
@@ -382,7 +351,7 @@ py_class!(pub class commits |py| {
 
 impl commits {
     /// Create a `commits` Python object from a Rust struct.
-    pub fn from_commits(py: Python, commits: impl Commits + Send + 'static) -> PyResult<Self> {
+    pub fn from_commits(py: Python, commits: impl DagCommits + Send + 'static) -> PyResult<Self> {
         Self::create_instance(py, RefCell::new(Box::new(commits)))
     }
 

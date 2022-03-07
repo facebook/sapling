@@ -13,7 +13,14 @@ use std::io;
 use std::sync::Arc;
 
 use dag::errors::NotFoundError;
+use dag::ops::CheckIntegrity;
+use dag::ops::IdConvert;
+use dag::ops::IdMapSnapshot;
+use dag::ops::PrefixLookup;
+use dag::ops::ToIdSet;
+use dag::ops::ToSet;
 use dag::CloneData;
+use dag::DagAlgorithm;
 use dag::Vertex;
 use dag::VertexListWithOptions;
 use futures::future::try_join_all;
@@ -132,6 +139,29 @@ pub trait DescribeBackend {
     /// For segments backend, this writes segments data.
     fn explain_internals(&self, w: &mut dyn io::Write) -> io::Result<()>;
 }
+
+/// A combination of other traits: commit read/write + DAG algorithms.
+pub trait DagCommits:
+    ReadCommitText
+    + StripCommits
+    + AppendCommits
+    + CheckIntegrity
+    + DescribeBackend
+    + DagAlgorithm
+    + IdConvert
+    + IdMapSnapshot
+    + PrefixLookup
+    + ToIdSet
+    + ToSet
+{
+}
+
+impl DagCommits for HgCommits {}
+impl DagCommits for HybridCommits {}
+impl DagCommits for MemHgCommits {}
+impl DagCommits for RevlogCommits {}
+impl DagCommits for DoubleWriteCommits {}
+impl DagCommits for GitSegmentedCommits {}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GraphNode {
