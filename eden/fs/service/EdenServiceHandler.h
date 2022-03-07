@@ -266,6 +266,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   folly::Future<std::unique_ptr<SetPathObjectIdResult>> future_setPathObjectId(
       std::unique_ptr<SetPathObjectIdParams> params) override;
 
+  folly::SemiFuture<folly::Unit> semifuture_removeRecursively(
+      std::unique_ptr<RemoveRecursivelyParams> params) override;
+
   void reloadConfig() override;
 
   void getDaemonInfo(DaemonInfo& result) override;

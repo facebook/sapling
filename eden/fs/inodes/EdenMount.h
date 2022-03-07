@@ -855,6 +855,13 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   void forgetStaleInodes();
 
+  /**
+   * If we have a FUSE or NFS channel, flush all invalidations we sent to the
+   * kernel This will ensure that other processes will see up-to-date data once
+   * we return.
+   */
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> flushInvalidations();
+
  private:
   friend class RenameLock;
   friend class SharedRenameLock;

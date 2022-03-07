@@ -84,7 +84,6 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(RootId newSnapshot) {
   renameLock_.unlock();
 
   if (!isDryRun()) {
-#ifndef _WIN32
     // If we have a FUSE channel, flush all invalidations we sent to the kernel
     // as part of the checkout operation.  This will ensure that other processes
     // will see up-to-date data once we return.
@@ -92,24 +91,10 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(RootId newSnapshot) {
     // We do this after releasing the rename lock since some of the invalidation
     // operations may be blocked waiting on FUSE unlink() and rename()
     // operations complete.
-    XLOG(DBG4) << "waiting for inode invalidations to complete";
-    folly::Future<folly::Unit> flushInvalidationsFuture;
-    if (auto* fuseChannel = mount_->getFuseChannel()) {
-      flushInvalidationsFuture = fuseChannel->flushInvalidations();
-    } else if (auto* nfsdChannel = mount_->getNfsdChannel()) {
-      flushInvalidationsFuture = nfsdChannel->flushInvalidations();
-    }
-
-    return std::move(flushInvalidationsFuture).thenValue([this](auto&&) {
-      XLOG(DBG4) << "finished processing inode invalidations";
-
-      return std::move(*conflicts_.wlock());
-    });
-#else
-    if (auto* channel = mount_->getPrjfsChannel()) {
-      channel->flushNegativePathCache();
-    }
-#endif
+    return mount_->flushInvalidations()
+        .thenValue([this](auto&&) { return std::move(*conflicts_.wlock()); })
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance());
   }
 
   // Return conflicts_ via a move operation.  We don't need them any more, and

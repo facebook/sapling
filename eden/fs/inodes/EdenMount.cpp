@@ -1475,6 +1475,27 @@ void EdenMount::forgetStaleInodes() {
   inodeMap_->forgetStaleInodes();
 }
 
+ImmediateFuture<folly::Unit> EdenMount::flushInvalidations() {
+#ifndef _WIN32
+  XLOG(DBG4) << "waiting for inode invalidations to complete";
+  ImmediateFuture<folly::Unit> flushInvalidationsFuture;
+  if (auto* fuseChannel = getFuseChannel()) {
+    flushInvalidationsFuture = fuseChannel->flushInvalidations().semi();
+  } else if (auto* nfsdChannel = getNfsdChannel()) {
+    flushInvalidationsFuture = nfsdChannel->flushInvalidations().semi();
+  }
+  return std::move(flushInvalidationsFuture).thenValue([](auto&&) {
+    XLOG(DBG4) << "finished processing inode invalidations";
+    return folly::unit;
+  });
+#else
+  if (auto* channel = getPrjfsChannel()) {
+    channel->flushNegativePathCache();
+  }
+  return folly::unit;
+#endif
+}
+
 #ifndef _WIN32
 folly::Future<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
   // 1) Ensure that all future opens will by default provide this owner

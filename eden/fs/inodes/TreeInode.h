@@ -198,7 +198,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Remove the file or directory starting at name.
    *
    * In the case where name is a directory, this does a recursive removal of
-   * all of its children too.
+   * all of its children too. This method ensures the invalidation is flushed
+   * so the caller would see the up-to-date state after when call is finished.
    *
    * Note that this may fail if a concurrent file/directory creation is being
    * performed in that hierarchy. The caller is responsible for handling this

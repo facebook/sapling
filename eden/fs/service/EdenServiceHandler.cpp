@@ -1777,6 +1777,35 @@ EdenServiceHandler::future_setPathObjectId(
 #endif
 }
 
+folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeRecursively(
+    std::unique_ptr<RemoveRecursivelyParams> params) {
+  auto mountPoint = params->get_mountPoint();
+  auto repoPath = params->get_path();
+  auto syncTimeout = getSyncTimeout(*params->sync_ref());
+
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, mountPoint, repoPath);
+  auto mountPath = AbsolutePathPiece{mountPoint};
+  auto edenMount = server_->getMount(mountPath);
+
+  auto relativePath = RelativePath{repoPath};
+  auto& fetchContext = helper->getFetchContext();
+
+  TreeInodePtr inode =
+      edenMount->getInode(relativePath, fetchContext).get()->getParentRacy();
+  return wrapImmediateFuture(
+             std::move(helper),
+             waitForPendingNotifications(*edenMount, syncTimeout)
+                 .thenValue([inode = std::move(inode),
+                             relativePath = std::move(relativePath),
+                             &fetchContext](auto&&) {
+                   return inode->removeRecursively(
+                       relativePath.basename(),
+                       InvalidationRequired::Yes,
+                       fetchContext);
+                 }))
+      .semi();
+}
+
 EdenServiceHandler::GlobOptions::GlobOptions(const GlobParams& params)
     : includeDotfiles{*params.includeDotfiles_ref()},
       prefetchFiles{*params.prefetchFiles_ref()},

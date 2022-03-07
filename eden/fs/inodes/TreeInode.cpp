@@ -41,6 +41,7 @@
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/Synchronized.h"
 #include "eden/fs/utils/TimeUtil.h"
@@ -1187,6 +1188,12 @@ ImmediateFuture<folly::Unit> TreeInode::removeRecursively(
                     std::move(name), std::move(child), invalidate, 1, context);
               });
         }
+      })
+      .thenValue([self = inodePtrFromThis(), invalidate](folly::Unit&&) {
+        if (invalidate == InvalidationRequired::Yes) {
+          return self->getMount()->flushInvalidations();
+        }
+        return ImmediateFuture(folly::unit);
       });
 }
 
