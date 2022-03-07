@@ -7,6 +7,7 @@
 import errno
 import os
 import stat
+import sys
 from pathlib import Path
 from typing import List
 
@@ -32,12 +33,13 @@ class DotEdenTest(testcase.EdenRepoTest):
         super().setUp()
         self.entries = list(self.dot_eden_path.iterdir())
         self.assertNotEqual([], self.entries)
+        self.epermError = errno.EINVAL if sys.platform == "win32" else errno.EPERM
 
     def test_rm_existing_contents_fails(self) -> None:
         for entry in self.entries:
             with self.assertRaises(OSError) as cm:
                 entry.unlink()
-            self.assertEqual(errno.EPERM, cm.exception.errno)
+            self.assertEqual(self.epermError, cm.exception.errno)
 
     def test_mkdir_fails(self) -> None:
         with self.assertRaises(OSError) as cm:
@@ -70,18 +72,18 @@ class DotEdenTest(testcase.EdenRepoTest):
         for entry in self.entries:
             with self.assertRaises(OSError) as cm:
                 entry.rename(self.dot_eden_path / "dst")
-            self.assertEqual(errno.EPERM, cm.exception.errno)
+            self.assertEqual(self.epermError, cm.exception.errno)
 
     def test_rename_from_fails(self) -> None:
         for entry in self.entries:
             with self.assertRaises(OSError) as cm:
                 entry.rename(Path(self.mount) / "dst")
-            self.assertEqual(errno.EPERM, cm.exception.errno)
+            self.assertEqual(self.epermError, cm.exception.errno)
 
     def test_rename_to_fails(self) -> None:
         with self.assertRaises(OSError) as cm:
             (Path(self.mount) / "hello").rename(self.dot_eden_path / "dst")
-        self.assertEqual(errno.EPERM, cm.exception.errno)
+        self.assertEqual(self.epermError, cm.exception.errno)
 
     def test_chown_fails(self) -> None:
         for entry in self.entries:

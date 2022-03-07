@@ -206,6 +206,7 @@ const std::unordered_map<PRJ_NOTIFICATION, PrjfsTraceCallType>
     notificationTypeMap = {
         {PRJ_NOTIFICATION_NEW_FILE_CREATED,
          PrjfsTraceCallType::NEW_FILE_CREATED},
+        {PRJ_NOTIFICATION_PRE_DELETE, PrjfsTraceCallType::PRE_DELETE},
         {PRJ_NOTIFICATION_FILE_OVERWRITTEN,
          PrjfsTraceCallType::FILE_OVERWRITTEN},
         {PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED,
@@ -835,6 +836,14 @@ std::string fileHandleClosedFileDeletedRenderer(
       FMT_STRING("{}Deleted({})"), isDirectory ? "dir" : "file", relPath);
 }
 
+std::string preDeleteRenderer(
+    RelativePathPiece relPath,
+    RelativePathPiece /*destPath*/,
+    bool isDirectory) {
+  return fmt::format(
+      FMT_STRING("pre{}Deleted({})"), isDirectory ? "Dir" : "File", relPath);
+}
+
 std::string preSetHardlinkRenderer(
     RelativePathPiece oldPath,
     RelativePathPiece newPath,
@@ -849,6 +858,12 @@ const std::unordered_map<PRJ_NOTIFICATION, NotificationHandlerEntry>
             {&PrjfsChannelInner::newFileCreated,
              newFileCreatedRenderer,
              &ChannelThreadStats::newFileCreated},
+        },
+        {
+            PRJ_NOTIFICATION_PRE_DELETE,
+            {&PrjfsChannelInner::preDelete,
+             preDeleteRenderer,
+             &ChannelThreadStats::preDelete},
         },
         {
             PRJ_NOTIFICATION_FILE_OVERWRITTEN,
@@ -937,11 +952,29 @@ ImmediateFuture<folly::Unit> PrjfsChannelInner::fileRenamed(
 }
 
 ImmediateFuture<folly::Unit> PrjfsChannelInner::preRename(
-    RelativePath /*oldPath*/,
-    RelativePath /*newPath*/,
-    bool /*isDirectory*/,
-    std::shared_ptr<ObjectFetchContext> /*context*/) {
-  return folly::unit;
+    RelativePath oldPath,
+    RelativePath newPath,
+    bool isDirectory,
+    std::shared_ptr<ObjectFetchContext> context) {
+  if (isDirectory) {
+    return dispatcher_->preDirRename(
+        std::move(oldPath), std::move(newPath), std::move(context));
+  } else {
+    return dispatcher_->preFileRename(
+        std::move(oldPath), std::move(newPath), std::move(context));
+  }
+}
+
+ImmediateFuture<folly::Unit> PrjfsChannelInner::preDelete(
+    RelativePath relPath,
+    RelativePath /*destPath*/,
+    bool isDirectory,
+    std::shared_ptr<ObjectFetchContext> context) {
+  if (isDirectory) {
+    return dispatcher_->preDirDelete(std::move(relPath), std::move(context));
+  } else {
+    return dispatcher_->preFileDelete(std::move(relPath), std::move(context));
+  }
 }
 
 ImmediateFuture<folly::Unit> PrjfsChannelInner::fileHandleClosedFileDeleted(
@@ -1076,7 +1109,8 @@ void PrjfsChannel::start(bool readOnly, bool useNegativePathCaching) {
 
   PRJ_NOTIFICATION_MAPPING notificationMappings[] = {
       {PRJ_NOTIFY_NEW_FILE_CREATED | PRJ_NOTIFY_FILE_OVERWRITTEN |
-           PRJ_NOTIFY_PRE_RENAME | PRJ_NOTIFY_FILE_RENAMED |
+           PRJ_NOTIFY_PRE_DELETE | PRJ_NOTIFY_PRE_RENAME |
+           PRJ_NOTIFY_FILE_RENAMED |
            PRJ_NOTIFY_FILE_HANDLE_CLOSED_FILE_MODIFIED |
            PRJ_NOTIFY_FILE_HANDLE_CLOSED_FILE_DELETED |
            PRJ_NOTIFY_PRE_SET_HARDLINK,

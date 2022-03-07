@@ -312,6 +312,19 @@ class PrjfsChannelInner {
       std::shared_ptr<ObjectFetchContext> context);
 
   /**
+   * Notification sent prior to a file or directory being deleted.
+   *
+   * Called prior to ProjectedFS doing any on-disk checks, and thus if relPath
+   * may or may not exist on disk and the deletion may later fail. The deletion
+   * is known to have happened only when fileHandleClosedFileDeleted is called.
+   */
+  ImmediateFuture<folly::Unit> preDelete(
+      RelativePath relPath,
+      RelativePath destPath,
+      bool isDirectory,
+      std::shared_ptr<ObjectFetchContext> context);
+
+  /**
    * Notification sent when a file or directory has been removed.
    */
   ImmediateFuture<folly::Unit> fileHandleClosedFileDeleted(

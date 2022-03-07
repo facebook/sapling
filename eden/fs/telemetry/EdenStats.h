@@ -172,6 +172,7 @@ class ChannelThreadStats : public EdenThreadStatsBase {
   Stat fileHandleClosedFileModified{
       createStat("prjfs.fileHandleClosedFileModified_us")};
   Stat fileRenamed{createStat("prjfs.fileRenamed_us")};
+  Stat preDelete{createStat("prjfs.preDelete_us")};
   Stat preRenamed{createStat("prjfs.preRenamed_us")};
   Stat fileHandleClosedFileDeleted{
       createStat("prjfs.fileHandleClosedFileDeleted_us")};

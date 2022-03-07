@@ -552,6 +552,36 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
           [](std::tuple<folly::Unit, folly::Unit>&&) { return folly::unit; });
 }
 
+ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preFileRename(
+    RelativePath oldPath,
+    RelativePath newPath,
+    std::shared_ptr<ObjectFetchContext> /*context*/) {
+  if (oldPath == kDotEdenConfigPath || newPath == kDotEdenConfigPath) {
+    return makeImmediateFuture<folly::Unit>(
+        std::system_error(EPERM, std::generic_category()));
+  }
+  if (newPath.dirname() == kDotEdenRelativePath) {
+    return makeImmediateFuture<folly::Unit>(
+        std::system_error(EPERM, std::generic_category()));
+  }
+  return folly::unit;
+}
+
+ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preDirRename(
+    RelativePath oldPath,
+    RelativePath newPath,
+    std::shared_ptr<ObjectFetchContext> /*context*/) {
+  if (oldPath == kDotEdenRelativePath || newPath == kDotEdenRelativePath) {
+    return makeImmediateFuture<folly::Unit>(
+        std::system_error(EPERM, std::generic_category()));
+  }
+  if (newPath.dirname() == kDotEdenRelativePath) {
+    return makeImmediateFuture<folly::Unit>(
+        std::system_error(EPERM, std::generic_category()));
+  }
+  return folly::unit;
+}
+
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileDeleted(
     RelativePath path,
     std::shared_ptr<ObjectFetchContext> context) {
@@ -559,11 +589,31 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileDeleted(
       *mount_, path, notificationExecutor_, std::move(context));
 }
 
+ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preFileDelete(
+    RelativePath path,
+    std::shared_ptr<ObjectFetchContext> /*context*/) {
+  if (path == kDotEdenConfigPath) {
+    return makeImmediateFuture<folly::Unit>(
+        std::system_error(EPERM, std::generic_category()));
+  }
+  return folly::unit;
+}
+
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::dirDeleted(
     RelativePath path,
     std::shared_ptr<ObjectFetchContext> context) {
   return fileNotification(
       *mount_, path, notificationExecutor_, std::move(context));
+}
+
+ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preDirDelete(
+    RelativePath path,
+    std::shared_ptr<ObjectFetchContext> /*context*/) {
+  if (path == kDotEdenRelativePath) {
+    return makeImmediateFuture<folly::Unit>(
+        std::system_error(EPERM, std::generic_category()));
+  }
+  return folly::unit;
 }
 
 ImmediateFuture<folly::Unit>

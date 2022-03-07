@@ -100,6 +100,28 @@ class PrjfsDispatcher {
       std::shared_ptr<ObjectFetchContext> context) = 0;
 
   /**
+   * Notification sent when a directory is about to be renamed
+   *
+   * This should succeed or fail without any side effects to the inode
+   * hierarchy.
+   */
+  virtual ImmediateFuture<folly::Unit> preDirRename(
+      RelativePath oldPath,
+      RelativePath newPath,
+      std::shared_ptr<ObjectFetchContext> context) = 0;
+
+  /**
+   * Notification sent when a file is about to be renamed
+   *
+   * This should succeed or fail without any side effects to the inode
+   * hierarchy.
+   */
+  virtual ImmediateFuture<folly::Unit> preFileRename(
+      RelativePath oldPath,
+      RelativePath newPath,
+      std::shared_ptr<ObjectFetchContext> context) = 0;
+
+  /**
    * Notification sent when a file was removed
    */
   virtual ImmediateFuture<folly::Unit> fileDeleted(
@@ -107,9 +129,29 @@ class PrjfsDispatcher {
       std::shared_ptr<ObjectFetchContext> context) = 0;
 
   /**
+   * Notification sent when a file is about to be removed.
+   *
+   * This should succeed or fail without any side effects to the inode
+   * hierarchy.
+   */
+  virtual ImmediateFuture<folly::Unit> preFileDelete(
+      RelativePath relPath,
+      std::shared_ptr<ObjectFetchContext> context) = 0;
+
+  /**
    * Notification sent when a directory was removed
    */
   virtual ImmediateFuture<folly::Unit> dirDeleted(
+      RelativePath relPath,
+      std::shared_ptr<ObjectFetchContext> context) = 0;
+
+  /**
+   * Notification sent when a directory is about to be removed.
+   *
+   * This should succeed or fail without any side effects to the inode
+   * hierarchy.
+   */
+  virtual ImmediateFuture<folly::Unit> preDirDelete(
       RelativePath relPath,
       std::shared_ptr<ObjectFetchContext> context) = 0;
 

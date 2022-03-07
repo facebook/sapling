@@ -35,7 +35,13 @@ if sys.platform == "win32":
         "config_test.ConfigTest": True,
         "corrupt_overlay_test.CorruptOverlayTestDefault": True,
         "debug_getpath_test.DebugGetPathTestHg": True,
-        "doteden_test.DotEdenTestHg": True,
+        "doteden_test.DotEdenTestHg": [
+            "test_mkdir_fails",  # ProjectedFS doesn't allow refusing directory creation
+            "test_create_file_fails",  # ProjectedFS doesn't allow refusing file creation
+            "test_mknod_fails",  # mknod doesn't exist on Windows
+            "test_symlink_fails",  # ProjectedFS doesn't allow refusing symlink creation
+            "test_chown_fails",  # chown doesn't exist on Windows
+        ],
         "edenclient_test.EdenClientTestHg": True,
         "facebook.buck.buck_test.BuckTestHg": True,
         "fsck_test.FsckTestDefault": True,

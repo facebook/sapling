@@ -52,12 +52,30 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
       RelativePath newPath,
       std::shared_ptr<ObjectFetchContext> context) override;
 
+  ImmediateFuture<folly::Unit> preDirRename(
+      RelativePath oldPath,
+      RelativePath newPath,
+      std::shared_ptr<ObjectFetchContext> context) override;
+
+  ImmediateFuture<folly::Unit> preFileRename(
+      RelativePath oldPath,
+      RelativePath newPath,
+      std::shared_ptr<ObjectFetchContext> context) override;
+
   ImmediateFuture<folly::Unit> fileDeleted(
       RelativePath oldPath,
       std::shared_ptr<ObjectFetchContext> context) override;
 
+  ImmediateFuture<folly::Unit> preFileDelete(
+      RelativePath relPath,
+      std::shared_ptr<ObjectFetchContext> context) override;
+
   ImmediateFuture<folly::Unit> dirDeleted(
       RelativePath oldPath,
+      std::shared_ptr<ObjectFetchContext> context) override;
+
+  ImmediateFuture<folly::Unit> preDirDelete(
+      RelativePath relPath,
       std::shared_ptr<ObjectFetchContext> context) override;
 
   ImmediateFuture<folly::Unit> waitForPendingNotifications() override;
