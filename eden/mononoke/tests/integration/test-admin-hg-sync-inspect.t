@@ -9,7 +9,6 @@
 
   $ mononoke_admin hg-sync-bundle inspect 1
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   Bookmark: master_bookmark
   * Log entry is a bookmark creation. (glob)
   === To ===

@@ -31,14 +31,12 @@ get content_id for file B
   BonsaiChangesetId: d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da 
   $ mononoke_admin filestore store B
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * Wrote 122e93be74ea1962717796ad5b1f4a428f431d4d4f9674846443f1e91a690b14 (2 bytes) (glob)
 
 upload C as it wasn't imported
   $ echo C > C
   $ mononoke_admin filestore store C
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * Wrote 2b574f3e5fdc3151a85d8982a46b82d91fa0ef0bb15224fac5a25488b69d38eb (2 bytes) (glob)
   $ cd $TESTTMP
 
@@ -82,11 +80,9 @@ Manually create a bonsai that would not normally be produced because it has unne
 
   $ mononoke_admin create-bonsai bonsai_file --dangerous
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   Created bonsai changeset 2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f for hg_changeset 1ef6b45b6561464f92b16aba791974a9bb858ce2
   $ mononoke_admin bookmarks set master_bookmark 2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f)) (glob)
   * Current position of BookmarkName { bookmark: "master_bookmark" } is Some(ChangesetId(Blake2(d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da))) (glob)
 

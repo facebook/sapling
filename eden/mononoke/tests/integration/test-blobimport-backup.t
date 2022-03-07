@@ -35,12 +35,10 @@ setup configuration
 # Get content_id for file B
   $ mononoke_admin filestore store B
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * Wrote 55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f (1 bytes) (glob)
 # Upload C as it wasn't imported
   $ mononoke_admin filestore store C
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * Wrote 896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d (1 bytes) (glob)
   $ cd $TESTTMP
 
@@ -81,7 +79,6 @@ setup configuration
   > EOF
   $ mononoke_admin create-bonsai bonsai_file --dangerous
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   Created bonsai changeset 4b71c845e8783e58fce825fa80254840eba291d323a5d69218ad927fc801153c for hg_changeset 26805aba1e600a82e93661149f2313866a221a7b
   $ mononoke_admin bookmarks set master_bookmark 26805aba1e600a82e93661149f2313866a221a7b 2>/dev/null
   $ mononoke_admin bookmarks list --kind publishing 2>/dev/null

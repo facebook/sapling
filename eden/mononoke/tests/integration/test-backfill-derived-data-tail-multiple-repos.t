@@ -74,7 +74,6 @@ enable some more derived data types for normal usage and backfilling
 build the skiplist that will be used to slice the repository
   $ prod_setup_skiplist
   *] using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   *] creating a skiplist from scratch (glob)
   *] build 5 skiplist nodes (glob)
 
@@ -86,7 +85,6 @@ build the skiplist that will be used to slice the repository
 build the skiplist that will be used to slice the repository
   $ backup_setup_skiplist
   *] using repo "backup" repoid RepositoryId(1) (glob)
-  *Reloading redacted config from configerator* (glob)
   *] creating a skiplist from scratch (glob)
   *] build 5 skiplist nodes (glob)
 

@@ -39,5 +39,4 @@ Pushing a merge
   updating bookmark master_bookmark
   $ mononoke_admin filenodes validate "$(hg log -r master_bookmark -T '{node}')"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: * (glob)

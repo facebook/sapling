@@ -201,10 +201,8 @@ Try to sync it automatically, it's expected to fail
 Now sync with the tool
   $ cd "$TESTTMP"
   $ megarepo_tool_multirepo --source-repo-id 1 --target-repo-id 0 sync-diamond-merge with_merge_master --bookmark master_bookmark |& grep -v "using repo"
-  *Reloading redacted config from configerator* (glob)
   *] Initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
   *] Done initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(46c0f70c6300f4168cb70321839ac0079c74b6d3295adb81eeb1932be4f80e9d)) (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
@@ -217,8 +215,6 @@ Now sync with the tool
   $ mononoke_admin_source_target 0 1 crossrepo map master_bookmark |& grep -v "using repo"
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
-  *Reloading redacted config from configerator* (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(f38496fbd160eaf1bf6ebad1f317635ea818000bb3d634bba6eefa2c80b9666a)) (glob)
   RewrittenAs([(ChangesetId(Blake2(46c0f70c6300f4168cb70321839ac0079c74b6d3295adb81eeb1932be4f80e9d)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
   $ flush_mononoke_bookmarks
@@ -257,9 +253,7 @@ Merge with preserved ancestors
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
-  *Reloading redacted config from configerator* (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4)) (glob)
   RewrittenAs([(ChangesetId(Blake2(d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
@@ -291,14 +285,10 @@ Merge with preserved ancestors
 -- sync p1
   $ cd "$TESTTMP"
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit $(hg log -T "{node}" -r pre_merge_p1 --cwd "$TESTTMP/with_merge_hg") |& grep -v "using repo"
-  * Reloading redacted config from configerator* (glob)
   *] Initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
   *] Done initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
-  * Reloading redacted config from configerator* (glob)
   *] Initializing CfgrLiveCommitSyncConfig, repo: meg_mon (glob)
   *] Done initializing CfgrLiveCommitSyncConfig, repo: meg_mon (glob)
-  * Reloading redacted config from configerator* (glob)
-  * Reloading redacted config from configerator* (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
@@ -313,9 +303,7 @@ Merge with preserved ancestors
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
-  *Reloading redacted config from configerator* (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d)) (glob)
   RewrittenAs([(ChangesetId(Blake2(283f929b3e2c7d299920a8ee18b0928191fb3f5d9cc530f9fb7c0eb578e45d70)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
@@ -323,11 +311,9 @@ Merge with preserved ancestors
   $ cd "$TESTTMP"
   $ megarepo_tool_multirepo --source-repo-id 1 --target-repo-id 0 sync-diamond-merge with_merge_master --bookmark master_bookmark
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
-  *Reloading redacted config from configerator* (glob)
   *] Initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
   *] Done initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c)) (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
@@ -343,9 +329,7 @@ Merge with preserved ancestors
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
-  *Reloading redacted config from configerator* (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(89c0603366c60ae4bf8d8dca6da7581c741b7e89a6fcc3f49a44fdd248de3b1d)) (glob)
   RewrittenAs([(ChangesetId(Blake2(89c0603366c60ae4bf8d8dca6da7581c741b7e89a6fcc3f49a44fdd248de3b1d)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
@@ -354,9 +338,7 @@ Merge with preserved ancestors
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
-  *Reloading redacted config from configerator* (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c)) (glob)
   RewrittenAs([(ChangesetId(Blake2(a530e2a1eb7ed81c57328f1c0b8fb20656190c5c272d94f7bf768a689c83670d)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
@@ -365,9 +347,7 @@ Merge with preserved ancestors
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
-  *Reloading redacted config from configerator* (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(a530e2a1eb7ed81c57328f1c0b8fb20656190c5c272d94f7bf768a689c83670d)) (glob)
   * target repo cs id: 3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c, mapping version: TEST_VERSION_NAME (glob)
   * fetching content ids and types for * in * (glob)

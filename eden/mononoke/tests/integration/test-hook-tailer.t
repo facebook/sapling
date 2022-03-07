@@ -11,7 +11,6 @@ Run the hook tailer
 
   $ hook_tailer --bookmark master_bookmark 2>&1 | strip_glog
   Hook tailer is starting
-  *Reloading redacted config from configerator* (glob)
   ==== Hooks results ====
   Starting hooks for c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd (0 already started)
   ==== Hooks stats ====
@@ -33,7 +32,6 @@ Test various combinations of exclusions
 
   $ hook_tailer --bookmark master_bookmark --limit 2 2>&1 | strip_glog
   Hook tailer is starting
-  *Reloading redacted config from configerator* (glob)
   ==== Hooks results ====
   Starting hooks for c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd (0 already started)
   ==== Hooks stats ====
@@ -44,7 +42,6 @@ Test various combinations of exclusions
 
   $ hook_tailer --bookmark master_bookmark --exclude master_bookmark 2>&1 | strip_glog
   Hook tailer is starting
-  *Reloading redacted config from configerator* (glob)
   changeset resolved as: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd))
   ==== Hooks results ====
   Starting hooks for 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66 (0 already started)
@@ -57,7 +54,6 @@ Test various combinations of exclusions
   $ echo "master_bookmark" > "$TESTTMP/excluded"
   $ hook_tailer --bookmark master_bookmark --exclude-file "$TESTTMP/excluded" 2>&1 | strip_glog
   Hook tailer is starting
-  *Reloading redacted config from configerator* (glob)
   changeset resolved as: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd))
   ==== Hooks results ====
   Starting hooks for 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66 (0 already started)
@@ -71,7 +67,6 @@ Test excluding multiple commits
 
   $ hook_tailer --bookmark master_bookmark --exclude 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66 --exclude 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec 2>&1 | strip_glog
   Hook tailer is starting
-  *Reloading redacted config from configerator* (glob)
   changeset resolved as: ChangesetId(Blake2(*)) (glob)
   changeset resolved as: ChangesetId(Blake2(*)) (glob)
   ==== Hooks results ====
@@ -86,7 +81,6 @@ Test explicit commits
 
   $ hook_tailer --bookmark master_bookmark --changeset "master_bookmark" 2>&1 | strip_glog
   Hook tailer is starting
-  *Reloading redacted config from configerator* (glob)
   changeset resolved as: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd))
   ==== Hooks results ====
   Starting hooks for c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd (0 already started)
@@ -98,7 +92,6 @@ Test explicit commits
 
   $ hook_tailer --bookmark master_bookmark --changeset 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66 --changeset 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec 2>&1 | strip_glog
   Hook tailer is starting
-  *Reloading redacted config from configerator* (glob)
   changeset resolved as: ChangesetId(Blake2(*)) (glob)
   changeset resolved as: ChangesetId(Blake2(*)) (glob)
   ==== Hooks results ====
@@ -113,7 +106,6 @@ Test explicit commits
   $ echo "9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec" >> "$TESTTMP/included"
   $ hook_tailer --bookmark master_bookmark --changeset-file "$TESTTMP/included" 2>&1 | strip_glog
   Hook tailer is starting
-  *Reloading redacted config from configerator* (glob)
   changeset resolved as: ChangesetId(Blake2(*)) (glob)
   changeset resolved as: ChangesetId(Blake2(*)) (glob)
   ==== Hooks results ====

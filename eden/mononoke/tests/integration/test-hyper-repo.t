@@ -42,18 +42,14 @@ blobimport hg servers repos into Mononoke repos
   $ REPOID=1 blobimport second_source_repo/.hg second_source_repo
   $ REPOID=2 mononoke_hyper_repo_builder master_bookmark main_bookmark add-source-repo --source-repo first_source_repo
   * using repo "first_source_repo" repoid RepositoryId(0) (glob)
-  * Reloading redacted config from configerator (glob)
   * using repo "hyper_repo" repoid RepositoryId(2) (glob)
-  * Reloading redacted config from configerator (glob)
   * found 1 files in source repo, copying them to hyper repo... (glob)
   * Finished copying (glob)
   * about to create 1 commits (glob)
   * creating * (glob)
   $ REPOID=2 mononoke_hyper_repo_builder master_bookmark main_bookmark add-source-repo --source-repo second_source_repo
   * using repo "second_source_repo" repoid RepositoryId(1) (glob)
-  * Reloading redacted config from configerator (glob)
   * using repo "hyper_repo" repoid RepositoryId(2) (glob)
-  * Reloading redacted config from configerator (glob)
   * found 1 files in source repo, copying them to hyper repo... (glob)
   * Finished copying (glob)
   * about to create 1 commits (glob)
@@ -105,13 +101,10 @@ push one more commit
 now tail it to the hyper repo
   $ REPOID=2 mononoke_hyper_repo_builder master_bookmark main_bookmark tail --once
   * using repo "hyper_repo" repoid RepositoryId(2) (glob)
-  * Reloading redacted config from configerator (glob)
   * using repo "*" repoid RepositoryId(*) (glob)
-  * Reloading redacted config from configerator (glob)
   *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   * using repo "*" repoid RepositoryId(*) (glob)
-  * Reloading redacted config from configerator (glob)
   *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   * found 1 commits to sync from first_source_repo repo (glob)
@@ -123,13 +116,10 @@ now tail it to the hyper repo
 run again, make sure nothing happens
   $ REPOID=2 mononoke_hyper_repo_builder master_bookmark main_bookmark tail --once
   * using repo "hyper_repo" repoid RepositoryId(2) (glob)
-  * Reloading redacted config from configerator (glob)
   * using repo "*" repoid RepositoryId(*) (glob)
-  * Reloading redacted config from configerator (glob)
   *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   * using repo "*" repoid RepositoryId(*) (glob)
-  * Reloading redacted config from configerator (glob)
   *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
 

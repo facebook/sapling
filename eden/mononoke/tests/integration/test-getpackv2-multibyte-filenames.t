@@ -28,7 +28,6 @@
   $ git commit -qm "Add test file"
   $ gitimport "$GIT_REPO" --derive-hg full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * GitRepo:*repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
   * Hg: *: HgManifestId(HgNodeHash(Sha1(*))) (glob)
   * Ref: Some(*): Some(ChangesetId(Blake2(968ac4f1e35e964e19028f9a81b1fe2ae9852fe09b11697542726017e5f9e3fd))) (glob)

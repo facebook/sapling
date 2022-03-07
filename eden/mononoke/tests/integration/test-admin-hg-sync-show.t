@@ -9,7 +9,6 @@
 
   $ mononoke_admin hg-sync-bundle show
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   1 (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
 
   $ mononoke_admin hg-sync-bundle last-processed --set 1
@@ -17,4 +16,3 @@
 
   $ mononoke_admin hg-sync-bundle show
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)

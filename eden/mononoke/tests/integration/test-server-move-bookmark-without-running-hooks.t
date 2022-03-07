@@ -83,7 +83,6 @@ the push should fail nevertheless. But first let's check that commit actually ex
 mononoke now
   $ mononoke_admin phases fetch cd415129827add17f8486647dad5f3f84f5df316
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * Reloading redacted config from configerator (glob)
   draft
   $ hgmn push -r . --to tag/newtag --create
   pushing rev cd415129827a to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark tag/newtag
@@ -130,7 +129,6 @@ First check that push fail for this bookmark as well
 Try the push tag/newtag again. Since this commit is public it should succeed
   $ mononoke_admin phases fetch cd415129827add17f8486647dad5f3f84f5df316
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * Reloading redacted config from configerator (glob)
   public
   $ hgmn push -r . --to tag/newtag --create
   pushing rev cd415129827a to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark tag/newtag

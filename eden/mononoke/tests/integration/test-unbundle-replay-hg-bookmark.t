@@ -52,7 +52,6 @@ Check bookmark history
 
   $ mononoke_admin bookmarks log -c hg master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * (master_bookmark) ef90aeee2a47e488fc381fba57b2e20096e23dde pushrebase * (glob)
   * (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
   * (master_bookmark) cbab85d064b0fbdd3e9caa125f8eeac0fb5acf6a pushrebase * (glob)
@@ -75,7 +74,6 @@ Replay the push. This will not do anything because the entries do not exist (we 
 
   $ unbundle_replay hg-bookmark "$BUNDLE_HELPER" master_bookmark
   * Loading repository: repo (id = 0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * Loading hg bookmark updates for bookmark master_bookmark, starting at 26805aba1e600a82e93661149f2313866a221a7b (glob)
   * No further hg bookmark updates for bookmark master_bookmark at 26805aba1e600a82e93661149f2313866a221a7b (glob)
 
@@ -117,7 +115,6 @@ Check history again. We're back to where we were:
 
   $ mononoke_admin bookmarks log -c hg master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * (master_bookmark) ef90aeee2a47e488fc381fba57b2e20096e23dde pushrebase * (glob)
   * (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
   * (master_bookmark) cbab85d064b0fbdd3e9caa125f8eeac0fb5acf6a pushrebase * (glob)

@@ -62,7 +62,6 @@
   > --bookmark-suffix "new_repo" \
   > --dest-bookmark master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   * The importing bookmark name is: repo_import_new_repo. * (glob)
@@ -90,7 +89,6 @@
   > --bookmark-suffix "new_repo" \
   > --dest-bookmark master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   * The importing bookmark name is: repo_import_new_repo. * (glob)
@@ -125,7 +123,6 @@
   > --commit-message "merging" \
   > --recovery-file-path "$GIT_REPO/recovery_file.json"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)

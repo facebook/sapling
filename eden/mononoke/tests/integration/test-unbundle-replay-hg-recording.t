@@ -45,7 +45,6 @@ Check bookmark history
 
   $ mononoke_admin bookmarks log -c hg master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
   * (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
 
@@ -63,7 +62,6 @@ Replay the push. This will fail because the entry does not exist (we need run th
 
   $ unbundle_replay hg-recording "$BUNDLE_HELPER" 1
   * Loading repository: repo (id = 0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * Execution error: Entry with id 1 does not exist (glob)
   Error: Execution failed
   [1]
@@ -90,7 +88,6 @@ Check history again. We're back to where we were:
 
   $ mononoke_admin bookmarks log -c hg master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
   * (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
 

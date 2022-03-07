@@ -56,7 +56,6 @@
   $ cd "$TESTTMP"
   $ gitimport "$GIT_REPO" --derive-trees --derive-hg --bonsai-git-mapping full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * GitRepo:$TESTTMP/repo-git commit 1 of 2 - Oid:8ce3eae4 => Bid:631c03b2 (glob)
   * GitRepo:$TESTTMP/repo-git commit 2 of 2 - Oid:69a26531 => Bid:5539313b (glob)
   * 2 tree(s) are valid! (glob)
@@ -68,12 +67,10 @@
 # Set master (gitimport does not do this yet)
   $ mononoke_admin bookmarks set another_committer 5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e)) (glob)
   * Current position of BookmarkName { bookmark: "another_committer" } is None (glob)
   $ mononoke_admin bookmarks set master 631c03b250b34b3f9ee3b6acfb597123ec8340adaa91e3ba84ef0f4c54c6641a
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Current position of BookmarkName { bookmark: "master" } is None (glob)
 

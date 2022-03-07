@@ -56,7 +56,6 @@
   $ cd "$TESTTMP"
   $ gitimport "$GIT_REPO" --derive-trees --derive-hg --bonsai-git-mapping full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * GitRepo:$TESTTMP/repo-git commit 1 of 2 - Oid:8ce3eae4 => Bid:631c03b2 (glob)
   * GitRepo:$TESTTMP/repo-git commit 2 of 2 - Oid:69a26531 => Bid:5539313b (glob)
   * 2 tree(s) are valid! (glob)
@@ -68,7 +67,6 @@
 # Check hg hash before overwriting
   $ mononoke_admin convert --from bonsai --to hg 5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * Reloading redacted config from configerator (glob)
   70361aa80b8d681cc78fcccba6d5671df7ee4d23
 
 # Now rederive HG_SET_COMMITTER_EXTRA=true. This changes hg hash, so let's run it with --rederive and make sure
@@ -76,7 +74,6 @@
   $ HG_SET_COMMITTER_EXTRA=true ENABLED_DERIVED_DATA='["git_trees", "filenodes", "hgchangesets"]' setup_common_config
   $ mononoke_admin derived-data derive hgchangesets --changeset 5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e --rederive
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * Reloading redacted config from configerator (glob)
   * changeset resolved as: ChangesetId(Blake2(5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e)) (glob)
   * about to rederive 1 commits (glob)
   * deriving 5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e (glob)
@@ -85,6 +82,5 @@
 # Check hg hash after overwriting
   $ mononoke_admin convert --from bonsai --to hg 5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * Reloading redacted config from configerator (glob)
   c87b24576a61fd421922284be86769baa165ef43
 

@@ -98,7 +98,6 @@ Check filestore store & fetch
 
   $ mononoke_admin filestore store "$TESTTMP/blob"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * Wrote 2ff003c268263a870defffe9afdccd3a72e501bbd892f24cac7ca944ac240eb1 (4 bytes) (glob)
 
   $ mononoke_admin filestore fetch id 2ff003c268263a870defffe9afdccd3a72e501bbd892f24cac7ca944ac240eb1 2>/dev/null

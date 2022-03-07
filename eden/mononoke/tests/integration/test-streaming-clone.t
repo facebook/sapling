@@ -21,7 +21,6 @@ setup configuration
   $ LOG_FILE="$TESTTMP/log_file"
   $ streaming_clone --scuba-dataset dataset --scuba-log-file "$LOG_FILE" create --dot-hg-path "$TESTTMP/repo-hg/.hg"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * current sizes in database: index: 0, data: 0, repo: repo (glob)
   * about to upload 1 entries, repo: repo (glob)
   * inserting into streaming clone database, repo: repo (glob)
@@ -34,7 +33,6 @@ setup configuration
 Try creating again, this should fail
   $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * cannot create new streaming clone chunks because they already exists (glob)
   [1]
 
@@ -59,7 +57,6 @@ Try creating again, this should fail
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "delete from streaming_changelog_chunks where repo_id = 0;"
   $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg" --max-data-chunk-size 1
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * current sizes in database: index: 0, data: 0, repo: repo (glob)
   * about to upload 3 entries, repo: repo (glob)
   * inserting into streaming clone database, repo: repo (glob)
@@ -134,7 +131,6 @@ Push a few new commits and update streaming clone
 Check that with last chunk skipping no new batches are uploaded
   $ streaming_clone update --dot-hg-path "$TESTTMP/repo-streamclone-2/.hg" --skip-last-chunk
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * current sizes in database: index: 192, data: 165, repo: repo (glob)
   * about to upload 0 entries, repo: repo (glob)
   * inserting into streaming clone database, repo: repo (glob)
@@ -142,7 +138,6 @@ Check that with last chunk skipping no new batches are uploaded
 
   $ streaming_clone update --dot-hg-path "$TESTTMP/repo-streamclone-2/.hg"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * current sizes in database: index: 192, data: 165, repo: repo (glob)
   * about to upload 1 entries, repo: repo (glob)
   * inserting into streaming clone database, repo: repo (glob)
@@ -177,12 +172,10 @@ Check no-upload-if-less-than-chunks option
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "delete from streaming_changelog_chunks where repo_id = 0;"
   $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg" --no-upload-if-less-than-chunks 2
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * Reloading redacted config from configerator (glob)
   * current sizes in database: index: 0, data: 0, repo: repo (glob)
   * has too few chunks to upload - 1. Exiting, repo: repo (glob)
   $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg" --no-upload-if-less-than-chunks 2 --max-data-chunk-size 1
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * Reloading redacted config from configerator (glob)
   * current sizes in database: index: 0, data: 0, repo: repo (glob)
   * about to upload 3 entries, repo: repo (glob)
   * inserting into streaming clone database, repo: repo (glob)

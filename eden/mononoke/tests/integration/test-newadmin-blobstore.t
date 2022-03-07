@@ -16,7 +16,6 @@ setup configuration
   > # modify: C file "test content \xaa end"
   > # delete: C Z
   > EOF
-  *] Reloading redacted config from configerator (glob)
   A=e26d4ad219658cadec76d086a28621bc612762d0499ae79ba093c5ec15efe5fc
   B=ecf6ed0f7b5c6d1871a3b7b0bc78b04e2cc036a67f96890f2834b728355e5fc5
   C=f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1

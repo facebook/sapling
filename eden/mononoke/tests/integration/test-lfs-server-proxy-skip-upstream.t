@@ -39,7 +39,6 @@
 
   $ REPOID=1 lfs_import "$LFS_HELPER" "$(cat spec)"
   * using repo "lfs_repo" repoid RepositoryId(1) (glob)
-  *Reloading redacted config from configerator* (glob)
   * lfs_upload: importing blob Sha256(ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746) (glob)
   * lfs_upload: imported blob Sha256(ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746) (glob)
 

@@ -26,7 +26,6 @@
   $ cd "$TESTTMP"
   $ gitimport "$GIT_REPO" --derive-trees --derive-hg --hggit-compatibility --bonsai-git-mapping full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * GitRepo:*repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
   * 1 tree(s) are valid! (glob)
   * Hg: 0ecc922af7b11d796a715f3c093673914b060164: HgManifestId(HgNodeHash(Sha1(4f16e4ceeccf36b18e4a72e183c16a9bea650e1d))) (glob)
@@ -34,5 +33,4 @@
 
   $ mononoke_admin filestore is-chunked id 48ef00ac63821b09154b55f1b380d253f936afb076a873e1bcc1d137c8b5bab2
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * Reloading redacted config from configerator (glob)
   chunked

@@ -66,7 +66,6 @@ Make a new commit
 Move bookmark backwards
   $ REPOID=0 mononoke_admin bookmarks set master_bookmark "$C"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * Reloading redacted config from configerator (glob)
   * changeset resolved as: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)) (glob)
   * Current position of BookmarkName { bookmark: "master_bookmark" } is Some(ChangesetId(Blake2(830c5dcdb5335a4ecdda15afc927edd525c26d0a3d7f14c93ef5ecc48d0db532))) (glob)
 

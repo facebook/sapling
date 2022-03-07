@@ -22,7 +22,6 @@ Check bookmarks
   $ echo value > "$TESTTMP/value"
   $ mononoke_admin blobstore-upload --key somekey --value-file "$TESTTMP/value"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * writing 6 bytes to blobstore (glob)
   $ mononoke_admin blobstore-fetch somekey --raw-blob "$TESTTMP/fetched_value"
   * using blobstore: Fileblob { base: "$TESTTMP/blobstore/blobs", put_behaviour: Overwrite } (glob)

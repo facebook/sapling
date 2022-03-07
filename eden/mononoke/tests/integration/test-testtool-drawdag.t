@@ -32,7 +32,6 @@ The tool will print the commit hash of each commit.
   > # bookmark: M main
   > # bookmark: Z zzzz
   > EOF
-  *] Reloading redacted config from configerator (glob)
   A=1c68a7b9eb5c92651e6e08a2d15a811f539f4051a23bc16d8f3bec7b69cc2fb2
   B=f2133d7c1ed18900e4c2ce57aff0d32af25ba0d0de9128fa79056aea366cd46f
   C=0750cdede19930eeaaf9a5653156112e7b1ae382010a00936c6319bf92351ebb
@@ -72,7 +71,6 @@ need to match the previous graph (although it's probably a good idea).
   >     D0    |  # exists: D0 971c152b1c5d22763033d2fc23ac40c1e785a3c50df28e37b69bf188f2d949b5
   >           W0 # exists: W0 72706786c3e15ccc27917c68e0d5be053295585213f11748bec9ac1440d421e5
   > EOF
-  *] Reloading redacted config from configerator (glob)
   D0=971c152b1c5d22763033d2fc23ac40c1e785a3c50df28e37b69bf188f2d949b5
   D1=5d656cad8da7be07bf90202f578bd9855688da10bed44fd2b3d7f62e241abe75
   W0=72706786c3e15ccc27917c68e0d5be053295585213f11748bec9ac1440d421e5

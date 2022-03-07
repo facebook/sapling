@@ -180,7 +180,7 @@ impl InnerConfig {
         ctx: &CoreContext,
         blobstore: &dyn Blobstore,
     ) -> Result<Self> {
-        slog::info!(ctx.logger(), "Reloading redacted config from configerator");
+        slog::debug!(ctx.logger(), "Reloading redacted config from configerator");
         let map: HashMap<String, RedactedMetadata> = stream::iter(
             config
                 .all_redactions

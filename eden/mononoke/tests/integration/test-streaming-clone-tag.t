@@ -22,7 +22,6 @@ Try creating with a tag
   $ TAG=another_mainline
   $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg" --tag another_mainline
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * current sizes in database: index: 0, data: 0, tag: another_mainline, repo: repo (glob)
   * about to upload 1 entries, tag: another_mainline, repo: repo (glob)
   * inserting into streaming clone database, tag: another_mainline, repo: repo (glob)

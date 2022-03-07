@@ -47,10 +47,8 @@
 # Validate with and without LFS, see that it's the same both ways round.
   $ check_git_wc --csid 9008b77c0e045e165185b0b969833b825a24d386207ad05dc614238116a11aca --git-repo-path "${GIT_REPO}/.git" --git-commit c141531763860520767a348d160d1c1c02339218 --git-lfs --scheduled-max 2
   *] using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   $ check_git_wc --csid 9008b77c0e045e165185b0b969833b825a24d386207ad05dc614238116a11aca --git-repo-path "${GIT_REPO}/.git" --git-commit c141531763860520767a348d160d1c1c02339218 --scheduled-max 2
   *] using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
 
 # Add an LFS pointer
   $ cd "$GIT_REPO"
@@ -75,10 +73,8 @@
 # This time, LFS works, non-LFS fails because the git sha256 is of the pointer, not the content
   $ check_git_wc --csid ebb720a32798f440a3a998dd2863615011c558fd5bb9d77832cfb77b6e8321d2 --git-repo-path "${GIT_REPO}/.git" --git-commit 71ba3fb41d4d75215d50edc4c2061ff3f21225b8 --git-lfs --scheduled-max 2
   *] using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   $ check_git_wc --csid ebb720a32798f440a3a998dd2863615011c558fd5bb9d77832cfb77b6e8321d2 --git-repo-path "${GIT_REPO}/.git" --git-commit 71ba3fb41d4d75215d50edc4c2061ff3f21225b8 --scheduled-max 2
   *] using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   *] Execution error: file 'lfs-file' has hash 94cb9a4fb124ed218aeeaefa7927680d5a261652f400f9d4f6a4e729c995d088 in git and 5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03 in Mononoke (glob)
   Error: Execution failed
   [1]
@@ -86,13 +82,11 @@
 # With two commits present, validate the older git commit against newer Mononoke and vice-versa
   $ check_git_wc --csid 9008b77c0e045e165185b0b969833b825a24d386207ad05dc614238116a11aca --git-repo-path "${GIT_REPO}/.git" --git-commit 71ba3fb41d4d75215d50edc4c2061ff3f21225b8 --git-lfs --scheduled-max 2
   *] using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   *] Execution error: file 'lfs-file' in git but not Bonsai (glob)
   Error: Execution failed
   [1]
   $ check_git_wc --csid ebb720a32798f440a3a998dd2863615011c558fd5bb9d77832cfb77b6e8321d2 --git-repo-path "${GIT_REPO}/.git" --git-commit c141531763860520767a348d160d1c1c02339218 --git-lfs --scheduled-max 2
   *] using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   *] Execution error: File (root path)/lfs-file in Bonsai but not git (glob)
   Error: Execution failed
   [1]

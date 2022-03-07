@@ -31,7 +31,6 @@
 # Check that nothing happens if the filestore is not enabled
   $ mononoke_rechunker "$FILENODE"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
 
   $ ls "$TESTTMP/blobstore/blobs" | grep hgfilenode
   blob-repo0000.hgfilenode.sha1.92c09d364cd563132d6eb5f1424ff63523d51f73
@@ -39,7 +38,6 @@
 # Check that the rechunker complains about an unknown filenode
   $ mononoke_rechunker "ffffffffffffffffffffffffffffffffffffffff"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * Blob is missing: hgfilenode.sha1.ffffffffffffffffffffffffffffffffffffffff (glob)
   Error: Execution failed
   [1]
@@ -51,7 +49,6 @@
 
   $ mononoke_rechunker "$FILENODE"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
 
   $ ls "$TESTTMP/blobstore/blobs" | grep chunk | wc -l
   2

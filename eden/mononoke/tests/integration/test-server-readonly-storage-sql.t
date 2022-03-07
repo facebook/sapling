@@ -43,7 +43,6 @@ check the read sql path still works with readonly storage
 check that sql writes are blocked by readonly storage
   $ mononoke_admin --with-readonly-storage=true bookmarks set another_bookmark 26805aba1e600a82e93661149f2313866a221a7b 2>&1
   * using repo "repo" repoid * (glob)
-  * (glob)
   * changeset resolved as: * (glob)
   * Current position of BookmarkName { bookmark: "another_bookmark" } is None (glob)
   * While executing InsertBookmarks query (glob)

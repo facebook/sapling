@@ -35,14 +35,12 @@
   $ cd "$TESTTMP"
   $ gitimport "$GIT_REPO"  --bonsai-git-mapping import-tree-as-single-bonsai-changeset 69d481cfc9a21ef59b516c3de04cd742d059d345
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * found 3 file paths (glob)
   * imported as 4e4aec4571f5f1cafabf6e968c11ee99f3a5deab1292b23f6faddbbf1e19422e (glob)
 
 # Set master (gitimport does not do this yet)
   $ mononoke_admin bookmarks set master 4e4aec4571f5f1cafabf6e968c11ee99f3a5deab1292b23f6faddbbf1e19422e
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Current position of BookmarkName { bookmark: "master" } is None (glob)
 

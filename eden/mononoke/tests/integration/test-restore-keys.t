@@ -88,9 +88,7 @@ First run should fail, because we do not strip repo0000 prefix
   > --missing-keys-output "$TESTTMP"/missing \
   > --success-keys-output "$TESTTMP"/success
   * using repo "orig" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * using repo "backup" repoid RepositoryId(1) (glob)
-  *Reloading redacted config from configerator* (glob)
   * 29 keys to copy (glob)
   Error: failed to copy repo0000.alias.gitsha1.7371f47a6f8bd23a8fa1a8b2a9479cdd76380e54
   
@@ -105,9 +103,7 @@ Now run with ignore errors - it should not fail, but should not copy anything ei
   > --missing-keys-output "$TESTTMP"/missing \
   > --success-keys-output "$TESTTMP"/success 2>&1 | grep -v 'failed to copy'
   * using repo "orig" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * using repo "backup" repoid RepositoryId(1) (glob)
-  *Reloading redacted config from configerator* (glob)
   * 29 keys to copy (glob)
   * 2 keys processed (glob)
   * 4 keys processed (glob)
@@ -132,9 +128,7 @@ Now run with ignore errors - it should not fail, but should not copy anything ei
   > --missing-keys-output "$TESTTMP"/missing \
   > --success-keys-output "$TESTTMP"/success
   * using repo "orig" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * using repo "backup" repoid RepositoryId(1) (glob)
-  *Reloading redacted config from configerator* (glob)
   * 29 keys to copy (glob)
   * 2 keys processed (glob)
   * 4 keys processed (glob)

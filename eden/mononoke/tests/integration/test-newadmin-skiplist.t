@@ -37,7 +37,6 @@ setup configuration
   > # bookmark: M main
   > # bookmark: Q other
   > EOF
-  *] Reloading redacted config from configerator (glob)
   A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
   C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
@@ -59,13 +58,11 @@ setup configuration
 Check we can build a new skiplist from scratch [with explicitly
 provided blobstore key]
   $ mononoke_newadmin skiplist -R repo -k skiplist_5 build --exponent 2
-  *] Reloading redacted config from configerator (glob)
   *] creating a skiplist from scratch (glob)
   *] built 5 skiplist nodes (glob)
 
 Check we can build a new skiplist based on existing skiplist
   $ mononoke_newadmin skiplist -R repo -k skiplist_5 build --exponent 2
-  *] Reloading redacted config from configerator (glob)
   *] cmap size 5, parent nodecount 0, skip nodecount 5, maxsedgelen 1, maxpedgelen 0 (glob)
   *] skiplist graph has 5 entries (glob)
   *] built 5 skiplist nodes (glob)
@@ -73,20 +70,17 @@ Check we can build a new skiplist based on existing skiplist
 Check we can build a new skiplist from scratch [with blobstore
 key taken from repo config]
   $ mononoke_newadmin skiplist -R repo build --rebuild --exponent 3
-  *] Reloading redacted config from configerator (glob)
   *] creating a skiplist from scratch (glob)
   *] built 2 skiplist nodes (glob)
 
 Check we can read and display an existing skiplist [with explicitly
 provided blobstore key]
   $ mononoke_newadmin skiplist -R repo -k skiplist_5 read
-  *] Reloading redacted config from configerator (glob)
   *] cmap size 5, parent nodecount 0, skip nodecount 5, maxsedgelen 1, maxpedgelen 0 (glob)
   *] skiplist graph has 5 entries (glob)
 
 Check we can read and display an existing skiplist [with blobstore
 key taken from repo config]
   $ mononoke_newadmin skiplist -R repo read
-  *] Reloading redacted config from configerator (glob)
   *] cmap size 2, parent nodecount 0, skip nodecount 2, maxsedgelen 1, maxpedgelen 0 (glob)
   *] skiplist graph has 2 entries (glob)

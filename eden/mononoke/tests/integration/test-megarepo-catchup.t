@@ -116,7 +116,6 @@ blobimport
   > --deletion-chunk-size 3 \
   > user "deletion commit" 
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * total files to delete is 6 (glob)
   * created bonsai #0. Deriving hg changeset for it to verify its correctness (glob)

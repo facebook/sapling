@@ -66,22 +66,18 @@ Push files
 Censor file (file 'b' in commit '2cc2702dde1d7133c30a1ed763ee82c04befb237')
   $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 b --force --log-only
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   $ mononoke_admin redaction list 2cc2702dde1d7133c30a1ed763ee82c04befb237
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Listing redacted files for ChangesetId: HgChangesetId(HgNodeHash(Sha1(*))) (glob)
   * Please be patient. (glob)
   * [TASK]Censor b      : b (log only) (glob)
   $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 b --force
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   $ mononoke_admin redaction list 2cc2702dde1d7133c30a1ed763ee82c04befb237
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Listing redacted files for ChangesetId: HgChangesetId(HgNodeHash(Sha1(*))) (glob)
   * Please be patient. (glob)

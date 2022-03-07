@@ -62,9 +62,7 @@ Copy missing key from the healthy inner blobstore
   > --source-inner-blobstore-id 1 \
   > --target-inner-blobstore-id 0
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * 1 keys to copy (glob)
   * 1 keys processed (glob)
   * 1 keys were copied (glob)

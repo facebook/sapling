@@ -48,7 +48,6 @@
   $ cd "$TESTTMP"
   $ gitimport "$GIT_REPO" --derive-trees full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * GitRepo:*repo-git commit 1 of 5 - Oid:* => Bid:* (glob)
   * GitRepo:*repo-git commit 2 of 5 - Oid:* => Bid:* (glob)
   * GitRepo:*repo-git commit 3 of 5 - Oid:* => Bid:* (glob)
@@ -63,7 +62,6 @@
 # Set master (gitimport does not do this yet)
   $ mononoke_admin bookmarks set master 138f3627a8b764746a787d755cee5fb7134f631b63da40e97e515075f0a83dd1
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: ChangesetId(Blake2(138f3627a8b764746a787d755cee5fb7134f631b63da40e97e515075f0a83dd1)) (glob)
   * Current position of BookmarkName { bookmark: "master" } is None (glob)
 
@@ -91,11 +89,9 @@
 # Now, check that various Mononoke verification binaries work properly on this commit
   $ hghash="$(hg log -r . -T '{node}')"
   $ RUST_BACKTRACE=1 bonsai_verify hg-manifest "$hghash" 1
-  *Reloading redacted config from configerator* (glob)
   * 0ade4c953b0844653456906f5aaf8d3b1da94c37 total:1 bad:0 * (glob)
 
   $ bonsai_verify round-trip "$hghash"
-  *Reloading redacted config from configerator* (glob)
   * 100.00% valid, summary: , total: *, valid: *, errors: 0, ignored: 0 (glob)
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT HEX(filenode), HEX(linknode) FROM filenodes ORDER BY filenode DESC;"
@@ -113,7 +109,6 @@
   $ hg log -r 'all()' -T '{node}\n' > hashes
   $ regenerate_hg_filenodes --file 'hashes'
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * processed 5 (glob)
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT HEX(filenode), HEX(linknode) FROM filenodes ORDER BY filenode DESC;"

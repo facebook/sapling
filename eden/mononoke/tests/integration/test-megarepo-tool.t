@@ -63,7 +63,6 @@ move things in fbsource
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: * (glob)
   * Marked as public * (glob)
   * Setting bookmark BookmarkName { bookmark: "fbsource_move" } to point to * (glob)
@@ -76,7 +75,6 @@ move things in ovrsource in a stack
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: * (glob)
   * Marked as public * (glob)
   * Setting bookmark BookmarkName { bookmark: "ovrsource_move" } to point to * (glob)
@@ -118,7 +116,6 @@ move things in ovrsource in a stack
 merge things in both repos
   $ megarepo_tool merge fbsource_move ovrsource_move user "megarepo merge" --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark master
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: * (glob)
   * changeset resolved as: * (glob)
   * Creating a merge commit (glob)

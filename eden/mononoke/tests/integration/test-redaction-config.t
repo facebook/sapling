@@ -86,7 +86,6 @@ start mononoke
 Censor the redacted blob (file 'b' in commit '14961831bd3af3a6331fef7e63367d61cb6c9f6b')
   $ MONONOKE_EXEC_STAGE=admin mononoke_admin redaction create-key-list 14961831bd3af3a6331fef7e63367d61cb6c9f6b b --force | head -n 1 | sed 's/Redaction saved as: //g' > rs_1
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
   * changeset resolved as: * (glob)
   $ cat > "$REDACTION_CONF/redaction_sets" <<EOF
   > {
