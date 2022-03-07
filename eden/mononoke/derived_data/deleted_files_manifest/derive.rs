@@ -193,7 +193,15 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 (_, Some(mf_id)) => Ok(mf_id),
                 (_, None) => {
                     // there are no deleted files, need to create an empty root manifest
-                    match Manifest::copy_and_update_subentries(None, None, BTreeMap::new()).await {
+                    match Manifest::copy_and_update_subentries(
+                        ctx,
+                        blobstore,
+                        None,
+                        None,
+                        BTreeMap::new(),
+                    )
+                    .await
+                    {
                         Ok(mf) => {
                             Self::save_manifest(mf, ctx, blobstore, sender.clone(), created.clone())
                                 .await
@@ -333,8 +341,8 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 // and modify only a few fields. Important if we're doing few
                 // changes on a big node and need to optimise.
                 for (path, node) in &mut recurse_entries {
-                    if let Some(subentry_id) = parent.lookup(path).await? {
-                        node.parents.insert(*subentry_id);
+                    if let Some(subentry_id) = parent.lookup(ctx, blobstore, path).await? {
+                        node.parents.insert(subentry_id);
                     }
                 }
 
@@ -348,7 +356,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 // merge all different subentries. So let's just look at all of them.
                 for parent in parent_manifests {
                     parent
-                        .into_subentries()
+                        .into_subentries(ctx, blobstore)
                         .try_for_each(|(path, mf_id)| {
                             let entry = recurse_entries.entry(path.clone()).or_insert_with(|| {
                                 DeletedManifestUnfoldNode {
@@ -416,6 +424,8 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             DeletedManifestChangeType::Reuse => Ok(change.copy_subentries_from.map(|mf| mf.id())),
             DeletedManifestChangeType::CreateDeleted => Self::save_manifest(
                 Manifest::copy_and_update_subentries(
+                    ctx,
+                    blobstore,
                     change.copy_subentries_from,
                     Some(cs_id),
                     subentries_to_update,
@@ -430,6 +440,8 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             .map(Some),
             DeletedManifestChangeType::RemoveIfNowEmpty => {
                 let manifest = Manifest::copy_and_update_subentries(
+                    ctx,
+                    blobstore,
                     change.copy_subentries_from,
                     None,
                     subentries_to_update,

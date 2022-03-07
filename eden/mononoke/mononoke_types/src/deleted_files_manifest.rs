@@ -6,6 +6,8 @@
  */
 
 use anyhow::{Context, Result};
+use blobstore::Blobstore;
+use context::CoreContext;
 use fbthrift::compact_protocol;
 use futures::stream::{self, BoxStream, StreamExt};
 use sorted_vector_map::SortedVectorMap;
@@ -101,7 +103,11 @@ impl DeletedManifestCommon for DeletedManifest {
         self.is_deleted()
     }
 
-    fn into_subentries(self) -> BoxStream<'static, Result<(MPathElement, Self::Id)>> {
+    fn into_subentries(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &impl Blobstore,
+    ) -> BoxStream<'static, Result<(MPathElement, Self::Id)>> {
         stream::iter(self.into_subentries().map(Ok)).boxed()
     }
 
@@ -109,11 +115,18 @@ impl DeletedManifestCommon for DeletedManifest {
         self.get_manifest_id()
     }
 
-    async fn lookup(&self, basename: &MPathElement) -> Result<Option<&Self::Id>> {
-        Ok(self.lookup(basename))
+    async fn lookup(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &impl Blobstore,
+        basename: &MPathElement,
+    ) -> Result<Option<Self::Id>> {
+        Ok(self.lookup(basename).cloned())
     }
 
     async fn copy_and_update_subentries(
+        _ctx: &CoreContext,
+        _blobstore: &impl Blobstore,
         current: Option<Self>,
         linknode: Option<ChangesetId>,
         subentries_to_update: BTreeMap<MPathElement, Option<Self::Id>>,

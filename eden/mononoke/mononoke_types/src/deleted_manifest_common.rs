@@ -6,7 +6,8 @@
  */
 
 use anyhow::Result;
-use blobstore::Loadable;
+use blobstore::{Blobstore, Loadable};
+use context::CoreContext;
 use futures::stream::BoxStream;
 use std::collections::BTreeMap;
 
@@ -23,17 +24,28 @@ pub trait DeletedManifestCommon:
     /// Create a new deleted manifest by copying subentries from `current` and then
     /// adding the subentries from `subentries_to_add` (where `None` means "remove")
     async fn copy_and_update_subentries(
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
         current: Option<Self>,
         linknode: Option<ChangesetId>,
         subentries_to_add: BTreeMap<MPathElement, Option<Self::Id>>,
     ) -> Result<Self>;
 
     /// Lookup a specific subentry on this manifest.
-    async fn lookup(&self, basename: &MPathElement) -> Result<Option<&Self::Id>>;
+    async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+        basename: &MPathElement,
+    ) -> Result<Option<Self::Id>>;
 
     /// List all subentries on this manifest. Use with care, some manifests can
     /// have hundreds of thousands of subentries.
-    fn into_subentries(self) -> BoxStream<'static, Result<(MPathElement, Self::Id)>>;
+    fn into_subentries<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+    ) -> BoxStream<'a, Result<(MPathElement, Self::Id)>>;
 
     /// Returns whether this node has no subentries.
     fn is_empty(&self) -> bool;
