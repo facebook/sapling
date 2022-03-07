@@ -1748,12 +1748,15 @@ EdenServiceHandler::future_setPathObjectId(
     std::unique_ptr<SetPathObjectIdParams> params) {
 #ifndef _WIN32
   auto mountPoint = params->get_mountPoint();
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG1, mountPoint);
   auto mountPath = AbsolutePathPiece{mountPoint};
   auto edenMount = server_->getMount(mountPath);
   // TODO: This function should operate with ObjectId instead of RootId.
+  auto repoPath = params->get_path();
   auto parsedRootId =
       edenMount->getObjectStore()->parseRootId(params->get_objectId());
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG1, mountPoint, repoPath, parsedRootId, params->get_type());
+
   auto& fetchContext = helper->getFetchContext();
   if (auto requestInfo = params->requestInfo_ref()) {
     fetchContext.updateRequestInfo(std::move(*requestInfo));
@@ -1762,7 +1765,7 @@ EdenServiceHandler::future_setPathObjectId(
       std::move(helper),
       edenMount
           ->setPathObjectId(
-              RelativePathPiece{params->get_path()},
+              RelativePathPiece{repoPath},
               parsedRootId,
               params->get_type(),
               params->get_mode(),
