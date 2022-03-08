@@ -17,7 +17,7 @@ use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use derived_data_manager::BonsaiDerivable;
-use derived_data_utils::{derived_data_utils, DerivedUtils};
+use derived_data_utils::{derived_data_utils, DerivedUtils, DERIVED_DATA_DEPS};
 use fsnodes::RootFsnodeId;
 use futures::{
     future::{try_join, try_join_all},
@@ -32,6 +32,7 @@ use readonlyblob::ReadOnlyBlobstore;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::{info, warn};
 use std::sync::Arc;
+use std::sync::Once;
 use unodes::RootUnodeManifestId;
 
 use crate::commit_discovery::CommitDiscoveryOptions;
@@ -65,6 +66,7 @@ pub async fn validate(
     let opts = regenerate::DeriveOptions::from_matches(sub_m)?;
 
     let validate_chunk_size = args::get_usize(&sub_m, ARG_VALIDATE_CHUNK_SIZE, 10000);
+    let warn_once = Once::new();
 
     info!(ctx.logger(), "Started validation");
     for chunk in csids.chunks(validate_chunk_size) {
@@ -94,14 +96,17 @@ pub async fn validate(
         // already exists in underlying mapping. This option disables this feature.
         membonsaihgmapping.set_save_noop_writes(true);
 
-        regenerate::regenerate_derived_data(
-            &ctx,
-            &repo,
-            chunk.clone(),
-            vec![derived_data_type.to_string()],
-            &opts,
-        )
-        .await?;
+        let types = std::iter::once(derived_data_type.to_string())
+            .chain(
+                DERIVED_DATA_DEPS
+                    .get(derived_data_type)
+                    .unwrap()
+                    .iter()
+                    .map(|t| t.to_string()),
+            )
+            .collect::<Vec<_>>();
+
+        regenerate::regenerate_derived_data(ctx, &repo, chunk.clone(), types, &opts).await?;
 
         {
             let cache = memblobstore.get_cache().lock().unwrap();
@@ -118,7 +123,7 @@ pub async fn validate(
         });
         let rederived_utils = &derived_data_utils(ctx.fb, &repo, derived_data_type)?;
 
-        borrowed!(ctx, orig_repo, repo);
+        borrowed!(ctx, orig_repo, repo, warn_once);
         stream::iter(chunk)
             .map(Ok)
             .try_for_each_concurrent(100, |csid| async move {
@@ -133,7 +138,7 @@ pub async fn validate(
                     return Err(anyhow!("mismatch in {}: {} vs {}", csid, real, rederived));
                 };
 
-                validate_generated_data(&ctx, &orig_repo, real_derived_utils, csid, repo)
+                validate_generated_data(ctx, orig_repo, warn_once, real_derived_utils, csid, repo)
                     .await
                     .with_context(|| format!("failed validating generated data for {}", csid))
             })
@@ -147,6 +152,7 @@ pub async fn validate(
 async fn validate_generated_data<'a>(
     ctx: &'a CoreContext,
     real_repo: &'a BlobRepo,
+    warn_once: &Once,
     real_derived_utils: &'a Arc<dyn DerivedUtils>,
     cs_id: ChangesetId,
     mem_blob_repo: &'a BlobRepo,
@@ -161,10 +167,12 @@ async fn validate_generated_data<'a>(
     } else if real_derived_utils.name() == MappedHgChangesetId::NAME {
         validate_hgchangesets(ctx, real_repo, cs_id, &mem_blob).await?;
     } else {
-        warn!(
-            ctx.logger(),
-            "Validating generated blobs is not supported for {}, so no validation of generated blobs was done!",
-            real_derived_utils.name()
+        warn_once.call_once(||
+            warn!(
+                ctx.logger(),
+                "Validating generated blobs is not supported for {}, so no validation of generated blobs was done!",
+                real_derived_utils.name()
+            )
         );
     }
 
