@@ -201,11 +201,7 @@ Try to sync it automatically, it's expected to fail
 Now sync with the tool
   $ cd "$TESTTMP"
   $ megarepo_tool_multirepo --source-repo-id 1 --target-repo-id 0 sync-diamond-merge with_merge_master --bookmark master_bookmark |& grep -v "using repo"
-  *] Initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
-  *] Done initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
   * changeset resolved as: ChangesetId(Blake2(46c0f70c6300f4168cb70321839ac0079c74b6d3295adb81eeb1932be4f80e9d)) (glob)
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * Preparing to sync a merge commit 46c0f70c6300f4168cb70321839ac0079c74b6d3295adb81eeb1932be4f80e9d... (glob)
   * 1 new commits are going to be merged in (glob)
   * syncing commit from new branch 0feeed653ec98bb533a2ad7fc8940ce07c4105326f07b20fcc68ebac0607abf2 (glob)
@@ -213,8 +209,6 @@ Now sync with the tool
   * It is recommended to run 'mononoke_admin crossrepo verify-wc' for f38496fbd160eaf1bf6ebad1f317635ea818000bb3d634bba6eefa2c80b9666a! (glob)
 -- a mapping should've been created for the synced merge commit
   $ mononoke_admin_source_target 0 1 crossrepo map master_bookmark |& grep -v "using repo"
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * changeset resolved as: ChangesetId(Blake2(f38496fbd160eaf1bf6ebad1f317635ea818000bb3d634bba6eefa2c80b9666a)) (glob)
   RewrittenAs([(ChangesetId(Blake2(46c0f70c6300f4168cb70321839ac0079c74b6d3295adb81eeb1932be4f80e9d)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
   $ flush_mononoke_bookmarks
@@ -250,8 +244,6 @@ Merge with preserved ancestors
 
 -- check the mapping for p2's parent
   $ mononoke_admin_source_target 1 0 crossrepo map $(hg log -T "{node}" -r with_merge_pre_big_merge)
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4)) (glob)
@@ -285,14 +277,6 @@ Merge with preserved ancestors
 -- sync p1
   $ cd "$TESTTMP"
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit $(hg log -T "{node}" -r pre_merge_p1 --cwd "$TESTTMP/with_merge_hg") |& grep -v "using repo"
-  *] Initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
-  *] Done initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
-  *] Initializing CfgrLiveCommitSyncConfig, repo: meg_mon (glob)
-  *] Done initializing CfgrLiveCommitSyncConfig, repo: meg_mon (glob)
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * changeset resolved as: ChangesetId(Blake2(87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d)) (glob)
   * Checking if 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d is already synced 1->0 (glob)
   * 1 unsynced ancestors of 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d (glob)
@@ -300,8 +284,6 @@ Merge with preserved ancestors
   * changeset 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d synced as 283f929b3e2c7d299920a8ee18b0928191fb3f5d9cc530f9fb7c0eb578e45d70 in * (glob)
   * successful sync (glob)
   $ mononoke_admin_source_target 1 0 crossrepo map 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d)) (glob)
@@ -311,12 +293,8 @@ Merge with preserved ancestors
   $ cd "$TESTTMP"
   $ megarepo_tool_multirepo --source-repo-id 1 --target-repo-id 0 sync-diamond-merge with_merge_master --bookmark master_bookmark
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
-  *] Initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
-  *] Done initializing CfgrLiveCommitSyncConfig, repo: with_merge_mon (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c)) (glob)
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * Preparing to sync a merge commit 3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c... (glob)
   * 2 new commits are going to be merged in (glob)
   * syncing commit from new branch d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4 (glob)
@@ -326,8 +304,6 @@ Merge with preserved ancestors
 
 -- check that p2 was synced as preserved (note identical hashes)
   $ mononoke_admin_source_target 1 0 crossrepo map $(hg log -r pre_merge_p2 -T "{node}" --cwd "$TESTTMP/with_merge_hg")
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(89c0603366c60ae4bf8d8dca6da7581c741b7e89a6fcc3f49a44fdd248de3b1d)) (glob)
@@ -335,8 +311,6 @@ Merge with preserved ancestors
 
 -- check that merge was synced
   $ mononoke_admin_source_target 1 0 crossrepo map with_merge_master
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c)) (glob)
@@ -344,8 +318,6 @@ Merge with preserved ancestors
 
 --verify the working copy
   $ mononoke_admin_source_target 1 0 crossrepo verify-wc master_bookmark
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(a530e2a1eb7ed81c57328f1c0b8fb20656190c5c272d94f7bf768a689c83670d)) (glob)

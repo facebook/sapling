@@ -15,7 +15,7 @@ use metaconfig_parser::Convert;
 use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig};
 use mononoke_types::RepositoryId;
 use pushredirect_enable::types::{MononokePushRedirectEnable, PushRedirectEnableState};
-use slog::{debug, error, info, Logger};
+use slog::{debug, error, Logger};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
@@ -114,7 +114,7 @@ pub struct CfgrLiveCommitSyncConfig {
 
 impl CfgrLiveCommitSyncConfig {
     pub fn new(logger: &Logger, config_store: &ConfigStore) -> Result<Self, Error> {
-        info!(logger, "Initializing CfgrLiveCommitSyncConfig");
+        debug!(logger, "Initializing CfgrLiveCommitSyncConfig");
         let config_handle_for_push_redirection =
             config_store.get_config_handle(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string())?;
         debug!(logger, "Initialized PushRedirect configerator config");
@@ -124,7 +124,7 @@ impl CfgrLiveCommitSyncConfig {
             logger,
             "Initialized all commit sync versions configerator config"
         );
-        info!(logger, "Done initializing CfgrLiveCommitSyncConfig");
+        debug!(logger, "Done initializing CfgrLiveCommitSyncConfig");
         Ok(Self {
             config_handle_for_all_versions,
             config_handle_for_push_redirection,

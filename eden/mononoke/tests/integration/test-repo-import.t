@@ -62,12 +62,8 @@
   > --bookmark-suffix "new_repo" \
   > --dest-bookmark master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
-  *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   * The importing bookmark name is: repo_import_new_repo. * (glob)
   * The destination bookmark name is: master_bookmark. * (glob)
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * Execution error: Failed to fetch common commit sync config: RepositoryId(0) is not a part of any configs (glob)
   Error: Execution failed
   [1]
@@ -89,12 +85,8 @@
   > --bookmark-suffix "new_repo" \
   > --dest-bookmark master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
-  *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   * The importing bookmark name is: repo_import_new_repo. * (glob)
   * The destination bookmark name is: master_bookmark. * (glob)
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * There is no additional setup step needed! (glob)
 
 # run segmented changelog tailer on master bookmark
@@ -123,10 +115,6 @@
   > --commit-message "merging" \
   > --recovery-file-path "$GIT_REPO/recovery_file.json"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
-  *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * Started importing git commits to Mononoke (glob)
   * GitRepo:* commit 1 of 2 - Oid:* => Bid:* (glob)
   * GitRepo:* commit 2 of 2 - Oid:* => Bid:* (glob)

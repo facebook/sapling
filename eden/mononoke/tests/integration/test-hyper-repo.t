@@ -102,11 +102,7 @@ now tail it to the hyper repo
   $ REPOID=2 mononoke_hyper_repo_builder master_bookmark main_bookmark tail --once
   * using repo "hyper_repo" repoid RepositoryId(2) (glob)
   * using repo "*" repoid RepositoryId(*) (glob)
-  *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
-  *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   * using repo "*" repoid RepositoryId(*) (glob)
-  *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
-  *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   * found 1 commits to sync from first_source_repo repo (glob)
   * preparing 1 commits from Some(ChangesetId(Blake2(16cfc4585314d75292e61e561fa738d7031a21878cb3308d3df815ec2475b72d))) to Some(ChangesetId(Blake2(16cfc4585314d75292e61e561fa738d7031a21878cb3308d3df815ec2475b72d))), repo first_source_repo (glob)
   * started syncing 1 file contents (glob)
@@ -117,11 +113,7 @@ run again, make sure nothing happens
   $ REPOID=2 mononoke_hyper_repo_builder master_bookmark main_bookmark tail --once
   * using repo "hyper_repo" repoid RepositoryId(2) (glob)
   * using repo "*" repoid RepositoryId(*) (glob)
-  *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
-  *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
   * using repo "*" repoid RepositoryId(*) (glob)
-  *] Initializing CfgrLiveCommitSyncConfig, repo: * (glob)
-  *] Done initializing CfgrLiveCommitSyncConfig, repo: * (glob)
 
   $ REPOID=2 mononoke_hyper_repo_builder master_bookmark main_bookmark validate main_bookmark |& grep 'all is well'
   * all is well! (glob)

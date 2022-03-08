@@ -12,14 +12,10 @@ setup configerator configs
 
 test various admin commands
   $ REPOID=0 mononoke_admin crossrepo config list
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
   TEST_VERSION_NAME
   TEST_VERSION_NAME_OLD
 
   $ REPOID=0 mononoke_admin crossrepo config list --with-contents
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
   TEST_VERSION_NAME:
     large repo: 0
     common pushrebase bookmarks: [BookmarkName { bookmark: "master_bookmark" }]
@@ -57,8 +53,6 @@ test various admin commands
   
   
   $ REPOID=0 mononoke_admin crossrepo config by-version TEST_VERSION_NAME_OLD
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
   large repo: 0
   common pushrebase bookmarks: [BookmarkName { bookmark: "master_bookmark" }]
   version name: TEST_VERSION_NAME_OLD
