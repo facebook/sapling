@@ -167,6 +167,16 @@ impl MutableRenames {
         Ok(())
     }
 
+    async fn has_rename(&self, ctx: &CoreContext, dst_cs_id: ChangesetId) -> Result<bool, Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+
+        let rename_targets =
+            HasRenameCheck::query(&self.store.read_connection, &self.repo_id, &dst_cs_id).await?;
+
+        Ok(!rename_targets.is_empty())
+    }
+
     pub async fn get_rename(
         &self,
         ctx: &CoreContext,
@@ -175,6 +185,10 @@ impl MutableRenames {
     ) -> Result<Option<MutableRenameEntry>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
+
+        if !self.has_rename(ctx, dst_cs_id).await? {
+            return Ok(None);
+        }
 
         let dst_path_bytes = path_bytes_from_mpath(dst_path.as_ref());
         let dst_path_hash = PathHashBytes::new(&dst_path_bytes);
@@ -249,6 +263,18 @@ queries! {
         WHERE mutable_renames.repo_id = {repo_id}
            AND mutable_renames.dst_cs_id = {dst_cs_id}
            AND  mutable_renames.dst_path_hash = {dst_path_hash}
+        "
+    }
+
+    read HasRenameCheck(repo_id: RepositoryId, dst_cs_id: ChangesetId) -> (ChangesetId) {
+        "
+        SELECT
+            mutable_renames.src_cs_id
+        FROM mutable_renames
+        WHERE
+            mutable_renames.repo_id = {repo_id}
+           AND mutable_renames.dst_cs_id = {dst_cs_id}
+        LIMIT 1
         "
     }
 }
