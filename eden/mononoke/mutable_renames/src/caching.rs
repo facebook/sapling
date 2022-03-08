@@ -6,7 +6,7 @@
  */
 
 use abomonation_derive::Abomonation;
-use anyhow::Error;
+use anyhow::{Context, Error};
 use async_trait::async_trait;
 use bytes::Bytes;
 use cachelib::VolatileLruCachePool;
@@ -37,7 +37,11 @@ impl CacheHandlers {
     pub fn new(fb: FacebookInit, pool: VolatileLruCachePool) -> Result<Self, Error> {
         let memcache = MemcacheClient::new(fb)?.into();
         let presence_cachelib = pool.into();
-        let presence_keygen = KeyGen::new("scm.mononoke.mutable_renames.present", CODEVER, 0); // FIXME: Sitever needs fixing up to come from tunables
+        let sitever = tunables::tunables()
+            .get_mutable_renames_sitever()
+            .try_into()
+            .context("While converting from i64 to u32 sitever")?;
+        let presence_keygen = KeyGen::new("scm.mononoke.mutable_renames.present", CODEVER, sitever);
         Ok(Self {
             memcache,
             presence_cachelib,
