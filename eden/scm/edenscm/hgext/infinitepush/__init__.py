@@ -210,8 +210,6 @@ def pushbackupbundle(ui, repo, other, outgoing, bookmarks):
     try:
         bundler = _createbundler(ui, repo, other)
         bundler.addparam("infinitepush", "True")
-        pushvarspart = bundler.newpart("pushvars")
-        pushvarspart.addparam("BYPASS_READONLY", "True", mandatory=False)
 
         backup = False
 

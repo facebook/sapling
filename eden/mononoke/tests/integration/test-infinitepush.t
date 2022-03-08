@@ -282,9 +282,8 @@ Pushbackup also works
   007299f6399f84ad9c3b269137902d47d908936d
   2cfeca6399fdb0084a6eba69275ea7aeb1d07667
   sending unbundle command
-  bundle2-output-bundle: "HG20", (1 params) 4 parts total
+  bundle2-output-bundle: "HG20", (1 params) 3 parts total
   bundle2-output-part: "replycaps" * bytes payload (glob)
-  bundle2-output-part: "pushvars" (params: 1 advisory) empty payload
   bundle2-output-part: "B2X:INFINITEPUSH" (params: 1 advisory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   commitcloud: backed up 1 commit
