@@ -1257,6 +1257,11 @@ folly::Try<folly::Unit> PrjfsChannel::addDirectoryPlaceholder(
           FMT_STRING(
               "Couldn't add a placeholder for: {}, as it triggered a recursive EdenFS call"),
           path);
+    } else if (result == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND)) {
+      // If EdenFS happens to be invalidating a directory that is no longer
+      // present in the destination commit, PrjMarkDirectoryAsPlaceholder would
+      // trigger a recursive lookup call and fail, raising this error. This is
+      // harmless and thus we can just ignore.
     } else {
       return folly::Try<folly::Unit>{makeHResultErrorExplicit(
           result,
