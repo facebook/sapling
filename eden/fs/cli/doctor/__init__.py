@@ -355,7 +355,7 @@ class EdenDoctor(EdenDoctorChecker):
             return 0
 
         out.write(
-            "Ask in the Eden Users group if you need help fixing issues with Eden:\n"
+            "Ask in the EdenFS Users group if you need help fixing issues with EdenFS:\n"
             "https://fb.facebook.com/groups/eden.users/\n"
         )
         return 1
@@ -364,7 +364,8 @@ class EdenDoctor(EdenDoctorChecker):
 class EdenfsNotHealthy(Problem):
     def __init__(self) -> None:
         super().__init__(
-            "Eden is not running.", remediation="To start Eden, run:\n\n    eden start"
+            "EdenFS is not running.",
+            remediation="To start EdenFS, run:\n\n    eden start",
         )
 
 
@@ -380,24 +381,24 @@ class EdenfsStarting(Problem):
     def __init__(self) -> None:
         remediation = '''\
 Please wait for edenfs to finish starting.
-If Eden seems to be taking too long to start you can try restarting it
+If EdenFS seems to be taking too long to start you can try restarting it
 with "eden restart"'''
-        super().__init__("Eden is currently still starting.", remediation=remediation)
+        super().__init__("EdenFS is currently still starting.", remediation=remediation)
 
 
 class EdenfsStopping(Problem):
     def __init__(self) -> None:
         remediation = """\
-Either wait for edenfs to exit, or to forcibly kill Eden, run:
+Either wait for edenfs to exit, or to forcibly kill EdenFS, run:
 
     eden stop --kill"""
-        super().__init__("Eden is currently shutting down.", remediation=remediation)
+        super().__init__("EdenFS is currently shutting down.", remediation=remediation)
 
 
 class EdenfsUnexpectedStatus(Problem):
     def __init__(self, status: config_mod.HealthStatus) -> None:
         msg = f"Unexpected health status reported by edenfs: {status}"
-        remediation = 'You can try restarting Eden by running "eden restart"'
+        remediation = 'You can try restarting EdenFS by running "eden restart"'
         super().__init__(msg, remediation=remediation)
 
 
@@ -562,7 +563,7 @@ the on-disk state in Eden's configuration file:
 - Running state directory:    {checkout_info.running_state_dir}
 - Configured state directory: {checkout_info.configured_state_dir}"""
         remediation = """\
-Running `eden restart` will cause Eden to restart and use the data from the
+Running `eden restart` will cause EdenFS to restart and use the data from the
 on-disk configuration."""
         super().__init__(msg, remediation)
 
@@ -675,7 +676,7 @@ Run "cd / && cd -" to update your shell's working directory."""
 def check_for_working_directory_problem() -> Optional[Problem]:
     # Report an issue if the working directory points to a stale mount point
     if working_directory_was_stale:
-        msg = "Your current working directory appears to be a stale Eden mount point"
+        msg = "Your current working directory appears to be a stale EdenFS mount point"
         return StaleWorkingDirectory(msg)
 
     # If the $PWD environment variable is set, confirm that it points our current
@@ -684,8 +685,8 @@ def check_for_working_directory_problem() -> Optional[Problem]:
     # This helps catch problems where the current working directory has been replaced
     # with a new mount point but the user hasn't cd'ed into the new mount yet.  For
     # instance this can happen if the user cd'ed into a checkout directory before Eden
-    # was running, and then started Eden.  The user will still need to cd again to see
-    # the Eden checkout contents.
+    # was running, and then started EdenFS.  The user will still need to cd again to see
+    # the EdenFS checkout contents.
     pwd = os.environ.get("PWD")
     if pwd is None:
         # If $PWD isn't set we can't check anything else
@@ -714,8 +715,8 @@ def check_for_working_directory_problem() -> Optional[Problem]:
 
     msg = """\
 Your current working directory is out-of-date.
-This can happen if you have (re)started Eden but your shell is still pointing to
-the old directory from before the Eden checkouts were mounted.
+This can happen if you have (re)started EdenFS but your shell is still pointing to
+the old directory from before the EdenFS checkouts were mounted.
 """
     return StaleWorkingDirectory(msg)
 

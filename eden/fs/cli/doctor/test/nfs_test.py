@@ -48,7 +48,7 @@ class NfsTest(DoctorTestBase):
         expected = f"""<yellow>- Found problem:<reset>
 Eden's state directory is on an NFS file system: {instance.state_dir}
   This will likely cause performance problems and/or other errors.
-The most common cause for this is if your ~/local symlink does not point to local disk.  Make sure that ~/local is a symlink pointing to local disk and then restart Eden.
+The most common cause for this is if your ~/local symlink does not point to local disk.  Make sure that ~/local is a symlink pointing to local disk and then run `eden restart`.
 
 Checking {checkout.path}
 <yellow>- Found problem:<reset>
@@ -78,7 +78,7 @@ The Mercurial data directory for {checkout.path}/.hg/sharedpath is at {instance.
         out = f"""<yellow>- Found problem:<reset>
 Eden's state directory is on an NFS file system: {v.instance.state_dir}
   This will likely cause performance problems and/or other errors.
-The most common cause for this is if your ~/local symlink does not point to local disk.  Make sure that ~/local is a symlink pointing to local disk and then restart Eden.
+The most common cause for this is if your ~/local symlink does not point to local disk.  Make sure that ~/local is a symlink pointing to local disk and then run `eden restart`.
 
 Checking {v.client_path}
 <yellow>Discovered 1 problem during --dry-run<reset>
@@ -111,7 +111,7 @@ The Mercurial data directory for {v.client_path}/.hg/sharedpath is at {v.shared_
         out = f"""<yellow>- Found problem:<reset>
 Eden's state directory is on an NFS file system: {v.instance.state_dir}
   This will likely cause performance problems and/or other errors.
-The most common cause for this is if your ~/local symlink does not point to local disk.  Make sure that ~/local is a symlink pointing to local disk and then restart Eden.
+The most common cause for this is if your ~/local symlink does not point to local disk.  Make sure that ~/local is a symlink pointing to local disk and then run `eden restart`.
 
 Checking {v.client_path}
 <yellow>- Found problem:<reset>

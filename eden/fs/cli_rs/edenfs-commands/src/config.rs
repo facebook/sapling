@@ -16,7 +16,7 @@ use edenfs_error::Result;
 use crate::ExitCode;
 
 #[derive(Parser, Debug)]
-#[clap(about = "Query Eden configuration")]
+#[clap(about = "Query EdenFS configuration")]
 pub struct ConfigCmd {}
 
 #[async_trait]

@@ -365,7 +365,7 @@ class Overlay:
                 #   contain allocated inode numbers.  We still recurse into the
                 #   directory in this case.  This makes sure we remove the overlay files
                 #   when remove=True, and also ensures that we will find any
-                #   materialized file data inside this subdirectory if Eden crashed in
+                #   materialized file data inside this subdirectory if EdenFS crashed in
                 #   the middle of trying to materialize a file but before it marked the
                 #   parent directories materialized.
                 # - Even for files we can have the same race on crash: eden may have

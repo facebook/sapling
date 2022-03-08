@@ -73,7 +73,7 @@ class MountTable(abc.ABC):
                 # Even if the FUSE process is shut down, the lstat call will succeed if
                 # the stat result is cached. Append a random string to avoid that. In a
                 # better world, this code would bypass the cache by opening a handle
-                # with O_DIRECT, but Eden does not support O_DIRECT.
+                # with O_DIRECT, but EdenFS does not support O_DIRECT.
                 os.lstat(os.path.join(path, hex(random.getrandbits(32))[2:].encode()))
             except OSError as e:
                 if e.errno == errno.ENOENT:

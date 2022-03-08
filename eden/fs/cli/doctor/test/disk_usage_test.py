@@ -57,7 +57,7 @@ class DiskUsageTest(DoctorTestBase):
         self.assertEqual(
             problems[0].description(),
             "/ has only 512000000 bytes available. "
-            "Eden lazily loads your files and needs enough disk "
+            "EdenFS lazily loads your files and needs enough disk "
             "space to store these files when loaded.",
         )
         self.assertEqual(problems[0].severity(), doctor.ProblemSeverity.ERROR)
@@ -69,7 +69,7 @@ class DiskUsageTest(DoctorTestBase):
         self.assertEqual(
             problems[0].description(),
             "/ is 98.00% full. "
-            "Eden lazily loads your files and needs enough disk "
+            "EdenFS lazily loads your files and needs enough disk "
             "space to store these files when loaded.",
         )
         self.assertEqual(problems[0].severity(), doctor.ProblemSeverity.ADVICE)
@@ -81,7 +81,7 @@ class DiskUsageTest(DoctorTestBase):
         self.assertEqual(
             problems[0].description(),
             "/ has only 512000000 bytes available. "
-            "Eden lazily loads your files and needs enough disk "
+            "EdenFS lazily loads your files and needs enough disk "
             "space to store these files when loaded.",
         )
         self.assertEqual(problems[0].severity(), doctor.ProblemSeverity.ERROR)
@@ -103,7 +103,7 @@ class DiskUsageTest(DoctorTestBase):
         self.assertEqual(
             problems[0].description(),
             "/ has only 512000000 bytes available. "
-            "Eden lazily loads your files and needs enough disk "
+            "EdenFS lazily loads your files and needs enough disk "
             "space to store these files when loaded. Ask your administrator "
             "for help.",
         )
@@ -119,7 +119,7 @@ class DiskUsageTest(DoctorTestBase):
         self.assertEqual(
             problems[0].description(),
             "/ is 98.00% full. "
-            "Eden lazily loads your files and needs enough disk "
+            "EdenFS lazily loads your files and needs enough disk "
             "space to store these files when loaded. Ask your administrator "
             "for help.",
         )

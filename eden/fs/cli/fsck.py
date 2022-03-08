@@ -310,7 +310,7 @@ class MissingNextInodeNumber(Error):
         self.next_inode_number = next_inode_number
 
     def __str__(self) -> str:
-        # Eden deletes the next-inode-number while the checkout is mounted,
+        # EdenFS deletes the next-inode-number while the checkout is mounted,
         # so if it is missing it just means that the checkout wasn't cleanly unmounted.
         # This is pretty common in situations where the user is running fsck...
         return f"edenfs appears to have been shut down uncleanly"
@@ -412,7 +412,7 @@ class FilesystemChecker:
                 if self._overlay_locked:
                     self._add_error(MissingNextInodeNumber(expected_next_inode_number))
                 else:
-                    # If we couldn't get the overlay lock then Eden is probably still
+                    # If we couldn't get the overlay lock then EdenFS is probably still
                     # running, so it's normal that the max inode number file does not
                     # exist.
                     pass

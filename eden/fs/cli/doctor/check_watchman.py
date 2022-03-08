@@ -60,7 +60,7 @@ class IncorrectWatchmanWatch(FixableProblem):
 
     def perform_fix(self) -> None:
         # Delete the old watch and try to re-establish it. Hopefully it will be
-        # an Eden watch this time.
+        # an EdenFS watch this time.
         _call_watchman(["watch-del", self._path])
         watch_details = _call_watchman(["watch-project", self._path])
         if watch_details.get("watcher") != "eden":
@@ -146,7 +146,7 @@ def check_nuclide_subscriptions(
     # connected_nuclide_roots.
     #
     # TODO(mbolin): Come up with a more stable contract than including a
-    # hardcoded list of Nuclide subscription names in here because Eden and
+    # hardcoded list of Nuclide subscription names in here because EdenFS and
     # Nuclide releases are not synced. This is admittedly a stopgap measure:
     # the primary objective is to figure out how Eden/Nuclide gets into
     # this state to begin with and prevent it.

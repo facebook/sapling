@@ -28,16 +28,16 @@ class StateDirOnNFS(Problem):
             f"  This will likely cause performance problems and/or other errors."
         )
 
-        # On FB devservers the default Eden state directory path is ~/local/.eden
+        # On FB devservers the default EdenFS state directory path is ~/local/.eden
         # Normally ~/local is expected to be a symlink to local disk (for users who are
         # still using NFS home directories in the first place).  The most common cause of
-        # the Eden state directory being on NFS is for users that somehow have a regular
+        # the EdenFS state directory being on NFS is for users that somehow have a regular
         # directory at ~/local rather than a symlink.  Suggest checking this as a
         # remediation.
         remediation = (
             "The most common cause for this is if your ~/local symlink does not point "
             "to local disk.  Make sure that ~/local is a symlink pointing to local disk "
-            "and then restart Eden."
+            "and then run `eden restart`."
         )
         super().__init__(msg, remediation)
 
@@ -181,7 +181,7 @@ def check_disk_usage(
             used_percent = float(used) / size
 
             message = (
-                "Eden lazily loads your files and needs enough disk space to "
+                "EdenFS lazily loads your files and needs enough disk space to "
                 "store these files when loaded."
             )
             extra_message = instance.get_config_value(

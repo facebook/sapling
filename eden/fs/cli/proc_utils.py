@@ -46,7 +46,7 @@ class EdenFSProcess(NamedTuple):
     # on the state directory.  This is set to True or False if we could tell if the
     # process was holding the lock, or None if we could not tell.
     #
-    # Normally this should only ever be False if the lock file (or the entire Eden state
+    # Normally this should only ever be False if the lock file (or the entire EdenFS state
     # directory) is deleted out from under a running EdenFS process.  Current releases
     # of EdenFS will detect this and exit if their lock file is deleted, but older
     # versions of EdenFS would continue to run in this state.

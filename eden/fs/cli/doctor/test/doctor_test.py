@@ -28,7 +28,7 @@ from fb303_core.ttypes import fb303_status
 
 class SnapshotFormatTest(DoctorTestBase):
     """
-    Eden doctor can parse the SNAPSHOT file directly. Validate its parse
+    EdenFS doctor can parse the SNAPSHOT file directly. Validate its parse
     against different formats.
     """
 
@@ -187,7 +187,7 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
 
 <yellow>Successfully fixed 3 problems.<reset>
 <yellow>1 issue requires manual attention.<reset>
-Ask in the Eden Users group if you need help fixing issues with Eden:
+Ask in the EdenFS Users group if you need help fixing issues with EdenFS:
 https://fb.facebook.com/groups/eden.users/
 """,
             out.getvalue(),
@@ -290,13 +290,13 @@ https://fb.facebook.com/groups/eden.users/
         self.assertEqual(
             """\
 <yellow>- Found problem:<reset>
-Eden is not running.
-To start Eden, run:
+EdenFS is not running.
+To start EdenFS, run:
 
     eden start
 
 <yellow>1 issue requires manual attention.<reset>
-Ask in the Eden Users group if you need help fixing issues with Eden:
+Ask in the EdenFS Users group if you need help fixing issues with EdenFS:
 https://fb.facebook.com/groups/eden.users/
 """,
             out.getvalue(),
@@ -328,13 +328,13 @@ https://fb.facebook.com/groups/eden.users/
         self.assertEqual(
             """\
 <yellow>- Found problem:<reset>
-Eden is currently still starting.
+EdenFS is currently still starting.
 Please wait for edenfs to finish starting.
-If Eden seems to be taking too long to start you can try restarting it
+If EdenFS seems to be taking too long to start you can try restarting it
 with "eden restart"
 
 <yellow>1 issue requires manual attention.<reset>
-Ask in the Eden Users group if you need help fixing issues with Eden:
+Ask in the EdenFS Users group if you need help fixing issues with EdenFS:
 https://fb.facebook.com/groups/eden.users/
 """,
             out.getvalue(),
@@ -366,13 +366,13 @@ https://fb.facebook.com/groups/eden.users/
         self.assertEqual(
             """\
 <yellow>- Found problem:<reset>
-Eden is currently shutting down.
-Either wait for edenfs to exit, or to forcibly kill Eden, run:
+EdenFS is currently shutting down.
+Either wait for edenfs to exit, or to forcibly kill EdenFS, run:
 
     eden stop --kill
 
 <yellow>1 issue requires manual attention.<reset>
-Ask in the Eden Users group if you need help fixing issues with Eden:
+Ask in the EdenFS Users group if you need help fixing issues with EdenFS:
 https://fb.facebook.com/groups/eden.users/
 """,
             out.getvalue(),
@@ -616,7 +616,7 @@ command palette in Atom.
 
         nuclide_root = os.path.join(edenfs_path, "subdirectory")
         # Note that a "filewatcher-" subscription in a subdirectory of the
-        # Eden mount should signal that the proper Watchman subscription is
+        # EdenFS mount should signal that the proper Watchman subscription is
         # set up.
         filewatcher_sub: List[str] = [
             f"filewatcher-{nuclide_root}"
@@ -928,7 +928,7 @@ which may have important bug fixes or performance improvements.
         "eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide", return_value=set()
     )
     def test_unconfigured_mounts_dont_crash(self, mock_get_roots_for_nuclide) -> None:
-        # If Eden advertises that a mount is active, but it is not in the
+        # If EdenFS advertises that a mount is active, but it is not in the
         # configuration, then at least don't throw an exception.
         instance = FakeEdenInstance(self.make_temporary_directory())
         edenfs_path1 = instance.create_test_mount("path1").path
@@ -959,7 +959,7 @@ Checkout {edenfs_path2} is running but not listed in Eden's configuration file.
 Running "eden unmount {edenfs_path2}" will unmount this checkout.
 
 <yellow>1 issue requires manual attention.<reset>
-Ask in the Eden Users group if you need help fixing issues with Eden:
+Ask in the EdenFS Users group if you need help fixing issues with EdenFS:
 https://fb.facebook.com/groups/eden.users/
 """,
             out.getvalue(),
@@ -1105,14 +1105,14 @@ Remounting {mount}...<green>fixed<reset>
             f"""\
 <yellow>- Found problem:<reset>
 Your current working directory is out-of-date.
-This can happen if you have (re)started Eden but your shell is still pointing to
-the old directory from before the Eden checkouts were mounted.
+This can happen if you have (re)started EdenFS but your shell is still pointing to
+the old directory from before the EdenFS checkouts were mounted.
 
 Run "cd / && cd -" to update your shell's working directory.
 
 Checking {mount}
 <yellow>1 issue requires manual attention.<reset>
-Ask in the Eden Users group if you need help fixing issues with Eden:
+Ask in the EdenFS Users group if you need help fixing issues with EdenFS:
 https://fb.facebook.com/groups/eden.users/
 """,
         )
@@ -1188,7 +1188,7 @@ To restore the connection to the PrivHelper, run `eden restart`
 
 Checking {mount}
 <yellow>1 issue requires manual attention.<reset>
-Ask in the Eden Users group if you need help fixing issues with Eden:
+Ask in the EdenFS Users group if you need help fixing issues with EdenFS:
 https://fb.facebook.com/groups/eden.users/
 """,
             out.getvalue(),

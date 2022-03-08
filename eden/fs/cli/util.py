@@ -133,7 +133,7 @@ def get_pid_using_lockfile(config_dir: Path) -> int:
 
 def check_health_using_lockfile(config_dir: Path) -> HealthStatus:
     """Make a best-effort to produce a HealthStatus based on the PID in the
-    Eden lockfile.
+    EdenFS lockfile.
     """
     try:
         # Throws if it does not parse as an int.
@@ -198,7 +198,7 @@ def check_health(
         # server is not running. This could be during the startup, shutdown,
         # or takeover of the edenfs process. As a backup to requesting the
         # PID from the Thrift server, we read it from the lockfile and try
-        # to deduce the current status of Eden.
+        # to deduce the current status of EdenFS.
         return check_health_using_lockfile(config_dir)
     except Thrift.TException as ex:
         detail = "error talking to edenfs: " + str(ex)
@@ -523,7 +523,7 @@ def is_valid_sha1(sha1: str) -> bool:
 
 def get_eden_mount_name(path_arg: str) -> str:
     """
-    Get the path to the Eden checkout containing the specified path
+    Get the path to the EdenFS checkout containing the specified path
     """
     if sys.platform == "win32":
         path = path_arg

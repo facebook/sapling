@@ -108,7 +108,7 @@ SUPPORTED_MOUNT_PROTOCOLS = {"fuse", "nfs", "prjfs"}
 
 # Create a readme file with this name in the mount point directory.
 # The intention is for this to contain instructions telling users what to do if their
-# Eden mount is not currently mounted.
+# EdenFS mount is not currently mounted.
 NOT_MOUNTED_README_PATH = "README_EDEN.txt"
 # The path under /etc/eden where site-specific contents for the not-mounted README can
 # be found.
@@ -517,7 +517,7 @@ class EdenInstance:
 
         for thrift_mount in thrift_mounts:
             path = Path(os.fsdecode(thrift_mount.mountPoint))
-            # Older versions of Eden did not report the state field.
+            # Older versions of EdenFS did not report the state field.
             # If it is missing, set it to RUNNING.
             state = (
                 thrift_mount.state
@@ -818,7 +818,7 @@ Do you want to run `eden mount %s` instead?"""
             # else.  We only delete these specific files for now rather than using
             # shutil.rmtree() to avoid deleting files we did not create.
             #
-            # Previous versions of Eden made the mount point directory read-only
+            # Previous versions of EdenFS made the mount point directory read-only
             # as part of "eden clone".  Make sure it is writable now so we can clean it up.
             path.chmod(0o755)
             try:
@@ -1475,7 +1475,7 @@ def detect_nested_checkout(
         # However, we prefer to get the list from the current eden process (if one's running)
         instance.get_running_version()
         checkout_list = instance.get_mounts().items()
-    except EdenNotRunningError:  # If Eden isn't running, we should fail
+    except EdenNotRunningError:  # If EdenFS isn't running, we should fail
         return None, None
 
     # Checkout list must be sorted so that parent paths are checked first
@@ -1508,13 +1508,13 @@ def find_eden(
 ) -> Tuple[EdenInstance, Optional[EdenCheckout], Optional[Path]]:
     """Look up the EdenInstance and EdenCheckout for a path.
 
-    If the input path points into an Eden checkout, this returns a tuple of
+    If the input path points into an EdenFS checkout, this returns a tuple of
     (EdenInstance, EdenCheckout, rel_path), where EdenInstance contains information for
     the edenfs instance serving this checkout, EdenCheckout contains information about
     the checkout, and rel_path contains the relative location of the input path inside
     the checkout.  The checkout does not need to be currently mounted for this to work.
 
-    If the input path does not point inside a known Eden checkout, this returns
+    If the input path does not point inside a known EdenFS checkout, this returns
     (EdenInstance, None, None)
     """
     if isinstance(path, str):

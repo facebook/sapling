@@ -868,7 +868,7 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
         overlay_type: Optional[str],
         backing_store_type: Optional[str] = None,
     ) -> Tuple[util.Repo, config_mod.CheckoutConfig]:
-        # Check to see if repo_arg points to an existing Eden mount
+        # Check to see if repo_arg points to an existing EdenFS mount
         checkout_config = instance.get_checkout_config_for_path(repo_arg)
         if checkout_config is not None:
             repo = util.get_repo(str(checkout_config.backing_repo), backing_store_type)
@@ -1152,8 +1152,8 @@ class FsckCmd(Subcmd):
     def check_explicit_paths(self, args: argparse.Namespace) -> List[int]:
         return_codes: List[int] = []
         for path in args.path:
-            # Check to see if this looks like an Eden checkout state directory.
-            # If this looks like an Eden checkout state directory,
+            # Check to see if this looks like an EdenFS checkout state directory.
+            # If this looks like an EdenFS checkout state directory,
             if (Path(path) / "local" / "info").exists() and (
                 Path(path) / "config.toml"
             ).exists():
@@ -2136,7 +2136,7 @@ class StopCmd(Subcmd):
 
     def _kill(self, instance: EdenInstance, args: argparse.Namespace) -> int:
         # Get the pid from the lock file rather than trying to query it over thrift.
-        # If the user is forcibly trying to kill Eden we assume something is probably
+        # If the user is forcibly trying to kill EdenFS we assume something is probably
         # wrong to start with and the thrift server might not be functional for some
         # reason.
         pid = check_health_using_lockfile(instance.state_dir).pid
@@ -2267,7 +2267,7 @@ Please run "cd / && cd -" to update your shell's working directory."""
 
 async def async_main(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     # Before doing anything else check that the current working directory is valid.
-    # This helps catch the case where a user is trying to run the Eden CLI inside
+    # This helps catch the case where a user is trying to run the EdenFS CLI inside
     # a stale eden mount point.
     stale_return_code = check_for_stale_working_directory()
     if stale_return_code is not None:

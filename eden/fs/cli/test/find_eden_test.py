@@ -19,7 +19,7 @@ from .. import config as config_mod
 
 
 class CheckoutInfo:
-    """A helper class for creating fake Eden checkouts in tests."""
+    """A helper class for creating fake EdenFS checkouts in tests."""
 
     def __init__(self, path: Path, name: str, eden_state_dir: Path) -> None:
         self.path = path

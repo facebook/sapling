@@ -20,7 +20,7 @@ use edenfs_error::Result;
 use crate::ExitCode;
 
 #[derive(Parser, Debug)]
-#[clap(about = "Check the health of the Eden service")]
+#[clap(about = "Check the health of the EdenFS service")]
 pub struct StatusCmd {
     /// Wait up to TIMEOUT seconds for the daemon to respond
     #[clap(long, default_value = "3")]

@@ -144,7 +144,7 @@ class DirstateChecker(HgFileChecker):
             self._in_progress_checkout = True
             return
         except Exception as ex:
-            errors.append(f"error parsing Eden snapshot ID: {ex}")
+            errors.append(f"error parsing EdenFS snapshot ID: {ex}")
             return
 
         self._old_snapshot = self._check_commit(
@@ -261,7 +261,7 @@ class RequiresChecker(HgFileChecker):
     def check_data(self, data: bytes) -> List[str]:
         requirements = data.splitlines()
         if b"eden" not in requirements:
-            return [".hg/requires file does not include Eden as a requirement"]
+            return [".hg/requires file does not include eden as a requirement"]
         return []
 
     def repair(self) -> None:
@@ -275,7 +275,7 @@ class SharedPathChecker(HgFileChecker):
 
     def check_data(self, data: bytes) -> List[str]:
         # TODO: make sure the sharedpath file points to a valid .hg directory that
-        # does not use Eden itself.  However, we can't fix errors about the sharedpath
+        # does not use EdenFS itself.  However, we can't fix errors about the sharedpath
         # file pointing to a bad repo, so those should probably be reported as
         # completely separate problems to the ProblemTracker.
         #

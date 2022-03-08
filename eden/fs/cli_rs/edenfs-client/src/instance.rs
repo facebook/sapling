@@ -95,7 +95,7 @@ impl EdenFsInstance {
         self.config_dir.join("lock")
     }
 
-    /// Read the pid from the Eden lockfile
+    /// Read the pid from the EdenFS lockfile
     fn pid(&self) -> Result<sysinfo::Pid, anyhow::Error> {
         let pidfile = self.pidfile();
         let pid_bytes = std::fs::read(&pidfile)
