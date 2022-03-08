@@ -24,7 +24,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 mod caching;
-use crate::caching::CacheHandlers;
+use crate::caching::{CacheHandlers, RenameKey};
 #[cfg(test)]
 mod tests;
 
@@ -221,7 +221,7 @@ impl MutableRenames {
         }
     }
 
-    pub async fn get_rename(
+    async fn get_rename_uncached(
         &self,
         ctx: &CoreContext,
         dst_cs_id: ChangesetId,
@@ -257,6 +257,33 @@ impl MutableRenames {
                 )?))
             }
             None => Ok(None),
+        }
+    }
+
+    pub async fn get_rename(
+        &self,
+        ctx: &CoreContext,
+        dst_cs_id: ChangesetId,
+        dst_path: Option<MPath>,
+    ) -> Result<Option<MutableRenameEntry>, Error> {
+        match &self.cache_handlers {
+            None => self.get_rename_uncached(ctx, dst_cs_id, dst_path).await,
+            Some(cache_handlers) => {
+                let mut keys = HashSet::new();
+                let key = RenameKey::new(dst_cs_id, dst_path);
+                keys.insert(key.clone());
+
+                let cache = cache_handlers.get_rename(self, ctx);
+
+                let mut res = caching_ext::get_or_fill(cache, keys).await?;
+
+                let res = res
+                    .remove(&key)
+                    .map(|r| r.0.map(MutableRenameEntry::try_from))
+                    .flatten()
+                    .transpose()?;
+                Ok(res)
+            }
         }
     }
 }

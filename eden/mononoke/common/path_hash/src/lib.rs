@@ -134,7 +134,7 @@ fn convert_from_repo_path(path: &RepoPath) -> (Vec<u8>, bool) {
     (bytes, is_tree)
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Abomonation, Clone, Debug, Eq, PartialEq)]
 pub struct PathHash {
     pub path_bytes: PathBytes,
     pub is_tree: bool,
