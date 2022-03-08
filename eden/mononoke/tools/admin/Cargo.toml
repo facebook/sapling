@@ -46,4 +46,5 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+strum_macros = "0.21"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
