@@ -424,15 +424,13 @@ fn fill_multiple_cachelib<'a, V>(
     for (cachelib_key, ttl, v) in data {
         let cachelib_key = cachelib_key.borrow();
 
-        match ttl {
-            CacheTtl::NoTtl => {
-                // NOTE: We ignore failures to cache individual entries here.
-                let _ = cachelib.set_cached(&cachelib_key.0, v);
-            }
-            CacheTtl::Ttl(..) => {
-                // Not implemented yet for our cachelib cache.
-            }
-        }
+        let ttl = match ttl {
+            CacheTtl::NoTtl => None,
+            CacheTtl::Ttl(ttl) => Some(ttl),
+        };
+
+        // NOTE: We ignore failures to cache individual entries here.
+        let _ = cachelib.set_cached(&cachelib_key.0, v, ttl);
     }
 }
 

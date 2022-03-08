@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 use crate::mock_store::MockStore;
 use anyhow::Result;
@@ -57,9 +58,9 @@ impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
         }
     }
 
-    pub fn set_cached(&self, key: &String, value: &T) -> Result<bool> {
+    pub fn set_cached(&self, key: &String, value: &T, ttl: Option<Duration>) -> Result<bool> {
         match self {
-            CachelibHandler::Real(ref cache) => set_cached(cache, key, value),
+            CachelibHandler::Real(ref cache) => set_cached(cache, key, value, ttl),
             CachelibHandler::Mock(store) => {
                 store.set(key, value.clone());
                 Ok(true)
@@ -109,7 +110,7 @@ mod tests {
             let cachelib_handler = CachelibHandler::Mock(mock_cachelib.clone());
 
             for (k, v) in initial_keys.iter() {
-                let _ = cachelib_handler.set_cached(k, v);
+                let _ = cachelib_handler.set_cached(k, v, None);
             }
 
             if mock_cachelib.data() != initial_keys {

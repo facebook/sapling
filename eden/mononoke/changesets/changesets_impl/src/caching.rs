@@ -178,7 +178,7 @@ impl Changesets for CachingChangesets {
             let key = get_cache_key(self.repo_id, &cs.cs_id);
             let _ = self
                 .cachelib
-                .set_cached(&key, ChangesetEntryWrapper::ref_cast(&cs));
+                .set_cached(&key, ChangesetEntryWrapper::ref_cast(cs), None);
         }
     }
 

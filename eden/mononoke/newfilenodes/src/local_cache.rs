@@ -96,7 +96,7 @@ impl CachelibCache {
     where
         V: Cacheable + Abomonation + Clone + Send + 'static,
     {
-        let r = set_cached(self.get_cache::<V>(), &key.key, value);
+        let r = set_cached(self.get_cache::<V>(), &key.key, value, None);
         if r.is_err() {
             STATS::fill_cache_fail.add_value(1);
         }
