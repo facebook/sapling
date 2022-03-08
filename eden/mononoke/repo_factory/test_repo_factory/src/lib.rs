@@ -451,7 +451,10 @@ impl TestRepoFactory {
     pub fn mutable_renames(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcMutableRenames> {
         let sql_store =
             SqlMutableRenamesStore::from_sql_connections(self.metadata_db.clone().into());
-        Ok(Arc::new(MutableRenames::new(repo_identity.id(), sql_store)))
+        Ok(Arc::new(MutableRenames::new_test(
+            repo_identity.id(),
+            sql_store,
+        )))
     }
 
     /// Cross-repo sync manager for this repo

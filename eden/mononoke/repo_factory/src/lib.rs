@@ -882,7 +882,13 @@ impl RepoFactory {
             .open::<SqlMutableRenamesStore>(&repo_config.storage_config.metadata)
             .await
             .context(RepoFactoryError::MutableRenames)?;
-        Ok(Arc::new(MutableRenames::new(repo_config.repoid, sql_store)))
+        let cache_pool = self.maybe_volatile_pool("mutable_renames")?;
+        Ok(Arc::new(MutableRenames::new(
+            self.env.fb,
+            repo_config.repoid,
+            sql_store,
+            cache_pool,
+        )?))
     }
 
     pub fn derived_data_manager_set(

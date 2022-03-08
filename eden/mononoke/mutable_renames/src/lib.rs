@@ -8,7 +8,9 @@
 #![deny(warnings)]
 
 use anyhow::Error;
+use cachelib::VolatileLruCachePool;
 use context::{CoreContext, PerfCounterType};
+use fbinit::FacebookInit;
 use manifest::Entry;
 use mononoke_types::{
     hash::Blake2, path_bytes_from_mpath, ChangesetId, FileUnodeId, MPath, ManifestUnodeId,
@@ -18,8 +20,11 @@ use path_hash::{PathHash, PathHashBytes};
 use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
+use std::collections::HashSet;
 use std::sync::Arc;
 
+mod caching;
+use crate::caching::CacheHandlers;
 #[cfg(test)]
 mod tests;
 
@@ -112,13 +117,32 @@ impl MutableRenameEntry {
 pub struct MutableRenames {
     repo_id: RepositoryId,
     store: Arc<SqlMutableRenamesStore>,
+    cache_handlers: Option<CacheHandlers>,
 }
 
 impl MutableRenames {
-    pub fn new(repo_id: RepositoryId, store: SqlMutableRenamesStore) -> Self {
+    pub fn new(
+        fb: FacebookInit,
+        repo_id: RepositoryId,
+        store: SqlMutableRenamesStore,
+        cache_pool: Option<VolatileLruCachePool>,
+    ) -> Result<Self, Error> {
+        let cache_handlers = cache_pool
+            .map(|pool| CacheHandlers::new(fb, pool))
+            .transpose()?;
+        Ok(Self {
+            repo_id,
+            store: Arc::new(store),
+            cache_handlers,
+        })
+    }
+
+    pub fn new_test(repo_id: RepositoryId, store: SqlMutableRenamesStore) -> Self {
+        let cache_handlers = Some(CacheHandlers::new_test());
         Self {
             repo_id,
             store: Arc::new(store),
+            cache_handlers,
         }
     }
 
@@ -167,7 +191,11 @@ impl MutableRenames {
         Ok(())
     }
 
-    async fn has_rename(&self, ctx: &CoreContext, dst_cs_id: ChangesetId) -> Result<bool, Error> {
+    async fn has_rename_uncached(
+        &self,
+        ctx: &CoreContext,
+        dst_cs_id: ChangesetId,
+    ) -> Result<bool, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
@@ -175,6 +203,22 @@ impl MutableRenames {
             HasRenameCheck::query(&self.store.read_connection, &self.repo_id, &dst_cs_id).await?;
 
         Ok(!rename_targets.is_empty())
+    }
+
+    async fn has_rename(&self, ctx: &CoreContext, dst_cs_id: ChangesetId) -> Result<bool, Error> {
+        match &self.cache_handlers {
+            None => self.has_rename_uncached(ctx, dst_cs_id).await,
+            Some(cache_handlers) => {
+                let mut keys = HashSet::new();
+                keys.insert(dst_cs_id);
+
+                let cache = cache_handlers.has_rename(self, ctx);
+
+                let res = caching_ext::get_or_fill(cache, keys).await?;
+
+                Ok(res.get(&dst_cs_id).map_or(false, |r| r.0))
+            }
+        }
     }
 
     pub async fn get_rename(

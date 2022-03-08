@@ -326,7 +326,7 @@ impl Repo {
             skiplist_index: Arc::new(SkiplistIndex::new()),
             segmented_changelog: Arc::new(DisabledSegmentedChangelog::new()),
             ephemeral_store: Arc::new(RepoEphemeralStore::disabled(repo_id)),
-            mutable_renames: Arc::new(MutableRenames::new(
+            mutable_renames: Arc::new(MutableRenames::new_test(
                 repo_id,
                 SqlMutableRenamesStore::with_sqlite_in_memory()?,
             )),

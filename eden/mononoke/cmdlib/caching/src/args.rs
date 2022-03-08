@@ -92,6 +92,10 @@ pub struct CachelibArgs {
     #[clap(long, value_name = "SIZE", hide = true)]
     pub segmented_changelog_cache_size: Option<usize>,
 
+    /// Override size of the mutable renames cache
+    #[clap(long, value_name = "SIZE", hide = true)]
+    pub mutable_renames_cache_size: Option<usize>,
+
     /// Override the power for cachelib's hashtable buckets
     #[clap(long, value_name = "SIZE", hide = true)]
     pub buckets_power: Option<u32>,

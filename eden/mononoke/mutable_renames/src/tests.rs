@@ -17,7 +17,7 @@ use mononoke_types_mocks::{
 async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let store = SqlMutableRenamesStore::with_sqlite_in_memory()?;
-    let mutable_renames = MutableRenames::new(RepositoryId::new(0), store);
+    let mutable_renames = MutableRenames::new_test(RepositoryId::new(0), store);
 
     let dst_path = Some(MPath::new("dstpath")?);
     let src_path = Some(MPath::new("srcpath")?);
@@ -44,7 +44,7 @@ async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
 async fn test_insert_multiple(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let store = SqlMutableRenamesStore::with_sqlite_in_memory()?;
-    let mutable_renames = MutableRenames::new(RepositoryId::new(0), store);
+    let mutable_renames = MutableRenames::new_test(RepositoryId::new(0), store);
 
     let first_dst_path = Some(MPath::new("first_dstpath")?);
     let first_src_path = Some(MPath::new("second_srcpath")?);
@@ -87,7 +87,7 @@ async fn test_insert_multiple(fb: FacebookInit) -> Result<(), Error> {
 async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let store = SqlMutableRenamesStore::with_sqlite_in_memory()?;
-    let mutable_renames = MutableRenames::new(RepositoryId::new(0), store);
+    let mutable_renames = MutableRenames::new_test(RepositoryId::new(0), store);
 
     let dst_path = Some(MPath::new("first_dstpath")?);
     let first_src_path = Some(MPath::new("first_srcpath")?);
