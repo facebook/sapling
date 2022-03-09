@@ -34,7 +34,7 @@ macro_rules! auto_wire_tests {
                 use $crate::wire::tests::support::*;
                 let mut g = Gen::from_seed(42);
                 g.set_size(5);
-                insta_ext::assert_json!($wire::arbitrary(&mut g));
+                insta_ext::assert_json!($wire::arbitrary(&mut g), [<auto_test_ $wire:snake>]);
 
                 type Api = <$wire as ToApi>::Api;
                 println!("Checking wire roundtrip");

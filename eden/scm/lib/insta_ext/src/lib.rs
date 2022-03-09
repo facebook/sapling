@@ -19,7 +19,15 @@ pub fn setup() {
     }
 }
 
-pub fn run(is_cargo: bool, snapshot: &str, file: &str, module: &str, line: u32, expr: &str) {
+pub fn run(
+    test_name: &str,
+    is_cargo: bool,
+    snapshot: &str,
+    file: &str,
+    module: &str,
+    line: u32,
+    expr: &str,
+) {
     let command = if is_cargo {
         "INSTA_UPDATE=1 cargo test ..."
     } else {
@@ -34,7 +42,7 @@ pub fn run(is_cargo: bool, snapshot: &str, file: &str, module: &str, line: u32, 
         .and_then(|p| p.to_str())
         .unwrap();
     insta::_macro_support::assert_snapshot(
-        insta::_macro_support::AutoName.into(),
+        test_name.into(),
         snapshot,
         "unused",
         // buck builds have a _unittest module suffix which cargo doesn't
@@ -51,10 +59,11 @@ pub fn run(is_cargo: bool, snapshot: &str, file: &str, module: &str, line: u32, 
 /// stored on disk.
 #[macro_export]
 macro_rules! assert_json {
-    ($value: expr) => {{
+    ($value: expr, $test_name: ident) => {{
         $crate::setup();
 
         $crate::run(
+            stringify!($test_name),
             option_env!("CARGO_MANIFEST_DIR").is_some(),
             &serde_json::to_string(&$value).unwrap(),
             file!(),
