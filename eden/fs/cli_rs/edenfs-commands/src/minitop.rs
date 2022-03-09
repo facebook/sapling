@@ -19,7 +19,7 @@ use std::collections::BTreeMap;
 use std::io::{stdout, Stdout, Write};
 use std::path::Path;
 use std::time::Duration;
-use std::time::SystemTime;
+use std::time::Instant;
 use sysinfo::{Pid, System, SystemExt};
 
 use anyhow::anyhow;
@@ -146,7 +146,7 @@ struct Process {
     cmd: String,
     access_counts: AccessCounts,
     fetch_counts: u64,
-    last_access_time: SystemTime,
+    last_access_time: Instant,
 }
 
 impl Process {
@@ -202,7 +202,7 @@ impl TrackedProcesses {
                 existing_proc.access_counts.add(&access_counts);
                 existing_proc.fetch_counts = fetch_counts;
 
-                existing_proc.last_access_time = SystemTime::now();
+                existing_proc.last_access_time = Instant::now();
             }
             None => {
                 self.processes.insert(
@@ -213,7 +213,7 @@ impl TrackedProcesses {
                         cmd,
                         access_counts: access_counts.clone(),
                         fetch_counts,
-                        last_access_time: SystemTime::now(),
+                        last_access_time: Instant::now(),
                     },
                 );
             }
@@ -548,7 +548,7 @@ impl crate::Subcommand for MinitopCmd {
                             .from_err()?,
                     ))
                     .simple_human_time(TimeUnit::Nanoseconds),
-                    HumanTime::from(aggregated_process.last_access_time.elapsed().from_err()?)
+                    HumanTime::from(aggregated_process.last_access_time.elapsed())
                         .simple_human_time(TimeUnit::Seconds),
                     aggregated_process.cmd,
                 ]);
