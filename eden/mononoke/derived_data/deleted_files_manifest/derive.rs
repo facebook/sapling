@@ -13,7 +13,7 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
 use futures::{
-    channel::{mpsc, oneshot},
+    channel::mpsc,
     future::{self, BoxFuture, FutureExt},
     stream::{StreamExt, TryStreamExt},
 };
@@ -107,7 +107,6 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
         parents: Vec<Manifest::Id>,
         changes: PathTree<Option<PathChange>>,
     ) -> Result<Manifest::Id, Error> {
-        let (result_sender, result_receiver) = oneshot::channel();
         // Stream is used to batch writes to blobstore
         let (sender, receiver) = mpsc::unbounded();
         let created = Arc::new(Mutex::new(HashSet::new()));
@@ -189,7 +188,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             .await?;
 
             debug_assert!(manifest_opt.0.is_none());
-            let res = match manifest_opt {
+            match manifest_opt {
                 (_, Some(mf_id)) => Ok(mf_id),
                 (_, None) => {
                     // there are no deleted files, need to create an empty root manifest
@@ -209,19 +208,16 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                         Err(err) => Err(err),
                     }
                 }
-            };
-
-            let _ = result_sender.send(res);
-            Result::<_, Error>::Ok(())
+            }
         };
 
-        tokio::spawn(f);
+        let handle = tokio::spawn(f);
 
         receiver
             .buffered(1024)
             .try_for_each(|_| async { Ok(()) })
             .await?;
-        result_receiver.await?
+        handle.await?
     }
 
 
@@ -404,11 +400,9 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
 
             sender
                 .unbounded_send(f)
-                .map(move |()| mf_id)
-                .map_err(|err| anyhow!("failed to send manifest future {}", err))
-        } else {
-            Ok(mf_id)
+                .map_err(|err| anyhow!("failed to send manifest future {}", err))?;
         }
+        Ok(mf_id)
     }
 
     async fn do_create(
