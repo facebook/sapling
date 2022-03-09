@@ -70,7 +70,9 @@ fn write_reponame<T: AsRef<Path>>(path: T, config: &ConfigSet) -> Result<(), Ini
     let path = path.as_ref();
     if let Some(reponame) = config.get("remotefilelog", "reponame") {
         let reponame_path = path.join(REPONAME_FILE);
-        create_file(reponame_path.as_path(), reponame.as_bytes())?;
+        if !reponame_path.exists() {
+            create_file(reponame_path.as_path(), reponame.as_bytes())?;
+        }
     }
     Ok(())
 }
@@ -160,6 +162,16 @@ mod tests {
             &Options::new(),
         );
         write_reponame(tmp.path(), &config).unwrap();
+        assert_eq!(fs::read_to_string(reponame_path).unwrap(), "thename");
+
+        config.set(
+            "remotefilelog",
+            "reponame",
+            Some("newname"),
+            &Options::new(),
+        );
+        write_reponame(tmp.path(), &config).unwrap();
+        // Reponame should not be written into if it already exists
         assert_eq!(fs::read_to_string(reponame_path).unwrap(), "thename");
     }
 
