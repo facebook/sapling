@@ -74,11 +74,7 @@ impl TryFrom<curl::Error> for TlsError {
     type Error = curl::Error;
 
     fn try_from(source: curl::Error) -> Result<Self, Self::Error> {
-        match TlsErrorKind::from_code(source.code()) {
-            Some(TlsErrorKind::RecvError) if ssl_in_message(&source) => Ok(Self {
-                source,
-                kind: TlsErrorKind::RecvError,
-            }),
+        match TlsErrorKind::from_curl_error(&source) {
             Some(kind) => Ok(Self { source, kind }),
             None => Err(source),
         }
@@ -104,11 +100,11 @@ pub enum TlsErrorKind {
 }
 
 impl TlsErrorKind {
-    fn from_code(code: curl_sys::CURLcode) -> Option<Self> {
+    fn from_curl_error(source: &curl::Error) -> Option<Self> {
         use TlsErrorKind::*;
 
-        Some(match code {
-            curl_sys::CURLE_RECV_ERROR => RecvError,
+        Some(match source.code() {
+            curl_sys::CURLE_RECV_ERROR => ssl_categorize_recv_error(source),
             curl_sys::CURLE_SSL_CACERT => CaCert,
             curl_sys::CURLE_SSL_CACERT_BADFILE => CaCertBadFile,
             curl_sys::CURLE_SSL_CERTPROBLEM => CertProblem,
@@ -133,8 +129,13 @@ impl TlsErrorKind {
 /// "extra description" field of the error usually contains the actual error
 /// message from the TLS engine. This function tries to detect this situation
 /// using a crude string search heuristic.
-fn ssl_in_message(error: &curl::Error) -> bool {
-    error
-        .extra_description()
-        .map_or(false, |s| s.to_lowercase().contains("ssl"))
+fn ssl_categorize_recv_error(error: &curl::Error) -> TlsErrorKind {
+    let extra = error.extra_description();
+    if extra.map_or(false, |s| {
+        s.to_lowercase().contains("alert certificate required")
+    }) {
+        TlsErrorKind::CertProblem
+    } else {
+        TlsErrorKind::RecvError
+    }
 }
