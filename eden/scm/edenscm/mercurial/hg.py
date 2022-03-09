@@ -654,11 +654,6 @@ def clone(
                 ui.status(_("fetching lazy changelog\n"))
                 data = destrepo.edenapi.clonedata()
                 clonemod.segmentsclone(srcpeer.url(), data, destrepo)
-            # Can we use EdenAPI CloneData provided by the peer interface?
-            elif srcpeer.capable("clonedata") and shallow and not update:
-                clonecodepath = "segments"
-                data = srcpeer.clonedata()
-                clonemod.segmentsclone(srcpeer.url(), data, destrepo)
             # Can we use the new code path (stream clone + shallow + no
             # update + selective pull)?
             elif (
