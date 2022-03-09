@@ -16,7 +16,7 @@ use crossterm::{cursor, style, terminal};
 use futures::{FutureExt, StreamExt};
 use shlex::quote;
 use std::collections::BTreeMap;
-use std::io::{stdout, Write};
+use std::io::{stdout, Stdout, Write};
 use std::path::Path;
 use std::time::Duration;
 use std::time::SystemTime;
@@ -383,6 +383,42 @@ impl Drop for TerminalAttributes {
     }
 }
 
+struct Cursor {
+    row: u16,
+    terminal_rows: u16,
+}
+
+impl Cursor {
+    fn new() -> Result<Self> {
+        let (_, row) = cursor::position().from_err()?;
+        let (_, terminal_rows) = terminal::size().from_err()?;
+
+        Ok(Self { row, terminal_rows })
+    }
+
+    fn new_line(&mut self, stdout: &mut Stdout) -> Result<()> {
+        if self.row == self.terminal_rows {
+            queue!(stdout, terminal::ScrollUp(1), cursor::MoveToColumn(0)).from_err()
+        } else {
+            self.row += 1;
+            queue!(stdout, cursor::MoveToNextLine(1)).from_err()
+        }
+    }
+
+    fn refresh_terminal_size(&mut self) -> Result<()> {
+        let (_, terminal_rows) = terminal::size().from_err()?;
+        self.terminal_rows = terminal_rows;
+
+        // In the case where the terminal was resized and the cursor was on the last line, we want
+        // to make sure we stay on the last line.
+        if self.row > self.terminal_rows {
+            self.row = self.terminal_rows;
+        }
+
+        Ok(())
+    }
+}
+
 #[async_trait]
 impl crate::Subcommand for MinitopCmd {
     async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
@@ -401,6 +437,7 @@ impl crate::Subcommand for MinitopCmd {
         let _ = attributes; // silence warning
 
         let mut stdout = stdout();
+        let mut cursor = Cursor::new()?;
         let mut events = EventStream::new();
 
         loop {
@@ -409,6 +446,7 @@ impl crate::Subcommand for MinitopCmd {
             }
             client.flushStatsNow();
             system.refresh_processes();
+            cursor.refresh_terminal_size()?;
 
             // Update pending imports summary stats
             let (pending_imports, live_imports) = tokio::try_join!(
@@ -473,10 +511,9 @@ impl crate::Subcommand for MinitopCmd {
                 queue!(
                     stdout,
                     style::Print(format!("{:<40} {}", pending_string, live_string)),
-                    terminal::ScrollUp(1),
-                    cursor::MoveToColumn(0),
                 )
                 .from_err()?;
+                cursor.new_line(&mut stdout)?;
             }
 
             // Render aggregated processes
@@ -518,15 +555,11 @@ impl crate::Subcommand for MinitopCmd {
             }
 
             for line in table.lines() {
-                queue!(
-                    stdout,
-                    style::Print(line),
-                    terminal::ScrollUp(1),
-                    cursor::MoveToColumn(0)
-                )
-                .from_err()?;
+                queue!(stdout, style::Print(line),).from_err()?;
+                cursor.new_line(&mut stdout)?;
             }
-            queue!(stdout, terminal::ScrollUp(2), cursor::MoveToColumn(0)).from_err()?;
+            cursor.new_line(&mut stdout)?;
+            cursor.new_line(&mut stdout)?;
             stdout.flush().from_err()?;
 
             loop {
