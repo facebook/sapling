@@ -64,7 +64,10 @@ def print_diagnostic_info(
         out.write(b"uptime: ")
         instance.do_uptime(pretty=False, out=out)
 
-    print_eden_doctor_report(instance, out)
+    # Running eden doctor inside a hanged eden checkout can cause issues.
+    # We will disable this until we figure out a work-around.
+    # TODO(T113845692)
+    # print_eden_doctor_report(instance, out)
 
     processor = instance.get_config_value("rage.reporter", default="")
     if not dry_run and processor:

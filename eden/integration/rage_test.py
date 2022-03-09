@@ -25,7 +25,9 @@ class RageTest(testcase.EdenRepoTest):
         self.assertRegex(output, r"\nbuild_package_release\s*:")
         self.assertRegex(output, r"\nbuild_package_version\s*:")
         self.assertRegex(output, r"\nuptime\s*:")
-        self.assertIn(f"\nChecking {self.mount}\n", output)
+        # Disabled until we fix `eden rage` hanging issue
+        # TODO(T113845692)
+        # self.assertIn(f"\nChecking {self.mount}\n", output)
         self.assertIn("EdenFS memory usage", output)
 
     def test_rage_output_with_stopped_daemon(self) -> None:
@@ -44,7 +46,9 @@ class RageTest(testcase.EdenRepoTest):
         self.assertRegex(output, r"\nUser\s*:")
         self.assertRegex(output, r"\nHostname\s*:")
         self.assertRegex(output, r"\nVersion\s*:")
-        self.assertIn("\neden doctor --dry-run", output)
+        # Disabled until we fix `eden rage` hanging issue
+        # TODO(T113845692)
+        # self.assertIn("\neden doctor --dry-run", output)
         self.assertIn("\nMost recent EdenFS logs:\n", output)
         self.assertIn("\nList of running EdenFS processes:\n", output)
         self.assertIn("\nList of mount points:\n", output)
