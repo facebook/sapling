@@ -7,8 +7,8 @@
 
 use anyhow::{bail, Context, Error};
 use blobstore::{
-    Blobstore, BlobstorePutOps, BlobstoreUnlinkOps, DisabledBlob, ErrorKind, PutBehaviour,
-    DEFAULT_PUT_BEHAVIOUR,
+    Blobstore, BlobstoreEnumerableWithUnlink, BlobstorePutOps, BlobstoreUnlinkOps, DisabledBlob,
+    ErrorKind, PutBehaviour, DEFAULT_PUT_BEHAVIOUR,
 };
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use cacheblob::CachelibBlobstoreOptions;
@@ -21,7 +21,7 @@ use futures::future::{self, BoxFuture, FutureExt};
 use futures_watchdog::WatchdogExt;
 use logblob::LogBlob;
 use metaconfig_types::{
-    BlobConfig, BlobstoreId, DatabaseConfig, MultiplexId, MultiplexedStoreType,
+    BlobConfig, BlobstoreId, DatabaseConfig, MultiplexId, MultiplexedStoreType, PackConfig,
     ShardableRemoteDatabaseConfig,
 };
 use multiplexedblob::{
@@ -252,6 +252,21 @@ pub async fn make_sql_blobstore_xdb<'a>(
     }
 }
 
+pub fn make_packblob_wrapper<'a, T>(
+    pack_config: Option<PackConfig>,
+    blobstore_options: &'a BlobstoreOptions,
+    store: T,
+) -> Result<PackBlob<T>, Error> {
+    // Take the user specified option if provided, otherwise use the config
+    let put_format = if let Some(put_format) = blobstore_options.pack_options.override_put_format {
+        put_format
+    } else {
+        pack_config.map(|c| c.put_format).unwrap_or_default()
+    };
+
+    Ok(PackBlob::new(store, put_format))
+}
+
 /// Construct a PackBlob according to the spec; you are responsible for
 /// finding a PackBlob config
 pub async fn make_packblob<'a>(
@@ -278,15 +293,11 @@ pub async fn make_packblob<'a>(
         .watched(logger)
         .await?;
 
-        // Take the user specified option if provided, otherwise use the config
-        let put_format =
-            if let Some(put_format) = blobstore_options.pack_options.override_put_format {
-                put_format
-            } else {
-                pack_config.map(|c| c.put_format).unwrap_or_default()
-            };
-
-        Ok(PackBlob::new(store, put_format))
+        Ok(make_packblob_wrapper(
+            pack_config,
+            blobstore_options,
+            store,
+        )?)
     } else {
         bail!("Not a PackBlob")
     }
@@ -297,7 +308,7 @@ async fn make_manifold_blobstore(
     fb: FacebookInit,
     blobconfig: BlobConfig,
     blobstore_options: &BlobstoreOptions,
-) -> Result<Arc<dyn BlobstoreUnlinkOps>, Error> {
+) -> Result<Arc<dyn BlobstoreEnumerableWithUnlink>, Error> {
     use BlobConfig::*;
     let (bucket, prefix, ttl) = match blobconfig {
         Manifold { bucket, prefix } => (bucket, prefix, None),
@@ -323,7 +334,7 @@ async fn make_manifold_blobstore(
     _fb: FacebookInit,
     _blobconfig: BlobConfig,
     _blobstore_options: &BlobstoreOptions,
-) -> Result<Arc<dyn BlobstoreUnlinkOps>, Error> {
+) -> Result<Arc<dyn BlobstoreEnumerableWithUnlink>, Error> {
     unimplemented!("This is implemented only for fbcode_build")
 }
 
@@ -363,11 +374,61 @@ async fn make_blobstore_with_link<'a>(
             make_manifold_blobstore(fb, blobconfig, blobstore_options)
                 .watched(logger)
                 .await
+                .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)
         }
         Files { .. } => make_files_blobstore(blobconfig, blobstore_options)
             .await
             .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>),
         _ => bail!("Not a physical blobstore"),
+    }
+}
+
+// Constructs the BlobstoreEnumerableWithUnlink store implementations
+// for blobstores. If the blobstore is a wrapper blobstore, the inner
+// physical blobstore construction is delegated to another function
+// and the result is wrapped up in this function.
+pub async fn make_blobstore_enumerable_with_unlink<'a>(
+    fb: FacebookInit,
+    blobconfig: BlobConfig,
+    blobstore_options: &'a BlobstoreOptions,
+    logger: &'a Logger,
+) -> Result<Arc<dyn BlobstoreEnumerableWithUnlink>, Error> {
+    use BlobConfig::*;
+    match blobconfig {
+        Pack {
+            pack_config,
+            blobconfig,
+        } => {
+            let store =
+                raw_blobstore_enumerable_with_unlink(fb, *blobconfig, blobstore_options, logger)
+                    .watched(logger)
+                    .await?;
+            let pack_store = make_packblob_wrapper(pack_config, blobstore_options, store)?;
+            Ok(Arc::new(pack_store) as Arc<dyn BlobstoreEnumerableWithUnlink>)
+        }
+        _ => raw_blobstore_enumerable_with_unlink(fb, blobconfig, blobstore_options, logger).await,
+    }
+}
+
+// Constructs the raw BlobstoreEnumerableWithUnlink store implementations for low level
+// blobstore access. The blobstore created is NOT a wrapper (e.g. PackBlob)
+pub async fn raw_blobstore_enumerable_with_unlink<'a>(
+    fb: FacebookInit,
+    blobconfig: BlobConfig,
+    blobstore_options: &'a BlobstoreOptions,
+    logger: &'a Logger,
+) -> Result<Arc<dyn BlobstoreEnumerableWithUnlink>, Error> {
+    use BlobConfig::*;
+    match blobconfig {
+        Manifold { .. } | ManifoldWithTtl { .. } => {
+            make_manifold_blobstore(fb, blobconfig, blobstore_options)
+                .watched(logger)
+                .await
+        }
+        Files { .. } => make_files_blobstore(blobconfig, blobstore_options)
+            .await
+            .map(|store| Arc::new(store) as Arc<dyn BlobstoreEnumerableWithUnlink>),
+        _ => bail!("Not a physical blobstore that supports unlink + keysource + putops"),
     }
 }
 

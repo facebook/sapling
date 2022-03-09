@@ -182,6 +182,14 @@ impl<B: BlobstoreKeySource + BlobstorePutOps> BlobstoreKeySource for PackBlob<B>
     }
 }
 
+#[async_trait]
+impl<T: BlobstoreUnlinkOps> BlobstoreUnlinkOps for PackBlob<T> {
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        let inner_key = &[key, ENVELOPE_SUFFIX].concat();
+        self.inner.unlink(ctx, inner_key).await
+    }
+}
+
 impl<T: Blobstore + BlobstoreUnlinkOps> PackBlob<T> {
     /// Put packed content, returning the pack's key if successful.
     ///

@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use blobstore::Blobstore;
+use blobstore::BlobstoreEnumerableWithUnlink;
 use mononoke_types::RepositoryId;
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
@@ -37,7 +37,7 @@ impl RepoEphemeralStoreBuilder {
     pub fn build(
         self,
         repo_id: RepositoryId,
-        blobstore: Arc<dyn Blobstore>,
+        blobstore: Arc<dyn BlobstoreEnumerableWithUnlink>,
         initial_bubble_lifespan: Duration,
         bubble_expiration_grace: Duration,
     ) -> RepoEphemeralStore {

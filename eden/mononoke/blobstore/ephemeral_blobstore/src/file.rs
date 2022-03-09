@@ -64,7 +64,7 @@ impl Bubble {
         };
 
 
-        let raw_eph_blobstore = self.blobstore.clone().into_inner();
+        let raw_eph_blobstore = Arc::new(self.blobstore.clone().into_inner()) as Arc<dyn Blobstore>;
 
         filestore::copy(
             blobstore,

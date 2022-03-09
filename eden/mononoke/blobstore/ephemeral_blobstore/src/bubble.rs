@@ -13,7 +13,9 @@ use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use anyhow::Result;
-use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstoreIsPresent};
+use blobstore::{
+    Blobstore, BlobstoreBytes, BlobstoreEnumerableWithUnlink, BlobstoreGetData, BlobstoreIsPresent,
+};
 use changesets::ChangesetsArc;
 use context::CoreContext;
 use derivative::Derivative;
@@ -136,7 +138,7 @@ impl BubbleId {
     }
 }
 
-type RawBubbleBlobstore = PrefixBlobstore<Arc<dyn Blobstore>>;
+type RawBubbleBlobstore = PrefixBlobstore<Arc<dyn BlobstoreEnumerableWithUnlink>>;
 
 /// An opened ephemeral blobstore bubble.  This is a miniature blobstore
 /// that stores blobs just for this ephemeral bubble in a particular repo.
@@ -169,7 +171,7 @@ impl Bubble {
     pub(crate) fn new(
         bubble_id: BubbleId,
         expires_at: DateTime,
-        blobstore: Arc<dyn Blobstore>,
+        blobstore: Arc<dyn BlobstoreEnumerableWithUnlink>,
         connections: SqlConnections,
     ) -> Self {
         let blobstore = PrefixBlobstore::new(blobstore, bubble_id.prefix());
@@ -188,6 +190,12 @@ impl Bubble {
         } else {
             Err(EphemeralBlobstoreError::BubbleExpired(self.bubble_id).into())
         }
+    }
+
+    pub(crate) async fn delete_blobs_in_bubble(&self, _ctx: &CoreContext) -> Result<()> {
+        // TODO: Add concrete functionality for deleting blobs within the underlying
+        // blobstore in subsequent diff.
+        unimplemented!()
     }
 
     pub fn bubble_id(&self) -> BubbleId {

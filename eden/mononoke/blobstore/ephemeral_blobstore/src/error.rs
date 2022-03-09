@@ -27,4 +27,8 @@ pub enum EphemeralBlobstoreError {
     /// An in-use bubble has expired.
     #[error("bubble {0} has expired")]
     BubbleExpired(BubbleId),
+
+    /// The requested bubble could not be deleted.
+    #[error("failed to delete bubble {0}")]
+    DeleteBubbleFailed(BubbleId),
 }

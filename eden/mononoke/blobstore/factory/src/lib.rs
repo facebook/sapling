@@ -32,7 +32,8 @@ pub use throttledblob::ThrottleOptions;
 
 pub use crate::args::BlobstoreArgs;
 pub use crate::blobstore::{
-    make_blobstore, make_packblob, make_sql_blobstore, make_sql_blobstore_xdb, BlobstoreOptions,
+    make_blobstore, make_blobstore_enumerable_with_unlink, make_packblob, make_sql_blobstore,
+    make_sql_blobstore_xdb, BlobstoreOptions,
 };
 pub use crate::sql::{make_metadata_sql_factory, MetadataSqlFactory, SqlTierInfo};
 

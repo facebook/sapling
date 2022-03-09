@@ -10,8 +10,9 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::BlobstoreEnumerableWithUnlink;
 use chrono::Duration as ChronoDuration;
+use context::CoreContext;
 use derivative::Derivative;
 use mononoke_types::{ChangesetId, DateTime, RepositoryId, Timestamp};
 use sql::queries;
@@ -27,7 +28,7 @@ use crate::error::EphemeralBlobstoreError;
 struct RepoEphemeralStoreInner {
     /// The backing blobstore where blobs are stored, without any redaction
     /// or repo prefix wrappers.
-    pub(crate) blobstore: Arc<dyn Blobstore>,
+    pub(crate) blobstore: Arc<dyn BlobstoreEnumerableWithUnlink>,
 
     #[derivative(Debug = "ignore")]
     /// Database used to manage the ephemeral store.
@@ -50,7 +51,6 @@ struct RepoEphemeralStoreInner {
 pub struct RepoEphemeralStore {
     /// Repo this belongs to
     repo_id: RepositoryId,
-
     inner: Option<Arc<RepoEphemeralStoreInner>>,
 }
 
@@ -79,6 +79,26 @@ queries! {
         "SELECT bubble_id
         FROM ephemeral_bubble_changeset_mapping
         WHERE repo_id = {repo_id} AND cs_id = {cs_id}"
+    }
+
+    read SelectExpiredBubbles(
+        expires_at: Timestamp,
+        limit: u32,
+    ) -> (BubbleId,) {
+        "SELECT id
+        FROM ephemeral_bubbles
+        WHERE expires_at < {expires_at} AND NOT expired
+        LIMIT {limit}"
+    }
+
+    write UpdateExpired(
+        expired: u8, // Can only take values 1 (for expired) or 0 (not yet expired)
+        id: BubbleId
+    ) {
+        none,
+        "UPDATE ephemeral_bubbles
+        SET expired={expired}
+        WHERE id={id}"
     }
 }
 
@@ -132,6 +152,31 @@ impl RepoEphemeralStoreInner {
         Ok(rows.into_iter().next().map(|b| b.0))
     }
 
+    async fn get_expired_bubbles(
+        &self,
+        expiry_offset: Duration,
+        max_bubbles: u32,
+    ) -> Result<Vec<BubbleId>> {
+        let expiry_cutoff = DateTime::now() - to_chrono(expiry_offset);
+        let rows = SelectExpiredBubbles::query(
+            &self.connections.write_connection,
+            &Timestamp::from(expiry_cutoff),
+            &max_bubbles,
+        )
+        .await?;
+        Ok(rows.into_iter().map(|b| b.0).collect::<Vec<_>>())
+    }
+
+    async fn delete_bubble(&self, bubble_id: BubbleId, ctx: &CoreContext) -> Result<()> {
+        let bubble = self.open_bubble(bubble_id).await?;
+        bubble.delete_blobs_in_bubble(ctx).await?;
+        let res = UpdateExpired::query(&self.connections.write_connection, &1, &bubble_id).await?;
+        match res.affected_rows() {
+            1 => Ok(()),
+            _ => Err(EphemeralBlobstoreError::DeleteBubbleFailed(bubble_id).into()),
+        }
+    }
+
     async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble> {
         let mut rows =
             SelectBubbleById::query(&self.connections.read_connection, &bubble_id).await?;
@@ -166,7 +211,7 @@ impl RepoEphemeralStore {
     pub(crate) fn new(
         repo_id: RepositoryId,
         connections: SqlConnections,
-        blobstore: Arc<dyn Blobstore>,
+        blobstore: Arc<dyn BlobstoreEnumerableWithUnlink>,
         initial_bubble_lifespan: Duration,
         bubble_expiration_grace: Duration,
     ) -> Self {
@@ -198,6 +243,20 @@ impl RepoEphemeralStore {
         self.inner()?.create_bubble(custom_duration).await
     }
 
+    pub async fn delete_bubble(&self, bubble_id: BubbleId, ctx: &CoreContext) -> Result<()> {
+        self.inner()?.delete_bubble(bubble_id, ctx).await
+    }
+
+    pub async fn get_expired_bubbles(
+        &self,
+        expiry_offset: Duration,
+        max_bubbles: u32,
+    ) -> Result<Vec<BubbleId>> {
+        self.inner()?
+            .get_expired_bubbles(expiry_offset, max_bubbles)
+            .await
+    }
+
     pub async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble> {
         self.inner()?.open_bubble(bubble_id).await
     }
@@ -213,7 +272,7 @@ impl RepoEphemeralStore {
 mod test {
     use super::*;
     use crate::builder::RepoEphemeralStoreBuilder;
-    use blobstore::{BlobstoreBytes, BlobstoreKeyParam, BlobstoreKeySource};
+    use blobstore::{Blobstore, BlobstoreBytes, BlobstoreEnumerableWithUnlink, BlobstoreKeyParam};
     use context::CoreContext;
     use fbinit::FacebookInit;
     use maplit::hashset;
@@ -233,7 +292,7 @@ mod test {
         let blobstore = Arc::new(PackBlob::new(
             Memblob::default(),
             PackFormat::ZstdIndividual(0),
-        ));
+        )) as Arc<dyn BlobstoreEnumerableWithUnlink>;
         let repo_blobstore = RepoBlobstore::new(
             Arc::new(Memblob::default()),
             None,

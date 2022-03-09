@@ -657,13 +657,15 @@ CONFIG
     echo ']' >> common/storage.toml
   else
     mkdir -p "$blobstorepath"
+    # Using FileBlob instead of SqlBlob as the backing blobstore for ephemeral
+    # store since SqlBlob current doesn't support enumeration.
     cat >> common/storage.toml <<CONFIG
 $(db_config "$blobstorename")
 
 [$blobstorename.ephemeral_blobstore]
 initial_bubble_lifespan_secs = 1000
 bubble_expiration_grace_secs = 1000
-blobstore = { $underlyingstorage = { path = "$blobstorepath" } }
+blobstore = { blob_files = { path = "$blobstorepath" } }
 
 $(ephemeral_db_config "$blobstorename.ephemeral_blobstore")
 

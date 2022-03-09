@@ -124,6 +124,15 @@ impl std::ops::Add<ChronoDuration> for DateTime {
     }
 }
 
+impl std::ops::Sub<ChronoDuration> for DateTime {
+    type Output = DateTime;
+
+    #[inline]
+    fn sub(self, rhs: ChronoDuration) -> DateTime {
+        DateTime::new(self.into_chrono() - rhs)
+    }
+}
+
 impl Display for DateTime {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{}", self.0)

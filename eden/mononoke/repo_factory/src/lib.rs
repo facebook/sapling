@@ -16,10 +16,10 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use async_once_cell::AsyncOnceCell;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreEnumerableWithUnlink};
 use blobstore_factory::{
-    default_scrub_handler, make_blobstore, make_metadata_sql_factory, ComponentSamplingHandler,
-    MetadataSqlFactory, ScrubHandler,
+    default_scrub_handler, make_blobstore, make_blobstore_enumerable_with_unlink,
+    make_metadata_sql_factory, ComponentSamplingHandler, MetadataSqlFactory, ScrubHandler,
 };
 use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingBuilder};
 use bonsai_globalrev_mapping::{
@@ -283,6 +283,20 @@ impl RepoFactory {
         );
 
         Ok(repo_blobstore)
+    }
+
+    async fn blobstore_enumerable_with_unlink(
+        &self,
+        config: &BlobConfig,
+    ) -> Result<Arc<dyn BlobstoreEnumerableWithUnlink>> {
+        make_blobstore_enumerable_with_unlink(
+            self.env.fb,
+            config.clone(),
+            &self.env.blobstore_options,
+            &self.env.logger,
+        )
+        .watched(&self.env.logger)
+        .await
     }
 
     async fn blobstore(&self, config: &BlobConfig) -> Result<Arc<dyn Blobstore>> {
@@ -858,7 +872,9 @@ impl RepoFactory {
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcRepoEphemeralStore> {
         if let Some(ephemeral_config) = &repo_config.storage_config.ephemeral_blobstore {
-            let blobstore = self.blobstore(&ephemeral_config.blobstore).await?;
+            let blobstore = self
+                .blobstore_enumerable_with_unlink(&ephemeral_config.blobstore)
+                .await?;
             let ephemeral_blobstore = RepoEphemeralStoreBuilder::with_database_config(
                 self.env.fb,
                 &ephemeral_config.metadata,
