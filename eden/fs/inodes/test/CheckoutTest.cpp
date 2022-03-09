@@ -230,7 +230,6 @@ makeConflict(ConflictType type, StringPiece path, StringPiece message = "") {
   *conflict.message_ref() = message.str();
   return conflict;
 }
-} // unnamed namespace
 
 void testAddFile(
     folly::StringPiece newFilePath,
@@ -1455,12 +1454,10 @@ TEST(Checkout, testSetPathObjectIdCheckoutMultipleFiles) {
 
 #endif
 
-namespace {
 template <typename Unloader>
 struct CheckoutUnloadTest : ::testing::Test {
   Unloader unloader;
 };
-} // namespace
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -1729,6 +1726,49 @@ TEST(Checkout, checkoutFailsOnInProgressCheckout) {
   EXPECT_TRUE(checkout2.isReady());
   EXPECT_NO_THROW(std::move(checkout2).get());
 }
+
+TEST(Checkout, changing_hash_scheme_does_not_conflict_if_contents_are_same) {
+  TestMount mount;
+  auto backingStore = mount.getBackingStore();
+
+  folly::ByteRange contents = folly::StringPiece{"test contents\n"};
+
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("a/test.txt"_relpath, contents, false, ObjectId{"object1"});
+
+  auto builder2 = FakeTreeBuilder();
+  builder2.setFile("a/test.txt"_relpath, contents, false, ObjectId{"object2"});
+  builder2.finalize(backingStore, /*setReady=*/true);
+  auto commit2 = backingStore->putCommit("2", builder2);
+  commit2->setReady();
+
+  // Initialize the mount with the tree data from builder1
+  mount.initialize(RootId{"1"}, builder1);
+
+  auto executor = mount.getServerExecutor().get();
+
+  // Load a/test.txt
+  auto preInode = mount.getFileInode("a/test.txt");
+
+  // At this point, the working copy references the hash scheme used in commit1.
+
+  auto result = mount.getEdenMount()
+                    ->checkout(RootId{"2"}, std::nullopt, __func__)
+                    .getVia(executor);
+  EXPECT_EQ(0, result.conflicts.size());
+
+  // Call resetParent() to make the mount point back at commit1, even though
+  // the file state is from commit2.  They have the same contents, so a second
+  // checkout also should not produce conflicts.
+  mount.getEdenMount()->resetParent(RootId{"1"});
+
+  result = mount.getEdenMount()
+               ->checkout(RootId{"2"}, std::nullopt, __func__)
+               .getVia(executor);
+  EXPECT_EQ(0, result.conflicts.size());
+}
+
+} // namespace
 
 // TODO:
 // - remove subdirectory

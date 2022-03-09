@@ -85,13 +85,15 @@ class FakeTreeBuilder {
   void setFile(
       RelativePathPiece path,
       folly::ByteRange contents,
-      bool executable = false) {
+      bool executable = false,
+      std::optional<ObjectId> objectId = std::nullopt) {
     setFileImpl(
         path,
         contents,
         false,
         executable ? TreeEntryType::EXECUTABLE_FILE
-                   : TreeEntryType::REGULAR_FILE);
+                   : TreeEntryType::REGULAR_FILE,
+        std::move(objectId));
   }
 
   void setFiles(const std::initializer_list<FileInfo>& fileArgs);
@@ -121,13 +123,15 @@ class FakeTreeBuilder {
   void replaceFile(
       RelativePathPiece path,
       folly::ByteRange contents,
-      bool executable = false) {
+      bool executable = false,
+      std::optional<ObjectId> objectId = std::nullopt) {
     setFileImpl(
         path,
         contents,
         true,
         executable ? TreeEntryType::EXECUTABLE_FILE
-                   : TreeEntryType::REGULAR_FILE);
+                   : TreeEntryType::REGULAR_FILE,
+        std::move(objectId));
   }
 
   /**
@@ -263,6 +267,7 @@ class FakeTreeBuilder {
     TreeEntryType type;
     std::unique_ptr<PathMap<EntryInfo>> entries;
     std::string contents;
+    std::optional<ObjectId> objectId;
   };
 
   FakeTreeBuilder(FakeTreeBuilder const&) = delete;
@@ -272,7 +277,8 @@ class FakeTreeBuilder {
       RelativePathPiece path,
       folly::ByteRange contents,
       bool replace,
-      TreeEntryType type);
+      TreeEntryType type,
+      std::optional<ObjectId> objectId = std::nullopt);
   EntryInfo* getEntry(RelativePathPiece path);
   EntryInfo* getDirEntry(RelativePathPiece path, bool create);
 

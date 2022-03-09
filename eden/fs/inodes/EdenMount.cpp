@@ -1310,6 +1310,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
       .checkAsync("checkout", getPath().stringPiece())
       .via(getServerThreadPool().get())
       .thenValue([this, ctx, parent1Hash = oldParent, snapshotHash](auto&&) {
+        XLOG(DBG7) << "Checkout: getRoots";
         auto fromTreeFuture =
             objectStore_->getRootTree(parent1Hash, ctx->getFetchContext());
         auto toTreeFuture =
@@ -1319,6 +1320,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
       .thenValue(
           [this](std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
                      treeResults) {
+            XLOG(DBG7) << "Checkout: waitForPendingNotifications";
             return waitForPendingNotifications()
                 .thenValue([treeResults = std::move(treeResults)](auto&&) {
                   return treeResults;
@@ -1328,6 +1330,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
       .thenValue([this, ctx, checkoutTimes, stopWatch, journalDiffCallback](
                      std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
                          treeResults) {
+        XLOG(DBG7) << "Checkout: performDiff";
         checkoutTimes->didLookupTrees = stopWatch.elapsed();
         // Call JournalDiffCallback::performDiff() to compute the changes
         // between the original working directory state and the source

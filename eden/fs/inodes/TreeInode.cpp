@@ -2907,7 +2907,14 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   if (!oldScmEntry) {
     conflictType = ConflictType::UNTRACKED_ADDED;
   } else if (entry.getHash() != oldScmEntry->getHash()) {
-    conflictType = ConflictType::MODIFIED_MODIFIED;
+    // If the object IDs differ, it does not mean the files are different.
+    // Perhaps the hash scheme has changed, as with the hg:object-id-format
+    // ConfigSettiing.
+    // Unfortunately, the only way to know for sure is to load the inode.
+    auto inodeFuture = loadChildLocked(
+        contents, name, entry, pendingLoads, ctx->getFetchContext());
+    return make_unique<CheckoutAction>(
+        ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
   }
   if (conflictType != ConflictType::ERROR) {
     // If this is a directory we unfortunately have to load it and recurse into

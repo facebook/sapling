@@ -58,7 +58,8 @@ void FakeTreeBuilder::setFileImpl(
     RelativePathPiece path,
     folly::ByteRange contents,
     bool replace,
-    TreeEntryType type) {
+    TreeEntryType type,
+    std::optional<ObjectId> objectId) {
   XCHECK(!finalizedRoot_);
 
   auto dir = getDirEntry(path.dirname(), true);
@@ -66,6 +67,7 @@ void FakeTreeBuilder::setFileImpl(
 
   auto info = EntryInfo{type};
   info.contents = folly::StringPiece{contents}.str();
+  info.objectId = objectId;
 
   if (replace) {
     auto iter = dir->entries->find(name);
@@ -307,7 +309,9 @@ StoredBlob* FakeTreeBuilder::EntryInfo::finalizeBlob(
     FakeTreeBuilder* builder,
     bool setReady) const {
   XCHECK(type != TreeEntryType::TREE);
-  auto* storedBlob = builder->store_->maybePutBlob(contents).first;
+  auto* storedBlob = objectId
+      ? builder->store_->maybePutBlob(objectId.value(), contents).first
+      : builder->store_->maybePutBlob(contents).first;
   if (setReady) {
     storedBlob->setReady();
   }
