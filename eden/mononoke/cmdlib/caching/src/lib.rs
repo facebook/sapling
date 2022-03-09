@@ -37,11 +37,11 @@ pub fn init_cachelib(
     {
         facebook::init_cachelib_from_settings(fb, settings)
             .expect("cachelib initialize should always succeed");
-    }
 
-    if args.blobstore_cachelib_only {
-        Caching::CachelibOnlyBlobstore(args.cachelib_shards)
-    } else {
-        Caching::Enabled(args.cachelib_shards)
+        if args.blobstore_cachelib_only {
+            Caching::CachelibOnlyBlobstore(args.cachelib_shards)
+        } else {
+            Caching::Enabled(args.cachelib_shards)
+        }
     }
 }

@@ -11,7 +11,6 @@ use slog::Level;
 
 /// Sets the log level used by glog library to match the level use we use in slog.
 /// It can be overridden by setting the GLOG_minloglevel env variable.
-#[cfg(fbcode_build)]
 pub fn set_glog_log_level(fb: FacebookInit, level: Level) -> Result<()> {
     if std::env::var("GLOG_minloglevel").is_err() {
         let level_glog_num = match level {

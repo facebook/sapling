@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(fbcode_build)]
 pub mod glog;
 pub mod log;
 mod logging_args;
