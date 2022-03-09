@@ -136,12 +136,4 @@ def update(ui, repo, csid, clean=False):
             quiet=True,
         )
 
-        for (path, filetype) in pathtype:
-            if filetype == "Executable":
-                if not wctx[path].isexec():
-                    wctx[path].setflags(l=False, x=True)
-            else:
-                if wctx[path].isexec():
-                    wctx[path].setflags(l=False, x=False)
-
         storelatest(repo.metalog(), csid, snapshot["bubble_id"])

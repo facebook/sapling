@@ -11,6 +11,7 @@ use std::path::Path;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use cloned::cloned;
 use crossbeam::channel;
 use edenapi::api::EdenApi;
 use edenapi_types::AnyFileContentId;
@@ -34,6 +35,15 @@ fn abs_path(root: &RepoPathBuf, rel_path: &RepoPathBuf) -> RepoPathBuf {
     abs_path
 }
 
+struct OnDiskOptimizationResponse {
+    /// Paths which don't have the correct content.
+    incorrect_paths: Vec<(RepoPathBuf, FileType)>,
+    /// Paths that have the correct content, but maybe not the correct permissions.
+    correct_paths: Vec<(RepoPathBuf, FileType)>,
+    /// If the content was found, it is returned.
+    content: Option<Bytes>,
+}
+
 /// If the desired file is already on disk, usually, from a previous snapshot restore,
 /// we can just read it from disk and filter the paths based on which are still outdated.
 async fn on_disk_optimization(
@@ -42,27 +52,31 @@ async fn on_disk_optimization(
     token: &UploadToken,
     // Try not to fail if possible
     conservative: bool,
-) -> Result<(Vec<(RepoPathBuf, FileType)>, Option<Bytes>)> {
+) -> Result<OnDiskOptimizationResponse> {
     let desired_cid = match token.data.id {
         AnyId::AnyFileContentId(AnyFileContentId::ContentId(cid)) => cid,
-        // Id is not in the desired format, skip optimisation
         _ => {
             if conservative {
-                return Ok((paths, None));
+                return Ok(OnDiskOptimizationResponse {
+                    incorrect_paths: paths,
+                    correct_paths: vec![],
+                    content: None,
+                });
             } else {
                 bail!("Token not in ContentId format")
             }
         }
     };
-    let (send, recv) = channel::unbounded();
-    let filtered_paths = stream::iter(paths)
+    let (send_content, recv_content) = channel::unbounded();
+    let (send_correct_paths, recv_correct_paths) = channel::unbounded();
+    let incorrect_paths = stream::iter(paths)
         .map(Result::<_>::Ok)
         .try_filter_map(|(rel_path, file_type)| {
             let abs_path = abs_path(root, &rel_path);
-            let send = send.clone();
+            cloned!(send_content, send_correct_paths);
             async move {
                 let future = {
-                    let rel_path = rel_path.clone();
+                    cloned!(rel_path);
                     async move {
                         let abs_path = abs_path.as_repo_path().as_str();
                         let is_symlink = tokio::fs::symlink_metadata(abs_path)
@@ -87,9 +101,10 @@ async fn on_disk_optimization(
                         };
                         let content_id = calc_contentid(&bytes);
                         if content_id == desired_cid {
-                            if send.is_empty() {
-                                let _ = send.send(bytes);
+                            if send_content.is_empty() {
+                                let _ = send_content.send(bytes);
                             }
+                            let _ = send_correct_paths.send((rel_path, file_type));
                             Ok(None)
                         } else {
                             Ok(Some((rel_path, file_type)))
@@ -105,7 +120,11 @@ async fn on_disk_optimization(
         })
         .try_collect()
         .await?;
-    Ok((filtered_paths, recv.try_recv().ok()))
+    Ok(OnDiskOptimizationResponse {
+        incorrect_paths,
+        correct_paths: recv_correct_paths.try_iter().collect(),
+        content: recv_content.try_recv().ok(),
+    })
 }
 
 struct MergedTokens {
@@ -135,45 +154,21 @@ fn merge_tokens(
 
 const WORKERS: usize = 10;
 
+/// Return which files differ in content or symlinkness from the given upload tokens.
+/// Note: does not return files that differ in executable permission.
 pub async fn check_files(
     root: &RepoPathBuf,
     files: impl IntoIterator<Item = (RepoPathBuf, UploadToken, FileType)>,
 ) -> Result<Vec<RepoPathBuf>> {
     stream::iter(merge_tokens(files).map(|value| async move {
-        let (paths, _) = on_disk_optimization(root, value.paths, &value.token, false).await?;
-        let paths = paths.into_iter().map(|(path, _)| path);
+        let response = on_disk_optimization(root, value.paths, &value.token, false).await?;
+        let paths = response.incorrect_paths.into_iter().map(|(path, _)| path);
         Result::<_>::Ok(stream::iter(paths).map(Result::<_>::Ok))
     }))
     .buffered(WORKERS)
     .try_flatten()
     .try_collect()
     .await
-}
-
-async fn symlink(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<()> {
-    // Remove existing file in the way of symlink destination.
-    if tokio::fs::symlink_metadata(dst.as_ref()).await.is_ok() {
-        tokio::fs::remove_file(dst.as_ref()).await?;
-    }
-
-    #[cfg(unix)]
-    {
-        tokio::fs::symlink(src, dst).await?;
-    }
-    #[cfg(windows)]
-    {
-        let metadata = tokio::fs::metadata(src.as_ref()).await?;
-        if metadata.file_type().is_dir() {
-            tokio::fs::symlink_dir(src, dst).await?;
-        } else {
-            tokio::fs::symlink_file(src, dst).await?;
-        }
-    }
-    #[cfg(not(any(unix, windows)))]
-    {
-        unimplemented!()
-    }
-    Ok(())
 }
 
 pub async fn download_files(
@@ -186,8 +181,19 @@ pub async fn download_files(
     let writer = &writer;
 
     stream::iter(merge_tokens(files).map(|value| async move {
-        let (paths, content) = on_disk_optimization(root, value.paths, &value.token, true).await?;
-        let len = paths.len();
+        let OnDiskOptimizationResponse {
+            correct_paths,
+            incorrect_paths,
+            content,
+        } = on_disk_optimization(root, value.paths, &value.token, true).await?;
+        for (path, file_type) in correct_paths {
+            match file_type {
+                FileType::Regular => writer.set_executable(path, false).await?,
+                FileType::Executable => writer.set_executable(path, true).await?,
+                FileType::Symlink => {}
+            }
+        }
+        let len = incorrect_paths.len();
         if len == 0 {
             return Ok(());
         }
@@ -195,28 +201,24 @@ pub async fn download_files(
             Some(bytes) => bytes,
             None => api.download_file(value.token).await?,
         };
-        let (write_paths, symlink_paths): (Vec<_>, Vec<_>) = paths
+        let write_paths = incorrect_paths
             .into_iter()
             // We're zipping and using repeat_n to avoid cloning the
             // whole content unecessarily. One file should be the most
             // common case.
             .zip(itertools::repeat_n(content, len))
-            .partition(|content| content.0.1 != FileType::Symlink);
-        writer
-            .write_batch(
-                write_paths
-                    .into_iter()
-                    .map(|((path, _), content)| (path, content, UpdateFlag::Regular)),
-            )
-            .await?;
-
-        for ((path, _), content) in symlink_paths {
-            symlink(
-                String::from_utf8(content.to_vec())?,
-                AsRef::<str>::as_ref(&abs_path(root, &path)),
-            )
-            .await?;
-        }
+            .map(|((path, file_type), content)| {
+                (
+                    path,
+                    content,
+                    match file_type {
+                        FileType::Regular => UpdateFlag::Regular,
+                        FileType::Symlink => UpdateFlag::Symlink,
+                        FileType::Executable => UpdateFlag::Executable,
+                    },
+                )
+            });
+        writer.write_batch(write_paths).await?;
 
         Ok(())
     }))

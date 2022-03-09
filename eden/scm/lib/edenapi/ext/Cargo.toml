@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.51"
 blake2 = "0.9"
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 crossbeam = "0.8"
 edenapi = { version = "0.1.0", path = ".." }
 edenapi_types = { version = "0.1.0", path = "../types" }
