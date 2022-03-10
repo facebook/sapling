@@ -2182,6 +2182,11 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--version", "-v", action="store_true", help="Print EdenFS version."
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug mode (more verbose logging, traceback, etc..)",
+    )
 
     subcmd_add_list: List[Type[Subcmd]] = [
         subcmd_mod.HelpCmd,
@@ -2319,6 +2324,10 @@ def main() -> int:
         # streams and skip the rest of process shutdown.
         sys.stdout.flush()
         sys.stderr.flush()
+
+        if args.debug:
+            raise
+
         os._exit(130)
         # Pyre doesn't understand that os._exit is noreturn.
         return 130
