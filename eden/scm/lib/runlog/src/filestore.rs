@@ -23,8 +23,11 @@ use util::path::create_shared_dir;
 use crate::Entry;
 
 pub struct FileStore {
-    // Directory to write files to.
+    // Directory to write files to (normally .hg/runlog/).
     dir: PathBuf,
+
+    // Path to runlog watchfile (normally .hg/runlog_watchfile).
+    watchfile_path: PathBuf,
 
     // A lock file indicating we are still running.
     #[allow(dead_code)]
@@ -36,20 +39,28 @@ pub struct FileStore {
 
 const LOCK_EXT: &str = "lock";
 const JSON_EXT: &str = "json";
-const WATCHFILE: &str = "watchfile";
+const WATCHFILE: &str = "runlog_watchfile";
+const RUNLOG_DIR: &str = "runlog";
 
 /// FileStore is a simple runlog storage that writes JSON entries to a
 /// specified directory.
 impl FileStore {
     // Create a new FileStore that writes files to directory dir. dir
     // is created automatically if it doesn't exist.
-    pub(crate) fn new(dir: PathBuf, entry_id: &str, boring_commands: Vec<String>) -> Result<Self> {
+    pub(crate) fn new(
+        shared_dot_hg_dir: &Path,
+        entry_id: &str,
+        boring_commands: Vec<String>,
+    ) -> Result<Self> {
+        let dir = shared_dot_hg_dir.join(RUNLOG_DIR);
+
         create_shared_dir(&dir)?;
 
         let lock_file = PathLock::exclusive(dir.join(entry_id).with_extension(LOCK_EXT))?;
 
         Ok(FileStore {
             dir,
+            watchfile_path: shared_dot_hg_dir.join(WATCHFILE),
             lock_file,
             skip_watchfile_commands: boring_commands.into_iter().collect(),
         })
@@ -68,22 +79,19 @@ impl FileStore {
 
         if !e.command.is_empty() && !self.skip_watchfile_commands.contains(&e.command[0]) {
             // Contents aren't important, but it makes it easier to test.
-            fs::write(self.dir.join(WATCHFILE), &e.command[0])?;
+            fs::write(&self.watchfile_path, &e.command[0])?;
         }
 
         Ok(())
     }
 
-    pub(crate) fn cleanup<P: AsRef<Path>>(dir: P, threshold: Duration) -> Result<()> {
+    pub(crate) fn cleanup<P: AsRef<Path>>(shared_dot_hg_dir: P, threshold: Duration) -> Result<()> {
+        let dir = shared_dot_hg_dir.as_ref().join(RUNLOG_DIR);
+
         create_shared_dir(&dir)?;
 
         for dir_entry in fs::read_dir(dir)? {
             let path = dir_entry?.path();
-
-            // Don't delete watchfile.
-            if Some(WATCHFILE.as_ref()) == path.file_name() {
-                continue;
-            }
 
             let ext = match path.extension().and_then(OsStr::to_str) {
                 Some(ext) => ext,
@@ -117,8 +125,10 @@ impl FileStore {
     // Iterates each entry, yielding the entry and whether the
     // associated command is still running.
     pub fn entry_iter<P: AsRef<Path>>(
-        dir: P,
+        shared_dot_hg_path: P,
     ) -> Result<impl Iterator<Item = Result<(Entry, bool), Error>>> {
+        let dir = shared_dot_hg_path.as_ref().join(RUNLOG_DIR);
+
         create_shared_dir(&dir)?;
 
         Ok(fs::read_dir(&dir)?.filter_map(|file| match file {
@@ -173,15 +183,16 @@ mod tests {
     fn test_save() -> Result<()> {
         let td = tempdir()?;
 
-        let fs_dir = td.path().join("banana");
-        let fs = FileStore::new(fs_dir.clone(), "some_id", vec![])?;
+        let fs = FileStore::new(td.path(), "some_id", vec![])?;
+        let rl_dir = td.path().join(RUNLOG_DIR);
+
         // Make sure FileStore creates directory automatically.
-        assert!(fs_dir.exists());
+        assert!(rl_dir.exists());
 
         let mut entry = Entry::new(vec!["some_command".to_string()]);
 
         let assert_entry = |e: &Entry| {
-            let f = fs::File::open(fs_dir.join(&e.id).with_extension(JSON_EXT)).unwrap();
+            let f = fs::File::open(rl_dir.join(&e.id).with_extension(JSON_EXT)).unwrap();
             let got: Entry = serde_json::from_reader(&f).unwrap();
             assert_eq!(&got, e);
 
@@ -205,7 +216,11 @@ mod tests {
     fn test_cleanup() -> Result<()> {
         let td = tempdir()?;
         let e = Entry::new(vec!["foo".to_string()]);
-        let entry_path = td.path().join(&e.id).with_extension(JSON_EXT);
+        let entry_path = td
+            .path()
+            .join(RUNLOG_DIR)
+            .join(&e.id)
+            .with_extension(JSON_EXT);
 
         {
             let fs = FileStore::new(td.path().into(), &e.id, vec![])?;

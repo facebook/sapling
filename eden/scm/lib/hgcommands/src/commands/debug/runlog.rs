@@ -39,7 +39,7 @@ pub fn run(opts: DebugRunlogOpts, io: &IO, repo: Repo) -> Result<u8> {
         _ => return Err(errors::Abort("invalid template (only \"json\" supported)".into()).into()),
     };
 
-    for entry in runlog::FileStore::entry_iter(repo.shared_dot_hg_path().join("runlog"))? {
+    for entry in runlog::FileStore::entry_iter(repo.shared_dot_hg_path())? {
         let (entry, running) = match entry {
             Ok((entry, running)) => (entry, running),
             Err(err) => {

@@ -40,7 +40,7 @@ impl Logger {
             if repo.config().get_or("runlog", "enable", || false)?
                 && !accidentally_running_as_root(repo)
             {
-                let dir = repo.shared_dot_hg_path().join("runlog");
+                let dir = repo.shared_dot_hg_path();
 
                 // Probabilistically clean up old entries to avoid doing the work every time.
                 let cleanup_chance = repo.config().get_or("runlog", "cleanup_chance", || 0.01)?;
@@ -48,7 +48,7 @@ impl Logger {
                     let threshold = repo
                         .config()
                         .get_or("runlog", "cleanup_threshold", || 3600.0)?;
-                    FileStore::cleanup(&dir, Duration::from_secs_f64(threshold))?;
+                    FileStore::cleanup(dir, Duration::from_secs_f64(threshold))?;
                 }
 
                 storage = Some(Mutex::new(FileStore::new(
