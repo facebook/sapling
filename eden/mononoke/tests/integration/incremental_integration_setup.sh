@@ -7,7 +7,7 @@
 set -e
 
 if [[ -n "$USEBUCK1" ]]; then
-    BUCK=buck
+    BUCK=buck1
 else
     BUCK=buck2
 fi
