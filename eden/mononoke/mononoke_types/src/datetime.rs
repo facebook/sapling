@@ -6,12 +6,14 @@
  */
 
 use std::fmt::{self, Display};
+use std::str::FromStr;
 
 use anyhow::{bail, Context, Result};
 use chrono::{
     DateTime as ChronoDateTime, Duration as ChronoDuration, FixedOffset, Local, LocalResult,
     NaiveDateTime, TimeZone,
 };
+use chrono_english::{parse_date_string, Dialect};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
 use sql::mysql;
@@ -152,6 +154,15 @@ impl Arbitrary for DateTime {
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         empty_shrinker()
+    }
+}
+
+impl FromStr for DateTime {
+    type Err = chrono_english::DateError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let now = DateTime::now().into_chrono();
+        Ok(DateTime::new(parse_date_string(s, now, Dialect::Us)?))
     }
 }
 

@@ -21,7 +21,6 @@ bookmarks_types = { version = "0.1.0", path = "../bookmarks_types" }
 bytes = { version = "1.1", features = ["serde"] }
 changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../../changesets" }
-chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo_sync" }
@@ -50,6 +49,7 @@ revset = { version = "0.1.0", path = "../../revset" }
 scribe_commit_queue = { version = "0.1.0", path = "../../repo_client/scribe_commit_queue" }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+strum_macros = "0.21"
 thiserror = "1.0.29"
 trait_alias = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tunables = { version = "0.1.0", path = "../../tunables" }

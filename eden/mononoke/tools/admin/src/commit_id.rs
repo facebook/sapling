@@ -133,8 +133,11 @@ impl IdentityScheme {
 
 /// Parse a general commit ID from a string
 ///
-/// Globalrevs should be prefixed by 'm', and svnrevs should be
-/// prefixed by 's'.
+/// The string can either be of the form <scheme>=<id>, or just
+/// a bare id, in which case the scheme will be inferred.
+///
+/// For inferred schemes, globalrevs should be prefixed by 'm', and svnrevs
+/// should be prefixed by 's'.
 ///
 /// Hash types are inferred from their length (64 characters for
 /// 32-byte bonsai hashes, 40 characters for 20-byte Mercurial or
@@ -147,7 +150,16 @@ pub async fn parse_commit_id(
     repo: &AdminRepo,
     commit_id: &str,
 ) -> Result<ChangesetId> {
-    if let Some(globalrev) = commit_id.strip_prefix('m') {
+    if let Some((scheme, id)) = commit_id.split_once('=') {
+        let scheme = IdentityScheme::from_str(scheme, /* ignore_case */ true).map_err(|e| {
+            anyhow!(
+                "Failed to parse commit identity scheme '{}': {}",
+                scheme.to_string(),
+                e
+            )
+        })?;
+        scheme.parse_commit_id(ctx, repo, id).await
+    } else if let Some(globalrev) = commit_id.strip_prefix('m') {
         IdentityScheme::Globalrev
             .parse_commit_id(ctx, repo, globalrev)
             .await

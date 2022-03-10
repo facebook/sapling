@@ -13,6 +13,9 @@ use metaconfig_types::{
 };
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_cross_repo::RepoCrossRepoRef;
+use repo_identity::RepoIdentityRef;
+use strum_macros::ToString;
 
 use crate::{BookmarkMovementError, Repo};
 
@@ -70,8 +73,9 @@ impl<'params> BookmarkMoveAuthorization<'params> {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum BookmarkKind {
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ToString)]
+#[strum(serialize_all = "kebab_case")]
+pub enum BookmarkKind {
     Scratch,
     Public,
 }
@@ -186,8 +190,8 @@ pub(crate) async fn ensure_ancestor_of(
             .await?)
 }
 
-pub(crate) fn check_bookmark_sync_config(
-    repo: &impl Repo,
+pub fn check_bookmark_sync_config(
+    repo: &(impl RepoIdentityRef + RepoCrossRepoRef),
     bookmark: &BookmarkName,
     kind: BookmarkKind,
 ) -> Result<(), BookmarkMovementError> {

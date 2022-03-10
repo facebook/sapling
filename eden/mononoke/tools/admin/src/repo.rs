@@ -9,12 +9,13 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
-use bookmarks::{self, Bookmarks};
+use bookmarks::{self, BookmarkUpdateLog, Bookmarks};
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use ephemeral_blobstore::RepoEphemeralStore;
 use phases::Phases;
 use repo_blobstore::RepoBlobstore;
+use repo_cross_repo::RepoCrossRepo;
 use repo_identity::RepoIdentity;
 
 /// Repository object for admin commands.
@@ -40,6 +41,9 @@ pub struct AdminRepo {
     pub bookmarks: dyn Bookmarks,
 
     #[facet]
+    pub bookmark_update_log: dyn BookmarkUpdateLog,
+
+    #[facet]
     pub repo_blobstore: RepoBlobstore,
 
     #[facet]
@@ -53,4 +57,7 @@ pub struct AdminRepo {
 
     #[facet]
     pub phases: dyn Phases,
+
+    #[facet]
+    pub repo_cross_repo: RepoCrossRepo,
 }

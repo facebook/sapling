@@ -192,6 +192,7 @@ impl From<BookmarkPrefix> for Value {
     Hash,
     PartialEq,
     Copy,
+    clap::ArgEnum,
     mysql::OptTryFromRowField
 )]
 pub enum BookmarkKind {
@@ -286,6 +287,13 @@ pub struct BookmarkPrefix {
 impl fmt::Display for BookmarkPrefix {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.bookmark_prefix)
+    }
+}
+
+impl FromStr for BookmarkPrefix {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        BookmarkPrefix::new(s)
     }
 }
 

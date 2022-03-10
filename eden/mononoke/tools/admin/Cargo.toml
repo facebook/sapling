@@ -17,6 +17,7 @@ bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_m
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bonsai_svnrev_mapping = { version = "0.1.0", path = "../../bonsai_svnrev_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+bookmarks_movement = { version = "0.1.0", path = "../../bookmarks/bookmarks_movement" }
 bulkops = { version = "0.1.0", path = "../../bulkops" }
 bytes = { version = "1.1", features = ["serde"] }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -42,6 +43,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 phases = { version = "0.1.0", path = "../../phases" }
 regex = "1.5.4"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_cross_repo = { version = "0.1.0", path = "../../repo_attributes/repo_cross_repo" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
