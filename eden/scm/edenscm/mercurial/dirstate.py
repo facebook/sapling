@@ -941,20 +941,19 @@ class dirstate(object):
         self, match: "Callable[[str], bool]", ignored: bool, clean: bool, unknown: bool
     ) -> "scmutil.status":
         """Determine the status of the working copy relative to the
-        dirstate and return a pair of (unsure, status), where status is of type
-        scmutil.status and:
-
-          unsure:
-            files that might have been modified since the dirstate was
-            written, but need to be read to be sure (size is the same
-            but mtime differs)
-          status.modified:
-            files that have definitely been modified since the dirstate
-            was written (different size or mode)
-          status.clean:
-            files that have definitely not been modified since the
-            dirstate was written
+        dirstate and return a scmutil.status.
         """
+        if self._ui.configbool("workingcopy", "ruststatus"):
+            if ignored or clean:
+                raise error.Abort(_("Rust status does not support ignored or clean"))
+            pendingchanges = self._fs.pendingchanges(match, listignored=False)
+            return bindings.workingcopy.status.compute(
+                self._map._tree,
+                pendingchanges,
+                match,
+                unknown,
+            )
+
         wctx = self._repo[None]
         # Prime the wctx._parents cache so the parent doesn't change out from
         # under us if a checkout happens in another process.

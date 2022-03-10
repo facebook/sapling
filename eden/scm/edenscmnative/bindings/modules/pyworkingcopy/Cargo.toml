@@ -9,5 +9,7 @@ cpython = { version = "0.7", default-features = false }
 cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 pathmatcher = { path = "../../../../lib/pathmatcher" }
 pypathmatcher = { path = "../pypathmatcher" }
+pystatus = { path = "../pystatus" }
 pytreestate = { path = "../pytreestate" }
+types = { path = "../../../../lib/types" }
 workingcopy = { path = "../../../../lib/workingcopy" }

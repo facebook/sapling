@@ -6,4 +6,5 @@
  */
 
 pub mod filesystem;
+pub mod status;
 pub mod walker;

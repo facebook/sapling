@@ -17,6 +17,7 @@ use cpython_ext::PyPathBuf;
 use pathmatcher::Matcher;
 use pypathmatcher::extract_matcher;
 use pytreestate::treestate;
+use types::RepoPathBuf;
 use workingcopy::filesystem::ChangeType;
 use workingcopy::filesystem::PendingChangeResult;
 use workingcopy::filesystem::PendingChanges;
@@ -30,6 +31,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<walker>(py)?;
     m.add_class::<pendingchanges>(py)?;
     m.add_class::<physicalfilesystem>(py)?;
+    m.add_class::<status>(py)?;
     Ok(m)
 }
 
@@ -110,4 +112,40 @@ py_class!(class walker |py| {
         }).collect::<Vec<(cpython_ext::Str, cpython_ext::Str)>>())
     }
 
+});
+
+py_class!(class status |py| {
+    @staticmethod
+    def compute(
+        pytreestate: treestate,
+        pypendingchanges: PyObject,
+        pymatcher: PyObject,
+        list_unknown: bool,
+    ) -> PyResult<PyObject> {
+        // Convert the pending changes (a Iterable[Tuple[str, bool]]) into a Vec<ChangeType>.
+        let mut pending_changes = Vec::<ChangeType>::new();
+        for change in pypendingchanges.iter(py)? {
+            let tuple: PyTuple = change?.cast_into(py)?;
+            let file: PyString = tuple.get_item(py, 0).cast_into(py)?;
+            let file = file.to_string(py)?;
+            let file = RepoPathBuf::from_string(file.to_string()).map_pyerr(py)?;
+            let file_exists = tuple.get_item(py, 1).cast_into::<PyBool>(py)?.is_true();
+            let change = if file_exists {
+                ChangeType::Changed(file)
+            } else {
+                ChangeType::Deleted(file)
+            };
+            pending_changes.push(change);
+        }
+
+        let treestate = pytreestate.get_state(py);
+        let matcher = extract_matcher(py, pymatcher)?;
+        let status = workingcopy::status::compute_status(
+            treestate,
+            pending_changes.into_iter(),
+            matcher,
+            list_unknown,
+        ).map_pyerr(py)?;
+        pystatus::to_python_status(py, &status)
+    }
 });
