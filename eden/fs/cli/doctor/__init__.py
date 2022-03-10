@@ -142,7 +142,9 @@ class EdenDoctorChecker:
             self.tracker.add_problem(EdenfsStarting())
         elif status.status == fb303_status.STOPPING:
             self.tracker.add_problem(EdenfsStopping())
-        elif status.status == fb303_status.DEAD:
+        elif (
+            status.status == fb303_status.DEAD or status.status == fb303_status.STOPPED
+        ):
             self.run_edenfs_not_healthy_checks()
         else:
             self.tracker.add_problem(EdenfsUnexpectedStatus(status))
