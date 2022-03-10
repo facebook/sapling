@@ -40,6 +40,7 @@ void traverseTreeInodeChildren(
     const std::optional<ObjectId>& hash,
     uint64_t fsRefcount,
     TraversalCallbacks& callbacks) {
+  XLOG(DBG7) << "Traversing: " << rootPath;
   callbacks.visitTreeInode(rootPath, ino, hash, fsRefcount, children);
   for (auto& entry : children) {
     auto childPath = rootPath + entry.name;
@@ -54,7 +55,7 @@ void traverseTreeInodeChildren(
         if (callbacks.shouldRecurse(entry)) {
           // If we are able to load a child directory from the overlay, then
           // this child entry has been allocated, and can be traversed.
-          auto contents = overlay->loadOverlayDir(ino);
+          auto contents = overlay->loadOverlayDir(entry.ino);
           if (!contents.empty()) {
             traverseTreeInodeChildren(
                 overlay,

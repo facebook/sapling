@@ -49,10 +49,9 @@ TEST(TraverseTest, does_not_traverse_unallocated_and_unmaterialized_trees) {
   TestCallbacks callbacks;
   traverseObservedInodes(*root, rootPath, callbacks);
 
-  EXPECT_EQ(3, callbacks.paths.size());
+  EXPECT_EQ(2, callbacks.paths.size());
   EXPECT_EQ("", callbacks.paths.at(0));
   EXPECT_EQ(".eden", callbacks.paths.at(1));
-  EXPECT_EQ("dir1", callbacks.paths.at(2));
 }
 
 TEST(TraverseTest, does_traverse_loaded_trees) {
