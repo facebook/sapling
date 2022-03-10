@@ -52,6 +52,16 @@ impl StatusBuilder {
         self
     }
 
+    pub fn ignored(mut self, ignored: Vec<RepoPathBuf>) -> Self {
+        Self::index(&mut self.0.all, ignored, FileStatus::Ignored);
+        self
+    }
+
+    pub fn clean(mut self, clean: Vec<RepoPathBuf>) -> Self {
+        Self::index(&mut self.0.all, clean, FileStatus::Clean);
+        self
+    }
+
     // This fn has to take 'deconstructed' self, because you can't borrow &mut self and &self.xxx at the same time
     fn index(
         all: &mut HashMap<RepoPathBuf, FileStatus>,
@@ -88,6 +98,14 @@ impl Status {
         self.filter_status(FileStatus::Unknown)
     }
 
+    pub fn ignored(&self) -> impl Iterator<Item = &RepoPathBuf> {
+        self.filter_status(FileStatus::Ignored)
+    }
+
+    pub fn clean(&self) -> impl Iterator<Item = &RepoPathBuf> {
+        self.filter_status(FileStatus::Clean)
+    }
+
     pub fn status(&self, file: &RepoPath) -> Option<FileStatus> {
         self.all.get(file).copied()
     }
@@ -101,11 +119,20 @@ impl Status {
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum FileStatus {
+    /// The file has been modified.
     Modified,
+    /// The file has been added to the tree.
     Added,
+    /// The file has been removed to the tree.
     Removed,
+    /// The file is in the tree, but it isn't in the working copy (it's "missing").
     Deleted,
+    /// The file isn't in the tree, but it exists in the working copy and it isn't ignored.
     Unknown,
+    /// The file isn't in the tree and it exists in the working copy, but it is ignored.
+    Ignored,
+    /// The file has not been modified.
+    Clean,
 }
 
 impl FileStatus {
@@ -114,8 +141,10 @@ impl FileStatus {
             FileStatus::Modified => "M",
             FileStatus::Added => "A",
             FileStatus::Removed => "R",
-            FileStatus::Unknown => "?",
             FileStatus::Deleted => "!",
+            FileStatus::Unknown => "?",
+            FileStatus::Ignored => "I",
+            FileStatus::Clean => "C",
         }
     }
 }

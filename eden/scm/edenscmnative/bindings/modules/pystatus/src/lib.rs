@@ -33,13 +33,17 @@ py_class!(pub class status |py| {
         let removed = python_status.getattr(py, "removed")?;
         let deleted = python_status.getattr(py, "deleted")?;
         let unknown = python_status.getattr(py, "unknown")?;
+        let ignored = python_status.getattr(py, "ignored")?;
+        let clean = python_status.getattr(py, "clean")?;
 
         let builder = StatusBuilder::new()
             .modified(from_python_file_list(py, modified)?)
             .added(from_python_file_list(py, added)?)
             .removed(from_python_file_list(py, removed)?)
             .deleted(from_python_file_list(py, deleted)?)
-            .unknown(from_python_file_list(py, unknown)?);
+            .unknown(from_python_file_list(py, unknown)?)
+            .ignored(from_python_file_list(py, ignored)?)
+            .clean(from_python_file_list(py, clean)?);
 
         status::create_instance(py, builder.build())
     }
