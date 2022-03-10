@@ -74,7 +74,7 @@ class RcuPtr {
      * isn't dangling.
      */
     explicit RcuLockedPtr(RcuPtr& self)
-        : guard_(&self.domain_),
+        : guard_(self.domain_),
           inner_(self.inner_.load(std::memory_order_acquire)) {}
 
     folly::rcu_reader_domain<RcuTag> guard_;

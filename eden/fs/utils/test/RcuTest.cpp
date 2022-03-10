@@ -12,13 +12,13 @@
 using namespace facebook::eden;
 
 TEST(RcuTest, rlock) {
-  RcuPtr<int> rcu{*folly::rcu_default_domain(), 42};
+  RcuPtr<int> rcu{folly::rcu_default_domain(), 42};
   auto guard = rcu.rlock();
   EXPECT_EQ(*guard, 42);
 }
 
 TEST(RcuTest, update) {
-  RcuPtr<int> rcu{*folly::rcu_default_domain(), 42};
+  RcuPtr<int> rcu{folly::rcu_default_domain(), 42};
   auto guard = rcu.rlock();
   rcu.update(10);
   EXPECT_EQ(*guard, 42);
@@ -28,7 +28,7 @@ TEST(RcuTest, update) {
 }
 
 TEST(RcuTest, exchange) {
-  RcuPtr<int> rcu{*folly::rcu_default_domain(), 42};
+  RcuPtr<int> rcu{folly::rcu_default_domain(), 42};
   auto guard = rcu.rlock();
   auto old = rcu.exchange(10);
   EXPECT_EQ(*old, 42);
@@ -39,7 +39,7 @@ TEST(RcuTest, exchange) {
 }
 
 TEST(RcuTest, synchronize) {
-  RcuPtr<int> rcu{*folly::rcu_default_domain(), 42};
+  RcuPtr<int> rcu{folly::rcu_default_domain(), 42};
   rcu.synchronize();
   auto guard = rcu.rlock();
   EXPECT_EQ(*guard, 42);
@@ -54,7 +54,7 @@ TEST(RcuTest, updateAndSynchronize) {
     }
   };
 
-  RcuPtr<int, folly::RcuTag, Deleter> rcu{*folly::rcu_default_domain(), 42};
+  RcuPtr<int, folly::RcuTag, Deleter> rcu{folly::rcu_default_domain(), 42};
   rcu.update(10);
   rcu.synchronize();
   EXPECT_TRUE(updateAndSynchronizeDeleted);
@@ -69,7 +69,7 @@ TEST(RcuUniquePtr, updateAndSynchronize) {
     }
   };
 
-  RcuPtr<int, folly::RcuTag, Deleter> rcu{*folly::rcu_default_domain()};
+  RcuPtr<int, folly::RcuTag, Deleter> rcu{folly::rcu_default_domain()};
   rcu.update(std::unique_ptr<int, Deleter>{new int(42)});
   rcu.update(std::unique_ptr<int, Deleter>{new int(43)});
   rcu.synchronize();
