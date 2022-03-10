@@ -1171,6 +1171,8 @@ class ui(object):
         ('line\\nbreak? ', [('y', 'Yes'), ('n', 'No')])
         >>> ui.extractchoices("want lots of $$money$$?$$Ye&s$$N&o")
         ('want lots of $$money$$?', [('s', 'Yes'), ('o', 'No')])
+        >>> ui.extractchoices("which commit to move to [1-10/(c)ancel]? $$ &cancel $$ &1 $$ &2 $$ &3 $$ &4 $$ &5 $$ &6 $$ &7 $$ &8 $$ &9 $$ &10")
+        ('which commit to move to [1-10/(c)ancel]? ', [('c', 'cancel'), ('1', '1'), ('2', '2'), ('3', '3'), ('4', '4'), ('5', '5'), ('6', '6'), ('7', '7'), ('8', '8'), ('9', '9'), ('10', '10')])
         """
 
         # Sadly, the prompt string may have been built with a filename
@@ -1183,6 +1185,8 @@ class ui(object):
         choices = [p.strip(" ") for p in m.group(2).split("$$")]
 
         def choicetuple(s):
+            if (choice := s.replace("&", "", 1)).isdecimal():
+                return choice, choice
             ampidx = s.index("&")
             return s[ampidx + 1 : ampidx + 2].lower(), s.replace("&", "", 1)
 

@@ -32,7 +32,6 @@ Check help text for new options and removal of unsupported options.
    -c --check                require clean working directory
   
   (some details hidden, use --verbose to show complete help)
-
 Create stack of commits and go to the bottom.
   $ hg debugbuilddag --mergeable-file +6
   $ hg up 'desc(r0)'
@@ -303,27 +302,64 @@ Test interactive:
   (leaving bookmark bottom)
   [9913ce] branch b
 
+Test interactive >= 10 choices:
+  $ drawdag << 'EOS'
+  > a b c   g h i
+  >  \|/     \|/
+  >   | d e f | j
+  >    \ \|/ / /
+  >   desc('b')
+  > EOS
+  $ hg --config ui.interactive=true next << EOS
+  > 10
+  > EOS
+  changeset 9913ce0137a4 has multiple children, namely:
+  (1) [3f9bda] a
+  (2) [64b9b8] b
+  (3) [95297f] c
+  (4) [551771] d
+  (5) [f44bd1] e
+  (6) [f72cbe] f
+  (7) [60b350] g
+  (8) [f09214] h
+  (9) [23284c] i
+  (10) [1e290b] j
+  which changeset to move to [1-10/(c)ancel]?  10
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [1e290b] j
+  $ hg up bottom -q
+  $ hg --config ui.interactive=true next --top << EOS
+  > 10
+  > EOS
+  current stack has multiple heads, namely:
+  (1) [f2987e] (top) r5
+  (2) [ae9b2b] branch a
+  (3) [3f9bda] a
+  (4) [64b9b8] b
+  (5) [95297f] c
+  (6) [551771] d
+  (7) [f44bd1] e
+  (8) [f72cbe] f
+  (9) [60b350] g
+  (10) [f09214] h
+  (11) [23284c] i
+  (12) [1e290b] j
+  which changeset to move to [1-12/(c)ancel]?  10
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark bottom)
+  [f09214] h
+
 
 Test next prefer draft commit.
   $ hg up 'desc(r3)' -q
-  $ showgraph
-  o   branch b
+  $ hg log -Gr '.+children(.)' -T '{desc}'
+  o  test
   │
-  │ o   branch a
+  │ o  r4
   ├─╯
-  o  other test
+  @  r3
   │
-  │ o  top r5
-  │ │
-  │ o   r4
-  ├─╯
-  @  bookmark r3
-  │
-  o   r2
-  │
-  o   r1
-  │
-  o  bottom r0
+  ~
 Here we have 2 draft children.
   $ hg next
   changeset * has multiple children, namely: (glob)
