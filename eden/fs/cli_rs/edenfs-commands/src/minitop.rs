@@ -142,120 +142,107 @@ impl AccessCountsExt for AccessCounts {
 #[derive(Clone)]
 struct Process {
     pid: pid_t,
-    mount: String,
+    mount_name: String,
     cmd: String,
     access_counts: AccessCounts,
-    fetch_counts: u64,
+    fetch_counts: i64,
     last_access_time: Instant,
 }
 
 impl Process {
+    fn new(pid: pid_t, mount_name: String) -> Self {
+        Self {
+            pid,
+            mount_name,
+            cmd: "<unknown>".to_string(),
+            access_counts: AccessCounts::default(),
+            fetch_counts: 0,
+            last_access_time: Instant::now(),
+        }
+    }
+
+    fn set_cmd(&mut self, cmd: String) -> &mut Self {
+        self.cmd = cmd;
+        self
+    }
+
+    /// Update this `Process` access counts.
+    ///
+    /// Since the `getAccessCounts` API gives us an incremental `AccessCounts`, this is simply
+    /// incrementing the current counts with the passed ones. The last access time is also
+    /// incremented.
+    fn increment_access_counts(&mut self, counts: &AccessCounts) {
+        self.access_counts.add(counts);
+        self.last_access_time = Instant::now();
+    }
+
+    /// Update this `Process` fetch counts.
+    ///
+    /// As opposed to the access counts, this is an absolute value since EdenFS started, thus this
+    /// will only update the last access time if the fetch counts also changed.
+    fn set_fetch_counts(&mut self, fetch_counts: i64) {
+        if self.fetch_counts != fetch_counts {
+            self.fetch_counts = fetch_counts;
+            self.last_access_time = Instant::now();
+        }
+    }
+
+    /// Test if this `Process` is still running.
     fn is_running(&self, system: &System) -> bool {
         system.process(self.pid as Pid).is_some()
     }
 }
 
-struct TrackedProcesses {
-    processes: BTreeMap<pid_t, Process>,
+/// Get the last component of the passed in byte slice representing a Path.
+///
+/// The path is eagerly converted from an `OsString` to a `String` for ease of use.
+fn get_mount_name(mount_path: &[u8]) -> anyhow::Result<String> {
+    let path = path_from_bytes(mount_path)?;
+    let filename = path
+        .file_name()
+        .ok_or_else(|| anyhow!("filename is missing"))?;
+
+    filename
+        .to_os_string()
+        .into_string()
+        .map_err(|_| anyhow!("mount name is not UTF-8"))
 }
 
-impl TrackedProcesses {
-    fn new() -> Self {
-        TrackedProcesses {
-            processes: BTreeMap::<pid_t, Process>::new(),
-        }
-    }
+type TrackedProcesses = BTreeMap<pid_t, Process>;
 
-    fn extract_mount(path: &[u8]) -> anyhow::Result<String> {
-        let path = path_from_bytes(path)?;
-        let filename = path
-            .file_name()
-            .ok_or_else(|| anyhow!("filename is missing"))?;
+/// We aggregate all tracked processes in a separate step right before rendering
+/// (as opposed to aggregating eagerly as we receive process logs in `update_process`)
+/// because tracked processes could stop running which may change the top_pid.
+fn aggregate_processes(processes: &TrackedProcesses, system: &System) -> Vec<Process> {
+    // Technically, it's more correct to aggregate this by TGID
+    // Because that's hard to get, we instead aggregate by mount & cmd
+    // (mount, cmd) => Process
+    let mut aggregated_processes = BTreeMap::<(&str, &str), Process>::new();
 
-        filename
-            .to_os_string()
-            .into_string()
-            .map_err(|_| anyhow!("mount name is not UTF-8"))
-    }
-
-    /// Starts to track a given process. If the process is already being tracked,
-    /// then it updates the process's information (counts, last update time, etc).
-    ///
-    /// At any given time, a single pid may have multiple access logs.
-    fn update_process(
-        &mut self,
-        pid: pid_t,
-        mount: &[u8],
-        cmd: String,
-        access_counts: &AccessCounts,
-        fetch_counts: i64,
-    ) -> Result<()> {
-        let mount = TrackedProcesses::extract_mount(mount)?;
-        let fetch_counts = u64::try_from(fetch_counts).from_err()?;
-
-        match self.processes.get_mut(&pid) {
-            Some(existing_proc) => {
-                existing_proc.cmd = cmd;
-
-                // We increment access counts, but overwrite fetch counts
+    for (_pid, process) in processes.iter() {
+        match aggregated_processes.get_mut(&(&process.mount_name, &process.cmd)) {
+            Some(agg_proc) => {
+                // We aggregate access counts, but we don't change fetch counts
                 // (this matches behavior in original python implementation)
-                existing_proc.access_counts.add(&access_counts);
-                existing_proc.fetch_counts = fetch_counts;
+                agg_proc.access_counts.add(&process.access_counts);
 
-                existing_proc.last_access_time = Instant::now();
+                // Figure out what the most relevant process id is
+                if process.is_running(system)
+                    || agg_proc.last_access_time < process.last_access_time
+                {
+                    agg_proc.pid = process.pid;
+                    agg_proc.last_access_time = process.last_access_time;
+                }
             }
             None => {
-                self.processes.insert(
-                    pid,
-                    Process {
-                        pid,
-                        mount,
-                        cmd,
-                        access_counts: access_counts.clone(),
-                        fetch_counts,
-                        last_access_time: Instant::now(),
-                    },
-                );
+                aggregated_processes.insert((&process.mount_name, &process.cmd), process.clone());
             }
         }
-
-        Ok(())
     }
 
-    /// We aggregate all tracked processes in a separate step right before rendering
-    /// (as opposed to aggregating eagerly as we receive process logs in `update_process`)
-    /// because tracked processes could stop running which may change the top_pid.
-    fn aggregated_processes(&self, system: &System) -> Vec<Process> {
-        // Technically, it's more correct to aggregate this by TGID
-        // Because that's hard to get, we instead aggregate by mount & cmd
-        // (mount, cmd) => Process
-        let mut aggregated_processes = BTreeMap::<(&str, &str), Process>::new();
-
-        for (_pid, process) in self.processes.iter() {
-            match aggregated_processes.get_mut(&(&process.mount, &process.cmd)) {
-                Some(agg_proc) => {
-                    // We aggregate access counts, but we don't change fetch counts
-                    // (this matches behavior in original python implementation)
-                    agg_proc.access_counts.add(&process.access_counts);
-
-                    // Figure out what the most relevant process id is
-                    if process.is_running(system)
-                        || agg_proc.last_access_time < process.last_access_time
-                    {
-                        agg_proc.pid = process.pid;
-                        agg_proc.last_access_time = process.last_access_time;
-                    }
-                }
-                None => {
-                    aggregated_processes.insert((&process.mount, &process.cmd), process.clone());
-                }
-            }
-        }
-
-        let mut sorted_processes = aggregated_processes.into_values().collect::<Vec<Process>>();
-        sorted_processes.sort_by(|a, b| b.last_access_time.cmp(&a.last_access_time));
-        sorted_processes
-    }
+    let mut sorted_processes = aggregated_processes.into_values().collect::<Vec<Process>>();
+    sorted_processes.sort_by(|a, b| b.last_access_time.cmp(&a.last_access_time));
+    sorted_processes
 }
 
 struct ImportStat {
@@ -461,24 +448,22 @@ impl crate::Subcommand for MinitopCmd {
                 .from_err()?;
 
             for (mount, accesses) in &counts.accessesByMount {
+                let mount_name = get_mount_name(mount)?;
+
                 for (pid, access_counts) in &accesses.accessCountsByPid {
-                    tracked_processes.update_process(
-                        *pid,
-                        mount,
-                        counts.get_cmd_for_pid(*pid)?,
-                        access_counts,
-                        *accesses.fetchCountsByPid.get(pid).unwrap_or(&0),
-                    )?;
+                    tracked_processes
+                        .entry(*pid)
+                        .or_insert_with(|| Process::new(*pid, mount_name.clone()))
+                        .set_cmd(counts.get_cmd_for_pid(*pid)?)
+                        .increment_access_counts(access_counts);
                 }
 
                 for (pid, fetch_counts) in &accesses.fetchCountsByPid {
-                    tracked_processes.update_process(
-                        *pid,
-                        mount,
-                        counts.get_cmd_for_pid(*pid)?,
-                        &AccessCounts::default(),
-                        *fetch_counts,
-                    )?;
+                    tracked_processes
+                        .entry(*pid)
+                        .or_insert_with(|| Process::new(*pid, mount_name.clone()))
+                        .set_cmd(counts.get_cmd_for_pid(*pid)?)
+                        .set_fetch_counts(*fetch_counts);
                 }
             }
 
@@ -520,10 +505,10 @@ impl crate::Subcommand for MinitopCmd {
             let mut table = Table::new();
             table.set_header(COLUMN_TITLES);
             table.load_preset(UTF8_BORDERS_ONLY);
-            for aggregated_process in tracked_processes.aggregated_processes(&system) {
+            for aggregated_process in aggregate_processes(&tracked_processes, &system) {
                 table.add_row(vec![
                     aggregated_process.pid.to_string(),
-                    aggregated_process.mount.clone(),
+                    aggregated_process.mount_name.clone(),
                     aggregated_process.access_counts.fsChannelReads.to_string(),
                     aggregated_process.access_counts.fsChannelWrites.to_string(),
                     aggregated_process.access_counts.fsChannelTotal.to_string(),
