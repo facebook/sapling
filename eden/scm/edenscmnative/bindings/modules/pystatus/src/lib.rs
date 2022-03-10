@@ -7,10 +7,12 @@
 
 #![allow(non_camel_case_types)]
 
+use ::status::FileStatus;
 use ::status::Status;
 use ::status::StatusBuilder;
 use cpython::*;
 use cpython_ext::ExtractInnerRef;
+use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use types::RepoPathBuf;
 
@@ -71,4 +73,35 @@ fn from_python_file_list(py: Python, list: PyObject) -> PyResult<Vec<RepoPathBuf
         files.push(file);
     }
     Ok(files)
+}
+
+/// Convert a Rust-native [`Status`] into a Python-native `scmutil.status`.
+pub fn to_python_status(py: Python, status: &Status) -> PyResult<PyObject> {
+    let modified = PyList::new(py, &[]);
+    let added = PyList::new(py, &[]);
+    let removed = PyList::new(py, &[]);
+    let deleted = PyList::new(py, &[]);
+    let unknown = PyList::new(py, &[]);
+    let ignored = PyList::new(py, &[]);
+    let clean = PyList::new(py, &[]);
+
+    for (file, status) in status.iter() {
+        let list = match status {
+            FileStatus::Modified => &modified,
+            FileStatus::Added => &added,
+            FileStatus::Removed => &removed,
+            FileStatus::Deleted => &deleted,
+            FileStatus::Unknown => &unknown,
+            FileStatus::Ignored => &ignored,
+            FileStatus::Clean => &clean,
+        };
+        let pypath: PyPathBuf = file.into();
+        list.append(py, pypath.into_py_object(py).into_object());
+    }
+
+    // Create the Python-native status object.
+    let scmutil_module = py.import("edenscm.mercurial.scmutil")?;
+    let status_class = scmutil_module.get(py, "status")?;
+    let lists = (modified, added, removed, deleted, unknown, ignored, clean);
+    status_class.call(py, lists, None)
 }

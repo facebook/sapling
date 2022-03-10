@@ -115,6 +115,10 @@ impl Status {
             .iter()
             .filter_map(move |(f, s)| if *s == status { Some(f) } else { None })
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&RepoPath, FileStatus)> {
+        self.all.iter().map(|(f, s)| (f.as_repo_path(), *s))
+    }
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
