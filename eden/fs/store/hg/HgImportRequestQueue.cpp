@@ -32,11 +32,6 @@ folly::Future<std::unique_ptr<Tree>> HgImportRequestQueue::enqueueTree(
       std::move(request));
 }
 
-folly::Future<folly::Unit> HgImportRequestQueue::enqueuePrefetch(
-    std::shared_ptr<HgImportRequest> request) {
-  return enqueue<folly::Unit, HgImportRequest::Prefetch>(std::move(request));
-}
-
 template <typename Ret, typename ImportType>
 folly::Future<Ret> HgImportRequestQueue::enqueue(
     std::shared_ptr<HgImportRequest> request) {
@@ -45,53 +40,43 @@ folly::Future<Ret> HgImportRequestQueue::enqueue(
   std::vector<std::shared_ptr<HgImportRequest>>* queue;
   if constexpr (std::is_same_v<ImportType, HgImportRequest::BlobImport>) {
     queue = &state->blobQueue;
-  } else if constexpr (std::
-                           is_same_v<ImportType, HgImportRequest::TreeImport>) {
-    queue = &state->treeQueue;
   } else {
-    static_assert(std::is_same_v<ImportType, HgImportRequest::Prefetch>);
-    queue = &state->prefetchQueue;
+    static_assert(std::is_same_v<ImportType, HgImportRequest::TreeImport>);
+    queue = &state->treeQueue;
   }
 
-  if constexpr (!std::is_same_v<ImportType, HgImportRequest::Prefetch>) {
-    const auto& hash = request->getRequest<ImportType>()->hash;
+  const auto& hash = request->getRequest<ImportType>()->hash;
+  if (auto* existingRequestPtr = folly::get_ptr(state->requestTracker, hash)) {
+    auto& existingRequest = *existingRequestPtr;
+    auto* trackedImport = existingRequest->template getRequest<ImportType>();
 
-    if (auto* existingRequestPtr =
-            folly::get_ptr(state->requestTracker, hash)) {
-      auto& existingRequest = *existingRequestPtr;
-      auto* trackedImport = existingRequest->template getRequest<ImportType>();
+    auto [promise, future] = folly::makePromiseContract<Ret>();
+    trackedImport->promises.emplace_back(std::move(promise));
 
-      auto [promise, future] = folly::makePromiseContract<Ret>();
-      trackedImport->promises.emplace_back(std::move(promise));
+    if (existingRequest->getPriority() < request->getPriority()) {
+      existingRequest->setPriority(request->getPriority());
 
-      if (existingRequest->getPriority() < request->getPriority()) {
-        existingRequest->setPriority(request->getPriority());
-
-        // Since the new request has a higher priority than the already present
-        // one, we need to re-order the heap.
-        //
-        // TODO(xavierd): this has a O(n) complexity, and enqueing tons of
-        // duplicated requests will thus lead to a quadratic complexity.
-        std::make_heap(
-            queue->begin(),
-            queue->end(),
-            [](const std::shared_ptr<HgImportRequest>& lhs,
-               const std::shared_ptr<HgImportRequest>& rhs) {
-              return (*lhs) < (*rhs);
-            });
-      }
-
-      return std::move(future).toUnsafeFuture();
+      // Since the new request has a higher priority than the already present
+      // one, we need to re-order the heap.
+      //
+      // TODO(xavierd): this has a O(n) complexity, and enqueing tons of
+      // duplicated requests will thus lead to a quadratic complexity.
+      std::make_heap(
+          queue->begin(),
+          queue->end(),
+          [](const std::shared_ptr<HgImportRequest>& lhs,
+             const std::shared_ptr<HgImportRequest>& rhs) {
+            return (*lhs) < (*rhs);
+          });
     }
+
+    return std::move(future).toUnsafeFuture();
   }
 
   queue->emplace_back(request);
   auto promise = request->getPromise<Ret>();
 
-  if constexpr (!std::is_same_v<ImportType, HgImportRequest::Prefetch>) {
-    const auto& hash = request->getRequest<ImportType>()->hash;
-    state->requestTracker.emplace(hash, std::move(request));
-  }
+  state->requestTracker.emplace(hash, std::move(request));
 
   std::push_heap(
       queue->begin(),
@@ -115,17 +100,15 @@ std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue() {
     if (!state->running) {
       state->treeQueue.clear();
       state->blobQueue.clear();
-      state->prefetchQueue.clear();
       return std::vector<std::shared_ptr<HgImportRequest>>();
     }
 
     ImportPriority highestPriority{ImportPriorityKind::Low, 0};
 
-    // Trees have a higher priority than blobs who themself have a higher
-    // priority than prefetch, thus check the queues in that order.
-    // The reason for trees having a higher priority is due to trees allowing a
-    // higher fan-out and thus increasing concurrency of fetches which
-    // translate onto a higher overall throughput.
+    // Trees have a higher priority than blobs, thus check the queues in that
+    // order.  The reason for trees having a higher priority is due to trees
+    // allowing a higher fan-out and thus increasing concurrency of fetches
+    // which translate onto a higher overall throughput.
     if (!state->treeQueue.empty()) {
       count = config_->getEdenConfig()->importBatchSizeTree.getValue();
       highestPriority = state->treeQueue.front()->getPriority();
@@ -138,14 +121,6 @@ std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue() {
         queue = &state->blobQueue;
         count = config_->getEdenConfig()->importBatchSize.getValue();
         highestPriority = priority;
-      }
-    }
-
-    if (!state->prefetchQueue.empty()) {
-      auto priority = state->prefetchQueue.front()->getPriority();
-      if (!queue || priority > highestPriority) {
-        queue = &state->prefetchQueue;
-        count = 1;
       }
     }
 

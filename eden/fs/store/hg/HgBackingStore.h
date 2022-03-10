@@ -68,10 +68,6 @@ class HgBackingStore {
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const std::shared_ptr<HgImportRequest>& request);
 
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> prefetchBlobs(
-      std::vector<HgProxyHash> ids,
-      ObjectFetchContext& context);
-
   void periodicManagementTask();
 
   /**

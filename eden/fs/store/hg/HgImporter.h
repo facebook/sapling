@@ -79,8 +79,6 @@ class Importer {
       RelativePathPiece path,
       Hash20 blobHash) = 0;
 
-  virtual void prefetchFiles(const std::vector<HgProxyHash>& files) = 0;
-
   /**
    * Import tree and store it in the datapack
    *
@@ -128,7 +126,6 @@ class HgImporter : public Importer {
   std::unique_ptr<Blob> importFileContents(
       RelativePathPiece path,
       Hash20 blobHash) override;
-  void prefetchFiles(const std::vector<HgProxyHash>& files) override;
   std::unique_ptr<folly::IOBuf> fetchTree(
       RelativePathPiece path,
       Hash20 pathManifestNode) override;
@@ -179,7 +176,7 @@ class HgImporter : public Importer {
     CMD_OLD_CAT_FILE = 3,
     CMD_MANIFEST_NODE_FOR_COMMIT = 4,
     CMD_FETCH_TREE = 5,
-    CMD_PREFETCH_FILES = 6,
+    CMD_PREFETCH_FILES = 6, // REMOVED
     CMD_CAT_FILE = 7,
     CMD_GET_FILE_SIZE = 8,
     CMD_CAT_TREE = 9,
@@ -258,11 +255,6 @@ class HgImporter : public Importer {
       Hash20 pathManifestNode,
       folly::StringPiece context);
 
-  // Note: intentional RelativePath rather than RelativePathPiece here because
-  // HgProxyHash is not movable and it was less work to make a copy here than
-  // to implement its move constructor :-p
-  TransactionID sendPrefetchFilesRequest(const std::vector<HgProxyHash>& files);
-
   SpawnedProcess helper_;
   const AbsolutePath repoPath_;
   std::shared_ptr<EdenStats> const stats_;
@@ -309,7 +301,6 @@ class HgImporterManager : public Importer {
   std::unique_ptr<Blob> importFileContents(
       RelativePathPiece path,
       Hash20 blobHash) override;
-  void prefetchFiles(const std::vector<HgProxyHash>& files) override;
   std::unique_ptr<folly::IOBuf> fetchTree(
       RelativePathPiece path,
       Hash20 pathManifestNode) override;

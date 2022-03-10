@@ -55,12 +55,6 @@ class HgImportRequest {
     std::vector<folly::Promise<Response>> promises;
   };
 
-  struct Prefetch {
-    using Response = folly::Unit;
-
-    std::vector<HgProxyHash> proxyHashes;
-  };
-
   /**
    * Allocate a blob request.
    */
@@ -75,13 +69,6 @@ class HgImportRequest {
   static std::shared_ptr<HgImportRequest> makeTreeImportRequest(
       ObjectId hash,
       HgProxyHash proxyHash,
-      ImportPriority priority);
-
-  /**
-   * Allocate a prefetch request.
-   */
-  static std::shared_ptr<HgImportRequest> makePrefetchRequest(
-      std::vector<HgProxyHash> hashes,
       ImportPriority priority);
 
   /**
@@ -151,11 +138,10 @@ class HgImportRequest {
   HgImportRequest(const HgImportRequest&) = delete;
   HgImportRequest& operator=(const HgImportRequest&) = delete;
 
-  using Request = std::variant<BlobImport, TreeImport, Prefetch>;
+  using Request = std::variant<BlobImport, TreeImport>;
   using Response = std::variant<
       folly::Promise<std::unique_ptr<Blob>>,
-      folly::Promise<std::unique_ptr<Tree>>,
-      folly::Promise<folly::Unit>>;
+      folly::Promise<std::unique_ptr<Tree>>>;
 
   Request request_;
   ImportPriority priority_;

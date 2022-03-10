@@ -324,14 +324,6 @@ unique_ptr<Blob> HgImporter::importFileContents(
   return make_unique<Blob>(blobId, std::move(buf));
 }
 
-void HgImporter::prefetchFiles(const std::vector<HgProxyHash>& files) {
-  auto requestID = sendPrefetchFilesRequest(files);
-
-  // Read the response; throws if there was any error.
-  // No payload is returned.
-  readChunkHeader(requestID, "CMD_PREFETCH_FILES");
-}
-
 std::unique_ptr<IOBuf> HgImporter::fetchTree(
     RelativePathPiece path,
     Hash20 pathManifestNode) {
@@ -531,62 +523,6 @@ HgImporter::TransactionID HgImporter::sendFileRequest(
   return txnID;
 }
 
-HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
-    const std::vector<HgProxyHash>& files) {
-  stats_->getHgImporterStatsForCurrentThread().prefetchFiles.addValue(1);
-
-  auto txnID = nextRequestID_++;
-  ChunkHeader header;
-  header.command = Endian::big<uint32_t>(CMD_PREFETCH_FILES);
-  header.requestID = Endian::big<uint32_t>(txnID);
-  header.flags = 0;
-
-  // Compute the length of the body
-  size_t dataLength = sizeof(uint32_t);
-  for (const auto& file : files) {
-    dataLength += sizeof(uint32_t) + file.path().stringPiece().size() +
-        (Hash20::RAW_SIZE * 2);
-  }
-  if (dataLength > std::numeric_limits<uint32_t>::max()) {
-    throw std::runtime_error(
-        folly::to<string>("prefetch files request is too large: ", dataLength));
-  }
-  header.dataLength = Endian::big<uint32_t>(folly::to_narrow(dataLength));
-
-  // Serialize the body.
-  // We serialize all of the filename lengths first, then all of the strings and
-  // hashes later.  This is purely to make it easier to deserialize in python
-  // using the struct module.
-  //
-  // The hashes are serialized as hex since that is how the python code needs
-  // them.
-  IOBuf buf(IOBuf::CREATE, dataLength);
-  Appender appender(&buf, 0);
-  appender.writeBE<uint32_t>(folly::to_narrow(files.size()));
-  for (const auto& file : files) {
-    auto fileName = file.path().stringPiece();
-    appender.writeBE<uint32_t>(folly::to_narrow(fileName.size()));
-  }
-  for (const auto& file : files) {
-    auto fileName = file.path().stringPiece();
-    appender.push(fileName);
-    // TODO: It would be nice to have a function that can hexlify the hash
-    // data directly into the IOBuf without making a copy in a temporary string.
-    // This isn't really that big of a deal though.
-    appender.push(StringPiece(file.revHash().toString()));
-  }
-  XDCHECK_EQ(buf.length(), dataLength);
-
-  std::array<struct iovec, 2> iov;
-  iov[0].iov_base = &header;
-  iov[0].iov_len = sizeof(header);
-  iov[1].iov_base = const_cast<uint8_t*>(buf.data());
-  iov[1].iov_len = buf.length();
-  writeToHelper(iov, "CMD_PREFETCH_FILES");
-
-  return txnID;
-}
-
 HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
     CommandType cmd,
     RelativePathPiece path,
@@ -714,11 +650,6 @@ unique_ptr<Blob> HgImporterManager::importFileContents(
   return retryOnError([=](HgImporter* importer) {
     return importer->importFileContents(path, blobHash);
   });
-}
-
-void HgImporterManager::prefetchFiles(const std::vector<HgProxyHash>& files) {
-  return retryOnError(
-      [&](HgImporter* importer) { return importer->prefetchFiles(files); });
 }
 
 std::unique_ptr<IOBuf> HgImporterManager::fetchTree(

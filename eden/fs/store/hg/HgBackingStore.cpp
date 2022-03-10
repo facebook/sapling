@@ -605,19 +605,6 @@ SemiFuture<std::unique_ptr<Blob>> HgBackingStore::fetchBlobFromHgImporter(
       });
 }
 
-SemiFuture<folly::Unit> HgBackingStore::prefetchBlobs(
-    std::vector<HgProxyHash> proxyHashes,
-    ObjectFetchContext& /*context*/) {
-  return folly::via(
-             importThreadPool_.get(),
-             [proxyHashes = std::move(proxyHashes),
-              &liveImportPrefetchWatches = liveImportPrefetchWatches_] {
-               RequestMetricsScope queueTracker{&liveImportPrefetchWatches};
-               return getThreadLocalImporter().prefetchFiles(proxyHashes);
-             })
-      .via(serverThreadPool_);
-}
-
 folly::StringPiece HgBackingStore::stringOfHgImportObject(
     HgImportObject object) {
   switch (object) {

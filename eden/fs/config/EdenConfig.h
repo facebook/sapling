@@ -301,11 +301,6 @@ class EdenConfig : private ConfigSettingManager {
       20'000'000,
       this};
 
-  ConfigSetting<bool> useEdenNativePrefetch{
-      "store:use-eden-native-prefetch",
-      false,
-      this};
-
   /**
    * The minimum duration between logging occurrences of failed HgProxyHash
    * loads.

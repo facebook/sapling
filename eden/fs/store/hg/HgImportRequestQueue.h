@@ -43,15 +43,6 @@ class HgImportRequestQueue {
       std::shared_ptr<HgImportRequest> request);
 
   /**
-   * Enqueue a prefetch request to the queue
-   *
-   * Return a future that will complete when the prefetch request
-   * completes.
-   */
-  folly::Future<folly::Unit> enqueuePrefetch(
-      std::shared_ptr<HgImportRequest> request);
-
-  /**
    * Returns a list of requests from the queue. It returns an empty list while
    * the queue is being destructed. This function will block when there is no
    * item available in the queue.
@@ -134,7 +125,6 @@ class HgImportRequestQueue {
     bool running = true;
     std::vector<std::shared_ptr<HgImportRequest>> treeQueue;
     std::vector<std::shared_ptr<HgImportRequest>> blobQueue;
-    std::vector<std::shared_ptr<HgImportRequest>> prefetchQueue;
 
     /**
      * Map of a ObjectId to an element in the queue. Any changes to this type

@@ -47,10 +47,4 @@ std::shared_ptr<HgImportRequest> HgImportRequest::makeTreeImportRequest(
   return makeRequest<TreeImport>(priority, hash, std::move(proxyHash));
 }
 
-std::shared_ptr<HgImportRequest> HgImportRequest::makePrefetchRequest(
-    std::vector<HgProxyHash> hashes,
-    ImportPriority priority) {
-  return makeRequest<Prefetch>(priority, std::move(hashes));
-}
-
 } // namespace facebook::eden

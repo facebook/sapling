@@ -207,21 +207,6 @@ void HgQueuedBackingStore::processTreeImportRequests(
   }
 }
 
-void HgQueuedBackingStore::processPrefetchRequests(
-    std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
-  for (auto& request : requests) {
-    auto parameter = request->getRequest<HgImportRequest::Prefetch>();
-    request->getPromise<HgImportRequest::Prefetch::Response>()->setWith(
-        [store = backingStore_.get(),
-         proxyHashes = parameter->proxyHashes]() mutable {
-          return store
-              ->prefetchBlobs(
-                  std::move(proxyHashes), ObjectFetchContext::getNullContext())
-              .getTry();
-        });
-  }
-}
-
 void HgQueuedBackingStore::processRequest() {
   folly::setThreadName("hgqueue");
   for (;;) {
@@ -237,8 +222,6 @@ void HgQueuedBackingStore::processRequest() {
       processBlobImportRequests(std::move(requests));
     } else if (first->isType<HgImportRequest::TreeImport>()) {
       processTreeImportRequests(std::move(requests));
-    } else if (first->isType<HgImportRequest::Prefetch>()) {
-      processPrefetchRequests(std::move(requests));
     }
   }
 }
@@ -469,36 +452,21 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
         // oriented ones. Mercurial will anyway not re-fetch a blob that is
         // already present locally, so the check for local blob is pure overhead
         // when prefetching.
+        std::vector<folly::SemiFuture<BackingStore::GetBlobRes>> futures;
+        futures.reserve(ids.size());
 
-        // when useEdenNativePrefetch is true, fetch blobs one by one instead
-        // of grouping them and fetching in batches.
-        if (config_->getEdenConfig()->useEdenNativePrefetch.getValue()) {
-          std::vector<folly::SemiFuture<BackingStore::GetBlobRes>> futures;
-          futures.reserve(ids.size());
+        for (size_t i = 0; i < ids.size(); i++) {
+          const auto& id = ids[i];
+          const auto& proxyHash = proxyHashes[i];
 
-          for (size_t i = 0; i < ids.size(); i++) {
-            const auto& id = ids[i];
-            const auto& proxyHash = proxyHashes[i];
-
-            futures.emplace_back(getBlobImpl(id, proxyHash, context));
-          }
-
-          return folly::collectAll(futures).deferValue([](const auto& tries) {
-            for (const auto& t : tries) {
-              t.throwUnlessValue();
-            }
-          });
-        } else {
-          // TODO: deduplicate prefetches
-          auto request = HgImportRequest::makePrefetchRequest(
-              std::move(proxyHashes), ImportPriority::kNormal());
-
-          auto importTracker = std::make_unique<RequestMetricsScope>(
-              &pendingImportPrefetchWatches_);
-          return queue_.enqueuePrefetch(std::move(request))
-              .ensure([importTracker = std::move(importTracker)]() {})
-              .semi();
+          futures.emplace_back(getBlobImpl(id, proxyHash, context));
         }
+
+        return folly::collectAll(futures).deferValue([](const auto& tries) {
+          for (const auto& t : tries) {
+            t.throwUnlessValue();
+          }
+        });
       });
 }
 
