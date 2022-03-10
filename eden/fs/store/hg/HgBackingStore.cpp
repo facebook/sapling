@@ -578,19 +578,6 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifestImpl(
   }
 }
 
-unique_ptr<Tree> HgBackingStore::getTreeFromHgCache(
-    const ObjectId& edenTreeId,
-    const HgProxyHash& proxyHash) {
-  if (auto tree =
-          datapackStore_.getTreeLocal(edenTreeId, proxyHash, *localStore_)) {
-    XLOG(DBG5) << "imported tree of '" << proxyHash.path() << "', "
-               << proxyHash.revHash().toString() << " from hgcache";
-    return tree;
-  }
-
-  return nullptr;
-}
-
 SemiFuture<std::unique_ptr<Blob>> HgBackingStore::fetchBlobFromHgImporter(
     HgProxyHash hgInfo) {
   return folly::via(

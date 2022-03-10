@@ -320,7 +320,10 @@ folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTree(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::Tree);
 
-  if (auto tree = backingStore_->getTreeFromHgCache(id, proxyHash)) {
+  if (auto tree = backingStore_->getDatapackStore().getTreeLocal(
+          id, proxyHash, *localStore_)) {
+    XLOG(DBG5) << "imported tree of '" << proxyHash.path() << "', "
+               << proxyHash.revHash().toString() << " from hgcache";
     return folly::makeSemiFuture(BackingStore::GetTreeRes{
         std::move(tree), ObjectFetchContext::Origin::FromDiskCache});
   }
