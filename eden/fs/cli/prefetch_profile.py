@@ -7,8 +7,6 @@ import argparse
 import os
 import re
 import subprocess
-import sys
-import warnings
 from pathlib import Path
 from typing import List, Optional, Set
 
@@ -17,8 +15,9 @@ from facebook.eden.ttypes import Glob, GlobParams, PredictiveFetch
 from . import subcmd as subcmd_mod, tabulate
 from .cmd_util import get_eden_instance, require_checkout
 from .config import EdenCheckout, EdenInstance
+from .prefetch import _println
 from .subcmd import Subcmd
-from .util import get_eden_cli_cmd, get_environment_suitable_for_subprocess
+from .util import get_environment_suitable_for_subprocess
 
 
 prefetch_profile_cmd = subcmd_mod.Decorator()
@@ -219,24 +218,6 @@ def prefetch_profiles(
     )
 
 
-def print_prefetch_results(results, print_commits) -> None:
-    print("\nFiles Prefetched: ")
-    # Can just print names it's clear which commit they come from
-    if not print_commits:
-        columns = ["FileName"]
-        data = [{"FileName": os.fsdecode(name)} for name in results.matchingFiles]
-        print(tabulate.tabulate(columns, data))
-    # Print commit and name this will make it more clean which commits
-    # files are fetched from
-    else:
-        columns = ["FileName", "Commit"]
-        data = [
-            {"FileName": os.fsdecode(name), "Commit": commit.hex()}
-            for name, commit in zip(results.matchingFiles, results.originHashes)
-        ]
-        print(tabulate.tabulate(columns, data))
-
-
 @prefetch_profile_cmd("record", "Start recording fetched file paths.")
 class RecordProfileCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
@@ -397,7 +378,8 @@ class ActivateProfileCmd(Subcmd):
                 # so no need to list which commit a file is fetched for, it will
                 # be the current commit.
                 if args.verbose and result is not None:
-                    print_prefetch_results(result, False)
+                    for name in result.matchingFiles:
+                        _println(os.fsdecode(name))
             return 0
 
 
@@ -453,11 +435,9 @@ class ActivatePredictiveProfileCmd(Subcmd):
                         predictive=True,
                         predictive_num_dirs=args.num_dirs,
                     )
-                    # there will only every be one commit used to query globFiles here,
-                    # so no need to list which commit a file is fetched for, it will
-                    # be the current commit.
                     if args.verbose and result is not None:
-                        print_prefetch_results(result, False)
+                        for name in result.matchingFiles:
+                            _println(os.fsdecode(name))
                     return 0
                 except Exception as error:
                     # in case of a timeout or other error sending a request to the smartservice
@@ -596,9 +576,8 @@ class FetchProfileCmd(Subcmd):
         )
 
         if args.verbose and result is not None:
-            # Can just print names it's clear which commit they come from
-            # i.e. the current commit is used or only one commit passed.
-            print_prefetch_results(result, args.commits and len(args.commits) > 1)
+            for name in result.matchingFiles:
+                _println(os.fsdecode(name))
 
         return 0
 
@@ -668,11 +647,9 @@ class FetchPredictiveProfileCmd(Subcmd):
                 predictive=True,
                 predictive_num_dirs=predictive_num_dirs,
             )
-
             if args.verbose and result is not None:
-                # Can just print names it's clear which commit they come from
-                # i.e. the current commit is used or only one commit passed.
-                print_prefetch_results(result, args.commits and len(args.commits) > 1)
+                for name in result.matchingFiles:
+                    _println(os.fsdecode(name))
         except Exception as error:
             # in case of a timeout or other error sending a request to the smartplatform
             # service for predictive prefetch profiles
