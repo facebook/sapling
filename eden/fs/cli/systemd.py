@@ -17,11 +17,11 @@ import typing
 
 pystemd_import_error = None
 try:
-    import pystemd
-    import pystemd.dbusexc  # pyre-ignore[21]: T32805591
-    import pystemd.dbuslib
-    import pystemd.systemd1.manager
-    import pystemd.systemd1.unit
+    import pystemd  # @manual
+    import pystemd.dbusexc  # @manual # pyre-ignore[21]: T32805591
+    import pystemd.dbuslib  # @manual
+    import pystemd.systemd1.manager  # @manual
+    import pystemd.systemd1.unit  # @manual
 except ModuleNotFoundError as e:
     pystemd_import_error = e
 

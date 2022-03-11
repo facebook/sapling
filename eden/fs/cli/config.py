@@ -50,7 +50,7 @@ from .util import (
 
 
 try:
-    from eden.thrift import client
+    from eden.thrift import client  # @manual
 except ImportError:
     # Thrift-py3 is not supported in the CMake build yet.
     pass
@@ -343,7 +343,7 @@ class EdenInstance:
             return telemetry.NullTelemetryLogger()
 
         try:
-            from eden.fs.cli.facebook import scuba_telemetry
+            from eden.fs.cli.facebook import scuba_telemetry  # @manual
 
             return scuba_telemetry.ScubaTelemetryLogger()
         except (ImportError, NotImplementedError):
