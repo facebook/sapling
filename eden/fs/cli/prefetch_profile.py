@@ -180,7 +180,7 @@ def prefetch_profiles(
     predict_revisions: bool,
     predictive: bool,
     predictive_num_dirs: int,
-) -> Optional[Glob]:
+) -> Optional[List[Glob]]:
 
     if predictive and not should_prefetch_predictive_profiles(instance):
         if not silent:
@@ -201,21 +201,49 @@ def prefetch_profiles(
 
     all_profile_contents = set()
 
+    glob_results = []
+
     if not predictive:
+        # special trees prefetch profile which fetches all of the trees in the repo, kick this
+        # off before activating the rest of the prefetch profiles
+        if "trees" in profiles:
+            profiles.remove("trees")
+            glob_results.append(
+                make_prefetch_request(
+                    checkout=checkout,
+                    instance=instance,
+                    all_profile_contents={"**/*"},
+                    enable_prefetch=False,
+                    silent=silent,
+                    revisions=revisions,
+                    predict_revisions=predict_revisions,
+                    background=background,
+                    predictive=predictive,
+                    predictive_num_dirs=predictive_num_dirs,
+                )
+            )
+            # if only "trees" was requested
+            if not profiles:
+                return glob_results
         for profile in profiles:
             all_profile_contents |= get_contents_for_profile(checkout, profile, silent)
-    return make_prefetch_request(
-        checkout=checkout,
-        instance=instance,
-        all_profile_contents=all_profile_contents,
-        enable_prefetch=enable_prefetch,
-        silent=silent,
-        revisions=revisions,
-        predict_revisions=predict_revisions,
-        background=background,
-        predictive=predictive,
-        predictive_num_dirs=predictive_num_dirs,
+
+    glob_results.append(
+        make_prefetch_request(
+            checkout=checkout,
+            instance=instance,
+            all_profile_contents=all_profile_contents,
+            enable_prefetch=enable_prefetch,
+            silent=silent,
+            revisions=revisions,
+            predict_revisions=predict_revisions,
+            background=background,
+            predictive=predictive,
+            predictive_num_dirs=predictive_num_dirs,
+        )
     )
+
+    return glob_results
 
 
 @prefetch_profile_cmd("record", "Start recording fetched file paths.")
@@ -362,7 +390,7 @@ class ActivateProfileCmd(Subcmd):
                 return activation_result
 
             if not args.skip_prefetch:
-                result = prefetch_profiles(
+                results = prefetch_profiles(
                     checkout,
                     instance,
                     [args.profile_name],
@@ -377,9 +405,10 @@ class ActivateProfileCmd(Subcmd):
                 # there will only every be one commit used to query globFiles here,
                 # so no need to list which commit a file is fetched for, it will
                 # be the current commit.
-                if args.verbose and result is not None:
-                    for name in result.matchingFiles:
-                        _println(os.fsdecode(name))
+                if args.verbose and results is not None:
+                    for result in results:
+                        for name in result.matchingFiles:
+                            _println(os.fsdecode(name))
             return 0
 
 
@@ -423,7 +452,7 @@ class ActivatePredictiveProfileCmd(Subcmd):
 
             if not args.skip_prefetch:
                 try:
-                    result = prefetch_profiles(
+                    results = prefetch_profiles(
                         checkout,
                         instance,
                         [],
@@ -435,9 +464,10 @@ class ActivatePredictiveProfileCmd(Subcmd):
                         predictive=True,
                         predictive_num_dirs=args.num_dirs,
                     )
-                    if args.verbose and result is not None:
-                        for name in result.matchingFiles:
-                            _println(os.fsdecode(name))
+                    if args.verbose and results is not None:
+                        for result in results:
+                            for name in result.matchingFiles:
+                                _println(os.fsdecode(name))
                     return 0
                 except Exception as error:
                     # in case of a timeout or other error sending a request to the smartservice
@@ -562,7 +592,7 @@ class FetchProfileCmd(Subcmd):
                 print("No profiles to fetch.")
             return 0
 
-        result = prefetch_profiles(
+        results = prefetch_profiles(
             checkout,
             instance,
             profiles_to_fetch,
@@ -575,9 +605,10 @@ class FetchProfileCmd(Subcmd):
             predictive_num_dirs=0,
         )
 
-        if args.verbose and result is not None:
-            for name in result.matchingFiles:
-                _println(os.fsdecode(name))
+        if args.verbose and results is not None:
+            for result in results:
+                for name in result.matchingFiles:
+                    _println(os.fsdecode(name))
 
         return 0
 
@@ -635,7 +666,7 @@ class FetchPredictiveProfileCmd(Subcmd):
         ):
             predictive_num_dirs = checkout.get_config().predictive_prefetch_num_dirs
         try:
-            result = prefetch_profiles(
+            results = prefetch_profiles(
                 checkout,
                 instance,
                 [],
@@ -647,9 +678,10 @@ class FetchPredictiveProfileCmd(Subcmd):
                 predictive=True,
                 predictive_num_dirs=predictive_num_dirs,
             )
-            if args.verbose and result is not None:
-                for name in result.matchingFiles:
-                    _println(os.fsdecode(name))
+            if args.verbose and results is not None:
+                for result in results:
+                    for name in result.matchingFiles:
+                        _println(os.fsdecode(name))
         except Exception as error:
             # in case of a timeout or other error sending a request to the smartplatform
             # service for predictive prefetch profiles
