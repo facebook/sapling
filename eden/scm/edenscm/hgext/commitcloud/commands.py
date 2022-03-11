@@ -1290,13 +1290,23 @@ def cloudreclaimworkspaces(ui, repo, **opts):
             _(
                 "reason why the sync has been triggered (used for logging purposes) (ADVANCED)"
             ),
-        )
+        ),
+        (
+            "",
+            "best-effort",
+            False,
+            _(
+                "avoids taking the repo lock when possible, but may fail if "
+                "other commands are running (ADVANCED)"
+            ),
+        ),
     ],
 )
 def cloudsync(ui, repo, cloudrefs=None, **opts):
     """backup and synchronize commits with the commit cloud service"""
     repo.ignoreautobackup = True
     full = opts.get("full")
+    besteffort = opts.get("best_effort")
 
     if scmdaemon.checkmaybeskiprun(repo, opts):
         return 0
@@ -1321,6 +1331,7 @@ def cloudsync(ui, repo, cloudrefs=None, **opts):
         maybeversion,
         maybeworkspace,
         connect_opts=opts,
+        besteffort=besteffort,
     )
     return ret
 

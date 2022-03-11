@@ -888,7 +888,7 @@ Run cloud status after failing to synchronize
   Raw Workspace Name: user/test/default
   Automatic Sync (on local changes): OFF
   Automatic Sync via 'Scm Daemon' (on remote changes): OFF
-  Last Sync Version: 17
+  Last Sync Version: 18
   Last Sync Heads: 1 (0 omitted)
   Last Sync Bookmarks: 1 (0 omitted)
   Last Sync Remote Bookmarks: 0

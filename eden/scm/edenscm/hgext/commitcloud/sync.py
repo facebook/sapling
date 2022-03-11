@@ -105,7 +105,10 @@ def _iscleanrepo(repo):
 def sync(repo, *args, **kwargs):
     with backuplock.lock(repo):
         try:
-            rc, synced = _sync(repo, *args, **kwargs)
+            besteffort = kwargs.pop("besteffort", False)
+            nc = util.nullcontextmanager
+            with nc() if besteffort else repo.wlock(), nc() if besteffort else repo.lock():
+                rc, synced = _sync(repo, *args, **kwargs)
             if synced is not None:
                 with repo.svfs(_syncstatusfile, "w+") as fp:
                     fp.write(encodeutf8("Success" if synced else "Failed"))

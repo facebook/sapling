@@ -146,7 +146,7 @@ def backgroundbackup(repo, reason=None):
     """start background backup"""
     ui = repo.ui
     if workspace.currentworkspace(repo):
-        background_cmd = ["hg", "cloud", "sync"]
+        background_cmd = ["hg", "cloud", "sync", "--best-effort"]
         background_cmd += ["--reason", reason]
     else:
         background_cmd = ["hg", "cloud", "backup"]
