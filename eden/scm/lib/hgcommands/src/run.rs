@@ -346,7 +346,7 @@ fn spawn_progress_thread(
 
     // Limit how often we write runlog. This config knob is primarily for tests to lower.
     let runlog_interval =
-        Duration::from_secs_f64(config.get_or("runlog", "progress_refresh", || 0.5)?).max(interval);
+        Duration::from_secs_f64(config.get_or("runlog", "progress-refresh", || 0.5)?).max(interval);
 
     let mut config = progress_render::RenderingConfig {
         delay: Duration::from_secs_f64(config.get_or("progress", "delay", || 3.0)?),

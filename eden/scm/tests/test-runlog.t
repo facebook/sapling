@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ enable progress
-  $ setconfig extensions.rustprogresstest="$TESTDIR/runlogtest.py" runlog.enable=True runlog.progress_refresh=0
+  $ setconfig extensions.rustprogresstest="$TESTDIR/runlogtest.py" runlog.enable=True runlog.progress-refresh=0
 
   $ waitforrunlog() {
   >   while ! cat .hg/runlog/*.json 2> /dev/null; do
@@ -230,9 +230,9 @@ Make sure runlog works with rust renderer.
     "progress": []
   } (no-eol)
 
-Make sure progress updates when runlog.progress_refresh set.
+Make sure progress updates when runlog.progress-refresh set.
   $ rm $TESTTMP/go
-  $ hg progresstest --waitfile=$TESTTMP/go --config runlog.progress_refresh=0.001 1 &
+  $ hg progresstest --waitfile=$TESTTMP/go --config runlog.progress-refresh=0.001 1 &
   $ waitforrunlog
   {
     "id": ".*", (re)
@@ -240,7 +240,7 @@ Make sure progress updates when runlog.progress_refresh set.
       "progresstest",
       "--waitfile=$TESTTMP/go",
       "--config",
-      "runlog.progress_refresh=0.001",
+      "runlog.progress-refresh=0.001",
       "1"
     ],
     "pid": \d+, (re)
@@ -258,7 +258,7 @@ Make sure progress updates when runlog.progress_refresh set.
       "progresstest",
       "--waitfile=$TESTTMP/go",
       "--config",
-      "runlog.progress_refresh=0.001",
+      "runlog.progress-refresh=0.001",
       "1"
     ],
     "pid": \d+, (re)
@@ -282,7 +282,7 @@ Wait for background process to exit.
 
 
 Test we don't clean up entries with chance=0
-  $ setconfig runlog.cleanup_chance=0 runlog.cleanup_threshold=0
+  $ setconfig runlog.cleanup-chance=0 runlog.cleanup-threshold=0
   $ rm -f .hg/runlog/*
   $ hg root > /dev/null
   $ hg root > /dev/null
@@ -290,7 +290,7 @@ Test we don't clean up entries with chance=0
   4
 
 Test we always clean up with chance=1
-  $ setconfig runlog.cleanup_chance=1
+  $ setconfig runlog.cleanup-chance=1
   $ hg root > /dev/null
   $ ls .hg/runlog/* | grep -v watchfile | wc -l | sed -e 's/ //g'
   2
@@ -298,7 +298,7 @@ Test we always clean up with chance=1
 Test runlog CLI command
 
 Show completed entries (i.e. exited "root" entry)
-  $ setconfig runlog.cleanup_chance=0
+  $ setconfig runlog.cleanup-chance=0
   $ rm -f .hg/runlog/*
   $ hg root > /dev/null
   $ hg debugrunlog --ended

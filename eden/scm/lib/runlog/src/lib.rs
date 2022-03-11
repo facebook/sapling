@@ -43,11 +43,11 @@ impl Logger {
                 let dir = repo.shared_dot_hg_path();
 
                 // Probabilistically clean up old entries to avoid doing the work every time.
-                let cleanup_chance = repo.config().get_or("runlog", "cleanup_chance", || 0.01)?;
+                let cleanup_chance = repo.config().get_or("runlog", "cleanup-chance", || 0.01)?;
                 if cleanup_chance > rand::thread_rng().gen::<f64>() {
                     let threshold = repo
                         .config()
-                        .get_or("runlog", "cleanup_threshold", || 3600.0)?;
+                        .get_or("runlog", "cleanup-threshold", || 3600.0)?;
                     FileStore::cleanup(dir, Duration::from_secs_f64(threshold))?;
                 }
 
