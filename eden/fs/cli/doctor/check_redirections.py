@@ -22,7 +22,7 @@ def check_redirections(
     checkout: EdenCheckout,
     mount_table: mtab.MountTable,
 ) -> None:
-    redirs = get_effective_redirections(checkout, mount_table)
+    redirs = get_effective_redirections(checkout, mount_table, instance)
 
     for redir in redirs.values():
         if redir.state == RedirectionState.MATCHES_CONFIGURATION:

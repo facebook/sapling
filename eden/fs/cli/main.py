@@ -244,7 +244,7 @@ files outside the repo rather than to ignore and clean them up.\n""",
 
         for mount in mounts:
             instance, checkout, _rel_path = require_checkout(args, mount)
-            self.usage_for_redirections(checkout, all_redirections, clean)
+            self.usage_for_redirections(checkout, all_redirections, clean, instance)
 
         if not all_redirections:
             self.writeln_ui("No redirection")
@@ -461,9 +461,15 @@ space by running:
             )
 
     def usage_for_redirections(
-        self, checkout: EdenCheckout, redirection_repos: Set[str], clean: bool
+        self,
+        checkout: EdenCheckout,
+        redirection_repos: Set[str],
+        clean: bool,
+        instance: EdenInstance,
     ) -> None:
-        redirections = redirect_mod.get_effective_redirections(checkout, mtab.new())
+        redirections = redirect_mod.get_effective_redirections(
+            checkout, mtab.new(), instance
+        )
         seen_paths = set()
         if len(redirections) > 0:
             for redir in redirections.values():
@@ -1287,7 +1293,7 @@ class ChownCmd(Subcmd):
 
         if not args.skip_redirection:
             for redir in redirect_mod.get_effective_redirections(
-                checkout, mtab.new()
+                checkout, mtab.new(), instance
             ).values():
                 target = redir.expand_target_abspath(checkout)
                 print(f"Chowning redirection: {redir.repo_path}...", end="", flush=True)

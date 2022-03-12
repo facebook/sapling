@@ -16,7 +16,7 @@ import stat
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, Iterable, Optional
+from typing import Set, Dict, Iterable, Optional
 
 from thrift.Thrift import TApplicationException
 
@@ -493,8 +493,34 @@ def get_configured_redirections(checkout: EdenCheckout) -> Dict[str, Redirection
     return redirs
 
 
+def is_strict_subdir(base: bytes, sub_dir: bytes) -> bool:
+    return base != sub_dir and sub_dir.startswith(base)
+
+
+def get_nested_mounts(instance: EdenInstance, checkout_path_bytes: bytes) -> Set[bytes]:
+    """
+    Find out nested EdenFS mounts in the checkout path
+    """
+    nested_mounts = set()
+
+    for eden_mount in instance.get_mount_paths():
+        eden_mount_path_byte = bytes(Path(eden_mount)) + b"/"
+        if is_strict_subdir(checkout_path_bytes, eden_mount_path_byte):
+            nested_mounts.add(eden_mount_path_byte)
+    return nested_mounts
+
+
+def in_nested_mount(nested_mounts: Set[bytes], mount_point: bytes) -> bool:
+    for nested_mount in nested_mounts:
+        if os.path.realpath(nested_mount) == os.path.realpath(
+            mount_point
+        ) or mount_point.startswith(nested_mount):
+            return True
+    return False
+
+
 def get_effective_redirections(
-    checkout: EdenCheckout, mount_table: mtab.MountTable
+    checkout: EdenCheckout, mount_table: mtab.MountTable, instance: EdenInstance
 ) -> Dict[str, Redirection]:
     """Computes the complete set of redirections that are currently in effect.
     This is based on the explicitly configured settings but also factors in
@@ -502,32 +528,40 @@ def get_effective_redirections(
     """
     redirs = {}
     checkout_path_bytes = bytes(checkout.path) + b"/"
+
+    nested_mounts = get_nested_mounts(instance, checkout_path_bytes)
+
     for mount_info in mount_table.read():
         mount_point = mount_info.mount_point
-        if mount_point.startswith(checkout_path_bytes):
-            rel_path = os.fsdecode(mount_point[len(checkout_path_bytes) :])
-            # The is_bind_mount test may appear to be redundant but it is
-            # possible for mounts to layer such that we have:
-            #
-            # /my/repo    <-- fuse at the top of the vfs
-            # /my/repo/buck-out
-            # /my/repo    <-- earlier generation fuse at bottom
-            #
-            # The buck-out bind mount in the middle is visible in the
-            # mount table but is not visible via the VFS because there
-            # is a different /my/repo mounted over the top.
-            #
-            # We test whether we can see a mount point at that location
-            # before recording it in the effective redirection list so
-            # that we don't falsely believe that the bind mount is up.
-            if rel_path and is_bind_mount(Path(os.fsdecode(mount_point))):
-                redirs[rel_path] = Redirection(
-                    repo_path=Path(rel_path),
-                    redir_type=RedirectionType.UNKNOWN,
-                    target=None,
-                    source="mount",
-                    state=RedirectionState.UNKNOWN_MOUNT,
-                )
+        if not mount_point.startswith(checkout_path_bytes) or in_nested_mount(
+            nested_mounts, mount_point
+        ):
+            continue
+
+        rel_path = os.fsdecode(mount_point[len(checkout_path_bytes) :])
+
+        # The is_bind_mount test may appear to be redundant but it is
+        # possible for mounts to layer such that we have:
+        #
+        # /my/repo    <-- fuse at the top of the vfs
+        # /my/repo/buck-out
+        # /my/repo    <-- earlier generation fuse at bottom
+        #
+        # The buck-out bind mount in the middle is visible in the
+        # mount table but is not visible via the VFS because there
+        # is a different /my/repo mounted over the top.
+        #
+        # We test whether we can see a mount point at that location
+        # before recording it in the effective redirection list so
+        # that we don't falsely believe that the bind mount is up.
+        if rel_path and is_bind_mount(Path(os.fsdecode(mount_point))):
+            redirs[rel_path] = Redirection(
+                repo_path=Path(rel_path),
+                redir_type=RedirectionType.UNKNOWN,
+                target=None,
+                source="mount",
+                state=RedirectionState.UNKNOWN_MOUNT,
+            )
 
     for rel_path, redir in get_configured_redirections(checkout).items():
         is_in_mount_table = rel_path in redirs
@@ -630,9 +664,9 @@ def is_empty_dir(path: Path) -> bool:
     return True
 
 
-def prepare_redirection_list(checkout: EdenCheckout) -> str:
+def prepare_redirection_list(checkout: EdenCheckout, instance: EdenInstance) -> str:
     mount_table = mtab.new()
-    redirs = get_effective_redirections(checkout, mount_table)
+    redirs = get_effective_redirections(checkout, mount_table, instance)
     return create_redirection_configs(checkout, redirs.values(), False)
 
 
@@ -671,7 +705,7 @@ class ListCmd(Subcmd):
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
 
         mount_table = mtab.new()
-        redirs = get_effective_redirections(checkout, mount_table)
+        redirs = get_effective_redirections(checkout, mount_table, instance)
         print_redirection_configs(checkout, redirs.values(), args.json)
         return 0
 
@@ -745,7 +779,7 @@ class UnmountCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
         mount_table = mtab.new()
-        redirs = get_effective_redirections(checkout, mount_table)
+        redirs = get_effective_redirections(checkout, mount_table, instance)
 
         for redir in redirs.values():
             redir.remove_existing(checkout)
@@ -753,7 +787,7 @@ class UnmountCmd(Subcmd):
                 continue
 
         # recompute and display the current state
-        redirs = get_effective_redirections(checkout, mount_table)
+        redirs = get_effective_redirections(checkout, mount_table, instance)
         ok = True
         for redir in redirs.values():
             if redir.state == RedirectionState.MATCHES_CONFIGURATION:
@@ -794,9 +828,9 @@ class FixupCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        _instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
+        instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
         mount_table = mtab.new()
-        redirs = get_effective_redirections(checkout, mount_table)
+        redirs = get_effective_redirections(checkout, mount_table, instance)
         for redir in redirs.values():
             if redir.state == RedirectionState.MATCHES_CONFIGURATION and not (
                 args.force_remount_bind_mounts and redir.type == RedirectionType.BIND
@@ -813,7 +847,7 @@ class FixupCmd(Subcmd):
             redir.apply(checkout)
 
         # recompute and display the current state
-        redirs = get_effective_redirections(checkout, mount_table)
+        redirs = get_effective_redirections(checkout, mount_table, instance)
         ok = True
         for redir in redirs.values():
             if redir.state != RedirectionState.MATCHES_CONFIGURATION:
@@ -984,7 +1018,7 @@ class AddCmd(Subcmd):
         # bring the redirection back online.
         # However, we keep this separate from the `redirs` list below for
         # the reasons stated in the comment above.
-        effective_redirs = get_effective_redirections(checkout, mtab.new())
+        effective_redirs = get_effective_redirections(checkout, mtab.new(), instance)
 
         try:
             args.repo_path = str(
@@ -1078,7 +1112,7 @@ class DelCmd(Subcmd):
             checkout.save_config(config)
             return 0
 
-        redirs = get_effective_redirections(checkout, mtab.new())
+        redirs = get_effective_redirections(checkout, mtab.new(), instance)
         redir = redirs.get(args.repo_path)
         if redir:
             # This path isn't possible to trigger until we add profiles,
