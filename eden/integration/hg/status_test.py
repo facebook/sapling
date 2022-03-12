@@ -217,6 +217,15 @@ enforce-parents = false
         os.chmod(path, mode)
         self.assert_status_empty()
 
+    def test_rename_materialized(self) -> None:
+        self.write_file("subdir1/file.txt", "contents")
+        self.assert_status({"subdir1/file.txt": "?"})
+
+        subdir1 = os.path.join(self.mount, "subdir1")
+        subdir2 = os.path.join(self.mount, "subdir2")
+        os.rename(subdir1, subdir2)
+        self.assert_status({"subdir2/file.txt": "?"})
+
 
 @hg_test
 # pyre-ignore[13]: T62487924
