@@ -1435,10 +1435,23 @@ class Test(unittest.TestCase):
             self._portmap(0),
             self._portmap(1),
             self._portmap(2),
+            # This hack allows us to have same outputs for ipv4 and v6 urls:
+            # [ipv6]:port
+            (
+                br"([^0-9:])\[%s\]:[0-9]+" % re.escape(_bytespath(self._localip())),
+                br"\1$LOCALIP:$LOCAL_PORT",
+            ),
+            # [ipv6]
+            (
+                br"([^0-9:])\[%s\]" % re.escape(_bytespath(self._localip())),
+                br"\1$LOCALIP",
+            ),
+            # ipv4:port
             (
                 br"([^0-9])%s:[0-9]+" % re.escape(_bytespath(self._localip())),
                 br"\1$LOCALIP:$LOCAL_PORT",
             ),
+            # [ipv4]
             (br"([^0-9])%s" % re.escape(_bytespath(self._localip())), br"\1$LOCALIP"),
             (br"\bHG_TXNID=TXN:[a-f0-9]{40}\b", br"HG_TXNID=TXN:$ID$"),
         ]
