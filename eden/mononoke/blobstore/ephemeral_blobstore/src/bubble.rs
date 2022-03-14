@@ -13,12 +13,17 @@ use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use anyhow::Result;
+use async_stream::try_stream;
 use blobstore::{
     Blobstore, BlobstoreBytes, BlobstoreEnumerableWithUnlink, BlobstoreGetData, BlobstoreIsPresent,
+    BlobstoreKeyParam, BlobstoreKeySource, BlobstoreUnlinkOps,
 };
 use changesets::ChangesetsArc;
 use context::CoreContext;
 use derivative::Derivative;
+use futures::future::try_join_all;
+use futures::stream::TryStreamExt;
+use futures::{pin_mut, Stream};
 use mononoke_types::repo::{EPH_ID_PREFIX, EPH_ID_SUFFIX};
 use mononoke_types::DateTime;
 use prefixblob::PrefixBlobstore;
@@ -140,6 +145,72 @@ impl BubbleId {
 
 type RawBubbleBlobstore = PrefixBlobstore<Arc<dyn BlobstoreEnumerableWithUnlink>>;
 
+/// Enum representing the expiry status of a bubble in the backing store.
+#[derive(Copy, Debug, Clone, PartialEq)]
+pub enum ExpiryStatus {
+    Active = 0,
+    Expired = 1,
+}
+
+impl fmt::Display for ExpiryStatus {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            ExpiryStatus::Expired => write!(fmt, "1"),
+            ExpiryStatus::Active => write!(fmt, "0"),
+        }
+    }
+}
+
+impl From<ExpiryStatus> for Value {
+    fn from(status: ExpiryStatus) -> Self {
+        let val = match status {
+            ExpiryStatus::Expired => 1,
+            ExpiryStatus::Active => 0,
+        };
+        Value::Int(val)
+    }
+}
+
+impl ConvIr<ExpiryStatus> for ExpiryStatus {
+    fn new(v: Value) -> Result<Self, FromValueError> {
+        match v {
+            Value::Int(1) => Ok(ExpiryStatus::Expired),
+            Value::Int(0) => Ok(ExpiryStatus::Active),
+            v => Err(FromValueError(v)),
+        }
+    }
+
+    fn commit(self) -> ExpiryStatus {
+        self
+    }
+
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
+impl FromValue for ExpiryStatus {
+    type Intermediate = ExpiryStatus;
+}
+
+impl OptionalTryFromRowField for ExpiryStatus {
+    fn try_from_opt(field: RowField) -> Result<Option<Self>, MysqlError> {
+        opt_try_from_rowfield(field)
+    }
+}
+
+impl TryFrom<i64> for ExpiryStatus {
+    type Error = ();
+
+    fn try_from(value: i64) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(ExpiryStatus::Expired),
+            0 => Ok(ExpiryStatus::Active),
+            _ => Err(()),
+        }
+    }
+}
+
 /// An opened ephemeral blobstore bubble.  This is a miniature blobstore
 /// that stores blobs just for this ephemeral bubble in a particular repo.
 #[derive(Derivative, Clone)]
@@ -155,6 +226,8 @@ pub struct Bubble {
     /// Blobstore to use for accessing blobs in this bubble, without redaction
     /// or repo prefix wrappers.
     pub(crate) blobstore: RawBubbleBlobstore,
+
+    expired: ExpiryStatus,
 
     /// SQL connection
     #[derivative(Debug = "ignore")]
@@ -173,6 +246,7 @@ impl Bubble {
         expires_at: DateTime,
         blobstore: Arc<dyn BlobstoreEnumerableWithUnlink>,
         connections: SqlConnections,
+        expired: ExpiryStatus,
     ) -> Self {
         let blobstore = PrefixBlobstore::new(blobstore, bubble_id.prefix());
 
@@ -181,25 +255,58 @@ impl Bubble {
             expires_at,
             blobstore,
             connections,
+            expired,
         }
     }
 
     pub(crate) fn check_unexpired(&self) -> Result<()> {
-        if self.expires_at >= DateTime::now() {
+        if self.expires_at >= DateTime::now() && self.expired != ExpiryStatus::Expired {
             Ok(())
         } else {
             Err(EphemeralBlobstoreError::BubbleExpired(self.bubble_id).into())
         }
     }
 
-    pub(crate) async fn delete_blobs_in_bubble(&self, _ctx: &CoreContext) -> Result<()> {
-        // TODO: Add concrete functionality for deleting blobs within the underlying
-        // blobstore in subsequent diff.
-        unimplemented!()
+    pub(crate) async fn delete_blobs_in_bubble(&self, ctx: &CoreContext) -> Result<usize> {
+        let key_stream = self.get_keys_in_bubble(ctx).await;
+        let mut keys_deleted = 0;
+        pin_mut!(key_stream);
+        while let Some(keys) = key_stream.try_next().await? {
+            // As long as the unlink operation on underlying blobstores is "truly" async
+            // (i.e. they yield on cross service I/O), the below will execute the unlinking
+            // concurrently and terminate early on the first error encountered.
+            let unlinked_keys =
+                try_join_all(keys.iter().map(|key| self.blobstore.unlink(ctx, key))).await?;
+            keys_deleted += unlinked_keys.len();
+        }
+        // If the unlinking of all blobs within the bubble was successful, return the
+        // number of blobs unlinked.
+        Ok(keys_deleted)
+    }
+
+    async fn get_keys_in_bubble<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+    ) -> impl Stream<Item = Result<Vec<String>>> + 'a {
+        let mut token = Arc::new(BlobstoreKeyParam::from(..));
+        try_stream! {
+            loop {
+                let result = self.blobstore.enumerate(ctx, &token).await?;
+                yield Vec::from_iter(result.keys);
+                token = match result.next_token {
+                    Some(next_token) => Arc::new(next_token),
+                    None => break,
+                };
+            }
+        }
     }
 
     pub fn bubble_id(&self) -> BubbleId {
         self.bubble_id
+    }
+
+    pub fn expired(&self) -> ExpiryStatus {
+        self.expired
     }
 
     /// Return a blobstore that gives priority to accessing the bubble, but falls back

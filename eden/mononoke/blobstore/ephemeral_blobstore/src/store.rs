@@ -19,7 +19,7 @@ use sql::queries;
 use sql_ext::SqlConnections;
 use std::time::Duration;
 
-use crate::bubble::{Bubble, BubbleId};
+use crate::bubble::{Bubble, BubbleId, ExpiryStatus};
 use crate::error::EphemeralBlobstoreError;
 
 /// Ephemeral Store.
@@ -67,7 +67,7 @@ queries! {
 
     read SelectBubbleById(
         id: BubbleId,
-    ) -> (Timestamp, bool, Option<String>) {
+    ) -> (Timestamp, ExpiryStatus, Option<String>) {
         "SELECT expires_at, expired, owner_identity FROM ephemeral_bubbles
          WHERE id = {id}"
     }
@@ -87,18 +87,36 @@ queries! {
     ) -> (BubbleId,) {
         "SELECT id
         FROM ephemeral_bubbles
-        WHERE expires_at < {expires_at} AND NOT expired
+        WHERE expires_at < {expires_at}
         LIMIT {limit}"
     }
 
     write UpdateExpired(
-        expired: u8, // Can only take values 1 (for expired) or 0 (not yet expired)
+        expired: ExpiryStatus,
         id: BubbleId
     ) {
         none,
         "UPDATE ephemeral_bubbles
         SET expired={expired}
         WHERE id={id}"
+    }
+
+    write DeleteBubble(
+        id: BubbleId,
+    ) {
+        none,
+        "DELETE
+        FROM ephemeral_bubbles
+        WHERE id={id} AND expired"
+    }
+
+    write DeleteBubbleChangesetMapping(
+        id: BubbleId,
+    ) {
+        none,
+        "DELETE
+        FROM ephemeral_bubble_changeset_mapping
+        WHERE bubble_id IN (SELECT id FROM ephemeral_bubbles WHERE id = {id} AND expired)"
     }
 }
 
@@ -135,6 +153,7 @@ impl RepoEphemeralStoreInner {
                     expires_at + self.bubble_expiration_grace,
                     self.blobstore.clone(),
                     self.connections.clone(),
+                    ExpiryStatus::Active,
                 ))
             }
             _ => Err(EphemeralBlobstoreError::CreateBubbleFailed.into()),
@@ -152,6 +171,8 @@ impl RepoEphemeralStoreInner {
         Ok(rows.into_iter().next().map(|b| b.0))
     }
 
+    /// Gets the vector of bubbles that are past their expiry period
+    /// by atleast a duration of expiry_offset + bubble_expiration_grace
     async fn get_expired_bubbles(
         &self,
         expiry_offset: Duration,
@@ -160,24 +181,48 @@ impl RepoEphemeralStoreInner {
         let expiry_cutoff = DateTime::now() - to_chrono(expiry_offset);
         let rows = SelectExpiredBubbles::query(
             &self.connections.write_connection,
-            &Timestamp::from(expiry_cutoff),
+            &Timestamp::from(expiry_cutoff - self.bubble_expiration_grace),
             &max_bubbles,
         )
         .await?;
         Ok(rows.into_iter().map(|b| b.0).collect::<Vec<_>>())
     }
 
-    async fn delete_bubble(&self, bubble_id: BubbleId, ctx: &CoreContext) -> Result<()> {
-        let bubble = self.open_bubble(bubble_id).await?;
-        bubble.delete_blobs_in_bubble(ctx).await?;
-        let res = UpdateExpired::query(&self.connections.write_connection, &1, &bubble_id).await?;
-        match res.affected_rows() {
-            1 => Ok(()),
-            _ => Err(EphemeralBlobstoreError::DeleteBubbleFailed(bubble_id).into()),
+    /// Method responsible for deleting the bubble and all the data contained within.
+    /// Returns the number of blobs deleted from the bubble.
+    async fn delete_bubble(&self, bubble_id: BubbleId, ctx: &CoreContext) -> Result<usize> {
+        // Step 1: Mark the bubble as expired in the backing SQL Store
+        let res = UpdateExpired::query(
+            &self.connections.write_connection,
+            &ExpiryStatus::Expired,
+            &bubble_id,
+        )
+        .await?;
+        if res.affected_rows() != 1 {
+            return Err(EphemeralBlobstoreError::DeleteBubbleFailed(bubble_id).into());
         }
+        // Step 2: Delete the blob content within the expired bubble
+        let bubble = self.open_bubble_raw(bubble_id, false).await?;
+        let count = bubble.delete_blobs_in_bubble(ctx).await?;
+
+        // Step 3: Delete the metadata associated with the bubble from
+        // the backing SQL store
+        let res =
+            DeleteBubbleChangesetMapping::query(&self.connections.write_connection, &bubble_id)
+                .await?;
+        if res.affected_rows() > 1 {
+            return Err(EphemeralBlobstoreError::DeleteBubbleFailed(bubble_id).into());
+        }
+
+        // Step 4: Delete the bubble itself from the backing SQL store
+        let res = DeleteBubble::query(&self.connections.write_connection, &bubble_id).await?;
+        if res.affected_rows() > 1 {
+            return Err(EphemeralBlobstoreError::DeleteBubbleFailed(bubble_id).into());
+        }
+        Ok(count)
     }
 
-    async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble> {
+    async fn open_bubble_raw(&self, bubble_id: BubbleId, fail_on_expired: bool) -> Result<Bubble> {
         let mut rows =
             SelectBubbleById::query(&self.connections.read_connection, &bubble_id).await?;
 
@@ -192,9 +237,11 @@ impl RepoEphemeralStoreInner {
         }
 
         // TODO(mbthomas): check owner_identity
-        let (expires_at, expired, ref _owner_identity) = rows[0];
+        let (expires_at, expiry_status, ref _owner_identity) = rows[0];
         let expires_at: DateTime = expires_at.into();
-        if expired || expires_at < DateTime::now() {
+        if fail_on_expired
+            && (expiry_status == ExpiryStatus::Expired || expires_at < DateTime::now())
+        {
             return Err(EphemeralBlobstoreError::NoSuchBubble(bubble_id).into());
         }
 
@@ -203,7 +250,12 @@ impl RepoEphemeralStoreInner {
             expires_at + self.bubble_expiration_grace,
             self.blobstore.clone(),
             self.connections.clone(),
+            expiry_status,
         ))
+    }
+
+    async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble> {
+        self.open_bubble_raw(bubble_id, true).await
     }
 }
 
@@ -243,10 +295,16 @@ impl RepoEphemeralStore {
         self.inner()?.create_bubble(custom_duration).await
     }
 
-    pub async fn delete_bubble(&self, bubble_id: BubbleId, ctx: &CoreContext) -> Result<()> {
+    /// Method responsible for deleting the bubble and all the data contained within.
+    /// Returns the number of blobs deleted from the bubble.
+    /// NOTE: Deletes the bubble regardless of its expiry status. Make sure the bubble
+    /// is suitable for deletion.
+    pub async fn delete_bubble(&self, bubble_id: BubbleId, ctx: &CoreContext) -> Result<usize> {
         self.inner()?.delete_bubble(bubble_id, ctx).await
     }
 
+    /// Gets the vector of bubbles that are past their expiry period
+    /// by atleast a duration of expiry_offset + bubble_expiration_grace
     pub async fn get_expired_bubbles(
         &self,
         expiry_offset: Duration,
@@ -272,6 +330,7 @@ impl RepoEphemeralStore {
 mod test {
     use super::*;
     use crate::builder::RepoEphemeralStoreBuilder;
+    use anyhow::anyhow;
     use blobstore::{Blobstore, BlobstoreBytes, BlobstoreEnumerableWithUnlink, BlobstoreKeyParam};
     use context::CoreContext;
     use fbinit::FacebookInit;
@@ -284,8 +343,16 @@ mod test {
     use scuba_ext::MononokeScubaSampleBuilder;
     use sql_construct::SqlConstruct;
 
-    #[fbinit::test]
-    async fn basic_test(fb: FacebookInit) -> Result<()> {
+    fn bootstrap(
+        fb: FacebookInit,
+        initial_lifespan: Duration,
+        grace_period: Duration,
+    ) -> Result<(
+        CoreContext,
+        Arc<dyn BlobstoreEnumerableWithUnlink>,
+        RepoBlobstore,
+        RepoEphemeralStore,
+    )> {
         let ctx = CoreContext::test_mock(fb);
         // The ephemeral blobstore will normally be used stacked on top of
         // packblob, so use this in the test, too.
@@ -302,9 +369,17 @@ mod test {
         let eph = RepoEphemeralStoreBuilder::with_sqlite_in_memory()?.build(
             REPO_ZERO,
             blobstore.clone(),
-            Duration::from_secs(30 * 24 * 60 * 60),
-            Duration::from_secs(6 * 60 * 60),
+            initial_lifespan,
+            grace_period,
         );
+        Ok((ctx, blobstore, repo_blobstore, eph))
+    }
+
+    #[fbinit::test]
+    async fn basic_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (ctx, blobstore, repo_blobstore, eph) = bootstrap(fb, initial, grace)?;
         let key = "test_key".to_string();
 
         // Create a bubble and put data in it.
@@ -363,5 +438,207 @@ mod test {
             }
         );
         Ok(())
+    }
+
+    #[fbinit::test]
+    async fn create_and_fetch_active_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace)?;
+        let bubble1 = eph.create_bubble(None).await?;
+        // Ensure a newly created bubble exists in Active status
+        assert_eq!(bubble1.expired(), ExpiryStatus::Active);
+        // Re-opening the bubble from storage returns the same status
+        let bubble1_read = eph.open_bubble(bubble1.bubble_id()).await?;
+        assert_eq!(bubble1_read.expired(), bubble1.expired());
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delete_empty_bubble_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (ctx, _, _, eph) = bootstrap(fb, initial, grace)?;
+        // Create an empty bubble.
+        let bubble1 = eph.create_bubble(None).await?;
+        // Delete the bubble
+        let deleted = eph.delete_bubble(bubble1.bubble_id(), &ctx).await?;
+        // Should be 0 since the bubble was empty
+        assert_eq!(deleted, 0);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn delete_nonempty_bubble_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (ctx, blobstore, repo_blobstore, eph) = bootstrap(fb, initial, grace)?;
+        // Create a bubble and add data to it.
+        let bubble1 = eph.create_bubble(None).await?;
+        let bubble1_repo = bubble1.wrap_repo_blobstore(repo_blobstore.clone());
+        bubble1_repo
+            .put(
+                &ctx,
+                String::from("test_key_1"),
+                BlobstoreBytes::from_bytes("test data 1"),
+            )
+            .await?;
+        // Add more data to it
+        bubble1_repo
+            .put(
+                &ctx,
+                String::from("test_key_2"),
+                BlobstoreBytes::from_bytes("test data 2"),
+            )
+            .await?;
+        // Add some more data to it
+        bubble1_repo
+            .put(
+                &ctx,
+                String::from("test_key_3"),
+                BlobstoreBytes::from_bytes("test data 3"),
+            )
+            .await?;
+        bubble1_repo
+            .put(
+                &ctx,
+                String::from("test_key_4"),
+                BlobstoreBytes::from_bytes("test data 4"),
+            )
+            .await?;
+        // Enumerate the blobstore and check the required data is present.
+        let enumerated = blobstore
+            .enumerate(&ctx, &BlobstoreKeyParam::from(..))
+            .await?;
+        // Should contain four keys for now
+        assert_eq!(enumerated.keys.len(), 4);
+        // Delete the bubble
+        let deleted = eph.delete_bubble(bubble1.bubble_id(), &ctx).await?;
+        // Should be 4 based on the input data added
+        assert_eq!(deleted, 4);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn reopen_deleted_bubble_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (ctx, _, repo_blobstore, eph) = bootstrap(fb, initial, grace)?;
+        // Create a bubble and add data to it.
+        let bubble1 = eph.create_bubble(None).await?;
+        let bubble1_repo = bubble1.wrap_repo_blobstore(repo_blobstore.clone());
+        bubble1_repo
+            .put(
+                &ctx,
+                String::from("test_key_1"),
+                BlobstoreBytes::from_bytes("test data 1"),
+            )
+            .await?;
+        // Delete the bubble
+        eph.delete_bubble(bubble1.bubble_id(), &ctx).await?;
+        let res = eph.open_bubble(bubble1.bubble_id()).await;
+        // Since the bubble is deleted, reopening the bubble should
+        // throw the "no such bubble" error
+        match res {
+            Err(e) => match e.downcast_ref::<EphemeralBlobstoreError>() {
+                Some(EphemeralBlobstoreError::NoSuchBubble(_)) => Ok(()),
+                _ => Err(anyhow!("Invalid error post bubble deletion")),
+            },
+            _ => Err(anyhow!("Bubble expected to be deleted but it still exists")),
+        }
+    }
+
+    #[fbinit::test]
+    async fn get_expired_bubbles_test(fb: FacebookInit) -> Result<()> {
+        // We want immediately expiring bubbles
+        let initial = Duration::from_secs(0);
+        let grace = Duration::from_secs(0);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace)?;
+        // Create an empty bubble that would expire immediately.
+        let bubble1 = eph.create_bubble(None).await?;
+        // Validate bubble is created in active state
+        assert_eq!(bubble1.expired(), ExpiryStatus::Active);
+        // Create an empty bubble that won't expire anytime soon.
+        let bubble2 = eph.create_bubble(Some(Duration::from_secs(10000))).await?;
+        // Validate bubble is created in active state
+        assert_eq!(bubble2.expired(), ExpiryStatus::Active);
+        // Get expired bubbles
+        let res = eph.get_expired_bubbles(Duration::from_secs(0), 10).await?;
+        // Only one bubble should be returned since only one has expired so far
+        assert_eq!(res.len(), 1);
+        let res_bubble_id = res
+            .first()
+            .expect("Invalid number of expired bubbles")
+            .clone();
+        // The first bubble should be the only one that's expired
+        assert_eq!(res_bubble_id, bubble1.bubble_id());
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn get_expired_bubbles_offset_test(fb: FacebookInit) -> Result<()> {
+        // We want immediately expiring bubbles
+        let initial = Duration::from_secs(0);
+        let grace = Duration::from_secs(0);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace)?;
+        // Create an empty bubble that would expire immediately.
+        let bubble1 = eph.create_bubble(None).await?;
+        // Validate bubble is created in active state
+        assert_eq!(bubble1.expired(), ExpiryStatus::Active);
+        // Create an empty bubble that won't expire anytime soon.
+        let bubble2 = eph.create_bubble(Some(Duration::from_secs(10000))).await?;
+        // Validate bubble is created in active state
+        assert_eq!(bubble2.expired(), ExpiryStatus::Active);
+        // Get expired bubbles
+        let res = eph
+            .get_expired_bubbles(Duration::from_secs(1000), 10)
+            .await?;
+        // No items should be returned since there aren't any bubbles
+        // that have been expired for atleast the past 1000 seconds
+        assert_eq!(res.len(), 0);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn get_n_expired_bubbles_test(fb: FacebookInit) -> Result<()> {
+        // We want immediately expiring bubbles
+        let initial = Duration::from_secs(0);
+        let grace = Duration::from_secs(0);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace)?;
+        // Create empty bubbles that would expire immediately.
+        eph.create_bubble(None).await?;
+        eph.create_bubble(None).await?;
+        eph.create_bubble(None).await?;
+        eph.create_bubble(None).await?;
+        eph.create_bubble(None).await?;
+        // Get expired bubbles
+        let res = eph.get_expired_bubbles(Duration::from_secs(0), 2).await?;
+        // Only 2 bubbles should be returned given the input limit of 2
+        assert_eq!(res.len(), 2);
+        // Get expired bubbles
+        let res = eph.get_expired_bubbles(Duration::from_secs(0), 0).await?;
+        // No bubbles should be returned since limit is 0
+        assert_eq!(res.len(), 0);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn reopen_expired_bubble_test(fb: FacebookInit) -> Result<()> {
+        // We want immediately expiring bubbles
+        let initial = Duration::from_secs(0);
+        let grace = Duration::from_secs(0);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace)?;
+        // Create an empty bubble that would expire immediately.
+        let bubble1 = eph.create_bubble(None).await?;
+        // Opening the expired bubble should give a
+        // "No such bubble" error
+        let res = eph.open_bubble(bubble1.bubble_id()).await;
+        match res {
+            Err(e) => match e.downcast_ref::<EphemeralBlobstoreError>() {
+                Some(EphemeralBlobstoreError::NoSuchBubble(_)) => Ok(()),
+                _ => Err(anyhow!("Invalid error post bubble deletion")),
+            },
+            _ => Err(anyhow!("Bubble expected to be deleted but it still exists")),
+        }
     }
 }

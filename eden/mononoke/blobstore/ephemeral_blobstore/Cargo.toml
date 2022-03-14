@@ -9,6 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.51"
+async-stream = "0.3"
 async-trait = "0.1.52"
 blobstore = { version = "0.1.0", path = ".." }
 changesets = { version = "0.1.0", path = "../../changesets" }
