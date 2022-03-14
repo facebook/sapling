@@ -33,6 +33,7 @@ from __future__ import absolute_import
 
 import json
 import os
+import re as remod
 import socket
 import ssl
 from enum import Enum
@@ -202,6 +203,23 @@ class mononokepipe(object):
         return self._pipe.flush()
 
 
+def maybestripsquarebrackets(hostname):
+    """Strips the square braces from host name (if-present)
+
+    socket.createconnection used for mononoke connections can't deal with ipv6
+    addressed wrapped in square braces. This function allows us to support urls
+    like mononoke://[::1]/repo
+
+    util.url doesn't do it for us beacause it's not part of
+    http://www.ietf.org/rfc/rfc2396.txt
+    """
+    bracketed_ipv6 = remod.compile(r"^\[(.*)\]$")
+    m = bracketed_ipv6.match(hostname)
+    if m is not None:
+        return m.group(1)
+    return hostname
+
+
 class mononokepeer(stdiopeer.stdiopeer):
     def __init__(self, ui, path, create=False):
         super(mononokepeer, self).__init__(ui, path, create=create)
@@ -216,7 +234,7 @@ class mononokepeer(stdiopeer.stdiopeer):
 
         self._clientinfo = clientinfo.clientinfo(ui._uiconfig._rcfg._rcfg)
         self._user = u.user
-        self._host = u.host
+        self._host = maybestripsquarebrackets(u.host)
         self._port = u.port or 443
         self._path = u.path
         self._compression = ui.configwith(bool, "mononokepeer", "compression")
