@@ -18,7 +18,27 @@ def _hasanychanges(repo):
 
 def _fullclean(ui, repo, exclude):
     ui.status(_("cleaning up uncommitted code\n"), component="snapshot")
-    # Remove "tracked changes"
+    # The order of operations to cleanup here is very deliberate, to avoid errors.
+    # Most errors happen due to file/dir clashes, see https://fburl.com/jwyhd0fk
+    # Step 1: Forget files that were "hg added"
+    cmdutil.forget(
+        ui,
+        repo,
+        scmutil.match(
+            repo[None], [f"path:{p}" for p in (set(repo[None].added()) - set(exclude))]
+        ),
+        prefix="",
+        explicitonly=True,
+    )
+    # Step 2: Remove "untracked changes" (e.g. untracked files)
+    repo.dirstate._fs.purge(
+        scmutil.match(repo[None], opts={"exclude": exclude}),
+        removefiles=True,
+        removedirs=True,
+        removeignored=False,
+        dryrun=False,
+    )
+    # Step 3: Remove "tracked changes"
     cmdutil.revert(
         ui,
         repo,
@@ -27,14 +47,6 @@ def _fullclean(ui, repo, exclude):
         all=True,
         no_backup=True,
         exclude=exclude,
-    )
-    # Remove "untracked changes" (e.g. untracked files)
-    repo.dirstate._fs.purge(
-        scmutil.match(repo[None], opts={"exclude": exclude}),
-        removefiles=True,
-        removedirs=True,
-        removeignored=False,
-        dryrun=False,
     )
 
 
