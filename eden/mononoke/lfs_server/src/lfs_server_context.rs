@@ -257,14 +257,17 @@ impl<S: Stream<Item = Result<Bytes, Error>> + Send + 'static> Drop for HttpClien
     }
 }
 fn get_host_header(headers: &Option<&HeaderMap>) -> Result<String, LfsServerContextErrorKind> {
-    Ok(headers
+    let host_port_str = headers
         .ok_or(LfsServerContextErrorKind::MissingHostHeader)?
         .get(http::header::HOST)
         .ok_or(LfsServerContextErrorKind::MissingHostHeader)?
         .to_str()
-        .map_err(|_e| LfsServerContextErrorKind::MissingHostHeader)?
-        .splitn(2, ':')
-        .next()
+        .map_err(|_e| LfsServerContextErrorKind::MissingHostHeader)?;
+    // We're splitting from the right end of the string to account for ipv6 addreses
+    // which contain ':'.
+    Ok(host_port_str
+        .rsplitn(2, ':')
+        .last()
         .ok_or(LfsServerContextErrorKind::MissingHostHeader)?
         .to_string())
 }
