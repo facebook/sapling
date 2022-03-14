@@ -28,7 +28,7 @@ impl CommitDiscoveryOptions {
                     .takes_value(true)
                     .required(false)
                     .conflicts_with(ARG_INPUT_FILE)
-                    .help("changeset by {hd|bonsai} hash or bookmark"),
+                    .help("changeset by {hg|bonsai} hash or bookmark"),
             )
             .arg(
                 Arg::with_name(ARG_INPUT_FILE)

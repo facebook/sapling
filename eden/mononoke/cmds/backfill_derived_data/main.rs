@@ -303,7 +303,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                     Arg::with_name(ARG_CHANGESET)
                         .required(true)
                         .index(1)
-                        .help("changeset by {hd|bonsai} hash or bookmark"),
+                        .help("changeset by {hg|bonsai} hash or bookmark"),
                 )
                 .arg(
                     Arg::with_name(ARG_DERIVED_DATA_TYPE)
