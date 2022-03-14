@@ -39,12 +39,15 @@ EOF
 
 function base_commit_and_snapshot {
     export BASE_SNAPSHOT_COMMIT
+    export BASE_SNAPSHOT
     # Make an interesting commit and snapshot that tests all types of file changes
     echo a > modified_file
     echo a > missing_file
     echo a > untouched_file
     echo a > deleted_file
     echo a > deleted_file_then_untracked_modify
+    mkdir dir
+    echo a > dir/file_in_dir
     hg addremove -q
     hg commit -m "Add base files"
     BASE_SNAPSHOT_COMMIT=$(hg log -T "{node}" -r .)
@@ -62,7 +65,7 @@ function base_commit_and_snapshot {
     hg rm deleted_file_then_untracked_modify
     echo b > deleted_file_then_untracked_modify
     ln -s symlink_target symlink_file
-    hgedenapi snapshot create
+    BASE_SNAPSHOT=$(HGPLAIN=1 hgedenapi snapshot create)
 }
 
 function assert_on_base_snapshot {
@@ -70,6 +73,8 @@ function assert_on_base_snapshot {
     (
     set -e -o pipefail
     [[ "$(hg log -T "{node}" -r .)" = "$BASE_SNAPSHOT_COMMIT" ]] || ( echo wrong parent && hg log -T "{node}" -r . )
+    [[ "$(cat untouched_file)" = "a" ]] || echo wrong untouched_file
+    [[ "$(cat dir/file_in_dir)" = "a" ]] || echo wrong file_in_dir
     [[ "$(cat modified_file)" = "b" ]] || echo wrong modified_file
     [[ "$(cat added_file)" = "b" ]] || echo wrong added_file
     [[ "$(cat deleted_file_then_untracked_modify)" = "b" ]] || wrong deleted_file_then_untracked_modify
