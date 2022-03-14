@@ -85,7 +85,8 @@ class CheckoutContext {
   void start(
       RenameLock&& renameLock,
       EdenMount::ParentLock::LockedPtr&& parentLock,
-      RootId newSnapshot);
+      RootId newSnapshot,
+      std::shared_ptr<const Tree> toTree);
 
   /**
    * Complete the checkout operation

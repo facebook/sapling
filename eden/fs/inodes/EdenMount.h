@@ -485,9 +485,12 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   InodeNumber getDotEdenInodeNumber() const;
 #endif // !_WIN32
 
-  /** Convenience method for getting the Tree for the root of the mount. */
-  folly::Future<std::shared_ptr<const Tree>> getRootTree(
-      ObjectFetchContext& context) const;
+  /**
+   * Loads and returns the Tree corresponding to the root of the mount's working
+   * copy parent (commit hash or root ID). Note that the returned Tree may not
+   * corresponding to the mount's current inode structure.
+   */
+  std::shared_ptr<const Tree> getRootTree() const;
 
   /**
    * Look up the Tree or TreeEntry for the specified path.
@@ -632,9 +635,12 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 
   /**
    * Reset the state to point to the specified parent commit, without
-   * modifying the working directory contents at all.
+   * modifying the working directory contents at all. The passed in rootTree
+   * must be the corresponding root tree for the commit.
    */
-  void resetParent(const RootId& parent);
+  void resetParent(
+      const RootId& parent,
+      std::shared_ptr<const Tree>&& rootTree);
 
   /**
    * Acquire the rename lock in exclusive mode.
@@ -922,7 +928,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   EdenMount(EdenMount const&) = delete;
   EdenMount& operator=(EdenMount const&) = delete;
 
-  folly::Future<TreeInodePtr> createRootInode(const RootId& parentCommit);
+  TreeInodePtr createRootInode(std::shared_ptr<const Tree> tree);
 
   FOLLY_NODISCARD ImmediateFuture<folly::Unit> setupDotEden(TreeInodePtr root);
 
@@ -1066,6 +1072,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 
   struct ParentCommitState {
     RootId commitHash;
+    std::shared_ptr<const Tree> rootTree;
     bool checkoutInProgress = false;
   };
 

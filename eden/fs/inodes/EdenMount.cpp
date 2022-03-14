@@ -256,17 +256,25 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
     const std::optional<SerializedInodeMap>& takeover) {
   transitionState(State::UNINITIALIZED, State::INITIALIZING);
 
+  auto parentCommit = checkoutConfig_->getParentCommit();
+  auto parent =
+      parentCommit.getCurrentRootId(ParentCommit::RootIdPreference::To).value();
+
   return serverState_->getFaultInjector()
       .checkAsync("mount", getPath().stringPiece())
       .via(getServerThreadPool().get())
-      .thenValue([this, progressCallback = std::move(progressCallback)](
-                     auto&&) mutable {
-        auto parentCommit = checkoutConfig_->getParentCommit();
-        auto parent =
-            parentCommit.getCurrentRootId(ParentCommit::RootIdPreference::To)
-                .value();
+      .thenValue([this, parent](auto&&) {
+        static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+            "EdenMount::initialize");
+        return objectStore_->getRootTree(parent, *context);
+      })
+      .thenValue([this,
+                  progressCallback = std::move(progressCallback),
+                  parent,
+                  inProgressCheckout = parentCommit.isCheckoutInProgress()](
+                     std::shared_ptr<const Tree> parentTree) mutable {
         *parentState_.wlock() =
-            ParentCommitState{parent, parentCommit.isCheckoutInProgress()};
+            ParentCommitState{parent, parentTree, inProgressCheckout};
 
         // Record the transition from no snapshot to the current snapshot in
         // the journal.  This also sets things up so that we can carry the
@@ -277,11 +285,12 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
         // This must be performed before we do any operations that may
         // allocate inode numbers, including creating the root TreeInode.
         return overlay_->initialize(getPath(), std::move(progressCallback))
-            .deferValue([parent](auto&&) { return parent; });
+            .deferValue([parentTree = std::move(parentTree)](auto&&) mutable {
+              return parentTree;
+            });
       })
-      .thenValue(
-          [this](RootId parent) { return createRootInode(std::move(parent)); })
-      .thenValue([this, takeover](TreeInodePtr initTreeNode) {
+      .thenValue([this, takeover](std::shared_ptr<const Tree> parentTree) {
+        auto initTreeNode = createRootInode(std::move(parentTree));
         if (takeover) {
           inodeMap_->initializeFromTakeover(std::move(initTreeNode), *takeover);
         } else if (isWorkingCopyPersistent()) {
@@ -307,8 +316,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
       });
 }
 
-folly::Future<TreeInodePtr> EdenMount::createRootInode(
-    const RootId& parentCommit) {
+TreeInodePtr EdenMount::createRootInode(std::shared_ptr<const Tree> tree) {
   // Load the overlay, if present.
   auto rootOverlayDir = overlay_->loadOverlayDir(kRootNodeId);
   if (!rootOverlayDir.empty()) {
@@ -316,12 +324,7 @@ folly::Future<TreeInodePtr> EdenMount::createRootInode(
     return TreeInodePtr::makeNew(this, std::move(rootOverlayDir), std::nullopt);
   }
 
-  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-      "EdenMount::createRootInode");
-  return objectStore_->getRootTree(parentCommit, *context)
-      .thenValue([this](std::shared_ptr<const Tree> tree) {
-        return TreeInodePtr::makeNew(this, std::move(tree));
-      });
+  return TreeInodePtr::makeNew(this, std::move(tree));
 }
 
 #ifndef _WIN32
@@ -696,7 +699,7 @@ folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
         auto [targetTreeInode, incomingTree] = results;
         targetTreeInode->unloadChildrenUnreferencedByFs();
         // TODO(@yipu): Remove rename lock
-        ctx->start(this->acquireRenameLock(), {}, rootId);
+        ctx->start(this->acquireRenameLock(), {}, rootId, nullptr);
         setPathObjectIdTime->didAcquireRenameLock = stopWatch.elapsed();
         return targetTreeInode->checkout(ctx.get(), nullptr, incomingTree);
       })
@@ -975,9 +978,8 @@ TreeInodePtr EdenMount::getRootInode() const {
   return inodeMap_->getRootInode();
 }
 
-folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTree(
-    ObjectFetchContext& context) const {
-  return objectStore_->getRootTree(getParentCommit(), context);
+std::shared_ptr<const Tree> EdenMount::getRootTree() const {
+  return parentState_.rlock()->rootTree;
 }
 
 namespace {
@@ -1044,21 +1046,17 @@ ImmediateFuture<std::variant<std::shared_ptr<const Tree>, TreeEntry>>
 EdenMount::getTreeOrTreeEntry(
     RelativePathPiece path,
     ObjectFetchContext& context) const {
-  return ImmediateFuture{getRootTree(context).semi()}.thenValue(
-      [path = path.copy(), &context, objectStore = objectStore_](
-          std::shared_ptr<const Tree> tree) mutable {
-        if (path.empty()) {
-          return ImmediateFuture{
-              std::variant<std::shared_ptr<const Tree>, TreeEntry>{
-                  std::move(tree)}};
-        }
+  auto rootTree = getRootTree();
+  if (path.empty()) {
+    return ImmediateFuture{std::variant<std::shared_ptr<const Tree>, TreeEntry>{
+        std::move(rootTree)}};
+  }
 
-        auto processor = std::make_unique<TreeLookupProcessor>(
-            path, std::move(objectStore), context);
-        auto future = processor->next(std::move(tree));
-        return std::move(future).ensure(
-            [p = std::move(processor)]() mutable { p.reset(); });
-      });
+  auto processor =
+      std::make_unique<TreeLookupProcessor>(path, objectStore_, context);
+  auto future = processor->next(std::move(rootTree));
+  return std::move(future).ensure(
+      [p = std::move(processor)]() mutable { p.reset(); });
 }
 
 namespace {
@@ -1122,15 +1120,12 @@ ImmediateFuture<RelativePath> EdenMount::canonicalizePathFromTree(
     return path.copy();
   }
 
-  return ImmediateFuture{getRootTree(context).semi()}.thenValue(
-      [path = path.copy(), &context, objectStore = objectStore_](
-          std::shared_ptr<const Tree> tree) mutable {
-        auto processor = std::make_unique<CanonicalizeProcessor>(
-            std::move(path), std::move(objectStore), context);
-        auto future = processor->next(std::move(tree));
-        return std::move(future).ensure(
-            [p = std::move(processor)]() mutable { p.reset(); });
-      });
+  auto tree = getRootTree();
+  auto processor = std::make_unique<CanonicalizeProcessor>(
+      path.copy(), objectStore_, context);
+  auto future = processor->next(std::move(tree));
+  return std::move(future).ensure(
+      [p = std::move(processor)]() mutable { p.reset(); });
 }
 
 #ifndef _WIN32
@@ -1359,7 +1354,11 @@ folly::Future<CheckoutResult> EdenMount::checkout(
         // completes. This also updates the SNAPSHOT file to make sure that an
         // interrupted checkout can be properly detected.
         auto renameLock = this->acquireRenameLock();
-        ctx->start(std::move(renameLock), parentState_.wlock(), snapshotHash);
+        ctx->start(
+            std::move(renameLock),
+            parentState_.wlock(),
+            snapshotHash,
+            std::get<1>(treeResults));
 
         checkoutTimes->didAcquireRenameLock = stopWatch.elapsed();
 
@@ -1639,7 +1638,9 @@ folly::Future<std::unique_ptr<ScmStatus>> EdenMount::diff(
       });
 }
 
-void EdenMount::resetParent(const RootId& parent) {
+void EdenMount::resetParent(
+    const RootId& parent,
+    std::shared_ptr<const Tree>&& rootTree) {
   // Hold the snapshot lock around the entire operation.
   auto parentLock = parentState_.wlock();
 
@@ -1658,6 +1659,7 @@ void EdenMount::resetParent(const RootId& parent) {
 
   checkoutConfig_->setParentCommit(parent);
   parentLock->commitHash = parent;
+  parentLock->rootTree = std::move(rootTree);
 
   journal_->recordHashUpdate(oldParent, parent);
 }

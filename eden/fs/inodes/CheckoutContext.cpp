@@ -40,7 +40,8 @@ CheckoutContext::~CheckoutContext() {}
 void CheckoutContext::start(
     RenameLock&& renameLock,
     EdenMount::ParentLock::LockedPtr&& parentLock,
-    RootId newSnapshot) {
+    RootId newSnapshot,
+    std::shared_ptr<const Tree> toTree) {
   renameLock_ = std::move(renameLock);
 
   // Only update the parent if it is not a dry run.
@@ -51,6 +52,7 @@ void CheckoutContext::start(
       oldParent = parentLock->commitHash;
       // Update the in-memory snapshot ID
       parentLock->commitHash = newSnapshot;
+      parentLock->rootTree = std::move(toTree);
     }
 
     auto config = mount_->getCheckoutConfig();

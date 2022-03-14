@@ -525,7 +525,10 @@ void EdenServiceHandler::resetParentCommits(
         ->importManifestForRoot(parent1, rootManifest)
         .get();
   }
-  edenMount->resetParent(parent1);
+  auto tree = edenMount->getObjectStore()
+                  ->getRootTree(parent1, helper->getFetchContext())
+                  .get();
+  edenMount->resetParent(parent1, std::move(tree));
 }
 
 namespace {

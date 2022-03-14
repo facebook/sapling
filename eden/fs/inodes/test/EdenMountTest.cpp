@@ -511,7 +511,7 @@ TEST(EdenMount, resetParents) {
   EXPECT_FALSE(testMount.hasFileAt("src/extra.h"));
 
   // Reset the TestMount to pointing to commit2
-  edenMount->resetParent(RootId("2"));
+  edenMount->resetParent(RootId("2"), nullptr);
   // The snapshot ID should be updated, both in memory and on disk
   EXPECT_EQ(RootId("2"), edenMount->getParentCommit());
   EXPECT_EQ(

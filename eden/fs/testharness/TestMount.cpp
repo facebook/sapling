@@ -406,7 +406,7 @@ void TestMount::resetCommit(
     rootTree->setReady();
   }
 
-  edenMount_->resetParent(commitHash);
+  edenMount_->resetParent(commitHash, nullptr);
 }
 
 bool TestMount::hasOverlayData(InodeNumber ino) const {
@@ -691,9 +691,7 @@ Future<Unit> TestMount::loadAllInodesFuture(const TreeInodePtr& treeInode) {
 }
 
 std::shared_ptr<const Tree> TestMount::getRootTree() const {
-  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-      "TestMount::getRootTree");
-  return edenMount_->getRootTree(*context).get();
+  return edenMount_->getRootTree();
 }
 
 std::string TestMount::loadFileContentsFromPath(std::string path) {
