@@ -8,6 +8,7 @@ edition = "2021"
 cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.7", default-features = false }
 repo = { path = "../../../../lib/repo" }
+util = { path = "../../../../lib/util" }
 pyconfigparser = { path = "../pyconfigparser" }
 
 [features]

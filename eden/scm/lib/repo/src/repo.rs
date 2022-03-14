@@ -40,7 +40,7 @@ impl OptionalRepo {
     /// parent directories.
     pub fn from_cwd(cwd: impl AsRef<Path>) -> Result<OptionalRepo> {
         if let Some(path) = find_hg_repo_root(&util::path::absolute(cwd)?) {
-            let repo = Repo::from_raw_path(path)?;
+            let repo = Repo::load(path)?;
             Ok(OptionalRepo::Some(repo))
         } else {
             Ok(OptionalRepo::None(
@@ -72,7 +72,7 @@ impl OptionalRepo {
         if let Ok(path) = util::path::absolute(&full_repository_path) {
             if path.join(".hg").is_dir() {
                 // `path` is a directory with `.hg`.
-                let repo = Repo::from_raw_path(path)?;
+                let repo = Repo::load(path)?;
                 return Ok(OptionalRepo::Some(repo));
             } else if path.is_file() {
                 // 'path' is a bundle path
@@ -115,7 +115,7 @@ impl Repo {
     /// Load the repo from explicit path.
     ///
     /// Load repo configurations.
-    fn from_raw_path<P>(path: P) -> Result<Self>
+    pub fn load<P>(path: P) -> Result<Self>
     where
         P: Into<PathBuf>,
     {
