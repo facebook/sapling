@@ -8,6 +8,7 @@
 use std::num::{NonZeroU32, NonZeroUsize};
 
 use anyhow::{anyhow, Context, Result};
+use arg_extensions::ArgDefaults;
 use clap::Args;
 use metaconfig_types::PackFormat;
 use rand_distr::Normal;
@@ -19,12 +20,10 @@ use crate::PutBehaviour;
 pub struct BlobstoreArgs {
     /// Read QPS limit
     #[clap(long)]
-    // TODO: programmatic default
     pub blobstore_read_qps: Option<NonZeroU32>,
 
     /// Write QPS limit
     #[clap(long)]
-    // TODO: programmatic default
     pub blobstore_write_qps: Option<NonZeroU32>,
 
     /// Read bytes/s limit
@@ -101,7 +100,6 @@ pub struct BlobstoreArgs {
 
     /// Desired blobstore behaviour when a put is made to an existing key.
     #[clap(long)]
-    // TODO: programmatic default
     pub blobstore_put_behaviour: Option<PutBehaviour>,
 }
 
@@ -135,6 +133,40 @@ impl BlobstoreArgs {
             self.blobstore_put_stddev_delay_secs,
         )
         .context("Failed to create blobstore put delay distribution")
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct BlobstoreArgDefaults {
+    read_qps: Option<NonZeroU32>,
+    write_qps: Option<NonZeroU32>,
+    cachelib_attempt_zstd: Option<bool>,
+    put_behaviour: Option<PutBehaviour>,
+}
+
+impl ArgDefaults for BlobstoreArgDefaults {
+    fn arg_defaults(&self) -> Vec<(&'static str, String)> {
+        let mut defaults = Vec::new();
+        if let Some(read_qps) = self.read_qps {
+            defaults.push(("blobstore_read_qps", read_qps.to_string()));
+        }
+        if let Some(write_qps) = self.write_qps {
+            defaults.push(("blobstore_write_qps", write_qps.to_string()));
+        }
+        if let Some(cachelib_attempt_zstd) = self.cachelib_attempt_zstd {
+            defaults.push((
+                "blobstore_cachelib_attempt_zstd",
+                cachelib_attempt_zstd.to_string(),
+            ));
+        }
+        if let Some(put_behaviour) = self.put_behaviour {
+            defaults.push((
+                "blobstore_put_behaviour",
+                <&'static str>::from(put_behaviour).to_string(),
+            ));
+        }
+
+        defaults
     }
 }
 
