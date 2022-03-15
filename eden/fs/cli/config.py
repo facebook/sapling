@@ -847,7 +847,9 @@ Do you want to run `eden mount %s` instead?"""
         path = Path(path)
         shutil.rmtree(self._get_client_dir_for_mount_point(path))
         self._remove_path_from_directory_map(path)
+        self.cleanup_mount(path, preserve_mount_point)
 
+    def cleanup_mount(self, path: Path, preserve_mount_point: bool = False) -> None:
         if sys.platform != "win32":
             # Delete the mount point
             # It should normally contain the readme file that we put there, but nothing

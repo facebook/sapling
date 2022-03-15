@@ -6,6 +6,7 @@
 
 import argparse
 import asyncio
+import enum
 import errno
 import inspect
 import json
@@ -1337,6 +1338,20 @@ class MountCmd(Subcmd):
         return 0
 
 
+# Types of removal
+#
+# * ACTIVE_MOUNT: removing a mounted repository, we need to talk with EdenFS
+# daemon to get it unmounted.
+# * INACTIVE_MOUNT: removing an unmounted repository, we can simply delete
+# its configuration.
+# * CLEANUP_ONLY: removing an unknown directory, it might be an old EdenFS
+# mount that failed to clean up. We try to clean it up again in this case.
+class RemoveType(enum.Enum):
+    ACTIVE_MOUNT = 0
+    INACTIVE_MOUNT = 1
+    CLEANUP_ONLY = 2
+
+
 @subcmd("remove", "Remove an EdenFS checkout", aliases=["rm"])
 class RemoveCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -1359,28 +1374,49 @@ class RemoveCmd(Subcmd):
             "paths", nargs="+", metavar="path", help="The EdenFS checkout(s) to remove"
         )
 
+    def is_prjfs_path(self, path: str) -> bool:
+        if platform.system() != "Windows":
+            return False
+        try:
+            return (Path(path) / ".EDEN_TEST_NONEXISTENT_PATH").exists()
+        except OSError as e:
+            # HACK: similar to how we test if EdenFS is running, we will get
+            # this 369 error for partial removal because EdenFS is no longer
+            # serving this mount point. As a result, Windows will return this
+            # error for stat.
+            # Errno 369 is not documented but it is "The provider that supports
+            # file system virtualization is temporarily unavailable".
+
+            # pyre-ignore[16]: winerror is Windows only.
+            if e.winerror == 369:
+                return True
+            return False
+        except Exception:
+            return False
+
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
         configured_mounts = list(instance.get_mount_paths())
 
         # First translate the list of paths into canonical checkout paths
         # We also track a bool indicating if this checkout is currently mounted
-        mounts: List[Tuple[str, bool]] = []
+        mounts: List[Tuple[str, RemoveType]] = []
         for path in args.paths:
             try:
                 mount_path = util.get_eden_mount_name(path)
-                active = True
+                remove_type = RemoveType.ACTIVE_MOUNT
             except util.NotAnEdenMountError as ex:
                 # This is not an active mount point.
                 # Check for it by name in the config file anyway, in case it is
                 # listed in the config file but not currently mounted.
                 mount_path = os.path.realpath(path)
                 if mount_path in configured_mounts:
-                    active = False
+                    remove_type = RemoveType.INACTIVE_MOUNT
+                elif self.is_prjfs_path(path):
+                    remove_type = RemoveType.CLEANUP_ONLY
                 else:
                     print(f"error: {ex}")
                     return 1
-                active = False
             except Exception as ex:
                 print(f"error: cannot determine mount point for {path}: {ex}")
                 return 1
@@ -1391,11 +1427,11 @@ class RemoveCmd(Subcmd):
                     f"{mount_path}, not deleting"
                 )
                 return 1
-            mounts.append((mount_path, active))
+            mounts.append((mount_path, remove_type))
 
         # Warn the user since this operation permanently destroys data
         if args.prompt and sys.stdin.isatty():
-            mounts_list = "\n  ".join(path for path, active in mounts)
+            mounts_list = "\n  ".join(path for path, _ in mounts)
             print(
                 f"""\
 Warning: this operation will permanently delete the following checkouts:
@@ -1409,9 +1445,9 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
 
         # Unmount + destroy everything
         exit_code = 0
-        for mount, active in mounts:
+        for mount, remove_type in mounts:
             print(f"Removing {mount}...")
-            if active:
+            if remove_type == RemoveType.ACTIVE_MOUNT:
                 try:
                     # We don't bother complaining about removing redirections on
                     # Windows since redirections are symlinks on windows,
@@ -1448,7 +1484,10 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                     # ahead delete the mount from the config in this case.
 
             try:
-                instance.destroy_mount(mount, args.preserve_mount_point)
+                if remove_type != RemoveType.CLEANUP_ONLY:
+                    instance.destroy_mount(mount, args.preserve_mount_point)
+                else:
+                    instance.cleanup_mount(Path(mount), args.preserve_mount_point)
             except Exception as ex:
                 print_stderr(f"error deleting configuration for {mount}: {ex}")
                 exit_code = 1
