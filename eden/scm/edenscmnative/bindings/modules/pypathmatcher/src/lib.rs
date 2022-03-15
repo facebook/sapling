@@ -81,6 +81,10 @@ py_class!(pub class treematcher |py| {
             Ok(self.matcher(py).match_recursive(path))
         }
     }
+
+    def matching_rule_indexes(&self, path: &PyPath) -> PyResult<Vec<usize>> {
+        Ok(self.matcher(py).matching_rule_indexes(path))
+    }
 });
 
 impl ExtractInnerRef for treematcher {

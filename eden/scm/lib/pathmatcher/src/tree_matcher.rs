@@ -35,6 +35,12 @@ bitflags! {
     }
 }
 
+#[derive(Clone, Debug)]
+struct RuleInfo {
+    flags: RuleFlags,
+    orig_idx: usize,
+}
+
 /// Pattern matcher constructed by an ordered list of positive and negative
 /// glob patterns. Negative patterns are prefixed with `!`.
 ///
@@ -52,7 +58,7 @@ pub struct TreeMatcher {
 
     // Flags (ex. negative rule or is it a parent directory) for additional
     // information matching the pattern indexes.
-    rule_flags: Vec<RuleFlags>,
+    rule_info: Vec<RuleInfo>,
 }
 
 impl TreeMatcher {
@@ -80,9 +86,9 @@ impl TreeMatcher {
         rules: impl Iterator<Item = impl AsRef<str>>,
     ) -> Result<Self, globset::Error> {
         let mut builder = GlobSetBuilder::new();
-        let mut rule_flags = Vec::new();
+        let mut rule_info = Vec::new();
 
-        for rule in rules {
+        for (idx, rule) in rules.enumerate() {
             let rule = rule.as_ref();
             let (negative, rule) = if rule.starts_with("!") {
                 (true, &rule[1..])
@@ -123,7 +129,10 @@ impl TreeMatcher {
                     let parent_rule = &rule[..index];
                     for glob in build_globs(parent_rule)? {
                         builder.add(glob);
-                        rule_flags.push(flag | RuleFlags::PARENT);
+                        rule_info.push(RuleInfo {
+                            flags: flag | RuleFlags::PARENT,
+                            orig_idx: idx,
+                        });
                     }
                 }
                 sep_index = index + 1;
@@ -138,14 +147,17 @@ impl TreeMatcher {
             // the documentation of globset might say otherwise.
             for glob in build_globs(&rule)? {
                 builder.add(glob);
-                rule_flags.push(flag);
+                rule_info.push(RuleInfo {
+                    flags: flag,
+                    orig_idx: idx,
+                });
             }
         }
 
         let glob_set = builder.build()?;
         let matcher = Self {
             glob_set,
-            rule_flags,
+            rule_info,
         };
         Ok(matcher)
     }
@@ -175,7 +187,7 @@ impl TreeMatcher {
         // A subpath may mismatch - cannot return Some(true)
         let mut subpath_may_mismatch = false;
         for id in self.glob_set.matches(dir).into_iter().rev() {
-            let flag = self.rule_flags[id];
+            let flag = self.rule_info[id].flags;
             if flag.contains(RuleFlags::PARENT) {
                 // An auto-generated parent rule matches.
                 if flag.contains(RuleFlags::NEGATIVE) {
@@ -209,7 +221,7 @@ impl TreeMatcher {
 
         if subpath_may_match {
             None
-        } else if !self.rule_flags.is_empty() && dir.to_str() == Some("") {
+        } else if !self.rule_info.is_empty() && dir.to_str() == Some("") {
             // Special case: empty dir
             None
         } else {
@@ -222,7 +234,7 @@ impl TreeMatcher {
     /// `/` should be used as the path separator, regardless of system.
     pub fn matches(&self, path: impl AsRef<Path>) -> bool {
         for id in self.glob_set.matches(path).into_iter().rev() {
-            let flag = self.rule_flags[id];
+            let flag = self.rule_info[id].flags;
             if flag.contains(RuleFlags::PARENT) {
                 // For full path matches, parent rules do not count.
                 continue;
@@ -236,6 +248,17 @@ impl TreeMatcher {
         }
         // No rule matches
         false
+    }
+
+    pub fn matching_rule_indexes(&self, path: impl AsRef<Path>) -> Vec<usize> {
+        let mut idxs: Vec<usize> = self
+            .glob_set
+            .matches(path)
+            .into_iter()
+            .map(|idx| self.rule_info[idx].orig_idx)
+            .collect();
+        idxs.dedup();
+        idxs
     }
 }
 
@@ -562,5 +585,15 @@ mod tests {
         // See https://github.com/BurntSushi/aho-corasick/issues/53.
         assert!(m1.matches("fbandroid/libraries/fbjni/x"));
         assert!(m2.matches("fbandroid/libraries/fbjni/x"));
+    }
+
+    #[test]
+    fn test_matching_rule_indexes() {
+        let pats = ["foo", "bar/baz", "qux/**"];
+        let m = TreeMatcher::from_rules(pats.iter()).unwrap();
+        assert_eq!(m.matching_rule_indexes("banana"), vec![]);
+        assert_eq!(m.matching_rule_indexes("foo"), vec![0]);
+        assert_eq!(m.matching_rule_indexes("bar/baz"), vec![1]);
+        assert_eq!(m.matching_rule_indexes("qux/some/thing"), vec![2]);
     }
 }
