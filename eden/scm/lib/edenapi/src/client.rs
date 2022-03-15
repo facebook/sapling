@@ -1308,19 +1308,14 @@ async fn with_retry<'t, T>(
             return result;
         }
         match result {
-            Err(EdenApiError::HttpError {
-                status,
-                message,
-                headers,
-            }) => {
-                tracing::warn!("Retrying http status {} {} {:#?}", status, message, headers);
+            Ok(result) => return Ok(result),
+            Err(ref error) => {
+                if !error.is_retryable() {
+                    return result;
+                }
+                tracing::warn!("Retrying http error {:?}", error);
                 tokio::time::sleep(Duration::from_secs(1)).await;
             }
-            Err(EdenApiError::Http(err)) => {
-                tracing::warn!("Retrying http error {:?}", err);
-                tokio::time::sleep(Duration::from_secs(1)).await;
-            }
-            other => return other,
         }
         attempt += 1;
     }
