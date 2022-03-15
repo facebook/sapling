@@ -34,6 +34,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_runtime::block_on;
+use async_runtime::stream_to_iter;
 use auth::AuthSection;
 use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
@@ -41,7 +42,6 @@ use futures::future::FutureExt;
 use futures::stream::iter;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
-use futures::TryStreamExt;
 use hg_http::http_client;
 use hg_http::http_config;
 use http::status::StatusCode;
@@ -1069,7 +1069,7 @@ impl LfsRemoteInner {
     pub fn batch_fetch(
         &self,
         objs: &HashSet<(Sha256, usize)>,
-        write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
+        write_to_store: impl FnMut(Sha256, Bytes) -> Result<()>,
         error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
         let read_from_store = |_sha256, _size| unreachable!();
@@ -1131,7 +1131,6 @@ impl LfsRemoteInner {
         async move {
             let mut backoff = http_options.backoff_times.iter().copied();
             let mut throttle_backoff = http_options.throttle_backoff_times.iter().copied();
-            let mut rng = thread_rng();
             let mut attempt = 0;
 
             let mut seen_error_codes = HashSet::new();
@@ -1258,7 +1257,8 @@ impl LfsRemoteInner {
                 };
 
                 if let Some(backoff_time) = backoff_time {
-                    let sleep_time = Duration::from_secs_f32(rng.gen_range(0.0..backoff_time));
+                    let sleep_time =
+                        Duration::from_secs_f32(thread_rng().gen_range(0.0..backoff_time));
                     tracing::debug!(
                         sleep_time = ?sleep_time,
                         retry_strategy = ?retry_strategy,
@@ -1368,9 +1368,8 @@ impl LfsRemoteInner {
         action: ObjectAction,
         oid: Sha256,
         size: u64,
-        write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + 'static,
         http_options: Arc<HttpOptions>,
-    ) -> Result<()> {
+    ) -> Result<(Sha256, Bytes)> {
         let url = Url::from_str(&action.href.to_string())?;
 
         let data = match chunk_size {
@@ -1443,9 +1442,7 @@ impl LfsRemoteInner {
             },
         };
 
-        spawn_blocking(move || write_to_store(oid, data)).await??;
-
-        Ok(())
+        Ok((oid, data))
     }
 
     /// Fetch and Upload blobs from the LFS server.
@@ -1459,7 +1456,7 @@ impl LfsRemoteInner {
         objs: &HashSet<(Sha256, usize)>,
         operation: Operation,
         read_from_store: impl Fn(Sha256, u64) -> Result<Option<Bytes>> + Send + Clone + 'static,
-        write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
+        mut write_to_store: impl FnMut(Sha256, Bytes) -> Result<()>,
         mut error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
         let response = LfsRemoteInner::send_batch_request(http, objs, operation)?;
@@ -1498,6 +1495,7 @@ impl LfsRemoteInner {
                         read_from_store.clone(),
                         http.http_options.clone(),
                     )
+                    .map(|_| None)
                     .left_future(),
                     Operation::Download => LfsRemoteInner::process_download(
                         http.client.clone(),
@@ -1505,25 +1503,35 @@ impl LfsRemoteInner {
                         action,
                         oid,
                         object.object.size,
-                        write_to_store.clone(),
                         http.http_options.clone(),
                     )
+                    .map(Some)
                     .right_future(),
                 };
 
-                futures.push(Ok(fut));
+                futures.push(fut);
             }
         }
 
-        // Request a couple of blobs concurrently.
-        block_on(iter(futures).try_for_each_concurrent(http.concurrent_fetches, |fut| fut))
+        // Request blobs concurrently.
+        let stream = stream_to_iter(iter(futures).buffer_unordered(http.concurrent_fetches));
+
+        // It's awkward that the futures are shared for uploading and downloading. We use Some(_)
+        // to indicate if the result came from the download path, and 'flatten' filters out the
+        // Nones.
+        for result in stream.flatten() {
+            let (sha, data) = result?;
+            write_to_store(sha, data)?;
+        }
+
+        Ok(())
     }
 
     /// Fetch files from the filesystem.
     fn batch_fetch_file(
         file: &LfsBlobsStore,
         objs: &HashSet<(Sha256, usize)>,
-        write_to_store: impl Fn(Sha256, Bytes) -> Result<()>,
+        mut write_to_store: impl FnMut(Sha256, Bytes) -> Result<()>,
     ) -> Result<()> {
         for (hash, size) in objs {
             if let Some(data) = file.get(hash, *size as u64)? {
@@ -1669,7 +1677,7 @@ impl LfsRemote {
     fn batch_fetch(
         &self,
         objs: &HashSet<(Sha256, usize)>,
-        write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
+        write_to_store: impl FnMut(Sha256, Bytes) -> Result<()>,
         error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
         self.remote.batch_fetch(objs, write_to_store, error_handler)
