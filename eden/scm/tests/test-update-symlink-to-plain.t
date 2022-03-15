@@ -30,3 +30,18 @@
   NO LONGER A LINK
   $ cat file
   CONTENT
+
+Make sure we can clear out unknown symlink to write regular file.
+  $ mkdir subdir
+  $ echo subfile > subdir/subfile
+  $ hg commit -qAm subfile
+  $ rm -rf subdir
+  $ ln -s file subdir
+Sanity that we can't do it without -C
+  $ hg up -q .
+  $ cat subdir/subfile
+  cat: subdir/subfile: $ENOTDIR$
+  [1]
+  $ hg up -Cq .
+  $ cat subdir/subfile
+  subfile

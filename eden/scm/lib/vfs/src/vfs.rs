@@ -108,35 +108,38 @@ impl VFS {
     /// be created.
     ///
     /// This is a slow operation, and should not be called before attempting to create `path`.
-    fn clear_conflicts(&self, path: &RepoPath) -> Result<()> {
-        let filepath = self.inner.auditor.audit(path)?;
-        let mut path = filepath.as_path();
-        if let Ok(metadata) = symlink_metadata(path) {
-            let file_type = metadata.file_type();
-            if file_type.is_dir() {
-                remove_dir_all(path)
-                    .with_context(|| format!("Can't remove directory {:?}", path))?;
-            }
-        }
+    fn clear_conflicts(&self, repo_path: &RepoPath) -> Result<()> {
+        let full_path = self.join(repo_path);
 
-        loop {
-            if path == self.inner.root {
+        // Walk down our ancestors, removing the first regular file or symlink
+        // we find. We have the invariant that path_buf contains no symlinks
+        // since we remove the top most symlink we come across.
+        let mut path_buf = self.inner.root.clone();
+        for part in repo_path.components() {
+            path_buf.push(part.as_str());
+
+            let metadata = match symlink_metadata(&path_buf) {
+                Ok(metadata) => metadata,
+                Err(err) if err.kind() == ErrorKind::NotFound => break,
+                Err(err) => bail!("error lstating {:?} in clear_conflicts: {}", path_buf, err),
+            };
+
+            let file_type = metadata.file_type();
+            if file_type.is_file() || file_type.is_symlink() {
+                remove_file(&path_buf)
+                    .with_context(|| format!("Can't remove file {:?}", path_buf))?;
                 break;
             }
 
-            if let Ok(metadata) = symlink_metadata(path) {
-                let file_type = metadata.file_type();
-                if file_type.is_file() || file_type.is_symlink() {
-                    remove_file(path).with_context(|| format!("Can't remove file {:?}", path))?;
-                }
+            // If the full destination is a directory, clear it out.
+            if file_type.is_dir() && path_buf == full_path {
+                remove_dir_all(&path_buf)
+                    .with_context(|| format!("Can't remove directory {:?}", path_buf))?;
+                break;
             }
-
-            // By virtue of the fact that we haven't reached the root, we are guaranteed to
-            // have a parent directory.
-            path = path.parent().unwrap();
         }
 
-        let dir = filepath.parent().unwrap();
+        let dir = full_path.parent().unwrap();
         create_dir_all(dir).with_context(|| format!("Can't create directory {:?}", dir))?;
 
         Ok(())
@@ -445,9 +448,21 @@ mod unix_tests {
         let path = RepoPath::from_str("a").unwrap();
         vfs.write(path, b"abc", UpdateFlag::Symlink).unwrap();
         vfs.write(path, &[1, 2, 3], UpdateFlag::Regular).unwrap();
-        let mut buf = tmp.path().to_path_buf();
-        buf.push("a");
-        let metadata = fs::symlink_metadata(buf).unwrap();
+        let metadata = fs::symlink_metadata(vfs.join(path)).unwrap();
+        assert!(metadata.file_type().is_file())
+    }
+
+    #[test]
+    fn test_ancestor_symlink_overwrite() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
+
+        let dir = RepoPath::from_str("a").unwrap();
+        let file = RepoPath::from_str("a/b").unwrap();
+
+        vfs.write(dir, b"abc", UpdateFlag::Symlink).unwrap();
+        vfs.write(file, &[1, 2, 3], UpdateFlag::Regular).unwrap();
+        let metadata = fs::symlink_metadata(vfs.join(file)).unwrap();
         assert!(metadata.file_type().is_file())
     }
 

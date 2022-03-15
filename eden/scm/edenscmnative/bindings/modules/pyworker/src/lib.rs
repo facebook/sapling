@@ -533,7 +533,7 @@ mod tests {
 
     #[cfg(not(windows))]
     #[test]
-    fn test_update_try_replace_symlink_with_dir() -> Result<()> {
+    fn test_update_replace_symlink_with_dir() -> Result<()> {
         let workingdir = TempDir::new()?;
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
@@ -557,7 +557,10 @@ mod tests {
 
         let root = workingdir.as_ref().to_path_buf();
         let state = WriterState::new(root, store)?;
-        assert!(update(&state, k, UpdateFlag::Regular).is_err());
+        update(&state, k, UpdateFlag::Regular)?;
+
+        path.extend(&["d", "e"]);
+        assert!(metadata(path)?.is_file());
 
         Ok(())
     }
