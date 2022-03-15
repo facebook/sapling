@@ -43,7 +43,7 @@ const RAW_FILE_NAME_ARG: &str = "raw-blob";
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(BLOBSTORE_FETCH)
         .about("fetches blobs from manifold")
-        .args_from_usage("[KEY]    'key of the blob to be fetched'")
+        .args_from_usage("[KEY]    'key of the blob to be fetched with no repo prefex'")
         .arg(
             Arg::with_name("decode-as")
                 .long("decode-as")
