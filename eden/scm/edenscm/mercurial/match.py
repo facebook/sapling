@@ -762,7 +762,7 @@ class gitignorematcher(basematcher):
         return "<gitignorematcher>"
 
 
-def rulesmatch(root, cwd, rules):
+def rulesmatch(root, cwd, rules, ruledetails=None):
     # Strip the exclude indicator from the rules, then reapply it later after
     # normalizing everything.
     excludeindexes = set()
@@ -792,7 +792,7 @@ def rulesmatch(root, cwd, rules):
         else:
             rules.append(glob)
 
-    return treematcher(root, "", rules=rules)
+    return treematcher(root, "", rules=rules, ruledetails=ruledetails)
 
 
 class treematcher(basematcher):
@@ -800,11 +800,12 @@ class treematcher(basematcher):
     Have a smarter 'visitdir' implementation.
     """
 
-    def __init__(self, root, cwd, badfn=None, rules=[]):
+    def __init__(self, root, cwd, badfn=None, rules=[], ruledetails=None):
         super(treematcher, self).__init__(root, cwd, badfn)
         rules = list(rules)
         self._matcher = pathmatcher.treematcher(rules)
         self._rules = rules
+        self._ruledetails = ruledetails
 
     def matchfn(self, f):
         return self._matcher.matches(f)
@@ -818,6 +819,19 @@ class treematcher(basematcher):
         else:
             assert matched is False
             return False
+
+    def explain(self, f):
+        matchingidxs = self._matcher.matching_rule_indexes(f)
+        if matchingidxs:
+            # Use the final matching index (this follows the "last match wins"
+            # logic within the tree matcher).
+            rule = self._rules[matchingidxs[-1]]
+            if self._ruledetails:
+                rule = "{} ({})".format(rule, self._ruledetails[matchingidxs[-1]])
+
+            return rule
+
+        return None
 
     def __repr__(self):
         return "<treematcher rules=%r>" % self._rules
@@ -1281,6 +1295,14 @@ class unionmatcher(basematcher):
                 return v
             r |= v
         return r
+
+    def explain(self, f):
+        for match in self._matchers:
+            explanation = match.explain(f)
+            if explanation:
+                return explanation
+
+        return None
 
     def __repr__(self):
         return "<unionmatcher matchers=%r>" % self._matchers

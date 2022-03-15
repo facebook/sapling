@@ -31,5 +31,31 @@ class NeverMatcherTests(unittest.TestCase):
         self.assertTrue(m("a/b/c/d/e/f/g/99/x"))
 
 
+class ExplainTreeMatcherTests(unittest.TestCase):
+    def testExplain(self):
+        m = matchmod.treematcher("/", "", rules=["foo/bar", "!baz", "qux", "!qux"])
+        self.assertEqual(m.explain("blah"), None)
+        self.assertEqual(m.explain("baz"), "!baz")
+        self.assertEqual(m.explain("qux"), "!qux")
+        self.assertEqual(m.explain("foo/bar"), "foo/bar")
+
+        m = matchmod.treematcher(
+            "/", "", rules=["foo/bar", "!baz"], ruledetails=["a", "b"]
+        )
+        self.assertEqual(m.explain("blah"), None)
+        self.assertEqual(m.explain("baz"), "!baz (b)")
+        self.assertEqual(m.explain("foo/bar"), "foo/bar (a)")
+
+    # Works for unions of tree matchers as well.
+    def testExplainUnion(self):
+        m = matchmod.unionmatcher(
+            [
+                matchmod.treematcher("/", "", rules=["f*"]),
+                matchmod.treematcher("/", "", rules=["bar"]),
+            ]
+        )
+        self.assertEqual(m.explain("foo"), "f*")
+
+
 if __name__ == "__main__":
     silenttestrunner.main(__name__)
