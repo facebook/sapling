@@ -800,6 +800,42 @@ Do you want to run `eden mount %s` instead?"""
         with self.get_thrift_client_legacy(timeout=15) as client:
             client.unmount(os.fsencode(path))
 
+    def get_handle_path(self) -> Optional[Path]:
+        handle = shutil.which("handle.exe")
+        if handle:
+            return Path(handle)
+        return None
+
+    def check_handle(self, mount: Path) -> None:
+        handle = self.get_handle_path()
+
+        if not handle:
+            return
+
+        print(f"Checking handle.exe for processes holding handles from '{mount}'...")
+        output = subprocess.check_output([handle, "-nobanner", mount])
+        parsed = [line.split() for line in output.decode().splitlines() if line]
+        non_edenfs_process = any(filter(lambda x: x[0].lower() != "edenfs.exe", parsed))
+
+        # When no handle is found in the repo, handle.exe will report `"No
+        # matching handles found."`, which will be 4 words.
+        if not non_edenfs_process or not parsed or len(parsed[0]) == 4:
+            # Nothing other than edenfs.exe is holding handles to files from
+            # the repo, we can proceed with the removal
+            return
+
+        print(
+            "The following processes still hold handles from the mount, please"
+            " terminate them.\n"
+        )
+
+        for executable, _, pid, _, _type, _, path in parsed:
+            print(f"{executable}({pid}): {path}")
+
+        print()
+
+        return
+
     def destroy_mount(
         self, path: Union[Path, str], preserve_mount_point: bool = False
     ) -> None:
@@ -863,19 +899,30 @@ trouble cleaning up leftovers. You will need to manually remove {path}.
 """
             )
 
-            error = errors[0][1]
+            used_by_other = any(
+                filter(
+                    lambda x: isinstance(x[1], OSError) and x[1].winerror == 32, errors
+                )
+            )
 
-            if isinstance(error, OSError) and error.winerror == 32:
+            if used_by_other:
+                if self.get_handle_path():
+                    self.check_handle(path)
+                else:
+                    print(
+                        f"""\
+    It looks like {path} is still in use by another process. If you need help to
+    figure out which process, please try `handle.exe` from sysinternals:
+
+    handle.exe {path}
+
+    """
+                    )
                 print(
-                    f"""\
-It looks like {path} is still in use by another process. If you need help to
-figure out which process, please try `handle.exe` from sysinternals:
-
-  handle.exe {path}
-"""
+                    f"After terminating the processes, please manually delete {path}."
                 )
 
-            raise error
+            raise errors[0][1]
 
     def check_health(self, timeout: Optional[float] = None) -> HealthStatus:
         """
