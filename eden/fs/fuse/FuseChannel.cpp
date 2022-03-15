@@ -995,7 +995,17 @@ folly::Future<folly::Unit> FuseChannel::flushInvalidations() {
   // will fulfill once it reaches that element in the queue.
   Promise<Unit> promise;
   auto result = promise.getFuture();
-  invalidationQueue_.lock()->queue.emplace_back(std::move(promise));
+  {
+    auto state = invalidationQueue_.lock();
+    if (state->stop) {
+      // In the case of a concurrent unmount with a checkout, the unmount could
+      // win the race and thus have shutdown the invalidation thread. This is
+      // not an issue as the mount is gone at this point, let's thus return
+      // immediately.
+      return folly::unit;
+    }
+    state->queue.emplace_back(std::move(promise));
+  }
   invalidationCV_.notify_one();
   return result;
 }
