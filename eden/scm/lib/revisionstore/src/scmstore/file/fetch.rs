@@ -18,7 +18,6 @@ use crossbeam::channel::Sender;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use futures::StreamExt;
-use parking_lot::RwLock;
 use progress_model::AggregatingProgressBar;
 use tracing::debug;
 use tracing::field;
@@ -69,7 +68,7 @@ pub struct FetchState {
     lfs_pointers: HashMap<Key, (LfsPointersEntry, bool)>,
 
     /// A table tracking if discovered LFS pointers were found in the local-only or cache / shared store.
-    pointer_origin: Arc<RwLock<HashMap<Sha256, StoreType>>>,
+    pointer_origin: HashMap<Sha256, StoreType>,
 
     /// A table tracking if each key is local-only or cache/shared so that computed aux data can be written to the appropriate store
     key_origin: HashMap<Key, StoreType>,
@@ -101,7 +100,7 @@ impl FetchState {
 
             lfs_pointers: HashMap::new(),
             key_origin: HashMap::new(),
-            pointer_origin: Arc::new(RwLock::new(HashMap::new())),
+            pointer_origin: HashMap::new(),
 
             fetch_logger: file_store.fetch_logger.clone(),
             extstored_policy: file_store.extstored_policy,
@@ -169,7 +168,7 @@ impl FetchState {
 
     fn mark_complete(&mut self, key: &Key) {
         if let Some((ptr, _)) = self.lfs_pointers.remove(key) {
-            self.pointer_origin.write().remove(&ptr.sha256());
+            self.pointer_origin.remove(&ptr.sha256());
         }
     }
 
@@ -178,10 +177,10 @@ impl FetchState {
         // Overwrite StoreType::Local with StoreType::Shared, but not vice versa
         match typ {
             StoreType::Shared => {
-                self.pointer_origin.write().insert(sha256, typ);
+                self.pointer_origin.insert(sha256, typ);
             }
             StoreType::Local => {
-                self.pointer_origin.write().entry(sha256).or_insert(typ);
+                self.pointer_origin.entry(sha256).or_insert(typ);
             }
         }
         self.lfs_pointers.insert(key, (ptr, write));
@@ -761,7 +760,7 @@ impl FetchState {
                     self.found_attributes(key.clone(), file, Some(StoreType::Shared));
                 }
 
-                match self.pointer_origin.read().get(&sha256).ok_or_else(|| {
+                match self.pointer_origin.get(&sha256).ok_or_else(|| {
                     anyhow!(
                         "no source found for Sha256; received unexpected Sha256 from LFS server"
                     )
@@ -964,7 +963,7 @@ impl FetchState {
                             let new = new.mask(self.common.request_attrs);
                             let _ = self.common.found_tx.send(Ok((key.clone(), new)));
                             if let Some((ptr, _)) = self.lfs_pointers.remove(&key) {
-                                self.pointer_origin.write().remove(&ptr.sha256());
+                                self.pointer_origin.remove(&ptr.sha256());
                             }
                         } else {
                             *value = new;
