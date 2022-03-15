@@ -119,6 +119,22 @@ Should gives us the tombstone file since it is redacted
   $ cat b
   This version of the file is redacted and you are not allowed to access it. Update or rebase to a newer commit.
 
+Mononoke admin also won't give us the content
+  $ mononoke_admin blobstore-fetch content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9
+  *] using blobstore: Fileblob { base: "$TESTTMP/blobstore/blobs", put_behaviour: Overwrite } (glob)
+  *] The blob content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9 is censored. (glob)
+   Task/Sev: T1
+  [1]
+
+Same for newadmin
+  $ mononoke_newadmin blobstore -R repo fetch content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9
+  Error: Failed to fetch blob
+  
+  Caused by:
+      The blob content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9 is censored.
+       Task/Sev: T1
+  [1]
+
 Restart mononoke and disable redaction verification
   $ killandwait $MONONOKE_PID
   $ rm -rf "$TESTTMP/mononoke-config"

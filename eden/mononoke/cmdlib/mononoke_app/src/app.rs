@@ -22,11 +22,10 @@ use metaconfig_parser::{RepoConfigs, StorageConfigs};
 use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, RepoConfig};
 use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
-use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig, SqlRedactedContentStore};
+use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig};
 use repo_factory::{RepoFactory, RepoFactoryBuilder};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use tokio::runtime::Handle;
 
 use crate::args::{ConfigArgs, ConfigMode, RepoArg, RepoArgs, RepoBlobstoreArgs};
@@ -281,13 +280,10 @@ impl MononokeApp {
         };
 
         let blobstore = if redaction == Redaction::Enabled {
-            let redacted_blobs_db = SqlRedactedContentStore::with_metadata_database_config(
-                self.env.fb,
-                &storage_config.metadata,
-                &self.env.mysql_options,
-                self.env.readonly_storage.0,
-            )?;
-            let redacted_blobs = Arc::new(redacted_blobs_db.get_all_redacted_blobs().await?);
+            let redacted_blobs = self
+                .repo_factory
+                .redacted_blobs(self.new_context(), &storage_config.metadata)
+                .await?;
             RedactedBlobstore::new(
                 blobstore,
                 RedactedBlobstoreConfig::new(Some(redacted_blobs), self.redaction_scuba_builder()?),

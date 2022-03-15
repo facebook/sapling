@@ -9,6 +9,6 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[error("The blob {0} is censored. \n Task/Sev: {1}")]
+    #[error("The blob {0} is censored.\n Task/Sev: {1}")]
     Censored(String, String),
 }

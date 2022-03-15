@@ -336,7 +336,7 @@ impl RepoFactory {
             .await
     }
 
-    async fn redacted_blobs(
+    pub async fn redacted_blobs(
         &self,
         ctx: CoreContext,
         db_config: &MetadataDatabaseConfig,

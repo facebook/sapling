@@ -25,13 +25,15 @@ use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, StorageConfig};
 use mononoke_types::{FileContents, RepositoryId};
 use prefixblob::PrefixBlobstore;
 use redactedblobstore::{
-    RedactedBlobs, RedactedBlobstore, RedactedBlobstoreConfig, SqlRedactedContentStore,
+    RedactedBlobs, RedactedBlobstore, RedactedBlobstoreConfig, RedactionConfigBlobstore,
+    SqlRedactedContentStore,
 };
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, warn, Logger};
 use sql_ext::facebook::MysqlOptions;
 use std::ffi::OsStr;
 use tokio::{fs::File, io::AsyncWriteExt};
+use tunables::tunables;
 
 use crate::error::SubcommandError;
 
@@ -184,13 +186,34 @@ pub async fn subcommand_blobstore_fetch<'a>(
     let maybe_redacted_blobs_fut = async {
         match redaction {
             Redaction::Enabled => {
-                let redacted_blobs =
-                    args::open_sql::<SqlRedactedContentStore>(fb, config_store, &matches)?;
-                redacted_blobs
-                    .get_all_redacted_blobs()
-                    .await
-                    .map(Arc::new)
-                    .map(Some)
+                let redacted_blobs = if tunables().get_redaction_config_from_xdb() {
+                    let redacted_blobs_db =
+                        args::open_sql::<SqlRedactedContentStore>(fb, config_store, matches)?;
+                    redacted_blobs_db.get_all_redacted_blobs().await?
+                } else {
+                    let redaction_config_blobstore = Arc::new(RedactionConfigBlobstore::new(
+                        make_blobstore(
+                            fb,
+                            common_config.redaction_config.blobstore.clone(),
+                            mysql_options,
+                            *readonly_storage,
+                            blobstore_options,
+                            &logger,
+                            config_store,
+                            &blobstore_factory::default_scrub_handler(),
+                            None,
+                        )
+                        .await?,
+                    ));
+                    RedactedBlobs::from_configerator(
+                        config_store,
+                        &common_config.redaction_config.redaction_sets_location,
+                        ctx.clone(),
+                        redaction_config_blobstore,
+                    )
+                    .await?
+                };
+                Ok(Some(Arc::new(redacted_blobs)))
             }
             Redaction::Disabled => Ok(None),
         }
