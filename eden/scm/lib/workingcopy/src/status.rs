@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -13,6 +14,7 @@ use pathmatcher::Matcher;
 use status::{Status, StatusBuilder};
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
+use types::RepoPathBuf;
 
 use crate::filesystem::ChangeType;
 
@@ -62,6 +64,83 @@ pub fn compute_status<M: Matcher + Clone + Send + Sync + 'static>(
         }
     }
 
+    // Step 2: handle files that aren't in pending changes.
+    // We can't directly check the filesystem at this layer. Instead, we need to infer:
+    // a file that isn't in P1 and isn't in "pending changes" doesn't exist on the filesystem.
+    let seen = std::iter::empty()
+        .chain(modified.iter())
+        .chain(added.iter())
+        .chain(removed.iter())
+        .chain(deleted.iter())
+        .chain(unknown.iter())
+        .cloned()
+        .collect::<HashSet<RepoPathBuf>>();
+
+    // A file that's "added" in the tree (doesn't exist in a parent, but exists in the next
+    // commit) but isn't in "pending changes" must have been deleted on the filesystem.
+    walk_treestate(
+        &mut treestate,
+        StateFlags::EXIST_NEXT,
+        StateFlags::EXIST_P1 | StateFlags::EXIST_P2,
+        |path, state| {
+            if matcher.matches_file(&path)? && !seen.contains(&path) {
+                deleted.push(path);
+            }
+            Ok(())
+        },
+    )?;
+
+    // Pending changes shows changes in the working copy with respect to P1.
+    // Thus, we need to specially handle files that are in P2 but not P1:
+    //   If they exist in the filesystem, they'll be in pending changes as "modified".
+    //   Otherwise, if they don't exist in the filesystem (which we determine by checking if they
+    //   were in pending changes), they're either "deleted" or "removed" (based on EXIST_NEXT).
+    walk_treestate(
+        &mut treestate,
+        StateFlags::EXIST_P2,
+        StateFlags::EXIST_P1,
+        |path, state| {
+            if matcher.matches_file(&path)? && !seen.contains(&path) {
+                if state.contains(StateFlags::EXIST_NEXT) {
+                    deleted.push(path);
+                } else {
+                    removed.push(path);
+                }
+            }
+            Ok(())
+        },
+    )?;
+
+    // Files that will be removed (that is, they exist in either of the parents, but don't
+    // exist in the next commit) should be marked as removed, even if they're not in
+    // pending changes (e.g. even if the file still exists). Files that are in P2 but
+    // not P1 are handled above, so we only need to handle files in P1 here.
+    walk_treestate(
+        &mut treestate,
+        StateFlags::EXIST_P1,
+        StateFlags::EXIST_NEXT,
+        |path, state| {
+            if matcher.matches_file(&path)? && !seen.contains(&path) {
+                removed.push(path);
+            }
+            Ok(())
+        },
+    )?;
+
+    // Handle "retroactive copies": when a clean file is marked as having been copied
+    // from another file. These files should be marked as "modified".
+    walk_treestate(
+        &mut treestate,
+        StateFlags::COPIED,
+        StateFlags::empty(),
+        |path, state| {
+            if matcher.matches_file(&path)? && !seen.contains(&path) {
+                modified.push(path);
+            }
+            Ok(())
+        },
+    )?;
+
     Ok(StatusBuilder::new()
         .modified(modified)
         .added(added)
@@ -69,6 +148,31 @@ pub fn compute_status<M: Matcher + Clone + Send + Sync + 'static>(
         .deleted(deleted)
         .unknown(unknown)
         .build())
+}
+
+/// Walk the TreeState, calling the callback for files that have all flags in [`state_all`]
+/// and none of the flags in [`state_none`].
+fn walk_treestate(
+    treestate: &mut TreeState,
+    state_all: StateFlags,
+    state_none: StateFlags,
+    mut callback: impl FnMut(RepoPathBuf, StateFlags) -> Result<()>,
+) -> Result<()> {
+    let file_mask = state_all | state_none;
+    treestate.visit(
+        &mut |components, state| {
+            let path = RepoPathBuf::from_utf8(components.concat())?;
+            (callback)(path, state.state)?;
+            Ok(treestate::tree::VisitorResult::NotChanged)
+        },
+        &|_path, dir| match dir.get_aggregated_state() {
+            Some(state) => {
+                state.union.contains(state_all) && !state.intersection.intersects(state_none)
+            }
+            None => true,
+        },
+        &|_path, file| file.state & file_mask == state_all,
+    )
 }
 
 #[cfg(test)]
@@ -79,7 +183,9 @@ mod tests {
     use types::RepoPath;
     use types::RepoPathBuf;
     const EXIST_P1: StateFlags = StateFlags::EXIST_P1;
+    const EXIST_P2: StateFlags = StateFlags::EXIST_P2;
     const EXIST_NEXT: StateFlags = StateFlags::EXIST_NEXT;
+    const COPIED: StateFlags = StateFlags::COPIED;
 
     use super::*;
 
@@ -153,6 +259,48 @@ mod tests {
                 ("removed-file", Some(FileStatus::Removed)),
                 ("deleted-file", Some(FileStatus::Deleted)),
                 ("unknown-file", Some(FileStatus::Unknown)),
+            ],
+        );
+    }
+
+    /// Test status for files that aren't in pending changes.
+    #[test]
+    fn test_status_no_changes() {
+        let treestate = &[
+            ("added-then-deleted", EXIST_NEXT),
+            ("removed-but-on-filesystem", EXIST_P1),
+            ("retroactive-copy", EXIST_P1 | EXIST_NEXT | COPIED),
+        ];
+        let changes = &[];
+        let status = status_helper(treestate, changes).expect("status");
+        compare_status(
+            status,
+            &[
+                ("added-then-deleted", Some(FileStatus::Deleted)),
+                ("removed-but-on-filesystem", Some(FileStatus::Removed)),
+                ("retroactive-copy", Some(FileStatus::Modified)),
+            ],
+        );
+    }
+
+    /// Test status for files relating to a merge.
+    #[test]
+    fn test_status_merge() {
+        let treestate = &[
+            ("merged-only-p2", EXIST_P2 | EXIST_NEXT),
+            ("merged-in-both", EXIST_P1 | EXIST_P2 | EXIST_NEXT),
+            ("merged-and-removed", EXIST_P2),
+            ("merged-but-deleted", EXIST_P2 | EXIST_NEXT),
+        ];
+        let changes = &[("merged-only-p2", false), ("merged-in-both", false)];
+        let status = status_helper(treestate, changes).expect("status");
+        compare_status(
+            status,
+            &[
+                ("merged-only-p2", Some(FileStatus::Modified)),
+                ("merged-in-both", Some(FileStatus::Modified)),
+                ("merged-and-removed", Some(FileStatus::Removed)),
+                ("merged-but-deleted", Some(FileStatus::Deleted)),
             ],
         );
     }
