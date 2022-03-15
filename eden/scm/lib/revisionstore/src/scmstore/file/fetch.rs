@@ -711,7 +711,7 @@ impl FetchState {
         cache: Option<Arc<LfsStore>>,
     ) {
         let errors = &mut self.errors;
-        let (key_map, pending): (HashMap<_, _>, HashSet<_>) = self
+        let pending: HashSet<_> = self
             .lfs_pointers
             .iter()
             .map(|(key, (ptr, write))| {
@@ -722,9 +722,15 @@ impl FetchState {
                         }
                     }
                 }
-                ((ptr.sha256(), key), (ptr.sha256(), ptr.size() as usize))
+                (ptr.sha256(), ptr.size() as usize)
             })
-            .unzip();
+            .collect();
+
+        let mut key_map: HashMap<Sha256, Vec<(Key, LfsPointersEntry)>> = HashMap::new();
+        for (key, (ptr, _)) in self.lfs_pointers.iter() {
+            let keys = key_map.entry(ptr.sha256()).or_default();
+            keys.push((key.clone(), ptr.clone()));
+        }
 
         if pending.is_empty() {
             return;
@@ -744,32 +750,38 @@ impl FetchState {
         // Fetch & write to local LFS stores
         let top_level_error = store.batch_fetch(
             &pending,
-            {
-                let lfs_local = local.clone();
-                let lfs_cache = cache.clone();
-                let pointer_origin = self.pointer_origin.clone();
-                move |sha256, data| -> Result<()> {
-                    prog.increase_position(1);
+            |sha256, data| -> Result<()> {
+                prog.increase_position(1);
 
-                    match pointer_origin.read().get(&sha256).ok_or_else(|| {
-                        anyhow!(
-                            "no source found for Sha256; received unexpected Sha256 from LFS server"
-                        )
-                    })? {
-                        StoreType::Local => lfs_local
-                            .as_ref()
-                            .expect("no lfs_local present when handling local LFS pointer")
-                            .add_blob(&sha256, data),
-                        StoreType::Shared => lfs_cache
-                            .as_ref()
-                            .expect("no lfs_cache present when handling cache LFS pointer")
-                            .add_blob(&sha256, data),
-                    }
+                // Unwrap is safe because the only place sha256 could come from is
+                // `pending` and all of its entries were put in `key_map`.
+                for (key, ptr) in key_map.get(&sha256).unwrap().iter() {
+                    let mut file = StoreFile::default();
+                    file.content = Some(LazyFile::Lfs(data.clone(), ptr.clone()));
+                    self.found_attributes(key.clone(), file, Some(StoreType::Shared));
+                }
+
+                match self.pointer_origin.read().get(&sha256).ok_or_else(|| {
+                    anyhow!(
+                        "no source found for Sha256; received unexpected Sha256 from LFS server"
+                    )
+                })? {
+                    StoreType::Local => local
+                        .as_ref()
+                        .expect("no lfs_local present when handling local LFS pointer")
+                        .add_blob(&sha256, data),
+                    StoreType::Shared => cache
+                        .as_ref()
+                        .expect("no lfs_cache present when handling cache LFS pointer")
+                        .add_blob(&sha256, data),
                 }
             },
             |sha256, error| {
-                if let Some(key) = key_map.get(&sha256) {
-                    keyed_errors.push(((*key).clone(), error));
+                if let Some(keys) = key_map.get(&sha256) {
+                    let error = ClonableError::new(error);
+                    for (key, _) in keys.iter() {
+                        keyed_errors.push(((*key).clone(), error.clone().into()));
+                    }
                 } else {
                     other_errors.push(anyhow!("invalid other lfs error: {:?}", error));
                 }
@@ -788,18 +800,6 @@ impl FetchState {
         }
         for error in other_errors.into_iter() {
             self.errors.other_error(error);
-        }
-
-        // After prefetching into the local LFS stores, retry fetching from them. The returned Bytes will then be mmaps rather
-        // than large files stored in memory.
-        // TODO(meyer): We probably want to intermingle this with the remote fetch handler to avoid files being evicted between there
-        // and here, rather than just retrying the local fetches.
-        if let Some(ref lfs_cache) = cache {
-            self.fetch_lfs(lfs_cache, StoreType::Shared)
-        }
-
-        if let Some(ref lfs_local) = local {
-            self.fetch_lfs(lfs_local, StoreType::Local)
         }
     }
 
