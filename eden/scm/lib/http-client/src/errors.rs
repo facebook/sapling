@@ -131,11 +131,13 @@ impl TlsErrorKind {
 /// using a crude string search heuristic.
 fn ssl_categorize_recv_error(error: &curl::Error) -> TlsErrorKind {
     let extra = error.extra_description();
-    if extra.map_or(false, |s| {
-        s.to_lowercase().contains("alert certificate required")
-    }) {
-        TlsErrorKind::CertProblem
-    } else {
-        TlsErrorKind::RecvError
+    if let Some(extra) = extra {
+        let extra = extra.to_lowercase();
+        // Covers: "alert certificate required" and "alert bad certificate"
+        if extra.contains("certificate") {
+            return TlsErrorKind::CertProblem;
+        }
     }
+
+    TlsErrorKind::RecvError
 }
