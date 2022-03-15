@@ -845,6 +845,7 @@ class SparseConfig(object):
     profiles = attr.ib(convert=tuple)
     metadata = attr.ib(default=attr.Factory(dict))
     isroot = attr.ib(default=False)
+    ruleorigins = attr.ib(default=attr.Factory(list))
 
     def toincludeexclude(self):
         include = []
@@ -884,6 +885,7 @@ class SparseProfile(object):
     rules = attr.ib(convert=list)
     profiles = attr.ib(convert=tuple)
     metadata = attr.ib(default=attr.Factory(dict))
+    ruleorigins = attr.ib(default=attr.Factory(list))
 
     # Return whether self and other_config are effectively equivalent.
     # In particular, don't compare path or metadata.
@@ -896,6 +898,12 @@ class SparseProfile(object):
 
     def version(self):
         return self.metadata.get("version", "1")
+
+    def ruleorigin(self, idx):
+        if idx < len(self.ruleorigins):
+            return self.ruleorigins[idx]
+        else:
+            return "MISSING_RULE_ORIGIN"
 
 
 def _wraprepo(ui, repo):
@@ -1134,6 +1142,7 @@ def _wraprepo(ui, repo):
             includes = set()
             excludes = set()
             rules = ["glob:.hg*"]
+            ruleorigins = ["sparse.py"]
             profiles = []
             onlyv1 = True
             for kind, value in rawconfig.lines:
@@ -1146,11 +1155,14 @@ def _wraprepo(ui, repo):
                         # we'll append them later.
                         version = debugversion or profile.version()
                         if version == "1":
-                            for value in profile.rules:
+                            for (i, value) in enumerate(profile.rules):
+                                origin = "{} -> {}".format(
+                                    rawconfig.path, profile.ruleorigin(i)
+                                )
                                 if value.startswith("!"):
-                                    excludes.add(value[1:])
+                                    excludes.add((value[1:], origin))
                                 else:
-                                    includes.add(value)
+                                    includes.add((value, origin))
                         elif version == "2":
                             # Do nothing. A higher layer will turn profile.rules
                             # into a matcher and compose it with the other
@@ -1161,20 +1173,25 @@ def _wraprepo(ui, repo):
                                 _("unexpected sparse profile version '%s'") % version
                             )
                 elif kind == "include":
-                    includes.add(value)
+                    includes.add((value, rawconfig.path))
                 elif kind == "exclude":
-                    excludes.add(value)
+                    excludes.add((value, rawconfig.path))
 
             if includes:
-                rules.extend(includes)
+                for (rule, origin) in includes:
+                    rules.append(rule)
+                    ruleorigins.append(origin)
 
             if excludes:
-                rules.extend("!" + value for value in excludes)
+                for (rule, origin) in excludes:
+                    rules.append("!" + rule)
+                    ruleorigins.append(origin)
 
             # If all rules (excluding the default '.hg*') are exclude rules, add
             # an initial "**" to provide the default include of everything.
             if not includes and onlyv1:
                 rules.insert(0, "**")
+                ruleorigins.append("sparse.py")
 
             return SparseConfig(
                 "<aggregated from %s>".format(rawconfig.path),
@@ -1182,6 +1199,7 @@ def _wraprepo(ui, repo):
                 profiles,
                 rawconfig.metadata,
                 isroot,
+                ruleorigins,
             )
 
         def readsparseprofile(self, rev, name, profileconfigs):
@@ -1203,20 +1221,24 @@ def _wraprepo(ui, repo):
             rawconfig = self.readsparseconfig(raw, filename=name)
 
             rules = []
+            ruleorigins = []
             profiles = set()
             for kind, value in rawconfig.lines:
                 if kind == "profile":
                     profiles.add(value)
                     profile = self.readsparseprofile(rev, value, profileconfigs)
                     if profile is not None:
-                        for rule in profile.rules:
+                        for (i, rule) in enumerate(profile.rules):
                             rules.append(rule)
+                            ruleorigins.append(profile.ruleorigin(i))
                         for subprofile in profile.profiles:
                             profiles.add(subprofile)
                 elif kind == "include":
                     rules.append(value)
+                    ruleorigins.append(name)
                 elif kind == "exclude":
                     rules.append("!" + value)
+                    ruleorigins.append(name)
 
             if profileconfigs:
                 raw = profileconfigs.get(name)
@@ -1227,10 +1249,12 @@ def _wraprepo(ui, repo):
                     for kind, value in rawprofileconfig.lines:
                         if kind == "include":
                             rules.append(value)
+                            ruleorigins.append(rawprofileconfig.path)
                         elif kind == "exclude":
                             rules.append("!" + value)
+                            ruleorigins.append(rawprofileconfig.path)
 
-            return SparseProfile(name, rules, profiles, rawconfig.metadata)
+            return SparseProfile(name, rules, profiles, rawconfig.metadata, ruleorigins)
 
         def _warnfullcheckout(self):
             # Only warn once per command
@@ -1358,13 +1382,17 @@ def _wraprepo(ui, repo):
         def _computesparsematcher(self, revs, rawconfig=None, debugversion=None):
             matchers = []
             isalways = False
+
             for rev in revs:
                 try:
                     config = self.getsparsepatterns(
-                        rev, rawconfig=rawconfig, debugversion=debugversion
+                        rev,
+                        rawconfig=rawconfig,
+                        debugversion=debugversion,
                     )
 
                     matchrules = config.mainrules
+                    ruleorigins = config.ruleorigins
 
                     if config.profiles:
                         # Keep each profile separate, so the end result is a
@@ -1382,14 +1410,20 @@ def _wraprepo(ui, repo):
                                 if config.isroot:
                                     matchers.append(
                                         matchmod.rulesmatch(
-                                            self.root, "", profile.rules
+                                            self.root,
+                                            "",
+                                            profile.rules,
+                                            profile.ruleorigins,
                                         )
                                     )
                                 else:
                                     matchrules.extend(profile.rules)
+                                    ruleorigins.extend(profile.ruleorigins)
 
                     if matchrules:
-                        matchers.append(matchmod.rulesmatch(self.root, "", matchrules))
+                        matchers.append(
+                            matchmod.rulesmatch(self.root, "", matchrules, ruleorigins)
+                        )
 
                     if not config.mainrules and not config.profiles:
                         isalways = True
@@ -2081,9 +2115,7 @@ def debugsparsematch(ui, repo, *args, **opts):
 
     def getmatcher(profile):
         raw = pycompat.decodeutf8(ctx[profile].data())
-        return repo.sparsematch(
-            revs=[nullrev], config=repo.readsparseconfig(raw=raw, filename=profile)
-        )
+        return repo.sparsematch(config=repo.readsparseconfig(raw=raw, filename=profile))
 
     def getunionmatcher(profiles):
         matchers = [getmatcher(p) for p in profiles]
@@ -2104,6 +2136,43 @@ def debugsparsematch(ui, repo, *args, **opts):
     for path in files:
         if matcher(path):
             ui.write(_("%s\n") % path)
+
+
+@command(
+    "debugsparseexplainmatch",
+    [
+        ("s", "sparse-profile", "", "sparse profile to include"),
+    ],
+    _("-s SPARSE_PROFILE FILE..."),
+)
+def debugsparseexplainmatch(ui, repo, *args, **opts):
+    # Make it work in an edenfs checkout.
+    if "eden" in repo.requirements:
+        _wraprepo(ui, repo)
+
+    ctx = repo["."]
+
+    config = None
+    profile = opts.get("sparse_profile")
+    if profile:
+        config = repo.readsparseconfig(
+            raw=pycompat.decodeutf8(ctx[profile].data()), filename=profile
+        )
+
+    m = scmutil.match(ctx, pats=args, opts=opts, default="path")
+    files = m.files()
+
+    matcher = repo.sparsematch(
+        config=config,
+    )
+
+    for f in files:
+        explanation = matcher.explain(f)
+        if not explanation:
+            ui.write(_("{}: excluded by default".format(f)))
+        else:
+            verb = "excluded" if explanation[0] == "!" else "included"
+            ui.write(_("{}: {} by rule {}\n".format(f, verb, explanation)))
 
 
 def _contains_files(load_matcher, profile, files):

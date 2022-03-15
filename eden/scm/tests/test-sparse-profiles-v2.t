@@ -42,6 +42,11 @@ test sparse
   
   file.txt
 
+
+  $ hg debugsparseexplainmatch inc/exc/incfile.txt
+  inc/exc/incfile.txt: excluded by rule !inc/exc/** ($TESTTMP/myrepo/.hg/sparse -> base.sparse)
+
+
 # Upgrade main.sparse to v2
   $ cat > main.sparse <<EOF
   > [metadata]
@@ -63,6 +68,10 @@ test sparse
   file.txt
   
   incfile.txt
+
+  $ hg debugsparseexplainmatch inc/exc/incfile.txt
+  inc/exc/incfile.txt: included by rule inc/exc/incfile.txt/** (main.sparse)
+
 
   $ hg debugsparseprofilev2 main.sparse
   V1 includes 4 files
