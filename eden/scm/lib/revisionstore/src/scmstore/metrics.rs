@@ -56,13 +56,14 @@ impl FetchMetrics {
     }
 
     pub(crate) fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
-        std::array::IntoIter::new([
+        [
             ("requests", self.requests),
             ("keys", self.keys),
             ("hits", self.hits),
             ("misses", self.misses),
             ("errors", self.errors),
-        ])
+        ]
+        .into_iter()
         .filter(|&(_, v)| v != 0)
     }
 }
@@ -139,7 +140,8 @@ impl WriteMetrics {
     }
 
     pub(crate) fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
-        std::array::IntoIter::new([("items", self.items), ("ok", self.ok), ("err", self.err)])
+        [("items", self.items), ("ok", self.ok), ("err", self.err)]
+            .into_iter()
             .filter(|&(_, v)| v != 0)
     }
 }
@@ -174,11 +176,12 @@ impl ApiMetrics {
     }
 
     pub(crate) fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
-        std::array::IntoIter::new([
+        [
             ("calls", self.calls),
             ("keys", self.keys),
             ("singles", self.singles),
-        ])
+        ]
+        .into_iter()
         .filter(|&(_, v)| v != 0)
     }
 }
