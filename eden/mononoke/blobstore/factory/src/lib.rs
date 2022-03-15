@@ -7,6 +7,7 @@
 
 #![deny(warnings)]
 
+use arg_extensions::ArgDefaults;
 use clap::Args;
 
 mod args;
@@ -40,11 +41,13 @@ pub use crate::sql::{make_metadata_sql_factory, MetadataSqlFactory, SqlTierInfo}
 #[derive(Copy, Clone, PartialEq)]
 pub struct ReadOnlyStorage(pub bool);
 
-impl ReadOnlyStorage {
-    pub fn arg_defaults(&self) -> Vec<(&'static str, String)> {
+impl ArgDefaults for ReadOnlyStorage {
+    fn arg_defaults(&self) -> Vec<(&'static str, String)> {
         vec![("with-readonly-storage", self.0.to_string())]
     }
+}
 
+impl ReadOnlyStorage {
     pub fn from_args(args: &ReadOnlyStorageArgs) -> Self {
         ReadOnlyStorage(args.with_readonly_storage)
     }
@@ -60,6 +63,7 @@ pub struct ReadOnlyStorageArgs {
         long,
         value_name = "BOOL",
         parse(try_from_str),
+        default_value = "false",
         default_missing_value = "true"
     )]
     pub with_readonly_storage: bool,

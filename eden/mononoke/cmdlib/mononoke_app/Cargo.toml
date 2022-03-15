@@ -9,6 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.51"
+arg_extensions = { version = "0.1.0", path = "../extensions" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }

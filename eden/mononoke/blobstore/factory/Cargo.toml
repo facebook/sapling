@@ -9,6 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.51"
+arg_extensions = { version = "0.1.0", path = "../../cmdlib/extensions" }
 blobstore = { version = "0.1.0", path = ".." }
 blobstore_stats = { version = "0.1.0", path = "../blobstore_stats" }
 blobstore_sync_queue = { version = "0.1.0", path = "../../blobstore_sync_queue" }

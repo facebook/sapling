@@ -226,6 +226,7 @@ members = [
   "cmdlib/caching",
   "cmdlib/displaying",
   "cmdlib/environment",
+  "cmdlib/extensions",
   "cmdlib/log",
   "cmdlib/mononoke_app",
   "cmdlib/scrubbing",

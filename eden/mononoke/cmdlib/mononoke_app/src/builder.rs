@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
+use arg_extensions::ArgDefaults;
 #[cfg(fbcode_build)]
 use blobstore_factory::ManifoldArgs;
 use blobstore_factory::{
@@ -39,8 +40,8 @@ use crate::extension::{AppExtension, AppExtensionBox, BoxedAppExtension, BoxedAp
 pub struct MononokeAppBuilder {
     fb: FacebookInit,
     extensions: Vec<(TypeId, Box<dyn BoxedAppExtension>)>,
+    arg_defaults: Vec<Box<dyn ArgDefaults>>,
     cachelib_settings: CachelibSettings,
-    readonly_storage: ReadOnlyStorage,
     default_scuba_dataset: Option<String>,
     defaults: HashMap<&'static str, String>,
 }
@@ -93,15 +94,15 @@ impl MononokeAppBuilder {
         MononokeAppBuilder {
             fb,
             extensions: Vec::new(),
+            arg_defaults: Vec::new(),
             cachelib_settings: CachelibSettings::default(),
-            readonly_storage: ReadOnlyStorage(false),
             default_scuba_dataset: None,
             defaults: HashMap::new(),
         }
     }
 
-    pub fn with_default_readonly_storage(mut self, readonly_storage: bool) -> Self {
-        self.readonly_storage = ReadOnlyStorage(readonly_storage);
+    pub fn with_arg_defaults(mut self, arg_defaults: impl ArgDefaults + 'static) -> Self {
+        self.arg_defaults.push(Box::new(arg_defaults));
         self
     }
 
@@ -138,11 +139,12 @@ impl MononokeAppBuilder {
     where
         AppArgs: IntoApp,
     {
-        for defaults in [
-            self.readonly_storage.arg_defaults(),
-            self.cachelib_settings.arg_defaults(),
-        ] {
-            for (arg, default) in defaults {
+        for (arg, default) in self.cachelib_settings.arg_defaults() {
+            self.defaults.insert(arg, default);
+        }
+
+        for defaults in self.arg_defaults.iter() {
+            for (arg, default) in defaults.arg_defaults() {
                 self.defaults.insert(arg, default);
             }
         }
