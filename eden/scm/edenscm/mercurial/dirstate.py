@@ -947,12 +947,14 @@ class dirstate(object):
             if ignored or clean:
                 raise error.Abort(_("Rust status does not support ignored or clean"))
             pendingchanges = self._fs.pendingchanges(match, listignored=False)
-            return bindings.workingcopy.status.compute(
+            status = bindings.workingcopy.status.compute(
                 self._map._tree,
                 pendingchanges,
                 match,
-                unknown,
             )
+            if not unknown:
+                status.unknown = []
+            return status
 
         wctx = self._repo[None]
         # Prime the wctx._parents cache so the parent doesn't change out from

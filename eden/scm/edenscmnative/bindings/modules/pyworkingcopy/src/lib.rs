@@ -120,7 +120,6 @@ py_class!(class status |py| {
         pytreestate: treestate,
         pypendingchanges: PyObject,
         pymatcher: PyObject,
-        list_unknown: bool,
     ) -> PyResult<PyObject> {
         // Convert the pending changes (a Iterable[Tuple[str, bool]]) into a Vec<ChangeType>.
         let mut pending_changes = Vec::<ChangeType>::new();
@@ -144,7 +143,6 @@ py_class!(class status |py| {
             treestate,
             pending_changes.into_iter(),
             matcher,
-            list_unknown,
         ).map_pyerr(py)?;
         pystatus::to_python_status(py, &status)
     }

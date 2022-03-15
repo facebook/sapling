@@ -21,7 +21,6 @@ pub fn compute_status<M: Matcher + Clone + Send + Sync + 'static>(
     treestate: Arc<Mutex<TreeState>>,
     pending_changes: impl Iterator<Item = ChangeType>,
     matcher: M,
-    list_unknown: bool,
 ) -> Result<Status> {
     // XXX: Dummy logic to demonstrate the Rust/Python glue.
     let mut modified = vec![];
