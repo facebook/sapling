@@ -1070,7 +1070,7 @@ impl LfsRemoteInner {
         &self,
         objs: &HashSet<(Sha256, usize)>,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
-        error_handler: impl Fn(Sha256, Error),
+        error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
         let read_from_store = |_sha256, _size| unreachable!();
         match self {
@@ -1090,7 +1090,7 @@ impl LfsRemoteInner {
         &self,
         objs: &HashSet<(Sha256, usize)>,
         read_from_store: impl Fn(Sha256, u64) -> Result<Option<Bytes>> + Send + Clone + 'static,
-        error_handler: impl Fn(Sha256, Error),
+        error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
         let write_to_store = |_, _| unreachable!();
         match self {
@@ -1460,7 +1460,7 @@ impl LfsRemoteInner {
         operation: Operation,
         read_from_store: impl Fn(Sha256, u64) -> Result<Option<Bytes>> + Send + Clone + 'static,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
-        error_handler: impl Fn(Sha256, Error),
+        mut error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
         let response = LfsRemoteInner::send_batch_request(http, objs, operation)?;
         let response = match response {
@@ -1670,7 +1670,7 @@ impl LfsRemote {
         &self,
         objs: &HashSet<(Sha256, usize)>,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
-        error_handler: impl Fn(Sha256, Error),
+        error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
         self.remote.batch_fetch(objs, write_to_store, error_handler)
     }
@@ -1679,7 +1679,7 @@ impl LfsRemote {
         &self,
         objs: &HashSet<(Sha256, usize)>,
         read_from_store: impl Fn(Sha256, u64) -> Result<Option<Bytes>> + Send + Clone + 'static,
-        error_handler: impl Fn(Sha256, Error),
+        error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
         self.remote
             .batch_upload(objs, read_from_store, error_handler)

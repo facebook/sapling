@@ -18,7 +18,6 @@ use crossbeam::channel::Sender;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use futures::StreamExt;
-use parking_lot::Mutex;
 use parking_lot::RwLock;
 use progress_model::AggregatingProgressBar;
 use tracing::debug;
@@ -739,8 +738,8 @@ impl FetchState {
 
         let prog = self.lfs_progress.create_or_extend(pending.len() as u64);
 
-        let keyed_errors = Arc::new(Mutex::new(Vec::new()));
-        let other_errors = Arc::new(Mutex::new(Vec::new()));
+        let mut keyed_errors = Vec::<(Key, anyhow::Error)>::new();
+        let mut other_errors = vec![];
 
         // Fetch & write to local LFS stores
         let top_level_error = store.batch_fetch(
@@ -768,17 +767,11 @@ impl FetchState {
                     }
                 }
             },
-            {
-                let keyed_errors = keyed_errors.clone();
-                let other_errors = other_errors.clone();
-                move |sha256, error| {
-                    if let Some(key) = key_map.get(&sha256) {
-                        keyed_errors.lock().push(((*key).clone(), error));
-                    } else {
-                        other_errors
-                            .lock()
-                            .push(anyhow!("invalid other lfs error: {:?}", error));
-                    }
+            |sha256, error| {
+                if let Some(key) = key_map.get(&sha256) {
+                    keyed_errors.push(((*key).clone(), error));
+                } else {
+                    other_errors.push(anyhow!("invalid other lfs error: {:?}", error));
                 }
             },
         );
@@ -790,11 +783,9 @@ impl FetchState {
             }
         }
 
-        let keyed_errors = std::mem::take(&mut *keyed_errors.lock());
         for (key, error) in keyed_errors.into_iter() {
             self.errors.keyed_error(key, error);
         }
-        let other_errors = std::mem::take(&mut *other_errors.lock());
         for error in other_errors.into_iter() {
             self.errors.other_error(error);
         }
