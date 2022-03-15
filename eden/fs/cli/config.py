@@ -812,8 +812,15 @@ Do you want to run `eden mount %s` instead?"""
         if not handle:
             return
 
-        print(f"Checking handle.exe for processes holding handles from '{mount}'...")
-        output = subprocess.check_output([handle, "-nobanner", mount])
+        print(f"Checking handle.exe for processes using '{mount}'...")
+        print("Press ctrl+c to skip.")
+        try:
+            output = subprocess.check_output([handle, "-nobanner", mount])
+        except KeyboardInterrupt:
+            print("Handle check interrupted.\n")
+            print("If you want to find out which process is still using the repo, run:")
+            print(f"    handle.exe {mount}\n")
+            return
         parsed = [line.split() for line in output.decode().splitlines() if line]
         non_edenfs_process = any(filter(lambda x: x[0].lower() != "edenfs.exe", parsed))
 
@@ -825,15 +832,13 @@ Do you want to run `eden mount %s` instead?"""
             return
 
         print(
-            "The following processes still hold handles from the mount, please"
-            " terminate them.\n"
+            "The following processes are still using the repo, please terminate them.\n"
         )
 
         for executable, _, pid, _, _type, _, path in parsed:
             print(f"{executable}({pid}): {path}")
 
         print()
-
         return
 
     def destroy_mount(
@@ -890,7 +895,7 @@ Do you want to run `eden mount %s` instead?"""
             if not path.exists():
                 return
 
-            print(f"Removing {path} failed, the following files couldn't be removed:")
+            print(f"Failed to remove {path}, the following files couldn't be removed:")
             for f in errors:
                 print(os.fsdecode(f[0].strip(windows_prefix)))
 
@@ -923,6 +928,7 @@ trouble cleaning up leftovers. You will need to manually remove {path}.
                 print(
                     f"After terminating the processes, please manually delete {path}."
                 )
+                print()
 
             raise errors[0][1]
 
