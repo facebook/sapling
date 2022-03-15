@@ -121,7 +121,7 @@ impl Status {
     }
 }
 
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FileStatus {
     /// The file has been modified.
     Modified,
