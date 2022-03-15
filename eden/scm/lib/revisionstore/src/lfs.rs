@@ -41,7 +41,7 @@ use futures::future::FutureExt;
 use futures::stream::iter;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
-use futures::stream::TryStreamExt;
+use futures::TryStreamExt;
 use hg_http::http_client;
 use hg_http::http_config;
 use http::status::StatusCode;
@@ -140,10 +140,10 @@ pub(crate) enum LfsBlobsStore {
 
 pub(crate) struct HttpLfsRemote {
     url: Url,
-    client: HttpClient,
+    client: Arc<HttpClient>,
     concurrent_fetches: usize,
     download_chunk_size: Option<NonZeroU64>,
-    http_options: HttpOptions,
+    http_options: Arc<HttpOptions>,
 }
 
 struct HttpOptions {
@@ -1107,12 +1107,12 @@ impl LfsRemoteInner {
     }
 
     async fn send_with_retry(
-        client: &HttpClient,
+        client: Arc<HttpClient>,
         method: Method,
         url: Url,
         add_extra: impl Fn(Request) -> Request,
         check_status: impl Fn(StatusCode) -> Result<(), TransferError>,
-        http_options: &HttpOptions,
+        http_options: Arc<HttpOptions>,
     ) -> Result<Bytes, FetchError> {
         if http_options.missing_client_certs {
             return Err(FetchError {
@@ -1316,12 +1316,12 @@ impl LfsRemoteInner {
 
         let response_fut = async move {
             LfsRemoteInner::send_with_retry(
-                &http.client,
+                http.client.clone(),
                 Method::Post,
                 batch_url,
                 move |builder| builder.body(batch_json.clone()),
                 |_| Ok(()),
-                &http.http_options,
+                http.http_options.clone(),
             )
             .await
         };
@@ -1331,12 +1331,12 @@ impl LfsRemoteInner {
     }
 
     async fn process_upload(
-        client: &HttpClient,
+        client: Arc<HttpClient>,
         action: ObjectAction,
         oid: Sha256,
         size: u64,
         read_from_store: impl Fn(Sha256, u64) -> Result<Option<Bytes>> + Send + 'static,
-        http_options: &HttpOptions,
+        http_options: Arc<HttpOptions>,
     ) -> Result<()> {
         let body = spawn_blocking(move || read_from_store(oid, size)).await??;
 
@@ -1363,13 +1363,13 @@ impl LfsRemoteInner {
     }
 
     async fn process_download(
-        client: &HttpClient,
+        client: Arc<HttpClient>,
         chunk_size: Option<NonZeroU64>,
         action: ObjectAction,
         oid: Sha256,
         size: u64,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + 'static,
-        http_options: &HttpOptions,
+        http_options: Arc<HttpOptions>,
     ) -> Result<()> {
         let url = Url::from_str(&action.href.to_string())?;
 
@@ -1388,7 +1388,7 @@ impl LfsRemoteInner {
                         let range = format!("bytes={}-{}", chunk_start, chunk_end);
 
                         let chunk = LfsRemoteInner::send_with_retry(
-                            client,
+                            client.clone(),
                             Method::Get,
                             url.clone(),
                             |builder| {
@@ -1405,7 +1405,7 @@ impl LfsRemoteInner {
                                     received: status,
                                 })
                             },
-                            http_options,
+                            http_options.clone(),
                         )
                         .await?;
 
@@ -1491,22 +1491,22 @@ impl LfsRemoteInner {
 
                 let fut = match op {
                     Operation::Upload => LfsRemoteInner::process_upload(
-                        &http.client,
+                        http.client.clone(),
                         action,
                         oid,
                         object.object.size,
                         read_from_store.clone(),
-                        &http.http_options,
+                        http.http_options.clone(),
                     )
                     .left_future(),
                     Operation::Download => LfsRemoteInner::process_download(
-                        &http.client,
+                        http.client.clone(),
                         http.download_chunk_size,
                         action,
                         oid,
                         object.object.size,
                         write_to_store.clone(),
-                        &http.http_options,
+                        http.http_options.clone(),
                     )
                     .right_future(),
                 };
@@ -1647,10 +1647,10 @@ impl LfsRemote {
                 ignore_prefetch_errors,
                 remote: LfsRemoteInner::Http(HttpLfsRemote {
                     url,
-                    client,
+                    client: Arc::new(client),
                     concurrent_fetches,
                     download_chunk_size,
-                    http_options: HttpOptions {
+                    http_options: Arc::new(HttpOptions {
                         accept_zstd,
                         http_version,
                         min_transfer_speed,
@@ -1660,7 +1660,7 @@ impl LfsRemote {
                         throttle_backoff_times,
                         request_timeout,
                         missing_client_certs,
-                    },
+                    }),
                 }),
             })
         }
