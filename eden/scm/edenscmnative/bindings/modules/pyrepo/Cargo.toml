@@ -9,7 +9,9 @@ cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.7", default-features = false }
 repo = { path = "../../../../lib/repo" }
 util = { path = "../../../../lib/util" }
+parking_lot = "0.11.2"
 pyconfigparser = { path = "../pyconfigparser" }
+pymetalog = { path = "../pymetalog" }
 
 [features]
 python2 = ["cpython/python27-sys", "cpython_ext/python2"]

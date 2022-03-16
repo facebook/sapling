@@ -231,10 +231,9 @@ py_class!(pub class commits |py| {
     /// source of truth of commit references (ex. using git references as source
     /// of truth).
     def updatereferences(&self, metalog: PyMetaLog) -> PyResult<PyNone> {
-        let meta = metalog.metalog_refcell(py);
-        let meta = meta.borrow();
+        let meta = metalog.metalog_rwlock(py);
         let mut inner = self.inner(py).borrow_mut();
-        inner.update_references_to_match_metalog(&meta).map_pyerr(py)?;
+        inner.update_references_to_match_metalog(&meta.read()).map_pyerr(py)?;
         Ok(PyNone)
     }
 
@@ -334,9 +333,8 @@ py_class!(pub class commits |py| {
     @staticmethod
     def opengitsegments(gitdir: &PyPath, segmentsdir: &PyPath, metalog: PyMetaLog) -> PyResult<Self> {
         let inner = py.allow_threads(|| GitSegmentedCommits::new(gitdir.as_path(), segmentsdir.as_path())).map_pyerr(py)?;
-        let meta = metalog.metalog_refcell(py);
-        let mut meta = meta.borrow_mut();
-        inner.git_references_to_metalog(&mut meta).map_pyerr(py)?;
+        let meta = metalog.metalog_rwlock(py);
+        inner.git_references_to_metalog(&mut meta.write()).map_pyerr(py)?;
         Self::from_commits(py, inner)
     }
 
