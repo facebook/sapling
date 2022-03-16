@@ -12,6 +12,7 @@ mononoke_app::subcommands! {
     mod convert;
     mod fetch;
     mod list_repos;
+    mod mutable_renames;
     mod repo_info;
     mod skiplist;
 }

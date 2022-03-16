@@ -13,6 +13,7 @@ use bookmarks::{self, BookmarkUpdateLog, Bookmarks};
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use ephemeral_blobstore::RepoEphemeralStore;
+use mutable_renames::MutableRenames;
 use phases::Phases;
 use repo_blobstore::RepoBlobstore;
 use repo_cross_repo::RepoCrossRepo;
@@ -60,4 +61,7 @@ pub struct AdminRepo {
 
     #[facet]
     pub repo_cross_repo: RepoCrossRepo,
+
+    #[facet]
+    pub mutable_renames: MutableRenames,
 }

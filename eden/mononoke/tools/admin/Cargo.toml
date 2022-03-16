@@ -40,6 +40,7 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+mutable_renames = { version = "0.1.0", path = "../../mutable_renames" }
 phases = { version = "0.1.0", path = "../../phases" }
 regex = "1.5.4"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }

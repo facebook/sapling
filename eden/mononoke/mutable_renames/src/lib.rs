@@ -191,7 +191,7 @@ impl MutableRenames {
         Ok(())
     }
 
-    async fn has_rename_uncached(
+    pub async fn has_rename_uncached(
         &self,
         ctx: &CoreContext,
         dst_cs_id: ChangesetId,
@@ -205,7 +205,11 @@ impl MutableRenames {
         Ok(!rename_targets.is_empty())
     }
 
-    async fn has_rename(&self, ctx: &CoreContext, dst_cs_id: ChangesetId) -> Result<bool, Error> {
+    pub async fn has_rename(
+        &self,
+        ctx: &CoreContext,
+        dst_cs_id: ChangesetId,
+    ) -> Result<bool, Error> {
         match &self.cache_handlers {
             None => self.has_rename_uncached(ctx, dst_cs_id).await,
             Some(cache_handlers) => {
@@ -221,7 +225,7 @@ impl MutableRenames {
         }
     }
 
-    async fn get_rename_uncached(
+    pub async fn get_rename_uncached(
         &self,
         ctx: &CoreContext,
         dst_cs_id: ChangesetId,
