@@ -467,15 +467,16 @@ mod test {
     use maplit::{btreemap, hashmap, hashset};
     use metaconfig_types::{
         AclRegion, AclRegionConfig, AclRegionRule, BlameVersion, BlobConfig, BlobstoreId,
-        BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, CommitSyncConfig,
-        CommitSyncConfigVersion, DatabaseConfig, DefaultSmallToLargeCommitSyncPathAction,
-        DerivedDataConfig, DerivedDataTypesConfig, EphemeralBlobstoreConfig, FilestoreParams,
-        HookBypass, HookConfig, HookManagerParams, HookParams, InfinitepushNamespace,
-        InfinitepushParams, LfsParams, LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId,
-        MultiplexedStoreType, PushParams, PushrebaseFlags, PushrebaseParams, RemoteDatabaseConfig,
-        RemoteMetadataDatabaseConfig, RepoClientKnobs, SegmentedChangelogConfig,
-        ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig,
-        SourceControlServiceMonitoring, SourceControlServiceParams, UnodeVersion,
+        BookmarkParams, BubbleDeletionMode, Bundle2ReplayParams, CacheWarmupParams,
+        CommitSyncConfig, CommitSyncConfigVersion, DatabaseConfig,
+        DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, DerivedDataTypesConfig,
+        EphemeralBlobstoreConfig, FilestoreParams, HookBypass, HookConfig, HookManagerParams,
+        HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams, LocalDatabaseConfig,
+        MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PushParams, PushrebaseFlags,
+        PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, RepoClientKnobs,
+        SegmentedChangelogConfig, ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig,
+        SmallRepoCommitSyncConfig, SourceControlServiceMonitoring, SourceControlServiceParams,
+        UnodeVersion,
     };
     use mononoke_types::MPath;
     use mononoke_types_mocks::changesetid::ONES_CSID;
@@ -877,6 +878,7 @@ mod test {
         [files.ephemeral_blobstore]
         initial_bubble_lifespan_secs = 86400
         bubble_expiration_grace_secs = 3600
+        bubble_deletion_mode = 1
 
         [files.ephemeral_blobstore.metadata.local]
         local_db_path = "/tmp/www-ephemeral"
@@ -1156,6 +1158,7 @@ mod test {
                         }),
                         initial_bubble_lifespan: Duration::from_secs(86400),
                         bubble_expiration_grace: Duration::from_secs(3600),
+                        bubble_deletion_mode: BubbleDeletionMode::MarkOnly,
                     }),
                 },
                 write_lock_db_address: None,

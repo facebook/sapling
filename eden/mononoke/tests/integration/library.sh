@@ -633,6 +633,11 @@ function setup_mononoke_storage_config {
   local underlyingstorage="$1"
   local blobstorename="$2"
   local blobstorepath="$TESTTMP/$blobstorename"
+  local bubble_deletion_mode=0 # Bubble deletion is disabled by default
+  if [[ -n ${BUBBLE_DELETION_MODE:-} ]]; then
+    bubble_deletion_mode=${BUBBLE_DELETION_MODE}
+  fi
+
 
   if [[ -n "${MULTIPLEXED:-}" ]]; then
     cat >> common/storage.toml <<CONFIG
@@ -665,6 +670,7 @@ $(db_config "$blobstorename")
 [$blobstorename.ephemeral_blobstore]
 initial_bubble_lifespan_secs = 1000
 bubble_expiration_grace_secs = 1000
+bubble_deletion_mode = $bubble_deletion_mode
 blobstore = { blob_files = { path = "$blobstorepath" } }
 
 $(ephemeral_db_config "$blobstorename.ephemeral_blobstore")

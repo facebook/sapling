@@ -11,16 +11,18 @@ use std::time::Duration;
 
 use anyhow::{anyhow, bail, Context, Result};
 use metaconfig_types::{
-    BlobConfig, BlobstoreId, DatabaseConfig, EphemeralBlobstoreConfig, FilestoreParams,
-    LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PackConfig,
-    PackFormat, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, ShardableRemoteDatabaseConfig,
-    ShardedRemoteDatabaseConfig, StorageConfig,
+    BlobConfig, BlobstoreId, BubbleDeletionMode, DatabaseConfig, EphemeralBlobstoreConfig,
+    FilestoreParams, LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId,
+    MultiplexedStoreType, PackConfig, PackFormat, RemoteDatabaseConfig,
+    RemoteMetadataDatabaseConfig, ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig,
+    StorageConfig,
 };
 use nonzero_ext::nonzero;
 use repos::{
-    RawBlobstoreConfig, RawBlobstorePackConfig, RawBlobstorePackFormat, RawDbConfig, RawDbLocal,
-    RawDbRemote, RawDbShardableRemote, RawDbShardedRemote, RawEphemeralBlobstoreConfig,
-    RawFilestoreParams, RawMetadataConfig, RawMultiplexedStoreType, RawStorageConfig,
+    RawBlobstoreConfig, RawBlobstorePackConfig, RawBlobstorePackFormat, RawBubbleDeletionMode,
+    RawDbConfig, RawDbLocal, RawDbRemote, RawDbShardableRemote, RawDbShardedRemote,
+    RawEphemeralBlobstoreConfig, RawFilestoreParams, RawMetadataConfig, RawMultiplexedStoreType,
+    RawStorageConfig,
 };
 
 use crate::convert::Convert;
@@ -37,6 +39,20 @@ impl Convert for RawStorageConfig {
                 .map(RawEphemeralBlobstoreConfig::convert)
                 .transpose()?,
         })
+    }
+}
+
+impl Convert for RawBubbleDeletionMode {
+    type Output = BubbleDeletionMode;
+
+    fn convert(self) -> Result<Self::Output> {
+        let deletion_mode = match self {
+            RawBubbleDeletionMode::DISABLED => BubbleDeletionMode::Disabled,
+            RawBubbleDeletionMode::MARK_ONLY => BubbleDeletionMode::MarkOnly,
+            RawBubbleDeletionMode::MARK_AND_DELETE => BubbleDeletionMode::MarkAndDelete,
+            v => return Err(anyhow!("Invalid value {} for enum BubbleDeletionMode", v)),
+        };
+        Ok(deletion_mode)
     }
 }
 
@@ -57,6 +73,7 @@ impl Convert for RawEphemeralBlobstoreConfig {
                     .try_into()
                     .context("Failed to convert bubble_expiration_grace")?,
             ),
+            bubble_deletion_mode: self.bubble_deletion_mode.convert()?,
         })
     }
 }

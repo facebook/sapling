@@ -1098,6 +1098,24 @@ impl MetadataDatabaseConfig {
     }
 }
 
+/// Enum configuration representing the possible modes
+/// of deletion for expired bubbles.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum BubbleDeletionMode {
+    /// No marking or deletion
+    Disabled,
+    /// Mark bubbles as expired but don't delete them
+    MarkOnly,
+    /// Mark bubbles as expired and delete them
+    MarkAndDelete,
+}
+
+impl Default for BubbleDeletionMode {
+    fn default() -> Self {
+        BubbleDeletionMode::Disabled // By default, disallow bubble deletion
+    }
+}
+
 /// Configuration for the ephemeral blobstore, which stores
 /// blobs for ephemeral changesets and snapshots.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -1115,6 +1133,10 @@ pub struct EphemeralBlobstoreConfig {
 
     /// Grace period for already-opened bubbles after expiration.
     pub bubble_expiration_grace: Duration,
+
+    /// Mode deciding if the bubbles should be simply marked as
+    /// expired or completely deleted from the backing store.
+    pub bubble_deletion_mode: BubbleDeletionMode,
 }
 
 /// Params for the bundle2 replay
