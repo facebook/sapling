@@ -17,4 +17,5 @@ types = { version = "0.1.0", path = "../types" }
 vfs = { version = "0.1.0", path = "../vfs" }
 
 [dev-dependencies]
+tempdir = "0.3"
 tempfile = "3.2"
