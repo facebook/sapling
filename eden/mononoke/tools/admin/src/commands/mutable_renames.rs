@@ -6,6 +6,7 @@
  */
 
 mod check_commit;
+mod get;
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
@@ -15,6 +16,7 @@ use mononoke_app::MononokeApp;
 use crate::repo::AdminRepo;
 
 use check_commit::CheckCommitArgs;
+use get::GetArgs;
 
 /// Fetch and update mutable renames information
 #[derive(Parser)]
@@ -30,6 +32,8 @@ pub struct CommandArgs {
 pub enum MutableRenamesSubcommand {
     /// Determine if a commit has mutable rename information attached
     CheckCommit(CheckCommitArgs),
+    /// Get mutable rename information for a given commit, path pair
+    Get(GetArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -44,6 +48,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         MutableRenamesSubcommand::CheckCommit(args) => {
             check_commit::check_commit(&ctx, &repo, args).await?
         }
+        MutableRenamesSubcommand::Get(args) => get::get(&ctx, &repo, args).await?,
     }
 
     Ok(())
