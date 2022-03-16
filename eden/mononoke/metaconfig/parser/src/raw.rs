@@ -11,8 +11,8 @@ use std::path::Path;
 use anyhow::{anyhow, Result};
 use cached_config::ConfigStore;
 use repos::{
-    RawCommitSyncConfig, RawCommonConfig, RawRepoConfig, RawRepoConfigs, RawRepoDefinition,
-    RawRepoDefinitions, RawStorageConfig,
+    RawAclRegionConfig, RawCommitSyncConfig, RawCommonConfig, RawRepoConfig, RawRepoConfigs,
+    RawRepoDefinition, RawRepoDefinitions, RawStorageConfig,
 };
 
 use crate::errors::ConfigurationError;
@@ -60,6 +60,13 @@ fn read_raw_configs_toml(config_path: &Path) -> Result<RawRepoConfigs> {
     )?;
     let storage = read_toml_path::<HashMap<String, RawStorageConfig>>(
         config_path.join("common").join("storage.toml").as_path(),
+        true,
+    )?;
+    let acl_region_configs = read_toml_path::<HashMap<String, RawAclRegionConfig>>(
+        config_path
+            .join("common")
+            .join("acl_regions.toml")
+            .as_path(),
         true,
     )?;
 
@@ -129,6 +136,7 @@ fn read_raw_configs_toml(config_path: &Path) -> Result<RawRepoConfigs> {
         common,
         repos,
         storage,
+        acl_region_configs,
         repo_definitions,
     })
 }

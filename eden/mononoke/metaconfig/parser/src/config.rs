@@ -23,7 +23,10 @@ use metaconfig_types::{
     StorageConfig,
 };
 use mononoke_types::RepositoryId;
-use repos::{RawCommonConfig, RawRepoConfig, RawRepoConfigs, RawRepoDefinition, RawStorageConfig};
+use repos::{
+    RawAclRegionConfig, RawCommonConfig, RawRepoConfig, RawRepoConfigs, RawRepoDefinition,
+    RawStorageConfig,
+};
 
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
 const HOOK_MAX_FILE_SIZE_DEFAULT: u64 = 8 * 1024 * 1024; // 8MiB
@@ -59,6 +62,7 @@ pub fn load_repo_configs(
         common,
         repos,
         storage,
+        acl_region_configs,
         repo_definitions,
     } = crate::raw::read_raw_configs(config_path.as_ref(), config_store)?;
     let repo_definitions = repo_definitions.repo_definitions;
@@ -70,8 +74,12 @@ pub fn load_repo_configs(
     let mut repoids = HashSet::new();
 
     for (reponame, raw_repo_definition) in repo_definitions.into_iter() {
-        let repo_config =
-            parse_with_repo_definition(raw_repo_definition, &repo_configs, &storage_configs)?;
+        let repo_config = parse_with_repo_definition(
+            raw_repo_definition,
+            &repo_configs,
+            &storage_configs,
+            &acl_region_configs,
+        )?;
 
         if !repoids.insert(repo_config.repoid) {
             return Err(ConfigurationError::DuplicatedRepoId(repo_config.repoid).into());
@@ -92,6 +100,7 @@ fn parse_with_repo_definition(
     repo_definition: RawRepoDefinition,
     named_repo_configs: &HashMap<String, RawRepoConfig>,
     named_storage_configs: &HashMap<String, RawStorageConfig>,
+    named_acl_region_configs: &HashMap<String, RawAclRegionConfig>,
 ) -> Result<RepoConfig> {
     let RawRepoDefinition {
         repo_id: repoid,
@@ -104,6 +113,7 @@ fn parse_with_repo_definition(
         readonly,
         needs_backup: _,
         external_repo_id: _,
+        acl_region_config,
     } = repo_definition;
 
     let named_repo_config_name = repo_config
@@ -266,6 +276,17 @@ fn parse_with_repo_definition(
 
     let repo_client_knobs = repo_client_knobs.convert()?.unwrap_or_default();
 
+    let acl_region_config = acl_region_config
+        .map(|key| {
+            named_acl_region_configs.get(&key).cloned().ok_or_else(|| {
+                ConfigurationError::InvalidConfig(format!(
+                    "ACL region config \"{}\" not defined",
+                    key
+                ))
+            })
+        })
+        .transpose()?
+        .convert()?;
 
     Ok(RepoConfig {
         enabled,
@@ -303,6 +324,7 @@ fn parse_with_repo_definition(
         repo_client_knobs,
         phabricator_callsign,
         backup_repo_config,
+        acl_region_config,
     })
 }
 
@@ -444,18 +466,19 @@ mod test {
     use cached_config::TestSource;
     use maplit::{btreemap, hashmap, hashset};
     use metaconfig_types::{
-        BlameVersion, BlobConfig, BlobstoreId, BookmarkParams, Bundle2ReplayParams,
-        CacheWarmupParams, CommitSyncConfig, CommitSyncConfigVersion, DatabaseConfig,
-        DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, DerivedDataTypesConfig,
-        EphemeralBlobstoreConfig, FilestoreParams, HookBypass, HookConfig, HookManagerParams,
-        HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams, LocalDatabaseConfig,
-        MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PushParams, PushrebaseFlags,
-        PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, RepoClientKnobs,
-        SegmentedChangelogConfig, ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig,
-        SmallRepoCommitSyncConfig, SourceControlServiceMonitoring, SourceControlServiceParams,
-        UnodeVersion,
+        AclRegion, AclRegionConfig, AclRegionRule, BlameVersion, BlobConfig, BlobstoreId,
+        BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, CommitSyncConfig,
+        CommitSyncConfigVersion, DatabaseConfig, DefaultSmallToLargeCommitSyncPathAction,
+        DerivedDataConfig, DerivedDataTypesConfig, EphemeralBlobstoreConfig, FilestoreParams,
+        HookBypass, HookConfig, HookManagerParams, HookParams, InfinitepushNamespace,
+        InfinitepushParams, LfsParams, LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId,
+        MultiplexedStoreType, PushParams, PushrebaseFlags, PushrebaseParams, RemoteDatabaseConfig,
+        RemoteMetadataDatabaseConfig, RepoClientKnobs, SegmentedChangelogConfig,
+        ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig,
+        SourceControlServiceMonitoring, SourceControlServiceParams, UnodeVersion,
     };
     use mononoke_types::MPath;
+    use mononoke_types_mocks::changesetid::ONES_CSID;
     use nonzero_ext::nonzero;
     use pretty_assertions::assert_eq;
     use regex::Regex;
@@ -797,6 +820,7 @@ mod test {
             repo_config="fbsource"
             needs_backup=false
             backup_source_repo_name="source"
+            acl_region_config="fbsource"
         "#;
         let www_content = r#"
             scuba_table_hooks="scm_hooks"
@@ -861,11 +885,22 @@ mod test {
         path = "/tmp/www-ephemeral"
         "#;
 
+        let acl_region_configs = r#"
+        [[fbsource.allow_rules]]
+        name = "name_test"
+        hipster_acl = "acl_test"
+        [[fbsource.allow_rules.regions]]
+        roots = ["1111111111111111111111111111111111111111111111111111111111111111"]
+        heads = []
+        path_prefixes = ["test/prefix"]
+        "#;
+
 
         let paths = btreemap! {
             "common/storage.toml" => storage,
             "common/common.toml" => common_content,
             "common/commitsyncmap.toml" => "",
+            "common/acl_regions.toml" => acl_region_configs,
             "repos/fbsource/server.toml" => fbsource_content,
             "repos/www/server.toml" => www_content,
             "repo_definitions/fbsource/server.toml" => fbsource_repo_def,
@@ -1087,6 +1122,17 @@ mod test {
                 backup_repo_config: Some(BackupRepoConfig {
                     source_repo_name: "source".to_string(),
                 }),
+                acl_region_config: Some(AclRegionConfig {
+                    allow_rules: vec![AclRegionRule {
+                        name: "name_test".to_string(),
+                        regions: vec![AclRegion {
+                            roots: vec![ONES_CSID],
+                            heads: vec![],
+                            path_prefixes: vec![MPath::new("test/prefix").unwrap()],
+                        }],
+                        hipster_acl: "acl_test".to_string(),
+                    }],
+                }),
             },
         );
 
@@ -1153,6 +1199,7 @@ mod test {
                 repo_client_knobs: RepoClientKnobs::default(),
                 phabricator_callsign: Some("WWW".to_string()),
                 backup_repo_config: None,
+                acl_region_config: None,
             },
         );
         assert_eq!(

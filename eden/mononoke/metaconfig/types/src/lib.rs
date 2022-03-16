@@ -207,6 +207,8 @@ pub struct RepoConfig {
     /// If it's a backup repo, then this field stores information
     /// about the backup configuration
     pub backup_repo_config: Option<BackupRepoConfig>,
+    /// ACL region configuration
+    pub acl_region_config: Option<AclRegionConfig>,
 }
 
 /// Backup repo configuration
@@ -1533,4 +1535,51 @@ impl Default for SegmentedChangelogConfig {
             bonsai_changesets_to_include: vec![],
         }
     }
+}
+
+/// Define a region of the repository, in terms of commits and path prefixes.
+///
+/// The commit range is equivalent to the Mercurial revset
+///     descendants(roots) - descendants(heads)
+///
+/// If the roots and heads lists are both empty then this region covers the
+/// entire repo.
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct AclRegion {
+    /// List of roots that begin this region.  Any commit that is a descendant of any
+    /// root, including the root itself, will be included in the region.  If this
+    /// list is empty then all commits are included (provided they are not the
+    /// descendant of a head).
+    pub roots: Vec<ChangesetId>,
+
+    /// List of heads that end this region.  Any commit that is a descendant of
+    /// any head, includin the head itself, will NOT be included in the region.
+    /// If this list is empty then all commits that are descendants of the roots
+    /// are included.
+    pub heads: Vec<ChangesetId>,
+
+    /// List of path prefixes that apply to this region.  Prefixes are in terms of
+    /// path elements, so the prefix a/b applies to a/b/c but not a/bb.
+    pub path_prefixes: Vec<MPath>,
+}
+
+/// ACL region rule consisting of multiple regions and path prefixes
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct AclRegionRule {
+    /// The name of this region rule.  This is used in error messages and diagnostics.
+    pub name: String,
+    /// A list of regions that this rule applies to.
+    pub regions: Vec<AclRegion>,
+    /// The hipster ACL that defines who is permitted to access the regions of
+    /// the repo defined by this rule.
+    pub hipster_acl: String,
+}
+
+/// Describe ACL Regions for a repository.
+///
+/// This is a set of rules which define regions of the repository (commits and paths)
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct AclRegionConfig {
+    /// List of rules that grant access to regions of the repo.
+    pub allow_rules: Vec<AclRegionRule>,
 }

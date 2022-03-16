@@ -27,5 +27,6 @@ toml = "=0.5.8"
 
 [dev-dependencies]
 maplit = "1.0"
+mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 pretty_assertions = "0.6"
 tempdir = "0.3"
