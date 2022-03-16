@@ -25,6 +25,7 @@ use minibytes::Bytes;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use progress_model::AggregatingProgressBar;
+use rand::Rng;
 
 pub(crate) use self::fetch::FetchState;
 pub use self::metrics::FileStoreFetchMetrics;
@@ -156,6 +157,12 @@ impl FileStore {
             let start_instant = Instant::now();
 
             let all_keys: Vec<Key> = state.pending();
+            let span = tracing::span!(
+                tracing::Level::DEBUG,
+                "file fetch",
+                id = rand::thread_rng().gen::<u16>()
+            );
+            let _enter = span.enter();
 
             if let Some(ref aux_cache) = aux_cache {
                 state.fetch_aux_indexedlog(aux_cache, StoreType::Shared);
