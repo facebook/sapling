@@ -177,7 +177,7 @@ impl Client {
         Self { inner }
     }
 
-    fn config(&self) -> &Config {
+    pub(crate) fn config(&self) -> &Config {
         &self.inner.config
     }
 

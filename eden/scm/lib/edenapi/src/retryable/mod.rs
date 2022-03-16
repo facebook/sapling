@@ -24,7 +24,6 @@ pub(crate) use files::RetryableFileAttrs;
 pub(crate) use files::RetryableFiles;
 pub(crate) use trees::RetryableTrees;
 
-const MAX_RETRIES: usize = 3;
 #[async_trait]
 pub(crate) trait RetryableStreamRequest: Sized + Sync + Send + 'static {
     type Item: Send + 'static;
@@ -33,8 +32,13 @@ pub(crate) trait RetryableStreamRequest: Sized + Sync + Send + 'static {
 
     fn received_item(&mut self, _item: &Self::Item) {}
 
-    fn retry_after(&mut self, error: &EdenApiError, attempt: usize) -> Option<Duration> {
-        if error.is_retryable() && attempt < MAX_RETRIES {
+    fn retry_after(
+        &mut self,
+        error: &EdenApiError,
+        attempt: usize,
+        max: usize,
+    ) -> Option<Duration> {
+        if error.is_retryable() && attempt < max {
             Some(Duration::from_secs(attempt as u64 + 1))
         } else {
             None
@@ -63,11 +67,12 @@ pub(crate) trait RetryableStreamRequest: Sized + Sync + Send + 'static {
             let client = client.clone();
 
             async move {
+                let max_attempts = client.config().max_retry_per_request;
                 loop {
                     // Ideally we'd return None when we hit the final error, but we need to use
                     // that time to return the error, so instead we return None on this next
                     // iteration.
-                    if state.attempt > MAX_RETRIES {
+                    if state.attempt > max_attempts {
                         return None;
                     }
 
@@ -101,13 +106,17 @@ pub(crate) trait RetryableStreamRequest: Sized + Sync + Send + 'static {
                         Err(e) => e,
                     };
 
-                    let retry_after = match state.request.retry_after(&error, state.attempt) {
-                        Some(d) => d,
-                        None => {
-                            state.attempt = MAX_RETRIES + 1;
-                            return Some((Err(error), state));
-                        }
-                    };
+                    let retry_after =
+                        match state
+                            .request
+                            .retry_after(&error, state.attempt, max_attempts)
+                        {
+                            Some(d) => d,
+                            None => {
+                                state.attempt = max_attempts + 1;
+                                return Some((Err(error), state));
+                            }
+                        };
                     state.attempt += 1;
                     state.entries = None;
 
@@ -206,6 +215,7 @@ mod tests {
         let client = HttpClientBuilder::new()
             .repo_name(repo_name)
             .server_url(base_url)
+            .max_retry_per_request(10)
             .build()?;
 
         let keys: Vec<Key> = vec![

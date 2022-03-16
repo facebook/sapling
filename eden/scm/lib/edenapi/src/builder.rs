@@ -227,7 +227,7 @@ impl HttpClientBuilder {
                 },
             );
         let max_retry_per_request =
-            get_config::<usize>(config, "edenapi", "max-retry-per-request")?.unwrap_or(10);
+            get_config::<usize>(config, "edenapi", "max-retry-per-request")?.unwrap_or(3);
 
         let mut http_config = hg_http::http_config(config, auth);
         http_config.verbose_stats |= debug;
@@ -318,6 +318,12 @@ impl HttpClientBuilder {
     /// into concurrently-sent batches.
     pub fn max_location_to_hash(mut self, size: Option<usize>) -> Self {
         self.max_location_to_hash = size;
+        self
+    }
+
+    /// Maximum number of retries per request.
+    pub fn max_retry_per_request(mut self, max: usize) -> Self {
+        self.max_retry_per_request = max;
         self
     }
 
