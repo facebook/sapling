@@ -27,7 +27,7 @@ serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.29"
-tracing = "0.1.29"
+tracing = "0.1.32"
 tracing-futures = "0.2.5"
 
 [build-dependencies]

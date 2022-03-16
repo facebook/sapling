@@ -43,7 +43,7 @@ rand = { version = "0.8", features = ["small_rng"] }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 tempfile = { version = "3.2", optional = true }
 thiserror = "1.0.29"
-tracing = "0.1.29"
+tracing = "0.1.32"
 vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 
 [dev-dependencies]

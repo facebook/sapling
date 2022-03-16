@@ -28,7 +28,7 @@ sha2 = { version = "0.8", optional = true }
 tempfile = "3.2"
 thiserror = "1.0.29"
 thrift-types = { path = "../thrift-types", optional = true }
-tracing = "0.1.29"
+tracing = "0.1.32"
 types = { path = "../types", optional = true }
 util = { path = "../util" }
 version = { path = "../version" }

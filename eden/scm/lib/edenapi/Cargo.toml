@@ -30,7 +30,7 @@ serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_cbor = "0.11"
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
-tracing = "0.1.29"
+tracing = "0.1.32"
 types = { version = "0.1.0", path = "../types" }
 url = "2.2.2"
 version = { version = "0.1.0", path = "../version" }
