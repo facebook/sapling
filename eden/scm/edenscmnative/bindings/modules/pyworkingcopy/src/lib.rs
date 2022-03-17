@@ -12,11 +12,14 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use cpython::*;
+use cpython_ext::convert::ImplInto;
 use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyPathBuf;
 use pathmatcher::Matcher;
+use pymanifest::treemanifest;
 use pypathmatcher::extract_matcher;
 use pytreestate::treestate;
+use storemodel::ReadFileContents;
 use types::RepoPathBuf;
 use workingcopy::filesystem::ChangeType;
 use workingcopy::filesystem::PendingChangeResult;
@@ -24,6 +27,8 @@ use workingcopy::filesystem::PendingChanges;
 use workingcopy::filesystem::PhysicalFileSystem;
 use workingcopy::walker::WalkError;
 use workingcopy::walker::Walker;
+
+type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "workingcopy"].join(".");
@@ -42,13 +47,24 @@ py_class!(class physicalfilesystem |py| {
         physicalfilesystem::create_instance(py, RefCell::new(PhysicalFileSystem::new(root.to_path_buf()).map_pyerr(py)?))
     }
 
-    def pendingchanges(&self, pytreestate: treestate, pymatcher: PyObject, include_directories: bool, last_write: u32, thread_count: u8) -> PyResult<pendingchanges> {
+    def pendingchanges(
+        &self,
+        pymanifest: treemanifest,
+        pystore: ImplInto<ArcReadFileContents>,
+        pytreestate: treestate,
+        pymatcher: PyObject,
+        include_directories: bool,
+        last_write: u32,
+        thread_count: u8,
+    ) -> PyResult<pendingchanges> {
         let matcher = extract_matcher(py, pymatcher)?;
         let fs = self.filesystem(py);
+        let manifest = pymanifest.get_underlying(py);
+        let store = pystore.into();
         let treestate = pytreestate.get_state(py);
         let last_write = last_write.into();
         let pending = fs.borrow()
-            .pending_changes(treestate, matcher, include_directories, last_write, thread_count)
+            .pending_changes(manifest, store, treestate, matcher, include_directories, last_write, thread_count)
             .map_pyerr(py)?;
         pendingchanges::create_instance(py, RefCell::new(pending))
     }

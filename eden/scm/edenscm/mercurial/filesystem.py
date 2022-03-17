@@ -166,6 +166,8 @@ class physicalfilesystem(object):
             physicalfs = workingcopy.physicalfilesystem(self.opener.join(""))
             threadcount = self.ui.configint("workingcopy", "rustwalkerthreads")
             pendingchanges = physicalfs.pendingchanges(
+                self.dirstate._repo[self.dirstate.p1()].manifest(),
+                self.dirstate._repo.fileslog.filescmstore,
                 self.dirstate._map._tree,
                 match,
                 False,

@@ -13,11 +13,18 @@ use std::time::SystemTime;
 
 use anyhow::Error;
 use anyhow::Result;
+use futures::StreamExt;
+use manifest::Manifest;
+use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
+use parking_lot::RwLock;
+use pathmatcher::ExactMatcher;
 use pathmatcher::Matcher;
+use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
+use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
 use vfs::is_executable;
@@ -27,6 +34,8 @@ use vfs::VFS;
 use crate::walker::WalkEntry;
 use crate::walker::WalkError;
 use crate::walker::Walker;
+
+type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 
 /// Represents a file modification time in Mercurial, in seconds since the unix epoch.
 #[derive(PartialEq)]
@@ -75,6 +84,8 @@ impl PhysicalFileSystem {
 
     pub fn pending_changes<M: Matcher + Clone + Send + Sync + 'static>(
         &self,
+        manifest: Arc<RwLock<TreeManifest>>,
+        store: ArcReadFileContents,
         treestate: Arc<Mutex<TreeState>>,
         matcher: M,
         include_directories: bool,
@@ -91,12 +102,15 @@ impl PhysicalFileSystem {
             vfs: self.vfs.clone(),
             walker,
             matcher,
+            manifest,
+            store,
             treestate,
             stage: PendingChangesStage::Walk,
             include_directories,
             seen: HashSet::new(),
             lookups: vec![],
             tree_iter: None,
+            lookup_iter: None,
             last_write,
         };
         Ok(pending_changes)
@@ -107,12 +121,15 @@ pub struct PendingChanges<M: Matcher + Clone + Send + Sync + 'static> {
     vfs: VFS,
     walker: Walker<M>,
     matcher: M,
+    manifest: Arc<RwLock<TreeManifest>>,
+    store: ArcReadFileContents,
     treestate: Arc<Mutex<TreeState>>,
     stage: PendingChangesStage,
     include_directories: bool,
     seen: HashSet<RepoPathBuf>,
     lookups: Vec<RepoPathBuf>,
     tree_iter: Option<Box<dyn Iterator<Item = Result<PendingChangeResult>> + Send>>,
+    lookup_iter: Option<Box<dyn Iterator<Item = Result<PendingChangeResult>> + Send>>,
     last_write: HgModifiedTime,
 }
 
@@ -341,8 +358,67 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
     }
 
     fn next_lookup(&mut self) -> Option<Result<PendingChangeResult>> {
-        None
+        self.lookup_iter
+            .get_or_insert_with(|| {
+                // The first time this function is called, process all of the pending lookups.
+                let mut results = Vec::<Result<PendingChangeResult>>::new();
+
+                // First, get the keys for the paths from the current manifest.
+                let matcher = match ExactMatcher::new(self.lookups.iter()) {
+                    Ok(matcher) => matcher,
+                    Err(e) => return Box::new(std::iter::once(Err(e))),
+                };
+                let keys = self
+                    .manifest
+                    .read()
+                    .files(matcher)
+                    .filter_map(|result| {
+                        let file = match result {
+                            Ok(file) => file,
+                            Err(e) => {
+                                results.push(Err(e));
+                                return None;
+                            }
+                        };
+                        Some(Key::new(file.path, file.meta.hgid))
+                    })
+                    .collect::<Vec<_>>();
+
+                // Then fetch the contents of each file and check it against the filesystem.
+                // TODO: if the underlying stores gain the ability to do hash-based comparisons,
+                // switch this to use that (rather than pulling down the entire contents of each
+                // file).
+                let vfs = self.vfs.clone();
+                let comparisons = async_runtime::block_on(async {
+                    self.store
+                        .read_file_contents(keys)
+                        .await
+                        .filter_map(|result| async {
+                            let (expected, key) = match result {
+                                Ok(x) => x,
+                                Err(e) => return Some(Err(e)),
+                            };
+                            let actual = match vfs.read(&key.path) {
+                                Ok(x) => x,
+                                Err(e) => return Some(Err(e)),
+                            };
+                            if expected == actual {
+                                None
+                            } else {
+                                Some(Ok(PendingChangeResult::File(ChangeType::Changed(key.path))))
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                        .await
+                });
+                results.extend(comparisons);
+                Box::new(results.into_iter())
+            })
+            .next()
     }
+
+    // TODO: after finishing these comparisons, update the cached mtimes of files so we
+    // don't have to do a comparison again next time.
 }
 
 impl<M: Matcher + Clone + Send + Sync + 'static> Iterator for PendingChanges<M> {
