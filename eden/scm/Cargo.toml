@@ -41,6 +41,7 @@ members = [
   "lib/dag/gitdag",
   "lib/debugtop",
   "lib/dev-logger",
+  "lib/doctor/network",
   "lib/drawdag",
   "lib/eagerepo",
   "lib/edenapi",
