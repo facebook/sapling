@@ -112,23 +112,25 @@ impl Diagnosis {
         }
     }
 
-    fn short_name<'a>(&'a self) -> String {
-        let http_detail = |err: &'a HttpError| -> &'a str {
-            match err {
-                HttpError::UnexpectedResponse(res) => res.status.as_str(),
-                HttpError::RequestFailure(_) => "other",
-                HttpError::MissingCerts(_) => "missing_certs",
-                HttpError::Config(_) => "config",
-                HttpError::InvalidCert(_, _) => "invalid_cert",
-            }
-        };
-
+    fn short_name(&self) -> String {
         match self {
             Diagnosis::BadConfig(_) => "bad_config".to_string(),
             Diagnosis::NoInternet(_) => "no_internet".to_string(),
             Diagnosis::NoCorp(_) => "no_corp".to_string(),
-            Diagnosis::AuthProxyProblem(err) => format!("auth_proxy_problem({})", http_detail(err)),
-            Diagnosis::HttpProblem(err) => format!("http_problem({})", http_detail(err)),
+            Diagnosis::AuthProxyProblem(err) => format!("auth_proxy_problem({})", err.short_name()),
+            Diagnosis::HttpProblem(err) => format!("http_problem({})", err.short_name()),
+        }
+    }
+}
+
+impl HttpError {
+    fn short_name<'a>(&'a self) -> &'a str {
+        match self {
+            HttpError::UnexpectedResponse(res) => res.status.as_str(),
+            HttpError::RequestFailure(_) => "other",
+            HttpError::MissingCerts(_) => "missing_certs",
+            HttpError::Config(_) => "config",
+            HttpError::InvalidCert(_, _) => "invalid_cert",
         }
     }
 }
@@ -353,6 +355,8 @@ impl Doctor {
         url: &Url,
         use_x2pagentd: bool,
     ) -> Result<(), HttpError> {
+        tracing::debug!(%url, use_x2pagentd, "check_host_http");
+
         let mut hc = hg_http::http_config(config, None);
 
         if !use_x2pagentd {
