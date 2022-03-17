@@ -19,7 +19,7 @@ use simple_asn1::ASN1Block;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-#[error("Problem with X.509 certificate at '{path}': {kind}")]
+#[error("Problem with certificate {path}: {kind}")]
 pub struct X509Error {
     #[source]
     pub kind: X509ErrorKind,

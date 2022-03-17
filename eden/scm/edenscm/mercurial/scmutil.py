@@ -167,7 +167,12 @@ def callcatch(ui, req, func):
 
                 sshpeer.cleanupall()
 
-        except (error.HttpError, error.FetchError, error.NetworkError) as inst:
+        except (
+            error.HttpError,
+            error.FetchError,
+            error.NetworkError,
+            error.TlsError,
+        ) as inst:
             if ui.configbool("experimental", "network-doctor"):
                 problem = bindings.doctor.diagnose_network(ui._rcfg._rcfg)
                 if problem:

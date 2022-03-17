@@ -39,6 +39,8 @@ pub enum HttpError {
     RequestFailure(HttpClientError),
     #[error(transparent)]
     MissingCerts(#[from] auth::MissingCerts),
+    #[error("{0}")]
+    InvalidCert(auth::X509Error, HttpClientError),
     #[error("invalid http config: {0}")]
     Config(String),
 }
@@ -106,7 +108,7 @@ impl Diagnosis {
                 }
                 msg
             }
-            Self::HttpProblem(err) => diagnose_http_error(err),
+            Self::HttpProblem(err) => diagnose_http_error(config, err),
         }
     }
 
@@ -117,6 +119,7 @@ impl Diagnosis {
                 HttpError::RequestFailure(_) => "other",
                 HttpError::MissingCerts(_) => "missing_certs",
                 HttpError::Config(_) => "config",
+                HttpError::InvalidCert(_, _) => "invalid_cert",
             }
         };
 
@@ -130,9 +133,25 @@ impl Diagnosis {
     }
 }
 
-fn diagnose_http_error(err: &HttpError) -> String {
+fn diagnose_http_error(config: &dyn Config, err: &HttpError) -> String {
+    let maybe_append_help = |mut msg: String, help_name: &str| -> String {
+        if let Some(help) = config.get("help", help_name) {
+            msg = format!("{}\n\n{}", msg, help.as_ref());
+        }
+        msg
+    };
+
     match err {
         HttpError::UnexpectedResponse(res) => diagnose_unexpected_response(res),
+        HttpError::RequestFailure(HttpClientError::Tls(err)) => maybe_append_help(
+            // We weren't able to diagnose a particular cert problem,
+            // so give a generic TLS message. Include the error since
+            // it may have something more useful.
+            format!("TLS error - please check your certificates.\n\n{}", err),
+            "tlshelp",
+        ),
+        HttpError::InvalidCert(err, _) => maybe_append_help(format!("{}", err), "tlsauthhelp"),
+        HttpError::MissingCerts(err) => maybe_append_help(format!("{}", err), "tlsauthhelp"),
         _ => format!("{}", err),
     }
 }
@@ -341,7 +360,7 @@ impl Doctor {
         let result = if let Some(stub) = &self.stub_healthcheck_response {
             stub(url, use_x2pagentd)
         } else {
-            let mut req = hg_http::http_client("network-doctor", hc).get(url.clone());
+            let mut req = hg_http::http_client("network-doctor", hc.clone()).get(url.clone());
             req.set_timeout(Duration::from_secs(3));
             req.send().map(|res| HttpResponse {
                 status: res.status(),
@@ -353,7 +372,17 @@ impl Doctor {
         match result {
             Ok(res) if res.status.is_success() => Ok(()),
             Ok(res) => Err(HttpError::UnexpectedResponse(res)),
-            Err(err) => Err(HttpError::RequestFailure(err)),
+            Err(err) => {
+                if let HttpClientError::Tls(_) = err {
+                    if let Some(cert_path) = &hc.cert_path {
+                        if let Err(x509_err) = auth::check_certs(cert_path) {
+                            return Err(HttpError::InvalidCert(x509_err, err));
+                        }
+                    }
+                }
+
+                Err(HttpError::RequestFailure(err))
+            }
         }
     }
 }
