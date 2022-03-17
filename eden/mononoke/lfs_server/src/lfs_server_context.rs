@@ -256,20 +256,26 @@ impl<S: Stream<Item = Result<Bytes, Error>> + Send + 'static> Drop for HttpClien
         }
     }
 }
+
+fn host_maybe_port_to_host(host_maybe_port: &str) -> Result<String, LfsServerContextErrorKind> {
+    Ok(host_maybe_port
+        .parse::<Uri>()
+        .map_err(|_e| LfsServerContextErrorKind::MissingHostHeader)?
+        .authority()
+        .ok_or(LfsServerContextErrorKind::MissingHostHeader)?
+        .host()
+        .to_string())
+}
+
 fn get_host_header(headers: &Option<&HeaderMap>) -> Result<String, LfsServerContextErrorKind> {
-    let host_port_str = headers
+    let host_maybe_port = headers
         .ok_or(LfsServerContextErrorKind::MissingHostHeader)?
         .get(http::header::HOST)
         .ok_or(LfsServerContextErrorKind::MissingHostHeader)?
         .to_str()
         .map_err(|_e| LfsServerContextErrorKind::MissingHostHeader)?;
-    // We're splitting from the right end of the string to account for ipv6 addreses
-    // which contain ':'.
-    Ok(host_port_str
-        .rsplitn(2, ':')
-        .last()
-        .ok_or(LfsServerContextErrorKind::MissingHostHeader)?
-        .to_string())
+
+    host_maybe_port_to_host(host_maybe_port)
 }
 
 impl RepositoryRequestContext {
@@ -819,5 +825,15 @@ mod test {
             LfsServerContextErrorKind::NotAuthenticated => Ok(()),
             _ => Err(anyhow!("test failed")),
         }
+    }
+
+    #[test]
+    fn test_host_maybe_port_to_host() -> Result<(), Error> {
+        assert_eq!(host_maybe_port_to_host("example.com")?, "example.com");
+        assert_eq!(host_maybe_port_to_host("example.com:90")?, "example.com");
+        assert_eq!(host_maybe_port_to_host("[::1]")?, "[::1]");
+        assert_eq!(host_maybe_port_to_host("[::1]:80")?, "[::1]");
+        assert_eq!(host_maybe_port_to_host("127.0.0.1:80")?, "127.0.0.1");
+        Ok(())
     }
 }
