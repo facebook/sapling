@@ -8,12 +8,12 @@
 use std::collections::hash_map;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt;
 
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use crossbeam::channel::Sender;
-use thiserror::Error;
 use types::Key;
 
 use crate::scmstore::attrs::StoreAttrs;
@@ -150,12 +150,31 @@ impl<T: StoreValue> CommonFetchState<T> {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug)]
 pub enum KeyFetchError {
-    #[error("Key fetch failed: {key}: {errors:?}")]
     KeyedError { key: Key, errors: Vec<Error> },
-    #[error(transparent)]
     Other(Error),
+}
+
+// Manual std::error impl to pick a source() for KeyedError.
+impl std::error::Error for KeyFetchError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Other(err) => err.source(),
+            Self::KeyedError { errors, .. } => errors.iter().next().map(|e| e.as_ref()),
+        }
+    }
+}
+
+impl fmt::Display for KeyFetchError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Other(err) => err.fmt(f),
+            Self::KeyedError { key, errors } => {
+                write!(f, "Key fetch failed {}: {:?}", key, errors)
+            }
+        }
+    }
 }
 
 pub(crate) struct FetchErrors {
@@ -258,5 +277,39 @@ impl<T> FetchResults<T> {
         }
 
         Ok(first)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::anyhow;
+
+    use super::*;
+
+    #[test]
+    fn test_error_chain() {
+        {
+            let inner_err = anyhow!("inner");
+            let outer_err = inner_err.context("context");
+
+            let err: &dyn std::error::Error = &KeyFetchError::Other(outer_err);
+            assert_eq!(format!("{}", err.source().unwrap()), "inner");
+        }
+
+        {
+            let err: &dyn std::error::Error = &KeyFetchError::KeyedError {
+                key: Default::default(),
+                errors: vec![],
+            };
+            assert!(err.source().is_none());
+        }
+
+        {
+            let err: &dyn std::error::Error = &KeyFetchError::KeyedError {
+                key: Default::default(),
+                errors: vec![anyhow!("one"), anyhow!("two")],
+            };
+            assert_eq!(format!("{}", err.source().unwrap()), "one");
+        }
     }
 }
