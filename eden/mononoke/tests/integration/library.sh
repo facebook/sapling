@@ -88,6 +88,15 @@ function urlencode {
   "$URLENCODE" "$@"
 }
 
+function mononoke_host {
+  if [[ $LOCALIP == *":"* ]]; then
+    # ipv6, surround in brackets
+    echo -n "[$LOCALIP]"
+  else
+    echo -n "$LOCALIP"
+  fi
+}
+
 function mononoke_address {
   if [[ $LOCALIP == *":"* ]]; then
     # ipv6, surround in brackets
@@ -441,13 +450,13 @@ function wait_for_server {
   if [[ -n "$found_port" ]]; then
     echo "Running check: $* >/dev/null"
     "$@" >/dev/null
-    echo "exited with $?"
+    echo "exited with $?" 1>&2
   else
     echo "Port was never written to $bound_addr_file" 1>&2
   fi
-  echo ""
-  echo "Log of $service_description"
-  cat "$log_file"
+  echo "" 1>&2
+  echo "Log of $service_description" 1>&2
+  cat "$log_file" 1>&2
   exit 1
 }
 
@@ -1299,11 +1308,12 @@ function lfs_server {
 
   if [[ "$proto" = "https" ]]; then
     # need to use localhost to match test certs
-    opts=("${opts[@]}" "--listen-host" "localhost")
+    listen_host="localhost"
   else
     # use local IP as its more stable for test expectations when localhost is multihomed
-    opts=("${opts[@]}" "--listen-host" "$LOCALIP")
+    listen_host="$(mononoke_host)"
   fi
+  opts=("${opts[@]}" "--listen-host" "$listen_host")
 
   GLOG_minloglevel=5 "$LFS_SERVER" \
     "${opts[@]}" "${args[@]}" >> "$log" 2>&1 &
@@ -1311,11 +1321,12 @@ function lfs_server {
   lfs_server_pid="$!"
   echo "$lfs_server_pid" >> "$DAEMON_PIDS"
 
+  export LFS_PORT
   wait_for_server "lfs_server" "LFS_PORT" "$log" \
     "${MONONOKE_LFS_START_TIMEOUT:-"$MONONOKE_LFS_DEFAULT_START_TIMEOUT"}" "$bound_addr_file" \
     lfs_health "$poll" "$proto" "$bound_addr_file"
 
-  uri="${proto}://$(cat "$bound_addr_file")"
+  uri="${proto}://$listen_host:$LFS_PORT"
   echo "$uri"
 
   cp "$log" "$log.saved"
