@@ -23,6 +23,8 @@ import time
 import traceback
 import weakref
 
+import bindings
+
 from . import (
     encoding,
     error,
@@ -135,7 +137,7 @@ def nochangesfound(ui, repo, excluded=None):
         ui.status(_("no changes found\n"))
 
 
-def callcatch(ui, func):
+def callcatch(ui, req, func):
     """call func() with global exception handling
 
     return func() if no exception happens. otherwise do some error handling
@@ -143,21 +145,38 @@ def callcatch(ui, func):
     """
     try:
         try:
-            return func()
-        except Exception as ex:  # re-raises
-            ui.traceback()
+            try:
+                return func()
+            except Exception as ex:  # re-raises
+                # Swap in the repo's ui if available since this includes the repo's config.
+                if req.cmdrepo:
+                    ui = req.cmdrepo.ui
 
-            # Log error info for all non-zero exits.
-            _uploadtraceback(ui, str(ex), util.smartformatexc())
+                ui.traceback()
+
+                # Log error info for all non-zero exits.
+                _uploadtraceback(ui, str(ex), util.smartformatexc())
+
+                raise
+            finally:
+                # Print 'remote:' messages before 'abort:' messages.
+                # This also avoids sshpeer.__del__ during Py_Finalize -> GC
+                # on Python 3, which can cause deadlocks waiting for the
+                # stderr reading thread.
+                from . import sshpeer
+
+                sshpeer.cleanupall()
+
+        except (error.HttpError, error.FetchError, error.NetworkError) as inst:
+            if ui.configbool("experimental", "network-doctor"):
+                problem = bindings.doctor.diagnose_network(ui._rcfg._rcfg)
+                if problem:
+                    ui.warn("\n{}\n".format(problem[0]), label="doctor.treatment")
+                    ui.note("  {}\n".format(problem[1]))
+                    ui.debug("\nOriginal error:\n{}\n".format(inst))
+                    return 1
+
             raise
-        finally:
-            # Print 'remote:' messages before 'abort:' messages.
-            # This also avoids sshpeer.__del__ during Py_Finalize -> GC
-            # on Python 3, which can cause deadlocks waiting for the
-            # stderr reading thread.
-            from . import sshpeer
-
-            sshpeer.cleanupall()
 
     # Global exception handling, alphabetically
     # Mercurial-specific first, followed by built-in and library exceptions

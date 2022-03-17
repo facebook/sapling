@@ -28,6 +28,7 @@ from . import pycompat
 
 CertificateError = bindings.error.CertificateError
 CommitLookupError = bindings.error.CommitLookupError
+FetchError = bindings.error.FetchError
 HttpError = bindings.error.HttpError
 IndexedLogError = bindings.error.IndexedLogError
 LockContendedError = bindings.error.LockContendedError

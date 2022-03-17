@@ -77,6 +77,9 @@ class request(object):
         self.ui = ui
         self.repo = repo
 
+        # The repo, if any, that ends up being used for command execution.
+        self.cmdrepo = None
+
         # input/output/error streams
         if fin and not isinstance(fin, util.refcell):
             fin = util.refcell(fin)
@@ -705,19 +708,19 @@ def _runcatch(req):
     ):
         # Run command (and maybe start ipdb) in a background thread for
         # better Ctrl+C handling of long native logic.
-        return util.threaded(_callcatch)(ui, _runcatchfunc)
+        return util.threaded(_callcatch)(ui, req, _runcatchfunc)
     else:
         # Run in the main thread.
-        return _callcatch(ui, _runcatchfunc)
+        return _callcatch(ui, req, _runcatchfunc)
 
 
-def _callcatch(ui, func):
+def _callcatch(ui, req, func):
     """like scmutil.callcatch but handles more high-level exceptions about
     config parsing and commands. besides, use handlecommandexception to handle
     uncaught exceptions.
     """
     try:
-        return scmutil.callcatch(ui, func)
+        return scmutil.callcatch(ui, req, func)
     except error.AmbiguousCommand as inst:
 
         ui.warn(_("hg: command '%s' is ambiguous:\n") % inst.args[0])
@@ -1240,6 +1243,9 @@ def _dispatch(req):
                         repo.ui.setconfig("visibility", "all-heads", "true", "--hidden")
                     if repo != req.repo:
                         ui.atexit(repo.close)
+
+                    # Stuff this in to the request so exception handling code has access to repo/repo.ui.
+                    req.cmdrepo = repo
                 args.insert(0, repo)
             elif rpath:
                 ui.warn(_("warning: --repository ignored\n"))
