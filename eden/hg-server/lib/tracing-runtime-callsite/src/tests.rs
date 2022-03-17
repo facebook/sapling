@@ -35,7 +35,7 @@ fn test_callsite_span() {
     });
     assert_eq!(
         d(callsite.metadata()),
-        "Metadata { name: foo, target: bar, level: Level(Error), module_path: z::a, location: a.rs:10, fields: {x, y, z}, callsite: _, kind: Kind(Span) }"
+        "Metadata { name: foo, target: bar, level: Level(Error), module_path: z::a, location: a.rs:10, fields: {x, y, z}, callsite: _, kind: Kind(SPAN) }"
     );
     assert_eq!(callsite.identifier(), callsite.metadata().callsite());
     let log = capture(|| {
@@ -49,11 +49,11 @@ fn test_callsite_span() {
     assert_eq!(
         log,
         [
-            "new_span(Attributes { metadata: Metadata { name: foo, target: bar, level: Level(Error), module_path: z::a, location: a.rs:10, fields: {x, y, z}, callsite: _, kind: Kind(Span) }, values: ValueSet { callsite: _ }, parent: Current } = 1",
+            "new_span(Attributes { metadata: Metadata { name: foo, target: bar, level: Level(Error), module_path: z::a, location: a.rs:10, fields: {x, y, z}, callsite: _, kind: Kind(SPAN) }, values: ValueSet { callsite: _ }, parent: Current } = 1",
             "record(Id(1), Record { values: ValueSet { y: yyy2, callsite: _ } })",
             "enter(Id(1))",
             "exit(Id(1))",
-            "new_span(Attributes { metadata: Metadata { name: foo, target: bar, level: Level(Error), module_path: z::a, location: a.rs:10, fields: {x, y, z}, callsite: _, kind: Kind(Span) }, values: ValueSet { x: foo, z: 123, callsite: _ }, parent: Current } = 2",
+            "new_span(Attributes { metadata: Metadata { name: foo, target: bar, level: Level(Error), module_path: z::a, location: a.rs:10, fields: {x, y, z}, callsite: _, kind: Kind(SPAN) }, values: ValueSet { x: foo, z: 123, callsite: _ }, parent: Current } = 2",
             "record(Id(2), Record { values: ValueSet { x: 123, callsite: _ } })",
             "enter(Id(2))",
             "exit(Id(2))"
@@ -71,7 +71,7 @@ fn test_callsite_event() {
     });
     assert_eq!(
         d(callsite.metadata()),
-        "Metadata { name: foo, target: , level: Level(Error), fields: {x, y, z}, callsite: _, kind: Kind(Event) }"
+        "Metadata { name: foo, target: , level: Level(Error), fields: {x, y, z}, callsite: _, kind: Kind(EVENT) }"
     );
     assert_eq!(callsite.identifier(), callsite.metadata().callsite());
     let log = capture(|| {
@@ -82,9 +82,9 @@ fn test_callsite_event() {
     assert_eq!(
         log,
         [
-            "event(Event { fields: ValueSet { callsite: _ }, metadata: Metadata { name: foo, target: , level: Level(Error), fields: {x, y, z}, callsite: _, kind: Kind(Event) }, parent: Current })",
-            "event(Event { fields: ValueSet { x: 12, z: zz, callsite: _ }, metadata: Metadata { name: foo, target: , level: Level(Error), fields: {x, y, z}, callsite: _, kind: Kind(Event) }, parent: Current })",
-            "event(Event { fields: ValueSet { x: 15, callsite: _ }, metadata: Metadata { name: foo, target: , level: Level(Error), fields: {x, y, z}, callsite: _, kind: Kind(Event) }, parent: Current })"
+            "event(Event { fields: ValueSet { callsite: _ }, metadata: Metadata { name: foo, target: , level: Level(Error), fields: {x, y, z}, callsite: _, kind: Kind(EVENT) }, parent: Current })",
+            "event(Event { fields: ValueSet { x: 12, z: zz, callsite: _ }, metadata: Metadata { name: foo, target: , level: Level(Error), fields: {x, y, z}, callsite: _, kind: Kind(EVENT) }, parent: Current })",
+            "event(Event { fields: ValueSet { x: 15, callsite: _ }, metadata: Metadata { name: foo, target: , level: Level(Error), fields: {x, y, z}, callsite: _, kind: Kind(EVENT) }, parent: Current })"
         ]
     );
 }
