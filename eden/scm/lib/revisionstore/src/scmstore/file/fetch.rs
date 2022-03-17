@@ -752,14 +752,6 @@ impl FetchState {
             |sha256, data| -> Result<()> {
                 prog.increase_position(1);
 
-                // Unwrap is safe because the only place sha256 could come from is
-                // `pending` and all of its entries were put in `key_map`.
-                for (key, ptr) in key_map.get(&sha256).unwrap().iter() {
-                    let mut file = StoreFile::default();
-                    file.content = Some(LazyFile::Lfs(data.clone(), ptr.clone()));
-                    self.found_attributes(key.clone(), file, Some(StoreType::Shared));
-                }
-
                 match self.pointer_origin.get(&sha256).ok_or_else(|| {
                     anyhow!(
                         "no source found for Sha256; received unexpected Sha256 from LFS server"
@@ -768,12 +760,25 @@ impl FetchState {
                     StoreType::Local => local
                         .as_ref()
                         .expect("no lfs_local present when handling local LFS pointer")
-                        .add_blob(&sha256, data),
+                        .add_blob(&sha256, data.clone())?,
                     StoreType::Shared => cache
                         .as_ref()
                         .expect("no lfs_cache present when handling cache LFS pointer")
-                        .add_blob(&sha256, data),
+                        .add_blob(&sha256, data.clone())?,
+                };
+
+                // Unwrap is safe because the only place sha256 could come from is
+                // `pending` and all of its entries were put in `key_map`.
+                for (key, ptr) in key_map.get(&sha256).unwrap().iter() {
+                    let mut file = StoreFile::default();
+                    file.content = Some(LazyFile::Lfs(data.clone(), ptr.clone()));
+
+                    // It's important to do this after the self.pointer_origin.get() above, since
+                    // found_attributes removes the key from pointer_origin.
+                    self.found_attributes(key.clone(), file, Some(StoreType::Shared));
                 }
+
+                Ok(())
             },
             |sha256, error| {
                 if let Some(keys) = key_map.get(&sha256) {
