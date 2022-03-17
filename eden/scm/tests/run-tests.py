@@ -572,9 +572,9 @@ def getparser():
     )
     hgconf.set_defaults(local=True)
     hgconf.add_argument(
-        "--ipv6",
+        "--ipv4",
         action="store_true",
-        help="prefer IPv6 to IPv4 for network related tests",
+        help="use IPv4 for network related tests",
     )
     hgconf.add_argument(
         "-3",
@@ -712,11 +712,11 @@ def parseargs(args, parser):
         parser.error("--bisect-repo cannot be used without --known-good-rev")
 
     global useipv6
-    if options.ipv6:
-        useipv6 = checksocketfamily("AF_INET6")
+    if options.ipv4:
+        useipv6 = False
     else:
-        # only use IPv6 if IPv4 is unavailable and IPv6 is available
-        useipv6 = (not checksocketfamily("AF_INET")) and checksocketfamily("AF_INET6")
+        # only use IPv4 if IPv6 is unavailable
+        useipv6 = checksocketfamily("AF_INET6")
 
     options.anycoverage = options.cover or options.annotate or options.htmlcov
     if options.anycoverage:
