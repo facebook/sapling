@@ -914,9 +914,6 @@ Test list of internal help commands
    debugbundle   lists the contents of a bundle
    debugcapabilities
                  lists the capabilities of a remote peer
-   debugcauserusterror
-                 cause an error to be generated in rust for testing error
-                 handling
    debugchangelog
                  show or migrate changelog backend
    debugcheckcasecollisions

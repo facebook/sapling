@@ -14,7 +14,6 @@ pub use super::IO;
 
 commands! {
     mod args;
-    mod causerusterror;
     mod dumpdynamicconfig;
     mod dumpindexedlog;
     mod dumptrace;

@@ -15,7 +15,5 @@ indexedlog = { path = "../../../../lib/indexedlog" }
 metalog = { path = "../../../../lib/metalog" }
 revisionstore = { path = "../../../../lib/revisionstore" }
 revlogindex = { path = "../../../../lib/revlogindex" }
-taggederror = { path = "../../../../lib/taggederror" }
-taggederror-util = { path = "../../../../lib/taggederror-util" }
 treestate = { path = "../../../../lib/treestate" }
 vfs = { path = "../../../../lib/vfs" }

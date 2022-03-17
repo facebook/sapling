@@ -979,36 +979,7 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
 
 def _log_exception(lui, e):
     try:
-        typename = None
-        fault = None
-        category = None
-        transience = None
-
-        # Extract Rust metadata
-        try:
-            rustmetadata = e.args[0]
-            typename = rustmetadata.typename()
-            fault = rustmetadata.fault()
-            category = rustmetadata.category()
-            transience = rustmetadata.transience()
-        except (IndexError, AttributeError):
-            pass
-
-        # Extract Python metadata
-        if isinstance(e, error.Tagged):
-            fault = e.fault.value if e.fault is not None else None
-            category = e.category.value if e.category is not None else None
-            transience = e.transience.value if e.transience is not None else None
-
-        lui.log(
-            "exceptions",
-            exception_type=type(e).__name__,
-            exception_msg=str(e),
-            fault=fault,
-            transience=transience,
-            category=category,
-            rust_error_type=typename,
-        )
+        lui.log("exceptions", exception_type=type(e).__name__, exception_msg=str(e))
     except Exception as e:
         try:
             wrapped = error.ProgrammingError("failed to log exception: {!r}".format(e))

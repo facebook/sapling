@@ -7,12 +7,6 @@
 
 use cpython::*;
 use cpython_ext::error;
-use cpython_ext::ResultPyErrExt;
-use taggederror::intentional_bail;
-use taggederror::intentional_error;
-use taggederror::CommonMetadata;
-use taggederror::FilteredAnyhow;
-use taggederror_util::AnyhowEdenExt;
 
 py_exception!(error, CertificateError);
 py_exception!(error, CommitLookupError, exc::KeyError);
@@ -26,55 +20,6 @@ py_exception!(error, NonUTF8Path);
 py_exception!(error, RustError);
 py_exception!(error, RevisionstoreError);
 py_exception!(error, TlsError);
-
-py_class!(pub class TaggedExceptionData |py| {
-    data metadata: CommonMetadata;
-    data error_message: String;
-    def __new__(_cls) -> PyResult<TaggedExceptionData> {
-        TaggedExceptionData::create_instance(py, CommonMetadata::default(), String::new())
-    }
-
-    def fault(&self) -> PyResult<Option<String>> {
-        Ok(match self.metadata(py).fault() {
-            Some(fault) => Some(format!("{}", fault)),
-            None => None,
-        })
-    }
-
-    def transience(&self) -> PyResult<Option<String>> {
-        Ok(match self.metadata(py).transience() {
-            Some(transience) => Some(format!("{}", transience)),
-            None => None,
-        })
-    }
-
-    def category(&self) -> PyResult<Option<String>> {
-        Ok(match self.metadata(py).category() {
-            Some(category) => Some(format!("{}", category)),
-            None => None,
-        })
-    }
-
-    def typename(&self) -> PyResult<Option<&'static str>> {
-        Ok(self.metadata(py).type_name().map(|v| v.0))
-    }
-
-    def has_metadata(&self) -> PyResult<bool> {
-        Ok(!self.metadata(py).empty())
-    }
-
-    def metadata_display(&self) -> PyResult<String> {
-        Ok(format!("{}", self.metadata(py)))
-    }
-
-    def message(&self) -> PyResult<String> {
-        Ok(self.error_message(py).clone())
-    }
-
-    def __repr__(&self) -> PyResult<String> {
-        Ok(self.error_message(py).clone())
-    }
-});
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "error"].join(".");
@@ -99,14 +44,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         py.get_type::<RevisionstoreError>(),
     )?;
     m.add(py, "NonUTF8Path", py.get_type::<NonUTF8Path>())?;
-    m.add(
-        py,
-        "TaggedExceptionData",
-        py.get_type::<TaggedExceptionData>(),
-    )?;
     m.add(py, "TlsError", py.get_type::<TlsError>())?;
-    m.add(py, "throwrustexception", py_fn!(py, py_intentional_error()))?;
-    m.add(py, "throwrustbail", py_fn!(py, py_intentional_bail()))?;
 
     register_error_handlers();
 
@@ -114,7 +52,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 fn register_error_handlers() {
-    fn specific_error_handler(py: Python, e: &error::Error, m: CommonMetadata) -> Option<PyErr> {
+    fn specific_error_handler(py: Python, e: &error::Error) -> Option<PyErr> {
         // Extract inner io::Error out.
         // Why does Python need the low-level IOError? It doesn't have to.
         // Consider:
@@ -134,7 +72,7 @@ fn register_error_handlers() {
                     dag::errors::BackendError::Io(e) => {
                         return Some(cpython_ext::error::translate_io_error(py, &e));
                     }
-                    dag::errors::BackendError::Other(e) => return specific_error_handler(py, e, m),
+                    dag::errors::BackendError::Other(e) => return specific_error_handler(py, e),
                     _ => {}
                 },
                 dag::Error::VertexNotFound(_) | dag::Error::IdNotFound(_) => {
@@ -227,7 +165,7 @@ fn register_error_handlers() {
         } else if let Some(e) = e.downcast_ref::<revisionstore::scmstore::KeyFetchError>() {
             use revisionstore::scmstore::KeyFetchError::*;
             if let Other(ref e) = e {
-                specific_error_handler(py, e, m)
+                specific_error_handler(py, e)
             } else {
                 Some(PyErr::new::<FetchError, _>(
                     py,
@@ -241,31 +179,10 @@ fn register_error_handlers() {
         }
     }
 
-    fn fallback_error_handler(py: Python, e: &error::Error, m: CommonMetadata) -> Option<PyErr> {
-        TaggedExceptionData::create_instance(
-            py,
-            m,
-            format!(
-                "{:?}",
-                FilteredAnyhow::new(e).with_metadata_func(|e| e.eden_metadata())
-            ),
-        )
-        .map(|data| PyErr::new::<RustError, _>(py, data))
-        .ok()
+    fn fallback_error_handler(py: Python, e: &error::Error) -> Option<PyErr> {
+        Some(PyErr::new::<RustError, _>(py, format!("{:?}", e)))
     }
 
     error::register("010-specific", specific_error_handler);
     error::register("999-fallback", fallback_error_handler);
-}
-
-fn py_intentional_error(py: Python) -> PyResult<PyInt> {
-    Ok(intentional_error(false)
-        .map(|r| r.to_py_object(py))
-        .map_pyerr(py)?)
-}
-
-fn py_intentional_bail(py: Python) -> PyResult<PyInt> {
-    Ok(intentional_bail()
-        .map(|r| r.to_py_object(py))
-        .map_pyerr(py)?)
 }

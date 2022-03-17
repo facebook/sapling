@@ -23,9 +23,6 @@ use cpython::PyResult;
 use cpython::Python;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
-use taggederror::CommonMetadata;
-use taggederror::TaggedError;
-use taggederror_util::AnyhowEdenExt;
 
 /// Extends the `Result` type to allow conversion to `PyResult` from a native
 /// Rust result.
@@ -84,8 +81,7 @@ pub trait AnyhowResultExt<T> {
     fn into_anyhow_result(self) -> Result<T>;
 }
 
-pub type AnyhowErrorIntoPyErrFunc =
-    fn(Python, &anyhow::Error, CommonMetadata) -> Option<cpython::PyErr>;
+pub type AnyhowErrorIntoPyErrFunc = fn(Python, &anyhow::Error) -> Option<cpython::PyErr>;
 
 static INTO_PYERR_FUNC_LIST: Lazy<Mutex<BTreeMap<&'static str, AnyhowErrorIntoPyErrFunc>>> =
     Lazy::new(|| Default::default());
@@ -105,22 +101,18 @@ impl<T, E: Into<Error>> ResultPyErrExt<T> for Result<T, E> {
         self.map_err(|e| {
             let e: anyhow::Error = e.into();
             let mut e = &e;
-            let metadata = e.eden_metadata();
             loop {
                 if let Some(e) = e.downcast_ref::<PyErr>() {
                     return e.inner.clone_ref(py);
                 } else if let Some(inner) = e.downcast_ref::<anyhow::Error>() {
                     e = inner;
                     continue;
-                } else if let Some(inner) = e.downcast_ref::<TaggedError>() {
-                    e = &inner.source;
-                    continue;
                 } else if let Some(e) = e.downcast_ref::<std::io::Error>() {
                     return translate_io_error(py, e);
                 }
 
                 for func in INTO_PYERR_FUNC_LIST.lock().values() {
-                    if let Some(err) = (func)(py, e, metadata) {
+                    if let Some(err) = (func)(py, e) {
                         return err;
                     }
                 }

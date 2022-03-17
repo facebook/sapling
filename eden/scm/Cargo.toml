@@ -96,8 +96,6 @@ members = [
   "lib/status",
   "lib/storemodel",
   "lib/streams",
-  "lib/taggederror",
-  "lib/taggederror-util",
   "lib/thrift-types",
   "lib/tracing-analyzer",
   "lib/tracing-collector",

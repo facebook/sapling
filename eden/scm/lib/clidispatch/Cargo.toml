@@ -14,8 +14,6 @@ configparser = { version = "0.1.0", path = "../configparser" }
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
 io = { version = "0.1.0", path = "../io" }
 repo = { version = "0.1.0", path = "../repo" }
-taggederror = { version = "0.1.0", path = "../taggederror" }
-taggederror-util = { version = "0.1.0", path = "../taggederror-util" }
 thiserror = "1.0.29"
 thrift-types = { version = "0.1.0", path = "../thrift-types" }
 tracing = "0.1.32"
