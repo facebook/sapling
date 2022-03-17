@@ -152,7 +152,18 @@ fn diagnose_http_error(config: &dyn Config, err: &HttpError) -> String {
         ),
         HttpError::InvalidCert(err, _) => maybe_append_help(format!("{}", err), "tlsauthhelp"),
         HttpError::MissingCerts(err) => maybe_append_help(format!("{}", err), "tlsauthhelp"),
-        _ => format!("{}", err),
+        HttpError::RequestFailure(HttpClientError::Curl(err)) => diagnose_curl_error(err),
+
+        HttpError::Config(err) => err.to_string(),
+        HttpError::RequestFailure(_) => format!("{}", err),
+    }
+}
+
+fn diagnose_curl_error(err: &curl::Error) -> String {
+    if err.is_operation_timedout() {
+        "Network timeout. Please check your connection.".to_string()
+    } else {
+        format!("{}", err)
     }
 }
 
