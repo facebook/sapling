@@ -79,10 +79,19 @@ impl Doctor {
             None => {
                 return Err(HostError::Config(format!("url {} has no host", url)));
             }
-            Some(Host::Domain(host)) => match (self.dns_lookup)(&format!("{}:{}", host, port)) {
-                Err(err) => return Err(HostError::DNS(err)),
-                Ok(addrs) => addrs.collect(),
-            },
+            Some(Host::Domain(host)) => {
+                // Let tests stub out host check results.
+                if host == "test_fail" {
+                    return Err(HostError::TCP(io::Error::new(io::ErrorKind::Other, "test")));
+                } else if host == "test_succeed" {
+                    return Ok(());
+                }
+
+                match (self.dns_lookup)(&format!("{}:{}", host, port)) {
+                    Err(err) => return Err(HostError::DNS(err)),
+                    Ok(addrs) => addrs.collect(),
+                }
+            }
             Some(Host::Ipv4(ip)) => vec![SocketAddr::new(ip.into(), port)],
             Some(Host::Ipv6(ip)) => vec![SocketAddr::new(ip.into(), port)],
         };
