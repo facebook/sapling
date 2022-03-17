@@ -64,7 +64,7 @@ pub struct HttpResponse {
 }
 
 impl Diagnosis {
-    pub fn treatment(&self) -> String {
+    pub fn treatment(&self, config: &dyn Config) -> String {
         match self {
             Self::NoCorp(_) => {
                 "Please check your VPN connection (internet okay, but can't reach corp)."
@@ -75,9 +75,64 @@ impl Diagnosis {
                     .to_string()
             }
             Self::BadConfig(msg) => format!("Invalid config: {}", msg),
-            _ => todo!(),
+            Self::AuthProxyProblem(_) => {
+                let mut msg = "Local auth proxy problem.".to_string();
+                if let Some(help) = config.get("help", "auth-proxy-help") {
+                    msg = format!("{} {}", msg, help.as_ref());
+                }
+                msg
+            }
+            Self::HttpProblem(err) => diagnose_http_error(err),
         }
     }
+}
+
+fn diagnose_http_error(err: &HttpError) -> String {
+    match err {
+        HttpError::UnexpectedResponse(res) => diagnose_unexpected_response(res),
+        _ => format!("{}", err),
+    }
+}
+
+fn diagnose_unexpected_response(res: &HttpResponse) -> String {
+    match res.status {
+        http::StatusCode::FORBIDDEN => {
+            "You lack permission for this repo. Please see https://fburl.com/svnuser, and make sure you have permission for this repo.".to_string()
+        }
+        _ => {
+            let mut header_hints = vec![];
+            if let Some(x2p_error_type) = header_value(&res.headers, "x-x2pagentd-error-type") {
+                let mut hint = format!("x2pagentd: {}", x2p_error_type);
+                if let Some(x2p_msg) = header_value(&res.headers, "x-x2pagentd-error-msg") {
+                    hint = format!("{} ({})", hint, x2p_msg);
+                }
+                header_hints.push(hint);
+            }
+
+            for (n, v) in res.headers.iter() {
+                if let Some(advice_type) = n.as_str().strip_prefix("x-fb-validated-x2pauth-advice-")
+                {
+                    if let Ok(v) = v.to_str() {
+                        header_hints.push(format!("x2p auth {}: {}", advice_type, v));
+                    }
+                }
+            }
+
+            format!(
+                "Unexpected server response: {}{}",
+                res.status,
+                header_hints
+                    .iter()
+                    .map(|h| format!("\n\t{}", h))
+                    .collect::<Vec<String>>()
+                    .join(""),
+            )
+        }
+    }
+}
+
+fn header_value<'a>(h: &'a http::HeaderMap, key: &str) -> Option<&'a str> {
+    h.get(key).and_then(|val| val.to_str().ok())
 }
 
 pub struct Doctor {
@@ -297,17 +352,19 @@ mod tests {
     use std::net::SocketAddr;
     use std::net::TcpListener;
 
+    use http::StatusCode;
     use tempfile::tempdir;
 
     use super::*;
 
-    fn stub_response(status: http::StatusCode, headers: Vec<(String, String)>) -> HttpResponse {
-        let headers: HashMap<String, String> = headers.into_iter().collect();
-        HttpResponse {
-            status,
-            headers: (&headers).try_into().unwrap(),
-            body: vec![],
-        }
+    macro_rules! response {
+        ($status:expr $(, $name:tt : $val:tt)* $(,)?) => {
+            HttpResponse {
+                status: $status,
+                headers: (&HashMap::<String, String>::from([$(($name.to_string(), $val.to_string()),)*])).try_into().unwrap(),
+                body: vec![],
+            }
+        };
     }
 
     #[test]
@@ -447,7 +504,7 @@ mod tests {
         {
             doc.stub_healthcheck_response = Some(Box::new(|url, _x2p| {
                 assert_eq!(url.path(), "/edenapi/some_repo/capabilities");
-                Ok(stub_response(http::StatusCode::OK, vec![]))
+                Ok(response!(http::StatusCode::OK))
             }));
             assert!(matches!(doc.check_http_connectivity(&cfg), Ok(())));
         }
@@ -455,7 +512,7 @@ mod tests {
         // Unexpected HTTP response.
         {
             doc.stub_healthcheck_response = Some(Box::new(|_url, _x2p| {
-                Ok(stub_response(http::StatusCode::FORBIDDEN, vec![]))
+                Ok(response!(http::StatusCode::FORBIDDEN))
             }));
             assert!(matches!(
                 doc.check_http_connectivity(&cfg),
@@ -484,12 +541,9 @@ mod tests {
             // Simulate x2pagentd specific problem.
             doc.stub_healthcheck_response = Some(Box::new(|_url, x2p| {
                 if x2p {
-                    Ok(stub_response(
-                        http::StatusCode::INTERNAL_SERVER_ERROR,
-                        vec![],
-                    ))
+                    Ok(response!(http::StatusCode::INTERNAL_SERVER_ERROR))
                 } else {
-                    Ok(stub_response(http::StatusCode::OK, vec![]))
+                    Ok(response!(http::StatusCode::OK))
                 }
             }));
             assert!(matches!(
@@ -502,5 +556,30 @@ mod tests {
                 )))
             ));
         }
+    }
+
+    #[test]
+    fn test_diagnose_unexpected_response() {
+        assert_eq!(
+            diagnose_unexpected_response(&response!(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "x-x2pagentd-error-type": "apple",
+                "x-x2pagentd-error-msg": "not crispy",
+            )),
+            "Unexpected server response: 500 Internal Server Error\n\tx2pagentd: apple (not crispy)"
+        );
+
+        assert_eq!(
+            diagnose_unexpected_response(&response!(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "x-fb-validated-x2pauth-advice-access-denied": "reboot laptop",
+            )),
+            "Unexpected server response: 500 Internal Server Error\n\tx2p auth access-denied: reboot laptop"
+        );
+
+        assert_eq!(
+            diagnose_unexpected_response(&response!(StatusCode::FORBIDDEN)),
+            "You lack permission for this repo. Please see https://fburl.com/svnuser, and make sure you have permission for this repo.",
+        );
     }
 }

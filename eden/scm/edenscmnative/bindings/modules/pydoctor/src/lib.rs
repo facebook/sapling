@@ -22,8 +22,9 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 fn diagnose_network(py: Python, config: &config) -> PyResult<Option<(String, String)>> {
-    match network_doctor::Doctor::new().diagnose(&config.get_cfg(py)) {
+    let config = &config.get_cfg(py);
+    match network_doctor::Doctor::new().diagnose(config) {
         Ok(()) => Ok(None),
-        Err(d) => Ok(Some((d.treatment(), format!("{}", d)))),
+        Err(d) => Ok(Some((d.treatment(config), format!("{}", d)))),
     }
 }

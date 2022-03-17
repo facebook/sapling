@@ -21,7 +21,7 @@ pub fn run(_opts: DebugNetworkDoctorOps, io: &IO, repo: Repo) -> Result<u8> {
     let mut stdout = io.output();
     match network_doctor::Doctor::new().diagnose(repo.config()) {
         Ok(()) => write!(stdout, "No network problems detected.\n")?,
-        Err(d) => write!(stdout, "{}\n\n{}\n", d.treatment(), d)?,
+        Err(d) => write!(stdout, "{}\n\n{}\n", d.treatment(repo.config()), d)?,
     };
     Ok(0)
 }
