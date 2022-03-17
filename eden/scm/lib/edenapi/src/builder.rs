@@ -132,7 +132,6 @@ pub struct HttpClientBuilder {
     debug: bool,
     correlator: Option<String>,
     http_version: Option<HttpVersion>,
-    validate_certs: bool,
     log_dir: Option<PathBuf>,
     encoding: Option<Encoding>,
     min_transfer_speed: Option<MinTransferSpeed>,
@@ -167,21 +166,15 @@ impl HttpClientBuilder {
             .parse::<Url>()
             .map_err(|e| ConfigError::Invalid("edenapi.url".into(), e.into()))?;
 
-        let validate_certs =
-            get_config::<bool>(config, "edenapi", "validate-certs")?.unwrap_or_default();
         let auth = AuthSection::from_config(config)
             .best_match_for(&server_url)
-            .or_else(|e| {
-                // If certificate validation is disabled, ignore errors here and make it appear as
-                // if there simply wasn't a matching cert. This prevents EdenAPI from crashing the
-                // program on startup if the user's certificate is missing.
-                if validate_certs {
-                    Err(e)
-                } else {
-                    tracing::warn!("Ignoring missing client certificates: {}", &e);
-                    Ok(None)
-                }
-            })?;
+            .unwrap_or_else(|e| {
+                // Ignore errors here and make it appear as if there simply
+                // wasn't a matching cert. This prevents EdenAPI from crashing
+                // the program on startup if the user's certificate is missing.
+                tracing::warn!("Ignoring missing client certificates: {}", &e);
+                None
+            });
 
         let mut headers = get_config::<String>(config, "edenapi", "headers")?
             .map(parse_headers)
@@ -246,7 +239,6 @@ impl HttpClientBuilder {
             debug,
             correlator: None,
             http_version,
-            validate_certs,
             log_dir,
             encoding,
             min_transfer_speed,
@@ -348,13 +340,6 @@ impl HttpClientBuilder {
         self
     }
 
-    /// Specify whether the client should validate the user's client certificate
-    /// before each request.
-    pub fn validate_certs(mut self, validate_certs: bool) -> Self {
-        self.validate_certs = validate_certs;
-        self
-    }
-
     /// If specified, the client will write a JSON version of every request
     /// it sends to the specified directory. This is primarily useful for
     /// debugging.
@@ -410,7 +395,6 @@ pub(crate) struct Config {
     pub(crate) debug: bool,
     pub(crate) correlator: Option<String>,
     pub(crate) http_version: Option<HttpVersion>,
-    pub(crate) validate_certs: bool,
     pub(crate) log_dir: Option<PathBuf>,
     pub(crate) encoding: Option<Encoding>,
     pub(crate) min_transfer_speed: Option<MinTransferSpeed>,
@@ -435,7 +419,6 @@ impl TryFrom<HttpClientBuilder> for Config {
             debug,
             correlator,
             http_version,
-            validate_certs,
             log_dir,
             encoding,
             min_transfer_speed,
@@ -472,7 +455,6 @@ impl TryFrom<HttpClientBuilder> for Config {
             debug,
             correlator,
             http_version,
-            validate_certs,
             log_dir,
             encoding,
             min_transfer_speed,

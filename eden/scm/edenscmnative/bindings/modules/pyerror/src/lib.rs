@@ -214,13 +214,6 @@ fn register_error_handlers() {
                     cpython_ext::Str::from(e.to_string()),
                 )),
             }
-        } else if let Some(edenapi::EdenApiError::BadCertificate(e)) =
-            e.downcast_ref::<edenapi::EdenApiError>()
-        {
-            Some(PyErr::new::<CertificateError, _>(
-                py,
-                cpython_ext::Str::from(format!("{}", e)),
-            ))
         } else if e.is::<auth::MissingCerts>() {
             Some(PyErr::new::<CertificateError, _>(
                 py,

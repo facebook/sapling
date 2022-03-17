@@ -16,7 +16,6 @@ use std::time::Duration;
 
 use anyhow::format_err;
 use async_trait::async_trait;
-use auth::check_certs;
 use bytes::Bytes as RawBytes;
 use edenapi_types::make_hash_lookup_request;
 use edenapi_types::AnyFileContentId;
@@ -213,12 +212,6 @@ impl Client {
         // config and glue code to apply the config to the request.
 
         let config = self.config();
-
-        if let Some(ref cert) = config.http_config.cert_path {
-            if self.config().validate_certs {
-                check_certs(cert)?;
-            }
-        }
 
         for (k, v) in &config.headers {
             req.set_header(k, v);

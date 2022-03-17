@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use auth::MissingCerts;
-use auth::X509Error;
 use edenapi_types::wire::WireToApiConversionError;
 use edenapi_types::EdenApiServerError;
 use http::header::HeaderMap;
@@ -24,10 +22,6 @@ pub enum EdenApiError {
     ParseResponse(String),
     #[error(transparent)]
     BadConfig(#[from] ConfigError),
-    #[error(transparent)]
-    MissingCertificate(#[from] MissingCerts),
-    #[error(transparent)]
-    BadCertificate(#[from] X509Error),
     #[error(transparent)]
     Http(#[from] HttpClientError),
     #[error("Server reported an error ({status}): {message}. Headers: {headers:#?}")]

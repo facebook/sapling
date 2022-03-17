@@ -8,7 +8,6 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.51"
 async-trait = "0.1.52"
-auth = { version = "0.1.0", path = "../../auth" }
 configmodel = { version = "0.1.0", path = "../../configmodel" }
 edenapi_types = { version = "0.1.0", path = "../types" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }

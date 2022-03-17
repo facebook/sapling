@@ -13,7 +13,6 @@ use auth::AuthSection;
 use auth::{self};
 use cpython::*;
 use cpython_ext::PyNone;
-use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
 use pyconfigparser::config;
 use url::Url;
@@ -35,7 +34,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             )
         ),
     )?;
-    m.add(py, "checkcert", py_fn!(py, checkcert(cert: &PyPath)))?;
 
     Ok(m)
 }
@@ -98,8 +96,4 @@ fn getauth(
                 Ok((&group.name, dict).to_py_object(py).into_object())
             },
         )
-}
-
-fn checkcert(py: Python, cert: &PyPath) -> PyResult<PyNone> {
-    auth::check_certs(cert).map_pyerr(py).map(|_| PyNone)
 }
