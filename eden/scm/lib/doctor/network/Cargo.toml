@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 configmodel = { version = "0.1.0", path = "../../configmodel" }
+thiserror = "1.0.29"
 url = "2.2.2"

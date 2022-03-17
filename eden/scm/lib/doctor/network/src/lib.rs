@@ -14,21 +14,44 @@ use std::vec;
 
 use configmodel::Config;
 use configmodel::ConfigExt;
+use thiserror::Error;
 use url::Host;
 use url::Url;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum HostError {
+    #[error("invalid host config: {0}")]
     Config(String),
+    #[error("DNS error: {0}")]
     DNS(io::Error),
+    #[error("TCP error: {0}")]
     TCP(io::Error),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Diagnosis {
+    #[error("invalid config: {0}")]
     BadConfig(String),
+    #[error("no internet connectivity: {0}")]
     NoInternet(HostError),
+    #[error("no corp connectivity: {0}")]
     NoCorp(HostError),
+}
+
+impl Diagnosis {
+    pub fn treatment(&self) -> String {
+        match self {
+            Self::NoCorp(_) => {
+                "Please check your VPN connection (internet okay, but can't reach corp)."
+                    .to_string()
+            }
+            Self::NoInternet(_) => {
+                "Please check your internet connection (failed external connectivity test)."
+                    .to_string()
+            }
+            Self::BadConfig(msg) => format!("Invalid config: {}", msg),
+        }
+    }
 }
 
 pub struct Doctor {
