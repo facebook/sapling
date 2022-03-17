@@ -1,0 +1,10 @@
+[package]
+name = "pydoctor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+network-doctor = { path = "../../../../lib/doctor/network" }
+cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython = { version = "0.7", default-features = false }
+pyconfigparser = { path = "../pyconfigparser" }

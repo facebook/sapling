@@ -20,7 +20,7 @@ lto = false
 cpython_ext = { path = "../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.7", default-features = false }
 pyauth = { path = "modules/pyauth" }
-pycats= { path = "modules/pycats" }
+pycats = { path = "modules/pycats" }
 pyblackbox = { path = "modules/pyblackbox" }
 pybytes = { path = "modules/pybytes" }
 pycheckout = { path = "modules/pycheckout" }
@@ -29,6 +29,7 @@ pyconfigparser = { path = "modules/pyconfigparser" }
 pydag = { path = "modules/pydag" }
 pydiffhelpers = { path = "modules/pydiffhelpers" }
 pydirs = { path = "modules/pydirs" }
+pydoctor = { path = "modules/pydoctor" }
 pydrawdag = { path = "modules/pydrawdag" }
 pyeagerepo = { path = "modules/pyeagerepo" }
 pyedenapi = { path = "modules/pyedenapi" }
