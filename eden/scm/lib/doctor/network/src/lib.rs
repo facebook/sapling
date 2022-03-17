@@ -12,6 +12,8 @@ use std::net::ToSocketAddrs;
 use std::time::Duration;
 use std::vec;
 
+use configmodel::Config;
+use configmodel::ConfigExt;
 use url::Host;
 use url::Url;
 
@@ -22,7 +24,10 @@ pub enum HostError {
     TCP(io::Error),
 }
 
-struct Doctor {
+#[derive(Debug)]
+pub enum Diagnosis {}
+
+pub struct Doctor {
     // Allow tests to stub DNS responses.
     dns_lookup: Box<dyn Fn(&str) -> io::Result<vec::IntoIter<SocketAddr>>>,
     tcp_connect_timeout: Duration,
@@ -33,7 +38,7 @@ fn real_dns_lookup(host_port: &str) -> io::Result<vec::IntoIter<SocketAddr>> {
 }
 
 impl Doctor {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Doctor {
             dns_lookup: Box::new(real_dns_lookup),
             tcp_connect_timeout: Duration::from_secs(1),
@@ -73,6 +78,10 @@ impl Doctor {
             }
         }
 
+        Ok(())
+    }
+
+    pub fn diagnose(&self, _config: &dyn Config) -> Result<(), Diagnosis> {
         Ok(())
     }
 }

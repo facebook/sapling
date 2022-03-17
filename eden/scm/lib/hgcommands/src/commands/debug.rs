@@ -21,11 +21,12 @@ commands! {
     mod dynamicconfig;
     mod fsync;
     mod http;
-    mod scmstore;
-    mod scmstorereplay;
+    mod networkdoctor;
     mod python;
     mod racyoutput;
     mod runlog;
+    mod scmstore;
+    mod scmstorereplay;
     mod segmentclone;
     mod segmentgraph;
     mod segmentpull;

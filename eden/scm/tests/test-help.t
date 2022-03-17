@@ -1019,6 +1019,8 @@ Test list of internal help commands
                  convert obsolescence markers to mutation records
    debugnamecomplete
                  complete "names" - tags, open branch names, bookmark names
+   debugnetworkdoctor
+                 run the (Rust) network doctor
    debugobsolete
                  create arbitrary obsolete marker
    debugoptADV   (no help text available)

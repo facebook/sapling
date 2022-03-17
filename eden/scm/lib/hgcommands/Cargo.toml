@@ -32,6 +32,7 @@ indexedlog = { version = "0.1.0", path = "../indexedlog" }
 libc = "0.2.98"
 metrics-render = { version = "0.1.0", path = "../metrics/render" }
 mincode = { version = "0.1.0", path = "../mincode" }
+network-doctor = { version = "0.1.0", path = "../doctor/network" }
 once_cell = "1.8"
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 procinfo = { version = "0.1.0", path = "../procinfo" }
