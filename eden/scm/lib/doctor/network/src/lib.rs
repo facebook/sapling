@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
 use std::io;
 use std::net::SocketAddr;
 use std::net::TcpStream;
@@ -56,11 +57,34 @@ pub enum Diagnosis {
     HttpProblem(HttpError),
 }
 
-#[derive(Debug)]
 pub struct HttpResponse {
     status: http::StatusCode,
     headers: http::HeaderMap,
     body: Vec<u8>,
+}
+
+impl fmt::Debug for HttpResponse {
+    // Turn body into text based on content-type.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match header_value(&self.headers, "content-type") {
+            Some("application/json") | Some("text/html") => {
+                write!(
+                    f,
+                    "HttpResponse {{ status: {:?}, headers: {:?}, body: {:?} }}",
+                    self.status,
+                    self.headers,
+                    String::from_utf8_lossy(&self.body)
+                )
+            }
+            _ => {
+                write!(
+                    f,
+                    "HttpResponse {{ status: {:?}, headers: {:?}, body: {:?} }}",
+                    self.status, self.headers, self.body
+                )
+            }
+        }
+    }
 }
 
 impl Diagnosis {
@@ -359,10 +383,13 @@ mod tests {
 
     macro_rules! response {
         ($status:expr $(, $name:tt : $val:tt)* $(,)?) => {
+            response!($status, b"", $($name : $val,)*)
+        };
+        ($status:expr, $body:expr $(, $name:tt : $val:tt)* $(,)?) => {
             HttpResponse {
                 status: $status,
                 headers: (&HashMap::<String, String>::from([$(($name.to_string(), $val.to_string()),)*])).try_into().unwrap(),
-                body: vec![],
+                body: $body.to_vec(),
             }
         };
     }
@@ -580,6 +607,33 @@ mod tests {
         assert_eq!(
             diagnose_unexpected_response(&response!(StatusCode::FORBIDDEN)),
             "You lack permission for this repo. Please see https://fburl.com/svnuser, and make sure you have permission for this repo.",
+        );
+    }
+
+    #[test]
+    fn test_response_body_format() {
+        assert_eq!(
+            format!(
+                "{:?}",
+                response!(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    b"some body",
+                    "content-type": "application/octet-stream",
+                )
+            ),
+            "HttpResponse { status: 500, headers: {\"content-type\": \"application/octet-stream\"}, body: [115, 111, 109, 101, 32, 98, 111, 100, 121] }"
+        );
+
+        assert_eq!(
+            format!(
+                "{:?}",
+                response!(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    b"{}",
+                    "content-type": "application/json",
+                )
+            ),
+            "HttpResponse { status: 500, headers: {\"content-type\": \"application/json\"}, body: \"{}\" }"
         );
     }
 }
