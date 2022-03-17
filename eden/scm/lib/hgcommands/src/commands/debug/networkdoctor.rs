@@ -18,11 +18,11 @@ define_flags! {
 }
 
 pub fn run(_opts: DebugNetworkDoctorOps, io: &IO, repo: Repo) -> Result<u8> {
-    write!(
-        io.output(),
-        "{:?}\n",
-        network_doctor::Doctor::new().diagnose(repo.config())
-    )?;
+    let mut stdout = io.output();
+    match network_doctor::Doctor::new().diagnose(repo.config()) {
+        Ok(()) => write!(stdout, "No network problems detected.\n")?,
+        Err(d) => write!(stdout, "{}\n\n{}\n", d.treatment(), d)?,
+    };
     Ok(0)
 }
 
