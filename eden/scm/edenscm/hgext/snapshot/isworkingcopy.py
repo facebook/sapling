@@ -13,19 +13,16 @@ from .latest import _isworkingcopy
 def cmd(ui, repo, csid=None, **opts):
     if csid is None:
         raise error.CommandError("snapshot isworkingcopy", _("missing snapshot id"))
-    try:
-        snapshot = repo.edenapi.fetchsnapshot(
-            {
-                "cs_id": bytes.fromhex(csid),
-            },
-        )
-    except Exception:
-        raise error.Abort(_("snapshot doesn't exist"))
+
+    snapshot = repo.edenapi.fetchsnapshot(
+        {
+            "cs_id": bytes.fromhex(csid),
+        },
+    )
+    maxuntrackedsize = parsemaxuntracked(opts)
+    iswc, reason = _isworkingcopy(ui, repo, snapshot, maxuntrackedsize)
+    if iswc:
+        if not ui.plain():
+            ui.status(_("snapshot is the working copy\n"))
     else:
-        maxuntrackedsize = parsemaxuntracked(opts)
-        iswc, reason = _isworkingcopy(ui, repo, snapshot, maxuntrackedsize)
-        if iswc:
-            if not ui.plain():
-                ui.status(_("snapshot is the working copy\n"))
-        else:
-            raise error.Abort(_("snapshot is not the working copy: {}").format(reason))
+        raise error.Abort(_("snapshot is not the working copy: {}").format(reason))
