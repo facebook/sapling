@@ -328,10 +328,7 @@ impl Dispatcher {
                     }
                 }
             }
-            CommandFunc::OptionalRepo(f) => match optional_repo {
-                OptionalRepo::Some(repo) => f(parsed, io, Some(repo)),
-                OptionalRepo::None(_config) => f(parsed, io, None),
-            },
+            CommandFunc::OptionalRepo(f) => f(parsed, io, optional_repo),
             CommandFunc::NoRepo(f) => f(parsed, io, optional_repo.take_config()),
         }
     }

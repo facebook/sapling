@@ -13,13 +13,14 @@ use cliparser::parser::Flag;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
 use configparser::config::ConfigSet;
+use repo::repo::OptionalRepo;
 use repo::repo::Repo;
 
 use crate::io::IO;
 
 pub enum CommandFunc {
     NoRepo(Box<dyn Fn(ParseOutput, &IO, ConfigSet) -> Result<u8>>),
-    OptionalRepo(Box<dyn Fn(ParseOutput, &IO, Option<Repo>) -> Result<u8>>),
+    OptionalRepo(Box<dyn Fn(ParseOutput, &IO, OptionalRepo) -> Result<u8>>),
     Repo(Box<dyn Fn(ParseOutput, &IO, Repo) -> Result<u8>>),
 }
 
@@ -127,12 +128,12 @@ where
 impl<S, FN> Register<FN, ((), S)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(S, &IO, Option<Repo>) -> Result<u8> + 'static,
+    FN: Fn(S, &IO, OptionalRepo) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {
         self.insert_aliases(name);
         let func =
-            move |opts: ParseOutput, io: &IO, repo: Option<Repo>| f(opts.try_into()?, io, repo);
+            move |opts: ParseOutput, io: &IO, repo: OptionalRepo| f(opts.try_into()?, io, repo);
         let func = CommandFunc::OptionalRepo(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func);
         self.commands.insert(name.to_string(), def);
