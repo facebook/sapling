@@ -346,13 +346,17 @@ impl Doctor {
 
         if !use_x2pagentd {
             let auth = match AuthSection::from_config(config).best_match_for(url) {
-                Ok(Some(auth)) => auth,
+                Ok(Some(auth)) => Some(auth),
                 Ok(None) => {
-                    return Err(HttpError::Config(format!("no auth section for {}", url)));
+                    if url.scheme() == "https" {
+                        return Err(HttpError::Config(format!("no auth section for {}", url)));
+                    } else {
+                        None
+                    }
                 }
                 Err(err) => return Err(err.into()),
             };
-            hc = hg_http::http_config(config, Some(auth));
+            hc = hg_http::http_config(config, auth);
             // This disables x2pagentd when it is enabled by default.
             hc.unix_socket_path = None;
         }
@@ -585,7 +589,7 @@ mod tests {
             fake_cert_path.to_string_lossy().to_string(),
         );
 
-        // Happy path - server returns 200 for /health_check.
+        // Happy path - server returns 200 for /capabilities.
         {
             doc.stub_healthcheck_response = Some(Box::new(|url, _x2p| {
                 assert_eq!(url.path(), "/edenapi/some_repo/capabilities");
@@ -640,6 +644,42 @@ mod tests {
                     }
                 )))
             ));
+        }
+
+        // Make sure we support non-https.
+        {
+            let mut cfg = cfg.clone();
+
+            cfg.insert(
+                "edenapi.url".to_string(),
+                "http://example.com/edenapi/".to_string(),
+            );
+
+            cfg.insert("auth.test.prefix".to_string(), "doesnt_match".to_string());
+
+            doc.stub_healthcheck_response =
+                Some(Box::new(|_url, _x2p| Ok(response!(http::StatusCode::OK))));
+            assert!(matches!(doc.check_http_connectivity(&cfg), Ok(())));
+        }
+
+        // Give a specific error for missing auth section.
+        {
+            let mut cfg = cfg.clone();
+
+            cfg.insert("auth.test.prefix".to_string(), "doesnt_match".to_string());
+
+            doc.stub_healthcheck_response =
+                Some(Box::new(|_url, _x2p| Ok(response!(http::StatusCode::OK))));
+
+            match doc.check_http_connectivity(&cfg) {
+                Err(Diagnosis::HttpProblem(HttpError::Config(msg))) => {
+                    assert_eq!(
+                        msg,
+                        "no auth section for https://example.com/edenapi/some_repo/capabilities"
+                    );
+                }
+                _ => panic!(),
+            };
         }
     }
 
