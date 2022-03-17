@@ -109,6 +109,25 @@ impl Diagnosis {
             Self::HttpProblem(err) => diagnose_http_error(err),
         }
     }
+
+    fn short_name<'a>(&'a self) -> String {
+        let http_detail = |err: &'a HttpError| -> &'a str {
+            match err {
+                HttpError::UnexpectedResponse(res) => res.status.as_str(),
+                HttpError::RequestFailure(_) => "other",
+                HttpError::MissingCerts(_) => "missing_certs",
+                HttpError::Config(_) => "config",
+            }
+        };
+
+        match self {
+            Diagnosis::BadConfig(_) => "bad_config".to_string(),
+            Diagnosis::NoInternet(_) => "no_internet".to_string(),
+            Diagnosis::NoCorp(_) => "no_corp".to_string(),
+            Diagnosis::AuthProxyProblem(err) => format!("auth_proxy_problem({})", http_detail(err)),
+            Diagnosis::HttpProblem(err) => format!("http_problem({})", http_detail(err)),
+        }
+    }
 }
 
 fn diagnose_http_error(err: &HttpError) -> String {
@@ -226,9 +245,19 @@ impl Doctor {
     }
 
     pub fn diagnose(&self, config: &dyn Config) -> Result<(), Diagnosis> {
-        self.check_corp_connectivity(config)?;
-        self.check_http_connectivity(config)?;
-        Ok(())
+        let res = || -> Result<(), Diagnosis> {
+            self.check_corp_connectivity(config)?;
+            self.check_http_connectivity(config)?;
+            Ok(())
+        }();
+
+        let short_res = match &res {
+            Err(err) => err.short_name(),
+            Ok(()) => "ok".to_string(),
+        };
+        tracing::debug!(target: "network_doctor_diagnosis", network_doctor_diagnosis=&short_res[..]);
+
+        res
     }
 
     fn check_corp_connectivity(&self, config: &dyn Config) -> Result<(), Diagnosis> {
