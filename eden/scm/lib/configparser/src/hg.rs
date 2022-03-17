@@ -72,7 +72,7 @@ pub trait ConfigSetHgExt {
     #[cfg(feature = "fb")]
     /// Load the dynamic config files for the given repo path.
     /// Returns errors parsing, generating, or fetching the configs.
-    fn load_dynamic(&mut self, repo_path: &Path, opts: Options) -> Result<Vec<Error>>;
+    fn load_dynamic(&mut self, repo_path: Option<&Path>, opts: Options) -> Result<Vec<Error>>;
 
     /// Load user config files (and environment variables).  If `$HGRCPATH` is
     /// set, load files listed in that environment variable instead.
@@ -240,9 +240,7 @@ impl ConfigSetHgExt for ConfigSet {
             errors.append(&mut self.parse(MERGE_TOOLS_CONFIG, &"merge-tools.rc".into()));
         }
         #[cfg(feature = "fb")]
-        if let Some(repo_path) = repo_path {
-            errors.append(&mut self.load_dynamic(&repo_path, opts.clone())?);
-        }
+        errors.append(&mut self.load_dynamic(repo_path, opts.clone())?);
         errors.append(&mut self.load_system(opts.clone()));
         errors.append(&mut self.load_user(opts.clone()));
 
@@ -300,7 +298,7 @@ impl ConfigSetHgExt for ConfigSet {
     }
 
     #[cfg(feature = "fb")]
-    fn load_dynamic(&mut self, repo_path: &Path, opts: Options) -> Result<Vec<Error>> {
+    fn load_dynamic(&mut self, repo_path: Option<&Path>, opts: Options) -> Result<Vec<Error>> {
         use std::process::Command;
         use std::time::Duration;
         use std::time::SystemTime;
@@ -311,7 +309,7 @@ impl ConfigSetHgExt for ConfigSet {
         let mut errors = Vec::new();
 
         // Compute path
-        let dynamic_path = get_config_dir(Some(repo_path))?.join("hgrc.dynamic");
+        let dynamic_path = get_config_dir(repo_path)?.join("hgrc.dynamic");
 
         // Check version
         let content = read_to_string(&dynamic_path).ok();
@@ -327,25 +325,29 @@ impl ConfigSetHgExt for ConfigSet {
 
         // Synchronously generate the new config if it's out of date with our version
         if version != Some(this_version) {
-            tracing::info!("dynamicconfig: regenerate at {}", repo_path.display());
+            tracing::info!("dynamicconfig: regenerate at {}", dynamic_path.display());
             let (repo_name, user_name) = {
                 let mut temp_config = ConfigSet::new();
-                // We need to know the repo name, but that's stored in the repository configs at
-                // the moment. In the long term we need to move that, but for now let's load the
-                // repo config ahead of time to read the name.
-                let repo_hgrc_path = repo_path.join("hgrc");
                 if !temp_config.load_user(opts.clone()).is_empty() {
                     bail!("unable to read user config to get user name");
                 }
-                let opts = opts.clone().source("temp").process_hgplain();
-                if !temp_config.load_path(repo_hgrc_path, &opts).is_empty() {
-                    bail!("unable to read repo config to get repo name");
-                }
 
-                let user_name: String = temp_config.get_or_default("ui", "username")?;
-                let repo_name = read_set_repo_name(&mut temp_config, repo_path)?;
+                let repo_name = match repo_path {
+                    Some(repo_path) => {
+                        let opts = opts.clone().source("temp").process_hgplain();
+                        // We need to know the repo name, but that's stored in the repository configs at
+                        // the moment. In the long term we need to move that, but for now let's load the
+                        // repo config ahead of time to read the name.
+                        let repo_hgrc_path = repo_path.join("hgrc");
+                        if !temp_config.load_path(repo_hgrc_path, &opts).is_empty() {
+                            bail!("unable to read repo config to get repo name");
+                        }
+                        Some(read_set_repo_name(&mut temp_config, repo_path)?)
+                    }
+                    None => None,
+                };
 
-                (repo_name, user_name)
+                (repo_name, temp_config.get_or_default("ui", "username")?)
             };
 
             // Regen inline
@@ -395,8 +397,12 @@ impl ConfigSetHgExt for ConfigSet {
                     let mut command = Command::new("hg");
                     command
                         .arg("debugdynamicconfig")
-                        .args(&["--cwd", &repo_path.to_string_lossy()])
                         .env("HG_DEBUGDYNAMICCONFIG", "1");
+
+                    if let Some(repo_path) = repo_path {
+                        command.args(&["--cwd", &repo_path.to_string_lossy()]);
+                    }
+
                     let _ = run_background(command);
                 }
             }
@@ -641,34 +647,39 @@ fn get_config_dir(repo_path: Option<&Path>) -> Result<PathBuf> {
                 repo_path.to_path_buf()
             }
         }
-        None => dirs::cache_dir()
-            .ok_or_else(|| anyhow!("unable to find cache_dir for Mercurial configuration"))?
-            .join("edenscm"),
+        None => {
+            let mut dir = if let Ok(tmp) = std::env::var("TESTTMP") {
+                PathBuf::from(tmp).join(".cache")
+            } else {
+                dirs::cache_dir().ok_or_else(|| {
+                    anyhow!("unable to find cache_dir for Mercurial configuration")
+                })?
+            };
+
+            dir.push("edenscm");
+
+            util::path::create_shared_dir_all(&dir)?;
+
+            dir
+        }
     })
 }
 
 #[cfg(feature = "fb")]
 pub fn calculate_dynamicconfig(
     config_dir: PathBuf,
-    repo_name: String,
+    repo_name: Option<impl AsRef<str>>,
     canary: Option<String>,
     user_name: String,
 ) -> Result<ConfigSet> {
     use crate::fb::dynamicconfig::Generator;
-
-    let config = Generator::new(
-        repo_name.clone(),
-        config_dir.to_path_buf(),
-        user_name.clone(),
-    )?
-    .execute(canary.clone())?;
-    Ok(config)
+    Generator::new(repo_name, config_dir, user_name)?.execute(canary)
 }
 
 #[cfg(feature = "fb")]
 pub fn generate_dynamicconfig(
-    repo_path: &Path,
-    repo_name: String,
+    repo_path: Option<&Path>,
+    repo_name: Option<impl AsRef<str>>,
     canary: Option<String>,
     user_name: String,
 ) -> Result<()> {
@@ -680,7 +691,7 @@ pub fn generate_dynamicconfig(
 
 
     // Resolve sharedpath
-    let config_dir = get_config_dir(Some(repo_path))?;
+    let config_dir = get_config_dir(repo_path)?;
 
     // Verify that the filesystem is writable, otherwise exit early since we won't be able to write
     // the config.
@@ -702,7 +713,7 @@ pub fn generate_dynamicconfig(
             "# Generated by `hg debugdynamicconfig` - DO NOT MODIFY\n",
         ),
         version,
-        &repo_name,
+        repo_name.as_ref().map_or("no_repo", |r| r.as_ref()),
         canary.as_ref(),
         &user_name,
     );

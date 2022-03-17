@@ -1,6 +1,7 @@
 #chg-compatible
 
-  $ hg init
+  $ hg init repo
+  $ cd repo
   $ touch a
 
   $ unset HGUSER

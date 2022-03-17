@@ -23,17 +23,18 @@ define_flags! {
 pub fn run(opts: DebugDynamicConfigOpts, _io: &IO, repo: Repo) -> Result<u8> {
     #[cfg(feature = "fb")]
     {
-        let repo_name: String = repo
-            .repo_name()
-            .map_or_else(|| "".to_string(), |s| s.to_string());
-
         let username = repo
             .config()
             .get("ui", "username")
             .and_then(|u| Some(u.to_string()))
             .unwrap_or_else(|| "".to_string());
 
-        generate_dynamicconfig(repo.shared_dot_hg_path(), repo_name, opts.canary, username)?;
+        generate_dynamicconfig(
+            Some(repo.shared_dot_hg_path()),
+            repo.repo_name(),
+            opts.canary,
+            username,
+        )?;
     }
     #[cfg(not(feature = "fb"))]
     let _ = (opts, repo);

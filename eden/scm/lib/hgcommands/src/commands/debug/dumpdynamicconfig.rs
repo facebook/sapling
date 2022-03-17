@@ -16,7 +16,7 @@ use super::IO;
 define_flags! {
     pub struct DebugDumpConfigOpts {
         /// repository name
-        reponame: String,
+        reponame: Option<String>,
 
         /// user name
         username: String,

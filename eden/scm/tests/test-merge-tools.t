@@ -5,7 +5,8 @@
 test merge-tools configuration - mostly exercising filemerge.py
 
   $ unset HGMERGE # make sure HGMERGE doesn't interfere with the test
-  $ hg init
+  $ hg init repo
+  $ cd repo
 
 revision 0
 
@@ -1099,6 +1100,9 @@ set tools.args explicit to include $base $local $other $output:
   space
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+
+
+
   $ aftermerge
   # cat f
   revision 1
@@ -1311,7 +1315,7 @@ Verify naming of temporary files and that extension is preserved:
   $ hg update -q -C 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9
   $ hg merge -y -r tip --tool echo --config merge-tools.echo.args='$base $local $other $output'
   merging f and f.txt to f.txt
-  */f~base* $TESTTMP/f.txt.orig */f~other.*txt $TESTTMP/f.txt (glob)
+  */f~base* $TESTTMP/repo/f.txt.orig */f~other.*txt $TESTTMP/repo/f.txt (glob)
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -1394,4 +1398,3 @@ test ui.merge:interactive
   f = nonint
   $ hg debugpickmergetool --config ui.formatted=true  --config ui.interactive=true  --config ui.merge=nonint --config ui.merge:interactive=int f
   f = int
-
