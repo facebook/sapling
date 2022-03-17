@@ -25,7 +25,11 @@ pub enum HostError {
 }
 
 #[derive(Debug)]
-pub enum Diagnosis {}
+pub enum Diagnosis {
+    BadConfig(String),
+    NoInternet(HostError),
+    NoCorp(HostError),
+}
 
 pub struct Doctor {
     // Allow tests to stub DNS responses.
@@ -81,13 +85,65 @@ impl Doctor {
         Ok(())
     }
 
-    pub fn diagnose(&self, _config: &dyn Config) -> Result<(), Diagnosis> {
+    pub fn diagnose(&self, config: &dyn Config) -> Result<(), Diagnosis> {
+        self.check_corp_connectivity(config)?;
         Ok(())
+    }
+
+    fn check_corp_connectivity(&self, config: &dyn Config) -> Result<(), Diagnosis> {
+        let repo_url = config_url(config, "edenapi", "url", None)?;
+
+        // First check for corp connectivity.
+        let corp_err = match self.check_host(&repo_url) {
+            Ok(()) => return Ok(()),
+            Err(err) => err,
+        };
+
+        // If we don't have corp connectivity, see if we have internet connectivity.
+        let external_url = config_url(
+            config,
+            "doctor",
+            "external-host-check-url",
+            Some("https://www.facebook.com"),
+        )?;
+
+        match self.check_host(&external_url) {
+            Ok(()) => Err(Diagnosis::NoCorp(corp_err)),
+            Err(err) => Err(Diagnosis::NoInternet(err)),
+        }
+    }
+}
+
+fn config_url(
+    config: &dyn Config,
+    section: &str,
+    field: &str,
+    default: Option<&str>,
+) -> Result<Url, Diagnosis> {
+    let url: String = match (config.get_nonempty_opt(section, field), default) {
+        (Err(err), _) => return Err(Diagnosis::BadConfig(format!("config error: {}", err))),
+        (Ok(Some(url)), _) => url,
+        (Ok(None), Some(default)) => default.to_string(),
+        (Ok(None), None) => {
+            return Err(Diagnosis::BadConfig(format!(
+                "no config for {}.{}",
+                section, field
+            )));
+        }
+    };
+
+    match Url::parse(&url) {
+        Err(err) => Err(Diagnosis::BadConfig(format!(
+            "invalid url {}: {}",
+            url, err
+        ))),
+        Ok(url) => Ok(url),
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
     use std::net::SocketAddr;
     use std::net::TcpListener;
 
@@ -140,6 +196,56 @@ mod tests {
 
             let url = Url::parse("https://169.254.0.1:1234").unwrap();
             assert!(matches!(doc.check_host(&url), Err(HostError::TCP(_))))
+        }
+    }
+
+    #[test]
+    fn test_check_diagnose() {
+        let non_working_url = "https://169.254.0.1:1234";
+
+        // Both corp and external fail.
+        {
+            let mut cfg = BTreeMap::new();
+            cfg.insert("edenapi.url".to_string(), non_working_url.to_string());
+            cfg.insert(
+                "doctor.external-host-check-url".to_string(),
+                non_working_url.to_string(),
+            );
+
+            let mut doc = Doctor::new();
+            doc.tcp_connect_timeout = Duration::from_millis(1);
+
+            assert!(matches!(doc.diagnose(&cfg), Err(Diagnosis::NoInternet(_))));
+        }
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let listener_addr = listener.local_addr().unwrap();
+        let working_url = format!("https://{}:{}", listener_addr.ip(), listener_addr.port());
+
+        // External works.
+        {
+            let mut cfg = BTreeMap::new();
+            cfg.insert("edenapi.url".to_string(), non_working_url.to_string());
+            cfg.insert(
+                "doctor.external-host-check-url".to_string(),
+                working_url.to_string(),
+            );
+
+            let doc = Doctor::new();
+            assert!(matches!(doc.diagnose(&cfg), Err(Diagnosis::NoCorp(_))));
+        }
+
+        // Corp works.
+        {
+            let mut cfg = BTreeMap::new();
+            cfg.insert("edenapi.url".to_string(), working_url.to_string());
+            cfg.insert(
+                "doctor.external-host-check-url".to_string(),
+                working_url.to_string(),
+            );
+
+            let doc = Doctor::new();
+            assert!(matches!(doc.diagnose(&cfg), Ok(())));
         }
     }
 }
