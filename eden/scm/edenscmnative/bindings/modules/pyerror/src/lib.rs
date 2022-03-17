@@ -140,13 +140,14 @@ fn register_error_handlers() {
                 py,
                 cpython_ext::Str::from(format!("{:?}", e)),
             ))
-        } else if let Some(edenapi::EdenApiError::Http(e)) =
-            e.downcast_ref::<edenapi::EdenApiError>()
-        {
+        } else if let Some(e) = e.downcast_ref::<edenapi::EdenApiError>() {
             match e {
-                http_client::HttpClientError::Tls(http_client::TlsError { source: e, .. }) => Some(
-                    PyErr::new::<TlsError, _>(py, cpython_ext::Str::from(e.to_string())),
-                ),
+                edenapi::EdenApiError::Http(http_client::HttpClientError::Tls(
+                    http_client::TlsError { source: e, .. },
+                )) => Some(PyErr::new::<TlsError, _>(
+                    py,
+                    cpython_ext::Str::from(e.to_string()),
+                )),
                 _ => Some(PyErr::new::<HttpError, _>(
                     py,
                     cpython_ext::Str::from(e.to_string()),
