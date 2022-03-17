@@ -321,6 +321,26 @@ pub fn create_shared_dir(path: impl AsRef<Path>) -> io::Result<()> {
     create_dir_with_mode(path.as_ref(), 0o2775)
 }
 
+/// Create the directory and ancestors with group write permission on UNIX systems.
+pub fn create_shared_dir_all(path: impl AsRef<Path>) -> io::Result<()> {
+    let mut to_create = vec![path.as_ref()];
+    while let Some(dir) = to_create.pop() {
+        match create_shared_dir(dir) {
+            Ok(()) => continue,
+            Err(err) if err.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(err) if err.kind() == io::ErrorKind::NotFound => {
+                to_create.push(dir);
+                match dir.parent() {
+                    Some(parent) => to_create.push(parent),
+                    None => return Err(err),
+                }
+            }
+            Err(err) => return Err(err),
+        }
+    }
+    Ok(())
+}
+
 /// Expand the user's home directory and any environment variables references in
 /// the given path.
 ///
@@ -608,5 +628,21 @@ mod tests {
         let expected = PathBuf::from("/home/user/a/b/$baz");
 
         assert_eq!(expand_path_impl(&path, getenv, homedir), expected);
+    }
+
+    #[test]
+    fn test_create_shared_dir_all() -> Result<()> {
+        let tempdir = TempDir::new()?;
+        let path = tempdir.path().join("foo").join("bar");
+        create_shared_dir_all(&path)?;
+        assert!(path.is_dir());
+
+        #[cfg(unix)]
+        {
+            let metadata = path.metadata()?;
+            assert_eq!(metadata.permissions().mode(), 0o42775);
+        }
+
+        Ok(())
     }
 }
