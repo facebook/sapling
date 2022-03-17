@@ -7,8 +7,10 @@
 
 use std::io::Write;
 
+use configparser::config::Options;
+use repo::repo::OptionalRepo;
+
 use super::define_flags;
-use super::Repo;
 use super::Result;
 use super::IO;
 
@@ -17,7 +19,17 @@ define_flags! {
     }
 }
 
-pub fn run(_opts: DebugNetworkDoctorOps, io: &IO, repo: Repo) -> Result<u8> {
+pub fn run(_opts: DebugNetworkDoctorOps, io: &IO, mut repo: OptionalRepo) -> Result<u8> {
+    // Set a default repo so we can build valid edenapi URLs outside a repo.
+    if let OptionalRepo::None(ref mut config) = repo {
+        config.set(
+            "remotefilelog",
+            "reponame",
+            Some("fbsource"),
+            &Options::new().source("networkdoctor.rs"),
+        );
+    }
+
     let mut stdout = io.output();
     match network_doctor::Doctor::new().diagnose(repo.config()) {
         Ok(()) => write!(stdout, "No network problems detected.\n")?,
