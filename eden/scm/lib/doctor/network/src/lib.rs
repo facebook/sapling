@@ -12,20 +12,34 @@ use std::net::ToSocketAddrs;
 use std::time::Duration;
 use std::vec;
 
+use auth::AuthSection;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use http_client::HttpClientError;
 use thiserror::Error;
 use url::Host;
 use url::Url;
 
 #[derive(Debug, Error)]
 pub enum HostError {
-    #[error("invalid host config: {0}")]
-    Config(String),
     #[error("DNS error: {0}")]
     DNS(io::Error),
     #[error("TCP error: {0}")]
     TCP(io::Error),
+    #[error("invalid host config: {0}")]
+    Config(String),
+}
+
+#[derive(Debug, Error)]
+pub enum HttpError {
+    #[error("unexpected http response: {0:?}")]
+    UnexpectedResponse(HttpResponse),
+    #[error("http request failure: {0:?}")]
+    RequestFailure(HttpClientError),
+    #[error(transparent)]
+    MissingCerts(#[from] auth::MissingCerts),
+    #[error("invalid http config: {0}")]
+    Config(String),
 }
 
 #[derive(Debug, Error)]
@@ -36,6 +50,17 @@ pub enum Diagnosis {
     NoInternet(HostError),
     #[error("no corp connectivity: {0}")]
     NoCorp(HostError),
+    #[error("x2pagentd problem: {0}")]
+    AuthProxyProblem(HttpError),
+    #[error("http connection problem: {0}")]
+    HttpProblem(HttpError),
+}
+
+#[derive(Debug)]
+pub struct HttpResponse {
+    status: http::StatusCode,
+    headers: http::HeaderMap,
+    body: Vec<u8>,
 }
 
 impl Diagnosis {
@@ -50,6 +75,7 @@ impl Diagnosis {
                     .to_string()
             }
             Self::BadConfig(msg) => format!("Invalid config: {}", msg),
+            _ => todo!(),
         }
     }
 }
@@ -58,6 +84,8 @@ pub struct Doctor {
     // Allow tests to stub DNS responses.
     dns_lookup: Box<dyn Fn(&str) -> io::Result<vec::IntoIter<SocketAddr>>>,
     tcp_connect_timeout: Duration,
+    stub_healthcheck_response:
+        Option<Box<dyn Fn(&Url, bool) -> Result<HttpResponse, HttpClientError>>>,
 }
 
 fn real_dns_lookup(host_port: &str) -> io::Result<vec::IntoIter<SocketAddr>> {
@@ -69,10 +97,11 @@ impl Doctor {
         Doctor {
             dns_lookup: Box::new(real_dns_lookup),
             tcp_connect_timeout: Duration::from_secs(1),
+            stub_healthcheck_response: None,
         }
     }
 
-    fn check_host(&self, url: &Url) -> Result<(), HostError> {
+    fn check_host_tcp(&self, url: &Url) -> Result<(), HostError> {
         let port = url.port().unwrap_or(443);
 
         let sock_addrs: Vec<SocketAddr> = match url.host() {
@@ -119,6 +148,7 @@ impl Doctor {
 
     pub fn diagnose(&self, config: &dyn Config) -> Result<(), Diagnosis> {
         self.check_corp_connectivity(config)?;
+        self.check_http_connectivity(config)?;
         Ok(())
     }
 
@@ -126,7 +156,7 @@ impl Doctor {
         let repo_url = config_url(config, "edenapi", "url", None)?;
 
         // First check for corp connectivity.
-        let corp_err = match self.check_host(&repo_url) {
+        let corp_err = match self.check_host_tcp(&repo_url) {
             Ok(()) => return Ok(()),
             Err(err) => err,
         };
@@ -139,13 +169,100 @@ impl Doctor {
             Some("https://www.facebook.com"),
         )?;
 
-        match self.check_host(&external_url) {
+        match self.check_host_tcp(&external_url) {
             Ok(()) => Err(Diagnosis::NoCorp(corp_err)),
             Err(err) => Err(Diagnosis::NoInternet(err)),
         }
     }
+
+    fn check_http_connectivity(&self, config: &dyn Config) -> Result<(), Diagnosis> {
+        let mut url = config_url(config, "edenapi", "url", None)?;
+        let repo_name = match config.get("remotefilelog", "reponame") {
+            Some(name) => name.to_string(),
+            None => {
+                return Err(Diagnosis::BadConfig(
+                    "remotefilelog.reponame is not set".to_string(),
+                ));
+            }
+        };
+
+        // Build edenpi/:repo/capabilities URL. This will suss out permission
+        // errors (as opposed to :repo/health_check).
+        match url.path_segments_mut() {
+            Ok(mut path) => path.pop_if_empty().push(&repo_name).push("capabilities"),
+            Err(()) => return Err(Diagnosis::BadConfig("bad edenapi.url".into())),
+        };
+
+        let mut x2pagentd_err = None;
+        if use_x2pagentd(config, &url) {
+            x2pagentd_err = match self.check_host_http(config, &url, true) {
+                Ok(()) => return Ok(()),
+                Err(err) => Some(err),
+            }
+        }
+
+        match (self.check_host_http(config, &url, false), x2pagentd_err) {
+            (Ok(()), Some(err)) => Err(Diagnosis::AuthProxyProblem(err)),
+            (Ok(()), None) => Ok(()),
+            (Err(_), Some(proxy_err)) => Err(Diagnosis::HttpProblem(proxy_err)),
+            (Err(err), None) => Err(Diagnosis::HttpProblem(err)),
+        }
+    }
+
+    fn check_host_http(
+        &self,
+        config: &dyn Config,
+        url: &Url,
+        use_x2pagentd: bool,
+    ) -> Result<(), HttpError> {
+        let mut hc = hg_http::http_config(config, None);
+
+        if !use_x2pagentd {
+            let auth = match AuthSection::from_config(config).best_match_for(url) {
+                Ok(Some(auth)) => auth,
+                Ok(None) => {
+                    return Err(HttpError::Config(format!("no auth section for {}", url)));
+                }
+                Err(err) => return Err(err.into()),
+            };
+            hc = hg_http::http_config(config, Some(auth));
+            // This disables x2pagentd when it is enabled by default.
+            hc.unix_socket_path = None;
+        }
+
+        let result = if let Some(stub) = &self.stub_healthcheck_response {
+            stub(url, use_x2pagentd)
+        } else {
+            let mut req = hg_http::http_client("network-doctor", hc).get(url.clone());
+            req.set_timeout(Duration::from_secs(3));
+            req.send().map(|res| HttpResponse {
+                status: res.status(),
+                headers: res.headers().clone(),
+                body: res.body().to_vec(),
+            })
+        };
+
+        match result {
+            Ok(res) if res.status.is_success() => Ok(()),
+            Ok(res) => Err(HttpError::UnexpectedResponse(res)),
+            Err(err) => Err(HttpError::RequestFailure(err)),
+        }
+    }
 }
 
+fn use_x2pagentd(config: &dyn Config, url: &Url) -> bool {
+    let hc = hg_http::http_config(config, None);
+    if hc.unix_socket_path.is_none() {
+        return false;
+    }
+
+    match url.domain() {
+        None => false,
+        Some(domain) => hc.unix_socket_domains.contains(domain),
+    }
+}
+
+// Extract and parse URL from config with optional default if no config value.
 fn config_url(
     config: &dyn Config,
     section: &str,
@@ -176,10 +293,22 @@ fn config_url(
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
+    use std::collections::HashMap;
     use std::net::SocketAddr;
     use std::net::TcpListener;
 
+    use tempfile::tempdir;
+
     use super::*;
+
+    fn stub_response(status: http::StatusCode, headers: Vec<(String, String)>) -> HttpResponse {
+        let headers: HashMap<String, String> = headers.into_iter().collect();
+        HttpResponse {
+            status,
+            headers: (&headers).try_into().unwrap(),
+            body: vec![],
+        }
+    }
 
     #[test]
     fn test_check_host() {
@@ -194,9 +323,8 @@ mod tests {
                 panic!("dns lookup!")
             });
 
-
             let url = Url::parse(&format!("https://{}:{}", addr.ip(), addr.port())).unwrap();
-            assert!(doc.check_host(&url).is_ok());
+            assert!(doc.check_host_tcp(&url).is_ok());
         }
 
         // DNS lookup is okay.
@@ -206,7 +334,7 @@ mod tests {
             });
 
             let url = Url::parse(&format!("https://localhost:{}", addr.port())).unwrap();
-            assert!(doc.check_host(&url).is_ok());
+            assert!(doc.check_host_tcp(&url).is_ok());
         }
 
         // DNS lookup fails.
@@ -219,7 +347,7 @@ mod tests {
             });
 
             let url = Url::parse(&format!("https://localhost:{}", addr.port())).unwrap();
-            assert!(matches!(doc.check_host(&url), Err(HostError::DNS(_))));
+            assert!(matches!(doc.check_host_tcp(&url), Err(HostError::DNS(_))));
         }
 
         // No one is listening.
@@ -227,12 +355,12 @@ mod tests {
             doc.tcp_connect_timeout = Duration::from_millis(1);
 
             let url = Url::parse("https://169.254.0.1:1234").unwrap();
-            assert!(matches!(doc.check_host(&url), Err(HostError::TCP(_))))
+            assert!(matches!(doc.check_host_tcp(&url), Err(HostError::TCP(_))))
         }
     }
 
     #[test]
-    fn test_check_diagnose() {
+    fn test_check_corp_connectivity() {
         let non_working_url = "https://169.254.0.1:1234";
 
         // Both corp and external fail.
@@ -247,7 +375,10 @@ mod tests {
             let mut doc = Doctor::new();
             doc.tcp_connect_timeout = Duration::from_millis(1);
 
-            assert!(matches!(doc.diagnose(&cfg), Err(Diagnosis::NoInternet(_))));
+            assert!(matches!(
+                doc.check_corp_connectivity(&cfg),
+                Err(Diagnosis::NoInternet(_))
+            ));
         }
 
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -264,7 +395,10 @@ mod tests {
             );
 
             let doc = Doctor::new();
-            assert!(matches!(doc.diagnose(&cfg), Err(Diagnosis::NoCorp(_))));
+            assert!(matches!(
+                doc.check_corp_connectivity(&cfg),
+                Err(Diagnosis::NoCorp(_))
+            ));
         }
 
         // Corp works.
@@ -277,7 +411,96 @@ mod tests {
             );
 
             let doc = Doctor::new();
-            assert!(matches!(doc.diagnose(&cfg), Ok(())));
+            assert!(matches!(doc.check_corp_connectivity(&cfg), Ok(())));
+        }
+    }
+
+    #[test]
+    fn test_check_http_connectivity() {
+        let td = tempdir().unwrap();
+
+        let mut doc = Doctor::new();
+
+        let fake_cert_path = td.path().join("cert");
+        std::fs::write(&fake_cert_path, "foo").unwrap();
+
+        let mut cfg = BTreeMap::new();
+        cfg.insert(
+            "edenapi.url".to_string(),
+            "https://example.com/edenapi/".to_string(),
+        );
+        cfg.insert(
+            "remotefilelog.reponame".to_string(),
+            "some_repo".to_string(),
+        );
+        cfg.insert("auth.test.prefix".to_string(), "*".to_string());
+        cfg.insert(
+            "auth.test.cert".to_string(),
+            fake_cert_path.to_string_lossy().to_string(),
+        );
+        cfg.insert(
+            "auth.test.key".to_string(),
+            fake_cert_path.to_string_lossy().to_string(),
+        );
+
+        // Happy path - server returns 200 for /health_check.
+        {
+            doc.stub_healthcheck_response = Some(Box::new(|url, _x2p| {
+                assert_eq!(url.path(), "/edenapi/some_repo/capabilities");
+                Ok(stub_response(http::StatusCode::OK, vec![]))
+            }));
+            assert!(matches!(doc.check_http_connectivity(&cfg), Ok(())));
+        }
+
+        // Unexpected HTTP response.
+        {
+            doc.stub_healthcheck_response = Some(Box::new(|_url, _x2p| {
+                Ok(stub_response(http::StatusCode::FORBIDDEN, vec![]))
+            }));
+            assert!(matches!(
+                doc.check_http_connectivity(&cfg),
+                Err(Diagnosis::HttpProblem(HttpError::UnexpectedResponse(
+                    HttpResponse {
+                        status: http::StatusCode::FORBIDDEN,
+                        ..
+                    }
+                )))
+            ));
+        }
+
+        // Simulate x2pagentd specific problem.
+        {
+            let mut cfg = cfg.clone();
+
+            cfg.insert(
+                "auth_proxy.unix_socket_path".to_string(),
+                "/dev/null".to_string(),
+            );
+            cfg.insert(
+                "auth_proxy.unix_socket_domains".to_string(),
+                "example.com".to_string(),
+            );
+
+            // Simulate x2pagentd specific problem.
+            doc.stub_healthcheck_response = Some(Box::new(|_url, x2p| {
+                if x2p {
+                    Ok(stub_response(
+                        http::StatusCode::INTERNAL_SERVER_ERROR,
+                        vec![],
+                    ))
+                } else {
+                    Ok(stub_response(http::StatusCode::OK, vec![]))
+                }
+            }));
+            assert!(matches!(
+                doc.check_http_connectivity(&cfg),
+                Err(Diagnosis::AuthProxyProblem(HttpError::UnexpectedResponse(
+                    HttpResponse {
+                        status: http::StatusCode::INTERNAL_SERVER_ERROR,
+                        ..
+                    }
+                )))
+            ));
         }
     }
 }
