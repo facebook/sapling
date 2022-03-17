@@ -37,6 +37,7 @@ Clone the repo. Take a unique cache path to go to the server, and turn off compr
   $ setconfig "lfs.accept-zstd=False"
 
 Update. Check for compression. It shouldn't be used.
+(the reply to the first query is either 280 or 276 as it includes either [::1] or 127.0.0.1)
 
   $ hgmn up master -q
   $ sha256sum large
@@ -44,10 +45,10 @@ Update. Check for compression. It shouldn't be used.
 
   $ wait_for_json_record_count "$TESTTMP/scuba.json" 2
   $ jq .int.response_content_length < "$TESTTMP/scuba.json"
-  280
+  280|276 (re)
   2097152
   $ jq .int.response_bytes_sent < "$TESTTMP/scuba.json"
-  280
+  280|276 (re)
   2097152
   $ jq .normal.response_content_encoding < "$TESTTMP/scuba.json"
   null
@@ -71,10 +72,10 @@ Update again. This time, we should have compression.
 
   $ wait_for_json_record_count "$TESTTMP/scuba.json" 2
   $ jq .int.response_content_length < "$TESTTMP/scuba.json"
-  280
+  280|276 (re)
   null
   $ jq .int.response_bytes_sent < "$TESTTMP/scuba.json"
-  280
+  280|276 (re)
   202
   $ jq .normal.response_content_encoding < "$TESTTMP/scuba.json"
   null
