@@ -22,6 +22,7 @@ use serde::de::DeserializeOwned;
 use tokio::io::BufReader;
 use tokio_util::io::ReaderStream;
 use tokio_util::io::StreamReader;
+use url::Url;
 
 use crate::errors::HttpClientError;
 use crate::handler::Buffered;
@@ -325,6 +326,10 @@ impl AsyncResponse {
     /// Split the response into its head and body.
     pub fn into_parts(self) -> (Head, AsyncBody) {
         (self.head, self.body)
+    }
+
+    pub fn url(&self) -> &Url {
+        self.head.request_info.url()
     }
 }
 

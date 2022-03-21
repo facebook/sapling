@@ -1271,6 +1271,7 @@ async fn raise_for_status(res: AsyncResponse) -> Result<AsyncResponse, EdenApiEr
         return Ok(res);
     }
 
+    let url = res.url().to_string();
     let (head, body) = res.into_parts();
     let body = body.decoded().try_concat().await?;
     let mut message = String::from_utf8_lossy(&body).into_owned();
@@ -1287,6 +1288,7 @@ async fn raise_for_status(res: AsyncResponse) -> Result<AsyncResponse, EdenApiEr
         status,
         message,
         headers,
+        url,
     })
 }
 

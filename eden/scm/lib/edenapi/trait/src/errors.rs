@@ -24,11 +24,12 @@ pub enum EdenApiError {
     BadConfig(#[from] ConfigError),
     #[error(transparent)]
     Http(#[from] HttpClientError),
-    #[error("Server reported an error ({status}): {message}. Headers: {headers:#?}")]
+    #[error("Server responded {status} for {url}: {message}. Headers: {headers:#?}")]
     HttpError {
         status: StatusCode,
         message: String,
         headers: HeaderMap,
+        url: String,
     },
     #[error(transparent)]
     InvalidUrl(#[from] url::ParseError),
@@ -61,11 +62,7 @@ impl EdenApiError {
                 Tls(TlsError { kind, .. }) => kind == &TlsErrorKind::RecvError,
                 _ => true,
             },
-            HttpError {
-                status,
-                message: _,
-                headers: _,
-            } => {
+            HttpError { status, .. } => {
                 // 300-399
                 if status.is_redirection() {
                     false

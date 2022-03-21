@@ -186,6 +186,7 @@ impl EdenApi for EagerRepo {
         if attributes.child_metadata {
             return Err(not_implemented_error(
                 "EagerRepo does not support child_metadata for trees".to_string(),
+                "trees".to_string(),
             ));
         }
         for key in keys {
@@ -459,6 +460,7 @@ impl EagerRepo {
                     status: StatusCode::NOT_FOUND,
                     message: format!("{} cannot be found", id.to_hex()),
                     headers: Default::default(),
+                    url: "eagerepo://get_sha1_blob_for_api".to_string(),
                 })
             }
             Ok(Some(data)) => {
@@ -469,6 +471,7 @@ impl EagerRepo {
                 status: StatusCode::INTERNAL_SERVER_ERROR,
                 message: format!("{:?}", e),
                 headers: Default::default(),
+                url: "eagerepo://get_sha1_blob_for_api".to_string(),
             }),
         }
     }
@@ -550,11 +553,12 @@ fn convert_to_response<T: Send + Sync + 'static>(values: Vec<edenapi::Result<T>>
 }
 
 /// Not implement error.
-fn not_implemented_error(message: String) -> EdenApiError {
+fn not_implemented_error(message: String, handler: String) -> EdenApiError {
     EdenApiError::HttpError {
         status: StatusCode::NOT_IMPLEMENTED,
         message,
         headers: Default::default(),
+        url: format!("eagerepo://{}", handler),
     }
 }
 
