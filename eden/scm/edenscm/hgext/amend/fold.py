@@ -38,6 +38,7 @@ hex = node.hex
             _("fold linearly from current revision to specified revision"),
         ),
         ("", "no-rebase", False, _("don't rebase descendants after split")),
+        ("M", "reuse-message", "", _("reuse commit message from REV"), _("REV")),
     ]
     + (commands.commitopts + commands.commitopts2 + commands.formatteropts),
     _("hg fold [OPTION]... (--from [-r] REV | --exact [-r] REV...)"),
@@ -126,7 +127,11 @@ def fold(ui, repo, *revs, **opts):
             allctx = [repo[r] for r in revs]
             targetphase = max(c.phase() for c in allctx)
 
-            if commitopts.get("message") or commitopts.get("logfile"):
+            if (
+                commitopts.get("message")
+                or commitopts.get("logfile")
+                or commitopts.get("reuse_message")
+            ):
                 commitopts["edit"] = False
             else:
                 msgs = ["HG: This is a fold of %d changesets." % len(allctx)]

@@ -266,3 +266,18 @@ When rebase is involved
 
   $ hg fold --exact 0 d65bf110c68ee2cf0a0ba076da90df3fcf76229b -T '{nodechanges|json}' -q
   {"d65bf110c68ee2cf0a0ba076da90df3fcf76229b": ["785c10c9aad58fba814a235f074a79bdc5535083"], "fdaccbb26270c9a42503babe11fd846d7300df0b": ["785c10c9aad58fba814a235f074a79bdc5535083"]} (no-eol)
+
+Test fold with --reuse-message
+  $ reset
+  $ hg debugbuilddag -m +6
+  $ hg up 'desc(r5)'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg fold --from 'desc(r1)' --reuse-message 'desc(r3)'
+  5 changesets folded
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ showgraph
+  @  e45dfaa6fe9c r3
+  │
+  o  fdaccbb26270 r0
+
