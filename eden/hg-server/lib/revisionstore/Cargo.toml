@@ -49,7 +49,7 @@ tracing = "0.1.32"
 types = { path = "../types" }
 url = "2.2.2"
 util = { path = "../util" }
-zstd = "=0.8.0+zstd.1.4.9"
+zstd = "0.9.0+zstd.1.5.0"
 
 [dev-dependencies]
 maplit = "1.0"
