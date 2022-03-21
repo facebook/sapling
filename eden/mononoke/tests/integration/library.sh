@@ -26,6 +26,7 @@ else
   MONONOKE_SCS_DEFAULT_START_TIMEOUT=60
   MONONOKE_DDS_DEFAULT_START_TIMEOUT=60
 fi
+VI_SERVICE_DEFAULT_START_TIMEOUT=60
 
 REPOID=0
 REPONAME=${REPONAME:-repo}
@@ -2041,6 +2042,6 @@ function verify_integrity_service() {
   echo "$pid" >> "$DAEMON_PIDS"
 
   wait_for_server "Verify Integrity service" VI_SERVICE_PORT "$TESTTMP/verify_integrity_service.out" \
-    "30" "$VI_SERVICE_ADDR_FILE" \
+    "${VI_SERVICE_START_TIMEOUT:-"$VI_SERVICE_DEFAULT_START_TIMEOUT"}" "$VI_SERVICE_ADDR_FILE" \
     verify_integrity_service_health
 }
