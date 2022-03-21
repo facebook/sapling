@@ -13,7 +13,6 @@ path = "test/main.rs"
 
 [dependencies]
 anyhow = "1.0.51"
-blobstore = { version = "0.1.0", path = "../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
@@ -23,8 +22,8 @@ bookmarks_types = { version = "0.1.0", path = "../bookmarks/bookmarks_types" }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 changeset_fetcher = { version = "0.1.0", path = "changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../changesets" }
+changesets_creation = { version = "0.1.0", path = "../changesets/changesets_creation" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -41,7 +40,6 @@ repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 scribe_commit_queue = { version = "0.1.0", path = "../repo_client/scribe_commit_queue" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-topo_sort = { version = "0.1.0", path = "../common/topo_sort" }
 
 [dev-dependencies]
 ascii = "1.0"
@@ -49,7 +47,9 @@ assert_matches = "1.5"
 async-trait = "0.1.52"
 blobrepo_errors = { version = "0.1.0", path = "errors" }
 blobrepo_hg = { version = "0.1.0", path = "blobrepo_hg" }
+blobstore = { version = "0.1.0", path = "../blobstore" }
 bytes = { version = "1.1", features = ["serde"] }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib_caching = { version = "0.1.0", path = "../cmdlib/caching" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }

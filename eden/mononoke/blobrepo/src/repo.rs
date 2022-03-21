@@ -6,7 +6,6 @@
  */
 
 use anyhow::{format_err, Error};
-use blobstore::Blobstore;
 use bonsai_git_mapping::{ArcBonsaiGitMapping, BonsaiGitMapping};
 use bonsai_globalrev_mapping::{ArcBonsaiGlobalrevMapping, BonsaiGlobalrevMapping};
 use bonsai_hg_mapping::{ArcBonsaiHgMapping, BonsaiHgMapping};
@@ -19,33 +18,22 @@ use bookmarks::{
 use cacheblob::LeaseOps;
 use changeset_fetcher::SimpleChangesetFetcher;
 use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
-use changesets::{ChangesetInsert, Changesets, ChangesetsRef};
-use cloned::cloned;
+use changesets::{Changesets, ChangesetsRef};
 use context::CoreContext;
 use ephemeral_blobstore::Bubble;
 use filenodes::{ArcFilenodes, Filenodes};
 use filestore::FilestoreConfig;
-use futures::{
-    future::{try_join, BoxFuture},
-    stream::FuturesUnordered,
-    Stream, TryStreamExt,
-};
+use futures::{future::BoxFuture, Stream, TryStreamExt};
 use mercurial_mutation::{ArcHgMutationStore, HgMutationStore};
 use metaconfig_types::{DerivedDataConfig, DerivedDataTypesConfig};
-use mononoke_types::{
-    BlobstoreValue, BonsaiChangeset, ChangesetId, Generation, MononokeId, RepositoryId,
-};
+use mononoke_types::{BonsaiChangeset, ChangesetId, Generation, RepositoryId};
 use phases::Phases;
 use pushrebase_mutation_mapping::{ArcPushrebaseMutationMapping, PushrebaseMutationMapping};
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreRef};
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use stats::prelude::*;
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
-use topo_sort::sort_topological;
+use std::sync::Arc;
 
 define_stats! {
     prefix = "mononoke.blobrepo";
@@ -412,88 +400,5 @@ pub async fn save_bonsai_changesets(
     ctx: CoreContext,
     container: &(impl ChangesetsRef + RepoBlobstoreRef),
 ) -> Result<(), Error> {
-    let complete_changesets = container.changesets();
-    let blobstore = container.repo_blobstore();
-
-    let mut parents_to_check: HashSet<ChangesetId> = HashSet::new();
-    for bcs in &bonsai_changesets {
-        parents_to_check.extend(bcs.parents());
-    }
-    // Remove commits that we are uploading in this batch
-    for bcs in &bonsai_changesets {
-        parents_to_check.remove(&bcs.get_changeset_id());
-    }
-
-    let parents_to_check = parents_to_check
-        .into_iter()
-        .map({
-            |p| {
-                cloned!(complete_changesets);
-                let ctx = &ctx;
-                async move {
-                    let exists = complete_changesets.exists(ctx, p).await?;
-                    if exists {
-                        Ok(())
-                    } else {
-                        Err(format_err!("Commit {} does not exist in the repo", p))
-                    }
-                }
-            }
-        })
-        .collect::<FuturesUnordered<_>>()
-        .try_collect::<Vec<_>>();
-
-    let bonsai_changesets: HashMap<_, _> = bonsai_changesets
-        .into_iter()
-        .map(|bcs| (bcs.get_changeset_id(), bcs))
-        .collect();
-
-    // Order of inserting entries in changeset table matters though, so we first need to
-    // topologically sort commits.
-    let mut bcs_parents = HashMap::new();
-    for bcs in bonsai_changesets.values() {
-        let parents: Vec<_> = bcs.parents().collect();
-        bcs_parents.insert(bcs.get_changeset_id(), parents);
-    }
-
-    let topo_sorted_commits = sort_topological(&bcs_parents).expect("loop in commit chain!");
-    let mut bonsai_complete_futs = vec![];
-    for bcs_id in topo_sorted_commits {
-        if let Some(bcs) = bonsai_changesets.get(&bcs_id) {
-            let bcs_id = bcs.get_changeset_id();
-            let completion_record = ChangesetInsert {
-                cs_id: bcs_id,
-                parents: bcs.parents().into_iter().collect(),
-            };
-            bonsai_complete_futs.push(complete_changesets.add(ctx.clone(), completion_record));
-        }
-    }
-
-    // Order of inserting bonsai changesets objects doesn't matter, so we can join them
-    let bonsai_objects = bonsai_changesets
-        .into_iter()
-        .map({
-            |(_, bcs)| {
-                cloned!(ctx, blobstore);
-                async move {
-                    let bonsai_blob = bcs.into_blob();
-                    let bcs_id = bonsai_blob.id().clone();
-                    let blobstore_key = bcs_id.blobstore_key();
-                    blobstore
-                        .put(&ctx, blobstore_key, bonsai_blob.into())
-                        .await?;
-                    Ok(())
-                }
-            }
-        })
-        .collect::<FuturesUnordered<_>>()
-        .try_collect::<Vec<_>>();
-
-    try_join(bonsai_objects, parents_to_check).await?;
-
-    for bonsai_complete in bonsai_complete_futs {
-        bonsai_complete.await?;
-    }
-
-    Ok(())
+    changesets_creation::save_changesets(&ctx, container, bonsai_changesets).await
 }

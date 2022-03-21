@@ -221,6 +221,7 @@ members = [
   "bulkops/bench",
   "cache_warmup",
   "changesets",
+  "changesets/changesets_creation",
   "changesets/changesets_impl",
   "changesets/if",
   "cmdlib",
