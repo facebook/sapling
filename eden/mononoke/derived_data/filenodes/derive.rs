@@ -115,7 +115,7 @@ pub async fn generate_all_filenodes(
     let hg_id = derivation_ctx
         .derive_dependency::<MappedHgChangesetId>(ctx, bcs.get_changeset_id())
         .await?
-        .0;
+        .hg_changeset_id();
     let root_mf = hg_id.load(ctx, &blobstore).await?.manifestid();
     // Bonsai might have > 2 parents, while mercurial supports at most 2.
     // That's fine for us - we just won't generate filenodes for paths that came from
@@ -125,9 +125,14 @@ pub async fn generate_all_filenodes(
             .fetch_parents::<MappedHgChangesetId>(ctx, &bcs)
             .await?
             .into_iter()
-            .map(
-                |id| async move { Result::<_>::Ok(id.0.load(ctx, &blobstore).await?.manifestid()) },
-            ),
+            .map(|id| async move {
+                Result::<_>::Ok(
+                    id.hg_changeset_id()
+                        .load(ctx, &blobstore)
+                        .await?
+                        .manifestid(),
+                )
+            }),
     )
     .await?;
     let linknode = hg_id;

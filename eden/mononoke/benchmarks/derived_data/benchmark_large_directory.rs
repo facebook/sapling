@@ -131,7 +131,7 @@ async fn derive(ctx: &CoreContext, repo: &BlobRepo, data: &str, csid: ChangesetI
         MappedHgChangesetId::NAME => MappedHgChangesetId::derive(&ctx, &repo, csid)
             .await
             .unwrap()
-            .0
+            .hg_changeset_id()
             .to_string(),
         RootSkeletonManifestId::NAME => RootSkeletonManifestId::derive(&ctx, &repo, csid)
             .await

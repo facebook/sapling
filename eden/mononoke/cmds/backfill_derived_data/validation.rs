@@ -274,11 +274,14 @@ async fn validate_hgchangesets<'a>(
 ) -> Result<(), Error> {
     let real_blobstore = real_repo.blobstore().boxed();
 
-    let (hgchangeset_id, parents) =
+    let (derived, parents) =
         find_cs_and_parents_derived_data::<MappedHgChangesetId>(ctx, real_repo, cs_id).await?;
     let mem_blob = &mem_blob;
     let manifest = async {
-        let hgchangeset = hgchangeset_id.0.load(ctx, real_repo.blobstore()).await?;
+        let hgchangeset = derived
+            .hg_changeset_id()
+            .load(ctx, real_repo.blobstore())
+            .await?;
         check_exists(
             ctx,
             &mem_blob,
@@ -288,7 +291,7 @@ async fn validate_hgchangesets<'a>(
         Result::<_, Error>::Ok(hgchangeset.manifestid())
     };
     let parents = try_join_all(parents.into_iter().map(|p| async move {
-        let p = p.0.load(ctx, real_repo.blobstore()).await?;
+        let p = p.hg_changeset_id().load(ctx, real_repo.blobstore()).await?;
         Result::<_, Error>::Ok(p.manifestid())
     }));
 

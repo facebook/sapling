@@ -304,7 +304,7 @@ pub(crate) async fn derive_from_parents(
         try_join_all(
             parents
                 .into_iter()
-                .map(|id| async move { id.0.load(ctx, blobstore).await }),
+                .map(|id| async move { id.hg_changeset_id().load(ctx, blobstore).await }),
         )
         .await?
     };
@@ -320,7 +320,7 @@ pub(crate) async fn derive_from_parents(
 
     let (hg_cs_id, _) =
         generate_hg_changeset(ctx, blobstore, bonsai, manifest_id, parents, options).await?;
-    Ok(MappedHgChangesetId(hg_cs_id))
+    Ok(MappedHgChangesetId::new(hg_cs_id))
 }
 
 pub async fn derive_simple_hg_changeset_stack_without_copy_info(
@@ -331,7 +331,7 @@ pub async fn derive_simple_hg_changeset_stack_without_copy_info(
     options: &HgChangesetDeriveOptions,
 ) -> Result<HashMap<ChangesetId, MappedHgChangesetId>, Error> {
     let parent = match parent {
-        Some(parent) => Some(parent.0.load(ctx, blobstore).await?),
+        Some(parent) => Some(parent.hg_changeset_id().load(ctx, blobstore).await?),
         None => None,
     };
 
@@ -387,7 +387,7 @@ pub async fn derive_simple_hg_changeset_stack_without_copy_info(
         })?;
         let (hg_changeset_id, hg_cs) =
             generate_hg_changeset(&ctx, &blobstore, bonsai, *mf_id, parents, options).await?;
-        res.insert(cs_id, MappedHgChangesetId(hg_changeset_id));
+        res.insert(cs_id, MappedHgChangesetId::new(hg_changeset_id));
         parents = vec![hg_cs];
     }
 
@@ -482,7 +482,7 @@ pub async fn get_hg_from_bonsai_changeset(
     STATS::get_hg_from_bonsai_changeset.add_value(1);
     let start_timestmap = Instant::now();
     let result = match MappedHgChangesetId::derive(&ctx, &repo, bcs_id).await {
-        Ok(id) => Ok(id.0),
+        Ok(id) => Ok(id.hg_changeset_id()),
         Err(err) => match err {
             DeriveError::Disabled(..) => Err(err.into()),
             DeriveError::Error(err) => Err(err),

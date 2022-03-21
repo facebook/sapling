@@ -32,9 +32,13 @@ define_stats! {
 use derived_data_service_if::types as thrift;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct MappedHgChangesetId(pub HgChangesetId);
+pub struct MappedHgChangesetId(HgChangesetId);
 
 impl MappedHgChangesetId {
+    pub(crate) fn new(hg_changeset_id: HgChangesetId) -> Self {
+        MappedHgChangesetId(hg_changeset_id)
+    }
+
     pub fn hg_changeset_id(&self) -> HgChangesetId {
         self.0
     }

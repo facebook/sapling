@@ -730,8 +730,8 @@ async fn bonsai_to_hg_key<'a, V: 'a + VisitOne>(
             maybe_derived::<MappedHgChangesetId>(ctx, repo, bcs_id, enable_derive)
                 .await?
                 .map(|v| {
-                    checker.record_hg_from_bonsai(&bcs_id, v.0);
-                    v.0
+                    checker.record_hg_from_bonsai(&bcs_id, v.hg_changeset_id());
+                    v.hg_changeset_id()
                 })
         };
         Ok(derived.map(|inner| ChangesetKey {
