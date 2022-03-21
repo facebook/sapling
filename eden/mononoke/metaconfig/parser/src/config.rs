@@ -765,6 +765,7 @@ mod test {
             [[hooks]]
             name="rust:rusthook"
             config_ints={ int1 = 44 }
+            config_ints_64={ int2 = 42 }
             [hooks.config_string_lists]
                 list1 = ["val1", "val2"]
 
@@ -1012,8 +1013,10 @@ mod test {
                             bypass: Some(HookBypass::new_with_commit_msg("@allow_hook1".into())),
                             strings: hashmap! {},
                             ints: hashmap! {},
+                            ints_64: hashmap! {},
                             string_lists: hashmap! {},
                             int_lists: hashmap! {},
+                            int_64_lists: hashmap! {},
                         },
                     },
                     HookParams {
@@ -1024,10 +1027,14 @@ mod test {
                             ints: hashmap! {
                                 "int1".into() => 44,
                             },
+                            ints_64: hashmap! {
+                                "int2".into() => 42,
+                            },
                             string_lists: hashmap! {
                                 "list1".into() => vec!("val1".to_owned(), "val2".to_owned()),
                             },
                             int_lists: hashmap! {},
+                            int_64_lists: hashmap! {},
                         },
                     },
                 ],

@@ -658,12 +658,16 @@ pub struct HookConfig {
     pub bypass: Option<HookBypass>,
     /// Map of config to it's value. Values here are strings
     pub strings: HashMap<String, String>,
-    /// Map of config to it's value. Values here are integers
+    /// **Warning:** this being deprecated, please use ints_64 instead. Map of config to it's value. Values here are 32bit integers
     pub ints: HashMap<String, i32>,
+    /// Map of config to it's value. Values here are 64bit integers
+    pub ints_64: HashMap<String, i64>,
     /// Map of config to it's value. Values here are lists of strings
     pub string_lists: HashMap<String, Vec<String>>,
-    /// Map of config to it's value. Values here are lists of integers
+    /// **Warning:** this being deprecated, please use int_64_lists. Map of config to it's value. Values here are lists of 32bit integers
     pub int_lists: HashMap<String, Vec<i32>>,
+    /// Map of config to it's value. Values here are lists of 64bit integers
+    pub int_64_lists: HashMap<String, Vec<i64>>,
 }
 
 /// Configuration for a hook

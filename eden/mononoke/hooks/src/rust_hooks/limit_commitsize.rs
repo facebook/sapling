@@ -460,6 +460,7 @@ mod test {
             ints,
             string_lists,
             int_lists,
+            ..Default::default()
         };
         let mut builder = LimitCommitsize::builder();
         builder = builder.set_from_config(&config);
