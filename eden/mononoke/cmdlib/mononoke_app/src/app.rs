@@ -22,7 +22,7 @@ use metaconfig_parser::{RepoConfigs, StorageConfigs};
 use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, RepoConfig};
 use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
-use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig};
+use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig, RedactionConfigBlobstore};
 use repo_factory::{RepoFactory, RepoFactoryBuilder};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
@@ -294,6 +294,29 @@ impl MononokeApp {
         };
 
         Ok(blobstore)
+    }
+
+    pub async fn redaction_config_blobstore(&self) -> Result<Arc<RedactionConfigBlobstore>> {
+        self.repo_factory
+            .redaction_config_blobstore_from_config(
+                &self.repo_configs.common.redaction_config.blobstore,
+            )
+            .await
+    }
+
+    pub async fn redaction_config_blobstore_for_darkstorm(
+        &self,
+    ) -> Result<Arc<RedactionConfigBlobstore>> {
+        let blobstore_config = self
+            .repo_configs
+            .common
+            .redaction_config
+            .darkstorm_blobstore
+            .as_ref()
+            .ok_or_else(|| anyhow!("Configuration must have darkstorm blobstore"))?;
+        self.repo_factory
+            .redaction_config_blobstore_from_config(blobstore_config)
+            .await
     }
 
     fn redaction_scuba_builder(&self) -> Result<MononokeScubaSampleBuilder> {

@@ -13,10 +13,12 @@ use bookmarks::{self, BookmarkUpdateLog, Bookmarks};
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use ephemeral_blobstore::RepoEphemeralStore;
+use metaconfig_types::RepoConfig;
 use mutable_renames::MutableRenames;
 use phases::Phases;
 use repo_blobstore::RepoBlobstore;
 use repo_cross_repo::RepoCrossRepo;
+use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 
 /// Repository object for admin commands.
@@ -25,6 +27,9 @@ use repo_identity::RepoIdentity;
 pub struct AdminRepo {
     #[facet]
     pub repo_identity: RepoIdentity,
+
+    #[facet]
+    pub repo_config: RepoConfig,
 
     #[facet]
     pub bonsai_hg_mapping: dyn BonsaiHgMapping,
@@ -58,6 +63,9 @@ pub struct AdminRepo {
 
     #[facet]
     pub phases: dyn Phases,
+
+    #[facet]
+    pub repo_derived_data: RepoDerivedData,
 
     #[facet]
     pub repo_cross_repo: RepoCrossRepo,

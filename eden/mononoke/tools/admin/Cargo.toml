@@ -33,6 +33,7 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../../filestore" }
+fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 manifest = { version = "0.1.0", path = "../../manifest" }
@@ -45,6 +46,7 @@ phases = { version = "0.1.0", path = "../../phases" }
 regex = "1.5.4"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_cross_repo = { version = "0.1.0", path = "../../repo_attributes/repo_cross_repo" }
+repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }

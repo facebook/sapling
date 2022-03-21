@@ -17,6 +17,7 @@ use crate::typed_hash::{
 };
 
 /// A serialized blob in memory.
+#[derive(Clone)]
 pub struct Blob<Id> {
     id: Id,
     data: Bytes,
