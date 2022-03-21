@@ -2757,7 +2757,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = test_repo_factory::build_empty()?;
+            let repo: BlobRepo = test_repo_factory::build_empty()?;
 
             let p1 = CreateCommitContext::new_root(&ctx, &repo)
                 .add_file("p1", "some content")
@@ -2905,7 +2905,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = test_repo_factory::build_empty()?;
+            let repo: BlobRepo = test_repo_factory::build_empty()?;
 
             // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
             // on top of master
@@ -3002,7 +3002,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = test_repo_factory::build_empty()?;
+            let repo: BlobRepo = test_repo_factory::build_empty()?;
 
             // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
             // on top of master
@@ -3090,7 +3090,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = test_repo_factory::build_empty()?;
+            let repo: BlobRepo = test_repo_factory::build_empty()?;
 
             // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
             // on top of master
@@ -3255,7 +3255,7 @@ mod tests {
     #[fbinit::test]
     async fn test_commit_validation(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
 
         // Pushrebase hook that deletes "base" file from the list of file changes
         struct InvalidPushrebaseHook {}

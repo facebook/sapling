@@ -10,6 +10,7 @@ use std::time::Duration;
 
 use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
+use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
 use bookmarks::{BookmarkName, BookmarksRef};
@@ -312,7 +313,7 @@ async fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_parallel_derivation(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo = make_test_repo_factory().build()?;
+    let repo: BlobRepo = make_test_repo_factory().build()?;
 
     // Create a commit with lots of parents, and make each derivation take
     // 2 seconds.  Check that derivations happen in parallel by ensuring
@@ -379,7 +380,7 @@ async fn ensure_tunables_disable_derivation(
 /// the appropriate values in tunables.
 async fn test_cancelling_slow_derivation(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo = make_test_repo_factory().build()?;
+    let repo: BlobRepo = make_test_repo_factory().build()?;
 
     let create_tunables = || {
         let tunables = MononokeTunables::default();

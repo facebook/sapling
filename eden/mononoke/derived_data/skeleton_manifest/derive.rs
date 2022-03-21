@@ -362,14 +362,20 @@ mod test {
 
     const L_FILES: &[&str] = &["dir2/subdir1/subsubdir1/FILE1"];
 
-    fn add_files<'a>(mut c: CreateCommitContext<'a>, files: &[&str]) -> CreateCommitContext<'a> {
+    fn add_files<'a>(
+        mut c: CreateCommitContext<'a, BlobRepo>,
+        files: &[&str],
+    ) -> CreateCommitContext<'a, BlobRepo> {
         for &file in files {
             c = c.add_file(file, file);
         }
         c
     }
 
-    fn delete_files<'a>(mut c: CreateCommitContext<'a>, files: &[&str]) -> CreateCommitContext<'a> {
+    fn delete_files<'a>(
+        mut c: CreateCommitContext<'a, BlobRepo>,
+        files: &[&str],
+    ) -> CreateCommitContext<'a, BlobRepo> {
         for &file in files {
             c = c.delete_file(file);
         }

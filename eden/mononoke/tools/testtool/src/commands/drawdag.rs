@@ -286,8 +286,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     let mut change_fns = BTreeMap::new();
     for (name, changes) in commit_changes {
-        let apply: Box<ChangeFn> =
-            Box::new(move |c: CreateCommitContext| apply_changes(c, changes));
+        let apply: Box<ChangeFn<BlobRepo>> =
+            Box::new(move |c: CreateCommitContext<BlobRepo>| apply_changes(c, changes));
         change_fns.insert(name, apply);
     }
 
@@ -339,9 +339,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 }
 
 fn apply_changes<'a>(
-    mut c: CreateCommitContext<'a>,
+    mut c: CreateCommitContext<'a, BlobRepo>,
     changes: Vec<ChangeAction>,
-) -> CreateCommitContext<'a> {
+) -> CreateCommitContext<'a, BlobRepo> {
     for change in changes {
         match change {
             ChangeAction::Modify { path, content, .. } => c = c.add_file(path.as_slice(), content),

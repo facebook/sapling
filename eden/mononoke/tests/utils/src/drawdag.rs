@@ -8,19 +8,18 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::{anyhow, Result};
-use blobrepo::BlobRepo;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
-use crate::CreateCommitContext;
+use crate::{CreateCommitContext, Repo};
 
-pub type ChangeFn = dyn FnOnce(CreateCommitContext) -> CreateCommitContext + Send + Sync;
+pub type ChangeFn<R> = dyn FnOnce(CreateCommitContext<R>) -> CreateCommitContext<R> + Send + Sync;
 
-pub async fn extend_from_dag_with_changes<'a>(
+pub async fn extend_from_dag_with_changes<'a, R: Repo>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a R,
     dag: &'a str,
-    mut changes: BTreeMap<String, Box<ChangeFn>>,
+    mut changes: BTreeMap<String, Box<ChangeFn<R>>>,
     existing: BTreeMap<String, ChangesetId>,
     default_files: bool,
 ) -> Result<(
@@ -115,11 +114,11 @@ pub async fn extend_from_dag_with_changes<'a>(
 ///         },
 ///     ).await?;
 /// ```
-pub async fn create_from_dag_with_changes<'a>(
+pub async fn create_from_dag_with_changes<'a, R: Repo>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a R,
     dag: &'a str,
-    changes: BTreeMap<String, Box<ChangeFn>>,
+    changes: BTreeMap<String, Box<ChangeFn<R>>>,
 ) -> Result<BTreeMap<String, ChangesetId>> {
     let (commits, _dag) =
         extend_from_dag_with_changes(ctx, repo, dag, changes, BTreeMap::new(), true).await?;
@@ -150,9 +149,9 @@ pub async fn create_from_dag_with_changes<'a>(
 ///         "##,
 ///     ).await?;
 /// ```
-pub async fn create_from_dag(
+pub async fn create_from_dag<R: Repo>(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &R,
     dag: &str,
 ) -> Result<BTreeMap<String, ChangesetId>> {
     create_from_dag_with_changes(ctx, repo, dag, BTreeMap::new()).await
@@ -177,10 +176,10 @@ pub async fn create_from_dag(
 macro_rules! __drawdag_changes {
     ( $( $key:expr => | $c:ident | $body:expr ),* $( , )? ) => {
         {
-            let mut changes: std::collections::BTreeMap<String, Box<$crate::drawdag::ChangeFn>> =
+            let mut changes: std::collections::BTreeMap<String, Box<$crate::drawdag::ChangeFn<_>>> =
                 std::collections::BTreeMap::new();
             $(
-                changes.insert(String::from($key), Box::new(|$c: $crate::CreateCommitContext| $body));
+                changes.insert(String::from($key), Box::new(|$c: $crate::CreateCommitContext<_>| $body));
             )*
             changes
         }

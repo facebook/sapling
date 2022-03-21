@@ -217,7 +217,7 @@ pub(crate) async fn populate_git_mapping_txn_hook(
 mod tests {
     use super::*;
     use anyhow::Result;
-    use blobrepo::AsBlobRepo;
+    use blobrepo::{AsBlobRepo, BlobRepo};
     use bonsai_git_mapping::{CONVERT_REVISION_EXTRA, HGGIT_SOURCE_EXTRA};
     use bookmarks::{BookmarkName, BookmarkUpdateReason, BookmarksRef};
     use borrowed::borrowed;
@@ -234,7 +234,10 @@ mod tests {
     use tests_utils::drawdag::{changes, create_from_dag_with_changes};
     use tests_utils::CreateCommitContext;
 
-    fn add_git_extras(context: CreateCommitContext, hash: GitSha1) -> CreateCommitContext {
+    fn add_git_extras(
+        context: CreateCommitContext<BlobRepo>,
+        hash: GitSha1,
+    ) -> CreateCommitContext<BlobRepo> {
         context
             .add_extra(
                 CONVERT_REVISION_EXTRA.to_string(),

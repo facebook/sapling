@@ -931,7 +931,7 @@ mod test {
     #[fbinit::test]
     async fn test_verify_working_copy_with_prefixes(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let source = test_repo_factory::build_empty()?;
+        let source: BlobRepo = test_repo_factory::build_empty()?;
         let source_cs_id = CreateCommitContext::new_root(&ctx, &source)
             .add_file("prefix/sub/file1", "1")
             .add_file("prefix/sub/file2", "2")
@@ -939,7 +939,7 @@ mod test {
             .commit()
             .await?;
 
-        let target = test_repo_factory::build_empty()?;
+        let target: BlobRepo = test_repo_factory::build_empty()?;
         let target_cs_id = CreateCommitContext::new_root(&ctx, &target)
             .add_file("sub/file1", "1")
             .add_file("sub/file2", "2")

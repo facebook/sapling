@@ -14,6 +14,7 @@ path = "main.rs"
 [dev-dependencies]
 anyhow = "1.0.51"
 async-trait = "0.1.52"
+blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 bytes = { version = "1.1", features = ["serde"] }

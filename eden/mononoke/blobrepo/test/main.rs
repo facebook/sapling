@@ -1160,7 +1160,7 @@ impl TestHelper {
         Ok(Self { ctx, repo })
     }
 
-    fn new_commit(&self) -> CreateCommitContext<'_> {
+    fn new_commit(&self) -> CreateCommitContext<'_, BlobRepo> {
         CreateCommitContext::new_root(&self.ctx, &self.repo)
     }
 

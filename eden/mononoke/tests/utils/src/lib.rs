@@ -8,13 +8,15 @@
 #![deny(warnings)]
 
 use anyhow::{format_err, Error};
-use blobrepo::{save_bonsai_changesets, BlobRepo};
-use blobrepo_hg::BlobRepoHg;
-use blobstore::{Loadable, Storable};
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use blobstore::Storable;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bookmarks::{BookmarkName, BookmarkUpdateReason, BookmarksRef};
 use bytes::{Bytes, BytesMut};
+use changesets::ChangesetsRef;
+use changesets_creation::save_changesets;
 use context::CoreContext;
-use filestore::{self, FetchKey, StoreRequest};
+use filestore::{self, FetchKey, FilestoreConfigRef, StoreRequest};
+use fsnodes::RootFsnodeId;
 use futures::{
     future,
     stream::{self, TryStreamExt},
@@ -26,16 +28,27 @@ use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
     MPath,
 };
+use repo_blobstore::{RepoBlobstoreArc, RepoBlobstoreRef};
+use repo_derived_data::RepoDerivedDataRef;
 use std::{
     collections::{BTreeMap, HashMap},
     str::FromStr,
 };
+use trait_alias::trait_alias;
 
 pub mod drawdag;
 
+#[trait_alias]
+pub trait Repo = BonsaiHgMappingRef
+    + BookmarksRef
+    + ChangesetsRef
+    + FilestoreConfigRef
+    + RepoBlobstoreArc
+    + RepoDerivedDataRef;
+
 pub async fn list_working_copy_utf8(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     cs_id: ChangesetId,
 ) -> Result<HashMap<MPath, String>, Error> {
     let wc = list_working_copy(ctx, repo, cs_id).await?;
@@ -47,7 +60,7 @@ pub async fn list_working_copy_utf8(
 
 pub async fn list_working_copy_utf8_with_types(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     cs_id: ChangesetId,
 ) -> Result<HashMap<MPath, (String, FileType)>, Error> {
     let wc = list_working_copy_with_types(ctx, repo, cs_id).await?;
@@ -59,7 +72,7 @@ pub async fn list_working_copy_utf8_with_types(
 
 pub async fn list_working_copy(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     cs_id: ChangesetId,
 ) -> Result<HashMap<MPath, Bytes>, Error> {
     let wc = list_working_copy_with_types(ctx, repo, cs_id).await?;
@@ -72,22 +85,22 @@ pub async fn list_working_copy(
 
 pub async fn list_working_copy_with_types(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     cs_id: ChangesetId,
 ) -> Result<HashMap<MPath, (Bytes, FileType)>, Error> {
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+    let root_fsnode_id = repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, cs_id)
         .await?;
-    let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
 
-    let mf_id = hg_cs.manifestid();
-    mf_id
-        .list_leaf_entries(ctx.clone(), repo.blobstore().boxed())
-        .map_ok(|(path, (file_type, filenode_id))| async move {
-            let filenode = filenode_id.load(ctx, repo.blobstore()).await?;
-            let content_id = filenode.content_id();
+    root_fsnode_id
+        .fsnode_id()
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore_arc())
+        .map_ok(|(path, file)| async move {
+            let content_id = *file.content_id();
+            let file_type = *file.file_type();
             let maybe_content = filestore::fetch(
-                repo.blobstore(),
+                repo.repo_blobstore(),
                 ctx.clone(),
                 &FetchKey::Canonical(content_id),
             )
@@ -115,10 +128,10 @@ pub async fn list_working_copy_with_types(
         .await
 }
 
-/// Helper to create bonsai changesets in a BlobRepo
-pub struct CreateCommitContext<'a> {
+/// Helper to create bonsai changesets in a repo
+pub struct CreateCommitContext<'a, R: Repo> {
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a R,
     parents: Vec<CommitIdentifier>,
     files: BTreeMap<MPath, CreateFileContext>,
     message: Option<String>,
@@ -127,10 +140,10 @@ pub struct CreateCommitContext<'a> {
     extra: BTreeMap<String, Vec<u8>>,
 }
 
-impl<'a> CreateCommitContext<'a> {
+impl<'a, R: Repo> CreateCommitContext<'a, R> {
     pub fn new(
         ctx: &'a CoreContext,
-        repo: &'a BlobRepo,
+        repo: &'a R,
         parents: Vec<impl Into<CommitIdentifier>>,
     ) -> Self {
         let parents: Vec<_> = parents.into_iter().map(|x| x.into()).collect();
@@ -148,7 +161,7 @@ impl<'a> CreateCommitContext<'a> {
 
     /// Creates commit with no parents (this is created to avoid specifying generic parameters
     /// in CreateCommitContext::new() when `parents` parameter is an empty vector)
-    pub fn new_root(ctx: &'a CoreContext, repo: &'a BlobRepo) -> Self {
+    pub fn new_root(ctx: &'a CoreContext, repo: &'a R) -> Self {
         Self {
             ctx,
             repo,
@@ -258,19 +271,19 @@ impl<'a> CreateCommitContext<'a> {
 
     pub async fn create_commit_object(self) -> Result<BonsaiChangesetMut, Error> {
         let parents = future::try_join_all(self.parents.into_iter().map({
-            let ctx = &self.ctx;
-            let repo = &self.repo;
-            move |p| resolve_cs_id(&ctx, &repo, p)
+            let ctx = self.ctx;
+            let repo = self.repo;
+            move |p| resolve_cs_id(ctx, repo, p)
         }))
         .await?;
 
         let files = future::try_join_all(self.files.into_iter().map({
-            let ctx = &self.ctx;
-            let repo = &self.repo;
+            let ctx = self.ctx;
+            let repo = self.repo;
             let parents = &parents;
             move |(path, create_file_context)| async move {
                 let file_change = create_file_context
-                    .into_file_change(&ctx, &repo, &parents)
+                    .into_file_change(ctx, repo, parents)
                     .await?;
 
                 Result::<_, Error>::Ok((path, file_change))
@@ -303,13 +316,12 @@ impl<'a> CreateCommitContext<'a> {
     }
 
     pub async fn commit(self) -> Result<ChangesetId, Error> {
-        let ctx = self.ctx.clone();
-        let repo = self.repo.clone();
+        let ctx = self.ctx;
+        let repo = self.repo;
         let bcs = self.create_commit_object().await?;
         let bcs = bcs.freeze()?;
-
         let bcs_id = bcs.get_changeset_id();
-        save_bonsai_changesets(vec![bcs], ctx, &repo).await?;
+        save_changesets(ctx, repo, vec![bcs]).await?;
         Ok(bcs_id)
     }
 }
@@ -324,7 +336,7 @@ impl CreateFileContext {
     async fn into_file_change(
         self,
         ctx: &CoreContext,
-        repo: &BlobRepo,
+        repo: &impl Repo,
         parents: &[ChangesetId],
     ) -> Result<FileChange, Error> {
         let file_change = match self {
@@ -332,8 +344,8 @@ impl CreateFileContext {
                 let content = Bytes::copy_from_slice(content.as_ref());
 
                 let meta = filestore::store(
-                    repo.blobstore(),
-                    repo.filestore_config(),
+                    repo.repo_blobstore(),
+                    repo.filestore_config().clone(),
                     ctx,
                     &StoreRequest::new(content.len().try_into().unwrap()),
                     stream::once(async move { Ok(content) }),
@@ -342,7 +354,7 @@ impl CreateFileContext {
 
                 let copy_info = match copy_info {
                     Some((path, cs_id)) => {
-                        let cs_id = resolve_cs_id(&ctx, &repo, cs_id).await?;
+                        let cs_id = resolve_cs_id(ctx, repo, cs_id).await?;
 
                         if !parents.contains(&cs_id) {
                             return Err(format_err!(
@@ -368,11 +380,11 @@ impl CreateFileContext {
 }
 
 /// Returns helper that can be moved to move/delete/create a bookmark
-pub fn bookmark(
+pub fn bookmark<R: Repo + Clone>(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &R,
     book_ident: impl Into<BookmarkIdentifier>,
-) -> UpdateBookmarkContext {
+) -> UpdateBookmarkContext<R> {
     UpdateBookmarkContext {
         ctx: ctx.clone(),
         repo: repo.clone(),
@@ -380,13 +392,13 @@ pub fn bookmark(
     }
 }
 
-pub struct UpdateBookmarkContext {
+pub struct UpdateBookmarkContext<R: Repo> {
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: R,
     book_ident: BookmarkIdentifier,
 }
 
-impl UpdateBookmarkContext {
+impl<R: Repo> UpdateBookmarkContext<R> {
     pub async fn set_to(
         self,
         cs_ident: impl Into<CommitIdentifier>,
@@ -398,7 +410,7 @@ impl UpdateBookmarkContext {
         };
 
         let cs_id = resolve_cs_id(&self.ctx, &self.repo, cs_ident).await?;
-        let mut book_txn = self.repo.update_bookmark_transaction(self.ctx);
+        let mut book_txn = self.repo.bookmarks().create_transaction(self.ctx);
         book_txn.force_set(&bookmark, cs_id, BookmarkUpdateReason::TestMove, None)?;
         book_txn.commit().await?;
         Ok(bookmark)
@@ -415,7 +427,7 @@ impl UpdateBookmarkContext {
         };
 
         let cs_id = resolve_cs_id(&self.ctx, &self.repo, cs_ident).await?;
-        let mut book_txn = self.repo.update_bookmark_transaction(self.ctx);
+        let mut book_txn = self.repo.bookmarks().create_transaction(self.ctx);
         book_txn.create_publishing(&bookmark, cs_id, BookmarkUpdateReason::TestMove, None)?;
         book_txn.commit().await?;
         Ok(bookmark)
@@ -433,7 +445,7 @@ impl UpdateBookmarkContext {
         };
 
         let cs_id = resolve_cs_id(&self.ctx, &self.repo, cs_ident).await?;
-        let mut book_txn = self.repo.update_bookmark_transaction(self.ctx);
+        let mut book_txn = self.repo.bookmarks().create_transaction(self.ctx);
         book_txn.create(&bookmark, cs_id, BookmarkUpdateReason::TestMove, None)?;
         book_txn.commit().await?;
         Ok(bookmark)
@@ -450,7 +462,7 @@ impl UpdateBookmarkContext {
         };
 
         let cs_id = resolve_cs_id(&self.ctx, &self.repo, cs_ident).await?;
-        let mut book_txn = self.repo.update_bookmark_transaction(self.ctx);
+        let mut book_txn = self.repo.bookmarks().create_transaction(self.ctx);
         book_txn.create_scratch(&bookmark, cs_id)?;
         book_txn.commit().await?;
         Ok(bookmark)
@@ -463,7 +475,7 @@ impl UpdateBookmarkContext {
             String(s) => BookmarkName::new(s)?,
         };
 
-        let mut book_txn = self.repo.update_bookmark_transaction(self.ctx);
+        let mut book_txn = self.repo.bookmarks().create_transaction(self.ctx);
         book_txn.force_delete(&bookmark, BookmarkUpdateReason::TestMove, None)?;
         book_txn.commit().await?;
         Ok(())
@@ -545,7 +557,7 @@ impl From<BookmarkName> for BookmarkIdentifier {
 pub async fn store_files<T: AsRef<str>>(
     ctx: &CoreContext,
     files: BTreeMap<&str, Option<T>>,
-    repo: &BlobRepo,
+    repo: &impl RepoBlobstoreRef,
 ) -> BTreeMap<MPath, FileChange> {
     let mut res = btreemap! {};
 
@@ -558,7 +570,7 @@ pub async fn store_files<T: AsRef<str>>(
                 let content = FileContents::new_bytes(Bytes::copy_from_slice(content.as_bytes()));
                 let content_id = content
                     .into_blob()
-                    .store(ctx, repo.blobstore())
+                    .store(ctx, repo.repo_blobstore())
                     .await
                     .unwrap();
 
@@ -579,14 +591,14 @@ pub async fn store_rename(
     copy_src: (MPath, ChangesetId),
     path: &str,
     content: &str,
-    repo: &BlobRepo,
+    repo: &impl RepoBlobstoreRef,
 ) -> (MPath, FileChange) {
     let path = MPath::new(path).unwrap();
     let size = content.len();
     let content = FileContents::new_bytes(Bytes::copy_from_slice(content.as_bytes()));
     let content_id = content
         .into_blob()
-        .store(ctx, repo.blobstore())
+        .store(ctx, repo.repo_blobstore())
         .await
         .unwrap();
 
@@ -597,7 +609,7 @@ pub async fn store_rename(
 
 pub async fn resolve_cs_id(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl BookmarksRef + BonsaiHgMappingRef),
     cs_ident: impl Into<CommitIdentifier>,
 ) -> Result<ChangesetId, Error> {
     use CommitIdentifier::*;
@@ -611,12 +623,12 @@ pub async fn resolve_cs_id(
             maybe_cs_id.ok_or(format_err!("{} not found", hg_cs_id))
         }
         Bookmark(bookmark) => {
-            let maybe_cs_id = repo.get_bonsai_bookmark(ctx.clone(), &bookmark).await?;
+            let maybe_cs_id = repo.bookmarks().get(ctx.clone(), &bookmark).await?;
             maybe_cs_id.ok_or(format_err!("{} not found", bookmark))
         }
         String(hash_or_bookmark) => {
             if let Ok(name) = BookmarkName::new(hash_or_bookmark.clone()) {
-                if let Ok(Some(csid)) = repo.get_bonsai_bookmark(ctx.clone(), &name).await {
+                if let Ok(Some(csid)) = repo.bookmarks().get(ctx.clone(), &name).await {
                     return Ok(csid);
                 }
             }
@@ -644,7 +656,7 @@ pub async fn resolve_cs_id(
 
 pub async fn create_commit(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: impl Repo,
     parents: Vec<ChangesetId>,
     file_changes: BTreeMap<MPath, FileChange>,
 ) -> ChangesetId {
@@ -663,13 +675,13 @@ pub async fn create_commit(
     .unwrap();
 
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx, &repo).await.unwrap();
+    save_changesets(&ctx, &repo, vec![bcs]).await.unwrap();
     bcs_id
 }
 
 pub async fn create_commit_with_date(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: impl Repo,
     parents: Vec<ChangesetId>,
     file_changes: BTreeMap<MPath, FileChange>,
     author_date: DateTime,
@@ -689,6 +701,6 @@ pub async fn create_commit_with_date(
     .unwrap();
 
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx, &repo).await.unwrap();
+    save_changesets(&ctx, &repo, vec![bcs]).await.unwrap();
     bcs_id
 }

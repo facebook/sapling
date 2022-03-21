@@ -206,6 +206,7 @@ fn remove_unreachable_nodes(
 #[cfg(test)]
 mod test {
     use super::*;
+    use blobrepo::BlobRepo;
     use fbinit::FacebookInit;
     use fixtures::linear;
     use std::collections::VecDeque;
@@ -274,7 +275,7 @@ mod test {
     async fn test_index_changeset_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let repo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
 
         let dag = create_from_dag(
             &ctx,
@@ -313,7 +314,7 @@ mod test {
     async fn test_index_cleanup(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let repo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
 
         let dag = create_from_dag(
             &ctx,
@@ -352,7 +353,7 @@ mod test {
     async fn test_index_cleanup_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let repo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
 
         let dag = create_from_dag(
             &ctx,
@@ -399,7 +400,7 @@ mod test {
     async fn test_skiplist_deletions_linear(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let repo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
 
         let dag = create_from_dag(
             &ctx,
@@ -444,7 +445,7 @@ mod test {
     async fn test_build_skiplist_heads(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let repo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
 
         let dag = create_from_dag(
             &ctx,
@@ -505,7 +506,7 @@ mod test {
     ) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let repo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
 
         let dag = create_from_dag(
             &ctx,
@@ -550,7 +551,7 @@ mod test {
     async fn test_skiplist_deletions_with_merges(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let repo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
 
         let dag = create_from_dag(
             &ctx,
@@ -593,7 +594,7 @@ mod test {
     async fn test_build_skiplist(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let repo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
 
         let dag = create_from_dag(
             &ctx,
