@@ -4591,6 +4591,12 @@ def pull(ui, repo, source="default", **opts):
         hint = _("use hg pull followed by hg update DEST")
         raise error.Abort(msg, hint=hint)
 
+    # Allows us to announce larger changes affecting all the users by displaying
+    # config-driven hint on pull.
+    for name, _message in ui.configitems("hint-definitions"):
+        if name.startswith("pull:"):
+            hintutil.trigger(name)
+
     source, branches = hg.parseurl(ui.expandpath(source))
     ui.status_err(_("pulling from %s\n") % util.hidepassword(source))
 
