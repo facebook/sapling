@@ -89,7 +89,7 @@ union CommitId {
 
   /// Bonsai commit stored in an ephemeral bubble
   6: EphemeralBonsai ephemeral_bonsai;
-}
+} (rust.ord)
 
 /// Specified a commit within a repo.
 struct CommitSpecifier {
