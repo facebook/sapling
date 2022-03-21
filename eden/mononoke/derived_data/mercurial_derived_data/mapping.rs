@@ -34,6 +34,12 @@ use derived_data_service_if::types as thrift;
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct MappedHgChangesetId(pub HgChangesetId);
 
+impl MappedHgChangesetId {
+    pub fn hg_changeset_id(&self) -> HgChangesetId {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct HgChangesetDeriveOptions {
     pub set_committer_field: bool,

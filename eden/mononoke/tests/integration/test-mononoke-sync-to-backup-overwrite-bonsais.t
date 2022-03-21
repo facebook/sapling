@@ -78,9 +78,8 @@ Manually create a bonsai that would not normally be produced because it has unne
   > }
   > EOF
 
-  $ mononoke_admin create-bonsai bonsai_file --dangerous
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  Created bonsai changeset 2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f for hg_changeset 1ef6b45b6561464f92b16aba791974a9bb858ce2
+  $ mononoke_testtool create-bonsai -R repo bonsai_file
+  Created bonsai changeset 2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f for Hg changeset 1ef6b45b6561464f92b16aba791974a9bb858ce2
   $ mononoke_admin bookmarks set master_bookmark 2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f)) (glob)

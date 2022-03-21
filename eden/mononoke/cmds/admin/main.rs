@@ -24,7 +24,6 @@ use crate::blobstore_unlink::subcommand_blobstore_unlink;
 use crate::blobstore_upload::subcommand_blobstore_upload;
 use crate::bonsai_fetch::subcommand_bonsai_fetch;
 use crate::content_fetch::subcommand_content_fetch;
-use crate::create_bonsai::subcommand_create_bonsai;
 use crate::crossrepo::subcommand_crossrepo;
 use crate::error::SubcommandError;
 use crate::filenodes::subcommand_filenodes;
@@ -43,7 +42,6 @@ mod bonsai_fetch;
 mod bookmarks_manager;
 mod common;
 mod content_fetch;
-mod create_bonsai;
 mod crossrepo;
 mod derived_data;
 mod error;
@@ -80,7 +78,6 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(blobstore_unlink::build_subcommand())
         .subcommand(blobstore_upload::build_subcommand())
         .subcommand(bonsai_fetch::build_subcommand())
-        .subcommand(create_bonsai::build_subcommand())
         .subcommand(content_fetch::build_subcommand())
         .subcommand(bookmarks_manager::build_subcommand())
         .subcommand(hg_changeset::build_subcommand())
@@ -134,9 +131,6 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (bonsai_fetch::BONSAI_FETCH, Some(sub_m)) => {
                 subcommand_bonsai_fetch(fb, logger, &matches, sub_m).await
-            }
-            (create_bonsai::CREATE_BONSAI, Some(sub_m)) => {
-                subcommand_create_bonsai(fb, logger, &matches, sub_m).await
             }
             (content_fetch::CONTENT_FETCH, Some(sub_m)) => {
                 subcommand_content_fetch(fb, logger, &matches, sub_m).await
