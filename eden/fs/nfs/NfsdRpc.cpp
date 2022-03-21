@@ -9,6 +9,10 @@
 
 #include "eden/fs/nfs/NfsdRpc.h"
 
+#include <fmt/format.h>
+
+#include <folly/Range.h>
+
 namespace facebook::eden {
 EDEN_XDR_SERDE_IMPL(specdata3, specdata1, specdata2);
 EDEN_XDR_SERDE_IMPL(nfstime3, seconds, nseconds);
@@ -136,6 +140,21 @@ EDEN_XDR_SERDE_IMPL(
     case_insensitive,
     case_preserving);
 EDEN_XDR_SERDE_IMPL(PATHCONF3resfail, obj_attributes);
+
+std::string constructParsingError(folly::io::Cursor cursor, uint32_t size) {
+  std::unique_ptr<folly::IOBuf> file_handle_bytes;
+  cursor.cloneAtMost(file_handle_bytes, size);
+
+  std::unique_ptr<folly::IOBuf> raw_request_bytes;
+  cursor.retreat(cursor.getCurrentPosition());
+  cursor.cloneAtMost(raw_request_bytes, cursor.totalLength());
+
+  return fmt::format(
+      "Failed to parse {} into an Inode  Number. Full request: {}. ",
+      folly::hexlify(file_handle_bytes->coalesce()),
+      folly::hexlify(raw_request_bytes->coalesce()));
+}
+
 } // namespace facebook::eden
 
 #endif
