@@ -31,4 +31,8 @@ pub enum EphemeralBlobstoreError {
     /// The requested bubble could not be deleted.
     #[error("failed to delete bubble {0}")]
     DeleteBubbleFailed(BubbleId),
+
+    /// The bubble deletion action is disabled
+    #[error("bubble deletion is disabled")]
+    DeleteBubbleDisabled,
 }

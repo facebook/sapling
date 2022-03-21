@@ -1104,7 +1104,7 @@ impl MetadataDatabaseConfig {
 
 /// Enum configuration representing the possible modes
 /// of deletion for expired bubbles.
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum BubbleDeletionMode {
     /// No marking or deletion
     Disabled,

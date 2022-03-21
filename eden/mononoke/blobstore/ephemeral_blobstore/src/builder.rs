@@ -10,6 +10,7 @@
 use std::sync::Arc;
 
 use blobstore::BlobstoreEnumerableWithUnlink;
+use metaconfig_types::BubbleDeletionMode;
 use mononoke_types::RepositoryId;
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
@@ -40,6 +41,7 @@ impl RepoEphemeralStoreBuilder {
         blobstore: Arc<dyn BlobstoreEnumerableWithUnlink>,
         initial_bubble_lifespan: Duration,
         bubble_expiration_grace: Duration,
+        bubble_deletion_mode: BubbleDeletionMode,
     ) -> RepoEphemeralStore {
         RepoEphemeralStore::new(
             repo_id,
@@ -47,6 +49,7 @@ impl RepoEphemeralStoreBuilder {
             blobstore,
             initial_bubble_lifespan,
             bubble_expiration_grace,
+            bubble_deletion_mode,
         )
     }
 }

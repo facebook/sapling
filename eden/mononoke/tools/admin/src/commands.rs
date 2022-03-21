@@ -17,4 +17,5 @@ mononoke_app::subcommands! {
     mod redaction;
     mod repo_info;
     mod skiplist;
+    mod ephemeral_store;
 }

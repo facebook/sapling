@@ -886,6 +886,7 @@ impl RepoFactory {
                 blobstore,
                 ephemeral_config.initial_bubble_lifespan,
                 ephemeral_config.bubble_expiration_grace,
+                ephemeral_config.bubble_deletion_mode,
             );
             Ok(Arc::new(ephemeral_blobstore))
         } else {
