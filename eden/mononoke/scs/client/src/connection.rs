@@ -114,11 +114,10 @@ impl Connection {
         client_id: String,
         tier: impl AsRef<str>,
     ) -> Result<Self, Error> {
-        let env = x2pclient::get_env(fb);
-        match env.as_str() {
-            "PROD" => Self::from_tier_name_via_sr(fb, client_id, tier),
-            "CORP" => Self::from_tier_name_via_x2p(fb, client_id, tier),
-            _ => Err(anyhow!("{} not supported", env)),
+        match x2pclient::get_env(fb) {
+            x2pclient::Environment::Prod => Self::from_tier_name_via_sr(fb, client_id, tier),
+            x2pclient::Environment::Corp => Self::from_tier_name_via_x2p(fb, client_id, tier),
+            other_env => Err(anyhow!("{} not supported", other_env)),
         }
     }
 
