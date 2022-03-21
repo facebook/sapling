@@ -727,15 +727,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponentPiece name,
       std::optional<InodeNumber> ino);
 
-  /**
-   * Attempt to remove an empty directory during a checkout operation.
-   *
-   * Returns true on success, or false if the directory could not be removed.
-   * The most likely cause of a failure is an ENOTEMPTY error if someone else
-   * has already created a new file in a directory made empty by a checkout.
-   */
-  FOLLY_NODISCARD bool checkoutTryRemoveEmptyDir(CheckoutContext* ctx);
-
   folly::Synchronized<TreeInodeState> contents_;
 
   /**

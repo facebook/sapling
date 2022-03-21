@@ -3081,100 +3081,80 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
   // We need to remove this directory (and possibly replace it with a file).
   // First we have to recursively unlink everything inside the directory.
   // Fortunately, calling checkout() with an empty destination tree does
-  // exactly what we want.  checkout() will even remove the directory before it
-  // returns if the directory is empty.
+  // exactly what we want.
   return treeInode->checkout(ctx, std::move(oldTree), nullptr)
       .thenValue(
           [ctx, parentInode = inodePtrFromThis(), treeInode, newScmEntry](
               auto&&) -> folly::Future<InvalidationRequired> {
-            // Make sure the treeInode was completely removed by the checkout.
-            // If there were still untracked files inside of it, it won't have
-            // been deleted, and we have a conflict that we cannot resolve.
-            if (!treeInode->isUnlinked()) {
-              ctx->addConflict(
-                  ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
-              return InvalidationRequired::No;
-            }
-
-            if (!newScmEntry) {
-              // checkout() will invalidate the parent inode if it removes a
-              // child because it becomes an empty tree, so we don't need to
-              // invalidate here.
-              return InvalidationRequired::No;
-            }
-
             if (ctx->isDryRun()) {
               // If this is a dry run, simply report conflicts and don't update
               // or invalidate the inode.
               return InvalidationRequired::No;
             }
 
-            // Add the new entry
-            auto invalidation = ImmediateFuture<folly::Unit>{folly::unit};
+            const auto& name = getInodeName(ctx, treeInode);
+            if (!newScmEntry) {
+              // Make sure we invalidate the treeInode and remove it, the
+              // checkout call merely makes sure that treeInode is emptied of
+              // all files/directories.
+              if (parentInode
+                      ->invalidateChannelEntryCache(
+                          *parentInode->contents_.wlock(),
+                          name,
+                          treeInode->getNodeId())
+                      .hasException()) {
+                ctx->addConflict(
+                    ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
+                return InvalidationRequired::No;
+              }
 
+              if (parentInode->tryRemoveChild(
+                      ctx->renameLock(),
+                      name,
+                      treeInode,
+                      InvalidationRequired::No) != 0) {
+                ctx->addConflict(
+                    ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
+                // Since we've invalidated the entry, we need to make sure the
+                // directory is also invalidated, fallthrough.
+              }
+
+              return InvalidationRequired::Yes;
+            }
+
+            XDCHECK(!newScmEntry->isTree());
+
+            bool inserted;
             {
               auto contents = parentInode->contents_.wlock();
-              XDCHECK(!newScmEntry->isTree());
-
-              // This code is running asynchronously during checkout, so
-              // flush the readdir cache right here.
-              invalidation = parentInode->invalidateChannelDirCache(*contents);
+              auto ret = contents->entries.emplace(
+                  newScmEntry->getName(),
+                  modeFromTreeEntryType(newScmEntry->getType()),
+                  parentInode->getOverlay()->allocateInodeNumber(),
+                  newScmEntry->getHash());
+              inserted = ret.second;
             }
 
-            auto fut =
-                std::move(invalidation)
-                    .thenTry([ctx, treeInode, parentInode, newScmEntry](
-                                 folly::Try<folly::Unit>&& success) mutable {
-                      if (success.hasException()) {
-                        ctx->addError(
-                            parentInode.get(),
-                            getInodeName(ctx, treeInode),
-                            success.exception());
-                        return InvalidationRequired::No;
-                      }
-
-                      bool inserted;
-                      {
-                        auto contents = parentInode->contents_.wlock();
-                        auto ret = contents->entries.emplace(
-                            newScmEntry->getName(),
-                            modeFromTreeEntryType(newScmEntry->getType()),
-                            parentInode->getOverlay()->allocateInodeNumber(),
-                            newScmEntry->getHash());
-                        inserted = ret.second;
-                      }
-
-                      if (!inserted) {
-                        const auto& name = getInodeName(ctx, treeInode);
-                        // Hmm.  Someone else already created a new entry in
-                        // this location before we had a chance to add our new
-                        // entry.  We don't block new file or directory
-                        // creations during a checkout operation, so this is
-                        // possible.  Just report an error in this case.
-                        ctx->addError(
-                            parentInode.get(),
-                            name,
-                            InodeError(
-                                EEXIST,
-                                parentInode,
-                                name,
-                                "new file created with this name while checkout operation "
-                                "was in progress"));
-                      }
-
-                      // Return false because the code above has already
-                      // invalidated this inode's readdir cache, so we don't
-                      // technically need to do it again unless something else
-                      // modifies the contents.
-                      return InvalidationRequired::No;
-                    });
-
-            if (fut.isReady()) {
-              return std::move(fut).getTry();
-            } else {
-              return std::move(fut).semi().via(
-                  parentInode->getMount()->getServerThreadPool().get());
+            if (!inserted) {
+              // Hmm.  Someone else already created a new entry in
+              // this location before we had a chance to add our new
+              // entry.  We don't block new file or directory
+              // creations during a checkout operation, so this is
+              // possible.  Just report an error in this case.
+              ctx->addError(
+                  parentInode.get(),
+                  name,
+                  InodeError(
+                      EEXIST,
+                      parentInode,
+                      name,
+                      "new file created with this name while checkout operation "
+                      "was in progress"));
             }
+
+            // Make sure that we invalidate the directory in
+            // TreeInode::checkout.
+            return InvalidationRequired::Yes;
           });
 }
 
@@ -3205,8 +3185,8 @@ folly::Try<folly::Unit> TreeInode::invalidateChannelEntryCache(
     if (path.has_value()) {
       // Try to remove the file first, and then call decFsRefcount if needed.
       // When no inode number is passed in, we still need to invalidate the
-      // ProjectedFS file, as tombstones are a special kind of placeholder that
-      // EdenFS doesn't have inodes for.
+      // ProjectedFS file, as tombstones are a special kind of placeholder
+      // that EdenFS doesn't have inodes for.
       auto ret = fsChannel->removeCachedFile(path.value() + name);
       if (ret.hasValue()) {
         auto& inodeMap = *getInodeMap();
@@ -3272,26 +3252,23 @@ void TreeInode::saveOverlayPostCheckout(
 
   bool isMaterialized;
   bool stateChanged;
-  bool deleteSelf;
   {
     auto contents = contents_.wlock();
 
     // Check to see if we need to be materialized or not.
     //
-    // If we can confirm that we are identical to the source control Tree we do
-    // not need to be materialized.
+    // If we can confirm that we are identical to the source control Tree we
+    // do not need to be materialized.
     auto tryToDematerialize = [&]() -> std::optional<ObjectId> {
       // If the new tree does not exist in source control, we must be
       // materialized, since there is no source control Tree to refer to.
-      // (If we are empty in this case we will set deleteSelf and try to remove
-      // ourself entirely.)
       if (!tree) {
         return std::nullopt;
       }
 
       const auto& scmEntries = tree->getTreeEntries();
-      // If we have a different number of entries we must be different from the
-      // Tree, and therefore must be materialized.
+      // If we have a different number of entries we must be different from
+      // the Tree, and therefore must be materialized.
       if (scmEntries.size() != contents->entries.size()) {
         return std::nullopt;
       }
@@ -3304,12 +3281,12 @@ void TreeInode::saveOverlayPostCheckout(
         // If any of our children are materialized, we need to be materialized
         // too to record the fact that we have materialized children.
         //
-        // If our children are materialized this means they are likely different
-        // from the new source control state.  (This is not a 100% guarantee
-        // though, as writes may still be happening concurrently to the checkout
-        // operation.)  Even if the child is still identical to its source
-        // control state we still want to make sure we are materialized if the
-        // child is.
+        // If our children are materialized this means they are likely
+        // different from the new source control state.  (This is not a 100%
+        // guarantee though, as writes may still be happening concurrently to
+        // the checkout operation.)  Even if the child is still identical to
+        // its source control state we still want to make sure we are
+        // materialized if the child is.
         if (inodeIter->second.isMaterialized()) {
           return std::nullopt;
         }
@@ -3329,8 +3306,9 @@ void TreeInode::saveOverlayPostCheckout(
       // that the previous fake Tree and the current fake Tree have the same
       // hash, which will incorrectly dematerialized this inode. The fake hash
       // cannot be reconstituted from the backing store, so this makes the
-      // directory structure unreadable. The correct long-term fix is to remove
-      // getHash() from Tree and pass around ObjectIds explicitly if known.
+      // directory structure unreadable. The correct long-term fix is to
+      // remove getHash() from Tree and pass around ObjectIds explicitly if
+      // known.
       if (tree->getHash().size() == 0) {
         return std::nullopt;
       }
@@ -3340,18 +3318,13 @@ void TreeInode::saveOverlayPostCheckout(
       return tree->getHash();
     };
 
-    // If we are now empty as a result of the checkout we can remove ourself
-    // entirely.  For now we only delete ourself if this directory doesn't
-    // exist in source control either.
-    deleteSelf = (!tree && contents->entries.empty());
-
     auto oldHash = contents->treeHash;
     contents->treeHash = tryToDematerialize();
     isMaterialized = contents->isMaterialized();
     stateChanged = (oldHash != contents->treeHash);
 
     XLOG(DBG4) << "saveOverlayPostCheckout(" << getLogPath() << ", " << tree
-               << "): deleteSelf=" << deleteSelf << ", oldHash="
+               << "): oldHash="
                << (oldHash ? oldHash.value().toLogString() : "none")
                << " newHash="
                << (contents->treeHash ? contents->treeHash.value().toLogString()
@@ -3362,36 +3335,25 @@ void TreeInode::saveOverlayPostCheckout(
     saveOverlayDir(contents->entries);
   }
 
-  if (deleteSelf) {
-    // If we should be removed entirely, delete ourself.
-    if (checkoutTryRemoveEmptyDir(ctx)) {
-      return;
-    }
-
-    // We failed to remove ourself.  The most likely reason is that someone
-    // created a new entry inside this directory between when we set deleteSelf
-    // above and when we attempted to remove ourself.  Fall through and perform
-    // the normal materialization state update in this case.
-  }
-
   if (stateChanged) {
     // If our state changed, tell our parent.
     //
-    // TODO: Currently we end up writing out overlay data for TreeInodes pretty
-    // often during the checkout process.  Each time a child entry is processed
-    // we will likely end up rewriting data for it's parent TreeInode, and then
-    // once all children are processed we do another pass through here in
-    // saveOverlayPostCheckout() and possibly write it out again.
+    // TODO: Currently we end up writing out overlay data for TreeInodes
+    // pretty often during the checkout process.  Each time a child entry is
+    // processed we will likely end up rewriting data for it's parent
+    // TreeInode, and then once all children are processed we do another pass
+    // through here in saveOverlayPostCheckout() and possibly write it out
+    // again.
     //
     // It would be nicer if we could only save the data for each TreeInode
     // once.  The downside of this is that the on-disk overlay state would be
     // potentially inconsistent until the checkout completes.  There may be
     // periods of time where a parent directory says the child is materialized
     // when the child has decided to be dematerialized.  This would cause
-    // problems when we tried to load the overlay data later.  If we update the
-    // code to be able to handle this somehow then maybe we could avoid doing
-    // all of the intermediate updates to the parent as we process each child
-    // entry.
+    // problems when we tried to load the overlay data later.  If we update
+    // the code to be able to handle this somehow then maybe we could avoid
+    // doing all of the intermediate updates to the parent as we process each
+    // child entry.
     auto loc = getLocationInfo(ctx->renameLock());
     if (loc.parent && !loc.unlinked) {
       if (isMaterialized) {
@@ -3402,22 +3364,6 @@ void TreeInode::saveOverlayPostCheckout(
       }
     }
   }
-}
-
-bool TreeInode::checkoutTryRemoveEmptyDir(CheckoutContext* ctx) {
-  auto location = getLocationInfo(ctx->renameLock());
-  XDCHECK(!location.unlinked);
-  if (!location.parent) {
-    // We can't ever remove the root directory.
-    return false;
-  }
-
-  auto errnoValue = location.parent->tryRemoveChild(
-      ctx->renameLock(),
-      location.name,
-      inodePtrFromThis(),
-      InvalidationRequired::Yes);
-  return (errnoValue == 0);
 }
 
 folly::Future<InodePtr> TreeInode::loadChildLocked(
@@ -3443,10 +3389,9 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
 }
 
 namespace {
-
 /**
- * WARNING: predicate is called while the InodeMap and TreeInode contents locks
- * are held.
+ * WARNING: predicate is called while the InodeMap and TreeInode contents
+ * locks are held.
  */
 template <typename Recurse, typename Predicate>
 size_t unloadChildrenIf(
@@ -3457,8 +3402,9 @@ size_t unloadChildrenIf(
     Predicate&& predicate) {
   size_t unloadCount = 0;
 
-  // Recurse into children here. Children hold strong references to their parent
-  // trees, so unloading children can cause the parent to become unreferenced.
+  // Recurse into children here. Children hold strong references to their
+  // parent trees, so unloading children can cause the parent to become
+  // unreferenced.
   for (auto& child : treeChildren) {
     unloadCount += recurse(*child);
   }
@@ -3478,12 +3424,12 @@ size_t unloadChildrenIf(
         continue;
       }
 
-      // Check isPtrAcquireCountZero() first. It's a single load instruction on
-      // x86 and if the predicate calls getFuseRefcount(), it will assert if
-      // isPtrAcquireCountZero() is false.
+      // Check isPtrAcquireCountZero() first. It's a single load instruction
+      // on x86 and if the predicate calls getFuseRefcount(), it will assert
+      // if isPtrAcquireCountZero() is false.
       if (entryInode->isPtrAcquireCountZero() && predicate(entryInode)) {
-        // If it's a tree and it has a loaded child, its refcount will never be
-        // zero because the child holds a reference to its parent.
+        // If it's a tree and it has a loaded child, its refcount will never
+        // be zero because the child holds a reference to its parent.
 
         // Allocate space in the vector. This can throw std::bad_alloc.
         toDelete.emplace_back();
@@ -3501,7 +3447,8 @@ size_t unloadChildrenIf(
   }
 
   unloadCount += toDelete.size();
-  // Outside of the locks, deallocate all of the inodes scheduled to be deleted.
+  // Outside of the locks, deallocate all of the inodes scheduled to be
+  // deleted.
   toDelete.clear();
 
   return unloadCount;
@@ -3516,8 +3463,8 @@ std::vector<TreeInodePtr> getTreeChildren(TreeInode* self) {
         continue;
       }
 
-      // This has the side effect of incrementing the reference counts of all
-      // of the children. When that goes back to zero,
+      // This has the side effect of incrementing the reference counts of
+      // all of the children. When that goes back to zero,
       // InodeMap::onInodeUnreferenced will be called on the entry.
       if (auto asTree = entry.second.asTreePtrOrNull()) {
         treeChildren.emplace_back(std::move(asTree));
@@ -3629,10 +3576,10 @@ size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
     }
   }
 
-  // We no longer need pointers to the child inodes - release them. Beware that
-  // this may deallocate inode instances for the children and clear them from
-  // InodeMap and contents table as a natural side effect of their refcounts
-  // going to zero.
+  // We no longer need pointers to the child inodes - release them. Beware
+  // that this may deallocate inode instances for the children and clear them
+  // from InodeMap and contents table as a natural side effect of their
+  // refcounts going to zero.
   //
   // unloadChildrenIf below will clear treeChildren.
   fileChildren.clear();
@@ -3707,12 +3654,12 @@ void TreeInode::prefetch(ObjectFetchContext& context) {
               continue;
             }
 
-            // Userspace will commonly issue a readdir() followed by a series of
-            // stat()s. In FUSE, that translates into readdir() and then
+            // Userspace will commonly issue a readdir() followed by a series
+            // of stat()s. In FUSE, that translates into readdir() and then
             // lookup(), which returns the same information as a stat(),
-            // including the number of directory entries or number of bytes in a
-            // file. Perform those operations here by loading inodes, trees, and
-            // blob sizes.
+            // including the number of directory entries or number of bytes in
+            // a file. Perform those operations here by loading inodes, trees,
+            // and blob sizes.
             inodeFutures.emplace_back(
                 lease.getTreeInode()
                     ->loadChildLocked(
@@ -3745,10 +3692,10 @@ folly::Future<struct stat> TreeInode::setattr(
   materialize();
   struct stat result(getMount()->initStatData());
 
-  // We do not have size field for directories and currently TreeInode does not
-  // have any field like FileInode::state_::mode to set the mode. May be in the
-  // future if needed we can add a mode Field to TreeInode::contents_ but for
-  // now we are simply setting the mode to (S_IFDIR | 0755).
+  // We do not have size field for directories and currently TreeInode does
+  // not have any field like FileInode::state_::mode to set the mode. May be
+  // in the future if needed we can add a mode Field to TreeInode::contents_
+  // but for now we are simply setting the mode to (S_IFDIR | 0755).
 
   // Set InodeNumber, timeStamps, mode in the result.
   result.st_ino = getNodeId().get();
