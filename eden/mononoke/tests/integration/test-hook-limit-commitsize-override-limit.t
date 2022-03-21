@@ -12,9 +12,9 @@
   > limit_commitsize <(
   >   cat <<CONF
   > bypass_commit_string="@allow-large-files"
-  > config_ints={commitsizelimit=${BYTE_LIMIT}}
+  > config_ints_64={commitsizelimit=${BYTE_LIMIT}}
   > config_string_lists={override_limit_path_regexes=["b$"]}
-  > config_int_lists={override_limits=[${OVERRIDE_BYTE_LIMIT}]}
+  > config_int_64_lists={override_limits=[${OVERRIDE_BYTE_LIMIT}]}
   > CONF
   > )
 

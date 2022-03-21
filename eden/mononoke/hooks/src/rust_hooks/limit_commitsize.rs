@@ -28,7 +28,11 @@ pub struct LimitCommitsizeBuilder {
 
 impl LimitCommitsizeBuilder {
     pub fn set_from_config(mut self, config: &HookConfig) -> Self {
+        // Please note that the _i64 configs override any i32s one with the same key.
         if let Some(v) = config.ints.get("commitsizelimit") {
+            self = self.commit_size_limit(*v as u64)
+        }
+        if let Some(v) = config.ints_64.get("commitsizelimit") {
             self = self.commit_size_limit(*v as u64)
         }
         if let Some(v) = config.string_lists.get("ignore_path_regexes") {
@@ -37,10 +41,16 @@ impl LimitCommitsizeBuilder {
         if let Some(v) = config.ints.get("changed_files_limit") {
             self = self.changed_files_limit(*v as u64)
         }
+        if let Some(v) = config.ints_64.get("changed_files_limit") {
+            self = self.changed_files_limit(*v as u64)
+        }
         if let Some(v) = config.string_lists.get("override_limit_path_regexes") {
             self = self.override_limit_path_regexes(v);
         }
         if let Some(v) = config.int_lists.get("override_limits") {
+            self = self.override_limits(v.into_iter().map(|i| *i as u64));
+        }
+        if let Some(v) = config.int_64_lists.get("override_limits") {
             self = self.override_limits(v.into_iter().map(|i| *i as u64));
         }
         self
@@ -248,7 +258,6 @@ mod test {
             .await?;
         assert_eq!(hook_execution, HookExecution::Accepted);
 
-
         let hook = build_hook(hashmap! {
             "commitsizelimit".to_string() => 3,
             "changed_files_limit".to_string() => 1,
@@ -445,19 +454,19 @@ mod test {
         Ok(())
     }
 
-    fn build_hook(ints: HashMap<String, i32>) -> Result<LimitCommitsize> {
-        build_hook_with_limits(ints, hashmap! {}, hashmap! {})
+    fn build_hook(ints_64: HashMap<String, i64>) -> Result<LimitCommitsize> {
+        build_hook_with_limits(ints_64, hashmap! {}, hashmap! {})
     }
 
     fn build_hook_with_limits(
-        ints: HashMap<String, i32>,
+        ints_64: HashMap<String, i64>,
         string_lists: HashMap<String, Vec<String>>,
         int_lists: HashMap<String, Vec<i32>>,
     ) -> Result<LimitCommitsize> {
         let config = HookConfig {
             bypass: None,
             strings: hashmap! {},
-            ints,
+            ints_64,
             string_lists,
             int_lists,
             ..Default::default()

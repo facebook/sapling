@@ -9,7 +9,7 @@
   $ hook_test_setup \
   > limit_commitsize <(
   >   cat <<CONF
-  > config_ints={commitsizelimit=10, changed_files_limit=5}
+  > config_ints_64={commitsizelimit=10, changed_files_limit=5}
   > CONF
   > )
 
