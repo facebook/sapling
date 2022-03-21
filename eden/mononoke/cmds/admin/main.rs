@@ -59,7 +59,6 @@ mod rebase;
 mod redaction;
 mod rsync;
 mod skiplist_subcommand;
-mod split_commit;
 mod subcommand_blame;
 mod subcommand_deleted_manifest;
 mod subcommand_fsnodes;
@@ -104,7 +103,6 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(rebase::build_subcommand())
         .subcommand(pushrebase::build_subcommand())
         .subcommand(subcommand_skeleton_manifests::build_subcommand())
-        .subcommand(split_commit::build_subcommand())
         .subcommand(truncate_segmented_changelog::build_subcommand())
 }
 
@@ -213,9 +211,6 @@ fn main(fb: FacebookInit) -> ExitCode {
                     fb, logger, &matches, sub_m,
                 )
                 .await
-            }
-            (split_commit::SPLIT_COMMIT, Some(sub_m)) => {
-                split_commit::subcommand_split_commit(fb, logger, &matches, sub_m).await
             }
             (truncate_segmented_changelog::TRUNCATE_SEGMENTED_CHANGELOG, Some(sub_m)) => {
                 truncate_segmented_changelog::subcommand_truncate_segmented_changelog(

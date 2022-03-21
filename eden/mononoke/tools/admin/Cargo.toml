@@ -23,6 +23,7 @@ bytes = { version = "1.1", features = ["serde"] }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../../changesets" }
+changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clap = { version = "3.1.2", features = ["derive", "regex", "unicode", "wrap_help"] }
 cmdlib_displaying = { version = "0.1.0", path = "../../cmdlib/displaying" }
@@ -53,3 +54,9 @@ skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 strum_macros = "0.21"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+
+[dev-dependencies]
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+maplit = "1.0"
+test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
+tests_utils = { version = "0.1.0", path = "../../tests/utils" }

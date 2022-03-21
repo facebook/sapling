@@ -13,6 +13,7 @@ use bookmarks::{self, BookmarkUpdateLog, Bookmarks};
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use ephemeral_blobstore::RepoEphemeralStore;
+use filestore::FilestoreConfig;
 use metaconfig_types::RepoConfig;
 use mutable_renames::MutableRenames;
 use phases::Phases;
@@ -30,6 +31,9 @@ pub struct AdminRepo {
 
     #[facet]
     pub repo_config: RepoConfig,
+
+    #[facet]
+    pub filestore_config: FilestoreConfig,
 
     #[facet]
     pub bonsai_hg_mapping: dyn BonsaiHgMapping,

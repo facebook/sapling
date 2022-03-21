@@ -5,104 +5,62 @@
  * GNU General Public License version 2.
  */
 
-use crate::error::SubcommandError;
-
-use anyhow::{anyhow, Error};
-use blobrepo::{save_bonsai_changesets, BlobRepo};
-use blobstore::Loadable;
-use clap_old::{App, Arg, ArgMatches, SubCommand};
-use cmdlib::{
-    args::{self, MononokeMatches},
-    helpers::csid_resolve,
-};
-use context::CoreContext;
-use fbinit::FacebookInit;
-use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, MPath};
-use slog::{info, Logger};
 use std::collections::BTreeMap;
 
-pub const SPLIT_COMMIT: &str = "split-commit";
-const ARG_HASH_OR_BOOKMARK: &str = "hash-or-bookmark";
-const ARG_COMMIT_FILE_SIZE: &str = "commit-file-size";
-const ARG_COMMIT_FILE_NUM: &str = "commit-file-num";
+use anyhow::{bail, Result};
+use blobstore::Loadable;
+use changesets_creation::save_changesets;
+use clap::{ArgGroup, Args};
+use context::CoreContext;
+use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, MPath};
+use repo_blobstore::RepoBlobstoreRef;
 
-pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
-    SubCommand::with_name(SPLIT_COMMIT)
-        .about("command to split bonsai commit in a stack of commits")
-        .long_about("This command splits a bonsai into a stack of commits while trying to maintain \
-        the limits on number of files and size of all files in a commit. However these limits are not strict \
-        i.e. resulting commits might have larger size and/or number of files. For example, if input commit has
-        a file which size is larger than file size limit, then obviously one of the commits will be larger than
-        the limit. Also we group copy/move sources and destinations in a single commit, which might also make
-        one of the commits to go above the limit.")
-        .arg(
-            Arg::with_name(ARG_COMMIT_FILE_NUM)
-                .long(ARG_COMMIT_FILE_NUM)
-                .help("target number of files in the commit. Not a strict limit - resulting commit might be bigger")
-                .takes_value(true)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name(ARG_COMMIT_FILE_SIZE)
-                .long(ARG_COMMIT_FILE_SIZE)
-                .help("target sum of all files sizes in the commit, in bytes. Not a strict limit - resulting commit might be bigger")
-                .takes_value(true)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name(ARG_HASH_OR_BOOKMARK)
-                .help("(hg|bonsai) commit hash or bookmark")
-                .takes_value(true)
-                .multiple(false)
-                .required(true),
-        )
+use crate::commit_id::parse_commit_id;
+use crate::repo::AdminRepo;
+
+#[derive(Args)]
+#[clap(group(ArgGroup::new("file-size-and-num").args(&["commit-file-size", "commit-file-num"]).multiple(true)))]
+pub struct CommitSplitArgs {
+    /// Commit ID to split
+    commit_id: String,
+
+    /// Target sum of the size of files in each commit (in bytes)
+    #[clap(long)]
+    commit_file_size: Option<u64>,
+
+    /// Target number of files in each commit
+    #[clap(long)]
+    commit_file_num: Option<u64>,
 }
 
-pub async fn subcommand_split_commit<'a>(
-    fb: FacebookInit,
-    logger: Logger,
-    matches: &'a MononokeMatches<'_>,
-    sub_matches: &'a ArgMatches<'_>,
-) -> Result<(), SubcommandError> {
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
+pub async fn split(ctx: &CoreContext, repo: &AdminRepo, split_args: CommitSplitArgs) -> Result<()> {
+    let cs_id = parse_commit_id(ctx, repo, &split_args.commit_id).await?;
 
-    let commit_file_size = args::get_u64_opt(sub_matches, ARG_COMMIT_FILE_SIZE);
-    let commit_file_num = args::get_u64_opt(sub_matches, ARG_COMMIT_FILE_NUM);
+    let stack = split_commit(
+        ctx,
+        repo,
+        cs_id,
+        split_args.commit_file_size,
+        split_args.commit_file_num,
+    )
+    .await?;
 
-    let hash_or_bm = sub_matches.value_of(ARG_HASH_OR_BOOKMARK).ok_or_else(|| {
-        let err: SubcommandError = anyhow!("--{} not set", ARG_HASH_OR_BOOKMARK).into();
-        err
-    })?;
-    let cs_id = csid_resolve(&ctx, repo.clone(), hash_or_bm).await?;
-
-    let result = split_commit(&ctx, &repo, cs_id, commit_file_size, commit_file_num).await?;
-
-    info!(
-        ctx.logger(),
-        "commits are printed from ancestors to descendants"
-    );
-    for cs_id in result {
-        println!("{}", cs_id);
-    }
+    println!("Split {} into {} commits", cs_id, stack.len());
 
     Ok(())
 }
 
 async fn split_commit(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &AdminRepo,
     cs_id: ChangesetId,
     commit_file_size: Option<u64>,
     commit_file_num: Option<u64>,
-) -> Result<Vec<ChangesetId>, Error> {
-    let bcs = cs_id
-        .load(&ctx, &repo.get_blobstore())
-        .await
-        .map_err(Error::from)?;
+) -> Result<Vec<ChangesetId>> {
+    let bcs = cs_id.load(ctx, repo.repo_blobstore()).await?;
 
     if bcs.is_merge() {
-        return Err(anyhow!("splitting merges is not supported!").into());
+        bail!("splitting merges is not supported!");
     }
 
     let mut parent = bcs.parents().next();
@@ -148,17 +106,17 @@ async fn split_commit(
         if should_create_new_commit {
             let num_of_files = current_file_changes.len();
             let cs_id = create_new_commit(
-                &ctx,
-                &repo,
+                ctx,
+                repo,
                 bcs.clone(),
                 parent.clone(),
                 &mut current_file_changes,
             )
             .await?;
             parent = Some(cs_id);
-            info!(
-                ctx.logger(),
-                "{}, size: {}, number of files: {}", cs_id, current_file_size, num_of_files,
+            println!(
+                "{} size: {} files: {}",
+                cs_id, current_file_size, num_of_files
             );
             current_file_changes.clear();
             current_file_size = 0;
@@ -166,7 +124,7 @@ async fn split_commit(
         }
 
         for (path, fc) in file_group {
-            let new_fc = fixup_file_change(&path, &fc, &parent)?;
+            let new_fc = modify_file_change_parent(path, fc, parent)?;
             if let FileChange::Change(fc) = &new_fc {
                 current_file_size += fc.size();
             }
@@ -177,40 +135,39 @@ async fn split_commit(
     if !current_file_changes.is_empty() {
         let num_of_files = current_file_changes.len();
         let cs_id = create_new_commit(
-            &ctx,
-            &repo,
+            ctx,
+            repo,
             bcs.clone(),
             parent.clone(),
             &mut current_file_changes,
         )
         .await?;
         result.push(cs_id);
-        info!(
-            ctx.logger(),
-            "{}, size: {}, number of files: {}", cs_id, current_file_size, num_of_files
+        println!(
+            "{} size: {} files: {}",
+            cs_id, current_file_size, num_of_files
         );
     }
 
     Ok(result)
 }
 
-fn fixup_file_change(
+fn modify_file_change_parent(
     path: &MPath,
     fc: &FileChange,
-    parent: &Option<ChangesetId>,
-) -> Result<FileChange, Error> {
+    parent: Option<ChangesetId>,
+) -> Result<FileChange> {
     let new_fc = match fc {
         FileChange::Change(fc) => {
-            // current_file_size += fc.size();
             // We need to fix copy info and change the parent
             if let Some((from_path, _)) = fc.copy_from() {
                 let copy_from = if let Some(parent) = parent {
-                    (from_path.clone(), *parent)
+                    (from_path.clone(), parent)
                 } else {
-                    return Err(anyhow!(
+                    bail!(
                         "invalid bonsai changeset - it's a root commit, but has copy info for {}",
                         path
-                    ));
+                    );
                 };
 
                 FileChange::Change(fc.with_new_copy_from(Some(copy_from)))
@@ -220,7 +177,7 @@ fn fixup_file_change(
         }
         FileChange::Deletion => fc.clone(),
         FileChange::UntrackedDeletion | FileChange::UntrackedChange(_) => {
-            return Err(anyhow!("cannot split snapshots!").into());
+            bail!("cannot split snapshots");
         }
     };
     Ok(new_fc)
@@ -228,33 +185,32 @@ fn fixup_file_change(
 
 async fn create_new_commit(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &AdminRepo,
     bcs: BonsaiChangeset,
     parent: Option<ChangesetId>,
     current_file_changes: &mut BTreeMap<MPath, FileChange>,
-) -> Result<ChangesetId, Error> {
+) -> Result<ChangesetId> {
     let mut new_bcs = bcs.clone().into_mut();
-    let mut parents = vec![];
-    parents.extend(parent);
-    new_bcs.parents = parents;
-    new_bcs.file_changes = current_file_changes.drain_filter(|_, _| true).collect();
+    new_bcs.parents = parent.into_iter().collect();
+    new_bcs.file_changes = std::mem::take(current_file_changes).into();
     let new_bcs = new_bcs.freeze()?;
-    let res = new_bcs.get_changeset_id();
-    save_bonsai_changesets(vec![new_bcs], ctx.clone(), repo).await?;
-    Ok(res)
+    let cs_id = new_bcs.get_changeset_id();
+    save_changesets(ctx, repo, vec![new_bcs]).await?;
+    Ok(cs_id)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use blobrepo_hg::BlobRepoHg;
+    use fbinit::FacebookInit;
     use maplit::hashmap;
+    use repo_blobstore::RepoBlobstoreRef;
     use tests_utils::{list_working_copy_utf8, CreateCommitContext};
 
     #[fbinit::test]
-    async fn test_split_commit_simple(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_split_commit_simple(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: AdminRepo = test_repo_factory::build_empty()?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("first", "a")
@@ -274,10 +230,8 @@ mod test {
 
         assert_eq!(split.len(), 3);
         {
-            // Make sure it's derived correctly
+            // Make sure it has the right contents
             let cs_id = *split.last().unwrap();
-            repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                .await?;
             let wc = list_working_copy_utf8(&ctx, &repo, cs_id).await?;
             assert_eq!(
                 wc,
@@ -288,18 +242,18 @@ mod test {
                 }
             );
 
-            let bcs = split[0].load(&ctx, &repo.get_blobstore()).await?;
+            let bcs = split[0].load(&ctx, repo.repo_blobstore()).await?;
             let parents: Vec<ChangesetId> = vec![];
             assert_eq!(
                 parents,
                 bcs.parents().into_iter().collect::<Vec<ChangesetId>>()
             );
-            let bcs = split[1].load(&ctx, &repo.get_blobstore()).await?;
+            let bcs = split[1].load(&ctx, repo.repo_blobstore()).await?;
             assert_eq!(
                 vec![split[0]],
                 bcs.parents().into_iter().collect::<Vec<_>>()
             );
-            let bcs = split[2].load(&ctx, &repo.get_blobstore()).await?;
+            let bcs = split[2].load(&ctx, repo.repo_blobstore()).await?;
             assert_eq!(
                 vec![split[1]],
                 bcs.parents().into_iter().collect::<Vec<_>>()
@@ -330,9 +284,7 @@ mod test {
         assert_eq!(split.len(), 1);
         {
             let cs_id = *split.last().unwrap();
-            // Make sure it's derived correctly
-            repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                .await?;
+            // Make sure it has the right contents
             let wc = list_working_copy_utf8(&ctx, &repo, cs_id).await?;
             assert_eq!(
                 wc,
@@ -349,9 +301,9 @@ mod test {
     }
 
     #[fbinit::test]
-    async fn test_split_commit_with_renames(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_split_commit_with_renames(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: AdminRepo = test_repo_factory::build_empty()?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("first", "a")
@@ -375,10 +327,8 @@ mod test {
 
         assert_eq!(split.len(), 2);
         {
-            // Make sure it's derived correctly
+            // Make sure it has the right contents
             let cs_id = *split.last().unwrap();
-            repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                .await?;
             let wc = list_working_copy_utf8(&ctx, &repo, cs_id).await?;
             assert_eq!(
                 wc,
@@ -394,9 +344,9 @@ mod test {
     }
 
     #[fbinit::test]
-    async fn test_split_commit_renamed_to_multiple_dest(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_split_commit_renamed_to_multiple_dest(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: AdminRepo = test_repo_factory::build_empty()?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("first", "a")
@@ -420,10 +370,8 @@ mod test {
 
         assert_eq!(split.len(), 1);
         {
-            // Make sure it's derived correctly
+            // Make sure it has the right contents
             let cs_id = *split.last().unwrap();
-            repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                .await?;
             let wc = list_working_copy_utf8(&ctx, &repo, cs_id).await?;
             assert_eq!(
                 wc,
@@ -432,7 +380,7 @@ mod test {
                     MPath::new("third")? => "c".to_string(),
                 }
             );
-            let bcs = cs_id.load(&ctx, &repo.get_blobstore()).await?;
+            let bcs = cs_id.load(&ctx, repo.repo_blobstore()).await?;
             assert_eq!(bcs.file_changes_map().len(), 3);
         }
 
