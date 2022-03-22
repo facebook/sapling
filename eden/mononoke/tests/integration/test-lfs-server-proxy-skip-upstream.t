@@ -12,7 +12,7 @@
 
 # Start a "server" that never responds as the upstream
   $ upstream_port="$(get_free_socket)"
-  $ upstream="http://${mononoke_host}:${upstream_port}/"
+  $ upstream="http://$(mononoke_host):${upstream_port}/"
   $ ncat --exec "/bin/sleep 1" --keep-open --listen "$LOCALIP" "$upstream_port" &
   $ nc_pid="$!"
   $ echo "$nc_pid" >> "$DAEMON_PIDS"
