@@ -9,7 +9,7 @@
 
 #include <folly/portability/Windows.h>
 
-#include <folly/futures/Future.h>
+#include <folly/experimental/AtomicReadMostlyMainPtr.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
 
 #include <ProjectedFSLib.h> // @manual
@@ -20,7 +20,6 @@
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
-#include "eden/fs/utils/Rcu.h"
 
 namespace facebook {
 namespace eden {
@@ -28,11 +27,6 @@ class EdenMount;
 class Notifications;
 class PrjfsChannelInner;
 class PrjfsRequestContext;
-
-namespace detail {
-struct RcuTag;
-using RcuLockedPtr = RcuPtr<PrjfsChannelInner, RcuTag>::RcuLockedPtr;
-} // namespace detail
 
 using TraceDetailedArgumentsHandle = std::shared_ptr<void>;
 
@@ -172,9 +166,10 @@ class PrjfsChannelInner {
   PrjfsChannelInner(
       std::unique_ptr<PrjfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
-      ProcessAccessLog& processAccessLog);
+      ProcessAccessLog& processAccessLog,
+      folly::Promise<folly::Unit> deletedPromise);
 
-  ~PrjfsChannelInner() = default;
+  ~PrjfsChannelInner();
 
   explicit PrjfsChannelInner() = delete;
   PrjfsChannelInner(const PrjfsChannelInner&) = delete;
@@ -424,6 +419,9 @@ class PrjfsChannelInner {
   folly::Synchronized<folly::F14FastMap<Guid, std::shared_ptr<Enumerator>>>
       enumSessions_;
 
+  // Set when the destructor is called.
+  folly::Promise<folly::Unit> deletedPromise_;
+
   struct TelemetryState {
     std::unordered_map<uint64_t, OutstandingRequest> requests;
   };
@@ -517,8 +515,8 @@ class PrjfsChannel {
    * As long as the returned value is alive, the mount cannot be unmounted.
    * When an unmount is pending, the shared_ptr will be NULL.
    */
-  detail::RcuLockedPtr getInner() {
-    return inner_.rlock();
+  folly::ReadMostlySharedPtr<PrjfsChannelInner> getInner() {
+    return inner_.load(std::memory_order_consume);
   }
 
  private:
@@ -529,7 +527,8 @@ class PrjfsChannel {
 
   ProcessAccessLog processAccessLog_;
 
-  RcuPtr<PrjfsChannelInner, detail::RcuTag> inner_;
+  folly::AtomicReadMostlyMainPtr<PrjfsChannelInner> inner_;
+  folly::SemiFuture<folly::Unit> innerDeleted_;
 
   // Internal ProjectedFS channel used to communicate with ProjectedFS.
   PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};

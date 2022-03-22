@@ -34,7 +34,7 @@ static_assert(CheckSize<PrjfsTraceEvent, 48>());
 static_assert(
     CheckEqual<1200000, kTraceBusCapacity * sizeof(PrjfsTraceEvent)>());
 
-detail::RcuLockedPtr getChannel(
+folly::ReadMostlySharedPtr<PrjfsChannelInner> getChannel(
     const PRJ_CALLBACK_DATA* callbackData) noexcept {
   XDCHECK(callbackData);
   auto* channel = static_cast<PrjfsChannel*>(callbackData->InstanceContext);
@@ -288,10 +288,12 @@ void detachAndCompleteCallback(
 PrjfsChannelInner::PrjfsChannelInner(
     std::unique_ptr<PrjfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
-    ProcessAccessLog& processAccessLog)
+    ProcessAccessLog& processAccessLog,
+    folly::Promise<folly::Unit> deletedPromise)
     : dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
       processAccessLog_(processAccessLog),
+      deletedPromise_(std::move(deletedPromise)),
       traceDetailedArguments_(std::atomic<size_t>(0)),
       traceBus_(
           TraceBus<PrjfsTraceEvent>::create("PrjfsTrace", kTraceBusCapacity)) {
@@ -313,6 +315,10 @@ PrjfsChannelInner::PrjfsChannelInner(
           }
         }
       }));
+}
+
+PrjfsChannelInner::~PrjfsChannelInner() {
+  deletedPromise_.setValue(folly::unit);
 }
 
 ImmediateFuture<folly::Unit> PrjfsChannelInner::waitForPendingNotifications() {
@@ -1068,10 +1074,6 @@ void PrjfsChannelInner::sendError(int32_t commandId, HRESULT result) {
   sendReply(mountChannel_, commandId, result, nullptr);
 }
 
-namespace {
-folly::Indestructible<folly::rcu_domain<detail::RcuTag>> prjfsRcuDomain;
-}
-
 PrjfsChannel::PrjfsChannel(
     AbsolutePathPiece mountPath,
     std::unique_ptr<PrjfsDispatcher> dispatcher,
@@ -1080,12 +1082,16 @@ PrjfsChannel::PrjfsChannel(
     Guid guid)
     : mountPath_(mountPath),
       mountId_(std::move(guid)),
-      processAccessLog_(std::move(processNameCache)),
-      inner_(
-          *prjfsRcuDomain,
-          std::move(dispatcher),
-          straceLogger,
-          processAccessLog_) {}
+      processAccessLog_(std::move(processNameCache)) {
+  auto [innerDeletedPromise, innerDeletedFuture] =
+      folly::makePromiseContract<folly::Unit>();
+  innerDeleted_ = std::move(innerDeletedFuture);
+  inner_.store(std::make_shared<PrjfsChannelInner>(
+      std::move(dispatcher),
+      straceLogger,
+      processAccessLog_,
+      std::move(innerDeletedPromise)));
+}
 
 PrjfsChannel::~PrjfsChannel() {
   XCHECK(stopPromise_.isFulfilled())
@@ -1158,7 +1164,7 @@ void PrjfsChannel::start(bool readOnly, bool useNegativePathCaching) {
   // negative path result is cached by Windows without rebooting.
   flushNegativePathCache();
 
-  inner_.rlock()->setMountChannel(mountChannel_);
+  getInner()->setMountChannel(mountChannel_);
 
   XLOG(INFO) << "Started PrjfsChannel for: " << mountPath_;
 }
@@ -1175,11 +1181,11 @@ folly::SemiFuture<folly::Unit> PrjfsChannel::stop() {
   PrjStopVirtualizing(mountChannel_);
   mountChannel_ = nullptr;
 
-  return folly::makeSemiFutureWith([this] {
-    inner_.reset();
-    inner_.synchronize();
-    stopPromise_.setValue(StopData{});
-  });
+  inner_.store(nullptr, std::memory_order_release);
+  return std::move(innerDeleted_)
+      .deferValue([stopPromise = std::move(stopPromise_)](auto&&) mutable {
+        stopPromise.setValue(StopData{});
+      });
 }
 
 folly::SemiFuture<PrjfsChannel::StopData> PrjfsChannel::getStopFuture() {

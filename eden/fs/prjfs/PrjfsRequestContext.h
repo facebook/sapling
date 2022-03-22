@@ -23,7 +23,7 @@ class PrjfsRequestContext : public RequestContext {
   PrjfsRequestContext& operator=(PrjfsRequestContext&&) = delete;
 
   explicit PrjfsRequestContext(
-      detail::RcuLockedPtr channel,
+      folly::ReadMostlySharedPtr<PrjfsChannelInner> channel,
       const PRJ_CALLBACK_DATA& prjfsData)
       : RequestContext(channel->getProcessAccessLog()),
         channel_(std::move(channel)),
@@ -65,7 +65,7 @@ class PrjfsRequestContext : public RequestContext {
   }
 
  private:
-  detail::RcuLockedPtr channel_;
+  folly::ReadMostlySharedPtr<PrjfsChannelInner> channel_;
   int32_t commandId_;
   pid_t clientPid_;
 };
