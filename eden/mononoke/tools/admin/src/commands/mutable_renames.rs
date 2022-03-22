@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod add;
 mod check_commit;
 mod get;
 
@@ -15,6 +16,7 @@ use mononoke_app::MononokeApp;
 
 use crate::repo::AdminRepo;
 
+use add::AddArgs;
 use check_commit::CheckCommitArgs;
 use get::GetArgs;
 
@@ -34,6 +36,8 @@ pub enum MutableRenamesSubcommand {
     CheckCommit(CheckCommitArgs),
     /// Get mutable rename information for a given commit, path pair
     Get(GetArgs),
+    /// Add new mutable renames to your repo
+    Add(AddArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -49,6 +53,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             check_commit::check_commit(&ctx, &repo, args).await?
         }
         MutableRenamesSubcommand::Get(args) => get::get(&ctx, &repo, args).await?,
+        MutableRenamesSubcommand::Add(args) => add::add(&ctx, &repo, args).await?,
     }
 
     Ok(())
