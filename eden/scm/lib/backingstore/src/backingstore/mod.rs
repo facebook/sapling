@@ -27,9 +27,21 @@ pub enum BackingStore {
 use BackingStore::*;
 
 impl BackingStore {
-    pub fn new<P: AsRef<Path>>(repository: P, use_edenapi: bool, aux_data: bool) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(
+        repository: P,
+        use_edenapi: bool,
+        aux_data: bool,
+        allow_retries: bool,
+    ) -> Result<Self> {
         let hg = repository.as_ref().join(".hg");
-        let config = configparser::hg::load::<String, String>(Some(&hg), None)?;
+        let mut config = configparser::hg::load::<String, String>(Some(&hg), None)?;
+
+        if !allow_retries {
+            let source = configparser::config::Options::new().source("backingstore");
+            config.set("lfs", "backofftimes", Some("0"), &source);
+            config.set("lfs", "throttlebackofftimes", Some("0"), &source);
+            config.set("edenapi", "max-retry-per-request", Some("0"), &source);
+        }
 
         Ok(if config.get_or_default("scmstore", "backingstore")? {
             New(BackingScmStores::new(&config, &hg, use_edenapi, aux_data)?)

@@ -90,10 +90,15 @@ void getTreeBatchCallback(
 HgNativeBackingStore::HgNativeBackingStore(
     folly::StringPiece repository,
     bool useEdenApi,
-    bool useAuxData) {
+    bool useAuxData,
+    bool allowRetries) {
   RustCFallible<RustBackingStore> store(
       rust_backingstore_new(
-          repository.data(), repository.size(), useEdenApi, useAuxData),
+          repository.data(),
+          repository.size(),
+          useEdenApi,
+          useAuxData,
+          allowRetries),
       rust_backingstore_free);
 
   if (store.isError()) {

@@ -184,6 +184,7 @@ HgBackingStore::HgBackingStore(
           repository,
           useEdenApi_,
           config->getEdenConfig()->useAuxMetadata.getValue(),
+          false, // allowRetries
           config),
       logger_(logger) {
   HgImporter importer(repository, stats);
@@ -208,7 +209,7 @@ HgBackingStore::HgBackingStore(
       config_(std::move(config)),
       serverThreadPool_{importThreadPool_.get()},
       useEdenApi_{false},
-      datapackStore_(repository, false, false, config_),
+      datapackStore_(repository, false, false, false, config_),
       logger_(nullptr) {
   const auto& options = importer->getOptions();
   repoName_ = options.repoName;

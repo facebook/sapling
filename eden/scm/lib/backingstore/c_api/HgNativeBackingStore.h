@@ -23,7 +23,8 @@ class HgNativeBackingStore {
   HgNativeBackingStore(
       folly::StringPiece repository,
       bool useEdenApi,
-      bool useAuxData);
+      bool useAuxData,
+      bool allowRetries);
 
   std::unique_ptr<folly::IOBuf>
   getBlob(folly::ByteRange name, folly::ByteRange node, bool local);
