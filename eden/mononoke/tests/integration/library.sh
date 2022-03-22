@@ -1971,6 +1971,8 @@ function merge_tunables() {
   local new
   new="$(jq -s '.[0] * .[1]' "$MONONOKE_TUNABLES_PATH" -)"
   printf "%s" "$new" > "$MONONOKE_TUNABLES_PATH"
+  # This may fail if Mononoke is not started. No big deal.
+  force_update_configerator >/dev/null 2>&1 || true
 }
 
 function init_tunables() {
