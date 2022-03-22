@@ -18,22 +18,18 @@ use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
 use borrowed::borrowed;
 use cached_config::ConfigStore;
 use chrono::Duration as ChronoDuration;
-use clap_old::Arg;
-use cmdlib::{
-    args::{self, MononokeClapApp},
-    helpers::block_execute,
-    value_t,
-};
+use clap::Parser;
 use context::{CoreContext, SessionContainer};
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
 use fbinit::FacebookInit;
 use futures::future;
 use futures_03_ext::BufferedParams;
 use healer::Healer;
-use lazy_static::lazy_static;
 use metaconfig_types::{BlobConfig, DatabaseConfig, StorageConfig};
+use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::MononokeAppBuilder;
 use mononoke_types::DateTime;
-use slog::{info, o};
+use slog::{error, info, o};
 use sql_construct::SqlConstructFromDatabaseConfig;
 #[cfg(fbcode_build)]
 use sql_ext::facebook::MyAdmin;
@@ -41,19 +37,45 @@ use sql_ext::{
     facebook::MysqlOptions,
     replication::{NoReplicaLagMonitor, ReplicaLagMonitor, WaitForReplicationConfig},
 };
+#[cfg(not(test))]
+use stats::schedule_stats_aggregation_preview;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-const QUIET_ARG: &str = "quiet";
-const ITER_LIMIT_ARG: &str = "iteration-limit";
-const HEAL_MIN_AGE_ARG: &str = "heal-min-age-secs";
-const HEAL_CONCURRENCY_ARG: &str = "heal-concurrency";
-const HEAL_MAX_BYTES: &str = "heal-max-bytes";
-
-lazy_static! {
-    /// Minimal age of entry to consider if it has to be healed
-    static ref DEFAULT_ENTRY_HEALING_MIN_AGE: ChronoDuration = ChronoDuration::minutes(2);
+#[derive(Parser)]
+#[clap(about = "Monitors blobstore_sync_queue to heal blobstores with missing data")]
+struct MononokeBlobstoreHealerArgs {
+    /// set limit for how many queue entries to process
+    #[clap(long, default_value_t = 10000)]
+    sync_queue_limit: usize,
+    /// performs a single healing and prints what would it do without doing it
+    #[clap(long)]
+    dry_run: bool,
+    /// drain the queue without healing.  Use with caution.
+    #[clap(long)]
+    drain_only: bool,
+    /// id of storage group to be healed, e.g. manifold_xdb_multiplex
+    #[clap(long)]
+    storage_id: String,
+    /// Optional source blobstore key in SQL LIKE format, e.g. repo0138.hgmanifest%
+    #[clap(long)]
+    blobstore_key_like: Option<String>,
+    /// Log a lot less
+    #[clap(long, short = 'q')]
+    quiet: bool,
+    /// If specified, only perform the given number of iterations
+    #[clap(long)]
+    iteration_limit: Option<u64>,
+    /// Seconds. If specified, override default minimum age to heal of 120 seconds
+    #[clap(long, default_value_t = 120)]
+    heal_min_age_secs: i64,
+    /// How maby blobs to heal concurrently.
+    #[clap(long, default_value_t = 100)]
+    heal_concurrency: usize,
+    /// max combined size of concurrently healed blobs (approximate, will still let individual larger blobs through)
+    #[clap(long, default_value_t = 10_000_000_000)]
+    heal_max_bytes: u64,
 }
 
 async fn maybe_schedule_healer_for_storage(
@@ -228,95 +250,43 @@ async fn schedule_healing(
     }
 }
 
-fn setup_app<'a, 'b>(app_name: &str) -> MononokeClapApp<'a, 'b> {
-    args::MononokeAppBuilder::new(app_name)
-        .with_scuba_logging_args()
-        .with_fb303_args()
-        .build()
-        .about("Monitors blobstore_sync_queue to heal blobstores with missing data")
-        .args_from_usage(
-            r#"
-            --sync-queue-limit=[LIMIT] 'set limit for how many queue entries to process'
-            --dry-run 'performs a single healing and prints what would it do without doing it'
-            --drain-only 'drain the queue without healing.  Use with caution.'
-            --storage-id=[STORAGE_ID] 'id of storage group to be healed, e.g. manifold_xdb_multiplex'
-            --blobstore-key-like=[BLOBSTORE_KEY] 'Optional source blobstore key in SQL LIKE format, e.g. repo0138.hgmanifest%'
-        "#,
-        )
-        .arg(
-            Arg::with_name(QUIET_ARG)
-                .long(QUIET_ARG)
-                .short("q")
-                .takes_value(false)
-                .required(false)
-                .help("Log a lot less"),
-        )
-        .arg(
-            Arg::with_name(ITER_LIMIT_ARG)
-                .long(ITER_LIMIT_ARG)
-                .takes_value(true)
-                .required(false)
-                .help("If specified, only perform the given number of iterations"),
-        )
-        .arg(
-            Arg::with_name(HEAL_MIN_AGE_ARG)
-                .long(HEAL_MIN_AGE_ARG)
-                .takes_value(true)
-                .required(false)
-                .help("Seconds. If specified, override default minimum age to heal of 120 seconds"),
-        ).arg(
-            Arg::with_name(HEAL_CONCURRENCY_ARG)
-                .long(HEAL_CONCURRENCY_ARG)
-                .takes_value(true)
-                .required(false)
-                .help("How maby blobs to heal concurrently."),
-        ).arg(
-            Arg::with_name(HEAL_MAX_BYTES)
-                .long(HEAL_MAX_BYTES)
-                .takes_value(true)
-                .required(false)
-                .help("max combined size of concurrently healed blobs \
-                       (approximate, will still let individual larger blobs through)")
-        )
-}
-
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let app_name = "blobstore_healer";
-    let matches = setup_app(app_name).get_matches(fb)?;
+    let app = MononokeAppBuilder::new(fb)
+        .with_app_extension(Fb303AppExtension {})
+        .build::<MononokeBlobstoreHealerArgs>()?;
+    let args: MononokeBlobstoreHealerArgs = app.args()?;
+    let env = app.environment();
 
-    let storage_id = matches
-        .value_of("storage-id")
-        .ok_or(Error::msg("Missing storage-id"))?;
-    let logger = matches.logger();
-    let config_store = matches.config_store();
-    let mysql_options = matches.mysql_options();
-    let readonly_storage = matches.readonly_storage();
-    let blobstore_options = matches.blobstore_options();
-    let storage_config = args::load_storage_configs(config_store, &matches)?
+    let storage_id = args.storage_id;
+    let logger = app.logger();
+    let config_store = app.config_store();
+    let mysql_options = &env.mysql_options;
+    let readonly_storage = env.readonly_storage;
+    let blobstore_options = &env.blobstore_options;
+    let storage_config = app
+        .storage_configs()
         .storage
-        .remove(storage_id)
+        .get(&storage_id)
         .ok_or(format_err!("Storage id `{}` not found", storage_id))?;
-    let source_blobstore_key = matches.value_of("blobstore-key-like");
-    let blobstore_sync_queue_limit = value_t!(matches, "sync-queue-limit", usize).unwrap_or(10000);
-    let heal_concurrency = value_t!(matches, HEAL_CONCURRENCY_ARG, usize).unwrap_or(100);
-    let heal_max_bytes = value_t!(matches, HEAL_MAX_BYTES, u64).unwrap_or(10_000_000_000);
-    let dry_run = matches.is_present("dry-run");
-    let drain_only = matches.is_present("drain-only");
+    let source_blobstore_key = args.blobstore_key_like;
+    let blobstore_sync_queue_limit = args.sync_queue_limit;
+    let heal_concurrency = args.heal_concurrency;
+    let heal_max_bytes = args.heal_max_bytes;
+    let dry_run = args.dry_run;
+    let drain_only = args.drain_only;
     if drain_only && source_blobstore_key.is_none() {
         bail!("Missing --blobstore-key-like restriction for --drain-only");
     }
 
-    let iter_limit = args::get_u64_opt(&matches, ITER_LIMIT_ARG);
-    let healing_min_age = args::get_i64_opt(&matches, HEAL_MIN_AGE_ARG)
-        .map(|s| ChronoDuration::seconds(s))
-        .unwrap_or(*DEFAULT_ENTRY_HEALING_MIN_AGE);
-    let quiet = matches.is_present(QUIET_ARG);
+    let iter_limit = args.iteration_limit;
+    let healing_min_age = ChronoDuration::seconds(args.heal_min_age_secs);
+    let quiet = args.quiet;
     if !quiet {
         info!(logger, "Using storage_config {:?}", storage_config);
     }
 
-    let scuba = matches.scuba_sample_builder();
+    let scuba = env.scuba_sample_builder.clone();
 
     let ctx = SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba);
     let buffered_params = BufferedParams {
@@ -331,22 +301,41 @@ fn main(fb: FacebookInit) -> Result<()> {
         drain_only,
         blobstore_sync_queue_limit,
         buffered_params,
-        storage_config,
+        storage_config.clone(),
         mysql_options,
         source_blobstore_key.map(|s| s.to_string()),
-        *readonly_storage,
+        readonly_storage,
         blobstore_options,
         iter_limit,
         healing_min_age,
         config_store,
     );
 
-    block_execute(
-        healer,
+    let fb303_args = app.extension_args::<Fb303AppExtension>()?;
+    fb303_args.start_fb303_server(
         fb,
-        app_name,
-        &logger,
-        &matches,
+        "mononoke_server",
+        logger,
         cmdlib::monitoring::AliveService,
-    )
+    )?;
+
+    let result = app.runtime().block_on(async {
+        #[cfg(not(test))]
+        {
+            let stats_agg = schedule_stats_aggregation_preview()
+                .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
+            // Note: this returns a JoinHandle, which we drop, thus detaching the task
+            // It thus does not count towards shutdown_on_idle below
+            tokio::task::spawn(stats_agg);
+        }
+
+        healer.await
+    });
+
+    // Log error in glog format (main will log, but not with glog)
+    result.map_err(move |e| {
+        error!(logger, "Execution error: {:?}", e);
+        // Shorten the error that main will print, given that already printed in glog form
+        format_err!("Execution failed")
+    })
 }

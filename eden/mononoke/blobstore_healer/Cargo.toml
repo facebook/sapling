@@ -20,6 +20,7 @@ blobstore_sync_queue = { version = "0.1.0", path = "../blobstore_sync_queue" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
+clap = { version = "3.1.2", features = ["derive", "regex", "unicode", "wrap_help"] }
 clap-old = { package = "clap", version = "2.33" }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
@@ -30,11 +31,13 @@ futures_03_ext = { package = "futures_ext", version = "0.1.0", git = "https://gi
 itertools = "0.10.3"
 lazy_static = "1.0"
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 rand = { version = "0.8", features = ["small_rng"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
