@@ -8,6 +8,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 #include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 
 #include <folly/Exception.h>
 #include <folly/logging/xlog.h>
@@ -272,28 +273,34 @@ void validatePathComponentLength(PathComponentPiece name) {
   }
 }
 
+namespace {
+boost::filesystem::path asBoostPath(AbsolutePathPiece path) {
+  return boost::filesystem::path{path.stringPiece()};
+}
+} // namespace
+
 bool ensureDirectoryExists(AbsolutePathPiece path) {
-  return boost::filesystem::create_directories(path.as_boost());
+  return boost::filesystem::create_directories(asBoostPath(path));
 }
 
 bool ensureDirectoryExists(
     AbsolutePathPiece path,
     boost::system::error_code& error) noexcept {
-  return boost::filesystem::create_directories(path.as_boost(), error);
+  return boost::filesystem::create_directories(asBoostPath(path), error);
 }
 
 bool removeRecursively(AbsolutePathPiece path) {
-  return boost::filesystem::remove_all(path.as_boost());
+  return boost::filesystem::remove_all(asBoostPath(path));
 }
 
 bool removeFileWithAbsolutePath(AbsolutePathPiece path) {
-  return boost::filesystem::remove(path.as_boost());
+  return boost::filesystem::remove(asBoostPath(path));
 }
 
 void renameWithAbsolutePath(
     AbsolutePathPiece srcPath,
     AbsolutePathPiece destPath) {
-  boost::filesystem::rename(srcPath.as_boost(), destPath.as_boost());
+  boost::filesystem::rename(asBoostPath(srcPath), asBoostPath(destPath));
 }
 
 AbsolutePath expandUser(

@@ -9,10 +9,8 @@
 
 #include "eden/fs/utils/Memory.h"
 
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
 #include <boost/operators.hpp>
-
+#include <boost/system/error_code.hpp>
 #include <fmt/format.h>
 #include <folly/Expected.h>
 #include <folly/FBString.h>
@@ -1420,24 +1418,6 @@ class AbsolutePathBase : public ComposedPathBase<
           std::is_same<StorageAlias, std::string>::value>::type>
   const char* c_str() const {
     return this->path_.c_str();
-  }
-
-  // TODO: switch to `std::filesystem` once it is ready
-  boost::filesystem::path as_boost() const {
-    auto piece = this->stringPiece();
-    return boost::filesystem::path(piece.begin(), piece.end());
-  }
-
-  bool is_regular_file() const {
-    return boost::filesystem::is_regular_file(as_boost());
-  }
-
-  bool is_directory() const {
-    return boost::filesystem::is_directory(as_boost());
-  }
-
-  bool exists() const {
-    return boost::filesystem::exists(as_boost());
   }
 };
 

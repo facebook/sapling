@@ -8,6 +8,8 @@
 #ifdef _WIN32
 
 #include "eden/fs/inodes/PrjfsDispatcherImpl.h"
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <cpptoml.h>
 #include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/executors/SerialExecutor.h>

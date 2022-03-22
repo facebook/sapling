@@ -206,7 +206,8 @@ void scanCurrentDir(
     InodeNumber inode,
     overlay::OverlayDir knownState,
     bool recordDeletion) {
-  if (!dir.is_directory()) {
+  auto boostPath = boost::filesystem::path(dir.stringPiece());
+  if (!boost::filesystem::is_directory(boostPath)) {
     XLOGF(WARN, "Attempting to scan '{}' which is not a directory", dir);
     return;
   }
@@ -215,8 +216,7 @@ void scanCurrentDir(
 
   auto overlayEntries = makeEntriesSet(knownState);
   // Loop to synchronize overlay state with disk state
-  for (const auto& entry :
-       boost::filesystem::directory_iterator(dir.as_boost())) {
+  for (const auto& entry : boost::filesystem::directory_iterator(boostPath)) {
     auto path = AbsolutePath{entry.path().c_str()};
     auto name = path.basename();
     auto dtype = dtypeFromEntry(entry);
@@ -297,8 +297,7 @@ void scanCurrentDir(
 
   // Now that this overlay directory is consistent with the on-disk state,
   // proceed to its children.
-  for (const auto& entry :
-       boost::filesystem::directory_iterator(dir.as_boost())) {
+  for (const auto& entry : boost::filesystem::directory_iterator(boostPath)) {
     auto path = AbsolutePath{entry.path().c_str()};
     auto mode = dtypeFromEntry(entry);
 

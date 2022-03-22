@@ -1036,54 +1036,6 @@ TEST(PathFuncs, localDirCreateRemove) {
   ASSERT_FALSE(removeRecursively(topDir));
 }
 
-TEST(PathFuncs, exists) {
-  folly::test::TemporaryDirectory dir = makeTempDir();
-  string pathStr{dir.path().string()};
-  AbsolutePathPiece tmpDir{pathStr};
-
-  auto filePath = tmpDir + "test.txt"_relpath;
-  EXPECT_FALSE(filePath.exists());
-  writeFile(filePath, StringPiece("hello\nworld")).throwUnlessValue();
-  EXPECT_TRUE(filePath.exists());
-
-  auto directoryPath = tmpDir + "dir"_relpath;
-  EXPECT_FALSE(directoryPath.exists());
-  ensureDirectoryExists(directoryPath);
-  EXPECT_TRUE(directoryPath.exists());
-}
-
-TEST(PathFuns, isRegularFile) {
-  folly::test::TemporaryDirectory dir = makeTempDir();
-  string pathStr{dir.path().string()};
-  AbsolutePathPiece tmpDir{pathStr};
-
-  auto filePath = tmpDir + "test.txt"_relpath;
-  EXPECT_FALSE(filePath.is_regular_file());
-  writeFile(filePath, StringPiece("hello\nworld")).throwUnlessValue();
-  EXPECT_TRUE(filePath.is_regular_file());
-
-  auto directoryPath = tmpDir + "dir"_relpath;
-  EXPECT_FALSE(directoryPath.is_regular_file());
-  ensureDirectoryExists(directoryPath);
-  EXPECT_FALSE(directoryPath.is_regular_file());
-}
-
-TEST(PathFuncs, isDirectory) {
-  folly::test::TemporaryDirectory dir = makeTempDir();
-  string pathStr{dir.path().string()};
-  AbsolutePathPiece tmpDir{pathStr};
-
-  auto filePath = tmpDir + "test.txt"_relpath;
-  EXPECT_FALSE(filePath.is_directory());
-  writeFile(filePath, StringPiece("hello\nworld")).throwUnlessValue();
-  EXPECT_FALSE(filePath.is_directory());
-
-  auto directoryPath = tmpDir + "dir"_relpath;
-  EXPECT_FALSE(directoryPath.is_directory());
-  ensureDirectoryExists(directoryPath);
-  EXPECT_TRUE(directoryPath.is_directory());
-}
-
 TEST(PathFuncs, noThrow) {
   // if std::string is nothrow move constructible and assignable, the
   // path types should be as well.
