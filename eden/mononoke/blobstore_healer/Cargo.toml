@@ -21,12 +21,10 @@ borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clap = { version = "3.1.2", features = ["derive", "regex", "unicode", "wrap_help"] }
-clap-old = { package = "clap", version = "2.33" }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1.31" }
 futures_03_ext = { package = "futures_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.10.3"
 lazy_static = "1.0"
