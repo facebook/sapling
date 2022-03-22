@@ -7,6 +7,7 @@
 
 mod add;
 mod check_commit;
+mod copy_immutable;
 mod get;
 
 use anyhow::{Context, Result};
@@ -18,6 +19,7 @@ use crate::repo::AdminRepo;
 
 use add::AddArgs;
 use check_commit::CheckCommitArgs;
+use copy_immutable::CopyImmutableArgs;
 use get::GetArgs;
 
 /// Fetch and update mutable renames information
@@ -38,6 +40,8 @@ pub enum MutableRenamesSubcommand {
     Get(GetArgs),
     /// Add new mutable renames to your repo
     Add(AddArgs),
+    /// Copy immutable renames to mutable renames
+    CopyImmutable(CopyImmutableArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -54,6 +58,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         MutableRenamesSubcommand::Get(args) => get::get(&ctx, &repo, args).await?,
         MutableRenamesSubcommand::Add(args) => add::add(&ctx, &repo, args).await?,
+        MutableRenamesSubcommand::CopyImmutable(args) => {
+            copy_immutable::copy_immutable(&ctx, &repo, args).await?
+        }
     }
 
     Ok(())
