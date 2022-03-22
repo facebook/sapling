@@ -51,7 +51,7 @@ use mononoke_types::ChangesetId;
 use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use tests_utils::drawdag::{extend_from_dag_with_changes, ChangeFn};
-use tests_utils::CreateCommitContext;
+use tests_utils::{CommitIdentifier, CreateCommitContext};
 use tokio::io::AsyncReadExt;
 use topo_sort::sort_topological;
 use unodes::RootUnodeManifestId;
@@ -89,9 +89,23 @@ enum Action {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum ChangeAction {
-    Modify { path: Vec<u8>, content: Vec<u8> },
-    Delete { path: Vec<u8> },
-    Extra { key: String, value: Vec<u8> },
+    Modify {
+        path: Vec<u8>,
+        content: Vec<u8>,
+    },
+    Delete {
+        path: Vec<u8>,
+    },
+    Extra {
+        key: String,
+        value: Vec<u8>,
+    },
+    Copy {
+        path: Vec<u8>,
+        content: Vec<u8>,
+        parent: String,
+        parent_path: Vec<u8>,
+    },
 }
 
 impl Action {
@@ -134,6 +148,22 @@ impl Action {
                     Ok(Action::Change {
                         name,
                         change: ChangeAction::Extra { key, value },
+                    })
+                }
+                ("copy", [name, path, content, parent, parent_path]) => {
+                    let name = name.to_string()?;
+                    let path = path.to_bytes();
+                    let content = content.to_bytes();
+                    let parent = parent.to_string()?;
+                    let parent_path = parent_path.to_bytes();
+                    Ok(Action::Change {
+                        name,
+                        change: ChangeAction::Copy {
+                            path,
+                            content,
+                            parent,
+                            parent_path,
+                        },
                     })
                 }
                 _ => Err(anyhow!("Invalid spec for key: {}", key)),
@@ -286,8 +316,12 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     let mut change_fns = BTreeMap::new();
     for (name, changes) in commit_changes {
-        let apply: Box<ChangeFn<BlobRepo>> =
-            Box::new(move |c: CreateCommitContext<BlobRepo>| apply_changes(c, changes));
+        let apply: Box<ChangeFn<BlobRepo>> = Box::new(
+            move |
+                c: CreateCommitContext<BlobRepo>,
+                committed: &'_ BTreeMap<String, ChangesetId>,
+            | { apply_changes(c, committed, changes) },
+        );
         change_fns.insert(name, apply);
     }
 
@@ -340,6 +374,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
 fn apply_changes<'a>(
     mut c: CreateCommitContext<'a, BlobRepo>,
+    committed: &'_ BTreeMap<String, ChangesetId>,
     changes: Vec<ChangeAction>,
 ) -> CreateCommitContext<'a, BlobRepo> {
     for change in changes {
@@ -347,6 +382,21 @@ fn apply_changes<'a>(
             ChangeAction::Modify { path, content, .. } => c = c.add_file(path.as_slice(), content),
             ChangeAction::Delete { path, .. } => c = c.delete_file(path.as_slice()),
             ChangeAction::Extra { key, value, .. } => c = c.add_extra(key, value),
+            ChangeAction::Copy {
+                path,
+                content,
+                parent,
+                parent_path,
+                ..
+            } => {
+                let parent: CommitIdentifier =
+                    committed.get(&parent).map_or(parent.into(), |&c| c.into());
+                c = c.add_file_with_copy_info(
+                    path.as_slice(),
+                    content,
+                    (parent, parent_path.as_slice()),
+                )
+            }
         }
     }
     c
