@@ -149,13 +149,16 @@ impl<T: BlobstoreKeySource> BlobstoreKeySource for PrefixBlobstore<T> {
     ) -> Result<BlobstoreEnumerationData> {
         let new_param = match range {
             BlobstoreKeyParam::Start(range) => BlobstoreKeyParam::Start(BlobstoreKeyRange {
-                begin_key: if range.begin_key.is_empty() {
-                    String::new()
-                } else {
-                    self.prepend(&range.begin_key)
-                },
+                // Regardless of the value of the begin_key (empty or non-empty), we
+                // need to prepend the prefix to begin the search from the first
+                // prefix-included entry in the underlying blobstore.
+                begin_key: self.prepend(&range.begin_key),
                 end_key: if range.end_key.is_empty() {
-                    String::new()
+                    // When the end-key is empty, we need to prepend the prefix to ensure
+                    // that the search is limited to prefix-included entries. The \u{10ffff}
+                    // (final valid unicode value) is added as a representative end-of-range
+                    // character for restricting the search.
+                    self.prepend("\u{10ffff}")
                 } else {
                     self.prepend(&range.end_key)
                 },

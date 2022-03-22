@@ -196,7 +196,7 @@ async fn get_blob<'a>(
                     put_behaviour,
                 )
                 .map_err(|e| -> Error { e })?;
-                let blobstore = PrefixBlobstore::new(manifold, format!("flat/{}.", NAME));
+                let blobstore = PrefixBlobstore::new(manifold, format!("{}.", NAME));
                 Arc::new(blobstore)
             }
             #[cfg(not(fbcode_build))]

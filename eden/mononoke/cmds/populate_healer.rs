@@ -37,8 +37,6 @@ const PRESERVE_STATE_RATIO: usize = 10_000;
 /// reporting will be broken
 const INIT_COUNT_VALUE: usize = 0;
 
-const FLAT_NAMESPACE_PREFIX: &str = "flat/";
-
 /// Configuration options
 struct Config {
     db_address: String,
@@ -271,14 +269,12 @@ async fn get_resume_state(
 
     let init_state = {
         let start = format!(
-            "{}repo{:04}.{}",
-            FLAT_NAMESPACE_PREFIX,
+            "repo{:04}.{}",
             config.repo_id.id(),
             config.start_key.clone().unwrap_or_else(|| "".to_string())
         );
         let end = format!(
-            "{}repo{:04}.{}",
-            FLAT_NAMESPACE_PREFIX,
+            "repo{:04}.{}",
             config.repo_id.id(),
             config.end_key.clone().unwrap_or_else(|| "\x7f".to_string()),
         );
@@ -382,7 +378,7 @@ fn make_key_source(
     match args {
         BlobConfig::Manifold { bucket, .. } => {
             let res = Arc::new(
-                ManifoldBlob::new(fb, &bucket, None, None, None, None, DEFAULT_PUT_BEHAVIOUR)?
+                ManifoldBlob::new(fb, bucket, None, None, None, None, DEFAULT_PUT_BEHAVIOUR)?
                     .into_inner(),
             );
             Ok(res)
