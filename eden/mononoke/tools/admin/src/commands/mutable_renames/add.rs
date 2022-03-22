@@ -17,6 +17,7 @@ use repo_derived_data::RepoDerivedDataRef;
 use std::collections::HashMap;
 use unodes::RootUnodeManifestId;
 
+use crate::commands::mutable_renames::copy_immutable;
 use crate::commit_id::parse_commit_id;
 use crate::repo::AdminRepo;
 
@@ -59,6 +60,16 @@ pub async fn add(ctx: &CoreContext, repo: &AdminRepo, add_args: AddArgs) -> Resu
     let src_path = MPath::new_opt(&add_args.src_path)?;
     let dst_cs_id = parse_commit_id(ctx, repo, &add_args.dst_commit_id).await?;
     let dst_path = MPath::new_opt(&add_args.dst_path)?;
+
+    // If we don't have mutable renames on a commit already, copy over the
+    // immutable renames before adding new ones
+    if !repo
+        .mutable_renames()
+        .has_rename_uncached(ctx, dst_cs_id)
+        .await?
+    {
+        copy_immutable::copy_immutable_impl(ctx, repo, dst_cs_id).await?;
+    }
 
     let src_root_unode_id = repo
         .repo_derived_data()

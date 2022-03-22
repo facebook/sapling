@@ -36,6 +36,14 @@ pub async fn copy_immutable(
     args: CopyImmutableArgs,
 ) -> Result<()> {
     let dst_cs_id = parse_commit_id(ctx, repo, &args.commit_id).await?;
+    copy_immutable_impl(ctx, repo, dst_cs_id).await
+}
+
+pub async fn copy_immutable_impl(
+    ctx: &CoreContext,
+    repo: &AdminRepo,
+    dst_cs_id: ChangesetId,
+) -> Result<()> {
     let bonsai_cs = dst_cs_id.load(ctx, repo.repo_blobstore()).await?;
 
     let changes_with_copies: Vec<_> = bonsai_cs
