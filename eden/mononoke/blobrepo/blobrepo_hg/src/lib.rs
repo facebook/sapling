@@ -39,6 +39,7 @@ use futures::{
     stream::{self, BoxStream},
     Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_mutation::ArcHgMutationStore;
 use mercurial_types::{HgChangesetId, HgFileNodeId};
 use mononoke_types::{ChangesetId, RepoPath};
@@ -397,7 +398,7 @@ impl BlobRepoHg for BlobRepo {
         ctx: CoreContext,
         bcs_id: ChangesetId,
     ) -> Result<HgChangesetId, Error> {
-        mercurial_derived_data::get_hg_from_bonsai_changeset(self.clone(), ctx, bcs_id).await
+        self.derive_hg_changeset(&ctx, bcs_id).await
     }
 }
 

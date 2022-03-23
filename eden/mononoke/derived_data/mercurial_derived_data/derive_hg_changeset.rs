@@ -10,13 +10,13 @@ use crate::{
     mapping::{HgChangesetDeriveOptions, MappedHgChangesetId},
 };
 use anyhow::{anyhow, bail, Error};
-use blobrepo::BlobRepo;
+use async_trait::async_trait;
 use blobrepo_common::changed_files::compute_changed_files;
 use blobstore::{Blobstore, Loadable};
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::{BonsaiDerived, DeriveError};
+use derived_data_manager::DerivationError;
 use futures::{
     future::{self, try_join, try_join_all},
     stream, FutureExt, TryStreamExt,
@@ -32,6 +32,7 @@ use mercurial_types::{
 use mononoke_types::{
     BonsaiChangeset, ChangesetId, FileChange, FileType, MPath, TrackedFileChange,
 };
+use repo_derived_data::RepoDerivedDataRef;
 use stats::prelude::*;
 use std::sync::Arc;
 use std::{collections::HashMap, time::Instant};
@@ -474,21 +475,38 @@ async fn generate_hg_changeset(
     Ok((csid, cs))
 }
 
-pub async fn get_hg_from_bonsai_changeset(
-    repo: BlobRepo,
-    ctx: CoreContext,
-    bcs_id: ChangesetId,
-) -> Result<HgChangesetId, Error> {
-    STATS::get_hg_from_bonsai_changeset.add_value(1);
-    let start_timestmap = Instant::now();
-    let result = match MappedHgChangesetId::derive(&ctx, &repo, bcs_id).await {
-        Ok(id) => Ok(id.hg_changeset_id()),
-        Err(err) => match err {
-            DeriveError::Disabled(..) => Err(err.into()),
-            DeriveError::Error(err) => Err(err),
-        },
-    };
-    STATS::generate_hg_from_bonsai_total_latency_ms
-        .add_value(start_timestmap.elapsed().as_millis() as i64);
-    result
+#[async_trait]
+pub trait DeriveHgChangeset {
+    async fn derive_hg_changeset(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<HgChangesetId, Error>;
+}
+
+#[async_trait]
+impl<Repo> DeriveHgChangeset for Repo
+where
+    Repo: RepoDerivedDataRef + Send + Sync,
+{
+    async fn derive_hg_changeset(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<HgChangesetId, Error> {
+        STATS::get_hg_from_bonsai_changeset.add_value(1);
+        let start_timestamp = Instant::now();
+        let result = match self
+            .repo_derived_data()
+            .derive::<MappedHgChangesetId>(ctx, cs_id)
+            .await
+        {
+            Ok(id) => Ok(id.hg_changeset_id()),
+            Err(err @ DerivationError::Disabled(..)) => Err(err.into()),
+            Err(DerivationError::Error(err)) => Err(err),
+        };
+        STATS::generate_hg_from_bonsai_total_latency_ms
+            .add_value(start_timestamp.elapsed().as_millis() as i64);
+        result
+    }
 }
