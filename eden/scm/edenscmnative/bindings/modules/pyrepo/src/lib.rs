@@ -13,15 +13,33 @@ use std::cell::RefCell;
 
 use cpython::*;
 use cpython_ext::error::ResultPyErrExt;
+use cpython_ext::ExtractInner;
 use cpython_ext::PyNone;
+use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use pyconfigparser::config;
+use pydag::commits::commits as PyCommits;
+use pyedenapi::PyClient;
+use pymetalog::metalog as PyMetaLog;
 use rsrepo::repo::Repo;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "repo"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<repo>(py)?;
+    m.add(
+        py,
+        "loadchangelog",
+        py_fn!(
+            py,
+            load_changelog(
+                dir: &PyPath,
+                storerequirements: Vec<String>,
+                metalog: PyMetaLog,
+                edenapi: Option<PyClient>
+            )
+        ),
+    )?;
     Ok(m)
 }
 
@@ -42,3 +60,18 @@ py_class!(pub class repo |py| {
         Self::create_instance(py, RefCell::new(repo))
     }
 });
+
+fn load_changelog(
+    py: Python,
+    dir: &PyPath,
+    storerequirements: Vec<String>,
+    metalog: PyMetaLog,
+    edenapi: Option<PyClient>,
+) -> PyResult<PyCommits> {
+    let client = edenapi.map(|e| e.extract_inner(py));
+    let meta = metalog.metalog_rwlock(py);
+    let inner = py
+        .allow_threads(|| rsrepo::open_dag_commits(dir.as_path(), storerequirements, meta, client))
+        .map_pyerr(py)?;
+    PyCommits::create_instance(py, RefCell::new(inner))
+}

@@ -628,3 +628,6 @@ class ChangelogRepo(object):
     @property
     def name(self):
         return self.sharedvfs.tryreadutf8("reponame").strip()
+
+    def metalog(self):
+        return metalog.metalog(self.svfs.join("metalog"))

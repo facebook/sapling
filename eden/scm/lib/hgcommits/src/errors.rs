@@ -18,6 +18,12 @@ pub enum CommitError {
 
     #[error("{0} is unsupported")]
     Unsupported(&'static str),
+
+    #[error("{0} is required for opening commits")]
+    OpenRequirements(&'static str),
+
+    #[error("unable to read {0}: `{1}")]
+    FileReadError(&'static str, std::io::Error),
 }
 
 impl From<std::io::Error> for CommitError {

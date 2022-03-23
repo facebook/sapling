@@ -3293,6 +3293,26 @@ def _remotenodes(repo):
 
 
 def _openchangelog(repo):
+    pythonrequirements = [
+        "emergencychangelog",
+        "lazytextchangelog",
+        "hybridchangelog",
+        "segmentedchangelog",
+    ]
+    if repo.ui.configbool("experimental", "use-rust-changelog") and not any(
+        set(repo.storerequirements) & set(pythonrequirements)
+    ):
+        path = repo.svfs.join("")
+        storereqs = list(repo.storerequirements)
+        meta = repo.metalog()
+        # Just trying to get edenapi if it won't be available causes race conditions
+        if "lazychangelog" in repo.storerequirements:
+            edenapi = repo.edenapi
+        else:
+            edenapi = None
+        inner = bindings.repo.loadchangelog(path, storereqs, meta, edenapi)
+        return changelog2.changelog(repo, inner, repo.ui.uiconfig())
+
     if "emergencychangelog" in repo.storerequirements:
         repo.ui.warn(
             _(
