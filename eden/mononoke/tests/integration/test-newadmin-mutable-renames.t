@@ -43,6 +43,7 @@ Check that D and E lack mutable rename information
 
 Copy immutable to mutable on D, and check it
   $ mononoke_newadmin mutable-renames -R repo copy-immutable $D
+  Creating entry for `c_file` copied to `c_prime`
   $ mononoke_newadmin mutable-renames -R repo check-commit $D
   Commit has mutable renames associated with some paths
   $ mononoke_newadmin mutable-renames -R repo get $D --path c_prime
@@ -54,6 +55,7 @@ Confirm that this didn't change E
 
 Add a mutable change on E, and check that the immutable changes and this change get copied across
   $ mononoke_newadmin mutable-renames -R repo add --src-commit-id $A --src-path a_file --dst-commit-id $E --dst-path a_file
+  Creating entry for `c_prime` copied to `d_prime`
   Creating entry for source file `a_file` to destination file `a_file`
   $ mononoke_newadmin mutable-renames -R repo check-commit $E
   Commit has mutable renames associated with some paths
