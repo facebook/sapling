@@ -13,6 +13,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::TryStreamExt;
 use humantime::parse_duration;
+use mercurial_derived_data::DeriveHgChangeset;
 use mononoke_types::Timestamp;
 use repo_blobstore::RepoBlobstoreRef;
 use serde_json::{json, to_string_pretty};
@@ -263,9 +264,7 @@ async fn handle_log(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
                         async move {
                             match cs_id {
                                 Some(cs_id) => {
-                                    let cs = repo
-                                        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                                        .await?;
+                                    let cs = repo.derive_hg_changeset(&ctx, cs_id).await?;
                                     Ok((entry_id, Some(cs), rs, ts))
                                 }
                                 None => Ok((entry_id, None, rs, ts)),
@@ -329,9 +328,7 @@ async fn handle_list(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) ->
                     move |(bookmark, bonsai_cs_id)| {
                         cloned!(ctx, repo);
                         async move {
-                            let hg_cs_id = repo
-                                .get_hg_from_bonsai_changeset(ctx.clone(), bonsai_cs_id)
-                                .await?;
+                            let hg_cs_id = repo.derive_hg_changeset(&ctx, bonsai_cs_id).await?;
                             println!("{}\t{}\t{}", bookmark.into_name(), bonsai_cs_id, hg_cs_id);
                             Ok(())
                         }

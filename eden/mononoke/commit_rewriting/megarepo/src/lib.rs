@@ -10,12 +10,12 @@
 
 use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use context::CoreContext;
 use futures::{future, Stream, TryStreamExt};
 use itertools::Itertools;
 use manifest::ManifestOps;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{
     blobs::{HgBlobChangeset, HgBlobEnvelope},
     HgChangesetId, MPath,
@@ -162,9 +162,7 @@ async fn perform_stack_move_impl<'a, Chunker>(
 where
     Chunker: Fn(Vec<FileMove>) -> Vec<Vec<FileMove>> + 'a,
 {
-    let parent_hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), parent_bcs_id)
-        .await?;
+    let parent_hg_cs_id = repo.derive_hg_changeset(ctx, parent_bcs_id).await?;
 
     let parent_hg_cs = parent_hg_cs_id.load(ctx, repo.blobstore()).await?;
 

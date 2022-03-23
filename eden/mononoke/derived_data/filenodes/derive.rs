@@ -277,6 +277,7 @@ mod tests {
     use futures::compat::Stream01CompatExt;
     use manifest::ManifestOps;
     use maplit::hashmap;
+    use mercurial_derived_data::DeriveHgChangeset;
     use mononoke_types::FileType;
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
@@ -314,9 +315,7 @@ mod tests {
             );
         }
 
-        let linknode = repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-            .await?;
+        let linknode = repo.derive_hg_changeset(ctx, cs_id).await?;
 
         for filenode in filenodes {
             assert_eq!(filenode.info.linknode, linknode);
@@ -603,9 +602,7 @@ mod tests {
         linear::initrepo(fb, &repo).await;
         let commit8 =
             resolve_cs_id(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await?;
-        let commit8 = repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), commit8)
-            .await?;
+        let commit8 = repo.derive_hg_changeset(&ctx, commit8).await?;
         *filenodes_cs_id.lock().unwrap() = Some(commit8);
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
         let mut cs_ids =
@@ -704,7 +701,7 @@ mod tests {
         let prod_filenodes = repo.get_filenodes();
         let backup_filenodes = backup_repo.get_filenodes();
         let manifest = repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), cs)
+            .derive_hg_changeset(ctx, cs)
             .await?
             .load(ctx, repo.blobstore())
             .await

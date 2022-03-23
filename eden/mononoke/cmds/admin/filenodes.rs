@@ -20,6 +20,7 @@ use filenodes::FilenodeInfo;
 use futures::{future::try_join_all, TryStreamExt};
 use futures_stats::TimedFutureExt;
 use manifest::{Entry, ManifestOps};
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{HgFileEnvelope, HgFileNodeId, MPath};
 use mononoke_types::RepoPath;
 use slog::{debug, info, Logger};
@@ -151,9 +152,7 @@ async fn handle_filenodes_at_revision(
     log_envelope: bool,
 ) -> Result<(), Error> {
     let cs_id = helpers::csid_resolve(&ctx, &blobrepo, revision.to_string()).await?;
-    let cs_id = blobrepo
-        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .await?;
+    let cs_id = blobrepo.derive_hg_changeset(&ctx, cs_id).await?;
     let filenode_ids = get_file_nodes(
         ctx.clone(),
         ctx.logger().clone(),

@@ -13,7 +13,6 @@ use crate::errors::{
 use crate::{bind_sync_err, BookmarkOverlay, CombinedBookmarkUpdateLogEntry, CommitsInBundle};
 use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateLogEntry, BookmarkUpdateReason, RawBundleReplayData};
 use changeset_fetcher::ArcChangesetFetcher;
 use cloned::cloned;
@@ -27,6 +26,7 @@ use futures_watchdog::WatchdogExt;
 use getbundle_response::SessionLfsParams;
 use itertools::Itertools;
 use mercurial_bundle_replay_data::BundleReplayData;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::LfsParams;
 use mononoke_api_types::InnerRepo;
@@ -328,9 +328,7 @@ impl BundlePreparer {
             let cs_id = async {
                 match batch.to_cs_id {
                     Some(to_changeset_id) => {
-                        let hg_cs_id = repo
-                            .get_hg_from_bonsai_changeset(ctx.clone(), to_changeset_id)
-                            .await?;
+                        let hg_cs_id = repo.derive_hg_changeset(&ctx, to_changeset_id).await?;
                         Ok(Some((to_changeset_id, hg_cs_id)))
                     }
                     None => Ok(None),

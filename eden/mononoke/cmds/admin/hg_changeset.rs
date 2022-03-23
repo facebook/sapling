@@ -7,7 +7,6 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use clap_old::{App, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
@@ -15,6 +14,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{compat::Stream01CompatExt, TryStreamExt};
 use manifest::{bonsai_diff, BonsaiDiffFileChange};
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{HgChangesetId, HgManifestId, MPath};
 use revset::RangeNodeStream;
 use serde_derive::Serialize;
@@ -95,7 +95,7 @@ pub async fn subcommand_hg_changeset<'a>(
             let css: Vec<_> =
                 RangeNodeStream::new(ctx.clone(), repo.get_changeset_fetcher(), start_cs, stop_cs)
                     .compat()
-                    .map_ok(|cs| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs))
+                    .map_ok(|cs| repo.derive_hg_changeset(&ctx, cs))
                     .try_buffer_unordered(100)
                     .map_ok(|cs| cs.to_hex().to_string())
                     .try_collect()

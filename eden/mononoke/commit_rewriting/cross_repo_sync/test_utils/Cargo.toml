@@ -14,7 +14,6 @@ path = "lib.rs"
 anyhow = "1.0.51"
 ascii = "1.0"
 blobrepo = { version = "0.1.0", path = "../../../blobrepo" }
-blobrepo_hg = { version = "0.1.0", path = "../../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../../bookmarks" }
 commit_transformation = { version = "0.1.0", path = "../../../megarepo_api/commit_transformation" }

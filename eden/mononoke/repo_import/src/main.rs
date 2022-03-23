@@ -9,7 +9,6 @@
 use anyhow::{format_err, Context, Error};
 use backsyncer::{backsync_latest, open_backsyncer_dbs, BacksyncLimit, TargetRepoDbs};
 use blobrepo::{save_bonsai_changesets, AsBlobRepo};
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BookmarksRef};
 use borrowed::borrowed;
@@ -33,6 +32,7 @@ use itertools::Itertools;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use manifest::ManifestOps;
 use maplit::hashset;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{HgChangesetId, MPath};
 use metaconfig_types::{
     BookmarkAttrs, CommitSyncConfigVersion, MetadataDatabaseConfig, RepoConfig,
@@ -441,7 +441,7 @@ async fn move_bookmark(
         let check_repo = async move {
             let hg_csid = repo
                 .as_blob_repo()
-                .get_hg_from_bonsai_changeset(ctx.clone(), curr_csid.clone())
+                .derive_hg_changeset(ctx, curr_csid.clone())
                 .await?;
             check_dependent_systems(
                 &ctx,
@@ -485,7 +485,7 @@ async fn move_bookmark(
             let small_repo_hg_csid = small_repo_back_sync_vars
                 .small_repo
                 .as_blob_repo()
-                .get_hg_from_bonsai_changeset(ctx.clone(), small_repo_cs_id)
+                .derive_hg_changeset(ctx, small_repo_cs_id)
                 .await?;
 
             check_dependent_systems(
@@ -631,10 +631,7 @@ async fn get_leaf_entries(
     repo: &Repo,
     cs_id: ChangesetId,
 ) -> Result<HashSet<MPath>, Error> {
-    let hg_cs_id = repo
-        .as_blob_repo()
-        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .await?;
+    let hg_cs_id = repo.as_blob_repo().derive_hg_changeset(ctx, cs_id).await?;
     let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
     hg_cs
         .manifestid()

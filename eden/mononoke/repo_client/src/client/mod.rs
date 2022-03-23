@@ -49,6 +49,7 @@ use lazy_static::lazy_static;
 use manifest::{Diff, Entry, ManifestOps};
 use maplit::hashmap;
 use mercurial_bundles::{create_bundle_stream, parts, wirepack, Bundle2Item};
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_revlog::{self, RevlogChangeset};
 use mercurial_types::{
     blobs::HgBlobChangeset, calculate_hg_node_id, convert_parents_to_remotefilelog_format,
@@ -2503,9 +2504,7 @@ impl GitLookup {
 
                 match maybe_bonsai {
                     Some(bcs_id) => {
-                        let hg_cs_id = repo
-                            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                            .await?;
+                        let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
                         Ok(Some(generate_lookup_resp_buf(
                             true,
                             hg_cs_id.to_hex().as_bytes(),

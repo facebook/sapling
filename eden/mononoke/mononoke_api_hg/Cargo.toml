@@ -25,6 +25,7 @@ futures-util = "0.3.7"
 getbundle_response = { version = "0.1.0", path = "../repo_client/getbundle_response" }
 hgproto = { version = "0.1.0", path = "../hgproto" }
 manifest = { version = "0.1.0", path = "../manifest" }
+mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
 mercurial_mutation = { version = "0.1.0", path = "../mercurial/mutation" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }

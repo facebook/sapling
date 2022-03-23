@@ -236,8 +236,8 @@ impl_bonsai_derived_via_manager!(MappedHgChangesetId);
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::DeriveHgChangeset;
     use blobrepo::BlobRepo;
-    use blobrepo_hg::BlobRepoHg;
     use bookmarks::BookmarkName;
     use borrowed::borrowed;
     use cloned::cloned;
@@ -265,9 +265,7 @@ mod test {
                     .and_then(move |new_bcs_id| {
                         cloned!(ctx, repo);
                         async move {
-                            let hg_cs_id = repo
-                                .get_hg_from_bonsai_changeset(ctx.clone(), new_bcs_id)
-                                .await?;
+                            let hg_cs_id = repo.derive_hg_changeset(&ctx, new_bcs_id).await?;
                             Result::<_, Error>::Ok((new_bcs_id, hg_cs_id))
                         }
                     })

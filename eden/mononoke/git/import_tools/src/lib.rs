@@ -18,7 +18,6 @@ pub use crate::gitimport_objects::{
 pub use crate::gitlfs::{GitImportLfs, LfsMetaData};
 use anyhow::{format_err, Context, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Blobstore;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bytes::Bytes;
@@ -33,7 +32,7 @@ pub use git_pool::GitPool;
 use git_types::TreeHandle;
 use linked_hash_map::LinkedHashMap;
 use manifest::{bonsai_diff, BonsaiDiffFileChange, StoreLoadable};
-use mercurial_derived_data::get_manifest_from_bonsai;
+use mercurial_derived_data::{get_manifest_from_bonsai, DeriveHgChangeset};
 use mercurial_types::HgManifestId;
 use mononoke_types::{
     hash, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, ContentMetadata, FileChange, MPath,
@@ -375,7 +374,7 @@ pub async fn gitimport(
                     let manifest = if let Some(manifest) = hg_manifests.get(&p) {
                         *manifest
                     } else {
-                        repo.get_hg_from_bonsai_changeset(ctx.clone(), p)
+                        repo.derive_hg_changeset(ctx, p)
                             .await?
                             .load(ctx, repo.blobstore())
                             .await?

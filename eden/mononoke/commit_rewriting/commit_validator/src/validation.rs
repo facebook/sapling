@@ -7,7 +7,6 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateLogEntry};
 use cloned::cloned;
@@ -28,6 +27,7 @@ use futures::{
 use futures_stats::TimedFutureExt;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use manifest::{Diff, Entry, ManifestOps};
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{FileType, HgFileNodeId, HgManifestId};
 use metaconfig_types::{CommitSyncConfigVersion, CommitSyncDirection};
 use mononoke_api_types::InnerRepo;
@@ -1426,9 +1426,7 @@ async fn fetch_root_mf_id(
     repo: &BlobRepo,
     cs_id: ChangesetId,
 ) -> Result<HgManifestId, Error> {
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .await?;
+    let hg_cs_id = repo.derive_hg_changeset(ctx, cs_id).await?;
     let changeset = hg_cs_id.load(ctx, repo.blobstore()).await?;
     Ok(changeset.manifestid())
 }

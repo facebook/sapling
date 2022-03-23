@@ -23,7 +23,6 @@ thiserror = "1.0.29"
 
 [dev-dependencies]
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
-blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

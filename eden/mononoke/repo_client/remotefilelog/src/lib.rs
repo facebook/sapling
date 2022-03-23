@@ -352,10 +352,10 @@ fn prepare_blob_lfs_file(
 mod test {
     use super::*;
     use assert_matches::assert_matches;
-    use blobrepo_hg::BlobRepoHg;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
     use manifest::{Entry, Manifest};
+    use mercurial_derived_data::DeriveHgChangeset;
     use metaconfig_types::FilestoreParams;
     use mononoke_types::MPathElement;
     use test_repo_factory::TestRepoFactory;
@@ -378,7 +378,7 @@ mod test {
             .await?;
 
         let hg_manifest = repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), bcs)
+            .derive_hg_changeset(ctx, bcs)
             .await?
             .load(ctx, repo.blobstore())
             .await?

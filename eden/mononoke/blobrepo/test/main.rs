@@ -16,10 +16,7 @@ use anyhow::Error;
 use assert_matches::assert_matches;
 use blobrepo::BlobRepo;
 use blobrepo_errors::ErrorKind;
-use blobrepo_hg::{
-    repo_commit::{compute_changed_files, UploadEntries},
-    BlobRepoHg,
-};
+use blobrepo_hg::repo_commit::{compute_changed_files, UploadEntries};
 use blobstore::{Loadable, Storable};
 use bytes::Bytes;
 use cloned::cloned;
@@ -28,7 +25,7 @@ use fbinit::FacebookInit;
 use fixtures::{create_bonsai_changeset, many_files_dirs, merge_uneven};
 use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use memblob::Memblob;
-use mercurial_derived_data::get_manifest_from_bonsai;
+use mercurial_derived_data::{get_manifest_from_bonsai, DeriveHgChangeset};
 use mercurial_types::{
     blobs::{
         ContentBlobMeta, File, HgBlobChangeset, HgBlobManifest, UploadHgFileContents,
@@ -783,10 +780,7 @@ async fn test_hg_commit_generation_simple(fb: FacebookInit) {
     blobrepo::save_bonsai_changesets(vec![bcs], ctx.clone(), &repo)
         .await
         .unwrap();
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-        .await
-        .unwrap();
+    let hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await.unwrap();
 
     assert_eq!(
         hg_cs_id,
@@ -826,10 +820,7 @@ async fn test_hg_commit_generation_stack(fb: FacebookInit) {
         .await
         .unwrap();
 
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx, top_of_stack)
-        .await
-        .unwrap();
+    let hg_cs_id = repo.derive_hg_changeset(&ctx, top_of_stack).await.unwrap();
     assert_eq!(
         hg_cs_id,
         HgChangesetId::new(string_to_nodehash(
@@ -852,10 +843,7 @@ async fn test_hg_commit_generation_one_after_another(fb: FacebookInit) {
         .await
         .unwrap();
 
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), first_bcs_id)
-        .await
-        .unwrap();
+    let hg_cs_id = repo.derive_hg_changeset(&ctx, first_bcs_id).await.unwrap();
     assert_eq!(
         hg_cs_id,
         HgChangesetId::new(string_to_nodehash(
@@ -863,10 +851,7 @@ async fn test_hg_commit_generation_one_after_another(fb: FacebookInit) {
         ))
     );
 
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx, second_bcs_id)
-        .await
-        .unwrap();
+    let hg_cs_id = repo.derive_hg_changeset(&ctx, second_bcs_id).await.unwrap();
     assert_eq!(
         hg_cs_id,
         HgChangesetId::new(string_to_nodehash(
@@ -884,10 +869,7 @@ async fn test_hg_commit_generation_diamond(fb: FacebookInit) {
         .await
         .unwrap();
 
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), last_bcs_id)
-        .await
-        .unwrap();
+    let hg_cs_id = repo.derive_hg_changeset(&ctx, last_bcs_id).await.unwrap();
     assert_eq!(
         hg_cs_id,
         HgChangesetId::new(string_to_nodehash(
@@ -907,10 +889,7 @@ async fn test_hg_commit_generation_many_diamond(fb: FacebookInit) {
         .unwrap()
         .unwrap();
 
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx, bcs_id)
-        .await
-        .unwrap();
+    let hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await.unwrap();
     assert_eq!(
         hg_cs_id,
         HgChangesetId::new(string_to_nodehash(
@@ -951,7 +930,7 @@ async fn test_hg_commit_generation_uneven_branch(fb: FacebookInit) {
     .unwrap();
 
     let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), merge.get_changeset_id())
+        .derive_hg_changeset(&ctx, merge.get_changeset_id())
         .await
         .unwrap();
     assert_eq!(
@@ -994,7 +973,7 @@ async fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> 
             std::iter::repeat(16).take(50),
         )
         .await?;
-    let hgcsid = repo.get_hg_from_bonsai_changeset(ctx, csid).await?;
+    let hgcsid = repo.derive_hg_changeset(&ctx, csid).await?;
 
     assert_eq!(hgcsid, "e9b73f926c993c5232139d4eefa6f77fa8c41279".parse()?);
 
@@ -1165,10 +1144,7 @@ impl TestHelper {
     }
 
     async fn lookup_changeset(&self, cs_id: ChangesetId) -> Result<HgBlobChangeset, Error> {
-        let hg_cs_id = self
-            .repo
-            .get_hg_from_bonsai_changeset(self.ctx.clone(), cs_id)
-            .await?;
+        let hg_cs_id = self.repo.derive_hg_changeset(&self.ctx, cs_id).await?;
 
         let hg_cs = hg_cs_id.load(&self.ctx, self.repo.blobstore()).await?;
 
@@ -1266,9 +1242,7 @@ mod octopus_merges {
             .commit()
             .await?;
 
-        let hg_cs_id = repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), commit)
-            .await?;
+        let hg_cs_id = repo.derive_hg_changeset(&ctx, commit).await?;
 
         let hg_cs = hg_cs_id.load(&ctx, repo.blobstore()).await?;
 

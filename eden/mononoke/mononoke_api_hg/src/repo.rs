@@ -24,6 +24,7 @@ use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::{future, stream, Stream, StreamExt, TryStream, TryStreamExt};
 use futures_util::try_join;
 use hgproto::GettreepackArgs;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_mutation::HgMutationEntry;
 use mercurial_types::blobs::{RevlogChangeset, UploadHgNodeHash, UploadHgTreeEntry};
 use mercurial_types::{HgChangesetId, HgFileEnvelopeMut, HgFileNodeId, HgManifestId, HgNodeHash};
@@ -487,13 +488,14 @@ impl HgRepoContext {
             })
     }
 
+    // TODO(mbthomas): get_hg_from_bonsai -> derive_hg_changeset
     pub async fn get_hg_from_bonsai(
         &self,
         cs_id: ChangesetId,
     ) -> Result<HgChangesetId, MononokeError> {
         Ok(self
             .blob_repo()
-            .get_hg_from_bonsai_changeset(self.ctx().clone(), cs_id)
+            .derive_hg_changeset(self.ctx(), cs_id)
             .await?)
     }
 
@@ -525,7 +527,7 @@ impl HgRepoContext {
             .await?;
         let hg_id_futures = result_csids.iter().map(|result_csid| {
             self.blob_repo()
-                .get_hg_from_bonsai_changeset(self.ctx().clone(), *result_csid)
+                .derive_hg_changeset(self.ctx(), *result_csid)
         });
         future::try_join_all(hg_id_futures)
             .await
@@ -928,9 +930,7 @@ mod tests {
         blob_repo: &BlobRepo,
         csid: ChangesetId,
     ) -> Result<HgManifestId, Error> {
-        let hg_cs_id = blob_repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), csid)
-            .await?;
+        let hg_cs_id = blob_repo.derive_hg_changeset(&ctx, csid).await?;
         let hg_cs = hg_cs_id.load(&ctx, &blob_repo.get_blobstore()).await?;
         Ok(hg_cs.manifestid())
     }

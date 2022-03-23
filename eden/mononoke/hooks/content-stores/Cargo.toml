@@ -11,7 +11,6 @@ license = "GPLv2+"
 anyhow = "1.0.51"
 async-trait = "0.1.52"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 bytes = { version = "1.1", features = ["serde"] }
@@ -22,6 +21,7 @@ filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
 manifest = { version = "0.1.0", path = "../../manifest" }
+mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 thiserror = "1.0.29"

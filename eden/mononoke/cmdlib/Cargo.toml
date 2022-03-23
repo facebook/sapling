@@ -10,7 +10,6 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.51"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
-blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
@@ -30,6 +29,7 @@ futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://gi
 libc = "0.2.98"
 maybe-owned = "0.3.4"
 megarepo_config = { version = "0.1.0", path = "../megarepo_api/megarepo_config" }
+mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_parser = { version = "0.1.0", path = "../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }

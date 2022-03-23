@@ -19,6 +19,7 @@ use futures::{
 use futures_01_ext::StreamExt as OldStreamExt;
 use futures_ext::{FbFutureExt, FbTryFutureExt};
 use futures_old::Future;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_repo::MononokeRepo;
 use std::collections::HashMap;
@@ -185,7 +186,7 @@ where
                 return self
                     .repo
                     .blobrepo()
-                    .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+                    .derive_hg_changeset(&ctx, cs_id)
                     .map_ok(Some)
                     .await;
             }
@@ -309,10 +310,7 @@ mod test {
             .commit()
             .await?;
 
-        let hg_cs_id = repo
-            .blob_repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-            .await?;
+        let hg_cs_id = repo.blob_repo.derive_hg_changeset(&ctx, cs_id).await?;
         bookmark(&ctx, &repo.blob_repo, "prefix/scratchbook")
             .create_scratch(cs_id)
             .await?;

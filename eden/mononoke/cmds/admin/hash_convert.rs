@@ -11,9 +11,9 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{hash::GitSha1, ChangesetId};
 use slog::Logger;
@@ -107,9 +107,7 @@ async fn convert_from_bonsai(
     to: &str,
 ) -> Result<String, Error> {
     if to == "hg" {
-        let hg = repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-            .await?;
+        let hg = repo.derive_hg_changeset(ctx, cs_id).await?;
         Ok(format!("{}", hg))
     } else if to == "git" {
         let maybegit = repo

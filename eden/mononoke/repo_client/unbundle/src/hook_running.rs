@@ -9,12 +9,12 @@
 
 use anyhow::{Context, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use bookmarks_movement::BookmarkMovementError;
 use context::CoreContext;
 use futures::future::{BoxFuture, FutureExt};
 use futures::stream::{self, StreamExt, TryStreamExt};
 use hooks::{CrossRepoPushSource, HookManager, HookRejection};
+use mercurial_derived_data::DeriveHgChangeset;
 
 use crate::resolver::{HgHookRejection, PostResolveAction, PostResolvePushRebase};
 use crate::BundleResolverError;
@@ -41,9 +41,7 @@ pub(crate) fn make_hook_rejection_remapper(
             let ctx = ctx.clone();
             let repo = repo.clone();
             async move {
-                let hg_cs_id = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                    .await?;
+                let hg_cs_id = repo.derive_hg_changeset(&ctx, cs_id).await?;
                 Ok(HgHookRejection {
                     hook_name,
                     hg_cs_id,

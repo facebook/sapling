@@ -7,11 +7,11 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use cloned::cloned;
 use context::CoreContext;
 use futures::try_join;
 use megarepolib::working_copy::get_colliding_paths_between_commits;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use slog::info;
@@ -51,8 +51,8 @@ pub async fn perform_merge(
 ) -> Result<HgChangesetId, Error> {
     cloned!(ctx, repo);
     let (first_hg_cs_id, second_hg_cs_id) = try_join!(
-        repo.get_hg_from_bonsai_changeset(ctx.clone(), first_bcs_id.clone()),
-        repo.get_hg_from_bonsai_changeset(ctx.clone(), second_bcs_id.clone()),
+        repo.derive_hg_changeset(&ctx, first_bcs_id.clone()),
+        repo.derive_hg_changeset(&ctx, second_bcs_id.clone()),
     )?;
     fail_on_path_conflicts(&ctx, &repo, first_hg_cs_id, second_hg_cs_id).await?;
     info!(

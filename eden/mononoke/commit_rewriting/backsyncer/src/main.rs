@@ -27,6 +27,7 @@ use futures::{
     try_join,
 };
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use mutable_counters::MutableCounters;
@@ -85,7 +86,7 @@ async fn derive_target_hg_changesets(
         Some(target_cs_id) => {
             let hg_cs_id = commit_syncer
                 .get_target_repo()
-                .get_hg_from_bonsai_changeset(ctx.clone(), target_cs_id)
+                .derive_hg_changeset(ctx, target_cs_id)
                 .await?;
             info!(
                 ctx.logger(),

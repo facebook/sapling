@@ -23,6 +23,7 @@ use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::{compat::Stream01CompatExt, future, StreamExt, TryStreamExt};
 use manifest::{get_implicit_deletes, PathOrPrefix};
+use mercurial_derived_data::DeriveHgChangeset;
 use mononoke_types::{ChangesetId, DeletedManifestId, MPath};
 use revset::AncestorsNodeStream;
 use slog::{debug, Logger};
@@ -186,9 +187,7 @@ async fn get_file_changes(
     };
 
     let parent_manifests_fut = async {
-        let hg_cs_id = repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-            .await?;
+        let hg_cs_id = repo.derive_hg_changeset(&ctx, cs_id).await?;
         let parents = repo.get_changeset_parents(ctx.clone(), hg_cs_id).await?;
         let parents_futs = parents.into_iter().map(|csid| {
             cloned!(ctx, repo);

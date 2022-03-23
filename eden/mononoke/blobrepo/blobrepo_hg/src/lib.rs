@@ -120,12 +120,6 @@ pub trait BlobRepoHg {
         path: RepoPath,
         limit: Option<u64>,
     ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>, Error>;
-
-    async fn get_hg_from_bonsai_changeset(
-        &self,
-        ctx: CoreContext,
-        bcs_id: ChangesetId,
-    ) -> Result<HgChangesetId, Error>;
 }
 
 define_stats! {
@@ -208,7 +202,7 @@ impl BlobRepoHg for BlobRepo {
                         .map(Ok),
                 )
                 .map_ok(|csid| {
-                    self.get_hg_from_bonsai_changeset(ctx.clone(), csid)
+                    self.derive_hg_changeset(&ctx, csid)
                         .map_ok(move |hgcsid| (hgcsid, csid))
                 })
                 .try_buffer_unordered(100)
@@ -234,7 +228,7 @@ impl BlobRepoHg for BlobRepo {
                 let repo = self.clone();
                 move |cs| {
                     cloned!(ctx, repo);
-                    async move { repo.get_hg_from_bonsai_changeset(ctx, cs).await }
+                    async move { repo.derive_hg_changeset(&ctx, cs).await }
                 }
             })
             .try_buffer_unordered(100)
@@ -280,7 +274,7 @@ impl BlobRepoHg for BlobRepo {
             .ok_or(ErrorKind::BonsaiNotFound(csid))?
             .parents
             .into_iter()
-            .map(|parent| self.get_hg_from_bonsai_changeset(ctx.clone(), parent));
+            .map(|parent| self.derive_hg_changeset(&ctx, parent));
 
         Ok(future::try_join_all(parents).await?)
     }
@@ -295,7 +289,7 @@ impl BlobRepoHg for BlobRepo {
         match cs_opt {
             None => Ok(None),
             Some(cs) => {
-                let hg_csid = self.get_hg_from_bonsai_changeset(ctx, cs).await?;
+                let hg_csid = self.derive_hg_changeset(&ctx, cs).await?;
                 Ok(Some(hg_csid))
             }
         }
@@ -391,14 +385,6 @@ impl BlobRepoHg for BlobRepo {
         self.get_filenodes()
             .get_all_filenodes_maybe_stale(&ctx, &path, limit)
             .await
-    }
-
-    async fn get_hg_from_bonsai_changeset(
-        &self,
-        ctx: CoreContext,
-        bcs_id: ChangesetId,
-    ) -> Result<HgChangesetId, Error> {
-        self.derive_hg_changeset(&ctx, bcs_id).await
     }
 }
 

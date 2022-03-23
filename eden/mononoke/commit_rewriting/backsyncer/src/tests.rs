@@ -30,6 +30,7 @@ use futures_ext::FbTryFutureExt;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
 use manifest::{Entry, ManifestOps};
 use maplit::{btreemap, hashmap};
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::{
     CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig,
@@ -958,12 +959,8 @@ async fn verify_mapping_and_all_wc(
             };
         }
 
-        let source_hg_cs_id = source_repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), source_cs_id)
-            .await?;
-        let target_hg_cs_id = target_repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), target_cs_id)
-            .await?;
+        let source_hg_cs_id = source_repo.derive_hg_changeset(&ctx, source_cs_id).await?;
+        let target_hg_cs_id = target_repo.derive_hg_changeset(&ctx, target_cs_id).await?;
 
         compare_contents(
             &ctx,

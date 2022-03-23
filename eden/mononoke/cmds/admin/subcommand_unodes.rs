@@ -9,7 +9,6 @@ use crate::error::SubcommandError;
 
 use anyhow::{bail, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use clap_old::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::{
@@ -21,6 +20,7 @@ use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::{compat::Stream01CompatExt, StreamExt, TryStreamExt};
 use manifest::{Entry, ManifestOps, PathOrPrefix};
+use mercurial_derived_data::DeriveHgChangeset;
 
 use mononoke_types::{ChangesetId, MPath};
 use revset::AncestorsNodeStream;
@@ -154,7 +154,7 @@ async fn subcommand_verify(
 
 async fn single_verify(ctx: &CoreContext, repo: &BlobRepo, csid: ChangesetId) -> Result<(), Error> {
     let hg_paths = async move {
-        let hg_csid = repo.get_hg_from_bonsai_changeset(ctx.clone(), csid).await?;
+        let hg_csid = repo.derive_hg_changeset(ctx, csid).await?;
         println!("CHANGESET: hg_csid:{:?} csid:{:?}", hg_csid, csid);
         let hg_changeset = hg_csid.load(ctx, repo.blobstore()).await?;
         let paths = hg_changeset

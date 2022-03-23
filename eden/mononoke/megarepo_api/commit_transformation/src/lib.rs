@@ -9,7 +9,6 @@
 
 use anyhow::{anyhow, bail, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use blobsync::copy_content;
 use borrowed::borrowed;
@@ -18,6 +17,7 @@ use context::CoreContext;
 use futures::{future::try_join_all, stream, StreamExt, TryStreamExt};
 use manifest::get_implicit_deletes;
 use megarepo_configs::types::SourceMappingRules;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgManifestId;
 use mononoke_types::{
     mpath_element_iter, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, ContentId, FileChange,
@@ -125,9 +125,7 @@ async fn get_manifest_ids<'a, I: IntoIterator<Item = ChangesetId>>(
         |bcs_id| {
             cloned!(ctx, repo);
             async move {
-                let cs_id = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                    .await?;
+                let cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
                 let hg_blob_changeset = cs_id.load(&ctx, repo.blobstore()).await?;
                 Ok(hg_blob_changeset.manifestid())
             }

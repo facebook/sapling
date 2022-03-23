@@ -25,7 +25,6 @@ use crate::{
 use anyhow::{format_err, Context, Error};
 use backsyncer::{backsync_latest, BacksyncLimit, TargetRepoDbs};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cacheblob::LeaseOps;
@@ -40,6 +39,7 @@ use futures::{
 };
 use hooks::{CrossRepoPushSource, HookRejection};
 use live_commit_sync_config::LiveCommitSyncConfig;
+use mercurial_derived_data::DeriveHgChangeset;
 use mononoke_repo::MononokeRepo;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use pushrebase::PushrebaseChangesetPair;
@@ -218,9 +218,7 @@ impl PushRedirector {
                         },
                     };
 
-                    let hg_cs_id = repo
-                        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                        .await?;
+                    let hg_cs_id = repo.derive_hg_changeset(&ctx, cs_id).await?;
 
                     Ok(HgHookRejection {
                         hook_name,
@@ -380,7 +378,7 @@ impl PushRedirector {
                             });
                             match small_cs_id {
                                 Err(err) => Err(err),
-                                Ok(id) => source_repo.get_hg_from_bonsai_changeset(ctx, *id).await,
+                                Ok(id) => source_repo.derive_hg_changeset(&ctx, *id).await,
                             }
                         }
                         .boxed()

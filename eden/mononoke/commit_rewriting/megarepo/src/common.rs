@@ -7,9 +7,9 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
-use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{HgChangesetId, MPath};
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange};
 use phases::PhasesRef;
@@ -92,9 +92,7 @@ async fn generate_hg_changeset(
     bcs_id: ChangesetId,
 ) -> Result<HgChangesetId, Error> {
     info!(ctx.logger(), "Generating an HG equivalent of {:?}", bcs_id);
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-        .await?;
+    let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
 
     info!(
         ctx.logger(),

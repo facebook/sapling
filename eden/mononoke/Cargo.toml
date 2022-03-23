@@ -81,7 +81,6 @@ anyhow = "1.0.51"
 ascii = "1.0"
 async-compression = { version = "0.3.8", features = ["all-implementations", "brotli", "bzip2", "deflate", "gzip", "zlib", "zstd"] }
 blobrepo = { version = "0.1.0", path = "blobrepo" }
-blobrepo_hg = { version = "0.1.0", path = "blobrepo/blobrepo_hg" }
 blobrepo_utils = { version = "0.1.0", path = "blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "blobstore" }
 blobstore_factory = { version = "0.1.0", path = "blobstore/factory" }

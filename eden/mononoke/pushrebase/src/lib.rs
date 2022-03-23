@@ -50,7 +50,6 @@
 /// more information on those;
 use anyhow::{format_err, Error, Result};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
-use blobrepo_hg::BlobRepoHg;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplay};
@@ -66,6 +65,7 @@ use futures::{
 use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use maplit::hashmap;
 use mercurial_bundle_replay_data::BundleReplayData;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, MPath};
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types::{
@@ -163,7 +163,7 @@ impl HgReplayData {
             cloned!(ctx, repo);
             move |cs_id| {
                 cloned!(ctx, repo);
-                async move { repo.get_hg_from_bonsai_changeset(ctx, cs_id).await }.boxed()
+                async move { repo.derive_hg_changeset(&ctx, cs_id).await }.boxed()
             }
         });
 
@@ -491,7 +491,7 @@ async fn maybe_validate_commit(
 
     // Generate hg changeset to check that this rebased bonsai commit
     // is valid.
-    repo.get_hg_from_bonsai_changeset(ctx.clone(), *bcs_id)
+    repo.derive_hg_changeset(ctx, *bcs_id)
         .map_err(|err| PushrebaseError::ValidationError {
             source_cs_id: *old_id,
             rebased_cs_id: *bcs_id,
@@ -624,7 +624,7 @@ async fn find_closest_ancestor_root(
 
         if let Some(index) = roots.get(&id) {
             if config.forbid_p2_root_rebases && *index != ChildIndex(0) {
-                let hgcs = repo.get_hg_from_bonsai_changeset(ctx.clone(), id).await?;
+                let hgcs = repo.derive_hg_changeset(ctx, id).await?;
                 return Err(PushrebaseError::Error(
                     PushrebaseInternalError::P2RootRebaseForbidden(hgcs, bookmark.clone()).into(),
                 ));
@@ -686,9 +686,7 @@ async fn id_to_manifestid(
     repo: &BlobRepo,
     bcs_id: ChangesetId,
 ) -> Result<HgManifestId, Error> {
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-        .await?;
+    let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
     let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
     Ok(hg_cs.manifestid())
 }
@@ -1391,10 +1389,7 @@ mod tests {
 
         let cs_id = commit_ctx.commit().await?;
 
-        let hgcss = hashset![
-            repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                .await?
-        ];
+        let hgcss = hashset![repo.derive_hg_changeset(ctx, cs_id).await?];
 
         let res = do_pushrebase(
             &ctx,
@@ -1428,9 +1423,7 @@ mod tests {
                 .commit()
                 .await?;
 
-            let hg_cs = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .await?;
+            let hg_cs = repo.derive_hg_changeset(&ctx, bcs_id).await?;
 
             let book = master_bookmark();
             bookmark(&ctx, &repo, book.clone())
@@ -1623,12 +1616,8 @@ mod tests {
             )
             .await?;
 
-            let hg_cs_1 = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                .await?;
-            let hg_cs_2 = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                .await?;
+            let hg_cs_1 = repo.derive_hg_changeset(&ctx, bcs_id_1).await?;
+            let hg_cs_2 = repo.derive_hg_changeset(&ctx, bcs_id_2).await?;
             do_pushrebase(
                 &ctx,
                 &repo,
@@ -1679,12 +1668,8 @@ mod tests {
             )
             .await?;
 
-            let hg_cs_1 = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                .await?;
-            let hg_cs_2 = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                .await?;
+            let hg_cs_1 = repo.derive_hg_changeset(&ctx, bcs_id_1).await?;
+            let hg_cs_2 = repo.derive_hg_changeset(&ctx, bcs_id_2).await?;
             do_pushrebase(
                 &ctx,
                 &repo,
@@ -1789,15 +1774,9 @@ mod tests {
                 make_paths(&["f0", "f1", "f2"]),
             );
 
-            let hg_cs_1 = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                .await?;
-            let hg_cs_2 = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                .await?;
-            let hg_cs_3 = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_3)
-                .await?;
+            let hg_cs_1 = repo.derive_hg_changeset(&ctx, bcs_id_1).await?;
+            let hg_cs_2 = repo.derive_hg_changeset(&ctx, bcs_id_2).await?;
+            let hg_cs_3 = repo.derive_hg_changeset(&ctx, bcs_id_3).await?;
             let bcs_id_rebased = do_pushrebase(
                 &ctx,
                 &repo,
@@ -1867,15 +1846,9 @@ mod tests {
             )
             .await?;
 
-            let hg_cs_1 = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                .await?;
-            let hg_cs_2 = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                .await?;
-            let hg_cs_3 = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_3)
-                .await?;
+            let hg_cs_1 = repo.derive_hg_changeset(&ctx, bcs_id_1).await?;
+            let hg_cs_2 = repo.derive_hg_changeset(&ctx, bcs_id_2).await?;
+            let hg_cs_3 = repo.derive_hg_changeset(&ctx, bcs_id_3).await?;
             let result = do_pushrebase(
                 &ctx,
                 &repo,
@@ -1930,12 +1903,9 @@ mod tests {
                 .await?;
 
             let hgcss = hashset![
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                    .await?,
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                    .await?,
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_3)
-                    .await?,
+                repo.derive_hg_changeset(&ctx, bcs_id_1).await?,
+                repo.derive_hg_changeset(&ctx, bcs_id_2).await?,
+                repo.derive_hg_changeset(&ctx, bcs_id_3).await?,
             ];
 
             let book = master_bookmark();
@@ -1980,10 +1950,8 @@ mod tests {
                 .commit()
                 .await?;
             let hgcss = hashset![
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                    .await?,
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                    .await?,
+                repo.derive_hg_changeset(&ctx, bcs_id_1).await?,
+                repo.derive_hg_changeset(&ctx, bcs_id_2).await?,
             ];
 
             let book = master_bookmark();
@@ -2034,11 +2002,8 @@ mod tests {
                 })
                 .await?;
 
-            let hgcss = try_join_all(
-                bcss.iter()
-                    .map(|bcs| repo.get_hg_from_bonsai_changeset(ctx.clone(), *bcs)),
-            )
-            .await?;
+            let hgcss =
+                try_join_all(bcss.iter().map(|bcs| repo.derive_hg_changeset(&ctx, *bcs))).await?;
             let book = master_bookmark();
             set_bookmark(
                 ctx.clone(),
@@ -2062,7 +2027,7 @@ mod tests {
                 .commit()
                 .await?;
 
-            let hgcss = hashset![repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs).await?];
+            let hgcss = hashset![repo.derive_hg_changeset(&ctx, bcs).await?];
 
             // try rebase with small recursion limit
             let config = PushrebaseFlags {
@@ -2104,7 +2069,7 @@ mod tests {
                 .add_file("file", "data")
                 .commit()
                 .await?;
-            let hgcss = hashset![repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs).await?];
+            let hgcss = hashset![repo.derive_hg_changeset(&ctx, bcs).await?];
 
             set_bookmark(
                 ctx.clone(),
@@ -2163,7 +2128,7 @@ mod tests {
                 .commit()
                 .await?;
 
-            let hgcss = hashset![repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs).await?];
+            let hgcss = hashset![repo.derive_hg_changeset(&ctx, bcs).await?];
 
             let book = master_bookmark();
             set_bookmark(
@@ -2276,7 +2241,7 @@ mod tests {
                 .commit()
                 .await?;
 
-            let hgcss = hashset![repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs).await?];
+            let hgcss = hashset![repo.derive_hg_changeset(&ctx, bcs).await?];
 
             let book = master_bookmark();
             set_bookmark(
@@ -2301,9 +2266,7 @@ mod tests {
             };
             assert_eq!(FileChange::Change(file_1_result), file_1_exec);
 
-            let result_hg = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), result.head)
-                .await?;
+            let result_hg = repo.derive_hg_changeset(&ctx, result.head).await?;
             let result_cs = result_hg.load(&ctx, repo.blobstore()).await?;
             let result_1_id = result_cs
                 .manifestid()
@@ -2491,9 +2454,7 @@ mod tests {
                 .commit()
                 .await?;
 
-            let hg_cs = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .await?;
+            let hg_cs = repo.derive_hg_changeset(&ctx, bcs_id).await?;
 
             let book = BookmarkName::new("newbook")?;
             do_pushrebase(
@@ -2594,9 +2555,7 @@ mod tests {
                 .add_file("file", "content")
                 .commit()
                 .await?;
-            let hg_cs = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .await?;
+            let hg_cs = repo.derive_hg_changeset(&ctx, bcs_id).await?;
 
             let book = master_bookmark();
             set_bookmark(
@@ -2648,9 +2607,7 @@ mod tests {
                 .set_author_date(DateTime::from_timestamp(0, 100)?)
                 .commit()
                 .await?;
-            let hg_cs = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .await?;
+            let hg_cs = repo.derive_hg_changeset(&ctx, bcs_id).await?;
 
             let book = master_bookmark();
             set_bookmark(
@@ -2715,10 +2672,8 @@ mod tests {
                 .commit()
                 .await?;
             let hgcss = hashset![
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_0)
-                    .await?,
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                    .await?,
+                repo.derive_hg_changeset(&ctx, bcs_id_0).await?,
+                repo.derive_hg_changeset(&ctx, bcs_id_1).await?,
             ];
 
             let book = master_bookmark();
@@ -2776,9 +2731,7 @@ mod tests {
 
             let book = master_bookmark();
 
-            let merge_hg_cs_id = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), merge)
-                .await?;
+            let merge_hg_cs_id = repo.derive_hg_changeset(&ctx, merge).await?;
 
             set_bookmark(ctx.clone(), repo.clone(), &book, &{
                 // https://github.com/rust-lang/rust/pull/64856
@@ -2865,10 +2818,7 @@ mod tests {
 
             let book = master_bookmark();
 
-            let hgcss = hashset![
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_should_fail)
-                    .await?
-            ];
+            let hgcss = hashset![repo.derive_hg_changeset(&ctx, bcs_id_should_fail).await?];
 
             let res = do_pushrebase(
                 &ctx,
@@ -2882,7 +2832,7 @@ mod tests {
 
             should_have_conflicts(res);
             let hgcss = hashset![
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_should_succeed)
+                repo.derive_hg_changeset(&ctx, bcs_id_should_succeed)
                     .await?,
             ];
 
@@ -2942,9 +2892,7 @@ mod tests {
                 .commit()
                 .await?;
 
-            let hg_cs = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
-                .await?;
+            let hg_cs = repo.derive_hg_changeset(&ctx, bcs_id_master).await?;
 
             let book = master_bookmark();
             set_bookmark(ctx.clone(), repo.clone(), &book, &{
@@ -2955,10 +2903,8 @@ mod tests {
             .await?;
 
             let hgcss = hashset![
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_first_merge)
-                    .await?,
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_second_merge)
-                    .await?,
+                repo.derive_hg_changeset(&ctx, bcs_id_first_merge).await?,
+                repo.derive_hg_changeset(&ctx, bcs_id_second_merge).await?,
             ];
 
             do_pushrebase(
@@ -2975,9 +2921,7 @@ mod tests {
                 .await?
                 .ok_or(Error::msg("master not set"))?;
 
-            let master_hg = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
-                .await?;
+            let master_hg = repo.derive_hg_changeset(&ctx, new_master).await?;
 
             ensure_content(
                 &ctx,
@@ -3033,9 +2977,7 @@ mod tests {
                 .commit()
                 .await?;
 
-            let hg_cs = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
-                .await?;
+            let hg_cs = repo.derive_hg_changeset(&ctx, bcs_id_master).await?;
 
             let book = master_bookmark();
             set_bookmark(ctx.clone(), repo.clone(), &book, &{
@@ -3045,10 +2987,7 @@ mod tests {
             })
             .await?;
 
-            let hgcss = hashset![
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_merge)
-                    .await?,
-            ];
+            let hgcss = hashset![repo.derive_hg_changeset(&ctx, bcs_id_merge).await?,];
 
             do_pushrebase(
                 &ctx,
@@ -3064,9 +3003,7 @@ mod tests {
                 .await?
                 .ok_or(Error::msg("master not set"))?;
 
-            let master_hg = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
-                .await?;
+            let master_hg = repo.derive_hg_changeset(&ctx, new_master).await?;
 
             ensure_content(
                 &ctx,
@@ -3132,9 +3069,7 @@ mod tests {
                 .commit()
                 .await?;
 
-            let hg_cs = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
-                .await?;
+            let hg_cs = repo.derive_hg_changeset(&ctx, bcs_id_master).await?;
 
             let book = master_bookmark();
             set_bookmark(ctx.clone(), repo.clone(), &book, &{
@@ -3144,10 +3079,7 @@ mod tests {
             })
             .await?;
 
-            let hgcss = hashset![
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_merge)
-                    .await?
-            ];
+            let hgcss = hashset![repo.derive_hg_changeset(&ctx, bcs_id_merge).await?];
 
             do_pushrebase(
                 &ctx,
@@ -3163,9 +3095,7 @@ mod tests {
                 .await?
                 .ok_or(Error::msg("master is not set"))?;
 
-            let master_hg = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
-                .await?;
+            let master_hg = repo.derive_hg_changeset(&ctx, new_master).await?;
 
             ensure_content(
                 &ctx,
@@ -3205,9 +3135,7 @@ mod tests {
             .commit()
             .await?;
 
-        let hg_cs = repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-            .await?;
+        let hg_cs = repo.derive_hg_changeset(&ctx, bcs_id).await?;
 
         let result = do_pushrebase(
             &ctx,
@@ -3223,9 +3151,7 @@ mod tests {
         let bcs = result.head.load(&ctx, repo.blobstore()).await?;
         assert_eq!(bcs.file_changes().collect::<Vec<_>>(), vec![]);
 
-        let master_hg = repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), result.head)
-            .await?;
+        let master_hg = repo.derive_hg_changeset(&ctx, result.head).await?;
 
         ensure_content(
             &ctx,
@@ -3374,9 +3300,7 @@ mod tests {
             .commit()
             .await?;
 
-        let hg_cs = repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-            .await?;
+        let hg_cs = repo.derive_hg_changeset(&ctx, bcs_id).await?;
 
         let err = do_pushrebase(
             &ctx,
@@ -3404,9 +3328,7 @@ mod tests {
             .commit()
             .await?;
 
-        let hg_cs = repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-            .await?;
+        let hg_cs = repo.derive_hg_changeset(&ctx, bcs_id).await?;
 
         do_pushrebase(
             &ctx,

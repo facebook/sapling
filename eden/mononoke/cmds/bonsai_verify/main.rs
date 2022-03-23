@@ -11,7 +11,6 @@ mod config;
 
 use anyhow::{format_err, Error, Result};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
 use blobstore::Loadable;
 use clap::{Parser, Subcommand};
@@ -29,7 +28,7 @@ use futures_old::{
     Future, Stream,
 };
 use lock_ext::LockExt;
-use mercurial_derived_data::get_manifest_from_bonsai;
+use mercurial_derived_data::{get_manifest_from_bonsai, DeriveHgChangeset};
 use mercurial_types::HgChangesetId;
 use mononoke_app::{args::RepoArgs, MononokeAppBuilder};
 use revset::AncestorsNodeStream;
@@ -317,7 +316,7 @@ fn subcommmand_hg_manifest_verify(
             .map(|res| async move {
                 match res {
                     Ok(csid) => {
-                        let cs_id = repo.get_hg_from_bonsai_changeset(ctx.clone(), csid).await?;
+                        let cs_id = repo.derive_hg_changeset(ctx, csid).await?;
                         let bonsai_fut = csid.load(ctx, repo.blobstore()).map_err(Error::from);
 
                         let parents_fut = async move {

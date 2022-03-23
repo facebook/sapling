@@ -19,7 +19,6 @@ anyhow = "1.0.51"
 async-stream = "0.3"
 base64 = "0.11.0"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
-blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
@@ -52,6 +51,7 @@ lfs_protocol = { version = "0.1.0", path = "../lfs_protocol" }
 maplit = "1.0"
 mercurial_bundle_replay_data = { version = "0.1.0", path = "../mercurial/bundle_replay_data" }
 mercurial_bundles = { version = "0.1.0", path = "../mercurial/bundles" }
+mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
 mercurial_revlog = { version = "0.1.0", path = "../mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }

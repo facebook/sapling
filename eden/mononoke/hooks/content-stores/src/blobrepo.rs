@@ -8,7 +8,6 @@
 use anyhow::{format_err, Context as _};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
@@ -18,6 +17,7 @@ use derived_data::BonsaiDerived;
 use futures::{future, stream::TryStreamExt};
 use futures_util::future::TryFutureExt;
 use manifest::{Diff, Entry, ManifestOps};
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{FileType, HgFileNodeId, HgManifestId};
 use mononoke_types::{ChangesetId, ContentId, MPath, ManifestUnodeId};
 use std::collections::HashMap;
@@ -196,7 +196,7 @@ async fn derive_hg_manifest(
     changeset_id: ChangesetId,
 ) -> Result<HgManifestId, ErrorKind> {
     let hg_changeset_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), changeset_id)
+        .derive_hg_changeset(ctx, changeset_id)
         .await
         .with_context(|| format!("Error deriving hg changeset for bonsai: {}", changeset_id))?;
     let hg_mf_id = hg_changeset_id

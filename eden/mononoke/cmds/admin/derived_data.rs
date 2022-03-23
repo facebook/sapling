@@ -7,7 +7,6 @@
 
 use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobrepo_override::DangerousOverride;
 use blobstore::Loadable;
 use cacheblob::{dummy::DummyLease, LeaseOps};
@@ -31,6 +30,7 @@ use futures::{
 };
 use futures_stats::TimedFutureExt;
 use manifest::ManifestOps;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::{ChangesetId, ContentId, FileType, MPath};
 use skeleton_manifest::RootSkeletonManifestId;
@@ -603,9 +603,7 @@ async fn list_hg_manifest(
     repo: &BlobRepo,
     cs_id: ChangesetId,
 ) -> Result<(ManifestType, HashMap<MPath, ManifestData>), Error> {
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .await?;
+    let hg_cs_id = repo.derive_hg_changeset(ctx, cs_id).await?;
 
     let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
     let mfid = hg_cs.manifestid();

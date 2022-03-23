@@ -14,6 +14,7 @@ use fixtures::many_files_dirs;
 use futures::compat::Future01CompatExt;
 use manifest::{Entry, ManifestOps};
 use maplit::hashset;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
 use metaconfig_types::LfsParams;
 use mononoke_api::Repo;
@@ -255,9 +256,7 @@ async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
         .commit()
         .await?;
 
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), commit)
-        .await?;
+    let hg_cs_id = repo.derive_hg_changeset(&ctx, commit).await?;
 
     let hg_cs = hg_cs_id.load(&ctx, &repo.get_blobstore()).await?;
 
@@ -323,9 +322,7 @@ async fn test_maybe_validate_pushed_bonsais(fb: FacebookInit) -> Result<(), Erro
         .commit()
         .await?;
 
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), commit)
-        .await?;
+    let hg_cs_id = repo.derive_hg_changeset(&ctx, commit).await?;
 
     // No replay data - ignore
     maybe_validate_pushed_bonsais(&ctx, &repo, &None).await?;

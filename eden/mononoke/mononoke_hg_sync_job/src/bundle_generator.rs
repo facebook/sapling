@@ -9,7 +9,6 @@ use crate::darkstorm_verifier::DarkstormVerifier;
 use crate::lfs_verifier::LfsVerifier;
 use anyhow::{bail, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use borrowed::borrowed;
@@ -30,6 +29,7 @@ use mercurial_bundles::{
     changegroup::CgVersion,
     create_bundle_stream, parts,
 };
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_revlog::RevlogChangeset;
 use mercurial_types::{HgBlobNode, HgChangesetId, MPath};
 use mononoke_types::{datetime::Timestamp, hash::Sha256, ChangesetId};
@@ -162,7 +162,7 @@ impl BookmarkChange {
         cloned!(repo);
         async move {
             let res = match maybe_cs {
-                Some(cs_id) => Some(repo.get_hg_from_bonsai_changeset(ctx, cs_id).await?),
+                Some(cs_id) => Some(repo.derive_hg_changeset(&ctx, cs_id).await?),
                 None => None,
             };
             Ok(res)
@@ -386,7 +386,7 @@ fn find_commits_to_push(
     .map(move |bcs_id| {
         cloned!(ctx, repo);
         async move {
-            let hg_cs_id = repo.get_hg_from_bonsai_changeset(ctx, bcs_id).await?;
+            let hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
             Ok((bcs_id, hg_cs_id))
         }
         .boxed()

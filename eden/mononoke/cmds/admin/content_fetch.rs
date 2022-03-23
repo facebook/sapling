@@ -7,7 +7,6 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use clap_old::{App, ArgMatches, SubCommand};
 use cmdlib::{
@@ -17,6 +16,7 @@ use cmdlib::{
 use context::CoreContext;
 use fbinit::FacebookInit;
 use manifest::{Entry, Manifest, ManifestOps};
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{HgFileNodeId, HgManifestId, MPath};
 use mononoke_types::FileType;
 use slog::Logger;
@@ -119,9 +119,7 @@ async fn fetch_entry(
     let mpath = MPath::new(path)?;
 
     let bcs_id = helpers::csid_resolve(&ctx, repo.clone(), rev.to_string()).await?;
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-        .await?;
+    let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
     let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
 
     let ret = hg_cs

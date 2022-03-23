@@ -8,7 +8,6 @@
 use crate::common::get_file_nodes;
 use anyhow::{anyhow, format_err, Context, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::{Loadable, Storable};
 use clap_old::{App, Arg, ArgGroup, ArgMatches, SubCommand};
 use cloned::cloned;
@@ -23,6 +22,7 @@ use futures::{
     stream::{StreamExt, TryStreamExt},
 };
 use manifest::ManifestOps;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId, MPath};
 use mononoke_types::{
     blob::BlobstoreValue, typed_hash::MononokeId, ContentId, RedactionKeyList, Timestamp,
@@ -276,9 +276,7 @@ async fn get_ctx_blobrepo_cs_id<'a>(
     let ctx = CoreContext::new_with_logger(fb, logger);
 
     let cs_id = helpers::csid_resolve(&ctx, blobrepo.clone(), rev.to_string()).await?;
-    let hg_cs_id = blobrepo
-        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .await?;
+    let hg_cs_id = blobrepo.derive_hg_changeset(&ctx, cs_id).await?;
 
     Ok((ctx, blobrepo, hg_cs_id))
 }
@@ -523,9 +521,7 @@ async fn check_if_content_is_reachable_from_bookmark(
         "Checking if redacted content exist in '{}' bookmark...", main_bookmark
     );
     let csid = helpers::csid_resolve(&ctx, blobrepo, main_bookmark).await?;
-    let hg_cs_id = blobrepo
-        .get_hg_from_bonsai_changeset(ctx.clone(), csid)
-        .await?;
+    let hg_cs_id = blobrepo.derive_hg_changeset(ctx, csid).await?;
 
     let hg_cs = hg_cs_id.load(ctx, blobrepo.blobstore()).await?;
 

@@ -7,7 +7,6 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cmdlib::helpers;
@@ -17,6 +16,7 @@ use maplit::hashset;
 use megarepolib::common::{
     create_and_save_bonsai, ChangesetArgs, ChangesetArgsFactory, StackPosition,
 };
+use mercurial_derived_data::DeriveHgChangeset;
 use metaconfig_types::PushrebaseFlags;
 use mononoke_api_types::InnerRepo;
 use mononoke_types::ChangesetId;
@@ -312,9 +312,7 @@ async fn push_merge_commit(
 
     // Generating hg changeset from bonsai changeset will give us a validation
     // that this merge commit is correct
-    let merge_hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), merge_cs_id)
-        .await?;
+    let merge_hg_cs_id = repo.derive_hg_changeset(ctx, merge_cs_id).await?;
 
     info!(ctx.logger(), "Generated hg changeset {}", merge_hg_cs_id);
     info!(ctx.logger(), "Now running pushrebase...");
@@ -669,9 +667,7 @@ mod test {
         );
 
         for merge_cs_id in gradual_merge_result.values() {
-            let hg_cs_id = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), *merge_cs_id)
-                .await?;
+            let hg_cs_id = repo.derive_hg_changeset(ctx, *merge_cs_id).await?;
             let hg_cs = hg_cs_id.load(&ctx, repo.blobstore()).await?;
             assert!(hg_cs.files().is_empty());
         }

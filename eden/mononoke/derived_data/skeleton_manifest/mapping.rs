@@ -173,7 +173,6 @@ pub(crate) fn get_file_changes(
 mod test {
     use super::*;
     use blobrepo::BlobRepo;
-    use blobrepo_hg::BlobRepoHg;
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
     use borrowed::borrowed;
@@ -188,6 +187,7 @@ mod test {
     use futures::stream::{Stream, TryStreamExt};
     use futures::try_join;
     use manifest::Entry;
+    use mercurial_derived_data::DeriveHgChangeset;
     use mercurial_types::{HgChangesetId, HgManifestId};
     use mononoke_types::ChangesetId;
     use repo_derived_data::RepoDerivedDataRef;
@@ -247,9 +247,7 @@ mod test {
             AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bcs_id.clone())
                 .compat()
                 .and_then(move |new_bcs_id| async move {
-                    let hg_cs_id = repo
-                        .get_hg_from_bonsai_changeset(ctx.clone(), new_bcs_id)
-                        .await?;
+                    let hg_cs_id = repo.derive_hg_changeset(ctx, new_bcs_id).await?;
                     Ok((new_bcs_id, hg_cs_id))
                 }),
         )

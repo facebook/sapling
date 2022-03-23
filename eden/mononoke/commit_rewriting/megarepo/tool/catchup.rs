@@ -7,7 +7,6 @@
 
 use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use context::CoreContext;
@@ -20,6 +19,7 @@ use itertools::Itertools;
 use manifest::{Diff, ManifestOps};
 use maplit::hashset;
 use megarepolib::common::{create_and_save_bonsai, ChangesetArgsFactory, StackPosition};
+use mercurial_derived_data::DeriveHgChangeset;
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types::{ChangesetId, FileChange, MPath};
 use pushrebase::do_pushrebase_bonsai;
@@ -73,9 +73,7 @@ pub async fn create_deletion_head_commits<'a>(
             ctx.logger(),
             "created bonsai #{}. Deriving hg changeset for it to verify its correctness", num
         );
-        let hg_cs_id = repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-            .await?;
+        let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
 
         info!(ctx.logger(), "derived {}, pushrebasing...", hg_cs_id);
 

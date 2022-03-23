@@ -55,12 +55,12 @@ tunables = { version = "0.1.0", path = "../../tunables" }
 [dev-dependencies]
 ascii = "1.0"
 assert_matches = "1.5"
-blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 bytes = { version = "1.1", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cross_repo_sync_test_utils = { version = "0.1.0", path = "test_utils" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
+mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 revset = { version = "0.1.0", path = "../../revset" }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }

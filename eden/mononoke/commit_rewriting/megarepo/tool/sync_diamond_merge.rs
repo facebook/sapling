@@ -12,7 +12,6 @@
 /// USE WITH CARE!
 use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
@@ -34,6 +33,7 @@ use futures_old::{Future, IntoFuture, Stream};
 use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::{bonsai_diff, BonsaiDiffFileChange};
 use maplit::hashmap;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{HgFileNodeId, HgManifestId};
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_api_types::InnerRepo;
@@ -455,9 +455,7 @@ fn id_to_manifestid(
     bcs_id: ChangesetId,
 ) -> impl Future<Item = HgManifestId, Error = Error> {
     async move {
-        let cs_id = repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-            .await?;
+        let cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
         let cs = cs_id.load(&ctx, repo.blobstore()).await?;
         Ok(cs.manifestid())
     }

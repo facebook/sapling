@@ -13,7 +13,6 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0.51"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }
 context = { version = "0.1.0", path = "../../server/context" }

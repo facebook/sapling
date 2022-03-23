@@ -25,7 +25,6 @@ sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexper
 unicode-segmentation = "1.6.0"
 
 [dev-dependencies]
-blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }

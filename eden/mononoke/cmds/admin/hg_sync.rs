@@ -7,7 +7,6 @@
 
 use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason, Freshness};
 use clap_old::{App, Arg, ArgMatches, SubCommand};
@@ -18,6 +17,7 @@ use fbinit::FacebookInit;
 use futures::stream::StreamExt;
 use futures::{compat::Future01CompatExt, future};
 use mercurial_bundle_replay_data::BundleReplayData;
+use mercurial_derived_data::DeriveHgChangeset;
 use mononoke_hg_sync_job_helper_lib::save_bundle_to_file;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
@@ -333,10 +333,7 @@ async fn show(
         let bundle_id = entry.id;
 
         let hg_cs_id = match entry.to_changeset_id {
-            Some(bcs_id) => repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .await?
-                .to_string(),
+            Some(bcs_id) => repo.derive_hg_changeset(ctx, bcs_id).await?.to_string(),
             None => "DELETED".to_string(),
         };
 

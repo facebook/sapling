@@ -26,6 +26,7 @@ use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use futures::{future::FutureExt, try_join};
 use futures_ext::{BoxStream, StreamExt as OldStreamExt};
 use manifest::{Diff, Entry, ManifestOps};
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{FileType, RepositoryId};
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -313,9 +314,7 @@ pub async fn generate_statistics_from_file<P: AsRef<Path>>(
         .map({
             move |changeset| async move {
                 let ChangesetEntry { repo_id, cs_id, .. } = changeset;
-                let hg_cs_id = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                    .await?;
+                let hg_cs_id = repo.derive_hg_changeset(ctx, cs_id).await?;
                 let cs_timestamp =
                     get_changeset_timestamp_from_changeset(ctx, repo, &hg_cs_id).await?;
                 // the error type annotation in principle should be inferred,
@@ -648,10 +647,7 @@ mod tests {
             )
             .await;
 
-            let hg_cs_id = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .await
-                .unwrap();
+            let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await.unwrap();
 
             let stats = get_statistics_from_changeset(ctx, repo, blobstore, &hg_cs_id)
                 .await
@@ -701,10 +697,7 @@ mod tests {
             )
             .await;
 
-            let hg_cs_id = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .await
-                .unwrap();
+            let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await.unwrap();
 
             let manifest = get_manifest_from_changeset(ctx, repo, &hg_cs_id)
                 .await

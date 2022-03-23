@@ -9,12 +9,12 @@
 
 use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use context::CoreContext;
 use futures::{FutureExt, TryFutureExt};
 use futures_old::{stream, Stream as StreamOld};
 use mercurial_bundles::obsmarkers::MetadataEntry;
 use mercurial_bundles::{part_encode::PartEncodeBuilder, parts};
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_types::DateTime;
 
@@ -59,8 +59,8 @@ fn pushrebased_changesets_to_hg_stream(
             let ctx = ctx.clone();
             async move {
                 let (old, new) = futures::try_join!(
-                    blobrepo.get_hg_from_bonsai_changeset(ctx.clone(), p.id_old),
-                    blobrepo.get_hg_from_bonsai_changeset(ctx.clone(), p.id_new),
+                    blobrepo.derive_hg_changeset(&ctx, p.id_old),
+                    blobrepo.derive_hg_changeset(&ctx, p.id_new),
                 )?;
                 Ok((old, vec![new]))
             }

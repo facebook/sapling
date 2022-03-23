@@ -468,6 +468,7 @@ mod tests {
     use futures::TryStreamExt;
     use manifest::ManifestOps;
     use maplit::btreemap;
+    use mercurial_derived_data::DeriveHgChangeset;
     use mercurial_types::{blobs::HgBlobManifest, HgFileNodeId, HgManifestId};
     use mononoke_types::{
         BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileContents,
@@ -1155,9 +1156,7 @@ mod tests {
         bcs_id: ChangesetId,
     ) -> Result<HgFileNodeId, Error> {
         let ctx = CoreContext::test_mock(fb);
-        let hg_cs_id = repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-            .await?;
+        let hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
         let hg_cs = hg_cs_id.load(&ctx, repo.blobstore()).await?;
         Ok(HgFileNodeId::new(hg_cs.manifestid().into_nodehash()))
     }

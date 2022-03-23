@@ -31,12 +31,12 @@ thiserror = "1.0.29"
 
 [dev-dependencies]
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 derived_data_test_utils = { version = "0.1.0", path = "../test_utils" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
+mercurial_derived_data = { version = "0.1.0", path = "../mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 pretty_assertions = "0.6"
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }

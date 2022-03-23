@@ -7,13 +7,13 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::{future::try_join, TryStreamExt};
 use manifest::{Diff, ManifestOps};
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::MPath;
 use mononoke_types::ChangesetId;
 use slog::info;
@@ -24,9 +24,7 @@ pub async fn get_working_copy_paths(
     repo: &BlobRepo,
     bcs_id: ChangesetId,
 ) -> Result<Vec<MPath>, Error> {
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-        .await?;
+    let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
 
     let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
     info!(ctx.logger(), "Getting working copy contents");

@@ -8,7 +8,6 @@
 use anyhow::{anyhow, Context, Error};
 use async_trait::async_trait;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use bytes::Bytes;
@@ -30,6 +29,7 @@ use megarepo_config::{
 };
 use megarepo_error::MegarepoError;
 use megarepo_mapping::{CommitRemappingState, SourceName};
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
 use mononoke_api::{ChangesetContext, Mononoke, MononokePath, RepoContext};
 use mononoke_types::{
@@ -188,16 +188,12 @@ pub trait MegarepoOp {
     ) -> Result<ChangesetId, MegarepoError> {
         let blob_repo = repo.blob_repo();
         let hg_cs_merge = async {
-            let hg_cs_id = blob_repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), merge_commit)
-                .await?;
+            let hg_cs_id = blob_repo.derive_hg_changeset(ctx, merge_commit).await?;
             let hg_cs = hg_cs_id.load(ctx, blob_repo.blobstore()).await?;
             Ok(hg_cs.manifestid())
         };
         let parent_hg_css = try_join_all(new_parent_commits.iter().map(|p| async move {
-            let hg_cs_id = blob_repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), *p)
-                .await?;
+            let hg_cs_id = blob_repo.derive_hg_changeset(ctx, *p).await?;
             let hg_cs = hg_cs_id.load(ctx, blob_repo.blobstore()).await?;
             Result::<_, Error>::Ok(hg_cs.manifestid())
         }));

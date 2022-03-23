@@ -25,11 +25,11 @@ use tokio::{
 use crate::args::MononokeMatches;
 use crate::monitoring;
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::{BookmarkName, BookmarksRef};
 use context::CoreContext;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{HgChangesetId, HgManifestId};
 use mononoke_types::ChangesetId;
 use repo_identity::RepoIdentityRef;
@@ -142,11 +142,11 @@ pub async fn get_root_manifest_id(
     repo: BlobRepo,
     hash_or_bookmark: impl ToString,
 ) -> Result<HgManifestId, Error> {
-    let cs_id = csid_resolve(&ctx, &repo, hash_or_bookmark).await?;
+    let cs_id = csid_resolve(ctx, &repo, hash_or_bookmark).await?;
     Ok(repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+        .derive_hg_changeset(ctx, cs_id)
         .await?
-        .load(&ctx, repo.blobstore())
+        .load(ctx, repo.blobstore())
         .await?
         .manifestid())
 }

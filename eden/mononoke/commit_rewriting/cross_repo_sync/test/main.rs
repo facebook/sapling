@@ -19,7 +19,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use blobrepo::{save_bonsai_changesets, BlobRepo};
-use blobrepo_hg::BlobRepoHg;
 use blobstore::{Loadable, Storable};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cacheblob::InProcessLease;
@@ -35,6 +34,7 @@ use futures::{future::join_all, FutureExt, TryStreamExt};
 use live_commit_sync_config::{TestLiveCommitSyncConfig, TestLiveCommitSyncConfigSource};
 use manifest::ManifestOps;
 use maplit::{btreemap, hashmap};
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::{
     CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig,
@@ -2102,9 +2102,7 @@ async fn assert_working_copy(
     cs_id: ChangesetId,
     expected_files: Vec<&str>,
 ) -> Result<(), Error> {
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .await?;
+    let hg_cs_id = repo.derive_hg_changeset(ctx, cs_id).await?;
 
     let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
     let mf_id = hg_cs.manifestid();

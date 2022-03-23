@@ -24,6 +24,7 @@ use futures::{
 };
 use futures_stats::TimedFutureExt;
 use manifest::{Entry, ManifestOps};
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
 use metaconfig_types::CacheWarmupParams;
 use microwave::{self, SnapshotLocation};
@@ -196,9 +197,7 @@ async fn do_cache_warmup(
         CacheWarmupTarget::Changeset(bcs_id) => bcs_id,
     };
 
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-        .await?;
+    let hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
 
     let blobstore_warmup = task::spawn({
         cloned!(ctx, repo);

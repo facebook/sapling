@@ -9,7 +9,6 @@
 
 use anyhow::Error;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
-use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use borrowed::borrowed;
 use bytes::Bytes;
@@ -18,6 +17,7 @@ use fbinit::FacebookInit;
 use filestore::StoreRequest;
 use futures::{future::try_join_all, stream};
 use maplit::btreemap;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{HgChangesetId, MPath};
 use mononoke_api_types::InnerRepo;
 use mononoke_types::{
@@ -116,10 +116,7 @@ async fn create_bonsai_changeset_from_test_data(
         .await
         .unwrap();
 
-    let hg_cs = blobrepo
-        .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-        .await
-        .unwrap();
+    let hg_cs = blobrepo.derive_hg_changeset(&ctx, bcs_id).await.unwrap();
 
     assert_eq!(
         hg_cs,

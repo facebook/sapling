@@ -186,7 +186,6 @@ mod tests {
     use super::*;
     use crate::fastlog_impl::{fetch_fastlog_batch_by_unode_id, fetch_flattened};
     use blobrepo::{save_bonsai_changesets, BlobRepo};
-    use blobrepo_hg::BlobRepoHg;
     use bookmarks::BookmarkName;
     use context::CoreContext;
     use fbinit::FacebookInit;
@@ -199,6 +198,7 @@ mod tests {
     use futures::{Stream, TryFutureExt};
     use manifest::ManifestOps;
     use maplit::btreemap;
+    use mercurial_derived_data::DeriveHgChangeset;
     use mercurial_types::HgChangesetId;
     use mononoke_types::fastlog_batch::{
         max_entries_in_fastlog_batch, MAX_BATCHES, MAX_LATEST_LEN,
@@ -651,9 +651,7 @@ mod tests {
                     .and_then(move |new_bcs_id| {
                         cloned!(ctx, repo);
                         async move {
-                            let hg_cs_id = repo
-                                .get_hg_from_bonsai_changeset(ctx.clone(), new_bcs_id)
-                                .await?;
+                            let hg_cs_id = repo.derive_hg_changeset(&ctx, new_bcs_id).await?;
                             Ok((new_bcs_id, hg_cs_id))
                         }
                     })
