@@ -9,11 +9,14 @@ mod filestore;
 
 #[cfg(unix)]
 use std::os::unix::prelude::MetadataExt;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
 use chrono;
+use configmodel::Config;
+use configmodel::ConfigExt;
 pub use filestore::FileStore;
 use parking_lot::Mutex;
 use rand::distributions::Alphanumeric;
@@ -32,32 +35,42 @@ pub struct Logger {
 impl Logger {
     /// Initialize a new logger and write out initial runlog entry.
     /// Respects runlog.enable config field.
-    pub fn new(repo: Option<&Repo>, command: Vec<String>) -> Result<Arc<Self>> {
-        let entry = Entry::new(command);
-        let mut storage: Option<Mutex<FileStore>> = None;
-
+    pub fn from_repo(repo: Option<&Repo>, command: Vec<String>) -> Result<Arc<Self>> {
         if let Some(repo) = repo {
-            if repo.config().get_or("runlog", "enable", || false)?
-                && !accidentally_running_as_root(repo)
-            {
-                let dir = repo.shared_dot_hg_path();
-
-                // Probabilistically clean up old entries to avoid doing the work every time.
-                let cleanup_chance = repo.config().get_or("runlog", "cleanup-chance", || 0.01)?;
-                if cleanup_chance > rand::thread_rng().gen::<f64>() {
-                    let threshold = repo
-                        .config()
-                        .get_or("runlog", "cleanup-threshold", || 3600.0)?;
-                    FileStore::cleanup(dir, Duration::from_secs_f64(threshold))?;
-                }
-
-                storage = Some(Mutex::new(FileStore::new(
-                    dir,
-                    &entry.id,
-                    repo.config().get_or_default("runlog", "boring-commands")?,
-                )?))
-            }
+            Self::new(repo.config(), repo.shared_dot_hg_path(), command)
+        } else {
+            Ok(Self::empty(command))
         }
+    }
+
+    fn empty(command: Vec<String>) -> Arc<Self> {
+        Arc::new(Logger {
+            entry: Mutex::new(Entry::new(command)),
+            storage: None,
+        })
+    }
+
+    fn new(config: &dyn Config, shared_path: &Path, command: Vec<String>) -> Result<Arc<Self>> {
+        if !config.get_or("runlog", "enable", || false)?
+            || accidentally_running_as_root(shared_path)
+        {
+            return Ok(Self::empty(command));
+        }
+
+        let entry = Entry::new(command);
+
+        // Probabilistically clean up old entries to avoid doing the work every time.
+        let cleanup_chance = config.get_or("runlog", "cleanup-chance", || 0.01)?;
+        if cleanup_chance > rand::thread_rng().gen::<f64>() {
+            let threshold = config.get_or("runlog", "cleanup-threshold", || 3600.0)?;
+            FileStore::cleanup(shared_path, Duration::from_secs_f64(threshold))?;
+        }
+
+        let storage = Some(Mutex::new(FileStore::new(
+            shared_path,
+            &entry.id,
+            config.get_or_default("runlog", "boring-commands")?,
+        )?));
 
         let logger = Self {
             entry: Mutex::new(entry),
@@ -99,14 +112,14 @@ impl Logger {
 }
 
 #[cfg(unix)]
-fn accidentally_running_as_root(repo: &Repo) -> bool {
+fn accidentally_running_as_root(shared_path: &Path) -> bool {
     // Check if we are root and repo is not owned by root.
 
     if unsafe { libc::geteuid() } != 0 {
         return false;
     }
 
-    match std::fs::metadata(repo.shared_dot_hg_path()) {
+    match std::fs::metadata(shared_path) {
         Ok(m) => m.uid() != 0,
         // err on side of not writing files as root
         Err(_) => true,
@@ -114,7 +127,7 @@ fn accidentally_running_as_root(repo: &Repo) -> bool {
 }
 
 #[cfg(not(unix))]
-fn accidentally_running_as_root(repo: &Repo) -> bool {
+fn accidentally_running_as_root(shared_path: &Path) -> bool {
     false
 }
 

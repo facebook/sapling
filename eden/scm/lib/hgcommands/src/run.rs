@@ -135,7 +135,8 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
                     sampling_config.set(sc).unwrap();
                 }
 
-                run_logger = match runlog::Logger::new(dispatcher.repo(), args[1..].to_vec()) {
+                run_logger = match runlog::Logger::from_repo(dispatcher.repo(), args[1..].to_vec())
+                {
                     Ok(logger) => Some(logger),
                     Err(err) => {
                         let _ = io.write_err(format!("Error creating runlogger: {}\n", err));
