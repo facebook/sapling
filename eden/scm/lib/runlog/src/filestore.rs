@@ -34,7 +34,7 @@ pub struct FileStore {
     lock_file: PathLock,
 
     // Boring commands we don't want to update the watchfile for.
-    skip_watchfile_commands: HashSet<String>,
+    boring_commands: HashSet<String>,
 }
 
 const LOCK_EXT: &str = "lock";
@@ -62,7 +62,7 @@ impl FileStore {
             dir,
             watchfile_path: shared_dot_hg_dir.join(WATCHFILE),
             lock_file,
-            skip_watchfile_commands: boring_commands.into_iter().collect(),
+            boring_commands: boring_commands.into_iter().collect(),
         })
     }
 
@@ -77,11 +77,24 @@ impl FileStore {
             },
         )?;
 
-        if !e.command.is_empty() && !self.skip_watchfile_commands.contains(&e.command[0]) {
+        if !e.command.is_empty() && !self.boring_commands.contains(&e.command[0]) {
             // Contents aren't important, but it makes it easier to test.
             fs::write(&self.watchfile_path, &e.command[0])?;
         }
 
+        Ok(())
+    }
+
+    pub(crate) fn close(&self, e: &Entry) -> Result<()> {
+        // Remove inconsequential, clean-exitting runlog entries immediately.
+        if !e.command.is_empty()
+            && self.boring_commands.contains(&e.command[0])
+            && e.exit_code == Some(0)
+        {
+            let path = self.dir.join(&e.id);
+            remove_file_ignore_missing(path.with_extension(LOCK_EXT))?;
+            remove_file_ignore_missing(path.with_extension(JSON_EXT))?;
+        }
         Ok(())
     }
 
@@ -145,6 +158,7 @@ impl FileStore {
                             .map_err(Error::new)
                             .and_then(|e| Ok((e, is_locked(file.path())?))),
                     ),
+                    Err(err) if err.kind() == io::ErrorKind::NotFound => None,
                     Err(err) => Some(Err(Error::new(err))),
                 }
             }

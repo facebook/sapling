@@ -76,7 +76,7 @@ impl Logger {
             entry: Mutex::new(entry),
             storage,
         };
-        logger.write(&logger.entry.lock())?;
+        logger.write(&logger.entry.lock(), false)?;
 
         return Ok(Arc::new(logger));
     }
@@ -87,7 +87,7 @@ impl Logger {
         entry.end_time = Some(chrono::Utc::now());
         entry.progress = Vec::new();
 
-        self.write(&entry)?;
+        self.write(&entry, true)?;
 
         Ok(())
     }
@@ -95,16 +95,20 @@ impl Logger {
     pub fn update_progress(&self, progress: Vec<Progress>) -> Result<()> {
         let mut entry = self.entry.lock();
         if entry.exit_code.is_none() && entry.update_status(progress) {
-            self.write(&entry)?;
+            self.write(&entry, false)?;
         }
 
         Ok(())
     }
 
-    fn write(&self, e: &Entry) -> Result<()> {
+    fn write(&self, e: &Entry, close: bool) -> Result<()> {
         if let Some(storage) = &self.storage {
             let storage = storage.lock();
             storage.save(e)?;
+
+            if close {
+                storage.close(e)?;
+            }
         }
 
         Ok(())
@@ -202,5 +206,59 @@ impl Progress {
             total,
             unit: bar.unit().to_string(),
         };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use tempfile::tempdir;
+
+    use super::*;
+
+    #[test]
+    fn test_close() -> Result<()> {
+        let mut cfg = BTreeMap::new();
+        cfg.insert("runlog.boring-commands".to_string(), "boring".to_string());
+        cfg.insert("runlog.enable".to_string(), "1".to_string());
+
+        // Boring commands that exit cleanly are removed immediately.
+        {
+            let td = tempdir()?;
+            let logger = Logger::new(&cfg, td.path(), vec!["boring".to_string()])?;
+            logger.close(0)?;
+
+            let got: Vec<String> = std::fs::read_dir(td.path().join("runlog"))?
+                .map(|d| d.unwrap().path().to_string_lossy().to_string())
+                .collect();
+            assert_eq!(got.len(), 0);
+        }
+
+        // Boring commands that exit uncleanly are still recorded.
+        {
+            let td = tempdir()?;
+            let logger = Logger::new(&cfg, td.path(), vec!["boring".to_string()])?;
+            logger.close(1)?;
+
+            let got: Vec<String> = std::fs::read_dir(td.path().join("runlog"))?
+                .map(|d| d.unwrap().path().to_string_lossy().to_string())
+                .collect();
+            assert_eq!(got.len(), 2);
+        }
+
+        // Non-boring commands aren't deleted immediately.
+        {
+            let td = tempdir()?;
+            let logger = Logger::new(&cfg, td.path(), vec!["interesting".to_string()])?;
+            logger.close(0)?;
+
+            let got: Vec<String> = std::fs::read_dir(td.path().join("runlog"))?
+                .map(|d| d.unwrap().path().to_string_lossy().to_string())
+                .collect();
+            assert_eq!(got.len(), 2);
+        }
+
+        Ok(())
     }
 }
