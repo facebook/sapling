@@ -57,8 +57,6 @@ impl Logger {
             return Ok(Self::empty(command));
         }
 
-        let entry = Entry::new(command);
-
         // Probabilistically clean up old entries to avoid doing the work every time.
         let cleanup_chance = config.get_or("runlog", "cleanup-chance", || 0.01)?;
         if cleanup_chance > rand::thread_rng().gen::<f64>() {
@@ -66,11 +64,16 @@ impl Logger {
             FileStore::cleanup(shared_path, Duration::from_secs_f64(threshold))?;
         }
 
-        let storage = Some(Mutex::new(FileStore::new(
-            shared_path,
-            &entry.id,
-            config.get_or_default("runlog", "boring-commands")?,
-        )?));
+        let boring_commands: Vec<String> = config.get_or_default("runlog", "boring-commands")?;
+
+        // This command is boring if it is in boring-commands, or it
+        // looks like the invoker is disabling the blackbox.
+        let boring = (!command.is_empty() && boring_commands.contains(&command[0]))
+            || (config.get_or_default::<String>("extensions", "blackbox")? == "!")
+            || (config.get("blackbox", "track") == Some("".into()));
+
+        let entry = Entry::new(command);
+        let storage = Some(Mutex::new(FileStore::new(shared_path, &entry.id, boring)?));
 
         let logger = Self {
             entry: Mutex::new(entry),
@@ -223,41 +226,36 @@ mod tests {
         cfg.insert("runlog.boring-commands".to_string(), "boring".to_string());
         cfg.insert("runlog.enable".to_string(), "1".to_string());
 
-        // Boring commands that exit cleanly are removed immediately.
-        {
+        let cleaned_up_files = |cfg, name: &str, exit: i32| -> Result<bool> {
             let td = tempdir()?;
-            let logger = Logger::new(&cfg, td.path(), vec!["boring".to_string()])?;
-            logger.close(0)?;
+            let logger = Logger::new(cfg, td.path(), vec![name.to_string()])?;
+            logger.close(exit)?;
 
             let got: Vec<String> = std::fs::read_dir(td.path().join("runlog"))?
                 .map(|d| d.unwrap().path().to_string_lossy().to_string())
                 .collect();
-            assert_eq!(got.len(), 0);
-        }
+
+            Ok(got.is_empty())
+        };
+
+        // Boring commands that exit cleanly are removed immediately.
+        assert!(cleaned_up_files(&cfg, "boring", 0)?);
 
         // Boring commands that exit uncleanly are still recorded.
-        {
-            let td = tempdir()?;
-            let logger = Logger::new(&cfg, td.path(), vec!["boring".to_string()])?;
-            logger.close(1)?;
-
-            let got: Vec<String> = std::fs::read_dir(td.path().join("runlog"))?
-                .map(|d| d.unwrap().path().to_string_lossy().to_string())
-                .collect();
-            assert_eq!(got.len(), 2);
-        }
+        assert!(!cleaned_up_files(&cfg, "boring", 1)?);
 
         // Non-boring commands aren't deleted immediately.
-        {
-            let td = tempdir()?;
-            let logger = Logger::new(&cfg, td.path(), vec!["interesting".to_string()])?;
-            logger.close(0)?;
+        assert!(!cleaned_up_files(&cfg, "interesting", 0)?);
 
-            let got: Vec<String> = std::fs::read_dir(td.path().join("runlog"))?
-                .map(|d| d.unwrap().path().to_string_lossy().to_string())
-                .collect();
-            assert_eq!(got.len(), 2);
-        }
+        // Infer boringness from blackbox disablement.
+        let mut no_bb_cfg = cfg.clone();
+        no_bb_cfg.insert("extensions.blackbox".to_string(), "!".to_string());
+        assert!(cleaned_up_files(&no_bb_cfg, "blackbox_disabled", 0)?);
+
+        // Infer boringness from empty blackbox.trace.
+        let mut no_bb_trace = cfg.clone();
+        no_bb_trace.insert("blackbox.track".to_string(), "".to_string());
+        assert!(cleaned_up_files(&no_bb_trace, "blackbox_disabled", 0)?);
 
         Ok(())
     }

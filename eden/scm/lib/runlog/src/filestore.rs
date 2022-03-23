@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fs;
 use std::io;
@@ -33,8 +32,10 @@ pub struct FileStore {
     #[allow(dead_code)]
     lock_file: PathLock,
 
-    // Boring commands we don't want to update the watchfile for.
-    boring_commands: HashSet<String>,
+    // Whether the current command is boring. This determines whether
+    // we touch the watchfile on updates and how aggressively we clean
+    // up files.
+    boring: bool,
 }
 
 const LOCK_EXT: &str = "lock";
@@ -47,11 +48,7 @@ const RUNLOG_DIR: &str = "runlog";
 impl FileStore {
     // Create a new FileStore that writes files to directory dir. dir
     // is created automatically if it doesn't exist.
-    pub(crate) fn new(
-        shared_dot_hg_dir: &Path,
-        entry_id: &str,
-        boring_commands: Vec<String>,
-    ) -> Result<Self> {
+    pub(crate) fn new(shared_dot_hg_dir: &Path, entry_id: &str, boring: bool) -> Result<Self> {
         let dir = shared_dot_hg_dir.join(RUNLOG_DIR);
 
         create_shared_dir(&dir)?;
@@ -62,7 +59,7 @@ impl FileStore {
             dir,
             watchfile_path: shared_dot_hg_dir.join(WATCHFILE),
             lock_file,
-            boring_commands: boring_commands.into_iter().collect(),
+            boring,
         })
     }
 
@@ -77,7 +74,7 @@ impl FileStore {
             },
         )?;
 
-        if !e.command.is_empty() && !self.boring_commands.contains(&e.command[0]) {
+        if !self.boring {
             // Contents aren't important, but it makes it easier to test.
             fs::write(&self.watchfile_path, &e.command[0])?;
         }
@@ -87,10 +84,7 @@ impl FileStore {
 
     pub(crate) fn close(&self, e: &Entry) -> Result<()> {
         // Remove inconsequential, clean-exitting runlog entries immediately.
-        if !e.command.is_empty()
-            && self.boring_commands.contains(&e.command[0])
-            && e.exit_code == Some(0)
-        {
+        if self.boring && e.exit_code == Some(0) {
             let path = self.dir.join(&e.id);
             remove_file_ignore_missing(path.with_extension(LOCK_EXT))?;
             remove_file_ignore_missing(path.with_extension(JSON_EXT))?;
@@ -197,7 +191,7 @@ mod tests {
     fn test_save() -> Result<()> {
         let td = tempdir()?;
 
-        let fs = FileStore::new(td.path(), "some_id", vec![])?;
+        let fs = FileStore::new(td.path(), "some_id", false)?;
         let rl_dir = td.path().join(RUNLOG_DIR);
 
         // Make sure FileStore creates directory automatically.
@@ -237,7 +231,7 @@ mod tests {
             .with_extension(JSON_EXT);
 
         {
-            let fs = FileStore::new(td.path().into(), &e.id, vec![])?;
+            let fs = FileStore::new(td.path(), &e.id, false)?;
             fs.save(&e)?;
 
             // Still locked, don't clean up.
@@ -264,13 +258,13 @@ mod tests {
         let td = tempdir()?;
 
         let a = Entry::new(vec!["a".to_string()]);
-        let a_fs = FileStore::new(td.path().into(), &a.id, vec![])?;
+        let a_fs = FileStore::new(td.path(), &a.id, false)?;
         a_fs.save(&a)?;
 
 
         let b = Entry::new(vec!["b".to_string()]);
         {
-            let b_fs = FileStore::new(td.path().into(), &b.id, vec![])?;
+            let b_fs = FileStore::new(td.path(), &b.id, false)?;
             b_fs.save(&b)?;
         }
 
@@ -291,7 +285,7 @@ mod tests {
         // Should write out watchfile.
         {
             let e = Entry::new(vec!["exciting".to_string()]);
-            let fs = FileStore::new(td.path().into(), &e.id, vec!["boring".to_string()])?;
+            let fs = FileStore::new(td.path(), &e.id, false)?;
             fs.save(&e)?;
         }
 
@@ -301,7 +295,7 @@ mod tests {
         // Boring command, don't touch watchfile.
         {
             let e = Entry::new(vec!["boring".to_string()]);
-            let fs = FileStore::new(td.path().into(), &e.id, vec!["boring".to_string()])?;
+            let fs = FileStore::new(td.path(), &e.id, true)?;
             fs.save(&e)?;
         }
 
@@ -310,7 +304,7 @@ mod tests {
         // Should touch watchfile.
         {
             let e = Entry::new(vec!["amazing".to_string()]);
-            let fs = FileStore::new(td.path().into(), &e.id, vec!["boring".to_string()])?;
+            let fs = FileStore::new(td.path(), &e.id, false)?;
             fs.save(&e)?;
         }
 
