@@ -21,6 +21,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SystemError.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
@@ -425,13 +426,19 @@ ImmediateFuture<folly::Unit> recursivelyAddAllChildrens(
     RelativePath path,
     ObjectFetchContext& context) {
   auto absPath = mount.getPath() + path;
-  auto boostPath = boost::filesystem::path(absPath.stringPiece());
+  auto direntNamesTry = getAllDirectoryEntryNames(absPath);
+  if (direntNamesTry.hasException()) {
+    return makeImmediateFuture<folly::Unit>(direntNamesTry.exception());
+  }
+  const auto& direntNames = direntNamesTry.value();
 
   std::vector<ImmediateFuture<folly::Unit>> futures;
-  for (const auto& entry : boost::filesystem::directory_iterator(boostPath)) {
-    auto entryName = PathComponent{entry.path().filename().c_str()};
+  futures.reserve(direntNames.size());
+
+  for (const auto& entryName : direntNames) {
     auto entryPath = path + entryName;
-    futures.emplace_back(fileNotificationImpl(mount, entryPath, context));
+    futures.emplace_back(
+        fileNotificationImpl(mount, std::move(entryPath), context));
   }
 
   return collectAllSafe(std::move(futures))
