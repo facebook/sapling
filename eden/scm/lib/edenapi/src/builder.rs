@@ -20,14 +20,26 @@ use configmodel::ConfigExt;
 use http_client::Encoding;
 use http_client::HttpVersion;
 use http_client::MinTransferSpeed;
+use lazy_static::lazy_static;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
+use rand::distributions::Alphanumeric;
+use rand::thread_rng;
+use rand::Rng;
 use url::Url;
 
 use crate::client::Client;
 use crate::errors::ConfigError;
 use crate::errors::EdenApiError;
 use crate::EdenApi;
+
+lazy_static! {
+    pub static ref DEFAULT_CORRELATOR: String = thread_rng()
+        .sample_iter(Alphanumeric)
+        .take(16)
+        .map(char::from)
+        .collect();
+}
 
 /// External function that constructs other kinds of `EdenApi` from config.
 static CUSTOM_BUILD_FUNCS: Lazy<

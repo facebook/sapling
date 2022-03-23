@@ -23,6 +23,7 @@ pub use http_client::Stats;
 pub use crate::api::EdenApi;
 pub use crate::builder::Builder;
 pub use crate::builder::HttpClientBuilder;
+pub use crate::builder::DEFAULT_CORRELATOR;
 pub use crate::client::Client;
 pub use crate::errors::ConfigError;
 pub use crate::errors::EdenApiError;

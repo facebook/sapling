@@ -29,6 +29,7 @@ import traceback
 from enum import IntEnum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import bindings
 from edenscm import tracing
 
 from . import (
@@ -274,7 +275,7 @@ class ui(object):
         """
         assert isinstance(self._correlator, util.refcell)
         if self._correlator.get() is None:
-            correlator = util.makerandomidentifier()
+            correlator = bindings.edenapi.correlator()
             self._correlator.swap(correlator)
             self.log("clienttelemetry", client_correlator=correlator)
         return self._correlator.get()

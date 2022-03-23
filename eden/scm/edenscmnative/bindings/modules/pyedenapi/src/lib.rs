@@ -24,5 +24,10 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
     m.add_class::<client::client>(py)?;
     m.add_class::<stats::stats>(py)?;
+    m.add(py, "correlator", py_fn!(py, correlator()))?;
     Ok(m)
+}
+
+fn correlator(_py: Python) -> PyResult<String> {
+    Ok(String::from(edenapi::DEFAULT_CORRELATOR.as_str()))
 }
