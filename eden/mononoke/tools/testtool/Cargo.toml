@@ -11,37 +11,24 @@ license = "GPLv2+"
 anyhow = "1.0.51"
 blame = { version = "0.1.0", path = "../../derived_data/blame" }
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-blobstore = { version = "0.1.0", path = "../../blobstore" }
-blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
-bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
-cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 clap = { version = "3.1.2", features = ["derive", "regex", "unicode", "wrap_help"] }
-cmdlib_displaying = { version = "0.1.0", path = "../../cmdlib/displaying" }
-cmdlib_scrubbing = { version = "0.1.0", path = "../../cmdlib/scrubbing" }
 context = { version = "0.1.0", path = "../../server/context" }
 deleted_files_manifest = { version = "0.1.0", path = "../../derived_data/deleted_files_manifest" }
 derived_data_filenodes = { version = "0.1.0", path = "../../derived_data/filenodes" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
-ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fastlog = { version = "0.1.0", path = "../../derived_data/fastlog" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-git_types = { version = "0.1.0", path = "../../git/git_types" }
-manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
-mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
-metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
-repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }

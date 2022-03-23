@@ -9,8 +9,6 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.51"
-environment = { version = "0.1.0", path = "../environment" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hex = "0.4.3"
 manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }

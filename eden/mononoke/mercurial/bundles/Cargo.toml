@@ -30,7 +30,6 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 percent-encoding = "2.1"
 phases = { version = "0.1.0", path = "../../phases" }
 quickcheck = "1.0"
-quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.29"
@@ -47,3 +46,4 @@ failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimenta
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_types-mocks = { version = "0.1.0", path = "../types/mocks" }
 partial-io = { git = "https://github.com/vgao1996/rust-partial-io", rev = "919bf89e8a5ccda789d5a53052d30ed6fc8b1988", features = ["quickcheck_types", "tokio"] }
+quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

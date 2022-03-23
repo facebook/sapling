@@ -27,8 +27,6 @@ environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1.31" }
-futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 live_commit_sync_config = { version = "0.1.0", path = "../live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
@@ -60,6 +58,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 cross_repo_sync_test_utils = { version = "0.1.0", path = "test_utils" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
+futures-old = { package = "futures", version = "0.1.31" }
 mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 revset = { version = "0.1.0", path = "../../revset" }

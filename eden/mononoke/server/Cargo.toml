@@ -17,11 +17,9 @@ cmdlib_logging = { version = "0.1.0", path = "../cmdlib/log" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
-monitoring = { version = "0.1.0", path = "monitoring" }
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 openssl = "0.10.35"
-repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_listener = { version = "0.1.0", path = "repo_listener" }
 secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

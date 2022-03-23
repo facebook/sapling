@@ -10,14 +10,10 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.51"
 bytes = { version = "1.1", features = ["serde"] }
-bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 futures = "0.1.31"
 futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 metadata = { version = "0.1.0", path = "../server/metadata" }
 netstring = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-permission_checker = { version = "0.1.0", path = "../permission_checker" }
-session_id = { version = "0.1.0", path = "../server/session_id" }
 tokio-util = { version = "0.6", features = ["full"] }
 zstd = "0.9.0+zstd.1.5.0"
 zstd-safe = "4.1.1+zstd.1.5.0"

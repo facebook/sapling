@@ -19,7 +19,6 @@ bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 bytes_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../filenodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
@@ -64,6 +63,7 @@ unbundle = { version = "0.1.0", path = "unbundle" }
 warm_bookmarks_cache = { version = "0.1.0", path = "../bookmarks/warm_bookmarks_cache" }
 
 [dev-dependencies]
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
