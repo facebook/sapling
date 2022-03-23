@@ -6,15 +6,15 @@
  */
 
 #include "eden/fs/utils/FileUtils.h"
+#include <boost/filesystem.hpp>
 #include <fmt/format.h>
-#include "folly/FileUtil.h"
+#include <folly/FileUtil.h>
 
 #ifdef _WIN32
 #include "eden/fs/utils/Handle.h"
 #endif
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 #ifndef _WIN32
 
@@ -51,6 +51,24 @@ folly::Try<void> writeFileAtomic(
   }
 
   return folly::Try<void>{};
+}
+
+folly::Try<std::vector<PathComponent>> getAllDirectoryEntryNames(
+    AbsolutePathPiece path) {
+  auto boostPath = boost::filesystem::path(path.stringPiece());
+  std::vector<PathComponent> direntNames;
+
+  boost::system::error_code ec;
+  auto iter = boost::filesystem::directory_iterator(boostPath, ec);
+  if (ec) {
+    return folly::Try<std::vector<PathComponent>>{std::system_error(
+        ec, fmt::format(FMT_STRING("couldn't iterate {}"), path))};
+  }
+
+  for (const auto& entry : iter) {
+    direntNames.emplace_back(entry.path().filename().c_str());
+  }
+  return folly::Try{direntNames};
 }
 
 #else
@@ -105,7 +123,7 @@ folly::Try<FileHandle> openHandle(AbsolutePathPiece path, OpenMode mode) {
       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
       nullptr,
       dwCreationDisposition,
-      FILE_ATTRIBUTE_NORMAL,
+      FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
       nullptr)};
   if (!fileHandle) {
     return folly::Try<FileHandle>{makeWin32ErrorExplicit(
@@ -218,7 +236,122 @@ folly::Try<void> writeFileAtomic(
   return folly::Try<void>{};
 }
 
+namespace {
+/*
+ * None of the following are present in the SDK, thus we have to define them by
+ * hand. Some were slightly modified from MSDN to limit the amount of data that
+ * needed to be manually defined.
+ */
+
+typedef LONG NTSTATUS;
+constexpr NTSTATUS STATUS_NO_MORE_FILES = 0x80000006L;
+
+typedef struct _FILE_NAMES_INFORMATION {
+  ULONG NextEntryOffset;
+  ULONG FileIndex;
+  ULONG FileNameLength;
+  WCHAR FileName[1];
+} FILE_NAMES_INFORMATION, *PFILE_NAMES_INFORMATION;
+
+typedef struct _IO_STATUS_BLOCK {
+  union {
+    NTSTATUS Status;
+    PVOID Pointer;
+  };
+  ULONG_PTR Information;
+} IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
+
+typedef enum _FILE_INFORMATION_CLASS {
+  FileNamesInformation = 12, // 12
+} FILE_INFORMATION_CLASS,
+    *PFILE_INFORMATION_CLASS;
+
+typedef NTSTATUS (*__kernel_entry NtQueryDirectoryFileP)(
+    HANDLE FileHandle,
+    HANDLE Event,
+    PVOID ApcRoutine,
+    PVOID ApcContext,
+    PIO_STATUS_BLOCK IoStatusBlock,
+    PVOID FileInformation,
+    ULONG Length,
+    FILE_INFORMATION_CLASS FileInformationClass,
+    BOOLEAN ReturnSingleEntry,
+    PVOID FileName,
+    BOOLEAN RestartScan);
+
+NTSTATUS NtQueryDirectoryFileImpl(
+    const FileHandle& handle,
+    void* buffer,
+    size_t bufferSize) {
+  static HMODULE ntdll = GetModuleHandleW(L"Ntdll.dll");
+  static NtQueryDirectoryFileP impl = reinterpret_cast<NtQueryDirectoryFileP>(
+      GetProcAddress(ntdll, "NtQueryDirectoryFile"));
+
+  IO_STATUS_BLOCK iosb;
+  return impl(
+      handle.get(),
+      nullptr,
+      nullptr,
+      nullptr,
+      &iosb,
+      buffer,
+      bufferSize,
+      FileNamesInformation,
+      false,
+      nullptr,
+      false);
+}
+
+} // namespace
+
+folly::Try<std::vector<PathComponent>> getAllDirectoryEntryNames(
+    AbsolutePathPiece path) {
+  auto handleTry = openHandle(path, OpenMode::READ);
+  if (handleTry.hasException()) {
+    return folly::Try<std::vector<PathComponent>>{
+        std::move(handleTry).exception()};
+  }
+  const auto& handle = handleTry.value();
+
+  std::vector<PathComponent> direntNames;
+  while (true) {
+    // The buffer must be 4 bytes aligned as described in
+    // https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_file_names_information
+    alignas(4) char buffer[16 * 1024];
+    auto status = NtQueryDirectoryFileImpl(handle, &buffer, sizeof(buffer));
+    if (status != 0) {
+      if (status == STATUS_NO_MORE_FILES) {
+        return folly::Try{std::move(direntNames)};
+      }
+
+      return folly::Try<std::vector<PathComponent>>{makeHResultErrorExplicit(
+          HRESULT_FROM_NT(status),
+          fmt::format(
+              FMT_STRING("couldn't iterate on {}, {:x}"),
+              path,
+              (uint32_t)status))};
+    }
+
+    FILE_NAMES_INFORMATION* dirent =
+        reinterpret_cast<FILE_NAMES_INFORMATION*>(&buffer);
+    while (dirent != nullptr) {
+      auto win_name = std::wstring_view{
+          dirent->FileName,
+          dirent->FileNameLength / sizeof(dirent->FileName[0])};
+      if (win_name != L"." && win_name != L"..") {
+        direntNames.emplace_back(win_name);
+      }
+
+      if (dirent->NextEntryOffset == 0) {
+        dirent = nullptr;
+      } else {
+        dirent = reinterpret_cast<FILE_NAMES_INFORMATION*>(
+            reinterpret_cast<char*>(dirent) + dirent->NextEntryOffset);
+      }
+    }
+  }
+}
+
 #endif
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

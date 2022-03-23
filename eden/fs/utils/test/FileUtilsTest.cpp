@@ -7,12 +7,14 @@
 
 #include "eden/fs/utils/FileUtils.h"
 #include <folly/Range.h>
+#include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 #include <string>
 #include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
+using testing::UnorderedElementsAre;
 using folly::literals::string_piece_literals::operator""_sp;
 
 namespace {
@@ -80,4 +82,19 @@ TEST_F(FileUtilsTest, testWriteFileTruncate) {
   writeFile(filePath, "hi"_sp).value();
   std::string readContents = readFile(filePath).value();
   EXPECT_EQ("hi", readContents);
+}
+
+TEST_F(FileUtilsTest, testGetAllDirectoryEntryNames) {
+  writeFile(getTestPath() + "A"_pc, "A"_sp).value();
+  writeFile(getTestPath() + "B"_pc, "B"_sp).value();
+  writeFile(getTestPath() + "C"_pc, "C"_sp).value();
+  writeFile(getTestPath() + "D"_pc, "D"_sp).value();
+  writeFile(getTestPath() + "E"_pc, "E"_sp).value();
+  writeFile(getTestPath() + "ABCDEF"_pc, "ACBDEF"_sp).value();
+
+  auto direntNames = getAllDirectoryEntryNames(getTestPath()).value();
+  EXPECT_THAT(
+      direntNames,
+      UnorderedElementsAre(
+          "A"_pc, "B"_pc, "C"_pc, "D"_pc, "E"_pc, "ABCDEF"_pc));
 }

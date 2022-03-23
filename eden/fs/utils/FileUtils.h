@@ -13,8 +13,7 @@
 #include <string>
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /** Read up to num_bytes bytes from the file */
 FOLLY_NODISCARD folly::Try<std::string> readFile(
@@ -34,6 +33,20 @@ FOLLY_NODISCARD folly::Try<void> writeFileAtomic(
     AbsolutePathPiece path,
     folly::ByteRange data);
 
+/**
+ * Read all the directory entry and return their names.
+ *
+ * On non-Windows OS, this is simply a wrapper around
+ * boost::filesystem::directory_iterator.
+ *
+ * On Windows, we have to use something different as Boost will use the
+ * FindFirstFile API which doesn't allow the directory to be opened with
+ * FILE_SHARE_DELETE. This sharing flags allows the directory to be
+ * renamed/deleted while it is being iterated on.
+ */
+FOLLY_NODISCARD folly::Try<std::vector<PathComponent>>
+getAllDirectoryEntryNames(AbsolutePathPiece path);
+
 #ifdef _WIN32
 /**
  * For Windows only, returns the file size of the materialized file.
@@ -41,5 +54,4 @@ FOLLY_NODISCARD folly::Try<void> writeFileAtomic(
 off_t getMaterializedFileSize(struct stat& st, AbsolutePath& pathToFile);
 #endif // _WIN32
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
