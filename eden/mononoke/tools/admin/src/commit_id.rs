@@ -17,8 +17,11 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::{ChangesetId, Globalrev, Svnrev};
 use strum_macros::ToString;
+use trait_alias::trait_alias;
 
-use crate::repo::AdminRepo;
+#[trait_alias]
+pub trait Repo =
+    BonsaiHgMappingRef + BonsaiGitMappingRef + BonsaiGlobalrevMappingRef + BonsaiSvnrevMappingRef;
 
 #[derive(Copy, Clone, Eq, PartialEq, ArgEnum, ToString)]
 #[strum(serialize_all = "kebab_case")]
@@ -44,7 +47,7 @@ impl IdentityScheme {
     pub async fn parse_commit_id(
         &self,
         ctx: &CoreContext,
-        repo: &AdminRepo,
+        repo: &impl Repo,
         commit_id: &str,
     ) -> Result<ChangesetId> {
         let cs_id = match self {
@@ -97,7 +100,7 @@ impl IdentityScheme {
     pub async fn map_commit_id(
         &self,
         ctx: &CoreContext,
-        repo: &AdminRepo,
+        repo: &impl Repo,
         cs_id: ChangesetId,
     ) -> Result<Option<String>> {
         let commit_id = match self {
@@ -147,7 +150,7 @@ impl IdentityScheme {
 /// returned.
 pub async fn parse_commit_id(
     ctx: &CoreContext,
-    repo: &AdminRepo,
+    repo: &impl Repo,
     commit_id: &str,
 ) -> Result<ChangesetId> {
     if let Some((scheme, id)) = commit_id.split_once('=') {
@@ -198,7 +201,7 @@ pub async fn parse_commit_id(
 /// If no schemes are selected, prints the bonsai hash.
 pub async fn print_commit_id(
     ctx: &CoreContext,
-    repo: &AdminRepo,
+    repo: &impl Repo,
     schemes: &[IdentityScheme],
     cs_id: ChangesetId,
 ) -> Result<()> {

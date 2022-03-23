@@ -11,11 +11,16 @@ mod copy_immutable;
 mod get;
 
 use anyhow::{Context, Result};
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use clap::{Parser, Subcommand};
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
-
-use crate::repo::AdminRepo;
+use mutable_renames::MutableRenames;
+use repo_blobstore::RepoBlobstore;
+use repo_derived_data::RepoDerivedData;
 
 use add::AddArgs;
 use check_commit::CheckCommitArgs;
@@ -30,6 +35,30 @@ pub struct CommandArgs {
 
     #[clap(subcommand)]
     subcommand: MutableRenamesSubcommand,
+}
+
+#[facet::container]
+pub struct Repo {
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+    #[facet]
+    bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    mutable_renames: MutableRenames,
 }
 
 #[derive(Subcommand)]
@@ -47,7 +76,7 @@ pub enum MutableRenamesSubcommand {
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_context();
 
-    let repo: AdminRepo = app
+    let repo: Repo = app
         .open_repo(&args.repo)
         .await
         .context("Failed to open repo")?;

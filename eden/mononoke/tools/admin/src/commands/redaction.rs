@@ -9,8 +9,16 @@ mod create_key_list;
 mod list;
 
 use anyhow::Result;
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
+use bookmarks::Bookmarks;
 use clap::{Parser, Subcommand};
+use metaconfig_types::RepoConfig;
 use mononoke_app::MononokeApp;
+use repo_blobstore::RepoBlobstore;
+use repo_derived_data::RepoDerivedData;
 
 use create_key_list::{RedactionCreateKeyListArgs, RedactionCreateKeyListFromIdsArgs};
 use list::RedactionListArgs;
@@ -20,6 +28,33 @@ use list::RedactionListArgs;
 pub struct CommandArgs {
     #[clap(subcommand)]
     subcommand: RedactionSubcommand,
+}
+
+#[facet::container]
+pub struct Repo {
+    #[facet]
+    repo_config: RepoConfig,
+
+    #[facet]
+    bookmarks: dyn Bookmarks,
+
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+    #[facet]
+    bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    repo_derived_data: RepoDerivedData,
 }
 
 #[derive(Subcommand)]

@@ -13,7 +13,6 @@ use mononoke_app::{MononokeApp, MononokeAppBuilder};
 
 mod commands;
 mod commit_id;
-mod repo;
 
 /// Administrate Mononoke
 #[derive(Parser)]

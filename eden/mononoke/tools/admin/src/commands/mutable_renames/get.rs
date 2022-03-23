@@ -11,8 +11,8 @@ use context::CoreContext;
 use mononoke_types::MPath;
 use mutable_renames::MutableRenamesRef;
 
+use super::Repo;
 use crate::commit_id::parse_commit_id;
-use crate::repo::AdminRepo;
 
 #[derive(Args)]
 pub struct GetArgs {
@@ -31,7 +31,7 @@ pub struct GetArgs {
     bypass_cache: bool,
 }
 
-pub async fn get(ctx: &CoreContext, repo: &AdminRepo, get_args: GetArgs) -> Result<()> {
+pub async fn get(ctx: &CoreContext, repo: &Repo, get_args: GetArgs) -> Result<()> {
     let target_commit = parse_commit_id(ctx, repo, &get_args.commit_id).await?;
 
     let mpath = MPath::new_opt(&get_args.path)?;

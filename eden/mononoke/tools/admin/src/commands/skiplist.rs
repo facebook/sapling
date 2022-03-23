@@ -8,13 +8,17 @@
 mod build;
 mod read;
 
-use crate::repo::AdminRepo;
 use anyhow::{format_err, Result};
+use bookmarks::Bookmarks;
 use build::SkiplistBuildArgs;
+use changeset_fetcher::ChangesetFetcher;
+use changesets::Changesets;
 use clap::{Parser, Subcommand};
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
+use phases::Phases;
+use repo_blobstore::RepoBlobstore;
 
 /// Build or read skiplist index for the repository
 #[derive(Parser)]
@@ -30,6 +34,24 @@ pub struct CommandArgs {
     /// The subcommand for skiplist index
     #[clap(subcommand)]
     subcommand: SkiplistSubcommand,
+}
+
+#[facet::container]
+pub struct Repo {
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    bookmarks: dyn Bookmarks,
+
+    #[facet]
+    changeset_fetcher: dyn ChangesetFetcher,
+
+    #[facet]
+    changesets: dyn Changesets,
+
+    #[facet]
+    phases: dyn Phases,
 }
 
 #[derive(Subcommand)]
@@ -57,7 +79,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let (_, repo_config) = app.repo_config(&args.repo)?;
     let logger = &app.logger();
     let key = get_blobstore_key(args.blobstore_key, repo_config)?;
-    let repo: AdminRepo = app.open_repo(&args.repo).await?;
+    let repo: Repo = app.open_repo(&args.repo).await?;
 
     match args.subcommand {
         SkiplistSubcommand::Build(build_args) => {

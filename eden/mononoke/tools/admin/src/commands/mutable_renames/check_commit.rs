@@ -10,8 +10,8 @@ use clap::Args;
 use context::CoreContext;
 use mutable_renames::MutableRenamesRef;
 
+use super::Repo;
 use crate::commit_id::parse_commit_id;
-use crate::repo::AdminRepo;
 
 #[derive(Args)]
 pub struct CheckCommitArgs {
@@ -28,7 +28,7 @@ pub struct CheckCommitArgs {
 
 pub async fn check_commit(
     ctx: &CoreContext,
-    repo: &AdminRepo,
+    repo: &Repo,
     check_commit_args: CheckCommitArgs,
 ) -> Result<()> {
     let target_commit = parse_commit_id(ctx, repo, &check_commit_args.commit_id).await?;

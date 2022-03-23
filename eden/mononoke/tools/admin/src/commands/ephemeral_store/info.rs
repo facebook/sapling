@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::repo::AdminRepo;
+use super::Repo;
 use anyhow::Result;
 use clap::Args;
 use context::CoreContext;
@@ -26,7 +26,7 @@ pub struct EphemeralStoreInfoArgs {
 
 pub async fn bubble_info(
     _ctx: &CoreContext,
-    _repo: &AdminRepo,
+    _repo: &Repo,
     _logger: &Logger,
     _args: EphemeralStoreInfoArgs,
 ) -> Result<()> {

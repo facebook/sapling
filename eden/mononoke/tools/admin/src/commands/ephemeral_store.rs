@@ -9,7 +9,6 @@ mod cleanup;
 mod info;
 mod list;
 
-use crate::repo::AdminRepo;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use cleanup::EphemeralStoreCleanUpArgs;
@@ -30,6 +29,11 @@ pub struct CommandArgs {
     subcommand: EphemeralStoreSubcommand,
 }
 
+#[facet::container]
+pub struct Repo {
+    // TODO: Add necessary repo attributes here.
+}
+
 #[derive(Subcommand)]
 pub enum EphemeralStoreSubcommand {
     /// Cleanup expired bubbles within the ephemeral store.
@@ -43,7 +47,7 @@ pub enum EphemeralStoreSubcommand {
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_context();
     let logger = &app.logger();
-    let repo: AdminRepo = app.open_repo(&args.repo).await?;
+    let repo: Repo = app.open_repo(&args.repo).await?;
 
     match args.subcommand {
         EphemeralStoreSubcommand::Cleanup(cleanup_args) => {

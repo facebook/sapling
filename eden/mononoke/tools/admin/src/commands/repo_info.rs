@@ -6,13 +6,11 @@
  */
 
 use anyhow::{Context, Result};
-use bookmarks::{BookmarkName, BookmarksRef};
+use bookmarks::{BookmarkName, Bookmarks, BookmarksRef};
 use clap::Parser;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
-use repo_identity::RepoIdentityRef;
-
-use crate::repo::AdminRepo;
+use repo_identity::{RepoIdentity, RepoIdentityRef};
 
 /// Show information about a repository
 #[derive(Parser)]
@@ -21,10 +19,19 @@ pub struct CommandArgs {
     repo: RepoArgs,
 }
 
+#[facet::container]
+pub struct Repo {
+    #[facet]
+    repo_identity: RepoIdentity,
+
+    #[facet]
+    bookmarks: dyn Bookmarks,
+}
+
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_context();
 
-    let repo: AdminRepo = app
+    let repo: Repo = app
         .open_repo(&args.repo)
         .await
         .context("Failed to open repo")?;

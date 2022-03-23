@@ -14,8 +14,8 @@ use context::CoreContext;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use mononoke_types::{ChangesetId, DateTime, Timestamp};
 
+use super::Repo;
 use crate::commit_id::IdentityScheme;
-use crate::repo::AdminRepo;
 
 #[derive(Args)]
 pub struct BookmarksLogArgs {
@@ -52,7 +52,7 @@ struct BookmarkLogEntry {
 impl BookmarkLogEntry {
     async fn new(
         ctx: &CoreContext,
-        repo: &AdminRepo,
+        repo: &Repo,
         timestamp: Timestamp,
         bookmark: BookmarkName,
         reason: BookmarkUpdateReason,
@@ -112,7 +112,7 @@ impl fmt::Display for BookmarkLogEntry {
     }
 }
 
-pub async fn log(ctx: &CoreContext, repo: &AdminRepo, log_args: BookmarksLogArgs) -> Result<()> {
+pub async fn log(ctx: &CoreContext, repo: &Repo, log_args: BookmarksLogArgs) -> Result<()> {
     let entries = if log_args.start_time.is_some() || log_args.end_time.is_some() {
         let start = log_args
             .start_time

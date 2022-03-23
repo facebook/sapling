@@ -26,8 +26,8 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 
 use super::list::paths_for_content_keys;
+use super::Repo;
 use crate::commit_id::parse_commit_id;
-use crate::repo::AdminRepo;
 
 #[derive(Args)]
 #[clap(group(ArgGroup::new("files-input=file").args(&["files", "input-file"]).required(true)))]
@@ -125,7 +125,7 @@ async fn create_key_list(
 /// Returns the content keys for the given paths.
 async fn content_keys_for_paths(
     ctx: &CoreContext,
-    repo: &AdminRepo,
+    repo: &Repo,
     cs_id: ChangesetId,
     paths: Vec<MPath>,
 ) -> Result<HashSet<String>> {
@@ -181,7 +181,7 @@ pub async fn create_key_list_from_commit_files(
     if files.is_empty() {
         bail!("No files to redact");
     }
-    let repo: AdminRepo = app
+    let repo: Repo = app
         .open_repo(&create_args.repo_args)
         .await
         .context("Failed to open repo")?;

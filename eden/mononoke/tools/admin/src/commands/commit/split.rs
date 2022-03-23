@@ -15,8 +15,8 @@ use context::CoreContext;
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, MPath};
 use repo_blobstore::RepoBlobstoreRef;
 
+use super::Repo;
 use crate::commit_id::parse_commit_id;
-use crate::repo::AdminRepo;
 
 #[derive(Args)]
 #[clap(group(ArgGroup::new("file-size-and-num").args(&["commit-file-size", "commit-file-num"]).multiple(true)))]
@@ -33,7 +33,7 @@ pub struct CommitSplitArgs {
     commit_file_num: Option<u64>,
 }
 
-pub async fn split(ctx: &CoreContext, repo: &AdminRepo, split_args: CommitSplitArgs) -> Result<()> {
+pub async fn split(ctx: &CoreContext, repo: &Repo, split_args: CommitSplitArgs) -> Result<()> {
     let cs_id = parse_commit_id(ctx, repo, &split_args.commit_id).await?;
 
     let stack = split_commit(
@@ -52,7 +52,7 @@ pub async fn split(ctx: &CoreContext, repo: &AdminRepo, split_args: CommitSplitA
 
 async fn split_commit(
     ctx: &CoreContext,
-    repo: &AdminRepo,
+    repo: &Repo,
     cs_id: ChangesetId,
     commit_file_size: Option<u64>,
     commit_file_num: Option<u64>,
@@ -185,7 +185,7 @@ fn modify_file_change_parent(
 
 async fn create_new_commit(
     ctx: &CoreContext,
-    repo: &AdminRepo,
+    repo: &Repo,
     bcs: BonsaiChangeset,
     parent: Option<ChangesetId>,
     current_file_changes: &mut BTreeMap<MPath, FileChange>,
@@ -202,15 +202,45 @@ async fn create_new_commit(
 #[cfg(test)]
 mod test {
     use super::*;
+    use bonsai_git_mapping::BonsaiGitMapping;
+    use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
+    use bookmarks::Bookmarks;
+    use changesets::Changesets;
     use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
     use maplit::hashmap;
-    use repo_blobstore::RepoBlobstoreRef;
+    use repo_blobstore::{RepoBlobstore, RepoBlobstoreRef};
+    use repo_derived_data::RepoDerivedData;
     use tests_utils::{list_working_copy_utf8, CreateCommitContext};
+
+    #[facet::container]
+    struct TestRepo {
+        #[delegate(
+            dyn BonsaiHgMapping,
+            dyn BonsaiGitMapping,
+            dyn BonsaiGlobalrevMapping,
+            dyn BonsaiSvnrevMapping,
+            dyn Changesets,
+            RepoBlobstore,
+        )]
+        repo: Repo,
+
+        #[facet]
+        bookmarks: dyn Bookmarks,
+
+        #[facet]
+        filestore_config: FilestoreConfig,
+
+        #[facet]
+        repo_derived_data: RepoDerivedData,
+    }
 
     #[fbinit::test]
     async fn test_split_commit_simple(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: AdminRepo = test_repo_factory::build_empty()?;
+        let repo: TestRepo = test_repo_factory::build_empty()?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("first", "a")
@@ -221,7 +251,7 @@ mod test {
 
         let split = split_commit(
             &ctx,
-            &repo,
+            &repo.repo,
             root,
             None,    // file size
             Some(1), // file num
@@ -263,7 +293,7 @@ mod test {
         // Now split by file size
         let split = split_commit(
             &ctx,
-            &repo,
+            &repo.repo,
             root,
             Some(1), // file size
             None,    // file num
@@ -274,7 +304,7 @@ mod test {
 
         let split = split_commit(
             &ctx,
-            &repo,
+            &repo.repo,
             root,
             None,    // file size
             Some(3), // file num
@@ -303,7 +333,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_commit_with_renames(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: AdminRepo = test_repo_factory::build_empty()?;
+        let repo: TestRepo = test_repo_factory::build_empty()?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("first", "a")
@@ -318,7 +348,7 @@ mod test {
 
         let split = split_commit(
             &ctx,
-            &repo,
+            &repo.repo,
             to_split,
             None,    // file size
             Some(1), // file num
@@ -346,7 +376,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_commit_renamed_to_multiple_dest(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: AdminRepo = test_repo_factory::build_empty()?;
+        let repo: TestRepo = test_repo_factory::build_empty()?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("first", "a")
@@ -361,7 +391,7 @@ mod test {
 
         let split = split_commit(
             &ctx,
-            &repo,
+            &repo.repo,
             to_split,
             None,    // file size
             Some(1), // file num

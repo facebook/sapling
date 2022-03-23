@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::repo::AdminRepo;
+use super::Repo;
 use anyhow::Result;
 use clap::Args;
 use context::CoreContext;
@@ -36,7 +36,7 @@ pub struct EphemeralStoreCleanUpArgs {
 
 pub async fn clean_bubbles(
     _ctx: &CoreContext,
-    _repo: &AdminRepo,
+    _repo: &Repo,
     _logger: &Logger,
     _args: EphemeralStoreCleanUpArgs,
 ) -> Result<()> {

@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::commands::skiplist::read::get_skiplist_index;
-use crate::repo::AdminRepo;
+use super::read::get_skiplist_index;
+use super::Repo;
 use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
 use blobstore::Blobstore;
@@ -20,6 +20,7 @@ use fbthrift::compact_protocol;
 use futures::{future::try_join, Stream, TryStreamExt};
 use mononoke_types::{BlobstoreBytes, ChangesetId, Generation};
 use phases::PhasesArc;
+use repo_blobstore::RepoBlobstoreRef;
 use skiplist::{sparse, SkiplistIndex, SkiplistNodeType};
 use slog::{debug, info, Logger};
 use std::collections::HashMap;
@@ -44,12 +45,11 @@ pub struct SkiplistBuildArgs {
 
 pub async fn build_skiplist(
     ctx: &CoreContext,
-    repo: &AdminRepo,
+    repo: &Repo,
     logger: &Logger,
     blobstore_key: String,
     args: SkiplistBuildArgs,
 ) -> Result<()> {
-    let blobstore = &repo.repo_blobstore;
     let exponent = args.exponent.parse::<u32>().map_err(Error::from)?;
     // Depth must be one more than the maximum exponent.
     let skiplist_depth = exponent + 1;
@@ -110,7 +110,7 @@ pub async fn build_skiplist(
     let bytes = compact_protocol::serialize(&thrift_merge_graph);
 
     debug!(logger, "storing {} bytes", bytes.len());
-    blobstore
+    repo.repo_blobstore()
         .put(
             ctx,
             blobstore_key.clone(),
@@ -121,7 +121,7 @@ pub async fn build_skiplist(
 
 async fn fetch_all_public_changesets_and_build_changeset_fetcher(
     ctx: &CoreContext,
-    repo: &AdminRepo,
+    repo: &Repo,
 ) -> Result<ArcChangesetFetcher, Error> {
     let fetcher = PublicChangesetBulkFetch::new(repo.changesets_arc(), repo.phases_arc());
     let fetched_changesets = fetcher
@@ -144,7 +144,7 @@ async fn fetch_all_public_changesets_and_build_changeset_fetcher(
 /// Get Bonsai changesets for Mercurial heads, which we approximate as Publishing Bonsai
 /// Bookmarks. Those will be served from cache, so they might be stale.
 pub fn get_bonsai_heads_maybe_stale(
-    repo: &AdminRepo,
+    repo: &Repo,
     ctx: CoreContext,
 ) -> impl Stream<Item = Result<ChangesetId, Error>> {
     repo.bookmarks

@@ -17,9 +17,9 @@ use repo_derived_data::RepoDerivedDataRef;
 use std::collections::HashMap;
 use unodes::RootUnodeManifestId;
 
+use super::Repo;
 use crate::commands::mutable_renames::copy_immutable;
 use crate::commit_id::parse_commit_id;
-use crate::repo::AdminRepo;
 
 #[derive(Args)]
 pub struct AddArgs {
@@ -55,7 +55,7 @@ pub struct AddArgs {
     dry_run: bool,
 }
 
-pub async fn add(ctx: &CoreContext, repo: &AdminRepo, add_args: AddArgs) -> Result<()> {
+pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()> {
     let src_cs_id = parse_commit_id(ctx, repo, &add_args.src_commit_id).await?;
     let src_path = MPath::new_opt(&add_args.src_path)?;
     let dst_cs_id = parse_commit_id(ctx, repo, &add_args.dst_commit_id).await?;

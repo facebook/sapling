@@ -13,8 +13,8 @@ use bookmarks_movement::{check_bookmark_sync_config, BookmarkKind};
 use clap::Args;
 use context::CoreContext;
 
+use super::Repo;
 use crate::commit_id::parse_commit_id;
-use crate::repo::AdminRepo;
 
 #[derive(Args)]
 pub struct BookmarksDeleteArgs {
@@ -45,7 +45,7 @@ pub struct BookmarksDeleteArgs {
 
 pub async fn delete(
     ctx: &CoreContext,
-    repo: &AdminRepo,
+    repo: &Repo,
     delete_args: BookmarksDeleteArgs,
 ) -> Result<()> {
     let kind = if delete_args.scratch {

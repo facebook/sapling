@@ -6,12 +6,15 @@
  */
 
 use anyhow::{Context, Result};
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use clap::Parser;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 
 use crate::commit_id::{parse_commit_id, print_commit_id, IdentityScheme};
-use crate::repo::AdminRepo;
 
 /// Convert commit identity between identity schemes
 #[derive(Parser)]
@@ -38,10 +41,25 @@ pub struct CommandArgs {
     id: String,
 }
 
+#[facet::container]
+pub struct Repo {
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+    #[facet]
+    bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
+}
+
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_context();
 
-    let repo: AdminRepo = app
+    let repo: Repo = app
         .open_repo(&args.repo)
         .await
         .context("Failed to open repo")?;

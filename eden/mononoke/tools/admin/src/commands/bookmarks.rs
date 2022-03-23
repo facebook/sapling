@@ -12,11 +12,16 @@ mod log;
 mod set;
 
 use anyhow::{Context, Result};
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
+use bookmarks::{BookmarkUpdateLog, Bookmarks};
 use clap::{Parser, Subcommand};
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
-
-use crate::repo::AdminRepo;
+use repo_cross_repo::RepoCrossRepo;
+use repo_identity::RepoIdentity;
 
 use delete::BookmarksDeleteArgs;
 use get::BookmarksGetArgs;
@@ -38,6 +43,33 @@ pub struct CommandArgs {
 
     #[clap(subcommand)]
     subcommand: BookmarksSubcommand,
+}
+
+#[facet::container]
+pub struct Repo {
+    #[facet]
+    repo_identity: RepoIdentity,
+
+    #[facet]
+    bookmarks: dyn Bookmarks,
+
+    #[facet]
+    bookmark_update_log: dyn BookmarkUpdateLog,
+
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+    #[facet]
+    bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
+
+    #[facet]
+    repo_cross_repo: RepoCrossRepo,
 }
 
 #[derive(Subcommand)]
@@ -65,7 +97,7 @@ pub enum BookmarksSubcommand {
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_context();
 
-    let repo: AdminRepo = app
+    let repo: Repo = app
         .open_repo(&args.repo)
         .await
         .context("Failed to open repo")?;

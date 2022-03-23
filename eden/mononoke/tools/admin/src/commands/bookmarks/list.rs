@@ -17,8 +17,8 @@ use context::CoreContext;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use mononoke_types::ChangesetId;
 
+use super::Repo;
 use crate::commit_id::IdentityScheme;
-use crate::repo::AdminRepo;
 
 #[derive(Args)]
 pub struct BookmarksListArgs {
@@ -55,7 +55,7 @@ struct BookmarkValue {
 impl BookmarkValue {
     async fn new(
         ctx: &CoreContext,
-        repo: &AdminRepo,
+        repo: &Repo,
         bookmark: Bookmark,
         changeset_id: ChangesetId,
         schemes: &[IdentityScheme],
@@ -93,7 +93,7 @@ impl fmt::Display for BookmarkValue {
     }
 }
 
-pub async fn list(ctx: &CoreContext, repo: &AdminRepo, list_args: BookmarksListArgs) -> Result<()> {
+pub async fn list(ctx: &CoreContext, repo: &Repo, list_args: BookmarksListArgs) -> Result<()> {
     let freshness = if list_args.fresh {
         Freshness::MostRecent
     } else {

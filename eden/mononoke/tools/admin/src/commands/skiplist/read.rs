@@ -5,16 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use crate::repo::AdminRepo;
+use super::Repo;
 use anyhow::{Error, Result};
 use blobstore::Blobstore;
 use context::CoreContext;
+use repo_blobstore::RepoBlobstoreRef;
 use skiplist::{deserialize_skiplist_index, SkiplistIndex};
 use slog::{debug, info, Logger};
 
 pub async fn read_skiplist(
     ctx: &CoreContext,
-    repo: &AdminRepo,
+    repo: &Repo,
     logger: &Logger,
     blobstore_key: String,
 ) -> Result<()> {
@@ -36,11 +37,11 @@ pub async fn read_skiplist(
 
 pub async fn get_skiplist_index(
     ctx: &CoreContext,
-    repo: &AdminRepo,
+    repo: &Repo,
     logger: &Logger,
     blobstore_key: String,
 ) -> Result<Option<SkiplistIndex>, Error> {
-    let maybebytes = repo.repo_blobstore.get(ctx, &blobstore_key).await?;
+    let maybebytes = repo.repo_blobstore().get(ctx, &blobstore_key).await?;
     match maybebytes {
         Some(bytes) => {
             debug!(

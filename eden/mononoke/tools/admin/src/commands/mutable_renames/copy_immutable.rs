@@ -18,8 +18,8 @@ use repo_derived_data::RepoDerivedDataRef;
 use std::collections::{HashMap, HashSet};
 use unodes::RootUnodeManifestId;
 
+use super::Repo;
 use crate::commit_id::parse_commit_id;
-use crate::repo::AdminRepo;
 
 #[derive(Args)]
 pub struct CopyImmutableArgs {
@@ -30,18 +30,14 @@ pub struct CopyImmutableArgs {
     commit_id: String,
 }
 
-pub async fn copy_immutable(
-    ctx: &CoreContext,
-    repo: &AdminRepo,
-    args: CopyImmutableArgs,
-) -> Result<()> {
+pub async fn copy_immutable(ctx: &CoreContext, repo: &Repo, args: CopyImmutableArgs) -> Result<()> {
     let dst_cs_id = parse_commit_id(ctx, repo, &args.commit_id).await?;
     copy_immutable_impl(ctx, repo, dst_cs_id).await
 }
 
 pub async fn copy_immutable_impl(
     ctx: &CoreContext,
-    repo: &AdminRepo,
+    repo: &Repo,
     dst_cs_id: ChangesetId,
 ) -> Result<()> {
     let bonsai_cs = dst_cs_id.load(ctx, repo.repo_blobstore()).await?;

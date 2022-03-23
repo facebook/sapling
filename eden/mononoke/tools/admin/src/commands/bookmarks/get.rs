@@ -10,8 +10,8 @@ use bookmarks::{BookmarkName, BookmarksRef};
 use clap::Args;
 use context::CoreContext;
 
+use super::Repo;
 use crate::commit_id::{print_commit_id, IdentityScheme};
-use crate::repo::AdminRepo;
 
 #[derive(Args)]
 pub struct BookmarksGetArgs {
@@ -23,7 +23,7 @@ pub struct BookmarksGetArgs {
     schemes: Vec<IdentityScheme>,
 }
 
-pub async fn get(ctx: &CoreContext, repo: &AdminRepo, get_args: BookmarksGetArgs) -> Result<()> {
+pub async fn get(ctx: &CoreContext, repo: &Repo, get_args: BookmarksGetArgs) -> Result<()> {
     let bookmark_value = repo
         .bookmarks()
         .get(ctx.clone(), &get_args.name)

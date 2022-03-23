@@ -21,8 +21,8 @@ use mononoke_types::{ChangesetId, ContentId, MPath, MononokeId};
 use repo_blobstore::{RepoBlobstoreArc, RepoBlobstoreRef};
 use repo_derived_data::RepoDerivedDataRef;
 
+use super::Repo;
 use crate::commit_id::parse_commit_id;
-use crate::repo::AdminRepo;
 
 #[derive(Args)]
 pub struct RedactionListArgs {
@@ -37,7 +37,7 @@ pub struct RedactionListArgs {
 /// given commit
 pub(super) async fn paths_for_content_keys(
     ctx: &CoreContext,
-    repo: &AdminRepo,
+    repo: &Repo,
     cs_id: ChangesetId,
     keys: &HashSet<String>,
 ) -> Result<Vec<(MPath, ContentId)>> {
@@ -82,7 +82,7 @@ pub async fn list(
     app: &MononokeApp,
     list_args: RedactionListArgs,
 ) -> Result<()> {
-    let repo: AdminRepo = app
+    let repo: Repo = app
         .open_repo(&list_args.repo_args)
         .await
         .context("Failed to open repo")?;

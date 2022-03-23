@@ -13,8 +13,8 @@ use bookmarks_movement::{check_bookmark_sync_config, BookmarkKind};
 use clap::Args;
 use context::CoreContext;
 
+use super::Repo;
 use crate::commit_id::parse_commit_id;
-use crate::repo::AdminRepo;
 
 #[derive(Args)]
 pub struct BookmarksSetArgs {
@@ -53,7 +53,7 @@ pub struct BookmarksSetArgs {
     create_only: bool,
 }
 
-pub async fn set(ctx: &CoreContext, repo: &AdminRepo, set_args: BookmarksSetArgs) -> Result<()> {
+pub async fn set(ctx: &CoreContext, repo: &Repo, set_args: BookmarksSetArgs) -> Result<()> {
     let kind = if set_args.scratch {
         BookmarkKind::Scratch
     } else {
