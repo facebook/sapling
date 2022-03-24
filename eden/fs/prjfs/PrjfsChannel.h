@@ -401,8 +401,12 @@ class PrjfsChannelInner {
   }
 
   void removeDirectoryEnumeration(Guid& guid) {
-    auto erasedCount = enumSessions_.wlock()->erase(guid);
-    XDCHECK(erasedCount == 1);
+    enumSessions_.wlock()->erase(guid);
+    // In theory, we should check that we removed an entry, but ProjectedFS
+    // sometimes likes to close directories that were never opened, making
+    // checking for the return value of erase unreliable. Since it doesn't
+    // really matter if we remove an entry in this case, we are free to ignore
+    // the return value.
   }
 
   // Internal ProjectedFS channel used to communicate with ProjectedFS.
