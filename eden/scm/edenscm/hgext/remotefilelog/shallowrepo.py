@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 import os
 
+from bindings import manifest as rustmanifest
 from edenscm.mercurial import encoding, error, localrepo, match, progress, scmutil, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid, nullrev
@@ -126,7 +127,7 @@ def wraprepo(repo):
 
             util.spawndetached(cmd)
 
-        def prefetch(self, revs, base=None, pats=None, opts=None, matcher=None):
+        def prefetch(self, revs, base=None, matcher=None):
             """Prefetches all the necessary file revisions for the given revs
             Optionally runs repack in background
             """
@@ -138,74 +139,29 @@ def wraprepo(repo):
                 None,
                 _("prefetching in %s") % self.origroot,
             ):
-                self._prefetch(revs, base, pats, opts, matcher)
+                self._prefetch(revs, base, matcher)
 
-        def _prefetch(self, revs, base=None, pats=None, opts=None, matcher=None):
-            fallbackpath = self.fallbackpath
-            if fallbackpath:
-                # If we know a rev is on the server, we should fetch the server
-                # version of those files, since our local file versions might
-                # become obsolete if the local commits are stripped.
-                localrevs = self.revs("draft()")
-                if base is not None and base != nullrev:
-                    serverbase = list(
-                        self.revs("first(reverse(::%d) - %ld)", base, localrevs)
-                    )
-                    if serverbase:
-                        base = serverbase[0]
-            else:
-                localrevs = self
-
+        def _prefetch(self, revs, base=None, matcher=None):
             mfl = self.manifestlog
-            if base is not None:
-                mfdict = mfl[self[base].manifestnode()].read()
-                skip = set(iteritems(mfdict))
-            else:
-                skip = set()
 
             # Copy the skip set to start large and avoid constant resizing,
             # and since it's likely to be very similar to the prefetch set.
-            files = skip.copy()
-            serverfiles = skip.copy()
-            visited = set()
-            visited.add(nullid)
+            files = set()
+            basemf = self[base or nullid].manifest()
             with progress.bar(self.ui, _("prefetching"), total=len(revs)) as prog:
                 for rev in sorted(revs):
                     ctx = self[rev]
-                    if pats:
-                        m = scmutil.match(ctx, pats, opts)
-                    elif matcher is None:
+                    if matcher is None:
                         matcher = self.maybesparsematch(rev)
 
-                    mfnode = ctx.manifestnode()
-                    mfctx = mfl[mfnode]
-
+                    mfctx = ctx.manifestctx()
                     mf = mfctx.read()
 
-                    diff = []
-                    if pats:
-                        diff.extend(iteritems(mf.matches(m)))
-                    if matcher:
-                        diff.extend(iteritems(mf.matches(matcher)))
-                    if not pats and not matcher:
-                        diff.extend(iteritems(mf))
-                    if rev not in localrevs:
-                        serverfiles.update(diff)
-                    else:
-                        files.update(diff)
-
-                    visited.add(mfctx.node())
+                    for path, (new, old) in mf.diff(basemf, matcher).items():
+                        if new[0]:
+                            files.add((path, new[0]))
                     prog.value += 1
 
-            files.difference_update(skip)
-            serverfiles.difference_update(skip)
-
-            # Fetch files known to be on the server
-            if serverfiles:
-                results = [(path, hex(fnode)) for (path, fnode) in serverfiles]
-                self.fileservice.prefetch(results, force=True)
-
-            # Fetch files that may or may not be on the server
             if files:
                 results = [(path, hex(fnode)) for (path, fnode) in files]
                 self.fileservice.prefetch(results)

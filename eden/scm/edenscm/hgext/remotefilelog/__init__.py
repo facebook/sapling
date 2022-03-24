@@ -1133,8 +1133,9 @@ def prefetch(ui, repo, *pats, **opts):
         )
 
     opts = resolveprefetchopts(ui, opts)
+    matcher = scmutil.match(repo[None], pats, opts)
     revs = scmutil.revrange(repo, opts.get("rev"))
-    repo.prefetch(revs, opts.get("base"), pats, opts)
+    repo.prefetch(revs, opts.get("base"), matcher=matcher)
 
     # Run repack in background
     if opts.get("repack"):

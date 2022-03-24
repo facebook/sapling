@@ -83,8 +83,6 @@ requires tree manifest for the base commit.
   fetching tree '' e445299a39f9006c2aec78dcc04dceeb102252b2
   1 trees fetched over 0.00s
   2 trees fetched over * (glob)
-  fetching tree 'dir' a18d21674e76d6aab2edb46810b20fbdbd10fb4b
-  1 trees fetched over 0.00s
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
 Test prefetching when a draft commit is marked public
