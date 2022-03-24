@@ -143,9 +143,9 @@ fn write_store_requirements(path: &Path, config: &ConfigSet) -> Result<(), InitE
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use configparser::config::Options;
+
+    use super::*;
 
     #[test]
     fn test_reponame() {
@@ -225,7 +225,6 @@ treestate
     #[cfg(feature = "fb")]
     #[test]
     fn test_config_load() {
-        // This test will fail if tests are run with `cargo test`, but works fine otherwise
         let tmp = tempfile::tempdir().unwrap();
         let mut config = ConfigSet::new();
         let dynamic_path = tmp.path().join("hgrc.dynamic");

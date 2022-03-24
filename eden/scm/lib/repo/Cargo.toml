@@ -21,4 +21,4 @@ tempfile = "3.2"
 
 [features]
 default = []
-fb = []
+fb = ["configparser/fb"]
