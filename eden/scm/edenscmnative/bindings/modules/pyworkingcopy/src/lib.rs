@@ -133,6 +133,7 @@ py_class!(class walker |py| {
 py_class!(class status |py| {
     @staticmethod
     def compute(
+        pymanifest: treemanifest,
         pytreestate: treestate,
         pypendingchanges: PyObject,
         pymatcher: PyObject,
@@ -153,9 +154,11 @@ py_class!(class status |py| {
             pending_changes.push(change);
         }
 
+        let manifest = pymanifest.get_underlying(py);
         let treestate = pytreestate.get_state(py);
         let matcher = extract_matcher(py, pymatcher)?;
         let status = workingcopy::status::compute_status(
+            &*manifest.read(),
             treestate,
             pending_changes.into_iter(),
             matcher,

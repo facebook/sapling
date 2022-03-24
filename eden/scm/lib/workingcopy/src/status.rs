@@ -5,11 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Result;
+use manifest::Manifest;
 use parking_lot::Mutex;
+use pathmatcher::ExactMatcher;
 use pathmatcher::Matcher;
 use status::{Status, StatusBuilder};
 use treestate::filestate::StateFlags;
@@ -21,6 +24,7 @@ use crate::filesystem::ChangeType;
 /// Compute the status of the working copy relative to the current commit.
 #[allow(unused_variables)]
 pub fn compute_status<M: Matcher + Clone + Send + Sync + 'static>(
+    manifest: &impl Manifest,
     treestate: Arc<Mutex<TreeState>>,
     pending_changes: impl Iterator<Item = ChangeType>,
     matcher: M,
@@ -32,35 +36,66 @@ pub fn compute_status<M: Matcher + Clone + Send + Sync + 'static>(
     let mut unknown = vec![];
 
     // Step 1: get the tree state for each pending change in the working copy.
+    // We may have a TreeState that only holds files that are being added/removed
+    // (for example, in a repo backed by EdenFS). In this case, we need to make a note
+    // of these paths to later query the manifest to determine if they're known or unknown files.
     let mut treestate = treestate.lock();
+    // Changed files that don't exist in the TreeState. Maps to (is_deleted, in_manifest).
+    let mut manifest_files = HashMap::<RepoPathBuf, (bool, bool)>::new();
     for change in pending_changes {
         let (path, is_deleted) = match change {
             ChangeType::Changed(path) => (path, false),
             ChangeType::Deleted(path) => (path, true),
         };
 
-        let (exist_parent, exist_next) = match treestate.get(&path)? {
+        match treestate.get(&path)? {
             Some(state) => {
-                let parent = state
+                let exist_parent = state
                     .state
                     .intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2);
-                let next = state.state.contains(StateFlags::EXIST_NEXT);
-                (parent, next)
-            }
-            None => (false, false),
-        };
+                let exist_next = state.state.contains(StateFlags::EXIST_NEXT);
 
-        match (is_deleted, exist_parent, exist_next) {
-            (_, true, false) => removed.push(path),
-            (true, true, true) => deleted.push(path),
-            (false, true, true) => modified.push(path),
-            (false, false, true) => added.push(path),
-            (false, false, false) => unknown.push(path),
-            _ => {
-                // The remaining case is (T, F, _).
-                // If the file is deleted, but didn't exist in a parent commit,
-                // it didn't change.
+                match (is_deleted, exist_parent, exist_next) {
+                    (_, true, false) => removed.push(path),
+                    (true, true, true) => deleted.push(path),
+                    (false, true, true) => modified.push(path),
+                    (false, false, true) => added.push(path),
+                    (false, false, false) => unknown.push(path),
+                    _ => {
+                        // The remaining case is (T, F, _).
+                        // If the file is deleted, but didn't exist in a parent commit,
+                        // it didn't change.
+                    }
+                }
             }
+            None => {
+                // Path not found in the TreeState, so we need to query the manifest
+                // to determine if this is a known or unknown file.
+                manifest_files.insert(path, (is_deleted, false));
+            }
+        }
+    }
+    // Handle changed files we didn't find in the TreeState.
+    manifest
+        .files(ExactMatcher::new(manifest_files.keys()))
+        .filter_map(Result::ok)
+        .for_each(|file| {
+            if let Some(entry) = manifest_files.get_mut(&file.path) {
+                entry.1 = true;
+            }
+        });
+    for (path, (is_deleted, in_manifest)) in manifest_files {
+        // `exist_parent = in_manifest`. Also, `exist_parent = in_manifest`:
+        // If a file existed in the manifest but didn't EXIST_NEXT,
+        // it would be a "removed" file (and thus would definitely be in the TreeState).
+        // Similarly, if a file doesn't exist in the manifest but did EXIST_NEXT,
+        // it would be an "added" file.
+        // This is a subset of the logic above.
+        match (is_deleted, in_manifest) {
+            (true, true) => deleted.push(path),
+            (false, true) => modified.push(path),
+            (false, false) => unknown.push(path),
+            (true, false) => {} // Deleted, but didn't exist in a parent commit.
         }
     }
 
@@ -189,6 +224,72 @@ mod tests {
 
     use super::*;
 
+    struct DummyManifest {
+        files: Vec<RepoPathBuf>,
+    }
+
+    #[allow(unused_variables)]
+    impl Manifest for DummyManifest {
+        fn get(&self, path: &RepoPath) -> Result<Option<manifest::FsNodeMetadata>> {
+            unimplemented!()
+        }
+
+        fn list(&self, path: &RepoPath) -> Result<manifest::List> {
+            unimplemented!()
+        }
+
+        fn insert(
+            &mut self,
+            file_path: RepoPathBuf,
+            file_metadata: manifest::FileMetadata,
+        ) -> Result<()> {
+            unimplemented!()
+        }
+
+        fn remove(&mut self, file_path: &RepoPath) -> Result<Option<manifest::FileMetadata>> {
+            unimplemented!()
+        }
+
+        fn flush(&mut self) -> Result<types::HgId> {
+            unimplemented!()
+        }
+
+        fn files<'a, M: 'static + Matcher + Sync + Send>(
+            &'a self,
+            matcher: M,
+        ) -> Box<dyn Iterator<Item = Result<manifest::File>> + 'a> {
+            Box::new(self.files.iter().cloned().map(|path| {
+                Ok(manifest::File {
+                    path,
+                    meta: manifest::FileMetadata::default(),
+                })
+            }))
+        }
+
+        fn dirs<'a, M: 'static + Matcher + Sync + Send>(
+            &'a self,
+            matcher: M,
+        ) -> Box<dyn Iterator<Item = Result<manifest::Directory>> + 'a> {
+            unimplemented!()
+        }
+
+        fn diff<'a, M: Matcher>(
+            &'a self,
+            other: &'a Self,
+            matcher: &'a M,
+        ) -> Result<Box<dyn Iterator<Item = Result<manifest::DiffEntry>> + 'a>> {
+            unimplemented!()
+        }
+
+        fn modified_dirs<'a, M: Matcher>(
+            &'a self,
+            other: &'a Self,
+            matcher: &'a M,
+        ) -> Result<Box<dyn Iterator<Item = Result<manifest::DirDiffEntry>> + 'a>> {
+            unimplemented!()
+        }
+    }
+
     /// Compute the status with the given input.
     ///
     /// * `treestate` is a list of (path, state flags).
@@ -197,17 +298,27 @@ mod tests {
         // Build the TreeState.
         let dir = TempDir::new("treestate").expect("tempdir");
         let mut state = TreeState::open(dir.path().join("1"), None).expect("open");
+        let mut manifest_files = vec![];
         for (path, flags) in treestate {
-            let file_state = FileStateV2 {
-                mode: 0,
-                size: 0,
-                mtime: 0,
-                state: *flags,
-                copied: None,
-            };
-            state.insert(path, &file_state).expect("insert");
+            if *flags == (StateFlags::EXIST_P1 | StateFlags::EXIST_NEXT) {
+                // Normal file, put it in the manifest instead of the TreeState.
+                let path = RepoPathBuf::from_string(path.to_string()).expect("path");
+                manifest_files.push(path);
+            } else {
+                let file_state = FileStateV2 {
+                    mode: 0,
+                    size: 0,
+                    mtime: 0,
+                    state: *flags,
+                    copied: None,
+                };
+                state.insert(path, &file_state).expect("insert");
+            }
         }
         let treestate = Arc::new(Mutex::new(state));
+        let manifest = DummyManifest {
+            files: manifest_files,
+        };
 
         // Build the pending changes.
         let changes = changes.iter().map(|&(path, is_deleted)| {
@@ -221,7 +332,7 @@ mod tests {
 
         // Compute the status.
         let matcher = pathmatcher::AlwaysMatcher::new();
-        compute_status(treestate, changes, matcher)
+        compute_status(&manifest, treestate, changes, matcher)
     }
 
     /// Compare the [`Status`] with the expected status for each given file.

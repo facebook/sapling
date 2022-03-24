@@ -948,6 +948,7 @@ class dirstate(object):
                 raise error.Abort(_("Rust status does not support ignored or clean"))
             pendingchanges = self._fs.pendingchanges(match, listignored=False)
             status = bindings.workingcopy.status.compute(
+                self._repo[self.p1()].manifest(),
                 self._map._tree,
                 pendingchanges,
                 match,

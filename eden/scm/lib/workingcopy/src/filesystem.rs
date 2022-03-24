@@ -364,10 +364,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                 let mut results = Vec::<Result<PendingChangeResult>>::new();
 
                 // First, get the keys for the paths from the current manifest.
-                let matcher = match ExactMatcher::new(self.lookups.iter()) {
-                    Ok(matcher) => matcher,
-                    Err(e) => return Box::new(std::iter::once(Err(e))),
-                };
+                let matcher = ExactMatcher::new(self.lookups.iter());
                 let keys = self
                     .manifest
                     .read()

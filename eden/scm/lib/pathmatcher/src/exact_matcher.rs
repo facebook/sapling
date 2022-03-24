@@ -25,12 +25,12 @@ impl ExactMatcher {
     /// Create [ExactMatcher] using an exact list of file paths.
     ///
     /// The matcher will only match files explicitly listed.
-    pub fn new(paths: impl Iterator<Item = impl AsRef<RepoPath>>) -> Result<Self> {
+    pub fn new(paths: impl Iterator<Item = impl AsRef<RepoPath>>) -> Self {
         let mut root = Node::default();
         for path in paths {
             root.insert(path.as_ref());
         }
-        Ok(ExactMatcher { root })
+        ExactMatcher { root }
     }
 
     /// Insert a new path into the set of paths matched.
@@ -117,7 +117,7 @@ mod tests {
         let paths = paths
             .iter()
             .map(|p| RepoPath::from_str(p).unwrap().to_owned());
-        let m = ExactMatcher::new(paths).expect("matcher");
+        let m = ExactMatcher::new(paths);
 
         // Test regular file matching.
         let cases = [
