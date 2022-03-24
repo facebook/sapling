@@ -488,6 +488,7 @@ class Client(object):
         before_timestamp=None,
         after_timestamp=None,
         timeout=10,
+        use_mutable_history=False,
     ):
         """List commits from the repo meeting given criteria.
 
@@ -514,6 +515,7 @@ class Client(object):
                 "exclude_rev_and_ancestors": exclude_rev_and_ancestors,
                 "before_timestamp": before_timestamp,
                 "after_timestamp": after_timestamp,
+                "follow_mutable_file_history": use_mutable_history,
             }
         }
         ret = self._client.query(timeout, query, json.dumps(params))

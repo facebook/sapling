@@ -478,6 +478,7 @@ class FastLogThread(Thread):
         reponame = self.reponame
         revfn = self.changelog.rev
         skip = 0
+        usemutablehistory = self.ui.configbool("fastlog", "followmutablehistory")
 
         while True:
             if self.stopped():
@@ -488,7 +489,13 @@ class FastLogThread(Thread):
             try:
                 client = graphql.Client(repo=self.repo)
                 results = client.scmquery_log(
-                    reponame, self.scm, start, file_paths=[path], skip=skip, number=todo
+                    reponame,
+                    self.scm,
+                    start,
+                    file_paths=[path],
+                    skip=skip,
+                    number=todo,
+                    use_mutable_history=usemutablehistory,
                 )
             except Exception as e:
                 if self.ui.config("fastlog", "debug"):
