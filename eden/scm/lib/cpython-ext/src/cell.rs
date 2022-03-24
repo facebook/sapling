@@ -9,9 +9,9 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::fmt::Debug;
 
-use cpython::*;
 use ::serde::de::DeserializeOwned;
 use ::serde::Serialize;
+use cpython::*;
 
 use crate::convert::Serde;
 use crate::none::PyNone;

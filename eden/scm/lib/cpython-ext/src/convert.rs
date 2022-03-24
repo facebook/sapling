@@ -16,6 +16,8 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::ops::Deref;
 
+use ::serde::Deserialize;
+use ::serde::Serialize;
 use cpython::FromPyObject;
 use cpython::PyObject;
 use cpython::PyType;
@@ -26,8 +28,6 @@ use cpython::_detail::ffi;
 use cpython::*;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
-use ::serde::Deserialize;
-use ::serde::Serialize;
 
 /// Wrapper type. Converts between pure Rust bytes-like types and PyBytes.
 ///

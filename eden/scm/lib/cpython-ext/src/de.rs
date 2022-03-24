@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use cpython::*;
 use ::serde::de;
 use ::serde::de::Visitor;
+use cpython::*;
 
 use crate::PyErr as Error;
 use crate::PyNone;
