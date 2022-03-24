@@ -138,7 +138,7 @@ impl BubbleId {
     }
 
     /// Generate the blobstore prefix for this bubble.
-    pub(crate) fn prefix(&self) -> String {
+    pub fn prefix(&self) -> String {
         format!("{}{}{}", EPH_ID_PREFIX, self.0, EPH_ID_SUFFIX,)
     }
 }
@@ -155,8 +155,8 @@ pub enum ExpiryStatus {
 impl fmt::Display for ExpiryStatus {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            ExpiryStatus::Expired => write!(fmt, "1"),
-            ExpiryStatus::Active => write!(fmt, "0"),
+            ExpiryStatus::Expired => write!(fmt, "Expired"),
+            ExpiryStatus::Active => write!(fmt, "Active"),
         }
     }
 }
@@ -268,7 +268,7 @@ impl Bubble {
     }
 
     pub(crate) async fn delete_blobs_in_bubble(&self, ctx: &CoreContext) -> Result<usize> {
-        let key_stream = self.get_keys_in_bubble(ctx).await;
+        let key_stream = self.get_keys_in_bubble(ctx, None).await;
         let mut keys_deleted = 0;
         pin_mut!(key_stream);
         while let Some(keys) = key_stream.try_next().await? {
@@ -284,11 +284,41 @@ impl Bubble {
         Ok(keys_deleted)
     }
 
+    pub(crate) async fn keys_in_bubble(
+        &self,
+        ctx: &CoreContext,
+        start_from: Option<String>,
+        limit: u32,
+    ) -> Result<Vec<String>> {
+        let key_stream = self.get_keys_in_bubble(ctx, start_from).await;
+        let mut collected_keys = vec![];
+        let limit = limit.try_into().unwrap();
+        pin_mut!(key_stream);
+        // Executing the below sequentially since we want to maintain
+        // the ordering of the elements returned. Plus, we want to exit
+        // as soon as we have the required number of keys.
+        while let Some(keys) = key_stream.try_next().await? {
+            collected_keys.extend(keys);
+            if collected_keys.len() >= limit {
+                break;
+            }
+        }
+        // In cases where limit % batch_size != 0, we would have fetched
+        // more than required, trim the extra keys.
+        collected_keys.truncate(limit);
+        Ok(collected_keys)
+    }
+
     async fn get_keys_in_bubble<'a>(
         &'a self,
         ctx: &'a CoreContext,
+        start_from: Option<String>,
     ) -> impl Stream<Item = Result<Vec<String>>> + 'a {
-        let mut token = Arc::new(BlobstoreKeyParam::from(..));
+        let search_range = match start_from {
+            Some(start) => BlobstoreKeyParam::from(start..),
+            None => BlobstoreKeyParam::from(..),
+        };
+        let mut token = Arc::new(search_range);
         try_stream! {
             loop {
                 let result = self.blobstore.enumerate(ctx, &token).await?;
@@ -307,6 +337,10 @@ impl Bubble {
 
     pub fn expired(&self) -> ExpiryStatus {
         self.expired
+    }
+
+    pub fn expires_at(&self) -> DateTime {
+        self.expires_at
     }
 
     /// Return a blobstore that gives priority to accessing the bubble, but falls back

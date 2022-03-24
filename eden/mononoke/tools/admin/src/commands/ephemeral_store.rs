@@ -12,15 +12,18 @@ mod list;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use cleanup::EphemeralStoreCleanUpArgs;
+use ephemeral_blobstore::RepoEphemeralStore;
 use info::EphemeralStoreInfoArgs;
 use list::EphemeralStoreListArgs;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
+use repo_identity::RepoIdentity;
 
 /// Cleanup, list or describe the contents of ephemeral store.
 #[derive(Parser)]
 pub struct CommandArgs {
-    /// The repository name or ID.
+    /// The repository name or ID. Any changesets provided for
+    /// subcommands will use this repoID for scoping.
     #[clap(flatten)]
     repo: RepoArgs,
 
@@ -31,7 +34,10 @@ pub struct CommandArgs {
 
 #[facet::container]
 pub struct Repo {
-    // TODO: Add necessary repo attributes here.
+    #[facet]
+    repo_ephemeral_store: RepoEphemeralStore,
+    #[facet]
+    repo_identity: RepoIdentity,
 }
 
 #[derive(Subcommand)]
@@ -46,18 +52,15 @@ pub enum EphemeralStoreSubcommand {
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_context();
-    let logger = &app.logger();
     let repo: Repo = app.open_repo(&args.repo).await?;
 
     match args.subcommand {
         EphemeralStoreSubcommand::Cleanup(cleanup_args) => {
-            cleanup::clean_bubbles(&ctx, &repo, logger, cleanup_args).await?
+            cleanup::clean_bubbles(&ctx, &repo, cleanup_args).await?
         }
-        EphemeralStoreSubcommand::Info(info_args) => {
-            info::bubble_info(&ctx, &repo, logger, info_args).await?
-        }
+        EphemeralStoreSubcommand::Info(info_args) => info::bubble_info(&repo, info_args).await?,
         EphemeralStoreSubcommand::List(list_args) => {
-            list::list_keys(&ctx, &repo, logger, list_args).await?
+            list::list_keys(&ctx, &repo, list_args).await?
         }
     }
     Ok(())

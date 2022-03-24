@@ -33,6 +33,7 @@ use tokio::{
 use walkdir::WalkDir;
 
 const PREFIX: &str = "blob";
+const PREFIX_HYPHEN: &str = "blob-";
 // https://url.spec.whatwg.org/#fragment-percent-encode-set
 const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'<').add(b'>').add(b'`');
 // https://url.spec.whatwg.org/#path-percent-encode-set
@@ -67,6 +68,18 @@ impl Fileblob {
     fn path(&self, key: &str) -> PathBuf {
         let key = percent_encode(key.as_bytes(), PATH);
         self.base.join(format!("{}-{}", PREFIX, key))
+    }
+
+    /// Stripping the prepended prefix (if its exists) before returning
+    /// keys back to the caller. Safe to call with or without the prefix.
+    fn strip_file_prefix<'a>(&self, key: &'a str) -> &'a str {
+        match key.strip_prefix(PREFIX_HYPHEN) {
+            // Remove the prefix if present and return the remaining
+            // slice.
+            Some(key_without_prefix) => key_without_prefix,
+            // If not present, return the key as-is.
+            None => key,
+        }
     }
 }
 
@@ -239,9 +252,11 @@ impl BlobstoreKeySource for Fileblob {
                     .into_iter()
                     .filter_map(|v| v.ok())
                     .for_each(|entry| {
-                        let entry = entry.path().to_str();
+                        // Need the filename not the directory, since the directory
+                        // structure is not exposed to the caller.
+                        let entry = entry.file_name().to_str();
                         if let Some(data) = entry {
-                            let key = data.to_string();
+                            let key = self.strip_file_prefix(data).to_string();
                             if range.contains(&key) {
                                 enum_data.keys.insert(key);
                             }

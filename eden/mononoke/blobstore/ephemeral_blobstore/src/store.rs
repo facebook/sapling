@@ -87,6 +87,14 @@ queries! {
         WHERE repo_id = {repo_id} AND cs_id = {cs_id}"
     }
 
+    read SelectChangesetFromBubble(
+        id: BubbleId,
+    ) -> (ChangesetId,) {
+        "SELECT cs_id
+        FROM ephemeral_bubble_changeset_mapping
+        WHERE bubble_id = {id}"
+    }
+
     read SelectBubblesWithExpiry(
         expires_at: Timestamp,
         limit: u32,
@@ -177,6 +185,7 @@ impl RepoEphemeralStoreInner {
         }
     }
 
+    /// Given a changeset ID, fetch the corresponding Bubble ID.
     async fn bubble_from_changeset(
         &self,
         repo_id: &RepositoryId,
@@ -186,6 +195,12 @@ impl RepoEphemeralStoreInner {
             SelectBubbleFromChangeset::query(&self.connections.read_connection, &repo_id, &cs_id)
                 .await?;
         Ok(rows.into_iter().next().map(|b| b.0))
+    }
+
+    async fn changesets_from_bubble(&self, bubble_id: &BubbleId) -> Result<Vec<ChangesetId>> {
+        let rows =
+            SelectChangesetFromBubble::query(&self.connections.read_connection, bubble_id).await?;
+        Ok(rows.into_iter().map(|b| b.0).collect::<Vec<_>>())
     }
 
     /// Gets the vector of bubbles that are past their expiry period
@@ -221,6 +236,17 @@ impl RepoEphemeralStoreInner {
             }
         };
         Ok(rows.into_iter().map(|b| b.0).collect::<Vec<_>>())
+    }
+
+    async fn keys_in_bubble(
+        &self,
+        bubble_id: BubbleId,
+        ctx: &CoreContext,
+        start_from: Option<String>,
+        max: u32,
+    ) -> Result<Vec<String>> {
+        let bubble = self.open_bubble_raw(bubble_id, false).await?;
+        Ok(bubble.keys_in_bubble(ctx, start_from, max).await?)
     }
 
     /// Method responsible for deleting the bubble and all the data contained within.
@@ -360,14 +386,45 @@ impl RepoEphemeralStore {
             .await
     }
 
+    /// Gets the blob keys stored within the bubble, optionally starting
+    /// from 'start_from' and upto 'max' in count.
+    pub async fn keys_in_bubble(
+        &self,
+        bubble_id: BubbleId,
+        ctx: &CoreContext,
+        start_from: Option<String>,
+        max: u32,
+    ) -> Result<Vec<String>> {
+        self.inner()?
+            .keys_in_bubble(bubble_id, ctx, start_from, max)
+            .await
+    }
+
+    /// Open the bubble corresponding to the given bubble ID if the bubble
+    /// exists and has not yet expired.
     pub async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble> {
         self.inner()?.open_bubble(bubble_id).await
     }
 
+    /// Open the bubble corresponding to the given bubble ID regardless
+    /// of the expiry status or date.
+    /// NOTE: To be used only for debugging, use open_bubble for other
+    /// production use cases.
+    pub async fn open_bubble_raw(&self, bubble_id: BubbleId) -> Result<Bubble> {
+        self.inner()?.open_bubble_raw(bubble_id, false).await
+    }
+
+    /// Given a changeset ID, fetch the corresponding bubble ID.
     pub async fn bubble_from_changeset(&self, cs_id: &ChangesetId) -> Result<Option<BubbleId>> {
         self.inner()?
             .bubble_from_changeset(&self.repo_id, cs_id)
             .await
+    }
+
+    /// Given a bubble ID, fetch the corresponding changeset ID within the
+    /// repository associated with the bubble.
+    pub async fn changesets_from_bubble(&self, bubble_id: &BubbleId) -> Result<Vec<ChangesetId>> {
+        self.inner()?.changesets_from_bubble(bubble_id).await
     }
 }
 
