@@ -19,6 +19,7 @@ import contextlib
 import errno
 import os
 import stat
+import tempfile
 import weakref
 from typing import (
     BinaryIO,
@@ -947,9 +948,26 @@ class dirstate(object):
             if ignored or clean:
                 raise error.Abort(_("Rust status does not support ignored or clean"))
             pendingchanges = self._fs.pendingchanges(match, listignored=False)
+
+            if "eden" in self._repo.requirements:
+                # EdenFS repos still use an old dirstate to track working copy
+                # changes. We need a TreeState for Rust status, so if the map
+                # doesn't have a tree, we create a temporary read-only one.
+                # Note: this TreeState won't track clean files, only added/removed/etc.
+                # TODO: get rid of this when EdenFS migrates to TreeState.
+                tempdir = tempfile.TemporaryDirectory()
+                tempvfs = vfs.vfs(tempdir.name)
+                tempvfs.makedir("treestate")
+                tempmap = treestate.treestatemap(
+                    self._ui, tempvfs, tempdir.name, importdirstate=self
+                )
+                tree = tempmap._tree
+            else:
+                tree = self._map._tree
+
             status = bindings.workingcopy.status.compute(
                 self._repo[self.p1()].manifest(),
-                self._map._tree,
+                tree,
                 pendingchanges,
                 match,
             )
