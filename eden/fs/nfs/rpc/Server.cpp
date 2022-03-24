@@ -18,6 +18,10 @@
 #include <folly/io/IOBufQueue.h>
 #include <folly/io/async/AsyncSocket.h>
 
+#include "eden/fs/nfs/rpc/Rpc.h"
+#include "eden/fs/telemetry/LogEvent.h"
+#include "eden/fs/telemetry/StructuredLogger.h"
+
 using folly::AsyncServerSocket;
 using folly::AsyncSocket;
 using folly::Future;
@@ -104,10 +108,12 @@ RpcTcpHandler::RpcTcpHandler(
     std::shared_ptr<RpcServerProcessor> proc,
     AsyncSocket::UniquePtr&& socket,
     std::shared_ptr<folly::Executor> threadPool,
+    const std::shared_ptr<StructuredLogger>& structuredLogger,
     std::weak_ptr<RpcServer> owningServer)
     : proc_(proc),
       sock_(std::move(socket)),
       threadPool_(std::move(threadPool)),
+      errorLogger_(structuredLogger),
       reader_(std::make_unique<Reader>(this)),
       state_(sock_->getEventBase()),
       owningServer_(std::move(owningServer)) {
@@ -322,6 +328,33 @@ std::unique_ptr<folly::IOBuf> finalizeFragment(
 }
 } // namespace
 
+void RpcTcpHandler::recordParsingError(
+    RpcParsingError& err,
+    std::unique_ptr<folly::IOBuf> input) {
+  std::string message = fmt::format(
+      "{} during {}. Full request {}.",
+      err.what(),
+      err.getProcedureContext(),
+      folly::hexlify(input->coalesce()));
+
+  XLOG(ERR) << message;
+
+  errorLogger_->logEvent(NfsParsingError{
+      folly::to<std::string>("FS", " - ", err.getProcedureContext()), message});
+}
+
+void RpcTcpHandler::replyServerError(
+    accept_stat err,
+    uint32_t xid,
+    std::unique_ptr<folly::IOBufQueue>& outputBuffer) {
+  // We don't know how much was already written to  the outputBuffer,
+  // thus let's clear it and write an error onto it.
+  outputBuffer->reset();
+  folly::io::QueueAppender errSer(outputBuffer.get(), 1024);
+  XdrTrait<uint32_t>::serialize(errSer, 0); // reserve space for fragment header
+  serializeReply(errSer, err, xid);
+}
+
 void RpcTcpHandler::dispatchAndReply(
     std::unique_ptr<folly::IOBuf> input,
     DestructorGuard guard) {
@@ -346,40 +379,43 @@ void RpcTcpHandler::dispatchAndReply(
     }
 
     XLOG(DBG7) << "dispatching a request";
-    auto fut = proc_->dispatchRpc(
-        std::move(deser),
-        std::move(ser),
-        call.xid,
-        call.cbody.prog,
-        call.cbody.vers,
-        call.cbody.proc);
+    auto fut = makeImmediateFutureWith([this,
+                                        deser = std::move(deser),
+                                        ser = std::move(ser),
+                                        xid = call.xid,
+                                        prog = call.cbody.prog,
+                                        vers = call.cbody.vers,
+                                        proc = call.cbody.proc]() mutable {
+      return proc_->dispatchRpc(
+          std::move(deser), std::move(ser), xid, prog, vers, proc);
+    });
 
     return std::move(fut)
-        .thenTry(
-            [keepInputAlive = std::move(input),
-             iobufQueue = std::move(iobufQueue),
-             call = std::move(call)](folly::Try<folly::Unit> result) mutable {
-              XLOG(DBG7) << "Request done, sending response.";
-              if (result.hasException()) {
-                XLOGF(
-                    WARN,
-                    "Server failed to dispatch proc {} to {}:{}: {}",
-                    call.cbody.proc,
-                    call.cbody.prog,
-                    call.cbody.vers,
-                    folly::exceptionStr(*result.exception().get_exception()));
+        .thenTry([this,
+                  input = std::move(input),
+                  iobufQueue = std::move(iobufQueue),
+                  call =
+                      std::move(call)](folly::Try<folly::Unit> result) mutable {
+          XLOG(DBG7) << "Request done, sending response.";
+          if (result.hasException()) {
+            if (auto* err =
+                    result.exception().get_exception<RpcParsingError>()) {
+              recordParsingError(*err, std::move(input));
+              replyServerError(accept_stat::GARBAGE_ARGS, call.xid, iobufQueue);
+            } else {
+              XLOGF(
+                  WARN,
+                  "Server failed to dispatch proc {} to {}:{}: {}",
+                  call.cbody.proc,
+                  call.cbody.prog,
+                  call.cbody.vers,
+                  folly::exceptionStr(*result.exception().get_exception()));
 
-                // We don't know how much dispatchRpc wrote to the iobufQueue,
-                // thus let's clear it and write an error onto it.
-                iobufQueue->reset();
-                folly::io::QueueAppender errSer(iobufQueue.get(), 1024);
-                XdrTrait<uint32_t>::serialize(
-                    errSer, 0); // reserve space for fragment header
-
-                serializeReply(errSer, accept_stat::SYSTEM_ERR, call.xid);
-              }
-              return finalizeFragment(std::move(iobufQueue));
-            })
+              replyServerError(accept_stat::SYSTEM_ERR, call.xid, iobufQueue);
+            }
+          }
+          return finalizeFragment(std::move(iobufQueue));
+        })
         .semi()
         .via(&folly::QueuedImmediateExecutor::instance());
   })
@@ -424,7 +460,7 @@ void RpcServer::RpcAcceptCallback::connectionAccepted(
   XLOG(DBG7) << "Accepted connection from: " << clientAddr;
   auto socket = AsyncSocket::newSocket(evb_, fd);
   auto handler = RpcTcpHandler::create(
-      proc_, std::move(socket), threadPool_, owningServer_);
+      proc_, std::move(socket), threadPool_, structuredLogger_, owningServer_);
 
   if (auto server = owningServer_.lock()) {
     server->registerRpcHandler(std::move(handler));
@@ -470,17 +506,20 @@ void RpcServerProcessor::onShutdown(RpcStopData) {}
 std::shared_ptr<RpcServer> RpcServer::create(
     std::shared_ptr<RpcServerProcessor> proc,
     folly::EventBase* evb,
-    std::shared_ptr<folly::Executor> threadPool) {
-  return std::shared_ptr<RpcServer>{
-      new RpcServer{std::move(proc), evb, std::move(threadPool)}};
+    std::shared_ptr<folly::Executor> threadPool,
+    const std::shared_ptr<StructuredLogger>& structuredLogger) {
+  return std::shared_ptr<RpcServer>{new RpcServer{
+      std::move(proc), evb, std::move(threadPool), structuredLogger}};
 }
 
 RpcServer::RpcServer(
     std::shared_ptr<RpcServerProcessor> proc,
     folly::EventBase* evb,
-    std::shared_ptr<folly::Executor> threadPool)
+    std::shared_ptr<folly::Executor> threadPool,
+    const std::shared_ptr<StructuredLogger>& structuredLogger)
     : evb_(evb),
       threadPool_(threadPool),
+      structuredLogger_(structuredLogger),
       acceptCb_(nullptr),
       serverSocket_(new AsyncServerSocket(evb_)),
       proc_(std::move(proc)),
@@ -488,7 +527,11 @@ RpcServer::RpcServer(
 
 void RpcServer::initialize(folly::SocketAddress addr) {
   acceptCb_.reset(new RpcServer::RpcAcceptCallback{
-      proc_, evb_, threadPool_, std::weak_ptr<RpcServer>{shared_from_this()}});
+      proc_,
+      evb_,
+      threadPool_,
+      structuredLogger_,
+      std::weak_ptr<RpcServer>{shared_from_this()}});
 
   // Ask kernel to assign us a port on the loopback interface
   serverSocket_->bind(addr);
@@ -512,6 +555,7 @@ void RpcServer::initialize(folly::File&& socket, InitialSocketType type) {
           AsyncSocket::newSocket(
               evb_, folly::NetworkSocket::fromFd(socket.release())),
           threadPool_,
+          structuredLogger_,
           shared_from_this()));
       return;
     case InitialSocketType::SERVER_SOCKET:
@@ -520,6 +564,7 @@ void RpcServer::initialize(folly::File&& socket, InitialSocketType type) {
           proc_,
           evb_,
           threadPool_,
+          structuredLogger_,
           std::weak_ptr<RpcServer>{shared_from_this()}});
       serverSocket_->useExistingSocket(
           folly::NetworkSocket::fromFd(socket.release()));

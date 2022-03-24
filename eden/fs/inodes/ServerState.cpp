@@ -12,6 +12,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
+#include "eden/fs/nfs/NfsServer.h"
 #include "eden/fs/telemetry/FsEventLogger.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
@@ -50,7 +51,7 @@ ServerState::ServerState(
     std::shared_ptr<IHiveLogger> hiveLogger,
     std::shared_ptr<ReloadableConfig> reloadableConfig,
     const EdenConfig& initialConfig,
-    std::shared_ptr<NfsServer> nfs,
+    folly::EventBase* mainEventBase,
     bool enableFaultDetection)
     : userInfo_{std::move(userInfo)},
       privHelper_{std::move(privHelper)},
@@ -60,7 +61,18 @@ ServerState::ServerState(
       structuredLogger_{std::move(structuredLogger)},
       hiveLogger_{std::move(hiveLogger)},
       faultInjector_{std::make_unique<FaultInjector>(enableFaultDetection)},
-      nfs_{std::move(nfs)},
+      nfs_{
+#ifndef _WIN32
+          initialConfig.enableNfsServer.getValue()
+              ? std::make_shared<NfsServer>(
+                    mainEventBase,
+                    initialConfig.numNfsThreads.getValue(),
+                    initialConfig.maxNfsInflightRequests.getValue(),
+                    structuredLogger_)
+              :
+#endif
+              nullptr,
+      },
       config_{std::move(reloadableConfig)},
       userIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
           initialConfig.userIgnoreFile.getValue(),

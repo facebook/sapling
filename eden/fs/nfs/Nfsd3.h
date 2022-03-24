@@ -27,6 +27,7 @@ namespace facebook::eden {
 class Notifier;
 class ProcessNameCache;
 class FsEventLogger;
+class StructuredLogger;
 
 using TraceDetailedArgumentsHandle = std::shared_ptr<void>;
 
@@ -132,6 +133,7 @@ class Nfsd3 {
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
       std::shared_ptr<FsEventLogger> fsEventLogger,
+      const std::shared_ptr<StructuredLogger>& structuredLogger,
       folly::Duration requestTimeout,
       std::shared_ptr<Notifier> notifications,
       CaseSensitivity caseSensitive,

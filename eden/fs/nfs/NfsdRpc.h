@@ -166,7 +166,9 @@ struct nfs_fh3 {
   InodeNumber ino;
 };
 
-std::string constructParsingError(folly::io::Cursor cursor, uint32_t size);
+RpcParsingError constructInodeParsingError(
+    folly::io::Cursor cursor,
+    uint32_t size);
 
 template <>
 struct XdrTrait<nfs_fh3> {
@@ -177,7 +179,9 @@ struct XdrTrait<nfs_fh3> {
 
   static nfs_fh3 deserialize(folly::io::Cursor& cursor) {
     uint32_t size = XdrTrait<uint32_t>::deserialize(cursor);
-    XCHECK_EQ(size, sizeof(nfs_fh3), constructParsingError(cursor, size));
+    if (UNLIKELY(size != sizeof(nfs_fh3))) {
+      throw constructInodeParsingError(cursor, size);
+    }
     return {InodeNumber{XdrTrait<uint64_t>::deserialize(cursor)}};
   }
 

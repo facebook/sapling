@@ -18,13 +18,14 @@ namespace facebook::eden {
 NfsServer::NfsServer(
     folly::EventBase* evb,
     uint64_t numServicingThreads,
-    uint64_t maxInflightRequests)
+    uint64_t maxInflightRequests,
+    const std::shared_ptr<StructuredLogger>& structuredLogger)
     : evb_(evb),
       threadPool_(std::make_shared<folly::CPUThreadPoolExecutor>(
           numServicingThreads,
           std::make_unique<EdenTaskQueue>(maxInflightRequests),
           std::make_unique<folly::NamedThreadFactory>("NfsThreadPool"))),
-      mountd_(evb_, threadPool_) {}
+      mountd_(evb_, threadPool_, structuredLogger) {}
 
 void NfsServer::initialize(
     folly::SocketAddress addr,
@@ -43,6 +44,7 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<FsEventLogger> fsEventLogger,
+    const std::shared_ptr<StructuredLogger>& structuredLogger,
     folly::Duration requestTimeout,
     std::shared_ptr<Notifier> notifier,
     CaseSensitivity caseSensitive,
@@ -54,6 +56,7 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
       straceLogger,
       std::move(processNameCache),
       std::move(fsEventLogger),
+      structuredLogger,
       requestTimeout,
       std::move(notifier),
       caseSensitive,

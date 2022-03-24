@@ -36,7 +36,10 @@ class Mountd {
    * to manually specify the port on which this server is bound, so registering
    * is not necessary for a properly behaving EdenFS.
    */
-  Mountd(folly::EventBase* evb, std::shared_ptr<folly::Executor> threadPool);
+  Mountd(
+      folly::EventBase* evb,
+      std::shared_ptr<folly::Executor> threadPool,
+      const std::shared_ptr<StructuredLogger>& structuredLogger);
 
   /**
    * Bind the RPC mountd program to the passed in address.

@@ -141,18 +141,17 @@ EDEN_XDR_SERDE_IMPL(
     case_preserving);
 EDEN_XDR_SERDE_IMPL(PATHCONF3resfail, obj_attributes);
 
-std::string constructParsingError(folly::io::Cursor cursor, uint32_t size) {
+RpcParsingError constructInodeParsingError(
+    folly::io::Cursor cursor,
+    uint32_t size) {
+  auto offset = cursor.getCurrentPosition();
   std::unique_ptr<folly::IOBuf> file_handle_bytes;
   cursor.cloneAtMost(file_handle_bytes, size);
 
-  std::unique_ptr<folly::IOBuf> raw_request_bytes;
-  cursor.retreat(cursor.getCurrentPosition());
-  cursor.cloneAtMost(raw_request_bytes, cursor.totalLength());
-
-  return fmt::format(
-      "Failed to parse {} into an Inode  Number. Full request: {}. ",
+  return RpcParsingError{fmt::format(
+      "Failed to parse {} into an InodeNumber at input offset {}",
       folly::hexlify(file_handle_bytes->coalesce()),
-      folly::hexlify(raw_request_bytes->coalesce()));
+      offset)};
 }
 
 } // namespace facebook::eden

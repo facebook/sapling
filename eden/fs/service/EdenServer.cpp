@@ -349,20 +349,11 @@ EdenServer::EdenServer(
           std::move(hiveLogger),
           config_,
           *edenConfig,
-#ifndef _WIN32
-          edenConfig->enableNfsServer.getValue()
-              ? std::make_shared<NfsServer>(
-                    mainEventBase_,
-                    edenConfig->numNfsThreads.getValue(),
-                    edenConfig->maxNfsInflightRequests.getValue())
-              :
-#endif
-              nullptr,
+          mainEventBase_,
           FLAGS_enable_fault_injection)},
       version_{std::move(version)},
       progressManager_{std::make_unique<
           folly::Synchronized<EdenServer::ProgressManager>>()} {
-
   treeCache_ = TreeCache::create(serverState_->getReloadableConfig());
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->registerCallback(kBlobCacheMemory, [this] {

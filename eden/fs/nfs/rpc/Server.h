@@ -26,6 +26,7 @@ class Executor;
 }
 
 namespace facebook::eden {
+class StructuredLogger;
 
 enum class RpcStopReason {
   RUNNING, // Running not stopping
@@ -103,6 +104,7 @@ class RpcTcpHandler : public folly::DelayedDestruction {
       std::shared_ptr<RpcServerProcessor> proc,
       folly::AsyncSocket::UniquePtr&& socket,
       std::shared_ptr<folly::Executor> threadPool,
+      const std::shared_ptr<StructuredLogger>& structuredLogger,
       std::weak_ptr<RpcServer> owningServer);
 
   class Reader : public folly::AsyncReader::ReadCallback {
@@ -179,6 +181,27 @@ class RpcTcpHandler : public folly::DelayedDestruction {
       DestructorGuard guard);
 
   /**
+   * Reply to an rpc call with an error.
+   * This function assumes that some data may have already been written to the
+   * output buffer. That output is discarded and we reply with an error message
+   * instead.
+   * This should be used if an exception is thrown while disptaching a request
+   * and the exception bubbles up to the rpc server.
+   */
+  void replyServerError(
+      accept_stat err,
+      uint32_t xid,
+      std::unique_ptr<folly::IOBufQueue>& outputBuffer);
+
+  /**
+   * Locally logs an error due to parsing an NFS request as well as log
+   * externally, so we can monitor these errors.
+   */
+  void recordParsingError(
+      RpcParsingError& err,
+      std::unique_ptr<folly::IOBuf> input);
+
+  /**
    * Processor to handle the requests.
    */
   std::shared_ptr<RpcServerProcessor> proc_;
@@ -193,6 +216,13 @@ class RpcTcpHandler : public folly::DelayedDestruction {
    * blocking the event base that is reading on the socket.
    */
   std::shared_ptr<folly::Executor> threadPool_;
+
+  /**
+   * This is a logger for error events. Inside a Meta environment, these events
+   * are exported off the machine this EdenFS instace is running on. This is
+   * where you log anomalous things that you want to monitor accross the fleet.
+   */
+  std::shared_ptr<StructuredLogger> errorLogger_;
 
   /**
    * Reads raw data off the socket.
@@ -271,7 +301,8 @@ class RpcServer : public std::enable_shared_from_this<RpcServer> {
   static std::shared_ptr<RpcServer> create(
       std::shared_ptr<RpcServerProcessor> proc,
       folly::EventBase* evb,
-      std::shared_ptr<folly::Executor> threadPool);
+      std::shared_ptr<folly::Executor> threadPool,
+      const std::shared_ptr<StructuredLogger>& structuredLogger);
 
   ~RpcServer();
 
@@ -323,7 +354,8 @@ class RpcServer : public std::enable_shared_from_this<RpcServer> {
   RpcServer(
       std::shared_ptr<RpcServerProcessor> proc,
       folly::EventBase* evb,
-      std::shared_ptr<folly::Executor> threadPool);
+      std::shared_ptr<folly::Executor> threadPool,
+      const std::shared_ptr<StructuredLogger>& structuredLogger);
 
   class RpcAcceptCallback : public folly::AsyncServerSocket::AcceptCallback,
                             public folly::DelayedDestruction {
@@ -335,10 +367,12 @@ class RpcServer : public std::enable_shared_from_this<RpcServer> {
         std::shared_ptr<RpcServerProcessor> proc,
         folly::EventBase* evb,
         std::shared_ptr<folly::Executor> threadPool,
+        const std::shared_ptr<StructuredLogger>& structuredLogger,
         std::weak_ptr<RpcServer> owningServer)
         : evb_(evb),
           proc_(proc),
           threadPool_(std::move(threadPool)),
+          structuredLogger_(structuredLogger),
           owningServer_(std::move(owningServer)),
           guard_(this) {}
 
@@ -357,6 +391,7 @@ class RpcServer : public std::enable_shared_from_this<RpcServer> {
     folly::EventBase* evb_;
     std::shared_ptr<RpcServerProcessor> proc_;
     std::shared_ptr<folly::Executor> threadPool_;
+    std::shared_ptr<StructuredLogger> structuredLogger_;
     std::weak_ptr<RpcServer> owningServer_;
 
     /**
@@ -373,6 +408,9 @@ class RpcServer : public std::enable_shared_from_this<RpcServer> {
 
   // Threadpool for processing requests off the main event base.
   std::shared_ptr<folly::Executor> threadPool_;
+
+  // Logger for logging anomalous things to Scuba
+  std::shared_ptr<StructuredLogger> structuredLogger_;
 
   // will be called when clients connect to the server socket.
   RpcAcceptCallback::UniquePtr acceptCb_;

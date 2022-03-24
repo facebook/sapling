@@ -165,6 +165,10 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
 
  private:
   std::unique_ptr<NfsDispatcher> dispatcher_;
+  // Logger that is used to observe NFS procedure calls in the EdenFS daemon.
+  // All events are published here when we are in stace mode. This is a local
+  // logger, the events are not logged anywhere outside of the machine this
+  // EdenFS instance runs on.
   const folly::Logger* straceLogger_;
   CaseSensitivity caseSensitive_;
   uint32_t iosize_;
@@ -1753,7 +1757,7 @@ struct LiveRequest {
   LiveRequest(
       std::shared_ptr<TraceBus<NfsTraceEvent>> traceBus,
       std::atomic<size_t>& traceDetailedArguments,
-      HandlerEntry& handlerEntry,
+      const HandlerEntry& handlerEntry,
       folly::io::Cursor& deser,
       uint32_t xid,
       uint32_t procNumber)
@@ -1812,7 +1816,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
     return folly::unit;
   }
 
-  auto handlerEntry = kNfs3dHandlers[procNumber];
+  auto& handlerEntry = kNfs3dHandlers[procNumber];
   FB_LOGF(
       *straceLogger_,
       DBG7,
@@ -1834,8 +1838,22 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
   // handler function and is deleted when context unique_ptr goes out of the
   // scope at the `ensure` lambda.
   auto& contextRef = *context;
-  return (this->*handlerEntry.handler)(
-             std::move(deser), std::move(ser), contextRef)
+  return makeImmediateFutureWith([this,
+                                  deser = std::move(deser),
+                                  ser = std::move(ser),
+                                  &contextRef = contextRef,
+                                  &handlerEntry = handlerEntry]() mutable {
+           return (this->*handlerEntry.handler)(
+               std::move(deser), std::move(ser), contextRef);
+         })
+      .thenTry([&contextRef = contextRef](folly::Try<folly::Unit>&& res) {
+        if (res.hasException()) {
+          if (auto* err = res.exception().get_exception<RpcParsingError>()) {
+            err->setProcedureContext(contextRef.getCauseDetail().value().str());
+          }
+        }
+        return std::move(res);
+      })
       .ensure([liveRequest = std::move(liveRequest),
                context = std::move(context)]() {});
 }
@@ -1855,6 +1873,7 @@ Nfsd3::Nfsd3(
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<FsEventLogger> fsEventLogger,
+    const std::shared_ptr<StructuredLogger>& structuredLogger,
     folly::Duration /*requestTimeout*/,
     std::shared_ptr<Notifier> /*notifier*/,
     CaseSensitivity caseSensitive,
@@ -1870,7 +1889,8 @@ Nfsd3::Nfsd3(
               traceDetailedArguments_,
               traceBus_),
           evb,
-          std::move(threadPool))),
+          std::move(threadPool),
+          structuredLogger)),
       processAccessLog_(std::move(processNameCache)),
       invalidationExecutor_{
           folly::SerialExecutor::create(folly::getGlobalCPUExecutor())},

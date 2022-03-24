@@ -269,5 +269,17 @@ struct EdenApiMiss {
   }
 };
 
+struct NfsParsingError {
+  std::string proc;
+  std::string reason;
+
+  static constexpr const char* type = "nfs_parsing_error";
+
+  void populate(DynamicEvent& event) const {
+    event.addString("interface", proc);
+    event.addString("reason", reason);
+  }
+};
+
 } // namespace eden
 } // namespace facebook

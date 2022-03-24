@@ -179,6 +179,28 @@ struct authsys_parms {
 };
 EDEN_XDR_SERDE_DECL(authsys_parms, stamp, machinename, uid, gid, gids);
 
+class RpcParsingError : public std::exception {
+ public:
+  explicit RpcParsingError(const std::string& rpcParseFailure)
+      : rpcParseFailure_(rpcParseFailure) {}
+
+  const char* what() const noexcept override {
+    return rpcParseFailure_.c_str();
+  }
+
+  const std::string& getProcedureContext() {
+    return procedureContext_;
+  }
+
+  void setProcedureContext(const std::string& context) {
+    procedureContext_ = context;
+  }
+
+ private:
+  std::string rpcParseFailure_;
+  std::string procedureContext_ = "<Unknown>";
+};
+
 } // namespace facebook::eden
 
 #endif

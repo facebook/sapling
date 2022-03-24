@@ -52,7 +52,7 @@ class ServerState {
       std::shared_ptr<IHiveLogger> hiveLogger,
       std::shared_ptr<ReloadableConfig> reloadableConfig,
       const EdenConfig& initialConfig,
-      std::shared_ptr<NfsServer> nfs,
+      folly::EventBase* mainEventBase,
       bool enableFaultInjection = false);
   ~ServerState();
 

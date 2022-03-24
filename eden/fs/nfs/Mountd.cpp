@@ -216,9 +216,14 @@ void MountdServerProcessor::unregisterMount(AbsolutePathPiece path) {
 
 Mountd::Mountd(
     folly::EventBase* evb,
-    std::shared_ptr<folly::Executor> threadPool)
+    std::shared_ptr<folly::Executor> threadPool,
+    const std::shared_ptr<StructuredLogger>& structuredLogger)
     : proc_(std::make_shared<MountdServerProcessor>()),
-      server_(RpcServer::create(proc_, evb, std::move(threadPool))) {}
+      server_(RpcServer::create(
+          proc_,
+          evb,
+          std::move(threadPool),
+          structuredLogger)) {}
 
 void Mountd::initialize(folly::SocketAddress addr, bool registerWithRpcbind) {
   server_->initialize(addr);

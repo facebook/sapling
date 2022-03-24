@@ -40,7 +40,8 @@ class NfsServer {
   NfsServer(
       folly::EventBase* evb,
       uint64_t numServicingThreads,
-      uint64_t maxInflightRequests);
+      uint64_t maxInflightRequests,
+      const std::shared_ptr<StructuredLogger>& structuredLogger);
 
   /**
    * Bind the NfsServer to the passed in socket.
@@ -74,6 +75,7 @@ class NfsServer {
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
       std::shared_ptr<FsEventLogger> fsEventLogger,
+      const std::shared_ptr<StructuredLogger>& structuredLogger,
       folly::Duration requestTimeout,
       std::shared_ptr<Notifier> notifier,
       CaseSensitivity caseSensitive,
