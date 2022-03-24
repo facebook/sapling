@@ -6,8 +6,8 @@
  */
 
 use cpython::*;
-use serde::de;
-use serde::de::Visitor;
+use ::serde::de;
+use ::serde::de::Visitor;
 
 use crate::PyErr as Error;
 use crate::PyNone;

@@ -10,8 +10,8 @@ use std::cell::RefCell;
 use std::fmt::Debug;
 
 use cpython::*;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
+use ::serde::de::DeserializeOwned;
+use ::serde::Serialize;
 
 use crate::convert::Serde;
 use crate::none::PyNone;
