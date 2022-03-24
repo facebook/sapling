@@ -256,8 +256,9 @@ impl Stream for RangeNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::fixtures::linear;
-    use crate::fixtures::merge_uneven;
+    use crate::fixtures::Linear;
+    use crate::fixtures::MergeUneven;
+    use crate::fixtures::TestRepoFixture;
     use blobrepo::BlobRepo;
     use context::CoreContext;
     use fbinit::FacebookInit;
@@ -283,7 +284,7 @@ mod test {
     #[fbinit::test]
     async fn linear_range(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(linear::getrepo(fb).await);
+        let repo = Arc::new(Linear::getrepo(fb).await);
 
         let nodestream = RangeNodeStream::new(
             ctx.clone(),
@@ -311,7 +312,7 @@ mod test {
     #[fbinit::test]
     async fn linear_direct_parent_range(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(linear::getrepo(fb).await);
+        let repo = Arc::new(Linear::getrepo(fb).await);
 
         let nodestream = RangeNodeStream::new(
             ctx.clone(),
@@ -336,7 +337,7 @@ mod test {
     #[fbinit::test]
     async fn linear_single_node_range(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(linear::getrepo(fb).await);
+        let repo = Arc::new(Linear::getrepo(fb).await);
 
         let nodestream = RangeNodeStream::new(
             ctx.clone(),
@@ -358,7 +359,7 @@ mod test {
     #[fbinit::test]
     async fn linear_empty_range(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(linear::getrepo(fb).await);
+        let repo = Arc::new(Linear::getrepo(fb).await);
 
         // These are swapped, so won't find anything
         let nodestream = RangeNodeStream::new(
@@ -375,7 +376,7 @@ mod test {
     #[fbinit::test]
     async fn merge_range_from_merge(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(merge_uneven::getrepo(fb).await);
+        let repo = Arc::new(MergeUneven::getrepo(fb).await);
 
         let nodestream = RangeNodeStream::new(
             ctx.clone(),
@@ -401,7 +402,7 @@ mod test {
     #[fbinit::test]
     async fn merge_range_everything(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(merge_uneven::getrepo(fb).await);
+        let repo = Arc::new(MergeUneven::getrepo(fb).await);
 
         let nodestream = RangeNodeStream::new(
             ctx.clone(),

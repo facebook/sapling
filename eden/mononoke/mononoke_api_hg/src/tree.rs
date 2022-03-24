@@ -130,7 +130,8 @@ mod tests {
     use blobstore::Loadable;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use fixtures::linear;
+    use fixtures::Linear;
+    use fixtures::TestRepoFixture;
     use mercurial_types::NULL_HASH;
     use mononoke_api::{
         repo::{Repo, RepoContext},
@@ -142,7 +143,7 @@ mod tests {
     #[fbinit::test]
     async fn test_hg_tree_context(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(Repo::new_test(ctx.clone(), linear::getrepo(fb).await).await?);
+        let repo = Arc::new(Repo::new_test(ctx.clone(), Linear::getrepo(fb).await).await?);
         let rctx = RepoContext::new(ctx.clone(), repo.clone()).await?;
 
         // Get the HgManifestId of the root tree manifest for a commit in this repo.

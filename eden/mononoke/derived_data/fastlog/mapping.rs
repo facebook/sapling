@@ -189,10 +189,11 @@ mod tests {
     use bookmarks::BookmarkName;
     use context::CoreContext;
     use fbinit::FacebookInit;
+    use fixtures::TestRepoFixture;
     use fixtures::{
         create_bonsai_changeset, create_bonsai_changeset_with_author,
-        create_bonsai_changeset_with_files, linear, merge_even, merge_uneven, store_files,
-        unshared_merge_even, unshared_merge_uneven,
+        create_bonsai_changeset_with_files, store_files, Linear, MergeEven, MergeUneven,
+        UnsharedMergeEven, UnsharedMergeUneven,
     };
     use futures::compat::Stream01CompatExt;
     use futures::{Stream, TryFutureExt};
@@ -216,7 +217,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_derive_single_empty_commit_no_parents(fb: FacebookInit) {
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let bcs = create_bonsai_changeset(vec![]);
         let bcs_id = bcs.get_changeset_id();
@@ -232,7 +233,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_derive_single_commit_no_parents(fb: FacebookInit) {
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         // This is the initial diff with no parents
@@ -267,7 +268,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_derive_linear(fb: FacebookInit) {
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let hg_cs_id = HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb").unwrap();
@@ -295,7 +296,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_derive_overflow(fb: FacebookInit) {
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let mut bonsais = vec![];
@@ -326,7 +327,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_random_repo(fb: FacebookInit) {
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
@@ -350,7 +351,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_derive_empty_commits(fb: FacebookInit) {
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let mut bonsais = vec![];
@@ -372,7 +373,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_find_intersection_of_diffs_unodes_linear(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         // This commit creates file "1" and "files"
@@ -414,7 +415,7 @@ mod tests {
             merge_files: BTreeMap<&str, Option<&str>>,
             expected: Vec<String>,
         ) -> Result<(), Error> {
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             let ctx = CoreContext::test_mock(fb);
             let manager = repo.repo_derived_data().manager();
 
@@ -544,7 +545,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
 
         {
-            let repo = merge_uneven::getrepo(fb).await;
+            let repo = MergeUneven::getrepo(fb).await;
             let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).try_collect().await?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
@@ -553,7 +554,7 @@ mod tests {
         }
 
         {
-            let repo = merge_even::getrepo(fb).await;
+            let repo = MergeEven::getrepo(fb).await;
             let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).try_collect().await?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
@@ -562,7 +563,7 @@ mod tests {
         }
 
         {
-            let repo = unshared_merge_even::getrepo(fb).await;
+            let repo = UnsharedMergeEven::getrepo(fb).await;
             let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).try_collect().await?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
@@ -571,7 +572,7 @@ mod tests {
         }
 
         {
-            let repo = unshared_merge_uneven::getrepo(fb).await;
+            let repo = UnsharedMergeUneven::getrepo(fb).await;
             let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).try_collect().await?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
@@ -584,7 +585,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_bfs_order(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         //            E

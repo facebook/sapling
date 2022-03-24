@@ -1405,7 +1405,8 @@ mod tests {
     use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData};
     use derived_data::BonsaiDerived;
     use derived_data_manager::BonsaiDerivable;
-    use fixtures::linear;
+    use fixtures::Linear;
+    use fixtures::TestRepoFixture;
     use mercurial_types::HgChangesetId;
     use std::{
         str::FromStr,
@@ -1417,7 +1418,7 @@ mod tests {
     #[fbinit::test]
     async fn test_tail_one_iteration(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
 
         let mut bookmarks_subscription = repo
             .bookmarks()
@@ -1437,7 +1438,7 @@ mod tests {
     #[fbinit::test]
     async fn test_single(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let mut repo = linear::get_inner_repo(fb).await;
+        let mut repo = Linear::get_inner_repo(fb).await;
 
         let mut counting_blobstore = None;
         repo.blob_repo = repo
@@ -1473,7 +1474,7 @@ mod tests {
     #[fbinit::test]
     async fn test_backfill_data_latest(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
 
         let hg_cs_id = HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb")?;
         let bcs_id = repo
@@ -1513,7 +1514,7 @@ mod tests {
     #[fbinit::test]
     async fn test_backfill_data_batch(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
 
         let mut batch = vec![];
         let hg_cs_ids = vec![
@@ -1558,7 +1559,7 @@ mod tests {
         // all other blobstore writes were successful i.e. mapping entry shouldn't exist
         // if any of the corresponding blobs weren't successfully saved
         let ctx = CoreContext::test_mock(fb);
-        let origrepo = linear::getrepo(fb).await;
+        let origrepo = Linear::getrepo(fb).await;
 
         let repo = origrepo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
             Arc::new(FailingBlobstore::new("manifest".to_string(), blobstore))

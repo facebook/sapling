@@ -1001,7 +1001,8 @@ mod tests {
     use delayblob::DelayedBlobstore;
     use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
-    use fixtures::linear;
+    use fixtures::Linear;
+    use fixtures::TestRepoFixture;
     use maplit::hashmap;
     use memblob::Memblob;
     use mononoke_api_types::InnerRepo;
@@ -1013,7 +1014,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::get_inner_repo(fb).await;
+        let repo = Linear::get_inner_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let sub = repo
@@ -1053,7 +1054,7 @@ mod tests {
             get_distr,
         ));
         let repo: InnerRepo = TestRepoFactory::new()?.with_blobstore(blobstore).build()?;
-        linear::initrepo(fb, &repo.blob_repo).await;
+        Linear::initrepo(fb, &repo.blob_repo).await;
         let ctx = CoreContext::test_mock(fb);
 
         let mut warmers: Vec<Warmer> = Vec::new();
@@ -1112,7 +1113,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_a_lot_of_moves(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::get_inner_repo(fb).await;
+        let repo = Linear::get_inner_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let mut warmers: Vec<Warmer> = Vec::new();
@@ -1152,7 +1153,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_derived_right_after_threshold(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::get_inner_repo(fb).await;
+        let repo = Linear::get_inner_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let mut warmers: Vec<Warmer> = Vec::new();
@@ -1199,7 +1200,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_spawn_bookmarks_coordinator_simple(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::get_inner_repo(fb).await;
+        let repo = Linear::get_inner_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let bookmarks = repo
@@ -1254,7 +1255,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_single_bookmarks_coordinator_many_updates(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::get_inner_repo(fb).await;
+        let repo = Linear::get_inner_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let bookmarks = repo
@@ -1347,7 +1348,7 @@ mod tests {
     async fn test_spawn_bookmarks_coordinator_failing_warmer(
         fb: FacebookInit,
     ) -> Result<(), Error> {
-        let repo = linear::get_inner_repo(fb).await;
+        let repo = Linear::get_inner_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let bookmarks = repo
@@ -1469,7 +1470,7 @@ mod tests {
     async fn test_spawn_bookmarks_coordinator_check_single_updater(
         fb: FacebookInit,
     ) -> Result<(), Error> {
-        let repo = linear::get_inner_repo(fb).await;
+        let repo = Linear::get_inner_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         RootUnodeManifestId::derive(
@@ -1571,7 +1572,7 @@ mod tests {
     async fn test_spawn_bookmarks_coordinator_with_publishing_bookmarks(
         fb: FacebookInit,
     ) -> Result<(), Error> {
-        let repo = linear::get_inner_repo(fb).await;
+        let repo = Linear::get_inner_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let bookmarks = repo
@@ -1649,7 +1650,7 @@ mod tests {
     async fn test_single_bookmarks_no_history(fb: FacebookInit) -> Result<(), Error> {
         let factory = TestRepoFactory::new()?;
         let repo: InnerRepo = factory.build()?;
-        linear::initrepo(fb, &repo.blob_repo).await;
+        Linear::initrepo(fb, &repo.blob_repo).await;
         let ctx = CoreContext::test_mock(fb);
 
         let bookmarks = Arc::new(RwLock::new(HashMap::new()));

@@ -273,7 +273,8 @@ mod tests {
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
     use filenodes::{FilenodeRangeResult, Filenodes};
-    use fixtures::linear;
+    use fixtures::Linear;
+    use fixtures::TestRepoFixture;
     use futures::compat::Stream01CompatExt;
     use manifest::ManifestOps;
     use maplit::hashmap;
@@ -541,8 +542,8 @@ mod tests {
     #[fbinit::test]
     async fn verify_batch_and_sequential_derive(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo1 = linear::getrepo(fb).await;
-        let repo2 = linear::getrepo(fb).await;
+        let repo1 = Linear::getrepo(fb).await;
+        let repo2 = Linear::getrepo(fb).await;
         let master_cs_id = resolve_cs_id(&ctx, &repo1, "master").await?;
         let mut cs_ids =
             AncestorsNodeStream::new(ctx.clone(), &repo1.get_changeset_fetcher(), master_cs_id)
@@ -599,7 +600,7 @@ mod tests {
                 }
             })
             .build()?;
-        linear::initrepo(fb, &repo).await;
+        Linear::initrepo(fb, &repo).await;
         let commit8 =
             resolve_cs_id(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await?;
         let commit8 = repo.derive_hg_changeset(&ctx, commit8).await?;

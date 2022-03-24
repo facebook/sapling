@@ -173,9 +173,10 @@ mod test {
     use derived_data::BonsaiDerived;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
+    use fixtures::TestRepoFixture;
     use fixtures::{
-        branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
-        merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
+        BranchEven, BranchUneven, BranchWide, Linear, ManyDiamonds, ManyFilesDirs, MergeEven,
+        MergeUneven, UnsharedMergeEven, UnsharedMergeUneven,
     };
     use futures::compat::Stream01CompatExt;
     use futures::future::Future;
@@ -267,15 +268,15 @@ mod test {
     #[fbinit::test]
     fn test_derive_data(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
-        verify_repo(fb, linear::getrepo(fb), &runtime);
-        verify_repo(fb, branch_even::getrepo(fb), &runtime);
-        verify_repo(fb, branch_uneven::getrepo(fb), &runtime);
-        verify_repo(fb, branch_wide::getrepo(fb), &runtime);
-        verify_repo(fb, many_diamonds::getrepo(fb), &runtime);
-        verify_repo(fb, many_files_dirs::getrepo(fb), &runtime);
-        verify_repo(fb, merge_even::getrepo(fb), &runtime);
-        verify_repo(fb, merge_uneven::getrepo(fb), &runtime);
-        verify_repo(fb, unshared_merge_even::getrepo(fb), &runtime);
-        verify_repo(fb, unshared_merge_uneven::getrepo(fb), &runtime);
+        verify_repo(fb, Linear::getrepo(fb), &runtime);
+        verify_repo(fb, BranchEven::getrepo(fb), &runtime);
+        verify_repo(fb, BranchUneven::getrepo(fb), &runtime);
+        verify_repo(fb, BranchWide::getrepo(fb), &runtime);
+        verify_repo(fb, ManyDiamonds::getrepo(fb), &runtime);
+        verify_repo(fb, ManyFilesDirs::getrepo(fb), &runtime);
+        verify_repo(fb, MergeEven::getrepo(fb), &runtime);
+        verify_repo(fb, MergeUneven::getrepo(fb), &runtime);
+        verify_repo(fb, UnsharedMergeEven::getrepo(fb), &runtime);
+        verify_repo(fb, UnsharedMergeUneven::getrepo(fb), &runtime);
     }
 }

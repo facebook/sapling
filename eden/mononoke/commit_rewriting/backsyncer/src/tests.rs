@@ -21,7 +21,8 @@ use cross_repo_sync::{
     CommitSyncRepos, CHANGE_XREPO_MAPPING_EXTRA,
 };
 use fbinit::FacebookInit;
-use fixtures::linear;
+use fixtures::Linear;
+use fixtures::TestRepoFixture;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     FutureExt, TryFutureExt, TryStreamExt,
@@ -1226,7 +1227,7 @@ async fn init_repos(
     let mut factory = TestRepoFactory::new()?;
     let source_repo_id = RepositoryId::new(1);
     let source_repo: BlobRepo = factory.with_id(source_repo_id).build()?;
-    linear::initrepo(fb, &source_repo).await;
+    Linear::initrepo(fb, &source_repo).await;
 
     let target_repo_id = RepositoryId::new(2);
     let target_repo: BlobRepo = factory.with_id(target_repo_id).build()?;

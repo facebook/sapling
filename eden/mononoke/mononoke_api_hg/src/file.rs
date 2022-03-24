@@ -200,7 +200,8 @@ mod tests {
 
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use fixtures::many_files_dirs;
+    use fixtures::ManyFilesDirs;
+    use fixtures::TestRepoFixture;
     use futures::TryStreamExt;
     use mercurial_types::{HgChangesetId, NULL_HASH};
     use mononoke_api::repo::{Repo, RepoContext};
@@ -210,9 +211,9 @@ mod tests {
     #[fbinit::test]
     async fn test_hg_file_context(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(Repo::new_test(ctx.clone(), many_files_dirs::getrepo(fb).await).await?);
+        let repo = Arc::new(Repo::new_test(ctx.clone(), ManyFilesDirs::getrepo(fb).await).await?);
 
-        // The `many_files_dirs` test repo contains the following files (at tip):
+        // The `ManyFilesDirs` test repo contains the following files (at tip):
         //   $ hg manifest --debug
         //   b8e02f6433738021a065f94175c7cd23db5f05be 644   1
         //   5d9299349fc01ddd25d0070d149b124d8f10411e 644   2
@@ -249,9 +250,9 @@ mod tests {
     #[fbinit::test]
     async fn test_hg_file_history(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(Repo::new_test(ctx.clone(), many_files_dirs::getrepo(fb).await).await?);
+        let repo = Arc::new(Repo::new_test(ctx.clone(), ManyFilesDirs::getrepo(fb).await).await?);
 
-        // The `many_files_dirs` test repo contains the following files (at tip):
+        // The `ManyFilesDirs` test repo contains the following files (at tip):
         //   $ hg manifest --debug
         //   b8e02f6433738021a065f94175c7cd23db5f05be 644   1
         //   5d9299349fc01ddd25d0070d149b124d8f10411e 644   2

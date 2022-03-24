@@ -461,7 +461,8 @@ mod test {
     use crate::mapping::get_file_changes;
     use derived_data_test_utils::{bonsai_changeset_from_hg, iterate_all_manifest_entries};
     use fbinit::FacebookInit;
-    use fixtures::{linear, many_files_dirs};
+    use fixtures::TestRepoFixture;
+    use fixtures::{Linear, ManyFilesDirs};
     use repo_derived_data::RepoDerivedDataRef;
     use std::str::FromStr;
     use tokio::runtime::Runtime;
@@ -469,7 +470,7 @@ mod test {
     #[fbinit::test]
     fn flat_linear_test(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
-        let repo = runtime.block_on(linear::getrepo(fb));
+        let repo = runtime.block_on(Linear::getrepo(fb));
         let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
 
         let ctx = CoreContext::test_mock(fb);
@@ -584,7 +585,7 @@ mod test {
     #[fbinit::test]
     fn nested_directories_test(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
-        let repo = runtime.block_on(many_files_dirs::getrepo(fb));
+        let repo = runtime.block_on(ManyFilesDirs::getrepo(fb));
         let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
 
         let ctx = CoreContext::test_mock(fb);

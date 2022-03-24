@@ -15,7 +15,8 @@ use bytes::Bytes;
 use cacheblob::InProcessLease;
 use chrono::{FixedOffset, TimeZone};
 use fbinit::FacebookInit;
-use fixtures::{branch_uneven, linear, many_files_dirs};
+use fixtures::TestRepoFixture;
+use fixtures::{BranchUneven, Linear, ManyFilesDirs};
 use futures::stream::TryStreamExt;
 use maplit::hashmap;
 
@@ -42,7 +43,7 @@ async fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
-        vec![("test".to_string(), linear::getrepo(fb).await)],
+        vec![("test".to_string(), Linear::getrepo(fb).await)],
     )
     .await?;
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
@@ -66,7 +67,7 @@ async fn commit_info_by_hg_hash(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
-        vec![("test".to_string(), linear::getrepo(fb).await)],
+        vec![("test".to_string(), Linear::getrepo(fb).await)],
     )
     .await?;
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
@@ -92,7 +93,7 @@ async fn commit_info_by_bookmark(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
-        vec![("test".to_string(), linear::getrepo(fb).await)],
+        vec![("test".to_string(), Linear::getrepo(fb).await)],
     )
     .await?;
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
@@ -120,7 +121,7 @@ async fn commit_hg_changeset_ids(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
-        vec![("test".to_string(), linear::getrepo(fb).await)],
+        vec![("test".to_string(), Linear::getrepo(fb).await)],
     )
     .await?;
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
@@ -153,7 +154,7 @@ async fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
-        vec![("test".to_string(), branch_uneven::getrepo(fb).await)],
+        vec![("test".to_string(), BranchUneven::getrepo(fb).await)],
     )
     .await?;
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
@@ -209,7 +210,7 @@ async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
-        vec![("test".to_string(), many_files_dirs::getrepo(fb).await)],
+        vec![("test".to_string(), ManyFilesDirs::getrepo(fb).await)],
     )
     .await?;
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
@@ -427,7 +428,7 @@ async fn commit_path_exists_and_type(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
-        vec![("test".to_string(), many_files_dirs::getrepo(fb).await)],
+        vec![("test".to_string(), ManyFilesDirs::getrepo(fb).await)],
     )
     .await?;
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
@@ -462,7 +463,7 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
-        vec![("test".to_string(), many_files_dirs::getrepo(fb).await)],
+        vec![("test".to_string(), ManyFilesDirs::getrepo(fb).await)],
     )
     .await?;
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
@@ -585,7 +586,7 @@ async fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
-        vec![("test".to_string(), many_files_dirs::getrepo(fb).await)],
+        vec![("test".to_string(), ManyFilesDirs::getrepo(fb).await)],
     )
     .await?;
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
@@ -652,7 +653,7 @@ async fn file_contents(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
-        vec![("test".to_string(), many_files_dirs::getrepo(fb).await)],
+        vec![("test".to_string(), ManyFilesDirs::getrepo(fb).await)],
     )
     .await?;
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
@@ -971,7 +972,7 @@ async fn resolve_changeset_id_prefix(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
-        vec![("test".to_string(), linear::getrepo(fb).await)],
+        vec![("test".to_string(), Linear::getrepo(fb).await)],
     )
     .await?;
 

@@ -243,9 +243,10 @@ mod test {
     use cloned::cloned;
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
+    use fixtures::TestRepoFixture;
     use fixtures::{
-        branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
-        merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
+        BranchEven, BranchUneven, BranchWide, Linear, ManyDiamonds, ManyFilesDirs, MergeEven,
+        MergeUneven, UnsharedMergeEven, UnsharedMergeUneven,
     };
     use futures::{compat::Stream01CompatExt, Future, Stream, TryFutureExt, TryStreamExt};
     use repo_derived_data::RepoDerivedDataRef;
@@ -315,16 +316,16 @@ mod test {
 
     #[fbinit::test]
     async fn test_batch_derive(fb: FacebookInit) -> Result<(), Error> {
-        verify_repo(fb, || linear::getrepo(fb)).await?;
-        verify_repo(fb, || branch_even::getrepo(fb)).await?;
-        verify_repo(fb, || branch_uneven::getrepo(fb)).await?;
-        verify_repo(fb, || branch_wide::getrepo(fb)).await?;
-        verify_repo(fb, || many_diamonds::getrepo(fb)).await?;
-        verify_repo(fb, || many_files_dirs::getrepo(fb)).await?;
-        verify_repo(fb, || merge_even::getrepo(fb)).await?;
-        verify_repo(fb, || merge_uneven::getrepo(fb)).await?;
-        verify_repo(fb, || unshared_merge_even::getrepo(fb)).await?;
-        verify_repo(fb, || unshared_merge_uneven::getrepo(fb)).await?;
+        verify_repo(fb, || Linear::getrepo(fb)).await?;
+        verify_repo(fb, || BranchEven::getrepo(fb)).await?;
+        verify_repo(fb, || BranchUneven::getrepo(fb)).await?;
+        verify_repo(fb, || BranchWide::getrepo(fb)).await?;
+        verify_repo(fb, || ManyDiamonds::getrepo(fb)).await?;
+        verify_repo(fb, || ManyFilesDirs::getrepo(fb)).await?;
+        verify_repo(fb, || MergeEven::getrepo(fb)).await?;
+        verify_repo(fb, || MergeUneven::getrepo(fb)).await?;
+        verify_repo(fb, || UnsharedMergeEven::getrepo(fb)).await?;
+        verify_repo(fb, || UnsharedMergeUneven::getrepo(fb)).await?;
         // Create a repo with a few empty commits in a row
         verify_repo(fb, || async {
             let repo: BlobRepo = test_repo_factory::build_empty().unwrap();

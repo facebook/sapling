@@ -20,9 +20,10 @@ use changesets::ChangesetsRef;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use fixtures::TestRepoFixture;
 use fixtures::{
-    branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs, merge_even,
-    merge_uneven, unshared_merge_even, unshared_merge_uneven,
+    BranchEven, BranchUneven, BranchWide, Linear, ManyDiamonds, ManyFilesDirs, MergeEven,
+    MergeUneven, UnsharedMergeEven, UnsharedMergeUneven,
 };
 use futures::future::BoxFuture;
 use futures_stats::{TimedFutureExt, TimedTryFutureExt};
@@ -69,43 +70,43 @@ async fn test_derive_fixtures(fb: FacebookInit) -> Result<()> {
     let mut factory = make_test_repo_factory();
 
     let repo = factory.with_id(RepositoryId::new(1)).build()?;
-    branch_even::initrepo(fb, &repo).await;
+    BranchEven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
     let repo = factory.with_id(RepositoryId::new(2)).build()?;
-    branch_uneven::initrepo(fb, &repo).await;
+    BranchUneven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
     let repo = factory.with_id(RepositoryId::new(3)).build()?;
-    branch_wide::initrepo(fb, &repo).await;
+    BranchWide::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
     let repo = factory.with_id(RepositoryId::new(4)).build()?;
-    linear::initrepo(fb, &repo).await;
+    Linear::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
     let repo = factory.with_id(RepositoryId::new(5)).build()?;
-    many_files_dirs::initrepo(fb, &repo).await;
+    ManyFilesDirs::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
     let repo = factory.with_id(RepositoryId::new(6)).build()?;
-    merge_even::initrepo(fb, &repo).await;
+    MergeEven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
     let repo = factory.with_id(RepositoryId::new(7)).build()?;
-    merge_uneven::initrepo(fb, &repo).await;
+    MergeUneven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
     let repo = factory.with_id(RepositoryId::new(8)).build()?;
-    unshared_merge_even::initrepo(fb, &repo).await;
+    UnsharedMergeEven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
     let repo = factory.with_id(RepositoryId::new(9)).build()?;
-    unshared_merge_uneven::initrepo(fb, &repo).await;
+    UnsharedMergeUneven::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
     let repo = factory.with_id(RepositoryId::new(10)).build()?;
-    many_diamonds::initrepo(fb, &repo).await;
+    ManyDiamonds::initrepo(fb, &repo).await;
     derive_for_master(&ctx, &repo).await?;
 
     Ok(())
@@ -117,7 +118,7 @@ async fn test_derive_fixtures(fb: FacebookInit) -> Result<()> {
 async fn test_gapped_derivation(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo = make_test_repo_factory().build()?;
-    linear::initrepo(fb, &repo).await;
+    Linear::initrepo(fb, &repo).await;
 
     let master = repo
         .bookmarks()
@@ -174,7 +175,7 @@ async fn test_gapped_derivation(fb: FacebookInit) -> Result<()> {
 async fn test_leases(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo = make_test_repo_factory().build()?;
-    linear::initrepo(fb, &repo).await;
+    Linear::initrepo(fb, &repo).await;
 
     let master = repo
         .bookmarks()
@@ -275,7 +276,7 @@ async fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
     let repo = make_test_repo_factory()
         .with_derived_data_lease(|| Arc::new(FailingLease))
         .build()?;
-    linear::initrepo(fb, &repo).await;
+    Linear::initrepo(fb, &repo).await;
 
     let master = repo
         .bookmarks()

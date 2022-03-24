@@ -189,6 +189,7 @@ mod test {
     use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
     use filestore::Alias;
+    use fixtures::TestRepoFixture;
     use futures_util::stream::TryStreamExt;
     use git2::{Oid, Repository};
     use manifest::ManifestOps;
@@ -247,9 +248,9 @@ mod test {
     }
 
     macro_rules! impl_test {
-        ($fixture:ident) => {
+        ($test_name:ident, $fixture:ident) => {
             #[fbinit::test]
-            fn $fixture(fb: FacebookInit) -> Result<(), Error> {
+            fn $test_name(fb: FacebookInit) -> Result<(), Error> {
                 let runtime = tokio::runtime::Runtime::new()?;
                 runtime.block_on(async move {
                     let repo = fixtures::$fixture::getrepo(fb).await;
@@ -259,14 +260,14 @@ mod test {
         };
     }
 
-    impl_test!(linear);
-    impl_test!(branch_even);
-    impl_test!(branch_uneven);
-    impl_test!(branch_wide);
-    impl_test!(merge_even);
-    impl_test!(many_files_dirs);
-    impl_test!(merge_uneven);
-    impl_test!(unshared_merge_even);
-    impl_test!(unshared_merge_uneven);
-    impl_test!(many_diamonds);
+    impl_test!(linear, Linear);
+    impl_test!(branch_even, BranchEven);
+    impl_test!(branch_uneven, BranchUneven);
+    impl_test!(branch_wide, BranchWide);
+    impl_test!(merge_even, MergeEven);
+    impl_test!(many_files_dirs, ManyFilesDirs);
+    impl_test!(merge_uneven, MergeUneven);
+    impl_test!(unshared_merge_even, UnsharedMergeEven);
+    impl_test!(unshared_merge_uneven, UnsharedMergeUneven);
+    impl_test!(many_diamonds, ManyDiamonds);
 }

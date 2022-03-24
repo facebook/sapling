@@ -150,7 +150,8 @@ impl Stream for UnionNodeStream {
 mod test {
     use super::*;
     use crate::errors::ErrorKind;
-    use crate::fixtures::{branch_even, branch_uneven, branch_wide, linear};
+    use crate::fixtures::TestRepoFixture;
+    use crate::fixtures::{BranchEven, BranchUneven, BranchWide, Linear};
     use crate::setcommon::{NotReadyEmptyStream, RepoErrorStream};
     use crate::tests::get_single_bonsai_streams;
     use crate::tests::TestChangesetFetcher;
@@ -168,7 +169,7 @@ mod test {
     #[fbinit::test]
     async fn union_identical_node(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -189,7 +190,7 @@ mod test {
     #[fbinit::test]
     async fn union_error_node(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -222,7 +223,7 @@ mod test {
     #[fbinit::test]
     async fn union_three_nodes(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -253,7 +254,7 @@ mod test {
     #[fbinit::test]
     async fn union_nothing(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -267,7 +268,7 @@ mod test {
     #[fbinit::test]
     async fn union_nesting(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -305,7 +306,7 @@ mod test {
     async fn slow_ready_union_nothing(fb: FacebookInit) {
         // Tests that we handle an input staying at NotReady for a while without panicking
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher = Arc::new(TestChangesetFetcher::new(repo));
 
         let inputs: Vec<BonsaiNodeStream> = vec![NotReadyEmptyStream::new(10).boxify()];
@@ -318,7 +319,7 @@ mod test {
     #[fbinit::test]
     async fn union_branch_even_repo(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = branch_even::getrepo(fb).await;
+        let repo = BranchEven::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -343,7 +344,7 @@ mod test {
     #[fbinit::test]
     async fn union_branch_uneven_repo(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = branch_uneven::getrepo(fb).await;
+        let repo = BranchUneven::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -376,7 +377,7 @@ mod test {
     #[fbinit::test]
     async fn union_branch_wide_repo(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = branch_wide::getrepo(fb).await;
+        let repo = BranchWide::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);

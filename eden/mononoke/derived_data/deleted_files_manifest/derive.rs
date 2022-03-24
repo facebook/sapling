@@ -558,7 +558,8 @@ mod tests {
     use bounded_traversal::bounded_traversal_stream;
     use derived_data_test_utils::bonsai_changeset_from_hg;
     use fbinit::FacebookInit;
-    use fixtures::{many_files_dirs, store_files};
+    use fixtures::TestRepoFixture;
+    use fixtures::{store_files, ManyFilesDirs};
     use futures::{pin_mut, stream::iter, Stream, TryStreamExt};
     use maplit::btreemap;
     use mononoke_types::{
@@ -738,7 +739,7 @@ mod tests {
 
     #[fbinit::test]
     async fn many_file_dirs_test(fb: FacebookInit) {
-        let repo = many_files_dirs::getrepo(fb).await;
+        let repo = ManyFilesDirs::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let mf_id_1 = {

@@ -111,7 +111,8 @@ mod test {
     use blobstore::Loadable;
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
-    use fixtures::linear;
+    use fixtures::Linear;
+    use fixtures::TestRepoFixture;
     use futures::compat::Stream01CompatExt;
     use futures::TryStreamExt;
     use mercurial_types::HgChangesetId;
@@ -124,7 +125,7 @@ mod test {
 
     #[fbinit::test]
     async fn derive_info_test(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let manager = repo.repo_derived_data().manager();
 
@@ -162,7 +163,7 @@ mod test {
     #[fbinit::test]
     async fn batch_derive(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
         let manager = repo.repo_derived_data().manager();
 

@@ -13,7 +13,8 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use fbinit::FacebookInit;
-use fixtures::linear;
+use fixtures::Linear;
+use fixtures::TestRepoFixture;
 use manifest::ManifestOps;
 use mercurial_types::HgChangesetId;
 use mononoke_types::MPath;
@@ -23,7 +24,7 @@ use tests_utils::resolve_cs_id;
 #[fbinit::test]
 async fn test_linear_get_file_history(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo = linear::getrepo(fb).await;
+    let repo = Linear::getrepo(fb).await;
 
     let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
     FilenodesOnlyPublic::derive(&ctx, &repo, master_cs_id).await?;

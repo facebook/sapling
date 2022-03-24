@@ -12,14 +12,15 @@ mod test {
     use super::*;
     use crate::ancestors::AncestorsNodeStream;
     use crate::ancestorscombinators::DifferenceOfUnionsOfAncestorsNodeStream;
-    use crate::fixtures::branch_even;
-    use crate::fixtures::branch_uneven;
-    use crate::fixtures::branch_wide;
-    use crate::fixtures::linear;
-    use crate::fixtures::merge_even;
-    use crate::fixtures::merge_uneven;
-    use crate::fixtures::unshared_merge_even;
-    use crate::fixtures::unshared_merge_uneven;
+    use crate::fixtures::BranchEven;
+    use crate::fixtures::BranchUneven;
+    use crate::fixtures::BranchWide;
+    use crate::fixtures::Linear;
+    use crate::fixtures::MergeEven;
+    use crate::fixtures::MergeUneven;
+    use crate::fixtures::TestRepoFixture;
+    use crate::fixtures::UnsharedMergeEven;
+    use crate::fixtures::UnsharedMergeUneven;
     use crate::intersectnodestream::IntersectNodeStream;
     use crate::setdifferencenodestream::SetDifferenceNodeStream;
     use crate::unionnodestream::UnionNodeStream;
@@ -330,14 +331,14 @@ mod test {
         };
     }
 
-    quickcheck_setops!(setops_branch_even, branch_even);
-    quickcheck_setops!(setops_branch_uneven, branch_uneven);
-    quickcheck_setops!(setops_branch_wide, branch_wide);
-    quickcheck_setops!(setops_linear, linear);
-    quickcheck_setops!(setops_merge_even, merge_even);
-    quickcheck_setops!(setops_merge_uneven, merge_uneven);
-    quickcheck_setops!(setops_unshared_merge_even, unshared_merge_even);
-    quickcheck_setops!(setops_unshared_merge_uneven, unshared_merge_uneven);
+    quickcheck_setops!(setops_branch_even, BranchEven);
+    quickcheck_setops!(setops_branch_uneven, BranchUneven);
+    quickcheck_setops!(setops_branch_wide, BranchWide);
+    quickcheck_setops!(setops_linear, Linear);
+    quickcheck_setops!(setops_merge_even, MergeEven);
+    quickcheck_setops!(setops_merge_uneven, MergeUneven);
+    quickcheck_setops!(setops_unshared_merge_even, UnsharedMergeEven);
+    quickcheck_setops!(setops_unshared_merge_uneven, UnsharedMergeUneven);
 
     // Given a list of hashes, generates all possible combinations where each hash can be included,
     // excluded or discarded. So for [h1] outputs are:
@@ -478,14 +479,14 @@ mod test {
             ok(Arc::new(SkiplistIndex::new())).boxify()
         }
 
-        ancestors_check!(ancestors_check_branch_even, branch_even);
-        ancestors_check!(ancestors_check_branch_uneven, branch_uneven);
-        ancestors_check!(ancestors_check_branch_wide, branch_wide);
-        ancestors_check!(ancestors_check_linear, linear);
-        ancestors_check!(ancestors_check_merge_even, merge_even);
-        ancestors_check!(ancestors_check_merge_uneven, merge_uneven);
-        ancestors_check!(ancestors_check_unshared_merge_even, unshared_merge_even);
-        ancestors_check!(ancestors_check_unshared_merge_uneven, unshared_merge_uneven);
+        ancestors_check!(ancestors_check_branch_even, BranchEven);
+        ancestors_check!(ancestors_check_branch_uneven, BranchUneven);
+        ancestors_check!(ancestors_check_branch_wide, BranchWide);
+        ancestors_check!(ancestors_check_linear, Linear);
+        ancestors_check!(ancestors_check_merge_even, MergeEven);
+        ancestors_check!(ancestors_check_merge_uneven, MergeUneven);
+        ancestors_check!(ancestors_check_unshared_merge_even, UnsharedMergeEven);
+        ancestors_check!(ancestors_check_unshared_merge_uneven, UnsharedMergeUneven);
     }
 
     mod full_skiplist_tests {
@@ -525,13 +526,13 @@ mod test {
             .boxify()
         }
 
-        ancestors_check!(ancestors_check_branch_even, branch_even);
-        ancestors_check!(ancestors_check_branch_uneven, branch_uneven);
-        ancestors_check!(ancestors_check_branch_wide, branch_wide);
-        ancestors_check!(ancestors_check_linear, linear);
-        ancestors_check!(ancestors_check_merge_even, merge_even);
-        ancestors_check!(ancestors_check_merge_uneven, merge_uneven);
-        ancestors_check!(ancestors_check_unshared_merge_even, unshared_merge_even);
-        ancestors_check!(ancestors_check_unshared_merge_uneven, unshared_merge_uneven);
+        ancestors_check!(ancestors_check_branch_even, BranchEven);
+        ancestors_check!(ancestors_check_branch_uneven, BranchUneven);
+        ancestors_check!(ancestors_check_branch_wide, BranchWide);
+        ancestors_check!(ancestors_check_linear, Linear);
+        ancestors_check!(ancestors_check_merge_even, MergeEven);
+        ancestors_check!(ancestors_check_merge_uneven, MergeUneven);
+        ancestors_check!(ancestors_check_unshared_merge_even, UnsharedMergeEven);
+        ancestors_check!(ancestors_check_unshared_merge_uneven, UnsharedMergeUneven);
     }
 }

@@ -14,6 +14,7 @@ use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
 use fbinit::FacebookInit;
+use fixtures::TestRepoFixture;
 use futures::stream::{futures_unordered, TryStreamExt};
 use futures::{future, TryFutureExt};
 use hooks::{
@@ -1122,7 +1123,7 @@ async fn test_cs_hooks_with_blob_store(fb: FacebookInit) {
         bookmarks,
         regexes.clone(),
         expected,
-        ContentFetcherType::Blob(fixtures::many_files_dirs::getrepo(ctx.fb).await),
+        ContentFetcherType::Blob(fixtures::ManyFilesDirs::getrepo(ctx.fb).await),
     )
     .await;
 }
@@ -1409,7 +1410,7 @@ async fn hook_manager_blobrepo(fb: FacebookInit, repo: BlobRepo) -> HookManager 
 }
 
 async fn hook_manager_many_files_dirs_blobrepo(fb: FacebookInit) -> HookManager {
-    hook_manager_blobrepo(fb, fixtures::many_files_dirs::getrepo(fb).await).await
+    hook_manager_blobrepo(fb, fixtures::ManyFilesDirs::getrepo(fb).await).await
 }
 
 fn to_mpath(string: &str) -> MPath {

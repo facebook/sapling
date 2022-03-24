@@ -552,7 +552,8 @@ mod tests {
     use super::*;
     use borrowed::borrowed;
     use bytes::Bytes;
-    use fixtures::linear;
+    use fixtures::Linear;
+    use fixtures::TestRepoFixture;
     use futures::{future, stream};
     use maplit::btreemap;
     use std::str::FromStr;
@@ -612,7 +613,7 @@ mod tests {
     fn linear_test_get_statistics_from_changeset(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         runtime.block_on(async move {
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
 
             let ctx = CoreContext::test_mock(fb);
             let blobstore = repo.get_blobstore();
@@ -662,7 +663,7 @@ mod tests {
     fn linear_test_get_statistics_from_entry_tree(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         runtime.block_on(async move {
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
 
             let ctx = CoreContext::test_mock(fb);
             let blobstore = repo.get_blobstore();
@@ -727,7 +728,7 @@ mod tests {
     fn linear_test_update_statistics(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         runtime.block_on(async move {
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
 
             let ctx = CoreContext::test_mock(fb);
             let blobstore = repo.get_blobstore();

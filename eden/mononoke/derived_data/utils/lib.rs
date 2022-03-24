@@ -939,7 +939,8 @@ mod tests {
     use bookmarks::BookmarkName;
     use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
-    use fixtures::merge_even;
+    use fixtures::MergeEven;
+    use fixtures::TestRepoFixture;
     use maplit::{btreemap, hashset};
     use metaconfig_types::UnodeVersion;
     use std::{
@@ -971,7 +972,7 @@ mod tests {
     #[fbinit::test]
     async fn test_build_derive_graph(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = merge_even::getrepo(fb).await;
+        let repo = MergeEven::getrepo(fb).await;
         let thin_out = ThinOut::new_keep_all();
         let master = repo
             .get_bonsai_bookmark(ctx.clone(), &BookmarkName::new("master").unwrap())

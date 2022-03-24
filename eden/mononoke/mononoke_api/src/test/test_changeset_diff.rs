@@ -11,7 +11,8 @@ use std::str::FromStr;
 use anyhow::{anyhow, Context, Error};
 use blobrepo::BlobRepo;
 use fbinit::FacebookInit;
-use fixtures::many_files_dirs;
+use fixtures::ManyFilesDirs;
+use fixtures::TestRepoFixture;
 use maplit::btreeset;
 use pretty_assertions::assert_eq;
 
@@ -190,7 +191,7 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
-        vec![("test".to_string(), many_files_dirs::getrepo(fb).await)],
+        vec![("test".to_string(), ManyFilesDirs::getrepo(fb).await)],
     )
     .await?;
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");

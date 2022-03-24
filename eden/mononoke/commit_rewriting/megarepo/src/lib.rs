@@ -223,7 +223,8 @@ mod test {
     use anyhow::Result;
     use cloned::cloned;
     use fbinit::FacebookInit;
-    use fixtures::{linear, many_files_dirs};
+    use fixtures::TestRepoFixture;
+    use fixtures::{Linear, ManyFilesDirs};
     use futures::FutureExt;
     use mercurial_types::HgChangesetId;
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime};
@@ -277,7 +278,7 @@ mod test {
         ChangesetId,
         ChangesetArgs,
     ) {
-        let repo = many_files_dirs::getrepo(fb).await;
+        let repo = ManyFilesDirs::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let hg_cs_id = HgChangesetId::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
@@ -427,7 +428,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_stack_move(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let old_bcs_id = resolve_cs_id(&ctx, &repo, "master").await?;

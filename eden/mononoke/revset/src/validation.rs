@@ -70,7 +70,8 @@ impl Stream for ValidateNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::fixtures::linear;
+    use crate::fixtures::Linear;
+    use crate::fixtures::TestRepoFixture;
     use crate::setcommon::NotReadyEmptyStream;
     use crate::tests::TestChangesetFetcher;
     use fbinit::FacebookInit;
@@ -82,7 +83,7 @@ mod test {
     #[fbinit::test]
     async fn validate_accepts_single_node(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -101,7 +102,7 @@ mod test {
     async fn slow_ready_validates(fb: FacebookInit) {
         // Tests that we handle an input staying at NotReady for a while without panicking
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher = Arc::new(TestChangesetFetcher::new(repo));
 
         let mut nodestream = ValidateNodeStream::new(
@@ -118,7 +119,7 @@ mod test {
     #[should_panic]
     async fn repeat_hash_panics(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(linear::getrepo(fb).await);
+        let repo = Arc::new(Linear::getrepo(fb).await);
 
         let head_csid =
             string_to_bonsai(fb, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await;
@@ -143,7 +144,7 @@ mod test {
     #[should_panic]
     async fn wrong_order_panics(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(linear::getrepo(fb).await);
+        let repo = Arc::new(Linear::getrepo(fb).await);
 
         let nodestream = single_changeset_id(
             ctx.clone(),

@@ -208,14 +208,15 @@ mod test {
     use super::*;
     use blobrepo::BlobRepo;
     use fbinit::FacebookInit;
-    use fixtures::linear;
+    use fixtures::Linear;
+    use fixtures::TestRepoFixture;
     use std::collections::VecDeque;
     use tests_utils::{drawdag::create_from_dag, resolve_cs_id};
 
     #[fbinit::test]
     async fn test_index_changeset_linear(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
 
         let cs_fetcher = repo.get_changeset_fetcher();
         let mut index = HashMap::new();

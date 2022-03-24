@@ -29,7 +29,8 @@ use cross_repo_sync::{
     CommitSyncDataProvider, CommitSyncOutcome, ErrorKind,
 };
 use cross_repo_sync_test_utils::rebase_root_on_master;
-use fixtures::{linear, many_files_dirs};
+use fixtures::TestRepoFixture;
+use fixtures::{Linear, ManyFilesDirs};
 use futures::{future::join_all, FutureExt, TryStreamExt};
 use live_commit_sync_config::{TestLiveCommitSyncConfig, TestLiveCommitSyncConfigSource};
 use manifest::ManifestOps;
@@ -375,7 +376,7 @@ fn create_large_to_small_commit_syncer(
 async fn test_sync_parentage(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping()?;
-    linear::initrepo(fb, &small_repo).await;
+    Linear::initrepo(fb, &small_repo).await;
     let config =
         create_small_to_large_commit_syncer(&ctx, small_repo, megarepo.clone(), "linear", mapping)?;
     create_initial_commit(ctx.clone(), &megarepo).await;
@@ -521,7 +522,7 @@ async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
         .build()?;
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
-    let linear = linear::getrepo(fb).await;
+    let linear = Linear::getrepo(fb).await;
     let linear_config = create_small_to_large_commit_syncer(
         &ctx,
         linear.clone(),
@@ -584,7 +585,7 @@ fn prepare_repos_and_mapping() -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMap
 async fn test_sync_empty_commit(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping()?;
-    linear::initrepo(fb, &small_repo).await;
+    Linear::initrepo(fb, &small_repo).await;
     let linear = small_repo;
 
     let stl_config = create_small_to_large_commit_syncer(
@@ -689,7 +690,7 @@ async fn megarepo_copy_file(
 async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping().unwrap();
-    linear::initrepo(fb, &small_repo).await;
+    Linear::initrepo(fb, &small_repo).await;
     let linear = small_repo;
 
     let stl_config = create_small_to_large_commit_syncer(
@@ -770,7 +771,7 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
 async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping().unwrap();
-    many_files_dirs::initrepo(fb, &small_repo).await;
+    ManyFilesDirs::initrepo(fb, &small_repo).await;
     let repo = small_repo.clone();
 
     let mut commit_syncer = create_small_to_large_commit_syncer(
@@ -842,7 +843,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     );
     mapping.add(&ctx, entry).await?;
 
-    // d261bc7900818dea7c86935b3fb17a33b2e3a6b4 from "many_files_dirs" should sync cleanly
+    // d261bc7900818dea7c86935b3fb17a33b2e3a6b4 from "ManyFilesDirs" should sync cleanly
     // on top of master. Among others, it introduces the following files:
     // - "dir1/subdir1/subsubdir1/file_1"
     // - "dir1/subdir1/subsubdir2/file_1"
@@ -858,7 +859,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         .await?
         .expect("Unexpectedly rewritten into nothingness");
 
-    // 051946ed218061e925fb120dac02634f9ad40ae2 from "many_files_dirs" replaces the
+    // 051946ed218061e925fb120dac02634f9ad40ae2 from "ManyFilesDirs" replaces the
     // entire "dir1" directory with a file, which implicitly deletes
     // "dir1/subdir1/subsubdir1" and "dir1/subdir1/subsubdir2".
     let repo_implicit_delete_bcs_id = get_bcs_id(
@@ -940,7 +941,7 @@ async fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId 
 async fn test_sync_parent_search(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping()?;
-    linear::initrepo(fb, &small_repo).await;
+    Linear::initrepo(fb, &small_repo).await;
     let linear = small_repo;
 
     let config = create_small_to_large_commit_syncer(
@@ -1060,7 +1061,7 @@ async fn get_multiple_master_mapping_setup(
 > {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping().unwrap();
-    linear::initrepo(fb, &small_repo).await;
+    Linear::initrepo(fb, &small_repo).await;
     let small_to_large_syncer = create_small_to_large_commit_syncer(
         &ctx,
         small_repo.clone(),
@@ -1597,7 +1598,7 @@ async fn test_disabled_sync(fb: FacebookInit) -> Result<(), Error> {
 async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping().unwrap();
-    linear::initrepo(fb, &small_repo).await;
+    Linear::initrepo(fb, &small_repo).await;
     let small_to_large_syncer = create_small_to_large_commit_syncer(
         &ctx,
         small_repo.clone(),

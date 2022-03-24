@@ -158,7 +158,8 @@ mod test {
     use blobrepo::BlobRepo;
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
-    use fixtures::linear;
+    use fixtures::Linear;
+    use fixtures::TestRepoFixture;
     use futures::compat::Stream01CompatExt;
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
@@ -171,7 +172,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
 
         let new_batch = {
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
 
             let mut cs_ids =
@@ -198,7 +199,7 @@ mod test {
         };
 
         let sequential = {
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
             repo.repo_derived_data()
                 .manager()
@@ -281,7 +282,7 @@ mod test {
     async fn batch_derive_with_gaps(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
         let ddm = repo.repo_derived_data().manager();
         ddm.derive::<RootSkeletonManifestId>(&ctx, master_cs_id, None)
@@ -306,7 +307,7 @@ mod test {
         ctx: &CoreContext,
         gap_size: usize,
     ) -> Result<HashMap<ChangesetId, RootSkeletonManifestId>, Error> {
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
 
         let mut cs_ids =

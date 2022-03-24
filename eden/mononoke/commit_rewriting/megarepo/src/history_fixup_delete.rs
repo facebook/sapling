@@ -98,14 +98,15 @@ mod test {
     use crate::working_copy::get_working_copy_paths;
     use cloned::cloned;
     use fbinit::FacebookInit;
-    use fixtures::unshared_merge_uneven;
+    use fixtures::TestRepoFixture;
+    use fixtures::UnsharedMergeUneven;
     use mononoke_types::DateTime;
     use std::collections::BTreeSet;
     use tests_utils::resolve_cs_id;
 
     #[fbinit::test]
     async fn test_create_fixup_deletes(fb: FacebookInit) -> Result<(), Error> {
-        let repo = unshared_merge_uneven::getrepo(fb).await;
+        let repo = UnsharedMergeUneven::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         // Side of the history that needs fixing up is one line of commit with the following

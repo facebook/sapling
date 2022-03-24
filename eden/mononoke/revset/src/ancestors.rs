@@ -188,9 +188,10 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::fixtures::linear;
-    use crate::fixtures::merge_uneven;
-    use crate::fixtures::unshared_merge_uneven;
+    use crate::fixtures::Linear;
+    use crate::fixtures::MergeUneven;
+    use crate::fixtures::TestRepoFixture;
+    use crate::fixtures::UnsharedMergeUneven;
     use crate::tests::TestChangesetFetcher;
     use fbinit::FacebookInit;
     use revset_test_helper::assert_changesets_sequence;
@@ -199,7 +200,7 @@ mod test {
     #[fbinit::test]
     async fn linear_ancestors(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -232,7 +233,7 @@ mod test {
     #[fbinit::test]
     async fn merge_ancestors_from_merge(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = merge_uneven::getrepo(fb).await;
+        let repo = MergeUneven::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -270,7 +271,7 @@ mod test {
     #[fbinit::test]
     async fn merge_ancestors_one_branch(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = merge_uneven::getrepo(fb).await;
+        let repo = MergeUneven::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -299,9 +300,9 @@ mod test {
     #[fbinit::test]
     async fn unshared_merge_all(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        // The unshared_merge_uneven fixture has a commit after the merge. Pull in everything
+        // The UnsharedMergeUneven fixture has a commit after the merge. Pull in everything
         // by starting at the head and working back to the original unshared history commits
-        let repo = unshared_merge_uneven::getrepo(fb).await;
+        let repo = UnsharedMergeUneven::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -345,7 +346,7 @@ mod test {
     #[fbinit::test]
     async fn no_common_ancestor(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = unshared_merge_uneven::getrepo(fb).await;
+        let repo = UnsharedMergeUneven::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -364,7 +365,7 @@ mod test {
     #[fbinit::test]
     async fn greatest_common_ancestor_different_branches(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = merge_uneven::getrepo(fb).await;
+        let repo = MergeUneven::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -389,7 +390,7 @@ mod test {
     #[fbinit::test]
     async fn greatest_common_ancestor_same_branch(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = merge_uneven::getrepo(fb).await;
+        let repo = MergeUneven::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -414,7 +415,7 @@ mod test {
     #[fbinit::test]
     async fn all_common_ancestors_different_branches(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = merge_uneven::getrepo(fb).await;
+        let repo = MergeUneven::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -439,7 +440,7 @@ mod test {
     #[fbinit::test]
     async fn all_common_ancestors_same_branch(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = merge_uneven::getrepo(fb).await;
+        let repo = MergeUneven::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);

@@ -74,14 +74,15 @@ mod test {
     use crate::common::{ChangesetArgs, StackPosition};
     use cloned::cloned;
     use fbinit::FacebookInit;
-    use fixtures::linear;
+    use fixtures::Linear;
+    use fixtures::TestRepoFixture;
     use mononoke_types::DateTime;
     use std::collections::HashSet;
     use tests_utils::{resolve_cs_id, CreateCommitContext};
 
     #[fbinit::test]
     async fn test_create_pre_merge_delete(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let bcs_id = resolve_cs_id(&ctx, &repo, "master").await?;
@@ -155,7 +156,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_create_pre_merge_delete_with_base(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let master_bcs_id = resolve_cs_id(&ctx, &repo, "master").await?;

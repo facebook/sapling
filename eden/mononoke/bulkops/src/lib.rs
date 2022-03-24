@@ -265,12 +265,13 @@ mod tests {
 
     use blobrepo::BlobRepo;
     use bookmarks::BookmarkName;
-    use fixtures::branch_wide;
+    use fixtures::BranchWide;
+    use fixtures::TestRepoFixture;
     use mononoke_types::ChangesetId;
     use phases::{PhasesArc, PhasesRef};
 
     async fn get_test_repo(ctx: &CoreContext, fb: FacebookInit) -> Result<BlobRepo, Error> {
-        let blobrepo = branch_wide::getrepo(fb).await;
+        let blobrepo = BranchWide::getrepo(fb).await;
 
         // our function avoids derivation so we need to explicitly do the derivation for
         // phases to have any data

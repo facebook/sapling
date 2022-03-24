@@ -14,7 +14,8 @@ use bytes::Bytes;
 use chrono::{FixedOffset, TimeZone};
 use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
-use fixtures::{linear, many_files_dirs};
+use fixtures::TestRepoFixture;
+use fixtures::{Linear, ManyFilesDirs};
 use std::str::FromStr;
 
 use crate::{
@@ -36,7 +37,7 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
-        vec![("test".to_string(), linear::getrepo(fb).await)],
+        vec![("test".to_string(), Linear::getrepo(fb).await)],
     )
     .await?;
     let repo = mononoke
@@ -173,7 +174,7 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
-        vec![("test".to_string(), many_files_dirs::getrepo(fb).await)],
+        vec![("test".to_string(), ManyFilesDirs::getrepo(fb).await)],
     )
     .await?;
     let repo = mononoke

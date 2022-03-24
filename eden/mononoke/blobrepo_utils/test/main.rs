@@ -12,11 +12,12 @@ use fixtures::*;
 // An extra level of nesting is required to avoid clashes between crate and module names.
 mod test {
     macro_rules! test_verify {
-        ($repo:ident) => {
-            mod $repo {
+        ($test_name:ident, $repo:ident) => {
+            mod $test_name {
                 use std::collections::HashSet;
 
                 use fbinit::FacebookInit;
+                use fixtures::TestRepoFixture;
                 use futures::{compat::Future01CompatExt, TryStreamExt};
                 use futures_old::{Future, Stream};
 
@@ -98,12 +99,12 @@ mod test {
         };
     }
 
-    test_verify!(branch_even);
-    test_verify!(branch_uneven);
-    test_verify!(branch_wide);
-    test_verify!(linear);
-    test_verify!(merge_even);
-    test_verify!(merge_uneven);
-    test_verify!(unshared_merge_even);
-    test_verify!(unshared_merge_uneven);
+    test_verify!(branch_even, BranchEven);
+    test_verify!(branch_uneven, BranchUneven);
+    test_verify!(branch_wide, BranchWide);
+    test_verify!(linear, Linear);
+    test_verify!(merge_even, MergeEven);
+    test_verify!(merge_uneven, MergeUneven);
+    test_verify!(unshared_merge_even, UnsharedMergeEven);
+    test_verify!(unshared_merge_uneven, UnsharedMergeUneven);
 }

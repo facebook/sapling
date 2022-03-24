@@ -119,14 +119,15 @@ mod test {
     use super::*;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use fixtures::linear;
+    use fixtures::Linear;
+    use fixtures::TestRepoFixture;
     use futures_ext::StreamExt;
     use mononoke_types_mocks::changesetid::ONES_CSID;
 
     #[fbinit::test]
     async fn valid_changeset(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let bcs_id = string_to_bonsai(fb, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await;
         let changeset_stream = single_changeset_id(ctx.clone(), bcs_id.clone(), &repo);
 
@@ -142,7 +143,7 @@ mod test {
     #[fbinit::test]
     async fn invalid_changeset(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let cs_id = ONES_CSID;
         let changeset_stream = single_changeset_id(ctx.clone(), cs_id, &repo.clone());
 

@@ -12,7 +12,8 @@ use std::sync::Arc;
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use fixtures::{branch_wide, linear, merge_uneven};
+use fixtures::TestRepoFixture;
+use fixtures::{BranchWide, Linear, MergeUneven};
 
 #[cfg(test)]
 use common::fetch_generation;
@@ -42,7 +43,7 @@ pub async fn test_linear_reachability<T: ReachabilityIndex + 'static>(
     index_creator: fn() -> T,
 ) {
     let ctx = CoreContext::test_mock(fb);
-    let repo = Arc::new(linear::getrepo(fb).await);
+    let repo = Arc::new(Linear::getrepo(fb).await);
     let index = index_creator();
     let ordered_hashes = vec![
         string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await,
@@ -76,7 +77,7 @@ pub async fn test_merge_uneven_reachability<T: ReachabilityIndex + 'static>(
     index_creator: fn() -> T,
 ) {
     let ctx = CoreContext::test_mock(fb);
-    let repo = Arc::new(merge_uneven::getrepo(fb).await);
+    let repo = Arc::new(MergeUneven::getrepo(fb).await);
     let index = index_creator();
     let root_node = string_to_bonsai(&ctx, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await;
 
@@ -138,7 +139,7 @@ pub async fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(
 ) {
     let ctx = CoreContext::test_mock(fb);
     // this repo has no merges but many branches
-    let repo = Arc::new(branch_wide::getrepo(fb).await);
+    let repo = Arc::new(BranchWide::getrepo(fb).await);
     let index = index_creator();
     let root_node = string_to_bonsai(&ctx, &repo, "ecba698fee57eeeef88ac3dcc3b623ede4af47bd").await;
 
@@ -245,13 +246,14 @@ mod test {
 
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use fixtures::linear;
+    use fixtures::Linear;
+    use fixtures::TestRepoFixture;
     use mononoke_types::Generation;
 
     #[fbinit::test]
     async fn test_helpers(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(linear::getrepo(fb).await);
+        let repo = Arc::new(Linear::getrepo(fb).await);
         let mut ordered_hashes_oldest_to_newest = vec![
             string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await,
             string_to_bonsai(&ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await,

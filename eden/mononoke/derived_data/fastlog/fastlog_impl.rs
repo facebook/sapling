@@ -236,13 +236,14 @@ mod test {
     use super::*;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
-    use fixtures::linear;
+    use fixtures::Linear;
+    use fixtures::TestRepoFixture;
     use mononoke_types_mocks::changesetid::{ONES_CSID, THREES_CSID, TWOS_CSID};
 
     #[fbinit::test]
     async fn fetch_flattened_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let blobstore = repo.blobstore();
         borrowed!(ctx);
         let mut d = VecDeque::new();
@@ -259,7 +260,7 @@ mod test {
     #[fbinit::test]
     async fn fetch_flattened_prepend(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let blobstore = repo.blobstore();
         borrowed!(ctx);
         let mut d = VecDeque::new();

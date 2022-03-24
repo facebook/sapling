@@ -73,12 +73,13 @@ pub async fn perform_merge(
 mod test {
     use super::*;
     use fbinit::FacebookInit;
-    use fixtures::merge_even;
+    use fixtures::MergeEven;
+    use fixtures::TestRepoFixture;
     use std::str::FromStr;
 
     #[fbinit::test]
     async fn test_path_conflict_detection(fb: FacebookInit) {
-        let repo = merge_even::getrepo(fb).await;
+        let repo = MergeEven::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let p1 = HgChangesetId::from_str("4f7f3fd428bec1a48f9314414b063c706d9c1aed").unwrap();
         let p2 = HgChangesetId::from_str("16839021e338500b3cf7c9b871c8a07351697d68").unwrap();

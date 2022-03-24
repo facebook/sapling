@@ -1402,7 +1402,8 @@ mod test {
     use ascii::AsciiString;
     use bookmarks::BookmarkName;
     use cross_repo_sync::{validation::find_bookmark_diff, CommitSyncDataProvider};
-    use fixtures::{linear, set_bookmark};
+    use fixtures::TestRepoFixture;
+    use fixtures::{set_bookmark, Linear};
     use futures::{compat::Stream01CompatExt, TryStreamExt};
     use live_commit_sync_config::TestLiveCommitSyncConfig;
     use maplit::{hashmap, hashset};
@@ -1538,8 +1539,8 @@ mod test {
         direction: CommitSyncDirection,
     ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
         let ctx = CoreContext::test_mock(fb);
-        let small_repo = linear::getrepo_with_id(fb, RepositoryId::new(0)).await;
-        let large_repo = linear::getrepo_with_id(fb, RepositoryId::new(1)).await;
+        let small_repo = Linear::getrepo_with_id(fb, RepositoryId::new(0)).await;
+        let large_repo = Linear::getrepo_with_id(fb, RepositoryId::new(1)).await;
 
         let master = BookmarkName::new("master")?;
         let maybe_master_val = small_repo.get_bonsai_bookmark(ctx.clone(), &master).await?;

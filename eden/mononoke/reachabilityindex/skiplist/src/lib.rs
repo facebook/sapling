@@ -1144,9 +1144,9 @@ mod test {
     use std::collections::HashSet;
 
     use super::*;
+    use fixtures::TestRepoFixture;
     use fixtures::{
-        branch_even, branch_uneven, branch_wide, linear, merge_even, merge_uneven,
-        unshared_merge_even,
+        BranchEven, BranchUneven, BranchWide, Linear, MergeEven, MergeUneven, UnsharedMergeEven,
     };
     use test_helpers::string_to_bonsai;
     use test_helpers::test_branch_wide_reachability;
@@ -1174,7 +1174,7 @@ mod test {
     #[fbinit::test]
     async fn test_add_node(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(linear::getrepo(fb).await);
+        let repo = Arc::new(Linear::getrepo(fb).await);
         let sli = SkiplistIndex::new();
         let master_node =
             string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await;
@@ -1200,7 +1200,7 @@ mod test {
     #[fbinit::test]
     async fn test_skip_edges_reach_end_in_linear(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(linear::getrepo(fb).await);
+        let repo = Arc::new(Linear::getrepo(fb).await);
         let sli = SkiplistIndex::new();
         let master_node =
             string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await;
@@ -1242,7 +1242,7 @@ mod test {
     #[fbinit::test]
     async fn test_skip_edges_progress_powers_of_2(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(linear::getrepo(fb).await);
+        let repo = Arc::new(Linear::getrepo(fb).await);
         let sli = SkiplistIndex::new();
         let master_node =
             string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await;
@@ -1283,7 +1283,7 @@ mod test {
     #[fbinit::test]
     async fn test_skip_edges_reach_end_in_merge(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(merge_uneven::getrepo(fb).await);
+        let repo = Arc::new(MergeUneven::getrepo(fb).await);
         let root_node =
             string_to_bonsai(&ctx, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await;
 
@@ -1338,7 +1338,7 @@ mod test {
     #[fbinit::test]
     async fn test_partial_index_in_merge(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(merge_uneven::getrepo(fb).await);
+        let repo = Arc::new(MergeUneven::getrepo(fb).await);
         let root_node =
             string_to_bonsai(&ctx, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await;
 
@@ -1405,7 +1405,7 @@ mod test {
     async fn test_simul_index_on_wide_branch(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         // this repo has no merges but many branches
-        let repo = Arc::new(branch_wide::getrepo(fb).await);
+        let repo = Arc::new(BranchWide::getrepo(fb).await);
         let root_node =
             string_to_bonsai(&ctx, &repo, "ecba698fee57eeeef88ac3dcc3b623ede4af47bd").await;
 
@@ -1592,7 +1592,7 @@ mod test {
     #[fbinit::test]
     async fn test_query_reachability_from_unindexed_node(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(linear::getrepo(fb).await);
+        let repo = Arc::new(Linear::getrepo(fb).await);
         let sli = SkiplistIndex::new();
         let get_parents_count = Arc::new(AtomicUsize::new(0));
         let get_gen_number_count = Arc::new(AtomicUsize::new(0));
@@ -2361,7 +2361,7 @@ mod test {
         // Resulting skiplits point further away than it's needed (if the worst case of skiplists
         // being updated very often to the latest merge commit).
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(linear::getrepo(fb).await);
+        let repo = Arc::new(Linear::getrepo(fb).await);
         let sli = SkiplistIndex::with_skip_edge_count(4);
 
         let old_head =
@@ -2394,7 +2394,7 @@ mod test {
     #[fbinit::test]
     async fn test_max_skips(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Arc::new(linear::getrepo(fb).await);
+        let repo = Arc::new(Linear::getrepo(fb).await);
         let sli = SkiplistIndex::new();
         let src_node =
             string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await;
@@ -2412,30 +2412,24 @@ mod test {
         Ok(())
     }
 
-    skiplist_test!(test_lca_first_generation, linear);
-    skiplist_test!(query_reachability_hint_on_self_is_true, linear);
-    skiplist_test!(query_reachability_to_higher_gen_is_false, linear);
-    skiplist_test!(query_from_indexed_merge_node, unshared_merge_even);
-    skiplist_test!(advance_node_linear, linear);
-    skiplist_test!(advance_node_uneven_merge, merge_uneven);
-    skiplist_test!(advance_node_on_partial_index, merge_uneven);
-    skiplist_test!(simul_node_advance_on_wide_branch, branch_wide);
-    skiplist_test!(process_frontier_on_wide_branch, branch_wide);
-    skiplist_test!(test_is_ancestor_merge_uneven, merge_uneven);
-    skiplist_test!(test_is_ancestor_unshared_merge_even, unshared_merge_even);
-    skiplist_test!(test_lca_branch_even, branch_even);
-    skiplist_test!(test_lca_branch_uneven, branch_uneven);
-    skiplist_test!(test_lca_branch_uneven_with_ancestor, branch_uneven);
-    skiplist_test!(test_lca_branch_wide_common_parent, branch_wide);
-    skiplist_test!(test_lca_branch_wide, branch_wide);
-    skiplist_test!(
-        test_lca_unshared_merge_even_some_result,
-        unshared_merge_even
-    );
-    skiplist_test!(
-        test_lca_unshared_merge_even_empty_result,
-        unshared_merge_even
-    );
-    skiplist_test!(test_find_merges_negative, linear);
-    skiplist_test!(test_find_merges_positive, merge_even);
+    skiplist_test!(test_lca_first_generation, Linear);
+    skiplist_test!(query_reachability_hint_on_self_is_true, Linear);
+    skiplist_test!(query_reachability_to_higher_gen_is_false, Linear);
+    skiplist_test!(query_from_indexed_merge_node, UnsharedMergeEven);
+    skiplist_test!(advance_node_linear, Linear);
+    skiplist_test!(advance_node_uneven_merge, MergeUneven);
+    skiplist_test!(advance_node_on_partial_index, MergeUneven);
+    skiplist_test!(simul_node_advance_on_wide_branch, BranchWide);
+    skiplist_test!(process_frontier_on_wide_branch, BranchWide);
+    skiplist_test!(test_is_ancestor_merge_uneven, MergeUneven);
+    skiplist_test!(test_is_ancestor_unshared_merge_even, UnsharedMergeEven);
+    skiplist_test!(test_lca_branch_even, BranchEven);
+    skiplist_test!(test_lca_branch_uneven, BranchUneven);
+    skiplist_test!(test_lca_branch_uneven_with_ancestor, BranchUneven);
+    skiplist_test!(test_lca_branch_wide_common_parent, BranchWide);
+    skiplist_test!(test_lca_branch_wide, BranchWide);
+    skiplist_test!(test_lca_unshared_merge_even_some_result, UnsharedMergeEven);
+    skiplist_test!(test_lca_unshared_merge_even_empty_result, UnsharedMergeEven);
+    skiplist_test!(test_find_merges_negative, Linear);
+    skiplist_test!(test_find_merges_positive, MergeEven);
 }

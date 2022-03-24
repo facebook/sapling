@@ -1266,7 +1266,8 @@ mod tests {
     use blobrepo_hg::BlobRepoHg;
     use bookmarks::BookmarkTransactionError;
     use fbinit::FacebookInit;
-    use fixtures::{linear, many_files_dirs, merge_even};
+    use fixtures::TestRepoFixture;
+    use fixtures::{Linear, ManyFilesDirs, MergeEven};
     use futures::{
         compat::Future01CompatExt,
         future::{try_join_all, TryFutureExt},
@@ -1415,7 +1416,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             // Bottom commit of the repo
             let parents = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"];
             let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
@@ -1506,7 +1507,7 @@ mod tests {
             let ctx = CoreContext::test_mock(fb);
             let factory = TestRepoFactory::new()?;
             let repo = factory.build()?;
-            linear::initrepo(fb, &repo).await;
+            Linear::initrepo(fb, &repo).await;
             // Bottom commit of the repo
             let parents = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"];
             let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
@@ -1585,7 +1586,7 @@ mod tests {
 
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
@@ -1637,7 +1638,7 @@ mod tests {
 
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
@@ -1704,7 +1705,7 @@ mod tests {
 
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             let config = PushrebaseFlags::default();
 
             let root0 = repo
@@ -1814,7 +1815,7 @@ mod tests {
 
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             let root = repo
                 .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
@@ -1879,7 +1880,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             let root = repo
                 .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
@@ -1928,7 +1929,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             let root = repo
                 .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
@@ -1974,7 +1975,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             let root = repo
                 .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
@@ -2055,7 +2056,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             let root = repo
                 .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
@@ -2113,7 +2114,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = many_files_dirs::getrepo(fb).await;
+            let repo = ManyFilesDirs::getrepo(fb).await;
             let root = repo
                 .bonsai_hg_mapping()
                 .get_bonsai_from_hg(
@@ -2199,7 +2200,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             let path_1 = MPath::new("1")?;
 
             let root_hg = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
@@ -2363,7 +2364,7 @@ mod tests {
 
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
@@ -2439,7 +2440,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
@@ -2475,7 +2476,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
@@ -2541,7 +2542,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
@@ -2591,7 +2592,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
             // Bottom commit of the repo
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
@@ -2652,7 +2653,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let repo = Linear::getrepo(fb).await;
 
             let root = repo
                 .bonsai_hg_mapping()
@@ -2792,7 +2793,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = merge_even::getrepo(fb).await;
+            let repo = MergeEven::getrepo(fb).await;
 
             // 4dcf230cd2f20577cb3e88ba52b73b376a2b3f69 - is a merge commit,
             // 3cda5c78aa35f0f5b09780d971197b51cad4613a is one of the ancestors
@@ -3120,7 +3121,7 @@ mod tests {
         fb: FacebookInit,
     ) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
 
         // First commit in the new repo
         let other_first_commit = CreateCommitContext::new_root(&ctx, &repo)
@@ -3283,7 +3284,7 @@ mod tests {
     #[fbinit::test]
     async fn pushrebase_test_failpushrebase_extra(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
 
         // Create one commit on top of latest commit in the linear repo
         let before_head_commit = "79a13814c5ce7330173ec04d279bf95ab3f652fb";

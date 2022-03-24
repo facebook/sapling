@@ -24,7 +24,8 @@ use caching_ext::{CachelibHandler, MemcacheHandler};
 use changeset_fetcher::PrefetchedChangesetsFetcher;
 use changesets::{ChangesetEntry, ChangesetsArc, ChangesetsRef};
 use context::CoreContext;
-use fixtures::{branch_even, linear, merge_even, merge_uneven, set_bookmark, unshared_merge_even};
+use fixtures::TestRepoFixture;
+use fixtures::{set_bookmark, BranchEven, Linear, MergeEven, MergeUneven, UnsharedMergeEven};
 use maplit::hashmap;
 use mononoke_types::{ChangesetId, RepositoryId};
 use phases::{PhasesArc, PhasesRef};
@@ -258,7 +259,7 @@ async fn fetch_cs_entry(ctx: &CoreContext, repo: &BlobRepo, cs: &str) -> Result<
 #[fbinit::test]
 async fn test_iddag_save_store(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = linear::getrepo(fb).await;
+    let blobrepo = Linear::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
     let repo_id = blobrepo.get_repoid();
 
@@ -299,19 +300,19 @@ async fn test_build_idmap(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     validate_build_idmap(
         ctx.clone(),
-        linear::getrepo(fb).await,
+        Linear::getrepo(fb).await,
         "79a13814c5ce7330173ec04d279bf95ab3f652fb",
     )
     .await?;
     validate_build_idmap(
         ctx.clone(),
-        merge_even::getrepo(fb).await,
+        MergeEven::getrepo(fb).await,
         "1f6bc010883e397abeca773192f3370558ee1320",
     )
     .await?;
     validate_build_idmap(
         ctx.clone(),
-        merge_uneven::getrepo(fb).await,
+        MergeUneven::getrepo(fb).await,
         "d35b1875cdd1ed2c687e86f1604b9d7e989450cb",
     )
     .await?;
@@ -350,7 +351,7 @@ async fn test_location_to_changeset_ids(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     validate_location_to_changeset_ids(
         ctx.clone(),
-        linear::getrepo(fb).await,
+        Linear::getrepo(fb).await,
         "79a13814c5ce7330173ec04d279bf95ab3f652fb", // master commit, message: modified 10
         (4, 3),
         vec![
@@ -362,7 +363,7 @@ async fn test_location_to_changeset_ids(fb: FacebookInit) -> Result<()> {
     .await?;
     validate_location_to_changeset_ids(
         ctx.clone(),
-        merge_uneven::getrepo(fb).await,
+        MergeUneven::getrepo(fb).await,
         "264f01429683b3dd8042cb3979e8bf37007118bc", // top of merged branch, message: Add 5
         (4, 2),
         vec![
@@ -373,7 +374,7 @@ async fn test_location_to_changeset_ids(fb: FacebookInit) -> Result<()> {
     .await?;
     validate_location_to_changeset_ids(
         ctx.clone(),
-        unshared_merge_even::getrepo(fb).await,
+        UnsharedMergeEven::getrepo(fb).await,
         "7fe9947f101acb4acf7d945e69f0d6ce76a81113", // master commit
         (1, 1),
         vec!["d592490c4386cdb3373dd93af04d563de199b2fb"], // parent of master, merge commit
@@ -385,7 +386,7 @@ async fn test_location_to_changeset_ids(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_location_to_changeset_id_invalid_req(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = unshared_merge_even::getrepo(fb).await;
+    let blobrepo = UnsharedMergeEven::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
     let known_cs_id =
         resolve_cs_id(&ctx, &blobrepo, "7fe9947f101acb4acf7d945e69f0d6ce76a81113").await?;
@@ -457,7 +458,7 @@ async fn test_changeset_id_to_location(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     validate_changeset_id_to_location(
         ctx.clone(),
-        linear::getrepo(fb).await,
+        Linear::getrepo(fb).await,
         "79a13814c5ce7330173ec04d279bf95ab3f652fb", // master commit, message: modified 10
         "79a13814c5ce7330173ec04d279bf95ab3f652fb", // client head == master_commit
         "0ed509bf086fadcb8a8a5384dc3b550729b0fc17", // message: added 7
@@ -466,7 +467,7 @@ async fn test_changeset_id_to_location(fb: FacebookInit) -> Result<()> {
     .await?;
     validate_changeset_id_to_location(
         ctx.clone(),
-        linear::getrepo(fb).await,
+        Linear::getrepo(fb).await,
         "79a13814c5ce7330173ec04d279bf95ab3f652fb", // master commit, message: modified 10
         "3c15267ebf11807f3d772eb891272b911ec68759", // message: added 9
         "0ed509bf086fadcb8a8a5384dc3b550729b0fc17", // message: added 7
@@ -475,7 +476,7 @@ async fn test_changeset_id_to_location(fb: FacebookInit) -> Result<()> {
     .await?;
     validate_changeset_id_to_location(
         ctx.clone(),
-        linear::getrepo(fb).await,
+        Linear::getrepo(fb).await,
         "79a13814c5ce7330173ec04d279bf95ab3f652fb", // master commit, message: modified 10
         "3c15267ebf11807f3d772eb891272b911ec68759", // message: added 9
         "79a13814c5ce7330173ec04d279bf95ab3f652fb", // our master, client doesn't know
@@ -484,7 +485,7 @@ async fn test_changeset_id_to_location(fb: FacebookInit) -> Result<()> {
     .await?;
     validate_changeset_id_to_location(
         ctx.clone(),
-        merge_uneven::getrepo(fb).await,
+        MergeUneven::getrepo(fb).await,
         "d35b1875cdd1ed2c687e86f1604b9d7e989450cb", // master, message: Merge two branches
         "d35b1875cdd1ed2c687e86f1604b9d7e989450cb", // client head == master
         "fc2cef43395ff3a7b28159007f63d6529d2f41ca", // message: Add 4
@@ -493,7 +494,7 @@ async fn test_changeset_id_to_location(fb: FacebookInit) -> Result<()> {
     .await?;
     validate_changeset_id_to_location(
         ctx.clone(),
-        unshared_merge_even::getrepo(fb).await,
+        UnsharedMergeEven::getrepo(fb).await,
         "7fe9947f101acb4acf7d945e69f0d6ce76a81113", // master commit
         "33fb49d8a47b29290f5163e30b294339c89505a2", // head merged branch, message: Add 5
         "163adc0d0f5d2eb0695ca123addcb92bab202096", // message: Add 3
@@ -506,7 +507,7 @@ async fn test_changeset_id_to_location(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_changeset_id_to_location_random_hash(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = linear::getrepo(fb).await;
+    let blobrepo = Linear::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
 
     let server_master =
@@ -528,7 +529,7 @@ async fn test_changeset_id_to_location_random_hash(fb: FacebookInit) -> Result<(
 #[fbinit::test]
 async fn test_changeset_id_to_location_multiple_heads(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = branch_even::getrepo(fb).await;
+    let blobrepo = BranchEven::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
 
     // Graph looks like:
@@ -599,7 +600,7 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
 
     {
         // linear
-        let blobrepo = linear::getrepo(fb).await;
+        let blobrepo = Linear::getrepo(fb).await;
         let sc = new_isolated_on_demand_update(ctx.clone(), &blobrepo)?;
 
         let known_cs =
@@ -614,7 +615,7 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
     }
     {
         // merge_uneven
-        let blobrepo = merge_uneven::getrepo(fb).await;
+        let blobrepo = MergeUneven::getrepo(fb).await;
         let sc = new_isolated_on_demand_update(ctx.clone(), &blobrepo)?;
 
         let known_cs =
@@ -636,13 +637,13 @@ async fn test_two_repos(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
 
-    let blobrepo1 = linear::getrepo_with_id(fb, RepositoryId::new(1)).await;
+    let blobrepo1 = Linear::getrepo_with_id(fb, RepositoryId::new(1)).await;
     let known_cs1 =
         resolve_cs_id(&ctx, &blobrepo1, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
     seed(&ctx, &blobrepo1, &conns, known_cs1).await?;
     let sc1 = load_owned(&ctx, &blobrepo1, &conns).await?;
 
-    let blobrepo2 = merge_even::getrepo_with_id(fb, RepositoryId::new(2)).await;
+    let blobrepo2 = MergeEven::getrepo_with_id(fb, RepositoryId::new(2)).await;
     let known_cs2 =
         resolve_cs_id(&ctx, &blobrepo2, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await?;
     seed(&ctx, &blobrepo2, &conns, known_cs2).await?;
@@ -670,7 +671,7 @@ async fn test_two_repos(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = linear::getrepo(fb).await;
+    let blobrepo = Linear::getrepo(fb).await;
 
     // commit modified10 (11)
     let cs11 = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
@@ -722,7 +723,7 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
     // then we reuse the idmap with another on demand update segmented changelog that starts off
     // with an empty iddag.
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = linear::getrepo(fb).await;
+    let blobrepo = Linear::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
     let idmap: Arc<dyn IdMap> = Arc::new(SqlIdMap::new(
         conns.0.clone(),
@@ -776,7 +777,7 @@ async fn test_clone_data(fb: FacebookInit) -> Result<()> {
     // In this test we first build a dag from scratch and then we reuse the idmap in an ondemand
     // segmented changelog that starts off with an empty iddag.
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = linear::getrepo(fb).await;
+    let blobrepo = Linear::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
 
     let head = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
@@ -804,7 +805,7 @@ async fn test_clone_data(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_caching(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = linear::getrepo(fb).await;
+    let blobrepo = Linear::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
 
     let cs_to_dag_handler = CachelibHandler::create_mock();
@@ -872,7 +873,7 @@ async fn test_caching(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = linear::getrepo(fb).await;
+    let blobrepo = Linear::getrepo(fb).await;
     let bookmark_name = BookmarkName::new("periodic_update")?;
 
     let start_hg_id = "607314ef579bd2407752361ba1b0c1729d08b281";
@@ -916,7 +917,7 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_seeder_tailer_and_load(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = linear::getrepo(fb).await;
+    let blobrepo = Linear::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
 
     let start_hg_id = "607314ef579bd2407752361ba1b0c1729d08b281"; // commit 4
@@ -939,7 +940,7 @@ async fn test_seeder_tailer_and_load(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = Arc::new(linear::getrepo(fb).await);
+    let blobrepo = Arc::new(Linear::getrepo(fb).await);
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
 
     let load_fn = {
@@ -987,7 +988,7 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_mismatched_heads(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = branch_even::getrepo(fb).await;
+    let blobrepo = BranchEven::getrepo(fb).await;
 
     let dag = new_isolated_on_demand_update(ctx.clone(), &blobrepo)?;
     let h1 = resolve_cs_id(&ctx, &blobrepo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await?;
@@ -1034,7 +1035,7 @@ async fn test_mismatched_heads(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_prefetched_seeding(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = linear::getrepo(fb).await;
+    let blobrepo = Linear::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
     let repo_id = blobrepo.get_repoid();
 
@@ -1064,7 +1065,7 @@ async fn test_prefetched_seeding(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_seeding_with_included_bonsais(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = linear::getrepo(fb).await;
+    let blobrepo = Linear::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
     let repo_id = blobrepo.get_repoid();
 

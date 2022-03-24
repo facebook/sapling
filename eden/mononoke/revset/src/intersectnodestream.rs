@@ -161,9 +161,10 @@ impl Stream for IntersectNodeStream {
 mod test {
     use super::*;
     use crate::errors::ErrorKind;
-    use crate::fixtures::linear;
-    use crate::fixtures::unshared_merge_even;
-    use crate::fixtures::unshared_merge_uneven;
+    use crate::fixtures::Linear;
+    use crate::fixtures::TestRepoFixture;
+    use crate::fixtures::UnsharedMergeEven;
+    use crate::fixtures::UnsharedMergeUneven;
     use crate::setcommon::NotReadyEmptyStream;
     use crate::tests::get_single_bonsai_streams;
     use crate::tests::TestChangesetFetcher;
@@ -182,7 +183,7 @@ mod test {
     #[fbinit::test]
     async fn intersect_identical_node(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -204,7 +205,7 @@ mod test {
     #[fbinit::test]
     async fn intersect_three_different_nodes(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -230,7 +231,7 @@ mod test {
     #[fbinit::test]
     async fn intersect_three_identical_nodes(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -250,7 +251,7 @@ mod test {
     #[fbinit::test]
     async fn intersect_nesting(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -278,7 +279,7 @@ mod test {
     #[fbinit::test]
     async fn intersection_of_unions(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -316,7 +317,7 @@ mod test {
     #[fbinit::test]
     async fn intersect_error_node(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -346,7 +347,7 @@ mod test {
     #[fbinit::test]
     async fn intersect_nothing(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -361,7 +362,7 @@ mod test {
     async fn slow_ready_intersect_nothing(fb: FacebookInit) {
         // Tests that we handle an input staying at NotReady for a while without panicking
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher = Arc::new(TestChangesetFetcher::new(repo));
 
         let inputs: Vec<BonsaiNodeStream> = vec![NotReadyEmptyStream::new(10).boxify()];
@@ -373,7 +374,7 @@ mod test {
     #[fbinit::test]
     async fn intersect_unshared_merge_even(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = unshared_merge_even::getrepo(fb).await;
+        let repo = UnsharedMergeEven::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -425,7 +426,7 @@ mod test {
     #[fbinit::test]
     async fn intersect_unshared_merge_uneven(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = unshared_merge_uneven::getrepo(fb).await;
+        let repo = UnsharedMergeUneven::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);

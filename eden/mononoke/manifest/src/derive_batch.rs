@@ -22,7 +22,7 @@ pub struct ManifestChanges<Leaf> {
 
 // Function that can derive manifests for a "simple" stack of commits. But what does "simple" mean?
 // In this case "simple" means:
-// 1) There are no merges i.e. we get just a linear stack of commits
+// 1) There are no merges i.e. we get just a Linear stack of commits
 //    (`changes` parameter  should be sorted from ancestors to descendant)
 // 2) Paths that commits modify should not be prefixes of each other i.e.
 //    stack shouldn't have file changes ("dir/A" => "dir") and ("dir" => "file").

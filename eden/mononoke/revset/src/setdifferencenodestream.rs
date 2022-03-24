@@ -116,9 +116,10 @@ impl Stream for SetDifferenceNodeStream {
 mod test {
     use super::*;
     use crate::errors::ErrorKind;
-    use crate::fixtures::linear;
-    use crate::fixtures::merge_even;
-    use crate::fixtures::merge_uneven;
+    use crate::fixtures::Linear;
+    use crate::fixtures::MergeEven;
+    use crate::fixtures::MergeUneven;
+    use crate::fixtures::TestRepoFixture;
     use crate::setcommon::NotReadyEmptyStream;
     use crate::tests::get_single_bonsai_streams;
     use crate::tests::TestChangesetFetcher;
@@ -137,7 +138,7 @@ mod test {
     #[fbinit::test]
     async fn difference_identical_node(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -157,7 +158,7 @@ mod test {
     #[fbinit::test]
     async fn difference_node_and_empty(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -177,7 +178,7 @@ mod test {
     #[fbinit::test]
     async fn difference_empty_and_node(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -198,7 +199,7 @@ mod test {
     #[fbinit::test]
     async fn difference_two_nodes(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -229,7 +230,7 @@ mod test {
     #[fbinit::test]
     async fn difference_error_node(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -264,7 +265,7 @@ mod test {
     async fn slow_ready_difference_nothing(fb: FacebookInit) {
         // Tests that we handle an input staying at NotReady for a while without panicking
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher = Arc::new(TestChangesetFetcher::new(repo));
 
         let mut nodestream = SetDifferenceNodeStream::new(
@@ -281,7 +282,7 @@ mod test {
     #[fbinit::test]
     async fn difference_union_with_single_node(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -329,7 +330,7 @@ mod test {
     #[fbinit::test]
     async fn difference_single_node_with_union(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let repo = Linear::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -367,7 +368,7 @@ mod test {
     #[fbinit::test]
     async fn difference_merge_even(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = merge_even::getrepo(fb).await;
+        let repo = MergeEven::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
@@ -425,7 +426,7 @@ mod test {
     #[fbinit::test]
     async fn difference_merge_uneven(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let repo = merge_uneven::getrepo(fb).await;
+        let repo = MergeUneven::getrepo(fb).await;
         let changeset_fetcher: ArcChangesetFetcher =
             Arc::new(TestChangesetFetcher::new(repo.clone()));
         let repo = Arc::new(repo);
