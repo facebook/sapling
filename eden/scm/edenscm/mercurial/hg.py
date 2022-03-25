@@ -652,8 +652,7 @@ def clone(
             ):
                 clonecodepath = "segments"
                 ui.status(_("fetching lazy changelog\n"))
-                data = destrepo.edenapi.clonedata()
-                clonemod.segmentsclone(srcpeer.url(), data, destrepo)
+                clonemod.segmentsclone(srcpeer.url(), destrepo)
             # Can we use the new code path (stream clone + shallow + no
             # update + selective pull)?
             elif (

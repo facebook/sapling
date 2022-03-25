@@ -360,4 +360,11 @@ impl commits {
         let inner = self.inner(py).borrow();
         inner.to_dyn_read_root_tree_ids()
     }
+
+    pub fn get_inner<'a>(
+        &'a self,
+        py: Python<'a>,
+    ) -> &'a RefCell<Box<dyn DagCommits + Send + 'static>> {
+        self.inner(py)
+    }
 }

@@ -69,3 +69,4 @@ pyworkingcopy = { path = "modules/pyworkingcopy" }
 pyzstd = { path = "modules/pyzstd" }
 pyclientinfo = { path = "modules/pyclientinfo" }
 pyzstore = { path = "modules/pyzstore" }
+pyexchange = { path = "modules/pyexchange" }

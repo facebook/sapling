@@ -5,6 +5,8 @@
 
 """clone utilities that aims for Mononoke compatibility"""
 
+import bindings
+
 from . import bookmarks as bookmod, error, streamclone, changelog2
 from .i18n import _
 from .node import hex
@@ -119,7 +121,7 @@ def emergencyclone(source, repo):
             repo.invalidatechangelog()
 
 
-def segmentsclone(source, clonedata, repo):
+def segmentsclone(source, repo):
     """clone using segmented changelog's CloneData
 
     This produces a repo with lazy commit hashes.
@@ -130,15 +132,23 @@ def segmentsclone(source, clonedata, repo):
         repo._writerequirements()
 
         repo.ui.status(_("populating main commit graph\n"))
-        repo.changelog.inner.importclonedata(clonedata)
-        tip = repo.changelog.dag.all().first()
-        if tip:
-            repo.ui.status(_("tip commit: %s\n") % hex(tip))
-            repo.svfs.write("tip", tip)
+        if repo.ui.configbool("clone", "nativepull"):
+            bindings.exchange.clone(
+                repo.ui._rcfg._rcfg, repo.edenapi, repo.metalog(), repo.changelog.inner
+            )
+        else:
+            clonedata = repo.edenapi.clonedata()
+            repo.changelog.inner.importclonedata(clonedata)
+            tip = repo.changelog.dag.all().first()
+            if tip:
+                repo.ui.status(_("tip commit: %s\n") % hex(tip))
+                repo.svfs.write("tip", tip)
 
-        repo.ui.status(_("fetching selected remote bookmarks\n"))
-        remote = bookmod.remotenameforurl(repo.ui, repo.ui.paths.getpath(source).rawloc)
-        assert remote is not None
-        repo.pull(
-            source, bookmarknames=bookmod.selectivepullbookmarknames(repo, remote)
-        )
+            repo.ui.status(_("fetching selected remote bookmarks\n"))
+            remote = bookmod.remotenameforurl(
+                repo.ui, repo.ui.paths.getpath(source).rawloc
+            )
+            assert remote is not None
+            repo.pull(
+                source, bookmarknames=bookmod.selectivepullbookmarknames(repo, remote)
+            )

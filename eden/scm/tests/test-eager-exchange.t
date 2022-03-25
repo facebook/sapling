@@ -142,8 +142,8 @@ Clone (using edenapi clonedata, bypassing peer interface):
   $ cd $TESTTMP
   $ hg clone -U --shallow test:e1 --config remotefilelog.reponame=x cloned1
   fetching lazy changelog
-  DEBUG eagerepo::api: clone_data
   populating main commit graph
+  DEBUG eagerepo::api: clone_data
   tip commit: 23d30dc6b70380b2d939023947578ae0e0198999
   fetching selected remote bookmarks
   DEBUG eagerepo::api: bookmarks master
@@ -153,8 +153,8 @@ Clone:
   $ cd $TESTTMP
   $ hg clone -U --shallow test:e1 cloned
   fetching lazy changelog
-  DEBUG eagerepo::api: clone_data
   populating main commit graph
+  DEBUG eagerepo::api: clone_data
   tip commit: 23d30dc6b70380b2d939023947578ae0e0198999
   fetching selected remote bookmarks
   DEBUG eagerepo::api: bookmarks master
