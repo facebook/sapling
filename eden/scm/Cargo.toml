@@ -52,6 +52,7 @@ members = [
   "lib/edenapi/types/proc_macros",
   "lib/edenfs-client",
   "lib/encoding",
+  "lib/exchange",
   "lib/fsinfo",
   "lib/fsyncglob",
   "lib/gitstore",
