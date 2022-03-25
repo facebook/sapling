@@ -35,6 +35,7 @@ pub mod file;
 pub mod path;
 pub mod repo;
 pub mod repo_write;
+pub mod sparse_profile;
 pub mod specifiers;
 pub mod tree;
 mod xrepo;

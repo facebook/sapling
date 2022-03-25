@@ -52,6 +52,7 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_api_types = { version = "0.1.0", path = "types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
+pathmatcher = { version = "0.1.0", path = "../../scm/lib/pathmatcher" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 phases = { version = "0.1.0", path = "../phases" }
 rand = { version = "0.8", features = ["small_rng"] }
@@ -90,3 +91,4 @@ fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 pretty_assertions = "0.6"
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }
+types = { version = "0.1.0", path = "../../scm/lib/types" }

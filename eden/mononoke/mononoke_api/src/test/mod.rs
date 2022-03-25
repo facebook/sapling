@@ -13,3 +13,4 @@ mod test_repo_bookmarks;
 mod test_repo_create_changeset;
 mod test_repo_land_stack;
 mod test_repo_modify_bookmarks;
+mod test_sparse_profile;
