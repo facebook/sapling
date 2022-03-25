@@ -2659,16 +2659,18 @@ def update(
 def getsparsematchers(repo, fp1, fp2, matcher=None):
     sparsematch = getattr(repo, "sparsematch", None)
     if sparsematch is not None:
+        from edenscm.hgext import sparse
+
         revs = {fp1, fp2}
         revs -= {nullid}
 
         repo._clearpendingprofileconfig(all=True)
-        oldpatterns = repo.getsparsepatterns(fp1)
+        oldpatterns = sparse.getsparsepatterns(repo, fp1)
         oldmatcher = sparsematch(fp1)
 
         repo._creatependingprofileconfigs()
 
-        newpatterns = repo.getsparsepatterns(fp2)
+        newpatterns = sparse.getsparsepatterns(repo, fp2)
         newmatcher = sparsematch(fp2)
 
         sparsematcher = sparsematch(*list(revs))
