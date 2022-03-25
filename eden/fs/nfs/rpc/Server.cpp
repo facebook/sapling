@@ -481,7 +481,7 @@ void RpcServer::RpcAcceptCallback::acceptError(
 void RpcServer::RpcAcceptCallback::acceptStopped() noexcept {
   // We won't ever be accepting any connection, it is now safe to delete
   // ourself, release the guard.
-  guard_.reset();
+  { auto guard = std::move(guard_); }
 }
 
 auth_stat RpcServerProcessor::checkAuthentication(

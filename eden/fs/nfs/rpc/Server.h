@@ -398,7 +398,7 @@ class RpcServer : public std::enable_shared_from_this<RpcServer> {
      * Hold a guard to ourself to avoid being deleted until the callback is
      * removed from the AsyncServerSocket.
      */
-    std::optional<folly::DelayedDestruction::DestructorGuard> guard_;
+    folly::DelayedDestruction::DestructorGuard guard_;
   };
 
   // main event base that is used for socket interactions. Do not block this
