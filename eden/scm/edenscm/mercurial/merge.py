@@ -2308,7 +2308,9 @@ def update(
         else:
             from . import eden_update
 
-            return eden_update.update(
+            oldnode = repo["."].node()
+
+            result = eden_update.update(
                 repo,
                 node,
                 branchmerge,
@@ -2321,6 +2323,23 @@ def update(
                 updatecheck,
                 wc,
             )
+
+            prefetchprofiles = repo.ui.configlist("eden", "prefetchsparseprofiles")
+            if prefetchprofiles:
+                from edenscm.hgext import sparse
+
+                raw = ""
+                for profile in prefetchprofiles:
+                    raw += "%%include %s\n" % profile
+                rawconfig = sparse.readsparseconfig(
+                    repo, raw, filename="eden_checkout_prefetch"
+                )
+                matcher = sparse.computesparsematcher(repo, ["."], rawconfig=rawconfig)
+                repo.ui.status_err(
+                    _("prefetching %s sparse profiles\n") % len(prefetchprofiles)
+                )
+                repo.prefetch(["."], base=oldnode, matcher=matcher)
+            return result
 
     if not branchmerge and not force:
         # TODO: remove the default once all callers that pass branchmerge=False
