@@ -68,7 +68,8 @@ impl Logger {
 
         // This command is boring if it is in boring-commands, or it
         // looks like the invoker is disabling the blackbox.
-        let boring = (!command.is_empty() && boring_commands.contains(&command[0]))
+        let boring = command.is_empty()
+            || boring_commands.contains(&command[0])
             || (config.get_or_default::<String>("extensions", "blackbox")? == "!")
             || (config.get("blackbox", "track") == Some("".into()));
 
@@ -256,6 +257,18 @@ mod tests {
         let mut no_bb_trace = cfg.clone();
         no_bb_trace.insert("blackbox.track".to_string(), "".to_string());
         assert!(cleaned_up_files(&no_bb_trace, "blackbox_disabled", 0)?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_empty_command() -> Result<()> {
+        let td = tempdir()?;
+        let mut cfg = BTreeMap::new();
+        cfg.insert("runlog.enable".to_string(), "1".to_string());
+
+        // Don't crash.
+        Logger::new(&cfg, td.path(), vec![])?;
 
         Ok(())
     }

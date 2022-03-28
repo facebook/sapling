@@ -74,7 +74,7 @@ impl FileStore {
             },
         )?;
 
-        if !self.boring {
+        if !self.boring && !e.command.is_empty() {
             // Contents aren't important, but it makes it easier to test.
             fs::write(&self.watchfile_path, &e.command[0])?;
         }
