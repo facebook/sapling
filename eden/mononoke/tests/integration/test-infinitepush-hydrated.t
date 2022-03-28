@@ -228,11 +228,9 @@ check hydrated infinitepush pulls
 -- intentionally do not use  "hgmn" here so that we do not try to fetch from
 -- mononoke. Also just in case kill mononoke
   $ killandwait "$MONONOKE_PID"
-  $ hg up c5564d074f73 --debug
-  resolving manifests
-   branchmerge: False, force: False, partial: False
-   ancestor: 895414f853ef, local: 895414f853ef+, remote: c5564d074f73
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg cat -r c5564d074f73 newfile --debug
+  new
+  more
 
 
 setup a new config and restart mononoke
