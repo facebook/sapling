@@ -100,6 +100,8 @@ fn open_hybrid(
     )?;
     if let Ok(lazy_path) = lazy_hash_path {
         hybrid_commits.enable_lazy_commit_hashes_from_local_segments(lazy_path.as_path())?;
+    } else {
+        hybrid_commits.enable_lazy_commit_hashes();
     }
     Ok(Box::new(hybrid_commits))
 }
