@@ -390,7 +390,7 @@ fn create_mysql_pool_config(mysql_args: &MysqlArgs) -> PoolConfig {
         mysql_args.mysql_pool_age_timeout,
         mysql_args.mysql_pool_idle_timeout,
         mysql_args.mysql_conn_open_timeout,
-        Duration::from_millis(mysql_args.mysql_max_query_time),
+        Duration::from_millis(mysql_args.mysql_query_time_limit),
     )
 }
 
@@ -402,7 +402,7 @@ fn create_mysql_sqlblob_pool_config(mysql_args: &MysqlArgs) -> PoolConfig {
         mysql_args.mysql_sqlblob_pool_age_timeout,
         mysql_args.mysql_sqlblob_pool_idle_timeout,
         mysql_args.mysql_conn_open_timeout,
-        Duration::from_millis(mysql_args.mysql_max_query_time),
+        Duration::from_millis(mysql_args.mysql_query_time_limit),
     )
 }
 

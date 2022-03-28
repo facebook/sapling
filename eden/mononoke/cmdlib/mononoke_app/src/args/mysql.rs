@@ -62,6 +62,6 @@ pub struct MysqlArgs {
     pub mysql_conn_open_timeout: u64,
 
     /// Mysql query time limit in millisecs
-    #[clap(long, default_value = "10000")]
-    pub mysql_max_query_time: u64,
+    #[clap(long, default_value = "10000", alias = "mysql-max-query-time")]
+    pub mysql_query_time_limit: u64,
 }
