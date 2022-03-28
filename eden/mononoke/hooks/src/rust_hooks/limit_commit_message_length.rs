@@ -7,7 +7,7 @@
 
 use crate::{
     ChangesetHook, CrossRepoPushSource, FileContentManager, HookConfig, HookExecution,
-    HookRejectionInfo,
+    HookRejectionInfo, PushAuthoredBy,
 };
 use anyhow::{Context, Error};
 use async_trait::async_trait;
@@ -55,7 +55,11 @@ impl ChangesetHook for LimitCommitMessageLength {
         changeset: &'cs BonsaiChangeset,
         _content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
+        if push_authored_by.service() {
+            return Ok(HookExecution::Accepted);
+        }
         let message = changeset.message();
         let len = message.len();
 

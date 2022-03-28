@@ -6,7 +6,8 @@
  */
 
 use crate::{
-    CrossRepoPushSource, FileContentManager, FileHook, HookConfig, HookExecution, HookRejectionInfo,
+    CrossRepoPushSource, FileContentManager, FileHook, HookConfig, HookExecution,
+    HookRejectionInfo, PushAuthoredBy,
 };
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
@@ -85,7 +86,11 @@ impl FileHook for LimitFilesize {
         change: Option<&'change BasicFileChange>,
         path: &'path MPath,
         cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
+        if push_authored_by.service() {
+            return Ok(HookExecution::Accepted);
+        }
         if cross_repo_push_source == CrossRepoPushSource::PushRedirected {
             // For push-redirected commits, we rely on running source-repo hooks
             return Ok(HookExecution::Accepted);

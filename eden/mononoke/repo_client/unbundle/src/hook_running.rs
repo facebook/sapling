@@ -13,7 +13,7 @@ use bookmarks_movement::BookmarkMovementError;
 use context::CoreContext;
 use futures::future::{BoxFuture, FutureExt};
 use futures::stream::{self, StreamExt, TryStreamExt};
-use hooks::{CrossRepoPushSource, HookManager, HookRejection};
+use hooks::{CrossRepoPushSource, HookManager, HookRejection, PushAuthoredBy};
 use mercurial_derived_data::DeriveHgChangeset;
 
 use crate::resolver::{HgHookRejection, PostResolveAction, PostResolvePushRebase};
@@ -97,6 +97,7 @@ async fn run_pushrebase_hooks(
         action.uploaded_bonsais.iter(),
         action.maybe_pushvars.as_ref(),
         cross_repo_push_source,
+        PushAuthoredBy::User,
     )
     .await
     {

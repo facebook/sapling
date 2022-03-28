@@ -23,7 +23,7 @@ use futures::{
     future,
     stream::{FuturesUnordered, StreamExt, TryStreamExt},
 };
-use hooks::CrossRepoPushSource;
+use hooks::{CrossRepoPushSource, PushAuthoredBy};
 use mononoke_types::ChangesetId;
 use repo_factory::RepoFactory;
 use slog::{debug, info, Logger};
@@ -108,6 +108,11 @@ async fn run_hook_tailer<'a>(
         Some("push-redirected") => CrossRepoPushSource::PushRedirected,
         _ => bail!("unexpected value of --push-source"),
     };
+    let push_authored_by = match matches.value_of("push_authored_by") {
+        Some("user") => PushAuthoredBy::User,
+        Some("service") => PushAuthoredBy::Service,
+        _ => bail!("unexpected value of --push-authored-by"),
+    };
 
     let mut stats_file = match stats_file {
         Some(stats_file) => {
@@ -149,6 +154,7 @@ async fn run_hook_tailer<'a>(
         exclusions,
         &disabled_hooks,
         cross_repo_push_source,
+        push_authored_by,
     )
     .await?;
 
@@ -316,6 +322,13 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .possible_values(&["native-to-this-repo", "push-redirected"])
                 .default_value("native-to-this-repo")
                 .help("act as if changesets originated from a given source (see CrossRepoPushSource help for more info)"),
+        ).arg(
+            Arg::with_name("push_authored_by")
+                .long("push-authored-by")
+                .takes_value(true)
+                .possible_values(&["user", "service"])
+                .default_value("user")
+                .help("who created changesets (affects how hooks behave, see PushAuthoredBy doc for more info)"),
         );
 
     app

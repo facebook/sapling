@@ -8,6 +8,7 @@
 use bookmarks_types::BookmarkName;
 use context::CoreContext;
 use futures::{stream, StreamExt, TryStreamExt};
+use hooks::PushAuthoredBy;
 use metaconfig_types::{
     BookmarkAttrs, InfinitepushParams, PushrebaseParams, SourceControlServiceParams,
 };
@@ -70,6 +71,15 @@ impl<'params> BookmarkMoveAuthorization<'params> {
             }
         }
         Ok(())
+    }
+}
+
+impl From<&BookmarkMoveAuthorization<'_>> for PushAuthoredBy {
+    fn from(auth: &BookmarkMoveAuthorization<'_>) -> PushAuthoredBy {
+        match auth {
+            BookmarkMoveAuthorization::User => PushAuthoredBy::User,
+            BookmarkMoveAuthorization::Service(_, _) => PushAuthoredBy::Service,
+        }
     }
 }
 

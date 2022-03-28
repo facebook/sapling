@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::{CrossRepoPushSource, FileContentManager, FileHook, HookExecution, HookRejectionInfo};
+use crate::{
+    CrossRepoPushSource, FileContentManager, FileHook, HookExecution, HookRejectionInfo,
+    PushAuthoredBy,
+};
 use anyhow::Error;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -34,7 +37,11 @@ impl FileHook for ConflictMarkers {
         change: Option<&'change BasicFileChange>,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
+        if push_authored_by.service() {
+            return Ok(HookExecution::Accepted);
+        }
         let change = match change {
             Some(change) => change,
             None => return Ok(HookExecution::Accepted),

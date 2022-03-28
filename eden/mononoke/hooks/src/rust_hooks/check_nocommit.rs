@@ -6,7 +6,8 @@
  */
 
 use crate::{
-    CrossRepoPushSource, FileContentManager, FileHook, HookConfig, HookExecution, HookRejectionInfo,
+    CrossRepoPushSource, FileContentManager, FileHook, HookConfig, HookExecution,
+    HookRejectionInfo, PushAuthoredBy,
 };
 use anyhow::Error;
 use async_trait::async_trait;
@@ -52,7 +53,11 @@ impl FileHook for CheckNocommitHook {
         change: Option<&'change BasicFileChange>,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
+        if push_authored_by.service() {
+            return Ok(HookExecution::Accepted);
+        }
         let maybe_text = match change {
             Some(change) => {
                 content_manager

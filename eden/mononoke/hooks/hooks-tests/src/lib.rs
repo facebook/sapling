@@ -19,7 +19,7 @@ use futures::stream::{futures_unordered, TryStreamExt};
 use futures::{future, TryFutureExt};
 use hooks::{
     hook_loader::load_hooks, ChangesetHook, CrossRepoPushSource, ErrorKind, FileHook,
-    HookExecution, HookManager, HookRejectionInfo,
+    HookExecution, HookManager, HookRejectionInfo, PushAuthoredBy,
 };
 use hooks_content_stores::{
     BlobRepoFileContentManager, FileChange as FileDiff, FileContentManager,
@@ -59,6 +59,7 @@ impl ChangesetHook for FnChangesetHook {
         _changeset: &'cs BonsaiChangeset,
         _content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
+        _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         Ok((self.f)())
     }
@@ -88,6 +89,7 @@ impl ChangesetHook for FindFilesChangesetHook {
         _changeset: &'cs BonsaiChangeset,
         content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
+        _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         let path = to_mpath(self.filename.as_str());
         let res = content_manager
@@ -127,6 +129,7 @@ impl ChangesetHook for FileChangesChangesetHook {
         changeset: &'cs BonsaiChangeset,
         content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
+        _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         let parent = changeset.parents().next();
         let (added, changed, removed) = if let Some(parent) = parent {
@@ -174,6 +177,7 @@ impl ChangesetHook for LatestChangesChangesetHook {
         _changeset: &'cs BonsaiChangeset,
         content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
+        _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         let paths = self.0.keys().cloned().collect();
         let res = content_manager
@@ -202,6 +206,7 @@ impl ChangesetHook for FileContentMatchingChangesetHook {
         changeset: &'cs BonsaiChangeset,
         content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
+        _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         let futs = futures_unordered::FuturesUnordered::new();
 
@@ -277,6 +282,7 @@ impl ChangesetHook for LengthMatchingChangesetHook {
         changeset: &'cs BonsaiChangeset,
         content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
+        _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         let futs = futures_unordered::FuturesUnordered::new();
         for (path, change) in changeset.simplified_file_changes() {
@@ -336,6 +342,7 @@ impl FileHook for FnFileHook {
         _change: Option<&'change BasicFileChange>,
         _path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
+        _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         Ok((self.f)())
     }
@@ -365,6 +372,7 @@ impl FileHook for PathMatchingFileHook {
         _change: Option<&'change BasicFileChange>,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
+        _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         Ok(if self.paths.contains(&path) {
             HookExecution::Accepted
@@ -392,6 +400,7 @@ impl FileHook for FileContentMatchingFileHook {
         change: Option<&'change BasicFileChange>,
         _path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
+        _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         match change {
             Some(change) => {
@@ -435,6 +444,7 @@ impl FileHook for IsSymLinkMatchingFileHook {
         change: Option<&'change BasicFileChange>,
         _path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
+        _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         let is_symlink = match change {
             Some(change) => change.file_type() == FileType::Symlink,
@@ -466,6 +476,7 @@ impl FileHook for LengthMatchingFileHook {
         change: Option<&'change BasicFileChange>,
         _path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
+        _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         let length = match change {
             Some(change) => {
@@ -1249,6 +1260,7 @@ async fn run_changeset_hooks_with_mgr(
             &BookmarkName::new(bookmark_name).unwrap(),
             None,
             CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
         )
         .await
         .unwrap();
@@ -1331,6 +1343,7 @@ async fn run_file_hooks_with_mgr(
             &BookmarkName::new(bookmark_name).unwrap(),
             None,
             CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
         )
         .await
         .unwrap();

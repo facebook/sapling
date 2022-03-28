@@ -19,7 +19,9 @@ use futures::{
     stream::{self, Stream, StreamExt, TryStreamExt},
 };
 use futures_stats::{FutureStats, TimedFutureExt};
-use hooks::{hook_loader::load_hooks, CrossRepoPushSource, HookManager, HookOutcome};
+use hooks::{
+    hook_loader::load_hooks, CrossRepoPushSource, HookManager, HookOutcome, PushAuthoredBy,
+};
 use hooks_content_stores::blobrepo_text_only_fetcher;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
@@ -48,6 +50,7 @@ pub struct Tailer {
     exclude_merges: bool,
     excludes: HashSet<ChangesetId>,
     cross_repo_push_source: CrossRepoPushSource,
+    push_authored_by: PushAuthoredBy,
 }
 
 impl Tailer {
@@ -62,6 +65,7 @@ impl Tailer {
         excludes: HashSet<ChangesetId>,
         disabled_hooks: &HashSet<String>,
         cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
     ) -> Result<Tailer> {
         let content_fetcher = blobrepo_text_only_fetcher(repo.clone(), config.hook_max_file_size);
 
@@ -86,6 +90,7 @@ impl Tailer {
             exclude_merges,
             excludes,
             cross_repo_push_source,
+            push_authored_by,
         })
     }
 
@@ -153,6 +158,7 @@ impl Tailer {
                             self.bookmark,
                             self.exclude_merges,
                             self.cross_repo_push_source,
+                            self.push_authored_by,
                         );
 
                         let maybe_outcomes = task::spawn(async move {
@@ -164,6 +170,7 @@ impl Tailer {
                                 cs_id,
                                 exclude_merges,
                                 cross_repo_push_source,
+                                push_authored_by,
                             )
                             .await
                         })
@@ -187,6 +194,7 @@ async fn run_hooks_for_changeset(
     cs_id: ChangesetId,
     exclude_merges: bool,
     cross_repo_push_source: CrossRepoPushSource,
+    push_authored_by: PushAuthoredBy,
 ) -> Result<Option<HookExecutionInstance>, Error> {
     let cs = cs_id.load(ctx, repo.blobstore()).await?;
 
@@ -200,7 +208,14 @@ async fn run_hooks_for_changeset(
     let file_count = cs.file_changes_map().len();
 
     let (stats, outcomes) = hm
-        .run_hooks_for_bookmark(ctx, vec![cs].iter(), bm, None, cross_repo_push_source)
+        .run_hooks_for_bookmark(
+            ctx,
+            vec![cs].iter(),
+            bm,
+            None,
+            cross_repo_push_source,
+            push_authored_by,
+        )
         .timed()
         .await;
 

@@ -12,7 +12,10 @@ use metaconfig_types::HookConfig;
 use mononoke_types::{BasicFileChange, MPath};
 
 use super::LuaPattern;
-use crate::{CrossRepoPushSource, FileContentManager, FileHook, HookExecution, HookRejectionInfo};
+use crate::{
+    CrossRepoPushSource, FileContentManager, FileHook, HookExecution, HookRejectionInfo,
+    PushAuthoredBy,
+};
 
 #[derive(Default)]
 pub struct DenyFilesBuilder {
@@ -95,7 +98,11 @@ impl FileHook for DenyFiles {
         change: Option<&'change BasicFileChange>,
         path: &'path MPath,
         cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
+        if push_authored_by.service() {
+            return Ok(HookExecution::Accepted);
+        }
         if change.is_none() {
             // It is acceptable to delete any file
             return Ok(HookExecution::Accepted);

@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::{CrossRepoPushSource, FileContentManager, FileHook, HookExecution, HookRejectionInfo};
+use crate::{
+    CrossRepoPushSource, FileContentManager, FileHook, HookExecution, HookRejectionInfo,
+    PushAuthoredBy,
+};
 
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
@@ -77,7 +80,11 @@ impl FileHook for NoBadFilenames {
         change: Option<&'change BasicFileChange>,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
+        if push_authored_by.service() {
+            return Ok(HookExecution::Accepted);
+        }
         if change.is_none() {
             return Ok(HookExecution::Accepted);
         }

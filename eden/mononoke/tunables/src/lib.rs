@@ -252,6 +252,13 @@ pub struct MononokeTunables {
     // Setting this tunable to a new non-zero value and restarting
     // mononoke hosts will invalidate mutable renames cache
     mutable_renames_sitever: AtomicI64,
+
+    // Setting this will enable hooks on pushrebase bookmark moves that were
+    // initiated by a service (for user-initiated moves we always run hooks).
+    // Most of them will run in no-op mode but some of them (namely,
+    // verify_integrity) will need to do some work like logging and this is
+    // why it may be useful to run them.
+    enable_hooks_on_service_pushrebase: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

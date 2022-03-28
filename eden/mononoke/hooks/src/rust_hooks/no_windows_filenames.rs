@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::{CrossRepoPushSource, FileContentManager, FileHook, HookExecution, HookRejectionInfo};
+use crate::{
+    CrossRepoPushSource, FileContentManager, FileHook, HookExecution, HookRejectionInfo,
+    PushAuthoredBy,
+};
 
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
@@ -92,7 +95,11 @@ impl FileHook for NoWindowsFilenames {
         change: Option<&'change BasicFileChange>,
         path: &'path MPath,
         cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
+        if push_authored_by.service() {
+            return Ok(HookExecution::Accepted);
+        }
         if cross_repo_push_source == CrossRepoPushSource::PushRedirected {
             // For push-redirected pushes we rely on the hook
             // running in the original repo

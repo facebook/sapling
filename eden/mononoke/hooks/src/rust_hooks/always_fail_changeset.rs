@@ -7,6 +7,7 @@
 
 use crate::{
     ChangesetHook, CrossRepoPushSource, FileContentManager, HookExecution, HookRejectionInfo,
+    PushAuthoredBy,
 };
 use anyhow::Error;
 use async_trait::async_trait;
@@ -32,6 +33,7 @@ impl ChangesetHook for AlwaysFailChangeset {
         _changeset: &'cs BonsaiChangeset,
         _content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
+        _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         Ok(HookExecution::Rejected(HookRejectionInfo::new(
             "This hook always fails",

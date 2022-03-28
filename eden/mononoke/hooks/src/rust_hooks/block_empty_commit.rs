@@ -7,6 +7,7 @@
 
 use crate::{
     ChangesetHook, CrossRepoPushSource, FileContentManager, HookExecution, HookRejectionInfo,
+    PushAuthoredBy,
 };
 use anyhow::Error;
 use async_trait::async_trait;
@@ -32,7 +33,11 @@ impl ChangesetHook for BlockEmptyCommit {
         changeset: &'cs BonsaiChangeset,
         _content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
+        if push_authored_by.service() {
+            return Ok(HookExecution::Accepted);
+        }
         if changeset.file_changes_map().is_empty() {
             Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                 "Empty commit is not allowed",

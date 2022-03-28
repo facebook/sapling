@@ -7,7 +7,7 @@
 
 use crate::{
     ChangesetHook, CrossRepoPushSource, FileContentManager, HookConfig, HookExecution,
-    HookRejectionInfo,
+    HookRejectionInfo, PushAuthoredBy,
 };
 
 use anyhow::{anyhow, Context, Result};
@@ -149,7 +149,11 @@ impl ChangesetHook for LimitCommitsize {
         changeset: &'cs BonsaiChangeset,
         _content_manager: &'fetcher dyn FileContentManager,
         cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
+        if push_authored_by.service() {
+            return Ok(HookExecution::Accepted);
+        }
         if cross_repo_push_source == CrossRepoPushSource::PushRedirected {
             // For push-redirected commits, we rely on running source-repo hooks
             return Ok(HookExecution::Accepted);
@@ -254,6 +258,7 @@ mod test {
                 &bcs,
                 &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
+                PushAuthoredBy::User,
             )
             .await?;
         assert_eq!(hook_execution, HookExecution::Accepted);
@@ -269,6 +274,7 @@ mod test {
                 &bcs,
                 &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
+                PushAuthoredBy::User,
             )
             .await?;
         match hook_execution {
@@ -291,6 +297,7 @@ mod test {
                 &bcs,
                 &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
+                PushAuthoredBy::User,
             )
             .await?;
         match hook_execution {
@@ -336,6 +343,7 @@ mod test {
                 &bcs,
                 &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
+                PushAuthoredBy::User,
             )
             .await?;
         assert_eq!(hook_execution, HookExecution::Accepted);
@@ -351,6 +359,7 @@ mod test {
                 &bcs,
                 &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
+                PushAuthoredBy::User,
             )
             .await?;
         match hook_execution {
@@ -397,6 +406,7 @@ mod test {
                 &bcs,
                 &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
+                PushAuthoredBy::User,
             )
             .await?;
         // override max size is 3 bytes which is enough for 3 bytes commit
@@ -441,6 +451,7 @@ mod test {
                 &bcs,
                 &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
+                PushAuthoredBy::User,
             )
             .await?;
         // override max size is 2 bytes, but commit has 3 in total

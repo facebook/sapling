@@ -200,6 +200,7 @@ impl HookManager {
         bookmark: &BookmarkName,
         maybe_pushvars: Option<&HashMap<String, Bytes>>,
         cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
     ) -> Result<Vec<HookOutcome>, Error> {
         debug!(ctx.logger(), "Running hooks for bookmark {:?}", bookmark);
 
@@ -243,6 +244,7 @@ impl HookManager {
                 cs,
                 scuba,
                 cross_repo_push_source,
+                push_authored_by,
             ) {
                 futs.push(future);
             }
@@ -279,6 +281,23 @@ fn get_bypass_reason(
     }
 
     None
+}
+
+/// An enum to represent if changesets were created by
+/// a user or a service. If it is a service then most
+/// hooks should just exit with a success because we trust
+/// service writes. However, some hooks like verify_integrity
+/// might still need to do some checks and/or logging.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PushAuthoredBy {
+    User,
+    Service,
+}
+
+impl PushAuthoredBy {
+    fn service(&self) -> bool {
+        *self == PushAuthoredBy::Service
+    }
 }
 
 /// An enum to represent the origin of the changeset
@@ -320,36 +339,51 @@ impl<'a> HookInstance<'a> {
         cs: &BonsaiChangeset,
         cs_id: ChangesetId,
         cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
     ) -> Result<HookOutcome, Error> {
         let (stats, result) = match self {
             Self::Changeset(hook) => {
-                hook.run(ctx, bookmark, cs, content_manager, cross_repo_push_source)
-                    .map_ok(|exec| {
-                        HookOutcome::ChangesetHook(
-                            ChangesetHookExecutionID {
-                                cs_id,
-                                hook_name: hook_name.to_string(),
-                            },
-                            exec,
-                        )
-                    })
-                    .timed()
-                    .await
+                hook.run(
+                    ctx,
+                    bookmark,
+                    cs,
+                    content_manager,
+                    cross_repo_push_source,
+                    push_authored_by,
+                )
+                .map_ok(|exec| {
+                    HookOutcome::ChangesetHook(
+                        ChangesetHookExecutionID {
+                            cs_id,
+                            hook_name: hook_name.to_string(),
+                        },
+                        exec,
+                    )
+                })
+                .timed()
+                .await
             }
             Self::File(hook, path, change) => {
-                hook.run(ctx, content_manager, change, path, cross_repo_push_source)
-                    .map_ok(|exec| {
-                        HookOutcome::FileHook(
-                            FileHookExecutionID {
-                                cs_id,
-                                path: path.clone(),
-                                hook_name: hook_name.to_string(),
-                            },
-                            exec,
-                        )
-                    })
-                    .timed()
-                    .await
+                hook.run(
+                    ctx,
+                    content_manager,
+                    change,
+                    path,
+                    cross_repo_push_source,
+                    push_authored_by,
+                )
+                .map_ok(|exec| {
+                    HookOutcome::FileHook(
+                        FileHookExecutionID {
+                            cs_id,
+                            path: path.clone(),
+                            hook_name: hook_name.to_string(),
+                        },
+                        exec,
+                    )
+                })
+                .timed()
+                .await
             }
         };
 
@@ -412,6 +446,7 @@ impl Hook {
         cs: &'cs BonsaiChangeset,
         scuba: MononokeScubaSampleBuilder,
         cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
     ) -> impl Iterator<Item = impl Future<Output = Result<HookOutcome, Error>> + 'cs> + 'cs {
         let mut futures = Vec::new();
 
@@ -427,6 +462,7 @@ impl Hook {
                 cs,
                 cs_id,
                 cross_repo_push_source,
+                push_authored_by,
             )),
             Self::File(hook, _) => {
                 futures.extend(cs.simplified_file_changes().map(move |(path, change)| {
@@ -439,6 +475,7 @@ impl Hook {
                         cs,
                         cs_id,
                         cross_repo_push_source,
+                        push_authored_by,
                     )
                 }))
             }
@@ -456,6 +493,7 @@ pub trait ChangesetHook: Send + Sync {
         changeset: &'cs BonsaiChangeset,
         content_manager: &'fetcher dyn FileContentManager,
         cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error>;
 }
 
@@ -468,6 +506,7 @@ pub trait FileHook: Send + Sync {
         change: Option<&'change BasicFileChange>,
         path: &'path MPath,
         cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error>;
 }
 

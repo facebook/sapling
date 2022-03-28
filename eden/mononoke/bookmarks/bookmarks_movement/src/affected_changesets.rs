@@ -418,7 +418,9 @@ impl AffectedChangesets {
     }
 
     /// If this is a user-initiated update to a public bookmark, run the
-    /// hooks against the affected changesets.
+    /// hooks against the affected changesets. Also run hooks if it is a
+    /// service-initiated pushrebase but hooks will run with taking this
+    /// into account.
     async fn check_hooks(
         &mut self,
         ctx: &CoreContext,
@@ -434,7 +436,11 @@ impl AffectedChangesets {
         additional_changesets: AdditionalChangesets,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<(), BookmarkMovementError> {
-        if auth == &BookmarkMoveAuthorization::User && kind == BookmarkKind::Public {
+        let run_because_pushrebase = reason == BookmarkUpdateReason::Pushrebase
+            && tunables().get_enable_hooks_on_service_pushrebase();
+        if (auth == &BookmarkMoveAuthorization::User || run_because_pushrebase)
+            && kind == BookmarkKind::Public
+        {
             if reason == BookmarkUpdateReason::Push && tunables().get_disable_hooks_on_plain_push()
             {
                 // Skip running hooks for this plain push.
@@ -486,6 +492,7 @@ impl AffectedChangesets {
                         self.iter(),
                         pushvars,
                         cross_repo_push_source,
+                        auth.into(),
                     )
                     .await?;
                 }
