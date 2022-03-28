@@ -11,7 +11,7 @@ use crate::Mononoke;
 use anyhow::Result;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use fixtures::many_files_dirs;
+use fixtures::{ManyFilesDirs, TestRepoFixture};
 use mercurial_types::HgChangesetId;
 use mononoke_types::MPath;
 use pathmatcher::Matcher;
@@ -23,7 +23,7 @@ async fn sparse_profile_parsing(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
         ctx.clone(),
-        vec![("test".to_string(), many_files_dirs::getrepo(fb).await)],
+        vec![("test".to_string(), ManyFilesDirs::getrepo(fb).await)],
     )
     .await?;
     let repo = mononoke
