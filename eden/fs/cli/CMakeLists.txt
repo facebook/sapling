@@ -7,7 +7,8 @@ file(GLOB EDENFSCTL_SRCS "*.py" "doctor/*.py")
 
 if (IS_FB_BUILD)
   file(GLOB EDENFSCTL_FB_DOCTOR_SRCS "doctor/facebook/*.py")
-  list(APPEND EDENFSCTL_SRCS ${EDENFSCTL_FB_DOCTOR_SRCS})
+  file(GLOB EDENFSCTL_FB_SRCS "facebook/*.py")
+  list(APPEND EDENFSCTL_SRCS ${EDENFSCTL_FB_DOCTOR_SRCS} ${EDENFSCTL_FB_SRCS})
 endif()
 
 add_fb_python_executable(

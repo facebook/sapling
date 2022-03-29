@@ -18,7 +18,7 @@ import sys
 import traceback
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Callable, Generator, IO, List, Tuple
+from typing import Callable, Generator, IO, List, Tuple, Optional, cast
 
 from . import (
     debug as debug_mod,
@@ -31,6 +31,13 @@ from . import (
     top as top_mod,
 )
 from .config import EdenInstance
+
+try:
+    from .facebook.rage import find_fb_cdb
+except ImportError:
+
+    def find_fb_cdb() -> Optional[Path]:
+        return None
 
 
 def section_title(message: str, out: IO[bytes]) -> None:
@@ -88,18 +95,8 @@ def print_diagnostic_info(
         edenfs_instance_pid = health_status.pid
         if edenfs_instance_pid is not None:
             print_edenfs_process_tree(edenfs_instance_pid, out)
-            if sys.platform == "darwin" and not dry_run and processor:
-                section_title("EdenFS process trace", out)
-                try:
-                    paste_output(
-                        lambda sink: print_trace(edenfs_instance_pid, sink),
-                        processor,
-                        out,
-                    )
-                except Exception as e:
-                    out.write(
-                        b"Error getting `sample $(eden pid)`: %s.\n" % str(e).encode()
-                    )
+            if not dry_run and processor:
+                trace_running_edenfs(processor, edenfs_instance_pid, out)
 
     print_eden_redirections(instance, out)
 
@@ -216,21 +213,18 @@ def paste_output(
         proc = subprocess.Popen(
             shlex.split(processor), stdin=subprocess.PIPE, stdout=subprocess.PIPE
         )
-        sink = proc.stdin
-        output = proc.stdout
+        sink = cast(IO[bytes], proc.stdin)
+        output = cast(IO[bytes], proc.stdout)
 
-        # pyre-fixme[6]: Expected `IO[bytes]` for 2nd param but got
-        #  `Optional[typing.IO[typing.Any]]`.
-        output_generator(sink)
+        try:
+            output_generator(sink)
+        finally:
+            sink.close()
 
-        # pyre-fixme[16]: `Optional` has no attribute `close`.
-        sink.close()
+            stdout = output.read().decode("utf-8")
 
-        # pyre-fixme[16]: `Optional` has no attribute `read`.
-        stdout = output.read().decode("utf-8")
-
-        output.close()
-        proc.wait()
+            output.close()
+            proc.wait()
 
         # Expected output to be in form "<str0>\n<str1>: <str2>\n"
         # and we want str1
@@ -437,8 +431,63 @@ def print_crashed_edenfs_logs(processor: str, out: IO[bytes]) -> None:
                 else:
                     out.write(" not uploaded due to being too old".encode())
 
+    out.write("\n".encode())
 
-def print_trace(pid: int, sink: IO[bytes]) -> None:
+
+def trace_running_edenfs(processor: str, pid: int, out: IO[bytes]) -> None:
+    if sys.platform == "darwin":
+        trace_fn = print_sample_trace
+    elif sys.platform == "win32":
+        trace_fn = print_cdb_backtrace
+    else:
+        return
+
+    section_title("EdenFS process trace", out)
+    try:
+        paste_output(
+            lambda sink: trace_fn(pid, sink),
+            processor,
+            out,
+        )
+    except Exception as e:
+        out.write(b"Error getting EdenFS trace: %s.\n" % str(e).encode())
+
+
+def find_cdb() -> Optional[Path]:
+    wdk_path = Path("C:/Program Files (x86)/Windows Kits/10/Debuggers/x64/cdb.exe")
+    if wdk_path.exists():
+        return wdk_path
+    else:
+        return find_fb_cdb()
+
+
+def print_cdb_backtrace(pid: int, sink: IO[bytes]) -> None:
+    cdb_path = find_cdb()
+    if cdb_path is None:
+        raise Exception("No cdb.exe found.")
+
+    cdb_cmd = [cdb_path.as_posix()]
+
+    cdb_cmd += [
+        "-p",
+        str(pid),
+        "-pvr",  # Do not add a breakpoint,
+        "-y",  # Add the following to the symbol path
+        "C:/tools/eden/libexec/",
+        "-lines",  # Print lines if possible
+        "-c",  # Execute the following command
+    ]
+
+    debugger_command = [
+        "~*k",  # print backtraces of all threads
+        "qd",  # Detach and quit
+    ]
+    cdb_cmd += [";".join(debugger_command)]
+
+    subprocess.run(cdb_cmd, check=True, stderr=subprocess.STDOUT, stdout=sink)
+
+
+def print_sample_trace(pid: int, sink: IO[bytes]) -> None:
     # "sample" is specific to MacOS. Check if it exists before running.
     stack_trace_cmd = []
 
