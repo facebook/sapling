@@ -6,7 +6,7 @@
  */
 
 use crate::derive::{get_changes, DeletedManifestDeriver};
-use crate::mapping::{RootDeletedManifestId, RootDeletedManifestIdCommon};
+use crate::mapping::RootDeletedManifestIdCommon;
 use crate::ops::DeletedManifestOps;
 use anyhow::Error;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
@@ -54,11 +54,11 @@ macro_rules! impl_deleted_manifest_tests {
             }
             #[fbinit::test]
             async fn test_find_entries(fb: FacebookInit) {
-                $crate::test_utils::test_find_entries(fb).await
+                $crate::test_utils::test_find_entries::<$manifest>(fb).await
             }
             #[fbinit::test]
             async fn test_list_all_entries(fb: FacebookInit) {
-                $crate::test_utils::test_list_all_entries(fb).await
+                $crate::test_utils::test_list_all_entries::<$manifest>(fb).await
             }
         }
     };
@@ -540,7 +540,7 @@ pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
     Ok(())
 }
 
-pub(crate) async fn test_find_entries(fb: FacebookInit) {
+pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) {
     // Test simple separate files and whole dir deletions
     let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
     let ctx = CoreContext::test_mock(fb);
@@ -561,9 +561,7 @@ pub(crate) async fn test_find_entries(fb: FacebookInit) {
         let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), files, vec![]).await;
 
         let bcs_id = bcs.get_changeset_id();
-        let mf_id = derive_manifest::<RootDeletedManifestId>(&ctx, &repo, bcs, vec![])
-            .await
-            .1;
+        let mf_id = derive_manifest::<Root>(&ctx, &repo, bcs, vec![]).await.1;
 
         (bcs_id, mf_id)
     };
@@ -581,14 +579,13 @@ pub(crate) async fn test_find_entries(fb: FacebookInit) {
         let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), files, vec![bcs_id_1]).await;
 
         let _bcs_id = bcs.get_changeset_id();
-        let mf_id: mononoke_types::DeletedManifestId =
-            derive_manifest::<RootDeletedManifestId>(&ctx, &repo, bcs, vec![mf_id_1])
-                .await
-                .1;
+        let mf_id = derive_manifest::<Root>(&ctx, &repo, bcs, vec![mf_id_1])
+            .await
+            .1;
 
         {
             // check that it will yield only two deleted paths
-            let mut entries = RootDeletedManifestId::find_entries(
+            let mut entries = Root::find_entries(
                 &ctx,
                 repo.blobstore(),
                 mf_id.clone(),
@@ -610,7 +607,7 @@ pub(crate) async fn test_find_entries(fb: FacebookInit) {
 
         {
             // check that it will yield recursively all deleted paths including dirs
-            let mut entries = RootDeletedManifestId::find_entries(
+            let mut entries = Root::find_entries(
                 &ctx,
                 repo.blobstore(),
                 mf_id.clone(),
@@ -632,7 +629,7 @@ pub(crate) async fn test_find_entries(fb: FacebookInit) {
 
         {
             // check that it will yield recursively even having a path patterns
-            let mut entries = RootDeletedManifestId::find_entries(
+            let mut entries = Root::find_entries(
                 &ctx,
                 repo.blobstore(),
                 mf_id.clone(),
@@ -657,7 +654,7 @@ pub(crate) async fn test_find_entries(fb: FacebookInit) {
     }
 }
 
-pub(crate) async fn test_list_all_entries(fb: FacebookInit) {
+pub(crate) async fn test_list_all_entries<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) {
     // Test simple separate files and whole dir deletions
     let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
     let ctx = CoreContext::test_mock(fb);
@@ -674,9 +671,7 @@ pub(crate) async fn test_list_all_entries(fb: FacebookInit) {
         let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), files, vec![]).await;
 
         let bcs_id = bcs.get_changeset_id();
-        let mf_id = derive_manifest::<RootDeletedManifestId>(&ctx, &repo, bcs, vec![])
-            .await
-            .1;
+        let mf_id = derive_manifest::<Root>(&ctx, &repo, bcs, vec![]).await.1;
 
         (bcs_id, mf_id)
     };
@@ -690,17 +685,16 @@ pub(crate) async fn test_list_all_entries(fb: FacebookInit) {
         let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), files, vec![bcs_id_1]).await;
 
         let _bcs_id = bcs.get_changeset_id();
-        let mf_id = derive_manifest::<RootDeletedManifestId>(&ctx, &repo, bcs, vec![mf_id_1])
+        let mf_id = derive_manifest::<Root>(&ctx, &repo, bcs, vec![mf_id_1])
             .await
             .1;
 
         {
             // check that it will yield only two deleted paths
-            let entries =
-                RootDeletedManifestId::list_all_entries(&ctx, repo.blobstore(), mf_id.clone())
-                    .try_collect::<Vec<_>>()
-                    .await
-                    .unwrap();
+            let entries = Root::list_all_entries(&ctx, repo.blobstore(), mf_id.clone())
+                .try_collect::<Vec<_>>()
+                .await
+                .unwrap();
 
             let mut entries = entries
                 .into_iter()
