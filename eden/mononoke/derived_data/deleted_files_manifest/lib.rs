@@ -14,4 +14,4 @@ mod ops;
 pub mod test_utils;
 
 pub use mapping::RootDeletedManifestId;
-pub use ops::{find_entries, find_entry, list_all_entries, resolve_path_state, PathState};
+pub use ops::{DeletedManifestOps, PathState};

@@ -17,7 +17,7 @@ use changesets::ChangesetsRef;
 use chrono::{DateTime, FixedOffset};
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use deleted_files_manifest::RootDeletedManifestId;
+use deleted_files_manifest::{DeletedManifestOps, RootDeletedManifestId};
 use derived_data::BonsaiDerived;
 use derived_data_manager::BonsaiDerivable;
 use fsnodes::RootFsnodeId;
@@ -456,11 +456,13 @@ impl ChangesetContext {
     pub async fn deleted_paths(
         &self,
         paths: impl Iterator<Item = MononokePath>,
-    ) -> Result<impl Stream<Item = Result<ChangesetPathHistoryContext, MononokeError>>, MononokeError>
-    {
-        Ok(deleted_files_manifest::find_entries(
-            self.ctx().clone(),
-            self.repo().blob_repo().get_blobstore(),
+    ) -> Result<
+        impl Stream<Item = Result<ChangesetPathHistoryContext, MononokeError>> + '_,
+        MononokeError,
+    > {
+        Ok(RootDeletedManifestId::find_entries(
+            self.ctx(),
+            self.repo().blob_repo().blobstore(),
             self.root_deleted_manifest_id()
                 .await?
                 .deleted_manifest_id()

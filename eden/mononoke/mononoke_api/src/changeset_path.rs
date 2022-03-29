@@ -353,10 +353,11 @@ impl ChangesetPathHistoryContext {
                 cloned!(self.changeset, self.path);
                 async move {
                     let ctx = changeset.ctx();
-                    let blobstore = changeset.repo().blob_repo().get_blobstore();
+                    let blobstore = changeset.repo().blob_repo().blobstore();
                     let root_deleted_manifest_id = changeset.root_deleted_manifest_id().await?;
                     if let Some(mpath) = path.into() {
-                        deleted_files_manifest::find_entry(
+                        use deleted_files_manifest::{DeletedManifestOps, RootDeletedManifestId};
+                        RootDeletedManifestId::find_entry(
                             ctx,
                             blobstore,
                             root_deleted_manifest_id.deleted_manifest_id().clone(),

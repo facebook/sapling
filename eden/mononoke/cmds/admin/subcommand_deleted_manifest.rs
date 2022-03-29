@@ -18,7 +18,7 @@ use cmdlib::{
     helpers,
 };
 use context::CoreContext;
-use deleted_files_manifest::{find_entries, list_all_entries, RootDeletedManifestId};
+use deleted_files_manifest::{DeletedManifestOps, RootDeletedManifestId};
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::{compat::Stream01CompatExt, future, StreamExt, TryStreamExt};
@@ -140,9 +140,9 @@ async fn subcommand_manifest(
         "ROOT Deleted Files Manifest {:?}", root_manifest,
     );
     let mf_id = root_manifest.deleted_manifest_id().clone();
-    let mut entries: Vec<_> = find_entries(
-        ctx.clone(),
-        repo.get_blobstore(),
+    let mut entries: Vec<_> = RootDeletedManifestId::find_entries(
+        &ctx,
+        repo.blobstore(),
         mf_id,
         Some(PathOrPrefix::Prefix(prefix)),
     )
@@ -221,10 +221,11 @@ async fn verify_single_commit(
     let deleted_manifest_paths = async move {
         let root_manifest = RootDeletedManifestId::derive(&ctx, &repo, cs_id).await?;
         let mf_id = root_manifest.deleted_manifest_id().clone();
-        let entries: BTreeSet<_> = list_all_entries(ctx.clone(), repo.get_blobstore(), mf_id)
-            .try_filter_map(|(path_opt, ..)| async move { Ok(path_opt) })
-            .try_collect()
-            .await?;
+        let entries: BTreeSet<_> =
+            RootDeletedManifestId::list_all_entries(&ctx, repo.blobstore(), mf_id)
+                .try_filter_map(|(path_opt, ..)| async move { Ok(path_opt) })
+                .try_collect()
+                .await?;
         Ok(entries)
     };
     let ((paths_added, paths_deleted), deleted_manifest_paths) =
