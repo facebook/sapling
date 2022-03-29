@@ -12,6 +12,7 @@ mod list;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use cleanup::EphemeralStoreCleanUpArgs;
+use ephemeral_blobstore::EphemeralBlobstoreError;
 use ephemeral_blobstore::RepoEphemeralStore;
 use info::EphemeralStoreInfoArgs;
 use list::EphemeralStoreListArgs;
@@ -54,14 +55,26 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_context();
     let repo: Repo = app.open_repo(&args.repo).await?;
 
-    match args.subcommand {
+    let subcommand_result = match args.subcommand {
         EphemeralStoreSubcommand::Cleanup(cleanup_args) => {
-            cleanup::clean_bubbles(&ctx, &repo, cleanup_args).await?
+            cleanup::clean_bubbles(&ctx, &repo, cleanup_args).await
         }
-        EphemeralStoreSubcommand::Info(info_args) => info::bubble_info(&repo, info_args).await?,
-        EphemeralStoreSubcommand::List(list_args) => {
-            list::list_keys(&ctx, &repo, list_args).await?
-        }
+        EphemeralStoreSubcommand::Info(info_args) => info::bubble_info(&repo, info_args).await,
+        EphemeralStoreSubcommand::List(list_args) => list::list_keys(&ctx, &repo, list_args).await,
+    };
+    match subcommand_result {
+        Err(e) => match e.downcast_ref::<EphemeralBlobstoreError>() {
+            // If this repo does not have an ephemeral store, then this is a no-op
+            Some(EphemeralBlobstoreError::NoEphemeralBlobstore(repo_id)) => {
+                println!(
+                    "Ephemeral store doesn't exist for repo {}, exiting.",
+                    repo_id
+                );
+                Ok(())
+            }
+            // For any other error, return as-is
+            _ => Err(e),
+        },
+        _ => Ok(()),
     }
-    Ok(())
 }
