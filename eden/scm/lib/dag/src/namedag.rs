@@ -246,13 +246,11 @@ where
         }
         // Previous version of the API requires `master_heads: &[Vertex]`.
         // Warn about possible misuses.
-        for (_head, opts) in heads.vertex_options() {
-            if opts.highest_group != Group::MASTER {
-                return programming(format!(
-                    "NameDag::flush({:?}) is probably misused (group is not master)",
-                    heads
-                ));
-            }
+        if !heads.vertexes_by_group(Group::NON_MASTER).is_empty() {
+            return programming(format!(
+                "NameDag::flush({:?}) is probably misused (group is not master)",
+                heads
+            ));
         }
 
         // Write cached IdMap to disk.
@@ -432,11 +430,8 @@ where
         // - If highest_group = MASTER is specified, then NON_MASTER group
         //   must be empty to ensure no id reassignment (checked below).
         // - If highest_group = MASTER is not used, then it's okay whatever.
-        if heads
-            .vertex_options()
-            .into_iter()
-            .any(|(_v, o)| o.highest_group < Group::NON_MASTER)
-        {
+        let master_heads = heads.vertexes_by_group(Group::MASTER);
+        if !master_heads.is_empty() {
             let all = self.dag.all()?;
             let has_non_master = match all.max() {
                 Some(id) => id.group() == Group::NON_MASTER,
@@ -713,16 +708,15 @@ where
                 &self.pending_heads.vertexes(),
             ));
         }
-        for (head, opts) in heads.vertex_options() {
-            if opts.highest_group != Group::MASTER {
-                return programming(format!(
-                    concat!(
-                        "import_pull_data called with non-master head ({:?}). ",
-                        "This is unsupported because the pull data is lazy and can only be inserted to the master group.",
-                    ),
-                    head
-                ));
-            }
+        let non_master_heads = heads.vertexes_by_group(Group::NON_MASTER);
+        if !non_master_heads.is_empty() {
+            return programming(format!(
+                concat!(
+                    "import_pull_data called with non-master heads ({:?}). ",
+                    "This is unsupported because the pull data is lazy and can only be inserted to the master group.",
+                ),
+                non_master_heads
+            ));
         }
 
         for id in clone_data.flat_segments.parents_head_and_roots() {
@@ -2275,12 +2269,7 @@ where
 
             // Rebuild them.
             let heads: VertexListWithOptions = heads[..].into();
-            debug_assert!(
-                heads
-                    .vertex_options()
-                    .iter()
-                    .all(|(_, o)| o.highest_group == Group::NON_MASTER)
-            );
+            debug_assert!(heads.vertexes_by_group(Group::MASTER).is_empty());
             self.build(&parents, &heads).await?;
 
             Ok(())

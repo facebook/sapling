@@ -96,6 +96,20 @@ impl VertexListWithOptions {
         self.list.iter().map(|i| i.0.clone()).collect()
     }
 
+    /// Get the vertexes, filter by the `highest_group` option.
+    pub fn vertexes_by_group(&self, group: Group) -> Vec<VertexName> {
+        self.list
+            .iter()
+            .filter_map(|(v, o)| {
+                if o.highest_group == group {
+                    Some(v.clone())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
     /// Test if this list is empty.
     pub fn is_empty(&self) -> bool {
         self.list.is_empty()
