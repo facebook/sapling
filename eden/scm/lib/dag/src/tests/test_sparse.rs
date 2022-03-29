@@ -382,11 +382,22 @@ async fn test_flush_reassign_master() {
     // The rest (H, ::L) will also be reassigned, but remain in the
     // non-master group.
     client.drawdag("B-X-Y-Z-F D-F-G-H B-I-J-K-L", &[]);
+    assert_eq!(
+        client.output(),
+        [
+            "resolve names: [B, D], heads: [E]",
+            "resolve names: [I, X], heads: [E]",
+            "resolve paths: [E~2, E~4]"
+        ]
+    );
+
     client.flush("").await;
+    assert!(client.output().is_empty());
 
     // The server needs to have the new master group vertexes (up to G)
     // for the client to be able to assign them in the master group.
     server.drawdag("B-X-Y-Z-F D-F-G", &["G"]);
+    assert!(client.output().is_empty());
     client.set_remote(&server);
 
     // To avoid reusing caches, reopen the graph from disk.
@@ -394,16 +405,7 @@ async fn test_flush_reassign_master() {
 
     // Force reassign of vertexes in the non-master group.
     client.flush("G").await;
-
-    assert_eq!(
-        client.output(),
-        [
-            "resolve names: [B, D], heads: [E]",
-            "resolve names: [I, X], heads: [E]",
-            "resolve paths: [E~2, E~4]",
-            "resolve names: [H], heads: [G, E]"
-        ]
-    );
+    assert_eq!(client.output(), ["resolve names: [H], heads: [G, E]"]);
 }
 
 #[tokio::test]
