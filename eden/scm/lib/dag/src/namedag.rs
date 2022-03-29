@@ -179,7 +179,7 @@ where
     /// But is faster.
     async fn add_heads_and_flush(
         &mut self,
-        parent_names_func: &dyn Parents,
+        parents: &dyn Parents,
         heads: &VertexListWithOptions,
     ) -> Result<()> {
         if !self.pending_heads.is_empty() {
@@ -211,7 +211,7 @@ where
         self.dag.reload(&dag_lock)?;
 
         // Build.
-        self.build(parent_names_func, heads).await?;
+        self.build(parents, heads).await?;
 
         // Write to disk.
         self.map.persist(&map_lock)?;
@@ -2219,7 +2219,7 @@ where
     P: TryClone + Sync + Send + 'static,
     S: TryClone + Sync + Send + 'static,
 {
-    /// Export non-master DAG as parent_names_func on HashMap.
+    /// Export non-master DAG as parents on HashMap.
     ///
     /// This can be expensive. It is expected to be either called infrequently,
     /// or called with a small amount of data. For example, bounded amount of
@@ -2278,15 +2278,11 @@ where
     }
 
     /// Build IdMap and Segments for the given heads.
-    async fn build(
-        &mut self,
-        parent_names_func: &dyn Parents,
-        heads: &VertexListWithOptions,
-    ) -> Result<()> {
+    async fn build(&mut self, parents: &dyn Parents, heads: &VertexListWithOptions) -> Result<()> {
         // Populate vertex negative cache to reduce round-trips doing remote lookups.
         if self.is_vertex_lazy() {
             let heads: Vec<VertexName> = heads.vertexes();
-            self.populate_missing_vertexes_for_add_heads(parent_names_func, &heads)
+            self.populate_missing_vertexes_for_add_heads(parents, &heads)
                 .await?;
         }
 
@@ -2302,13 +2298,7 @@ where
                 // Important: do not call self.map.assign_head. It does not trigger
                 // remote protocol properly. Call self.assign_head instead.
                 let prepared_segments = self
-                    .assign_head(
-                        vertex.clone(),
-                        parent_names_func,
-                        group,
-                        &mut covered,
-                        &reserved,
-                    )
+                    .assign_head(vertex.clone(), parents, group, &mut covered, &reserved)
                     .await?;
                 outcome.merge(prepared_segments);
                 // Update reserved.
