@@ -99,8 +99,8 @@ pub struct DeletedManifest {
 impl DeletedManifestCommon for DeletedManifest {
     type Id = DeletedManifestId;
 
-    fn is_deleted(&self) -> bool {
-        self.is_deleted()
+    fn linknode(&self) -> Option<&ChangesetId> {
+        self.linknode().as_ref()
     }
 
     fn into_subentries(

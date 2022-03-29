@@ -549,6 +549,3 @@ async fn diff_against_parents(
     let res: Vec<_> = changes.into_iter().collect();
     Ok(res)
 }
-
-#[cfg(test)]
-crate::test_utils::impl_deleted_manifest_tests!(DeletedManifest);

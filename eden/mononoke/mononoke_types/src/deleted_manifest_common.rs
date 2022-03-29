@@ -52,8 +52,13 @@ pub trait DeletedManifestCommon:
 
     /// Whether the file/directory represented by this manifest node currently exists
     /// in the changeset.
-    fn is_deleted(&self) -> bool;
+    fn is_deleted(&self) -> bool {
+        self.linknode().is_some()
+    }
 
     /// Calculate id of manifest object.
     fn id(&self) -> Self::Id;
+
+    /// Last changeset where the this node was deleted
+    fn linknode(&self) -> Option<&ChangesetId>;
 }

@@ -8,14 +8,14 @@
 use crate::derive::{get_changes, DeletedManifestDeriver};
 use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreGetData, Loadable};
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
 use mononoke_types::{
-    deleted_files_manifest::DeletedManifest, BlobstoreBytes, BonsaiChangeset, ChangesetId,
-    DeletedManifestId,
+    deleted_files_manifest::DeletedManifest, deleted_manifest_common::DeletedManifestCommon,
+    BlobstoreBytes, BonsaiChangeset, ChangesetId, DeletedManifestId, MononokeId,
 };
 use unodes::RootUnodeManifestId;
 
@@ -23,6 +23,27 @@ use derived_data_service_if::types as thrift;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootDeletedManifestId(DeletedManifestId);
+
+/// Common trait for the root id of all deleted manifest types
+pub trait RootDeletedManifestIdCommon: BonsaiDerivable + std::fmt::Debug + Clone {
+    /// The manifest type
+    type Manifest: DeletedManifestCommon<Id = Self::Id>;
+    /// The id type (Manifest::Id)
+    // Basically just a type alias to Manifest::Id, but Rust makes us be a bit more verbose
+    type Id: MononokeId<Value = Self::Manifest> + Loadable<Value = Self::Manifest>;
+
+    /// Get the id of the root deleted manifest node
+    fn id(&self) -> &Self::Id;
+}
+
+impl RootDeletedManifestIdCommon for RootDeletedManifestId {
+    type Manifest = DeletedManifest;
+    type Id = DeletedManifestId;
+
+    fn id(&self) -> &Self::Id {
+        self.deleted_manifest_id()
+    }
+}
 
 impl RootDeletedManifestId {
     pub fn deleted_manifest_id(&self) -> &DeletedManifestId {
@@ -132,3 +153,6 @@ impl BonsaiDerivable for RootDeletedManifestId {
 }
 
 impl_bonsai_derived_via_manager!(RootDeletedManifestId);
+
+#[cfg(test)]
+crate::test_utils::impl_deleted_manifest_tests!(RootDeletedManifestId);

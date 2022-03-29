@@ -6,7 +6,7 @@
  */
 
 use crate::derive::{get_changes, DeletedManifestDeriver};
-use crate::mapping::RootDeletedManifestId;
+use crate::mapping::RootDeletedManifestIdCommon;
 use anyhow::Error;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Loadable;
@@ -19,8 +19,8 @@ use fixtures::{store_files, ManyFilesDirs, TestRepoFixture};
 use futures::{pin_mut, stream::iter, FutureExt, Stream, StreamExt, TryStreamExt};
 use maplit::btreemap;
 use mononoke_types::{
-    deleted_files_manifest::DeletedManifest, BonsaiChangeset, BonsaiChangesetMut, ChangesetId,
-    DateTime, DeletedManifestId, FileChange, MPath,
+    deleted_manifest_common::DeletedManifestCommon, BonsaiChangeset, BonsaiChangesetMut,
+    ChangesetId, DateTime, FileChange, MPath,
 };
 use pretty_assertions::assert_eq;
 use repo_derived_data::RepoDerivedDataRef;
@@ -34,24 +34,28 @@ use tests_utils::CreateCommitContext;
 macro_rules! impl_deleted_manifest_tests {
     ($manifest:ty) => {
         mod tests {
+            use super::*;
+            use ::anyhow::Result;
+            use ::fbinit::FacebookInit;
+
             #[fbinit::test]
-            async fn linear_test(fb: ::fbinit::FacebookInit) {
-                $crate::test_utils::linear_test(fb).await
+            async fn linear_test(fb: FacebookInit) {
+                $crate::test_utils::linear_test::<$manifest>(fb).await
             }
             #[fbinit::test]
-            async fn many_file_dirs_test(fb: ::fbinit::FacebookInit) {
-                $crate::test_utils::many_file_dirs_test(fb).await
+            async fn many_file_dirs_test(fb: FacebookInit) {
+                $crate::test_utils::many_file_dirs_test::<$manifest>(fb).await
             }
             #[fbinit::test]
-            async fn merged_history_test(fb: ::fbinit::FacebookInit) -> ::anyhow::Result<()> {
-                $crate::test_utils::merged_history_test(fb).await
+            async fn merged_history_test(fb: FacebookInit) -> Result<()> {
+                $crate::test_utils::merged_history_test::<$manifest>(fb).await
             }
         }
     };
 }
 pub(crate) use impl_deleted_manifest_tests;
 
-pub(crate) async fn linear_test(fb: FacebookInit) {
+pub(crate) async fn linear_test<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) {
     // Test simple separate files and whole dir deletions
     let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
     let ctx = CoreContext::test_mock(fb);
@@ -67,7 +71,8 @@ pub(crate) async fn linear_test(fb: FacebookInit) {
             "dir-2/f-4" => Some("6\n"),
         };
         let (bcs_id, mf_id, deleted_nodes) =
-            create_cs_and_derive_manifest(ctx.clone(), repo.clone(), file_changes, vec![]).await;
+            create_cs_and_derive_manifest::<Root>(ctx.clone(), repo.clone(), file_changes, vec![])
+                .await;
 
         // nothing was deleted yet
         let expected_nodes = vec![(None, Status::Live)];
@@ -86,7 +91,7 @@ pub(crate) async fn linear_test(fb: FacebookInit) {
             "dir/f-2" => None,
             "dir-2/sub/f-3" => None,
         };
-        let (bcs_id, mf_id, deleted_nodes) = create_cs_and_derive_manifest(
+        let (bcs_id, mf_id, deleted_nodes) = create_cs_and_derive_manifest::<Root>(
             ctx.clone(),
             repo.clone(),
             file_changes,
@@ -117,7 +122,7 @@ pub(crate) async fn linear_test(fb: FacebookInit) {
             "file-2.txt" => None,
             "dir/sub/f-4" => Some("4\n4\n4\n"),
         };
-        let (bcs_id, mf_id, deleted_nodes) = create_cs_and_derive_manifest(
+        let (bcs_id, mf_id, deleted_nodes) = create_cs_and_derive_manifest::<Root>(
             ctx.clone(),
             repo.clone(),
             file_changes,
@@ -149,7 +154,7 @@ pub(crate) async fn linear_test(fb: FacebookInit) {
             // dir as file
             "dir-2/sub" => Some("file now!\n"),
         };
-        let (bcs_id, mf_id, deleted_nodes) = create_cs_and_derive_manifest(
+        let (bcs_id, mf_id, deleted_nodes) = create_cs_and_derive_manifest::<Root>(
             ctx.clone(),
             repo.clone(),
             file_changes,
@@ -182,7 +187,7 @@ pub(crate) async fn linear_test(fb: FacebookInit) {
             "dir-2/sub" => None,
             "dir/sub/f-4" => None,
         };
-        let (bcs_id, mf_id, deleted_nodes) = create_cs_and_derive_manifest(
+        let (bcs_id, mf_id, deleted_nodes) = create_cs_and_derive_manifest::<Root>(
             ctx.clone(),
             repo.clone(),
             file_changes,
@@ -215,7 +220,7 @@ pub(crate) async fn linear_test(fb: FacebookInit) {
     };
 }
 
-pub(crate) async fn many_file_dirs_test(fb: FacebookInit) {
+pub(crate) async fn many_file_dirs_test<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) {
     let repo = ManyFilesDirs::getrepo(fb).await;
     let ctx = CoreContext::test_mock(fb);
 
@@ -223,7 +228,7 @@ pub(crate) async fn many_file_dirs_test(fb: FacebookInit) {
         let hg_cs = "5a28e25f924a5d209b82ce0713d8d83e68982bc8";
         let (_, bcs) = bonsai_changeset_from_hg(&ctx, &repo, hg_cs).await.unwrap();
 
-        let (_, mf_id, deleted_nodes) = derive_manifest(&ctx, &repo, bcs, vec![]).await;
+        let (_, mf_id, deleted_nodes) = derive_manifest::<Root>(&ctx, &repo, bcs, vec![]).await;
 
         // nothing was deleted yet
         let expected_nodes = vec![(None, Status::Live)];
@@ -235,7 +240,8 @@ pub(crate) async fn many_file_dirs_test(fb: FacebookInit) {
         let hg_cs = "2f866e7e549760934e31bf0420a873f65100ad63";
         let (_, bcs) = bonsai_changeset_from_hg(&ctx, &repo, hg_cs).await.unwrap();
 
-        let (_, mf_id, deleted_nodes) = derive_manifest(&ctx, &repo, bcs, vec![mf_id_1]).await;
+        let (_, mf_id, deleted_nodes) =
+            derive_manifest::<Root>(&ctx, &repo, bcs, vec![mf_id_1]).await;
 
         // nothing was deleted yet
         let expected_nodes = vec![(None, Status::Live)];
@@ -247,7 +253,8 @@ pub(crate) async fn many_file_dirs_test(fb: FacebookInit) {
         let hg_cs = "d261bc7900818dea7c86935b3fb17a33b2e3a6b4";
         let (_, bcs) = bonsai_changeset_from_hg(&ctx, &repo, hg_cs).await.unwrap();
 
-        let (_, mf_id, deleted_nodes) = derive_manifest(&ctx, &repo, bcs, vec![mf_id_2]).await;
+        let (_, mf_id, deleted_nodes) =
+            derive_manifest::<Root>(&ctx, &repo, bcs, vec![mf_id_2]).await;
 
         // nothing was deleted yet
         let expected_nodes = vec![(None, Status::Live)];
@@ -259,7 +266,8 @@ pub(crate) async fn many_file_dirs_test(fb: FacebookInit) {
         let hg_cs = "051946ed218061e925fb120dac02634f9ad40ae2";
         let (bcs_id, bcs) = bonsai_changeset_from_hg(&ctx, &repo, hg_cs).await.unwrap();
 
-        let (_, mf_id, deleted_nodes) = derive_manifest(&ctx, &repo, bcs, vec![mf_id_3]).await;
+        let (_, mf_id, deleted_nodes) =
+            derive_manifest::<Root>(&ctx, &repo, bcs, vec![mf_id_3]).await;
 
         let expected_nodes = vec![
             (None, Status::Live),
@@ -294,7 +302,9 @@ pub(crate) async fn many_file_dirs_test(fb: FacebookInit) {
     };
 }
 
-pub(crate) async fn merged_history_test(fb: FacebookInit) -> Result<(), Error> {
+pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
+    fb: FacebookInit,
+) -> Result<(), Error> {
     //
     //  N
     //  | \
@@ -333,7 +343,7 @@ pub(crate) async fn merged_history_test(fb: FacebookInit) -> Result<(), Error> {
         .add_file("dir/file_2", "file->file_2")
         .commit()
         .await?;
-    let deleted_nodes = gen_deleted_manifest_nodes(&ctx, &repo, b.clone()).await?;
+    let deleted_nodes = gen_deleted_manifest_nodes::<Root>(&ctx, &repo, b.clone()).await?;
     let expected_nodes = vec![
         (None, Status::Live),
         (Some(path("dir")), Status::Live),
@@ -355,7 +365,7 @@ pub(crate) async fn merged_history_test(fb: FacebookInit) -> Result<(), Error> {
         .commit()
         .await?;
 
-    let deleted_nodes = gen_deleted_manifest_nodes(&ctx, &repo, d.clone()).await?;
+    let deleted_nodes = gen_deleted_manifest_nodes::<Root>(&ctx, &repo, d.clone()).await?;
     let expected_nodes = vec![
         (None, Status::Live),
         (Some(path("dir")), Status::Deleted(d)),
@@ -392,7 +402,7 @@ pub(crate) async fn merged_history_test(fb: FacebookInit) -> Result<(), Error> {
         .commit()
         .await?;
 
-    let deleted_nodes = gen_deleted_manifest_nodes(&ctx, &repo, g.clone()).await?;
+    let deleted_nodes = gen_deleted_manifest_nodes::<Root>(&ctx, &repo, g.clone()).await?;
     let expected_nodes = vec![
         (None, Status::Live),
         (Some(path("dir")), Status::Deleted(d)),
@@ -408,7 +418,7 @@ pub(crate) async fn merged_history_test(fb: FacebookInit) -> Result<(), Error> {
         .commit()
         .await?;
 
-    let deleted_nodes = gen_deleted_manifest_nodes(&ctx, &repo, h.clone()).await?;
+    let deleted_nodes = gen_deleted_manifest_nodes::<Root>(&ctx, &repo, h.clone()).await?;
     let expected_nodes = vec![
         (None, Status::Live),
         (Some(path("dir")), Status::Deleted(d)),
@@ -432,7 +442,7 @@ pub(crate) async fn merged_history_test(fb: FacebookInit) -> Result<(), Error> {
         .add_file("dir_5/file_2", "5.2")
         .commit()
         .await?;
-    let deleted_nodes = gen_deleted_manifest_nodes(&ctx, &repo, i.clone()).await?;
+    let deleted_nodes = gen_deleted_manifest_nodes::<Root>(&ctx, &repo, i.clone()).await?;
     let expected_nodes = vec![
         (None, Status::Live),
         (Some(path("dir")), Status::Live),
@@ -497,7 +507,7 @@ pub(crate) async fn merged_history_test(fb: FacebookInit) -> Result<(), Error> {
         .commit()
         .await?;
 
-    let deleted_nodes = gen_deleted_manifest_nodes(&ctx, &repo, n.clone()).await?;
+    let deleted_nodes = gen_deleted_manifest_nodes::<Root>(&ctx, &repo, n.clone()).await?;
     let expected_nodes = vec![
         (None, Status::Live),
         (Some(path("dir")), Status::Live),
@@ -520,7 +530,7 @@ pub(crate) async fn merged_history_test(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-async fn gen_deleted_manifest_nodes(
+async fn gen_deleted_manifest_nodes<Root: RootDeletedManifestIdCommon>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bonsai: ChangesetId,
@@ -528,23 +538,22 @@ async fn gen_deleted_manifest_nodes(
     let manifest = repo
         .repo_derived_data()
         .manager()
-        .derive::<RootDeletedManifestId>(ctx, bonsai, None)
+        .derive::<Root>(ctx, bonsai, None)
         .await?;
-    let mut deleted_nodes =
-        iterate_all_entries(ctx.clone(), repo.clone(), *manifest.deleted_manifest_id())
-            .map_ok(|(path, st, ..)| (path, st))
-            .try_collect::<Vec<_>>()
-            .await?;
+    let mut deleted_nodes = iterate_all_entries::<Root>(ctx.clone(), repo.clone(), *manifest.id())
+        .map_ok(|(path, st, ..)| (path, st))
+        .try_collect::<Vec<_>>()
+        .await?;
     deleted_nodes.sort_by_key(|(path, ..)| path.clone());
     Ok(deleted_nodes)
 }
 
-async fn create_cs_and_derive_manifest(
+async fn create_cs_and_derive_manifest<Root: RootDeletedManifestIdCommon>(
     ctx: CoreContext,
     repo: BlobRepo,
     file_changes: BTreeMap<&str, Option<&str>>,
-    parent_ids: Vec<(ChangesetId, DeletedManifestId)>,
-) -> (ChangesetId, DeletedManifestId, Vec<(Option<MPath>, Status)>) {
+    parent_ids: Vec<(ChangesetId, Root::Id)>,
+) -> (ChangesetId, Root::Id, Vec<(Option<MPath>, Status)>) {
     let parent_bcs_ids = parent_ids
         .iter()
         .map(|(bs, _)| bs.clone())
@@ -555,15 +564,15 @@ async fn create_cs_and_derive_manifest(
 
     let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), files, parent_bcs_ids).await;
 
-    derive_manifest(&ctx, &repo, bcs, parent_mf_ids).await
+    derive_manifest::<Root>(&ctx, &repo, bcs, parent_mf_ids).await
 }
 
-async fn derive_manifest(
+async fn derive_manifest<Root: RootDeletedManifestIdCommon>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bcs: BonsaiChangeset,
-    parent_mf_ids: Vec<DeletedManifestId>,
-) -> (ChangesetId, DeletedManifestId, Vec<(Option<MPath>, Status)>) {
+    parent_mf_ids: Vec<Root::Id>,
+) -> (ChangesetId, Root::Id, Vec<(Option<MPath>, Status)>) {
     let blobstore = repo.blobstore().boxed();
     let bcs_id = bcs.get_changeset_id();
 
@@ -574,7 +583,7 @@ async fn derive_manifest(
     )
     .await
     .unwrap();
-    let f = DeletedManifestDeriver::<DeletedManifest>::derive(
+    let f = DeletedManifestDeriver::<Root::Manifest>::derive(
         ctx,
         &blobstore,
         bcs_id,
@@ -586,7 +595,7 @@ async fn derive_manifest(
     // Make sure it's saved in the blobstore
     dfm_id.load(ctx, &blobstore).await.unwrap();
 
-    let mut deleted_nodes = iterate_all_entries(ctx.clone(), repo.clone(), dfm_id.clone())
+    let mut deleted_nodes = iterate_all_entries::<Root>(ctx.clone(), repo.clone(), dfm_id.clone())
         .map_ok(|(path, st, ..)| (path, st))
         .try_collect::<Vec<_>>()
         .await
@@ -634,11 +643,11 @@ impl From<Option<ChangesetId>> for Status {
     }
 }
 
-fn iterate_all_entries(
+fn iterate_all_entries<Root: RootDeletedManifestIdCommon>(
     ctx: CoreContext,
     repo: BlobRepo,
-    manifest_id: DeletedManifestId,
-) -> impl Stream<Item = Result<(Option<MPath>, Status, DeletedManifestId), Error>> {
+    manifest_id: Root::Id,
+) -> impl Stream<Item = Result<(Option<MPath>, Status, Root::Id), Error>> {
     async_stream::stream! {
         let blobstore = repo.get_blobstore();
         let s = bounded_traversal_stream(256, Some((None, manifest_id)), move |(path, manifest_id)| {
@@ -647,16 +656,16 @@ fn iterate_all_entries(
                 let manifest = manifest_id.load(&ctx, &blobstore).await?;
                 let entry = (
                     path.clone(),
-                    Status::from(manifest.linknode().clone()),
+                    Status::from(manifest.linknode().cloned()),
                     manifest_id,
                 );
                 let recurse_subentries = manifest
-                    .into_subentries()
-                    .map(|(name, mf_id)| {
+                    .into_subentries(&ctx, &blobstore)
+                    .map_ok(|(name, mf_id)| {
                         let full_path = MPath::join_opt_element(path.as_ref(), &name);
                         (Some(full_path), mf_id)
                     })
-                    .collect::<Vec<_>>();
+                    .try_collect::<Vec<_>>().await?;
 
                 Result::<_, Error>::Ok((vec![entry], recurse_subentries))
             }.boxed()
