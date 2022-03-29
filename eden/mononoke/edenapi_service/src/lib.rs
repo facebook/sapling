@@ -7,6 +7,7 @@
 
 #![deny(warnings)]
 #![feature(associated_type_defaults)]
+#![feature(try_blocks)]
 
 mod context;
 mod errors;
@@ -35,7 +36,7 @@ use std::sync::{atomic::AtomicBool, Arc};
 
 use crate::context::ServerContext;
 use crate::handlers::build_router;
-use crate::middleware::{OdsMiddleware, RequestContextMiddleware};
+use crate::middleware::{OdsMiddleware, RequestContextMiddleware, RequestDumperMiddleware};
 use crate::scuba::EdenApiScubaHandler;
 
 pub type EdenApi = MononokeHttpHandler<Router>;
@@ -77,6 +78,7 @@ pub fn build(
             scuba.clone(),
             rate_limiter,
         ))
+        .add(RequestDumperMiddleware::new(fb))
         .add(LoadMiddleware::new())
         .add(log_middleware)
         .add(OdsMiddleware::new())

@@ -79,6 +79,7 @@ pub struct MononokeTunables {
     max_scuba_msg_length: AtomicI64,
     wishlist_read_qps: AtomicI64,
     wishlist_write_qps: AtomicI64,
+    edenapi_req_dumper_sample_ratio: AtomicI64,
     command_monitor_interval: AtomicI64,
     command_monitor_remote_logging: AtomicI64,
     // Log all getfiles/gettreepack requests for paths that start with prefix

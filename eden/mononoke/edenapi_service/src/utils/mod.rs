@@ -17,6 +17,7 @@ use rate_limiting::Metric;
 
 use crate::context::ServerContext;
 use crate::errors::{ErrorKind, MononokeErrorExt};
+use crate::middleware::request_dumper::RequestDumper;
 use crate::middleware::RequestContext;
 
 pub mod cbor;
@@ -53,10 +54,17 @@ pub async fn get_repo(
 pub async fn get_request_body(state: &mut State) -> Result<Bytes, HttpError> {
     let body = Body::take_from(state);
     let headers = HeaderMap::try_borrow_from(state);
-    body.try_concat_body_opt(headers)
+    let body = body
+        .try_concat_body_opt(headers)
         .context(ErrorKind::InvalidContentLength)
         .map_err(HttpError::e400)?
         .await
         .context(ErrorKind::ClientCancelled)
-        .map_err(HttpError::e400)
+        .map_err(HttpError::e400)?;
+
+    if let Some(rd) = RequestDumper::try_borrow_mut_from(state) {
+        rd.add_body(&body);
+    };
+
+    Ok(body)
 }
