@@ -509,7 +509,7 @@ fn read_set_repo_name(config: &mut ConfigSet, repo_path: &Path) -> crate::Result
         tracing::debug!("repo name: {:?} (from {})", &repo_name, source);
         if source != ".hg/reponame" {
             let need_rewrite = match read_repo_name_from_disk(repo_path) {
-                Ok(s) => s == repo_name,
+                Ok(s) => s != repo_name,
                 Err(_) => true,
             };
             if need_rewrite {
