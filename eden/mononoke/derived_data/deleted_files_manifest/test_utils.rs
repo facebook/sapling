@@ -6,7 +6,8 @@
  */
 
 use crate::derive::{get_changes, DeletedManifestDeriver};
-use crate::mapping::RootDeletedManifestIdCommon;
+use crate::mapping::{RootDeletedManifestId, RootDeletedManifestIdCommon};
+use crate::ops::DeletedManifestOps;
 use anyhow::Error;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Loadable;
@@ -17,6 +18,7 @@ use derived_data_test_utils::bonsai_changeset_from_hg;
 use fbinit::FacebookInit;
 use fixtures::{store_files, ManyFilesDirs, TestRepoFixture};
 use futures::{pin_mut, stream::iter, FutureExt, Stream, StreamExt, TryStreamExt};
+use manifest::PathOrPrefix;
 use maplit::btreemap;
 use mononoke_types::{
     deleted_manifest_common::DeletedManifestCommon, BonsaiChangeset, BonsaiChangesetMut,
@@ -49,6 +51,14 @@ macro_rules! impl_deleted_manifest_tests {
             #[fbinit::test]
             async fn merged_history_test(fb: FacebookInit) -> Result<()> {
                 $crate::test_utils::merged_history_test::<$manifest>(fb).await
+            }
+            #[fbinit::test]
+            async fn test_find_entries(fb: FacebookInit) {
+                $crate::test_utils::test_find_entries(fb).await
+            }
+            #[fbinit::test]
+            async fn test_list_all_entries(fb: FacebookInit) {
+                $crate::test_utils::test_list_all_entries(fb).await
             }
         }
     };
@@ -528,6 +538,183 @@ pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
     assert_eq!(deleted_nodes, expected_nodes);
 
     Ok(())
+}
+
+pub(crate) async fn test_find_entries(fb: FacebookInit) {
+    // Test simple separate files and whole dir deletions
+    let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+    let ctx = CoreContext::test_mock(fb);
+
+    // create parent deleted files manifest
+    let (bcs_id_1, mf_id_1) = {
+        let file_changes = btreemap! {
+            "file.txt" => Some("1\n"),
+            "file-2.txt" => Some("2\n"),
+            "dir/sub/f-1" => Some("3\n"),
+            "dir/sub/f-6" => Some("3\n"),
+            "dir/f-2" => Some("4\n"),
+            "dir-2/sub/f-3" => Some("5\n"),
+            "dir-2/f-4" => Some("6\n"),
+            "dir-2/f-5" => Some("7\n"),
+        };
+        let files = store_files(&ctx, file_changes, &repo).await;
+        let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), files, vec![]).await;
+
+        let bcs_id = bcs.get_changeset_id();
+        let mf_id = derive_manifest::<RootDeletedManifestId>(&ctx, &repo, bcs, vec![])
+            .await
+            .1;
+
+        (bcs_id, mf_id)
+    };
+
+    // delete some files and dirs
+    {
+        let file_changes = btreemap! {
+            "dir/sub/f-1" => None,
+            "dir/sub/f-6" => None,
+            "dir/f-2" => None,
+            "dir-2/sub/f-3" => None,
+            "dir-2/f-4" => None,
+        };
+        let files = store_files(&ctx, file_changes, &repo).await;
+        let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), files, vec![bcs_id_1]).await;
+
+        let _bcs_id = bcs.get_changeset_id();
+        let mf_id: mononoke_types::DeletedManifestId =
+            derive_manifest::<RootDeletedManifestId>(&ctx, &repo, bcs, vec![mf_id_1])
+                .await
+                .1;
+
+        {
+            // check that it will yield only two deleted paths
+            let mut entries = RootDeletedManifestId::find_entries(
+                &ctx,
+                repo.blobstore(),
+                mf_id.clone(),
+                vec![
+                    PathOrPrefix::Path(Some(path("file.txt"))),
+                    PathOrPrefix::Path(Some(path("dir/f-2"))),
+                    PathOrPrefix::Path(Some(path("dir/sub/f-1"))),
+                ],
+            )
+            .map_ok(|(path, _)| path)
+            .try_collect::<Vec<_>>()
+            .await
+            .unwrap();
+
+            entries.sort();
+            let expected_entries = vec![Some(path("dir/f-2")), Some(path("dir/sub/f-1"))];
+            assert_eq!(entries, expected_entries);
+        }
+
+        {
+            // check that it will yield recursively all deleted paths including dirs
+            let mut entries = RootDeletedManifestId::find_entries(
+                &ctx,
+                repo.blobstore(),
+                mf_id.clone(),
+                vec![PathOrPrefix::Prefix(Some(path("dir-2")))],
+            )
+            .map_ok(|(path, _)| path)
+            .try_collect::<Vec<_>>()
+            .await
+            .unwrap();
+
+            entries.sort();
+            let expected_entries = vec![
+                Some(path("dir-2/f-4")),
+                Some(path("dir-2/sub")),
+                Some(path("dir-2/sub/f-3")),
+            ];
+            assert_eq!(entries, expected_entries);
+        }
+
+        {
+            // check that it will yield recursively even having a path patterns
+            let mut entries = RootDeletedManifestId::find_entries(
+                &ctx,
+                repo.blobstore(),
+                mf_id.clone(),
+                vec![
+                    PathOrPrefix::Prefix(Some(path("dir/sub"))),
+                    PathOrPrefix::Path(Some(path("dir/sub/f-1"))),
+                ],
+            )
+            .map_ok(|(path, _)| path)
+            .try_collect::<Vec<_>>()
+            .await
+            .unwrap();
+
+            entries.sort();
+            let expected_entries = vec![
+                Some(path("dir/sub")),
+                Some(path("dir/sub/f-1")),
+                Some(path("dir/sub/f-6")),
+            ];
+            assert_eq!(entries, expected_entries);
+        }
+    }
+}
+
+pub(crate) async fn test_list_all_entries(fb: FacebookInit) {
+    // Test simple separate files and whole dir deletions
+    let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+    let ctx = CoreContext::test_mock(fb);
+
+    // create parent deleted files manifest
+    let (bcs_id_1, mf_id_1) = {
+        let file_changes = btreemap! {
+            "file.txt" => Some("1\n"),
+            "dir/sub/f-1" => Some("3\n"),
+            "dir/sub/f-3" => Some("3\n"),
+            "dir/f-2" => Some("4\n"),
+        };
+        let files = store_files(&ctx, file_changes, &repo).await;
+        let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), files, vec![]).await;
+
+        let bcs_id = bcs.get_changeset_id();
+        let mf_id = derive_manifest::<RootDeletedManifestId>(&ctx, &repo, bcs, vec![])
+            .await
+            .1;
+
+        (bcs_id, mf_id)
+    };
+
+    {
+        let file_changes = btreemap! {
+            "dir/sub/f-1" => None,
+            "dir/sub/f-3" => None,
+        };
+        let files = store_files(&ctx, file_changes, &repo).await;
+        let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), files, vec![bcs_id_1]).await;
+
+        let _bcs_id = bcs.get_changeset_id();
+        let mf_id = derive_manifest::<RootDeletedManifestId>(&ctx, &repo, bcs, vec![mf_id_1])
+            .await
+            .1;
+
+        {
+            // check that it will yield only two deleted paths
+            let entries =
+                RootDeletedManifestId::list_all_entries(&ctx, repo.blobstore(), mf_id.clone())
+                    .try_collect::<Vec<_>>()
+                    .await
+                    .unwrap();
+
+            let mut entries = entries
+                .into_iter()
+                .map(|(path, _)| path)
+                .collect::<Vec<_>>();
+            entries.sort();
+            let expected_entries = vec![
+                Some(path("dir/sub")),
+                Some(path("dir/sub/f-1")),
+                Some(path("dir/sub/f-3")),
+            ];
+            assert_eq!(entries, expected_entries);
+        }
+    }
 }
 
 async fn gen_deleted_manifest_nodes<Root: RootDeletedManifestIdCommon>(
