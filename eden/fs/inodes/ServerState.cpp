@@ -51,7 +51,7 @@ ServerState::ServerState(
     std::shared_ptr<IHiveLogger> hiveLogger,
     std::shared_ptr<ReloadableConfig> reloadableConfig,
     const EdenConfig& initialConfig,
-    folly::EventBase* mainEventBase,
+    [[maybe_unused]] folly::EventBase* mainEventBase,
     bool enableFaultDetection)
     : userInfo_{std::move(userInfo)},
       privHelper_{std::move(privHelper)},
