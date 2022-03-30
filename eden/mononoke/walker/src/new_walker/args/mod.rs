@@ -6,6 +6,7 @@
  */
 
 pub mod progress;
+pub mod sampling;
 pub mod tail_args;
 
 use anyhow::Error;
