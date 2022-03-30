@@ -31,7 +31,7 @@ pub use packblob::PackOptions;
 pub use samplingblob::ComponentSamplingHandler;
 pub use throttledblob::ThrottleOptions;
 
-pub use crate::args::BlobstoreArgs;
+pub use crate::args::{BlobstoreArgDefaults, BlobstoreArgs};
 pub use crate::blobstore::{
     make_blobstore, make_blobstore_enumerable_with_unlink, make_packblob, make_sql_blobstore,
     make_sql_blobstore_xdb, BlobstoreOptions,

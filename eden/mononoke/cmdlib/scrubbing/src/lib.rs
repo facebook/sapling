@@ -52,10 +52,10 @@ pub struct ScrubArgs {
 
 #[derive(Default, Debug)]
 pub struct ScrubAppExtension {
-    action: Option<ScrubAction>,
-    grace: Option<Duration>,
-    queue_peek_bound: Option<Duration>,
-    write_mostly_missing: Option<ScrubWriteMostly>,
+    pub action: Option<ScrubAction>,
+    pub grace: Option<Duration>,
+    pub queue_peek_bound: Option<Duration>,
+    pub write_mostly_missing: Option<ScrubWriteMostly>,
 }
 
 impl ScrubAppExtension {

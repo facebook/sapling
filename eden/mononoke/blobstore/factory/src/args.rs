@@ -138,10 +138,10 @@ impl BlobstoreArgs {
 
 #[derive(Default, Debug)]
 pub struct BlobstoreArgDefaults {
-    read_qps: Option<NonZeroU32>,
-    write_qps: Option<NonZeroU32>,
-    cachelib_attempt_zstd: Option<bool>,
-    put_behaviour: Option<PutBehaviour>,
+    pub read_qps: Option<NonZeroU32>,
+    pub write_qps: Option<NonZeroU32>,
+    pub cachelib_attempt_zstd: Option<bool>,
+    pub put_behaviour: Option<PutBehaviour>,
 }
 
 impl ArgDefaults for BlobstoreArgDefaults {
