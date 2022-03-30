@@ -8,10 +8,10 @@ from pathlib import Path
 
 from edenscm.mercurial.edenapi_upload import (
     filetypefromfile,
-    parentsfromctx,
     uploadhgchangesets,
 )
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import nullid
 from edenscm.mercurial.revset import parseage
 
 from .metalog import fetchlatestbubble, storelatest
@@ -39,6 +39,21 @@ def parsemaxuntracked(opts):
         return int(opts["max_untracked_size"]) * 1000 * 1000
     else:
         return None
+
+
+def parentsfromwctx(ui, wctx):
+    p1 = wctx.p1().node()
+    p2 = wctx.p2().node()
+    if p2 != nullid and not ui.plain():
+        ui.warn(
+            _(
+                "Conflict snapshots are not yet properly supported, "
+                "but provided as best effort.\n"
+            )
+        )
+    if p1 == nullid:
+        return None
+    return p1
 
 
 @dataclass(frozen=True)
@@ -113,7 +128,7 @@ def createremote(ui, repo, **opts):
                 "author": wctx.user(),
                 "time": int(time),
                 "tz": tz,
-                "hg_parents": parentsfromctx(wctx),
+                "hg_parents": parentsfromwctx(ui, wctx),
             },
             lifetime,
             previousbubble,
