@@ -8,6 +8,7 @@
 pub mod progress;
 pub mod sampling;
 pub mod tail_args;
+pub mod walk_root;
 
 use anyhow::Error;
 use itertools::{process_results, Itertools};
