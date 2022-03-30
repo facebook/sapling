@@ -11,7 +11,7 @@ use std::fmt;
 use types::RepoPath;
 use types::RepoPathBuf;
 
-#[derive(Default)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct Status {
     all: HashMap<RepoPathBuf, FileStatus>,
 }

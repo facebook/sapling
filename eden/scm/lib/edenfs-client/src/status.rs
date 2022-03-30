@@ -814,35 +814,36 @@ mod test {
         RepoPathBuf::from_string(path.to_string()).unwrap()
     }
 
+    fn extract_output(io: IO) -> (String, String) {
+        let stdout = io.with_output(|o| o.as_any().downcast_ref::<Vec<u8>>().unwrap().clone());
+        let stdout = str::from_utf8(&stdout).unwrap().to_string();
+        let stderr = io.with_error(|e| {
+            e.as_ref()
+                .unwrap()
+                .as_any()
+                .downcast_ref::<Vec<u8>>()
+                .unwrap()
+                .clone()
+        });
+        let stderr = str::from_utf8(&stderr).unwrap().to_string();
+        (stdout, stderr)
+    }
+
     #[derive(Default)]
-    struct StatusTestCase<'a> {
-        args: Vec<String>,
+    struct GroupStatusTestCase {
         p1: [u8; 20],
         p2: [u8; 20],
         entries: BTreeMap<Vec<u8>, ScmFileStatus>,
         errors: BTreeMap<Vec<u8>, String>,
         dirstate_data_tuples: HashMap<RepoPathBuf, DirstateDataTuple>,
-        files: Vec<(&'a str, Fixture<'a>)>,
-        use_color: bool,
+        expected: status::Status,
         stdout: String,
         stderr: String,
-        return_code: u8,
     }
 
-    /// This function is used to drive most of the tests. It runs PrintConfig.print_status(), so it
-    /// focuses on exercising the display logic under various scenarios.
-    fn test_status(test_case: StatusTestCase<'_>) {
-        let repo_root = generate_fixture(test_case.files);
-        let repo_root_path = repo_root.path().canonicalize().unwrap();
-        let mut all_args: Vec<String> = vec![
-            "--cwd".to_owned(),
-            repo_root.path().to_str().unwrap().to_string(),
-            "status".to_owned(),
-        ];
-        all_args.extend_from_slice(&test_case.args);
-        let (hg_args, _handler) = parse_args(hg_parser(), &all_args[..]);
-        let print_config = PrintConfig::new(&hg_args.command);
-
+    /// Helper function for testing `group_entries`.
+    fn test_grouping(test_case: GroupStatusTestCase) {
+        let repo_root = generate_fixture(vec![]);
         let dirstate_data = DirstateData {
             p1: test_case.p1,
             p2: test_case.p2,
@@ -855,6 +856,40 @@ mod test {
             ..Default::default()
         };
 
+        let tin = "".as_bytes();
+        let tout = Vec::new();
+        let terr = Vec::new();
+        let io = IO::new(tin, tout, Some(terr));
+        let actual_status = group_entries(repo_root.path(), &status, &dirstate_data, &io).unwrap();
+        let (actual_output, actual_error) = extract_output(io);
+        assert_eq!(actual_output, test_case.stdout);
+        assert_eq!(actual_error, test_case.stderr);
+        assert!(actual_status == test_case.expected);
+    }
+
+    #[derive(Default)]
+    struct PrintTestCase {
+        args: Vec<String>,
+        status: status::Status,
+        copymap: HashMap<RepoPathBuf, RepoPathBuf>,
+        use_color: bool,
+        stdout: String,
+        stderr: String,
+    }
+
+    /// Helper function for testing `print_status`.
+    fn test_print(test_case: PrintTestCase) {
+        let repo_root = generate_fixture(vec![]);
+        let repo_root_path = repo_root.path().canonicalize().unwrap();
+        let mut all_args: Vec<String> = vec![
+            "--cwd".to_owned(),
+            repo_root.path().to_str().unwrap().to_string(),
+            "status".to_owned(),
+        ];
+        all_args.extend_from_slice(&test_case.args);
+        let (hg_args, _handler) = parse_args(hg_parser(), &all_args[..]);
+        let print_config = PrintConfig::new(&hg_args.command);
+
         let relativizer = HgStatusPathRelativizer::new(
             print_config.root_relative,
             RepoPathRelativizer::new(hg_args.cwd, repo_root_path),
@@ -862,46 +897,26 @@ mod test {
         let tin = "".as_bytes();
         let tout = Vec::new();
         let terr = Vec::new();
-        let mut io = IO::new(tin, tout, Some(terr));
-        let grouped = group_entries(repo_root.path(), &status, &dirstate_data, &io).unwrap();
+        let io = IO::new(tin, tout, Some(terr));
         print_config
             .print_status(
-                &grouped,
-                &dirstate_data.copymap,
+                &test_case.status,
+                &test_case.copymap,
                 &relativizer,
                 test_case.use_color,
-                &mut io,
+                &io,
             )
             .unwrap();
-        let return_code = print_errors(&status, &io).unwrap();
-        let actual_output =
-            io.with_output(|o| o.as_any().downcast_ref::<Vec<u8>>().unwrap().clone());
-        assert_eq!(str::from_utf8(&actual_output).unwrap(), test_case.stdout);
-        let actual_error = io.with_error(|e| {
-            e.as_ref()
-                .unwrap()
-                .as_any()
-                .downcast_ref::<Vec<u8>>()
-                .unwrap()
-                .clone()
-        });
-        assert_eq!(str::from_utf8(&actual_error).unwrap(), test_case.stderr);
-        assert_eq!(return_code, test_case.return_code);
-    }
-
-    fn one_modified_file() -> BTreeMap<Vec<u8>, ScmFileStatus> {
-        let mut entries = BTreeMap::new();
-        entries.insert("file.txt".into(), ScmFileStatus::MODIFIED);
-        entries
+        let (actual_output, actual_error) = extract_output(io);
+        assert_eq!(actual_output, test_case.stdout);
+        assert_eq!(actual_error, test_case.stderr);
     }
 
     #[test]
     fn empty_status() {
-        test_status(Default::default());
+        test_grouping(Default::default());
     }
 
-    // XXX: PathRelativizer is problematic on OSX.
-    #[cfg(target_os = "linux")]
     #[test]
     fn all_status_types() {
         let mut entries = BTreeMap::new();
@@ -982,6 +997,54 @@ mod test {
         entries.insert("ignored.txt".into(), ScmFileStatus::IGNORED);
         entries.insert("modified.txt".into(), ScmFileStatus::MODIFIED);
 
+        let expected = status::StatusBuilder::new()
+            .modified(vec![repo_path_buf("modified.txt")])
+            .added(vec![
+                repo_path_buf("added.txt"),
+                repo_path_buf("added_even_though_normally_ignored.txt"),
+                repo_path_buf("added_other_parent.txt"),
+            ])
+            .removed(vec![
+                repo_path_buf("modified_and_marked_for_removal.txt"),
+                repo_path_buf("removed.txt"),
+            ])
+            .deleted(vec![repo_path_buf(
+                "removed_but_not_marked_for_removal.txt",
+            )])
+            .unknown(vec![repo_path_buf("unknown.txt")])
+            .ignored(vec![repo_path_buf("ignored.txt")])
+            .build();
+
+        test_grouping(GroupStatusTestCase {
+            entries,
+            dirstate_data_tuples,
+            expected,
+            ..Default::default()
+        });
+    }
+
+    // XXX: PathRelativizer is problematic on OSX.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn test_print_status() {
+        let status = status::StatusBuilder::new()
+            .modified(vec![repo_path_buf("modified.txt")])
+            .added(vec![
+                repo_path_buf("added.txt"),
+                repo_path_buf("added_even_though_normally_ignored.txt"),
+                repo_path_buf("added_other_parent.txt"),
+            ])
+            .removed(vec![
+                repo_path_buf("modified_and_marked_for_removal.txt"),
+                repo_path_buf("removed.txt"),
+            ])
+            .deleted(vec![repo_path_buf(
+                "removed_but_not_marked_for_removal.txt",
+            )])
+            .unknown(vec![repo_path_buf("unknown.txt")])
+            .ignored(vec![repo_path_buf("ignored.txt")])
+            .build();
+
         // We have to slice [1..] to strip the leading newline.
         let no_arg_stdout = r#"
 M modified.txt
@@ -994,9 +1057,8 @@ R removed.txt
 ? unknown.txt
 "#[1..]
             .to_string();
-        test_status(StatusTestCase {
-            entries: entries.clone(),
-            dirstate_data_tuples: dirstate_data_tuples.clone(),
+        test_print(PrintTestCase {
+            status: status.clone(),
             stdout: no_arg_stdout,
             ..Default::default()
         });
@@ -1014,10 +1076,9 @@ R removed.txt
 I ignored.txt
 "#[1..]
             .to_string();
-        test_status(StatusTestCase {
+        test_print(PrintTestCase {
+            status: status.clone(),
             args: vec!["-mardui".to_owned()],
-            entries: entries.clone(),
-            dirstate_data_tuples: dirstate_data_tuples.clone(),
             stdout: mardui_stdout,
             ..Default::default()
         });
@@ -1033,10 +1094,9 @@ I ignored.txt
             "\u{001B}[35m\u{001B}[1m\u{001b}[4m? unknown.txt\u{001B}[0m\n",
             "\u{001B}[30;1m\u{001B}[1mI ignored.txt\u{001B}[0m\n",
         );
-        test_status(StatusTestCase {
+        test_print(PrintTestCase {
+            status,
             args: vec!["-mardui".to_owned()],
-            entries: entries.clone(),
-            dirstate_data_tuples: dirstate_data_tuples.clone(),
             use_color: true,
             stdout: mardui_color_stdout.to_string(),
             ..Default::default()
@@ -1047,16 +1107,20 @@ I ignored.txt
     #[cfg(target_os = "linux")]
     #[test]
     fn no_status_flag() {
-        test_status(StatusTestCase {
+        let status = status::StatusBuilder::new()
+            .modified(vec![repo_path_buf("file.txt")])
+            .build();
+
+        test_print(PrintTestCase {
+            status: status.clone(),
             args: vec!["--no-status".to_owned()],
-            entries: one_modified_file(),
             stdout: "file.txt\n".to_owned(),
             ..Default::default()
         });
 
-        test_status(StatusTestCase {
+        test_print(PrintTestCase {
+            status,
             args: vec!["-n".to_owned()],
-            entries: one_modified_file(),
             stdout: "file.txt\n".to_owned(),
             ..Default::default()
         });
@@ -1125,10 +1189,7 @@ I ignored.txt
             "unable to fetch directory data: connection reset".into(),
         );
 
-        let color_stdout = concat!(
-            "\u{001B}[34m\u{001B}[1mM modified.txt\u{001B}[0m\n",
-            "\u{001B}[35m\u{001B}[1m\u{001b}[4m? unknown.txt\u{001B}[0m\n",
-        );
+        let stdout = "";
         let src_lib_path = Path::new("src").join("lib");
         let stderr = format!(
             "{}\n  {}: {}\n",
@@ -1136,15 +1197,21 @@ I ignored.txt
             src_lib_path.display(),
             "unable to fetch directory data: connection reset",
         );
-        test_status(StatusTestCase {
+
+        let status = ScmStatus {
             entries,
             errors,
-            use_color: true,
-            stdout: color_stdout.to_string(),
-            stderr: stderr.to_string(),
-            return_code: 1,
             ..Default::default()
-        });
+        };
+        let tin = "".as_bytes();
+        let tout = Vec::new();
+        let terr = Vec::new();
+        let io = IO::new(tin, tout, Some(terr));
+        let return_code = print_errors(&status, &io).unwrap();
+        let (actual_output, actual_error) = extract_output(io);
+        assert_eq!(actual_output, stdout);
+        assert_eq!(actual_error, stderr);
+        assert_eq!(return_code, 1);
     }
 
     #[test]
@@ -1153,15 +1220,17 @@ I ignored.txt
         entries.insert(b"\xb0Z\xd0J\x91\x7f.INFO".to_vec(), ScmFileStatus::ADDED);
         entries.insert(b"modified.txt".to_vec(), ScmFileStatus::MODIFIED);
         let errors = BTreeMap::new();
-        let stdout = "M modified.txt\n";
+        let stdout = "";
         let stderr = "skipping invalid utf-8 filename: �Z�J�\u{7f}.INFO (Failed to parse to Utf8: \"�Z�J�\\u{7f}.INFO\". invalid utf-8 sequence of 1 bytes from index 0)\n";
-        test_status(StatusTestCase {
+        let expected = status::StatusBuilder::new()
+            .modified(vec![repo_path_buf("modified.txt")])
+            .build();
+        test_grouping(GroupStatusTestCase {
             entries,
             errors,
-            use_color: false,
+            expected,
             stdout: stdout.to_string(),
             stderr: stderr.to_string(),
-            return_code: 0,
             ..Default::default()
         });
     }
