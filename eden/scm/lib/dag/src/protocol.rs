@@ -23,8 +23,6 @@ use std::thread_local;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use serde::Deserialize;
-use serde::Serialize;
 
 use crate::id::VertexName;
 use crate::iddag::FirstAncestorConstraint;
@@ -42,32 +40,27 @@ use crate::Result;
 
 /// Request for locating names (commit hashes) in a IdDag.
 /// Useful for converting names to ids.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct RequestNameToLocation {
-    #[serde(rename = "n")]
     pub names: Vec<VertexName>,
-
-    #[serde(rename = "h")]
     pub heads: Vec<VertexName>,
 }
 
 /// Request for converting locations to names (commit hashes).
 /// Useful for converting ids to names.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct RequestLocationToName {
-    #[serde(rename = "p")]
     pub paths: Vec<AncestorPath>,
 }
 
 /// Response for converting names to ids or converting names to ids.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct ResponseIdNamePair {
     // For converting Id -> Name, the client provides AncestorPath, the server provides
     // Vec<Box<[u8]>>.
     //
     // For converting Name -> Id, the client provides Box<[u8]>, the server provides
     // AncestorPath.
-    #[serde(rename = "p")]
     pub path_names: Vec<(AncestorPath, Vec<VertexName>)>,
 }
 
@@ -75,16 +68,13 @@ pub struct ResponseIdNamePair {
 /// Usually, `x` is commonly known by the client and the server.
 ///
 /// This can be seen as a kind of "location".
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Clone)]
 pub struct AncestorPath {
-    #[serde(rename = "x")]
     pub x: VertexName,
 
-    #[serde(rename = "n")]
     pub n: u64,
 
     // Starting from x~n, get a chain of commits following p1.
-    #[serde(rename = "c")]
     pub batch_size: u64,
 }
 
