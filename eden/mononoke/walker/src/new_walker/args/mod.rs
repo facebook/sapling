@@ -8,14 +8,41 @@
 pub mod progress;
 pub mod sampling;
 pub mod tail_args;
+pub mod walk_params;
 pub mod walk_root;
 
 use anyhow::Error;
+use clap::Args;
 use itertools::{process_results, Itertools};
 use std::collections::HashSet;
-use walker_commands_impl::graph::NodeType;
-use walker_commands_impl::setup::{parse_interned_value, parse_node_value};
+use walker_commands_impl::graph::{EdgeType, NodeType};
+use walker_commands_impl::setup::{parse_edge_value, parse_interned_value, parse_node_value};
 use walker_commands_impl::state::InternedType;
+
+#[derive(Args, Debug)]
+pub struct WalkerCommonArgs {
+    /// Log a lot less
+    #[clap(long, short = 'q')]
+    pub quiet: bool,
+    /// Use redaction from config. Default is redaction off.
+    #[clap(long)]
+    pub enable_redaction: bool,
+    /// Maximum number of walk step tasks to attempt to execute at once.
+    /// Default 4096.
+    #[clap(long, default_value = "4096")]
+    pub scheduled_max: usize,
+    /// Enable derivation of data (e.g. hg, file metadata). Default is false
+    #[clap(long)]
+    pub enable_derive: bool,
+
+    /// If main blobstore in the storage config is a multiplexed one,
+    /// use inner blobstore with this id.
+    #[clap(long)]
+    pub inner_blobstore_id: Option<u64>,
+    /// Add a multiplier on sampling requests
+    #[clap(long, default_value = "100")]
+    pub blobstore_sampling_multiplier: u64,
+}
 
 fn parse_node_types<'a>(
     include_node_types: impl Iterator<Item = &'a String>,
@@ -63,4 +90,26 @@ fn parse_interned_values<'a>(
         return Ok(default.iter().cloned().collect());
     }
     Ok(values)
+}
+
+pub(crate) fn parse_edge_types<'a>(
+    include_types: impl ExactSizeIterator<Item = &'a String>,
+    exclude_types: impl ExactSizeIterator<Item = &'a String>,
+    default: &[EdgeType],
+) -> Result<HashSet<EdgeType>, Error> {
+    let mut include_edge_types = parse_edge_values(include_types, default)?;
+    let exclude_edge_types = parse_edge_values(exclude_types, &[])?;
+    include_edge_types.retain(|x| !exclude_edge_types.contains(x));
+    Ok(include_edge_types)
+}
+
+fn parse_edge_values<'a>(
+    values: impl ExactSizeIterator<Item = &'a String>,
+    default: &[EdgeType],
+) -> Result<HashSet<EdgeType>, Error> {
+    if values.len() == 0 {
+        Ok(default.iter().cloned().collect())
+    } else {
+        process_results(values.map(|v| parse_edge_value(v)), |s| s.concat())
+    }
 }
