@@ -3,3 +3,4 @@
 edition = "2021"
 merge_derives = false
 use_field_init_shorthand = true
+version = "Two"
