@@ -49,7 +49,7 @@ impl CreateCopyInfo {
 
     async fn resolve(
         self,
-        parents: &Vec<ChangesetContext>,
+        parents: &[ChangesetContext],
     ) -> Result<(MPath, ChangesetId), MononokeError> {
         let parent_ctx = parents.get(self.parent_index).ok_or_else(|| {
             MononokeError::InvalidRequest(format!(
@@ -126,7 +126,7 @@ impl CreateChange {
         ctx: &CoreContext,
         filestore_config: FilestoreConfig,
         repo_blobstore: RepoBlobstore,
-        parents: &Vec<ChangesetContext>,
+        parents: &[ChangesetContext],
     ) -> Result<FileChange, MononokeError> {
         let (file, copy_info, tracked) = match self {
             CreateChange::Tracked(file, copy_info) => (
@@ -146,7 +146,7 @@ impl CreateChange {
                 let meta = filestore::store(
                     &repo_blobstore,
                     filestore_config,
-                    &ctx,
+                    ctx,
                     &StoreRequest::new(bytes.len() as u64),
                     stream::once(async move { Ok(bytes) }),
                 )
@@ -163,19 +163,15 @@ impl CreateChange {
                 match maybe_size {
                     Some(size) => size,
                     None => {
-                        filestore::get_metadata(
-                            &repo_blobstore,
-                            &ctx,
-                            &FetchKey::Canonical(file_id),
-                        )
-                        .await?
-                        .ok_or_else(|| {
-                            MononokeError::InvalidRequest(format!(
-                                "File id '{}' is not available in this repo",
-                                file_id
-                            ))
-                        })?
-                        .total_size
+                        filestore::get_metadata(&repo_blobstore, ctx, &FetchKey::Canonical(file_id))
+                            .await?
+                            .ok_or_else(|| {
+                                MononokeError::InvalidRequest(format!(
+                                    "File id '{}' is not available in this repo",
+                                    file_id
+                                ))
+                            })?
+                            .total_size
                     }
                 },
             ),
@@ -422,8 +418,7 @@ impl RepoDraftContext {
         let prefix_paths: BTreeSet<_> = changes
             .iter()
             .filter(|(_path, change)| change.change_type() == CreateChangeType::Change)
-            .map(|(path, _change)| path.clone().prefixes())
-            .flatten()
+            .flat_map(|(path, _change)| path.clone().prefixes())
             .collect();
 
         // Check changes that replace a file with a directory also delete
@@ -484,7 +479,7 @@ impl RepoDraftContext {
                                         .wrap_repo_blobstore(self.blob_repo().blobstore().clone()),
                                     None => self.blob_repo().blobstore().clone(),
                                 },
-                                &parent_ctxs,
+                                parent_ctxs,
                             )
                             .await?;
                         Ok::<_, MononokeError>((path, change))
