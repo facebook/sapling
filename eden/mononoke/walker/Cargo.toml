@@ -11,6 +11,10 @@ license = "GPLv2+"
 path = "src/commands/lib.rs"
 
 [[bin]]
+name = "new_walker"
+path = "src/new_walker/main.rs"
+
+[[bin]]
 name = "walker"
 path = "src/main.rs"
 
@@ -33,9 +37,11 @@ bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
 bulkops = { version = "0.1.0", path = "../bulkops" }
 bytes = { version = "1.1", features = ["serde"] }
 changeset_info = { version = "0.1.0", path = "../derived_data/changeset_info" }
+clap = { version = "3.1.2", features = ["derive", "regex", "unicode", "wrap_help"] }
 clap-old = { package = "clap", version = "2.33" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
+cmdlib_scrubbing = { version = "0.1.0", path = "../cmdlib/scrubbing" }
 context = { version = "0.1.0", path = "../server/context" }
 dashmap = { version = "4.0.2", features = ["rayon", "serde"] }
 deleted_files_manifest = { version = "0.1.0", path = "../derived_data/deleted_files_manifest" }
@@ -59,6 +65,7 @@ maplit = "1.0"
 mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 multiplexedblob = { version = "0.1.0", path = "../blobstore/multiplexedblob" }
 newfilenodes = { version = "0.1.0", path = "../newfilenodes" }

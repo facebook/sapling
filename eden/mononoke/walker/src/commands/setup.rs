@@ -191,7 +191,7 @@ static NODE_HASH_VALIDATION_POSSIBLE_VALUES: Lazy<Vec<&'static str>> =
     Lazy::new(|| vec![NodeType::HgFileEnvelope.into()]);
 
 /// Default to clearing out all except HgChangesets ( and bonsai Changsets as no option to clear those)
-const DEFAULT_CHUNK_CLEAR_INTERNED_TYPES: &[InternedType] = &[
+pub const DEFAULT_CHUNK_CLEAR_INTERNED_TYPES: &[InternedType] = &[
     InternedType::FileUnodeId,
     InternedType::HgFileNodeId,
     InternedType::HgManifestId,
@@ -1052,7 +1052,7 @@ pub fn parse_progress_args(sub_m: &ArgMatches) -> ProgressOptions {
 }
 
 // parse the pre-defined groups we have for default etc
-fn parse_interned_value(
+pub fn parse_interned_value(
     arg: &str,
     default: &[InternedType],
 ) -> Result<HashSet<InternedType>, Error> {
@@ -1181,7 +1181,7 @@ fn parse_tail_args<'a>(
 }
 
 // parse the pre-defined groups we have for default etc
-fn parse_node_value(arg: &str) -> Result<HashSet<NodeType>, Error> {
+pub fn parse_node_value(arg: &str) -> Result<HashSet<NodeType>, Error> {
     Ok(match arg {
         ALL_VALUE_ARG => HashSet::from_iter(NodeType::iter()),
         DEFAULT_VALUE_ARG => HashSet::from_iter(DEFAULT_INCLUDE_NODE_TYPES.iter().cloned()),

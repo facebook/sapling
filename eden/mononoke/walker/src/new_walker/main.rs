@@ -8,6 +8,9 @@
 #![deny(warnings)]
 #![feature(process_exitcode_placeholder)]
 #![feature(async_closure)]
+
+pub mod args;
+
 use anyhow::Error;
 use blobstore_factory::{BlobstoreArgDefaults, ReadOnlyStorage};
 use clap::Parser;
