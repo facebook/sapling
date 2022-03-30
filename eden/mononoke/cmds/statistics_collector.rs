@@ -202,11 +202,9 @@ pub async fn get_statistics_from_changeset(
     let manifest_id = get_manifest_from_changeset(ctx, repo, hg_cs_id).await?;
     let statistics = manifest_id
         .list_leaf_entries(ctx.clone(), blobstore.clone())
-        .map(move |result| {
-            match result {
-                Ok((_, leaf)) => get_statistics_from_entry(ctx, repo, Entry::Leaf(leaf)).boxed(),
-                Err(e) => async move { Err(e) }.boxed(),
-            }
+        .map(move |result| match result {
+            Ok((_, leaf)) => get_statistics_from_entry(ctx, repo, Entry::Leaf(leaf)).boxed(),
+            Err(e) => async move { Err(e) }.boxed(),
         })
         .buffered(100usize)
         .try_fold(

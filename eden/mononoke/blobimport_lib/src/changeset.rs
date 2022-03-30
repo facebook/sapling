@@ -138,23 +138,21 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
 
     let rootmf = rootmf
         .map_err(Error::from)
-        .and_then(move |rootmf_shared| {
-            match *rootmf_shared {
-                None => Ok(None),
-                Some((manifest_id, ref mf)) => {
-                    let mut bytes = Vec::new();
-                    mf.generate(&mut bytes).with_context(|| {
-                        format!("While generating root manifest blob for {:?}", csid)
-                    })?;
+        .and_then(move |rootmf_shared| match *rootmf_shared {
+            None => Ok(None),
+            Some((manifest_id, ref mf)) => {
+                let mut bytes = Vec::new();
+                mf.generate(&mut bytes).with_context(|| {
+                    format!("While generating root manifest blob for {:?}", csid)
+                })?;
 
-                    let (p1, p2) = mf.parents().get_nodes();
-                    Ok(Some((
-                        manifest_id,
-                        HgBlob::from(Bytes::from(bytes)),
-                        p1,
-                        p2,
-                    )))
-                }
+                let (p1, p2) = mf.parents().get_nodes();
+                Ok(Some((
+                    manifest_id,
+                    HgBlob::from(Bytes::from(bytes)),
+                    p1,
+                    p2,
+                )))
             }
         })
         .boxify();

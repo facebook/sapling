@@ -210,13 +210,11 @@ where
                                 let subentries: BTreeMap<_, _> = subentries
                                     .flatten()
                                     .filter_map(
-                                        |
-                                            (name, context, entry): (
-                                                Option<MPathElement>,
-                                                Option<Ctx>,
-                                                _,
-                                            ),
-                                        | {
+                                        |(name, context, entry): (
+                                            Option<MPathElement>,
+                                            Option<Ctx>,
+                                            _,
+                                        )| {
                                             name.map(move |name| (name, (context, entry)))
                                         },
                                     )

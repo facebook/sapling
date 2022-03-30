@@ -46,13 +46,11 @@ pub async fn log_commits_to_scribe_raw(
     let res = stream::iter(changesets_and_changed_files_count)
         .map(Ok)
         .map_ok(
-            |
-                ScribeCommitInfo {
-                    changeset_id,
-                    bubble_id,
-                    changed_files,
-                },
-            | {
+            |ScribeCommitInfo {
+                 changeset_id,
+                 bubble_id,
+                 changed_files,
+             }| {
                 let queue = &queue;
                 async move {
                     let cs = repo

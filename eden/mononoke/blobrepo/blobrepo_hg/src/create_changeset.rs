@@ -82,13 +82,11 @@ async fn verify_bonsai_changeset_with_origin(
 
 pub fn create_bonsai_changeset_hook(origin_repo: Option<BlobRepo>) -> Arc<BonsaiChangesetHook> {
     Arc::new(
-        move |
-            ctx: CoreContext,
-            hg_cs: HgBlobChangeset,
-            parent_manifest_hashes: Vec<HgManifestId>,
-            bonsai_parents: Vec<ChangesetId>,
-            repo: BlobRepo,
-        | {
+        move |ctx: CoreContext,
+              hg_cs: HgBlobChangeset,
+              parent_manifest_hashes: Vec<HgManifestId>,
+              bonsai_parents: Vec<ChangesetId>,
+              repo: BlobRepo| {
             cloned!(origin_repo);
             async move {
                 let bonsai_cs = create_bonsai_changeset_object(
@@ -170,13 +168,11 @@ impl CreateChangeset {
         let create_bonsai_changeset_object = match self.create_bonsai_changeset_hook {
             Some(hook) => Arc::clone(&hook),
             None => Arc::new(
-                |
-                    ctx: CoreContext,
-                    hg_cs: HgBlobChangeset,
-                    parent_manifest_hashes: Vec<HgManifestId>,
-                    bonsai_parents: Vec<ChangesetId>,
-                    repo: BlobRepo,
-                | {
+                |ctx: CoreContext,
+                 hg_cs: HgBlobChangeset,
+                 parent_manifest_hashes: Vec<HgManifestId>,
+                 bonsai_parents: Vec<ChangesetId>,
+                 repo: BlobRepo| {
                     async move {
                         create_bonsai_changeset_object(
                             &ctx,

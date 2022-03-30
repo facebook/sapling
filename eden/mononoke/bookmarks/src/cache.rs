@@ -214,32 +214,30 @@ impl CachedBookmarks {
         cache
             .current
             .clone()
-            .map(move |cache_result| {
-                match &*cache_result {
-                    Ok(bookmarks) => {
-                        let result: Vec<_> = bookmarks
-                            .range(range)
-                            .filter_map(move |(name, (kind, changeset_id))| {
-                                if filter_kinds
-                                    .as_ref()
-                                    .map(|kinds| kinds.iter().any(|k| k == kind))
-                                    .unwrap_or(true)
-                                {
-                                    let bookmark = Bookmark {
-                                        name: name.clone(),
-                                        kind: *kind,
-                                    };
-                                    Some(Ok((bookmark, *changeset_id)))
-                                } else {
-                                    None
-                                }
-                            })
-                            .take(limit as usize)
-                            .collect();
-                        Ok(stream::iter(result))
-                    }
-                    Err(err) => Err(Error::from(err.clone())),
+            .map(move |cache_result| match &*cache_result {
+                Ok(bookmarks) => {
+                    let result: Vec<_> = bookmarks
+                        .range(range)
+                        .filter_map(move |(name, (kind, changeset_id))| {
+                            if filter_kinds
+                                .as_ref()
+                                .map(|kinds| kinds.iter().any(|k| k == kind))
+                                .unwrap_or(true)
+                            {
+                                let bookmark = Bookmark {
+                                    name: name.clone(),
+                                    kind: *kind,
+                                };
+                                Some(Ok((bookmark, *changeset_id)))
+                            } else {
+                                None
+                            }
+                        })
+                        .take(limit as usize)
+                        .collect();
+                    Ok(stream::iter(result))
                 }
+                Err(err) => Err(Error::from(err.clone())),
             })
             .try_flatten_stream()
             .boxed()

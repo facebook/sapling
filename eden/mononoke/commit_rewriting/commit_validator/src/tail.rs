@@ -75,11 +75,9 @@ where
     Fut: future::Future<Output = Result<(Item, T), Error>>,
 {
     stream::unfold(init, move |iteration_value| {
-        f(iteration_value).then(move |result| {
-            match result {
-                Ok((item, next_it_val)) => future::ready(Some((Ok(item), next_it_val))),
-                Err(e) => future::ready(Some((Err(e), iteration_value))),
-            }
+        f(iteration_value).then(move |result| match result {
+            Ok((item, next_it_val)) => future::ready(Some((Ok(item), next_it_val))),
+            Err(e) => future::ready(Some((Err(e), iteration_value))),
         })
     })
 }

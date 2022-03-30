@@ -212,13 +212,9 @@ pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
                     let bytes = chunk_id
                         .load(ctx.borrow(), &blobstore)
                         .await
-                        .map_err(move |err| {
-                            match err {
-                                LoadableError::Error(err) => err,
-                                LoadableError::Missing(_) => {
-                                    ErrorKind::ChunkNotFound(chunk_id).into()
-                                }
-                            }
+                        .map_err(move |err| match err {
+                            LoadableError::Error(err) => err,
+                            LoadableError::Missing(_) => ErrorKind::ChunkNotFound(chunk_id).into(),
                         })
                         .map(ContentChunk::into_bytes)?;
 

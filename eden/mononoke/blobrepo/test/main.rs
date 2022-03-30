@@ -651,9 +651,9 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
     let get_entries = {
         cloned!(ctx, repo);
         move |ms_hash: HgManifestId| -> BoxFuture<
-                'static,
-                Result<HashMap<String, Entry<HgManifestId, (FileType, HgFileNodeId)>>, Error>,
-            > {
+            'static,
+            Result<HashMap<String, Entry<HgManifestId, (FileType, HgFileNodeId)>>, Error>,
+        > {
             cloned!(ctx, repo);
             async move {
                 let ms = ms_hash.load(&ctx, repo.blobstore()).await?;

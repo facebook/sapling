@@ -49,20 +49,21 @@ mod test {
                         .and_then(|heads| verify.verify(heads).collect());
                     results
                         .and_then(move |results| {
-                            let diffs = results.into_iter().filter_map(move |(res, meta)| {
-                                match res {
-                                    BonsaiMFVerifyResult::Invalid(difference) => {
-                                        let cs_id = meta.changeset_id;
-                                        Some(
-                                            difference
-                                                .changes(ctx.clone())
-                                                .collect()
-                                                .map(move |changes| (cs_id, changes)),
-                                        )
-                                    }
-                                    _ => None,
-                                }
-                            });
+                            let diffs =
+                                results
+                                    .into_iter()
+                                    .filter_map(move |(res, meta)| match res {
+                                        BonsaiMFVerifyResult::Invalid(difference) => {
+                                            let cs_id = meta.changeset_id;
+                                            Some(
+                                                difference
+                                                    .changes(ctx.clone())
+                                                    .collect()
+                                                    .map(move |changes| (cs_id, changes)),
+                                            )
+                                        }
+                                        _ => None,
+                                    });
 
                             futures_old::future::join_all(diffs)
                         })

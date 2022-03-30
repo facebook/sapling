@@ -93,14 +93,12 @@ async fn compute_removed_files(
     child: HgManifestId,
     parent: Option<HgManifestId>,
 ) -> Result<Vec<MPath>, Error> {
-    compute_files_with_status(ctx, blobstore, child, parent, move |diff| {
-        match diff {
-            Diff::Removed(path, entry) => match entry {
-                Entry::Leaf(_) => path,
-                Entry::Tree(_) => None,
-            },
-            _ => None,
-        }
+    compute_files_with_status(ctx, blobstore, child, parent, move |diff| match diff {
+        Diff::Removed(path, entry) => match entry {
+            Entry::Leaf(_) => path,
+            Entry::Tree(_) => None,
+        },
+        _ => None,
     })
     .await
 }

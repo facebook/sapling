@@ -70,7 +70,7 @@ pub trait DerivationAssigner: Send + Sync {
     /// How to split derivation between primary and secondary managers. If not possible
     /// to split, this function should error.
     async fn assign(&self, ctx: &CoreContext, cs: Vec<ChangesetId>)
-        -> Result<DerivationAssignment>;
+    -> Result<DerivationAssignment>;
 }
 
 #[derive(Clone)]

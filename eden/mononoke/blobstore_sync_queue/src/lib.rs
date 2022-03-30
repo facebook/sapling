@@ -418,17 +418,15 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
         Ok(rows
             .into_iter()
             .map(
-                |
-                    (
-                        blobstore_key,
-                        blobstore_id,
-                        multiplex_id,
-                        timestamp,
-                        operation_key,
-                        id,
-                        blob_size,
-                    ),
-                | {
+                |(
+                    blobstore_key,
+                    blobstore_id,
+                    multiplex_id,
+                    timestamp,
+                    operation_key,
+                    id,
+                    blob_size,
+                )| {
                     BlobstoreSyncQueueEntry {
                         blobstore_key,
                         blobstore_id,
@@ -475,17 +473,15 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
         Ok(rows
             .into_iter()
             .map(
-                |
-                    (
-                        blobstore_key,
-                        blobstore_id,
-                        multiplex_id,
-                        timestamp,
-                        operation_key,
-                        id,
-                        blob_size,
-                    ),
-                | {
+                |(
+                    blobstore_key,
+                    blobstore_id,
+                    multiplex_id,
+                    timestamp,
+                    operation_key,
+                    id,
+                    blob_size,
+                )| {
                     BlobstoreSyncQueueEntry {
                         blobstore_key,
                         blobstore_id,

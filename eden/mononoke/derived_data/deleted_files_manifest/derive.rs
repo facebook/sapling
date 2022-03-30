@@ -122,13 +122,11 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 },
                 // unfold
                 {
-                    move |
-                        DeletedManifestUnfoldNode {
-                            path_element,
-                            changes,
-                            parents,
-                        },
-                    | {
+                    move |DeletedManifestUnfoldNode {
+                              path_element,
+                              changes,
+                              parents,
+                          }| {
                         async move {
                             let (mf_change, next_states) =
                                 Self::do_unfold(ctx, blobstore, changes, parents).await?;

@@ -394,12 +394,10 @@ async fn subcommand_compute_blame(
             }
         },
         {
-            |
-                (csid, parent_index, path, file_unode_id),
-                parents: Iter<
-                    Result<(Option<usize>, MPath, bytes::Bytes, EitherBlame), BlameRejected>,
-                >,
-            | {
+            |(csid, parent_index, path, file_unode_id),
+             parents: Iter<
+                Result<(Option<usize>, MPath, bytes::Bytes, EitherBlame), BlameRejected>,
+            >| {
                 cloned!(ctx, repo);
                 async move {
                     match fetch_content_for_blame(&ctx, &repo, file_unode_id).await? {

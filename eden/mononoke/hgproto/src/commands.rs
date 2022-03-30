@@ -810,10 +810,10 @@ mod test {
     #[test]
     fn getpackv1() {
         let input = "\u{0}\u{4}path\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}";
-        let (paramstream, _input) =
-            decode_getpack_arg_stream(BytesStream::new(stream::once(Ok(Bytes::from(input)))), || {
-                Getpackv1ArgDecoder::new()
-            });
+        let (paramstream, _input) = decode_getpack_arg_stream(
+            BytesStream::new(stream::once(Ok(Bytes::from(input)))),
+            || Getpackv1ArgDecoder::new(),
+        );
         let res = paramstream.collect().wait().unwrap();
         assert_eq!(res, vec![(MPath::new("path").unwrap(), vec![])]);
     }

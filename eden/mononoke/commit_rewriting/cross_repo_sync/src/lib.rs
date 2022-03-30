@@ -1351,13 +1351,12 @@ where
         let cs = cs.into_mut();
 
         let parent_outcomes = stream::iter(cs.parents.clone().into_iter().map(|p| {
-            self.get_commit_sync_outcome(ctx, p)
-                .and_then(move |maybe_outcome| {
-                    match maybe_outcome {
-                        Some(outcome) => future::ok((p, outcome)),
-                        None => future::err(format_err!("{} does not have CommitSyncOutcome", p)),
-                    }
-                })
+            self.get_commit_sync_outcome(ctx, p).and_then(
+                move |maybe_outcome| match maybe_outcome {
+                    Some(outcome) => future::ok((p, outcome)),
+                    None => future::err(format_err!("{} does not have CommitSyncOutcome", p)),
+                },
+            )
         }));
 
         let sync_outcomes = parent_outcomes
