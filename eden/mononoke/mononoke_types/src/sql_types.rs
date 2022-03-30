@@ -17,7 +17,7 @@ use sql::mysql_async::{
     FromValueError, Value,
 };
 use sql::sql_common::mysql::{
-    opt_try_from_rowfield, MysqlError, OptionalTryFromRowField, RowField,
+    opt_try_from_rowfield, OptionalTryFromRowField, RowField, ValueError,
 };
 
 type FromValueResult<T> = Result<T, FromValueError>;
@@ -129,7 +129,7 @@ impl FromValue for GitSha1 {
 }
 
 impl OptionalTryFromRowField for GitSha1 {
-    fn try_from_opt(field: RowField) -> Result<Option<Self>, MysqlError> {
+    fn try_from_opt(field: RowField) -> Result<Option<Self>, ValueError> {
         opt_try_from_rowfield(field)
     }
 }

@@ -33,7 +33,7 @@ use repo_identity::RepoIdentityRef;
 use sql::mysql_async::prelude::{ConvIr, FromValue};
 use sql::mysql_async::{FromValueError, Value};
 use sql::sql_common::mysql::{
-    opt_try_from_rowfield, MysqlError, OptionalTryFromRowField, RowField,
+    opt_try_from_rowfield, OptionalTryFromRowField, RowField, ValueError,
 };
 use sql_ext::SqlConnections;
 
@@ -115,7 +115,7 @@ impl FromValue for BubbleId {
 }
 
 impl OptionalTryFromRowField for BubbleId {
-    fn try_from_opt(field: RowField) -> Result<Option<Self>, MysqlError> {
+    fn try_from_opt(field: RowField) -> Result<Option<Self>, ValueError> {
         opt_try_from_rowfield(field)
     }
 }
@@ -194,7 +194,7 @@ impl FromValue for ExpiryStatus {
 }
 
 impl OptionalTryFromRowField for ExpiryStatus {
-    fn try_from_opt(field: RowField) -> Result<Option<Self>, MysqlError> {
+    fn try_from_opt(field: RowField) -> Result<Option<Self>, ValueError> {
         opt_try_from_rowfield(field)
     }
 }
