@@ -212,9 +212,9 @@ Test that rebasing and pushing works as expected
   adding manifests
   adding file changes
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
-  o  b  default/@
+  o  c headc
   │
-  │ o  c headc
+  │ o  b  default/@
   ├─╯
   @  a
   

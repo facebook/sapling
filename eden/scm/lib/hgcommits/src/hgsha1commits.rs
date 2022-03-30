@@ -15,6 +15,7 @@ use dag::delegate;
 use dag::errors::NotFoundError;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
+use dag::ops::DagStrip;
 use dag::Dag;
 use dag::Group;
 use dag::Set;
@@ -27,7 +28,6 @@ use parking_lot::RwLock;
 use zstore::Id20;
 use zstore::Zstore;
 
-use crate::strip;
 use crate::utils;
 use crate::AppendCommits;
 use crate::DescribeBackend;
@@ -182,14 +182,7 @@ impl StreamCommitText for HgCommits {
 #[async_trait::async_trait]
 impl StripCommits for HgCommits {
     async fn strip_commits(&mut self, set: Set) -> Result<()> {
-        let old_path = &self.dag_path;
-        let new_path = self.dag_path.join("strip");
-        let mut new = Self::new(&new_path, &self.commits_path)?;
-        strip::migrate_commits(self, &mut new, set).await?;
-        drop(new);
-        strip::racy_unsafe_move_files(&new_path, &self.dag_path)?;
-        *self = Self::new(&old_path, &self.commits_path)?;
-        Ok(())
+        self.dag.strip(&set).await.map_err(Into::into)
     }
 }
 

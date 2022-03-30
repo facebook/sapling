@@ -13,6 +13,7 @@ use std::sync::Arc;
 use dag::delegate;
 use dag::errors::NotFoundError;
 use dag::ops::DagAddHeads;
+use dag::ops::DagStrip;
 use dag::MemDag;
 use dag::Set;
 use dag::Vertex;
@@ -20,7 +21,6 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use minibytes::Bytes;
 
-use crate::strip;
 use crate::AppendCommits;
 use crate::DescribeBackend;
 use crate::GraphNode;
@@ -148,10 +148,7 @@ impl StreamCommitText for MemHgCommits {
 #[async_trait::async_trait]
 impl StripCommits for MemHgCommits {
     async fn strip_commits(&mut self, set: Set) -> Result<()> {
-        let mut new = Self::new()?;
-        strip::migrate_commits(self, &mut new, set).await?;
-        *self = new;
-        Ok(())
+        self.dag.strip(&set).await.map_err(Into::into)
     }
 }
 

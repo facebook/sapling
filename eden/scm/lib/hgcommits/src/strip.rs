@@ -29,6 +29,7 @@ pub trait StripCommits {
 }
 
 /// Enumerate all commits in `orig`, re-insert them to `new` except for `strip_set::`.
+/// This has unacceptable time complexity so it can only be used in tests.
 pub(crate) async fn migrate_commits(
     orig: &(impl ReadCommitText + DagAlgorithm),
     new: &mut impl AppendCommits,

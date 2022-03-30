@@ -74,9 +74,9 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   $ hg book bmnottracking
   $ mkcommit localcommit
   $ printdag
-  @  localcommit | bmnottracking |
+  o  untrackedremotecommit |  |
   │
-  │ o  untrackedremotecommit |  |
+  │ @  localcommit | bmnottracking |
   ├─╯
   o  root |  |
   
@@ -93,9 +93,9 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   $ printdag
   @  localcommit | bmnottracking |
   │
+  o  untrackedremotecommit |  |
+  │
   │ o  trackedremotecommit |  | default/bookmarkonremote
-  │ │
-  o │  untrackedremotecommit |  |
   ├─╯
   o  root |  |
   
@@ -173,9 +173,9 @@ Test pull with --rebase and --tool
   │
   │ o  localcommit | bmnottracking tracking |
   │ │
-  o │  trackedremotecommit |  |
-  │ │
   │ o  untrackedremotecommit |  | public/4557926d216642d06949776e29c30bb2a54e7b6d
+  │ │
+  o │  trackedremotecommit |  |
   ├─╯
   o  root |  |
   
@@ -198,9 +198,9 @@ Test pull with --rebase and --tool
   │
   │ o  localcommit | bmnottracking tracking |
   │ │
-  o │  trackedremotecommit |  |
-  │ │
   │ o  untrackedremotecommit |  | public/4557926d216642d06949776e29c30bb2a54e7b6d
+  │ │
+  o │  trackedremotecommit |  |
   ├─╯
   o  root |  |
   
