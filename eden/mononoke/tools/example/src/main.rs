@@ -8,7 +8,7 @@
 use anyhow::Result;
 use clap::Parser;
 use fbinit::FacebookInit;
-use mononoke_app::args::RepoArgs;
+use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::{MononokeApp, MononokeAppBuilder};
 use repo_identity::{RepoIdentity, RepoIdentityRef};
 
@@ -16,7 +16,7 @@ use repo_identity::{RepoIdentity, RepoIdentityRef};
 #[derive(Parser)]
 struct ExampleArgs {
     #[clap(flatten)]
-    repo: RepoArgs,
+    repos: MultiRepoArgs,
 }
 
 #[facet::container]
@@ -38,13 +38,15 @@ async fn async_main(app: MononokeApp) -> Result<()> {
     let args: ExampleArgs = app.args()?;
     let test_args = app.extension_args::<additional::TestAppExtension>()?;
 
-    let repo: Repo = app.open_repo(&args.repo).await?;
+    let repos: Vec<Repo> = app.open_repos(&args.repos).await?;
 
-    println!(
-        "Repo Id: {} Name: {}",
-        repo.repo_identity().id(),
-        repo.repo_identity().name(),
-    );
+    for repo in repos {
+        println!(
+            "Repo Id: {} Name: {}",
+            repo.repo_identity().id(),
+            repo.repo_identity().name(),
+        );
+    }
     if let Some(test_arg) = test_args.test_arg {
         println!("Test arg: {}", test_arg);
     }

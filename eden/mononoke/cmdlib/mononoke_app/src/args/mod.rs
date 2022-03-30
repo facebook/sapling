@@ -25,7 +25,7 @@ pub use config::{ConfigArgs, ConfigMode};
 pub use hooks::HooksArgs;
 pub use mcrouter::{McrouterAppExtension, McrouterArgs};
 pub use mysql::MysqlArgs;
-pub use repo::{RepoArg, RepoArgs};
+pub use repo::{MultiRepoArgs, RepoArg, RepoArgs};
 pub use repo_blobstore::RepoBlobstoreArgs;
 pub use runtime::RuntimeArgs;
 pub use shutdown_timeout::ShutdownTimeoutArgs;

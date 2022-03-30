@@ -18,6 +18,7 @@ use context::CoreContext;
 use environment::MononokeEnvironment;
 use facet::AsyncBuildable;
 use fbinit::FacebookInit;
+use futures::stream::{self, StreamExt, TryStreamExt};
 use metaconfig_parser::{RepoConfigs, StorageConfigs};
 use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, RepoConfig};
 use mononoke_types::RepositoryId;
@@ -28,7 +29,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use tokio::runtime::Handle;
 
-use crate::args::{ConfigArgs, ConfigMode, RepoArg, RepoArgs, RepoBlobstoreArgs};
+use crate::args::{ConfigArgs, ConfigMode, MultiRepoArgs, RepoArg, RepoArgs, RepoBlobstoreArgs};
 use crate::extension::{AppExtension, AppExtensionArgsBox, BoxedAppExtensionArgs};
 
 pub struct MononokeApp {
@@ -163,8 +164,8 @@ impl MononokeApp {
     }
 
     /// Get repo config based on user-provided arguments.
-    pub fn repo_config(&self, repo_args: &RepoArgs) -> Result<(String, RepoConfig)> {
-        match repo_args.id_or_name()? {
+    pub fn repo_config(&self, repo_arg: RepoArg) -> Result<(String, RepoConfig)> {
+        match repo_arg {
             RepoArg::Id(repo_id) => {
                 let (repo_name, repo_config) = self
                     .repo_configs
@@ -183,12 +184,37 @@ impl MononokeApp {
         }
     }
 
+    /// Open repositories based on user-provided arguments.
+    pub async fn open_repos<Repo>(&self, repos_args: &MultiRepoArgs) -> Result<Vec<Repo>>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let args = repos_args.ids_or_names()?;
+        let mut repos = vec![];
+        for arg in args {
+            repos.push(self.repo_config(arg)?);
+        }
+
+        let repos: HashMap<_, _> = repos.into_iter().collect();
+        let repos: Vec<_> = stream::iter(repos)
+            .map(|(repo_name, repo_config)| {
+                let repo_factory = self.repo_factory.clone();
+                async move { repo_factory.build(repo_name, repo_config).await }
+            })
+            .buffered(100)
+            .try_collect()
+            .await?;
+
+        Ok(repos)
+    }
+
     /// Open a repository based on user-provided arguments.
     pub async fn open_repo<Repo>(&self, repo_args: &RepoArgs) -> Result<Repo>
     where
         Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
     {
-        let (repo_name, repo_config) = self.repo_config(repo_args)?;
+        let repo_arg = repo_args.id_or_name()?;
+        let (repo_name, repo_config) = self.repo_config(repo_arg)?;
         let repo = self.repo_factory.build(repo_name, repo_config).await?;
         Ok(repo)
     }

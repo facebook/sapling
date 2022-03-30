@@ -44,6 +44,39 @@ impl RepoArgs {
     }
 }
 
+/// Command line arguments for specifying multiple repos.
+#[derive(Args, Debug)]
+#[clap(group(
+    ArgGroup::new("multirepos")
+        .required(true)
+        .multiple(true)
+        .conflicts_with("repo")
+        .args(&["repo-id", "repo-name"]),
+))]
+pub struct MultiRepoArgs {
+    /// Numeric repository ID
+    #[clap(long)]
+    repo_id: Vec<i32>,
+
+    /// Repository name
+    #[clap(short = 'R', long)]
+    repo_name: Vec<String>,
+}
+
+impl MultiRepoArgs {
+    pub fn ids_or_names(&self) -> Result<Vec<RepoArg>> {
+        let mut l = vec![];
+        for id in &self.repo_id {
+            l.push(RepoArg::Id(RepositoryId::new(*id)));
+        }
+        for name in &self.repo_name {
+            l.push(RepoArg::Name(name));
+        }
+
+        Ok(l)
+    }
+}
+
 pub enum RepoArg<'name> {
     Id(RepositoryId),
     Name(&'name str),
