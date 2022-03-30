@@ -41,6 +41,8 @@ use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 #[cfg(unix)]
 use tokio_uds_compat::UnixStream;
+use types::RepoPath;
+use types::RepoPathBuf;
 
 use crate::path_relativizer::PathRelativizer;
 
@@ -318,26 +320,21 @@ impl HgStatusPathRelativizer {
         HgStatusPathRelativizer { relativizer }
     }
 
-    /// path is a normalized file path relative to repo_root. If root_relative is true, then the
-    /// path that is returned will be relative to cwd.
-    pub fn relativize<P: AsRef<Path>>(&self, path: P) -> PathBuf {
-        self.relativize_impl(path.as_ref())
-    }
-
-    pub fn relativize_impl(&self, path: &Path) -> PathBuf {
+    /// Returns a String that is suitable for display to the user.
+    ///
+    /// If `root_relative` is true, the path returned will be relative to the working directory.
+    pub fn relativize(&self, repo_path: &RepoPath) -> String {
         let out = match self.relativizer {
-            Some(ref relativizer) => relativizer.relativize(path),
-            None => path.to_path_buf(),
+            Some(ref relativizer) => relativizer.relativize(repo_path),
+            None => repo_path.to_string(),
         };
 
-        // Unfortunately, PathBuf does not have an is_empty() method:
-        // https://github.com/rust-lang/rust/issues/30259.
-        if !out.as_os_str().is_empty() {
+        if !out.is_empty() {
             out
         } else {
             // In the rare event that the relativized path results in the empty string, print "."
             // instead so the user does not end up with an empty line.
-            PathBuf::from(".")
+            String::from(".")
         }
     }
 }
@@ -408,7 +405,7 @@ impl PrintConfig {
         let endl = self.endl;
 
         let print_group =
-            |print_group, enabled: bool, group: &Vec<PathBuf>| -> Result<(), io::Error> {
+            |print_group, enabled: bool, group: &Vec<RepoPathBuf>| -> Result<(), io::Error> {
                 if !enabled {
                     return Ok(());
                 }
@@ -436,17 +433,13 @@ impl PrintConfig {
                     io.write(format!(
                         "{}{}{}{}",
                         prefix,
-                        &relativizer.relativize(&path).display(),
+                        &relativizer.relativize(path),
                         suffix,
                         endl
                     ))?;
                     if self.copies {
                         if let Some(ref p) = dirstate_data.copymap.get(path) {
-                            io.write(format!(
-                                "  {}{}",
-                                &relativizer.relativize(p).display(),
-                                endl
-                            ))?;
+                            io.write(format!("  {}{}", &relativizer.relativize(p), endl))?;
                         }
                     }
                 }
@@ -486,12 +479,8 @@ impl PrintConfig {
         } else {
             io.write_err("Encountered errors computing status for some paths:\n")?;
             for (path_str, error) in &status.errors {
-                let path = Path::new(str::from_utf8(path_str)?);
-                io.write_err(format!(
-                    "  {}: {}\n",
-                    &relativizer.relativize(&path.to_path_buf()).display(),
-                    error,
-                ))?;
+                let path = RepoPath::from_utf8(path_str)?;
+                io.write_err(format!("  {}: {}\n", &relativizer.relativize(path), error,))?;
             }
             Ok(1)
         }
@@ -521,13 +510,13 @@ enum PrintGroup {
 
 #[derive(Default)]
 struct GroupedEntries {
-    modified: Vec<PathBuf>,
-    added: Vec<PathBuf>,
-    removed: Vec<PathBuf>,
-    deleted: Vec<PathBuf>,
-    unknown: Vec<PathBuf>,
-    ignored: Vec<PathBuf>,
-    clean: Vec<PathBuf>,
+    modified: Vec<RepoPathBuf>,
+    added: Vec<RepoPathBuf>,
+    removed: Vec<RepoPathBuf>,
+    deleted: Vec<RepoPathBuf>,
+    unknown: Vec<RepoPathBuf>,
+    ignored: Vec<RepoPathBuf>,
+    clean: Vec<RepoPathBuf>,
 }
 
 fn group_entries(
@@ -539,7 +528,7 @@ fn group_entries(
     let mut result = GroupedEntries::default();
     let mut dirstates = dirstate_data.tuples.clone();
     for (path_str, status_code) in &status.entries {
-        let path_str = match str::from_utf8(path_str) {
+        let path = match RepoPath::from_utf8(path_str) {
             Ok(s) => s,
             Err(e) => {
                 io.write_err(format!(
@@ -550,7 +539,6 @@ fn group_entries(
                 continue;
             }
         };
-        let path = Path::new(path_str);
         let dirstate = dirstates.remove(path);
         use self::DirstateDataStatus::*;
         let group = match (status_code.clone(), dirstate) {
@@ -585,7 +573,7 @@ fn group_entries(
                  once Thrift enums are translated as Rust enums."
             ),
         };
-        group.push(path.to_path_buf());
+        group.push(path.to_owned());
     }
 
     for (path, tuple) in dirstates {
@@ -595,17 +583,16 @@ fn group_entries(
                     eprintln!(
                         "Unexpected Nonnormal file {} has a merge state of \
                          NotApplicable but is marked as 'needs merging'.",
-                        path.display()
+                        path
                     );
                 } else {
                     result.modified.push(path)
                 }
             }
-            DirstateDataStatus::Add => match symlink_metadata(repo_root.join(&path)) {
-                Ok(ref attr) if attr.is_dir() => eprintln!(
-                    "Suspicious: dirstate tuple points to a directory: {}",
-                    path.display()
-                ),
+            DirstateDataStatus::Add => match symlink_metadata(repo_root.join(path.as_str())) {
+                Ok(ref attr) if attr.is_dir() => {
+                    eprintln!("Suspicious: dirstate tuple points to a directory: {}", path)
+                }
                 Ok(_) => result.added.push(path),
                 Err(_) => result.deleted.push(path),
             },
@@ -648,14 +635,14 @@ impl DirstateReader {
         Ok(BigEndian::read_u32(&buf))
     }
 
-    fn read_path(&mut self) -> Result<PathBuf> {
+    fn read_path(&mut self) -> Result<RepoPathBuf> {
         let path_length = self.read_u16()?;
 
         let mut buf = vec![0; path_length as usize];
         self.reader.read_exact(&mut buf)?;
         self.sha256.input(&buf);
 
-        Ok(Path::new(str::from_utf8(&buf)?).to_path_buf())
+        Ok(RepoPathBuf::from_utf8(buf)?)
     }
 
     fn verify_checksum(&mut self) -> Result<(), io::Error> {
@@ -701,8 +688,8 @@ fn read_hg_dirstate(repo_root: &Path) -> Result<DirstateData> {
     let version = reader.read_u32()?;
     ensure!(version == 1, "Unsupported dirstate version: {}", version);
 
-    let mut tuples: HashMap<PathBuf, DirstateDataTuple> = HashMap::new();
-    let mut copymap: HashMap<PathBuf, PathBuf> = HashMap::new();
+    let mut tuples: HashMap<RepoPathBuf, DirstateDataTuple> = HashMap::new();
+    let mut copymap: HashMap<RepoPathBuf, RepoPathBuf> = HashMap::new();
 
     loop {
         let header = reader.read_u8()?;
@@ -764,8 +751,8 @@ type CommitHash = [u8; 20];
 struct DirstateData {
     p1: CommitHash,
     p2: CommitHash,
-    tuples: HashMap<PathBuf, DirstateDataTuple>,
-    copymap: HashMap<PathBuf, PathBuf>,
+    tuples: HashMap<RepoPathBuf, DirstateDataTuple>,
+    copymap: HashMap<RepoPathBuf, RepoPathBuf>,
 }
 
 #[derive(Clone)]
@@ -803,6 +790,10 @@ mod test {
 
     use super::*;
 
+    fn repo_path_buf(path: &str) -> RepoPathBuf {
+        RepoPathBuf::from_string(path.to_string()).unwrap()
+    }
+
     #[derive(Default)]
     struct StatusTestCase<'a> {
         args: Vec<String>,
@@ -810,7 +801,7 @@ mod test {
         p2: [u8; 20],
         entries: BTreeMap<Vec<u8>, ScmFileStatus>,
         errors: BTreeMap<Vec<u8>, String>,
-        dirstate_data_tuples: HashMap<PathBuf, DirstateDataTuple>,
+        dirstate_data_tuples: HashMap<RepoPathBuf, DirstateDataTuple>,
         files: Vec<(&'a str, Fixture<'a>)>,
         use_color: bool,
         stdout: String,
@@ -897,7 +888,7 @@ mod test {
 
         entries.insert("added.txt".into(), ScmFileStatus::ADDED);
         dirstate_data_tuples.insert(
-            PathBuf::from("added.txt"),
+            repo_path_buf("added.txt"),
             DirstateDataTuple {
                 status: DirstateDataStatus::Add,
                 merge_state: DirstateMergeState::NotApplicable,
@@ -906,7 +897,7 @@ mod test {
 
         entries.insert("added_other_parent.txt".into(), ScmFileStatus::ADDED);
         dirstate_data_tuples.insert(
-            PathBuf::from("added_other_parent.txt"),
+            repo_path_buf("added_other_parent.txt"),
             DirstateDataTuple {
                 status: DirstateDataStatus::Normal,
                 merge_state: DirstateMergeState::OtherParent,
@@ -915,7 +906,7 @@ mod test {
 
         entries.insert("unknown.txt".into(), ScmFileStatus::ADDED);
         dirstate_data_tuples.insert(
-            PathBuf::from("unknown.txt"),
+            repo_path_buf("unknown.txt"),
             DirstateDataTuple {
                 status: DirstateDataStatus::Normal,
                 merge_state: DirstateMergeState::NotApplicable,
@@ -927,7 +918,7 @@ mod test {
             ScmFileStatus::IGNORED,
         );
         dirstate_data_tuples.insert(
-            PathBuf::from("added_even_though_normally_ignored.txt"),
+            repo_path_buf("added_even_though_normally_ignored.txt"),
             DirstateDataTuple {
                 status: DirstateDataStatus::Add,
                 merge_state: DirstateMergeState::NotApplicable,
@@ -939,7 +930,7 @@ mod test {
             ScmFileStatus::MODIFIED,
         );
         dirstate_data_tuples.insert(
-            PathBuf::from("modified_and_marked_for_removal.txt"),
+            repo_path_buf("modified_and_marked_for_removal.txt"),
             DirstateDataTuple {
                 status: DirstateDataStatus::Remove,
                 merge_state: DirstateMergeState::NotApplicable,
@@ -948,7 +939,7 @@ mod test {
 
         entries.insert("removed.txt".into(), ScmFileStatus::REMOVED);
         dirstate_data_tuples.insert(
-            PathBuf::from("removed.txt"),
+            repo_path_buf("removed.txt"),
             DirstateDataTuple {
                 status: DirstateDataStatus::Remove,
                 merge_state: DirstateMergeState::NotApplicable,
@@ -960,7 +951,7 @@ mod test {
             ScmFileStatus::REMOVED,
         );
         dirstate_data_tuples.insert(
-            PathBuf::from("removed_but_not_marked_for_removal.txt"),
+            repo_path_buf("removed_but_not_marked_for_removal.txt"),
             DirstateDataTuple {
                 status: DirstateDataStatus::Normal,
                 merge_state: DirstateMergeState::NotApplicable,
@@ -1142,7 +1133,7 @@ I ignored.txt
         entries.insert(b"modified.txt".to_vec(), ScmFileStatus::MODIFIED);
         let errors = BTreeMap::new();
         let stdout = "M modified.txt\n";
-        let stderr = "skipping invalid utf-8 filename: �Z�J�\u{7f}.INFO (invalid utf-8 sequence of 1 bytes from index 0)\n";
+        let stderr = "skipping invalid utf-8 filename: �Z�J�\u{7f}.INFO (Failed to parse to Utf8: \"�Z�J�\\u{7f}.INFO\". invalid utf-8 sequence of 1 bytes from index 0)\n";
         test_status(StatusTestCase {
             entries,
             errors,

@@ -7,6 +7,7 @@
 
 use std::path::Path;
 use std::path::PathBuf;
+use types::RepoPath;
 
 // TODO: Consider cleaning up and moving this to utils::path.
 fn relativize(base: &Path, path: &Path) -> PathBuf {
@@ -114,18 +115,21 @@ impl PathRelativizer {
         PathRelativizer { config }
     }
 
-    /// `path` must be relative to the repo root. Returns a corresponding PathBuf that is suitable
-    /// via display on the console.
-    pub fn relativize(&self, path: impl AsRef<Path>) -> PathBuf {
-        self.relativize_impl(path.as_ref())
-    }
+    /// Relativize the [`RepoPath`]. Returns a String that is suitable for display to the user.
+    pub fn relativize(&self, path: impl AsRef<RepoPath>) -> String {
+        fn inner(relativizer: &PathRelativizer, path: &RepoPath) -> String {
+            // TODO: directly operate on the RepoPath components.
+            let path: &Path = path.as_str().as_ref();
 
-    fn relativize_impl(&self, path: &Path) -> PathBuf {
-        use self::PathRelativizerConfig::*;
-        match self.config {
-            CwdUnderRepo { ref relative_cwd } => relativize(relative_cwd, path),
-            CwdOutsideRepo { ref prefix } => prefix.join(path),
+            use self::PathRelativizerConfig::*;
+            let output = match &relativizer.config {
+                CwdUnderRepo { relative_cwd } => relativize(relative_cwd, path),
+                CwdOutsideRepo { prefix } => prefix.join(path),
+            };
+            output.display().to_string()
         }
+
+        inner(self, path.as_ref())
     }
 }
 
@@ -165,7 +169,8 @@ mod test {
         let cwd = Path::new("/home/zuck/tfb");
         let relativizer = PathRelativizer::new(cwd, repo_root);
         let check = |path, expected| {
-            assert_eq!(relativizer.relativize(Path::new(path)), Path::new(expected));
+            let path = RepoPath::from_str(path).unwrap();
+            assert_eq!(relativizer.relativize(path), expected);
         };
         check("foo/bar.txt", "foo/bar.txt");
     }
@@ -176,7 +181,8 @@ mod test {
         let cwd = Path::new("/home/zuck/tfb/foo");
         let relativizer = PathRelativizer::new(cwd, repo_root);
         let check = |path, expected| {
-            assert_eq!(relativizer.relativize(Path::new(path)), Path::new(expected));
+            let path = RepoPath::from_str(path).unwrap();
+            assert_eq!(relativizer.relativize(path), expected);
         };
         check("foo/bar.txt", "bar.txt");
     }
@@ -187,7 +193,8 @@ mod test {
         let cwd = PathBuf::from("/home/zuck");
         let relativizer = PathRelativizer::new(cwd, repo_root);
         let check = |path, expected| {
-            assert_eq!(relativizer.relativize(Path::new(path)), Path::new(expected));
+            let path = RepoPath::from_str(path).unwrap();
+            assert_eq!(relativizer.relativize(path), expected);
         };
         check("foo/bar.txt", "tfb/foo/bar.txt");
     }
@@ -196,7 +203,8 @@ mod test {
     fn relativize_path_from_repo_when_cwd_is_cousin_of_repo_root() {
         let relativizer = PathRelativizer::new("/home/schrep/tfb", "/home/zuck/tfb");
         let check = |path, expected| {
-            assert_eq!(relativizer.relativize(Path::new(path)), Path::new(expected));
+            let path = RepoPath::from_str(path).unwrap();
+            assert_eq!(relativizer.relativize(path), expected);
         };
         check("foo/bar.txt", "../../zuck/tfb/foo/bar.txt");
     }
