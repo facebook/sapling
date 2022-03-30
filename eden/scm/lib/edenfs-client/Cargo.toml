@@ -12,6 +12,8 @@ chrono = { version = "0.4", features = ["clock", "serde", "std"], default-featur
 clidispatch = { version = "0.1.0", path = "../clidispatch" }
 fbthrift_socket = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sha2 = "0.8"
+status = { version = "0.1.0", path = "../status" }
 thrift-types = { version = "0.1.0", path = "../thrift-types" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+types = { version = "0.1.0", path = "../types" }

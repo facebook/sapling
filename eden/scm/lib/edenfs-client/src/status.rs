@@ -34,6 +34,7 @@ use eden::ScmStatus;
 use fbthrift_socket::SocketTransport;
 use sha2::Digest;
 use sha2::Sha256;
+use status::StatusBuilder;
 use thrift_types::edenfs as eden;
 use thrift_types::edenfs::client::EdenService;
 use thrift_types::fb303_core::client::BaseService;
@@ -144,16 +145,17 @@ async fn maybe_status_fastpath_internal(
     )
     .await?;
 
+    let status_output = group_entries(repo_root, &status.status, &dirstate_data, io)?;
     let relativizer = RepoPathRelativizer::new(cwd, repo_root);
     let relativizer = HgStatusPathRelativizer::new(print_config.root_relative, relativizer);
-    let return_code = print_config.print_status(
-        &repo_root,
-        &status.status,
-        &dirstate_data,
+    print_config.print_status(
+        &status_output,
+        &dirstate_data.copymap,
         &relativizer,
         use_color,
         io,
     )?;
+    let return_code = print_errors(&status.status, io)?;
 
     if let Ok(version) = status.version.parse::<u32>() {
         if use_color {
@@ -391,98 +393,114 @@ impl PrintConfig {
             root_relative: command.hgplain || command.is_present("root-relative"),
         }
     }
+
     fn print_status(
         &self,
-        repo_root: &Path,
-        status: &ScmStatus,
-        dirstate_data: &DirstateData,
+        status: &status::Status,
+        copymap: &HashMap<RepoPathBuf, RepoPathBuf>,
         relativizer: &HgStatusPathRelativizer,
         use_color: bool,
         io: &IO,
-    ) -> Result<u8> {
-        let groups = group_entries(&repo_root, &status, &dirstate_data, io)?;
+    ) -> Result<()> {
         let endl = self.endl;
 
-        let print_group =
-            |print_group, enabled: bool, group: &Vec<RepoPathBuf>| -> Result<(), io::Error> {
-                if !enabled {
-                    return Ok(());
-                }
+        let print_group = |
+            print_group,
+            enabled: bool,
+            group: &mut dyn Iterator<Item = &RepoPathBuf>,
+        | -> Result<(), io::Error> {
+            if !enabled {
+                return Ok(());
+            }
 
-                // `hg config | grep color` did not yield the entries for color.status listed on
-                // https://www.mercurial-scm.org/wiki/ColorExtension. At Facebook, we seem to match
-                // the defaults listed on the wiki page, except we don't change the background color.
-                let (code, ansi_prefix) = match print_group {
-                    PrintGroup::Modified => ("M ", format!("{}{}", BLUE, BOLD)),
-                    PrintGroup::Added => ("A ", format!("{}{}", GREEN, BOLD)),
-                    PrintGroup::Removed => ("R ", format!("{}{}", RED, BOLD)),
-                    PrintGroup::Deleted => ("! ", format!("{}{}{}", CYAN, BOLD, UNDERLINE)),
-                    PrintGroup::Unknown => ("? ", format!("{}{}{}", MAGENTA, BOLD, UNDERLINE)),
-                    PrintGroup::Ignored => ("I ", format!("{}{}", BRIGHT_BLACK, BOLD)),
-                    PrintGroup::Clean => ("C ", "".to_owned()),
-                };
-                let prefix = if self.no_status { "" } else { code };
-                let (prefix, suffix) = if use_color {
-                    (format!("{}{}", ansi_prefix, prefix), RESET.to_string())
-                } else {
-                    (prefix.to_owned(), "".to_owned())
-                };
+            // `hg config | grep color` did not yield the entries for color.status listed on
+            // https://www.mercurial-scm.org/wiki/ColorExtension. At Facebook, we seem to match
+            // the defaults listed on the wiki page, except we don't change the background color.
+            let (code, ansi_prefix) = match print_group {
+                PrintGroup::Modified => ("M ", format!("{}{}", BLUE, BOLD)),
+                PrintGroup::Added => ("A ", format!("{}{}", GREEN, BOLD)),
+                PrintGroup::Removed => ("R ", format!("{}{}", RED, BOLD)),
+                PrintGroup::Deleted => ("! ", format!("{}{}{}", CYAN, BOLD, UNDERLINE)),
+                PrintGroup::Unknown => ("? ", format!("{}{}{}", MAGENTA, BOLD, UNDERLINE)),
+                PrintGroup::Ignored => ("I ", format!("{}{}", BRIGHT_BLACK, BOLD)),
+                PrintGroup::Clean => ("C ", "".to_owned()),
+            };
+            let prefix = if self.no_status { "" } else { code };
+            let (prefix, suffix) = if use_color {
+                (format!("{}{}", ansi_prefix, prefix), RESET.to_string())
+            } else {
+                (prefix.to_owned(), "".to_owned())
+            };
 
-                for path in group {
-                    io.write(format!(
-                        "{}{}{}{}",
-                        prefix,
-                        &relativizer.relativize(path),
-                        suffix,
-                        endl
-                    ))?;
-                    if self.copies {
-                        if let Some(ref p) = dirstate_data.copymap.get(path) {
-                            io.write(format!("  {}{}", &relativizer.relativize(p), endl))?;
-                        }
+            let mut group = group.collect::<Vec<_>>();
+            group.sort();
+            for path in group {
+                io.write(format!(
+                    "{}{}{}{}",
+                    prefix,
+                    &relativizer.relativize(path),
+                    suffix,
+                    endl
+                ))?;
+                if self.copies {
+                    if let Some(p) = copymap.get(path) {
+                        io.write(format!("  {}{}", &relativizer.relativize(p), endl))?;
                     }
                 }
-                return Ok(());
-            };
+            }
+            Ok(())
+        };
 
         print_group(
             PrintGroup::Modified,
             self.status_types.modified,
-            &groups.modified,
+            &mut status.modified(),
         )?;
-        print_group(PrintGroup::Added, self.status_types.added, &groups.added)?;
+        print_group(
+            PrintGroup::Added,
+            self.status_types.added,
+            &mut status.added(),
+        )?;
         print_group(
             PrintGroup::Removed,
             self.status_types.removed,
-            &groups.removed,
+            &mut status.removed(),
         )?;
         print_group(
             PrintGroup::Deleted,
             self.status_types.deleted,
-            &groups.deleted,
+            &mut status.deleted(),
         )?;
         print_group(
             PrintGroup::Unknown,
             self.status_types.unknown,
-            &groups.unknown,
+            &mut status.unknown(),
         )?;
         print_group(
             PrintGroup::Ignored,
             self.status_types.ignored,
-            &groups.ignored,
+            &mut status.ignored(),
         )?;
-        print_group(PrintGroup::Clean, self.status_types.clean, &groups.clean)?;
+        print_group(
+            PrintGroup::Clean,
+            self.status_types.clean,
+            &mut status.clean(),
+        )?;
 
-        if status.errors.is_empty() {
-            Ok(0)
-        } else {
-            io.write_err("Encountered errors computing status for some paths:\n")?;
-            for (path_str, error) in &status.errors {
-                let path = RepoPath::from_utf8(path_str)?;
-                io.write_err(format!("  {}: {}\n", &relativizer.relativize(path), error,))?;
-            }
-            Ok(1)
+        Ok(())
+    }
+}
+
+fn print_errors(raw_status: &ScmStatus, io: &IO) -> Result<u8> {
+    if raw_status.errors.is_empty() {
+        Ok(0)
+    } else {
+        io.write_err("Encountered errors computing status for some paths:\n")?;
+        for (path_str, error) in &raw_status.errors {
+            let path = RepoPath::from_utf8(path_str)?;
+            io.write_err(format!("  {}: {}\n", path, error))?;
         }
+        Ok(1)
     }
 }
 
@@ -507,24 +525,20 @@ enum PrintGroup {
     Clean,
 }
 
-#[derive(Default)]
-struct GroupedEntries {
-    modified: Vec<RepoPathBuf>,
-    added: Vec<RepoPathBuf>,
-    removed: Vec<RepoPathBuf>,
-    deleted: Vec<RepoPathBuf>,
-    unknown: Vec<RepoPathBuf>,
-    ignored: Vec<RepoPathBuf>,
-    clean: Vec<RepoPathBuf>,
-}
-
 fn group_entries(
     repo_root: &Path,
     status: &ScmStatus,
     dirstate_data: &DirstateData,
     io: &IO,
-) -> Result<GroupedEntries> {
-    let mut result = GroupedEntries::default();
+) -> Result<status::Status> {
+    let mut modified = vec![];
+    let mut added = vec![];
+    let mut removed = vec![];
+    let mut deleted = vec![];
+    let mut unknown = vec![];
+    let mut ignored = vec![];
+    let clean = vec![];
+
     let mut dirstates = dirstate_data.tuples.clone();
     for (path_str, status_code) in &status.entries {
         let path = match RepoPath::from_utf8(path_str) {
@@ -542,14 +556,14 @@ fn group_entries(
         use self::DirstateDataStatus::*;
         let group = match (status_code.clone(), dirstate) {
             (ScmFileStatus::MODIFIED, Some(DirstateDataTuple { status: Remove, .. })) => {
-                &mut result.removed
+                &mut removed
             }
-            (ScmFileStatus::MODIFIED, _) => &mut result.modified,
+            (ScmFileStatus::MODIFIED, _) => &mut modified,
 
             (ScmFileStatus::REMOVED, Some(DirstateDataTuple { status: Remove, .. })) => {
-                &mut result.removed
+                &mut removed
             }
-            (ScmFileStatus::REMOVED, _) => &mut result.deleted,
+            (ScmFileStatus::REMOVED, _) => &mut deleted,
 
             (ScmFileStatus::ADDED, Some(DirstateDataTuple { status: Add, .. }))
             | (
@@ -559,13 +573,11 @@ fn group_entries(
                     merge_state: DirstateMergeState::OtherParent,
                     ..
                 }),
-            ) => &mut result.added,
-            (ScmFileStatus::ADDED, _) => &mut result.unknown,
+            ) => &mut added,
+            (ScmFileStatus::ADDED, _) => &mut unknown,
 
-            (ScmFileStatus::IGNORED, Some(DirstateDataTuple { status: Add, .. })) => {
-                &mut result.added
-            }
-            (ScmFileStatus::IGNORED, _) => &mut result.ignored,
+            (ScmFileStatus::IGNORED, Some(DirstateDataTuple { status: Add, .. })) => &mut added,
+            (ScmFileStatus::IGNORED, _) => &mut ignored,
 
             (ScmFileStatus(_), _) => unreachable!(
                 "Illegal state: this should not be reachable \
@@ -585,23 +597,32 @@ fn group_entries(
                         path
                     );
                 } else {
-                    result.modified.push(path)
+                    modified.push(path)
                 }
             }
             DirstateDataStatus::Add => match symlink_metadata(repo_root.join(path.as_str())) {
                 Ok(ref attr) if attr.is_dir() => {
                     eprintln!("Suspicious: dirstate tuple points to a directory: {}", path)
                 }
-                Ok(_) => result.added.push(path),
-                Err(_) => result.deleted.push(path),
+                Ok(_) => added.push(path),
+                Err(_) => deleted.push(path),
             },
-            DirstateDataStatus::Remove => result.removed.push(path),
+            DirstateDataStatus::Remove => removed.push(path),
             DirstateDataStatus::Normal => continue,
             DirstateDataStatus::Unknown => continue,
         }
     }
 
-    Ok(result)
+    let status = StatusBuilder::new()
+        .modified(modified)
+        .added(added)
+        .removed(removed)
+        .deleted(deleted)
+        .unknown(unknown)
+        .ignored(ignored)
+        .clean(clean)
+        .build();
+    Ok(status)
 }
 
 struct DirstateReader {
@@ -842,16 +863,17 @@ mod test {
         let tout = Vec::new();
         let terr = Vec::new();
         let mut io = IO::new(tin, tout, Some(terr));
-        let return_code = print_config
+        let grouped = group_entries(repo_root.path(), &status, &dirstate_data, &io).unwrap();
+        print_config
             .print_status(
-                repo_root.path(),
-                &status,
-                &dirstate_data,
+                &grouped,
+                &dirstate_data.copymap,
                 &relativizer,
                 test_case.use_color,
                 &mut io,
             )
             .unwrap();
+        let return_code = print_errors(&status, &io).unwrap();
         let actual_output =
             io.with_output(|o| o.as_any().downcast_ref::<Vec<u8>>().unwrap().clone());
         assert_eq!(str::from_utf8(&actual_output).unwrap(), test_case.stdout);
