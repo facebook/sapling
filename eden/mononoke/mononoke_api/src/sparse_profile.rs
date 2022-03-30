@@ -6,12 +6,17 @@
  */
 
 use crate::ChangesetContext;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Context, Error, Result};
+use blobstore::Loadable;
+use cloned::cloned;
 use context::CoreContext;
-use futures::{future::BoxFuture, FutureExt};
-use mononoke_types::MPath;
+use futures::{future::BoxFuture, FutureExt, TryStreamExt};
+use mononoke_types::{fsnode::FsnodeEntry, MPath};
 #[allow(unused)]
-use pathmatcher::TreeMatcher;
+use pathmatcher::{DirectoryMatch, Matcher, TreeMatcher};
+use types::RepoPath;
+
+use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SparseProfileEntry {
@@ -156,4 +161,67 @@ fn makeglobrecursive(mut s: String) -> String {
         s.push_str("/**");
     }
     s
+}
+
+pub async fn get_profile_size(
+    ctx: &CoreContext,
+    changeset: &ChangesetContext,
+    path: &MPath,
+) -> Result<u64> {
+    let entries = parse_sparse_profile_content(ctx, changeset, path).await?;
+
+    let matcher = Arc::new(build_tree_matcher(entries)?);
+
+    calculate_size(ctx, changeset, matcher).await
+}
+
+async fn calculate_size(
+    ctx: &CoreContext,
+    changeset: &ChangesetContext,
+    matcher: Arc<TreeMatcher>,
+) -> Result<u64> {
+    let root_fsnode_id = changeset.root_fsnode_id().await?;
+    let root: Option<MPath> = None;
+    let sizes = bounded_traversal::bounded_traversal_stream(
+        256,
+        vec![(root, *root_fsnode_id.fsnode_id())],
+        |(path, fsnode_id)| {
+            cloned!(ctx, matcher);
+            let blobstore = changeset.repo().blob_repo().blobstore();
+            async move {
+                let mut size = 0;
+                let mut next = vec![];
+                let fsnode = fsnode_id.load(&ctx, blobstore).await?;
+                for (base_name, entry) in fsnode.list() {
+                    let path = MPath::join_opt_element(path.as_ref(), base_name);
+                    let path_vec = path.to_vec();
+                    let repo_path = RepoPath::from_utf8(&path_vec)?;
+                    match entry {
+                        FsnodeEntry::File(leaf) => {
+                            if matcher.matches_file(repo_path)? {
+                                size += leaf.size();
+                            }
+                        }
+                        FsnodeEntry::Directory(tree) => {
+                            match matcher.matches_directory(repo_path)? {
+                                DirectoryMatch::Everything => {
+                                    size += tree.summary().descendant_files_total_size;
+                                }
+                                DirectoryMatch::Nothing => {}
+                                DirectoryMatch::ShouldTraverse => {
+                                    next.push((Some(path), *tree.id()));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Result::<_, Error>::Ok((size, next))
+            }
+            .boxed()
+        },
+    )
+    .try_collect::<Vec<_>>()
+    .await?;
+    Ok(sizes.iter().sum())
 }
