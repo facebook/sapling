@@ -63,7 +63,6 @@ impl Bubble {
             None => return Ok(None),
         };
 
-
         let raw_eph_blobstore = Arc::new(self.blobstore.clone().into_inner()) as Arc<dyn Blobstore>;
 
         filestore::copy(

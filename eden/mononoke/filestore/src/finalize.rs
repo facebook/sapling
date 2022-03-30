@@ -93,7 +93,6 @@ pub async fn finalize<B: Blobstore>(
     // cache, as everything in it can be computed from the content id. Therefore, in principle,
     // if it doesn't get written we can fix it up later.
 
-
     future::try_join3(put_sha1, put_sha256, put_git_sha1).await?;
 
     blob.store(ctx, blobstore).await?;

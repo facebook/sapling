@@ -248,7 +248,6 @@ async fn select_mapping(
         }
     };
 
-
     Ok(rows
         .into_iter()
         .map(move |(bcs_id, globalrev)| BonsaiGlobalrevMappingEntry { bcs_id, globalrev })

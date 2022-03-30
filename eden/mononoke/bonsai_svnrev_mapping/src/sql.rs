@@ -195,7 +195,6 @@ async fn select_mapping(
         }
     };
 
-
     Ok(rows
         .into_iter()
         .map(move |(bcs_id, svnrev)| BonsaiSvnrevMappingEntry { bcs_id, svnrev })

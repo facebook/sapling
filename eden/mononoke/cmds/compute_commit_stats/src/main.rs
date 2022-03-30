@@ -67,7 +67,6 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'a>) -> Result<(
         .try_collect::<Vec<_>>()
         .await?;
 
-
     println!("{}", serde_json::to_string_pretty(&commit_stats)?);
 
     Ok(())

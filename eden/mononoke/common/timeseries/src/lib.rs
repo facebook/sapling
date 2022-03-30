@@ -169,7 +169,6 @@ impl TimeseriesDelta for u64 {
 impl<T> TimeseriesAccumulator for Vec<T> {
     type Value = T;
 
-
     fn insert(&mut self, value: Self::Value) {
         self.push(value);
     }
@@ -207,7 +206,6 @@ mod test {
         assert_eq!(ts.start_instant, 0);
         assert_eq!(ts.start_idx, 0);
         assert_eq!(ts.buckets, vec![vec![1], vec![]]);
-
 
         ts.insert(1, 2)?;
         assert_eq!(ts.start_instant, 0);

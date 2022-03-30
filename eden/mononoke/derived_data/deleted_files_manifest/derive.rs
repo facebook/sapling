@@ -220,7 +220,6 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
         handle.await?
     }
 
-
     async fn do_unfold(
         ctx: &CoreContext,
         blobstore: &Arc<dyn Blobstore>,
@@ -253,7 +252,6 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             }
             Ok(false)
         };
-
 
         let change_type = match change {
             None => {

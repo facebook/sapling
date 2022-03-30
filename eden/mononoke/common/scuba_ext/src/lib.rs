@@ -144,7 +144,6 @@ impl MononokeScubaSampleBuilder {
         }
     }
 
-
     pub fn log_with_msg<S: Into<Option<String>>>(&mut self, log_tag: &str, msg: S) {
         if self.fallback_sampled_out_to_verbose
             && self.should_log_with_level(ScubaVerbosityLevel::Verbose)
@@ -220,7 +219,6 @@ impl MononokeScubaSampleBuilder {
         self.inner.sampled(sample_rate);
         self
     }
-
 
     pub fn unsampled(&mut self) -> &mut Self {
         self.inner.unsampled();

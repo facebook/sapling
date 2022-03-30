@@ -546,7 +546,6 @@ impl RepoContext {
                 .await?;
         }
 
-
         Ok(ChangesetContext::new(self.clone(), new_changeset_id))
     }
 }

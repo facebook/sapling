@@ -56,7 +56,6 @@ impl ChangesetMetadata {
             bail!("commiter extra is already set, can't insert another one!");
         }
 
-
         // Use the same format as hggit extension - https://fburl.com/diffusion/3ckf76fd
         let value = format!(
             "{} {} {}",

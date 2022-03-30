@@ -420,7 +420,6 @@ async fn test_change_target_config_no_file_dir_conflict_2(fb: FacebookInit) -> R
         .set_to(first_source_cs_id)
         .await?;
 
-
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
     let sync_target_config =

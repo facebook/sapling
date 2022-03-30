@@ -103,7 +103,6 @@ impl BonsaiDerivable for RootFsnodeId {
         .await
     }
 
-
     async fn store_mapping(
         self,
         ctx: &CoreContext,

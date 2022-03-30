@@ -277,7 +277,6 @@ pub trait MegarepoOp {
         Ok(old_target_with_removed_files.get_changeset_id())
     }
 
-
     async fn verify_no_file_conflicts(
         &self,
         repo: &RepoContext,
@@ -659,7 +658,6 @@ pub trait MegarepoOp {
                 ))
             })?;
 
-
         match &source_config.revision {
             SourceRevision::hash(expected_changeset_id) => {
                 let expected_changeset_id = ChangesetId::from_bytes(expected_changeset_id)
@@ -747,7 +745,6 @@ pub trait MegarepoOp {
         }
         Ok(links)
     }
-
 
     async fn upload_linkfiles(
         &self,
@@ -952,7 +949,6 @@ pub trait MegarepoOp {
         }
         Ok(())
     }
-
 
     async fn check_if_new_sync_target_config_is_equivalent_to_already_existing(
         &self,

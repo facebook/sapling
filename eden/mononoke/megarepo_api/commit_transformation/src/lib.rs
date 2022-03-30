@@ -732,7 +732,6 @@ mod test {
             _ => bail!("path_is_deleted"),
         };
 
-
         assert_eq!(
             maybe_copy_from,
             Some((MPath::new("path_1")?, first_rewritten_bcs_id))
@@ -765,7 +764,6 @@ mod test {
             .await
             .is_err()
         );
-
 
         // Diamond merge test with success
         let third_rewritten_bcs_id = test_rewrite_commit_cs_id(

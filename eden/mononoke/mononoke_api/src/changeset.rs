@@ -685,7 +685,6 @@ impl ChangesetContext {
         .await
     }
 
-
     /// Returns differences between this changeset and some other changeset.
     ///
     /// `self` is considered the "new" changeset (so files missing there are "Removed")

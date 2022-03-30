@@ -555,7 +555,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .required(false),
         );
 
-
     let catchup_validate_subcommand = SubCommand::with_name(CATCHUP_VALIDATE_COMMAND)
         .about("validate invariants about the catchup")
         .arg(
@@ -666,7 +665,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .required(true),
         );
 
-
     let sync_commit_and_ancestors = SubCommand::with_name(SYNC_COMMIT_AND_ANCESTORS)
         .about(
             "
@@ -683,7 +681,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .takes_value(true)
                 .required(true),
         );
-
 
     let diff_mapping_versions = SubCommand::with_name(DIFF_MAPPING_VERSIONS)
         .about("Show difference between two mapping versions.")

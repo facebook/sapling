@@ -97,7 +97,6 @@ impl HookManager {
                 hook_manager_params.bypassed_commits_scuba_table,
             );
 
-
         Ok(HookManager {
             repo_name,
             hooks,

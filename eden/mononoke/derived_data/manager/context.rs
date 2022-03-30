@@ -191,7 +191,6 @@ impl DerivationContext {
         self.manager.repo_name()
     }
 
-
     /// The blobstore that should be used for storing and retrieving blobs.
     pub fn blobstore(&self) -> &Arc<dyn Blobstore> {
         match &self.blobstore_write_cache {

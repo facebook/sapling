@@ -104,7 +104,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         ),
     };
 
-
     let will_exit = Arc::new(AtomicBool::new(false));
     let worker = worker::AsyncMethodRequestWorker::new(megarepo, name);
 

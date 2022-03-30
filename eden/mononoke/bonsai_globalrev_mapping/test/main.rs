@@ -289,7 +289,6 @@ async fn test_caching(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(store.stats().hits, 1);
     assert_eq!(store.stats().sets, 3);
 
-
     assert_eq!(
         caching
             .get_bonsai_from_globalrev(&ctx, GLOBALREV_ONE)

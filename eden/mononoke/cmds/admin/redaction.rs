@@ -341,7 +341,6 @@ async fn redaction_create_key_list_impl<'a, 'b>(
         ))?
     }
 
-
     println!("Redaction saved as: {}", id);
     println!(
         "To finish the redaction process, you need to commit this id to \

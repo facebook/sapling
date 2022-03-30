@@ -69,7 +69,6 @@ pub fn load_repo_configs(
     let repo_configs = repos;
     let storage_configs = storage;
 
-
     let mut resolved_repo_configs = HashMap::new();
     let mut repoids = HashSet::new();
 
@@ -897,7 +896,6 @@ mod test {
         heads = []
         path_prefixes = ["test/prefix"]
         "#;
-
 
         let paths = btreemap! {
             "common/storage.toml" => storage,

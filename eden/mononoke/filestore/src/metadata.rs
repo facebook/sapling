@@ -110,7 +110,6 @@ async fn rebuild_metadata<B: Blobstore>(
         .redeem(total_size)
         .map_err(|e| InternalError(content_id, e))?;
 
-
     let metadata = ContentMetadata {
         total_size,
         content_id,

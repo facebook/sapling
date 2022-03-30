@@ -57,7 +57,6 @@ impl RequestDumper {
                 .as_str(),
         );
 
-
         let mut headers_hs = HashSet::new();
         for (k, v) in headers {
             headers_hs.insert(format!("{}: {}", k.as_str(), v.to_str()?));

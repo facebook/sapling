@@ -448,7 +448,6 @@ mod test {
             .build_source()?
             .no_storage_build();
 
-
         let new_changesets = btreemap! {
             added_source.clone() => TWOS_CSID,
             changed_source.clone() => THREES_CSID,

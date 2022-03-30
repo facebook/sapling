@@ -29,7 +29,6 @@ pub fn diff_small_repo_commit_sync_configs(
         Some((from.default_action, to.default_action))
     };
 
-
     let mut mapping_added = HashMap::new();
     let mut mapping_changed = HashMap::new();
     let mut mapping_removed = HashMap::new();

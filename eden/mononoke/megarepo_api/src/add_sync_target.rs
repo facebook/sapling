@@ -119,7 +119,6 @@ impl<'a> AddSyncTarget<'a> {
             Some(format!("{}", top_merge_cs_id)),
         );
 
-
         // add_sync_target might need to derive a lot of data, and it takes a long time to
         // do it. We don't have any resumability, so if it fails for any reason, then we'd
         // need to start over.

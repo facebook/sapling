@@ -86,7 +86,6 @@ impl AsyncMethodRequestWorker {
             "Worker initialization complete, starting request processing loop.",
         );
 
-
         request_stream
             .try_for_each_concurrent(Some(concurrency_limit), async move |(req_id, params)| {
                 let worker = self.clone();
@@ -420,7 +419,6 @@ mod test {
         will_exit.store(true, Ordering::Relaxed);
         let res = s.await??;
         assert_eq!(res, vec![]);
-
 
         // ... now make it "abandoned", and make sure we reclaim it
         tokio::time::sleep(Duration::from_secs(1)).await;

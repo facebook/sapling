@@ -376,7 +376,6 @@ impl SqlSyncedCommitMapping {
         Ok(affected_rows)
     }
 
-
     async fn insert_or_overwrite_equivalent_working_copy(
         &self,
         ctx: &CoreContext,
@@ -463,7 +462,6 @@ impl SqlSyncedCommitMapping {
             Ok(false)
         }
     }
-
 
     async fn insert_version_for_large_repo_commit(
         &self,

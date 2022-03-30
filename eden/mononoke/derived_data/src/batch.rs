@@ -136,7 +136,6 @@ impl LinearStack {
             })
             .collect::<BTreeMap<_, _>>();
 
-
         self.total_file_changes_len += file_changes.len() as u64;
         let mut combined_file_changes = self.get_last_file_changes().cloned().unwrap_or_default();
         combined_file_changes.extend(file_changes.clone());

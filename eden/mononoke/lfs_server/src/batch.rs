@@ -1121,7 +1121,6 @@ mod test {
             .get(&meta.sha256.into())
             .context("Missing v1")?;
 
-
         // Note: give the server the wrong size here.
         let (obj2, action2) = internal_objects(&ctx, &[RequestObject { size: 0, ..obj }])
             .await?

@@ -585,7 +585,6 @@ async fn test_derive_manifest(fb: FacebookInit) -> Result<()> {
         );
     }
 
-
     // Weird case - if a directory is deleted as a file, then
     // it should just be ignored
     {

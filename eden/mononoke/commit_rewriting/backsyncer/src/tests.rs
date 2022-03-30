@@ -764,7 +764,6 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     );
     with_tunables_async(tunables, f.boxed()).await?;
 
-
     let commit_sync_outcome = commit_syncer
         .get_commit_sync_outcome(&ctx, before_mapping_change)
         .await?
@@ -1551,7 +1550,6 @@ async fn init_merged_repos(
             )
             .compat()
             .await?;
-
 
         let after_merge_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
         let noop_version = CommitSyncConfigVersion("noop".to_string());

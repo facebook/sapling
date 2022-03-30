@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-
 #![deny(warnings)]
 use anyhow::{anyhow, Context, Error};
 use blobrepo::BlobRepo;

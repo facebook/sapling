@@ -1564,7 +1564,6 @@ async fn test_disabled_sync(fb: FacebookInit) -> Result<(), Error> {
             .commit()
             .await?;
 
-
     let tunables = MononokeTunables::default();
     tunables.update_bools(&hashmap! {"xrepo_sync_disable_all_syncs".to_string() => true});
 
@@ -1641,7 +1640,6 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
     let small_cs = small_repo_master_cs_id
         .load(&ctx, small_repo.blobstore())
         .await?;
-
 
     let tunables = MononokeTunables::default();
     tunables.update_bools(&hashmap! {"xrepo_sync_disable_all_syncs".to_string() => true});
@@ -2304,7 +2302,6 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
             CommitSyncContext::Tests,
         )
         .await?;
-
 
     // Now try to sync it to the other small repo, it should return NotSyncCandidate
     let repos = CommitSyncRepos::LargeToSmall {

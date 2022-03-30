@@ -465,7 +465,6 @@ async fn change_mapping_via_extras<'a>(
     )
     .await?;
 
-
     let pushrebase_flags = repo_config.pushrebase.flags;
     let bookmark_attrs = BookmarkAttrs::new(ctx.fb, repo_config.bookmarks.clone()).await?;
     let pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
@@ -1332,7 +1331,6 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true)
                 .help("optional mapping version to write to db"),
         );
-
 
     let insert_subcommand = SubCommand::with_name(INSERT_SUBCOMMAND)
         .about("helper commands to insert mappings directly into db")

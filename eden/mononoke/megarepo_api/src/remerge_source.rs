@@ -121,7 +121,6 @@ impl<'a> RemergeSource<'a> {
                 MegarepoError::internal(anyhow!("programming error - moved changeset not found!"))
             })?;
 
-
         let current_source_cs = old_remapping_state
             .get_latest_synced_changeset(&source_name)
             .ok_or_else(|| {

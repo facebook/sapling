@@ -58,7 +58,6 @@ pub async fn subcommand_blobstore_upload<'a>(
     let data = tokio::fs::read(value_file).map_err(Error::from).await?;
     info!(ctx.logger(), "writing {} bytes to blobstore", data.len());
 
-
     repo.blobstore()
         .put(&ctx, key.to_string(), BlobstoreBytes::from_bytes(data))
         .await?;

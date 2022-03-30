@@ -480,7 +480,6 @@ impl UploadHgFileEntry {
                 .try_timed()
                 .await?;
 
-
             Self::log_stats(logger, path, node_id, "file_envelope_uploaded", stats);
 
             Ok(node_id)

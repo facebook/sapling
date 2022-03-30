@@ -343,7 +343,6 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
 
         let BonsaiHgMappingEntry { hg_cs_id, bcs_id } = entry.clone();
 
-
         if self.overwrite {
             let result = ReplaceMapping::query(
                 &self.write_connection,

@@ -144,7 +144,6 @@ pub async fn init_small_large_repo(
         large_repo: megarepo.clone(),
     };
 
-
     let noop_version = CommitSyncConfigVersion("noop".to_string());
     let version_with_small_repo = xrepo_mapping_version_with_small_repo();
     let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
@@ -179,7 +178,6 @@ pub async fn init_small_large_repo(
         },
         large_repo_id: RepositoryId::new(1),
     });
-
 
     let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(sync_config.clone()));
 
@@ -361,7 +359,6 @@ pub fn get_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {
 
     source.add_config(first_version);
     source.add_config(second_version);
-
 
     source.add_common_config(CommonCommitSyncConfig {
         common_pushrebase_bookmarks: vec![],
