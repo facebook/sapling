@@ -326,7 +326,6 @@ mod test {
             );
         }
 
-
         Ok(())
     }
 
@@ -368,7 +367,6 @@ mod test {
                 }
             );
         }
-
 
         Ok(())
     }
@@ -413,7 +411,6 @@ mod test {
             let bcs = cs_id.load(&ctx, repo.repo_blobstore()).await?;
             assert_eq!(bcs.file_changes_map().len(), 3);
         }
-
 
         Ok(())
     }

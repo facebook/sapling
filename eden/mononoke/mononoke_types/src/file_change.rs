@@ -251,7 +251,6 @@ impl FileChange {
         fco
     }
 
-
     /// Generate a random FileChange which picks copy-from parents from the list of parents
     /// provided.
     pub(crate) fn arbitrary_from_parents(g: &mut Gen, parents: &[ChangesetId]) -> Self {

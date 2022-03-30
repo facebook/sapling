@@ -167,7 +167,6 @@ impl<'a> State<'a> {
         Ok(())
     }
 
-
     /// Try to load a tree from the tree store.
     fn load_tree_entry(
         &mut self,

@@ -117,7 +117,6 @@ impl Hints {
         }
     }
 
-
     pub fn flags(&self) -> Flags {
         let flags = self.flags.load(Relaxed);
         Flags::from_bits_truncate(flags)

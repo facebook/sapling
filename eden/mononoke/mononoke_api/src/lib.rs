@@ -169,7 +169,6 @@ impl Mononoke {
         }
     }
 
-
     pub async fn repo_by_id(
         &self,
         ctx: CoreContext,

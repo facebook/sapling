@@ -261,7 +261,6 @@ mod tests {
         let a_fs = FileStore::new(td.path(), &a.id, false)?;
         a_fs.save(&a)?;
 
-
         let b = Entry::new(vec!["b".to_string()]);
         {
             let b_fs = FileStore::new(td.path(), &b.id, false)?;

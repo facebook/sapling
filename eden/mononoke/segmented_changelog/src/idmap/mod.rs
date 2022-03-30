@@ -45,7 +45,6 @@ pub trait IdMap: Send + Sync {
         dag_ids: Vec<DagId>,
     ) -> Result<HashMap<DagId, ChangesetId>>;
 
-
     async fn find_many_dag_ids(
         &self,
         ctx: &CoreContext,
@@ -63,7 +62,6 @@ pub trait IdMap: Send + Sync {
     ) -> Result<HashMap<ChangesetId, DagId>>;
 
     async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(DagId, ChangesetId)>>;
-
 
     fn idmap_version(&self) -> Option<IdMapVersion>;
 
@@ -485,7 +483,6 @@ mod tests {
             let overlay = OverlayIdMap::new(Arc::clone(&shared), cutoff(3));
             assert!(overlay.get_last_entry(&ctx).await.is_err());
         }
-
 
         Ok(())
     }

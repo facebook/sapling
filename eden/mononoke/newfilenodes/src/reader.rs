@@ -172,7 +172,6 @@ impl FilenodesReader {
     ) -> Result<FilenodeResult<Option<FilenodeInfo>>, Error> {
         STATS::gets.add_value(1);
 
-
         let pwh = PathWithHash::from_repo_path_cow(Cow::Owned(path.clone()));
         let key = filenode_cache_key(repo_id, &pwh, &filenode);
 

@@ -1031,7 +1031,6 @@ impl TestRepoFixture for MergeUneven {
         };
         create_bonsai_changeset_from_test_data(fb, blobrepo.clone(), files, commit_metadata).await;
 
-
         // Second branch
 
         let files = btreemap! {
@@ -1045,7 +1044,6 @@ impl TestRepoFixture for MergeUneven {
             "expected_hg_changeset"=> "3cda5c78aa35f0f5b09780d971197b51cad4613a",
         };
         create_bonsai_changeset_from_test_data(fb, blobrepo.clone(), files, commit_metadata).await;
-
 
         let files = btreemap! {
             "branch" => Some("3\n"),

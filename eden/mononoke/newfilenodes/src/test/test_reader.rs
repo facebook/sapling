@@ -1019,7 +1019,6 @@ fn get_all_filenodes_maybe_stale_with_disabled(fb: FacebookInit) -> Result<(), E
         ))
     })?;
 
-
     if let FilenodeRangeResult::Present(_) = res {
         panic!("expected FilenodeResult::Disabled");
     }

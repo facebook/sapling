@@ -584,8 +584,6 @@ mod tests {
             large_repo_id: commit_sync_config.large_repo_id,
         });
 
-
-
         Arc::new(sync_config)
     }
 

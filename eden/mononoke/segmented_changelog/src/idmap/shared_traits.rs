@@ -143,7 +143,6 @@ impl IdMap for IdMapMemWrites {
         Ok(result)
     }
 
-
     async fn find_many_dag_ids(
         &self,
         ctx: &CoreContext,

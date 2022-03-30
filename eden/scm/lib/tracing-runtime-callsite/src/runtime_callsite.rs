@@ -195,7 +195,6 @@ impl<K: KindType> RuntimeCallsite<K> {
         Identifier(self as &'static dyn Callsite)
     }
 
-
     /// Register to the global linked list. Can be slow.
     #[inline(never)]
     #[cold]

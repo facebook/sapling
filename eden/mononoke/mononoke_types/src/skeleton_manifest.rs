@@ -204,7 +204,6 @@ impl SkeletonManifest {
         .await
     }
 
-
     /// Returns the first case conflict that is an immediate child of this
     /// skeleton manifest that is not present in any of the parents.
     fn first_new_child_case_conflict(

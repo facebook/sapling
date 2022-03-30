@@ -96,7 +96,6 @@ impl HgRepoContext {
         self.repo().ephemeral_store()
     }
 
-
     /// Load bubble from id
     pub async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble, MononokeError> {
         Ok(self.repo.open_bubble(bubble_id).await?)
@@ -186,7 +185,6 @@ impl HgRepoContext {
         self.is_key_present_in_blobstore(&hash.into().blobstore_key(), bubble_id)
             .await
     }
-
 
     /// Convert given hash to canonical ContentId
     pub async fn convert_file_to_content_id<H: Into<FetchKey> + Copy + std::fmt::Debug>(
@@ -299,7 +297,6 @@ impl HgRepoContext {
         HgTreeContext::new_check_exists(self.clone(), manifest_id).await
     }
 
-
     /// Store HgFilenode into blobstore
     pub async fn store_hg_filenode(
         &self,
@@ -355,7 +352,6 @@ impl HgRepoContext {
 
         Ok(())
     }
-
 
     /// Store HgChangeset. The function also generates bonsai changeset and stores all necessary mappings.
     pub async fn store_hg_changesets(

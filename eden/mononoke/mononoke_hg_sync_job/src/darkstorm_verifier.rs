@@ -83,7 +83,6 @@ mod test {
         let size = bytes.len().try_into().unwrap();
         let req = StoreRequest::new(size);
 
-
         let res = filestore::store(
             &origin,
             filestore,

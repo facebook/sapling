@@ -688,7 +688,6 @@ impl RepoFactory {
         }
     }
 
-
     pub async fn pushrebase_mutation_mapping(
         &self,
         repo_config: &ArcRepoConfig,
@@ -699,7 +698,6 @@ impl RepoFactory {
             .context(RepoFactoryError::PushrebaseMutationMapping)?;
         Ok(Arc::new(conn.with_repo_id(repo_config.repoid)))
     }
-
 
     pub async fn filenodes(
         &self,

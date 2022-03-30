@@ -518,7 +518,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         ))
         .get_matches(fb)?;
 
-
     let logger = matches.logger();
     let runtime = matches.runtime();
     runtime.block_on(streaming_clone(fb, logger.clone(), &matches))

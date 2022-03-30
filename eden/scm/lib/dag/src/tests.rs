@@ -1268,7 +1268,6 @@ o  A(0)-D(3)
 "#
     );
 
-
     let mut buf = Vec::new();
     buf.push(b'\n');
     render_segment_dag(&mut buf, &built.name_dag, 1, Group::MASTER).unwrap();

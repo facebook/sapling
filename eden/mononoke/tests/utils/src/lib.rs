@@ -433,7 +433,6 @@ impl<R: Repo> UpdateBookmarkContext<R> {
         Ok(bookmark)
     }
 
-
     pub async fn create_pull_default(
         self,
         cs_ident: impl Into<CommitIdentifier>,

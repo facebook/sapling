@@ -56,7 +56,6 @@ pub trait IdDagStore: Send + Sync + 'static {
 
     fn insert_segment(&mut self, segment: Segment) -> Result<()>;
 
-
     /// Remove a flat segment. The segment cannot have descendants.
     fn remove_flat_segment(&mut self, segment: &Segment) -> Result<()> {
         self.resize_flat_segment(segment, None)

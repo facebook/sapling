@@ -47,7 +47,6 @@ fn main() {
         .build_segments_from_prepared_flat_segments(&outcome)
         .unwrap();
 
-
     let mut blob = Vec::new();
     bench("serializing inprocess iddag with mincode", || {
         elapsed(|| {

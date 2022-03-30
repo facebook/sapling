@@ -79,7 +79,6 @@ impl ProgressBar {
         self.message.store(Some(Arc::new(message)));
     }
 
-
     /// Obtain the position and total.
     pub fn position_total(&self) -> (u64, u64) {
         let pos = self.pos.load(Acquire);

@@ -800,7 +800,6 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             }
         };
 
-
         let overlay = {
             cloned!(repo);
             async move {

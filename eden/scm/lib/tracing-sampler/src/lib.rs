@@ -96,7 +96,6 @@ impl SamplingConfig {
             return None;
         }
 
-
         if let Some(output_file) = sampling_output_file(config) {
             if let Ok(file) = OpenOptions::new()
                 .create(true)
@@ -184,7 +183,6 @@ mod tests {
 
             // layer not configured, shouldn't show up.
             tracing::info!(target: "banana", foo = "bar");
-
 
             let config = BTreeMap::<String, String>::from([
                 (

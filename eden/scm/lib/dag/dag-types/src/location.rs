@@ -69,7 +69,6 @@ impl<Name> Location<Name> {
         Location::new(new_name, self.distance)
     }
 
-
     pub async fn and_then_descendant<T, E, Fut, F>(self, f: F) -> Result<Location<T>, E>
     where
         F: FnOnce(Name) -> Fut,

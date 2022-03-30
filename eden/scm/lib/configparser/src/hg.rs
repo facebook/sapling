@@ -689,7 +689,6 @@ pub fn generate_dynamicconfig(
     use filetime::FileTime;
     use tempfile::tempfile_in;
 
-
     // Resolve sharedpath
     let config_dir = get_config_dir(repo_path)?;
 

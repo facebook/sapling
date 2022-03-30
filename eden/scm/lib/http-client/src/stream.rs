@@ -98,7 +98,6 @@ where
                 _ => {}
             }
 
-
             let pos = *this.position;
             if pos > 0 {
                 // At this point we've deserialized most of the data in the buffer. Any remaining

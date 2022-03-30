@@ -168,7 +168,6 @@ pub async fn repo_handlers<'a>(
         let logger = root_log.new(o!("repo" => reponame.clone()));
         let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-
         // Clone the few things we're going to need later in our bootstrap.
         let cache_warmup_params = config.cache_warmup.clone();
         let db_config = config.storage_config.metadata.clone();

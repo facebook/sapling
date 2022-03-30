@@ -346,7 +346,6 @@ async fn test_maybe_validate_pushed_bonsais(fb: FacebookInit) -> Result<(), Erro
     )
     .await?;
 
-
     // Additional fields doesn't change the result
     maybe_validate_pushed_bonsais(
         &ctx,

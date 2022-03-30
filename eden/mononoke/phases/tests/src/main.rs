@@ -58,7 +58,6 @@ async fn set_bookmark(
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
     txn.force_set(&book, head, BookmarkUpdateReason::TestMove, None)?;
 
-
     let ok = txn.commit().await?;
     if !ok {
         return Err(Error::msg("Deletion did not commit"));
@@ -140,7 +139,6 @@ async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
         )
         .await?
         .ok_or_else(|| Error::msg("Invalid cs: draft_commit"))?;
-
 
     let other_draft_commit = repo
         .bonsai_hg_mapping()

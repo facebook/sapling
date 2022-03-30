@@ -357,7 +357,6 @@ impl<'a> FileStoreBuilder<'a> {
             .config
             .get_or_default::<bool>("scmstore", "prefercomputingauxdata")?;
 
-
         let activity_logger =
             if let Some(path) = self.config.get_opt::<String>("scmstore", "activitylog")? {
                 let f = std::fs::OpenOptions::new()

@@ -289,7 +289,6 @@ impl IO {
         Ok(())
     }
 
-
     pub fn write(&self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
         let mut inner = self.inner.lock();
@@ -552,7 +551,6 @@ impl Inner {
             if data.is_empty() && !inner.progress_has_content {
                 return Ok(());
             }
-
 
             if let Some(ref mut error) = inner.error {
                 // Flush pending output if it might conflict with progress.
