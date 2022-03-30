@@ -11,22 +11,20 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/utils/SystemError.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
-bool Notifier::canShowNotification() {
+bool Notifier::updateLastShown() {
   auto now = std::chrono::steady_clock::now();
   auto last = lastShown_.wlock();
-  // TODO(@cuev) add logic to disable notifications altogether
-  if (*last) {
+  if (config_->getEdenConfig()->enableNotifications.getValue() && *last) {
     auto expiry = last->value() +
-        config_.getEdenConfig()->notificationInterval.getValue();
+        config_->getEdenConfig()->notificationInterval.getValue();
     if (now < expiry) {
       return false;
     }
   }
+  *last = std::chrono::steady_clock::now();
   return true;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

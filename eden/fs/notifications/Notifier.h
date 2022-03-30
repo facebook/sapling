@@ -28,7 +28,8 @@ class ReloadableConfig;
  */
 class Notifier {
  public:
-  explicit Notifier(ReloadableConfig& edenConfig) : config_(edenConfig) {}
+  explicit Notifier(std::shared_ptr<ReloadableConfig> edenConfig)
+      : config_(std::move(edenConfig)) {}
   virtual ~Notifier() {}
 
   /**
@@ -37,8 +38,8 @@ class Notifier {
   virtual void showNetworkNotification(const std::exception& err) = 0;
 
  protected:
-  bool canShowNotification();
-  ReloadableConfig& config_;
+  bool updateLastShown();
+  std::shared_ptr<ReloadableConfig> config_;
   folly::Synchronized<std::optional<std::chrono::steady_clock::time_point>>
       lastShown_;
 };

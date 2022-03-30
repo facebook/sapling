@@ -43,6 +43,7 @@
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/nfs/NfsServer.h"
+#include "eden/fs/notifications/NullNotifier.h"
 #include "eden/fs/service/EdenCPUThreadPool.h"
 #include "eden/fs/service/EdenServiceHandler.h"
 #include "eden/fs/service/StartupLogger.h"
@@ -81,10 +82,13 @@
 #ifndef _WIN32
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/notifications/CommandNotifier.h"
 #include "eden/fs/takeover/TakeoverClient.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverServer.h"
-#endif // _WIN32
+#else
+#include "eden/fs/notifications/WindowsNotifier.h" // @manual
+#endif // !_WIN32
 
 #ifdef EDEN_HAVE_RECAS
 #include "eden/fs/store/facebook/recas/ReCasBackingStore.h" //@manual
@@ -170,6 +174,27 @@ using namespace std::chrono_literals;
 namespace {
 
 using namespace facebook::eden;
+
+std::shared_ptr<Notifier> getPlatformNotifier(
+    std::shared_ptr<ReloadableConfig> config,
+    std::string version) {
+#if defined(_WIN32)
+  /*
+   * If the E-Menu is disabled, we should create a Null Notifier
+   * that no-ops when EdenFS attempts to send notifications
+   * through it.
+   */
+  if (config->getEdenConfig()->enableEdenMenu.getValue()) {
+    return std::make_shared<WindowsNotifier>(config, version);
+  } else {
+    return std::make_shared<NullNotifier>(config);
+  }
+
+#else
+  (void)version;
+  return std::make_shared<CommandNotifier>(config);
+#endif // _WIN32
+}
 
 constexpr StringPiece kRocksDBPath{"storage/rocks-db"};
 constexpr StringPiece kSqlitePath{"storage/sqlite.db"};
@@ -350,6 +375,7 @@ EdenServer::EdenServer(
           config_,
           *edenConfig,
           mainEventBase_,
+          getPlatformNotifier(config_, version),
           FLAGS_enable_fault_injection)},
       version_{std::move(version)},
       progressManager_{std::make_unique<

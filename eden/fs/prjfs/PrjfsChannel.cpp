@@ -10,6 +10,7 @@
 #include "eden/fs/prjfs/PrjfsChannel.h"
 #include <fmt/format.h>
 #include <folly/logging/xlog.h>
+#include "eden/fs/notifications/Notifier.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
 #include "eden/fs/prjfs/PrjfsRequestContext.h"
 #include "eden/fs/utils/Bug.h"
@@ -289,9 +290,11 @@ PrjfsChannelInner::PrjfsChannelInner(
     std::unique_ptr<PrjfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
     ProcessAccessLog& processAccessLog,
-    folly::Promise<folly::Unit> deletedPromise)
+    folly::Promise<folly::Unit> deletedPromise,
+    std::shared_ptr<Notifier> notifier)
     : dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
+      notifier_(std::move(notifier)),
       processAccessLog_(processAccessLog),
       deletedPromise_(std::move(deletedPromise)),
       traceDetailedArguments_(std::atomic<size_t>(0)),
@@ -1079,7 +1082,8 @@ PrjfsChannel::PrjfsChannel(
     std::unique_ptr<PrjfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
-    Guid guid)
+    Guid guid,
+    std::shared_ptr<Notifier> notifier)
     : mountPath_(mountPath),
       mountId_(std::move(guid)),
       processAccessLog_(std::move(processNameCache)) {
@@ -1090,7 +1094,8 @@ PrjfsChannel::PrjfsChannel(
       std::move(dispatcher),
       straceLogger,
       processAccessLog_,
-      std::move(innerDeletedPromise)));
+      std::move(innerDeletedPromise),
+      std::move(notifier)));
 }
 
 PrjfsChannel::~PrjfsChannel() {

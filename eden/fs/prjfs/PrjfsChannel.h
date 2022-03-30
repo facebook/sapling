@@ -24,7 +24,8 @@
 namespace facebook {
 namespace eden {
 class EdenMount;
-class Notifications;
+class Notifier;
+class ReloadableConfig;
 class PrjfsChannelInner;
 class PrjfsRequestContext;
 
@@ -167,7 +168,8 @@ class PrjfsChannelInner {
       std::unique_ptr<PrjfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
       ProcessAccessLog& processAccessLog,
-      folly::Promise<folly::Unit> deletedPromise);
+      folly::Promise<folly::Unit> deletedPromise,
+      std::shared_ptr<Notifier> notifier);
 
   ~PrjfsChannelInner();
 
@@ -415,6 +417,8 @@ class PrjfsChannelInner {
   std::unique_ptr<PrjfsDispatcher> dispatcher_;
   const folly::Logger* const straceLogger_{nullptr};
 
+  std::shared_ptr<Notifier> notifier_;
+
   // The processAccessLog_ is owned by PrjfsChannel which is guaranteed to have
   // its lifetime be longer than that of PrjfsChannelInner.
   ProcessAccessLog& processAccessLog_;
@@ -450,7 +454,8 @@ class PrjfsChannel {
       std::unique_ptr<PrjfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
-      Guid guid);
+      Guid guid,
+      std::shared_ptr<Notifier> notifier);
 
   ~PrjfsChannel();
 

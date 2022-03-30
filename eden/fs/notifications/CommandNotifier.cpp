@@ -12,8 +12,7 @@
 #include "eden/fs/utils/SpawnedProcess.h"
 #include "eden/fs/utils/SystemError.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 bool isGenericConnectivityError(const std::exception& err) {
@@ -34,10 +33,9 @@ void CommandNotifier::showNetworkNotification(const std::exception& err) {
     return;
   }
 
-  if (!canShowNotification()) {
+  if (!updateLastShown()) {
     return;
   }
-  *lastShown_.wlock() = std::chrono::steady_clock::now();
 
   std::vector<std::string> args;
   if (folly::kIsWindows) {
@@ -50,9 +48,8 @@ void CommandNotifier::showNetworkNotification(const std::exception& err) {
   }
 
   args.emplace_back(
-      config_.getEdenConfig()->genericErrorNotificationCommand.getValue());
+      config_->getEdenConfig()->genericErrorNotificationCommand.getValue());
 
   SpawnedProcess(args).detach();
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

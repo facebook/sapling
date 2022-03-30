@@ -1800,7 +1800,8 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
                      EdenDispatcherFactory::makePrjfsDispatcher(this),
                      &getStraceLogger(),
                      serverState_->getProcessNameCache(),
-                     getCheckoutConfig()->getRepoGuid());
+                     getCheckoutConfig()->getRepoGuid(),
+                     this->getServerState()->getNotifier());
                  channel->start(
                      readOnly,
                      edenConfig->prjfsUseNegativePathCaching.getValue());

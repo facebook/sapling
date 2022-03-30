@@ -24,8 +24,8 @@ class ReloadableConfig;
  */
 class CommandNotifier : public Notifier {
  public:
-  explicit CommandNotifier(ReloadableConfig& edenConfig)
-      : Notifier(edenConfig) {}
+  explicit CommandNotifier(std::shared_ptr<ReloadableConfig> edenConfig)
+      : Notifier(std::move(edenConfig)) {}
 
   virtual void showNetworkNotification(const std::exception& err) override;
 };

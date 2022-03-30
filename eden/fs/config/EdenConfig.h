@@ -686,6 +686,22 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::minutes(1),
       this};
 
+  /**
+   * Whether the E-Menu should be created when the EdenFS daemon is started
+   */
+  ConfigSetting<bool> enableEdenMenu{
+      "notifications:enable-eden-menu",
+      false,
+      this};
+
+  /**
+   * Whether notifications are completely disabled
+   */
+  ConfigSetting<bool> enableNotifications{
+      "notifications:enable-notifications",
+      false,
+      this};
+
   // [log]
 
   ConfigSetting<uint64_t> maxLogFileSize{"log:max-file-size", 50000000, this};

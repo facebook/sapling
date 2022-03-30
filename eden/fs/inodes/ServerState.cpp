@@ -52,6 +52,7 @@ ServerState::ServerState(
     std::shared_ptr<ReloadableConfig> reloadableConfig,
     const EdenConfig& initialConfig,
     [[maybe_unused]] folly::EventBase* mainEventBase,
+    std::shared_ptr<Notifier> notifier,
     bool enableFaultDetection)
     : userInfo_{std::move(userInfo)},
       privHelper_{std::move(privHelper)},
@@ -80,6 +81,7 @@ ServerState::ServerState(
       systemIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
           initialConfig.systemIgnoreFile.getValue(),
           kSystemIgnoreMinPollSeconds}},
+      notifier_{std::move(notifier)},
       fsEventLogger_{
           (kHasHiveLogger && initialConfig.requestSamplesPerMinute.getValue())
               ? std::make_shared<FsEventLogger>(config_, hiveLogger_)

@@ -26,6 +26,7 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/notifications/CommandNotifier.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/LocalStore.h"
@@ -105,7 +106,7 @@ TestMount::TestMount()
   auto edenConfig = std::make_shared<ReloadableConfig>(
       edenConfig_, ConfigReloadBehavior::NoReload);
   treeCache_ = TreeCache::create(edenConfig);
-
+  auto reloadableConfig = make_shared<ReloadableConfig>(edenConfig_);
   auto userInfo = UserInfo::lookup();
   serverState_ = {make_shared<ServerState>(
       userInfo,
@@ -118,6 +119,7 @@ TestMount::TestMount()
       make_shared<ReloadableConfig>(edenConfig_),
       *edenConfig_,
       nullptr,
+      make_shared<CommandNotifier>(reloadableConfig),
       /*enableFaultInjection=*/true)};
 }
 

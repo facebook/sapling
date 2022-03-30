@@ -53,6 +53,7 @@ class ServerState {
       std::shared_ptr<ReloadableConfig> reloadableConfig,
       const EdenConfig& initialConfig,
       folly::EventBase* mainEventBase,
+      std::shared_ptr<Notifier> notifier,
       bool enableFaultInjection = false);
   ~ServerState();
 
