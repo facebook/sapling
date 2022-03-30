@@ -505,9 +505,7 @@ impl PeriodicUpdateSegmentedChangelog {
     }
 }
 
-segmented_changelog_delegate!(PeriodicUpdateSegmentedChangelog, |
-    &self,
-    ctx: &CoreContext,
-| {
-    &self.on_demand_update_sc
-});
+segmented_changelog_delegate!(
+    PeriodicUpdateSegmentedChangelog,
+    |&self, ctx: &CoreContext| { &self.on_demand_update_sc }
+);

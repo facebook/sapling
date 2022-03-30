@@ -48,13 +48,11 @@ pub async fn add_pushrebase_mapping(
     let entries: Vec<_> = entries
         .iter()
         .map(
-            |
-                PushrebaseMutationMappingEntry {
-                    repo_id,
-                    predecessor_bcs_id,
-                    successor_bcs_id,
-                },
-            | (repo_id, predecessor_bcs_id, successor_bcs_id),
+            |PushrebaseMutationMappingEntry {
+                 repo_id,
+                 predecessor_bcs_id,
+                 successor_bcs_id,
+             }| (repo_id, predecessor_bcs_id, successor_bcs_id),
         )
         .collect();
 

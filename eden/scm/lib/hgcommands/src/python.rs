@@ -24,10 +24,10 @@ use libc::c_char;
 use libc::c_int;
 #[cfg(feature = "python3")]
 use libc::wchar_t;
-#[cfg(feature = "python3")]
-use python3_sys as ffi;
 #[cfg(feature = "python2")]
 use python27_sys as ffi;
+#[cfg(feature = "python3")]
+use python3_sys as ffi;
 
 #[cfg(feature = "python2")]
 type PyChar = c_char;

@@ -186,13 +186,11 @@ impl PushRedirector {
         Arc::new({
             let large_to_small_commit_syncer = self.large_to_small_commit_syncer.clone();
             cloned!(ctx);
-            move |
-                HookRejection {
-                    hook_name,
-                    cs_id,
-                    reason,
-                },
-            | {
+            move |HookRejection {
+                      hook_name,
+                      cs_id,
+                      reason,
+                  }| {
                 cloned!(ctx, large_to_small_commit_syncer, large_to_small);
                 // For the benefit of the user seeing the error, remap the commit hash back
                 // to the small repo, so that while the error message may contain large repo

@@ -83,32 +83,30 @@ impl NodeMap {
     }
 
     pub fn iter<'a>(&'a self) -> Result<Box<dyn Iterator<Item = Result<(Node, Node)>> + 'a>> {
-        let iter = self.log.iter().map(move |entry| {
-            match entry {
-                Ok(data) => {
-                    let mut first = self.log.index_func(0, &data)?;
-                    if first.len() != 1 {
-                        return Err(NodeMapError(format!(
-                            "invalid index 1 keys in {:?}",
-                            self.log.dir
-                        ))
-                        .into());
-                    }
-                    let first = first.pop().unwrap();
-                    let mut second = self.log.index_func(1, &data)?;
-                    if second.len() != 1 {
-                        return Err(NodeMapError(format!(
-                            "invalid index 2 keys in {:?}",
-                            self.log.dir
-                        ))
-                        .into());
-                    }
-                    let second = second.pop().unwrap();
-
-                    Ok((Node::from_slice(&first)?, Node::from_slice(&second)?))
+        let iter = self.log.iter().map(move |entry| match entry {
+            Ok(data) => {
+                let mut first = self.log.index_func(0, &data)?;
+                if first.len() != 1 {
+                    return Err(NodeMapError(format!(
+                        "invalid index 1 keys in {:?}",
+                        self.log.dir
+                    ))
+                    .into());
                 }
-                Err(e) => Err(e.into()),
+                let first = first.pop().unwrap();
+                let mut second = self.log.index_func(1, &data)?;
+                if second.len() != 1 {
+                    return Err(NodeMapError(format!(
+                        "invalid index 2 keys in {:?}",
+                        self.log.dir
+                    ))
+                    .into());
+                }
+                let second = second.pop().unwrap();
+
+                Ok((Node::from_slice(&first)?, Node::from_slice(&second)?))
             }
+            Err(e) => Err(e.into()),
         });
         Ok(Box::new(iter))
     }

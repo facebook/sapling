@@ -51,7 +51,7 @@ pub trait OptionsHgExt {
     /// `{"A": "B", "B": "C"}` map, section name "A" will be treated as "B", not "C".
     /// This is implemented via `append_filter`.
     fn remap_sections<K: Eq + Hash + Into<Text>, V: Into<Text>>(self, remap: HashMap<K, V>)
-        -> Self;
+    -> Self;
 
     /// Filter sections. Sections outside include_sections won't be loaded.
     /// This is implemented via `append_filter`.

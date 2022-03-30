@@ -303,17 +303,15 @@ impl IdDagStore for IndexedLogStore {
             .log
             .lookup_range(Self::INDEX_LEVEL_HEAD, &lower_bound[..]..=&upper_bound[..])?
             .rev();
-        let iter = iter.flat_map(move |entry| {
-            match entry {
-                Ok((_key, values)) => values
-                    .into_iter()
-                    .map(|value| {
-                        let value = value?;
-                        Ok(self.segment_from_slice(value))
-                    })
-                    .collect(),
-                Err(err) => vec![Err(err.into())],
-            }
+        let iter = iter.flat_map(move |entry| match entry {
+            Ok((_key, values)) => values
+                .into_iter()
+                .map(|value| {
+                    let value = value?;
+                    Ok(self.segment_from_slice(value))
+                })
+                .collect(),
+            Err(err) => vec![Err(err.into())],
         });
         Ok(Box::new(iter))
     }
@@ -328,16 +326,14 @@ impl IdDagStore for IndexedLogStore {
         let iter = self
             .log
             .lookup_range(Self::INDEX_LEVEL_HEAD, &lower_bound[..]..=&upper_bound[..])?;
-        let iter = iter.flat_map(move |entry| {
-            match entry {
-                Ok((_key, values)) => values
-                    .map(|value| {
-                        let value = value?;
-                        Ok(self.segment_from_slice(value))
-                    })
-                    .collect(),
-                Err(err) => vec![Err(err.into())],
-            }
+        let iter = iter.flat_map(move |entry| match entry {
+            Ok((_key, values)) => values
+                .map(|value| {
+                    let value = value?;
+                    Ok(self.segment_from_slice(value))
+                })
+                .collect(),
+            Err(err) => vec![Err(err.into())],
         });
         Ok(Box::new(iter))
     }

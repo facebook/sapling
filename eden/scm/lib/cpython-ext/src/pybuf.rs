@@ -40,10 +40,10 @@ use std::slice;
 
 use cpython::PyObject;
 use cpython::Python;
-#[cfg(feature = "python3")]
-use python3_sys as cpy;
 #[cfg(feature = "python2")]
 use python27_sys as cpy;
+#[cfg(feature = "python3")]
+use python3_sys as cpy;
 
 pub struct SimplePyBuf<T>(cpy::Py_buffer, PhantomData<T>);
 

@@ -95,9 +95,7 @@ mod windows {
             // According to https://devblogs.microsoft.com/oldnewthing/20050121-00/?p=36633
             // kernel handles are always a multiple of 4
             let handle = unsafe { std::mem::transmute(handle * 4) };
-            unsafe {
-                SetHandleInformation(handle, HANDLE_FLAG_INHERIT, 0)
-            };
+            unsafe { SetHandleInformation(handle, HANDLE_FLAG_INHERIT, 0) };
         }
         // A cleaner way might be setting bInheritHandles to FALSE at
         // CreateProcessW time. However the Rust stdlib does not expose an
@@ -130,33 +128,25 @@ mod unix {
         // There are some constraints for this function.
         // See std::os::unix::process::CommandExt::pre_exec.
         // Namely, do not allocate.
-        unsafe {
-            command.pre_exec(pre_exec_close_fds)
-        };
+        unsafe { command.pre_exec(pre_exec_close_fds) };
     }
 
     pub fn new_session(command: &mut Command) {
-        unsafe {
-            command.pre_exec(pre_exec_setsid)
-        };
+        unsafe { command.pre_exec(pre_exec_setsid) };
     }
 
     fn pre_exec_close_fds() -> io::Result<()> {
         // Set FD_CLOEXEC on files.
         // Note: using `close` might break error reporting if exec fails.
         for fd in 3..=MAXFD {
-            unsafe {
-                libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC)
-            };
+            unsafe { libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC) };
         }
         Ok(())
     }
 
     fn pre_exec_setsid() -> io::Result<()> {
         // Create a new session.
-        unsafe {
-            libc::setsid()
-        };
+        unsafe { libc::setsid() };
         Ok(())
     }
 }

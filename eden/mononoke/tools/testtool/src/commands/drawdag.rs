@@ -317,10 +317,10 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let mut change_fns = BTreeMap::new();
     for (name, changes) in commit_changes {
         let apply: Box<ChangeFn<BlobRepo>> = Box::new(
-            move |
-                c: CreateCommitContext<BlobRepo>,
-                committed: &'_ BTreeMap<String, ChangesetId>,
-            | { apply_changes(c, committed, changes) },
+            move |c: CreateCommitContext<BlobRepo>,
+                  committed: &'_ BTreeMap<String, ChangesetId>| {
+                apply_changes(c, committed, changes)
+            },
         );
         change_fns.insert(name, apply);
     }

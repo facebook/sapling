@@ -62,7 +62,7 @@ pub trait HybridResolver<I, O, E> {
 
     /// Resolve I using remote data in batch. The output stream can be out-of-order.
     async fn resolve_remote(&self, input: &[I])
-        -> Result<BoxStream<'static, Result<(I, O), E>>, E>;
+    -> Result<BoxStream<'static, Result<(I, O), E>>, E>;
 
     /// Raise an error if the server did not response to input multiple times.
     fn retry_error(&self, attempt: usize, input: &[I]) -> E;

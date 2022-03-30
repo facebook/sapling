@@ -166,46 +166,40 @@ impl WorkspaceSubscriberService {
         actions.insert(CommitCloudRestartSubscriptions, {
             let sender = self.channel.0.clone();
             let interrupt = self.interrupt.clone();
-            Box::new(move || {
-                match sender.send(CommitCloudRestartSubscriptions) {
-                    Err(err) => error!(
-                        "Send CommitCloudRestartSubscriptions via mpsc::channel failed, reason: {}",
-                        err
-                    ),
-                    Ok(_) => {
-                        info!("Restart subscriptions can take a while because it is graceful");
-                        interrupt.store(true, Ordering::Relaxed);
-                    }
+            Box::new(move || match sender.send(CommitCloudRestartSubscriptions) {
+                Err(err) => error!(
+                    "Send CommitCloudRestartSubscriptions via mpsc::channel failed, reason: {}",
+                    err
+                ),
+                Ok(_) => {
+                    info!("Restart subscriptions can take a while because it is graceful");
+                    interrupt.store(true, Ordering::Relaxed);
                 }
             })
         });
         actions.insert(CommitCloudCancelSubscriptions, {
             let sender = self.channel.0.clone();
             let interrupt = self.interrupt.clone();
-            Box::new(move || {
-                match sender.send(CommitCloudCancelSubscriptions) {
-                    Err(err) => error!(
-                        "Send CommitCloudCancelSubscriptions via mpsc::channel failed with {}",
-                        err
-                    ),
-                    Ok(_) => {
-                        info!("Cancel subscriptions can take a while because it is graceful");
-                        interrupt.store(true, Ordering::Relaxed);
-                    }
+            Box::new(move || match sender.send(CommitCloudCancelSubscriptions) {
+                Err(err) => error!(
+                    "Send CommitCloudCancelSubscriptions via mpsc::channel failed with {}",
+                    err
+                ),
+                Ok(_) => {
+                    info!("Cancel subscriptions can take a while because it is graceful");
+                    interrupt.store(true, Ordering::Relaxed);
                 }
             })
         });
         actions.insert(CommitCloudStartSubscriptions, {
             let sender = self.channel.0.clone();
             let interrupt = self.interrupt.clone();
-            Box::new(move || {
-                match sender.send(CommitCloudStartSubscriptions) {
-                    Err(err) => error!(
-                        "Send CommitCloudStartSubscriptions via mpsc::channel failed with {}",
-                        err
-                    ),
-                    Ok(_) => interrupt.store(true, Ordering::Relaxed),
-                }
+            Box::new(move || match sender.send(CommitCloudStartSubscriptions) {
+                Err(err) => error!(
+                    "Send CommitCloudStartSubscriptions via mpsc::channel failed with {}",
+                    err
+                ),
+                Ok(_) => interrupt.store(true, Ordering::Relaxed),
             })
         });
         actions

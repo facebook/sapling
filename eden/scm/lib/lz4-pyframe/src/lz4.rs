@@ -168,9 +168,7 @@ pub fn decompress(data: &[u8]) -> Result<Vec<u8>> {
         return Ok(Vec::new());
     }
     let mut dest = Vec::<u8>::with_capacity(max_decompressed_size);
-    unsafe {
-        dest.set_len(max_decompressed_size)
-    };
+    unsafe { dest.set_len(max_decompressed_size) };
     decompress_into(data, &mut dest)?;
     Ok(dest)
 }
@@ -192,9 +190,7 @@ pub fn compress(data: &[u8]) -> Result<Vec<u8>> {
     dest.write_u32::<LittleEndian>(data.len() as u32)?;
 
     if !data.is_empty() {
-        unsafe {
-            dest.set_len(max_compressed_size)
-        };
+        unsafe { dest.set_len(max_compressed_size) };
         let written: i32 = check_error(unsafe {
             LZ4_compress_continue(
                 stream.0,
@@ -227,9 +223,7 @@ pub fn compresshc(data: &[u8]) -> Result<Vec<u8>> {
     dest.write_u32::<LittleEndian>(data.len() as u32)?;
 
     if !data.is_empty() {
-        unsafe {
-            dest.set_len(max_compressed_size)
-        };
+        unsafe { dest.set_len(max_compressed_size) };
         let written: i32 = check_error(unsafe {
             LZ4_compress_HC_continue(
                 stream.0,

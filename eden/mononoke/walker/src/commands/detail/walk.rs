@@ -542,9 +542,11 @@ async fn bonsai_changeset_step<V: VisitOne>(
     let mut edges = vec![];
 
     // Expands to parents
-    checker.add_edge(&mut edges, EdgeType::ChangesetToChangesetInfoMapping, || {
-        Node::ChangesetInfoMapping(*bcs_id)
-    });
+    checker.add_edge(
+        &mut edges,
+        EdgeType::ChangesetToChangesetInfoMapping,
+        || Node::ChangesetInfoMapping(*bcs_id),
+    );
 
     // Parents expand 1:[0|1|2] and then the same as all below
     for parent_id in bcs.parents() {
@@ -651,9 +653,11 @@ async fn file_content_metadata_step<V: VisitOne>(
             checker.add_edge(&mut edges, EdgeType::FileContentMetadataToSha1Alias, || {
                 Node::AliasContentMapping(AliasKey(Alias::Sha1(metadata.sha1)))
             });
-            checker.add_edge(&mut edges, EdgeType::FileContentMetadataToSha256Alias, || {
-                Node::AliasContentMapping(AliasKey(Alias::Sha256(metadata.sha256)))
-            });
+            checker.add_edge(
+                &mut edges,
+                EdgeType::FileContentMetadataToSha256Alias,
+                || Node::AliasContentMapping(AliasKey(Alias::Sha256(metadata.sha256))),
+            );
             checker.add_edge(
                 &mut edges,
                 EdgeType::FileContentMetadataToGitSha1Alias,
@@ -755,9 +759,11 @@ async fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
     let hg_cs_id = hg_key.map(|hg_key| {
         // This seems like a nonsense edge, but its a way to establish HgChangesetId on the way to Bonsai Changeset
         // which is useful in LFS validation.  The edge is disabled by default.
-        checker.add_edge(&mut edges, EdgeType::BonsaiHgMappingToHgBonsaiMapping, || {
-            Node::HgBonsaiMapping(hg_key.clone())
-        });
+        checker.add_edge(
+            &mut edges,
+            EdgeType::BonsaiHgMappingToHgBonsaiMapping,
+            || Node::HgBonsaiMapping(hg_key.clone()),
+        );
         checker.add_edge(
             &mut edges,
             // use HgChangesetViaBonsai rather than HgChangeset so that same route is taken to each changeset
@@ -850,12 +856,16 @@ async fn hg_changeset_step<V: VisitOne>(
     });
 
     if key.filenode_known_derived {
-        checker.add_edge(&mut edges, EdgeType::HgChangesetToHgManifestFileNode, || {
-            Node::HgManifestFileNode(PathKey::new(
-                HgFileNodeId::new(hgchangeset.manifestid().into_nodehash()),
-                WrappedPath::Root,
-            ))
-        });
+        checker.add_edge(
+            &mut edges,
+            EdgeType::HgChangesetToHgManifestFileNode,
+            || {
+                Node::HgManifestFileNode(PathKey::new(
+                    HgFileNodeId::new(hgchangeset.manifestid().into_nodehash()),
+                    WrappedPath::Root,
+                ))
+            },
+        );
     }
 
     // Mostly 1:1, can be 1:2, with further expansion
@@ -1070,9 +1080,11 @@ async fn hg_manifest_step<V: VisitOne>(
             || Node::HgFileEnvelope(hg_file_node_id),
             || Some(full_path.clone()),
         );
-        checker.add_edge(&mut filenode_edges, EdgeType::HgManifestToHgFileNode, || {
-            Node::HgFileNode(PathKey::new(hg_file_node_id, full_path))
-        });
+        checker.add_edge(
+            &mut filenode_edges,
+            EdgeType::HgManifestToHgFileNode,
+            || Node::HgFileNode(PathKey::new(hg_file_node_id, full_path)),
+        );
     }
     // File nodes can expand a lot into history via linknodes
     edges.append(&mut filenode_edges);
@@ -1093,9 +1105,11 @@ async fn alias_content_mapping_step<V: VisitOne>(
 ) -> Result<StepOutput, StepError> {
     let content_id = alias.load(ctx, repo.blobstore()).await?;
     let mut edges = vec![];
-    checker.add_edge(&mut edges, EdgeType::AliasContentMappingToFileContent, || {
-        Node::FileContent(content_id)
-    });
+    checker.add_edge(
+        &mut edges,
+        EdgeType::AliasContentMappingToFileContent,
+        || Node::FileContent(content_id),
+    );
     Ok(StepOutput::Done(
         checker.step_data(NodeType::AliasContentMapping, || {
             NodeData::AliasContentMapping(content_id)
@@ -1468,12 +1482,16 @@ async fn deleted_manifest_step<V: VisitOne>(
         if !checker.in_chunk(&linked_cs_id) {
             return Ok(StepOutput::Deferred(linked_cs_id));
         }
-        checker.add_edge(&mut edges, EdgeType::DeletedManifestToLinkedChangeset, || {
-            Node::Changeset(ChangesetKey {
-                inner: linked_cs_id,
-                filenode_known_derived: false, /* dfm does not imply hg is fully derived */
-            })
-        });
+        checker.add_edge(
+            &mut edges,
+            EdgeType::DeletedManifestToLinkedChangeset,
+            || {
+                Node::Changeset(ChangesetKey {
+                    inner: linked_cs_id,
+                    filenode_known_derived: false, /* dfm does not imply hg is fully derived */
+                })
+            },
+        );
     }
 
     for (child_path, deleted_manifest_id) in deleted_manifest.clone().into_subentries() {

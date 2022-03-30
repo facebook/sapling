@@ -156,20 +156,18 @@ impl SqlHgMutationStore {
         let ref_db_entries: Vec<_> = db_entries
             .iter()
             .map(
-                |
-                    &(
-                        repo_id,
-                        successor,
-                        primordial,
-                        ref extra_pred_count,
-                        ref split_count,
-                        op,
-                        user,
-                        ref time,
-                        ref tz,
-                        ref extra,
-                    ),
-                | {
+                |&(
+                    repo_id,
+                    successor,
+                    primordial,
+                    ref extra_pred_count,
+                    ref split_count,
+                    op,
+                    user,
+                    ref time,
+                    ref tz,
+                    ref extra,
+                )| {
                     (
                         repo_id,
                         successor,

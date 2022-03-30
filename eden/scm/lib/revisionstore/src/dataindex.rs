@@ -228,9 +228,7 @@ impl DataIndex {
         // Write fanout
         // `locations` will contain the eventual offset that each value will be written to.
         let mut locations: Vec<u32> = Vec::with_capacity(values.len());
-        unsafe {
-            locations.set_len(values.len())
-        };
+        unsafe { locations.set_len(values.len()) };
         FanoutTable::write(
             writer,
             if options.large { 2 } else { 1 },

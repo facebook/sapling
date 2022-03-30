@@ -148,8 +148,8 @@ pub struct RevlogRepo {
     changelog: Revlog,                          // changes
     inner: Arc<RwLock<RevlogInner>>,            // Inner parts
     inmemory_logs_capacity: usize, // Limit on the number of filelogs and tree revlogs in memory.
-    // Note: there can be 2 * inmemory_logs_capacity revlogs in
-    // memory in total: half for filelogs and half for revlogs.
+                                   // Note: there can be 2 * inmemory_logs_capacity revlogs in
+                                   // memory in total: half for filelogs and half for revlogs.
 }
 
 pub struct RevlogRepoOptions {

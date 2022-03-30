@@ -31,13 +31,11 @@ pub(crate) fn make_hook_rejection_remapper(
 ) -> Box<dyn HookRejectionRemapper> {
     let ctx = ctx.clone();
     Box::new(
-        move |
-            HookRejection {
-                hook_name,
-                cs_id,
-                reason,
-            },
-        | {
+        move |HookRejection {
+                  hook_name,
+                  cs_id,
+                  reason,
+              }| {
             let ctx = ctx.clone();
             let repo = repo.clone();
             async move {

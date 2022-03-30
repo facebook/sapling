@@ -69,9 +69,7 @@ fn tzset() -> Option<i32> {
             fn tzset();
             static timezone: c_long;
         }
-        unsafe {
-            tzset()
-        };
+        unsafe { tzset() };
         return Some(unsafe { timezone } as i32);
     }
     #[cfg(windows)]
@@ -83,13 +81,9 @@ fn tzset() -> Option<i32> {
             fn _tzset();
             fn _get_timezone(seconds: *mut c_long) -> c_int;
         }
-        unsafe {
-            _tzset()
-        };
+        unsafe { _tzset() };
         let mut timezone = 0;
-        unsafe {
-            _get_timezone(&mut timezone)
-        };
+        unsafe { _get_timezone(&mut timezone) };
         // The time-0.1.42 crate calls FileTimeToSystemTime on Windows which
         // does not respect $TZ. Ideally it should call functions from MSVC
         // runtime instead. To reduce issues, use `set_default_offset` to

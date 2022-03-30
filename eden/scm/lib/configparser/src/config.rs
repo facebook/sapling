@@ -310,13 +310,11 @@ impl ConfigSet {
         let skip_include = path.parent().is_none(); // skip handling %include if path is empty
 
         // Utilities to avoid too much indentation.
-        let handle_value = |
-            this: &mut ConfigSet,
-            pair: Pair,
-            section: Text,
-            name: Text,
-            location: ValueLocation,
-        | {
+        let handle_value = |this: &mut ConfigSet,
+                            pair: Pair,
+                            section: Text,
+                            name: Text,
+                            location: ValueLocation| {
             let pairs = pair.into_inner();
             let mut lines = Vec::with_capacity(1);
             for pair in pairs {

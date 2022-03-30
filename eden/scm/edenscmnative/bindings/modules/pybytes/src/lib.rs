@@ -7,10 +7,10 @@
 
 use cpython::*;
 use minibytes::Bytes as MiniBytes;
-#[cfg(feature = "python3")]
-use python3_sys as ffi;
 #[cfg(feature = "python2")]
 use python27_sys as ffi;
+#[cfg(feature = "python3")]
+use python3_sys as ffi;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "bytes"].join(".");

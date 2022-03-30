@@ -339,11 +339,9 @@ where
                 Some((
                     Hunk {
                         remove: cluster_bounds.remove.start
-                            ..
-                            add_context(hunk.remove.end, payload.old_lines.len()),
+                            ..add_context(hunk.remove.end, payload.old_lines.len()),
                         add: cluster_bounds.add.start
-                            ..
-                            add_context(hunk.add.end, payload.new_lines.len()),
+                            ..add_context(hunk.add.end, payload.new_lines.len()),
                     },
                     included_hunks_range.start..hunk_no + 1,
                 ))
@@ -356,11 +354,9 @@ where
                 Some((
                     Hunk {
                         remove: sub_context(hunk.remove.start)
-                            ..
-                            add_context(hunk.remove.end, payload.old_lines.len()),
+                            ..add_context(hunk.remove.end, payload.old_lines.len()),
                         add: sub_context(hunk.add.start)
-                            ..
-                            add_context(hunk.add.end, payload.new_lines.len()),
+                            ..add_context(hunk.add.end, payload.new_lines.len()),
                     },
                     hunk_no..hunk_no + 1,
                 ))

@@ -21,10 +21,10 @@ use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
-#[cfg(feature = "python3")]
-use python3_sys as ffi;
 #[cfg(feature = "python2")]
 use python27_sys as ffi;
+#[cfg(feature = "python3")]
+use python3_sys as ffi;
 use tracing::Level;
 use tracing_collector::model::Action;
 use tracing_collector::model::EspanId;

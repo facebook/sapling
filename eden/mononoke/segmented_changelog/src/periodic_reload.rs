@@ -115,10 +115,10 @@ impl PeriodicReloadSegmentedChangelog {
     }
 }
 
-segmented_changelog_delegate!(PeriodicReloadSegmentedChangelog, |
-    &self,
-    ctx: &CoreContext,
-| { self.0.load() });
+segmented_changelog_delegate!(
+    PeriodicReloadSegmentedChangelog,
+    |&self, ctx: &CoreContext| { self.0.load() }
+);
 
 impl Drop for PeriodicReloadSegmentedChangelog {
     fn drop(&mut self) {

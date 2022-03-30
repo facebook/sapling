@@ -18,10 +18,10 @@ use ffi::PyTypeObject;
 use ffi::PyVarObject;
 use ffi::Py_ssize_t;
 use ffi::_PyObject_New;
-#[cfg(feature = "python3")]
-use python3_sys as ffi;
 #[cfg(feature = "python2")]
 use python27_sys as ffi;
+#[cfg(feature = "python3")]
+use python3_sys as ffi;
 
 // From Python bytearrayobject.h. Must match the C definition.
 #[cfg(feature = "python2")]

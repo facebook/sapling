@@ -110,9 +110,7 @@ impl MutableDataPackInner {
         let mut file = self.data_file.get_mut();
 
         let mut data = Vec::with_capacity(location.size as usize);
-        unsafe {
-            data.set_len(location.size as usize)
-        };
+        unsafe { data.set_len(location.size as usize) };
 
         file.seek(SeekFrom::Start(location.offset))?;
         file.read_exact(&mut data)?;
