@@ -408,6 +408,69 @@ where
         .into()
 }
 
+/// Return a relative [`PathBuf`] to the path from the base path.
+pub fn relativize(base: &Path, path: &Path) -> PathBuf {
+    let mut base_iter = base.iter();
+    let mut path_iter = path.iter();
+    let mut rel_path = PathBuf::new();
+    loop {
+        match (base_iter.next(), path_iter.next()) {
+            (Some(ref c), Some(ref p)) if c == p => continue,
+
+            // Examples:
+            // b: foo/bar/baz/
+            // p: foo/bar/biz/buzz.html
+            // This is the common case where we have to go up some number of directories
+            // (so one "../" per unique path component of base) and then back down.
+            //
+            // b: foo/bar/baz/biz/
+            // p: foo/bar/
+            // If foo/bar was a file and then the user replaced it with a directory, and now
+            // the user is in a subdirectory of that directory, then one "../" per unique path
+            // component of base.
+            (Some(_c), remaining_path) => {
+                // Find the common prefix of path and base. Prefix with one "../" per unique
+                // path component of base and then append the unique sequence of components from
+                // path.
+                rel_path.push(".."); // This is for the current component, c.
+                for _ in base_iter {
+                    rel_path.push("..");
+                }
+
+                if let Some(p) = remaining_path {
+                    rel_path.push(p);
+                    for component in path_iter {
+                        rel_path.push(component);
+                    }
+                }
+                break;
+            }
+
+            // Example:
+            // b: foo/bar/
+            // p: foo/bar/baz/buzz.html
+            (None, Some(p)) => {
+                rel_path.push(p);
+                for component in path_iter {
+                    rel_path.push(component);
+                }
+                break;
+            }
+
+            // Example:
+            // b: foo/bar/baz/
+            // p: foo/bar/baz/
+            // If foo/bar/baz was a file and then the user replaced it with a directory, which
+            // is also the user's current directory, then "" should be returned.
+            (None, None) => {
+                break;
+            }
+        }
+    }
+
+    rel_path
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs::File;
@@ -644,5 +707,31 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn test_relativize_absolute_paths() {
+        let check = |base, path, expected| {
+            assert_eq!(
+                relativize(Path::new(base), Path::new(path)),
+                Path::new(expected)
+            );
+        };
+        check("/", "/", "");
+        check("/foo/bar/baz", "/foo/bar/baz", "");
+        check("/foo/bar", "/foo/bar/baz", "baz");
+        check("/foo", "/foo/bar/baz", "bar/baz");
+        check("/foo/bar/baz", "/foo/bar", "..");
+        check("/foo/bar/baz", "/foo", "../..");
+        check("/foo/bar/baz", "/foo/BAR", "../../BAR");
+        check("/foo/bar/baz", "/foo/BAR/BAZ", "../../BAR/BAZ");
+    }
+
+    #[test]
+    fn test_relativize_platform_absolute_paths() {
+        // This test with Windows-style absolute paths on Windows, and Unix-style path on Unix
+        let cwd = Path::new(".").canonicalize().unwrap();
+        let result = relativize(&cwd, &cwd.join("a").join("b"));
+        assert_eq!(result, Path::new("a").join("b"));
     }
 }

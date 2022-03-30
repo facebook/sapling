@@ -7,5 +7,4 @@
 
 //! # Communicating to EdenFS via Thrift
 
-mod path_relativizer;
 pub mod status;

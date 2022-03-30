@@ -36,6 +36,8 @@ use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::fmt;
 use std::ops::Deref;
+use std::path::Path;
+use std::path::PathBuf;
 use std::str::Utf8Error;
 
 use serde_derive::Deserialize;
@@ -644,6 +646,67 @@ impl<'a> Iterator for Ancestors<'a> {
     }
 }
 
+enum RepoPathRelativizerConfig {
+    // If the cwd is inside the repo, then Hg paths should be relativized against the cwd relative
+    // to the repo root.
+    CwdUnderRepo { relative_cwd: PathBuf },
+
+    // If the cwd is outside the repo, then prefix is the cwd relative to the repo root: Hg paths
+    // can simply be appended to this path.
+    CwdOutsideRepo { prefix: PathBuf },
+}
+
+pub struct RepoPathRelativizer {
+    config: RepoPathRelativizerConfig,
+}
+
+/// Utility for computing a relativized path for a file in an Hg repository given the user's cwd
+/// and specified value for --repository/-R, if any.
+///
+/// Note: the caller is responsible for normalizing the repo_root and cwd parameters ahead of time.
+/// If these are specified in different formats (e.g., on Windows one is a UNC path and the other
+/// is not), then this function will not produce expected results.  Unfortunately the Rust library
+/// does not provide a mechanism for normalizing paths.  The best thing for callers to do for now
+/// is probably to call Path::canonicalize() if they expect that the paths do exist on disk.
+impl RepoPathRelativizer {
+    /// `cwd` corresponds to getcwd(2) while `repo_root` is the absolute path specified via
+    /// --repository/-R, or failing that, the Hg repo that contains `cwd`.
+    pub fn new(cwd: impl AsRef<Path>, repo_root: impl AsRef<Path>) -> Self {
+        RepoPathRelativizer::new_impl(cwd.as_ref(), repo_root.as_ref())
+    }
+
+    fn new_impl(cwd: &Path, repo_root: &Path) -> Self {
+        use self::RepoPathRelativizerConfig::*;
+        let config = if cwd.starts_with(&repo_root) {
+            CwdUnderRepo {
+                relative_cwd: util::path::relativize(repo_root, cwd),
+            }
+        } else {
+            CwdOutsideRepo {
+                prefix: util::path::relativize(cwd, repo_root),
+            }
+        };
+        RepoPathRelativizer { config }
+    }
+
+    /// Relativize the [`RepoPath`]. Returns a String that is suitable for display to the user.
+    pub fn relativize(&self, path: impl AsRef<RepoPath>) -> String {
+        fn inner(relativizer: &RepoPathRelativizer, path: &RepoPath) -> String {
+            // TODO: directly operate on the RepoPath components.
+            let path: &Path = path.as_str().as_ref();
+
+            use self::RepoPathRelativizerConfig::*;
+            let output = match &relativizer.config {
+                CwdUnderRepo { relative_cwd } => util::path::relativize(relative_cwd, path),
+                CwdOutsideRepo { prefix } => prefix.join(path),
+            };
+            output.display().to_string()
+        }
+
+        inner(self, path.as_ref())
+    }
+}
+
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for RepoPathBuf {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
@@ -1044,5 +1107,47 @@ mod tests {
         assert!(repo_path("foo/bar") == repo_path("foo/bar"));
         assert!(repo_path("foo/bar") > repo_path("bar"));
         assert!(repo_path("foo/bar") > repo_path("foo"));
+    }
+
+    #[test]
+    fn test_relativize_path_from_repo_when_cwd_is_repo_root() {
+        let repo_root = Path::new("/home/zuck/tfb");
+        let cwd = Path::new("/home/zuck/tfb");
+        let relativizer = RepoPathRelativizer::new(cwd, repo_root);
+        let check = |path, expected| {
+            assert_eq!(relativizer.relativize(repo_path(path)), expected);
+        };
+        check("foo/bar.txt", "foo/bar.txt");
+    }
+
+    #[test]
+    fn test_relativize_path_from_repo_when_cwd_is_descendant_of_repo_root() {
+        let repo_root = Path::new("/home/zuck/tfb");
+        let cwd = Path::new("/home/zuck/tfb/foo");
+        let relativizer = RepoPathRelativizer::new(cwd, repo_root);
+        let check = |path, expected| {
+            assert_eq!(relativizer.relativize(repo_path(path)), expected);
+        };
+        check("foo/bar.txt", "bar.txt");
+    }
+
+    #[test]
+    fn test_relativize_path_from_repo_when_cwd_is_ancestor_of_repo_root() {
+        let repo_root = PathBuf::from("/home/zuck/tfb");
+        let cwd = PathBuf::from("/home/zuck");
+        let relativizer = RepoPathRelativizer::new(cwd, repo_root);
+        let check = |path, expected| {
+            assert_eq!(relativizer.relativize(repo_path(path)), expected);
+        };
+        check("foo/bar.txt", "tfb/foo/bar.txt");
+    }
+
+    #[test]
+    fn test_relativize_path_from_repo_when_cwd_is_cousin_of_repo_root() {
+        let relativizer = RepoPathRelativizer::new("/home/schrep/tfb", "/home/zuck/tfb");
+        let check = |path, expected| {
+            assert_eq!(relativizer.relativize(repo_path(path)), expected);
+        };
+        check("foo/bar.txt", "../../zuck/tfb/foo/bar.txt");
     }
 }

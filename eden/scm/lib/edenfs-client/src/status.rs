@@ -41,10 +41,9 @@ use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 #[cfg(unix)]
 use tokio_uds_compat::UnixStream;
+use types::path::RepoPathRelativizer;
 use types::RepoPath;
 use types::RepoPathBuf;
-
-use crate::path_relativizer::PathRelativizer;
 
 /// Standalone status command for edenfs.
 ///
@@ -145,7 +144,7 @@ async fn maybe_status_fastpath_internal(
     )
     .await?;
 
-    let relativizer = PathRelativizer::new(cwd, repo_root);
+    let relativizer = RepoPathRelativizer::new(cwd, repo_root);
     let relativizer = HgStatusPathRelativizer::new(print_config.root_relative, relativizer);
     let return_code = print_config.print_status(
         &repo_root,
@@ -306,13 +305,13 @@ pub struct PrintConfigStatusTypes {
 
 /// Wrapper around an ordinary PathRelativizer that honors the --root-relative flag to `hg status`.
 struct HgStatusPathRelativizer {
-    relativizer: Option<PathRelativizer>,
+    relativizer: Option<RepoPathRelativizer>,
 }
 
 impl HgStatusPathRelativizer {
     /// * `root_relative` true if --root-relative was specified.
     /// * `relativizer` comes from HgArgs.relativizer.
-    pub fn new(root_relative: bool, relativizer: PathRelativizer) -> HgStatusPathRelativizer {
+    pub fn new(root_relative: bool, relativizer: RepoPathRelativizer) -> HgStatusPathRelativizer {
         let relativizer = match (root_relative, relativizer) {
             (false, r) => Some(r),
             _ => None,
@@ -837,7 +836,7 @@ mod test {
 
         let relativizer = HgStatusPathRelativizer::new(
             print_config.root_relative,
-            PathRelativizer::new(hg_args.cwd, repo_root_path),
+            RepoPathRelativizer::new(hg_args.cwd, repo_root_path),
         );
         let tin = "".as_bytes();
         let tout = Vec::new();
