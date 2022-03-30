@@ -221,22 +221,11 @@ Test remotebookmark revsets
   abort: no remote bookmarks exist that match 're:gamma/.*'!
   [255]
 
-Test clone --mirror
 
+Test custom paths dont override default
   $ cd ..
   $ cd alpha
   $ hg book foo bar baz
-  $ cd ..
-  $ hg clone --mirror alpha mirror
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd mirror
-  $ hg book
-     bar                       4538525df7e2
-     baz                       4538525df7e2
-     foo                       4538525df7e2
-
-Test custom paths dont override default
   $ cd ..
   $ hg init path_overrides
   $ cd path_overrides

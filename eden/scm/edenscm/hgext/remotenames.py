@@ -541,9 +541,6 @@ def extsetup(ui):
 
     extensions.wrapcommand(commands.table, "pull", expullcmd)
 
-    entry = extensions.wrapcommand(commands.table, "clone", exclonecmd)
-    entry[1].append(("", "mirror", None, "sync all bookmarks"))
-
     entry = extensions.wrapcommand(commands.table, "update", updatecmd)
     entry[1].append(("B", "bookmark", "", "create new bookmark"))
 
@@ -1004,12 +1001,6 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         result = 0
 
     return result
-
-
-def exclonecmd(orig, ui, *args, **opts):
-    if opts["mirror"]:
-        ui.setconfig("remotenames", "syncbookmarks", True, "mirror-clone")
-    orig(ui, *args, **opts)
 
 
 def _readtracking(repo):
