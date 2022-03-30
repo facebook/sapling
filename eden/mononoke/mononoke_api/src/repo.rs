@@ -73,7 +73,9 @@ use warm_bookmarks_cache::{BookmarksCache, NoopBookmarksCache, WarmBookmarksCach
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
 use crate::file::{FileContext, FileId};
-use crate::repo_write::{PermissionsModel, RepoWriteContext};
+use crate::permissions::WritePermissionsModel;
+use crate::repo_draft::RepoDraftContext;
+use crate::repo_write::RepoWriteContext;
 use crate::specifiers::{
     ChangesetId, ChangesetPrefixSpecifier, ChangesetSpecifier, ChangesetSpecifierPrefixResolution,
     HgChangesetId,
@@ -1448,6 +1450,64 @@ impl RepoContext {
         Ok(maybe_cs_id.map(|cs_id| ChangesetContext::new(other.clone(), cs_id)))
     }
 
+    /// Get a draft context to make draft changes to this repository.
+    pub async fn draft(mut self) -> Result<RepoDraftContext, MononokeError> {
+        if !self.config().source_control_service.permit_writes {
+            return Err(MononokeError::InvalidRequest(String::from(
+                "source control service writes are not enabled for this repo",
+            )));
+        }
+
+        // TODO(T105334556): This should require draft permission
+        self.ctx = self.ctx.with_mutated_scuba(|mut scuba| {
+            scuba.add("write_permissions_model", "any");
+            scuba
+        });
+
+        self.ctx
+            .scuba()
+            .clone()
+            .log_with_msg("Write request start", None);
+
+        Ok(RepoDraftContext::new(
+            self,
+            WritePermissionsModel::AllowAnyWrite,
+        ))
+    }
+
+    /// Get a draft context to make draft changes to this repository on behalf of a service.
+    pub async fn service_draft(
+        mut self,
+        service_identity: String,
+    ) -> Result<RepoDraftContext, MononokeError> {
+        if !self.config().source_control_service.permit_service_writes {
+            return Err(MononokeError::InvalidRequest(String::from(
+                "source control service writes are not enabled for this repo",
+            )));
+        }
+
+        // Check the user is permitted to speak for the named service.
+        self.repo
+            .check_service_permissions(&self.ctx, service_identity.clone())
+            .await?;
+
+        self.ctx = self.ctx.with_mutated_scuba(|mut scuba| {
+            scuba.add("write_permissions_model", "service");
+            scuba.add("service_identity", service_identity.as_str());
+            scuba
+        });
+
+        self.ctx
+            .scuba()
+            .clone()
+            .log_with_msg("Write request start", None);
+
+        Ok(RepoDraftContext::new(
+            self,
+            WritePermissionsModel::ServiceIdentity(service_identity),
+        ))
+    }
+
     /// Get a write context to make changes to this repository.
     pub async fn write(mut self) -> Result<RepoWriteContext, MononokeError> {
         if !self.config().source_control_service.permit_writes {
@@ -1469,7 +1529,10 @@ impl RepoContext {
             .clone()
             .log_with_msg("Write request start", None);
 
-        Ok(RepoWriteContext::new(self, PermissionsModel::AllowAnyWrite))
+        Ok(RepoWriteContext::new(
+            self,
+            WritePermissionsModel::AllowAnyWrite,
+        ))
     }
 
     /// Get a write context to make changes to this repository on behalf of a service.
@@ -1501,7 +1564,7 @@ impl RepoContext {
 
         Ok(RepoWriteContext::new(
             self,
-            PermissionsModel::ServiceIdentity(service_identity),
+            WritePermissionsModel::ServiceIdentity(service_identity),
         ))
     }
 

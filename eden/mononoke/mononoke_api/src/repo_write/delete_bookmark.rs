@@ -14,7 +14,8 @@ use metaconfig_types::BookmarkAttrs;
 use mononoke_types::ChangesetId;
 
 use crate::errors::MononokeError;
-use crate::repo_write::{PermissionsModel, RepoWriteContext};
+use crate::permissions::WritePermissionsModel;
+use crate::repo_write::RepoWriteContext;
 
 impl RepoWriteContext {
     /// Delete a bookmark.
@@ -54,7 +55,7 @@ impl RepoWriteContext {
         )
         .with_pushvars(pushvars);
 
-        if let PermissionsModel::ServiceIdentity(service_identity) = &self.permissions_model {
+        if let WritePermissionsModel::ServiceIdentity(service_identity) = &self.permissions_model {
             op = op.for_service(service_identity, &self.config().source_control_service);
         }
 

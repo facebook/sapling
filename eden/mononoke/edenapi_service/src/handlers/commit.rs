@@ -328,6 +328,9 @@ impl EdenApiHandler for UploadBonsaiChangesetHandler {
             .await?;
         let cs_id = repo
             .repo()
+            .clone()
+            .draft()
+            .await?
             .create_changeset(
                 parents,
                 cs.author,

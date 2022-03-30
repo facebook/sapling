@@ -12,7 +12,7 @@ function base_snapshot_repo_setup {
         echo "Must provide at least one clone name"
         exit 1
     fi
-    INFINITEPUSH_ALLOW_WRITES=true setup_common_config
+    ENABLE_API_WRITES=true INFINITEPUSH_ALLOW_WRITES=true setup_common_config
     cd "$TESTTMP"
     cat >> "$HGRCPATH" <<EOF
 [extensions]

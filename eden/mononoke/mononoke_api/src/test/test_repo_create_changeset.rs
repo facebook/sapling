@@ -20,7 +20,7 @@ use std::str::FromStr;
 
 use crate::{
     ChangesetContext, ChangesetId, CoreContext, CreateChange, CreateChangeFile, FileType, Mononoke,
-    MononokeError, MononokePath, RepoWriteContext,
+    MononokeError, MononokePath, RepoDraftContext,
 };
 
 #[fbinit::test]
@@ -44,7 +44,7 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
         .repo(ctx.clone(), "test")
         .await?
         .expect("repo exists")
-        .write()
+        .draft()
         .await?;
     let expected_hash = "68c9120f387cf1c3b7e4c2e30cdbd5b953f27a732cfe9f42f335f0091ece3c6c";
     let parent_hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
@@ -181,11 +181,11 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
         .repo(ctx, "test")
         .await?
         .expect("repo exists")
-        .write()
+        .draft()
         .await?;
 
     async fn create_changeset(
-        repo: &RepoWriteContext,
+        repo: &RepoDraftContext,
         changes: BTreeMap<MononokePath, CreateChange>,
     ) -> Result<ChangesetContext, MononokeError> {
         let parent_hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";

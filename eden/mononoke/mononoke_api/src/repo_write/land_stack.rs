@@ -21,7 +21,8 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use revset::RangeNodeStream;
 
 use crate::errors::MononokeError;
-use crate::repo_write::{PermissionsModel, RepoWriteContext};
+use crate::permissions::WritePermissionsModel;
+use crate::repo_write::RepoWriteContext;
 
 pub use bookmarks_movement::PushrebaseOutcome;
 
@@ -91,7 +92,7 @@ impl RepoWriteContext {
         let mut op = bookmarks_movement::PushrebaseOntoBookmarkOp::new(&bookmark, changesets)
             .with_pushvars(pushvars);
 
-        if let PermissionsModel::ServiceIdentity(service_identity) = &self.permissions_model {
+        if let WritePermissionsModel::ServiceIdentity(service_identity) = &self.permissions_model {
             op = op.for_service(service_identity, &self.config().source_control_service);
         }
 

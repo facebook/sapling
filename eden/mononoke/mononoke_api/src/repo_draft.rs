@@ -11,12 +11,9 @@ use crate::errors::MononokeError;
 use crate::permissions::WritePermissionsModel;
 use crate::repo::RepoContext;
 
-pub mod create_bookmark;
-pub mod delete_bookmark;
-pub mod land_stack;
-pub mod move_bookmark;
+pub mod create_changeset;
 
-pub struct RepoWriteContext {
+pub struct RepoDraftContext {
     /// Repo that is being written to.
     repo: RepoContext,
 
@@ -24,7 +21,7 @@ pub struct RepoWriteContext {
     permissions_model: WritePermissionsModel,
 }
 
-impl Deref for RepoWriteContext {
+impl Deref for RepoDraftContext {
     type Target = RepoContext;
 
     fn deref(&self) -> &RepoContext {
@@ -32,7 +29,7 @@ impl Deref for RepoWriteContext {
     }
 }
 
-impl RepoWriteContext {
+impl RepoDraftContext {
     pub(crate) fn new(repo: RepoContext, permissions_model: WritePermissionsModel) -> Self {
         Self {
             repo,
