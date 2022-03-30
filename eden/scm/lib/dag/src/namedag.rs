@@ -10,7 +10,6 @@
 //! Combination of IdMap and IdDag.
 
 use std::collections::BTreeMap;
-use std::collections::HashMap;
 use std::collections::HashSet;
 use std::env::var;
 use std::fmt;
@@ -19,7 +18,6 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use dag_types::FlatSegment;
-use futures::future::join_all;
 use futures::future::BoxFuture;
 use futures::FutureExt;
 use futures::StreamExt;
@@ -29,6 +27,7 @@ use parking_lot::Mutex;
 use parking_lot::RwLock;
 
 use crate::clone::CloneData;
+use crate::errors::bug;
 use crate::errors::programming;
 use crate::errors::DagError;
 use crate::errors::NotFoundError;
@@ -211,7 +210,7 @@ where
         self.dag.reload(&dag_lock)?;
 
         // Build.
-        self.build(parents, heads).await?;
+        self.build_with_lock(parents, heads, &map_lock).await?;
 
         // Write to disk.
         self.map.persist(&map_lock)?;
@@ -2215,114 +2214,167 @@ impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone + 'static,
-    M: TryClone + IdMapAssignHead + IdConvert + Sync + Send + 'static,
+    M: TryClone + Persist + IdMapWrite + IdConvert + Sync + Send + 'static,
     P: TryClone + Sync + Send + 'static,
     S: TryClone + Sync + Send + 'static,
 {
-    /// Export non-master DAG as parents on HashMap.
-    ///
-    /// This can be expensive. It is expected to be either called infrequently,
-    /// or called with a small amount of data. For example, bounded amount of
-    /// non-master commits.
-    async fn non_master_parent_names(&self) -> Result<HashMap<VertexName, Vec<VertexName>>> {
-        tracing::debug!(target: "dag::reassign", "calculating non-master subgraph");
-        let parent_ids = self.dag.non_master_parent_ids()?;
-        // PERF: This is suboptimal async iteration. It might be okay if non-master
-        // part is not lazy.
-        //
-        // Map id to name.
-        let mut parent_names_map = HashMap::with_capacity(parent_ids.len());
-        for (id, parent_ids) in parent_ids.into_iter() {
-            let name = self.vertex_name(id).await?;
-            let parent_names = join_all(parent_ids.into_iter().map(|p| self.vertex_name(p)))
-                .await
-                .into_iter()
-                .collect::<Result<Vec<_>>>()?;
-            parent_names_map.insert(name, parent_names);
-        }
-        tracing::debug!(target: "dag::reassign", "non-master subgraph has {} entries", parent_names_map.len());
-        Ok(parent_names_map)
-    }
-
-    /// Re-assign ids and segments for non-master group.
-    fn rebuild_non_master<'a: 's, 's>(&'a mut self) -> BoxFuture<'s, Result<()>> {
-        let fut = async move {
-            // backup part of the named graph in memory.
-            let parents = self.non_master_parent_names().await?;
-            let mut heads = parents
-                .keys()
-                .collect::<HashSet<_>>()
-                .difference(
-                    &parents
-                        .values()
-                        .flat_map(|ps| ps.into_iter())
-                        .collect::<HashSet<_>>(),
-                )
-                .map(|&v| v.clone())
-                .collect::<Vec<_>>();
-            heads.sort_unstable();
-            tracing::debug!(target: "dag::reassign", "non-master heads: {} entries", heads.len());
-
-            // Remove existing non-master data.
-            self.dag.remove_non_master()?;
-            self.map.remove_non_master().await?;
-
-            // Rebuild them.
-            let heads: VertexListWithOptions = heads[..].into();
-            debug_assert!(heads.vertexes_by_group(Group::MASTER).is_empty());
-            self.build(&parents, &heads).await?;
-
-            Ok(())
-        };
-        Box::pin(fut)
-    }
-
     /// Build IdMap and Segments for the given heads.
-    async fn build(&mut self, parents: &dyn Parents, heads: &VertexListWithOptions) -> Result<()> {
-        // Populate vertex negative cache to reduce round-trips doing remote lookups.
-        if self.is_vertex_lazy() {
-            let heads: Vec<VertexName> = heads.vertexes();
-            self.populate_missing_vertexes_for_add_heads(parents, &heads)
-                .await?;
+    /// Update IdMap and IdDag to include the given heads and their ancestors.
+    ///
+    /// Handle "reassign" cases. For example, when adding P to the master group
+    /// and one of its parent N2 is in the non-master group:
+    ///
+    /// ```plain,ignore
+    ///     1--2--3             3---P
+    ///         \                  /
+    ///          N1-N2-N3        N2
+    /// ```
+    ///
+    /// To maintain topological order, N2 need to be re-assigned to the master
+    /// group. This is done by temporarily removing N1-N2-N3, re-insert N1-N2
+    /// as 4-5 to be able to insert P, then re-insert N3 in the non-master
+    /// group:
+    ///
+    /// ```plain,ignore
+    ///     1--2--3 --6 (P)
+    ///         \    /
+    ///          4--5 --N1
+    /// ```
+    async fn build_with_lock(
+        &mut self,
+        parents: &dyn Parents,
+        heads: &VertexListWithOptions,
+        map_lock: &M::Lock,
+    ) -> Result<()> {
+        // `std::borrow::Cow` without `Clone` constraint.
+        enum Input<'a> {
+            Borrowed(&'a dyn Parents, &'a VertexListWithOptions),
+            Owned(Box<dyn Parents>, VertexListWithOptions),
         }
 
-        // Update IdMap.
-        let mut outcome = PreparedFlatSegments::default();
-        let mut covered = self.dag().all_ids_in_groups(&Group::ALL)?;
-        let mut reserved = calculate_initial_reserved(self, &covered, heads).await?;
-        for group in [Group::MASTER, Group::NON_MASTER] {
-            for (vertex, opts) in heads.vertex_options() {
-                if opts.highest_group != group {
-                    continue;
-                }
-                // Important: do not call self.map.assign_head. It does not trigger
-                // remote protocol properly. Call self.assign_head instead.
-                let prepared_segments = self
-                    .assign_head(vertex.clone(), parents, group, &mut covered, &reserved)
+        // Manual recursion. async fn does not support recursion.
+        let mut stack = vec![Input::Borrowed(parents, heads)];
+
+        // Avoid infinite loop (buggy logic).
+        let mut loop_count = 0;
+
+        while let Some(input) = stack.pop() {
+            loop_count += 1;
+            if loop_count > 2 {
+                return bug("should not loop > 2 times (1st insertion+strip, 2nd reinsert)");
+            }
+
+            let (parents, heads) = match &input {
+                Input::Borrowed(p, h) => (*p, *h),
+                Input::Owned(p, h) => (p.as_ref(), h),
+            };
+
+            // Populate vertex negative cache to reduce round-trips doing remote lookups.
+            if self.is_vertex_lazy() {
+                let heads: Vec<VertexName> = heads.vertexes();
+                self.populate_missing_vertexes_for_add_heads(parents, &heads)
                     .await?;
-                outcome.merge(prepared_segments);
-                // Update reserved.
-                if opts.reserve_size > 0 {
-                    let low = self.map.vertex_id(vertex).await? + 1;
-                    update_reserved(&mut reserved, &covered, low, opts.reserve_size);
+            }
+
+            // Backup, then remove vertexes that need to be reassigned. Actual reassignment
+            // happens in the next loop iteration.
+            let to_reassign: NameSet = self.find_vertexes_to_reassign(parents, heads).await?;
+            if !to_reassign.is_empty().await? {
+                let reinsert_heads: VertexListWithOptions = {
+                    let heads = self
+                        .heads(
+                            self.descendants(to_reassign.clone())
+                                .await?
+                                .difference(&to_reassign),
+                        )
+                        .await?;
+                    tracing::debug!(target: "dag::reassign", "need to rebuild heads: {:?}", &heads);
+                    let heads: Vec<VertexName> = heads.iter().await?.try_collect().await?;
+                    VertexListWithOptions::from(heads)
+                };
+                let reinsert_parents: Box<dyn Parents> = Box::new(self.dag_snapshot()?);
+                self.strip_with_lock(&to_reassign, map_lock).await?;
+
+                // Rebuild non-master ids and segments on the next iteration.
+                stack.push(Input::Owned(reinsert_parents, reinsert_heads));
+            };
+
+            // Update IdMap.
+            let mut outcome = PreparedFlatSegments::default();
+            let mut covered = self.dag().all_ids_in_groups(&Group::ALL)?;
+            let mut reserved = calculate_initial_reserved(self, &covered, heads).await?;
+            for group in [Group::MASTER, Group::NON_MASTER] {
+                for (vertex, opts) in heads.vertex_options() {
+                    if opts.highest_group != group {
+                        continue;
+                    }
+                    // Important: do not call self.map.assign_head. It does not trigger
+                    // remote protocol properly. Call self.assign_head instead.
+                    let prepared_segments = self
+                        .assign_head(vertex.clone(), parents, group, &mut covered, &reserved)
+                        .await?;
+                    outcome.merge(prepared_segments);
+                    // Update reserved.
+                    if opts.reserve_size > 0 {
+                        let low = self.map.vertex_id(vertex).await? + 1;
+                        update_reserved(&mut reserved, &covered, low, opts.reserve_size);
+                    }
                 }
             }
-        }
 
-        // Update segments.
-        self.dag
-            .build_segments_from_prepared_flat_segments(&outcome)?;
+            // Update segments.
+            self.dag
+                .build_segments_from_prepared_flat_segments(&outcome)?;
 
-        // The master group might have new vertexes inserted, which will
-        // affect the `overlay_map_next_id`.
-        self.update_overlay_map_id_set()?;
-
-        // Rebuild non-master ids and segments.
-        if self.need_rebuild_non_master().await {
-            self.rebuild_non_master().await?;
+            // The master group might have new vertexes inserted, which will
+            // affect the `overlay_map_id_set`.
+            self.update_overlay_map_id_set()?;
         }
 
         Ok(())
+    }
+
+    /// Find vertexes that need to be reassigned from the non-master group
+    /// to the master group. That is,
+    /// `ancestors(master_heads_to_insert) & existing_non_master_group`
+    ///
+    /// Assume pre-fetching (populate_missing_vertexes_for_add_heads)
+    /// was done, so this function can just use naive DFS without worrying
+    /// about excessive remote lookups.
+    async fn find_vertexes_to_reassign(
+        &self,
+        parents: &dyn Parents,
+        heads: &VertexListWithOptions,
+    ) -> Result<NameSet> {
+        // Heads that need to be inserted to the master group.
+        let master_heads = heads.vertexes_by_group(Group::MASTER);
+
+        // Visit vertexes recursively.
+        let mut id_set = IdSet::empty();
+        let mut to_visit: Vec<VertexName> = master_heads;
+        let mut visited = HashSet::new();
+        while let Some(vertex) = to_visit.pop() {
+            if !visited.insert(vertex.clone()) {
+                continue;
+            }
+            let id = self.vertex_id_optional(&vertex).await?;
+            // None: The vertex/id is not yet inserted to IdMap.
+            if let Some(id) = id {
+                if id.group() == Group::MASTER {
+                    // Already exist in the master group. Stop visiting.
+                    continue;
+                } else {
+                    // Need reassign. Need to continue visiting.
+                    id_set.push(id);
+                }
+            }
+            let parents = parents.parent_names(vertex).await?;
+            to_visit.extend(parents);
+        }
+
+        let set = NameSet::from_spans_dag(id_set, self)?;
+        tracing::debug!(target: "dag::reassign", "need to reassign: {:?}", &set);
+        Ok(set)
     }
 }
 

@@ -234,10 +234,6 @@ Test with two unrelated histories
   $ touch u2 && hg add u2 && hg ci -mu2
 
   $ hg smartlog  -T '{node|short} {bookmarks} {desc}'
-  @  806aaef35296  u2
-  │
-  o  8749dc393678  u1
-  
   o  05d10250273e feature2 d
   │
   o  38d85b506754 master c2
@@ -249,6 +245,11 @@ Test with two unrelated histories
   o  b68836a6e2ca  a2
   │
   ~
+  
+  @  806aaef35296  u2
+  │
+  o  8749dc393678  u1
+  
 
 
 A draft stack at the top

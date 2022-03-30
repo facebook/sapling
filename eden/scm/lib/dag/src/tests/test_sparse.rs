@@ -379,8 +379,7 @@ async fn test_flush_reassign_master() {
 
     // Add vertexes in the non-master group.
     // There are 2 parts: ::G will be reassigned to the master group.
-    // The rest (H, ::L) will also be reassigned, but remain in the
-    // non-master group.
+    // The rest (H, ::L) will remain in the non-master group.
     client.drawdag("B-X-Y-Z-F D-F-G-H B-I-J-K-L", &[]);
     assert_eq!(
         client.output(),
@@ -403,9 +402,38 @@ async fn test_flush_reassign_master() {
     // To avoid reusing caches, reopen the graph from disk.
     client.reopen();
 
+    assert_eq!(
+        client.dump_state().await,
+        r#"<spans [X:L+N0:N9, A:E+0:4]>
+Lv0: RH0-4[], N0-N2[1], N3-N5[3, N2], N6-N9[1]
+Lv1: N0-N5[1, 3]
+P->C: 1->N0, 1->N6, 3->N3, N2->N3
+0->A 1->B 2->C 3->D 4->E N0->X N1->Y N2->Z N3->F N4->G N5->H N6->I N7->J N8->K N9->L"#
+    );
+
     // Force reassign of vertexes in the non-master group.
     client.flush("G").await;
-    assert_eq!(client.output(), ["resolve names: [H], heads: [G, E]"]);
+    assert!(client.output().is_empty());
+
+    //       I-J-K-L
+    //      /
+    //   A-B--C--D-E
+    //      \     \
+    //       X-Y-Z-F-G-H
+    //
+    // Check that:
+    // - G % E = G+F+Z+Y+X are added to the master group.
+    // - I::L remains in the non-master group unchanged.
+    // - X::G are removed from the non-master group.
+    // - H is re-inserted in the non-master group.
+    assert_eq!(
+        client.dump_state().await,
+        r#"<spans [I:L+N6:N9, H+N0, A:G+0:9]>
+Lv0: RH0-4[], 5-7[1], 8-9[3, 7], N0-N0[9], N6-N9[1]
+Lv1: R0-4[]
+P->C: 1->5, 1->N6, 3->8, 7->8, 9->N0
+0->A 1->B 2->C 3->D 4->E 5->X 6->Y 7->Z 8->F 9->G N0->H N6->I N7->J N8->K N9->L"#
+    );
 }
 
 #[tokio::test]
