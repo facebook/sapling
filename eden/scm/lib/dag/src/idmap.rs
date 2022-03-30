@@ -396,12 +396,17 @@ impl<T> IdMapAssignHead for T where T: IdConvert + IdMapWrite {}
 /// Write operations for IdMap.
 #[async_trait::async_trait]
 pub trait IdMapWrite {
+    /// Insert a new `(id, name)` pair to the map.
+    ///
+    /// The `id` and `name` mapping should be unique, it's an error to map an id
+    /// to multiple names, or map a name to multiple ids. Note: older versions
+    /// of `IdMap` allowed mapping a name to a non-master Id, then a master Id
+    /// (in this order), and the master Id is used for lookups. This is no
+    /// longer permitted.
     async fn insert(&mut self, id: Id, name: &[u8]) -> Result<()>;
     /// Remove ids in the range `low..=high` and their associated names.
     /// Return removed names.
     async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>>;
-    async fn remove_non_master(&mut self) -> Result<()>;
-    async fn need_rebuild_non_master(&self) -> bool;
 }
 
 #[cfg(test)]
@@ -433,7 +438,7 @@ mod tests {
         map.insert(id, b"jkl2").unwrap_err(); // id maps to jkl
         map.insert(id + 1, b"jkl2").unwrap();
         map.insert(id + 2, b"jkl2").unwrap_err(); // jkl2 maps to id + 1
-        map.insert(Id(15), b"jkl2").unwrap(); // reassign jkl2 to master group - ok.
+        map.insert(Id(15), b"jkl2").unwrap_err(); // reassign jkl2 to master group - error.
         map.insert(id + 3, b"abc").unwrap_err(); // reassign abc to non-master group - error.
 
         // Test hex lookup.
@@ -461,10 +466,11 @@ mod tests {
             assert_eq!(map.find_id_by_name(b"def").unwrap().unwrap().0, 2);
             assert_eq!(map.find_id_by_name(b"ghi").unwrap().unwrap().0, 10);
             assert_eq!(map.find_id_by_name(b"jkl").unwrap().unwrap(), id);
-            assert_eq!(map.find_id_by_name(b"jkl2").unwrap().unwrap().0, 15);
+            assert_eq!(
+                format!("{:?}", map.find_id_by_name(b"jkl2").unwrap().unwrap()),
+                "N1"
+            );
             assert!(map.find_id_by_name(b"jkl3").unwrap().is_none());
-            // Error: re-assigned ids prevent sync.
-            map.persist(&lock).unwrap_err();
         }
 
         // Test Debug
@@ -476,7 +482,6 @@ mod tests {
   ghi: 10,
   jkl: N0,
   jkl2: N1,
-  jkl2: 15,
 }
 "#
         );

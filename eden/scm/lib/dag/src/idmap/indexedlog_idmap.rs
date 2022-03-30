@@ -39,7 +39,6 @@ use crate::VerLink;
 pub struct IdMap {
     pub(crate) log: log::Log,
     path: PathBuf,
-    need_rebuild_non_master: bool,
     map_id: String,
     map_version: VerLink,
 }
@@ -85,7 +84,6 @@ impl TryClone for IdMap {
         let result = Self {
             log: self.log.try_clone()?,
             path: self.path.clone(),
-            need_rebuild_non_master: self.need_rebuild_non_master,
             map_id: self.map_id.clone(),
             map_version: self.map_version.clone(),
         };
@@ -100,7 +98,6 @@ impl IdMap {
         Ok(Self {
             log,
             path,
-            need_rebuild_non_master: false,
             map_id,
             map_version: VerLink::new(),
         })
@@ -228,7 +225,6 @@ impl IdMap {
     ///
     /// Errors if the new entry conflicts with existing entries.
     pub fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
-        let group = id.group();
         let existing_name = self.find_name_by_id(id)?;
         if let Some(existing_name) = existing_name {
             if existing_name == name {
@@ -249,17 +245,12 @@ impl IdMap {
             // non-master groups.
             if existing_id == id {
                 return Ok(());
-            } else if existing_id.group() <= group {
+            } else {
                 return bug(format!(
                     "new entry {} = {:?} conflicts with an existing entry {} = {:?}",
                     id, name, existing_id, name
                 ));
             }
-            tracing::debug!("need reassign {:?} {:?} => {:?}", name, existing_id, id);
-            // Mark "need_rebuild_non_master". This prevents "sync" until
-            // the callsite uses "remove_non_master" to remove and re-insert
-            // non-master ids.
-            self.need_rebuild_non_master = true;
         }
 
         let mut data = Vec::with_capacity(8 + Group::BYTES + name.len());
@@ -462,15 +453,6 @@ impl IdMapWrite for IdMap {
     async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>> {
         IdMap::remove_range(self, low, high)
     }
-    async fn remove_non_master(&mut self) -> Result<()> {
-        self.log.append(IdMap::MAGIC_CLEAR_NON_MASTER)?;
-        self.map_version = VerLink::new();
-        self.need_rebuild_non_master = false;
-        Ok(())
-    }
-    async fn need_rebuild_non_master(&self) -> bool {
-        self.need_rebuild_non_master
-    }
 }
 
 impl Persist for IdMap {
@@ -501,9 +483,6 @@ impl Persist for IdMap {
     }
 
     fn persist(&mut self, _lock: &Self::Lock) -> Result<()> {
-        if self.need_rebuild_non_master {
-            return bug("cannot persist with re-assigned ids unresolved");
-        }
         self.log.sync()?;
         Ok(())
     }

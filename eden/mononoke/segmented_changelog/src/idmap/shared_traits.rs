@@ -399,13 +399,4 @@ impl IdMapWrite for IdMapWrapper {
         let _ = (low, high);
         programming("remove_range() is not implemented server-side")
     }
-    async fn remove_non_master(&mut self) -> Result<()> {
-        // We don't handle non-master in the server
-        Ok(())
-    }
-
-    async fn need_rebuild_non_master(&self) -> bool {
-        // We don't handle non-master in the server
-        false
-    }
 }

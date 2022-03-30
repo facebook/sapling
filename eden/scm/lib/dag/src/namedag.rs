@@ -599,14 +599,6 @@ where
     async fn remove_range(&mut self, low: Id, high: Id) -> Result<Vec<VertexName>> {
         self.map.remove_range(low, high).await
     }
-
-    async fn remove_non_master(&mut self) -> Result<()> {
-        self.map.remove_non_master().await
-    }
-
-    async fn need_rebuild_non_master(&self) -> bool {
-        self.map.need_rebuild_non_master().await
-    }
 }
 
 #[async_trait::async_trait]

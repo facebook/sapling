@@ -179,13 +179,6 @@ impl IdMapWrite for MemIdMap {
         self.map_version = VerLink::new();
         self.core.remove_range(low, high)
     }
-    async fn remove_non_master(&mut self) -> Result<()> {
-        self.map_version = VerLink::new();
-        Ok(())
-    }
-    async fn need_rebuild_non_master(&self) -> bool {
-        false
-    }
 }
 
 impl Persist for MemIdMap {
