@@ -34,7 +34,8 @@ class WindowsNotifier : public Notifier {
  public:
   explicit WindowsNotifier(
       std::shared_ptr<ReloadableConfig> edenConfig,
-      std::string_view version);
+      std::string_view version,
+      std::chrono::time_point<std::chrono::steady_clock> startTime);
   ~WindowsNotifier();
 
   /**
@@ -59,9 +60,13 @@ class WindowsNotifier : public Notifier {
    */
   WindowsNotification popNextNotification();
 
+  std::wstring getEdenInfoStr();
+
  private:
   std::optional<Guid> guid_;
   WindowHandle hwnd_;
+  std::string version_;
+  std::chrono::time_point<std::chrono::steady_clock> startTime_;
   std::thread eventThread_;
   std::queue<WindowsNotification> notifQ_;
 };

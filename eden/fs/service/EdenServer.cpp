@@ -185,11 +185,17 @@ std::shared_ptr<Notifier> getPlatformNotifier(
    * through it.
    */
   if (config->getEdenConfig()->enableEdenMenu.getValue()) {
-    return std::make_shared<WindowsNotifier>(config, version);
+    /*
+     * The startTime we're passing will be slightly different than the actual
+     * start time... However, this doesn't matter too much. We will already be
+     * showing a slightly incorrect uptime because the E-Menu won't update the
+     * uptime until the user re-clicks on the "About EdenFS" menu option
+     */
+    return std::make_shared<WindowsNotifier>(
+        config, version, std::chrono::steady_clock::now());
   } else {
     return std::make_shared<NullNotifier>(config);
   }
-
 #else
   (void)version;
   return std::make_shared<CommandNotifier>(config);

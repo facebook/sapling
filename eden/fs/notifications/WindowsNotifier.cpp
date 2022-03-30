@@ -15,6 +15,7 @@
 #include <wchar.h>
 #include <thread>
 
+#include <fmt/chrono.h>
 #include <folly/futures/Future.h>
 #include <folly/portability/Windows.h>
 
@@ -40,15 +41,20 @@ constexpr UINT WMAPP_NOTIFYDESTROY = WM_APP + 2;
 
 const wchar_t kWinClassNameStr[] = L"EdenFSMenu";
 const wchar_t kMenuWelcomeStr[] = L"Welcome to the E-Menu";
+const wchar_t kMenuAboutStr[] = L"About EdenFS";
 const wchar_t kMenuCloseStr[] = L"Quit E-Menu";
 const wchar_t kDebugMenu[] = L"Debug Menu";
 const wchar_t kSendTestNotification[] = L"Send Test Notification";
 const wchar_t kWindowTitle[] = L"EdenFSMenu";
 const wchar_t kMenuToolTip[] = L"EdenFS Menu";
+const wchar_t kEdenInfoTitle[] = L"EdenFS Info";
+const wchar_t kEdenVersion[] = L"Running Eden Version: ";
+const wchar_t kEdenUptime[] = L"Eden Daemon Uptime: ";
 
 constexpr UINT IDM_EXIT = 124;
 constexpr UINT IDM_EDENNOTIFICATION = 125;
 constexpr UINT IDM_EDENDEBUGNOTIFICATION = 126;
+constexpr UINT IDM_EDENINFO = 127;
 
 void check(bool opResult, std::string_view context) {
   if (opResult) {
@@ -201,6 +207,8 @@ MenuHandle createEdenMenu(bool debugIsEnabled) {
       MF_BYPOSITION | MF_STRING | MF_GRAYED,
       NULL,
       kMenuWelcomeStr);
+  appendMenuEntry(
+      hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_EDENINFO, kMenuAboutStr);
   if (debugIsEnabled) {
     appendDebugMenu(hMenu.get());
   }
@@ -299,6 +307,20 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
             return 0;
           }
 
+          case IDM_EDENINFO: {
+            auto notifier = getWindowsNotifier(hwnd);
+            auto msgBodyStr = notifier->getEdenInfoStr();
+            checkNonZero(
+                MessageBoxExW(
+                    hwnd,
+                    msgBodyStr.c_str(),
+                    kEdenInfoTitle,
+                    MB_OK,
+                    MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL)),
+                "Failed to populate EdenFS Info");
+            return 0;
+          }
+
           default:
             return DefWindowProc(hwnd, message, wParam, lParam);
         }
@@ -377,11 +399,14 @@ int windowsEventLoop(
 
 WindowsNotifier::WindowsNotifier(
     std::shared_ptr<ReloadableConfig> edenConfig,
-    std::string_view version)
+    std::string_view version,
+    std::chrono::time_point<std::chrono::steady_clock> startTime)
     : Notifier(std::move(edenConfig)),
       guid_{
           version == "(dev build)" ? std::nullopt
-                                   : std::optional<Guid>(EMenuGuid)} {
+                                   : std::optional<Guid>(EMenuGuid)},
+      version_{version},
+      startTime_{startTime} {
   // Avoids race between thread startup and hwnd_ initialization
   auto [promise, hwndFuture] = folly::makePromiseContract<WindowHandle>();
   eventThread_ = std::thread{
@@ -425,6 +450,27 @@ void WindowsNotifier::showNetworkNotification(const std::exception& /*err*/) {
 
 bool WindowsNotifier::debugIsEnabled() {
   return config_->getEdenConfig()->enableEdenDebugMenu.getValue();
+}
+
+namespace {
+std::wstring getDaemonUptime(
+    std::chrono::time_point<std::chrono::steady_clock> startTime) {
+  auto uptimeSec = std::chrono::duration_cast<std::chrono::seconds>(
+      std::chrono::steady_clock::now() - startTime);
+  auto uptimeStr =
+      fmt::format("{:%H hours, %M minutes, %S seconds}", uptimeSec);
+  return std::wstring(kEdenUptime) +
+      std::wstring(uptimeStr.begin(), uptimeStr.end());
+}
+
+std::wstring getDaemonVersion(std::string ver) {
+  return std::wstring(kEdenVersion) + std::wstring(ver.begin(), ver.end());
+}
+
+} // namespace
+
+std::wstring WindowsNotifier::getEdenInfoStr() {
+  return getDaemonVersion(version_) + L"\n" + getDaemonUptime(startTime_);
 }
 } // namespace facebook::eden
 
