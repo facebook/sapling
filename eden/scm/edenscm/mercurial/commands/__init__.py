@@ -1504,7 +1504,6 @@ def cat(ui, repo, file1, *pats, **opts):
         ("u", "updaterev", "", _("revision or branch to check out"), _("REV")),
         ("r", "rev", [], _("include the specified changeset"), _("REV")),
         ("", "pull", None, _("use pull protocol to copy metadata")),
-        ("", "uncompressed", None, _("an alias to --stream (DEPRECATED)")),
         ("", "stream", None, _("clone with minimal data processing")),
         (
             "",
@@ -1638,7 +1637,7 @@ def clone(ui, source, dest=None, **opts):
             source,
             dest,
             pull=opts.get("pull"),
-            stream=opts.get("stream") or opts.get("uncompressed"),
+            stream=opts.get("stream"),
             rev=opts.get("rev"),
             update=opts.get("updaterev") or not opts.get("noupdate"),
             shallow=opts.get("shallow"),

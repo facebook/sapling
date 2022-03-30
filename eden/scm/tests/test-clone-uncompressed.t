@@ -26,15 +26,6 @@ Basic clone
   searching for changes
   no changes found
 
---uncompressed is an alias to --stream
-
-  $ hg clone --uncompressed -U ssh://user@dummy/server clone1-uncompressed
-  streaming all changes
-  1027 files to transfer, * of data (glob)
-  transferred * in * seconds (*) (glob)
-  searching for changes
-  no changes found
-
 Clone with background file closing enabled
 
   $ hg --debug --config worker.backgroundclose=true --config worker.backgroundcloseminfilecount=1 clone --stream -U ssh://user@dummy/server clone-background 2>&1 | grep -v adding

@@ -16,7 +16,7 @@
 Clone:
 
   $ cd $TESTTMP
-  $ hg clone --no-shallow --uncompressed ssh://user@dummy/server client
+  $ hg clone --no-shallow --stream ssh://user@dummy/server client
   streaming all changes
   6 files to transfer, 901 bytes of data
   transferred 901 bytes in 0.0 seconds (880 KB/sec)
