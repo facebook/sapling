@@ -81,8 +81,8 @@ pub struct JobParams {
     pub per_repo: Vec<(RepoSubcommandParams, RepoWalkParams)>,
 }
 
-const PROGRESS_SAMPLE_RATE: u64 = 1000;
-const PROGRESS_SAMPLE_DURATION_S: u64 = 5;
+pub const PROGRESS_SAMPLE_RATE: u64 = 1000;
+pub const PROGRESS_SAMPLE_DURATION_S: u64 = 5;
 
 // Sub commands
 pub const SCRUB: &str = "scrub";
@@ -1233,7 +1233,7 @@ pub fn parse_node_types<'a>(
 }
 
 // parse the pre-defined groups we have for deep, shallow, hg, bonsai etc.
-fn parse_edge_value(arg: &str) -> Result<HashSet<EdgeType>, Error> {
+pub fn parse_edge_value(arg: &str) -> Result<HashSet<EdgeType>, Error> {
     Ok(match arg {
         ALL_VALUE_ARG => HashSet::from_iter(EdgeType::iter()),
         BONSAI_VALUE_ARG => HashSet::from_iter(BONSAI_EDGE_TYPES.iter().cloned()),

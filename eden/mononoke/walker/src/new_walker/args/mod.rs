@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+pub mod progress;
 pub mod tail_args;
 
 use anyhow::Error;
