@@ -50,6 +50,11 @@ class WindowsNotifier : public Notifier {
   }
 
   /*
+   * Whether or not the debug menu is enabled
+   */
+  bool debugIsEnabled();
+
+  /*
    * Pop the next notification from the notification queue
    */
   WindowsNotification popNextNotification();

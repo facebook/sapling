@@ -702,6 +702,14 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Whether the debug menu is shown in the Eden Menu
+   */
+  ConfigSetting<bool> enableEdenDebugMenu{
+      "notifications:enable-debug",
+      false,
+      this};
+
   // [log]
 
   ConfigSetting<uint64_t> maxLogFileSize{"log:max-file-size", 50000000, this};

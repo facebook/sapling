@@ -40,14 +40,15 @@ constexpr UINT WMAPP_NOTIFYDESTROY = WM_APP + 2;
 
 const wchar_t kWinClassNameStr[] = L"EdenFSMenu";
 const wchar_t kMenuWelcomeStr[] = L"Welcome to the E-Menu";
-const wchar_t kMenuPlaceholderStr1[] = L"First Placeholder Menu Item";
-const wchar_t kMenuPlaceholderStr2[] = L"Second Placeholder Menu Item";
 const wchar_t kMenuCloseStr[] = L"Quit E-Menu";
+const wchar_t kDebugMenu[] = L"Debug Menu";
+const wchar_t kSendTestNotification[] = L"Send Test Notification";
 const wchar_t kWindowTitle[] = L"EdenFSMenu";
 const wchar_t kMenuToolTip[] = L"EdenFS Menu";
 
 constexpr UINT IDM_EXIT = 124;
 constexpr UINT IDM_EDENNOTIFICATION = 125;
+constexpr UINT IDM_EDENDEBUGNOTIFICATION = 126;
 
 void check(bool opResult, std::string_view context) {
   if (opResult) {
@@ -157,6 +158,9 @@ void restoreTooltip(HWND hwnd) {
       Shell_NotifyIconW(NIM_MODIFY, &iconData), "Failed to restore tooltip");
 }
 
+using MenuHandle =
+    std::unique_ptr<std::remove_pointer_t<HMENU>, BOOL (*)(HMENU)>;
+
 void appendMenuEntry(
     HMENU hMenu,
     UINT uFlags,
@@ -174,7 +178,22 @@ void appendMenuEntry(
 using MenuHandle =
     std::unique_ptr<std::remove_pointer_t<HMENU>, BOOL (*)(HMENU)>;
 
-MenuHandle createEdenMenu() {
+void appendDebugMenu(HMENU hMenu) {
+  MenuHandle subMenu{
+      checkNonZero(CreatePopupMenu(), "CreatePopupMenu failed"), &DestroyMenu};
+  appendMenuEntry(
+      subMenu.get(),
+      MF_BYPOSITION | MF_STRING,
+      IDM_EDENDEBUGNOTIFICATION,
+      kSendTestNotification);
+  appendMenuEntry(
+      hMenu,
+      MF_BYPOSITION | MF_POPUP,
+      reinterpret_cast<UINT_PTR>(subMenu.get()),
+      kDebugMenu);
+}
+
+MenuHandle createEdenMenu(bool debugIsEnabled) {
   MenuHandle hMenu{
       checkNonZero(CreatePopupMenu(), "CreatePopupMenu failed"), &DestroyMenu};
   appendMenuEntry(
@@ -182,17 +201,16 @@ MenuHandle createEdenMenu() {
       MF_BYPOSITION | MF_STRING | MF_GRAYED,
       NULL,
       kMenuWelcomeStr);
-  appendMenuEntry(
-      hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_EXIT, kMenuPlaceholderStr1);
-  appendMenuEntry(
-      hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_EXIT, kMenuPlaceholderStr2);
+  if (debugIsEnabled) {
+    appendDebugMenu(hMenu.get());
+  }
   appendMenuEntry(
       hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_EXIT, kMenuCloseStr);
   return hMenu;
 }
 
-void showContextMenu(HWND hwnd, POINT pt) {
-  MenuHandle hMenu = createEdenMenu();
+void showContextMenu(HWND hwnd, POINT pt, bool debugIsEnabled) {
+  MenuHandle hMenu = createEdenMenu(debugIsEnabled);
 
   /*
    * Although the Window is hidden, we still need to set it as the foreground
@@ -274,6 +292,13 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
             return 0;
           }
 
+          case IDM_EDENDEBUGNOTIFICATION: {
+            auto notifier = getWindowsNotifier(hwnd);
+            const auto excp = std::exception{};
+            notifier->showNetworkNotification(excp);
+            return 0;
+          }
+
           default:
             return DefWindowProc(hwnd, message, wParam, lParam);
         }
@@ -295,7 +320,8 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
             // directly.
           case WM_CONTEXTMENU: {
             POINT const pt = {LOWORD(wParam), HIWORD(wParam)};
-            showContextMenu(hwnd, pt);
+            auto notifier = getWindowsNotifier(hwnd);
+            showContextMenu(hwnd, pt, notifier->debugIsEnabled());
           } break;
         }
         return 0;
@@ -395,6 +421,10 @@ void WindowsNotifier::showNetworkNotification(const std::exception& /*err*/) {
       WM_COMMAND,
       IDM_EDENNOTIFICATION,
       reinterpret_cast<LPARAM>(this));
+}
+
+bool WindowsNotifier::debugIsEnabled() {
+  return config_->getEdenConfig()->enableEdenDebugMenu.getValue();
 }
 } // namespace facebook::eden
 
