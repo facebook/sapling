@@ -42,7 +42,6 @@ use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 #[cfg(unix)]
 use tokio_uds_compat::UnixStream;
-use types::path::RepoPathRelativizer;
 use types::RepoPath;
 use types::RepoPathBuf;
 
@@ -63,37 +62,29 @@ use types::RepoPathBuf;
 /// - Avoid `print!` directly. Use `clidispatch::io` instead.
 pub fn maybe_status_fastpath(
     repo_root: &Path,
-    cwd: &Path,
-    print_config: PrintConfig,
     io: &IO,
-) -> Result<u8> {
+    list_ignored: bool,
+) -> Result<(status::Status, HashMap<RepoPathBuf, RepoPathBuf>)> {
     let rt = tokio::runtime::Runtime::new()?;
 
-    rt.block_on(maybe_status_fastpath_internal(
-        repo_root,
-        cwd,
-        print_config,
-        io,
-    ))
+    rt.block_on(maybe_status_fastpath_internal(repo_root, io, list_ignored))
 }
 
 #[cfg(windows)]
 async fn maybe_status_fastpath_internal(
     repo_root: &Path,
-    cwd: &Path,
-    print_config: PrintConfig,
     io: &IO,
-) -> Result<u8> {
+    list_ignored: bool,
+) -> Result<(status::Status, HashMap<RepoPathBuf, RepoPathBuf>)> {
     Err(FallbackToPython.into())
 }
 
 #[cfg(unix)]
 async fn maybe_status_fastpath_internal(
     repo_root: &Path,
-    cwd: &Path,
-    print_config: PrintConfig,
     io: &IO,
-) -> Result<u8> {
+    list_ignored: bool,
+) -> Result<(status::Status, HashMap<RepoPathBuf, RepoPathBuf>)> {
     // Look up the mount point name where Eden thinks this repository is
     // located.  This may be different from repo_root if a parent directory
     // of the Eden mount has been bind mounted to another location, resulting
@@ -141,21 +132,13 @@ async fn maybe_status_fastpath_internal(
         &fb303_client,
         &eden_root,
         dirstate_data.p1,
-        print_config.status_types.ignored,
+        list_ignored,
     )
     .await?;
 
-    let status_output = group_entries(repo_root, &status.status, &dirstate_data, io)?;
-    let relativizer = RepoPathRelativizer::new(cwd, repo_root);
-    let relativizer = HgStatusPathRelativizer::new(print_config.root_relative, relativizer);
-    print_config.print_status(
-        &status_output,
-        &dirstate_data.copymap,
-        &relativizer,
-        use_color,
-        io,
-    )?;
-    let return_code = print_errors(&status.status, io)?;
+    let status_output = group_entries(&repo_root, &status.status, &dirstate_data, io)?;
+    let copymap = dirstate_data.copymap;
+    print_errors(&status.status, io)?;
 
     if let Ok(version) = status.version.parse::<u32>() {
         if use_color {
@@ -186,7 +169,7 @@ Your running Eden server is more than 45 days old.  You should run
         }
     }
 
-    Ok(return_code)
+    Ok((status_output, copymap))
 }
 
 const NULL_COMMIT: [u8; 20] = [0; 20];
@@ -276,221 +259,6 @@ async fn get_status_helper(
     }
 }
 
-/// Config that determines how the output of `hg status` will be printed to the console.
-pub struct PrintConfig {
-    /// Determines which types of statuses will be displayed.
-    pub status_types: PrintConfigStatusTypes,
-    /// If true, the status will not be printed: only the path.
-    pub no_status: bool,
-    /// If true, for each file that was copied/moved, the source of copy/move will be printed
-    /// below the destination.
-    pub copies: bool,
-    /// Termination character for the line: in practice this is '\0' or '\n'.
-    pub endl: char,
-    /// If true, paths are printed relative to the root of the repository; otherwise, they are
-    /// printed relative to getcwd(2).
-    pub root_relative: bool,
-}
-
-/// This struct covers the possible set of values for `hg status`. Used in conjunction with
-/// PrintConfig: paths will only be included in the output of `hg status` if their corresponding
-/// status is true in this struct.
-pub struct PrintConfigStatusTypes {
-    pub modified: bool,
-    pub added: bool,
-    pub removed: bool,
-    pub deleted: bool,
-    pub clean: bool,
-    pub unknown: bool,
-    pub ignored: bool,
-}
-
-/// Wrapper around an ordinary PathRelativizer that honors the --root-relative flag to `hg status`.
-struct HgStatusPathRelativizer {
-    relativizer: Option<RepoPathRelativizer>,
-}
-
-impl HgStatusPathRelativizer {
-    /// * `root_relative` true if --root-relative was specified.
-    /// * `relativizer` comes from HgArgs.relativizer.
-    pub fn new(root_relative: bool, relativizer: RepoPathRelativizer) -> HgStatusPathRelativizer {
-        let relativizer = match (root_relative, relativizer) {
-            (false, r) => Some(r),
-            _ => None,
-        };
-        HgStatusPathRelativizer { relativizer }
-    }
-
-    /// Returns a String that is suitable for display to the user.
-    ///
-    /// If `root_relative` is true, the path returned will be relative to the working directory.
-    pub fn relativize(&self, repo_path: &RepoPath) -> String {
-        let out = match self.relativizer {
-            Some(ref relativizer) => relativizer.relativize(repo_path),
-            None => repo_path.to_string(),
-        };
-
-        if !out.is_empty() {
-            out
-        } else {
-            // In the rare event that the relativized path results in the empty string, print "."
-            // instead so the user does not end up with an empty line.
-            String::from(".")
-        }
-    }
-}
-
-/// Holds the result of parsing an argument list.
-#[cfg(test)]
-use telemetry::argparse::ParsedArgs;
-
-impl PrintConfig {
-    #[cfg(test)]
-    fn new(command: &ParsedArgs) -> PrintConfig {
-        // Note that if none of -mardcui is specified explicitly, then -mardu is assumed.
-        let modified = command.is_present("modified");
-        let added = command.is_present("added");
-        let removed = command.is_present("removed");
-        let deleted = command.is_present("deleted");
-        let clean = command.is_present("clean");
-        let unknown = command.is_present("unknown");
-        let ignored = command.is_present("ignored");
-        let status_types = if modified || added || removed || deleted || clean || unknown || ignored
-        {
-            PrintConfigStatusTypes {
-                modified,
-                added,
-                removed,
-                deleted,
-                clean,
-                unknown,
-                ignored,
-            }
-        } else {
-            PrintConfigStatusTypes {
-                modified: true,
-                added: true,
-                removed: true,
-                deleted: true,
-                clean: false,
-                unknown: true,
-                ignored: false,
-            }
-        };
-
-        let no_status = command.is_present("no-status");
-        let endl = if command.is_present("print0") {
-            '\0'
-        } else {
-            '\n'
-        };
-        PrintConfig {
-            status_types,
-            no_status,
-            // Note that if --no-status is specified, then it disables --copies.
-            copies: !no_status && command.is_present("copies"),
-            endl,
-            root_relative: command.hgplain || command.is_present("root-relative"),
-        }
-    }
-
-    fn print_status(
-        &self,
-        status: &status::Status,
-        copymap: &HashMap<RepoPathBuf, RepoPathBuf>,
-        relativizer: &HgStatusPathRelativizer,
-        use_color: bool,
-        io: &IO,
-    ) -> Result<()> {
-        let endl = self.endl;
-
-        let print_group = |
-            print_group,
-            enabled: bool,
-            group: &mut dyn Iterator<Item = &RepoPathBuf>,
-        | -> Result<(), io::Error> {
-            if !enabled {
-                return Ok(());
-            }
-
-            // `hg config | grep color` did not yield the entries for color.status listed on
-            // https://www.mercurial-scm.org/wiki/ColorExtension. At Facebook, we seem to match
-            // the defaults listed on the wiki page, except we don't change the background color.
-            let (code, ansi_prefix) = match print_group {
-                PrintGroup::Modified => ("M ", format!("{}{}", BLUE, BOLD)),
-                PrintGroup::Added => ("A ", format!("{}{}", GREEN, BOLD)),
-                PrintGroup::Removed => ("R ", format!("{}{}", RED, BOLD)),
-                PrintGroup::Deleted => ("! ", format!("{}{}{}", CYAN, BOLD, UNDERLINE)),
-                PrintGroup::Unknown => ("? ", format!("{}{}{}", MAGENTA, BOLD, UNDERLINE)),
-                PrintGroup::Ignored => ("I ", format!("{}{}", BRIGHT_BLACK, BOLD)),
-                PrintGroup::Clean => ("C ", "".to_owned()),
-            };
-            let prefix = if self.no_status { "" } else { code };
-            let (prefix, suffix) = if use_color {
-                (format!("{}{}", ansi_prefix, prefix), RESET.to_string())
-            } else {
-                (prefix.to_owned(), "".to_owned())
-            };
-
-            let mut group = group.collect::<Vec<_>>();
-            group.sort();
-            for path in group {
-                io.write(format!(
-                    "{}{}{}{}",
-                    prefix,
-                    &relativizer.relativize(path),
-                    suffix,
-                    endl
-                ))?;
-                if self.copies {
-                    if let Some(p) = copymap.get(path) {
-                        io.write(format!("  {}{}", &relativizer.relativize(p), endl))?;
-                    }
-                }
-            }
-            Ok(())
-        };
-
-        print_group(
-            PrintGroup::Modified,
-            self.status_types.modified,
-            &mut status.modified(),
-        )?;
-        print_group(
-            PrintGroup::Added,
-            self.status_types.added,
-            &mut status.added(),
-        )?;
-        print_group(
-            PrintGroup::Removed,
-            self.status_types.removed,
-            &mut status.removed(),
-        )?;
-        print_group(
-            PrintGroup::Deleted,
-            self.status_types.deleted,
-            &mut status.deleted(),
-        )?;
-        print_group(
-            PrintGroup::Unknown,
-            self.status_types.unknown,
-            &mut status.unknown(),
-        )?;
-        print_group(
-            PrintGroup::Ignored,
-            self.status_types.ignored,
-            &mut status.ignored(),
-        )?;
-        print_group(
-            PrintGroup::Clean,
-            self.status_types.clean,
-            &mut status.clean(),
-        )?;
-
-        Ok(())
-    }
-}
-
 fn print_errors(raw_status: &ScmStatus, io: &IO) -> Result<u8> {
     if raw_status.errors.is_empty() {
         Ok(0)
@@ -504,26 +272,8 @@ fn print_errors(raw_status: &ScmStatus, io: &IO) -> Result<u8> {
     }
 }
 
-const RED: &str = "\u{001B}[31m";
-const BLUE: &str = "\u{001B}[34m";
-const MAGENTA: &str = "\u{001B}[35m";
-const GREEN: &str = "\u{001B}[32m";
-const CYAN: &str = "\u{001B}[36m";
-const BRIGHT_BLACK: &str = "\u{001B}[30;1m"; // Effectively grey.
-
 const BOLD: &str = "\u{001B}[1m";
-const UNDERLINE: &str = "\u{001b}[4m";
 const RESET: &str = "\u{001B}[0m";
-
-enum PrintGroup {
-    Modified,
-    Added,
-    Removed,
-    Deleted,
-    Unknown,
-    Ignored,
-    Clean,
-}
 
 fn group_entries(
     repo_root: &Path,
@@ -797,14 +547,10 @@ enum DirstateMergeState {
     OtherParent,
 }
 
-// TODO: Consider migrating from telemetry::hgargparse to cliparser for faster
-// build and better OSS support.
 #[cfg(test)]
 mod test {
     use std::collections::BTreeMap;
 
-    use telemetry::hgargparse::hg_parser;
-    use telemetry::hgargparse::parse_args;
     use telemetry::test_utils::generate_fixture;
     use telemetry::test_utils::Fixture;
 
@@ -865,51 +611,6 @@ mod test {
         assert_eq!(actual_output, test_case.stdout);
         assert_eq!(actual_error, test_case.stderr);
         assert!(actual_status == test_case.expected);
-    }
-
-    #[derive(Default)]
-    struct PrintTestCase {
-        args: Vec<String>,
-        status: status::Status,
-        copymap: HashMap<RepoPathBuf, RepoPathBuf>,
-        use_color: bool,
-        stdout: String,
-        stderr: String,
-    }
-
-    /// Helper function for testing `print_status`.
-    fn test_print(test_case: PrintTestCase) {
-        let repo_root = generate_fixture(vec![]);
-        let repo_root_path = repo_root.path().canonicalize().unwrap();
-        let mut all_args: Vec<String> = vec![
-            "--cwd".to_owned(),
-            repo_root.path().to_str().unwrap().to_string(),
-            "status".to_owned(),
-        ];
-        all_args.extend_from_slice(&test_case.args);
-        let (hg_args, _handler) = parse_args(hg_parser(), &all_args[..]);
-        let print_config = PrintConfig::new(&hg_args.command);
-
-        let relativizer = HgStatusPathRelativizer::new(
-            print_config.root_relative,
-            RepoPathRelativizer::new(hg_args.cwd, repo_root_path),
-        );
-        let tin = "".as_bytes();
-        let tout = Vec::new();
-        let terr = Vec::new();
-        let io = IO::new(tin, tout, Some(terr));
-        print_config
-            .print_status(
-                &test_case.status,
-                &test_case.copymap,
-                &relativizer,
-                test_case.use_color,
-                &io,
-            )
-            .unwrap();
-        let (actual_output, actual_error) = extract_output(io);
-        assert_eq!(actual_output, test_case.stdout);
-        assert_eq!(actual_error, test_case.stderr);
     }
 
     #[test]
@@ -1019,109 +720,6 @@ mod test {
             entries,
             dirstate_data_tuples,
             expected,
-            ..Default::default()
-        });
-    }
-
-    // XXX: PathRelativizer is problematic on OSX.
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn test_print_status() {
-        let status = status::StatusBuilder::new()
-            .modified(vec![repo_path_buf("modified.txt")])
-            .added(vec![
-                repo_path_buf("added.txt"),
-                repo_path_buf("added_even_though_normally_ignored.txt"),
-                repo_path_buf("added_other_parent.txt"),
-            ])
-            .removed(vec![
-                repo_path_buf("modified_and_marked_for_removal.txt"),
-                repo_path_buf("removed.txt"),
-            ])
-            .deleted(vec![repo_path_buf(
-                "removed_but_not_marked_for_removal.txt",
-            )])
-            .unknown(vec![repo_path_buf("unknown.txt")])
-            .ignored(vec![repo_path_buf("ignored.txt")])
-            .build();
-
-        // We have to slice [1..] to strip the leading newline.
-        let no_arg_stdout = r#"
-M modified.txt
-A added.txt
-A added_even_though_normally_ignored.txt
-A added_other_parent.txt
-R modified_and_marked_for_removal.txt
-R removed.txt
-! removed_but_not_marked_for_removal.txt
-? unknown.txt
-"#[1..]
-            .to_string();
-        test_print(PrintTestCase {
-            status: status.clone(),
-            stdout: no_arg_stdout,
-            ..Default::default()
-        });
-
-        // We have to slice [1..] to strip the leading newline.
-        let mardui_stdout = r#"
-M modified.txt
-A added.txt
-A added_even_though_normally_ignored.txt
-A added_other_parent.txt
-R modified_and_marked_for_removal.txt
-R removed.txt
-! removed_but_not_marked_for_removal.txt
-? unknown.txt
-I ignored.txt
-"#[1..]
-            .to_string();
-        test_print(PrintTestCase {
-            status: status.clone(),
-            args: vec!["-mardui".to_owned()],
-            stdout: mardui_stdout,
-            ..Default::default()
-        });
-
-        let mardui_color_stdout = concat!(
-            "\u{001B}[34m\u{001B}[1mM modified.txt\u{001B}[0m\n",
-            "\u{001B}[32m\u{001B}[1mA added.txt\u{001B}[0m\n",
-            "\u{001B}[32m\u{001B}[1mA added_even_though_normally_ignored.txt\u{001B}[0m\n",
-            "\u{001B}[32m\u{001B}[1mA added_other_parent.txt\u{001B}[0m\n",
-            "\u{001B}[31m\u{001B}[1mR modified_and_marked_for_removal.txt\u{001B}[0m\n",
-            "\u{001B}[31m\u{001B}[1mR removed.txt\u{001B}[0m\n",
-            "\u{001B}[36m\u{001B}[1m\u{001b}[4m! removed_but_not_marked_for_removal.txt\u{001B}[0m\n",
-            "\u{001B}[35m\u{001B}[1m\u{001b}[4m? unknown.txt\u{001B}[0m\n",
-            "\u{001B}[30;1m\u{001B}[1mI ignored.txt\u{001B}[0m\n",
-        );
-        test_print(PrintTestCase {
-            status,
-            args: vec!["-mardui".to_owned()],
-            use_color: true,
-            stdout: mardui_color_stdout.to_string(),
-            ..Default::default()
-        });
-    }
-
-    // XXX: PathRelativizer is problematic on OSX.
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn no_status_flag() {
-        let status = status::StatusBuilder::new()
-            .modified(vec![repo_path_buf("file.txt")])
-            .build();
-
-        test_print(PrintTestCase {
-            status: status.clone(),
-            args: vec!["--no-status".to_owned()],
-            stdout: "file.txt\n".to_owned(),
-            ..Default::default()
-        });
-
-        test_print(PrintTestCase {
-            status,
-            args: vec!["-n".to_owned()],
-            stdout: "file.txt\n".to_owned(),
             ..Default::default()
         });
     }

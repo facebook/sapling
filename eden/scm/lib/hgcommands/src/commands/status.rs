@@ -5,17 +5,20 @@
  * GNU General Public License version 2.
  */
 
+mod print;
+
 use anyhow::Result;
 use clidispatch::errors;
+use clidispatch::io::CanColor;
 use clidispatch::io::IO;
 use cliparser::define_flags;
-use edenfs_client::status::maybe_status_fastpath;
-use edenfs_client::status::PrintConfig;
-use edenfs_client::status::PrintConfigStatusTypes;
 use repo::repo::Repo;
+use types::path::RepoPathRelativizer;
 
 use crate::commands::FormatterOpts;
 use crate::commands::WalkOpts;
+use print::PrintConfig;
+use print::PrintConfigStatusTypes;
 
 define_flags! {
     pub struct StatusOpts {
@@ -139,10 +142,20 @@ pub fn run(opts: StatusOpts, io: &IO, repo: Repo) -> Result<u8> {
         copies: opts.copies,
         endl: if opts.print0 { '\0' } else { '\n' },
         root_relative: opts.root_relative,
+        use_color: std::io::stdout().can_color(),
     };
 
+    // Attempt to fetch status information from EdenFS.
+    let (status, copymap) = edenfs_client::status::maybe_status_fastpath(
+        repo.path(),
+        io,
+        print_config.status_types.ignored,
+    )?;
+
     let cwd = std::env::current_dir()?;
-    maybe_status_fastpath(repo.path(), &cwd, print_config, io)
+    let relativizer = RepoPathRelativizer::new(cwd, repo.path());
+    print::print_status(io, relativizer, &print_config, &status, &copymap)?;
+    Ok(0)
 }
 
 pub fn name() -> &'static str {
