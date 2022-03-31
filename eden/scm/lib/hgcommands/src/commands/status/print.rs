@@ -109,11 +109,10 @@ pub fn print_status(
     let endl = config.endl;
     let relativizer = HgStatusPathRelativizer::new(config.root_relative, relativizer);
 
-    let print_group = |
-        print_group,
-        enabled: bool,
-        group: &mut dyn Iterator<Item = &RepoPathBuf>,
-    | -> Result<(), std::io::Error> {
+    let print_group = |print_group,
+                       enabled: bool,
+                       group: &mut dyn Iterator<Item = &RepoPathBuf>|
+     -> Result<(), std::io::Error> {
         if !enabled {
             return Ok(());
         }
