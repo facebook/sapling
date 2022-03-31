@@ -120,7 +120,7 @@ impl LoggingArgs {
         let glog_drain = make_tag_filter_drain(
             glog_drain(),
             self.log_include_tag.iter().cloned().collect(),
-            self.log_include_tag.iter().cloned().collect(),
+            self.log_exclude_tag.iter().cloned().collect(),
             true, // Log messages which have no tags
         )?;
 
