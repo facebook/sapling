@@ -16,7 +16,7 @@ http = "0.2"
 metalog = { version = "0.1.0", path = "../metalog" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 nonblocking = { version = "0.1.0", path = "../nonblocking" }
-thiserror = "1.0.29"
+thiserror = "1.0.30"
 tracing = "0.1.32"
 zstore = { version = "0.1.0", path = "../zstore" }
 

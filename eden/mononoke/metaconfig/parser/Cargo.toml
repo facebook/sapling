@@ -22,7 +22,7 @@ repos = { version = "0.1.0", path = "../../../../configerator/structs/scm/monono
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_ignored = "0.1"
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
-thiserror = "1.0.29"
+thiserror = "1.0.30"
 toml = "=0.5.8"
 
 [dev-dependencies]

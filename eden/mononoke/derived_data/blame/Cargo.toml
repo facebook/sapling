@@ -29,7 +29,7 @@ manifest = { version = "0.1.0", path = "../../manifest" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-thiserror = "1.0.29"
+thiserror = "1.0.30"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 unodes = { version = "0.1.0", path = "../unodes" }
 

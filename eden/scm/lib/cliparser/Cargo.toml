@@ -12,7 +12,7 @@ cpython = { version = "0.7", optional = true, default-features = false }
 cpython_ext = { version = "0.1.0", path = "../cpython-ext", optional = true, default-features = false }
 lazy_static = "1.0"
 shlex = "1.0"
-thiserror = "1.0.29"
+thiserror = "1.0.30"
 
 [features]
 default = []

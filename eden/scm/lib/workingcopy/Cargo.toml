@@ -16,7 +16,7 @@ parking_lot = { version = "0.11.2", features = ["send_guard"] }
 pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 status = { version = "0.1.0", path = "../status" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
-thiserror = "1.0.29"
+thiserror = "1.0.30"
 treestate = { version = "0.1.0", path = "../treestate" }
 types = { version = "0.1.0", path = "../types" }
 vfs = { version = "0.1.0", path = "../vfs" }

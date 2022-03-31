@@ -13,7 +13,7 @@ fs2 = "0.4"
 fsinfo = { version = "0.1.0", path = "../fsinfo" }
 libc = "0.2.121"
 minibytes = { version = "0.1.0", path = "../minibytes" }
-thiserror = "1.0.29"
+thiserror = "1.0.30"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }
