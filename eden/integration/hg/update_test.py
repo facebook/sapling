@@ -607,6 +607,22 @@ class UpdateTest(EdenHgTestCase):
             self.assert_status_empty()
             self.assertEqual(self.read_file("foo/bar.txt"), "updated in commit 3\n")
 
+    def test_update_dir_to_file(self) -> None:
+        self.repo.remove_file("foo/subdir")
+        self.repo.write_file("foo/subdir", "I am not a directory any more\n")
+        commit4 = self.repo.commit("directory to file")
+
+        # test without the directory materialized
+        self.repo.update(self.commit3)
+        self.repo.update(commit4)
+
+        # and with the directory materialized
+        self.repo.update(self.commit3)
+        self.read_dir("foo/subdir")
+        # this command is what is failing in our current eden release.
+        # fix incoming.
+        # self.repo.update(commit4)
+
 
 @hg_test
 # pyre-ignore[13]: T62487924

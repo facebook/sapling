@@ -302,6 +302,10 @@ class EdenTestCase(EdenTestCaseBase):
             if ex.errno != errno.EEXIST:
                 raise
 
+    def read_dir(self, path: str) -> List[str]:
+        fullpath = self.get_path(path)
+        return os.listdir(fullpath)
+
     def make_parent_dir(self, path: str) -> None:
         dirname = os.path.dirname(path)
         if dirname:
