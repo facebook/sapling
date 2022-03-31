@@ -414,7 +414,44 @@ class Redirection:
     def _apply_symlink(self, checkout_path: Path, target: Path) -> None:
         symlink_path = Path(checkout_path / self.repo_path)
         symlink_path.parent.mkdir(exist_ok=True, parents=True)
-        symlink_path.symlink_to(target)
+
+        if sys.platform != "win32":
+            symlink_path.symlink_to(target)
+        else:
+            # Creating a symlink on Windows is non-atomic, and thus when EdenFS
+            # gets the notification about a file being created and then goes on
+            # testing what's on disk, it may either find a symlink, or a directory.
+            #
+            # This is bad for EdenFS for a number of reason. The main one being
+            # that EdenFS will attempt to recursively add all the childrens of
+            # that directory to the inode hierarchy. If the symlinks points to
+            # a very large directory, this can be extremely slow, leading to a
+            # very poor user experience.
+            #
+            # Since these symlinks are created for redirections, we can expect
+            # the above to be true.
+            #
+            # To fix this in a generic way is hard to impossible. One of the
+            # approach would be to hack in the PrjfsDispatcherImpl.cpp and
+            # sleep a bit when we detect a directory, to make sure that we
+            # retest it if this was a symlink. This wouldn't work if the system
+            # is overloaded, and it would add a small delay to update/status
+            # operation due to these waiting on all pending notifications to be
+            # handled.
+            #
+            # Instead, we chose here to handle it in a local way by forcing the
+            # redirection to be created atomically. We first create the symlink
+            # in the parent directory of the repository, and then move it
+            # inside, which is atomic.
+            repo_and_symlink_path = Path(checkout_path.name) / self.repo_path
+            temp_symlink_path = checkout_path.parent / Path(
+                "Z".join(repo_and_symlink_path.parts)
+            )
+            # These files should be created by EdenFS only, let's just remove
+            # it if it's there.
+            temp_symlink_path.unlink(missing_ok=True)
+            temp_symlink_path.symlink_to(target)
+            os.rename(temp_symlink_path, symlink_path)
 
     def apply(self, checkout: EdenCheckout) -> None:
         disposition = self.remove_existing(checkout)
