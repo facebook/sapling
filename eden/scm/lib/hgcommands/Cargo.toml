@@ -46,6 +46,7 @@ repo = { version = "0.1.0", path = "../repo" }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
 runlog = { version = "0.1.0", path = "../runlog" }
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
+status = { version = "0.1.0", path = "../status" }
 terminal_size = "0.1"
 tracing = "0.1.32"
 tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
