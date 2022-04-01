@@ -521,6 +521,34 @@ struct PushrebaseOutcome {
   2: list<PushrebaseRebasedCommit> rebased_commits;
 }
 
+typedef string SparseProfileName
+
+struct AllSparseProfiles {}
+
+/// Which sparse profiles should be analysed
+union SparseProfiles {
+  /// Given list of names
+  1: list<SparseProfileName> profiles;
+  /// All available profiles based on configured root path
+  2: AllSparseProfiles all_profiles;
+}
+
+struct SparseProfileSize {
+  1: i64 size;
+}
+
+struct SparseProfileChange {
+  1: i64 size_change;
+}
+
+struct SparseProfileSizes {
+  1: map<SparseProfileName, SparseProfileSize> sizes;
+}
+
+struct SparseProfileDeltaSizes {
+  1: map<SparseProfileName, SparseProfileChange> size_changes;
+}
+
 /// Method parameters structures
 
 struct ListReposParams {}
@@ -1007,6 +1035,18 @@ struct CommitMultiplePathLastChangedParams {
   2: set<CommitIdentityScheme> identity_schemes;
 }
 
+struct CommitSparseProfileDeltaParams {
+  /// Revision on which inspect sparse profiles
+  1: CommitId other_id;
+  /// list of sparse profiles for which calculate size change
+  2: SparseProfiles profiles;
+}
+
+struct CommitSparseProfileSizeParams {
+  /// list of sparse profiles for which calculate total size
+  1: SparseProfiles profiles;
+}
+
 struct TreeExistsParams {}
 
 struct TreeListParams {
@@ -1401,6 +1441,15 @@ struct CommitMultiplePathLastChangedResponse {
   1: map<Path, CommitPathLastChange> path_last_change;
 }
 
+struct CommitSparseProfileDeltaResponse {
+  /// If any sparse profile changed, this contains change for each profile
+  1: optional SparseProfileDeltaSizes changed_sparse_profiles;
+}
+
+struct CommitSparseProfileSizeResponse {
+  1: SparseProfileSizes profiles_size;
+}
+
 struct TreeListResponse {
   /// The directory entries in this directory, at the offset requested,
   /// limited by the limit requested.
@@ -1775,6 +1824,18 @@ service SourceControlService extends fb303_core.BaseService {
   CommitMultiplePathLastChangedResponse commit_multiple_path_last_changed(
     1: CommitSpecifier commit,
     2: CommitMultiplePathLastChangedParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
+  /// Calculate the size change for each sparse profile for a given commit
+  CommitSparseProfileDeltaResponse commit_sparse_profile_delta(
+    1: CommitSpecifier commit,
+    2: CommitSparseProfileDeltaParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
+  /// Calculate the total size of each sparse profiles
+  CommitSparseProfileSizeResponse commit_sparse_profile_size(
+    1: CommitSpecifier commit,
+    2: CommitSparseProfileSizeParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
 
   /// Tree Methods

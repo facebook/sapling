@@ -74,6 +74,10 @@ impl AddScubaResponse for thrift::CommitPathLastChangedResponse {}
 
 impl AddScubaResponse for thrift::CommitMultiplePathLastChangedResponse {}
 
+impl AddScubaResponse for thrift::CommitSparseProfileDeltaResponse {}
+
+impl AddScubaResponse for thrift::CommitSparseProfileSizeResponse {}
+
 impl AddScubaResponse for thrift::FileChunk {}
 
 impl AddScubaResponse for thrift::FileInfo {}

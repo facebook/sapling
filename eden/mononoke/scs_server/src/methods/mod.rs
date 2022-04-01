@@ -14,6 +14,7 @@ use crate::source_control_impl::SourceControlServiceImpl;
 pub(crate) mod commit;
 pub(crate) mod commit_lookup_pushrebase_history;
 pub(crate) mod commit_path;
+pub(crate) mod commit_sparse_profile_info;
 pub(crate) mod file;
 pub(crate) mod megarepo;
 pub(crate) mod repo;
