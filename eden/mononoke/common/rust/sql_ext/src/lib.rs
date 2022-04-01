@@ -30,7 +30,7 @@ pub mod facebook {
     #[cfg(fbcode_build)]
     pub use r#impl::{
         create_mysql_connections_sharded, create_mysql_connections_unsharded,
-        myadmin::{MyAdmin, MyAdminLagMonitor},
+        myadmin::{replication_status_chunked, MyAdmin, MyAdminLagMonitor},
         PoolConfig, SharedConnectionPool,
     };
 
