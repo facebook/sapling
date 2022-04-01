@@ -303,7 +303,9 @@ impl MetaLog {
             // since the final root object is not committed yet.
             let ancestor = Self::open(&self.path, Some(self.orig_root_id))?;
             let other = Self::open(&self.path, None)?;
-            let mut resolver = options.resolver.unwrap_or(Box::new(resolver::fail));
+            let mut resolver = options
+                .resolver
+                .unwrap_or_else(|| Box::new(resolver::simple));
             (resolver)(self, &other, &ancestor)?;
         }
         self.root.message = options.message.to_string();
@@ -561,38 +563,56 @@ pub(crate) struct SerId20(#[serde(with = "types::serde_with::hgid::tuple")] pub(
 pub mod resolver {
     use std::collections::BTreeSet;
 
+    use super::Id20;
     use super::MetaLog;
+    use super::SerId20;
     use crate::Result;
 
-    /// Fail the merge unconditionally on any kind of conflicts.
-    pub fn fail(this: &mut MetaLog, other: &MetaLog, ancestor: &MetaLog) -> Result<()> {
+    /// Simple merge strategy: Only reject conflicted changes.
+    ///
+    /// ```plain,ignore
+    ///     ancestor this other result
+    ///     A        A    A     A
+    ///     A        A    B     B
+    ///     A        B    A     B
+    ///     A        B    B     B
+    ///     A        B    C     (Error)
+    /// ```
+    pub fn simple(this: &mut MetaLog, other: &MetaLog, ancestor: &MetaLog) -> Result<()> {
         let mut conflicts = BTreeSet::new();
+        let mut resolved: Vec<(String, Option<Id20>)> = Vec::new();
         for key in other.keys().iter().chain(this.keys().iter()) {
             let ancestor_id = ancestor.root.map.get(&key.to_string()).map(|t| t.0);
             let other_id = other.root.map.get(&key.to_string()).map(|t| t.0);
             let this_id = this.root.map.get(&key.to_string()).map(|t| t.0);
-            let changed_description = match (
+            match (
                 ancestor_id == this_id,
                 ancestor_id == other_id,
                 this_id == other_id,
             ) {
-                (false, false, false) => "both changed, diverged",
-                (false, false, true) => "both changed, same",
-                (true, false, _) => "other changed",
-                (false, true, _) => "this changed",
-                (true, true, _) => continue,
-            };
-            conflicts.insert(format!("  {}: {}", key, changed_description));
+                (false, false, false) => {
+                    conflicts.insert(key.to_string());
+                }
+                (true, false, _) => {
+                    resolved.push((key.to_string(), other_id));
+                }
+                _ => {}
+            }
         }
-        let message = if conflicts.is_empty() {
-            "conflict detected".to_string()
-        } else {
-            format!(
-                "conflict detected:\n{}",
+        if !conflicts.is_empty() {
+            let message = format!(
+                "conflicted changes:\n{}",
                 conflicts.into_iter().collect::<Vec<_>>().join("\n")
-            )
-        };
-        Err(this.error(message))
+            );
+            return Err(this.error(message));
+        }
+        for (key, opt_id) in resolved {
+            match opt_id {
+                Some(id) => this.root.map.insert(key, SerId20(id)),
+                None => this.root.map.remove(&key),
+            };
+        }
+        Ok(())
     }
 }
 
@@ -679,40 +699,86 @@ mod tests {
         assert_eq!(metalog.message(), "third_commit");
     }
 
+    /// Populate metalog for conflict testing.
+    /// Return (ancestor, this, other).
+    /// ancestor and other are committed, this has pending changes in memory.
+    ///
+    /// Content of metalog is decided by the name. A name contains 3
+    /// characters for (ancestor, this, other). Each character could be:
+    /// 0: not present; other: content with single char.
+    fn populate_for_conflict_test(
+        metalog: &mut MetaLog,
+        names: &[&str],
+    ) -> (MetaLog, MetaLog, MetaLog) {
+        fn populate(metalog: &mut MetaLog, names: &[&str], index: usize) {
+            for name in names {
+                let ch = name.chars().nth(index).unwrap();
+                if ch == '0' {
+                    metalog.remove(name).unwrap();
+                } else {
+                    metalog.set(name, &[ch as u8]).unwrap();
+                }
+            }
+        }
+
+        // Create ancestor
+        populate(metalog, names, 0);
+        let ancestor_id = metalog.commit(commit_opt("ancestor", 0)).unwrap();
+
+        // Prepare "this" - uncommitted
+        let mut this = metalog.checkout(ancestor_id).unwrap();
+        populate(&mut this, names, 1);
+
+        // Prepare "other" - committed
+        let mut other = metalog.checkout(ancestor_id).unwrap();
+        populate(&mut other, names, 2);
+        other.commit(commit_opt("other", 1)).unwrap();
+
+        let ancestor = metalog.checkout(ancestor_id).unwrap();
+        (ancestor, this, other)
+    }
+
     #[test]
-    fn test_default_resolver() {
+    fn test_default_resolver_conflicts() {
         let dir = TempDir::new().unwrap();
         let mut metalog = MetaLog::open(&dir, None).unwrap();
-        metalog.set("00", b"0").unwrap();
-        metalog.set("10", b"0").unwrap();
-        metalog.set("01", b"0").unwrap();
-        metalog.set("11a", b"0").unwrap();
-        metalog.set("11b", b"0").unwrap();
-        metalog.commit(commit_opt("commit 0", 0)).unwrap();
-
-        let mut metalog1 = MetaLog::open(&dir, None).unwrap();
-        let mut metalog2 = MetaLog::open(&dir, None).unwrap();
-        metalog1.set("10", b"1").unwrap();
-        metalog1.set("11a", b"1").unwrap();
-        metalog1.set("11b", b"1").unwrap();
-        metalog2.set("01", b"1").unwrap();
-        metalog2.set("11a", b"1").unwrap();
-        metalog2.set("11b", b"2").unwrap();
-
-        metalog1.commit(commit_opt("commit 1", 1)).unwrap();
-        let err = metalog2
-            .commit(commit_opt("commit 2", 2))
+        let names = [
+            "001", "010", "011", "012", "100", "101", "102", "110", "111", "112", "120", "121",
+            "122", "123",
+        ];
+        let mut this = populate_for_conflict_test(&mut metalog, &names).1;
+        let err = this
+            .commit(commit_opt("this", 2))
             .unwrap_err()
             .to_string()
             .replace(&format!("{:?}", dir.path()), "<path>");
-        assert_eq!(
-            err,
-            r#"<path>: conflict detected:
-  01: this changed
-  10: other changed
-  11a: both changed, same
-  11b: both changed, diverged"#
-        );
+        assert_eq!(err, "<path>: conflicted changes:\n012\n102\n120\n123");
+    }
+
+    #[test]
+    fn test_default_resolver_no_conflict() {
+        let dir = TempDir::new().unwrap();
+        let mut metalog = MetaLog::open(&dir, None).unwrap();
+        // Similar to test_default_resolver_conflicts but without the conflicted cases.
+        let names = [
+            "001", "010", "011", "100", "101", "110", "111", "112", "121", "122",
+        ];
+        let mut this = populate_for_conflict_test(&mut metalog, &names).1;
+        this.commit(commit_opt("this", 2)).unwrap();
+        // Check resolved content.
+        for name in names {
+            let chars: Vec<char> = name.chars().collect();
+            let expected: char = if chars[0] == chars[1] {
+                chars[2]
+            } else {
+                chars[1]
+            };
+            if expected == '0' {
+                assert!(this.get(name).unwrap().is_none());
+            } else {
+                assert_eq!(this.get(name).unwrap().unwrap(), &[expected as u8]);
+            }
+        }
     }
 
     #[test]
