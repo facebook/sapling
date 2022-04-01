@@ -160,6 +160,7 @@ Grep options work
   a:1:x
 #if osx
   $ hg grep -V ''
+  [1] (?)
 #else
   $ hg grep -V ''
   [123]
