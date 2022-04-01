@@ -298,7 +298,7 @@ impl MetaLog {
                 actual_compaction_epoch.unwrap_or(0)
             )));
         }
-        if self.log.read().is_changed() && !options.detached {
+        if self.is_latest_root_different()? && !options.detached {
             // If 'detached' is set, then just write it in a conflict-free way,
             // since the final root object is not committed yet.
             let ancestor = Self::open(&self.path, Some(self.orig_root_id))?;
@@ -342,6 +342,21 @@ impl MetaLog {
         }
         tracing::debug!("committed {} => {}", orig_root_id.to_hex(), id.to_hex());
         Ok(id)
+    }
+
+    /// Check if the on-disk metalog's latest root is different from orig_root_id
+    fn is_latest_root_different(&self) -> Result<bool> {
+        let log = self.log.read();
+        // The lastest root id in the in-process log is already different.
+        if find_last_root_id(&log)? != self.orig_root_id {
+            return Ok(true);
+        }
+        // The lastest root id in the in-process log is the same, but the
+        // in-process log is outdated.
+        if log.is_changed() {
+            return Ok(true);
+        }
+        Ok(false)
     }
 
     /// Test if there are uncommitted changes.
