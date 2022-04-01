@@ -1253,7 +1253,9 @@ folly::Try<folly::Unit> PrjfsChannel::addDirectoryPlaceholder(
   if (FAILED(result)) {
     if (result == HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
       // This is already a placeholder, not an error.
-    } else if (result == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND)) {
+    } else if (
+        result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) ||
+        result == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND)) {
       // If EdenFS happens to be invalidating a directory that is no longer
       // present in the destination commit, PrjMarkDirectoryAsPlaceholder would
       // trigger a recursive lookup call and fail, raising this error. This is
