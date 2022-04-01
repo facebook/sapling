@@ -143,7 +143,7 @@ class Client(object):
               }) {
                 results {
                     nodes {
-                    latest_phabricator_version {
+                    latest_associated_phabricator_version_regardless_of_viewer {
                       description
                       repository {
                           scm_name
@@ -166,7 +166,7 @@ class Client(object):
         params = {"diffid": diffid}
         ret = self._client.query(timeout, query, params)
         return ret["data"]["phabricator_diff_query"][0]["results"]["nodes"][0][
-            "latest_phabricator_version"
+            "latest_associated_phabricator_version_regardless_of_viewer"
         ]
 
     def getlandednodes(self, repo, diffids, timeout=10):
