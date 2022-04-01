@@ -2356,7 +2356,13 @@ def main() -> int:
     parser = create_parser()
     args = parser.parse_args()
 
-    if platform.system() == "Windows":
+    # The default event loop on 3.8+ will cause an ugly backtrace when
+    # edenfsctl is interrupted. Switching back to the selector event loop.
+    if (
+        platform.system() == "Windows"
+        # pyre-fixme[16]: Windows only
+        and getattr(asyncio, "WindowsSelectorEventLoopPolicy", None) is not None
+    ):
         # pyre-fixme[16]: Windows only
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
