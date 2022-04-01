@@ -3093,32 +3093,48 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
             }
 
             const auto& name = getInodeName(ctx, treeInode);
+
+            // Now we can attempt to delete treeInode!
+            // The ordering of invalidateChannelEntryCache and tryRemoveChild
+            // is important on Windows here. We need to attempt to clear the
+            // filesystem data before we delete the inode because the kernel is
+            // the source of truth. If invalidating fails, we do not want to
+            // actually delete the inode from eden's state. Note: On NFS and
+            // FUSE, EdenFS is the source of truth. So in theory one might want
+            // to change eden first and then FUSE or NFS. On FUSE this doesn't
+            // really matter, if we invalidated fuse and then removing in eden
+            // fails, its fine we did the extra invalidation. On NFS our
+            // invalidation relies on data changing in EdenFS and the kernel
+            // noticing and clearing it's own caches. So we would really want
+            // tryRemoveChild to happen first. But thankfully
+            // invalidateChannelEntryCache doesn't do anything on NFS anyways.
+            // so it does not matter these are out of order.
+
+            if (parentInode
+                    ->invalidateChannelEntryCache(
+                        *parentInode->contents_.wlock(),
+                        name,
+                        treeInode->getNodeId())
+                    .hasException()) {
+              ctx->addConflict(
+                  ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
+              return InvalidationRequired::No;
+            }
+
+            if (parentInode->tryRemoveChild(
+                    ctx->renameLock(),
+                    name,
+                    treeInode,
+                    InvalidationRequired::No) != 0) {
+              ctx->addConflict(
+                  ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
+              // Since we've invalidated the entry, even if this fails we need
+              // to make sure the directory is also invalidated, fallthrough.
+            }
+
+            // If the entry does not exist at the new commit we can stop here.
+            // no need to add anything back to our parent's contents.
             if (!newScmEntry) {
-              // Make sure we invalidate the treeInode and remove it, the
-              // checkout call merely makes sure that treeInode is emptied of
-              // all files/directories.
-              if (parentInode
-                      ->invalidateChannelEntryCache(
-                          *parentInode->contents_.wlock(),
-                          name,
-                          treeInode->getNodeId())
-                      .hasException()) {
-                ctx->addConflict(
-                    ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
-                return InvalidationRequired::No;
-              }
-
-              if (parentInode->tryRemoveChild(
-                      ctx->renameLock(),
-                      name,
-                      treeInode,
-                      InvalidationRequired::No) != 0) {
-                ctx->addConflict(
-                    ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
-                // Since we've invalidated the entry, we need to make sure the
-                // directory is also invalidated, fallthrough.
-              }
-
               return InvalidationRequired::Yes;
             }
 

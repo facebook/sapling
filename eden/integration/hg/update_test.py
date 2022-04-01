@@ -619,9 +619,7 @@ class UpdateTest(EdenHgTestCase):
         # and with the directory materialized
         self.repo.update(self.commit3)
         self.read_dir("foo/subdir")
-        # this command is what is failing in our current eden release.
-        # fix incoming.
-        # self.repo.update(commit4)
+        self.repo.update(commit4)
 
 
 @hg_test

@@ -271,10 +271,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *     in source control in the previous commit state.
    * @param toTree The Tree object that the checkout operation is moving to.
    *     This argument may be null if this path no longer exists in the
-   *     destination commit.  If the destination location is empty, and this
-   *     TreeInode is empty after the checkout operation (no untracked entries
-   *     remain inside it), then this TreeInode itself will be unlinked as
-   *     well.
+   *     destination commit.  This tree inode will not be unlinked even if
+   *     toTree is null. The caller is responsible for unlinking if necessary.
    *
    * @return Returns a future that will be fulfilled once this tree and all of
    *     its children have been updated.
