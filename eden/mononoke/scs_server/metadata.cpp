@@ -17,7 +17,8 @@ std::unique_ptr<rust::srserver::RustThriftMetadata> create_metadata() noexcept {
   meta->meta_ =
       [](apache::thrift::metadata::ThriftServiceMetadataResponse& response) {
         ::apache::thrift::detail::md::ServiceMetadata<
-            ::facebook::scm::service::SourceControlServiceSvIf>::gen(response);
+            apache::thrift::ServiceHandler<
+                ::facebook::scm::service::SourceControlService>>::gen(response);
       };
   return meta;
 }
