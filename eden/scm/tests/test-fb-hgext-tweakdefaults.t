@@ -158,10 +158,7 @@ Grep options work
   a
   $ hg grep -n x
   a:1:x
-#if osx
-  $ hg grep -V ''
-  [1] (?)
-#else
+#if no-osx
   $ hg grep -V ''
   [123]
 #endif
