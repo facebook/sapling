@@ -19,6 +19,7 @@ import os
 import re
 import socket
 import subprocess
+import tempfile
 import time
 import traceback
 import weakref
@@ -176,6 +177,22 @@ def callcatch(ui, req, func):
             if ui.configbool("experimental", "network-doctor"):
                 problem = bindings.doctor.diagnose_network(ui._rcfg._rcfg)
                 if problem:
+                    fd, path = tempfile.mkstemp(prefix="hg-error-details-")
+                    with util.fdopen(fd, "wb") as tmp:
+                        tmp.write(
+                            "Doctor output:\n{}\n\n{}\n\nOriginal Error:\n{}\n\n{}".format(
+                                problem[0], problem[1], inst, util.smartformatexc()
+                            ).encode()
+                        )
+
+                    ui.warn(
+                        _(
+                            "command failed due to network error (see {} for details)\n".format(
+                                path
+                            )
+                        ),
+                        error=_("abort"),
+                    )
                     ui.warn("\n{}\n".format(problem[0]), label="doctor.treatment")
                     ui.note("  {}\n".format(problem[1]))
                     ui.debug("\nOriginal error:\n{}\n".format(inst))

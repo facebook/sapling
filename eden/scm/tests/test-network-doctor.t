@@ -10,6 +10,7 @@ Set up fake cert paths so we don't hit "missing certs" error.
 
   $ hg pull --config edenapi.url=https://test_fail/foo --config doctor.external-host-check-url=https://test_succeed
   pulling from mononoke://169.254.1.2/foo
+  abort: command failed due to network error (see * for details) (glob)
   
   Please check your VPN connection (internet okay, but can't reach corp).
   [1]
@@ -17,6 +18,7 @@ Set up fake cert paths so we don't hit "missing certs" error.
 
   $ hg pull --config edenapi.url=https://test_fail/foo --config doctor.external-host-check-url=https://test_succeed --verbose
   pulling from mononoke://169.254.1.2/foo
+  abort: command failed due to network error (see * for details) (glob)
   
   Please check your VPN connection (internet okay, but can't reach corp).
     no corp connectivity: TCP error: test
@@ -25,6 +27,7 @@ Set up fake cert paths so we don't hit "missing certs" error.
 
   $ hg pull --config edenapi.url=https://test_fail/foo --config doctor.external-host-check-url=https://test_succeed --debug
   pulling from mononoke://169.254.1.2/foo
+  abort: command failed due to network error (see * for details) (glob)
   
   Please check your VPN connection (internet okay, but can't reach corp).
     no corp connectivity: TCP error: test
