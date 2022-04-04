@@ -8,8 +8,8 @@
 #include "eden/fs/utils/ProcessAccessLog.h"
 
 #include <benchmark/benchmark.h>
+#include "eden/common/utils/ProcessNameCache.h"
 #include "eden/common/utils/benchharness/Bench.h"
-#include "eden/fs/utils/ProcessNameCache.h"
 
 using namespace facebook::eden;
 

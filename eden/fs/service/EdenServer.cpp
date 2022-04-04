@@ -35,6 +35,7 @@
 #include <thrift/lib/cpp2/server/ThriftProcessor.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
+#include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/TomlConfig.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
@@ -76,7 +77,6 @@
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcUtil.h"
-#include "eden/fs/utils/ProcessNameCache.h"
 #include "eden/fs/utils/TimeUtil.h"
 #include "eden/fs/utils/UserInfo.h"
 #ifndef _WIN32

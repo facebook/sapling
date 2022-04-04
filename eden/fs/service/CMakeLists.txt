@@ -77,6 +77,7 @@ target_link_libraries(
     ${YARPL_LIBRARIES}
     Folly::folly
     cpptoml
+    edencommon::utils
 )
 
 if (NOT WIN32)

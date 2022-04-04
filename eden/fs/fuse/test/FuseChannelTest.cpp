@@ -12,13 +12,13 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <unordered_map>
+#include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/TestDispatcher.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/EnumValue.h"
-#include "eden/fs/utils/ProcessNameCache.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;

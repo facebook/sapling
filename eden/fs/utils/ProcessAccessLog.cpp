@@ -12,7 +12,7 @@
 #include <folly/MicroLock.h>
 #include <folly/ThreadLocal.h>
 
-#include "eden/fs/utils/ProcessNameCache.h"
+#include "eden/common/utils/ProcessNameCache.h"
 
 namespace facebook {
 namespace eden {

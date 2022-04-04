@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <optional>
 #include <typeinfo>
-#include "eden/fs/utils/ProcessNameCache.h"
 
 #include <fb303/ServiceData.h>
 #include <folly/Conv.h>
@@ -42,6 +41,7 @@
 #include "eden/fs/service/facebook/EdenFSSmartPlatformServiceEndpoint.h" // @manual
 #endif
 
+#include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -78,7 +78,6 @@
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/ProcUtil.h"
-#include "eden/fs/utils/ProcessNameCache.h"
 #include "eden/fs/utils/StatTimes.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 

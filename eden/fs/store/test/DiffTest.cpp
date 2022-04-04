@@ -12,6 +12,7 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
+#include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/store/DiffContext.h"
@@ -24,7 +25,6 @@
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/utils/ProcessNameCache.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;

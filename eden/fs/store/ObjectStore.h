@@ -14,6 +14,7 @@
 #include <unordered_map>
 
 #include <folly/logging/xlog.h>
+#include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/Hash.h"
@@ -24,7 +25,6 @@
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
-#include "eden/fs/utils/ProcessNameCache.h"
 
 namespace facebook::eden {
 

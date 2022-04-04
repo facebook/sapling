@@ -15,6 +15,7 @@
 #include <gflags/gflags.h>
 #include <signal.h>
 #include <sysexits.h>
+#include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
@@ -24,7 +25,6 @@
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/utils/ProcessNameCache.h"
 #include "eden/fs/utils/UserInfo.h"
 
 using namespace facebook::eden;

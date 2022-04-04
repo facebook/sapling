@@ -9,6 +9,7 @@
 #include <folly/executors/QueuedImmediateExecutor.h>
 #include <folly/portability/GTest.h>
 #include <chrono>
+#include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
@@ -17,7 +18,6 @@
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/LoggingFetchContext.h"
-#include "eden/fs/utils/ProcessNameCache.h"
 
 using namespace folly::literals;
 using namespace std::chrono_literals;

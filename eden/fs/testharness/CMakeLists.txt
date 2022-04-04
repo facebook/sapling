@@ -40,6 +40,7 @@ target_link_libraries(
   eden_model
   eden_store
   eden_utils
+  edencommon::utils
   ${BOOST_LIBRARIES}
   Folly::folly_test_util
   ${LIBGMOCK_LIBRARIES}

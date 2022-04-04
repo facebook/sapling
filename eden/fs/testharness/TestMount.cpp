@@ -48,9 +48,9 @@
 #ifdef _WIN32
 #include "eden/fs/utils/Guid.h"
 #else
+#include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/testharness/FakeFuse.h"
-#include "eden/fs/utils/ProcessNameCache.h"
 #endif
 
 using folly::Future;

@@ -12,6 +12,7 @@
 #include <folly/test/TestUtils.h>
 #include <stdexcept>
 
+#include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BackingStoreLogger.h"
@@ -24,7 +25,6 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/HgRepo.h"
-#include "eden/fs/utils/ProcessNameCache.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;

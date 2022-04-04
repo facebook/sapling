@@ -10,8 +10,8 @@
 #include <sys/types.h>
 #include <utility>
 
+#include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
-#include "eden/fs/utils/ProcessNameCache.h"
 
 using ::testing::Contains;
 using ::testing::ElementsAre;

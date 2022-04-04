@@ -9,10 +9,10 @@
 
 #include <folly/Conv.h>
 
+#include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
-#include "eden/fs/utils/ProcessNameCache.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 namespace facebook::eden {
