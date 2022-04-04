@@ -25,7 +25,7 @@
 #endif
 
 #ifdef _WIN32
-#include "eden/fs/utils/Handle.h"
+#include "eden/common/utils/Handle.h"
 #include "eden/fs/utils/StringConv.h"
 #endif
 

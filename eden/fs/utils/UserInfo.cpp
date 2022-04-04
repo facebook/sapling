@@ -19,7 +19,7 @@
 #else // !_WIN32
 #include <Lmcons.h> // @manual
 #include <userenv.h> // @manual
-#include "eden/fs/utils/Handle.h"
+#include "eden/common/utils/Handle.h"
 #include "eden/fs/utils/WinError.h"
 #endif // _WIN32
 
