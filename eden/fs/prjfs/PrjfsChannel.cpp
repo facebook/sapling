@@ -11,6 +11,7 @@
 #include <fmt/format.h>
 #include <folly/logging/xlog.h>
 
+#include "eden/common/utils/StringConv.h"
 #include "eden/common/utils/WinError.h"
 #include "eden/fs/notifications/Notifier.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
@@ -21,7 +22,6 @@
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/StaticAssert.h"
-#include "eden/fs/utils/StringConv.h"
 
 namespace facebook::eden {
 

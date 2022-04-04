@@ -19,9 +19,9 @@
 #include <folly/futures/Future.h>
 #include <folly/portability/Windows.h>
 
+#include "eden/common/utils/StringConv.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/utils/SpawnedProcess.h"
-#include "eden/fs/utils/StringConv.h"
 #include "eden/fs/utils/SystemError.h"
 
 namespace facebook::eden {

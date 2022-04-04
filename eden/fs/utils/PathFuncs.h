@@ -27,7 +27,7 @@
 #include "eden/fs/utils/Utf8.h"
 
 #ifdef _WIN32
-#include <eden/fs/utils/StringConv.h>
+#include <eden/common/utils/StringConv.h>
 #endif
 
 namespace facebook {

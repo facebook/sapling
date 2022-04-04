@@ -26,7 +26,7 @@
 
 #ifdef _WIN32
 #include "eden/common/utils/Handle.h"
-#include "eden/fs/utils/StringConv.h"
+#include "eden/common/utils/StringConv.h"
 #endif
 
 namespace facebook::eden::detail {
