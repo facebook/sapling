@@ -14,6 +14,7 @@
 #include <folly/logging/xlog.h>
 #include <vector>
 
+#include "eden/common/utils/Synchronized.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/CheckoutContext.h"
@@ -43,7 +44,6 @@
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/utils/Synchronized.h"
 #include "eden/fs/utils/TimeUtil.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 

@@ -17,7 +17,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
 
-#include "eden/fs/utils/Synchronized.h"
+#include "eden/common/utils/Synchronized.h"
 
 #ifdef __APPLE__
 #include <libproc.h> // @manual

@@ -62,6 +62,8 @@ endif()
 find_package(Re2 MODULE REQUIRED)
 include_directories(${RE2_INCLUDE_DIR})
 
+find_package(edencommon CONFIG REQUIRED)
+
 # The following packages ship with their own CMake configuration files
 find_package(cpptoml CONFIG REQUIRED)
 find_package(gflags CONFIG REQUIRED)
