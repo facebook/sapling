@@ -14,11 +14,11 @@
 #include <ProjectedFSLib.h> // @manual
 #include <winioctl.h> // @manual
 
+#include "eden/common/utils/WinError.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
 #include "eden/fs/utils/DirType.h"
-#include "eden/fs/utils/WinError.h"
 
 namespace facebook::eden {
 namespace {

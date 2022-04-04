@@ -25,5 +25,6 @@ if (WIN32)
       Folly::folly
       ProjectedFS
       cpptoml
+      edencommon::utils
   )
 endif()

@@ -7,7 +7,7 @@
 
 #include "eden/fs/utils/FileHash.h"
 #include <openssl/sha.h>
-#include "eden/fs/utils/WinError.h"
+#include "eden/common/utils/WinError.h"
 
 namespace facebook::eden {
 

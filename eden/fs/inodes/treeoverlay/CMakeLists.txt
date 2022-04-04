@@ -24,6 +24,7 @@ target_link_libraries(
     eden_overlay_thrift_cpp
     eden_utils
     Folly::folly
+    edencommon::utils
 )
 
 add_executable(

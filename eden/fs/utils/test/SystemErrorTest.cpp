@@ -9,7 +9,7 @@
 #include <folly/portability/GTest.h>
 #include <iostream>
 #include <string>
-#include "eden/fs/utils/WinError.h"
+#include "eden/common/utils/WinError.h"
 using namespace facebook::eden;
 
 // Test Win32 error

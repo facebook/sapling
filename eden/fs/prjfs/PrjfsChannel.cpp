@@ -10,6 +10,8 @@
 #include "eden/fs/prjfs/PrjfsChannel.h"
 #include <fmt/format.h>
 #include <folly/logging/xlog.h>
+
+#include "eden/common/utils/WinError.h"
 #include "eden/fs/notifications/Notifier.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
 #include "eden/fs/prjfs/PrjfsRequestContext.h"
@@ -20,7 +22,6 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/StaticAssert.h"
 #include "eden/fs/utils/StringConv.h"
-#include "eden/fs/utils/WinError.h"
 
 namespace facebook::eden {
 

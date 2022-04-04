@@ -10,7 +10,7 @@
 
 #include <combaseapi.h> // @manual
 #include <fmt/format.h>
-#include "eden/fs/utils/WinError.h"
+#include "eden/common/utils/WinError.h"
 
 namespace facebook {
 namespace eden {
