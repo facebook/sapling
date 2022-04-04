@@ -18,7 +18,7 @@
 #include <mutex>
 #include <system_error>
 #include <thread>
-#include "eden/fs/benchharness/Bench.h"
+#include "eden/common/utils/benchharness/Bench.h"
 
 DEFINE_uint64(threads, 1, "The number of concurrent open/close threads");
 DEFINE_uint64(iterations, 100000, "Number of open/close iterations per thread");

@@ -11,7 +11,7 @@
 #include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <random>
-#include "eden/fs/benchharness/Bench.h"
+#include "eden/common/utils/benchharness/Bench.h"
 
 namespace {
 constexpr size_t kPageSize = 4096;

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/benchharness/Bench.h"
+#include "eden/common/utils/benchharness/Bench.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/hg/HgImportRequest.h"

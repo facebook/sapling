@@ -7,7 +7,7 @@
 
 #include <folly/io/async/EventBaseThread.h>
 #include <thrift/lib/cpp2/async/HeaderClientChannel.h>
-#include "eden/fs/benchharness/Bench.h"
+#include "eden/common/utils/benchharness/Bench.h"
 #include "eden/fs/service/gen-cpp2/EdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "watchman/cppclient/WatchmanClient.h"

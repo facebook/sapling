@@ -8,7 +8,7 @@
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <gflags/gflags.h>
-#include "eden/fs/benchharness/Bench.h"
+#include "eden/common/utils/benchharness/Bench.h"
 
 namespace {
 
