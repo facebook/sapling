@@ -10,6 +10,7 @@
 use std::convert::TryFrom;
 use std::fmt;
 use std::num::NonZeroU64;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -129,6 +130,14 @@ impl TryFrom<i64> for BubbleId {
             .and_then(NonZeroU64::new)
             .map(BubbleId::new)
             .ok_or(())
+    }
+}
+
+impl FromStr for BubbleId {
+    type Err = <NonZeroU64 as FromStr>::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        NonZeroU64::from_str(s).map(Self)
     }
 }
 

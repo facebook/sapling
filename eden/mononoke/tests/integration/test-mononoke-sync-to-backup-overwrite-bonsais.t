@@ -29,15 +29,13 @@ setup repo
 get content_id for file B
   $ mononoke_admin bonsai-fetch master_bookmark 2> /dev/null | grep BonsaiChangesetId
   BonsaiChangesetId: d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da 
-  $ mononoke_admin filestore store B
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * Wrote 122e93be74ea1962717796ad5b1f4a428f431d4d4f9674846443f1e91a690b14 (2 bytes) (glob)
+  $ mononoke_newadmin filestore -R repo store B
+  Wrote 122e93be74ea1962717796ad5b1f4a428f431d4d4f9674846443f1e91a690b14 (2 bytes)
 
 upload C as it wasn't imported
   $ echo C > C
-  $ mononoke_admin filestore store C
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * Wrote 2b574f3e5fdc3151a85d8982a46b82d91fa0ef0bb15224fac5a25488b69d38eb (2 bytes) (glob)
+  $ mononoke_newadmin filestore -R repo store C
+  Wrote 2b574f3e5fdc3151a85d8982a46b82d91fa0ef0bb15224fac5a25488b69d38eb (2 bytes)
   $ cd $TESTTMP
 
 Manually create a bonsai that would not normally be produced because it has unnecessary

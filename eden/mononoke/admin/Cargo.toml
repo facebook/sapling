@@ -93,7 +93,6 @@ sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
 thiserror = "1.0.30"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
-tokio-util = { version = "0.6", features = ["full"] }
 tunables = { version = "0.1.0", path = "../tunables" }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }

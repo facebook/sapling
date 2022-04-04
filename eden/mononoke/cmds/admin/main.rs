@@ -46,7 +46,6 @@ mod crossrepo;
 mod derived_data;
 mod error;
 mod filenodes;
-mod filestore;
 mod hash_convert;
 mod hg_changeset;
 mod hg_sync;
@@ -89,7 +88,6 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(redaction::build_subcommand())
         .subcommand(filenodes::build_subcommand())
         .subcommand(subcommand_phases::build_subcommand())
-        .subcommand(filestore::build_subcommand())
         .subcommand(subcommand_unodes::build_subcommand())
         .subcommand(subcommand_fsnodes::build_subcommand())
         .subcommand(crossrepo::build_subcommand())
@@ -163,9 +161,6 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (filenodes::FILENODES, Some(sub_m)) => {
                 subcommand_filenodes(fb, logger, &matches, sub_m).await
-            }
-            (filestore::FILESTORE, Some(sub_m)) => {
-                filestore::execute_command(fb, logger, &matches, sub_m).await
             }
             (subcommand_phases::PHASES, Some(sub_m)) => {
                 subcommand_phases::subcommand_phases(fb, logger, &matches, sub_m).await

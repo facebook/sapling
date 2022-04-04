@@ -32,14 +32,12 @@ setup configuration
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark master_bookmark)
 
-# Get content_id for file B
-  $ mononoke_admin filestore store B
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * Wrote 55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f (1 bytes) (glob)
+# Check content_id for file B
+  $ mononoke_newadmin filestore -R repo store B
+  Wrote 55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f (1 bytes)
 # Upload C as it wasn't imported
-  $ mononoke_admin filestore store C
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * Wrote 896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d (1 bytes) (glob)
+  $ mononoke_newadmin filestore -R repo store C
+  Wrote 896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d (1 bytes)
   $ cd $TESTTMP
 
   $ cat > bonsai_file <<EOF

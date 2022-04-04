@@ -12,6 +12,7 @@ mononoke_app::subcommands! {
     mod commit;
     mod convert;
     mod fetch;
+    mod filestore;
     mod list_repos;
     mod mutable_renames;
     mod redaction;

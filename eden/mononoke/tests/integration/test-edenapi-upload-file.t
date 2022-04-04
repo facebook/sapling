@@ -81,19 +81,16 @@ Check responses.
 
 
 Check file in blobstores
-  $ mononoke_admin filestore verify sha1 03cfd743661f07975fa2f1220c5194cbaff48451
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * content_id: true (glob)
-  * sha1: true (glob)
-  * sha256: true (glob)
-  * git_sha1: true (glob)
-  $ mononoke_admin filestore verify sha1 7b18d017f89f61cf17d47f92749ea6930a3f1deb
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * Content not found! (glob)
+  $ mononoke_newadmin filestore -R repo verify --content-sha1 03cfd743661f07975fa2f1220c5194cbaff48451
+  content_id: true
+  sha1: true
+  sha256: true
+  git_sha1: true
+  $ mononoke_newadmin filestore -R repo verify --content-sha1 7b18d017f89f61cf17d47f92749ea6930a3f1deb
+  Error: Content not found
   [1]
-  $ mononoke_admin filestore verify --bubble-id 1 sha1 7b18d017f89f61cf17d47f92749ea6930a3f1deb
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * content_id: true (glob)
-  * sha1: true (glob)
-  * sha256: true (glob)
-  * git_sha1: true (glob)
+  $ mononoke_newadmin filestore -R repo verify --bubble-id 1 --content-sha1 7b18d017f89f61cf17d47f92749ea6930a3f1deb
+  content_id: true
+  sha1: true
+  sha256: true
+  git_sha1: true
