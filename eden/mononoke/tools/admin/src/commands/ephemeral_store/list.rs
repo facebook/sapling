@@ -11,7 +11,6 @@ use clap::Args;
 use context::CoreContext;
 use ephemeral_blobstore::BubbleId;
 use mononoke_types::ChangesetId;
-use std::num::NonZeroU64;
 use std::str::FromStr;
 
 // By default, at most 100 blob keys will be listed for a bubble.
@@ -25,10 +24,9 @@ pub struct EphemeralStoreListArgs {
     #[clap(long, short = 'i', conflicts_with = "bubble-id")]
     changeset_id: Option<String>,
 
-    /// The ID of the bubble for which the blob data needs to be listed. If provided,
-    /// the changeset ID is ignored.
+    /// The ID of the bubble for which the blob data needs to be listed.
     #[clap(long, short = 'b', conflicts_with = "changeset-id")]
-    bubble_id: Option<NonZeroU64>,
+    bubble_id: Option<BubbleId>,
 
     /// The maximum number of blob keys listed in the output. Defaults to 100.
     #[clap(long, short = 'l', default_value_t = DEFAULT_MAX_KEYS_FOR_LIST)]
@@ -50,7 +48,7 @@ pub async fn list_keys(ctx: &CoreContext, repo: &Repo, args: EphemeralStoreListA
             .bubble_from_changeset(&ChangesetId::from_str(id)?)
             .await?
             .ok_or_else(|| anyhow!("No bubble exists for changeset ID {}", id)),
-        (Some(id), _) => Ok(BubbleId::new(*id)),
+        (Some(id), _) => Ok(*id),
         (_, _) => Err(anyhow!(
             "Need to provide either changeset ID or bubble ID as input"
         )),

@@ -6,7 +6,6 @@
  */
 
 use std::io::Write;
-use std::num::NonZeroU64;
 
 use anyhow::{anyhow, Context, Result};
 use blobstore::Loadable;
@@ -34,7 +33,7 @@ pub struct CommandArgs {
 
     /// Fetch from within this ephemeral bubble
     #[clap(long)]
-    bubble: Option<NonZeroU64>,
+    bubble_id: Option<BubbleId>,
 
     /// Path of the tree or file to fetch
     #[clap(long, short = 'p')]
@@ -85,12 +84,12 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .context("Failed to resolve changeset")?
         .ok_or_else(|| anyhow!("Changeset not found"))?;
 
-    let blobstore = match args.bubble {
+    let blobstore = match args.bubble_id {
         None => repo.repo_blobstore().clone(),
         Some(bubble_id) => {
             let bubble = repo
                 .repo_ephemeral_store()
-                .open_bubble(BubbleId::new(bubble_id))
+                .open_bubble(bubble_id)
                 .await
                 .with_context(|| format!("Failed to open bubble {}", bubble_id))?;
             bubble.wrap_repo_blobstore(repo.repo_blobstore().clone())

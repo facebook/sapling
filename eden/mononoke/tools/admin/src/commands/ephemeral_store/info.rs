@@ -10,7 +10,6 @@ use anyhow::{anyhow, Result};
 use clap::Args;
 use ephemeral_blobstore::BubbleId;
 use mononoke_types::ChangesetId;
-use std::num::NonZeroU64;
 use std::str::FromStr;
 
 #[derive(Args)]
@@ -21,10 +20,9 @@ pub struct EphemeralStoreInfoArgs {
     #[clap(long, short = 'i', conflicts_with = "bubble-id")]
     changeset_id: Option<String>,
 
-    /// The ID of the bubble for which the metadata is requested. If provided,
-    /// the changeset ID is ignored.
+    /// The ID of the bubble for which the metadata is requested.
     #[clap(long, short = 'b', conflicts_with = "changeset-id")]
-    bubble_id: Option<NonZeroU64>,
+    bubble_id: Option<BubbleId>,
 }
 
 pub async fn bubble_info(repo: &Repo, args: EphemeralStoreInfoArgs) -> Result<()> {
@@ -34,7 +32,7 @@ pub async fn bubble_info(repo: &Repo, args: EphemeralStoreInfoArgs) -> Result<()
             .bubble_from_changeset(&ChangesetId::from_str(id)?)
             .await?
             .ok_or_else(|| anyhow!("No bubble exists for changeset ID {}", id)),
-        (Some(id), _) => Ok(BubbleId::new(*id)),
+        (Some(id), _) => Ok(*id),
         (_, _) => Err(anyhow!(
             "Need to provide either changeset ID or bubble ID as input"
         )),
