@@ -2411,6 +2411,8 @@ def successors(repo, subset, x):
 
 @predicate("lost()")
 def lost(repo, subset, x):
+    "Finds invisible local commits without successors."
+
     def yieldlost(repo):
         metalog = repo.metalog()
         roots = metalog.roots()
