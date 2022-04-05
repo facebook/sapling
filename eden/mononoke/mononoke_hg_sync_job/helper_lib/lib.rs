@@ -12,9 +12,9 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use bookmarks::Freshness;
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, stream::TryStreamExt};
+use futures::stream::TryStreamExt;
 use mononoke_types::RawBundle2Id;
-use mutable_counters::MutableCounters;
+use mutable_counters::MutableCountersRef;
 use slog::info;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
@@ -164,29 +164,20 @@ pub fn read_file_contents<F: Seek + Read>(f: &mut F) -> Result<String> {
 }
 
 /// Wait until all of the entries in the queue have been synced to hg
-pub async fn wait_for_latest_log_id_to_be_synced<C>(
+pub async fn wait_for_latest_log_id_to_be_synced(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    mutable_counters: &C,
     sleep_secs: u64,
-) -> Result<(), Error>
-where
-    C: MutableCounters + Clone + Sync + 'static,
-{
-    wait_for_latest_log_id_for_repo_to_be_synced(ctx, repo, repo, mutable_counters, sleep_secs)
-        .await
+) -> Result<(), Error> {
+    wait_for_latest_log_id_for_repo_to_be_synced(ctx, repo, repo, sleep_secs).await
 }
 
-pub async fn wait_for_latest_log_id_for_repo_to_be_synced<C>(
+pub async fn wait_for_latest_log_id_for_repo_to_be_synced(
     ctx: &CoreContext,
     repo: &BlobRepo,
     target_repo: &BlobRepo,
-    mutable_counters: &C,
     sleep_secs: u64,
-) -> Result<(), Error>
-where
-    C: MutableCounters + Clone + Sync + 'static,
-{
+) -> Result<(), Error> {
     let target_repo_id = target_repo.get_repoid();
     let largest_id = match repo
         .bookmark_update_log()
@@ -206,19 +197,16 @@ where
     */
 
     loop {
-        let mut_counters_value = match mutable_counters
-            .get_counter(ctx.clone(), target_repo_id, LATEST_REPLAYED_REQUEST_KEY)
-            .compat()
+        let mut_counters_value = target_repo
+            .mutable_counters()
+            .get_counter(ctx, LATEST_REPLAYED_REQUEST_KEY)
             .await?
-        {
-            Some(value) => value,
-            None => {
-                return Err(format_err!(
+            .ok_or_else(|| {
+                format_err!(
                     "Couldn't fetch the counter value from mutable_counters for repo_id {:?}",
                     target_repo_id
-                ));
-            }
-        };
+                )
+            })?;
         if largest_id > mut_counters_value.try_into().unwrap() {
             info!(
                 ctx.logger(),

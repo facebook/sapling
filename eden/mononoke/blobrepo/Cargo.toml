@@ -33,6 +33,7 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mercurial_mutation = { version = "0.1.0", path = "../mercurial/mutation" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 phases = { version = "0.1.0", path = "../phases" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../pushrebase_mutation_mapping" }
 repo_blobstore = { version = "0.1.0", path = "repo_blobstore" }

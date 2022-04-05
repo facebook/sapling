@@ -58,6 +58,7 @@ use metaconfig_types::{
     ArcRepoConfig, BlobConfig, CensoredScubaParams, CommonConfig, MetadataDatabaseConfig,
     Redaction, RedactionConfig, RepoConfig,
 };
+use mutable_counters::{ArcMutableCounters, SqlMutableCountersBuilder};
 use mutable_renames::{ArcMutableRenames, MutableRenames, SqlMutableRenamesStore};
 use newfilenodes::NewFilenodesBuilder;
 use parking_lot::Mutex;
@@ -500,6 +501,9 @@ pub enum RepoFactoryError {
 
     #[error("Error opening cross repo sync mapping")]
     RepoCrossRepo,
+
+    #[error("Error opening mutable counters")]
+    MutableCounters,
 }
 
 #[facet::factory(name: String, config: RepoConfig)]
@@ -963,6 +967,19 @@ impl RepoFactory {
             live_commit_sync_config,
             sync_lease,
         )))
+    }
+
+    pub async fn mutable_counters(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcMutableCounters> {
+        Ok(Arc::new(
+            self.open::<SqlMutableCountersBuilder>(&repo_config.storage_config.metadata)
+                .await
+                .context(RepoFactoryError::MutableCounters)?
+                .build(repo_identity.id()),
+        ))
     }
 }
 

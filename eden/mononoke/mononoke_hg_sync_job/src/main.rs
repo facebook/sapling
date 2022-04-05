@@ -20,7 +20,6 @@ use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateLogEntry, Freshne
 use borrowed::borrowed;
 use bundle_generator::FilenodeVerifier;
 use bundle_preparer::{maybe_adjust_batch, BundlePreparer};
-use cached_config::ConfigStore;
 use clap_old::{Arg, ArgGroup, SubCommand};
 use cloned::cloned;
 use cmdlib::{
@@ -32,7 +31,6 @@ use darkstorm_verifier::DarkstormVerifier;
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use futures::{
-    compat::Future01CompatExt,
     future::{self, try_join, try_join3, BoxFuture, FutureExt as _, TryFutureExt},
     pin_mut,
     stream::{self, StreamExt, TryStreamExt},
@@ -46,16 +44,14 @@ use mercurial_types::HgChangesetId;
 use metaconfig_types::HgsqlName;
 use metaconfig_types::RepoReadOnly;
 use mononoke_api_types::InnerRepo;
-use mononoke_types::{ChangesetId, RepositoryId};
-use mutable_counters::{MutableCounters, SqlMutableCounters};
+use mononoke_types::ChangesetId;
+use mutable_counters::{ArcMutableCounters, MutableCountersArc};
 use regex::Regex;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use retry::{retry, RetryAttemptsCount};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{error, info};
-use sql_construct::{
-    facebook::FbSqlConstruct, SqlConstruct, SqlConstructFromMetadataDatabaseConfig,
-};
+use sql_construct::{facebook::FbSqlConstruct, SqlConstruct};
 use sql_ext::facebook::MysqlOptions;
 
 use std::collections::HashMap;
@@ -609,62 +605,38 @@ impl BookmarkOverlay {
 }
 
 struct LatestReplayedSyncCounter {
-    mutable_counters: SqlMutableCounters,
-    repo_id: RepositoryId,
+    mutable_counters: ArcMutableCounters,
 }
 
 impl LatestReplayedSyncCounter {
     fn new(
-        ctx: &CoreContext,
         source_repo: &BlobRepo,
-        darkstorm_backup_repo: &Option<BlobRepo>,
-        config_store: &ConfigStore,
-        matches: &MononokeMatches<'_>,
+        darkstorm_backup_repo: Option<&BlobRepo>,
     ) -> Result<Self, Error> {
-        let (mutable_counters, repo_id) = if let Some(backup_repo) = darkstorm_backup_repo {
-            let repo_id = backup_repo.get_repoid();
-
-            let (_, config) = args::get_config_by_repoid(config_store, matches, repo_id)?;
-            let mysql_options = matches.mysql_options();
-            let readonly_storage = matches.readonly_storage();
-            let mutable_counters = SqlMutableCounters::with_metadata_database_config(
-                ctx.fb,
-                &config.storage_config.metadata,
-                &mysql_options,
-                readonly_storage.0,
-            )?;
-
-            (mutable_counters, repo_id)
+        if let Some(backup_repo) = darkstorm_backup_repo {
+            let mutable_counters = backup_repo.mutable_counters_arc();
+            Ok(Self { mutable_counters })
         } else {
-            let mutable_counters =
-                args::open_sql::<SqlMutableCounters>(ctx.fb, config_store, &matches)?;
-            (mutable_counters, source_repo.get_repoid())
-        };
-
-        Ok(Self {
-            mutable_counters,
-            repo_id,
-        })
+            let mutable_counters = source_repo.mutable_counters_arc();
+            Ok(Self { mutable_counters })
+        }
     }
 
     async fn get_counter(&self, ctx: &CoreContext) -> Result<Option<i64>, Error> {
         self.mutable_counters
-            .get_counter(ctx.clone(), self.repo_id, LATEST_REPLAYED_REQUEST_KEY)
-            .compat()
+            .get_counter(ctx, LATEST_REPLAYED_REQUEST_KEY)
             .await
     }
 
     async fn set_counter(&self, ctx: &CoreContext, value: i64) -> Result<bool, Error> {
         self.mutable_counters
             .set_counter(
-                ctx.clone(),
-                self.repo_id,
+                ctx,
                 LATEST_REPLAYED_REQUEST_KEY,
                 value,
                 // TODO(stash): do we need conditional updates here?
                 None,
             )
-            .compat()
             .await
     }
 }
@@ -948,13 +920,8 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                 args::get_usize_opt(&sub_m, "bundle-prefetch").unwrap_or(0) + 1;
             let combine_bundles = args::get_u64_opt(&sub_m, "combine-bundles").unwrap_or(1);
             let loop_forever = sub_m.is_present("loop-forever");
-            let mutable_counters = LatestReplayedSyncCounter::new(
-                &ctx,
-                &repo,
-                &maybe_darkstorm_backup_repo,
-                &config_store,
-                matches,
-            )?;
+            let replayed_sync_counter =
+                LatestReplayedSyncCounter::new(&repo, maybe_darkstorm_backup_repo.as_ref())?;
             let exit_path = sub_m
                 .value_of("exit-file")
                 .map(|name| Path::new(name).to_path_buf());
@@ -975,7 +942,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                 _ => true,
             };
 
-            let counter = mutable_counters
+            let counter = replayed_sync_counter
                 .get_counter(&ctx)
                 .and_then(move |maybe_counter| {
                     future::ready(maybe_counter.or(start_id).ok_or_else(|| {
@@ -1090,7 +1057,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                 retry(
                     &ctx.logger(),
                     |_| async {
-                        let success = mutable_counters
+                        let success = replayed_sync_counter
                             .set_counter(&ctx, next_id)
                             .watched(ctx.logger())
                             .await?;

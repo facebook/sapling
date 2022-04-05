@@ -12,9 +12,8 @@ use clap_old::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use mononoke_types::RepositoryId;
-use mutable_counters::{MutableCounters, SqlMutableCounters};
+use mutable_counters::{MutableCounters, SqlMutableCounters, SqlMutableCountersBuilder};
 use slog::{info, Logger};
 
 pub const MUTABLE_COUNTERS: &str = "mutable-counters";
@@ -74,19 +73,18 @@ pub async fn subcommand_mutable_counters<'a>(
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let mutable_counters = args::open_sql::<SqlMutableCounters>(fb, config_store, &matches)
-        .context("While opening SqlMutableCounters")?;
+    let mutable_counters = args::open_sql::<SqlMutableCountersBuilder>(fb, config_store, matches)
+        .context("While opening SqlMutableCounters")?
+        .build(repo_id);
 
     match sub_m.subcommand() {
-        (MUTABLE_COUNTERS_LIST, Some(_)) => {
-            mutable_counters_list(ctx, repo_id, mutable_counters).await
-        }
+        (MUTABLE_COUNTERS_LIST, Some(_)) => mutable_counters_list(ctx, mutable_counters).await,
         (MUTABLE_COUNTERS_GET, Some(sub_m)) => {
             let name = sub_m
                 .value_of(MUTABLE_COUNTERS_NAME)
                 .ok_or_else(|| format_err!("counter name is required"))?;
 
-            mutable_counters_get(ctx, repo_id, name, mutable_counters).await
+            mutable_counters_get(ctx, name, mutable_counters).await
         }
         (MUTABLE_COUNTERS_SET, Some(sub_m)) => {
             let name = sub_m
@@ -105,13 +103,9 @@ pub async fn subcommand_mutable_counters<'a>(
 
 async fn mutable_counters_list(
     ctx: CoreContext,
-    repo_id: RepositoryId,
     mutable_counters: SqlMutableCounters,
 ) -> Result<(), Error> {
-    let counters = mutable_counters
-        .get_all_counters(ctx.clone(), repo_id)
-        .compat()
-        .await?;
+    let counters = mutable_counters.get_all_counters(&ctx).await?;
 
     for (name, value) in counters {
         println!("{:<30}={}", name, value);
@@ -122,14 +116,10 @@ async fn mutable_counters_list(
 
 async fn mutable_counters_get(
     ctx: CoreContext,
-    repo_id: RepositoryId,
     name: &str,
     mutable_counters: SqlMutableCounters,
 ) -> Result<(), Error> {
-    let maybe_value = mutable_counters
-        .get_counter(ctx.clone(), repo_id, name)
-        .compat()
-        .await?;
+    let maybe_value = mutable_counters.get_counter(&ctx, name).await?;
 
     println!("{:?}", maybe_value);
     Ok(())
@@ -143,8 +133,7 @@ async fn mutable_counters_set(
     mutable_counters: SqlMutableCounters,
 ) -> Result<(), Error> {
     mutable_counters
-        .set_counter(ctx.clone(), repo_id, name, value, None)
-        .compat()
+        .set_counter(&ctx, name, value, None)
         .await?;
 
     info!(

@@ -22,14 +22,11 @@ use cmdlib::{
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use futures::future;
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use mononoke_api_types::InnerRepo;
-use mutable_counters::MutableCounters;
-use mutable_counters::SqlMutableCounters;
+use mutable_counters::MutableCountersRef;
 use scuba_ext::MononokeScubaSampleBuilder;
-use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 
 mod cli;
 mod reporting;
@@ -81,13 +78,12 @@ fn validate_stream<'a>(
         })
 }
 
-async fn run_in_tailing_mode<T: MutableCounters>(
+async fn run_in_tailing_mode(
     ctx: &CoreContext,
     blobrepo: BlobRepo,
     validation_helpers: ValidationHelpers,
     start_id: u64,
     scuba_sample: MononokeScubaSampleBuilder,
-    mutable_counters: &T,
 ) -> Result<(), Error> {
     let counter_name = format_counter();
     let stream_of_entries = tail_entries(
@@ -104,9 +100,9 @@ async fn run_in_tailing_mode<T: MutableCounters>(
                 let entry_id = validated_entry_id_res?;
                 if entry_id.last_commit_for_bookmark_move() {
                     let id = entry_id.bookmarks_update_log_entry_id;
-                    mutable_counters
-                        .set_counter(ctx.clone(), blobrepo.get_repoid(), &counter_name, id, None)
-                        .compat()
+                    blobrepo
+                        .mutable_counters()
+                        .set_counter(ctx, &counter_name, id, None)
                         .await?;
                 }
 
@@ -164,7 +160,6 @@ async fn run<'a>(
         .with_context(|| format!("While opening the large repo ({})", repo_id))?;
     let mysql_options = matches.mysql_options();
     let readonly_storage = matches.readonly_storage();
-    let dbconfig = repo_config.storage_config.metadata.clone();
     let scuba_sample = matches.scuba_sample_builder();
     let validation_helpers = get_validation_helpers(
         fb,
@@ -187,27 +182,11 @@ async fn run<'a>(
             run_in_once_mode(&ctx, blobrepo, validation_helpers, entry_id).await
         }
         (ARG_TAIL, Some(sub_m)) => {
-            let mutable_counters = SqlMutableCounters::with_metadata_database_config(
-                fb,
-                &dbconfig,
-                &mysql_options,
-                readonly_storage.0,
-            )
-            .context("While opening MutableCounters")?;
-
-            let start_id = get_start_id(ctx.clone(), repo_id, &mutable_counters, sub_m)
+            let start_id = get_start_id(&ctx, &repo, sub_m)
                 .await
                 .context("While fetching the start_id")?;
 
-            run_in_tailing_mode(
-                &ctx,
-                blobrepo,
-                validation_helpers,
-                start_id,
-                scuba_sample,
-                &mutable_counters,
-            )
-            .await
+            run_in_tailing_mode(&ctx, blobrepo, validation_helpers, start_id, scuba_sample).await
         }
         (_, _) => Err(format_err!("Incorrect command line arguments provided")),
     }

@@ -14,13 +14,11 @@ use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use cross_repo_sync::types::{Large, Small};
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use futures::future::try_join_all;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::RepoConfig;
 use mononoke_api_types::InnerRepo;
-use mononoke_types::RepositoryId;
-use mutable_counters::MutableCounters;
+use mutable_counters::MutableCountersRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
@@ -99,10 +97,9 @@ pub fn format_counter() -> String {
     "x_repo_commit_validator".to_string()
 }
 
-pub async fn get_start_id<'a, T: MutableCounters>(
-    ctx: CoreContext,
-    repo_id: RepositoryId,
-    mutable_counters: &T,
+pub async fn get_start_id<'a>(
+    ctx: &CoreContext,
+    repo: &impl MutableCountersRef,
     matches: &'a ArgMatches<'a>,
 ) -> Result<u64, Error> {
     match matches.value_of(ARG_START_ID) {
@@ -111,9 +108,8 @@ pub async fn get_start_id<'a, T: MutableCounters>(
             .map_err(|_| format_err!("{} must be a valid u64", ARG_START_ID)),
         None => {
             let counter = format_counter();
-            mutable_counters
-                .get_counter(ctx.clone(), repo_id, &counter)
-                .compat()
+            repo.mutable_counters()
+                .get_counter(ctx, &counter)
                 .await?
                 .ok_or(format_err!("mutable counter {} is missing", counter))
                 .map(|val| val as u64)

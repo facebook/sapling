@@ -14,6 +14,7 @@ use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use ephemeral_blobstore::RepoEphemeralStore;
 use mercurial_mutation::HgMutationStore;
+use mutable_counters::MutableCounters;
 use mutable_renames::MutableRenames;
 use phases::Phases;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
@@ -44,6 +45,7 @@ pub struct InnerRepo {
         dyn Phases,
         dyn PushrebaseMutationMapping,
         dyn HgMutationStore,
+        dyn MutableCounters,
     )]
     pub blob_repo: BlobRepo,
 

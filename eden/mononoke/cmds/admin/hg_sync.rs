@@ -14,13 +14,15 @@ use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
+use futures::future;
 use futures::stream::StreamExt;
-use futures::{compat::Future01CompatExt, future};
 use mercurial_bundle_replay_data::BundleReplayData;
 use mercurial_derived_data::DeriveHgChangeset;
 use mononoke_hg_sync_job_helper_lib::save_bundle_to_file;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
-use mutable_counters::{MutableCounters, SqlMutableCounters};
+use mutable_counters::{
+    MutableCounters, MutableCountersRef, SqlMutableCounters, SqlMutableCountersBuilder,
+};
 use slog::{info, Logger};
 
 use crate::common::{
@@ -155,14 +157,7 @@ async fn last_processed(
         (Some(new_value), false, false) => {
             let new_value = i64::from_str_radix(new_value, 10).unwrap();
             mutable_counters
-                .set_counter(
-                    ctx.clone(),
-                    repo_id,
-                    LATEST_REPLAYED_REQUEST_KEY,
-                    new_value,
-                    None,
-                )
-                .compat()
+                .set_counter(ctx, LATEST_REPLAYED_REQUEST_KEY, new_value, None)
                 .await
                 .with_context(|| {
                     format!(
@@ -180,8 +175,7 @@ async fn last_processed(
         }
         (None, skip, dry_run) => {
             let maybe_counter = mutable_counters
-                .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
-                .compat()
+                .get_counter(ctx, LATEST_REPLAYED_REQUEST_KEY)
                 .await?;
 
             match maybe_counter {
@@ -221,13 +215,11 @@ async fn last_processed(
                         (Some(new_counter), false) => {
                             let success = mutable_counters
                                 .set_counter(
-                                    ctx.clone(),
-                                    repo_id,
+                                    ctx,
                                     LATEST_REPLAYED_REQUEST_KEY,
                                     new_counter as i64,
                                     Some(counter),
                                 )
-                                .compat()
                                 .await?;
 
                             match success {
@@ -264,8 +256,7 @@ async fn remains(
     // correct value, but it's ok, since (a) there won't
     // be a counter #0 and (b) this is just an advisory data
     let counter = mutable_counters
-        .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
-        .compat()
+        .get_counter(ctx, LATEST_REPLAYED_REQUEST_KEY)
         .await?
         .unwrap_or(0)
         .try_into()?;
@@ -306,7 +297,6 @@ async fn show(
     sub_m: &ArgMatches<'_>,
     ctx: &CoreContext,
     repo: &BlobRepo,
-    mutable_counters: &SqlMutableCounters,
     bookmarks: &dyn BookmarkUpdateLog,
 ) -> Result<(), Error> {
     let limit = args::get_u64(sub_m, "limit", 10);
@@ -315,9 +305,9 @@ async fn show(
     // and there exists a counter #0, we want return the
     // correct value, but it's ok, since (a) there won't
     // be a counter #0 and (b) this is just an advisory data
-    let counter = mutable_counters
-        .get_counter(ctx.clone(), repo.get_repoid(), LATEST_REPLAYED_REQUEST_KEY)
-        .compat()
+    let counter = repo
+        .mutable_counters()
+        .get_counter(ctx, LATEST_REPLAYED_REQUEST_KEY)
         .await?
         .unwrap_or(0);
 
@@ -393,8 +383,7 @@ async fn verify(
     bookmarks: &dyn BookmarkUpdateLog,
 ) -> Result<(), Error> {
     let counter = mutable_counters
-        .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
-        .compat()
+        .get_counter(ctx, LATEST_REPLAYED_REQUEST_KEY)
         .await?
         .unwrap_or(0) // See rationale in remains()
         .try_into()?;
@@ -535,8 +524,9 @@ pub async fn subcommand_process_hg_sync<'a>(
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let mutable_counters = args::open_sql::<SqlMutableCounters>(fb, config_store, &matches)
-        .context("While opening SqlMutableCounters")?;
+    let mutable_counters = args::open_sql::<SqlMutableCountersBuilder>(fb, config_store, matches)
+        .context("While opening SqlMutableCounters")?
+        .build(repo_id);
 
     let bookmarks = args::open_sql::<SqlBookmarksBuilder>(fb, config_store, &matches)
         .context("While opening SqlBookmarks")?
@@ -551,7 +541,7 @@ pub async fn subcommand_process_hg_sync<'a>(
         }
         (HG_SYNC_SHOW, Some(sub_m)) => {
             let repo = args::open_repo(fb, ctx.logger(), &matches).await?;
-            show(sub_m, &ctx, &repo, &mutable_counters, &bookmarks).await?
+            show(sub_m, &ctx, &repo, &bookmarks).await?
         }
         (HG_SYNC_FETCH_BUNDLE, Some(sub_m)) => {
             let repo = args::open_repo(fb, ctx.logger(), &matches).await?;

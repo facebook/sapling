@@ -23,16 +23,12 @@ use derived_data_manager::BonsaiDerivable;
 use derived_data_utils::POSSIBLE_DERIVED_TYPES;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
-use futures::{
-    compat::Future01CompatExt,
-    future::{try_join, TryFutureExt},
-};
+use futures::future::{try_join, TryFutureExt};
 #[cfg(fbcode_build)]
 use mercurial_revlog::revlog::RevIdx;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::ChangesetId;
-use mutable_counters::MutableCounters;
-use mutable_counters::SqlMutableCounters;
+use mutable_counters::MutableCountersRef;
 use slog::{error, info, warn, Logger};
 use std::collections::HashMap;
 use std::fs::read;
@@ -370,7 +366,6 @@ async fn run_blobimport<'a>(
         args::open_sql::<SqlBonsaiGlobalrevMappingBuilder>(fb, config_store, matches)?;
     let synced_commit_mapping =
         args::open_sql::<SqlSyncedCommitMapping>(fb, config_store, matches)?;
-    let mutable_counters = args::open_sql::<SqlMutableCounters>(fb, config_store, matches)?;
 
     let blobrepo: BlobRepo = if matches.is_present("no-create") {
         args::open_repo_unredacted(fb, &ctx.logger(), matches).await?
@@ -454,7 +449,6 @@ async fn run_blobimport<'a>(
                 maybe_update_highest_imported_generation_number(
                     &ctx,
                     &blobrepo,
-                    &mutable_counters,
                     latest_imported_cs_id,
                 )
                 .await?;
@@ -489,16 +483,11 @@ async fn run_blobimport<'a>(
 async fn maybe_update_highest_imported_generation_number(
     ctx: &CoreContext,
     blobrepo: &BlobRepo,
-    mutable_counters: &SqlMutableCounters,
     latest_imported_cs_id: ChangesetId,
 ) -> Result<(), Error> {
-    let maybe_highest_imported_gen_num = mutable_counters
-        .get_counter(
-            ctx.clone(),
-            blobrepo.get_repoid(),
-            blobimport_lib::HIGHEST_IMPORTED_GEN_NUM,
-        )
-        .compat();
+    let maybe_highest_imported_gen_num = blobrepo
+        .mutable_counters()
+        .get_counter(ctx, blobimport_lib::HIGHEST_IMPORTED_GEN_NUM);
     let new_gen_num = blobrepo.get_generation_number(ctx.clone(), latest_imported_cs_id);
     let (maybe_highest_imported_gen_num, new_gen_num) =
         try_join(maybe_highest_imported_gen_num, new_gen_num).await?;
@@ -516,15 +505,14 @@ async fn maybe_update_highest_imported_generation_number(
     };
 
     if let Some(new_gen_num) = new_gen_num {
-        mutable_counters
+        blobrepo
+            .mutable_counters()
             .set_counter(
-                ctx.clone(),
-                blobrepo.get_repoid(),
+                ctx,
                 blobimport_lib::HIGHEST_IMPORTED_GEN_NUM,
                 new_gen_num.value() as i64,
                 maybe_highest_imported_gen_num,
             )
-            .compat()
             .await?;
     }
     Ok(())

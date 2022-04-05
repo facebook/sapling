@@ -46,6 +46,7 @@ mercurial_mutation = { version = "0.1.0", path = "../../mercurial/mutation" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 newfilenodes = { version = "0.1.0", path = "../../newfilenodes" }
 phases = { version = "0.1.0", path = "../../phases" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }

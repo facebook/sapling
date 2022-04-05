@@ -38,6 +38,7 @@ futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_commit_sync_config" }
 mercurial_mutation = { version = "0.1.0", path = "../mercurial/mutation" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
 newfilenodes = { version = "0.1.0", path = "../newfilenodes" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }

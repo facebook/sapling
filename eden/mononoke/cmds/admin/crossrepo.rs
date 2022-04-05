@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, format_err, Context, Error};
+use anyhow::{anyhow, format_err, Error};
 use backsyncer::format_counter as format_backsyncer_counter;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Loadable;
@@ -25,7 +25,7 @@ use cross_repo_sync::{
     CommitSyncContext, CommitSyncRepos, CommitSyncer, CHANGE_XREPO_MAPPING_EXTRA,
 };
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, stream, try_join, TryFutureExt};
+use futures::{stream, try_join, TryFutureExt};
 use itertools::Itertools;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use maplit::{btreemap, hashmap, hashset};
@@ -36,8 +36,7 @@ use metaconfig_types::{
 use mononoke_types::{
     BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath, RepositoryId,
 };
-use mutable_counters::MutableCounters;
-use mutable_counters::SqlMutableCounters;
+use mutable_counters::MutableCountersRef;
 use pushrebase::{do_pushrebase_bonsai, FAILUPUSHREBASE_EXTRA};
 use slog::{info, warn, Logger};
 use sorted_vector_map::sorted_vector_map;
@@ -251,10 +250,6 @@ async fn run_pushredirection_subcommand<'a>(
                 .await?
                 .ok_or_else(|| anyhow!("No bookmarks update log entries for large repo"))?;
 
-            let mutable_counters =
-                args::open_source_sql::<SqlMutableCounters>(fb, config_store, &matches)
-                    .context("While opening SqlMutableCounters")?;
-
             let counter = format_backsyncer_counter(&large_repo.get_repoid());
             info!(
                 ctx.logger(),
@@ -263,15 +258,14 @@ async fn run_pushredirection_subcommand<'a>(
                 counter,
                 small_repo.get_repoid()
             );
-            let res = mutable_counters
+            let res = small_repo
+                .mutable_counters()
                 .set_counter(
-                    ctx.clone(),
-                    small_repo.get_repoid(),
+                    &ctx,
                     &counter,
                     largest_id.try_into().unwrap(),
                     None, // prev_value
                 )
-                .compat()
                 .await?;
 
             if !res {

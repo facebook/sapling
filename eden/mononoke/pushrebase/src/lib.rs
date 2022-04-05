@@ -1269,7 +1269,6 @@ mod tests {
     use fixtures::TestRepoFixture;
     use fixtures::{Linear, ManyFilesDirs, MergeEven};
     use futures::{
-        compat::Future01CompatExt,
         future::{try_join_all, TryFutureExt},
         stream::{self, TryStreamExt},
     };
@@ -1278,10 +1277,9 @@ mod tests {
     use mononoke_types::FileType;
     use mononoke_types::{BonsaiChangesetMut, RepositoryId};
     use mononoke_types_mocks::hash::AS;
-    use mutable_counters::{MutableCounters, SqlMutableCounters};
+    use mutable_counters::{MutableCountersRef, SqlMutableCounters};
     use rand::Rng;
     use sql::Transaction;
-    use sql_construct::SqlConstruct;
     use sql_ext::TransactionResult;
     use std::time::Duration;
     use std::{collections::BTreeMap, str::FromStr};
@@ -1492,8 +1490,7 @@ mod tests {
                 let key = format!("{}", self.1);
 
                 let ret =
-                    SqlMutableCounters::set_counter_on_txn(ctx.clone(), self.0, &key, 1, None, txn)
-                        .await?;
+                    SqlMutableCounters::set_counter_on_txn(ctx, self.0, &key, 1, None, txn).await?;
 
                 match ret {
                     TransactionResult::Succeeded(txn) => Ok(txn),
@@ -1514,11 +1511,6 @@ mod tests {
                 .add_file("file", "content")
                 .commit()
                 .await?;
-
-            let repoid = repo.get_repoid();
-            let mutable_counters = Arc::new(SqlMutableCounters::from_sql_connections(
-                factory.metadata_db().clone().into(),
-            ));
 
             let bcs = bcs_id.load(&ctx, repo.blobstore()).await?;
 
@@ -1546,10 +1538,7 @@ mod tests {
             let master_val = resolve_cs_id(&ctx, &repo, "master").await?;
             let key = format!("{}", master_val);
             assert_eq!(
-                mutable_counters
-                    .get_counter(ctx.clone(), repoid, &key)
-                    .compat()
-                    .await?,
+                repo.mutable_counters().get_counter(&ctx, &key).await?,
                 Some(1),
             );
 
@@ -1570,10 +1559,7 @@ mod tests {
 
             let key = format!("{}", resolve_cs_id(&ctx, &repo, "newbook").await?);
             assert_eq!(
-                mutable_counters
-                    .get_counter(ctx.clone(), repoid, &key)
-                    .compat()
-                    .await?,
+                repo.mutable_counters().get_counter(&ctx, &key).await?,
                 Some(1),
             );
             Ok(())

@@ -656,20 +656,15 @@ mod test {
     use fbinit::FacebookInit;
     use futures::TryStreamExt;
     use maplit::hashset;
-    use mutable_counters::MutableCounters;
-    use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
-
-    use mutable_counters::SqlMutableCounters;
-    use sql_construct::SqlConstruct;
+    use mutable_counters::MutableCountersRef;
     use synced_commit_mapping::SqlSyncedCommitMapping;
+    use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
     use tokio::runtime::Runtime;
 
     #[fbinit::test]
     fn test_simple(fb: FacebookInit) -> Result<(), Error> {
         let runtime = Runtime::new()?;
         runtime.block_on(async move {
-            let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
-
             let ctx = CoreContext::test_mock(fb);
             let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
             let commit_syncer = syncers.small_to_large;
@@ -684,7 +679,7 @@ mod test {
                 .set_to(new_master)
                 .await?;
 
-            sync_and_validate(&ctx, &commit_syncer, &mutable_counters).await?;
+            sync_and_validate(&ctx, &commit_syncer).await?;
 
             let non_master_commit = CreateCommitContext::new(&ctx, &smallrepo, vec!["master"])
                 .add_file("nonmasterfile", "nonmastercontent")
@@ -694,7 +689,7 @@ mod test {
                 .set_to(non_master_commit)
                 .await?;
 
-            sync_and_validate(&ctx, &commit_syncer, &mutable_counters).await?;
+            sync_and_validate(&ctx, &commit_syncer).await?;
 
             // Create a stack of commits
             let first_in_stack = CreateCommitContext::new(&ctx, &smallrepo, vec!["master"])
@@ -724,7 +719,7 @@ mod test {
             bookmark(&ctx, &smallrepo, "newpremove")
                 .set_to("premove")
                 .await?;
-            sync_and_validate(&ctx, &commit_syncer, &mutable_counters).await?;
+            sync_and_validate(&ctx, &commit_syncer).await?;
             let commit_sync_outcome = commit_syncer
                 .get_commit_sync_outcome(&ctx, premove)
                 .await?
@@ -745,7 +740,7 @@ mod test {
                 .delete()
                 .await?;
 
-            sync_and_validate(&ctx, &commit_syncer, &mutable_counters).await?;
+            sync_and_validate(&ctx, &commit_syncer).await?;
             Ok(())
         })
     }
@@ -754,8 +749,6 @@ mod test {
     fn test_simple_merge(fb: FacebookInit) -> Result<(), Error> {
         let runtime = Runtime::new()?;
         runtime.block_on(async move {
-            let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
-
             let ctx = CoreContext::test_mock(fb);
             let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
             let commit_syncer = syncers.small_to_large;
@@ -778,7 +771,6 @@ mod test {
             let res = sync(
                 &ctx,
                 &commit_syncer,
-                &mutable_counters,
                 &hashset! {BookmarkName::new("master")?},
             )
             .await?;
@@ -793,7 +785,6 @@ mod test {
             sync_and_validate_with_common_bookmarks(
                 &ctx,
                 &commit_syncer,
-                &mutable_counters,
                 &hashset! {BookmarkName::new("master")?},
                 &hashset! {BookmarkName::new("newrepohead")?},
             )
@@ -807,11 +798,7 @@ mod test {
             bookmark(&ctx, &smallrepo, "master")
                 .set_to(diamond_merge)
                 .await?;
-            assert!(
-                sync_and_validate(&ctx, &commit_syncer, &mutable_counters)
-                    .await
-                    .is_err()
-            );
+            assert!(sync_and_validate(&ctx, &commit_syncer,).await.is_err());
             Ok(())
         })
     }
@@ -820,8 +807,6 @@ mod test {
     fn test_merge_added_in_single_bookmark_update(fb: FacebookInit) -> Result<(), Error> {
         let runtime = Runtime::new()?;
         runtime.block_on(async move {
-            let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
-
             let ctx = CoreContext::test_mock(fb);
             let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
             let commit_syncer = syncers.small_to_large;
@@ -844,7 +829,7 @@ mod test {
                     .await?;
 
             bookmark(&ctx, &smallrepo, "master").set_to(merge).await?;
-            sync_and_validate(&ctx, &commit_syncer, &mutable_counters).await?;
+            sync_and_validate(&ctx, &commit_syncer).await?;
 
             Ok(())
         })
@@ -854,8 +839,6 @@ mod test {
     fn test_merge_of_a_merge_one_step(fb: FacebookInit) -> Result<(), Error> {
         let runtime = Runtime::new()?;
         runtime.block_on(async move {
-            let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
-
             let ctx = CoreContext::test_mock(fb);
             let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
             let commit_syncer = syncers.small_to_large;
@@ -883,7 +866,7 @@ mod test {
                     .await?;
 
             bookmark(&ctx, &smallrepo, "master").set_to(merge).await?;
-            sync_and_validate(&ctx, &commit_syncer, &mutable_counters).await?;
+            sync_and_validate(&ctx, &commit_syncer).await?;
 
             Ok(())
         })
@@ -893,8 +876,6 @@ mod test {
     fn test_merge_of_a_merge_two_steps(fb: FacebookInit) -> Result<(), Error> {
         let runtime = Runtime::new()?;
         runtime.block_on(async move {
-            let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
-
             let ctx = CoreContext::test_mock(fb);
             let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
             let commit_syncer = syncers.small_to_large;
@@ -920,7 +901,6 @@ mod test {
             let res = sync(
                 &ctx,
                 &commit_syncer,
-                &mutable_counters,
                 &hashset! {BookmarkName::new("master")?},
             )
             .await?;
@@ -934,7 +914,6 @@ mod test {
             sync_and_validate_with_common_bookmarks(
                 &ctx,
                 &commit_syncer,
-                &mutable_counters,
                 &hashset! {BookmarkName::new("master")?},
                 &hashset! {BookmarkName::new("newrepoimport")?},
             )
@@ -948,8 +927,6 @@ mod test {
     fn test_merge_non_shared_bookmark(fb: FacebookInit) -> Result<(), Error> {
         let runtime = Runtime::new()?;
         runtime.block_on(async move {
-            let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
-
             let ctx = CoreContext::test_mock(fb);
 
             let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
@@ -966,7 +943,6 @@ mod test {
             let res = sync(
                 &ctx,
                 &commit_syncer,
-                &mutable_counters,
                 &hashset! {BookmarkName::new("master")?},
             )
             .await?;
@@ -981,7 +957,6 @@ mod test {
                 sync_and_validate_with_common_bookmarks(
                     &ctx,
                     &commit_syncer,
-                    &mutable_counters,
                     &hashset! {BookmarkName::new("master")?},
                     &hashset! {BookmarkName::new("newrepohead")?, BookmarkName::new("somebook")?},
                 )
@@ -994,8 +969,6 @@ mod test {
 
     #[fbinit::test]
     async fn test_merge_different_versions(fb: FacebookInit) -> Result<(), Error> {
-        let mutable_counters = SqlMutableCounters::with_sqlite_in_memory()?;
-
         let ctx = CoreContext::test_mock(fb);
         let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
         let commit_syncer = syncers.small_to_large;
@@ -1013,7 +986,6 @@ mod test {
         sync_and_validate_with_common_bookmarks(
             &ctx,
             &commit_syncer,
-            &mutable_counters,
             &hashset! { BookmarkName::new("master")?},
             &hashset! {},
         )
@@ -1029,7 +1001,7 @@ mod test {
             .await?;
 
         sync_and_validate_with_common_bookmarks(
-            &ctx, &commit_syncer, &mutable_counters,
+            &ctx, &commit_syncer,
             &hashset!{ BookmarkName::new("master")?, BookmarkName::new("another_pushrebase_bookmark")?},
             &hashset!{},
         ).await?;
@@ -1040,12 +1012,10 @@ mod test {
     async fn sync_and_validate(
         ctx: &CoreContext,
         commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
-        mutable_counters: &SqlMutableCounters,
     ) -> Result<(), Error> {
         sync_and_validate_with_common_bookmarks(
             ctx,
             commit_syncer,
-            mutable_counters,
             &hashset! {BookmarkName::new("master")?},
             &hashset! {},
         )
@@ -1055,18 +1025,11 @@ mod test {
     async fn sync_and_validate_with_common_bookmarks(
         ctx: &CoreContext,
         commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
-        mutable_counters: &SqlMutableCounters,
         common_pushrebase_bookmarks: &HashSet<BookmarkName>,
         should_be_missing: &HashSet<BookmarkName>,
     ) -> Result<(), Error> {
         let smallrepo = commit_syncer.get_source_repo();
-        sync(
-            ctx,
-            commit_syncer,
-            mutable_counters,
-            common_pushrebase_bookmarks,
-        )
-        .await?;
+        sync(ctx, commit_syncer, common_pushrebase_bookmarks).await?;
 
         let actually_missing = validation::find_bookmark_diff(ctx.clone(), commit_syncer)
             .await?
@@ -1091,17 +1054,15 @@ mod test {
     async fn sync(
         ctx: &CoreContext,
         commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
-        mutable_counters: &SqlMutableCounters,
         common_pushrebase_bookmarks: &HashSet<BookmarkName>,
     ) -> Result<Vec<SyncResult>, Error> {
         let smallrepo = commit_syncer.get_source_repo();
         let megarepo = commit_syncer.get_target_repo();
 
         let counter = crate::format_counter(&commit_syncer);
-        let target_repo_id = megarepo.get_repoid();
-        let start_from = mutable_counters
-            .get_counter(ctx.clone(), target_repo_id, &counter)
-            .compat()
+        let start_from = megarepo
+            .mutable_counters()
+            .get_counter(ctx, &counter)
             .await?
             .unwrap_or(1);
 
@@ -1141,9 +1102,9 @@ mod test {
             .await?;
             res.push(single_res);
 
-            mutable_counters
-                .set_counter(ctx.clone(), target_repo_id, &counter, entry_id, None)
-                .compat()
+            megarepo
+                .mutable_counters()
+                .set_counter(ctx, &counter, entry_id, None)
                 .await?;
         }
 

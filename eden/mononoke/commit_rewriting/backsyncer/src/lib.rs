@@ -37,13 +37,12 @@ use cross_repo_sync::{
     find_toposorted_unsynced_ancestors, CandidateSelectionHint, CommitSyncContext,
     CommitSyncOutcome, CommitSyncer,
 };
-use futures::{compat::Future01CompatExt, FutureExt, TryStreamExt};
+use futures::{FutureExt, TryStreamExt};
 use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_types::{ChangesetId, RepositoryId};
-use mutable_counters::{MutableCounters, SqlMutableCounters};
+use mutable_counters::{ArcMutableCounters, MutableCountersArc, SqlMutableCounters};
 use slog::{debug, warn};
 use sql::Transaction;
-use sql_construct::SqlConstruct;
 use sql_ext::facebook::MysqlOptions;
 use sql_ext::{SqlConnections, TransactionResult};
 use std::{sync::Arc, time::Instant};
@@ -77,14 +76,12 @@ where
     M: SyncedCommitMapping + Clone + 'static,
 {
     // TODO(ikostia): start borrowing `CommitSyncer`, no reason to consume it
-    let TargetRepoDbs { ref counters, .. } = target_repo_dbs;
-    let target_repo_id = commit_syncer.get_target_repo().get_repoid();
     let source_repo_id = commit_syncer.get_source_repo().get_repoid();
     let counter_name = format_counter(&source_repo_id);
 
-    let counter = counters
-        .get_counter(ctx.clone(), target_repo_id, &counter_name)
-        .compat()
+    let counter = target_repo_dbs
+        .counters
+        .get_counter(&ctx, &counter_name)
         .await?
         .unwrap_or(0);
 
@@ -167,13 +164,11 @@ where
                 target_repo_dbs
                     .counters
                     .set_counter(
-                        ctx.clone(),
-                        commit_syncer.get_target_repo().get_repoid(),
+                        &ctx,
                         &format_counter(&commit_syncer.get_source_repo().get_repoid()),
                         entry.id,
                         Some(counter),
                     )
-                    .compat()
                     .await?;
                 counter = entry.id;
                 continue;
@@ -220,12 +215,10 @@ where
             // Verify that counter was moved and continue if that's the case
 
             let source_repo_id = commit_syncer.get_source_repo().get_repoid();
-            let target_repo_id = commit_syncer.get_target_repo().get_repoid();
             let counter_name = format_counter(&source_repo_id);
             let new_counter = target_repo_dbs
                 .counters
-                .get_counter(ctx.clone(), target_repo_id, &counter_name)
-                .compat()
+                .get_counter(&ctx, &counter_name)
                 .await?
                 .unwrap_or(0);
             if new_counter <= counter {
@@ -258,11 +251,6 @@ where
 {
     let target_repo_id = commit_syncer.get_target_repo().get_repoid();
     let source_repo_id = commit_syncer.get_source_repo().get_repoid();
-    let TargetRepoDbs {
-        connections,
-        bookmarks,
-        ..
-    } = target_repo_dbs;
 
     debug!(ctx.logger(), "preparing to backsync {:?}", log_entry);
 
@@ -309,8 +297,11 @@ where
     let txn_hook = Arc::new({
         move |ctx: CoreContext, txn: Transaction| {
             async move {
-                let txn = SqlMutableCounters::set_counter_on_txn(
-                    ctx.clone(),
+                // This is an abstraction leak: it only works because the
+                // mutable counters are stored in the same db as the
+                // bookmarks.
+                let txn_result = SqlMutableCounters::set_counter_on_txn(
+                    &ctx,
                     target_repo_id,
                     &format_counter(&source_repo_id),
                     new_counter,
@@ -319,7 +310,7 @@ where
                 )
                 .await?;
 
-                match txn {
+                match txn_result {
                     TransactionResult::Succeeded(txn) => Ok(txn),
                     TransactionResult::Failed => Err(BookmarkTransactionError::LogicError),
                 }
@@ -341,7 +332,7 @@ where
         let to_cs_id = get_remapped_cs_id(to_sync_outcome)?;
 
         if from_cs_id != to_cs_id {
-            let mut bookmark_txn = bookmarks.create_transaction(ctx.clone());
+            let mut bookmark_txn = target_repo_dbs.bookmarks.create_transaction(ctx.clone());
             debug!(
                 ctx.logger(),
                 "syncing bookmark {} to {:?}", bookmark, to_cs_id
@@ -406,15 +397,14 @@ where
         debug!(ctx.logger(), "Renamed bookmark is None. No sync happening.");
     }
 
-    let updated = SqlMutableCounters::from_sql_connections(connections)
+    let updated = target_repo_dbs
+        .counters
         .set_counter(
-            ctx.clone(),
-            target_repo_id,
+            &ctx,
             &format_counter(&source_repo_id),
             new_counter,
             prev_counter,
         )
-        .compat()
         .await?;
 
     Ok(updated)
@@ -427,7 +417,7 @@ pub struct TargetRepoDbs {
     pub connections: SqlConnections,
     pub bookmarks: ArcBookmarks,
     pub bookmark_update_log: ArcBookmarkUpdateLog,
-    pub counters: SqlMutableCounters,
+    pub counters: ArcMutableCounters,
 }
 
 pub async fn open_backsyncer_dbs(
@@ -445,13 +435,11 @@ pub async fn open_backsyncer_dbs(
         .await?
         .into();
 
-    let counters = SqlMutableCounters::from_sql_connections(connections.clone());
-
     Ok(TargetRepoDbs {
         connections,
         bookmarks: blobrepo.bookmarks().clone(),
         bookmark_update_log: blobrepo.bookmark_update_log().clone(),
-        counters,
+        counters: blobrepo.mutable_counters_arc(),
     })
 }
 

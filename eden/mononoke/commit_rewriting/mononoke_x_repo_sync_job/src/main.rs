@@ -61,7 +61,6 @@ use cross_repo_sync::{
 use derived_data_utils::derive_data_for_csids;
 use fbinit::FacebookInit;
 use futures::{
-    compat::Future01CompatExt,
     future::{self, try_join},
     stream::{self, TryStreamExt},
     StreamExt,
@@ -71,7 +70,7 @@ use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use mononoke_api_types::InnerRepo;
 use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::{ChangesetId, RepositoryId};
-use mutable_counters::{MutableCounters, SqlMutableCounters};
+use mutable_counters::{ArcMutableCounters, MutableCountersArc, MutableCountersRef};
 use regex::Regex;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
@@ -148,12 +147,9 @@ enum TailingArgs<M> {
     LoopForever(CommitSyncer<M>, ConfigStore),
 }
 
-async fn run_in_tailing_mode<
-    M: SyncedCommitMapping + Clone + 'static,
-    C: MutableCounters + Clone + Sync + 'static,
->(
+async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
     ctx: &CoreContext,
-    mutable_counters: C,
+    target_mutable_counters: ArcMutableCounters,
     source_skiplist_index: Source<Arc<SkiplistIndex>>,
     target_skiplist_index: Target<Arc<SkiplistIndex>>,
     common_pushrebase_bookmarks: HashSet<BookmarkName>,
@@ -170,7 +166,7 @@ async fn run_in_tailing_mode<
             tail(
                 &ctx,
                 &commit_syncer,
-                &mutable_counters,
+                &target_mutable_counters,
                 scuba_sample,
                 &common_pushrebase_bookmarks,
                 &source_skiplist_index,
@@ -204,7 +200,7 @@ async fn run_in_tailing_mode<
                 let synced_something = tail(
                     &ctx,
                     &commit_syncer,
-                    &mutable_counters,
+                    &target_mutable_counters,
                     scuba_sample.clone(),
                     &common_pushrebase_bookmarks,
                     &source_skiplist_index,
@@ -227,13 +223,10 @@ async fn run_in_tailing_mode<
     Ok(())
 }
 
-async fn tail<
-    M: SyncedCommitMapping + Clone + 'static,
-    C: MutableCounters + Clone + Sync + 'static,
->(
+async fn tail<M: SyncedCommitMapping + Clone + 'static>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M>,
-    mutable_counters: &C,
+    target_mutable_counters: &ArcMutableCounters,
     mut scuba_sample: MononokeScubaSampleBuilder,
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
     source_skiplist_index: &Source<Arc<SkiplistIndex>>,
@@ -244,14 +237,10 @@ async fn tail<
     maybe_bookmark_regex: &Option<Regex>,
 ) -> Result<bool, Error> {
     let source_repo = commit_syncer.get_source_repo();
-    let target_repo_id = commit_syncer.get_target_repo_id();
     let bookmark_update_log = source_repo.bookmark_update_log();
     let counter = format_counter(&commit_syncer);
 
-    let maybe_start_id = mutable_counters
-        .get_counter(ctx.clone(), target_repo_id, &counter)
-        .compat()
-        .await?;
+    let maybe_start_id = target_mutable_counters.get_counter(ctx, &counter).await?;
     let start_id = maybe_start_id.ok_or(format_err!("counter not found"))?;
     let limit = 10;
     let log_entries = bookmark_update_log
@@ -309,7 +298,6 @@ async fn tail<
 
                     maybe_apply_backpressure(
                         ctx,
-                        mutable_counters,
                         backpressure_params,
                         commit_syncer.get_target_repo(),
                         scuba_sample.clone(),
@@ -331,26 +319,21 @@ async fn tail<
             // Note that updating the counter might fail after successful sync of the commits.
             // This is expected - next run will try to update the counter again without
             // re-syncing the commits.
-            mutable_counters
-                .set_counter(ctx.clone(), target_repo_id, &counter, entry_id, None)
-                .compat()
+            target_mutable_counters
+                .set_counter(ctx, &counter, entry_id, None)
                 .await?;
         }
         Ok(true)
     }
 }
 
-async fn maybe_apply_backpressure<C>(
+async fn maybe_apply_backpressure(
     ctx: &CoreContext,
-    mutable_counters: &C,
     backpressure_params: &BackpressureParams,
     target_repo: &BlobRepo,
     scuba_sample: MononokeScubaSampleBuilder,
     sleep_secs: u64,
-) -> Result<(), Error>
-where
-    C: MutableCounters + Clone + Sync + 'static,
-{
+) -> Result<(), Error> {
     let target_repo_id = target_repo.get_repoid();
     let limit = 10;
     loop {
@@ -360,9 +343,9 @@ where
                 async move {
                     let repo_id = repo.get_repoid();
                     let backsyncer_counter = format_backsyncer_counter(&target_repo_id);
-                    let maybe_counter = mutable_counters
-                        .get_counter(ctx.clone(), repo_id, &backsyncer_counter)
-                        .compat()
+                    let maybe_counter = repo
+                        .mutable_counters()
+                        .get_counter(ctx, &backsyncer_counter)
                         .await?;
 
                     match maybe_counter {
@@ -400,7 +383,7 @@ where
     }
 
     if backpressure_params.wait_for_target_repo_hg_sync {
-        wait_for_latest_log_id_to_be_synced(ctx, target_repo, mutable_counters, sleep_secs).await?;
+        wait_for_latest_log_id_to_be_synced(ctx, target_repo, sleep_secs).await?;
     }
     Ok(())
 }
@@ -419,7 +402,6 @@ async fn run<'a>(
 ) -> Result<(), Error> {
     let config_store = matches.config_store();
     let mut scuba_sample = get_scuba_sample(ctx.clone(), &matches);
-    let counters = args::open_source_sql::<SqlMutableCounters>(fb, config_store, &matches)?;
 
     let source_repo_id = args::get_source_repo_id(config_store, &matches)?;
     let target_repo_id = args::get_target_repo_id(config_store, &matches)?;
@@ -445,6 +427,7 @@ async fn run<'a>(
 
     let source_skiplist_index = Source(source_repo.skiplist_index.clone());
     let target_skiplist_index = Target(target_repo.skiplist_index.clone());
+    let target_mutable_counters = target_repo.mutable_counters_arc();
     match matches.subcommand() {
         (ARG_ONCE, Some(sub_m)) => {
             add_common_fields(&mut scuba_sample, &commit_syncer);
@@ -495,7 +478,7 @@ async fn run<'a>(
 
             run_in_tailing_mode(
                 &ctx,
-                counters,
+                target_mutable_counters,
                 source_skiplist_index,
                 target_skiplist_index,
                 common_bookmarks,

@@ -41,7 +41,6 @@ use metaconfig_types::{
 use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime};
 use movers::{DefaultAction, Mover};
-use mutable_counters::SqlMutableCounters;
 use pushrebase::do_pushrebase_bonsai;
 use repo_blobstore::RepoBlobstoreRef;
 use segmented_changelog::{seedheads_from_config, SeedHead, SegmentedChangelogTailer};
@@ -360,7 +359,6 @@ async fn move_bookmark(
     bookmark: &BookmarkName,
     checker_flags: &CheckerFlags,
     maybe_call_sign: &Option<String>,
-    mutable_counters: &SqlMutableCounters,
     maybe_small_repo_back_sync_vars: &Option<SmallRepoBackSyncVars>,
     recovery_fields: &mut RecoveryFields,
 ) -> Result<(), Error> {
@@ -449,7 +447,6 @@ async fn move_bookmark(
                 &checker_flags,
                 hg_csid,
                 sleep_time,
-                &mutable_counters,
                 &maybe_call_sign,
             )
             .await?;
@@ -494,7 +491,6 @@ async fn move_bookmark(
                 &checker_flags,
                 small_repo_hg_csid,
                 sleep_time,
-                &mutable_counters,
                 &small_repo_back_sync_vars.maybe_call_sign,
             )
             .await?;
@@ -647,7 +643,6 @@ async fn check_dependent_systems(
     checker_flags: &CheckerFlags,
     hg_csid: HgChangesetId,
     sleep_time: u64,
-    mutable_counters: &SqlMutableCounters,
     maybe_call_sign: &Option<String>,
 ) -> Result<(), Error> {
     // if a check is disabled, we have already passed the check
@@ -668,8 +663,7 @@ async fn check_dependent_systems(
     }
 
     if !passed_hg_sync_check {
-        wait_for_latest_log_id_to_be_synced(ctx, repo.as_blob_repo(), mutable_counters, sleep_time)
-            .await?;
+        wait_for_latest_log_id_to_be_synced(ctx, repo.as_blob_repo(), sleep_time).await?;
     }
 
     Ok(())
@@ -1049,8 +1043,6 @@ async fn repo_import(
         Ok(Some(mutable_path))
     });
 
-    let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, config_store, &matches)?;
-
     // Importing process starts here
     if recovery_fields.import_stage == ImportStage::GitImport {
         let prefs = GitimportPreferences::default();
@@ -1166,7 +1158,6 @@ async fn repo_import(
             &repo_import_setting.importing_bookmark,
             &checker_flags,
             &call_sign,
-            &mutable_counters,
             &maybe_small_repo_back_sync_vars,
             recovery_fields,
         )

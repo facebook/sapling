@@ -21,7 +21,6 @@ use metaconfig_types::{
 use mononoke_api::Repo;
 use mononoke_api_types::InnerRepo;
 use mononoke_types::RepositoryId;
-use mutable_counters::{MutableCounters, SqlMutableCounters};
 use rand::Rng;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
@@ -49,8 +48,6 @@ pub struct MononokeRepo {
     repo: Arc<Repo>,
     bookmark_attrs: BookmarkAttrs,
     streaming_clone: SqlStreamingCloneConfig,
-    #[allow(dead_code)]
-    mutable_counters: Arc<dyn MutableCounters>,
 }
 
 impl MononokeRepo {
@@ -62,16 +59,6 @@ impl MononokeRepo {
     ) -> Result<Self, Error> {
         let storage_config = &repo.config().storage_config;
 
-        let mutable_counters = Arc::new(
-            SqlMutableCounters::with_metadata_database_config(
-                fb,
-                &storage_config.metadata,
-                mysql_options,
-                readonly_storage.0,
-            )
-            .context("Failed to open SqlMutableCounters")?,
-        );
-
         let streaming_clone = streaming_clone(
             fb,
             repo.blob_repo(),
@@ -81,14 +68,13 @@ impl MononokeRepo {
             readonly_storage.0,
         )?;
 
-        Self::new_from_parts(fb, repo, streaming_clone, mutable_counters).await
+        Self::new_from_parts(fb, repo, streaming_clone).await
     }
 
     pub async fn new_from_parts(
         fb: FacebookInit,
         repo: Arc<Repo>,
         streaming_clone: SqlStreamingCloneConfig,
-        mutable_counters: Arc<dyn MutableCounters>,
     ) -> Result<Self, Error> {
         // TODO: Update Metaconfig so we just have this in config:
         let bookmark_attrs = BookmarkAttrs::new(fb, repo.config().bookmarks.clone()).await?;
@@ -96,7 +82,6 @@ impl MononokeRepo {
         Ok(Self {
             repo,
             streaming_clone,
-            mutable_counters,
             bookmark_attrs,
         })
     }

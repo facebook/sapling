@@ -27,6 +27,7 @@ use futures::{future::BoxFuture, Stream, TryStreamExt};
 use mercurial_mutation::{ArcHgMutationStore, HgMutationStore};
 use metaconfig_types::{DerivedDataConfig, DerivedDataTypesConfig};
 use mononoke_types::{BonsaiChangeset, ChangesetId, Generation, RepositoryId};
+use mutable_counters::MutableCounters;
 use phases::Phases;
 use pushrebase_mutation_mapping::{ArcPushrebaseMutationMapping, PushrebaseMutationMapping};
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreRef};
@@ -104,6 +105,9 @@ pub struct BlobRepoInner {
 
     #[facet]
     pub repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    pub mutable_counters: dyn MutableCounters,
 }
 
 #[facet::container]
@@ -126,6 +130,7 @@ pub struct BlobRepo {
         dyn Filenodes,
         dyn HgMutationStore,
         RepoDerivedData,
+        dyn MutableCounters,
     )]
     inner: Arc<BlobRepoInner>,
 }

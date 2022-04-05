@@ -23,10 +23,7 @@ use cross_repo_sync::{
 use fbinit::FacebookInit;
 use fixtures::Linear;
 use fixtures::TestRepoFixture;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    FutureExt, TryFutureExt, TryStreamExt,
-};
+use futures::{compat::Stream01CompatExt, FutureExt, TryFutureExt, TryStreamExt};
 use futures_ext::FbTryFutureExt;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
 use manifest::{Entry, ManifestOps};
@@ -40,7 +37,7 @@ use metaconfig_types::{
 use mononoke_types::RepositoryId;
 use mononoke_types::{ChangesetId, MPath};
 use movers::Mover;
-use mutable_counters::{MutableCounters, SqlMutableCounters};
+use mutable_counters::MutableCountersArc;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use skiplist::SkiplistIndex;
 use sql_construct::SqlConstruct;
@@ -149,7 +146,6 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
         .await?;
 
         let source_repo = commit_syncer.get_source_repo();
-        let target_repo = commit_syncer.get_target_repo();
 
         let next_log_entries: Vec<_> = source_repo
             .read_next_bookmark_log_entries(ctx.clone(), 0, 1000, Freshness::MostRecent)
@@ -172,12 +168,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
         // Make sure all of the entries were synced
         let fetched_value = target_repo_dbs
             .counters
-            .get_counter(
-                ctx.clone(),
-                target_repo.get_repoid(),
-                &format_counter(&source_repo.get_repoid()),
-            )
-            .compat()
+            .get_counter(&ctx, &format_counter(&source_repo.get_repoid()))
             .await?;
 
         assert_eq!(fetched_value, Some(latest_log_id));
@@ -649,9 +640,9 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
         connections: factory.metadata_db().clone().into(),
         bookmarks: target_repo.bookmarks().clone(),
         bookmark_update_log: target_repo.bookmark_update_log().clone(),
-        counters: SqlMutableCounters::from_sql_connections(factory.metadata_db().clone().into()),
+        counters: target_repo.mutable_counters_arc(),
     };
-    init_target_repo(&ctx, &target_repo_dbs, source_repo_id, target_repo_id).await?;
+    init_target_repo(&ctx, &target_repo_dbs, source_repo_id).await?;
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
 
@@ -850,7 +841,6 @@ async fn backsync_and_verify_master_wc(
     target_repo_dbs: TargetRepoDbs,
 ) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
-    let target_repo = commit_syncer.get_target_repo();
 
     let ctx = CoreContext::test_mock(fb);
     let next_log_entries: Vec<_> = commit_syncer
@@ -879,12 +869,7 @@ async fn backsync_and_verify_master_wc(
     // Check that counter was moved
     let fetched_value = target_repo_dbs
         .counters
-        .get_counter(
-            ctx.clone(),
-            target_repo.get_repoid(),
-            &format_counter(&source_repo.get_repoid()),
-        )
-        .compat()
+        .get_counter(&ctx, &format_counter(&source_repo.get_repoid()))
         .await?;
     assert_eq!(fetched_value, Some(latest_log_id));
 
@@ -1235,9 +1220,9 @@ async fn init_repos(
         connections: factory.metadata_db().clone().into(),
         bookmarks: target_repo.bookmarks().clone(),
         bookmark_update_log: target_repo.bookmark_update_log().clone(),
-        counters: SqlMutableCounters::from_sql_connections(factory.metadata_db().clone().into()),
+        counters: target_repo.mutable_counters_arc(),
     };
-    init_target_repo(&ctx, &target_repo_dbs, source_repo_id, target_repo_id).await?;
+    init_target_repo(&ctx, &target_repo_dbs, source_repo_id).await?;
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
 
@@ -1484,19 +1469,11 @@ async fn init_target_repo(
     ctx: &CoreContext,
     target_repo_dbs: &TargetRepoDbs,
     source_repo_id: RepositoryId,
-    target_repo_id: RepositoryId,
 ) -> Result<(), Error> {
     // Init counters
     target_repo_dbs
         .counters
-        .set_counter(
-            ctx.clone(),
-            target_repo_id,
-            &format_counter(&source_repo_id),
-            0,
-            None,
-        )
-        .compat()
+        .set_counter(ctx, &format_counter(&source_repo_id), 0, None)
         .await?;
 
     Ok(())
@@ -1533,22 +1510,13 @@ async fn init_merged_repos(
             connections: factory.metadata_db().clone().into(),
             bookmarks: small_repo.bookmarks().clone(),
             bookmark_update_log: small_repo.bookmark_update_log().clone(),
-            counters: SqlMutableCounters::from_sql_connections(
-                factory.metadata_db().clone().into(),
-            ),
+            counters: small_repo.mutable_counters_arc(),
         };
 
         // Init counters
         small_repo_dbs
             .counters
-            .set_counter(
-                ctx.clone(),
-                repoid,
-                &format_counter(&large_repo_id),
-                0,
-                None,
-            )
-            .compat()
+            .set_counter(&ctx, &format_counter(&large_repo_id), 0, None)
             .await?;
 
         let after_merge_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());

@@ -21,7 +21,6 @@ use context::{CoreContext, SessionContainer};
 use cross_repo_sync::{CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer};
 use fbinit::FacebookInit;
 use futures::{
-    compat::Future01CompatExt,
     future::FutureExt,
     stream::{self, StreamExt, TryStreamExt},
     try_join,
@@ -30,7 +29,6 @@ use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
-use mutable_counters::MutableCounters;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info};
 use stats::prelude::*;
@@ -167,14 +165,10 @@ where
     M: SyncedCommitMapping + Clone + 'static,
 {
     let TargetRepoDbs { ref counters, .. } = target_repo_dbs;
-    let target_repo_id = commit_syncer.get_target_repo().get_repoid();
     let source_repo_id = commit_syncer.get_source_repo().get_repoid();
 
     let counter_name = format_counter(&source_repo_id);
-    let maybe_counter = counters
-        .get_counter(ctx.clone(), target_repo_id, &counter_name)
-        .compat()
-        .await?;
+    let maybe_counter = counters.get_counter(ctx, &counter_name).await?;
     let counter = maybe_counter.ok_or(format_err!("{} counter not found", counter_name))?;
     let source_repo = commit_syncer.get_source_repo();
     let next_entry = source_repo

@@ -27,7 +27,7 @@ mod tests {
     use derived_data_manager::BonsaiDerivable;
     use derived_data_utils::derived_data_utils;
     use fbinit::FacebookInit;
-    use futures::{compat::Future01CompatExt, stream::TryStreamExt};
+    use futures::stream::TryStreamExt;
     use git_types::TreeHandle;
     use live_commit_sync_config::{
         CfgrLiveCommitSyncConfig, LiveCommitSyncConfig, TestLiveCommitSyncConfig,
@@ -48,7 +48,7 @@ mod tests {
     };
     use mononoke_types_mocks::changesetid::{ONES_CSID as MON_CSID, TWOS_CSID};
     use movers::{DefaultAction, Mover};
-    use mutable_counters::{MutableCounters, SqlMutableCounters};
+    use mutable_counters::MutableCountersRef;
     use repo_blobstore::RepoBlobstoreRef;
     use sql_construct::SqlConstruct;
     use std::collections::HashMap;
@@ -127,7 +127,6 @@ mod tests {
             x_repo_check_disabled: true,
             hg_sync_check_disabled: true,
         };
-        let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
         let changesets = create_from_dag(
             &ctx,
             repo.as_blob_repo(),
@@ -146,7 +145,6 @@ mod tests {
             &importing_bookmark,
             &checker_flags,
             &call_sign,
-            &mutable_counters,
             &None,
             &mut recovery_fields,
         )
@@ -188,7 +186,6 @@ mod tests {
             x_repo_check_disabled: true,
             hg_sync_check_disabled: true,
         };
-        let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
         let changesets = create_from_dag(
             &ctx,
             repo.as_blob_repo(),
@@ -215,7 +212,6 @@ mod tests {
             &importing_bookmark,
             &checker_flags,
             &None,
-            &mutable_counters,
             &None,
             &mut recovery_fields,
         )
@@ -266,56 +262,29 @@ mod tests {
         };
         let call_sign = None;
         let sleep_time = 1;
-        let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
-        let repo_id = repo.repo_id();
         let bookmark = create_bookmark_name("book");
 
         assert!(
-            check_dependent_systems(
-                &ctx,
-                &repo,
-                &checker_flags,
-                HG_CSID,
-                sleep_time,
-                &mutable_counters,
-                &call_sign,
-            )
-            .await
-            .is_err()
+            check_dependent_systems(&ctx, &repo, &checker_flags, HG_CSID, sleep_time, &call_sign,)
+                .await
+                .is_err()
         );
 
         let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         txn.create(&bookmark, MON_CSID, BookmarkUpdateReason::TestMove, None)?;
         txn.commit().await.unwrap();
         assert!(
-            check_dependent_systems(
-                &ctx,
-                &repo,
-                &checker_flags,
-                HG_CSID,
-                sleep_time,
-                &mutable_counters,
-                &call_sign,
-            )
-            .await
-            .is_err()
+            check_dependent_systems(&ctx, &repo, &checker_flags, HG_CSID, sleep_time, &call_sign,)
+                .await
+                .is_err()
         );
 
-        mutable_counters
-            .set_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY, 1, None)
-            .compat()
+        repo.mutable_counters()
+            .set_counter(&ctx, LATEST_REPLAYED_REQUEST_KEY, 1, None)
             .await?;
 
-        check_dependent_systems(
-            &ctx,
-            &repo,
-            &checker_flags,
-            HG_CSID,
-            sleep_time,
-            &mutable_counters,
-            &call_sign,
-        )
-        .await?;
+        check_dependent_systems(&ctx, &repo, &checker_flags, HG_CSID, sleep_time, &call_sign)
+            .await?;
 
         let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         txn.update(
@@ -329,35 +298,18 @@ mod tests {
 
         let timed_out = time::timeout(
             Duration::from_millis(2000),
-            check_dependent_systems(
-                &ctx,
-                &repo,
-                &checker_flags,
-                HG_CSID,
-                sleep_time,
-                &mutable_counters,
-                &call_sign,
-            ),
+            check_dependent_systems(&ctx, &repo, &checker_flags, HG_CSID, sleep_time, &call_sign),
         )
         .await
         .is_err();
         assert!(timed_out);
 
-        mutable_counters
-            .set_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY, 2, None)
-            .compat()
+        repo.mutable_counters()
+            .set_counter(&ctx, LATEST_REPLAYED_REQUEST_KEY, 2, None)
             .await?;
 
-        check_dependent_systems(
-            &ctx,
-            &repo,
-            &checker_flags,
-            HG_CSID,
-            sleep_time,
-            &mutable_counters,
-            &call_sign,
-        )
-        .await?;
+        check_dependent_systems(&ctx, &repo, &checker_flags, HG_CSID, sleep_time, &call_sign)
+            .await?;
         Ok(())
     }
 

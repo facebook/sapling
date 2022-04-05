@@ -43,7 +43,7 @@ use metaconfig_types::{
     ArcRepoConfig, DerivedDataConfig, DerivedDataTypesConfig, RepoConfig, UnodeVersion,
 };
 use mononoke_types::RepositoryId;
-use mutable_counters::SqlMutableCounters;
+use mutable_counters::{ArcMutableCounters, SqlMutableCountersBuilder};
 use mutable_renames::{ArcMutableRenames, MutableRenames, SqlMutableRenamesStore};
 use newfilenodes::NewFilenodesBuilder;
 use phases::ArcPhases;
@@ -144,7 +144,7 @@ impl TestRepoFactory {
         hg_mutation_con: SqliteConnection,
     ) -> Result<TestRepoFactory> {
         metadata_con.execute_batch(MegarepoMapping::CREATION_QUERY)?;
-        metadata_con.execute_batch(SqlMutableCounters::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlMutableCountersBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlChangesetsBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiGitMappingBuilder::CREATION_QUERY)?;
@@ -469,5 +469,13 @@ impl TestRepoFactory {
             live_commit_sync_config,
             sync_lease,
         )))
+    }
+
+    /// Mutable counters
+    pub fn mutable_counters(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcMutableCounters> {
+        Ok(Arc::new(
+            SqlMutableCountersBuilder::from_sql_connections(self.metadata_db.clone().into())
+                .build(repo_identity.id()),
+        ))
     }
 }

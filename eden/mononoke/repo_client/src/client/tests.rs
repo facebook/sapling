@@ -21,7 +21,6 @@ use metaconfig_types::LfsParams;
 use mononoke_api::Repo;
 use mononoke_repo::MononokeRepo;
 use mononoke_types_mocks::changesetid::ONES_CSID;
-use mutable_counters::SqlMutableCounters;
 use scuba_ext::MononokeScubaSampleBuilder;
 use serde_json::json;
 use sql_construct::SqlConstruct;
@@ -418,7 +417,6 @@ async fn run_and_check_if_lfs(
             fetcher: SqlStreamingChunksFetcher::with_sqlite_in_memory()?,
             repoid: blob_repo.get_repoid(),
         },
-        Arc::new(SqlMutableCounters::with_sqlite_in_memory()?),
     )
     .await?;
 

@@ -40,6 +40,7 @@ use metaconfig_types::ArcRepoConfig;
 use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepoPath, RepositoryId,
 };
+use mutable_counters::{ArcMutableCounters, SqlMutableCountersBuilder};
 use newfilenodes::NewFilenodesBuilder;
 use phases::ArcPhases;
 use pushrebase_mutation_mapping::{
@@ -290,6 +291,12 @@ impl BenchmarkRepoFactory {
 
     pub fn skiplist_index(&self) -> ArcSkiplistIndex {
         Arc::new(SkiplistIndex::new())
+    }
+
+    pub fn mutable_counters(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcMutableCounters> {
+        Ok(Arc::new(
+            SqlMutableCountersBuilder::with_sqlite_in_memory()?.build(repo_identity.id()),
+        ))
     }
 }
 

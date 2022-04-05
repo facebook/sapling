@@ -13,6 +13,7 @@ use bookmarks::{BookmarkUpdateLog, Bookmarks};
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use mononoke_types::RepositoryId;
+use mutable_counters::MutableCounters;
 use phases::Phases;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
 use repo_blobstore::RepoBlobstore;
@@ -36,6 +37,7 @@ pub struct Repo {
         dyn Changesets,
         dyn Phases,
         dyn PushrebaseMutationMapping,
+        dyn MutableCounters,
     )]
     blob_repo: BlobRepo,
 
