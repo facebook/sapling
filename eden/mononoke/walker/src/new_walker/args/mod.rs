@@ -7,12 +7,14 @@
 
 pub mod progress;
 pub mod sampling;
+pub mod scrub;
 pub mod tail_args;
 pub mod walk_params;
 pub mod walk_root;
 
 pub use progress::ProgressArgs;
 pub use sampling::SamplingArgs;
+pub use scrub::{ScrubOutputNodeArgs, ScrubPackLogArgs};
 pub use tail_args::{CheckpointArgs, ChunkingArgs, TailArgs};
 pub use walk_params::{HashValidationArgs, WalkerGraphArgs, WalkerGraphParams};
 pub use walk_root::WalkRootArgs;
@@ -40,6 +42,10 @@ pub struct WalkerCommonArgs {
     /// Enable derivation of data (e.g. hg, file metadata).
     #[clap(long)]
     pub enable_derive: bool,
+    /// Limit the amount of data fetched from stores, by not streaming
+    /// large files to the end. Only used by `scrub` subcommand.
+    #[clap(long)]
+    pub limit_data_fetch: bool,
 
     /// Id of a storage group to operate over, e.g. manifold_xdb_multiplex
     pub storage_id: Option<String>,
