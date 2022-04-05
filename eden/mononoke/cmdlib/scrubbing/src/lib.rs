@@ -95,16 +95,20 @@ impl AppExtension for ScrubAppExtension {
 
     fn environment_hook(&self, args: &ScrubArgs, env: &mut MononokeEnvironment) -> Result<()> {
         if let Some(scrub_action) = args.blobstore_scrub_action {
-            let scrub_options = ScrubOptions {
+            let mut scrub_options = ScrubOptions {
                 scrub_action,
-                scrub_grace: args.blobstore_scrub_grace.map(Duration::from_secs),
-                scrub_action_on_missing_write_mostly: args
-                    .blobstore_scrub_write_mostly_missing
-                    .unwrap_or(ScrubWriteMostly::Scrub),
-                queue_peek_bound: args
-                    .blobstore_scrub_queue_peek_bound
-                    .map(Duration::from_secs),
+                ..ScrubOptions::default()
             };
+
+            if let Some(scrub_grace) = args.blobstore_scrub_grace {
+                scrub_options.scrub_grace = Some(Duration::from_secs(scrub_grace));
+            }
+            if let Some(action_on_missing) = args.blobstore_scrub_write_mostly_missing {
+                scrub_options.scrub_action_on_missing_write_mostly = action_on_missing;
+            }
+            if let Some(queue_peek_bound) = args.blobstore_scrub_queue_peek_bound {
+                scrub_options.queue_peek_bound = Duration::from_secs(queue_peek_bound);
+            }
             env.blobstore_options.set_scrub_options(scrub_options);
         }
         Ok(())

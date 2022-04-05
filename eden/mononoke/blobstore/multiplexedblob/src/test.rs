@@ -307,10 +307,8 @@ async fn scrub_none(
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
         ScrubOptions {
-            scrub_action: ScrubAction::ReportOnly,
-            scrub_grace: None,
             scrub_action_on_missing_write_mostly,
-            queue_peek_bound: None,
+            ..ScrubOptions::default()
         },
         Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
     );
@@ -1002,9 +1000,8 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         nonzero!(1u64),
         ScrubOptions {
             scrub_action: ScrubAction::ReportOnly,
-            scrub_grace: None,
             scrub_action_on_missing_write_mostly,
-            queue_peek_bound: None,
+            ..ScrubOptions::default()
         },
         scrub_handler.clone(),
     );
@@ -1105,9 +1102,8 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         nonzero!(1u64),
         ScrubOptions {
             scrub_action: ScrubAction::Repair,
-            scrub_grace: None,
             scrub_action_on_missing_write_mostly,
-            queue_peek_bound: None,
+            ..ScrubOptions::default()
         },
         scrub_handler.clone(),
     );
@@ -1155,9 +1151,9 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
             nonzero!(1u64),
             ScrubOptions {
                 scrub_action: ScrubAction::Repair,
-                scrub_grace: None,
                 scrub_action_on_missing_write_mostly,
-                queue_peek_bound: Some(Duration::from_secs(7200)),
+                queue_peek_bound: Duration::from_secs(7200),
+                ..ScrubOptions::default()
             },
             scrub_handler,
         );
