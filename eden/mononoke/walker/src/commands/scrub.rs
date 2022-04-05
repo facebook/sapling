@@ -226,7 +226,7 @@ struct ScrubKeySample {
 
 // Holds a map from blobstore keys to their samples per store
 #[derive(Debug)]
-struct ScrubSample {
+pub struct ScrubSample {
     data: HashMap<String, HashMap<Option<BlobstoreId>, ScrubKeySample>>,
 }
 
@@ -417,13 +417,13 @@ impl ProgressReporterUnprotected for ProgressStateCountByType<ScrubStats, ScrubS
 
 #[derive(Clone)]
 pub struct ScrubCommand {
-    limit_data_fetch: bool,
-    output_format: OutputFormat,
-    output_node_types: HashSet<NodeType>,
-    progress_options: ProgressOptions,
-    sampling_options: SamplingOptions,
-    pack_info_log_options: Option<PackInfoLogOptions>,
-    sampler: Arc<WalkSampleMapping<Node, ScrubSample>>,
+    pub limit_data_fetch: bool,
+    pub output_format: OutputFormat,
+    pub output_node_types: HashSet<NodeType>,
+    pub progress_options: ProgressOptions,
+    pub sampling_options: SamplingOptions,
+    pub pack_info_log_options: Option<PackInfoLogOptions>,
+    pub sampler: Arc<WalkSampleMapping<Node, ScrubSample>>,
 }
 
 impl ScrubCommand {

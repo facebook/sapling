@@ -10,6 +10,7 @@
 #![feature(async_closure)]
 
 mod args;
+mod commands;
 mod setup;
 
 use anyhow::Error;
@@ -52,16 +53,17 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let read_only_storage = ReadOnlyStorage(true);
 
+    let subcommands = commands::subcommands();
     MononokeAppBuilder::new(fb)
         .with_app_extension(scrub_extension)
         .with_default_cachelib_settings(cachelib_defaults)
         .with_arg_defaults(blobstore_defaults)
         .with_arg_defaults(read_only_storage)
         .with_app_extension(Fb303AppExtension {})
-        .build::<WalkerArgs>()?
+        .build_with_subcommands::<WalkerArgs>(subcommands)?
         .run(async_main)
 }
 
-async fn async_main(_app: MononokeApp) -> Result<(), Error> {
-    Ok(())
+async fn async_main(app: MononokeApp) -> Result<(), Error> {
+    commands::dispatch(app).await
 }
