@@ -6,12 +6,13 @@
  */
 
 use std::any::TypeId;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 use blobstore::Blobstore;
+use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
 use cached_config::ConfigStore;
 use clap::{ArgMatches, Error as ClapError, FromArgMatches};
 use context::CoreContext;
@@ -27,6 +28,7 @@ use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig, RedactionCon
 use repo_factory::{RepoFactory, RepoFactoryBuilder};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
+use sql_ext::facebook::MysqlOptions;
 use tokio::runtime::Handle;
 
 use crate::args::{ConfigArgs, ConfigMode, MultiRepoArgs, RepoArg, RepoArgs, RepoBlobstoreArgs};
@@ -143,6 +145,21 @@ impl MononokeApp {
         &self.env.logger
     }
 
+    /// The mysql options for this app.
+    pub fn mysql_options(&self) -> &MysqlOptions {
+        &self.env.mysql_options
+    }
+
+    /// The blobstore options for this app.
+    pub fn blobstore_options(&self) -> &BlobstoreOptions {
+        &self.env.blobstore_options
+    }
+
+    /// The readonly storage options for this app.
+    pub fn readonly_storage(&self) -> &ReadOnlyStorage {
+        &self.env.readonly_storage
+    }
+
     /// Create a basic CoreContext.
     pub fn new_context(&self) -> CoreContext {
         CoreContext::new_with_logger(self.env.fb, self.logger().clone())
@@ -182,6 +199,20 @@ impl MononokeApp {
                 Ok((repo_name.to_string(), repo_config.clone()))
             }
         }
+    }
+
+    /// Get repo configs based on user-provided arguments.
+    pub fn multi_repo_configs(&self, repo_args: Vec<RepoArg>) -> Result<Vec<(String, RepoConfig)>> {
+        let mut repos = vec![];
+        let mut unique_repos = HashSet::new();
+        for repo in repo_args {
+            let (name, repo_conf) = self.repo_config(repo)?;
+            if unique_repos.insert(name.clone()) {
+                repos.push((name, repo_conf));
+            }
+        }
+
+        Ok(repos)
     }
 
     /// Open repositories based on user-provided arguments.

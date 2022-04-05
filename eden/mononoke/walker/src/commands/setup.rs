@@ -1575,7 +1575,7 @@ pub async fn setup_common<'a>(
 }
 
 // Setup for just one repo. Try and keep clap parsing out of here, should be done beforehand
-async fn setup_repo<'a>(
+pub async fn setup_repo<'a>(
     walk_stats_key: &'static str,
     fb: FacebookInit,
     logger: &'a Logger,

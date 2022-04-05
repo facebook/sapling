@@ -10,6 +10,7 @@
 #![feature(async_closure)]
 
 mod args;
+mod setup;
 
 use anyhow::Error;
 use blobstore_factory::{BlobstoreArgDefaults, ReadOnlyStorage};
