@@ -16,18 +16,20 @@ mod setup;
 use anyhow::Error;
 use blobstore_factory::{BlobstoreArgDefaults, ReadOnlyStorage};
 use clap::Parser;
-use fbinit::FacebookInit;
-use mononoke_app::fb303::Fb303AppExtension;
-use mononoke_app::{MononokeApp, MononokeAppBuilder};
-
 use cmdlib::args::CachelibSettings;
 use cmdlib_scrubbing::ScrubAppExtension;
-
+use fbinit::FacebookInit;
+use mononoke_app::args::MultiRepoArgs;
+use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::{MononokeApp, MononokeAppBuilder};
 use multiplexedblob::ScrubWriteMostly;
 use std::num::NonZeroU32;
 
 #[derive(Parser)]
-struct WalkerArgs {}
+struct WalkerArgs {
+    #[clap(flatten)]
+    pub repos: MultiRepoArgs,
+}
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {

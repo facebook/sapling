@@ -12,7 +12,7 @@ use cloned::cloned;
 use cmdlib::args::ResolvedRepo;
 use fbinit::FacebookInit;
 use metaconfig_types::{MetadataDatabaseConfig, Redaction, RepoConfig};
-use mononoke_app::MononokeApp;
+use mononoke_app::{args::MultiRepoArgs, MononokeApp};
 use mononoke_types::repo::RepositoryId;
 use newfilenodes::NewFilenodesBuilder;
 use repo_factory::RepoFactory;
@@ -40,6 +40,7 @@ use crate::args::{TailArgs, WalkerCommonArgs, WalkerGraphParams};
 pub async fn setup_common<'a>(
     walk_stats_key: &'static str,
     app: &MononokeApp,
+    repo_args: &MultiRepoArgs,
     common_args: &WalkerCommonArgs,
     blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
@@ -72,7 +73,7 @@ pub async fn setup_common<'a>(
 
     // There is no need to check if repos is empty: at least one repo arg
     // is required when running the command.
-    let repos = app.multi_repo_configs(common_args.repos.ids_or_names()?)?;
+    let repos = app.multi_repo_configs(repo_args.ids_or_names()?)?;
     let repo_count = repos.len();
     if repo_count > 1 {
         info!(

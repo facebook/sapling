@@ -19,6 +19,7 @@ use walker_commands_impl::{
 
 use crate::args::{SamplingArgs, ScrubOutputNodeArgs, ScrubPackLogArgs, WalkerCommonArgs};
 use crate::setup::setup_common;
+use crate::WalkerArgs;
 
 #[derive(Parser)]
 pub struct CommandArgs {
@@ -44,6 +45,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<(), Error> {
     let job_params = setup_common(
         SCRUB,
         &app,
+        &app.args::<WalkerArgs>()?.repos,
         &args.common_args,
         None,
         Some(component_sampler.clone()),
