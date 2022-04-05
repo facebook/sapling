@@ -11,9 +11,16 @@ pub mod tail_args;
 pub mod walk_params;
 pub mod walk_root;
 
+pub use progress::ProgressArgs;
+pub use sampling::SamplingArgs;
+pub use tail_args::{CheckpointArgs, ChunkingArgs, TailArgs};
+pub use walk_params::{HashValidationArgs, WalkerGraphArgs, WalkerGraphParams};
+pub use walk_root::WalkRootArgs;
+
 use anyhow::Error;
 use clap::Args;
 use itertools::{process_results, Itertools};
+use mononoke_app::args::MultiRepoArgs;
 use std::collections::HashSet;
 use walker_commands_impl::graph::{EdgeType, NodeType};
 use walker_commands_impl::setup::{parse_edge_value, parse_interned_value, parse_node_value};
@@ -28,13 +35,14 @@ pub struct WalkerCommonArgs {
     #[clap(long)]
     pub enable_redaction: bool,
     /// Maximum number of walk step tasks to attempt to execute at once.
-    /// Default 4096.
     #[clap(long, default_value = "4096")]
     pub scheduled_max: usize,
-    /// Enable derivation of data (e.g. hg, file metadata). Default is false
+    /// Enable derivation of data (e.g. hg, file metadata).
     #[clap(long)]
     pub enable_derive: bool,
 
+    /// Id of a storage group to operate over, e.g. manifold_xdb_multiplex
+    pub storage_id: Option<String>,
     /// If main blobstore in the storage config is a multiplexed one,
     /// use inner blobstore with this id.
     #[clap(long)]
@@ -42,6 +50,19 @@ pub struct WalkerCommonArgs {
     /// Add a multiplier on sampling requests
     #[clap(long, default_value = "100")]
     pub blobstore_sampling_multiplier: u64,
+
+    #[clap(flatten)]
+    pub repos: MultiRepoArgs,
+    #[clap(flatten, next_help_heading = "WALKING ROOTS")]
+    pub walk_roots: WalkRootArgs,
+    #[clap(flatten, next_help_heading = "GRAPH OPTIONS")]
+    pub graph_params: WalkerGraphArgs,
+    #[clap(flatten, next_help_heading = "HASH VALIDATION OPTIONS")]
+    pub hash_validation: HashValidationArgs,
+    #[clap(flatten, next_help_heading = "PROGRESS OPTIONS")]
+    pub progress: ProgressArgs,
+    #[clap(flatten, next_help_heading = "TAILING OPTIONS")]
+    pub tailing: TailArgs,
 }
 
 fn parse_node_types<'a>(

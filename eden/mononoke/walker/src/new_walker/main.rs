@@ -9,14 +9,14 @@
 #![feature(process_exitcode_placeholder)]
 #![feature(async_closure)]
 
-pub mod args;
+mod args;
 
 use anyhow::Error;
 use blobstore_factory::{BlobstoreArgDefaults, ReadOnlyStorage};
 use clap::Parser;
 use fbinit::FacebookInit;
 use mononoke_app::fb303::Fb303AppExtension;
-use mononoke_app::{args::MultiRepoArgs, MononokeApp, MononokeAppBuilder};
+use mononoke_app::{MononokeApp, MononokeAppBuilder};
 
 use cmdlib::args::CachelibSettings;
 use cmdlib_scrubbing::ScrubAppExtension;
@@ -25,10 +25,7 @@ use multiplexedblob::ScrubWriteMostly;
 use std::num::NonZeroU32;
 
 #[derive(Parser)]
-struct WalkerArgs {
-    #[clap(flatten)]
-    repos: MultiRepoArgs,
-}
+struct WalkerArgs {}
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
