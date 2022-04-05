@@ -11,11 +11,13 @@
 
 namespace facebook::eden {
 
-enum class ImportPriorityKind : int16_t { Low = 0, Normal = 1, High = 2 };
+constexpr uint64_t kOffset = 60;
+
+enum class ImportPriorityKind : uint8_t { Low = 0, Normal = 1, High = 2 };
 
 struct ImportPriority {
   ImportPriorityKind kind;
-  uint64_t offset : 48;
+  uint64_t offset : kOffset;
 
   static constexpr ImportPriority kLow() {
     return ImportPriority{ImportPriorityKind::Low};
@@ -38,9 +40,8 @@ struct ImportPriority {
   constexpr ImportPriority(ImportPriorityKind kind, uint64_t offset) noexcept
       : kind(kind), offset(offset) {}
 
-  constexpr inline int64_t value() const noexcept {
-    return (static_cast<int16_t>(kind) * (static_cast<uint64_t>(1) << 48)) +
-        offset;
+  constexpr inline uint64_t value() const noexcept {
+    return (static_cast<uint64_t>(kind) << kOffset) + offset;
   }
 
   /**

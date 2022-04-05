@@ -29,7 +29,7 @@ class ObjectFetchContext {
    *
    * Suitable for use as an index into an array of size kObjectTypeEnumMax
    */
-  enum ObjectType : unsigned {
+  enum ObjectType : uint8_t {
     Blob,
     BlobMetadata,
     Tree,
@@ -41,7 +41,7 @@ class ObjectFetchContext {
    *
    * Suitable for use as an index into an array of size kOriginEnumMax.
    */
-  enum Origin : unsigned {
+  enum Origin : uint8_t {
     /** The request didn't succeed */
     NotFetched,
     /** The request was serviced from a memory cache */
@@ -56,7 +56,7 @@ class ObjectFetchContext {
   /**
    * Which interface caused this object fetch
    */
-  enum Cause : unsigned { Unknown, Fs, Thrift, Prefetch };
+  enum Cause : uint8_t { Unknown, Fs, Thrift, Prefetch };
 
   ObjectFetchContext() {}
 

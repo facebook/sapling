@@ -15,19 +15,13 @@ using namespace facebook::eden;
 
 TEST(ImportPriorityTest, value) {
   EXPECT_LT(ImportPriority::kNormal(), ImportPriority::kHigh());
-  EXPECT_LT(
-      ImportPriority{static_cast<ImportPriorityKind>(INT16_MIN)},
-      ImportPriority::kNormal());
-  EXPECT_LT(
-      ImportPriority::kHigh(),
-      ImportPriority{static_cast<ImportPriorityKind>(INT16_MAX)});
+  EXPECT_LT(ImportPriority::kLow(), ImportPriority::kNormal());
 
   // The maximum possible priority
-  auto maximum = ImportPriority{
-      static_cast<ImportPriorityKind>(INT16_MAX), 0xFFFFFFFFFFFF};
-  EXPECT_EQ(maximum.value(), 0x7FFFFFFFFFFFFFFF);
+  auto maximum = ImportPriority{ImportPriorityKind::High, 0xFFFFFFFFFFFFFFF};
+  EXPECT_EQ(maximum.value(), 0x2FFFFFFFFFFFFFFF);
 
   // the minimum possible priority
-  auto minimum = ImportPriority{static_cast<ImportPriorityKind>(INT16_MIN), 0};
-  EXPECT_EQ(minimum.value(), -0x8000000000000000);
+  auto minimum = ImportPriority{ImportPriorityKind::Low, 0};
+  EXPECT_EQ(minimum.value(), 0x0000000000000000);
 }
