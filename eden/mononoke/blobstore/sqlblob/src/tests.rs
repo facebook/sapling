@@ -12,10 +12,7 @@ use borrowed::borrowed;
 use bytes::Bytes;
 use fbinit::FacebookInit;
 use rand::{distributions::Alphanumeric, thread_rng, Rng, RngCore};
-use std::time::Duration;
 use strum::IntoEnumIterator;
-
-const UPDATE_WAIT_TIME: Duration = Duration::from_millis(3);
 
 async fn test_chunking_methods<Test, Fut>(
     fb: FacebookInit,
@@ -346,7 +343,7 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
 
             let mark_gen = set_test_generations(test_source.as_ref(), 4, 3, 0, INITIAL_VERSION + 1);
 
-            tokio::time::sleep(UPDATE_WAIT_TIME).await;
+            config_store.force_update_configs();
 
             // Set the generation and confirm
             bs.set_generation(&key1, true, mark_gen).await?;
@@ -362,7 +359,7 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
             if value_len > MAX_INLINE_LEN {
                 // Update via another key, confirm both have put generation
                 set_test_generations(test_source.as_ref(), 5, 4, 2, INITIAL_VERSION + 2);
-                tokio::time::sleep(UPDATE_WAIT_TIME).await;
+                config_store.force_update_configs();
                 bs.put(ctx, key2.clone(), blobstore_bytes.clone()).await?;
                 let generations = bs.get_chunk_generations(&key1).await?;
                 assert_eq!(generations, vec![Some(5)], "key1 generation not updated");
@@ -373,7 +370,7 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
                 // the wrong version.
                 let mark_gen =
                     set_test_generations(test_source.as_ref(), 999, 10, 3, INITIAL_VERSION + 3);
-                tokio::time::sleep(UPDATE_WAIT_TIME).await;
+                config_store.force_update_configs();
                 bs.set_generation(&key1, true, mark_gen).await?;
                 let generations = bs.get_chunk_generations(&key1).await?;
                 assert_eq!(generations, vec![Some(10)], "key1 generation not updated");
