@@ -205,6 +205,55 @@ mod test {
         }
     }
 
+    fn terminal(values: Vec<(&str, i32)>) -> ShardedMapNode<MyType> {
+        ShardedMapNode::Terminal {
+            values: values
+                .into_iter()
+                .map(|(k, v)| (SmallVec::from_slice(k.as_bytes()), MyType(v)))
+                .collect(),
+        }
+    }
+
+    fn intermediate(
+        prefix: &str,
+        value: Option<MyType>,
+        children: Vec<(char, ShardedMapNode<MyType>)>,
+    ) -> ShardedMapNode<MyType> {
+        let value_count =
+            children.iter().map(|(_, v)| v.size()).sum::<usize>() + value.iter().len();
+        ShardedMapNode::Intermediate {
+            prefix: SmallVec::from_slice(prefix.as_bytes()),
+            value,
+            value_count,
+            children: children
+                .into_iter()
+                .map(|(c, v)| (c as u32 as u8, MapChild::Inlined(v)))
+                .collect(),
+        }
+    }
+
+    /// Returns an example map based on the picture on https://fburl.com/2fqtp2rk
+    fn example_map() -> ShardedMapNode<MyType> {
+        let abac = terminal(vec![
+            ("ab", 7),
+            ("aba", 8),
+            ("akkk", 9),
+            ("ate", 10),
+            ("axi", 11),
+        ]);
+        let abal = terminal(vec![("aba", 5), ("ada", 6)]);
+        let a = intermediate("ba", None, vec![('c', abac), ('l', abal)]);
+        let o = terminal(vec![("miojo", 1), ("miux", 2), ("mundo", 3), ("mungal", 4)]);
+        // root
+        intermediate("", None, vec![('a', a), ('o', o)])
+    }
+
+    fn assert_round_trip(map: ShardedMapNode<MyType>) {
+        let map_t = map.clone().into_thrift();
+        // This is not deep equality through blobstore
+        assert_eq!(ShardedMapNode::from_thrift(map_t).unwrap(), map);
+    }
+
     #[test]
     fn basic_test() {
         let empty = ShardedMapNode::<MyType>::Terminal {
@@ -221,15 +270,13 @@ mod test {
         assert!(empty.is_empty());
         assert_eq!(empty.size(), 0);
 
-        let map = ShardedMapNode::Terminal {
-            values: vec![
-                (SmallBinary::from_vec(vec![1, 3]), MyType(3)),
-                (SmallBinary::from_vec(vec![5, 7]), MyType(5)),
-            ]
-            .into_iter()
-            .collect(),
-        };
-        let map_t = map.clone().into_thrift();
-        assert_eq!(ShardedMapNode::from_thrift(map_t).unwrap(), map);
+        let map = terminal(vec![("ab", 3), ("cd", 5)]);
+        assert!(!map.is_empty());
+        assert_round_trip(map);
+
+        let map = example_map();
+        assert!(!map.is_empty());
+        assert_eq!(map.size(), 11);
+        assert_round_trip(map);
     }
 }
