@@ -19,8 +19,8 @@ use futures::{
 };
 use manifest::{Diff, ManifestOps, PathTree};
 use mononoke_types::{
-    deleted_manifest_common::DeletedManifestCommon, BonsaiChangeset, ChangesetId, MPath,
-    MPathElement, ManifestUnodeId, MononokeId,
+    deleted_manifest_common::DeletedManifestCommon, BlobstoreKey, BonsaiChangeset, ChangesetId,
+    MPath, MPathElement, ManifestUnodeId,
 };
 use std::sync::Arc;
 use std::{collections::BTreeMap, collections::HashSet};

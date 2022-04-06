@@ -43,9 +43,9 @@ use mononoke_types::{
     fsnode::Fsnode,
     skeleton_manifest::SkeletonManifest,
     unode::{FileUnode, ManifestUnode},
-    BlameId, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, DeletedManifestId,
-    FastlogBatchId, FileUnodeId, FsnodeId, MPath, MPathHash, ManifestUnodeId, MononokeId, RepoPath,
-    SkeletonManifestId,
+    BlameId, BlobstoreKey, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata,
+    DeletedManifestId, FastlogBatchId, FileUnodeId, FsnodeId, MPath, MPathHash, ManifestUnodeId,
+    MononokeId, RepoPath, SkeletonManifestId,
 };
 use newfilenodes::PathHash;
 use once_cell::sync::OnceCell;

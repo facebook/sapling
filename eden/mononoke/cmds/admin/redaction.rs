@@ -25,7 +25,7 @@ use manifest::ManifestOps;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId, MPath};
 use mononoke_types::{
-    blob::BlobstoreValue, typed_hash::MononokeId, ContentId, RedactionKeyList, Timestamp,
+    blob::BlobstoreValue, typed_hash::BlobstoreKey, ContentId, RedactionKeyList, Timestamp,
 };
 use redactedblobstore::SqlRedactedContentStore;
 use repo_factory::RepoFactory;

@@ -56,9 +56,9 @@ pub use redaction_key_list::RedactionKeyList;
 pub use repo::{RepositoryId, REPO_PREFIX_REGEX};
 pub use svnrev::Svnrev;
 pub use typed_hash::{
-    ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, ContentChunkId, ContentId,
-    ContentMetadataId, DeletedManifestId, FastlogBatchId, FileUnodeId, FsnodeId, ManifestUnodeId,
-    MononokeId, RawBundle2Id, SkeletonManifestId,
+    BlobstoreKey, ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, ContentChunkId,
+    ContentId, ContentMetadataId, DeletedManifestId, FastlogBatchId, FileUnodeId, FsnodeId,
+    ManifestUnodeId, MononokeId, RawBundle2Id, SkeletonManifestId,
 };
 
 mod macros;

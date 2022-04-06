@@ -21,7 +21,7 @@ use futures::stream::TryStreamExt;
 use manifest::{Entry, ManifestOps};
 use mononoke_app::args::{RepoArgs, RepoBlobstoreArgs};
 use mononoke_app::MononokeApp;
-use mononoke_types::{BlobstoreValue, ChangesetId, MPath, MononokeId, RedactionKeyList};
+use mononoke_types::{BlobstoreKey, BlobstoreValue, ChangesetId, MPath, RedactionKeyList};
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 

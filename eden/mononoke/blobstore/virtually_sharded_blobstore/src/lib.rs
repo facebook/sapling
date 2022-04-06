@@ -568,7 +568,7 @@ mod test {
     mod caching {
         use super::*;
 
-        use mononoke_types::{content_chunk::new_blob_and_pointer, MononokeId};
+        use mononoke_types::{content_chunk::new_blob_and_pointer, BlobstoreKey};
 
         #[fbinit::test]
         fn test_filestore_chunk_is_not_compressed(fb: FacebookInit) -> Result<()> {

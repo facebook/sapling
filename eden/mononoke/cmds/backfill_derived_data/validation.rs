@@ -27,7 +27,7 @@ use manifest::{
     find_intersection_of_diffs, find_intersection_of_diffs_and_parents, Entry, Manifest,
 };
 use mercurial_derived_data::MappedHgChangesetId;
-use mononoke_types::{ChangesetId, MononokeId};
+use mononoke_types::{BlobstoreKey, ChangesetId};
 use readonlyblob::ReadOnlyBlobstore;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::{info, warn};

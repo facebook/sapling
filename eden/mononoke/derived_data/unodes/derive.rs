@@ -26,8 +26,8 @@ use manifest::{
 use metaconfig_types::UnodeVersion;
 use mononoke_types::unode::{FileUnode, ManifestUnode, UnodeEntry};
 use mononoke_types::{
-    BlobstoreValue, ChangesetId, ContentId, FileType, FileUnodeId, MPath, MPathElement, MPathHash,
-    ManifestUnodeId, MononokeId,
+    BlobstoreKey, BlobstoreValue, ChangesetId, ContentId, FileType, FileUnodeId, MPath,
+    MPathElement, MPathHash, ManifestUnodeId,
 };
 use sorted_vector_map::SortedVectorMap;
 use std::collections::{BTreeMap, HashMap};

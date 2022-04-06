@@ -14,7 +14,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::future::try_join;
 use futures::stream::{FuturesUnordered, TryStreamExt};
-use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, MononokeId};
+use mononoke_types::{BlobstoreKey, BlobstoreValue, BonsaiChangeset, ChangesetId};
 use repo_blobstore::RepoBlobstoreRef;
 use topo_sort::sort_topological;
 

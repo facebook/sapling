@@ -19,7 +19,7 @@ use mercurial_types::{
     HgFileEnvelope, HgFileNodeId, HgManifestId, MPath, RepoPath,
 };
 use mononoke_types::{
-    BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MononokeId,
+    BlobstoreKey, BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange,
 };
 use repo_blobstore::RepoBlobstore;
 use sorted_vector_map::SortedVectorMap;

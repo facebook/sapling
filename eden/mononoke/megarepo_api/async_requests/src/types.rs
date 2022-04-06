@@ -17,7 +17,7 @@ pub use megarepo_types_thrift::{
     MegarepoAsynchronousRequestResult as ThriftMegarepoAsynchronousRequestResult,
     MegarepoAsynchronousRequestResultId as ThriftMegarepoAsynchronousRequestResultId,
 };
-use mononoke_types::{hash::Blake2, impl_typed_context, impl_typed_hash_no_context};
+use mononoke_types::{hash::Blake2, impl_typed_context, impl_typed_hash_no_context, BlobstoreKey};
 pub use requests_table::{RequestStatus, RequestType, RowId};
 use source_control::{
     MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams,
@@ -84,16 +84,6 @@ pub trait Request: Sized + Send + Sync {
     fn empty_poll_response() -> Self::PollResponse;
 }
 
-/// A type, which can be parsed from a blobstore key,
-/// and from which a blobstore key can be produced
-/// (this is implemented by various handle types, where
-/// blobstore key consists of two things: a hash
-/// and a string, describing what the key refers to)
-pub trait BlobstoreKeyWrapper: FromStr<Err = Error> {
-    fn blobstore_key(&self) -> String;
-    fn parse_blobstore_key(key: &str) -> Result<Self, Error>;
-}
-
 /// Thrift type representing async service method parameters
 pub trait ThriftParams: Sized + Send + Sync + Into<MegarepoAsynchronousRequestParams> {
     type R: Request<ThriftParams = Self>;
@@ -154,21 +144,7 @@ macro_rules! impl_async_svc_stored_type {
         impl_typed_hash_no_context! {
             hash_type => $handle_type,
             thrift_type => $handle_thrift_type,
-        }
-
-        impl BlobstoreKeyWrapper for $handle_type {
-            fn blobstore_key(&self) -> String {
-                format!("async.svc.{}.blake2.{}", stringify!($value_type), self.0.to_hex())
-            }
-
-            fn parse_blobstore_key(key: &str) -> Result<Self, Error> {
-                // concat! instead of format! to not allocate every time
-                let prefix = concat!("async.svc.", stringify!($value_type), ".blake2.");
-                match key.strip_prefix(prefix) {
-                    None => return Err(anyhow!("{} is not a blobstore key for {}", key, stringify!($value_type))),
-                    Some(suffix) => Self::from_str(suffix)
-                }
-            }
+            blobstore_key => concat!("async.svc.", stringify!($value_type)),
         }
 
         // Typed context type is needed for hash computation

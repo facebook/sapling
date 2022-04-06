@@ -214,7 +214,7 @@ mod test {
     use fbinit::FacebookInit;
     use http::StatusCode;
     use maplit::hashmap;
-    use mononoke_types::typed_hash::MononokeId;
+    use mononoke_types::typed_hash::BlobstoreKey;
     use mononoke_types_mocks::contentid::ONES_CTID;
     use permission_checker::MononokeIdentity;
     use redactedblobstore::{RedactedBlobs, RedactedMetadata};

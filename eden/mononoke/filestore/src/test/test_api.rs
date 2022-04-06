@@ -22,7 +22,9 @@ use futures::{
     stream::{self, TryStreamExt},
 };
 use lazy_static::lazy_static;
-use mononoke_types::{hash, typed_hash::MononokeId, ContentId, ContentMetadata, ContentMetadataId};
+use mononoke_types::{
+    hash, typed_hash::BlobstoreKey, ContentId, ContentMetadata, ContentMetadataId,
+};
 use mononoke_types_mocks::contentid::ONES_CTID;
 
 const HELLO_WORLD: &[u8] = b"hello, world";

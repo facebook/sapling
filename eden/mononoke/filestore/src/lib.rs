@@ -20,7 +20,7 @@ use std::borrow::Borrow;
 
 use blobstore::{Blobstore, Loadable, LoadableError};
 use context::CoreContext;
-use mononoke_types::{hash, ContentId, ContentMetadata, FileContents, MononokeId};
+use mononoke_types::{hash, BlobstoreKey, ContentId, ContentMetadata, FileContents};
 
 mod alias;
 mod chunk;

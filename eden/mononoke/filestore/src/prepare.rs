@@ -16,7 +16,7 @@ use futures::{
     task::Poll,
 };
 use mononoke_types::{
-    content_chunk::new_blob_and_pointer, hash, ChunkedFileContents, FileContents, MononokeId,
+    content_chunk::new_blob_and_pointer, hash, BlobstoreKey, ChunkedFileContents, FileContents,
 };
 
 use crate::alias::add_aliases_to_multiplexer;

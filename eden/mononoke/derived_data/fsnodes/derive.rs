@@ -27,7 +27,7 @@ use manifest::{
 use mononoke_types::fsnode::{Fsnode, FsnodeDirectory, FsnodeEntry, FsnodeFile, FsnodeSummary};
 use mononoke_types::hash::{Sha1, Sha256};
 use mononoke_types::{
-    BlobstoreValue, ChangesetId, ContentId, ContentMetadata, FileType, FsnodeId, MononokeId,
+    BlobstoreKey, BlobstoreValue, ChangesetId, ContentId, ContentMetadata, FileType, FsnodeId,
 };
 use mononoke_types::{MPath, MPathElement};
 use sorted_vector_map::SortedVectorMap;

@@ -7,7 +7,7 @@
 
 use crate::{
     thrift,
-    typed_hash::{FileUnodeId, MononokeId},
+    typed_hash::{BlobstoreKey, FileUnodeId, MononokeId},
     ChangesetId, MPath,
 };
 use anyhow::{bail, format_err, Error, Result};

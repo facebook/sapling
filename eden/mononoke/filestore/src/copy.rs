@@ -13,7 +13,7 @@ use futures::{
     future,
     stream::{self, StreamExt, TryStreamExt},
 };
-use mononoke_types::{BlobstoreValue, ContentMetadata, MononokeId};
+use mononoke_types::{BlobstoreKey, BlobstoreValue, ContentMetadata};
 
 use crate::{Alias, FileContents, FilestoreConfig};
 

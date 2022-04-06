@@ -15,7 +15,7 @@ use context::CoreContext;
 use futures::{stream, StreamExt, TryStreamExt};
 use megarepo_error::MegarepoError;
 use memblob::Memblob;
-use mononoke_types::{RepositoryId, Timestamp};
+use mononoke_types::{BlobstoreKey as BlobstoreKeyTrait, RepositoryId, Timestamp};
 use requests_table::{
     BlobstoreKey, LongRunningRequestEntry, LongRunningRequestsQueue, RequestStatus, RequestType,
     SqlLongRunningRequestsQueue,
@@ -26,8 +26,8 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use crate::types::{
-    BlobstoreKeyWrapper, MegarepoAsynchronousRequestParams, MegarepoAsynchronousRequestResult,
-    Request, ThriftParams, Token,
+    MegarepoAsynchronousRequestParams, MegarepoAsynchronousRequestResult, Request, ThriftParams,
+    Token,
 };
 
 const INITIAL_POLL_DELAY_MS: u64 = 1000;

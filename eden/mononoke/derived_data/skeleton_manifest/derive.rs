@@ -25,7 +25,7 @@ use mononoke_types::skeleton_manifest::{
     SkeletonManifest, SkeletonManifestDirectory, SkeletonManifestEntry, SkeletonManifestSummary,
 };
 use mononoke_types::{
-    BlobstoreValue, ChangesetId, ContentId, FileType, MPath, MPathElement, MononokeId,
+    BlobstoreKey, BlobstoreValue, ChangesetId, ContentId, FileType, MPath, MPathElement,
     SkeletonManifestId,
 };
 use sorted_vector_map::SortedVectorMap;

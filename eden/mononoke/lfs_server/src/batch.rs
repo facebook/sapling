@@ -38,7 +38,7 @@ use lfs_protocol::{
     git_lfs_mime, ObjectAction, ObjectError, ObjectStatus, Operation, RequestBatch, RequestObject,
     ResponseBatch, ResponseObject, Transfer,
 };
-use mononoke_types::{hash::Sha256, typed_hash::ContentId, MononokeId};
+use mononoke_types::{hash::Sha256, typed_hash::ContentId, BlobstoreKey};
 
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::{RepositoryRequestContext, UriBuilder};

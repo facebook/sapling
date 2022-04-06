@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use edenapi_types::AnyFileContentId;
-use mononoke_types::{errors::ErrorKind, hash, ContentAlias, ContentId, MononokeId};
+use mononoke_types::{errors::ErrorKind, hash, BlobstoreKey, ContentAlias, ContentId};
 
 /// Key for fetching - we can access with any of the supported key types
 #[derive(Debug, Copy, Clone)]

@@ -20,7 +20,7 @@ use fbinit::FacebookInit;
 use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures_stats::{FutureStats, TimedFutureExt};
-use mononoke_types::{ContentMetadata, MononokeId};
+use mononoke_types::{BlobstoreKey, ContentMetadata};
 use rand::Rng;
 use std::fmt::Debug;
 use std::sync::Arc;

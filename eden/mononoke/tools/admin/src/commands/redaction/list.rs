@@ -17,7 +17,7 @@ use manifest::ManifestOps;
 use metaconfig_types::RepoConfigRef;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
-use mononoke_types::{ChangesetId, ContentId, MPath, MononokeId};
+use mononoke_types::{BlobstoreKey, ChangesetId, ContentId, MPath};
 use repo_blobstore::{RepoBlobstoreArc, RepoBlobstoreRef};
 use repo_derived_data::RepoDerivedDataRef;
 

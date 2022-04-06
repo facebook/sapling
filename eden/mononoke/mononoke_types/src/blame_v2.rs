@@ -8,7 +8,7 @@
 use crate::blame::BlameRejected;
 use crate::path::MPath;
 use crate::thrift;
-use crate::typed_hash::{ChangesetId, FileUnodeId, MononokeId};
+use crate::typed_hash::{BlobstoreKey, ChangesetId, FileUnodeId, MononokeId};
 use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
 use bit_set::BitSet;

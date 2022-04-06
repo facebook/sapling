@@ -33,7 +33,7 @@ use mercurial_types::{
     nodehash::{HgFileNodeId, HgManifestId},
     HgChangesetId, HgNodeHash, HgParents, MPath, RepoPath, NULL_HASH,
 };
-use mononoke_types::{self, BonsaiChangeset, ChangesetId, MononokeId};
+use mononoke_types::{self, BlobstoreKey, BonsaiChangeset, ChangesetId};
 
 use crate::errors::*;
 use crate::BlobRepo;

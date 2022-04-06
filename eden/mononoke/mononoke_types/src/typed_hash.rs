@@ -40,13 +40,21 @@ use crate::{
 // There is no NULL_HASH for typed hashes. Any places that need a null hash should use an
 // Option type, or perhaps a list as desired.
 
-/// An identifier used throughout Mononoke.
-pub trait MononokeId: Copy + Eq + Hash + Sync + Send + 'static {
-    /// Blobstore value type associated with given MononokeId type
-    type Value: BlobstoreValue<Key = Self>;
-
+/// A type, which can be parsed from a blobstore key,
+/// and from which a blobstore key can be produced
+/// (this is implemented by various handle types, where
+/// blobstore key consists of two things: a hash
+/// and a string, describing what the key refers to)
+pub trait BlobstoreKey: FromStr<Err = anyhow::Error> {
     /// Return a key suitable for blobstore use.
     fn blobstore_key(&self) -> String;
+    fn parse_blobstore_key(key: &str) -> Result<Self>;
+}
+
+/// An identifier used throughout Mononoke.
+pub trait MononokeId: BlobstoreKey + Copy + Eq + Hash + Sync + Send + 'static {
+    /// Blobstore value type associated with given MononokeId type
+    type Value: BlobstoreValue<Key = Self>;
 
     /// Return a stable hash fingerprint that can be used for sampling
     fn sampling_fingerprint(&self) -> u64;
@@ -149,6 +157,7 @@ macro_rules! impl_typed_hash_no_context {
     {
         hash_type => $typed: ty,
         thrift_type => $thrift_typed: path,
+        blobstore_key => $blobstore_key: expr,
     } => {
         impl $typed {
             pub const fn new(blake2: $crate::private::Blake2) -> Self {
@@ -199,6 +208,21 @@ macro_rules! impl_typed_hash_no_context {
             // (this is public because downstream code wants to be able to serialize these nodes)
             pub fn into_thrift(self) -> $thrift_typed {
                 $thrift_typed($crate::private::thrift::IdType::Blake2(self.0.into_thrift()))
+            }
+        }
+
+        impl BlobstoreKey for $typed {
+            #[inline]
+            fn blobstore_key(&self) -> String {
+                format!(concat!($blobstore_key, ".blake2.{}"), self.0)
+            }
+
+            fn parse_blobstore_key(key: &str) -> $crate::private::anyhow::Result<Self> {
+                let prefix = concat!($blobstore_key, ".blake2.");
+                match key.strip_prefix(prefix) {
+                    None => $crate::private::anyhow::bail!("{} is not a blobstore key for {}", key, stringify!($typed)),
+                    Some(suffix) => Self::from_str(suffix),
+                }
             }
         }
 
@@ -360,6 +384,7 @@ macro_rules! impl_typed_hash {
         impl_typed_hash_no_context! {
             hash_type => $typed,
             thrift_type => $thrift_hash_type,
+            blobstore_key => $key,
         }
 
         impl_typed_hash_loadable_storable! {
@@ -374,11 +399,6 @@ macro_rules! impl_typed_hash {
 
         impl MononokeId for $typed {
             type Value = $value_type;
-
-            #[inline]
-            fn blobstore_key(&self) -> String {
-                format!(concat!($key, ".blake2.{}"), self.0)
-            }
 
             #[inline]
             fn sampling_fingerprint(&self) -> u64 {
@@ -494,6 +514,7 @@ impl_typed_hash! {
 impl_typed_hash_no_context! {
     hash_type => ContentMetadataId,
     thrift_type => thrift::ContentMetadataId,
+    blobstore_key => "content_metadata",
 }
 
 impl_typed_hash_loadable_storable! {
@@ -508,10 +529,6 @@ impl_typed_hash! {
     context_key => "fastlogbatch",
 }
 
-impl ContentMetadataId {
-    const PREFIX: &'static str = "content_metadata.blake2";
-}
-
 impl From<ContentId> for ContentMetadataId {
     fn from(content: ContentId) -> Self {
         Self { 0: content.0 }
@@ -520,11 +537,6 @@ impl From<ContentId> for ContentMetadataId {
 
 impl MononokeId for ContentMetadataId {
     type Value = ContentMetadata;
-
-    #[inline]
-    fn blobstore_key(&self) -> String {
-        format!("{}.{}", Self::PREFIX, self.0)
-    }
 
     #[inline]
     fn sampling_fingerprint(&self) -> u64 {
