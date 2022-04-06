@@ -25,6 +25,7 @@ import traceback
 from functools import partial
 from pathlib import Path
 
+import bindings
 from edenscm.mercurial import (
     bookmarks,
     cmdutil,
@@ -338,34 +339,20 @@ def _makerage(ui, repo, **opts):
     encoding.encodingmode = "replace"
 
     def hgcmd(cmdname, *args, **additional_opts):
-        cmd, opts = cmdutil.getcmdanddefaultopts(cmdname, commands.table)
-        opts.update(additional_opts)
+        cmdargs = ["hg", cmdname, *args]
+        for flagname, flagvalue in additional_opts.items():
+            if isinstance(flagvalue, list):
+                cmdargs += [f"--{flagname}={v}" for v in flagvalue]
+            else:
+                cmdargs += [f"--{flagname}={flagvalue}"]
+        fin = util.stringio()
+        fout = ferr = util.stringio()
+        status = bindings.commands.run(cmdargs, fin, fout, ferr)
 
-        _repo = repo
-        if "_repo" in opts:
-            _repo = opts["_repo"]
-            del opts["_repo"]
-        # If we failed to popbuffer for some reason, do not mess up with the
-        # main `ui` object.
-        newui = ui.copy()
-        newui.pushbuffer(error=True, subproc=True)
-        newui._colormode = None
-
-        def remoteui(orig, src, opts):
-            rui = orig(src, opts)
-            rui._outputui = newui
-            return rui
-
-        try:
-            with newui.configoverride(
-                configoverrides, "rage"
-            ), extensions.wrappedfunction(hg, "remoteui", remoteui):
-                if cmd.norepo:
-                    cmd(newui, *args, **opts)
-                else:
-                    cmd(newui, _repo, *args, **opts)
-        finally:
-            return newui.popbuffer()
+        output = fout.getvalue().decode()
+        if status != 0:
+            output += f"[{status}]\n"
+        return output
 
     basic = [
         ("date", lambda: time.ctime()),
