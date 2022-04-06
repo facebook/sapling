@@ -16,7 +16,10 @@ from unittest.mock import call, patch
 import eden.fs.cli.doctor as doctor
 from eden.fs.cli.config import EdenCheckout, EdenInstance
 from eden.fs.cli.doctor import check_hg, check_watchman
-from eden.fs.cli.doctor.check_filesystems import check_materialized_are_accessible
+from eden.fs.cli.doctor.check_filesystems import (
+    check_materialized_are_accessible,
+    check_loaded_content,
+)
 from eden.fs.cli.doctor.test.lib.fake_client import ResetParentsCommitsArgs
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
@@ -25,8 +28,9 @@ from eden.fs.cli.doctor.test.lib.fake_kerberos_checker import FakeKerberosChecke
 from eden.fs.cli.doctor.test.lib.fake_mount_table import FakeMountTable
 from eden.fs.cli.doctor.test.lib.problem_collector import ProblemCollector
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
+from eden.fs.cli.prjfs import PRJ_FILE_STATE
 from eden.fs.cli.test.lib.output import TestOutput
-from facebook.eden.ttypes import TreeInodeDebugInfo, TreeInodeEntryDebugInfo
+from facebook.eden.ttypes import TreeInodeDebugInfo, TreeInodeEntryDebugInfo, SHA1Result
 from fb303_core.ttypes import fb303_status
 
 
@@ -1273,6 +1277,46 @@ Checking {mount}
         self.assertEqual(
             tracker.problems[1].description(),
             "a/b is known to EdenFS as a file, but is a directory on disk",
+        )
+
+    @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.getSHA1")
+    @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
+    def test_loaded_content(self, mock_debugInodeStatus, mock_getSHA1) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+
+        with open(checkout.path / "a", "wb") as f:
+            f.write(b"foobar")
+
+        mock_getSHA1.return_value = [SHA1Result(b"\x01\x02\x03\x04")]
+
+        mock_debugInodeStatus.return_value = [
+            TreeInodeDebugInfo(
+                1,
+                b"",
+                True,
+                b"abcd",
+                [TreeInodeEntryDebugInfo(b"a", 2, stat.S_IFREG, True, False, b"1234")],
+            )
+        ]
+
+        def fake_PrjGetOnDiskFileState(path: Path) -> PRJ_FILE_STATE:
+            if path == checkout.path / "a":
+                return PRJ_FILE_STATE.HydratedPlaceholder
+            else:
+                return PRJ_FILE_STATE.Placeholder
+
+        tracker = ProblemCollector()
+        check_loaded_content(
+            tracker,
+            typing.cast(EdenInstance, instance),
+            checkout,
+            fake_PrjGetOnDiskFileState,
+        )
+
+        self.assertEqual(
+            tracker.problems[0].description(),
+            "The on-disk file at a is out of sync from EdenFS. Expected SHA1: 01020304, on-disk SHA1: 8843d7f92416211de9ebb963ff4ce28125932878",
         )
 
 

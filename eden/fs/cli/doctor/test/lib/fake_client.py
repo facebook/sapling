@@ -66,3 +66,8 @@ class FakeClient:
         sync: eden_ttypes.SyncBehavior,
     ) -> List[eden_ttypes.TreeInodeEntryDebugInfo]:
         return []
+
+    def getSHA1(
+        self, mountPoint: bytes, paths: List[bytes], sync: eden_ttypes.SyncBehavior
+    ) -> List[eden_ttypes.SHA1Result]:
+        return []

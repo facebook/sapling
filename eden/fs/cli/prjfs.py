@@ -4,16 +4,14 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# TODO(T65013742): Can't type check Windows on Linux
-# pyre-ignore-all-errors
-
 import ctypes
-import ctypes.wintypes
 import enum
-from ctypes.wintypes import LPCWSTR
+import sys
 from pathlib import Path
 
-prjfs = ctypes.windll.projectedfslib
+if sys.platform == "win32":
+    import ctypes.wintypes
+    from ctypes.wintypes import LPCWSTR
 
 
 class PRJ_FILE_STATE(enum.IntFlag):
@@ -24,21 +22,23 @@ class PRJ_FILE_STATE(enum.IntFlag):
     Tombstone = 16
 
 
-_PrjGetOnDiskFileState = prjfs.PrjGetOnDiskFileState
-_PrjGetOnDiskFileState.restype = ctypes.HRESULT
-_PrjGetOnDiskFileState.argtypes = [
-    ctypes.wintypes.LPCWSTR,
-    ctypes.POINTER(ctypes.c_int),
-]
+if sys.platform == "win32":
+    prjfs = ctypes.windll.projectedfslib
 
+    _PrjGetOnDiskFileState = prjfs.PrjGetOnDiskFileState
+    _PrjGetOnDiskFileState.restype = ctypes.HRESULT
+    _PrjGetOnDiskFileState.argtypes = [
+        ctypes.wintypes.LPCWSTR,
+        ctypes.POINTER(ctypes.c_int),
+    ]
 
-def PrjGetOnDiskFileState(path: Path) -> PRJ_FILE_STATE:
-    state = ctypes.c_int(0)
-    result = _PrjGetOnDiskFileState(LPCWSTR(str(path)), ctypes.byref(state))
+    def PrjGetOnDiskFileState(path: Path) -> PRJ_FILE_STATE:
+        state = ctypes.c_int(0)
+        result = _PrjGetOnDiskFileState(LPCWSTR(str(path)), ctypes.byref(state))
 
-    # Python will automatically throw OSError when result is non-zero
-    if result == 0:
-        return PRJ_FILE_STATE(state.value)
+        # Python will automatically throw OSError when result is non-zero
+        if result == 0:
+            return PRJ_FILE_STATE(state.value)
 
-    # It should never reach here, but just to make typechecker happy
-    raise RuntimeError("Windows Error: " + result)
+        # It should never reach here, but just to make typechecker happy
+        raise RuntimeError("Windows Error: " + result)

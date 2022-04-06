@@ -31,11 +31,10 @@ class PrjfsStateCmd(Subcmd):
     def _print_state(self, p: Path) -> None:
         from . import prjfs
 
+        # pyre-fixme[16]: TODO(T65013742): Can't type check Windows on Linux
         state = prjfs.PrjGetOnDiskFileState(p)
         state_formatted = ", ".join(
-            # pyre-fixme[6]: Expected `Iterable[str]` for 1st param but got
-            #  `List[enum.Flag]`.
-            [flag.name for flag in prjfs.PRJ_FILE_STATE if flag in state]
+            [str(flag.name) for flag in prjfs.PRJ_FILE_STATE if flag in state]
         )
 
         print("{0!s:50} {1!s}".format(p, state_formatted))

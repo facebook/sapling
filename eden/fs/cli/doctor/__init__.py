@@ -21,6 +21,7 @@ from eden.fs.cli import (
     proc_utils as proc_utils_mod,
     ui,
     version,
+    prjfs,
 )
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.doctor.util import (
@@ -539,6 +540,9 @@ def check_running_mount(
     check_redirections.check_redirections(tracker, instance, checkout, mount_table)
     if sys.platform == "win32":
         check_filesystems.check_materialized_are_accessible(tracker, instance, checkout)
+        check_filesystems.check_loaded_content(
+            tracker, instance, checkout, prjfs.PrjGetOnDiskFileState
+        )
     if config.scm_type == "hg":
         check_hg.check_hg(tracker, checkout)
 

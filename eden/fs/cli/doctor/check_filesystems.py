@@ -4,6 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import hashlib
 import os
 import platform
 import stat
@@ -11,12 +12,13 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import List, Set, Tuple
+from typing import List, Set, Tuple, Callable
 
 from eden.fs.cli.config import EdenInstance, EdenCheckout
 from eden.fs.cli.doctor.problem import Problem, ProblemSeverity, ProblemTracker
 from eden.fs.cli.filesystem import FsUtil
-from facebook.eden.constants import DIS_REQUIRE_MATERIALIZED
+from eden.fs.cli.prjfs import PRJ_FILE_STATE
+from facebook.eden.constants import DIS_REQUIRE_MATERIALIZED, DIS_REQUIRE_LOADED
 from facebook.eden.ttypes import SyncBehavior
 
 
@@ -301,3 +303,68 @@ def check_materialized_are_accessible(
 
     if mismatched_mode != []:
         tracker.add_problem(MaterializedInodesHaveDifferentModeOnDisk(mismatched_mode))
+
+
+class LoadedFileHasDifferentContentOnDisk(Problem):
+    def __init__(self, errors: List[Tuple[Path, bytes, bytes]]) -> None:
+        super().__init__(
+            "\n".join(
+                [
+                    f"The on-disk file at {error[0]} is out of sync from EdenFS. Expected SHA1: {error[1].hex()}, on-disk SHA1: {error[2].hex()}"
+                    for error in errors
+                ]
+            ),
+            severity=ProblemSeverity.ERROR,
+        )
+
+
+def check_loaded_content(
+    tracker: ProblemTracker,
+    instance: EdenInstance,
+    checkout: EdenCheckout,
+    query_prjfs_file: Callable[[Path], PRJ_FILE_STATE],
+) -> None:
+    with instance.get_thrift_client_legacy() as client:
+        loaded = client.debugInodeStatus(
+            bytes(checkout.path),
+            b"",
+            flags=DIS_REQUIRE_LOADED,
+            sync=SyncBehavior(),
+        )
+
+        errors = []
+        for loaded_dir in loaded:
+            path = Path(os.fsdecode(loaded_dir.path))
+
+            for dirent in loaded_dir.entries:
+                if not stat.S_ISREG(dirent.mode) or dirent.materialized:
+                    continue
+
+                dirent_path = path / Path(os.fsdecode(dirent.name))
+                filestate = query_prjfs_file(checkout.path / dirent_path)
+                if (
+                    filestate & PRJ_FILE_STATE.HydratedPlaceholder
+                    != PRJ_FILE_STATE.HydratedPlaceholder
+                ):
+                    # We should only compute the sha1 of files that have been read.
+                    continue
+
+                def compute_file_sha1(file: Path) -> bytes:
+                    hasher = hashlib.sha1()
+                    with open(checkout.path / dirent_path, "rb") as f:
+                        while True:
+                            buf = f.read(1024 * 1024)
+                            if buf == b"":
+                                break
+                            hasher.update(buf)
+                    return hasher.digest()
+
+                sha1 = client.getSHA1(
+                    bytes(checkout.path), [bytes(dirent_path)], sync=SyncBehavior()
+                )[0].get_sha1()
+                on_disk_sha1 = compute_file_sha1(checkout.path / dirent_path)
+                if sha1 != on_disk_sha1:
+                    errors += [(dirent_path, sha1, on_disk_sha1)]
+
+        if errors != []:
+            tracker.add_problem(LoadedFileHasDifferentContentOnDisk(errors))
