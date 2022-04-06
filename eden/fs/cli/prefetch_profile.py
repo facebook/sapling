@@ -25,7 +25,7 @@ prefetch_profile_cmd = subcmd_mod.Decorator()
 # consults the global kill switch to check if this user should prefetch their
 # active prefetch profiles.
 def should_prefetch_profiles(instance: EdenInstance) -> bool:
-    return instance.get_config_bool("prefetch-profiles.prefetching-enabled", False)
+    return instance.get_config_bool("prefetch-profiles.prefetching-enabled", True)
 
 
 # consults the global kill switch to check if this user should run a predictive
