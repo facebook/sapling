@@ -832,8 +832,8 @@ impl ProgressReporterUnprotected for ValidateProgressState {
 
 #[derive(Clone)]
 pub struct ValidateCommand {
-    include_check_types: HashSet<CheckType>,
-    progress_options: ProgressOptions,
+    pub include_check_types: HashSet<CheckType>,
+    pub progress_options: ProgressOptions,
 }
 
 impl ValidateCommand {

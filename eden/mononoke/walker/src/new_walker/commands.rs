@@ -7,4 +7,5 @@
 
 mononoke_app::subcommands! {
     mod scrub;
+    mod validate;
 }

@@ -9,6 +9,7 @@ pub mod progress;
 pub mod sampling;
 pub mod scrub;
 pub mod tail_args;
+pub mod validate;
 pub mod walk_params;
 pub mod walk_root;
 
@@ -16,6 +17,7 @@ pub use progress::ProgressArgs;
 pub use sampling::SamplingArgs;
 pub use scrub::{ScrubOutputNodeArgs, ScrubPackLogArgs};
 pub use tail_args::{CheckpointArgs, ChunkingArgs, TailArgs};
+pub use validate::ValidateCheckTypeArgs;
 pub use walk_params::{HashValidationArgs, WalkerGraphArgs, WalkerGraphParams};
 pub use walk_root::WalkRootArgs;
 

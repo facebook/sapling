@@ -21,6 +21,8 @@ use crate::args::{SamplingArgs, ScrubOutputNodeArgs, ScrubPackLogArgs, WalkerCom
 use crate::setup::setup_common;
 use crate::WalkerArgs;
 
+/// Checks the data is present by reading it and counting it.
+/// Combine with --enable-scrub-blobstore to check across the multiplex.
 #[derive(Parser)]
 pub struct CommandArgs {
     /// Set the output format
