@@ -6,6 +6,7 @@
  */
 
 mononoke_app::subcommands! {
+    mod compression_benefit;
     mod corpus;
     mod scrub;
     mod validate;

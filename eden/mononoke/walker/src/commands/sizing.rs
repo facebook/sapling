@@ -281,10 +281,10 @@ impl SamplingHandler for WalkSampleMapping<Node, SizingSample> {
 
 #[derive(Clone)]
 pub struct SizingCommand {
-    compression_level: i32,
-    progress_options: ProgressOptions,
-    sampling_options: SamplingOptions,
-    sampler: Arc<WalkSampleMapping<Node, SizingSample>>,
+    pub compression_level: i32,
+    pub progress_options: ProgressOptions,
+    pub sampling_options: SamplingOptions,
+    pub sampler: Arc<WalkSampleMapping<Node, SizingSample>>,
 }
 
 impl SizingCommand {
