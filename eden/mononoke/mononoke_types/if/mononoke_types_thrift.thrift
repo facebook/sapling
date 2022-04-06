@@ -21,6 +21,10 @@ typedef binary Blake2 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
 
 // NB don't call the type bytes as py3 bindings don't like it
 typedef binary (rust.type = "bytes::Bytes") binary_bytes
+typedef binary small_binary (
+  rust.newtype,
+  rust.type = "smallvec::SmallVec<[u8; 24]>",
+)
 
 // Allow the hash type to change in the future.
 union IdType {
@@ -34,6 +38,7 @@ typedef IdType RawBundle2Id (rust.newtype)
 typedef IdType FileUnodeId (rust.newtype)
 typedef IdType ManifestUnodeId (rust.newtype)
 typedef IdType DeletedManifestId (rust.newtype)
+typedef IdType ShardedMapNodeId (rust.newtype)
 typedef IdType FsnodeId (rust.newtype)
 typedef IdType SkeletonManifestId (rust.newtype)
 typedef IdType MPathHash (rust.newtype)
@@ -260,6 +265,85 @@ struct DeletedManifest {
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) subentries;
 } (rust.exhaustive)
+
+const i32 MAP_SHARD_SIZE = 2000;
+// Since thrift has no "generics", we store the values of the map as arbitrary
+// byte arrays. When parsing this, we will make sure they have the correct type.
+// When non-trivial, the MapValue will be a Thrift serialized form of the true value.
+typedef binary_bytes MapValue
+
+// When the number of values in a subtree is at most MAP_SHARD_SIZE
+// We inline all of them on a single node. Notice we don't use prefix here for
+// simplicity.
+struct ShardedMapTerminalNode {
+  // The key is the original map key minus the prefixes and edges from all
+  // intermediate nodes in the path to this node.
+  1: map<small_binary, MapValue> (
+    rust.type = "sorted_vector_map::SortedVectorMap",
+  ) values;
+} (rust.exhaustive)
+
+// An intermediate node of the sharded map node tree, though it may have a
+// value itself.
+struct ShardedMapIntermediateNode {
+  // Having this non-empty means this node was merged with its parents
+  // since they had a single child only.
+  1: small_binary prefix;
+  // An intermediate node may have a single value.
+  2: optional MapValue value;
+  // Total count of values in this subtree, including on this node.
+  3: i64 value_count;
+  // Children of this node. We only store the first byte of the edge,
+  // the remaining bytes are stored in the child node itself.
+  4: map<byte, MapChild> (
+    rust.type = "sorted_vector_map::SortedVectorMap",
+  ) children;
+} (rust.exhaustive)
+
+// This represents either an inlined sharded map node, or an id of
+// a node to be loaded from the blobstore.
+union MapChild {
+  1: ShardedMapNode inlined;
+  2: ShardedMapNodeId id;
+}
+
+// A binary -> binary map that may be stored sharded in many different nodes.
+//
+// The final key/values of the map can be defined recursively as so:
+// - If the map node is a terminal node, then we store all key/values directly
+// within `values`.
+// - If the map node is an intermediate node, then for each (byte, map) item of
+// its `children` (where `map` may be stored inlined or as an id on the blobstore),
+// prepend its keys with the single `byte` and then prepend them again with the `prefix`.
+// If `value` is non-null, add a new key to the final map with key equal to `prefix`.
+//
+// For example, let's look at a concrete example, taking some liberties with notation:
+// ShardedMapIntermediateNode {
+//   prefix: "foo",
+//   value: 12,
+//   children: {
+//     "b": ShardedMapTerminalNode {
+//       values: {
+//         "ar": 51,
+//         "az": 69,
+//       }
+//     }
+//   }
+// }
+//
+// The "unsharded version" of this map is: {
+//   "foo": 12,
+//   "foobar": 51,
+//   "foobaz": 69,
+// }
+//
+// The representation of the sharded map doesn't make any assumptions about how the
+// insertion/removal logic will actually shard the nodes, and any read operations
+// should not as well, to ensure maximum compatibility with algorithm design changes.
+union ShardedMapNode {
+  1: ShardedMapIntermediateNode intermediate;
+  2: ShardedMapTerminalNode terminal;
+}
 
 struct FsnodeFile {
   1: ContentId content_id;
