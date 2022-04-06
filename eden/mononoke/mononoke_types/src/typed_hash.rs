@@ -110,6 +110,10 @@ pub struct ManifestUnodeId(Blake2);
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct DeletedManifestId(Blake2);
 
+/// An identifier for a sharded map node used in deleted manifest v2
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct ShardedMapNodeId(Blake2);
+
 /// An identifier for an fsnode
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct FsnodeId(Blake2);
@@ -223,6 +227,20 @@ macro_rules! impl_typed_hash_no_context {
                     None => $crate::private::anyhow::bail!("{} is not a blobstore key for {}", key, stringify!($typed)),
                     Some(suffix) => Self::from_str(suffix),
                 }
+            }
+        }
+
+        impl TryFrom<$crate::private::Bytes> for $typed {
+            type Error = $crate::private::anyhow::Error;
+            #[inline]
+            fn try_from(b: $crate::private::Bytes) -> $crate::private::anyhow::Result<Self> {
+                Self::from_bytes(b)
+            }
+        }
+
+        impl From<$typed> for $crate::private::Bytes {
+            fn from(b: $typed) -> Self {
+                Self::copy_from_slice(b.as_ref())
             }
         }
 
@@ -485,6 +503,22 @@ impl_typed_hash! {
     context_key => "deletedmanifest",
 }
 
+// Manual implementations for ShardedMapNodeId because it has a generic type
+// so we can't implement MononokeId for it
+impl_typed_hash_no_context! {
+    hash_type => ShardedMapNodeId,
+    thrift_type => thrift::ShardedMapNodeId,
+    // TODO(yancouto): ShardedMapNode shouldn't depend on something that explicitly
+    // mentions dfm.
+    blobstore_key => "deletedmanifest2.mapnode",
+}
+
+impl_typed_context! {
+    hash_type => ShardedMapNodeId,
+    context_type => ShardedMapNodeContext,
+    context_key => "deletedmanifest2.mapnode",
+}
+
 impl_typed_hash! {
     hash_type => FsnodeId,
     thrift_hash_type => thrift::FsnodeId,
@@ -613,6 +647,12 @@ mod test {
         let id = ContentId::new(Blake2::from_byte_array([1; 32]));
         assert_eq!(id.blobstore_key(), format!("content.blake2.{}", id));
 
+        let id = ShardedMapNodeId::from_byte_array([1; 32]);
+        assert_eq!(
+            id.blobstore_key(),
+            format!("deletedmanifest2.mapnode.blake2.{}", id)
+        );
+
         let id = ContentChunkId::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("chunk.blake2.{}", id));
 
@@ -661,6 +701,11 @@ mod test {
         assert_eq!(id, deserialized);
 
         let id = ContentId::new(Blake2::from_byte_array([1; 32]));
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id = ShardedMapNodeId::from_byte_array([1; 32]);
         let serialized = serde_json::to_string(&id).unwrap();
         let deserialized = serde_json::from_str(&serialized).unwrap();
         assert_eq!(id, deserialized);

@@ -30,6 +30,7 @@ pub mod path;
 pub mod rawbundle2;
 pub mod redaction_key_list;
 pub mod repo;
+pub mod sharded_map;
 pub mod skeleton_manifest;
 pub mod sql_types;
 pub mod svnrev;
@@ -70,6 +71,7 @@ pub mod thrift {
 pub mod private {
     pub use anyhow;
     pub use ascii::{AsciiStr, AsciiString};
+    pub use bytes::Bytes;
     pub use quickcheck::{empty_shrinker, Arbitrary, Gen};
     pub use serde::{
         de::Deserialize, de::Deserializer, de::Error as DeError, Serialize, Serializer,
