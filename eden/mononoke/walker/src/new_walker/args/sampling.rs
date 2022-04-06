@@ -7,6 +7,7 @@
 
 use anyhow::Error;
 use clap::Args;
+use regex::Regex;
 use walker_commands_impl::sampling::SamplingOptions;
 
 use crate::args::{parse_node_types, parse_node_values};
@@ -28,7 +29,7 @@ pub struct SamplingArgs {
     pub include_sample_node_type: Vec<String>,
     /// If provided, only sample paths that match.
     #[clap(long)]
-    pub sample_path_regex: Option<String>,
+    pub sample_path_regex: Option<Regex>,
 }
 
 impl SamplingArgs {

@@ -346,11 +346,11 @@ impl SamplingHandler for CorpusSamplingHandler<CorpusSample> {
 
 #[derive(Clone)]
 pub struct CorpusCommand {
-    output_dir: Option<String>,
-    progress_options: ProgressOptions,
-    sampling_options: SamplingOptions,
-    sampling_path_regex: Option<Regex>,
-    sampler: Arc<CorpusSamplingHandler<CorpusSample>>,
+    pub output_dir: Option<String>,
+    pub progress_options: ProgressOptions,
+    pub sampling_options: SamplingOptions,
+    pub sampling_path_regex: Option<Regex>,
+    pub sampler: Arc<CorpusSamplingHandler<CorpusSample>>,
 }
 
 impl CorpusCommand {

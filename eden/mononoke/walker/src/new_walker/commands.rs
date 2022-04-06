@@ -6,6 +6,7 @@
  */
 
 mononoke_app::subcommands! {
+    mod corpus;
     mod scrub;
     mod validate;
 }
