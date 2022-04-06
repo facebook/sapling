@@ -6,15 +6,18 @@
 
 import os
 import platform
+import stat
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import List, Set
+from typing import List, Set, Tuple
 
-from eden.fs.cli.config import EdenInstance
+from eden.fs.cli.config import EdenInstance, EdenCheckout
 from eden.fs.cli.doctor.problem import Problem, ProblemSeverity, ProblemTracker
 from eden.fs.cli.filesystem import FsUtil
+from facebook.eden.constants import DIS_REQUIRE_MATERIALIZED
+from facebook.eden.ttypes import SyncBehavior
 
 
 def check_using_nfs_path(tracker: ProblemTracker, mount_path: Path) -> None:
@@ -208,3 +211,93 @@ def check_disk_usage(
                         severity=ProblemSeverity.ADVICE,
                     )
                 )
+
+
+def mode_to_str(mode: int) -> str:
+    if stat.S_ISDIR(mode):
+        return "directory"
+    elif stat.S_ISREG(mode):
+        return "file"
+    elif stat.S_ISLNK(mode):
+        return "symlink"
+    else:
+        return "unknown"
+
+
+class MaterializedInodesHaveDifferentModeOnDisk(Problem):
+    def __init__(self, errors: List[Tuple[Path, int, int]]) -> None:
+        super().__init__(
+            "\n".join(
+                [
+                    f"{error[0]} is known to EdenFS as a {mode_to_str(error[2])}, "
+                    f"but is a {mode_to_str(error[1])} on disk"
+                    for error in errors
+                ]
+            ),
+            severity=ProblemSeverity.ERROR,
+        )
+
+
+class MaterializedInodesAreInaccessible(Problem):
+    def __init__(self, paths: List[Path]) -> None:
+        super().__init__(
+            "\n".join(
+                [
+                    f"{path} is inaccessible despite EdenFS believing it should be"
+                    for path in paths
+                ]
+            ),
+            severity=ProblemSeverity.ERROR,
+        )
+
+
+def check_materialized_are_accessible(
+    tracker: ProblemTracker,
+    instance: EdenInstance,
+    checkout: EdenCheckout,
+) -> None:
+    mismatched_mode = []
+    inaccessible_inodes = []
+
+    with instance.get_thrift_client_legacy() as client:
+        materialized = client.debugInodeStatus(
+            bytes(checkout.path),
+            b"",
+            flags=DIS_REQUIRE_MATERIALIZED,
+            sync=SyncBehavior(),
+        )
+
+    for materialized_dir in materialized:
+        path = Path(os.fsdecode(materialized_dir.path))
+        try:
+            st = os.lstat(checkout.path / path)
+        except OSError:
+            inaccessible_inodes += [path]
+            continue
+
+        if not stat.S_ISDIR(st.st_mode):
+            mismatched_mode += [(path, stat.S_IFDIR, st.st_mode)]
+
+        for dirent in materialized_dir.entries:
+            if dirent.materialized:
+                dirent_path = path / Path(os.fsdecode(dirent.name))
+                try:
+                    dirent_stat = os.lstat(checkout.path / dirent_path)
+                except OSError:
+                    inaccessible_inodes += [dirent_path]
+                    continue
+
+                # TODO(xavierd): Symlinks are for now recognized as files.
+                dirent_mode = (
+                    stat.S_IFREG
+                    if stat.S_ISLNK(dirent_stat.st_mode)
+                    else stat.S_IFMT(dirent_stat.st_mode)
+                )
+                if dirent_mode != stat.S_IFMT(dirent.mode):
+                    mismatched_mode += [(dirent_path, dirent_stat.st_mode, dirent.mode)]
+
+    if inaccessible_inodes != []:
+        tracker.add_problem(MaterializedInodesAreInaccessible(inaccessible_inodes))
+
+    if mismatched_mode != []:
+        tracker.add_problem(MaterializedInodesHaveDifferentModeOnDisk(mismatched_mode))

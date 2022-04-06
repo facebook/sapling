@@ -57,3 +57,12 @@ class FakeClient:
                 hg_root_manifest=params.hgRootManifest,
             )
         )
+
+    def debugInodeStatus(
+        self,
+        mountPoint: bytes,
+        path: bytes,
+        flags: int,
+        sync: eden_ttypes.SyncBehavior,
+    ) -> List[eden_ttypes.TreeInodeEntryDebugInfo]:
+        return []

@@ -14,6 +14,7 @@ from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.doctor.problem import ProblemBase, ProblemTracker
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
+from eden.fs.cli.doctor.test.lib.problem_collector import ProblemCollector
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 
 
@@ -123,14 +124,3 @@ class DiskUsageTest(DoctorTestBase):
             "space to store these files when loaded. Ask your administrator "
             "for help.",
         )
-
-
-class ProblemCollector(ProblemTracker):
-    problems: List[ProblemBase]
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.problems = []
-
-    def add_problem(self, problem: ProblemBase) -> None:
-        self.problems.append(problem)

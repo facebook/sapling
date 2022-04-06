@@ -537,6 +537,8 @@ def check_running_mount(
     check_filesystems.check_using_nfs_path(tracker, checkout.path)
     check_watchman.check_active_mount(tracker, str(checkout.path), watchman_info)
     check_redirections.check_redirections(tracker, instance, checkout, mount_table)
+    if sys.platform == "win32":
+        check_filesystems.check_materialized_are_accessible(tracker, instance, checkout)
     if config.scm_type == "hg":
         check_hg.check_hg(tracker, checkout)
 

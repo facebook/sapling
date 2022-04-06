@@ -6,6 +6,7 @@
 
 import binascii
 import os
+import stat
 import struct
 import typing
 from pathlib import Path
@@ -15,14 +16,17 @@ from unittest.mock import call, patch
 import eden.fs.cli.doctor as doctor
 from eden.fs.cli.config import EdenCheckout, EdenInstance
 from eden.fs.cli.doctor import check_hg, check_watchman
+from eden.fs.cli.doctor.check_filesystems import check_materialized_are_accessible
 from eden.fs.cli.doctor.test.lib.fake_client import ResetParentsCommitsArgs
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
 from eden.fs.cli.doctor.test.lib.fake_hg_repo import FakeHgRepo
 from eden.fs.cli.doctor.test.lib.fake_kerberos_checker import FakeKerberosChecker
 from eden.fs.cli.doctor.test.lib.fake_mount_table import FakeMountTable
+from eden.fs.cli.doctor.test.lib.problem_collector import ProblemCollector
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 from eden.fs.cli.test.lib.output import TestOutput
+from facebook.eden.ttypes import TreeInodeDebugInfo, TreeInodeEntryDebugInfo
 from fb303_core.ttypes import fb303_status
 
 
@@ -1226,6 +1230,50 @@ Checking {mount}
             out.getvalue(),
         )
         self.assertEqual(0, exit_code)
+
+    @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.debugInodeStatus")
+    def test_materialized_are_accessible(self, mock_debugInodeStatus) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        mount = checkout.path
+
+        # Just create a/b/c folders
+        os.makedirs(mount / "a" / "b")
+
+        mock_debugInodeStatus.return_value = [
+            # Pretend that a/b is a file (it's a directory)
+            TreeInodeDebugInfo(
+                1,
+                b"a",
+                True,
+                b"abcd",
+                [TreeInodeEntryDebugInfo(b"b", 2, stat.S_IFREG, False, True, b"dcba")],
+                1,
+            ),
+            # Pretent that a/b/c is a directory (it doesn't exists)
+            TreeInodeDebugInfo(
+                2,
+                b"a/b",
+                True,
+                b"dcba",
+                [TreeInodeEntryDebugInfo(b"c", 3, stat.S_IFREG, False, True, b"1234")],
+                1,
+            ),
+        ]
+
+        tracker = ProblemCollector()
+        check_materialized_are_accessible(
+            tracker, typing.cast(EdenInstance, instance), checkout
+        )
+
+        self.assertEqual(
+            tracker.problems[0].description(),
+            "a/b/c is inaccessible despite EdenFS believing it should be",
+        )
+        self.assertEqual(
+            tracker.problems[1].description(),
+            "a/b is known to EdenFS as a file, but is a directory on disk",
+        )
 
 
 def _create_watchman_subscription(
