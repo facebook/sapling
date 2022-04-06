@@ -8,6 +8,7 @@
 #![allow(dead_code)]
 
 use anyhow::{anyhow, bail, Context, Error, Result};
+use async_recursion::async_recursion;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
@@ -92,6 +93,55 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                 .into_raw_bytes()
                 .as_ref(),
         )
+    }
+
+    /// Given a key, what's the value for that key, if any?
+    // See the detailed description of the logic in https://fburl.com/tlda3tzk
+    #[async_recursion]
+    pub async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+        key: &[u8],
+    ) -> Result<Option<Value>> {
+        Ok(match self {
+            // Case 1: Do lookup directly on the inlined map
+            Self::Terminal { values } => values.get(key).cloned(),
+            Self::Intermediate {
+                prefix,
+                value,
+                children,
+                ..
+            } => {
+                if let Some(key) = key.strip_prefix(prefix.as_slice()) {
+                    if let Some((first, rest)) = key.split_first() {
+                        if let Some(child) = children.get(first) {
+                            // Case 2: Recurse, either inlined or first fetching from the blobstore
+                            match child {
+                                MapChild::Inlined(node) => {
+                                    node.lookup(ctx, blobstore, rest).await?
+                                }
+                                MapChild::Id(id) => {
+                                    Self::load(ctx, blobstore, id)
+                                        .await?
+                                        .lookup(ctx, blobstore, rest)
+                                        .await?
+                                }
+                            }
+                        } else {
+                            // Case 3: No edge from this node to the next byte of the key
+                            None
+                        }
+                    } else {
+                        // Case 4: The node for this key is this intermediate node, not a terminal node
+                        value.clone()
+                    }
+                } else {
+                    // Case 5: Key doesn't match prefix
+                    None
+                }
+            }
+        })
     }
 
     pub fn is_empty(&self) -> bool {
@@ -186,9 +236,15 @@ impl<Value: MapValue> BlobstoreValue for ShardedMapNode<Value> {
 mod test {
     use super::*;
     use bytes::{Buf, BufMut, BytesMut};
+    use context::CoreContext;
+    use fbinit::FacebookInit;
+    use memblob::Memblob;
+    use pretty_assertions::assert_eq;
 
     #[derive(Debug, Clone, Copy, Eq, PartialEq)]
     struct MyType(i32);
+
+    type TestShardedMap = ShardedMapNode<MyType>;
 
     impl TryFrom<Bytes> for MyType {
         type Error = anyhow::Error;
@@ -205,7 +261,7 @@ mod test {
         }
     }
 
-    fn terminal(values: Vec<(&str, i32)>) -> ShardedMapNode<MyType> {
+    fn terminal(values: Vec<(&str, i32)>) -> TestShardedMap {
         ShardedMapNode::Terminal {
             values: values
                 .into_iter()
@@ -216,14 +272,14 @@ mod test {
 
     fn intermediate(
         prefix: &str,
-        value: Option<MyType>,
-        children: Vec<(char, ShardedMapNode<MyType>)>,
-    ) -> ShardedMapNode<MyType> {
+        value: Option<i32>,
+        children: Vec<(char, TestShardedMap)>,
+    ) -> TestShardedMap {
         let value_count =
             children.iter().map(|(_, v)| v.size()).sum::<usize>() + value.iter().len();
         ShardedMapNode::Intermediate {
             prefix: SmallVec::from_slice(prefix.as_bytes()),
-            value,
+            value: value.map(MyType),
             value_count,
             children: children
                 .into_iter()
@@ -233,7 +289,7 @@ mod test {
     }
 
     /// Returns an example map based on the picture on https://fburl.com/2fqtp2rk
-    fn example_map() -> ShardedMapNode<MyType> {
+    fn example_map() -> TestShardedMap {
         let abac = terminal(vec![
             ("ab", 7),
             ("aba", 8),
@@ -242,16 +298,28 @@ mod test {
             ("axi", 11),
         ]);
         let abal = terminal(vec![("aba", 5), ("ada", 6)]);
-        let a = intermediate("ba", None, vec![('c', abac), ('l', abal)]);
+        let a = intermediate("ba", Some(12), vec![('c', abac), ('l', abal)]);
         let o = terminal(vec![("miojo", 1), ("miux", 2), ("mundo", 3), ("mungal", 4)]);
         // root
         intermediate("", None, vec![('a', a), ('o', o)])
     }
 
-    fn assert_round_trip(map: ShardedMapNode<MyType>) {
+    fn assert_round_trip(map: TestShardedMap) {
         let map_t = map.clone().into_thrift();
         // This is not deep equality through blobstore
         assert_eq!(ShardedMapNode::from_thrift(map_t).unwrap(), map);
+    }
+
+    struct MapHelper(TestShardedMap, CoreContext, Memblob);
+    impl MapHelper {
+        fn size(&self) -> usize {
+            self.0.size()
+        }
+
+        async fn lookup(&self, key: &str) -> Result<Option<i32>> {
+            let v = self.0.lookup(&self.1, &self.2, key.as_bytes()).await?;
+            Ok(v.map(|my_type| my_type.0))
+        }
     }
 
     #[test]
@@ -276,7 +344,29 @@ mod test {
 
         let map = example_map();
         assert!(!map.is_empty());
-        assert_eq!(map.size(), 11);
+        assert_eq!(map.size(), 12);
         assert_round_trip(map);
+    }
+
+    #[fbinit::test]
+    async fn lookup_test(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = Memblob::default();
+
+        let map = MapHelper(example_map(), ctx, blobstore);
+        // Case 2 > Case 1
+        assert_eq!(map.lookup("omiux").await?, Some(2));
+        // Case 3
+        assert_eq!(map.lookup("inexistent").await?, None);
+        // Case 2 > Case 5
+        assert_eq!(map.lookup("abxio").await?, None);
+        // Case 2 > Case 4
+        assert_eq!(map.lookup("aba").await?, Some(12));
+        // Case 2 > Case 2 > Case 1
+        assert_eq!(map.lookup("abacakkk").await?, Some(9));
+        assert_eq!(map.lookup("abacakk").await?, None);
+        // Case 4
+        assert_eq!(map.lookup("").await?, None);
+        Ok(())
     }
 }
