@@ -35,7 +35,6 @@ pub struct TailArgs {
 }
 
 impl TailArgs {
-    #[allow(dead_code)]
     pub fn parse_args(
         &self,
         fb: FacebookInit,
@@ -103,7 +102,6 @@ pub struct ChunkingArgs {
 }
 
 impl ChunkingArgs {
-    #[allow(dead_code)]
     pub fn parse_args(
         &self,
         fb: FacebookInit,
@@ -169,7 +167,6 @@ pub struct CheckpointArgs {
 }
 
 impl CheckpointArgs {
-    #[allow(dead_code)]
     pub fn parse_args(
         &self,
         fb: FacebookInit,

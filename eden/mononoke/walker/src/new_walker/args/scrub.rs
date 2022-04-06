@@ -26,7 +26,6 @@ pub struct ScrubOutputNodeArgs {
 }
 
 impl ScrubOutputNodeArgs {
-    #[allow(dead_code)]
     pub fn parse_args(&self) -> Result<HashSet<NodeType>, Error> {
         parse_node_types(
             self.include_output_node_type.iter(),
@@ -53,7 +52,6 @@ pub struct ScrubPackLogArgs {
 }
 
 impl ScrubPackLogArgs {
-    #[allow(dead_code)]
     pub fn parse_args(&self, fb: FacebookInit) -> Result<Option<PackInfoLogOptions>, Error> {
         let log_node_types = parse_node_types(
             self.include_pack_log_node_type.iter(),

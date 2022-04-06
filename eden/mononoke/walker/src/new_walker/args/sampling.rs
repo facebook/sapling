@@ -33,7 +33,6 @@ pub struct SamplingArgs {
 }
 
 impl SamplingArgs {
-    #[allow(dead_code)]
     pub fn parse_args(&self, default_sample_rate: u64) -> Result<SamplingOptions, Error> {
         let sample_rate = self.sample_rate.clone().unwrap_or(default_sample_rate);
         let node_types = parse_node_types(

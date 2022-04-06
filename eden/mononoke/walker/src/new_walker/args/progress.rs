@@ -22,7 +22,6 @@ pub struct ProgressArgs {
 }
 
 impl ProgressArgs {
-    #[allow(dead_code)]
     pub fn parse_args(&self) -> ProgressOptions {
         ProgressOptions {
             sample_rate: self.progress_sample_rate,

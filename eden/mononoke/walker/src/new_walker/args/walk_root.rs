@@ -24,7 +24,6 @@ pub struct WalkRootArgs {
 }
 
 impl WalkRootArgs {
-    #[allow(dead_code)]
     pub fn parse_args(&self) -> Result<Vec<OutgoingEdge>, Error> {
         let mut walk_roots: Vec<OutgoingEdge> = vec![];
 

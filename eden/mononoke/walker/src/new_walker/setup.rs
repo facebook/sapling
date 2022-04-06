@@ -36,7 +36,6 @@ use walker_commands_impl::{
 
 use crate::args::{TailArgs, WalkerCommonArgs, WalkerGraphParams};
 
-#[allow(dead_code)]
 pub async fn setup_common<'a>(
     walk_stats_key: &'static str,
     app: &MononokeApp,

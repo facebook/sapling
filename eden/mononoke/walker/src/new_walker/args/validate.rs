@@ -24,7 +24,6 @@ pub struct ValidateCheckTypeArgs {
 }
 
 impl ValidateCheckTypeArgs {
-    #[allow(dead_code)]
     pub fn parse_args(&self) -> HashSet<CheckType> {
         let mut include_types = parse_check_type_args(&self.include_check_type);
         let exclude_types = parse_check_type_args(&self.exclude_check_type);

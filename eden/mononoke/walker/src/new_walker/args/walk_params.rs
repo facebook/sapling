@@ -56,7 +56,6 @@ pub struct WalkerGraphParams {
 }
 
 impl WalkerGraphArgs {
-    #[allow(dead_code)]
     pub fn parse_args(&self) -> Result<WalkerGraphParams, Error> {
         let include_node_types = parse_node_types(
             self.include_node_type.iter(),
@@ -102,7 +101,6 @@ pub struct HashValidationArgs {
 }
 
 impl HashValidationArgs {
-    #[allow(dead_code)]
     pub fn parse_args(&self) -> Result<HashSet<NodeType>, Error> {
         parse_node_types(
             self.include_hash_validation_node_type.iter(),
