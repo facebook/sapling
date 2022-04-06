@@ -9,9 +9,10 @@
 
 mod derive;
 mod mapping;
+mod mapping_v1;
 mod ops;
 #[cfg(test)]
 pub mod test_utils;
 
-pub use mapping::RootDeletedManifestId;
+pub use mapping_v1::RootDeletedManifestId;
 pub use ops::{DeletedManifestOps, PathState};
