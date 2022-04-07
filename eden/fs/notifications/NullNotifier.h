@@ -21,6 +21,11 @@ class NullNotifier : public Notifier {
   explicit NullNotifier(std::shared_ptr<ReloadableConfig> edenConfig)
       : Notifier(std::move(edenConfig)) {}
 
+  virtual void showNotification(
+      std::string_view /*notifTitle*/,
+      std::string_view /*notifBody*/,
+      std::string_view /*mount*/) override {}
+
   virtual void showNetworkNotification(const std::exception& /*err*/) override {
   }
 };

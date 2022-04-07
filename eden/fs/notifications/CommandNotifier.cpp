@@ -28,6 +28,18 @@ bool isGenericConnectivityError(const std::exception& err) {
 }
 } // namespace
 
+void CommandNotifier::showNotification(
+    std::string_view notifTitle,
+    std::string_view notifBody,
+    std::string_view mount) {
+  XLOG(
+      WARN,
+      "showNotification is unimplemented for CommandNotifiers: {}: {}: {}",
+      mount,
+      notifTitle,
+      notifBody);
+}
+
 void CommandNotifier::showNetworkNotification(const std::exception& err) {
   if (!isGenericConnectivityError(err)) {
     return;

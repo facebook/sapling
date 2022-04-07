@@ -16,6 +16,7 @@
 #include <thread>
 
 #include <fmt/chrono.h>
+#include <fmt/xchar.h>
 #include <folly/futures/Future.h>
 #include <folly/portability/Windows.h>
 
@@ -26,12 +27,6 @@
 
 namespace facebook::eden {
 namespace {
-const wchar_t EDEN_NETWORK_NOTIFICATION_TEXT[] =
-    L"EdenFS is experiencing network issues";
-const wchar_t EDEN_NETWORK_NOTIFICATION_TITLE[] = L"EdenFS Network Error";
-const auto EDEN_NETWORK_NOTIFICATION = WindowsNotification{
-    EDEN_NETWORK_NOTIFICATION_TITLE,
-    EDEN_NETWORK_NOTIFICATION_TEXT};
 
 const Guid EMenuGuid = Guid("1c3dced5-4dca-4710-8b8e-851a405def31");
 constexpr UINT EMenuUid = 123;
@@ -44,7 +39,10 @@ const wchar_t kMenuWelcomeStr[] = L"Welcome to the E-Menu";
 const wchar_t kMenuAboutStr[] = L"About EdenFS";
 const wchar_t kMenuCloseStr[] = L"Quit E-Menu";
 const wchar_t kDebugMenu[] = L"Debug Menu";
-const wchar_t kSendTestNotification[] = L"Send Test Notification";
+const wchar_t kSendTestGenericNotification[] =
+    L"Send Test Generic Notification";
+const wchar_t kSendTestNetworkNotification[] =
+    L"Send Test Network Notification";
 const wchar_t kWindowTitle[] = L"EdenFSMenu";
 const wchar_t kMenuToolTip[] = L"EdenFS Menu";
 const wchar_t kEdenInfoTitle[] = L"EdenFS Info";
@@ -54,7 +52,8 @@ const wchar_t kEdenUptime[] = L"Eden Daemon Uptime: ";
 constexpr UINT IDM_EXIT = 124;
 constexpr UINT IDM_EDENNOTIFICATION = 125;
 constexpr UINT IDM_EDENDEBUGNOTIFICATION = 126;
-constexpr UINT IDM_EDENINFO = 127;
+constexpr UINT IDM_EDENDEBUGNETWORKNOTIFICATION = 127;
+constexpr UINT IDM_EDENINFO = 128;
 
 void check(bool opResult, std::string_view context) {
   if (opResult) {
@@ -195,7 +194,12 @@ void appendDebugMenu(HMENU hMenu) {
       subMenu.get(),
       MF_BYPOSITION | MF_STRING,
       IDM_EDENDEBUGNOTIFICATION,
-      kSendTestNotification);
+      kSendTestGenericNotification);
+  appendMenuEntry(
+      subMenu.get(),
+      MF_BYPOSITION | MF_STRING,
+      IDM_EDENDEBUGNETWORKNOTIFICATION,
+      kSendTestNetworkNotification);
   appendMenuEntry(
       hMenu,
       MF_BYPOSITION | MF_POPUP,
@@ -243,10 +247,7 @@ void showContextMenu(HWND hwnd, POINT pt, bool debugIsEnabled) {
       "TrackPopupMenuEx failed");
 }
 
-void showWinNotification(
-    HWND hwnd,
-    const wchar_t* notifTitle,
-    const wchar_t* notifBody) {
+void showWinNotification(HWND hwnd, const WindowsNotification& notif) {
   NOTIFYICONDATAW iconData = {};
   iconData.cbSize = sizeof(iconData);
   iconData.uFlags = NIF_INFO;
@@ -255,10 +256,15 @@ void showWinNotification(
   // respect quiet time since this balloon did not come from a direct user
   // TODO(@cuev): maybe we should force notifications for more critical issues
   iconData.dwInfoFlags = NIIF_WARNING | NIIF_RESPECT_QUIET_TIME;
+  std::wstring title = multibyteToWideString(notif.title);
   StringCchPrintfW(
-      iconData.szInfoTitle, std::size(iconData.szInfoTitle), L"%s", notifTitle);
+      iconData.szInfoTitle,
+      std::size(iconData.szInfoTitle),
+      L"%s",
+      title.c_str());
+  std::wstring body = multibyteToWideString(notif.body);
   StringCchPrintfW(
-      iconData.szInfo, std::size(iconData.szInfo), L"%s", notifBody);
+      iconData.szInfo, std::size(iconData.szInfo), L"%s", body.c_str());
   checkNonZero(
       Shell_NotifyIconW(NIM_MODIFY, &iconData),
       "Failed to show E-Menu notification");
@@ -298,15 +304,28 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
 
           case IDM_EDENNOTIFICATION: {
             auto notifier = getWindowsNotifier(hwnd);
-            auto pendingNotif = notifier->popNextNotification();
-            showWinNotification(hwnd, pendingNotif.title, pendingNotif.body);
+            showWinNotification(hwnd, *notifier->popNextNotification());
+            return 0;
+          }
+
+          case IDM_EDENDEBUGNETWORKNOTIFICATION: {
+            auto notifier = getWindowsNotifier(hwnd);
+            const auto excp = std::exception{};
+            notifier->showNetworkNotification(excp);
             return 0;
           }
 
           case IDM_EDENDEBUGNOTIFICATION: {
             auto notifier = getWindowsNotifier(hwnd);
-            const auto excp = std::exception{};
-            notifier->showNetworkNotification(excp);
+            constexpr std::string_view title =
+                "EdenFS Test Notification - which is way too long and should be truncated!";
+            constexpr std::string_view body =
+                "Test notification body which is also way too long and should be truncated! "
+                "But that wasn't long enough, so we'll keep typing until we reach 275 characters. "
+                "Wow this is taking a while to reach this many characters. Will we realistically "
+                "ever send this many characters? No.";
+            constexpr std::string_view mount = "TestMountPlsIgnore";
+            notifier->showNotification(title, body, mount);
             return 0;
           }
 
@@ -435,22 +454,50 @@ WindowsNotifier::~WindowsNotifier() {
   eventThread_.join();
 }
 
-WindowsNotification WindowsNotifier::popNextNotification() {
-  auto ret = notifQ_.front();
+std::unique_ptr<WindowsNotification> WindowsNotifier::popNextNotification() {
+  auto ret = std::move(notifQ_.front());
   notifQ_.pop();
   return ret;
 }
 
-void WindowsNotifier::showNetworkNotification(const std::exception& /*err*/) {
+void WindowsNotifier::showNotification(
+    std::string_view notifTitle,
+    std::string_view notifBody,
+    std::string_view mount = {}) {
   if (!updateLastShown()) {
     return;
   }
-  notifQ_.push(EDEN_NETWORK_NOTIFICATION);
+
+  std::string body{notifBody};
+  std::string title{notifTitle};
+  if (!mount.empty()) {
+    body = fmt::format("{}: {}", mount, body);
+  }
+
+  // Win32 NOTIFYICONDATAW has a limit for the length of notification
+  // titles and bodies. We need to truncate any titles/bodies that are too long
+  if (body.length() > WIN32_MAX_BODY_LEN) {
+    body.resize(WIN32_MAX_BODY_LEN);
+  }
+  if (title.length() > WIN32_MAX_TITLE_LEN) {
+    title.resize(WIN32_MAX_TITLE_LEN);
+  }
+
+  auto notif = std::make_unique<WindowsNotification>();
+  notif->body = std::move(body);
+  notif->title = std::move(title);
+  notifQ_.push(std::move(notif));
   PostMessage(
       hwnd_.get(),
       WM_COMMAND,
       IDM_EDENNOTIFICATION,
       reinterpret_cast<LPARAM>(this));
+}
+
+void WindowsNotifier::showNetworkNotification(const std::exception& /*err*/) {
+  constexpr std::string_view body = "EdenFS is experiencing network issues";
+  constexpr std::string_view title = "EdenFS Network Error";
+  showNotification(title, body);
 }
 
 bool WindowsNotifier::debugIsEnabled() {
@@ -464,12 +511,11 @@ std::wstring getDaemonUptime(
       std::chrono::steady_clock::now() - startTime);
   auto uptimeStr =
       fmt::format("{:%H hours, %M minutes, %S seconds}", uptimeSec);
-  return std::wstring(kEdenUptime) +
-      std::wstring(uptimeStr.begin(), uptimeStr.end());
+  return std::wstring(kEdenUptime) + multibyteToWideString(uptimeStr);
 }
 
 std::wstring getDaemonVersion(std::string ver) {
-  return std::wstring(kEdenVersion) + std::wstring(ver.begin(), ver.end());
+  return std::wstring(kEdenVersion) + multibyteToWideString(ver);
 }
 
 } // namespace

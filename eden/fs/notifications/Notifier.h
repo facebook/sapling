@@ -33,7 +33,15 @@ class Notifier {
   virtual ~Notifier() {}
 
   /**
-   * Show a network notification to the interactive user.
+   * Show a custom notification to the interactive user.
+   */
+  virtual void showNotification(
+      std::string_view notifTitle,
+      std::string_view notifBody,
+      std::string_view mount) = 0;
+
+  /**
+   * Show a network error notification to the interactive user.
    */
   virtual void showNetworkNotification(const std::exception& err) = 0;
 

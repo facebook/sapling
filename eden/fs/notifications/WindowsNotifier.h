@@ -14,6 +14,9 @@
 
 namespace facebook::eden {
 
+constexpr size_t WIN32_MAX_TITLE_LEN = 63;
+constexpr size_t WIN32_MAX_BODY_LEN = 255;
+
 class ReloadableConfig;
 
 struct WindowDeleter {
@@ -26,8 +29,8 @@ using WindowHandle =
     std::unique_ptr<std::remove_pointer_t<HWND>, WindowDeleter>;
 
 struct WindowsNotification {
-  const wchar_t* title;
-  const wchar_t* body;
+  std::string title;
+  std::string body;
 };
 
 class WindowsNotifier : public Notifier {
@@ -39,7 +42,18 @@ class WindowsNotifier : public Notifier {
   ~WindowsNotifier();
 
   /**
-   * Show a generic network notification to the interactive user.
+   * Show a generic network notification to the interactive user. The title is
+   * limited to WIN32_MAX_TITLE_LEN characters, and the body + mount is limited
+   * to WIN32_MAX_BODY_LEN characters. Any attempt to pass longer strings will
+   * result in truncation.
+   */
+  virtual void showNotification(
+      std::string_view notifTitle,
+      std::string_view notifBody,
+      std::string_view mount) override;
+
+  /**
+   * Show a network error notification to the user.
    */
   virtual void showNetworkNotification(const std::exception& err) override;
 
@@ -58,7 +72,7 @@ class WindowsNotifier : public Notifier {
   /*
    * Pop the next notification from the notification queue
    */
-  WindowsNotification popNextNotification();
+  std::unique_ptr<WindowsNotification> popNextNotification();
 
   std::wstring getEdenInfoStr();
 
@@ -68,7 +82,7 @@ class WindowsNotifier : public Notifier {
   std::string version_;
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
   std::thread eventThread_;
-  std::queue<WindowsNotification> notifQ_;
+  std::queue<std::unique_ptr<WindowsNotification>> notifQ_;
 };
 
 } // namespace facebook::eden
