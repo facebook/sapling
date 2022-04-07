@@ -26,6 +26,7 @@ macro_rules! commands {
 mod debug;
 
 commands! {
+    mod clone;
     mod root;
     mod status;
     mod version;
