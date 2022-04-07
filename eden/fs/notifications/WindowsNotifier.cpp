@@ -33,7 +33,7 @@ const auto EDEN_NETWORK_NOTIFICATION = WindowsNotification{
     EDEN_NETWORK_NOTIFICATION_TITLE,
     EDEN_NETWORK_NOTIFICATION_TEXT};
 
-const Guid EMenuGuid = Guid("d2ea2ee4-1a60-4fe2-a711-2c71094e3651");
+const Guid EMenuGuid = Guid("1c3dced5-4dca-4710-8b8e-851a405def31");
 constexpr UINT EMenuUid = 123;
 
 constexpr UINT WMAPP_NOTIFYCALLBACK = WM_APP + 1;
