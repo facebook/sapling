@@ -164,7 +164,6 @@ struct CheckoutTimes {
 struct SetPathObjectIdTimes {
   using duration = std::chrono::steady_clock::duration;
   duration didLookupTreesOrGetInodeByPath{};
-  duration didAcquireRenameLock{};
   duration didCheckout{};
   duration didFinish{};
 };

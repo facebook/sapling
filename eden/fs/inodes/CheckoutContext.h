@@ -96,6 +96,13 @@ class CheckoutContext {
    */
   folly::Future<std::vector<CheckoutConflict>> finish(RootId newSnapshot);
 
+  /**
+   * Flush the invalidation if needed.
+   *
+   * Return the list of conflicts and errors.
+   */
+  folly::Future<std::vector<CheckoutConflict>> flush();
+
   void addConflict(ConflictType type, RelativePathPiece path);
   void
   addConflict(ConflictType type, TreeInode* parent, PathComponentPiece name);

@@ -85,6 +85,10 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(RootId newSnapshot) {
   // This allows any filesystem unlink() or rename() operations to proceed.
   renameLock_.unlock();
 
+  return flush();
+}
+
+Future<vector<CheckoutConflict>> CheckoutContext::flush() {
   if (!isDryRun()) {
     // If we have a FUSE channel, flush all invalidations we sent to the kernel
     // as part of the checkout operation.  This will ensure that other processes

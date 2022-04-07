@@ -692,20 +692,17 @@ folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
             });
 
   return collectSafe(getTargetTreeInodeFuture, getRootTreeFuture)
-      .thenValue([this, ctx, setPathObjectIdTime, stopWatch, rootId](
+      .thenValue([ctx, setPathObjectIdTime, stopWatch, rootId](
                      std::tuple<TreeInodePtr, shared_ptr<const Tree>> results) {
         setPathObjectIdTime->didLookupTreesOrGetInodeByPath =
             stopWatch.elapsed();
         auto [targetTreeInode, incomingTree] = results;
         targetTreeInode->unloadChildrenUnreferencedByFs();
-        // TODO(@yipu): Remove rename lock
-        ctx->start(this->acquireRenameLock(), {}, rootId, nullptr);
-        setPathObjectIdTime->didAcquireRenameLock = stopWatch.elapsed();
         return targetTreeInode->checkout(ctx.get(), nullptr, incomingTree);
       })
       .thenValue([ctx, setPathObjectIdTime, stopWatch, rootId](auto&&) {
         setPathObjectIdTime->didCheckout = stopWatch.elapsed();
-        return ctx->finish(rootId);
+        return ctx->flush();
       })
       .thenValue([ctx, setPathObjectIdTime, stopWatch](
                      std::vector<CheckoutConflict>&& conflicts) {
