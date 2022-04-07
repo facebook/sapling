@@ -137,6 +137,10 @@ void addNotificationIcon(HWND hwnd) {
           32,
           LR_DEFAULTCOLOR)),
       "LoadImage failed");
+
+  // We might have a stale icon if eden was uncleanly terminated. We
+  // should try to remove it before attempting to add a new icon.
+  (void)Shell_NotifyIconW(NIM_DELETE, &iconData);
   checkNonZero(
       Shell_NotifyIconW(NIM_ADD, &iconData), "Failed to add E-Menu icon");
   iconData.uVersion = NOTIFYICON_VERSION_4;
@@ -267,14 +271,13 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
     switch (message) {
       /* Return 0 on success, throws exception on failure */
       case WM_CREATE: {
-        // add the notification icon to the system tray (event occurs when
-        // Window is initially created)
+        // Set the WindowLongPtr, but don't create the E-Menu notification icon.
+        // We do this elsewhere.
         auto notifier = reinterpret_cast<CREATESTRUCT*>(lParam)->lpCreateParams;
         checkIsZero(
             SetWindowLongPtr(
                 hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(notifier)),
             "SetWindowLongPtr failed");
-        addNotificationIcon(hwnd);
         return 0;
       }
 
@@ -371,7 +374,7 @@ int windowsEventLoop(
         MAKEINTRESOURCEW(IDC_NOTIFICATIONICON),
         WndProc,
         hInstance);
-    return WindowHandle{checkNonZero(
+    auto windowHandle = WindowHandle{checkNonZero(
         CreateWindowW(
             kWinClassNameStr,
             kWindowTitle,
@@ -385,6 +388,8 @@ int windowsEventLoop(
             hInstance,
             reinterpret_cast<LPVOID>(notifier)),
         "Failed to create E-Menu window")};
+    addNotificationIcon(windowHandle.get());
+    return windowHandle;
   });
 
   // Main message loop:
