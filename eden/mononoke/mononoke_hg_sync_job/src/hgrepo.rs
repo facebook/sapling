@@ -563,6 +563,8 @@ mod tests {
     async fn ensure_alive_dead_process() -> Result<()> {
         let mut proc = AsyncProcess::from_command(Command::new("false"))?;
 
+        // Give the command a little time to finish
+        tokio::time::sleep(Duration::from_millis(100)).await;
         let res = proc
             .ensure_alive(
                 async {
@@ -574,6 +576,33 @@ mod tests {
             )
             .await;
         assert_matches!(res, Err(_));
+        assert!(res.unwrap_err().to_string().starts_with("hg peer is dead"));
+
+        assert!(!proc.is_valid());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn ensure_alive_no_grace_period() -> Result<()> {
+        let command = {
+            let mut command = Command::new("sleep");
+            command.args(vec!["0.1"]);
+            command
+        };
+        let mut proc = AsyncProcess::from_command(command)?;
+
+        let res = proc
+            .ensure_alive(
+                async {
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                    Ok(())
+                }
+                .boxed(),
+                None,
+            )
+            .await;
+        assert_matches!(res, Err(_));
+        assert!(res.unwrap_err().to_string().starts_with("hg peer has died"));
 
         assert!(!proc.is_valid());
         Ok(())
@@ -581,7 +610,12 @@ mod tests {
 
     #[tokio::test]
     async fn ensure_alive_grace_period() -> Result<()> {
-        let mut proc = AsyncProcess::from_command(Command::new("false"))?;
+        let command = {
+            let mut command = Command::new("sleep");
+            command.args(vec!["0.1"]);
+            command
+        };
+        let mut proc = AsyncProcess::from_command(command)?;
 
         let res = proc
             .ensure_alive(
