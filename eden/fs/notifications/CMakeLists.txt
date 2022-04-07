@@ -14,3 +14,8 @@ target_link_libraries(
     eden_config
     edencommon::utils
 )
+target_sources(
+  eden_notifications
+  INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/WindowsNotifier.rc
+)
