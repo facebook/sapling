@@ -302,6 +302,8 @@ def get_edenfs_environment() -> Dict[str, str]:
         "RUST_LIB_BACKTRACE",
         # Useful for environments that look like prod, but are actually corp
         "CONFIGERATOR_PRETEND_NOT_PROD",
+        # Ensure EdenFS respects redirecting which cache directory to write to
+        "XDG_CACHE_HOME",
     ]
 
     if sys.platform == "win32":
