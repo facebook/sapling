@@ -14,9 +14,12 @@
 namespace facebook::eden {
 
 bool Notifier::updateLastShown() {
+  if (!config_->getEdenConfig()->enableNotifications.getValue()) {
+    return false;
+  }
   auto now = std::chrono::steady_clock::now();
   auto last = lastShown_.wlock();
-  if (config_->getEdenConfig()->enableNotifications.getValue() && *last) {
+  if (*last) {
     auto expiry = last->value() +
         config_->getEdenConfig()->notificationInterval.getValue();
     if (now < expiry) {
