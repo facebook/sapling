@@ -48,12 +48,16 @@ const wchar_t kMenuToolTip[] = L"EdenFS Menu";
 const wchar_t kEdenInfoTitle[] = L"EdenFS Info";
 const wchar_t kEdenVersion[] = L"Running Eden Version: ";
 const wchar_t kEdenUptime[] = L"Eden Daemon Uptime: ";
+const wchar_t kMenuOptionsStr[] = L"Options";
+const wchar_t kDisableNotifications[] = L"Disable Notifications";
+const wchar_t kEnableNotifications[] = L"Enable Notifications";
 
 constexpr UINT IDM_EXIT = 124;
 constexpr UINT IDM_EDENNOTIFICATION = 125;
 constexpr UINT IDM_EDENDEBUGNOTIFICATION = 126;
 constexpr UINT IDM_EDENDEBUGNETWORKNOTIFICATION = 127;
 constexpr UINT IDM_EDENINFO = 128;
+constexpr UINT IDM_TOGGLENOTIFICATIONS = 129;
 
 void check(bool opResult, std::string_view context) {
   if (opResult) {
@@ -167,9 +171,6 @@ void restoreTooltip(HWND hwnd) {
       Shell_NotifyIconW(NIM_MODIFY, &iconData), "Failed to restore tooltip");
 }
 
-using MenuHandle =
-    std::unique_ptr<std::remove_pointer_t<HMENU>, BOOL (*)(HMENU)>;
-
 void appendMenuEntry(
     HMENU hMenu,
     UINT uFlags,
@@ -205,46 +206,6 @@ void appendDebugMenu(HMENU hMenu) {
       MF_BYPOSITION | MF_POPUP,
       reinterpret_cast<UINT_PTR>(subMenu.get()),
       kDebugMenu);
-}
-
-MenuHandle createEdenMenu(bool debugIsEnabled) {
-  MenuHandle hMenu{
-      checkNonZero(CreatePopupMenu(), "CreatePopupMenu failed"), &DestroyMenu};
-  appendMenuEntry(
-      hMenu.get(),
-      MF_BYPOSITION | MF_STRING | MF_GRAYED,
-      NULL,
-      kMenuWelcomeStr);
-  appendMenuEntry(
-      hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_EDENINFO, kMenuAboutStr);
-  if (debugIsEnabled) {
-    appendDebugMenu(hMenu.get());
-  }
-  appendMenuEntry(
-      hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_EXIT, kMenuCloseStr);
-  return hMenu;
-}
-
-void showContextMenu(HWND hwnd, POINT pt, bool debugIsEnabled) {
-  MenuHandle hMenu = createEdenMenu(debugIsEnabled);
-
-  /*
-   * Although the Window is hidden, we still need to set it as the foreground
-   * Window or the next call to TrackPopupMenuEx will fail.
-   */
-  checkNonZero(SetForegroundWindow(hwnd), "Failed to set foreground window");
-
-  // respect menu drop alignment
-  UINT uFlags = TPM_RIGHTBUTTON;
-  if (GetSystemMetrics(SM_MENUDROPALIGNMENT) != 0) {
-    uFlags |= TPM_RIGHTALIGN;
-  } else {
-    uFlags |= TPM_LEFTALIGN;
-  }
-
-  checkNonZero(
-      TrackPopupMenuEx(hMenu.get(), uFlags, pt.x, pt.y, hwnd, NULL),
-      "TrackPopupMenuEx failed");
 }
 
 void showWinNotification(HWND hwnd, const WindowsNotification& notif) {
@@ -343,6 +304,12 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
             return 0;
           }
 
+          case IDM_TOGGLENOTIFICATIONS: {
+            auto notifier = getWindowsNotifier(hwnd);
+            notifier->toggleNotificationsEnabled();
+            return 0;
+          }
+
           default:
             return DefWindowProc(hwnd, message, wParam, lParam);
         }
@@ -365,7 +332,7 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
           case WM_CONTEXTMENU: {
             POINT const pt = {LOWORD(wParam), HIWORD(wParam)};
             auto notifier = getWindowsNotifier(hwnd);
-            showContextMenu(hwnd, pt, notifier->debugIsEnabled());
+            notifier->showContextMenu(hwnd, pt);
           } break;
         }
         return 0;
@@ -431,6 +398,10 @@ WindowsNotifier::WindowsNotifier(
                                    : std::optional<Guid>(EMenuGuid)},
       version_{version},
       startTime_{startTime} {
+  // We only use 1 bit of the uint8_t to indicate notifs are enabled/disabled
+  notificationStatus_ = notificationsEnabledInConfig()
+      ? (1 << kNotificationsEnabledBit)
+      : (0 << kNotificationsEnabledBit);
   // Avoids race between thread startup and hwnd_ initialization
   auto [promise, hwndFuture] = folly::makePromiseContract<WindowHandle>();
   eventThread_ = std::thread{
@@ -454,6 +425,74 @@ WindowsNotifier::~WindowsNotifier() {
   eventThread_.join();
 }
 
+void WindowsNotifier::appendOptionsMenu(HMENU hMenu) {
+  MenuHandle optionsMenu{
+      checkNonZero(CreatePopupMenu(), "CreatePopupMenu failed"), &DestroyMenu};
+  // If notifications are disabled globally through the user's .edenrc, respect
+  // that choice and don't allow them to "enable" notifs through the E-Menu
+  if (notificationsEnabledInConfig()) {
+    appendMenuEntry(
+        optionsMenu.get(),
+        MF_BYPOSITION | MF_STRING,
+        IDM_TOGGLENOTIFICATIONS,
+        areNotificationsEnabled() ? kDisableNotifications
+                                  : kEnableNotifications);
+  } else {
+    // Gray out the menu item so they can't choose to enable notifs
+    appendMenuEntry(
+        optionsMenu.get(),
+        MF_BYPOSITION | MF_STRING | MF_GRAYED,
+        NULL,
+        kEnableNotifications);
+  }
+  appendMenuEntry(
+      hMenu,
+      MF_BYPOSITION | MF_POPUP,
+      reinterpret_cast<UINT_PTR>(optionsMenu.get()),
+      kMenuOptionsStr);
+}
+
+MenuHandle WindowsNotifier::createEdenMenu() {
+  MenuHandle hMenu{
+      checkNonZero(CreatePopupMenu(), "CreatePopupMenu failed"), &DestroyMenu};
+  appendMenuEntry(
+      hMenu.get(),
+      MF_BYPOSITION | MF_STRING | MF_GRAYED,
+      NULL,
+      kMenuWelcomeStr);
+  appendMenuEntry(
+      hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_EDENINFO, kMenuAboutStr);
+  appendOptionsMenu(hMenu.get());
+  if (debugIsEnabled()) {
+    appendDebugMenu(hMenu.get());
+  }
+  appendMenuEntry(
+      hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_EXIT, kMenuCloseStr);
+  return hMenu;
+}
+
+void WindowsNotifier::showContextMenu(HWND hwnd, POINT pt) {
+  MenuHandle hMenu = createEdenMenu();
+
+  /*
+   * Although the Window is hidden, we still need to set it as the foreground
+   * Window or the next call to TrackPopupMenuEx will fail.
+   */
+  checkNonZero(SetForegroundWindow(hwnd), "Failed to set foreground window");
+
+  // respect menu drop alignment
+  UINT uFlags = TPM_RIGHTBUTTON;
+  if (GetSystemMetrics(SM_MENUDROPALIGNMENT) != 0) {
+    uFlags |= TPM_RIGHTALIGN;
+  } else {
+    uFlags |= TPM_LEFTALIGN;
+  }
+
+  checkNonZero(
+      TrackPopupMenuEx(hMenu.get(), uFlags, pt.x, pt.y, hwnd, NULL),
+      "TrackPopupMenuEx failed");
+}
+
 std::unique_ptr<WindowsNotification> WindowsNotifier::popNextNotification() {
   auto ret = std::move(notifQ_.front());
   notifQ_.pop();
@@ -464,7 +503,7 @@ void WindowsNotifier::showNotification(
     std::string_view notifTitle,
     std::string_view notifBody,
     std::string_view mount = {}) {
-  if (!updateLastShown()) {
+  if (!areNotificationsEnabled() || !updateLastShown()) {
     return;
   }
 
@@ -502,6 +541,10 @@ void WindowsNotifier::showNetworkNotification(const std::exception& /*err*/) {
 
 bool WindowsNotifier::debugIsEnabled() {
   return config_->getEdenConfig()->enableEdenDebugMenu.getValue();
+}
+
+bool WindowsNotifier::notificationsEnabledInConfig() {
+  return config_->getEdenConfig()->enableNotifications.getValue();
 }
 
 namespace {

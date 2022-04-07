@@ -16,6 +16,7 @@ namespace facebook::eden {
 
 constexpr size_t WIN32_MAX_TITLE_LEN = 63;
 constexpr size_t WIN32_MAX_BODY_LEN = 255;
+constexpr size_t kNotificationsEnabledBit = 0;
 
 class ReloadableConfig;
 
@@ -27,6 +28,9 @@ struct WindowDeleter {
 
 using WindowHandle =
     std::unique_ptr<std::remove_pointer_t<HWND>, WindowDeleter>;
+
+using MenuHandle =
+    std::unique_ptr<std::remove_pointer_t<HMENU>, BOOL (*)(HMENU)>;
 
 struct WindowsNotification {
   std::string title;
@@ -74,15 +78,47 @@ class WindowsNotifier : public Notifier {
    */
   std::unique_ptr<WindowsNotification> popNextNotification();
 
+  /*
+   * Return information about the current running EdenFS daemon to display to
+   * the user
+   */
   std::wstring getEdenInfoStr();
 
+  /*
+   * Make the E-Menu popup menu appear to the user
+   */
+  void showContextMenu(HWND hwnd, POINT pt);
+
+  /*
+   * Whether notifications are enabled in the user's .edenrc
+   */
+  bool notificationsEnabledInConfig();
+
+  /*
+   * Whether the user has notifications enabled inside of the E-Menu
+   */
+  bool areNotificationsEnabled() {
+    return notificationStatus_ & (1 << kNotificationsEnabledBit);
+  }
+
+  /*
+   * Turn off notifications from within the E-Menu
+   */
+  void toggleNotificationsEnabled() {
+    notificationStatus_ ^= (1 << kNotificationsEnabledBit);
+  }
+
  private:
+  void appendOptionsMenu(HMENU hMenu);
+  MenuHandle createEdenMenu();
+
   std::optional<Guid> guid_;
   WindowHandle hwnd_;
   std::string version_;
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
   std::thread eventThread_;
   std::queue<std::unique_ptr<WindowsNotification>> notifQ_;
+  uint8_t notificationStatus_;
 };
 
 } // namespace facebook::eden
