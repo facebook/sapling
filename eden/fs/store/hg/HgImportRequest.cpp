@@ -19,32 +19,40 @@ template <typename RequestType>
 HgImportRequest::HgImportRequest(
     RequestType request,
     ImportPriority priority,
+    ObjectFetchContext::Cause cause,
     folly::Promise<typename RequestType::Response>&& promise)
     : request_(std::move(request)),
       priority_(priority),
+      cause_(cause),
       promise_(std::move(promise)) {}
 
 template <typename RequestType, typename... Input>
 std::shared_ptr<HgImportRequest> HgImportRequest::makeRequest(
     ImportPriority priority,
+    ObjectFetchContext::Cause cause,
     Input&&... input) {
   auto promise = folly::Promise<typename RequestType::Response>{};
   return std::make_shared<HgImportRequest>(
-      RequestType{std::forward<Input>(input)...}, priority, std::move(promise));
+      RequestType{std::forward<Input>(input)...},
+      priority,
+      cause,
+      std::move(promise));
 }
 
 std::shared_ptr<HgImportRequest> HgImportRequest::makeBlobImportRequest(
     ObjectId hash,
     HgProxyHash proxyHash,
-    ImportPriority priority) {
-  return makeRequest<BlobImport>(priority, hash, std::move(proxyHash));
+    ImportPriority priority,
+    ObjectFetchContext::Cause cause) {
+  return makeRequest<BlobImport>(priority, cause, hash, std::move(proxyHash));
 }
 
 std::shared_ptr<HgImportRequest> HgImportRequest::makeTreeImportRequest(
     ObjectId hash,
     HgProxyHash proxyHash,
-    ImportPriority priority) {
-  return makeRequest<TreeImport>(priority, hash, std::move(proxyHash));
+    ImportPriority priority,
+    ObjectFetchContext::Cause cause) {
+  return makeRequest<TreeImport>(priority, cause, hash, std::move(proxyHash));
 }
 
 } // namespace facebook::eden

@@ -26,6 +26,7 @@ DEFINE_string(mountRoot, "", "Root of the EdenFS mount");
 DEFINE_string(trace, "", "Trace mode");
 DEFINE_bool(writes, false, "Limit trace to write operations");
 DEFINE_bool(reads, false, "Limit trace to write operations");
+DEFINE_bool(verbose, false, "Show import priority and cause");
 
 namespace {
 constexpr auto kTimeout = std::chrono::seconds{1};
@@ -128,6 +129,23 @@ int trace_hg(
           {HgResourceType::TREE, reinterpret_cast<const char*>(u8"\U0001F332")},
       };
 
+  static const std::unordered_map<HgImportPriority, const char*>
+      kImportPriorities = {
+          {HgImportPriority::LOW,
+           reinterpret_cast<const char*>(u8"\U0001F7E5")},
+          {HgImportPriority::NORMAL,
+           reinterpret_cast<const char*>(u8"\U0001F536")},
+          {HgImportPriority::HIGH,
+           reinterpret_cast<const char*>(u8"\U0001F7E2")},
+      };
+
+  static const std::unordered_map<HgImportCause, const char*> kImportCauses = {
+      {HgImportCause::UNKNOWN, reinterpret_cast<const char*>(u8"\u2753")},
+      {HgImportCause::FS, reinterpret_cast<const char*>(u8"\U0001F4C1")},
+      {HgImportCause::THRIFT, reinterpret_cast<const char*>(u8"\U0001F4E0")},
+      {HgImportCause::PREFETCH, reinterpret_cast<const char*>(u8"\U0001F4C5")},
+  };
+
   std::move(traceHgStream).subscribeInline([&](folly::Try<HgEvent>&& event) {
     if (event.hasException()) {
       fmt::print("Error: {}\n", folly::exceptionStr(event.exception()));
@@ -141,6 +159,8 @@ int trace_hg(
 
     const HgEventType eventType = *evt.eventType_ref();
     const HgResourceType resourceType = *evt.resourceType_ref();
+    const HgImportPriority importPriority = *evt.importPriority_ref();
+    const HgImportCause importCause = *evt.importCause_ref();
     const uint64_t unique = *evt.unique_ref();
 
     switch (eventType) {
@@ -196,12 +216,28 @@ int trace_hg(
     const char* eventTypeStr = folly::get_default(kEventTypes, eventType, "?");
     const char* resourceTypeStr =
         folly::get_default(kResourceTypes, resourceType, "?");
-    fmt::print(
-        "{} {} {}{}\n",
-        eventTypeStr,
-        resourceTypeStr,
-        *evt.path_ref(),
-        timeAnnotation);
+    const char* importPriorityStr =
+        folly::get_default(kImportPriorities, importPriority, "?");
+    const char* importCauseStr =
+        folly::get_default(kImportCauses, importCause, "?");
+
+    if (FLAGS_verbose) {
+      fmt::print(
+          "{} {} {} {} {}{}\n",
+          eventTypeStr,
+          resourceTypeStr,
+          importPriorityStr,
+          importCauseStr,
+          *evt.path_ref(),
+          timeAnnotation);
+    } else {
+      fmt::print(
+          "{} {} {}{}\n",
+          eventTypeStr,
+          resourceTypeStr,
+          *evt.path_ref(),
+          timeAnnotation);
+    }
   });
 
   fmt::print("{} was unmounted\n", FLAGS_mountRoot);

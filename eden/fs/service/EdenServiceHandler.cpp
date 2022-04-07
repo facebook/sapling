@@ -1196,6 +1196,33 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
             break;
         }
 
+        switch (event.importPriority) {
+          case ImportPriorityKind::Low:
+            te.importPriority_ref() = HgImportPriority::LOW;
+            break;
+          case ImportPriorityKind::Normal:
+            te.importPriority_ref() = HgImportPriority::NORMAL;
+            break;
+          case ImportPriorityKind::High:
+            te.importPriority_ref() = HgImportPriority::HIGH;
+            break;
+        }
+
+        switch (event.importCause) {
+          case ObjectFetchContext::Cause::Unknown:
+            te.importCause_ref() = HgImportCause::UNKNOWN;
+            break;
+          case ObjectFetchContext::Cause::Fs:
+            te.importCause_ref() = HgImportCause::FS;
+            break;
+          case ObjectFetchContext::Cause::Thrift:
+            te.importCause_ref() = HgImportCause::THRIFT;
+            break;
+          case ObjectFetchContext::Cause::Prefetch:
+            te.importCause_ref() = HgImportCause::PREFETCH;
+            break;
+        }
+
         te.unique_ref() = event.unique;
 
         te.manifestNodeId_ref() = event.manifestNodeId.toString();

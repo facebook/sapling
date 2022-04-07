@@ -47,10 +47,22 @@ class TraceHgCommand(Subcmd):
         parser.add_argument(
             "checkout", default=None, nargs="?", help="Path to the checkout"
         )
+        parser.add_argument(
+            "--verbose",
+            action="store_true",
+            default=False,
+            help="Show import priority and cause",
+        )
 
     async def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = require_checkout(args, args.checkout)
         trace_stream_command = get_trace_stream_command()
+        # TODO the verbose flag can be added directly to the list passed to execute_cmd
+        # after the daemon with this new flag is running everywhere using
+        # f"--verbose={'true' if args.verbose else 'false'}"
+        verbose = []
+        if args.verbose:
+            verbose.append("--verbose=true")
         return execute_cmd(
             [
                 trace_stream_command,
@@ -58,6 +70,7 @@ class TraceHgCommand(Subcmd):
                 checkout.path,
                 "--trace=hg",
             ]
+            + verbose
         )
 
 

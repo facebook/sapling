@@ -56,11 +56,15 @@ HgImportTraceEvent::HgImportTraceEvent(
     uint64_t unique,
     EventType eventType,
     ResourceType resourceType,
-    const HgProxyHash& proxyHash)
+    const HgProxyHash& proxyHash,
+    ImportPriorityKind priority,
+    ObjectFetchContext::Cause cause)
     : unique{unique},
+      manifestNodeId{proxyHash.revHash()},
       eventType{eventType},
       resourceType{resourceType},
-      manifestNodeId{proxyHash.revHash()} {
+      importPriority{priority},
+      importCause{cause} {
   auto hgPath = proxyHash.path().stringPiece();
   path.reset(new char[hgPath.size() + 1]);
   memcpy(path.get(), hgPath.data(), hgPath.size());
@@ -112,7 +116,11 @@ void HgQueuedBackingStore::processBlobImportRequests(
     auto* blobImport = request->getRequest<HgImportRequest::BlobImport>();
 
     traceBus_->publish(HgImportTraceEvent::start(
-        request->getUnique(), HgImportTraceEvent::BLOB, blobImport->proxyHash));
+        request->getUnique(),
+        HgImportTraceEvent::BLOB,
+        blobImport->proxyHash,
+        request->getPriority().kind,
+        request->getCause()));
 
     XLOGF(DBG4, "Processing blob request for {}", blobImport->hash);
   }
@@ -162,7 +170,11 @@ void HgQueuedBackingStore::processTreeImportRequests(
     auto* treeImport = request->getRequest<HgImportRequest::TreeImport>();
 
     traceBus_->publish(HgImportTraceEvent::start(
-        request->getUnique(), HgImportTraceEvent::TREE, treeImport->proxyHash));
+        request->getUnique(),
+        HgImportTraceEvent::TREE,
+        treeImport->proxyHash,
+        request->getPriority().kind,
+        request->getCause()));
 
     XLOGF(DBG4, "Processing tree request for {}", treeImport->hash);
   }
@@ -335,21 +347,30 @@ folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTreeImpl(
     ObjectFetchContext& context) {
   auto getTreeFuture = folly::makeFutureWith([&] {
     auto request = HgImportRequest::makeTreeImportRequest(
-        id, proxyHash, context.getPriority());
+        id, proxyHash, context.getPriority(), context.getCause());
     uint64_t unique = request->getUnique();
 
     auto importTracker =
         std::make_unique<RequestMetricsScope>(&pendingImportTreeWatches_);
-    traceBus_->publish(
-        HgImportTraceEvent::queue(unique, HgImportTraceEvent::TREE, proxyHash));
+    traceBus_->publish(HgImportTraceEvent::queue(
+        unique,
+        HgImportTraceEvent::TREE,
+        proxyHash,
+        context.getPriority().kind,
+        context.getCause()));
 
     return queue_.enqueueTree(std::move(request))
         .ensure([this,
                  unique,
                  proxyHash,
+                 &context,
                  importTracker = std::move(importTracker)]() {
           traceBus_->publish(HgImportTraceEvent::finish(
-              unique, HgImportTraceEvent::TREE, proxyHash));
+              unique,
+              HgImportTraceEvent::TREE,
+              proxyHash,
+              context.getPriority().kind,
+              context.getCause()));
         });
   });
 
@@ -396,21 +417,30 @@ folly::SemiFuture<BackingStore::GetBlobRes> HgQueuedBackingStore::getBlobImpl(
                << ", hash is:" << id;
 
     auto request = HgImportRequest::makeBlobImportRequest(
-        id, proxyHash, context.getPriority());
+        id, proxyHash, context.getPriority(), context.getCause());
     auto unique = request->getUnique();
 
     auto importTracker =
         std::make_unique<RequestMetricsScope>(&pendingImportBlobWatches_);
-    traceBus_->publish(
-        HgImportTraceEvent::queue(unique, HgImportTraceEvent::BLOB, proxyHash));
+    traceBus_->publish(HgImportTraceEvent::queue(
+        unique,
+        HgImportTraceEvent::BLOB,
+        proxyHash,
+        context.getPriority().kind,
+        context.getCause()));
 
     return queue_.enqueueBlob(std::move(request))
         .ensure([this,
                  unique,
                  proxyHash,
+                 &context,
                  importTracker = std::move(importTracker)]() {
           traceBus_->publish(HgImportTraceEvent::finish(
-              unique, HgImportTraceEvent::BLOB, proxyHash));
+              unique,
+              HgImportTraceEvent::BLOB,
+              proxyHash,
+              context.getPriority().kind,
+              context.getCause()));
         });
   });
 

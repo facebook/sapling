@@ -15,6 +15,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ImportPriority.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/Bug.h"
@@ -61,7 +62,8 @@ class HgImportRequest {
   static std::shared_ptr<HgImportRequest> makeBlobImportRequest(
       ObjectId hash,
       HgProxyHash proxyHash,
-      ImportPriority priority);
+      ImportPriority priority,
+      ObjectFetchContext::Cause cause);
 
   /**
    * Allocate a tree request.
@@ -69,7 +71,8 @@ class HgImportRequest {
   static std::shared_ptr<HgImportRequest> makeTreeImportRequest(
       ObjectId hash,
       HgProxyHash proxyHash,
-      ImportPriority priority);
+      ImportPriority priority,
+      ObjectFetchContext::Cause cause);
 
   /**
    * Implementation detail of the make*Request functions from above. Do not use
@@ -79,6 +82,7 @@ class HgImportRequest {
   HgImportRequest(
       RequestType request,
       ImportPriority priority,
+      ObjectFetchContext::Cause cause,
       folly::Promise<typename RequestType::Response>&& promise);
 
   ~HgImportRequest() = default;
@@ -102,6 +106,10 @@ class HgImportRequest {
 
   ImportPriority getPriority() const noexcept {
     return priority_;
+  }
+
+  ObjectFetchContext::Cause getCause() const noexcept {
+    return cause_;
   }
 
   void setPriority(ImportPriority priority) noexcept {
@@ -133,6 +141,7 @@ class HgImportRequest {
   template <typename Request, typename... Input>
   static std::shared_ptr<HgImportRequest> makeRequest(
       ImportPriority priority,
+      ObjectFetchContext::Cause cause,
       Input&&... input);
 
   HgImportRequest(const HgImportRequest&) = delete;
@@ -145,6 +154,7 @@ class HgImportRequest {
 
   Request request_;
   ImportPriority priority_;
+  ObjectFetchContext::Cause cause_;
   Response promise_;
   uint64_t unique_ = generateUniqueID();
   std::chrono::steady_clock::time_point requestTime_ =

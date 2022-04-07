@@ -16,6 +16,7 @@
 
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/BackingStore.h"
+#include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
@@ -47,29 +48,40 @@ struct HgImportTraceEvent : TraceEventBase {
   static HgImportTraceEvent queue(
       uint64_t unique,
       ResourceType resourceType,
-      const HgProxyHash& proxyHash) {
-    return HgImportTraceEvent{unique, QUEUE, resourceType, proxyHash};
+      const HgProxyHash& proxyHash,
+      ImportPriorityKind priority,
+      ObjectFetchContext::Cause cause) {
+    return HgImportTraceEvent{
+        unique, QUEUE, resourceType, proxyHash, priority, cause};
   }
 
   static HgImportTraceEvent start(
       uint64_t unique,
       ResourceType resourceType,
-      const HgProxyHash& proxyHash) {
-    return HgImportTraceEvent{unique, START, resourceType, proxyHash};
+      const HgProxyHash& proxyHash,
+      ImportPriorityKind priority,
+      ObjectFetchContext::Cause cause) {
+    return HgImportTraceEvent{
+        unique, START, resourceType, proxyHash, priority, cause};
   }
 
   static HgImportTraceEvent finish(
       uint64_t unique,
       ResourceType resourceType,
-      const HgProxyHash& proxyHash) {
-    return HgImportTraceEvent{unique, FINISH, resourceType, proxyHash};
+      const HgProxyHash& proxyHash,
+      ImportPriorityKind priority,
+      ObjectFetchContext::Cause cause) {
+    return HgImportTraceEvent{
+        unique, FINISH, resourceType, proxyHash, priority, cause};
   }
 
   HgImportTraceEvent(
       uint64_t unique,
       EventType eventType,
       ResourceType resourceType,
-      const HgProxyHash& proxyHash);
+      const HgProxyHash& proxyHash,
+      ImportPriorityKind priority,
+      ObjectFetchContext::Cause cause);
 
   /// Simple accessor that hides the internal memory representation of paths.
   std::string getPath() const {
@@ -79,12 +91,14 @@ struct HgImportTraceEvent : TraceEventBase {
   // Unique per request, but is consistent across the three stages of an import:
   // queue, start, and finish. Used to correlate events to a request.
   uint64_t unique;
-  EventType eventType;
-  ResourceType resourceType;
-  // The HG manifest node ID.
-  Hash20 manifestNodeId;
   // Always null-terminated, and saves space in the trace event structure.
   std::unique_ptr<char[]> path;
+  // The HG manifest node ID.
+  Hash20 manifestNodeId;
+  EventType eventType;
+  ResourceType resourceType;
+  ImportPriorityKind importPriority;
+  ObjectFetchContext::Cause importCause;
 };
 
 /**
