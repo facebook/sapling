@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.56"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 configparser = { version = "0.1.0", path = "../configparser" }
 dag = { version = "0.1.0", path = "../dag" }

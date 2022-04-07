@@ -10,7 +10,7 @@ name = "macro_test"
 path = "test/basic_test.rs"
 
 [dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.56"
 bytes = { version = "1.1", features = ["serde"] }
 dag-types = { version = "0.1.0", path = "../../dag/dag-types", features = ["for-tests"] }
 paste = "1.0"

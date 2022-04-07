@@ -10,7 +10,7 @@ edition = "2021"
 crate-type = ["lib", "staticlib"]
 
 [dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.56"
 bytes = { version = "1.1", features = ["serde"] }
 configparser = { version = "0.1.0", path = "../configparser" }
 edenapi = { version = "0.1.0", path = "../edenapi" }

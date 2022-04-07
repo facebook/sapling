@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.56"
 configmodel = { version = "0.1.0", path = "../configmodel" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../manifest", features = ["for-tests"] }

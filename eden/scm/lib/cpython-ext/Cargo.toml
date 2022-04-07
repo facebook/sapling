@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.56"
 cpython = { version = "0.7", default-features = false }
 encoding = { version = "0.1.0", path = "../encoding" }
 io = { version = "0.1.0", path = "../io" }

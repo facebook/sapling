@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.56"
 clap = "2.33"
 commitcloudsubscriber = { version = "0.1.0", path = "../../lib/commitcloudsubscriber" }
 env_logger = "0.7"

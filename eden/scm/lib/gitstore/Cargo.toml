@@ -10,7 +10,7 @@ name = "read_obj"
 harness = false
 
 [dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.56"
 async-trait = "0.1.52"
 bytes = { version = "1.1", features = ["serde"] }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }

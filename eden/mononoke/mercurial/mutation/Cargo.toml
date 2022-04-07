@@ -12,7 +12,7 @@ name = "mercurial_mutation_test"
 path = "test/main.rs"
 
 [dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.56"
 async-trait = "0.1.52"
 context = { version = "0.1.0", path = "../../server/context" }
 edenapi_types = { version = "0.1.0", path = "../../../scm/lib/edenapi/types" }

@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.56"
 edenfs = { package = "thrift", version = "0.1.0", path = "../../../fs/service" }
 edenfs_config = { package = "config_thrift", version = "0.1.0", path = "../../../fs/config" }
 fb303_core = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }

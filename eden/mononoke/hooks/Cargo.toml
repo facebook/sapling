@@ -16,7 +16,7 @@ name = "hooks_tests"
 path = "hooks-tests/src/lib.rs"
 
 [dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.56"
 async-trait = "0.1.52"
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bytes = { version = "1.1", features = ["serde"] }

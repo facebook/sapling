@@ -12,7 +12,7 @@ name = "bonsai_git_mapping_test"
 path = "test/main.rs"
 
 [dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.56"
 ascii = "1.0"
 async-trait = "0.1.52"
 context = { version = "0.1.0", path = "../server/context" }

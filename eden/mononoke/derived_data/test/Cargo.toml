@@ -12,7 +12,7 @@ name = "derived_data_test"
 path = "main.rs"
 
 [dev-dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.56"
 async-trait = "0.1.52"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }

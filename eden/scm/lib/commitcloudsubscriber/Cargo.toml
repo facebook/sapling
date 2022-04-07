@@ -18,7 +18,7 @@ description = '''
 '''
 
 [dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.56"
 eventsource = "0.5"
 filetime = "0.2.9"
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

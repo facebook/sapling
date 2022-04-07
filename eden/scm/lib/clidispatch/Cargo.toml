@@ -7,7 +7,7 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.56"
 blackbox = { version = "0.1.0", path = "../blackbox" }
 cliparser = { version = "0.1.0", path = "../cliparser" }
 configparser = { version = "0.1.0", path = "../configparser" }

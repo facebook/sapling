@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.56"
 atomicfile = { version = "0.1.0", path = "../atomicfile" }
 dirs = "2.0"
 fs2 = "0.4"

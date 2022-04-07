@@ -17,7 +17,7 @@ libc = "0.2.121"
 pyblackbox = { path = "../../edenscmnative/bindings/modules/pyblackbox" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-anyhow = "1.0.51"
+anyhow = "1.0.56"
 winapi = { version = "0.3", features = ["everything"] }
 
 [features]
