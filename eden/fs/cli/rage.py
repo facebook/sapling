@@ -411,6 +411,7 @@ def print_crashed_edenfs_logs(processor: str, out: IO[bytes]) -> None:
         return
 
     section_title("EdenFS crashes:", out)
+    num_uploads = 0
     for crashes_path in crashes_paths:
         if not crashes_path.exists():
             continue
@@ -422,14 +423,15 @@ def print_crashed_edenfs_logs(processor: str, out: IO[bytes]) -> None:
                 crash_time = datetime.fromtimestamp(crash.stat().st_mtime)
                 human_crash_time = crash_time.strftime("%b %d %H:%M:%S")
                 out.write(f"{str(crash.name)} from {human_crash_time}: ".encode())
-                if crash_time > date_threshold:
+                if crash_time > date_threshold and num_uploads <= 2:
+                    num_uploads += 1
                     paste_output(
                         lambda sink: print_log_file(crash, sink, whole_file=False),
                         processor,
                         out,
                     )
                 else:
-                    out.write(" not uploaded due to being too old".encode())
+                    out.write(" not uploaded due to age or max num dumps\n".encode())
 
     out.write("\n".encode())
 
