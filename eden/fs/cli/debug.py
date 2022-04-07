@@ -61,7 +61,7 @@ from . import (
 )
 from .config import EdenCheckout, EdenInstance
 from .subcmd import Subcmd
-from .util import format_cmd, format_mount, split_inodes_by_operation_type, print_stderr
+from .util import format_cmd, format_mount, split_inodes_by_operation_type
 
 
 MB: int = 1024 ** 2
@@ -594,14 +594,6 @@ class MaterializedCmd(Subcmd):
 class FileStatsCMD(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("path", help="The path to the EdenFS mount point")
-        parser.add_argument(
-            "--external-logging-name",
-            default=None,
-            type=str,
-            help="Logs all loaded files to the external logger, with name set to this value. \
-             Name is generally an arbitrary, unique value per use case (for example, a name of a workflow). \
-             This is required in order to enable this external logging.",
-        )
 
     def make_file_entries(
         self, paths_and_sizes: List[Tuple[str, int]]
@@ -652,24 +644,6 @@ class FileStatsCMD(Subcmd):
 
         return directory_list
 
-    def log_files(self, name: str, files: List[Tuple[str, int]]) -> None:
-
-        try:
-            from eden.fs.cli.facebook import telemetry_utils
-
-            logger = telemetry_utils.get_eden_stats_file_logger()
-        except ImportError:
-            print_stderr("file-stats external stats is not supported on this platform")
-            return
-
-        for file, _ in files:
-            parent = Path(file).parent
-            sample = logger.new_sample("access")
-            sample.add_string("file", file)
-            sample.add_string("directory", str(parent))
-            sample.add_string("name", name)
-            sample.log()
-
     def run(self, args: argparse.Namespace) -> int:
         request_root = args.path
         instance, checkout, rel_path = cmd_util.require_checkout(args, request_root)
@@ -691,10 +665,6 @@ class FileStatsCMD(Subcmd):
             },
         }
         json.dump(operations, fp=sys.stdout, indent=4, separators=(",", ": "))
-
-        # Log file counts for offline consumption
-        if args.external_logging_name:
-            self.log_files(args.external_logging_name, read_files)
 
         return 0
 
