@@ -52,6 +52,7 @@ use rendezvous::RendezVousOptions;
 use repo_blobstore::{ArcRepoBlobstore, RepoBlobstore};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
+use repo_permission_checker::{AlwaysAllowMockRepoPermissionChecker, ArcRepoPermissionChecker};
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::DisabledSegmentedChangelog;
 use segmented_changelog_types::ArcSegmentedChangelog;
@@ -237,6 +238,11 @@ impl BenchmarkRepoFactory {
             SqlPushrebaseMutationMappingConnection::with_sqlite_in_memory()?
                 .with_repo_id(repo_identity.id()),
         ))
+    }
+
+    pub fn permission_checker(&self) -> Result<ArcRepoPermissionChecker> {
+        let permission_checker = AlwaysAllowMockRepoPermissionChecker::new();
+        Ok(Arc::new(permission_checker))
     }
 
     pub fn filenodes(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcFilenodes> {

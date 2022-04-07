@@ -33,6 +33,7 @@ use pushrebase_mutation_mapping::{ArcPushrebaseMutationMapping, PushrebaseMutati
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreRef};
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+use repo_permission_checker::{ArcRepoPermissionChecker, RepoPermissionChecker};
 use stats::prelude::*;
 use std::sync::Arc;
 
@@ -108,6 +109,9 @@ pub struct BlobRepoInner {
 
     #[facet]
     pub mutable_counters: dyn MutableCounters,
+
+    #[facet]
+    pub permission_checker: dyn RepoPermissionChecker,
 }
 
 #[facet::container]
@@ -131,6 +135,7 @@ pub struct BlobRepo {
         dyn HgMutationStore,
         RepoDerivedData,
         dyn MutableCounters,
+        dyn RepoPermissionChecker,
     )]
     inner: Arc<BlobRepoInner>,
 }
@@ -381,6 +386,11 @@ impl BlobRepo {
         Self {
             inner: Arc::new(inner),
         }
+    }
+
+    #[inline]
+    pub fn permission_checker(&self) -> ArcRepoPermissionChecker {
+        self.inner.permission_checker.clone()
     }
 }
 

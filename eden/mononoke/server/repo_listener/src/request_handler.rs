@@ -49,7 +49,7 @@ pub async fn request_handler(
     fb: FacebookInit,
     reponame: String,
     repo_handlers: &HashMap<String, RepoHandler>,
-    security_checker: &ConnectionsSecurityChecker,
+    _security_checker: &ConnectionsSecurityChecker,
     stdio: Stdio,
     rate_limiter: Option<RateLimitEnvironment>,
     addr: IpAddr,
@@ -109,8 +109,8 @@ pub async fn request_handler(
     }
 
     if !metadata.is_trusted_client() {
-        let is_allowed_to_repo = security_checker
-            .check_if_repo_access_allowed(reponame, metadata.identities())
+        let is_allowed_to_repo = repo.blobrepo().permission_checker()
+            .check_if_read_access_allowed(metadata.identities())
             .await
             .with_context(|| {
                 format!(

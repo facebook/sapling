@@ -107,8 +107,7 @@ pub async fn connection_acceptor(
 ) -> Result<()> {
     let enable_http_control_api = common_config.enable_http_control_api;
 
-    let security_checker =
-        ConnectionsSecurityChecker::new(fb, common_config, &repo_handlers, &root_log).await?;
+    let security_checker = ConnectionsSecurityChecker::new(fb, common_config).await?;
     let addr: SocketAddr = sockname
         .parse()
         .with_context(|| format!("could not parse '{}'", sockname))?;

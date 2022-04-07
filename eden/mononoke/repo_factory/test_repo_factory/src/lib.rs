@@ -56,6 +56,7 @@ use repo_blobstore::{ArcRepoBlobstore, RepoBlobstore};
 use repo_cross_repo::{ArcRepoCrossRepo, RepoCrossRepo};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
+use repo_permission_checker::{AlwaysAllowMockRepoPermissionChecker, ArcRepoPermissionChecker};
 use requests_table::SqlLongRunningRequestsQueue;
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::DisabledSegmentedChangelog;
@@ -354,6 +355,12 @@ impl TestRepoFactory {
             )
             .with_repo_id(repo_identity.id()),
         ))
+    }
+
+    /// Construct mock, allow-all security checker.
+    pub fn permission_checker(&self) -> Result<ArcRepoPermissionChecker> {
+        let permission_checker = AlwaysAllowMockRepoPermissionChecker::new();
+        Ok(Arc::new(permission_checker))
     }
 
     /// Construct Filenodes.

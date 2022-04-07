@@ -55,8 +55,8 @@ use futures_watchdog::WatchdogExt;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use mercurial_mutation::{ArcHgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
-    ArcRepoConfig, BlobConfig, CensoredScubaParams, CommonConfig, MetadataDatabaseConfig,
-    Redaction, RedactionConfig, RepoConfig,
+    AllowlistEntry, ArcRepoConfig, BlobConfig, CensoredScubaParams, CommonConfig,
+    MetadataDatabaseConfig, Redaction, RedactionConfig, RepoConfig,
 };
 use mutable_counters::{ArcMutableCounters, SqlMutableCountersBuilder};
 use mutable_renames::{ArcMutableRenames, MutableRenames, SqlMutableRenamesStore};
@@ -73,6 +73,7 @@ use repo_blobstore::{ArcRepoBlobstore, RepoBlobstore};
 use repo_cross_repo::{ArcRepoCrossRepo, RepoCrossRepo};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
+use repo_permission_checker::{ArcRepoPermissionChecker, ProdRepoPermissionChecker};
 use requests_table::{ArcLongRunningRequestsQueue, SqlLongRunningRequestsQueue};
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::{new_server_segmented_changelog, SegmentedChangelogSqlConnections};
@@ -144,6 +145,7 @@ pub struct RepoFactory {
     scrub_handler: Arc<dyn ScrubHandler>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
     bonsai_hg_mapping_overwrite: bool,
+    security_config: Vec<AllowlistEntry>,
 }
 
 impl RepoFactory {
@@ -159,6 +161,7 @@ impl RepoFactory {
             scrub_handler: default_scrub_handler(),
             blobstore_component_sampler: None,
             redaction_config: common.redaction_config.clone(),
+            security_config: common.security_config.clone(),
             bonsai_hg_mapping_overwrite: false,
         }
     }
@@ -701,6 +704,23 @@ impl RepoFactory {
             .await
             .context(RepoFactoryError::PushrebaseMutationMapping)?;
         Ok(Arc::new(conn.with_repo_id(repo_config.repoid)))
+    }
+
+    pub async fn permission_checker(
+        &self,
+        repo_config: &ArcRepoConfig,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcRepoPermissionChecker> {
+        let repo_name = repo_identity.name();
+        let permission_checker = ProdRepoPermissionChecker::new(
+            self.env.fb,
+            &self.env.logger,
+            &repo_config.hipster_acl,
+            repo_name,
+            &self.security_config,
+        )
+        .await?;
+        Ok(Arc::new(permission_checker))
     }
 
     pub async fn filenodes(
