@@ -426,7 +426,7 @@ def print_crashed_edenfs_logs(processor: str, out: IO[bytes]) -> None:
                 if crash_time > date_threshold and num_uploads <= 2:
                     num_uploads += 1
                     paste_output(
-                        lambda sink: print_log_file(crash, sink, whole_file=False),
+                        lambda sink: print_log_file(crash, sink, whole_file=True),
                         processor,
                         out,
                     )
