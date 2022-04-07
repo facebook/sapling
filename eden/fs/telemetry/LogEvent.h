@@ -281,5 +281,11 @@ struct NfsParsingError {
   }
 };
 
+struct TooManyNfsClients {
+  static constexpr const char* type = "too_many_clients";
+
+  void populate(DynamicEvent& /*event*/) const {}
+};
+
 } // namespace eden
 } // namespace facebook

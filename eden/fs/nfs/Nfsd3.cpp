@@ -23,7 +23,9 @@
 #include "eden/fs/nfs/NfsUtils.h"
 #include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/telemetry/FsEventLogger.h"
+#include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
+#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/IDGen.h"
 #include "eden/fs/utils/StaticAssert.h"
@@ -45,6 +47,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   explicit Nfsd3ServerProcessor(
       std::unique_ptr<NfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
+      const std::shared_ptr<StructuredLogger>& structuredLogger,
       CaseSensitivity caseSensitive,
       uint32_t iosize,
       folly::Promise<Nfsd3::StopData>& stopPromise,
@@ -53,6 +56,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       std::shared_ptr<TraceBus<NfsTraceEvent>>& traceBus)
       : dispatcher_(std::move(dispatcher)),
         straceLogger_(straceLogger),
+        structuredLogger_(structuredLogger),
         caseSensitive_(caseSensitive),
         iosize_(iosize),
         stopPromise_{stopPromise},
@@ -74,6 +78,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       uint32_t procNumber) override;
 
   void onShutdown(RpcStopData stopData) override;
+  void clientConnected() override;
 
   ImmediateFuture<folly::Unit> null(
       folly::io::Cursor deser,
@@ -171,6 +176,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   // logger, the events are not logged anywhere outside of the machine this
   // EdenFS instance runs on.
   const folly::Logger* straceLogger_;
+  const std::shared_ptr<StructuredLogger> structuredLogger_;
   CaseSensitivity caseSensitive_;
   uint32_t iosize_;
   // This promise is owned by the nfs3d. The nfs3d owns an RPC server that owns
@@ -179,6 +185,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   // this promise to be set before destroying of the nfs3d.
   folly::Promise<Nfsd3::StopData>& stopPromise_;
   ProcessAccessLog& processAccessLog_;
+  std::atomic_int32_t numberOfClients_;
   std::atomic<size_t>& traceDetailedArguments_;
   std::shared_ptr<TraceBus<NfsTraceEvent>>& traceBus_;
 };
@@ -1917,6 +1924,14 @@ void Nfsd3ServerProcessor::onShutdown(RpcStopData data) {
   // member variables after this!
   stopPromise_.setValue(std::move(data));
 }
+
+void Nfsd3ServerProcessor::clientConnected() {
+  auto numberOfClients =
+      numberOfClients_.fetch_add(1, std::memory_order::memory_order_acq_rel);
+  if (numberOfClients > 1) {
+    structuredLogger_->logEvent(TooManyNfsClients{});
+  }
+}
 } // namespace
 
 Nfsd3::Nfsd3(
@@ -1935,6 +1950,7 @@ Nfsd3::Nfsd3(
           std::make_shared<Nfsd3ServerProcessor>(
               std::move(dispatcher),
               straceLogger,
+              structuredLogger,
               caseSensitive,
               iosize,
               stopPromise_,

@@ -65,6 +65,7 @@ class RpcServerProcessor {
       uint32_t progNumber,
       uint32_t progVersion,
       uint32_t procNumber);
+  virtual void clientConnected();
   virtual void onShutdown(RpcStopData stopData);
 };
 

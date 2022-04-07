@@ -118,6 +118,7 @@ RpcTcpHandler::RpcTcpHandler(
       state_(sock_->getEventBase()),
       owningServer_(std::move(owningServer)) {
   sock_->setReadCB(reader_.get());
+  proc_->clientConnected();
 }
 
 folly::SemiFuture<folly::Unit> RpcTcpHandler::takeoverStop() {
@@ -502,6 +503,7 @@ ImmediateFuture<folly::Unit> RpcServerProcessor::dispatchRpc(
 }
 
 void RpcServerProcessor::onShutdown(RpcStopData) {}
+void RpcServerProcessor::clientConnected() {}
 
 std::shared_ptr<RpcServer> RpcServer::create(
     std::shared_ptr<RpcServerProcessor> proc,
