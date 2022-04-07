@@ -64,7 +64,7 @@ void check(bool opResult, std::string_view context) {
     auto errStr =
         fmt::format("{}: {}", context, win32ErrorToString(GetLastError()));
     // Exception may get swallowed by noexcept WndProc. Let's log it too.
-    XLOGF(ERR, "{}: {}", context, win32ErrorToString(GetLastError()));
+    XLOG(ERR) << errStr;
     throw std::runtime_error(errStr);
   }
 }
