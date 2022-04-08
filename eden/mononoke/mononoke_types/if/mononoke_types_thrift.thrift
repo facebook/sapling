@@ -291,18 +291,24 @@ struct ShardedMapIntermediateNode {
   1: small_binary prefix;
   // An intermediate node may have a single value.
   2: optional MapValue value;
-  // Total count of values in this subtree, including on this node.
-  3: i64 value_count;
   // Children of this node. We only store the first byte of the edge,
   // the remaining bytes are stored in the child node itself.
-  4: map<byte, MapChild> (
+  3: map<byte, ShardedMapEdge> (
     rust.type = "sorted_vector_map::SortedVectorMap",
-  ) children;
+  ) edges;
+} (rust.exhaustive)
+
+// An edge from a map node to another
+struct ShardedMapEdge {
+  // Total count of values in this child's subtree, including the child.
+  1: i64 size;
+  // The actual child
+  2: ShardedMapChild child;
 } (rust.exhaustive)
 
 // This represents either an inlined sharded map node, or an id of
 // a node to be loaded from the blobstore.
-union MapChild {
+union ShardedMapChild {
   1: ShardedMapNode inlined;
   2: ShardedMapNodeId id;
 }

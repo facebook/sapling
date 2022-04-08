@@ -24,6 +24,7 @@ bytes = { version = "1.1", features = ["serde"] }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 chrono-english = { git = "https://github.com/tiamunley/chrono-english.git", rev = "19f055d9290ab39032951f5ccd213d616cd8af85" }
 context = { version = "0.1.0", path = "../server/context" }
+derivative = "2.1"
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 faster-hex = "0.6.1"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
@@ -33,6 +34,7 @@ lazy_static = "1.0"
 lfs_protocol = { version = "0.1.0", path = "../lfs_protocol" }
 mononoke_types_thrift = { version = "0.1.0", path = "if" }
 nonzero_ext = "0.2"
+once_cell = "1.8"
 quickcheck = "1.0"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 regex = "1.5.4"

@@ -14,10 +14,12 @@ use blobstore::Blobstore;
 use bounded_traversal::{bounded_traversal_ordered_stream, OrderedTraversal};
 use bytes::Bytes;
 use context::CoreContext;
+use derivative::Derivative;
 use fbthrift::compact_protocol;
 use futures::{stream, FutureExt, Stream, StreamExt, TryStreamExt};
 use itertools::Itertools;
 use nonzero_ext::nonzero;
+use once_cell::sync::OnceCell;
 use smallvec::SmallVec;
 use sorted_vector_map::{sorted_vector_map, SortedVectorMap};
 use std::collections::BTreeMap;
@@ -27,25 +29,22 @@ use crate::errors::ErrorKind;
 use crate::thrift;
 use crate::typed_hash::{BlobstoreKey, ShardedMapNodeContext, ShardedMapNodeId};
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum MapChild<Value: MapValue> {
-    Id(ShardedMapNodeId),
-    Inlined(ShardedMapNode<Value>),
-}
-
 #[trait_alias::trait_alias]
 pub trait MapValue =
     TryFrom<Bytes, Error = Error> + Into<Bytes> + std::fmt::Debug + Clone + Send + Sync + 'static;
 
 type SmallBinary = SmallVec<[u8; 24]>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Derivative)]
+#[derivative(PartialEq, Debug)]
+#[derive(Clone, Eq)]
 pub enum ShardedMapNode<Value: MapValue> {
     Intermediate {
         prefix: SmallBinary,
         value: Option<Value>,
-        value_count: usize,
-        children: SortedVectorMap<u8, MapChild<Value>>,
+        edges: SortedVectorMap<u8, ShardedMapEdge<Value>>,
+        #[derivative(PartialEq = "ignore", Debug = "ignore")]
+        size: OnceCell<usize>,
     },
     Terminal {
         // The key is the original map key minus the prefixes and edges from all
@@ -54,7 +53,43 @@ pub enum ShardedMapNode<Value: MapValue> {
     },
 }
 
-impl<Value: MapValue> MapChild<Value> {
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ShardedMapEdge<Value: MapValue> {
+    size: usize,
+    child: ShardedMapChild<Value>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum ShardedMapChild<Value: MapValue> {
+    Id(ShardedMapNodeId),
+    Inlined(ShardedMapNode<Value>),
+}
+
+impl<Value: MapValue> ShardedMapEdge<Value> {
+    async fn load_child(
+        self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+    ) -> Result<ShardedMapNode<Value>> {
+        self.child.load(ctx, blobstore).await
+    }
+
+    fn from_thrift(t: thrift::ShardedMapEdge) -> Result<Self> {
+        Ok(Self {
+            size: t.size.try_into().context("Failed to parse size to usize")?,
+            child: ShardedMapChild::from_thrift(t.child)?,
+        })
+    }
+
+    fn into_thrift(self) -> thrift::ShardedMapEdge {
+        thrift::ShardedMapEdge {
+            size: self.size as i64,
+            child: self.child.into_thrift(),
+        }
+    }
+}
+
+impl<Value: MapValue> ShardedMapChild<Value> {
     async fn load(
         self,
         ctx: &CoreContext,
@@ -66,25 +101,25 @@ impl<Value: MapValue> MapChild<Value> {
         }
     }
 
-    fn from_thrift(t: thrift::MapChild) -> Result<Self> {
+    fn from_thrift(t: thrift::ShardedMapChild) -> Result<Self> {
         Ok(match t {
-            thrift::MapChild::inlined(inlined) => {
+            thrift::ShardedMapChild::inlined(inlined) => {
                 Self::Inlined(ShardedMapNode::from_thrift(inlined)?)
             }
-            thrift::MapChild::id(id) => Self::Id(ShardedMapNodeId::from_thrift(id)?),
-            thrift::MapChild::UnknownField(_) => bail!("Unknown variant"),
+            thrift::ShardedMapChild::id(id) => Self::Id(ShardedMapNodeId::from_thrift(id)?),
+            thrift::ShardedMapChild::UnknownField(_) => bail!("Unknown variant"),
         })
     }
 
-    fn into_thrift(self) -> thrift::MapChild {
+    fn into_thrift(self) -> thrift::ShardedMapChild {
         match self {
-            Self::Inlined(inlined) => thrift::MapChild::inlined(inlined.into_thrift()),
-            Self::Id(id) => thrift::MapChild::id(id.into_thrift()),
+            Self::Inlined(inlined) => thrift::ShardedMapChild::inlined(inlined.into_thrift()),
+            Self::Id(id) => thrift::ShardedMapChild::id(id.into_thrift()),
         }
     }
 }
 
-impl<Value: MapValue> Default for MapChild<Value> {
+impl<Value: MapValue> Default for ShardedMapChild<Value> {
     fn default() -> Self {
         Self::Inlined(Default::default())
     }
@@ -98,6 +133,15 @@ impl<Value: MapValue> Default for ShardedMapNode<Value> {
     }
 }
 
+impl<Value: MapValue> Default for ShardedMapEdge<Value> {
+    fn default() -> Self {
+        Self {
+            size: 0,
+            child: Default::default(),
+        }
+    }
+}
+
 /// Returns longest common prefix of a and b.
 fn common_prefix<'a>(a: &'a [u8], b: &'a [u8]) -> &'a [u8] {
     let lcp = a.iter().zip(b.iter()).take_while(|(a, b)| a == b).count();
@@ -106,6 +150,19 @@ fn common_prefix<'a>(a: &'a [u8], b: &'a [u8]) -> &'a [u8] {
 }
 
 impl<Value: MapValue> ShardedMapNode<Value> {
+    fn intermediate(
+        prefix: SmallBinary,
+        value: Option<Value>,
+        edges: SortedVectorMap<u8, ShardedMapEdge<Value>>,
+    ) -> Self {
+        Self::Intermediate {
+            prefix,
+            value,
+            edges,
+            size: Default::default(),
+        }
+    }
+
     async fn load(
         ctx: &CoreContext,
         blobstore: &impl Blobstore,
@@ -148,18 +205,18 @@ impl<Value: MapValue> ShardedMapNode<Value> {
             Self::Intermediate {
                 prefix,
                 value,
-                children,
+                edges,
                 ..
             } => {
                 if let Some(key) = key.strip_prefix(prefix.as_slice()) {
                     if let Some((first, rest)) = key.split_first() {
-                        if let Some(child) = children.get(first) {
+                        if let Some(edge) = edges.get(first) {
                             // Case 2: Recurse, either inlined or first fetching from the blobstore
-                            match child {
-                                MapChild::Inlined(node) => {
+                            match &edge.child {
+                                ShardedMapChild::Inlined(node) => {
                                     node.lookup(ctx, blobstore, rest).await?
                                 }
-                                MapChild::Id(id) => {
+                                ShardedMapChild::Id(id) => {
                                     Self::load(ctx, blobstore, id)
                                         .await?
                                         .lookup(ctx, blobstore, rest)
@@ -253,30 +310,25 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                         .map(|k| k.as_slice())
                         .reduce(common_prefix)
                         .unwrap_or(b"");
-                    Self::Intermediate {
-                        // Setting the correct prefix is not necessary for correctness, but it avoids
-                        // having Case 3 + Case 4.3.2 + compression unnecessarily.
-                        prefix: SmallBinary::from_slice(lcp),
-                        value: None,
-                        value_count: 0,
-                        children: Default::default(),
-                    }
-                    .update(
-                        ctx,
-                        blobstore,
-                        values
-                            .into_iter()
-                            .map(|(k, v)| (Bytes::copy_from_slice(k.as_ref()), Some(v)))
-                            .collect(),
-                    )
-                    .await
+                    // Setting the correct prefix is not necessary for correctness, but it avoids
+                    // having Case 3 + Case 4.3.2 + compression unnecessarily.
+                    Self::intermediate(SmallBinary::from_slice(lcp), None, Default::default())
+                        .update(
+                            ctx,
+                            blobstore,
+                            values
+                                .into_iter()
+                                .map(|(k, v)| (Bytes::copy_from_slice(k.as_ref()), Some(v)))
+                                .collect(),
+                        )
+                        .await
                 }
             }
             Self::Intermediate {
                 mut prefix,
                 mut value,
-                mut value_count,
-                mut children,
+                mut edges,
+                ..
             } => {
                 // LCP only considered added keys
                 let lcp = replacements
@@ -294,19 +346,19 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                     let mid_byte = prefix.pop().unwrap();
                     // Left: Bytes 0 .. lcp
                     let prefix_left = prefix;
-                    let right_node = Self::Intermediate {
-                        value,
-                        value_count,
-                        children,
-                        prefix: prefix_right,
-                    };
-                    let left_node = Self::Intermediate {
-                        prefix: prefix_left,
-                        value: None,
-                        value_count,
+                    let right_node = Self::intermediate(prefix_right, value, edges);
+                    let left_node = Self::intermediate(
+                        prefix_left,
+                        None,
                         // Design decision: all intermediate nodes are inlined
-                        children: sorted_vector_map![mid_byte => MapChild::Inlined(right_node)],
-                    };
+                        sorted_vector_map! {
+                            mid_byte =>
+                            ShardedMapEdge {
+                                size: right_node.size(),
+                                child: ShardedMapChild::Inlined(right_node),
+                            },
+                        },
+                    );
                     left_node.update(ctx, blobstore, replacements).await
                 } else {
                     // Case 4: All added keys traverse the long edge (have the prefix `prefix`)
@@ -326,9 +378,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                                         // Panic safety: rest was produced from k
                                         .insert(k.slice_ref(rest), v);
                                 } else {
-                                    value_count -= value.iter().len();
                                     value = v;
-                                    value_count += value.iter().len();
                                 }
                             }
                         }
@@ -338,15 +388,12 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                     let replaced_futures = partitioned
                         .into_iter()
                         .map(|(next_byte, replacements)| {
-                            let node = children.remove(&next_byte).unwrap_or_default();
+                            let edge = edges.remove(&next_byte).unwrap_or_default();
                             async move {
-                                let node = node.load(ctx, blobstore).await?;
-                                let size_removed = node.size();
-
+                                let node = edge.load_child(ctx, blobstore).await?;
                                 let replaced_node =
                                     node.update(ctx, blobstore, replacements).await?;
-                                let size_added = replaced_node.size();
-                                Ok((size_removed, size_added, next_byte, replaced_node))
+                                Ok((next_byte, replaced_node))
                             }
                         })
                         .collect::<Vec<_>>();
@@ -355,75 +402,74 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                         .try_collect::<Vec<_>>()
                         .await?;
                     let mut new_children = BTreeMap::new();
-                    for (size_removed, size_added, next_byte, replaced_node) in replaced {
-                        value_count -= size_removed;
-                        value_count += size_added;
+                    for (next_byte, replaced_node) in replaced {
                         if !replaced_node.is_empty() {
                             let previous = new_children.insert(next_byte, replaced_node);
                             debug_assert!(previous.is_none());
                         }
                     }
 
-                    if value_count <= shard_size {
+                    let new_size: usize = edges.values().map(|edge| edge.size).sum::<usize>()
+                        + new_children.values().map(|v| v.size()).sum::<usize>()
+                        + value.iter().len();
+
+                    if new_size <= shard_size {
                         // Case 4.3.1: Compress node into terminal node.
                         // For simplicity, reuse into_entries.
                         // In practice, all children will be terminal nodes, so nothing extra
                         // will be unecessarily persisted into the blobstore.
                         for (byte, node) in new_children {
                             debug_assert!(matches!(node, Self::Terminal { .. }));
-                            let previous = children.insert(byte, MapChild::Inlined(node));
+                            let previous = edges.insert(
+                                byte,
+                                ShardedMapEdge {
+                                    size: node.size(),
+                                    child: ShardedMapChild::Inlined(node),
+                                },
+                            );
                             debug_assert!(previous.is_none());
                         }
-                        let values = Self::Intermediate {
-                            prefix,
-                            value_count,
-                            value,
-                            children,
-                        }
-                        .into_entries(ctx, blobstore)
-                        // Extending SortedVectorMap 1 by 1 will be fast because into_entries
-                        // returns elements in order
-                        .try_collect()
-                        .await?;
+                        let values = Self::intermediate(prefix, value, edges)
+                            .into_entries(ctx, blobstore)
+                            // Extending SortedVectorMap 1 by 1 will be fast because into_entries
+                            // returns elements in order
+                            .try_collect()
+                            .await?;
 
                         Ok(Self::Terminal { values })
                     } else {
                         // Case 4.3.2: This will continue being a intermediate node, let's
                         // inline what's necessary and store everything
-                        let new_children = stream::iter(new_children)
+                        let new_edges = stream::iter(new_children)
                             .map(|(byte, node)| async move {
-                                let id_or_inlined = match &node {
+                                let size = node.size();
+                                let child = match &node {
                                     // Design decision: Inline all intermediate nodes and store
                                     // terminal nodes separated
-                                    Self::Intermediate { .. } => MapChild::Inlined(node),
+                                    Self::Intermediate { .. } => ShardedMapChild::Inlined(node),
                                     Self::Terminal { .. } => {
-                                        MapChild::Id(node.store(ctx, blobstore).await?)
+                                        ShardedMapChild::Id(node.store(ctx, blobstore).await?)
                                     }
                                 };
-                                Ok((byte, id_or_inlined))
+                                Ok((byte, ShardedMapEdge { size, child }))
                             })
                             .buffer_unordered(100)
                             .try_collect::<Vec<_>>()
                             .await?;
-                        for (byte, id_or_inlined) in new_children {
-                            let previous = children.insert(byte, id_or_inlined);
+                        for (byte, edge) in new_edges {
+                            let previous = edges.insert(byte, edge);
                             debug_assert!(previous.is_none());
                         }
-                        debug_assert!(!children.is_empty());
-                        if children.len() == 1 && value.is_none() {
-                            // Unwrap safety: children.len() == 1 above
-                            let (byte, child) = children.into_iter().next().unwrap();
-                            let mut child = child.load(ctx, blobstore).await?;
+                        debug_assert!(!edges.is_empty());
+                        if edges.len() == 1 && value.is_none() {
+                            // Unwrap safety: edges.len() == 1 above
+                            let (byte, edge) = edges.into_iter().next().unwrap();
+                            let mut child = edge.load_child(ctx, blobstore).await?;
                             prefix.push(byte);
                             child.prepend(prefix);
                             Ok(child)
                         } else {
-                            Ok(Self::Intermediate {
-                                prefix,
-                                value_count,
-                                value,
-                                children,
-                            })
+                            Ok(Self::intermediate(prefix, value, edges))
                         }
                     }
                 }
@@ -442,10 +488,13 @@ impl<Value: MapValue> ShardedMapNode<Value> {
         bounded_traversal_ordered_stream(
             nonzero!(256usize),
             nonzero!(256usize),
-            vec![(self.size(), (SmallBinary::new(), MapChild::Inlined(self)))],
-            move |(mut cur_prefix, id_or_inlined): (SmallBinary, MapChild<Value>)| {
+            vec![(
+                self.size(),
+                (SmallBinary::new(), ShardedMapChild::Inlined(self)),
+            )],
+            move |(mut cur_prefix, child): (SmallBinary, ShardedMapChild<Value>)| {
                 async move {
-                    Ok(match id_or_inlined.load(ctx, blobstore).await? {
+                    Ok(match child.load(ctx, blobstore).await? {
                         // Case 1. Prepend all keys with cur_prefix and output elements
                         Self::Terminal { values } => values
                             .into_iter()
@@ -459,8 +508,8 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                         Self::Intermediate {
                             prefix: new_prefix,
                             value,
-                            value_count,
-                            children,
+                            edges,
+                            ..
                         } => {
                             // Step 2-a. Extend cur_prefix
                             cur_prefix.extend(new_prefix);
@@ -470,24 +519,13 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                                 .map(|value| OrderedTraversal::Output((cur_prefix.clone(), value)))
                                 .into_iter()
                                 // Step 2-c. Copy prefix, append byte, and recurse.
-                                .chain(children.into_iter().map(|(byte, id_or_inlined)| {
+                                .chain(edges.into_iter().map(|(byte, edge)| {
                                     let mut new_prefix = cur_prefix.clone();
                                     new_prefix.push(byte);
-                                    // We have a tradeoff to decide on here:
-                                    // (1) If we don't load ids, we can't really know their size.
-                                    // (2) If we do load ids, we know their size, but we might load
-                                    // a lot of map nodes before they actually need to be used.
-                                    // (3) The other possible solution is putting value_count on the
-                                    // edge, not on the node.
-                                    // The choice was (1), as we use scheduled_max = queued_max = 1
-                                    // here, the size predictions shouldn't make any difference.
-                                    let size_prediction = match &id_or_inlined {
-                                        MapChild::Inlined(inlined) => inlined.size(),
-                                        MapChild::Id(_) => value_count,
-                                    };
+                                    let size_prediction = edge.size;
                                     OrderedTraversal::Recurse(
                                         size_prediction,
-                                        (new_prefix, id_or_inlined),
+                                        (new_prefix, edge.child),
                                     )
                                 }))
                                 .collect::<Vec<_>>()
@@ -502,14 +540,18 @@ impl<Value: MapValue> ShardedMapNode<Value> {
     pub fn is_empty(&self) -> bool {
         match self {
             Self::Terminal { values } => values.is_empty(),
-            Self::Intermediate { value_count, .. } => *value_count == 0,
+            Self::Intermediate { .. } => self.size() == 0,
         }
     }
 
     fn size(&self) -> usize {
         match self {
             Self::Terminal { values } => values.len(),
-            Self::Intermediate { value_count, .. } => *value_count,
+            Self::Intermediate {
+                value, edges, size, ..
+            } => *size.get_or_init(|| {
+                value.iter().len() + edges.values().map(|edge| edge.size).sum::<usize>()
+            }),
         }
     }
 
@@ -518,12 +560,12 @@ impl<Value: MapValue> ShardedMapNode<Value> {
             thrift::ShardedMapNode::intermediate(intermediate) => Self::Intermediate {
                 prefix: intermediate.prefix.0,
                 value: intermediate.value.map(Value::try_from).transpose()?,
-                value_count: intermediate.value_count as usize,
-                children: intermediate
-                    .children
+                edges: intermediate
+                    .edges
                     .into_iter()
-                    .map(|(k, v)| Ok((k as u8, MapChild::from_thrift(v)?)))
+                    .map(|(k, e)| Ok((k as u8, ShardedMapEdge::from_thrift(e)?)))
                     .collect::<Result<_>>()?,
+                size: Default::default(),
             },
             thrift::ShardedMapNode::terminal(terminal) => Self::Terminal {
                 values: terminal
@@ -541,15 +583,14 @@ impl<Value: MapValue> ShardedMapNode<Value> {
             Self::Intermediate {
                 prefix,
                 value,
-                value_count,
-                children,
+                edges,
+                ..
             } => thrift::ShardedMapNode::intermediate(thrift::ShardedMapIntermediateNode {
                 prefix: thrift::small_binary(prefix),
                 value: value.map(Into::into),
-                value_count: value_count as i64,
-                children: children
+                edges: edges
                     .into_iter()
-                    .map(|(k, v)| (k as i8, v.into_thrift()))
+                    .map(|(k, e)| (k as i8, e.into_thrift()))
                     .collect(),
             }),
             Self::Terminal { values } => {
@@ -634,16 +675,22 @@ mod test {
         value: Option<i32>,
         children: Vec<(char, TestShardedMap)>,
     ) -> TestShardedMap {
-        let value_count =
-            children.iter().map(|(_, v)| v.size()).sum::<usize>() + value.iter().len();
         ShardedMapNode::Intermediate {
             prefix: SmallVec::from_slice(prefix.as_bytes()),
             value: value.map(MyType),
-            value_count,
-            children: children
+            edges: children
                 .into_iter()
-                .map(|(c, v)| (c as u32 as u8, MapChild::Inlined(v)))
+                .map(|(c, v)| {
+                    (
+                        c as u32 as u8,
+                        ShardedMapEdge {
+                            size: v.size(),
+                            child: ShardedMapChild::Inlined(v),
+                        },
+                    )
+                })
                 .collect(),
+            size: Default::default(),
         }
     }
 
@@ -737,32 +784,37 @@ mod test {
 
         #[async_recursion]
         async fn validate(&self) -> Result<()> {
+            let size = self.size();
+            assert_eq!(self.0.is_empty(), size == 0);
             match &self.0 {
                 Terminal { values } => assert!(values.len() <= 5),
                 Intermediate {
                     prefix: _,
                     value,
-                    value_count,
-                    children,
+                    edges,
+                    size: _,
                 } => {
                     let children_size: usize = stream::iter(
-                        children
-                            .values()
-                            .map(|v| v.clone().load(&self.1, &self.2))
+                        edges
+                            .into_iter()
+                            .map(|(_, e)| async move {
+                                anyhow::Ok((e.size, e.child.clone().load(&self.1, &self.2).await?))
+                            })
                             // prevent compiler bug
                             .collect::<Vec<_>>(),
                     )
                     .buffer_unordered(100)
-                    .and_then(|child| async move {
+                    .and_then(|(size, child)| async move {
                         let child = Self(child, self.1.clone(), self.2.clone());
                         child.validate().await?;
-                        Ok(child.size())
+                        assert_eq!(child.size(), size);
+                        Ok(size)
                     })
                     .try_collect::<Vec<_>>()
                     .await?
                     .into_iter()
                     .sum();
-                    assert_eq!(children_size + value.iter().len(), *value_count);
+                    assert_eq!(children_size + value.iter().len(), size);
                 }
             }
             Ok(())
@@ -775,10 +827,12 @@ mod test {
         ) -> Result<ShardedMapNode<MyType>> {
             match &mut map {
                 Terminal { .. } => {}
-                Intermediate { children, .. } => {
-                    for (_, id_or_inlined) in children {
-                        let node = std::mem::take(id_or_inlined).load(&self.1, &self.2).await?;
-                        *id_or_inlined = MapChild::Inlined(self.inner_inline_all(node).await?);
+                Intermediate { edges, .. } => {
+                    for (_, edge) in edges {
+                        let node = std::mem::take(&mut edge.child)
+                            .load(&self.1, &self.2)
+                            .await?;
+                        edge.child = ShardedMapChild::Inlined(self.inner_inline_all(node).await?);
                     }
                 }
             }
@@ -794,10 +848,11 @@ mod test {
         async fn child(&self, key: char) -> Result<Self> {
             let child = match &self.0 {
                 Terminal { .. } => bail!("terminal"),
-                Intermediate { children, .. } => {
-                    children
+                Intermediate { edges, .. } => {
+                    edges
                         .get(&(key as u8))
                         .unwrap()
+                        .child
                         .clone()
                         .load(&self.1, &self.2)
                         .await?
@@ -815,7 +870,7 @@ mod test {
         fn assert_intermediate(&self, child_count: usize) {
             match &self.0 {
                 Terminal { .. } => panic!("not intermediate"),
-                Intermediate { children, .. } => assert_eq!(children.len(), child_count),
+                Intermediate { edges, .. } => assert_eq!(edges.len(), child_count),
             }
         }
         fn assert_prefix(&self, prefix: &str) {
@@ -837,9 +892,9 @@ mod test {
         assert_eq!(empty.size(), 0);
         let empty = ShardedMapNode::<MyType>::Intermediate {
             value: None,
-            value_count: 0,
-            children: Default::default(),
+            edges: Default::default(),
             prefix: Default::default(),
+            size: Default::default(),
         };
         assert!(empty.is_empty());
         assert_eq!(empty.size(), 0);
@@ -938,7 +993,7 @@ mod test {
         assert_all_keys(
             &ctx,
             &blobstore,
-            vec!["deletedmanifest2.mapnode.blake2.d400b43aefd2e3774011c3429e8ce9f7b3f932f6ced4433dc1070f388834c325"],
+            vec!["deletedmanifest2.mapnode.blake2.faa5cf45a62744c36771e1ded03fe98a7ba55ffff7fc66082184f0ed3d58eedc"],
         )
         .await?;
         Ok(())
@@ -978,11 +1033,9 @@ mod test {
         let child = map.child('a').await?;
         match child.0 {
             Terminal { .. } => bail!("not intermediate"),
-            Intermediate {
-                value, children, ..
-            } => {
+            Intermediate { value, edges, .. } => {
                 assert!(value.is_some());
-                assert_eq!(children.len(), 1);
+                assert_eq!(edges.len(), 1);
             }
         }
         map.add_remove(&[], &["aba"]).await?;
@@ -1183,6 +1236,9 @@ mod test {
                         .map(|(k, v)| (k.as_str(), *v))
                         .collect::<Vec<_>>();
                     map.add_remove(&adds, &[]).await?;
+                    if map.size() != values.len() {
+                        return Ok(false);
+                    }
                     for k in queries {
                         let correct_v = values.get(&k);
                         let test_v = map.lookup(&k).await?;
