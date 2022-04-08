@@ -111,9 +111,9 @@ Start mononoke server
   ├─╮
   │ o  [MEGAREPO DELETE] history fixup (1) [public;rev=8;d3b2dfc1d7dc]
   │ │
-  o │  [MEGAREPO DELETE] history fixup (0) [public;rev=7;94932f105be0]
+  │ o  [MEGAREPO DELETE] history fixup (0) [public;rev=7;c2a5523610c4]
   │ │
-  │ o  [MEGAREPO DELETE] history fixup (0) [public;rev=6;c2a5523610c4]
+  o │  [MEGAREPO DELETE] history fixup (0) [public;rev=6;94932f105be0]
   │ │
   │ o  small repo commit 3 [public;rev=5;ea8595b036ed]
   │ │
