@@ -400,7 +400,7 @@ renames and changes of PWD
   $TESTTMP/thisdir/rel
   $ mv thisdir thatdir
   $ hg -R thatdir/abs root
-  abort: .hg/sharedpath points to nonexistent directory $TESTTMP/thisdir/orig/.hg!
+  abort: required config not found at "$TESTTMP/thisdir/orig/.hg/hgrc.dynamic"
   [255]
   $ hg -R thatdir/rel root
   $TESTTMP/thatdir/rel

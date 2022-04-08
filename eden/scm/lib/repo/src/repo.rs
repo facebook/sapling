@@ -126,12 +126,25 @@ impl Repo {
         let path = path.into();
         assert!(path.is_absolute());
 
+        let dot_hg_path = path.join(".hg");
+        let config = configparser::hg::load::<String, String>(Some(&dot_hg_path), None)?;
+        Self::load_with_config(path, config)
+    }
+
+    /// Loads the repo from an explicit path. If a reference to a config object is passed,
+    /// a clone of it is used; otherwise, a new one is created.
+    pub fn load_with_config<P>(path: P, config: ConfigSet) -> Result<Self>
+    where
+        P: Into<PathBuf>,
+    {
+        let path = path.into();
+        assert!(path.is_absolute());
+
         let shared_path = read_sharedpath(&path)?;
         let dot_hg_path = path.join(".hg");
         let shared_dot_hg_path = shared_path.join(".hg");
         let store_path = shared_dot_hg_path.join("store");
 
-        let config = configparser::hg::load::<String, String>(Some(&dot_hg_path), None)?;
         let repo_name = configparser::hg::read_repo_name_from_disk(&shared_dot_hg_path)
             .ok()
             .or_else(|| {
