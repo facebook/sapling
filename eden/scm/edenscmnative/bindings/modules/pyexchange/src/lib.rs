@@ -45,7 +45,7 @@ fn clone(
     let config = config.get_cfg(py);
     let client = edenapi.extract_inner(py);
     let commits = commits.get_inner(py);
-    let mut commits = commits.borrow_mut();
+    let mut commits = commits.write();
     let meta = metalog.metalog_rwlock(py);
     let mut meta = meta.write();
     exchange::clone(&config, client, &mut meta, &mut commits).map_pyerr(py)?;

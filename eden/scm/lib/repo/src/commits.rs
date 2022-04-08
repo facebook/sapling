@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
@@ -20,7 +21,7 @@ use hgcommits::RevlogCommits;
 use metalog::MetaLog;
 use parking_lot::RwLock;
 
-type OpenedCommits = dyn DagCommits + Send + 'static;
+static REQUIREMENTS_PATH: &str = "requires";
 
 static HG_COMMITS_PATH: &str = "hgcommits/v1";
 static LAZY_HASH_PATH: &str = "lazyhashdir";
@@ -39,10 +40,11 @@ static GIT_FILE: &str = "gitdir";
 
 pub fn open_dag_commits(
     store_path: &Path,
-    store_requirements: Vec<String>,
     metalog: Arc<RwLock<MetaLog>>,
-    eden_api: Option<Arc<dyn EdenApi>>,
-) -> Result<Box<OpenedCommits>, CommitError> {
+    eden_api: Arc<dyn EdenApi>,
+) -> Result<Box<dyn DagCommits + Send + 'static>, CommitError> {
+    let store_requirements = get_store_requirements(store_path)
+        .map_err(|err| CommitError::FileReadError("requirements file", err))?;
     if store_requirements.contains(&GIT_STORE_REQUIREMENT.to_string()) {
         log_backend(GIT_BACKEND_LOG);
         return open_git(store_path, metalog);
@@ -57,6 +59,11 @@ pub fn open_dag_commits(
     Ok(Box::new(RevlogCommits::new(store_path)?))
 }
 
+fn get_store_requirements(store_path: &Path) -> Result<HashSet<String>, std::io::Error> {
+    let store_requirements = fs::read_to_string(store_path.join(REQUIREMENTS_PATH))?;
+    Ok(store_requirements.split('\n').map(String::from).collect())
+}
+
 fn log_backend(backend: &str) {
     tracing::info!(target: "changelog_info", changelog_backend=AsRef::<str>::as_ref(&backend));
 }
@@ -64,7 +71,7 @@ fn log_backend(backend: &str) {
 fn open_git(
     store_path: &Path,
     metalog: Arc<RwLock<MetaLog>>,
-) -> Result<Box<OpenedCommits>, CommitError> {
+) -> Result<Box<dyn DagCommits + Send + 'static>, CommitError> {
     let git_path =
         calculate_git_path(store_path).map_err(|err| CommitError::FileReadError("gitdir", err))?;
     let segments_path = calculate_segments_path(store_path);
@@ -73,7 +80,7 @@ fn open_git(
     Ok(Box::new(git_segmented_commits))
 }
 
-fn open_double(store_path: &Path) -> Result<Box<OpenedCommits>, CommitError> {
+fn open_double(store_path: &Path) -> Result<Box<dyn DagCommits + Send + 'static>, CommitError> {
     let segments_path = calculate_segments_path(store_path);
     let hg_commits_path = store_path.join(HG_COMMITS_PATH);
     let double_commits = DoubleWriteCommits::new(
@@ -86,9 +93,8 @@ fn open_double(store_path: &Path) -> Result<Box<OpenedCommits>, CommitError> {
 
 fn open_hybrid(
     store_path: &Path,
-    eden_api: Option<Arc<dyn EdenApi>>,
-) -> Result<Box<OpenedCommits>, CommitError> {
-    let eden_api = eden_api.ok_or(CommitError::OpenRequirements("eden_api"))?;
+    eden_api: Arc<dyn EdenApi>,
+) -> Result<Box<dyn DagCommits + Send + 'static>, CommitError> {
     let segments_path = calculate_segments_path(store_path);
     let hg_commits_path = store_path.join(HG_COMMITS_PATH);
     let lazy_hash_path = get_path_from_file(store_path, LAZY_HASH_PATH);

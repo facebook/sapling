@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::cell::RefCell;
 use std::sync::Arc;
 
 use anyhow::format_err;
@@ -40,6 +39,7 @@ use hgcommits::HybridCommits;
 use hgcommits::MemHgCommits;
 use hgcommits::RevlogCommits;
 use minibytes::Bytes;
+use parking_lot::RwLock;
 use pyedenapi::PyClient;
 use pymetalog::metalog as PyMetaLog;
 use storemodel::ReadRootTreeIds;
@@ -50,7 +50,7 @@ use crate::Names;
 use crate::Spans;
 
 py_class!(pub class commits |py| {
-    data inner: RefCell<Box<dyn DagCommits + Send + 'static>>;
+    data inner: Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>;
 
     /// Add a list of commits (node, [parent], text) in-memory.
     def addcommits(&self, commits: Vec<(PyBytes, Vec<PyBytes>, PyBytes)>) -> PyResult<PyNone> {
@@ -60,7 +60,7 @@ py_class!(pub class commits |py| {
             let raw_text = raw_text.data(py).to_vec().into();
             HgCommit { vertex, parents, raw_text }
         }).collect();
-        let mut inner = self.inner(py).borrow_mut();
+        let mut inner = self.inner(py).write();
         block_on(inner.add_commits(&commits)).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -73,7 +73,7 @@ py_class!(pub class commits |py| {
             let parents = parents.into_iter().map(|p| p.data(py).to_vec().into()).collect();
             GraphNode { vertex, parents }
         }).collect();
-        let mut inner = self.inner(py).borrow_mut();
+        let mut inner = self.inner(py).write();
         block_on(inner.add_graph_nodes(&graph_nodes)).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -82,7 +82,7 @@ py_class!(pub class commits |py| {
     /// `masterheads` is a hint about what parts belong to the "master" group.
     def flush(&self, masterheads: Vec<PyBytes>) -> PyResult<PyNone> {
         let heads = masterheads.into_iter().map(|h| h.data(py).to_vec().into()).collect::<Vec<_>>();
-        let mut inner = self.inner(py).borrow_mut();
+        let mut inner = self.inner(py).write();
         block_on(inner.flush(&heads)).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -91,7 +91,7 @@ py_class!(pub class commits |py| {
     /// For the revlog backend, this also write the commit graph to disk.
     /// For the lazy commit hash backend, this also writes the commit hashes.
     def flushcommitdata(&self) -> PyResult<PyNone> {
-        let mut inner = self.inner(py).borrow_mut();
+        let mut inner = self.inner(py).write();
         block_on(inner.flush_commit_data()).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -99,7 +99,7 @@ py_class!(pub class commits |py| {
     /// Import clone data (inside PyCell) and flush.
     def importclonedata(&self, data: PyCell) -> PyResult<PyNone> {
         let data: Box<CloneData<Vertex>> = data.take(py).ok_or_else(|| format_err!("Data is not CloneData")).map_pyerr(py)?;
-        let mut inner = self.inner(py).borrow_mut();
+        let mut inner = self.inner(py).write();
         block_on(inner.import_clone_data(*data)).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -110,7 +110,7 @@ py_class!(pub class commits |py| {
         let data: Box<CloneData<Vertex>> = data.take(py).ok_or_else(|| format_err!("Data is not CloneData")).map_pyerr(py)?;
         let commits = data.flat_segments.vertex_count();
         let segments = data.flat_segments.segment_count();
-        let mut inner = self.inner(py).borrow_mut();
+        let mut inner = self.inner(py).write();
         block_on(inner.import_pull_data(*data, &heads.0)).map_pyerr(py)?;
         Ok((commits, segments))
     }
@@ -119,7 +119,7 @@ py_class!(pub class commits |py| {
     /// Fails if called in a non-test environment.
     /// New tests should avoid depending on `strip`.
     def strip(&self, set: Names) -> PyResult<PyNone> {
-        let mut inner = self.inner(py).borrow_mut();
+        let mut inner = self.inner(py).write();
         block_on(inner.strip_commits(set.0)).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -127,7 +127,7 @@ py_class!(pub class commits |py| {
     /// Lookup the raw text of a commit by binary commit hash.
     def getcommitrawtext(&self, node: PyBytes) -> PyResult<Option<PyBytes>> {
         let vertex = node.data(py).to_vec().into();
-        let inner = self.inner(py).borrow();
+        let inner = self.inner(py).read();
         let optional_bytes = block_on(inner.get_commit_raw_text(&vertex)).map_pyerr(py)?;
         Ok(optional_bytes.map(|bytes| PyBytes::new(py, bytes.as_ref())))
     }
@@ -136,7 +136,7 @@ py_class!(pub class commits |py| {
     def getcommitrawtextlist(&self, nodes: Vec<BytesLike<Vertex>>) -> PyResult<Vec<BytesLike<Bytes>>>
     {
         let vertexes: Vec<Vertex> = nodes.into_iter().map(|b| b.0).collect();
-        let inner = self.inner(py).borrow();
+        let inner = self.inner(py).read();
         let texts = block_on(inner.get_commit_raw_text_list(&vertexes)).map_pyerr(py)?;
         Ok(texts.into_iter().map(BytesLike).collect())
     }
@@ -146,37 +146,37 @@ py_class!(pub class commits |py| {
         // Attempt to use IdMap bound to `set` if possible for performance.
         let id_map = match set.0.hints().id_map() {
             Some(map) => map,
-            None => self.inner(py).borrow().id_map_snapshot().map_pyerr(py)?,
+            None => self.inner(py).read().id_map_snapshot().map_pyerr(py)?,
         };
         Ok(Spans(block_on(id_map.to_id_set(&set.0)).map_pyerr(py)?))
     }
 
     /// Convert IdSet to Set. For compatibility with legacy code only.
     def tonodes(&self, set: Spans) -> PyResult<Names> {
-        let inner = self.inner(py).borrow();
+        let inner = self.inner(py).read();
         Ok(Names(inner.to_set(&set.0).map_pyerr(py)?))
     }
 
     /// Obtain the read-only dagalgo object that supports various DAG algorithms.
     def dagalgo(&self) -> PyResult<dagalgo> {
-        dagalgo::from_arc_dag(py, self.inner(py).borrow().dag_snapshot().map_pyerr(py)?)
+        dagalgo::from_arc_dag(py, self.inner(py).read().dag_snapshot().map_pyerr(py)?)
     }
 
     /// Obtain the read-only object that can do hex prefix lookup and convert
     /// between binary commit hashes and integer Ids.
     def idmap(&self) -> PyResult<idmap::idmap> {
-        idmap::idmap::from_arc_idmap(py, self.inner(py).borrow().id_map_snapshot().map_pyerr(py)?)
+        idmap::idmap::from_arc_idmap(py, self.inner(py).read().id_map_snapshot().map_pyerr(py)?)
     }
 
     /// Name of the backend used for DAG algorithms.
     def algorithmbackend(&self) -> PyResult<Str> {
-        let inner = self.inner(py).borrow();
+        let inner = self.inner(py).read();
         Ok(inner.algorithm_backend().to_string().into())
     }
 
     /// Describe the backend.
     def describebackend(&self) -> PyResult<Str> {
-        let inner = self.inner(py).borrow();
+        let inner = self.inner(py).read();
         Ok(inner.describe_backend().into())
     }
 
@@ -184,7 +184,7 @@ py_class!(pub class commits |py| {
     def explaininternals(&self, out: PyObject) -> PyResult<PyNone> {
         // This function takes a 'out' parameter so it can work with pager
         // and output progressively.
-        let inner = self.inner(py).borrow();
+        let inner = self.inner(py).read();
         let mut out = cpython_ext::wrap_pyio(out);
         inner.explain_internals(&mut out).map_pyerr(py)?;
         Ok(PyNone)
@@ -196,7 +196,7 @@ py_class!(pub class commits |py| {
     /// Returns missing ids. A valid lazy graph should return an empty list.
     /// See document in the dag crate for details.
     def checkuniversalids(&self) -> PyResult<Vec<u64>> {
-        let inner = self.inner(py).borrow();
+        let inner = self.inner(py).read();
         let ids = block_on(inner.check_universal_ids()).map_pyerr(py)?;
         Ok(ids.into_iter().map(|i| i.0).collect())
     }
@@ -207,7 +207,7 @@ py_class!(pub class commits |py| {
     /// Returns a list of human-readable messages indicating problems.
     /// A valid graph should return an empty list.
     def checksegments(&self) -> PyResult<Vec<String>> {
-        let inner = self.inner(py).borrow();
+        let inner = self.inner(py).read();
         let problems = block_on(inner.check_segments()).map_pyerr(py)?;
         Ok(problems)
     }
@@ -218,8 +218,8 @@ py_class!(pub class commits |py| {
     /// Returns a list of human-readable messages indicating problems.
     /// A valid graph should return an empty list.
     def checkisomorphicgraph(&self, other: commits, heads: Names) -> PyResult<Vec<String>> {
-        let inner = self.inner(py).borrow();
-        let other = other.inner(py).borrow().dag_snapshot().map_pyerr(py)?;
+        let inner = self.inner(py).read();
+        let other = other.inner(py).read().dag_snapshot().map_pyerr(py)?;
         let heads = heads.0;
         let problems = block_on(inner.check_isomorphic_graph(&other, heads)).map_pyerr(py)?;
         Ok(problems)
@@ -232,7 +232,7 @@ py_class!(pub class commits |py| {
     /// of truth).
     def updatereferences(&self, metalog: PyMetaLog) -> PyResult<PyNone> {
         let meta = metalog.metalog_rwlock(py);
-        let mut inner = self.inner(py).borrow_mut();
+        let mut inner = self.inner(py).write();
         inner.update_references_to_match_metalog(&meta.read()).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -350,21 +350,18 @@ py_class!(pub class commits |py| {
 impl commits {
     /// Create a `commits` Python object from a Rust struct.
     pub fn from_commits(py: Python, commits: impl DagCommits + Send + 'static) -> PyResult<Self> {
-        Self::create_instance(py, RefCell::new(Box::new(commits)))
+        Self::create_instance(py, Arc::new(RwLock::new(Box::new(commits))))
     }
 
     pub(crate) fn to_read_root_tree_nodes(
         &self,
         py: Python,
     ) -> Arc<dyn ReadRootTreeIds + Send + Sync> {
-        let inner = self.inner(py).borrow();
+        let inner = self.inner(py).read();
         inner.to_dyn_read_root_tree_ids()
     }
 
-    pub fn get_inner<'a>(
-        &'a self,
-        py: Python<'a>,
-    ) -> &'a RefCell<Box<dyn DagCommits + Send + 'static>> {
-        self.inner(py)
+    pub fn get_inner(&self, py: Python) -> Arc<RwLock<Box<dyn DagCommits + Send + 'static>>> {
+        self.inner(py).clone()
     }
 }

@@ -12,6 +12,7 @@ dag = { path = "../../../../lib/dag" }
 futures = { version = "0.3" }
 hgcommits = { path = "../../../../lib/hgcommits" }
 minibytes = { path = "../../../../lib/minibytes" }
+parking_lot = "0.11.2"
 pyedenapi = { path = "../pyedenapi" }
 pymetalog = { path = "../pymetalog" }
 renderdag = { path = "../../../../lib/renderdag" }

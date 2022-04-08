@@ -2185,6 +2185,7 @@ class localrepository(object):
 
     def invalidatechangelog(self):
         """Invalidates the changelog. Discard pending changes."""
+        self._rsrepo.invalidatechangelog()
         if "changelog" in self._filecache:
             del self._filecache["changelog"]
         if "changelog" in self.__dict__:
@@ -3303,15 +3304,7 @@ def _openchangelog(repo):
     if repo.ui.configbool("experimental", "use-rust-changelog") and not any(
         set(repo.storerequirements) & set(pythonrequirements)
     ):
-        path = repo.svfs.join("")
-        storereqs = list(repo.storerequirements)
-        meta = repo.metalog()
-        # Just trying to get edenapi if it won't be available causes race conditions
-        if "lazychangelog" in repo.storerequirements:
-            edenapi = repo.edenapi
-        else:
-            edenapi = None
-        inner = bindings.repo.loadchangelog(path, storereqs, meta, edenapi)
+        inner = repo._rsrepo.changelog()
         return changelog2.changelog(repo, inner, repo.ui.uiconfig())
 
     if "emergencychangelog" in repo.storerequirements:

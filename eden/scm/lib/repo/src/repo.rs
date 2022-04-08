@@ -15,9 +15,11 @@ use configparser::config::ConfigSet;
 use edenapi::Builder;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
+use hgcommits::DagCommits;
 use metalog::MetaLog;
 use parking_lot::RwLock;
 
+use crate::commits::open_dag_commits;
 use crate::errors;
 use crate::init;
 
@@ -32,6 +34,7 @@ pub struct Repo {
     repo_name: Option<String>,
     metalog: Option<Arc<RwLock<MetaLog>>>,
     eden_api: Option<Arc<dyn EdenApi>>,
+    dag_commits: Option<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
 }
 
 /// Either an optional [`Repo`] which owns a [`ConfigSet`], or a [`ConfigSet`]
@@ -158,6 +161,7 @@ impl Repo {
             });
         let metalog = None;
         let eden_api = None;
+        let dag_commits = None;
 
         Ok(Repo {
             path,
@@ -170,6 +174,7 @@ impl Repo {
             repo_name,
             metalog,
             eden_api,
+            dag_commits,
         })
     }
 
@@ -242,6 +247,24 @@ impl Repo {
                 Ok(eden_api)
             }
         }
+    }
+
+    pub fn dag_commits(&mut self) -> Result<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>> {
+        match &self.dag_commits {
+            Some(commits) => Ok(commits.clone()),
+            None => {
+                let metalog = self.metalog()?;
+                let eden_api = self.eden_api()?;
+                let commits = open_dag_commits(&self.store_path, metalog, eden_api)?;
+                let commits = Arc::new(RwLock::new(commits));
+                self.dag_commits = Some(commits.clone());
+                Ok(commits)
+            }
+        }
+    }
+
+    pub fn invalidate_dag_commits(&mut self) {
+        self.dag_commits = None;
     }
 }
 
