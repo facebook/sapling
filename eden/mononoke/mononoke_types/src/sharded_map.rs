@@ -6,18 +6,21 @@
  */
 
 #![allow(dead_code)]
+#![allow(clippy::mutable_key_type)] // false positive: Bytes is not inner mutable
 
-use anyhow::{anyhow, bail, Context, Error, Result};
+use anyhow::{anyhow, bail, Context, Error, Ok, Result};
 use async_recursion::async_recursion;
 use blobstore::Blobstore;
 use bounded_traversal::{bounded_traversal_ordered_stream, OrderedTraversal};
 use bytes::Bytes;
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures::{FutureExt, Stream};
+use futures::{stream, FutureExt, Stream, StreamExt, TryStreamExt};
+use itertools::Itertools;
 use nonzero_ext::nonzero;
 use smallvec::SmallVec;
-use sorted_vector_map::SortedVectorMap;
+use sorted_vector_map::{sorted_vector_map, SortedVectorMap};
+use std::collections::BTreeMap;
 
 use crate::blob::{Blob, BlobstoreValue, ShardedMapNodeBlob};
 use crate::errors::ErrorKind;
@@ -95,6 +98,13 @@ impl<Value: MapValue> Default for ShardedMapNode<Value> {
     }
 }
 
+/// Returns longest common prefix of a and b.
+fn common_prefix<'a>(a: &'a [u8], b: &'a [u8]) -> &'a [u8] {
+    let lcp = a.iter().zip(b.iter()).take_while(|(a, b)| a == b).count();
+    // Panic safety: lcp is at most a.len()
+    &a[..lcp]
+}
+
 impl<Value: MapValue> ShardedMapNode<Value> {
     async fn load(
         ctx: &CoreContext,
@@ -170,6 +180,255 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                 }
             }
         })
+    }
+
+    /// Given a map and replacements, return the map with the replacements.
+    fn update_map(
+        mut map: BTreeMap<SmallBinary, Value>,
+        replacements: impl IntoIterator<Item = (Bytes, Option<Value>)>,
+    ) -> Result<SortedVectorMap<SmallBinary, Value>> {
+        for (key, value) in replacements {
+            let key = SmallVec::from_iter(key);
+            match value {
+                Some(value) => map.insert(key, value),
+                None => map.remove(&key),
+            };
+        }
+        Ok(map.into())
+    }
+
+    /// Prepend all keys in this node with the given prefix.
+    fn prepend(&mut self, prefix: SmallBinary) {
+        match self {
+            Self::Terminal { values } => {
+                *values = std::mem::take(values)
+                    .into_iter()
+                    .update(|(k, _)| {
+                        k.insert_from_slice(0, &prefix);
+                    })
+                    .collect()
+            }
+            Self::Intermediate {
+                prefix: cur_prefix, ..
+            } => {
+                cur_prefix.insert_from_slice(0, &prefix);
+            }
+        }
+    }
+
+    fn shard_size() -> Result<usize> {
+        if cfg!(test) {
+            Ok(5)
+        } else {
+            thrift::MAP_SHARD_SIZE
+                .try_into()
+                .context("Failed to parse shard size")
+        }
+    }
+
+    /// Create a new map from this map with given replacements. It is a generalization of
+    /// adding and removing, and should be faster than doing all operations separately.
+    /// It does not rely on the added keys not existing or the removed keys existing.
+    // See the detailed description of the logic in https://fburl.com/lnusbzgl
+    #[async_recursion]
+    pub async fn update(
+        self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+        replacements: BTreeMap<Bytes, Option<Value>>,
+    ) -> Result<Self> {
+        let shard_size = Self::shard_size()?;
+        match self {
+            Self::Terminal { values } => {
+                let values = Self::update_map(values.into_iter().collect(), replacements)?;
+                if values.len() <= shard_size {
+                    // Case 1: values is small enough, return a terminal node
+                    Ok(Self::Terminal { values })
+                } else {
+                    // Case 2: This will become a intermediate node
+                    // Let's reuse the logic to add values to a intermediate node by creating
+                    // an empty one.
+                    let lcp = values
+                        .keys()
+                        .map(|k| k.as_slice())
+                        .reduce(common_prefix)
+                        .unwrap_or(b"");
+                    Self::Intermediate {
+                        // Setting the correct prefix is not necessary for correctness, but it avoids
+                        // having Case 3 + Case 4.3.2 + compression unnecessarily.
+                        prefix: SmallBinary::from_slice(lcp),
+                        value: None,
+                        value_count: 0,
+                        children: Default::default(),
+                    }
+                    .update(
+                        ctx,
+                        blobstore,
+                        values
+                            .into_iter()
+                            .map(|(k, v)| (Bytes::copy_from_slice(k.as_ref()), Some(v)))
+                            .collect(),
+                    )
+                    .await
+                }
+            }
+            Self::Intermediate {
+                mut prefix,
+                mut value,
+                mut value_count,
+                mut children,
+            } => {
+                // LCP only considered added keys
+                let lcp = replacements
+                    .iter()
+                    .filter_map(|(k, v)| v.as_ref().map(|_| k))
+                    .fold(prefix.as_slice(), |lcp, key| common_prefix(lcp, key))
+                    .len();
+                if lcp < prefix.len() {
+                    // Case 3: The prefix of all keys is smaller than `prefix`
+                    // Let's create two new nodes and recursively update them.
+                    // Right: Bytes lcp + 1 .. size
+                    let prefix_right = prefix.drain(lcp + 1..).collect();
+                    // Middle: Byte lcp
+                    // unwrap safety: lcp + 1 > 0, so split_off leaves at least one element at prefix
+                    let mid_byte = prefix.pop().unwrap();
+                    // Left: Bytes 0 .. lcp
+                    let prefix_left = prefix;
+                    let right_node = Self::Intermediate {
+                        value,
+                        value_count,
+                        children,
+                        prefix: prefix_right,
+                    };
+                    let left_node = Self::Intermediate {
+                        prefix: prefix_left,
+                        value: None,
+                        value_count,
+                        // Design decision: all intermediate nodes are inlined
+                        children: sorted_vector_map![mid_byte => MapChild::Inlined(right_node)],
+                    };
+                    left_node.update(ctx, blobstore, replacements).await
+                } else {
+                    // Case 4: All added keys traverse the long edge (have the prefix `prefix`)
+                    let mut partitioned = BTreeMap::<u8, BTreeMap<Bytes, Option<Value>>>::new();
+                    // Step 4.1: Strip prefixes, and partition replacements.
+                    replacements.into_iter().for_each(|(k, v)| {
+                        match k.strip_prefix(prefix.as_slice()) {
+                            None => {
+                                // Only deletions might not have the correct prefix
+                                debug_assert!(v.is_none());
+                            }
+                            Some(rest) => {
+                                if let Some((first, rest)) = rest.split_first() {
+                                    partitioned
+                                        .entry(*first)
+                                        .or_default()
+                                        // Panic safety: rest was produced from k
+                                        .insert(k.slice_ref(rest), v);
+                                } else {
+                                    value_count -= value.iter().len();
+                                    value = v;
+                                    value_count += value.iter().len();
+                                }
+                            }
+                        }
+                    });
+
+                    // Step 4.2: Recursively update partitioned children
+                    let replaced_futures = partitioned
+                        .into_iter()
+                        .map(|(next_byte, replacements)| {
+                            let node = children.remove(&next_byte).unwrap_or_default();
+                            async move {
+                                let node = node.load(ctx, blobstore).await?;
+                                let size_removed = node.size();
+
+                                let replaced_node =
+                                    node.update(ctx, blobstore, replacements).await?;
+                                let size_added = replaced_node.size();
+                                Ok((size_removed, size_added, next_byte, replaced_node))
+                            }
+                        })
+                        .collect::<Vec<_>>();
+                    let replaced = stream::iter(replaced_futures)
+                        .buffer_unordered(100)
+                        .try_collect::<Vec<_>>()
+                        .await?;
+                    let mut new_children = BTreeMap::new();
+                    for (size_removed, size_added, next_byte, replaced_node) in replaced {
+                        value_count -= size_removed;
+                        value_count += size_added;
+                        if !replaced_node.is_empty() {
+                            let previous = new_children.insert(next_byte, replaced_node);
+                            debug_assert!(previous.is_none());
+                        }
+                    }
+
+                    if value_count <= shard_size {
+                        // Case 4.3.1: Compress node into terminal node.
+                        // For simplicity, reuse into_entries.
+                        // In practice, all children will be terminal nodes, so nothing extra
+                        // will be unecessarily persisted into the blobstore.
+                        for (byte, node) in new_children {
+                            debug_assert!(matches!(node, Self::Terminal { .. }));
+                            let previous = children.insert(byte, MapChild::Inlined(node));
+                            debug_assert!(previous.is_none());
+                        }
+                        let values = Self::Intermediate {
+                            prefix,
+                            value_count,
+                            value,
+                            children,
+                        }
+                        .into_entries(ctx, blobstore)
+                        // Extending SortedVectorMap 1 by 1 will be fast because into_entries
+                        // returns elements in order
+                        .try_collect()
+                        .await?;
+
+                        Ok(Self::Terminal { values })
+                    } else {
+                        // Case 4.3.2: This will continue being a intermediate node, let's
+                        // inline what's necessary and store everything
+                        let new_children = stream::iter(new_children)
+                            .map(|(byte, node)| async move {
+                                let id_or_inlined = match &node {
+                                    // Design decision: Inline all intermediate nodes and store
+                                    // terminal nodes separated
+                                    Self::Intermediate { .. } => MapChild::Inlined(node),
+                                    Self::Terminal { .. } => {
+                                        MapChild::Id(node.store(ctx, blobstore).await?)
+                                    }
+                                };
+                                Ok((byte, id_or_inlined))
+                            })
+                            .buffer_unordered(100)
+                            .try_collect::<Vec<_>>()
+                            .await?;
+                        for (byte, id_or_inlined) in new_children {
+                            let previous = children.insert(byte, id_or_inlined);
+                            debug_assert!(previous.is_none());
+                        }
+                        debug_assert!(!children.is_empty());
+                        if children.len() == 1 && value.is_none() {
+                            // Unwrap safety: children.len() == 1 above
+                            let (byte, child) = children.into_iter().next().unwrap();
+                            let mut child = child.load(ctx, blobstore).await?;
+                            prefix.push(byte);
+                            child.prepend(prefix);
+                            Ok(child)
+                        } else {
+                            Ok(Self::Intermediate {
+                                prefix,
+                                value_count,
+                                value,
+                                children,
+                            })
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// Iterates through all values in the map, asynchronously and only loading
@@ -338,6 +597,8 @@ mod test {
     use futures::TryStreamExt;
     use memblob::Memblob;
     use pretty_assertions::assert_eq;
+    use quickcheck::{Arbitrary, Gen, QuickCheck, TestResult, Testable};
+    use ShardedMapNode::*;
 
     #[derive(Debug, Clone, Copy, Eq, PartialEq)]
     struct MyType(i32);
@@ -402,12 +663,28 @@ mod test {
         intermediate("", None, vec![('a', a), ('o', o)])
     }
 
+    const EXAMPLE_ENTRIES: &[(&str, i32)] = &[
+        ("aba", 12),
+        ("abacab", 7),
+        ("abacaba", 8),
+        ("abacakkk", 9),
+        ("abacate", 10),
+        ("abacaxi", 11),
+        ("abalaba", 5),
+        ("abalada", 6),
+        ("omiojo", 1),
+        ("omiux", 2),
+        ("omundo", 3),
+        ("omungal", 4),
+    ];
+
     fn assert_round_trip(map: TestShardedMap) {
         let map_t = map.clone().into_thrift();
         // This is not deep equality through blobstore
         assert_eq!(ShardedMapNode::from_thrift(map_t).unwrap(), map);
     }
 
+    #[derive(Clone)]
     struct MapHelper(TestShardedMap, CoreContext, Memblob);
     impl MapHelper {
         fn size(&self) -> usize {
@@ -426,15 +703,128 @@ mod test {
                 .and_then(|(k, v)| async move { Ok((String::from_utf8(k.to_vec())?, v.0)) })
         }
 
-        async fn assert_entries(&self, entries: Vec<(&str, i32)>) -> Result<()> {
+        async fn assert_entries(&self, entries: &[(&str, i32)]) -> Result<()> {
             assert_eq!(
                 self.entries().try_collect::<Vec<_>>().await?,
                 entries
-                    .into_iter()
-                    .map(|(k, v)| (String::from(k), v))
+                    .iter()
+                    .map(|(k, v)| (String::from(*k), *v))
                     .collect::<Vec<_>>()
             );
             Ok(())
+        }
+
+        async fn add_remove(&mut self, to_add: &[(&str, i32)], to_remove: &[&str]) -> Result<()> {
+            let map = std::mem::take(&mut self.0);
+            self.0 = map
+                .update(
+                    &self.1,
+                    &self.2,
+                    to_add
+                        .iter()
+                        .map(|(k, v)| (Bytes::copy_from_slice(k.as_bytes()), Some(MyType(*v))))
+                        .chain(
+                            to_remove
+                                .iter()
+                                .map(|k| (Bytes::copy_from_slice(k.as_bytes()), None)),
+                        )
+                        .collect(),
+                )
+                .await?;
+            self.validate().await?;
+            Ok(())
+        }
+
+        #[async_recursion]
+        async fn validate(&self) -> Result<()> {
+            match &self.0 {
+                Terminal { values } => assert!(values.len() <= 5),
+                Intermediate {
+                    prefix: _,
+                    value,
+                    value_count,
+                    children,
+                } => {
+                    let children_size: usize = stream::iter(
+                        children
+                            .values()
+                            .map(|v| v.clone().load(&self.1, &self.2))
+                            // prevent compiler bug
+                            .collect::<Vec<_>>(),
+                    )
+                    .buffer_unordered(100)
+                    .and_then(|child| async move {
+                        let child = Self(child, self.1.clone(), self.2.clone());
+                        child.validate().await?;
+                        Ok(child.size())
+                    })
+                    .try_collect::<Vec<_>>()
+                    .await?
+                    .into_iter()
+                    .sum();
+                    assert_eq!(children_size + value.iter().len(), *value_count);
+                }
+            }
+            Ok(())
+        }
+
+        #[async_recursion]
+        async fn inner_inline_all(
+            &self,
+            mut map: ShardedMapNode<MyType>,
+        ) -> Result<ShardedMapNode<MyType>> {
+            match &mut map {
+                Terminal { .. } => {}
+                Intermediate { children, .. } => {
+                    for (_, id_or_inlined) in children {
+                        let node = std::mem::take(id_or_inlined).load(&self.1, &self.2).await?;
+                        *id_or_inlined = MapChild::Inlined(self.inner_inline_all(node).await?);
+                    }
+                }
+            }
+            Ok(map)
+        }
+
+        async fn inline_all(&mut self) -> Result<()> {
+            let map = std::mem::take(&mut self.0);
+            self.0 = self.inner_inline_all(map).await?;
+            Ok(())
+        }
+
+        async fn child(&self, key: char) -> Result<Self> {
+            let child = match &self.0 {
+                Terminal { .. } => bail!("terminal"),
+                Intermediate { children, .. } => {
+                    children
+                        .get(&(key as u8))
+                        .unwrap()
+                        .clone()
+                        .load(&self.1, &self.2)
+                        .await?
+                }
+            };
+            Ok(Self(child, self.1.clone(), self.2.clone()))
+        }
+
+        fn assert_terminal(&self, values_len: usize) {
+            match &self.0 {
+                Intermediate { .. } => panic!("not terminal"),
+                Terminal { values } => assert_eq!(values.len(), values_len),
+            }
+        }
+        fn assert_intermediate(&self, child_count: usize) {
+            match &self.0 {
+                Terminal { .. } => panic!("not intermediate"),
+                Intermediate { children, .. } => assert_eq!(children.len(), child_count),
+            }
+        }
+        fn assert_prefix(&self, prefix: &str) {
+            match &self.0 {
+                Terminal { .. } => panic!("not intermediate"),
+                Intermediate {
+                    prefix: my_prefix, ..
+                } => assert_eq!(my_prefix.as_slice(), prefix.as_bytes()),
+            }
         }
     }
 
@@ -493,29 +883,14 @@ mod test {
         let blobstore = Memblob::default();
 
         let map = MapHelper(example_map(), ctx, blobstore);
-        map.assert_entries(vec![
-            ("aba", 12),
-            ("abacab", 7),
-            ("abacaba", 8),
-            ("abacakkk", 9),
-            ("abacate", 10),
-            ("abacaxi", 11),
-            ("abalaba", 5),
-            ("abalada", 6),
-            ("omiojo", 1),
-            ("omiux", 2),
-            ("omundo", 3),
-            ("omungal", 4),
-        ])
-        .await?;
+        map.assert_entries(EXAMPLE_ENTRIES).await?;
         Ok(())
     }
 
-    async fn assert_all_keys(
+    async fn get_all_keys(
         ctx: &CoreContext,
         blobstore: &impl BlobstoreKeySource,
-        keys: Vec<&str>,
-    ) -> Result<()> {
+    ) -> Result<impl Iterator<Item = String>> {
         let data = blobstore
             .enumerate(
                 ctx,
@@ -528,10 +903,29 @@ mod test {
         if data.next_token.is_some() {
             unimplemented!();
         }
+        let mut data: Vec<_> = data.keys.into_iter().collect();
+        data.sort();
+        Ok(data.into_iter())
+    }
+
+    async fn assert_all_keys(
+        ctx: &CoreContext,
+        blobstore: &impl BlobstoreKeySource,
+        keys: Vec<&str>,
+    ) -> Result<()> {
         assert_eq!(
-            data.keys.into_iter().collect::<Vec<_>>(),
+            get_all_keys(ctx, blobstore).await?.collect::<Vec<_>>(),
             keys.into_iter().map(String::from).collect::<Vec<_>>()
         );
+        Ok(())
+    }
+
+    async fn assert_key_count(
+        ctx: &CoreContext,
+        blobstore: &impl BlobstoreKeySource,
+        count: usize,
+    ) -> Result<()> {
+        assert_eq!(get_all_keys(ctx, blobstore).await?.count(), count);
         Ok(())
     }
 
@@ -548,5 +942,261 @@ mod test {
         )
         .await?;
         Ok(())
+    }
+
+    #[fbinit::test]
+    async fn update_basic_test(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = Memblob::default();
+        let mut map = MapHelper(Default::default(), ctx.clone(), blobstore.clone());
+        map.assert_entries(&[]).await?;
+        map.add_remove(EXAMPLE_ENTRIES, &[]).await?;
+        map.assert_entries(EXAMPLE_ENTRIES).await?;
+        assert_all_keys(
+            &ctx,
+            &blobstore,
+            vec![
+                "deletedmanifest2.mapnode.blake2.1d1fed7c96edbdb45e0399854ead99dcac9b67b710c8666afe02b52767aa412f",
+                "deletedmanifest2.mapnode.blake2.467adc16abe35cb1ed6ee161fd359b23897efc8a26fd119840e5c353366e78f5",
+                "deletedmanifest2.mapnode.blake2.f1e1595a55864e3719af9e1ac80adeddb302a889e1871b33b8a161566290c687",
+            ],
+        )
+        .await?;
+        {
+            // Let's compare it to our hand-written map
+            let mut map = map.clone();
+            map.inline_all().await?;
+            map.assert_entries(EXAMPLE_ENTRIES).await?;
+            assert_eq!(map.0, example_map());
+        }
+        map.add_remove(&[], &["abalaba", "non_existing"]).await?;
+        assert_eq!(map.0.size(), EXAMPLE_ENTRIES.len() - 1);
+        assert_key_count(&ctx, &blobstore, 4).await?;
+        map.add_remove(&[], &["abalada"]).await?;
+        // Intermeditate node should now have 1 child, but also a value
+        assert_key_count(&ctx, &blobstore, 4).await?;
+        let child = map.child('a').await?;
+        match child.0 {
+            Terminal { .. } => bail!("not intermediate"),
+            Intermediate {
+                value, children, ..
+            } => {
+                assert!(value.is_some());
+                assert_eq!(children.len(), 1);
+            }
+        }
+        map.add_remove(&[], &["aba"]).await?;
+        // Intermediate node without a value should be merged
+        assert_key_count(&ctx, &blobstore, 5).await?;
+        map.assert_entries(&[
+            ("abacab", 7),
+            ("abacaba", 8),
+            ("abacakkk", 9),
+            ("abacate", 10),
+            ("abacaxi", 11),
+            ("omiojo", 1),
+            ("omiux", 2),
+            ("omundo", 3),
+            ("omungal", 4),
+        ])
+        .await?;
+        map.child('a').await?.assert_terminal(5);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn update_tricky_test(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = Memblob::default();
+        let mut map = MapHelper(Default::default(), ctx.clone(), blobstore.clone());
+        map.add_remove(
+            &[
+                ("A11", 1),
+                ("A12", 2),
+                ("A13", 3),
+                ("A21", 1),
+                ("A22", 2),
+                ("A23", 3),
+            ],
+            &[],
+        )
+        .await?;
+        map.assert_intermediate(2);
+        map.child('1').await?.assert_terminal(3);
+        map.child('2').await?.assert_terminal(3);
+        // LCP of keys is smaller than prefix only due to removals.
+        map.add_remove(&[("A14", 4)], &["cz", "A", "A31"]).await?;
+        map.assert_intermediate(2);
+        map.child('1').await?.assert_terminal(4);
+        map.child('2').await?.assert_terminal(3);
+        map.add_remove(
+            &[
+                ("B11", 1),
+                ("B21", 1),
+                ("B22", 2),
+                ("B23", 3),
+                ("B24", 4),
+                ("B31", 1),
+            ],
+            &["A11", "A12", "A13", "A14", "A21", "A22", "A23"],
+        )
+        .await?;
+        map.assert_intermediate(3);
+        map.child('1').await?.assert_terminal(1);
+        map.child('2').await?.assert_terminal(4);
+        map.child('3').await?.assert_terminal(1);
+        map.add_remove(&[], &[""]).await?;
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn update_tricky_deletes_test(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = Memblob::default();
+        let mut map = MapHelper(Default::default(), ctx.clone(), blobstore.clone());
+        map.add_remove(EXAMPLE_ENTRIES, &[]).await?;
+        // Removing something that is not a prefix of the intermediate node
+        // can panic if not done correctly
+        map.add_remove(&[], &[""]).await?;
+        map.add_remove(&[], &["a"]).await?;
+        map.add_remove(&[], &["ab"]).await?;
+        // Bug where we might mismatch prefix of deleted keys
+        map.add_remove(&[], &["abx"]).await?;
+        assert_eq!(map.size(), 12);
+        map.add_remove(&[], &["abxlada"]).await?;
+        assert_eq!(map.size(), 12);
+        // Let's play with the value of an intermediate node and assert all is still good:
+        map.add_remove(&[], &["aba"]).await?;
+        assert_eq!(map.size(), 11);
+        let child = map.child('a').await?;
+        assert_eq!(child.size(), 7);
+        assert_eq!(map.lookup("aba").await?, None);
+        map.add_remove(&[("aba", 0)], &[]).await?;
+        assert_eq!(map.size(), 12);
+        assert_eq!(map.lookup("aba").await?, Some(0));
+        map.add_remove(&[("aba", -1)], &[]).await?;
+        assert_eq!(map.size(), 12);
+        assert_eq!(map.lookup("aba").await?, Some(-1));
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn update_cases_test(fb: FacebookInit) -> Result<()> {
+        // Let's try to do updates that cause different cases and assert it all works out
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = Memblob::default();
+        let mut map = MapHelper(Default::default(), ctx.clone(), blobstore.clone());
+        // Case 1
+        map.add_remove(&[("_a", 1), ("_b", 2), ("_c", 3)], &[])
+            .await?;
+        map.assert_terminal(3);
+        // Case 2 > Case 4 > (Recursive Case 1's) > Case 4.3.2
+        map.add_remove(&[("_d", 4), ("_e", 5), ("_f", 6)], &[])
+            .await?;
+        map.assert_intermediate(6);
+        map.child('d').await?.assert_terminal(1);
+        // Case 4 > (Recursive Case 1) > case 4.3.1
+        map.add_remove(&[], &["_b"]).await?;
+        map.assert_terminal(5);
+        // Case 2 > Case 3 > Case 4 > (Recursive Case 1, Case 2>...) > Case 4.3.2
+        map.add_remove(&[("_b", 2), ("z", -1)], &[]).await?;
+        map.assert_intermediate(2);
+        map.assert_prefix("");
+        map.child('_').await?.assert_intermediate(6);
+        map.child('z').await?.assert_terminal(1);
+        // Case 4 > (Rec Case 1) > Case 4.3.2 + merge
+        map.add_remove(&[], &["z"]).await?;
+        map.assert_intermediate(6);
+        map.assert_prefix("_");
+        // Case 3 > Case 4 > Rec Case 1 > Case 4.3.2
+        map.add_remove(&[("y", -2)], &[]).await?;
+        map.assert_intermediate(2);
+        map.assert_prefix("");
+        // Case 4 > (Rec Case 1, Case 4>Rec Case1>Case 4.3.1) > Case 4.3.1
+        map.add_remove(&[], &["_b", "y"]).await?;
+        map.assert_terminal(5);
+        map.assert_entries(&[("_a", 1), ("_c", 3), ("_d", 4), ("_e", 5), ("_f", 6)])
+            .await?;
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn update_case_3_test(fb: FacebookInit) -> Result<()> {
+        // Let's try an update that causes case 3 and do detailed asserting
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = Memblob::default();
+        let mut map = MapHelper(Default::default(), ctx.clone(), blobstore.clone());
+        map.add_remove(
+            &[
+                ("abc1", 1),
+                ("abc2", 2),
+                ("abc3", 3),
+                ("abc4", 4),
+                ("abc5", 5),
+                ("abc6", 6),
+            ],
+            &[],
+        )
+        .await?;
+        map.assert_intermediate(6);
+        map.assert_prefix("abc");
+        map.add_remove(&[("a1", 1)], &[]).await?;
+        map.assert_intermediate(2);
+        map.assert_prefix("a");
+        let childb = map.child('b').await?;
+        childb.assert_prefix("c");
+        childb.assert_intermediate(6);
+        let child1 = map.child('1').await?;
+        child1.assert_terminal(1);
+        map.assert_entries(&[
+            ("a1", 1),
+            ("abc1", 1),
+            ("abc2", 2),
+            ("abc3", 3),
+            ("abc4", 4),
+            ("abc5", 5),
+            ("abc6", 6),
+        ])
+        .await?;
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn round_trip_quickcheck(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = Memblob::default();
+        use tokio::runtime::Runtime;
+
+        struct Roundtrip(Runtime, CoreContext, Memblob);
+        impl Testable for Roundtrip {
+            fn result(&self, gen: &mut Gen) -> TestResult {
+                let res = self.0.block_on(async {
+                    let values: BTreeMap<String, i32> = Arbitrary::arbitrary(gen);
+                    let mut queries: Vec<String> = Arbitrary::arbitrary(gen);
+                    let keys: Vec<&String> = values.keys().collect();
+                    for _ in 0..values.len() / 2 {
+                        queries.push(gen.choose(&keys).unwrap().to_string());
+                    }
+                    let mut map = MapHelper(Default::default(), self.1.clone(), self.2.clone());
+                    let adds = values
+                        .iter()
+                        .map(|(k, v)| (k.as_str(), *v))
+                        .collect::<Vec<_>>();
+                    map.add_remove(&adds, &[]).await?;
+                    for k in queries {
+                        let correct_v = values.get(&k);
+                        let test_v = map.lookup(&k).await?;
+                        if correct_v.cloned() != test_v {
+                            return Ok(false);
+                        }
+                    }
+                    let test_roundtrip = map.entries().try_collect::<BTreeMap<_, _>>().await?;
+                    Ok(values == test_roundtrip)
+                });
+                TestResult::from_bool(matches!(res, Result::Ok(true)))
+            }
+        }
+
+        QuickCheck::new().quickcheck(Roundtrip(Runtime::new().unwrap(), ctx, blobstore));
     }
 }
