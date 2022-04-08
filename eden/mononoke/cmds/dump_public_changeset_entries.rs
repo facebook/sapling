@@ -24,6 +24,7 @@ const ARG_OUT_FILENAME: &str = "out-filename";
 const ARG_START_COMMIT: &str = "start-commit";
 const ARG_START_FROM_FILE_END: &str = "start-from-file-end";
 const ARG_MERGE_FILE: &str = "merge-file";
+const ARG_LIMIT: &str = "limit";
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
@@ -65,6 +66,14 @@ fn main(fb: FacebookInit) -> Result<()> {
                     avoiding duplicate commits between files and database fetch. Can be repeated",
                 ),
         )
+        .arg(
+            Arg::with_name(ARG_LIMIT)
+                .long(ARG_LIMIT)
+                .takes_value(true)
+                .help("Only look at this many commits. Notice that this may output less than LIMIT \
+                       commits if there are non-public commits, but it's a good way to do this command \
+                       incrementally."),
+        )
         .group(
             ArgGroup::with_name("starting-commit")
                 .args(&[ARG_START_COMMIT, ARG_START_FROM_FILE_END]),
@@ -86,6 +95,10 @@ fn main(fb: FacebookInit) -> Result<()> {
         .into_iter()
         .flatten()
         .map(|path| load_file_contents(path.as_ref()));
+    let limit = matches
+        .value_of(ARG_LIMIT)
+        .map(|limit| limit.parse::<u64>())
+        .transpose()?;
 
     let blob_repo_fut = args::open_repo(fb, &logger, &matches);
 
@@ -105,9 +118,12 @@ fn main(fb: FacebookInit) -> Result<()> {
             }
         };
 
-        let bounds = fetcher
+        let mut bounds = fetcher
             .get_repo_bounds_after_commits(&ctx, start_commit.into_iter().collect())
             .await?;
+        if let Some(limit) = limit {
+            bounds.1 = bounds.1.min(bounds.0 + limit);
+        }
 
         let css = {
             let (mut file_css, db_css): (Vec<_>, Vec<_>) = future::try_join(
