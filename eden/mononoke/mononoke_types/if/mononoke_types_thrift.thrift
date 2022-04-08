@@ -38,6 +38,7 @@ typedef IdType RawBundle2Id (rust.newtype)
 typedef IdType FileUnodeId (rust.newtype)
 typedef IdType ManifestUnodeId (rust.newtype)
 typedef IdType DeletedManifestId (rust.newtype)
+typedef IdType DeletedManifestV2Id (rust.newtype)
 typedef IdType ShardedMapNodeId (rust.newtype)
 typedef IdType FsnodeId (rust.newtype)
 typedef IdType SkeletonManifestId (rust.newtype)
@@ -350,6 +351,12 @@ union ShardedMapNode {
   1: ShardedMapIntermediateNode intermediate;
   2: ShardedMapTerminalNode terminal;
 }
+
+struct DeletedManifestV2 {
+  1: optional ChangesetId linknode;
+  // Map of MPathElement -> DeletedManifestV2Id
+  2: ShardedMapNode subentries;
+} (rust.exhaustive)
 
 struct FsnodeFile {
   1: ContentId content_id;
