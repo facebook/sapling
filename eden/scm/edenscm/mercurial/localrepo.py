@@ -471,8 +471,7 @@ class localrepository(object):
         self.ui.reloadconfigs(self.root)
 
         # Setting the inner Rust repo should only be done when the filesystem actually exists
-        if self.ui.configbool("init", "use-rust"):
-            self._rsrepo = bindings.repo.repo(self.root)
+        self._rsrepo = bindings.repo.repo(self.root)
 
         self._loadextensions()
 
