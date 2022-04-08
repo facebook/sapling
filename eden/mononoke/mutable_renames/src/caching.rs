@@ -18,9 +18,9 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use memcache::{KeyGen, MemcacheClient};
-use mononoke_types::{hash::Blake2, ChangesetId, MPath};
+use mononoke_types::{hash::Blake2, path_bytes_from_mpath, ChangesetId, MPath};
 use mutable_rename_thrift as thrift;
-use path_hash::PathHash;
+use path_hash::{PathHash, PathHashBytes};
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
@@ -367,13 +367,18 @@ impl<'a> EntityStore<CachedMutableRenameEntry> for CachedGetMutableRename<'a> {
 pub struct RenameKey {
     dst_cs_id: ChangesetId,
     dst_path: Option<MPath>,
+    dst_path_hash: PathHashBytes,
 }
 
 impl RenameKey {
     pub fn new(dst_cs_id: ChangesetId, dst_path: Option<MPath>) -> Self {
+        let dst_path_bytes = path_bytes_from_mpath(dst_path.as_ref());
+        let dst_path_hash = PathHashBytes::new(&dst_path_bytes);
+
         Self {
             dst_cs_id,
             dst_path,
+            dst_path_hash,
         }
     }
 }
@@ -386,9 +391,9 @@ impl<'a> KeyedEntityStore<RenameKey, CachedMutableRenameEntry> for CachedGetMuta
                 "mutable_renames.rename.cs_id_at_root.repo{}.{}",
                 self.owner.repo_id, key.dst_cs_id
             ),
-            Some(path) => format!(
+            Some(_) => format!(
                 "mutable_renames.rename.cs_id_and_path.repo{}.{}.{}",
-                self.owner.repo_id, key.dst_cs_id, path
+                self.owner.repo_id, key.dst_cs_id, key.dst_path_hash
             ),
         }
     }

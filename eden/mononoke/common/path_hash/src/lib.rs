@@ -56,6 +56,15 @@ impl From<PathHashBytes> for Value {
     }
 }
 
+impl std::fmt::Display for PathHashBytes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        for byte in &self.0 {
+            write!(f, "{:02x}", byte)?;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[derive(mysql::OptTryFromRowField)]
 pub struct PathBytes(pub Vec<u8>);
