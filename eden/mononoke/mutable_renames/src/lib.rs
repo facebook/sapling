@@ -60,6 +60,10 @@ pub struct MutableRenameEntry {
 }
 
 impl MutableRenameEntry {
+    /// Create a new entry to pass to `add`
+    /// This says that dst_path in dst_cs_id is in fact the immediate child of src_path at src_cs_id
+    /// The unode is needed to allow us to reconstruct unode history correctly.
+    /// If either path is `None`, this represents the root of the repo
     pub fn new(
         dst_cs_id: ChangesetId,
         dst_path: Option<MPath>,
@@ -91,6 +95,8 @@ impl MutableRenameEntry {
         &self.dst_path_hash
     }
 
+    /// Get the source path for this entry, or None if the source
+    /// is the repo root
     pub fn src_path(&self) -> &Option<MPath> {
         &self.src_path
     }
@@ -99,10 +105,13 @@ impl MutableRenameEntry {
         &self.src_path_hash
     }
 
+    /// Get the source changeset ID for this entry
     pub fn src_cs_id(&self) -> ChangesetId {
         self.src_cs_id
     }
 
+    /// Get the unode you would find by looking up src_path()
+    /// in src_cs_id() - this is faster because it's pre-cached
     pub fn get_src_unode(&self) -> Entry<ManifestUnodeId, FileUnodeId> {
         if self.is_tree == 1 {
             Entry::Tree(ManifestUnodeId::new(self.src_unode))

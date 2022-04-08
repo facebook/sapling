@@ -379,7 +379,7 @@ impl RenameKey {
 impl<'a> KeyedEntityStore<RenameKey, CachedMutableRenameEntry> for CachedGetMutableRename<'a> {
     fn get_cache_key(&self, key: &RenameKey) -> String {
         match &key.dst_path {
-            None => format!("mutable_renames.rename.cs_id_only.{}", key.dst_cs_id),
+            None => format!("mutable_renames.rename.cs_id_at_root.{}", key.dst_cs_id),
             Some(path) => format!(
                 "mutable_renames.rename.cs_id_and_path.{}.{}",
                 key.dst_cs_id, path
