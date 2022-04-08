@@ -328,6 +328,23 @@ mod tests {
                     .get_type()
                 );
             }
+            NodeType::DeletedManifestV2 => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!("DeletedManifestV2{}{}", NODE_SEP, SAMPLE_BLAKE2))?
+                        .get_type()
+                );
+            }
+            NodeType::DeletedManifestV2Mapping => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!(
+                        "DeletedManifestV2Mapping{}{}",
+                        NODE_SEP, SAMPLE_BLAKE2
+                    ))?
+                    .get_type()
+                );
+            }
             NodeType::FastlogBatch => {
                 assert_eq!(
                     node_type,

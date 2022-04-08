@@ -14,7 +14,7 @@ use blobstore_factory::SqlTierInfo;
 use bookmarks::BookmarkName;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
-use deleted_files_manifest::RootDeletedManifestId;
+use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestV2Id};
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fastlog::{unode_entry_to_fastlog_batch_key, RootFastlog};
@@ -39,13 +39,14 @@ use mercurial_types::{
 use mononoke_types::{
     blame::Blame,
     deleted_files_manifest::DeletedManifest,
+    deleted_manifest_v2::DeletedManifestV2,
     fastlog_batch::FastlogBatch,
     fsnode::Fsnode,
     skeleton_manifest::SkeletonManifest,
     unode::{FileUnode, ManifestUnode},
     BlameId, BlobstoreKey, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata,
-    DeletedManifestId, FastlogBatchId, FileUnodeId, FsnodeId, MPath, MPathHash, ManifestUnodeId,
-    MononokeId, RepoPath, SkeletonManifestId,
+    DeletedManifestId, DeletedManifestV2Id, FastlogBatchId, FileUnodeId, FsnodeId, MPath,
+    MPathHash, ManifestUnodeId, MononokeId, RepoPath, SkeletonManifestId,
 };
 use newfilenodes::PathHash;
 use once_cell::sync::OnceCell;
@@ -333,6 +334,8 @@ create_graph!(
             ChangesetInfoMapping,
             DeletedManifest,
             DeletedManifestMapping,
+            DeletedManifestV2,
+            DeletedManifestV2Mapping,
             FastlogBatch,
             FastlogDir,
             FastlogFile,
@@ -358,6 +361,7 @@ create_graph!(
             ChangesetInfo,
             ChangesetInfoMapping,
             DeletedManifestMapping,
+            DeletedManifestV2Mapping,
             FsnodeMapping,
             SkeletonManifestMapping,
             UnodeMapping
@@ -439,6 +443,12 @@ create_graph!(
     ),
     (DeletedManifestMapping, ChangesetId, [RootDeletedManifest(DeletedManifest)]),
     (
+        DeletedManifestV2,
+        DeletedManifestV2Id,
+        [DeletedManifestV2Child(DeletedManifestV2), LinkedChangeset(Changeset)]
+    ),
+    (DeletedManifestV2Mapping, ChangesetId, [RootDeletedManifestV2(DeletedManifestV2)]),
+    (
         Fsnode,
         FsnodeId,
         [ChildFsnode(Fsnode), FileContent]
@@ -515,6 +525,8 @@ impl NodeType {
             NodeType::ChangesetInfoMapping => Some(ChangesetInfo::NAME),
             NodeType::DeletedManifest => Some(RootDeletedManifestId::NAME),
             NodeType::DeletedManifestMapping => Some(RootDeletedManifestId::NAME),
+            NodeType::DeletedManifestV2 => Some(RootDeletedManifestV2Id::NAME),
+            NodeType::DeletedManifestV2Mapping => Some(RootDeletedManifestV2Id::NAME),
             NodeType::FastlogBatch => Some(RootFastlog::NAME),
             NodeType::FastlogDir => Some(RootFastlog::NAME),
             NodeType::FastlogFile => Some(RootFastlog::NAME),
@@ -556,6 +568,8 @@ impl NodeType {
             NodeType::ChangesetInfoMapping => false,
             NodeType::DeletedManifest => true,
             NodeType::DeletedManifestMapping => false,
+            NodeType::DeletedManifestV2 => true,
+            NodeType::DeletedManifestV2Mapping => false,
             NodeType::FastlogBatch => true,
             NodeType::FastlogDir => true,
             NodeType::FastlogFile => true,
@@ -812,6 +826,8 @@ pub enum NodeData {
     ChangesetInfoMapping(Option<ChangesetId>),
     DeletedManifest(Option<DeletedManifest>),
     DeletedManifestMapping(Option<DeletedManifestId>),
+    DeletedManifestV2(Option<DeletedManifestV2>),
+    DeletedManifestV2Mapping(Option<DeletedManifestV2Id>),
     FastlogBatch(Option<FastlogBatch>),
     FastlogDir(Option<FastlogBatch>),
     FastlogFile(Option<FastlogBatch>),
@@ -883,6 +899,8 @@ impl Node {
             Node::ChangesetInfoMapping(_) => None,
             Node::DeletedManifest(_) => None,
             Node::DeletedManifestMapping(_) => None,
+            Node::DeletedManifestV2(_) => None,
+            Node::DeletedManifestV2Mapping(_) => None,
             Node::FastlogBatch(_) => None,
             Node::FastlogDir(_) => None,
             Node::FastlogFile(_) => None,
@@ -923,6 +941,8 @@ impl Node {
             Node::ChangesetInfoMapping(k) => k.blobstore_key(),
             Node::DeletedManifest(k) => k.blobstore_key(),
             Node::DeletedManifestMapping(k) => k.blobstore_key(),
+            Node::DeletedManifestV2(k) => k.blobstore_key(),
+            Node::DeletedManifestV2Mapping(k) => k.blobstore_key(),
             Node::FastlogBatch(k) => k.blobstore_key(),
             Node::FastlogDir(k) => k.blobstore_key(),
             Node::FastlogFile(k) => k.blobstore_key(),
@@ -963,6 +983,8 @@ impl Node {
             Node::ChangesetInfoMapping(_) => None,
             Node::DeletedManifest(_) => None,
             Node::DeletedManifestMapping(_) => None,
+            Node::DeletedManifestV2(_) => None,
+            Node::DeletedManifestV2Mapping(_) => None,
             Node::FastlogBatch(_) => None,
             Node::FastlogDir(_) => None,
             Node::FastlogFile(_) => None,
@@ -1004,6 +1026,8 @@ impl Node {
             Node::ChangesetInfoMapping(k) => Some(k.sampling_fingerprint()),
             Node::DeletedManifest(k) => Some(k.sampling_fingerprint()),
             Node::DeletedManifestMapping(k) => Some(k.sampling_fingerprint()),
+            Node::DeletedManifestV2(k) => Some(k.sampling_fingerprint()),
+            Node::DeletedManifestV2Mapping(k) => Some(k.sampling_fingerprint()),
             Node::FastlogBatch(k) => Some(k.sampling_fingerprint()),
             Node::FastlogDir(k) => Some(k.sampling_fingerprint()),
             Node::FastlogFile(k) => Some(k.sampling_fingerprint()),
@@ -1163,8 +1187,7 @@ mod tests {
         // list, otherwise it won't get scrubbed and thus you would be unaware of different representation
         // in different stores
         let grandfathered: HashSet<&'static str> =
-            // TODO(yancouto): Add DMv2 logic in walker
-            HashSet::from_iter(vec!["git_trees", "deleted_manifest2"].into_iter());
+            HashSet::from_iter(vec!["git_trees"].into_iter());
         let mut missing = HashSet::new();
         for t in a {
             if s.contains(t.as_str()) {

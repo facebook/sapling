@@ -15,6 +15,7 @@ mod ops;
 #[cfg(test)]
 pub mod test_utils;
 
+pub use mapping::RootDeletedManifestIdCommon;
 pub use mapping_v1::RootDeletedManifestId;
 pub use mapping_v2::RootDeletedManifestV2Id;
 pub use ops::{DeletedManifestOps, PathState};
