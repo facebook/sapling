@@ -19,7 +19,7 @@ use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use pyconfigparser::config;
 use pydag::commits::commits as PyCommits;
-use pyedenapi::PyClient;
+use pyedenapi::PyClient as PyEdenApi;
 use pymetalog::metalog as PyMetaLog;
 use rsrepo::repo::Repo;
 
@@ -36,7 +36,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
                 dir: &PyPath,
                 storerequirements: Vec<String>,
                 metalog: PyMetaLog,
-                edenapi: Option<PyClient>
+                edenapi: Option<PyEdenApi>
             )
         ),
     )?;
@@ -73,6 +73,12 @@ py_class!(pub class repo |py| {
         repo_ref.invalidate_metalog();
         Ok(PyNone)
     }
+
+    def edenapi(&self) -> PyResult<PyEdenApi> {
+        let mut repo_ref = self.inner(py).borrow_mut();
+        let edenapi_ref = repo_ref.eden_api().map_pyerr(py)?;
+        PyEdenApi::create_instance(py, edenapi_ref)
+    }
 });
 
 fn load_changelog(
@@ -80,7 +86,7 @@ fn load_changelog(
     dir: &PyPath,
     storerequirements: Vec<String>,
     metalog: PyMetaLog,
-    edenapi: Option<PyClient>,
+    edenapi: Option<PyEdenApi>,
 ) -> PyResult<PyCommits> {
     let client = edenapi.map(|e| e.extract_inner(py));
     let meta = metalog.metalog_rwlock(py);

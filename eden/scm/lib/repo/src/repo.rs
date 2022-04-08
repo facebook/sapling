@@ -12,6 +12,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use configparser::config::ConfigSet;
+use edenapi::Builder;
+use edenapi::EdenApi;
+use edenapi::EdenApiError;
 use metalog::MetaLog;
 use parking_lot::RwLock;
 
@@ -28,6 +31,7 @@ pub struct Repo {
     shared_dot_hg_path: PathBuf,
     repo_name: Option<String>,
     metalog: Option<Arc<RwLock<MetaLog>>>,
+    eden_api: Option<Arc<dyn EdenApi>>,
 }
 
 /// Either an optional [`Repo`] which owns a [`ConfigSet`], or a [`ConfigSet`]
@@ -153,6 +157,7 @@ impl Repo {
                     .map(|v| v.to_string())
             });
         let metalog = None;
+        let eden_api = None;
 
         Ok(Repo {
             path,
@@ -164,6 +169,7 @@ impl Repo {
             shared_dot_hg_path,
             repo_name,
             metalog,
+            eden_api,
         })
     }
 
@@ -222,6 +228,20 @@ impl Repo {
 
     pub fn metalog_path(&self) -> PathBuf {
         self.store_path.join("metalog")
+    }
+
+    pub fn eden_api(&mut self) -> Result<Arc<dyn EdenApi>, EdenApiError> {
+        match &self.eden_api {
+            Some(eden_api) => Ok(eden_api.clone()),
+            None => {
+                let correlator = edenapi::DEFAULT_CORRELATOR.as_str();
+                let eden_api = Builder::from_config(&self.config)?
+                    .correlator(Some(correlator))
+                    .build()?;
+                self.eden_api = Some(eden_api.clone());
+                Ok(eden_api)
+            }
+        }
     }
 }
 

@@ -1258,7 +1258,7 @@ class localrepository(object):
         if enabled is not None:
             if not enabled:
                 return absent(_("edenapi.enable being empty"))
-            return edenapi.getclient(self.ui)
+            return self._rsrepo.edenapi()
 
         path = self.ui.paths.get("default")
         if path is None:
@@ -1275,11 +1275,11 @@ class localrepository(object):
             return absent(_("paths.default being 'ssh:' and dummyssh in use"))
 
         if self.ui.config("edenapi", "url") and getattr(self, "name", None):
-            return edenapi.getclient(self.ui)
+            return self._rsrepo.edenapi()
 
         # If remote path is an EagerRepo, use EdenApi provided by it.
         if scheme in ("eager", "test"):
-            return edenapi.getclient(self.ui)
+            return self._rsrepo.edenapi()
 
         return absent(_("missing edenapi.url config or repo name"))
 
