@@ -12,7 +12,7 @@ parking_lot = { version = "0.11.2", features = ["send_guard"] }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 tracing = "0.1.32"
-tracing-subscriber = { version = "0.3.9", features = ["ansi", "env-filter", "fmt", "json", "parking_lot", "registry"] }
+tracing-subscriber = { version = "0.3.10", features = ["ansi", "env-filter", "fmt", "json", "parking_lot", "registry"] }
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3.7", features = ["processthreadsapi"] }

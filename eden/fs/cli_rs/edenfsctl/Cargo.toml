@@ -15,7 +15,7 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 sysinfo = "0.20.4"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tracing = "0.1.32"
-tracing-subscriber = { version = "0.3.9", features = ["ansi", "env-filter", "fmt", "json", "parking_lot", "registry"] }
+tracing-subscriber = { version = "0.3.10", features = ["ansi", "env-filter", "fmt", "json", "parking_lot", "registry"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
