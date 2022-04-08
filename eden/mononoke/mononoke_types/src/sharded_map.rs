@@ -81,6 +81,20 @@ impl<Value: MapValue> MapChild<Value> {
     }
 }
 
+impl<Value: MapValue> Default for MapChild<Value> {
+    fn default() -> Self {
+        Self::Inlined(Default::default())
+    }
+}
+
+impl<Value: MapValue> Default for ShardedMapNode<Value> {
+    fn default() -> Self {
+        Self::Terminal {
+            values: SortedVectorMap::new(),
+        }
+    }
+}
+
 impl<Value: MapValue> ShardedMapNode<Value> {
     async fn load(
         ctx: &CoreContext,
@@ -96,6 +110,17 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                 .into_raw_bytes()
                 .as_ref(),
         )
+    }
+
+    async fn store(
+        self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+    ) -> Result<ShardedMapNodeId> {
+        let blob = self.into_blob();
+        let id = blob.id().clone();
+        blobstore.put(ctx, id.blobstore_key(), blob.into()).await?;
+        Ok(id)
     }
 
     /// Given a key, what's the value for that key, if any?
@@ -306,6 +331,7 @@ impl<Value: MapValue> BlobstoreValue for ShardedMapNode<Value> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use blobstore::{BlobstoreKeyParam, BlobstoreKeyRange, BlobstoreKeySource};
     use bytes::{Buf, BufMut, BytesMut};
     use context::CoreContext;
     use fbinit::FacebookInit;
@@ -427,6 +453,7 @@ mod test {
         };
         assert!(empty.is_empty());
         assert_eq!(empty.size(), 0);
+        assert!(ShardedMapNode::<MyType>::default().is_empty());
 
         let map = terminal(vec![("ab", 3), ("cd", 5)]);
         assert!(!map.is_empty());
@@ -480,6 +507,45 @@ mod test {
             ("omundo", 3),
             ("omungal", 4),
         ])
+        .await?;
+        Ok(())
+    }
+
+    async fn assert_all_keys(
+        ctx: &CoreContext,
+        blobstore: &impl BlobstoreKeySource,
+        keys: Vec<&str>,
+    ) -> Result<()> {
+        let data = blobstore
+            .enumerate(
+                ctx,
+                &BlobstoreKeyParam::Start(BlobstoreKeyRange {
+                    begin_key: String::new(),
+                    end_key: String::new(),
+                }),
+            )
+            .await?;
+        if data.next_token.is_some() {
+            unimplemented!();
+        }
+        assert_eq!(
+            data.keys.into_iter().collect::<Vec<_>>(),
+            keys.into_iter().map(String::from).collect::<Vec<_>>()
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn store_test(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = Memblob::default();
+        let map = example_map();
+        map.store(&ctx, &blobstore).await?;
+        assert_all_keys(
+            &ctx,
+            &blobstore,
+            vec!["deletedmanifest2.mapnode.blake2.d400b43aefd2e3774011c3429e8ce9f7b3f932f6ced4433dc1070f388834c325"],
+        )
         .await?;
         Ok(())
     }
