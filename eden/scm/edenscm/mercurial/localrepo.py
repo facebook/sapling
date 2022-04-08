@@ -554,6 +554,7 @@ class localrepository(object):
         )
         self.spath = self.store.path
         self.svfs = self.store.vfs
+        self.svfs._rsrepo = self._rsrepo
         self.sjoin = self.store.join
         store.setvfsmode(self.localvfs)
         store.setvfsmode(self.sharedvfs)
@@ -2195,7 +2196,7 @@ class localrepository(object):
 
     def invalidatemetalog(self):
         """Invalidates the metalog. Discard pending changes."""
-        self.svfs.__dict__.pop("metalog", None)
+        self.svfs.invalidatemetalog()
 
     def invalidateall(self):
         """Fully invalidates both store and non-store parts, causing the

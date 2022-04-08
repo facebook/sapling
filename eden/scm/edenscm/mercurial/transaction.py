@@ -235,7 +235,11 @@ class transaction(util.transactional):
         # holds callbacks to call during abort
         self._abortcallback = {}
         # Reload metalog state when entering transaction.
-        metalog = opener.__dict__.pop("metalog", None)
+        metalog = (
+            opener.invalidatemetalog()
+            if util.safehasattr(opener, "invalidatemetalog")
+            else None
+        )
         if metalog and metalog.isdirty():
             # |<- A ->|<----------- repo lock --------->|
             #         |<- B ->|<- transaction ->|<- C ->|
@@ -676,7 +680,8 @@ class transaction(util.transactional):
 
         # Discard metalog state when exiting transaction.
         svfs = self._vfsmap[""]
-        svfs.__dict__.pop("metalog", None)
+        if util.safehasattr(svfs, "invalidatemetalog"):
+            svfs.invalidatemetalog()
 
         try:
             if not self.entries and not self._backupentries:

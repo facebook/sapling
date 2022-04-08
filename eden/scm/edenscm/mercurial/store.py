@@ -18,7 +18,6 @@ import os
 import stat
 from typing import Optional
 
-import bindings
 from edenscmnative import parsers
 
 from . import encoding, error, hintutil, pycompat, util, vfs as vfsmod
@@ -563,7 +562,7 @@ class metavfs(object):
     @util.propertycache
     def metalog(self):
         vfs = self.vfs
-        metalog = bindings.metalog.metalog.openfromenv(self.vfs.join("metalog"))
+        metalog = self._rsrepo.metalog()
 
         # Keys that are previously tracked in metalog.
         tracked = set(pycompat.decodeutf8((metalog.get("tracked") or b"")).split())
@@ -587,6 +586,10 @@ class metavfs(object):
             pass
 
         return metalog
+
+    def invalidatemetalog(self):
+        self._rsrepo.invalidatemetalog()
+        return self.__dict__.pop("metalog", None)
 
     def metaopen(self, path, mode="r"):
         assert path in self.metapaths

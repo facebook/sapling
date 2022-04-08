@@ -59,6 +59,19 @@ py_class!(pub class repo |py| {
         let repo = Repo::load(abs_path).map_pyerr(py)?;
         Self::create_instance(py, RefCell::new(repo))
     }
+
+    def metalog(&self) -> PyResult<PyMetaLog> {
+        let mut repo_ref = self.inner(py).borrow_mut();
+        let path = String::from(repo_ref.metalog_path().to_string_lossy());
+        let log_ref = repo_ref.metalog().map_pyerr(py)?;
+        PyMetaLog::create_instance(py, log_ref, path)
+    }
+
+    def invalidatemetalog(&self) -> PyResult<PyNone> {
+        let mut repo_ref = self.inner(py).borrow_mut();
+        repo_ref.invalidate_metalog();
+        Ok(PyNone)
+    }
 });
 
 fn load_changelog(

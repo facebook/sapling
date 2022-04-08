@@ -8,9 +8,12 @@
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Result;
 use configparser::config::ConfigSet;
+use metalog::MetaLog;
+use parking_lot::RwLock;
 
 use crate::errors;
 use crate::init;
@@ -24,6 +27,7 @@ pub struct Repo {
     dot_hg_path: PathBuf,
     shared_dot_hg_path: PathBuf,
     repo_name: Option<String>,
+    metalog: Option<Arc<RwLock<MetaLog>>>,
 }
 
 /// Either an optional [`Repo`] which owns a [`ConfigSet`], or a [`ConfigSet`]
@@ -135,6 +139,7 @@ impl Repo {
                     .get("remotefilelog", "reponame")
                     .map(|v| v.to_string())
             });
+        let metalog = None;
 
         Ok(Repo {
             path,
@@ -145,6 +150,7 @@ impl Repo {
             dot_hg_path,
             shared_dot_hg_path,
             repo_name,
+            metalog,
         })
     }
 
@@ -180,6 +186,29 @@ impl Repo {
 
     pub fn repo_name(&self) -> Option<&str> {
         self.repo_name.as_ref().map(|s| s.as_ref())
+    }
+
+    pub fn metalog(&mut self) -> Result<Arc<RwLock<MetaLog>>> {
+        match &self.metalog {
+            Some(metalog) => Ok(metalog.clone()),
+            None => {
+                let metalog_path = self.metalog_path();
+                let metalog = MetaLog::open_from_env(metalog_path.as_path())?;
+                let metalog = Arc::new(RwLock::new(metalog));
+                self.metalog = Some(metalog.clone());
+                Ok(metalog)
+            }
+        }
+    }
+
+    pub fn invalidate_metalog(&mut self) {
+        if self.metalog.is_some() {
+            self.metalog = None;
+        }
+    }
+
+    pub fn metalog_path(&self) -> PathBuf {
+        self.store_path.join("metalog")
     }
 }
 
