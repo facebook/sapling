@@ -43,6 +43,32 @@ def execute_cmd(arg_list: List[Union[pathlib.Path, str]]) -> int:
 
 @trace_cmd("hg", "Trace hg object fetches")
 class TraceHgCommand(Subcmd):
+    DESCRIPTION = """Trace EdenFS object fetches from Mercurial.
+Events are encoded using the following emojis:
+
+Event Type:
+\u21E3 START
+\u2193 FINISH
+
+Resource Type:
+\U0001F954 BLOB
+\U0001F332 TREE
+
+Import Priority (--verbose):
+\U0001F7E5 LOW
+\U0001F536 NORMAL
+\U0001F7E2 HIGH
+
+Import Cause (--verbose):
+\u2753 UNKNOWN
+\U0001F4C1 FS
+\U0001F4E0 THRIFT
+\U0001F4C5 PREFETCH
+"""
+    # pyre-fixme[15]: Type typing.Type[argparse.RawDescriptionHelpFormatter] is not a
+    # subtype of the overridden attribute typing.Optional[argparse.HelpFormatter]
+    FORMATTER = argparse.RawDescriptionHelpFormatter
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "checkout", default=None, nargs="?", help="Path to the checkout"

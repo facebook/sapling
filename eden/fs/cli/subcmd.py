@@ -20,6 +20,7 @@ class Subcmd(abc.ABC):
     NAME: Optional[str] = None
     HELP: Optional[str] = None
     DESCRIPTION: Optional[str] = None
+    FORMATTER: Optional[argparse.HelpFormatter] = None
     ALIASES: Optional[List[str]] = None
 
     def __init__(self, parser: argparse.ArgumentParser) -> None:
@@ -43,6 +44,9 @@ class Subcmd(abc.ABC):
         description = self.get_description()
         if description is not None:
             kwargs["description"] = description
+        formatter = self.get_formatter()
+        if formatter is not None:
+            kwargs["formatter_class"] = formatter
         parser = subparsers.add_parser(self.get_name(), **kwargs)
         parser.set_defaults(func=self.run)
         self.setup_parser(parser)
@@ -57,6 +61,11 @@ class Subcmd(abc.ABC):
 
     def get_description(self) -> Optional[str]:
         return self.DESCRIPTION
+
+    def get_formatter(
+        self,
+    ) -> Optional[argparse.HelpFormatter]:
+        return self.FORMATTER
 
     def get_aliases(self) -> List[str]:
         if self.ALIASES is None:
