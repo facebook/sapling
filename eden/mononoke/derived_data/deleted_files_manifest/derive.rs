@@ -67,14 +67,15 @@ pub(crate) struct DeletedManifestDeriver<Manifest: DeletedManifestCommon>(
     std::marker::PhantomData<Manifest>,
 );
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub(crate) enum PathChange {
     Add,
     Remove,
     FileDirConflict,
 }
 
-enum DeletedManifestChangeType {
+#[derive(Debug)]
+pub(crate) enum DeletedManifestChangeType {
     /// Path was deleted, we create a node if not present.
     CreateDeleted,
     /// Path now exists, delete if it doesn't have any subentries that were
@@ -127,6 +128,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                               changes,
                               parents,
                           }| {
+                        // -> ((Option<MPathElement>, DeletedManifestChange), Vec<UnfoldNode>)
                         async move {
                             let (mf_change, next_states) =
                                 Self::do_unfold(ctx, blobstore, changes, parents).await?;

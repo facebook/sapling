@@ -10,6 +10,7 @@ use blobstore::{Blobstore, Loadable};
 use context::CoreContext;
 use futures::stream::BoxStream;
 use std::collections::BTreeMap;
+use std::fmt::Debug;
 
 use crate::{blob::BlobstoreValue, ChangesetId, MPathElement, MononokeId};
 
@@ -17,7 +18,7 @@ use crate::{blob::BlobstoreValue, ChangesetId, MPathElement, MononokeId};
 /// of deleted manifest, and should be used to generalize usage of them.
 #[async_trait::async_trait]
 pub trait DeletedManifestCommon:
-    BlobstoreValue<Key = Self::Id> + Clone + Send + Sync + 'static
+    BlobstoreValue<Key = Self::Id> + Debug + Clone + Send + Sync + 'static
 {
     type Id: MononokeId<Value = Self> + Loadable<Value = Self>;
 

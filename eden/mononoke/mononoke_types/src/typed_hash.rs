@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt::{self, Display};
+use std::fmt::{self, Debug, Display};
 use std::hash::Hash;
 use std::{result, str::FromStr};
 
@@ -53,7 +53,7 @@ pub trait BlobstoreKey: FromStr<Err = anyhow::Error> {
 }
 
 /// An identifier used throughout Mononoke.
-pub trait MononokeId: BlobstoreKey + Copy + Eq + Hash + Sync + Send + 'static {
+pub trait MononokeId: BlobstoreKey + Debug + Copy + Eq + Hash + Sync + Send + 'static {
     /// Blobstore value type associated with given MononokeId type
     type Value: BlobstoreValue<Key = Self>;
 
@@ -625,7 +625,7 @@ impl FromStr for ChangesetIdPrefix {
 
 impl Display for ChangesetIdPrefix {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(fmt)
+        Display::fmt(&self.0, fmt)
     }
 }
 
