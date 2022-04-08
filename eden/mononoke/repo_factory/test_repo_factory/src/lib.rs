@@ -24,7 +24,7 @@ use changeset_info::ChangesetInfo;
 use changesets::ArcChangesets;
 use changesets_impl::SqlChangesetsBuilder;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
-use deleted_files_manifest::RootDeletedManifestId;
+use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestV2Id};
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable;
 use ephemeral_blobstore::{ArcRepoEphemeralStore, RepoEphemeralStore};
@@ -105,6 +105,7 @@ pub fn default_test_repo_config() -> RepoConfig {
                     RootFsnodeId::NAME.to_string(),
                     RootSkeletonManifestId::NAME.to_string(),
                     RootDeletedManifestId::NAME.to_string(),
+                    RootDeletedManifestV2Id::NAME.to_string(),
                     RootUnodeManifestId::NAME.to_string(),
                     TreeHandle::NAME.to_string(),
                     MappedHgChangesetId::NAME.to_string(),

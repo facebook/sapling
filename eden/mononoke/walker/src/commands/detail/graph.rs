@@ -1163,7 +1163,8 @@ mod tests {
         // list, otherwise it won't get scrubbed and thus you would be unaware of different representation
         // in different stores
         let grandfathered: HashSet<&'static str> =
-            HashSet::from_iter(vec!["git_trees"].into_iter());
+            // TODO(yancouto): Add DMv2 logic in walker
+            HashSet::from_iter(vec!["git_trees", "deleted_manifest2"].into_iter());
         let mut missing = HashSet::new();
         for t in a {
             if s.contains(t.as_str()) {

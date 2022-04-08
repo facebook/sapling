@@ -48,6 +48,7 @@ union DerivedData {
   8: DerivedDataDeletedManifest deleted_manifest;
   9: DerivedDataSkeletonManifest skeleton_manifest;
   10: DerivedDataTreeHandle tree_handle;
+  11: DerivedDataDeletedManifestV2 deleted_manifest_v2;
 }
 
 union DerivedDataFsnode {
@@ -95,6 +96,10 @@ union DerivedDataChangesetInfo {
 
 union DerivedDataDeletedManifest {
   1: mononoke_types_thrift.DeletedManifestId root_deleted_manifest_id;
+}
+
+union DerivedDataDeletedManifestV2 {
+  1: mononoke_types_thrift.DeletedManifestV2Id root_deleted_manifest_v2_id;
 }
 
 union DerivedDataSkeletonManifest {

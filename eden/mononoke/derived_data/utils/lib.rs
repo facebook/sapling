@@ -16,7 +16,7 @@ use changeset_info::ChangesetInfo;
 use changesets::ChangesetsArc;
 use cloned::cloned;
 use context::CoreContext;
-use deleted_files_manifest::RootDeletedManifestId;
+use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestV2Id};
 use derived_data::DerivedDataTypesConfig;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::{
@@ -64,6 +64,7 @@ pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     FilenodesOnlyPublic::NAME,
     RootSkeletonManifestId::NAME,
     TreeHandle::NAME,
+    RootDeletedManifestV2Id::NAME,
 ];
 
 pub const DEFAULT_BACKFILLING_CONFIG_NAME: &str = "backfilling";
@@ -458,6 +459,11 @@ fn derived_data_utils_impl(
                 enabled_config_name,
             ),
         )),
+        RootDeletedManifestV2Id::NAME => Ok(Arc::new(DerivedUtilsFromManager::<
+            RootDeletedManifestV2Id,
+        >::new(
+            repo, config, enabled_config_name
+        ))),
         FilenodesOnlyPublic::NAME => Ok(Arc::new(
             DerivedUtilsFromManager::<FilenodesOnlyPublic>::new(repo, config, enabled_config_name),
         )),
