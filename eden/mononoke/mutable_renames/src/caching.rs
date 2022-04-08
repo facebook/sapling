@@ -170,7 +170,10 @@ impl<'a> EntityStore<HasMutableRename> for CachedHasMutableRename<'a> {
 #[async_trait]
 impl<'a> KeyedEntityStore<ChangesetId, HasMutableRename> for CachedHasMutableRename<'a> {
     fn get_cache_key(&self, key: &ChangesetId) -> String {
-        format!("mutable_renames.presence.{}", *key)
+        format!(
+            "mutable_renames.presence.repo{}.{}",
+            self.owner.repo_id, *key
+        )
     }
 
     async fn get_from_db(
@@ -379,10 +382,13 @@ impl RenameKey {
 impl<'a> KeyedEntityStore<RenameKey, CachedMutableRenameEntry> for CachedGetMutableRename<'a> {
     fn get_cache_key(&self, key: &RenameKey) -> String {
         match &key.dst_path {
-            None => format!("mutable_renames.rename.cs_id_at_root.{}", key.dst_cs_id),
+            None => format!(
+                "mutable_renames.rename.cs_id_at_root.repo{}.{}",
+                self.owner.repo_id, key.dst_cs_id
+            ),
             Some(path) => format!(
-                "mutable_renames.rename.cs_id_and_path.{}.{}",
-                key.dst_cs_id, path
+                "mutable_renames.rename.cs_id_and_path.repo{}.{}.{}",
+                self.owner.repo_id, key.dst_cs_id, path
             ),
         }
     }
