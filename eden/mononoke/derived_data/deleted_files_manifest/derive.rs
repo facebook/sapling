@@ -15,7 +15,7 @@ use derived_data_manager::DerivationContext;
 use futures::{
     channel::mpsc,
     future::{self, BoxFuture, FutureExt},
-    stream::{StreamExt, TryStreamExt},
+    stream::{self, StreamExt, TryStreamExt},
 };
 use manifest::{Diff, ManifestOps, PathTree};
 use mononoke_types::{
@@ -332,11 +332,14 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                 // If there's one parent, we can "copy" its subentries
                 // and modify only a few fields. Important if we're doing few
                 // changes on a big node and need to optimise.
-                for (path, node) in &mut recurse_entries {
-                    if let Some(subentry_id) = parent.lookup(ctx, blobstore, path).await? {
-                        node.parents.insert(subentry_id);
-                    }
-                }
+                stream::iter(recurse_entries.iter_mut().map(anyhow::Ok))
+                    .try_for_each_concurrent(100, |(path, node)| async move {
+                        if let Some(subentry_id) = parent.lookup(ctx, blobstore, path).await? {
+                            node.parents.insert(subentry_id);
+                        }
+                        anyhow::Ok(())
+                    })
+                    .await?;
 
                 DeletedManifestChange {
                     change_type,
