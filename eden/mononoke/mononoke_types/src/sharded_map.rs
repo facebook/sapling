@@ -10,9 +10,12 @@
 use anyhow::{anyhow, bail, Context, Error, Result};
 use async_recursion::async_recursion;
 use blobstore::Blobstore;
+use bounded_traversal::{bounded_traversal_ordered_stream, OrderedTraversal};
 use bytes::Bytes;
 use context::CoreContext;
 use fbthrift::compact_protocol;
+use futures::{FutureExt, Stream};
+use nonzero_ext::nonzero;
 use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
 
@@ -144,6 +147,74 @@ impl<Value: MapValue> ShardedMapNode<Value> {
         })
     }
 
+    /// Iterates through all values in the map, asynchronously and only loading
+    /// blobs as needed.
+    // See the detailed description of the logic in https://fburl.com/53iumd6p
+    pub fn into_entries<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+    ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
+        bounded_traversal_ordered_stream(
+            nonzero!(256usize),
+            nonzero!(256usize),
+            vec![(self.size(), (SmallBinary::new(), MapChild::Inlined(self)))],
+            move |(mut cur_prefix, id_or_inlined): (SmallBinary, MapChild<Value>)| {
+                async move {
+                    Ok(match id_or_inlined.load(ctx, blobstore).await? {
+                        // Case 1. Prepend all keys with cur_prefix and output elements
+                        Self::Terminal { values } => values
+                            .into_iter()
+                            .map(|(key, value)| {
+                                let mut full_key = cur_prefix.clone();
+                                full_key.extend(key);
+                                OrderedTraversal::Output((full_key, value))
+                            })
+                            .collect::<Vec<_>>(),
+                        // Case 2. Recurse
+                        Self::Intermediate {
+                            prefix: new_prefix,
+                            value,
+                            value_count,
+                            children,
+                        } => {
+                            // Step 2-a. Extend cur_prefix
+                            cur_prefix.extend(new_prefix);
+                            let cur_prefix = &cur_prefix;
+                            value
+                                // Step 2-b. If value is present, output (cur_prefix, value)
+                                .map(|value| OrderedTraversal::Output((cur_prefix.clone(), value)))
+                                .into_iter()
+                                // Step 2-c. Copy prefix, append byte, and recurse.
+                                .chain(children.into_iter().map(|(byte, id_or_inlined)| {
+                                    let mut new_prefix = cur_prefix.clone();
+                                    new_prefix.push(byte);
+                                    // We have a tradeoff to decide on here:
+                                    // (1) If we don't load ids, we can't really know their size.
+                                    // (2) If we do load ids, we know their size, but we might load
+                                    // a lot of map nodes before they actually need to be used.
+                                    // (3) The other possible solution is putting value_count on the
+                                    // edge, not on the node.
+                                    // The choice was (1), as we use scheduled_max = queued_max = 1
+                                    // here, the size predictions shouldn't make any difference.
+                                    let size_prediction = match &id_or_inlined {
+                                        MapChild::Inlined(inlined) => inlined.size(),
+                                        MapChild::Id(_) => value_count,
+                                    };
+                                    OrderedTraversal::Recurse(
+                                        size_prediction,
+                                        (new_prefix, id_or_inlined),
+                                    )
+                                }))
+                                .collect::<Vec<_>>()
+                        }
+                    })
+                }
+                .boxed()
+            },
+        )
+    }
+
     pub fn is_empty(&self) -> bool {
         match self {
             Self::Terminal { values } => values.is_empty(),
@@ -238,6 +309,7 @@ mod test {
     use bytes::{Buf, BufMut, BytesMut};
     use context::CoreContext;
     use fbinit::FacebookInit;
+    use futures::TryStreamExt;
     use memblob::Memblob;
     use pretty_assertions::assert_eq;
 
@@ -320,6 +392,24 @@ mod test {
             let v = self.0.lookup(&self.1, &self.2, key.as_bytes()).await?;
             Ok(v.map(|my_type| my_type.0))
         }
+
+        fn entries(&self) -> impl Stream<Item = Result<(String, i32)>> + '_ {
+            self.0
+                .clone()
+                .into_entries(&self.1, &self.2)
+                .and_then(|(k, v)| async move { Ok((String::from_utf8(k.to_vec())?, v.0)) })
+        }
+
+        async fn assert_entries(&self, entries: Vec<(&str, i32)>) -> Result<()> {
+            assert_eq!(
+                self.entries().try_collect::<Vec<_>>().await?,
+                entries
+                    .into_iter()
+                    .map(|(k, v)| (String::from(k), v))
+                    .collect::<Vec<_>>()
+            );
+            Ok(())
+        }
     }
 
     #[test]
@@ -367,6 +457,30 @@ mod test {
         assert_eq!(map.lookup("abacakk").await?, None);
         // Case 4
         assert_eq!(map.lookup("").await?, None);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn into_entries_test(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = Memblob::default();
+
+        let map = MapHelper(example_map(), ctx, blobstore);
+        map.assert_entries(vec![
+            ("aba", 12),
+            ("abacab", 7),
+            ("abacaba", 8),
+            ("abacakkk", 9),
+            ("abacate", 10),
+            ("abacaxi", 11),
+            ("abalaba", 5),
+            ("abalada", 6),
+            ("omiojo", 1),
+            ("omiux", 2),
+            ("omundo", 3),
+            ("omungal", 4),
+        ])
+        .await?;
         Ok(())
     }
 }
