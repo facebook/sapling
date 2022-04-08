@@ -22,7 +22,7 @@ use unodes::RootUnodeManifestId;
 
 use derived_data_service_if::types as thrift;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct RootDeletedManifestId(DeletedManifestId);
 
 impl RootDeletedManifestIdCommon for RootDeletedManifestId {

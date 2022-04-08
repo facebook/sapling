@@ -79,6 +79,7 @@ lazy_static! {
         let blame = BlameRoot::NAME;
         let changesets_info = ChangesetInfo::NAME;
         let deleted_mf = RootDeletedManifestId::NAME;
+        let deleted_mf_v2 = RootDeletedManifestV2Id::NAME;
         let filenodes = FilenodesOnlyPublic::NAME;
         let skeleton_mf = RootSkeletonManifestId::NAME;
 
@@ -92,6 +93,7 @@ lazy_static! {
         dag.insert(filenodes, vec![hgchangeset]);
         dag.insert(fsnodes, vec![]);
         dag.insert(deleted_mf, vec![unodes]);
+        dag.insert(deleted_mf_v2, vec![unodes]);
         dag.insert(skeleton_mf, vec![]);
 
         dag
