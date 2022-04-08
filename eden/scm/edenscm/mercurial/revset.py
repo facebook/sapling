@@ -724,6 +724,7 @@ def bsearch(repo, subset, x):
 # - no help entry so that we do not advertise it any more
 @predicate("bisected", safe=True)
 def bisected(repo, subset, x):
+    "(HIDDEN)"
     return bisect(repo, subset, x)
 
 
@@ -781,6 +782,7 @@ def branch(repo, subset, x):
 
 @predicate("bumped()", safe=True)
 def bumped(repo, subset, x):
+    "(HIDDEN)"
     msg = "'bumped()' is deprecated, " "use 'phasedivergent()'"
     repo.ui.deprecwarn(msg, "4.4")
     repo.ui.deprecate(
@@ -1057,6 +1059,7 @@ def destination(repo, subset, x):
 
 @predicate("divergent()", safe=True)
 def divergent(repo, subset, x):
+    "(HIDDEN)"
     msg = "'divergent()' is deprecated, " "use 'contentdivergent()'"
     repo.ui.deprecwarn(msg, "4.4")
     repo.ui.deprecate(
@@ -2460,6 +2463,7 @@ def _substringmatcher(pattern, casesensitive=True):
 
 @predicate("unstable()", safe=True)
 def unstable(repo, subset, x):
+    "(HIDDEN)"
     msg = "'unstable()' is deprecated, " "use 'orphan()'"
     repo.ui.deprecwarn(msg, "4.4")
     repo.ui.deprecate("unstable-revset", "unstable() has been replaced with orphan()")

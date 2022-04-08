@@ -43,6 +43,7 @@ _exclkeywords = {
     "(ADVANCED)",
     "(DEPRECATED)",
     "(EXPERIMENTAL)",
+    "(HIDDEN)",
     # i18n: "(ADVANCED)" is a keyword, must be translated consistently
     _("(ADVANCED)"),
     # i18n: "(DEPRECATED)" is a keyword, must be translated consistently
