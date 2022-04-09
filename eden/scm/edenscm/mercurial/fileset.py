@@ -115,7 +115,7 @@ def getset(mctx, x):
 
 def stringset(mctx, x):
     m = mctx.matcher([x])
-    return [f for f in mctx.subset if m(f)]
+    return mctx.matches(m)
 
 
 def andset(mctx, x, y):
@@ -123,7 +123,7 @@ def andset(mctx, x, y):
 
 
 def orset(mctx, x, y):
-    xl = getset(mctx, x)
+    xl = list(getset(mctx, x))
     yl = getset(mctx, y)
     xlset = set(xl)
     return xl + [f for f in yl if f not in xlset]
@@ -214,8 +214,8 @@ def unknown(mctx, x):
     """
     # i18n: "unknown" is a keyword
     getargs(x, 0, 0, _("unknown takes no arguments"))
-    s = set(mctx.status().unknown)
-    return [f for f in mctx.subset if f in s]
+    s = mctx.status().unknown
+    return mctx.matchpaths(s)
 
 
 @predicate("ignored()", callstatus=True)
@@ -225,8 +225,8 @@ def ignored(mctx, x):
     """
     # i18n: "ignored" is a keyword
     getargs(x, 0, 0, _("ignored takes no arguments"))
-    s = set(mctx.status().ignored)
-    return [f for f in mctx.subset if f in s]
+    s = mctx.status().ignored
+    return mctx.matchpaths(s)
 
 
 @predicate("clean()", callstatus=True)
@@ -234,8 +234,8 @@ def clean(mctx, x):
     """File that is clean according to :hg:`status`."""
     # i18n: "clean" is a keyword
     getargs(x, 0, 0, _("clean takes no arguments"))
-    s = set(mctx.status().clean)
-    return [f for f in mctx.subset if f in s]
+    s = mctx.status().clean
+    return mctx.matchpaths(s)
 
 
 def func(mctx, a, b):
@@ -325,7 +325,7 @@ def hgignore(mctx, x):
     if ui.configbool("experimental", "disallowhgignorefileset"):
         raise error.Abort(_("hgignore() is deprecated. Use gitignore() instead."))
     ignore = repo.dirstate._ignore
-    return [f for f in mctx.subset if ignore(f)]
+    return mctx.matches(ignore)
 
 
 @predicate("gitignore()")
@@ -335,7 +335,7 @@ def gitignore(mctx, x):
     getargs(x, 0, 0, _("gitignore takes no arguments"))
     repo = mctx.ctx.repo()
     ignore = repo.dirstate._ignore
-    return [f for f in mctx.subset if ignore(f)]
+    return mctx.matches(ignore)
 
 
 @predicate("portable()")
@@ -543,6 +543,7 @@ methods = {
 class matchctx(object):
     def __init__(self, ctx, subset, status=None):
         self.ctx = ctx
+        assert isinstance(subset, (fullsubset, listsubset))
         self.subset = subset
         self._status = status
         self._existingenabled = False
@@ -550,8 +551,19 @@ class matchctx(object):
     def status(self):
         return self._status
 
-    def matcher(self, patterns):
-        return self.ctx.match(patterns)
+    def matcher(self, patterns, default="glob"):
+        return self.ctx.match(patterns, default=default)
+
+    def matches(self, m):
+        """apply a matcher m to subset"""
+        return self.subset.matches(m)
+
+    def matchpaths(self, paths):
+        if not paths:
+            return []
+        # note: if paths == [], then the matcher matches all files
+        m = self.matcher(paths, default="path")
+        return self.matches(m)
 
     def filter(self, files):
         return [f for f in files if f in self.subset]
@@ -571,10 +583,11 @@ class matchctx(object):
         )
 
     def narrow(self, files):
-        return matchctx(self.ctx, self.filter(files), self._status)
+        subset = listsubset(self.filter(files))
+        return matchctx(self.ctx, subset, self._status)
 
     def switch(self, ctx, status=None):
-        subset = self.filter(_buildsubset(ctx, status))
+        subset = listsubset(self.filter(_buildsubset(ctx, status)))
         return matchctx(ctx, subset, status)
 
 
@@ -589,7 +602,8 @@ class fullmatchctx(matchctx):
         return fullmatchctx(ctx, status)
 
     def narrow(self, files):
-        return matchctx(self.ctx, files, self._status)
+        subset = listsubset(files)
+        return matchctx(self.ctx, subset, self._status)
 
 
 # filesets using matchctx.switch()
@@ -615,9 +629,30 @@ def _buildsubset(ctx, status):
         subset = []
         for c in status:
             subset.extend(c)
-        return subset
+        return listsubset(subset)
     else:
-        return list(ctx.walk(ctx.match([])))
+        return fullsubset(ctx)
+
+
+class fullsubset:
+    """lazy representation for all files in ctx - ctx.walk(ctx.match([]))"""
+
+    def __init__(self, ctx):
+        self.ctx = ctx
+
+    def __iter__(self):
+        m = self.ctx.match([])
+        return iter(self.matches(m))
+
+    def matches(self, match):
+        return self.ctx.walk(match)
+
+
+class listsubset(list):
+    """non-lazy representation of files"""
+
+    def matches(self, match):
+        return [f for f in self if match(f)]
 
 
 def getfileset(ctx, expr):
