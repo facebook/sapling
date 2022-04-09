@@ -60,7 +60,6 @@ from .. import (
     match as matchmod,
     merge as mergemod,
     mutation,
-    obsolete,
     phases,
     progress,
     pvec,

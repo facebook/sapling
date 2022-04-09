@@ -25,12 +25,10 @@ Test operators and basic patterns
   (symbol 'a*')
   a1
   a2
-  $ fileset -v '"re:a\d"'
+  $ fileset -v '"re:a\\d"'
   (string 're:a\\d')
   a1
   a2
-  * DeprecationWarning: invalid escape sequence '\d' (glob)
-    return decodeutf8(codecs.escape_decode(s)[0], errors="surrogateescape")
   $ fileset -v 'a1 or a2'
   (or
     (symbol 'a1')
