@@ -1343,8 +1343,18 @@ def debugfileset(ui, repo, expr, **opts):
         tree = fileset.parse(expr)
         ui.note(fileset.prettyformat(tree), "\n")
 
-    for f in ctx.getfileset(expr):
+    files = list(ctx.getfileset(expr))
+    for f in files:
         ui.write("%s\n" % f)
+
+    # compare against 'set:...' which might use a different path.
+    pats = [f"set:{expr}"]
+    m = scmutil.match(ctx, pats, opts)
+    files = set(f for f in files if f in ctx)
+    files2 = set(f for f in ctx.matches(m) if f in ctx)
+    if files != files2:
+        msg = f"fileset output {sorted(files)} does not match matcher output {sorted(files2)}\n"
+        ui.write_err(msg)
 
 
 @command("debugfsinfo|debugfs", [], _("[PATH]"), norepo=True)
