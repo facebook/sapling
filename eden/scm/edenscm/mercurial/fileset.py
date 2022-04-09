@@ -123,10 +123,10 @@ def andset(mctx, x, y):
 
 
 def orset(mctx, x, y):
-    # needs optimizing
     xl = getset(mctx, x)
     yl = getset(mctx, y)
-    return xl + [f for f in yl if f not in xl]
+    xlset = set(xl)
+    return xl + [f for f in yl if f not in xlset]
 
 
 def notset(mctx, x):
