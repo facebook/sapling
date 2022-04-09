@@ -782,6 +782,9 @@ class gitfilelog(object):
         # compare without reading `node`
         return node != hashobj(b"blob", text)
 
+    def renamed(self, node):
+        return False
+
 
 def hashobj(kind, text):
     """(bytes, bytes) -> bytes. obtain git SHA1 hash"""
