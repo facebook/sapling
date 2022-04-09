@@ -862,31 +862,40 @@ def _kindpatstoglobs(kindpats, recursive=False):
     globs = []
     for kindpat in kindpats:
         kind, pat = kindpat[0:2]
-        if kind == "re":
-            # Attempt to convert the re pat to globs
-            reglobs = _convertretoglobs(pat)
-            if reglobs is not None:
-                globs += reglobs
+        subkindpats = [(kind, pat)]
+        if kind == "set":
+            # Attempt to rewrite fileset to non-fileset patterns
+            from . import fileset
+
+            maybekindpats = fileset.maybekindpats(pat)
+            if maybekindpats is not None:
+                subkindpats = maybekindpats
+        for kind, pat in subkindpats:
+            if kind == "re":
+                # Attempt to convert the re pat to globs
+                reglobs = _convertretoglobs(pat)
+                if reglobs is not None:
+                    globs += reglobs
+                else:
+                    return None
+            elif kind == "glob":
+                # The treematcher (man gitignore) does not support csh-style
+                # brackets (ex. "{a,b,c}"). Expand the brackets to patterns.
+                for subpat in pathmatcher.expandcurlybrackets(pat):
+                    normalized = pathmatcher.normalizeglob(subpat)
+                    if recursive:
+                        normalized = _makeglobrecursive(normalized)
+                    globs.append(normalized)
+            elif kind == "path":
+                if pat == ".":
+                    # Special case. Comes from `util.normpath`.
+                    pat = ""
+                else:
+                    pat = pathmatcher.plaintoglob(pat)
+                pat = _makeglobrecursive(pat)
+                globs.append(pat)
             else:
                 return None
-        elif kind == "glob":
-            # The treematcher (man gitignore) does not support csh-style
-            # brackets (ex. "{a,b,c}"). Expand the brackets to patterns.
-            for subpat in pathmatcher.expandcurlybrackets(pat):
-                normalized = pathmatcher.normalizeglob(subpat)
-                if recursive:
-                    normalized = _makeglobrecursive(normalized)
-                globs.append(normalized)
-        elif kind == "path":
-            if pat == ".":
-                # Special case. Comes from `util.normpath`.
-                pat = ""
-            else:
-                pat = pathmatcher.plaintoglob(pat)
-            pat = _makeglobrecursive(pat)
-            globs.append(pat)
-        else:
-            return None
     return globs
 
 

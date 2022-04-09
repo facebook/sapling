@@ -13,6 +13,7 @@
 from __future__ import absolute_import
 
 import re
+from typing import Optional, List, Tuple
 
 from . import error, merge, parser, pycompat, registrar, scmutil, util, winutil
 from .i18n import _
@@ -658,6 +659,39 @@ class listsubset(list):
 def getfileset(ctx, expr):
     tree = parse(expr)
     return getset(fullmatchctx(ctx, _buildstatus(ctx, tree)), tree)
+
+
+def maybekindpats(expr) -> Optional[List[Tuple[str, str]]]:
+    """attempt convert fileset expression to a list of (kind, pat)s.
+
+    Return None if the fileset expression cannot be converted.
+    """
+    tree = parse(expr)
+    return _maybekindpats(tree)
+
+
+def _maybekindpats(tree) -> Optional[List[Tuple[str, str]]]:
+    from . import match as matchmod
+
+    if tree[0] in {"symbol", "string"}:
+        # filename starting with "set:"
+        if tree[1].startswith("set:"):
+            return None
+        # "symbol" or "string" -> stringset -> mctx.matcher ->
+        # ctx.match([pat], default="glob")
+        return [matchmod._patsplit(tree[1], "glob")]
+    elif tree[0] == "or":
+        # ex. ('or', ('symbol', 'a'), ('symbol', 'b'))
+        # can be recursive
+        lhs = _maybekindpats(tree[1])
+        if lhs is None:
+            return None
+        rhs = _maybekindpats(tree[2])
+        if rhs is None:
+            return None
+        return lhs + rhs
+    else:
+        return None
 
 
 def _buildstatus(ctx, tree, basectx=None):
