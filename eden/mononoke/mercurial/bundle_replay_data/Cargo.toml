@@ -12,4 +12,4 @@ anyhow = "1.0.56"
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 mercurial_types = { version = "0.1.0", path = "../types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }

@@ -13,5 +13,5 @@ async-trait = "0.1.52"
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"
 openssl = "0.10.35"
-serde = { version = "1.0.126", features = ["derive", "rc"] }
+serde = { version = "1.0.136", features = ["derive", "rc"] }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }

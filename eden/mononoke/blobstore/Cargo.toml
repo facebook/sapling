@@ -21,7 +21,7 @@ bytes = { version = "1.1", features = ["serde"] }
 clap = { version = "3.1.2", features = ["derive", "regex", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../server/context" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-serde = { version = "1.0.126", features = ["derive", "rc"] }
+serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_derive = "1.0"
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 strum = "0.21"

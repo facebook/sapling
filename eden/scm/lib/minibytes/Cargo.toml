@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 bytes = { version = "1.1", features = ["serde"], optional = true }
 memmap = "0.7"
-serde = { version = "1.0.126", features = ["derive", "rc"] }
+serde = { version = "1.0.136", features = ["derive", "rc"] }
 
 [dev-dependencies]
 quickcheck = "1.0"

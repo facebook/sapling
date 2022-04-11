@@ -17,7 +17,7 @@ paste = "1.0"
 quickcheck = "1.0"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 revisionstore_types = { version = "0.1.0", path = "../../revisionstore/types" }
-serde = { version = "1.0.126", features = ["derive", "rc"] }
+serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_bytes = "0.11"
 serde_derive = "1.0"
 thiserror = "1.0.30"
@@ -27,7 +27,7 @@ types = { version = "0.1.0", path = "../../types" }
 [dev-dependencies]
 insta_ext = { version = "0.1.0", path = "../../insta_ext" }
 quickcheck_macros = "1.0"
-serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 
 [features]
 default = ["for-tests"]

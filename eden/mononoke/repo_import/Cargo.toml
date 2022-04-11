@@ -48,8 +48,8 @@ repo_cross_repo = { version = "0.1.0", path = "../repo_attributes/repo_cross_rep
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
-serde = { version = "1.0.126", features = ["derive", "rc"] }
-serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
+serde = { version = "1.0.136", features = ["derive", "rc"] }
+serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }

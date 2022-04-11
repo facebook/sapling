@@ -28,9 +28,9 @@ percent-encoding = "2.1"
 pprint = { version = "0.1.0", path = "../pprint" }
 progress-model = { version = "0.1.0", path = "../progress/model" }
 rand = { version = "0.8", features = ["small_rng"] }
-serde = { version = "1.0.126", features = ["derive", "rc"] }
+serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_cbor = "0.11"
-serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tracing = "0.1.32"
 types = { version = "0.1.0", path = "../types" }

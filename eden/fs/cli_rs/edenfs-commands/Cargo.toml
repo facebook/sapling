@@ -20,8 +20,8 @@ edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 once_cell = "1.8"
-serde = { version = "1.0.126", features = ["derive", "rc"] }
-serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
+serde = { version = "1.0.136", features = ["derive", "rc"] }
+serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 shlex = "1.0"
 subprocess = "0.2.7"
 sysinfo = "0.20.4"

@@ -20,6 +20,6 @@ mysql_common = "0.26.0"
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 regex = "1.5.4"
 scuba = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-serde = { version = "1.0.126", features = ["derive", "rc"] }
+serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_derive = "1.0"
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

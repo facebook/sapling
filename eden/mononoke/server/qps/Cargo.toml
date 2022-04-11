@@ -13,4 +13,4 @@ cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimen
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 qps_config = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/qps" }
-serde = { version = "1.0.126", features = ["derive", "rc"] }
+serde = { version = "1.0.136", features = ["derive", "rc"] }

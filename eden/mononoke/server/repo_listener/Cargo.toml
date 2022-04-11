@@ -53,7 +53,7 @@ rate_limiting = { version = "0.1.0", path = "../../rate_limiting" }
 repo_client = { version = "0.1.0", path = "../../repo_client" }
 scribe_ext = { version = "0.1.0", path = "../../common/scribe_ext" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
-serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 session_id = { version = "0.1.0", path = "../session_id" }
 sha-1 = "0.8"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

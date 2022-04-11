@@ -16,8 +16,8 @@ parking_lot = { version = "0.11.2", features = ["send_guard"] }
 progress-model = { version = "0.1.0", path = "../progress/model" }
 rand = { version = "0.8", features = ["small_rng"] }
 repo = { version = "0.1.0", path = "../repo" }
-serde = { version = "1.0.126", features = ["derive", "rc"] }
-serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
+serde = { version = "1.0.136", features = ["derive", "rc"] }
+serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 util = { version = "0.1.0", path = "../util" }
 
 [dev-dependencies]

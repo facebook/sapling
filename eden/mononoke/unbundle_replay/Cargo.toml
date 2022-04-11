@@ -35,7 +35,7 @@ pushrebase = { version = "0.1.0", path = "../pushrebase" }
 pushrebase_hook = { version = "0.1.0", path = "../pushrebase/pushrebase_hook" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
-serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }

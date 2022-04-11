@@ -11,5 +11,5 @@ anyhow = "1.0.56"
 clap = "2.33"
 dirs = "2.0"
 libc = "0.2.121"
-serde = { version = "1.0.126", features = ["derive", "rc"] }
+serde = { version = "1.0.136", features = ["derive", "rc"] }
 toml = "=0.5.8"

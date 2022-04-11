@@ -38,7 +38,7 @@ quickcheck = "1.0"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 rand = { version = "0.8", features = ["small_rng"] }
 rand_distr = "0.4"
-serde = { version = "1.0.126", features = ["derive", "rc"] }
+serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_derive = "1.0"
 sha-1 = "0.8"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
