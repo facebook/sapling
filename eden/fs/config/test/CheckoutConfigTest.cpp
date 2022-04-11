@@ -67,8 +67,11 @@ TEST_F(CheckoutConfigTest, testLoadFromClientDirectory) {
       CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
 
   auto parent = config->getParentCommit();
+  auto rootId = RootId{"1234567812345678123456781234567812345678"};
   EXPECT_EQ(
-      ParentCommit{RootId{"1234567812345678123456781234567812345678"}}, parent);
+      ParentCommit(
+          ParentCommit::WorkingCopyParentAndCheckedOutRevision{rootId, rootId}),
+      parent);
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 }
 
@@ -87,8 +90,11 @@ TEST_F(CheckoutConfigTest, testLoadWithIgnoredSettings) {
       CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
 
   auto parent = config->getParentCommit();
+  auto rootId = RootId{"1234567812345678123456781234567812345678"};
   EXPECT_EQ(
-      ParentCommit{RootId{"1234567812345678123456781234567812345678"}}, parent);
+      ParentCommit(
+          ParentCommit::WorkingCopyParentAndCheckedOutRevision{rootId, rootId}),
+      parent);
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 }
 
@@ -108,8 +114,11 @@ TEST_F(CheckoutConfigTest, testVersion1MultipleParents) {
   writeFile(snapshotPath, snapshotContents).value();
 
   auto parent = config->getParentCommit();
+  auto rootId = RootId{"99887766554433221100aabbccddeeffabcdef99"};
   EXPECT_EQ(
-      ParentCommit{RootId{"99887766554433221100aabbccddeeffabcdef99"}}, parent);
+      ParentCommit(
+          ParentCommit::WorkingCopyParentAndCheckedOutRevision{rootId, rootId}),
+      parent);
 }
 
 TEST_F(CheckoutConfigTest, testVersion2ParentBinary) {
@@ -127,9 +136,11 @@ TEST_F(CheckoutConfigTest, testVersion2ParentBinary) {
   writeFile(snapshotPath, snapshotContents).value();
 
   auto parent = config->getParentCommit();
+  auto rootId =
+      RootId{Hash20{"99887766554433221100aabbccddeeffabcdef99"}.toByteString()};
   EXPECT_EQ(
-      ParentCommit{RootId{
-          Hash20{"99887766554433221100aabbccddeeffabcdef99"}.toByteString()}},
+      ParentCommit(
+          ParentCommit::WorkingCopyParentAndCheckedOutRevision{rootId, rootId}),
       parent);
 }
 
@@ -185,8 +196,11 @@ TEST_F(CheckoutConfigTest, testVersion2ParentHex) {
   writeFile(snapshotPath, snapshotContents).value();
 
   auto parent = config->getParentCommit();
+  auto rootId = RootId{"99887766554433221100aabbccddeeffabcdef99"};
   EXPECT_EQ(
-      ParentCommit{RootId{"99887766554433221100aabbccddeeffabcdef99"}}, parent);
+      ParentCommit(
+          ParentCommit::WorkingCopyParentAndCheckedOutRevision{rootId, rootId}),
+      parent);
 }
 
 TEST_F(CheckoutConfigTest, testWriteSnapshot) {
@@ -199,17 +213,26 @@ TEST_F(CheckoutConfigTest, testWriteSnapshot) {
   // Write out a single parent and read it back
   config->setParentCommit(hash1);
   auto parent = config->getParentCommit();
-  EXPECT_EQ(ParentCommit{hash1}, parent);
+  EXPECT_EQ(
+      ParentCommit(
+          ParentCommit::WorkingCopyParentAndCheckedOutRevision{hash1, hash1}),
+      parent);
 
   // Change the parent
   config->setParentCommit(hash2);
   parent = config->getParentCommit();
-  EXPECT_EQ(ParentCommit{hash2}, parent);
+  EXPECT_EQ(
+      ParentCommit(
+          ParentCommit::WorkingCopyParentAndCheckedOutRevision{hash2, hash2}),
+      parent);
 
   // Change the parent back
   config->setParentCommit(hash1);
   parent = config->getParentCommit();
-  EXPECT_EQ(ParentCommit{hash1}, parent);
+  EXPECT_EQ(
+      ParentCommit(
+          ParentCommit::WorkingCopyParentAndCheckedOutRevision{hash1, hash1}),
+      parent);
 }
 
 template <typename ExceptionType>

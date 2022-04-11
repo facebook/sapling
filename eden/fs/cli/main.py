@@ -524,7 +524,7 @@ Legacy bind mount dirs listed above are unused and can be removed!
         self.usage_for_dir(overlay_dir, "materialized")
         with instance.get_thrift_client_legacy() as client:
             scm_status = client.getScmStatus(
-                bytes(checkout.path), True, checkout.get_snapshot().encode()
+                bytes(checkout.path), True, checkout.get_snapshot()[0].encode()
             )
 
             for rel_path, _file_status in scm_status.entries.items():

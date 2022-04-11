@@ -150,7 +150,11 @@ async fn ignored_usage_counts_for_mount(
         .getScmStatus(
             &bytes_from_path(checkout.path())?,
             true,
-            &checkout.get_snapshot()?.as_bytes().to_vec(),
+            &checkout
+                .get_snapshot()?
+                .working_copy_parent
+                .as_bytes()
+                .to_vec(),
         )
         .await
         .from_err()?;

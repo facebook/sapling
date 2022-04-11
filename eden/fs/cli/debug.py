@@ -61,7 +61,7 @@ from . import (
 )
 from .config import EdenCheckout, EdenInstance
 from .subcmd import Subcmd
-from .util import format_cmd, format_mount, split_inodes_by_operation_type
+from .util import format_cmd, format_mount, split_inodes_by_operation_type, print_stderr
 
 
 MB: int = 1024 ** 2
@@ -126,9 +126,9 @@ class ParentsCmd(Subcmd):
         path = args.path or os.getcwd()
         _, checkout, _ = cmd_util.require_checkout(args, path)
         try:
-            snapshot_hex = checkout.get_snapshot()
+            working_copy_parent, checked_out_revision = checkout.get_snapshot()
         except Exception as ex:
-            print(f"error parsing EdenFS snapshot : {ex}")
+            print_stderr(f"error parsing EdenFS snapshot : {ex}")
             return 1
 
         if args.hg:
@@ -137,9 +137,9 @@ class ParentsCmd(Subcmd):
             print("Mercurial p0: {}".format(self._commit_hex(hg_parents[0])))
             if hg_parents[1] != null_commit_id:
                 print("Mercurial p1: {}".format(self._commit_hex(hg_parents[1])))
-            print("EdenFS snapshot: {}".format(snapshot_hex))
+            print("EdenFS snapshot: {}".format(working_copy_parent))
         else:
-            print(snapshot_hex)
+            print(working_copy_parent)
 
         return 0
 

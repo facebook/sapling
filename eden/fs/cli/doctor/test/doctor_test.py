@@ -50,7 +50,7 @@ class SnapshotFormatTest(DoctorTestBase):
         (self.checkout.state_dir / "SNAPSHOT").write_bytes(
             b"eden\x00\x00\x00\x01" + binascii.unhexlify("11223344556677889900" * 2)
         )
-        self.assertEqual("11223344556677889900" * 2, self.checkout.get_snapshot())
+        self.assertEqual("11223344556677889900" * 2, self.checkout.get_snapshot()[0])
 
     def test_format1_two_parents(self) -> None:
         (self.checkout.state_dir / "SNAPSHOT").write_bytes(
@@ -58,7 +58,7 @@ class SnapshotFormatTest(DoctorTestBase):
             + binascii.unhexlify("11223344556677889900" * 2)
             + binascii.unhexlify("00998877665544332211" * 2)
         )
-        self.assertEqual("11223344556677889900" * 2, self.checkout.get_snapshot())
+        self.assertEqual("11223344556677889900" * 2, self.checkout.get_snapshot()[0])
 
     def test_format2_ascii(self) -> None:
         (self.checkout.state_dir / "SNAPSHOT").write_bytes(
@@ -66,7 +66,7 @@ class SnapshotFormatTest(DoctorTestBase):
             + struct.pack(">L", 40)
             + b"11223344556677889900" * 2
         )
-        self.assertEqual("11223344556677889900" * 2, self.checkout.get_snapshot())
+        self.assertEqual("11223344556677889900" * 2, self.checkout.get_snapshot()[0])
 
 
 class DoctorTest(DoctorTestBase):

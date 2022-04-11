@@ -18,9 +18,12 @@ namespace facebook::eden {
  */
 class ParentCommit {
  public:
+  struct WorkingCopyParentAndCheckedOutRevision;
   struct CheckoutInProgress;
 
-  /* implicit */ ParentCommit(RootId root) : state_{std::move(root)} {}
+  /* implicit */ ParentCommit(
+      ParentCommit::WorkingCopyParentAndCheckedOutRevision state)
+      : state_{std::move(state)} {}
 
   /* implicit */ ParentCommit(ParentCommit::CheckoutInProgress inProgress)
       : state_{std::move(inProgress)} {}
@@ -47,22 +50,42 @@ class ParentCommit {
   };
 
   /**
-   * Return the current RootId.
+   * Return the last checked out RootId.
    *
    * See the documentation of RootIdPreference for the behavior during
    * checkout.
    */
-  std::optional<RootId> getCurrentRootId(RootIdPreference preference) const;
+  std::optional<RootId> getLastCheckoutId(RootIdPreference preference) const;
+
+  /**
+   * Return the current reset RootId.
+   *
+   * In the case where a checkout is in progress, the destination commit is
+   * returned.
+   */
+  RootId getWorkingCopyParent() const;
 
   struct CheckoutInProgress {
     RootId from;
     RootId to;
   };
 
+  /**
+   * This is the steady state parent commit state.
+   *
+   * During a checkout operation both fields gets updated to the destination
+   * commit, while a reset operation only updates the workingCopyParent field.
+   */
+  struct WorkingCopyParentAndCheckedOutRevision {
+    RootId workingCopyParent;
+    RootId checkedOut;
+  };
+
   bool operator==(const ParentCommit& other) const;
 
  private:
-  std::variant<RootId, CheckoutInProgress> state_;
+  std::variant<WorkingCopyParentAndCheckedOutRevision, CheckoutInProgress>
+      state_;
 };
 
 } // namespace facebook::eden

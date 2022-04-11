@@ -78,12 +78,24 @@ const facebook::eden::RelativePathPiece kClientDirectoryMap{"config.json"};
 // - 32-bit length
 // - Arbitrary-length binary string of said length for the commit being updated
 // to
+// Version 4: (Working copy parent and checked out revision)
+// - 32-bit length of working copy parent
+// - Arbitrary-length binary string of said length for the working copy parent
+// - 32-bit length of checked out revision
+// - Arbitrary-length binary string of said length for the checked out revision
 constexpr folly::StringPiece kSnapshotFileMagic{"eden"};
 enum : uint32_t {
   kSnapshotHeaderSize = 8,
+  // Legacy SNAPSHOT file version.
   kSnapshotFormatVersion1 = 1,
+  // Legacy SNAPSHOT file version.
   kSnapshotFormatVersion2 = 2,
+  // State of the SNAPSHOT file when a checkout operation is ongoing.
   kSnapshotFormatCheckoutInProgressVersion = 3,
+  // State of the SNAPSHOT file when no checkout operation is ongoing. The
+  // SNAPSHOT contains both the currently checked out RootId, as well as the
+  // RootId most recently reset to.
+  kSnapshotFormatWorkingCopyParentAndCheckedOutRevisionVersion = 4,
 };
 } // namespace
 
@@ -135,18 +147,22 @@ ParentCommit CheckoutConfig::getParentCommit() const {
         cursor.pull(secondParent.mutableBytes().data(), Hash20::RAW_SIZE);
       }
 
+      auto rootId = RootId{parent1.toString()};
+
       // SNAPSHOT v1 stored hashes as binary, but RootId prefers them inflated
       // to human-readable ASCII, so hexlify here.
-      return RootId{parent1.toString()};
+      return ParentCommit::WorkingCopyParentAndCheckedOutRevision{
+          rootId, rootId};
     }
 
     case kSnapshotFormatVersion2: {
       auto bodyLength = cursor.readBE<uint32_t>();
 
       // The remainder of the file is the root ID.
-      std::string rootId = cursor.readFixedString(bodyLength);
+      auto rootId = RootId{cursor.readFixedString(bodyLength)};
 
-      return RootId{std::move(rootId)};
+      return ParentCommit::WorkingCopyParentAndCheckedOutRevision{
+          rootId, rootId};
     }
 
     case kSnapshotFormatCheckoutInProgressVersion: {
@@ -161,6 +177,18 @@ ParentCommit CheckoutConfig::getParentCommit() const {
 
       return ParentCommit::CheckoutInProgress{
           RootId{std::move(fromRootId)}, RootId{std::move(toRootId)}};
+    }
+
+    case kSnapshotFormatWorkingCopyParentAndCheckedOutRevisionVersion: {
+      auto workingCopyParentLength = cursor.readBE<uint32_t>();
+      auto workingCopyParent =
+          RootId{cursor.readFixedString(workingCopyParentLength)};
+
+      auto checkedOutLength = cursor.readBE<uint32_t>();
+      auto checkedOutRootId = RootId{cursor.readFixedString(checkedOutLength)};
+
+      return ParentCommit::WorkingCopyParentAndCheckedOutRevision{
+          std::move(workingCopyParent), std::move(checkedOutRootId)};
     }
 
     default:

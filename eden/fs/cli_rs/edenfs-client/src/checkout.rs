@@ -34,6 +34,7 @@ const SNAPSHOT: &str = "SNAPSHOT";
 const SNAPSHOT_MAGIC_1: &[u8] = b"eden\x00\x00\x00\x01";
 const SNAPSHOT_MAGIC_2: &[u8] = b"eden\x00\x00\x00\x02";
 const SNAPSHOT_MAGIC_3: &[u8] = b"eden\x00\x00\x00\x03";
+const SNAPSHOT_MAGIC_4: &[u8] = b"eden\x00\x00\x00\x04";
 
 const SUPPORTED_REPOS: &[&str] = &["git", "hg", "recas"];
 const SUPPORTED_MOUNT_PROTOCOLS: &[&str] = &["fuse", "nfs", "prjfs"];
@@ -179,6 +180,20 @@ impl CheckoutConfig {
     }
 }
 
+pub struct SnapshotState {
+    pub working_copy_parent: String,
+    pub last_checkout_hash: String,
+}
+
+impl SnapshotState {
+    fn new(working_copy_parent: String, last_checkout_hash: String) -> Self {
+        Self {
+            working_copy_parent,
+            last_checkout_hash,
+        }
+    }
+}
+
 /// Represents an edenfs checkout with mount information as well as information from configuration
 #[derive(Serialize)]
 pub struct EdenFsCheckout {
@@ -219,8 +234,9 @@ impl EdenFsCheckout {
         s
     }
 
-    /// Return the hex version of the parent hash in the SNAPSHOT file
-    pub fn get_snapshot(&self) -> Result<String> {
+    /// Returns a SnapshotState representing EdenFS working copy parent as well as the last checked
+    /// out revision.
+    pub fn get_snapshot(&self) -> Result<SnapshotState> {
         let snapshot_path = self.data_dir.join(SNAPSHOT);
         let mut f = File::open(&snapshot_path).from_err()?;
         let mut header = [0u8; 8];
@@ -228,12 +244,14 @@ impl EdenFsCheckout {
         if header == SNAPSHOT_MAGIC_1 {
             let mut snapshot = [0u8; 20];
             f.read(&mut snapshot).from_err()?;
-            Ok(EdenFsCheckout::encode_hex(&snapshot))
+            let decoded = EdenFsCheckout::encode_hex(&snapshot);
+            Ok(SnapshotState::new(decoded.clone(), decoded))
         } else if header == SNAPSHOT_MAGIC_2 {
             let body_length = f.read_u32::<BigEndian>().from_err()?;
             let mut buf = vec![0u8; body_length as usize];
             f.read_exact(&mut buf).from_err()?;
-            Ok(std::str::from_utf8(&buf).from_err()?.to_string())
+            let decoded = std::str::from_utf8(&buf).from_err()?.to_string();
+            Ok(SnapshotState::new(decoded.clone(), decoded))
         } else if header == SNAPSHOT_MAGIC_3 {
             let _pid = f.read_u32::<BigEndian>().from_err()?;
 
@@ -251,6 +269,23 @@ impl EdenFsCheckout {
                 std::str::from_utf8(&from_buf).from_err()?,
                 std::str::from_utf8(&to_buf).from_err()?
             )))
+        } else if header == SNAPSHOT_MAGIC_4 {
+            let working_copy_parent_length = f.read_u32::<BigEndian>().from_err()?;
+            let mut working_copy_parent_buf = vec![0u8; working_copy_parent_length as usize];
+            f.read_exact(&mut working_copy_parent_buf).from_err()?;
+
+            let checked_out_length = f.read_u32::<BigEndian>().from_err()?;
+            let mut checked_out_buf = vec![0u8; checked_out_length as usize];
+            f.read_exact(&mut checked_out_buf).from_err()?;
+
+            Ok(SnapshotState::new(
+                std::str::from_utf8(&working_copy_parent_buf)
+                    .from_err()?
+                    .to_string(),
+                std::str::from_utf8(&checked_out_buf)
+                    .from_err()?
+                    .to_string(),
+            ))
         } else {
             Err(EdenFsError::Other(anyhow!(
                 "SNAPSHOT file has invalid header"

@@ -258,7 +258,8 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
 
   auto parentCommit = checkoutConfig_->getParentCommit();
   auto parent =
-      parentCommit.getCurrentRootId(ParentCommit::RootIdPreference::To).value();
+      parentCommit.getLastCheckoutId(ParentCommit::RootIdPreference::To)
+          .value();
 
   return serverState_->getFaultInjector()
       .checkAsync("mount", getPath().stringPiece())

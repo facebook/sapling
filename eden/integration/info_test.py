@@ -34,8 +34,9 @@ class InfoTest(testcase.EdenRepoTest):
                 "state_dir": client_dir,
                 "scm_type": self.repo.get_type(),
                 "mount": self.mount,
-                "snapshot": self.repo.get_head_hash(),
                 "mount_protocol": get_protocol(self.use_nfs()),
+                "checked_out_revision": self.repo.get_head_hash(),
+                "working_copy_parent": self.repo.get_head_hash(),
             },
             client_info,
         )

@@ -95,6 +95,7 @@ SNAPSHOT = "SNAPSHOT"
 SNAPSHOT_MAGIC_1 = b"eden\x00\x00\x00\x01"
 SNAPSHOT_MAGIC_2 = b"eden\x00\x00\x00\x02"
 SNAPSHOT_MAGIC_3 = b"eden\x00\x00\x00\x03"
+SNAPSHOT_MAGIC_4 = b"eden\x00\x00\x00\x04"
 
 DEFAULT_REVISION = {  # supported repo name -> default bookmark
     "git": "refs/heads/master",
@@ -198,6 +199,11 @@ class ListMountInfo(typing.NamedTuple):
             if self.backing_repo is not None
             else None,
         }
+
+
+class SnapshotState(typing.NamedTuple):
+    working_copy_parent: str
+    last_checkout_hash: str
 
 
 class EdenInstance:
@@ -478,24 +484,29 @@ class EdenInstance:
     ) -> typing.Mapping[str, str]:
         checkout_config = checkout.get_config()
 
-        snapshot = None
         error = None
+        snapshot = None
         try:
             snapshot = checkout.get_snapshot()
         except Exception as ex:
             error = ex
 
-        return collections.OrderedDict(
+        ret = collections.OrderedDict(
             [
                 ("mount", str(checkout.path)),
                 ("scm_type", checkout_config.scm_type),
-                ("snapshot", snapshot)
-                if snapshot is not None
-                else ("error", str(error)),
                 ("state_dir", str(checkout.state_dir)),
                 ("mount_protocol", checkout_config.mount_protocol),
             ]
         )
+
+        if snapshot is not None:
+            ret["checked_out_revision"] = snapshot.last_checkout_hash
+            ret["working_copy_parent"] = snapshot.working_copy_parent
+        if error is not None:
+            ret["error"] = str(error)
+
+        return ret
 
     def get_mounts(self) -> Dict[Path, ListMountInfo]:
         try:
@@ -1342,19 +1353,27 @@ class EdenCheckout:
             enable_tree_overlay=enable_tree_overlay,
         )
 
-    def get_snapshot(self) -> str:
+    def get_snapshot(self) -> SnapshotState:
         """Return the hex version of the parent hash in the SNAPSHOT file."""
         snapshot_path = self.state_dir / SNAPSHOT
         with snapshot_path.open("rb") as f:
             header = f.read(8)
             if header == SNAPSHOT_MAGIC_1:
-                return binascii.hexlify(f.read(20)).decode()
+                decoded_parent = binascii.hexlify(f.read(20)).decode()
+                return SnapshotState(
+                    working_copy_parent=decoded_parent,
+                    last_checkout_hash=decoded_parent,
+                )
             elif header == SNAPSHOT_MAGIC_2:
                 (bodyLength,) = struct.unpack(">L", f.read(4))
                 parent = f.read(bodyLength)
                 if len(parent) != bodyLength:
                     raise RuntimeError("SNAPSHOT file too short")
-                return parent.decode()
+                decoded_parent = parent.decode()
+                return SnapshotState(
+                    working_copy_parent=decoded_parent,
+                    last_checkout_hash=decoded_parent,
+                )
             elif header == SNAPSHOT_MAGIC_3:
                 (pid,) = struct.unpack(">L", f.read(4))
 
@@ -1369,6 +1388,19 @@ class EdenCheckout:
 
                 raise InProgressCheckoutError(
                     fromParent.decode(), toParent.decode(), pid
+                )
+            elif header == SNAPSHOT_MAGIC_4:
+                (working_copy_parent_length,) = struct.unpack(">L", f.read(4))
+                working_copy_parent = f.read(working_copy_parent_length)
+                if len(working_copy_parent) != working_copy_parent_length:
+                    raise RuntimeError("SNAPSHOT file too short")
+                (checked_out_length,) = struct.unpack(">L", f.read(4))
+                checked_out_revision = f.read(checked_out_length)
+                if len(checked_out_revision) != checked_out_length:
+                    raise RuntimeError("SNAPSHOT file too short")
+                return SnapshotState(
+                    working_copy_parent=working_copy_parent.decode(),
+                    last_checkout_hash=checked_out_revision.decode(),
                 )
             else:
                 raise RuntimeError("SNAPSHOT file has invalid header")

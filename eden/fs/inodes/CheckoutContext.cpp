@@ -75,7 +75,7 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(RootId newSnapshot) {
   auto parentCommit = config->getParentCommit();
   if (parentCommit.isCheckoutInProgress()) {
     XCHECK_EQ(
-        parentCommit.getCurrentRootId(ParentCommit::RootIdPreference::To)
+        parentCommit.getLastCheckoutId(ParentCommit::RootIdPreference::To)
             .value(),
         newSnapshot);
     config->setParentCommit(newSnapshot);

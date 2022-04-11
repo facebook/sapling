@@ -585,7 +585,10 @@ void testModifyConflict(
       testMount.getEdenMount()->getCheckoutConfig()->getParentCommit();
   // Make sure both the mount parent and the config parent information was
   // updated
-  EXPECT_EQ(ParentCommit{currentParent}, configParent);
+  EXPECT_EQ(
+      ParentCommit(ParentCommit::WorkingCopyParentAndCheckedOutRevision{
+          currentParent, currentParent}),
+      configParent);
 
   auto postInode = testMount.getFileInode(path);
   switch (checkoutMode) {
