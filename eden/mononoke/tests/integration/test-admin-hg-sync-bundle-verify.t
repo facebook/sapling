@@ -14,8 +14,8 @@
 setup configuration
   $ ENABLE_PRESERVE_BUNDLE2=1 setup_common_config blob_files
   $ create_books_sqlite3_db
-  $ write_stub_log_entry create "$ZERO"
-  $ write_stub_log_entry update "$ZERO" "$ONE"
+  $ mononoke_testtool modify-bookmark -R repo create master_bookmark --to "$ZERO"
+  $ mononoke_testtool modify-bookmark -R repo update master_bookmark --from "$ZERO" --to "$ONE"
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select id, repo_id, hex(from_changeset_id), reason from bookmarks_update_log;"
   1|0||testmove
   2|0|0000000000000000000000000000000000000000000000000000000000000000|testmove
@@ -30,8 +30,8 @@ it is satisfied with only non-blobimport entries
   $ mononoke_admin hg-sync-bundle verify
   * All remaining bundles in RepositoryId(0) are non-blobimports (found 1) (glob)
 it is satisfied with only blobimport entries
-  $ write_stub_log_entry --blobimport update "$ONE" "$TWO"
-  $ write_stub_log_entry --blobimport update "$TWO" "$THREE"
+  $ mononoke_testtool modify-bookmark -R repo update master_bookmark --from "$ONE" --to "$TWO" --reason blobimport
+  $ mononoke_testtool modify-bookmark -R repo update master_bookmark --from "$TWO" --to "$THREE" --reason blobimport
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select id, repo_id, hex(from_changeset_id), reason from bookmarks_update_log;"
   1|0||testmove
   2|0|0000000000000000000000000000000000000000000000000000000000000000|testmove

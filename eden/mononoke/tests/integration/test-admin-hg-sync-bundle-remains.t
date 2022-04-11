@@ -13,10 +13,10 @@
 setup configuration
   $ ENABLE_PRESERVE_BUNDLE2=1 setup_common_config blob_files
   $ create_books_sqlite3_db
-  $ write_stub_log_entry create "$ZERO"
-  $ write_stub_log_entry update "$ZERO" "$ONE"
-  $ write_stub_log_entry --blobimport update "$ONE" "$TWO"
-  $ write_stub_log_entry --blobimport update "$TWO" "$THREE"
+  $ mononoke_testtool modify-bookmark -R repo create master_bookmark --to "$ZERO"
+  $ mononoke_testtool modify-bookmark -R repo update master_bookmark --from "$ZERO" --to "$ONE"
+  $ mononoke_testtool modify-bookmark -R repo update master_bookmark --reason blobimport --from "$ONE" --to "$TWO"
+  $ mononoke_testtool modify-bookmark -R repo update master_bookmark --reason blobimport --from "$TWO" --to "$THREE"
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select id, repo_id, hex(from_changeset_id), reason from bookmarks_update_log;"
   1|0||testmove
   2|0|0000000000000000000000000000000000000000000000000000000000000000|testmove

@@ -385,13 +385,6 @@ function mononoke_admin_source_target {
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }
 
-function write_stub_log_entry {
-  GLOG_minloglevel=5 "$WRITE_STUB_LOG_ENTRY" \
-    "${COMMON_ARGS[@]}" \
-    --repo-id $REPOID \
-    --mononoke-config-path "$TESTTMP"/mononoke-config --bookmark master_bookmark "$@"
-}
-
 function mononoke_hyper_repo_builder {
   local source_repo_book=$1
   shift

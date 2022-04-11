@@ -19,6 +19,7 @@ context = { version = "0.1.0", path = "../../server/context" }
 deleted_files_manifest = { version = "0.1.0", path = "../../derived_data/deleted_files_manifest" }
 derived_data_filenodes = { version = "0.1.0", path = "../../derived_data/filenodes" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fastlog = { version = "0.1.0", path = "../../derived_data/fastlog" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../../filestore" }

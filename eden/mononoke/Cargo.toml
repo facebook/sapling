@@ -391,7 +391,6 @@ members = [
   "streaming_clone",
   "tests/fixtures",
   "tests/utils",
-  "tests/write_stub_log_entry",
   "time_window_counter",
   "tools/admin",
   "tools/example",

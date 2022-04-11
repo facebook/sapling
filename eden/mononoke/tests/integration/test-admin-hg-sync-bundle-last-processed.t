@@ -22,15 +22,15 @@ setup stub data
   $ NINE=9999999999999999999999999999999999999999999999999999999999999999
   $ AS=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   $ create_books_sqlite3_db
-  $ write_stub_log_entry create "$ZERO"
-  $ write_stub_log_entry update "$ZERO" "$ONE"
-  $ write_stub_log_entry --blobimport update "$ONE" "$TWO"
-  $ write_stub_log_entry --blobimport update "$TWO" "$THREE"
-  $ write_stub_log_entry update "$THREE" "$FOUR"
-  $ write_stub_log_entry update "$FOUR" "$FIVE"
-  $ write_stub_log_entry update "$FIVE" "$SIX"
-  $ write_stub_log_entry --blobimport update "$SIX" "$SEVEN"
-  $ write_stub_log_entry --blobimport update "$SEVEN" "$EIGHT"
+  $ mononoke_testtool modify-bookmark -R repo create master_bookmark --to "$ZERO"
+  $ mononoke_testtool modify-bookmark -R repo update master_bookmark --from "$ZERO" --to "$ONE"
+  $ mononoke_testtool modify-bookmark -R repo update master_bookmark --from "$ONE" --to "$TWO" --reason blobimport
+  $ mononoke_testtool modify-bookmark -R repo update master_bookmark --from "$TWO" --to "$THREE" --reason blobimport
+  $ mononoke_testtool modify-bookmark -R repo update master_bookmark --from "$THREE" --to "$FOUR"
+  $ mononoke_testtool modify-bookmark -R repo update master_bookmark --from "$FOUR" --to "$FIVE"
+  $ mononoke_testtool modify-bookmark -R repo update master_bookmark --from "$FIVE" --to "$SIX"
+  $ mononoke_testtool modify-bookmark -R repo update master_bookmark --from "$SIX" --to "$SEVEN" --reason blobimport
+  $ mononoke_testtool modify-bookmark -R repo update master_bookmark --from "$SEVEN" --to "$EIGHT" --reason blobimport
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select id, repo_id, hex(from_changeset_id), reason from bookmarks_update_log;"
   1|0||testmove
   2|0|0000000000000000000000000000000000000000000000000000000000000000|testmove
@@ -119,8 +119,8 @@ Skipping ahead from the middle of a series of blobimports should succeed
   * Counter for RepositoryId(0) has value 3 (glob)
   * Counter for RepositoryId(0) was updated to 4 (glob)
 Skipping ahead with no valid candidate should fail
-  $ write_stub_log_entry --blobimport update "$EIGHT" "$NINE"
-  $ write_stub_log_entry --blobimport update "$NINE" "$AS"
+  $ mononoke_testtool modify-bookmark -R repo update master_bookmark --from "$EIGHT" --to "$NINE" --reason blobimport
+  $ mononoke_testtool modify-bookmark -R repo update master_bookmark --from "$NINE" --to "$AS" --reason blobimport
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select id, repo_id, hex(from_changeset_id), reason from bookmarks_update_log;"
   1|0||testmove
   2|0|0000000000000000000000000000000000000000000000000000000000000000|testmove
