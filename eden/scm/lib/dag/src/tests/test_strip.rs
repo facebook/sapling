@@ -176,15 +176,18 @@ async fn test_reinsert_then_create_higher_level() {
         Lv2: |N0 N1 N2|  |N4 N5 N6 N7|"#
     );
 
-    // Try to create Lv3 segments.
+    // Try to create Lv3 segments. This does not crash.
     dag.drawdag("A10-A11 A3-A11", &[]);
-    for i in 12..=14 {
-        // FIXME: Crash when creating Lv3 segment.
-        // Bug("level 3 segments [RN0-N2[], RN4-N7[N0]] are not sorted or connected!")
-        if i == 14 {
-            break;
-        }
+    for i in 12..=18 {
         let ascii = format!("Z-A{i} A{p}-A{i}", p = i - 1, i = i);
         dag.drawdag(&ascii, &[]);
     }
+    assert_eq!(
+        dag.dump_segments_ascii(),
+        r#"
+        Lv0: |N0|N1|N2|N3|N4|N5|N6|N7|N8|N9|N10|N11|N12|N13|N14|N15|N16|N17|N18|
+        Lv1: |N0|N1 N2|  |N4 N5|N6 N7|N8 N9|N10 N11|N12 N13|N14 N15|N16 N17|
+        Lv2: |N0 N1 N2|  |N4 N5 N6 N7|N8 N9 N10 N11|N12 N13 N14 N15|
+        Lv3: |N0 N1 N2|  |N4 N5 N6 N7 N8 N9 N10 N11|"#
+    );
 }

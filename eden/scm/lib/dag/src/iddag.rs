@@ -370,11 +370,11 @@ impl<Store: IdDagStore> IdDag<Store> {
                 tracing::trace!("  in lower-level: {:?}", &segments);
                 lower_segments_len += segments.len();
 
-                // Sanity check: They should be sorted and connected.
+                // Sanity check: They should be sorted and not overlapping.
                 for i in 1..segments.len() {
-                    if segments[i - 1].high()? + 1 != segments[i].span()?.low {
+                    if segments[i - 1].high()? >= segments[i].span()?.low {
                         let msg = format!(
-                            "level {} segments {:?} are not sorted or connected!",
+                            "level {} segments {:?} are overlapping or not sorted!",
                             level,
                             &segments[i - 1..=i]
                         );
@@ -403,6 +403,10 @@ impl<Store: IdDagStore> IdDag<Store> {
                         // |        segments[i].low
                         // segment_low
                         let span = segments[i].span()?;
+                        // Discontinuous?
+                        if i > low_idx && segments[i - 1].head()? + 1 != span.low {
+                            break;
+                        }
                         let head = span.high;
                         if !has_root && segments[i].has_root()? {
                             has_root = true;
