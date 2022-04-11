@@ -78,6 +78,8 @@ Match files with on the fly sparse profile
   $ rm temp.sparse
 
 Match fileset
+NOTE - this command is used in validate_sparse_profiles scripts, so be careful with
+changing it!
 
   $ cat > file_list.txt <<EOF
   > first.py
