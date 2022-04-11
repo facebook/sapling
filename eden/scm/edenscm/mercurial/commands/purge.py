@@ -88,7 +88,7 @@ def purge(ui, repo, *dirs, **opts):
     removeignored = opts.get("all")
     if not removefiles and not removedirs:
         removefiles = True
-        removedirs = True
+        removedirs = ui.configbool("purge", "dirs-by-default")
 
     match = scmutil.match(repo[None], dirs, opts)
 

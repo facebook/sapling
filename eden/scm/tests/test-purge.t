@@ -4,6 +4,7 @@ init
 
   $ hg init t
   $ cd t
+  $ setconfig purge.dirs-by-default=True
 
 setup
 
@@ -257,5 +258,15 @@ remove both files and dirs
   removing directory empty_dir
   removing directory dir
   $ ls
+
+remove only files when purge.dirs-by-default=False
+
+  $ setconfig purge.dirs-by-default=False
+  $ mkdir empty_dir
+  $ touch untracked_file
+  $ hg purge -v
+  removing file untracked_file
+  $ ls
+  empty_dir
 
   $ cd ..
