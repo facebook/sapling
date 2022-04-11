@@ -163,7 +163,12 @@ impl TestDag {
         if validate {
             self.validate().await;
         }
-        assert_eq!(self.dag.check_segments().await.unwrap(), [] as [String; 0]);
+        let problems = self.dag.check_segments().await.unwrap();
+        assert!(
+            problems.is_empty(),
+            "problems after drawdag: {:?}",
+            problems
+        );
         let master_heads = master_heads
             .iter()
             .map(|s| Vertex::copy_from(s.as_bytes()))
@@ -263,6 +268,8 @@ impl TestDag {
     pub async fn strip(&mut self, names: &'static str) {
         let set = Set::from_static_names(names.split(' ').map(|s| s.into()));
         self.dag.strip(&set).await.unwrap();
+        let problems = self.dag.check_segments().await.unwrap();
+        assert!(problems.is_empty(), "problems after strip: {:?}", problems);
     }
 
     /// Remote protocol used to resolve Id <-> Vertex remotely using the test dag
