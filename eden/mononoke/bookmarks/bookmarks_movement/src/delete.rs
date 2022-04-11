@@ -105,7 +105,14 @@ impl<'op> DeleteBookmarkOp<'op> {
             });
         }
 
-        check_repo_lock(repo_read_write_fetcher, kind, self.pushvars).await?;
+        check_repo_lock(
+            repo_read_write_fetcher,
+            kind,
+            self.pushvars,
+            repo.repo_permission_checker(),
+            ctx.metadata().identities(),
+        )
+        .await?;
 
         ctx.scuba()
             .clone()

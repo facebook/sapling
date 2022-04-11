@@ -24,6 +24,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
+use repo_permission_checker::RepoPermissionCheckerRef;
 use thiserror::Error;
 use trait_alias::trait_alias;
 
@@ -64,7 +65,8 @@ pub trait Repo = AsBlobRepo
     + RepoDerivedDataRef
     + RepoBlobstoreRef
     + RepoCrossRepoRef
-    + RepoIdentityRef;
+    + RepoIdentityRef
+    + RepoPermissionCheckerRef;
 
 /// An error encountered during an attempt to move a bookmark.
 #[derive(Debug, Error)]

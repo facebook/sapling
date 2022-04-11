@@ -32,6 +32,7 @@ hooks = { version = "0.1.0", path = "../../hooks" }
 itertools = "0.10.3"
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 phases = { version = "0.1.0", path = "../../phases" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_hook = { version = "0.1.0", path = "../../pushrebase/pushrebase_hook" }
@@ -41,6 +42,7 @@ repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_cross_repo = { version = "0.1.0", path = "../../repo_attributes/repo_cross_repo" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
+repo_permission_checker = { version = "0.1.0", path = "../../repo_attributes/repo_permission_checker" }
 repo_read_write_status = { version = "0.1.0", path = "../../repo_client/repo_read_write_status" }
 revset = { version = "0.1.0", path = "../../revset" }
 scribe_commit_queue = { version = "0.1.0", path = "../../repo_client/scribe_commit_queue" }

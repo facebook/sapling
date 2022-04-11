@@ -154,7 +154,14 @@ impl<'op> CreateBookmarkOp<'op> {
             )
             .await?;
 
-        check_repo_lock(repo_read_write_fetcher, kind, self.pushvars).await?;
+        check_repo_lock(
+            repo_read_write_fetcher,
+            kind,
+            self.pushvars,
+            repo.repo_permission_checker(),
+            ctx.metadata().identities(),
+        )
+        .await?;
 
         let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         let txn_hook;

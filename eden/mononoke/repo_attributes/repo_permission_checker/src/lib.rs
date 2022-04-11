@@ -21,6 +21,10 @@ use permission_checker::{
 #[auto_impl(&, Arc, Box)]
 pub trait RepoPermissionChecker: Send + Sync + 'static {
     async fn check_if_read_access_allowed(&self, identities: &MononokeIdentitySet) -> Result<bool>;
+    async fn check_if_read_only_bypass_allowed(
+        &self,
+        identities: &MononokeIdentitySet,
+    ) -> Result<bool>;
 }
 
 pub struct ProdRepoPermissionChecker {
@@ -75,6 +79,16 @@ impl RepoPermissionChecker for ProdRepoPermissionChecker {
             .check_set(identities, &["read"])
             .await?)
     }
+
+    async fn check_if_read_only_bypass_allowed(
+        &self,
+        identities: &MononokeIdentitySet,
+    ) -> Result<bool> {
+        Ok(self
+            .repo_permchecker
+            .check_set(identities, &["bypass_readonly"])
+            .await?)
+    }
 }
 
 pub struct AlwaysAllowMockRepoPermissionChecker {}
@@ -88,6 +102,13 @@ impl AlwaysAllowMockRepoPermissionChecker {
 #[async_trait]
 impl RepoPermissionChecker for AlwaysAllowMockRepoPermissionChecker {
     async fn check_if_read_access_allowed(
+        &self,
+        _identities: &MononokeIdentitySet,
+    ) -> Result<bool> {
+        Ok(true)
+    }
+
+    async fn check_if_read_only_bypass_allowed(
         &self,
         _identities: &MononokeIdentitySet,
     ) -> Result<bool> {

@@ -22,6 +22,7 @@ use repo_blobstore::RepoBlobstore;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+use repo_permission_checker::RepoPermissionChecker;
 use segmented_changelog_types::SegmentedChangelog;
 use skiplist::SkiplistIndex;
 
@@ -46,6 +47,7 @@ pub struct InnerRepo {
         dyn PushrebaseMutationMapping,
         dyn HgMutationStore,
         dyn MutableCounters,
+        dyn RepoPermissionChecker,
     )]
     pub blob_repo: BlobRepo,
 

@@ -15,27 +15,45 @@ use bytes::Bytes;
 use context::CoreContext;
 use metaconfig_types::RepoReadOnly;
 use mononoke_types::{BonsaiChangesetMut, ChangesetId};
+use permission_checker::MononokeIdentitySet;
 use pushrebase_hook::{
     PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
 };
+use repo_permission_checker::RepoPermissionChecker;
 use repo_read_write_status::RepoReadWriteFetcher;
 use sql::Transaction;
+use tunables::tunables;
 
 use crate::restrictions::BookmarkKind;
 use crate::BookmarkMovementError;
 
-fn should_check_repo_lock(kind: BookmarkKind, pushvars: Option<&HashMap<String, Bytes>>) -> bool {
+async fn should_check_repo_lock(
+    kind: BookmarkKind,
+    pushvars: Option<&HashMap<String, Bytes>>,
+    repo_perm_checker: &dyn RepoPermissionChecker,
+    idents: &MononokeIdentitySet,
+) -> Result<bool> {
     match kind {
-        BookmarkKind::Scratch => false,
+        BookmarkKind::Scratch => Ok(false),
         BookmarkKind::Public => {
             if let Some(pushvars) = pushvars {
+                let bypass_allowed = repo_perm_checker
+                    .check_if_read_only_bypass_allowed(idents)
+                    .await?;
+
+                let enforce_acl_check = tunables().get_enforce_bypass_readonly_acl();
+
+                if !bypass_allowed && enforce_acl_check {
+                    return Ok(true);
+                }
+
                 if let Some(value) = pushvars.get("BYPASS_READONLY") {
                     if value.to_ascii_lowercase() == b"true" {
-                        return false;
+                        return Ok(false);
                     }
                 }
             }
-            true
+            Ok(true)
         }
     }
 }
@@ -44,8 +62,10 @@ pub(crate) async fn check_repo_lock(
     repo_read_write_fetcher: &RepoReadWriteFetcher,
     kind: BookmarkKind,
     pushvars: Option<&HashMap<String, Bytes>>,
+    repo_perm_checker: &dyn RepoPermissionChecker,
+    idents: &MononokeIdentitySet,
 ) -> Result<(), BookmarkMovementError> {
-    if should_check_repo_lock(kind, pushvars) {
+    if should_check_repo_lock(kind, pushvars, repo_perm_checker, idents).await? {
         let state = repo_read_write_fetcher
             .readonly()
             .await
@@ -63,19 +83,23 @@ pub(crate) struct RepoLockPushrebaseHook {
 }
 
 impl RepoLockPushrebaseHook {
-    pub(crate) fn new(
+    pub(crate) async fn new(
         repo_read_write_fetcher: &RepoReadWriteFetcher,
         kind: BookmarkKind,
         pushvars: Option<&HashMap<String, Bytes>>,
-    ) -> Option<Box<dyn PushrebaseHook>> {
-        if should_check_repo_lock(kind, pushvars) {
+        repo_perm_checker: &dyn RepoPermissionChecker,
+        idents: &MononokeIdentitySet,
+    ) -> Result<Option<Box<dyn PushrebaseHook>>> {
+        let hook = if should_check_repo_lock(kind, pushvars, repo_perm_checker, idents).await? {
             let hook = Box::new(RepoLockPushrebaseHook {
                 repo_read_write_fetcher: Arc::new(repo_read_write_fetcher.clone()),
             });
             Some(hook as Box<dyn PushrebaseHook>)
         } else {
             None
-        }
+        };
+
+        Ok(hook)
     }
 }
 

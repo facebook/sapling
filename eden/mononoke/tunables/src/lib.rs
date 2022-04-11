@@ -260,6 +260,9 @@ pub struct MononokeTunables {
     // verify_integrity) will need to do some work like logging and this is
     // why it may be useful to run them.
     enable_hooks_on_service_pushrebase: AtomicBool,
+
+    // Control whether the BYPASS_READONLY pushvar is restricted by an ACL
+    enforce_bypass_readonly_acl: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

@@ -35,6 +35,7 @@ DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
     # Purposely not disabling network as this needs to make TLS connections.
     "test-per-repo-acl.t",
     "test-hook-verify-integrity.t",
+    "test-bypass-readonly-acl.t",
 }
 
 
