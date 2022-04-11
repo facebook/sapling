@@ -352,6 +352,53 @@ impl TestDag {
         format!("{}{}\n{}", all_str, iddag_state, idmap_state)
     }
 
+    #[cfg(test)]
+    /// Dump Dag segments as ASCII string.
+    pub fn dump_segments_ascii(&self) -> String {
+        use crate::Id;
+        use crate::IdSet;
+        use crate::IdSpan;
+        use std::collections::HashSet;
+
+        let span_iter = |span: IdSpan| IdSet::from_spans(vec![span]).into_iter().rev();
+        let iddag = &self.dag.dag;
+        let all_ids = iddag.all_ids_in_groups(&Group::ALL).unwrap();
+        let max_level = iddag.max_level().unwrap();
+        let mut output = String::new();
+        for level in 0..=max_level {
+            output = format!("{}\n        Lv{}:", output.trim_end(), level);
+            for span in all_ids.iter_span_asc() {
+                output += " |";
+                let segments = iddag.segments_in_span_ascending(*span, level).unwrap();
+                let segment_ids: HashSet<Id> = segments
+                    .iter()
+                    .flat_map(|s| span_iter(s.span().unwrap()))
+                    .collect();
+                let segment_highs: HashSet<Id> =
+                    segments.iter().map(|s| s.high().unwrap()).collect();
+                for id in span_iter(*span) {
+                    let id_str = format!("{:?}", id);
+                    if segment_ids.contains(&id) {
+                        output += &id_str
+                    } else {
+                        let space = " ".repeat(id_str.len());
+                        output += &space;
+                    };
+                    output.push(
+                        if segment_highs.contains(&id)
+                            || (segment_ids.contains(&(id + 1)) && !segment_ids.contains(&id))
+                        {
+                            '|'
+                        } else {
+                            ' '
+                        },
+                    );
+                }
+            }
+        }
+        output.trim_end().to_string()
+    }
+
     async fn validate(&self) {
         // All vertexes should be accessible, and round-trip through IdMap.
         let mut iter = self.dag.all().await.unwrap().iter().await.unwrap();

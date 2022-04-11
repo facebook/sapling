@@ -105,3 +105,86 @@ P->C: 1->4, 4->N0
     // Strip C+F. B is no longer lazy.
     assert_eq!(strip("C F").await, "<spans [0:1]>\nLv0: RH0-1[]\n1->B");
 }
+
+#[tokio::test]
+async fn test_reinsert_then_create_higher_level() {
+    // Test re-inserting a stripped "gap" and then creating higher level segments.
+    //
+    // Initial state:
+    //
+    // Lv0: |0|1|2|3|4|5|6|7|8|9|10|
+    // Lv1: |-|---|-|---|---|---|
+    // Lv2: |-----|-|-------|
+    //
+    // Strip 3:
+    //
+    // Lv0: |0|1|2| |4|5|6|7|8|9|10|
+    // Lv1: |-|---| |---|---|---|
+    // Lv2: |-----| |-------|
+    //
+    // Reinsert 3 (Note: 3 no longer has Lv1 and Lv2 segments):
+    //
+    // Lv0: |0|1|2|3|4|5|6|7|8|9|10|
+    // Lv1: |-|---| |---|---|---|
+    // Lv2: |-----| |-------|
+    //
+    // Trigger Lv3 segment creation:
+    //
+    // Lv0: |0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|
+    // Lv1: |-|---| |---|---|---|-----|-----|
+    // Lv2: |-----| |-------|---------|
+    // Lv3: ?       |-----------------|
+
+    let mut dag = TestDag::new_with_segment_size(2);
+
+    // Use "Z" as an extra parent to avoid merging flat segments.
+    dag.drawdag("Z", &[]);
+    for i in 1..=10 {
+        let ascii = match i {
+            1 | 3 | 4 => format!("A{i}", i = i),
+            _ => format!("Z-A{i} A{p}-A{i}", p = i - 1, i = i),
+        };
+        dag.drawdag(&ascii, &[]);
+    }
+    dag.flush("").await;
+
+    assert_eq!(
+        dag.dump_segments_ascii(),
+        r#"
+        Lv0: |N0|N1|N2|N3|N4|N5|N6|N7|N8|N9|N10|
+        Lv1: |N0|N1 N2|N3|N4 N5|N6 N7|N8 N9|
+        Lv2: |N0 N1 N2|N3|N4 N5 N6 N7|"#
+    );
+
+    // Strip 3.
+    dag.strip("A3").await;
+    assert_eq!(
+        dag.dump_segments_ascii(),
+        r#"
+        Lv0: |N0|N1|N2| |N4|N5|N6|N7|N8|N9|N10|
+        Lv1: |N0|N1 N2| |N4 N5|N6 N7|N8 N9|
+        Lv2: |N0 N1 N2| |N4 N5 N6 N7|"#
+    );
+
+    // Reinsert 3. Note A3 does not have Lv1 or Lv2 segments.
+    dag.drawdag("A2-A3 Z-A3", &[]);
+    assert_eq!(
+        dag.dump_segments_ascii(),
+        r#"
+        Lv0: |N0|N1|N2|N3|N4|N5|N6|N7|N8|N9|N10|
+        Lv1: |N0|N1 N2|  |N4 N5|N6 N7|N8 N9|
+        Lv2: |N0 N1 N2|  |N4 N5 N6 N7|"#
+    );
+
+    // Try to create Lv3 segments.
+    dag.drawdag("A10-A11 A3-A11", &[]);
+    for i in 12..=14 {
+        // FIXME: Crash when creating Lv3 segment.
+        // Bug("level 3 segments [RN0-N2[], RN4-N7[N0]] are not sorted or connected!")
+        if i == 14 {
+            break;
+        }
+        let ascii = format!("Z-A{i} A{p}-A{i}", p = i - 1, i = i);
+        dag.drawdag(&ascii, &[]);
+    }
+}
