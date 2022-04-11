@@ -648,19 +648,29 @@ fn get_config_dir(repo_path: Option<&Path>) -> Result<PathBuf> {
             }
         }
         None => {
-            let mut dir = if let Ok(tmp) = std::env::var("TESTTMP") {
-                PathBuf::from(tmp).join(".cache")
-            } else {
-                dirs::cache_dir().ok_or_else(|| {
-                    anyhow!("unable to find cache_dir for Mercurial configuration")
-                })?
-            };
+            let dirs = vec![
+                std::env::var("TESTTMP")
+                    .ok()
+                    .map(|d| PathBuf::from(d).join(".cache")),
+                std::env::var("HG_CONFIG_CACHE_DIR").ok().map(PathBuf::from),
+                dirs::cache_dir(),
+                Some(std::env::temp_dir()),
+            ];
 
-            dir.push("edenscm");
+            let mut errs = vec![];
+            for mut dir in dirs.into_iter().flatten() {
+                dir.push("edenscm");
+                match util::path::create_shared_dir_all(&dir) {
+                    Err(err) => {
+                        tracing::debug!("error setting up config cache dir {:?}: {}", dir, err);
+                        errs.push((dir, err));
+                        continue;
+                    }
+                    Ok(()) => return Ok(dir),
+                }
+            }
 
-            util::path::create_shared_dir_all(&dir)?;
-
-            dir
+            return Err(anyhow!("couldn't find config cache dir: {:?}", errs));
         }
     })
 }
