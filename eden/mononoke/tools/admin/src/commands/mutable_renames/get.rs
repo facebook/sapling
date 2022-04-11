@@ -56,7 +56,7 @@ pub async fn get(ctx: &CoreContext, repo: &Repo, get_args: GetArgs) -> Result<()
                     .as_ref()
                     .map_or(String::new(), |p| p.to_string()),
                 entry.src_cs_id(),
-                entry.get_src_unode()
+                entry.src_unode()
             );
         }
     }

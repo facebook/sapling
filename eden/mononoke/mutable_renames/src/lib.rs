@@ -97,8 +97,8 @@ impl MutableRenameEntry {
 
     /// Get the source path for this entry, or None if the source
     /// is the repo root
-    pub fn src_path(&self) -> &Option<MPath> {
-        &self.src_path
+    pub fn src_path(&self) -> Option<&MPath> {
+        self.src_path.as_ref()
     }
 
     fn src_path_hash(&self) -> &PathHash {
@@ -112,7 +112,7 @@ impl MutableRenameEntry {
 
     /// Get the unode you would find by looking up src_path()
     /// in src_cs_id() - this is faster because it's pre-cached
-    pub fn get_src_unode(&self) -> Entry<ManifestUnodeId, FileUnodeId> {
+    pub fn src_unode(&self) -> Entry<ManifestUnodeId, FileUnodeId> {
         if self.is_tree == 1 {
             Entry::Tree(ManifestUnodeId::new(self.src_unode))
         } else {

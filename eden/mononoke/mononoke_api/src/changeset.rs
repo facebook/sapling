@@ -174,7 +174,7 @@ impl ChangesetContext {
             let rename = match maybe_rename_entry {
                 Some(entry) => {
                     let cs_id = entry.src_cs_id();
-                    let path = MononokePath::new(entry.src_path().clone());
+                    let path = MononokePath::new(entry.src_path().cloned());
                     PathMutableHistory::PathAndChangeset(cs_id, path)
                 }
                 None => PathMutableHistory::NoChange,

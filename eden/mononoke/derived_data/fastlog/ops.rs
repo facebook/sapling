@@ -662,10 +662,10 @@ async fn find_mutable_renames(
         .get_rename(ctx, cs_id, (path.as_ref()).clone())
         .await?
     {
-        let src_path = Arc::new(rename.src_path().clone());
+        let src_path = Arc::new(rename.src_path().cloned());
         // TODO(stash): this unode can be used to avoid unode manifest traversal
         // later while doing prefetching
-        let src_unode = rename.get_src_unode().load(ctx, repo.blobstore()).await?;
+        let src_unode = rename.src_unode().load(ctx, repo.blobstore()).await?;
         let linknode = match src_unode {
             Entry::Tree(tree_unode) => *tree_unode.linknode(),
             Entry::Leaf(leaf_unode) => *leaf_unode.linknode(),
