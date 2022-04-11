@@ -327,8 +327,10 @@ impl<Store: IdDagStore> IdDag<Store> {
         // Flat segments:          [..............] gap [.......] gap [...........]
         // Lower level segments:   [.......][ N ]       [.....]       [....][ N ]
         // This level segments:    [.....]              [...]         [..]
-        // missing:                       [     ]            []           [     ]
-        // need_consider:                 [     ]                         [     ]
+        //   missing:                     [     ]            []           [     ]
+        //   need_consider:               [     ]                         [     ]
+        //                                                    ^
+        //                   no need to consdier because it does not have [N]
 
         let missing = self
             .all_ids_in_segment_level(level - 1)?
@@ -351,6 +353,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         let mut new_segments_per_considering_span = Vec::new();
         let mut lower_segments_len = 0;
         for considering_span in need_consider.as_spans() {
+            tracing::trace!(" considering {:?}", &considering_span);
             // `get_parents` is on the previous level of segments.
             let get_parents = |head: Id| -> Result<Vec<Id>> {
                 if let Some(seg) = self.find_segment_by_head_and_level(head, level - 1)? {
@@ -364,6 +367,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                 // Find all segments on the previous level that haven't been built.
                 let segments: Vec<_> =
                     self.segments_in_span_ascending(*considering_span, level - 1)?;
+                tracing::trace!("  in lower-level: {:?}", &segments);
                 lower_segments_len += segments.len();
 
                 // Sanity check: They should be sorted and connected.
@@ -439,6 +443,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                     new_segments.push(segment_info);
                 }
 
+                tracing::trace!("  new segments: {:?}", &new_segments);
                 new_segments
             };
 
@@ -454,6 +459,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                 .sum::<usize>()
                 >= lower_segments_len
         {
+            tracing::debug!("no need to introduce new level");
             return Ok((0, inserted_id_set));
         }
 
@@ -470,7 +476,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                     SegmentFlags::empty()
                 };
                 tracing::trace!(
-                    "inserting lv{} segment {}..{} {:?} {:?}",
+                    " inserting lv{} segment {}..{} {:?} {:?}",
                     level,
                     low,
                     high,
