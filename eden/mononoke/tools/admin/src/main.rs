@@ -11,6 +11,7 @@ use cmdlib_scrubbing::ScrubAppExtension;
 use fbinit::FacebookInit;
 use mononoke_app::{MononokeApp, MononokeAppBuilder};
 
+mod bookmark_log_entry;
 mod commands;
 mod commit_id;
 

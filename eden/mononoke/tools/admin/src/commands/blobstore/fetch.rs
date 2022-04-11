@@ -27,7 +27,7 @@ use tokio::io::AsyncWriteExt;
 pub struct BlobstoreFetchArgs {
     /// Write raw blob bytes to the given filename instead of
     /// printing to stdout.
-    #[clap(long, short = 'o', value_name = "FILE")]
+    #[clap(long, short = 'o', value_name = "FILE", parse(from_os_str))]
     output: Option<PathBuf>,
 
     /// Blobstore key to fetch.

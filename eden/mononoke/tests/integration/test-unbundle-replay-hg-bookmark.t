@@ -60,9 +60,9 @@ Check bookmark history
 Export the bundles so we can replay it as it if were coming from hg, through the $BUNDLE_HELPER
 
   $ mkdir "$BUNDLE_ROOT"
-  $ quiet mononoke_admin hg-sync-bundle fetch-bundle --id 2 --output-file "$BUNDLE_ROOT/bundle1"
-  $ quiet mononoke_admin hg-sync-bundle fetch-bundle --id 3 --output-file "$BUNDLE_ROOT/bundle2"
-  $ quiet mononoke_admin hg-sync-bundle fetch-bundle --id 4 --output-file "$BUNDLE_ROOT/bundle3"
+  $ quiet mononoke_newadmin hg-sync -R repo fetch-bundle 2 --output "$BUNDLE_ROOT/bundle1"
+  $ quiet mononoke_newadmin hg-sync -R repo fetch-bundle 3 --output "$BUNDLE_ROOT/bundle2"
+  $ quiet mononoke_newadmin hg-sync -R repo fetch-bundle 4 --output "$BUNDLE_ROOT/bundle3"
 
 Blow everything away: we're going to re-do the push from scratch, in a new repo.
 

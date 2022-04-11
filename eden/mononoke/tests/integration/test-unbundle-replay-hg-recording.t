@@ -50,7 +50,7 @@ Check bookmark history
 
 Export the bundle so we can replay it as it if were coming from hg, through the $BUNDLE_HELPER
 
-  $ quiet mononoke_admin hg-sync-bundle fetch-bundle --id 2 --output-file "$BUNDLE_PATH"
+  $ quiet mononoke_newadmin hg-sync -R repo fetch-bundle 2 --output "$BUNDLE_PATH"
 
 Blow everything away: we're going to re-do the push from scratch, in a new repo.
 

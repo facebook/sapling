@@ -25,7 +25,7 @@ pub struct FilestoreFetchArgs {
     #[clap(long)]
     bubble_id: Option<BubbleId>,
 
-    #[clap(long, short = 'o', parse(from_os_str))]
+    #[clap(long, short = 'o', value_name = "FILE", parse(from_os_str))]
     output: Option<PathBuf>,
 }
 

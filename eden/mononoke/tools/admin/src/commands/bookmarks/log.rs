@@ -5,16 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt;
-
-use anyhow::{anyhow, Error, Result};
-use bookmarks::{BookmarkName, BookmarkUpdateLogRef, BookmarkUpdateReason, Freshness};
+use anyhow::{anyhow, Result};
+use bookmarks::{BookmarkName, BookmarkUpdateLogRef, Freshness};
 use clap::Args;
 use context::CoreContext;
-use futures::stream::{self, StreamExt, TryStreamExt};
-use mononoke_types::{ChangesetId, DateTime, Timestamp};
+use futures::stream::TryStreamExt;
+use mononoke_types::DateTime;
 
 use super::Repo;
+use crate::bookmark_log_entry::BookmarkLogEntry;
 use crate::commit_id::IdentityScheme;
 
 #[derive(Args)]
@@ -39,77 +38,6 @@ pub struct BookmarksLogArgs {
     /// (either absolute time, or e.g. "2 hours ago").
     #[clap(long, short = 'e', requires = "start-time")]
     end_time: Option<DateTime>,
-}
-
-struct BookmarkLogEntry {
-    timestamp: Timestamp,
-    bookmark: BookmarkName,
-    reason: BookmarkUpdateReason,
-    ids: Vec<(IdentityScheme, String)>,
-    bundle_id: Option<u64>,
-}
-
-impl BookmarkLogEntry {
-    async fn new(
-        ctx: &CoreContext,
-        repo: &Repo,
-        timestamp: Timestamp,
-        bookmark: BookmarkName,
-        reason: BookmarkUpdateReason,
-        changeset_id: Option<ChangesetId>,
-        bundle_id: Option<u64>,
-        schemes: &[IdentityScheme],
-    ) -> Result<Self> {
-        let ids = if let Some(changeset_id) = changeset_id {
-            stream::iter(schemes.iter().copied())
-                .map(|scheme| {
-                    Ok::<_, Error>(async move {
-                        match scheme.map_commit_id(ctx, repo, changeset_id).await? {
-                            Some(commit_id) => Ok(Some((scheme, commit_id))),
-                            None => Ok(None),
-                        }
-                    })
-                })
-                .try_buffered(10)
-                .try_filter_map(|commit_id| async move { Ok(commit_id) })
-                .try_collect()
-                .await?
-        } else {
-            Vec::new()
-        };
-        Ok(BookmarkLogEntry {
-            timestamp,
-            bookmark,
-            reason,
-            ids,
-            bundle_id,
-        })
-    }
-}
-
-impl fmt::Display for BookmarkLogEntry {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(bundle_id) = self.bundle_id {
-            write!(fmt, "{} ", bundle_id)?;
-        }
-        write!(fmt, "({})", self.bookmark)?;
-        match self.ids.as_slice() {
-            [] => {}
-            [(_, id)] => write!(fmt, " {}", id)?,
-            ids => {
-                for (scheme, id) in ids {
-                    write!(fmt, " {}={}", scheme.to_string(), id)?;
-                }
-            }
-        }
-        write!(
-            fmt,
-            " {} {}",
-            self.reason,
-            DateTime::from(self.timestamp).as_chrono().to_rfc3339()
-        )?;
-        Ok(())
-    }
 }
 
 pub async fn log(ctx: &CoreContext, repo: &Repo, log_args: BookmarksLogArgs) -> Result<()> {

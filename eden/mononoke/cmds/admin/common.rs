@@ -26,8 +26,6 @@ use slog::{debug, Logger};
 use std::collections::HashMap;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
-pub const LATEST_REPLAYED_REQUEST_KEY: &str = "latest-replayed-request";
-
 pub async fn fetch_bonsai_changeset(
     ctx: CoreContext,
     rev: &str,
