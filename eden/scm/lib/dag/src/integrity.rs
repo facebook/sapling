@@ -67,14 +67,14 @@ where
                 let mut add_problem =
                     |msg| problems.push(format!("Level {} segment {:?} {}", level, &seg, msg));
 
-                // Spans need to be continuous within a group.
+                // Spans need to be sorted and non-overlapping within a group.
                 if span.low.group() > expected_low.group() {
                     expected_low = span.low.group().min_id();
                 }
                 if span.low > span.high || span.low.group() != span.high.group() {
                     add_problem(format!("has invalid span {:?}", span));
                 }
-                if span.low != expected_low {
+                if span.low < expected_low {
                     add_problem(format!(
                         "has unexpected span ({:?}), expected low ({:?})",
                         span, expected_low
@@ -114,19 +114,22 @@ where
                     }
                 }
 
-                // Check flags.
-                let mut expected_flags = SegmentFlags::empty();
+                // Check flags. min: must have flags, max: all possible flags.
+                let mut expected_flags_max = SegmentFlags::empty();
+                let mut expected_flags_min = SegmentFlags::empty();
                 if roots.range(span.low..=span.high).take(1).count() > 0 {
-                    expected_flags |= SegmentFlags::HAS_ROOT;
+                    expected_flags_min |= SegmentFlags::HAS_ROOT;
+                    expected_flags_max |= SegmentFlags::HAS_ROOT;
                 }
                 if level == 0 && heads.len() == 1 && span.high.group() == Group::MASTER {
-                    expected_flags |= SegmentFlags::ONLY_HEAD;
+                    // ONLY_HEAD is optional.
+                    expected_flags_max |= SegmentFlags::ONLY_HEAD;
                 }
                 let flags = seg.flags()?;
-                if flags != expected_flags {
+                if !flags.contains(expected_flags_min) || !expected_flags_max.contains(flags)  {
                     add_problem(format!(
-                        "has unexpected flags: {:?} (expected: {:?})",
-                        flags, expected_flags
+                        "has unexpected flags: {:?} (expected: min: {:?}, max: {:?})",
+                        flags, expected_flags_min, expected_flags_max
                     ));
                 }
 
