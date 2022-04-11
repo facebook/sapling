@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::derive::{get_changes, DeletedManifestDeriver};
+use crate::derive::RootDeletedManifestDeriver;
 use crate::mapping::RootDeletedManifestIdCommon;
-use anyhow::{anyhow, Context, Error, Result};
+use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::BlobstoreGetData;
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::impl_bonsai_derived_via_manager;
@@ -31,6 +31,16 @@ impl RootDeletedManifestIdCommon for RootDeletedManifestV2Id {
 
     fn id(&self) -> &Self::Id {
         &self.0
+    }
+
+    fn new(id: Self::Id) -> Self {
+        Self(id)
+    }
+
+    fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
+        let root_prefix = "derived_root_deleted_manifest2.";
+        let key_prefix = derivation_ctx.mapping_key_prefix::<RootDeletedManifestV2Id>();
+        format!("{}{}{}", root_prefix, key_prefix, changeset_id)
     }
 }
 
@@ -54,12 +64,6 @@ impl From<RootDeletedManifestV2Id> for BlobstoreBytes {
     }
 }
 
-fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
-    let root_prefix = "derived_root_deleted_manifest2.";
-    let key_prefix = derivation_ctx.mapping_key_prefix::<RootDeletedManifestV2Id>();
-    format!("{}{}{}", root_prefix, key_prefix, changeset_id)
-}
-
 #[async_trait]
 impl BonsaiDerivable for RootDeletedManifestV2Id {
     const NAME: &'static str = "deleted_manifest2";
@@ -72,21 +76,7 @@ impl BonsaiDerivable for RootDeletedManifestV2Id {
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
     ) -> Result<Self, Error> {
-        let bcs_id = bonsai.get_changeset_id();
-        let changes = get_changes(ctx, derivation_ctx, bonsai).await?;
-        let id = DeletedManifestDeriver::<DeletedManifestV2>::derive(
-            ctx,
-            derivation_ctx.blobstore(),
-            bcs_id,
-            parents
-                .into_iter()
-                .map(|root_mf_id| root_mf_id.id().clone())
-                .collect(),
-            changes,
-        )
-        .await
-        .context("Deriving DMv2")?;
-        Ok(RootDeletedManifestV2Id(id))
+        RootDeletedManifestDeriver::derive_single(ctx, derivation_ctx, bonsai, parents).await
     }
 
     async fn store_mapping(
@@ -95,8 +85,7 @@ impl BonsaiDerivable for RootDeletedManifestV2Id {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<()> {
-        let key = format_key(derivation_ctx, changeset_id);
-        derivation_ctx.blobstore().put(ctx, key, self.into()).await
+        RootDeletedManifestDeriver::store_mapping(self, ctx, derivation_ctx, changeset_id).await
     }
 
     async fn fetch(
@@ -104,13 +93,7 @@ impl BonsaiDerivable for RootDeletedManifestV2Id {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<Option<Self>> {
-        let key = format_key(derivation_ctx, changeset_id);
-        Ok(derivation_ctx
-            .blobstore()
-            .get(ctx, &key)
-            .await?
-            .map(TryInto::try_into)
-            .transpose()?)
+        RootDeletedManifestDeriver::fetch(ctx, derivation_ctx, changeset_id).await
     }
 
     fn from_thrift(data: thrift::DerivedData) -> Result<Self> {

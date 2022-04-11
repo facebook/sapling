@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, format_err, Error};
+use anyhow::{anyhow, format_err, Context, Error};
 use blobstore::{Blobstore, Loadable};
 use borrowed::borrowed;
 use bounded_traversal::bounded_traversal;
@@ -26,6 +26,8 @@ use std::sync::Arc;
 use std::{collections::BTreeMap, collections::HashSet};
 use tokio::sync::Mutex;
 use unodes::RootUnodeManifestId;
+
+use crate::mapping::RootDeletedManifestIdCommon;
 
 /// Derives deleted files manifest for bonsai changeset `cs_id` given parent deleted files
 /// manifests and the changes associated with the changeset. Parent deleted manifests should be
@@ -549,6 +551,59 @@ async fn diff_against_parents(
     }
     let res: Vec<_> = changes.into_iter().collect();
     Ok(res)
+}
+
+pub(crate) struct RootDeletedManifestDeriver<Root: RootDeletedManifestIdCommon>(
+    std::marker::PhantomData<Root>,
+);
+
+impl<Root: RootDeletedManifestIdCommon> RootDeletedManifestDeriver<Root> {
+    pub(crate) async fn derive_single(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsai: BonsaiChangeset,
+        parents: Vec<Root>,
+    ) -> Result<Root, Error> {
+        let bcs_id = bonsai.get_changeset_id();
+        let changes = get_changes(ctx, derivation_ctx, bonsai).await?;
+        let id = DeletedManifestDeriver::<Root::Manifest>::derive(
+            ctx,
+            derivation_ctx.blobstore(),
+            bcs_id,
+            parents
+                .into_iter()
+                .map(|root_mf_id| root_mf_id.id().clone())
+                .collect(),
+            changes,
+        )
+        .await
+        .with_context(|| format!("Deriving {}", Root::NAME))?;
+        Ok(Root::new(id))
+    }
+
+    pub(crate) async fn store_mapping(
+        root: Root,
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<(), Error> {
+        let key = Root::format_key(derivation_ctx, changeset_id);
+        derivation_ctx.blobstore().put(ctx, key, root.into()).await
+    }
+
+    pub(crate) async fn fetch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<Option<Root>, Error> {
+        let key = Root::format_key(derivation_ctx, changeset_id);
+        Ok(derivation_ctx
+            .blobstore()
+            .get(ctx, &key)
+            .await?
+            .map(TryInto::try_into)
+            .transpose()?)
+    }
 }
 
 #[cfg(test)]
