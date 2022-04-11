@@ -17,7 +17,7 @@ tracing = "0.1.32"
 util = { version = "0.1.0", path = "../util" }
 
 [dev-dependencies]
-tempfile = "3.2"
+tempfile = "3.3"
 
 [features]
 default = []

@@ -26,5 +26,5 @@ vfs = { version = "0.1.0", path = "../vfs" }
 async-trait = "0.1.52"
 manifest-tree = { version = "0.1.0", path = "../manifest-tree", features = ["for-tests"] }
 quickcheck = "1.0"
-tempfile = "3.2"
+tempfile = "3.3"
 walkdir = "2.3"

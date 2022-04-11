@@ -16,4 +16,4 @@ tracing-serde = "0.1.2"
 tracing-subscriber = { version = "0.3.10", features = ["ansi", "env-filter", "fmt", "json", "parking_lot", "registry"] }
 
 [dev-dependencies]
-tempfile = "3.2"
+tempfile = "3.3"

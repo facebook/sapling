@@ -20,4 +20,4 @@ zstdelta = { version = "0.1.0", path = "../zstdelta" }
 
 [dev-dependencies]
 quickcheck = "1.0"
-tempfile = "3.2"
+tempfile = "3.3"

@@ -24,4 +24,4 @@ serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_dep
 
 [dev-dependencies]
 minibench = { version = "0.1.0", path = "../minibench" }
-tempfile = "3.2"
+tempfile = "3.3"

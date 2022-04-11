@@ -21,4 +21,4 @@ util = { version = "0.1.0", path = "../util" }
 
 [dev-dependencies]
 anyhow = "1.0.56"
-tempfile = "3.2"
+tempfile = "3.3"

@@ -9,5 +9,5 @@ edition = "2021"
 dag = { version = "0.1.0", path = ".." }
 drawdag = { version = "0.1.0", path = "../../drawdag" }
 nonblocking = { version = "0.1.0", path = "../../nonblocking" }
-tempfile = "3.2"
+tempfile = "3.3"
 vlqencoding = { version = "0.1.0", path = "../../vlqencoding" }

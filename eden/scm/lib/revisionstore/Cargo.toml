@@ -47,7 +47,7 @@ serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_dep
 sha-1 = "0.8"
 sha2 = "0.8"
 storemodel = { version = "0.1.0", path = "../storemodel" }
-tempfile = "3.2"
+tempfile = "3.3"
 thiserror = "1.0.30"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "signal", "sync", "time"] }

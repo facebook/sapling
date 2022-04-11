@@ -14,5 +14,5 @@ types = { version = "0.1.0", path = "../types" }
 
 [dev-dependencies]
 quickcheck = "1.0"
-tempfile = "3.2"
+tempfile = "3.3"
 types = { version = "0.1.0", path = "../types", features = ["for-tests"], default-features = false }

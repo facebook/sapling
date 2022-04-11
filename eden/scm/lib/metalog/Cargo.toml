@@ -24,4 +24,4 @@ zstore = { version = "0.1.0", path = "../zstore" }
 quickcheck = "1.0"
 rand_chacha = "0.3"
 rand_core = "0.6"
-tempfile = "3.2"
+tempfile = "3.3"

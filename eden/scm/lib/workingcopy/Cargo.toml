@@ -23,4 +23,4 @@ vfs = { version = "0.1.0", path = "../vfs" }
 
 [dev-dependencies]
 tempdir = "0.3"
-tempfile = "3.2"
+tempfile = "3.3"
