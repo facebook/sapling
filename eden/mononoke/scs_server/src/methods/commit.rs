@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
 
 use context::CoreContext;
@@ -435,12 +435,7 @@ impl SourceControlServiceImpl {
         let mut other_changeset_id = commit_parents.get(0).copied();
 
         if params.follow_mutable_file_history {
-            let commit_parents: HashSet<_> = commit_parents.into_iter().collect();
-            let mut mutable_parents = base_changeset.mutable_parents();
-
-            // If a mutable history entry does not override a path, then we will only
-            // consider commit parents - otherwise, it's ambiguous what the user wanted
-            let must_be_commit_parent = mutable_parents.remove(&None);
+            let mutable_parents = base_changeset.mutable_parents();
 
             // If there are multiple choices to make, then bail - the user needs to be
             // clear to avoid the ambiguity
@@ -451,12 +446,6 @@ impl SourceControlServiceImpl {
                 .into());
             }
             if let Some(Some(parent)) = mutable_parents.into_iter().next() {
-                if must_be_commit_parent && !commit_parents.contains(&parent) {
-                    return Err(errors::invalid_request(
-                        "some paths have a mutable parent, others do not, and the mutable parent is not a commit parent",
-                    )
-                    .into());
-                }
                 other_changeset_id = Some(parent);
             }
         }

@@ -186,6 +186,17 @@ async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
+fn check_root_dir_diff(diff: Option<&ChangesetPathDiffContext>) -> Result<(), Error> {
+    match diff {
+        Some(ChangesetPathDiffContext::Changed(path1, path2)) if path1.path() == path2.path() => {
+            assert_eq!(path1.path(), &MononokePath::try_from("")?);
+        }
+        _ => {
+            panic!("unexpected root dir diff")
+        }
+    }
+    Ok(())
+}
 #[fbinit::test]
 async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
@@ -208,8 +219,9 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
     let diff: Vec<_> = cs
         .diff_unordered(&other_cs, false, None, btreeset! {ChangesetDiffItem::TREES})
         .await?;
-    assert_eq!(diff.len(), 5);
-    match diff.get(0) {
+    assert_eq!(diff.len(), 6);
+    check_root_dir_diff(diff.get(0))?;
+    match diff.get(1) {
         Some(ChangesetPathDiffContext::Added(path)) => {
             assert_eq!(path.path(), &MononokePath::try_from("dir2")?);
         }
@@ -231,8 +243,9 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
     let diff: Vec<_> = cs
         .diff_unordered(&other_cs, false, None, btreeset! {ChangesetDiffItem::TREES})
         .await?;
-    assert_eq!(diff.len(), 4);
-    match diff.get(0) {
+    assert_eq!(diff.len(), 5);
+    check_root_dir_diff(diff.get(0))?;
+    match diff.get(1) {
         Some(ChangesetPathDiffContext::Removed(path)) => {
             assert_eq!(path.path(), &MononokePath::try_from("dir1")?);
         }
@@ -421,7 +434,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
 
     // "i" is listed twice as a file that is deleted and a tree that is added
     let all_file_and_dir_list = [
-        "1", "10", "d", "d/e", "d/f", "d/g", "i", "i", "i/ii", "j", "j/k", "j.txt", "p", "q",
+        "", "1", "10", "d", "d/e", "d/f", "d/g", "i", "i", "i/ii", "j", "j/k", "j.txt", "p", "q",
         "q/y", "r", "r/v", "r/w", "r/w/x", "r/w/y", "z",
     ];
     check_diff_paths(&diff, &all_file_and_dir_list);
@@ -439,7 +452,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
         .await?;
 
     let all_changed_dirs_list = [
-        "a", "a/a", "a/a/a", "d", "i", "j", "q", "r", "r/s", "r/s/t", "r/w",
+        "", "a", "a/a", "a/a/a", "d", "i", "j", "q", "r", "r/s", "r/s/t", "r/w",
     ];
     check_diff_paths(&diff, &all_changed_dirs_list);
 
