@@ -74,7 +74,7 @@ pub(crate) enum PathChange {
     FileDirConflict,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) enum DeletedManifestChangeType {
     /// Path was deleted, we create a node if not present.
     CreateDeleted,
@@ -549,4 +549,216 @@ async fn diff_against_parents(
     }
     let res: Vec<_> = changes.into_iter().collect();
     Ok(res)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use anyhow::Result;
+    use fbinit::FacebookInit;
+    use maplit::btreemap;
+    use memblob::Memblob;
+    use mononoke_types::{
+        deleted_files_manifest::DeletedManifest, deleted_manifest_v2::DeletedManifestV2,
+        hash::Blake2, DeletedManifestId, DeletedManifestV2Id,
+    };
+    use pretty_assertions::assert_eq;
+
+    use PathChange::*;
+
+    type Id = (DeletedManifestId, DeletedManifestV2Id);
+
+    fn csid(x: u8) -> ChangesetId {
+        ChangesetId::new(Blake2::from_byte_array([x; 32]))
+    }
+
+    async fn entries<Manifest: DeletedManifestCommon>(
+        mf: Manifest,
+        ctx: &CoreContext,
+        blobstore: &Arc<dyn Blobstore>,
+    ) -> Result<BTreeMap<MPathElement, Manifest::Id>> {
+        mf.into_subentries(ctx, blobstore).try_collect().await
+    }
+
+    #[async_recursion::async_recursion]
+    async fn assert_equal(
+        ctx: &CoreContext,
+        blobstore: &Arc<dyn Blobstore>,
+        v1_id: DeletedManifestId,
+        v2_id: DeletedManifestV2Id,
+    ) -> Result<()> {
+        let (v1, v2) = futures::try_join!(v1_id.load(ctx, blobstore), v2_id.load(ctx, blobstore))?;
+        assert_eq!(v1.linknode().as_ref(), v2.linknode());
+        assert_eq!(v1.is_deleted(), v2.is_deleted());
+        let (v1_entries, mut v2_entries) =
+            futures::try_join!(entries(v1, ctx, blobstore), entries(v2, ctx, blobstore))?;
+        assert_eq!(
+            v1_entries.keys().collect::<Vec<_>>(),
+            v2_entries.keys().collect::<Vec<_>>()
+        );
+        for (name, v1_id) in v1_entries {
+            let v2_id = v2_entries.remove(&name).unwrap();
+            assert_equal(ctx, blobstore, v1_id, v2_id).await?;
+        }
+        assert!(v2_entries.is_empty());
+        Ok(())
+    }
+
+    async fn assert_derive_stack(
+        ctx: &CoreContext,
+        blobstore: &Arc<dyn Blobstore>,
+        parent: Option<Id>,
+        changes_by_cs: BTreeMap<ChangesetId, BTreeMap<&str, PathChange>>,
+    ) -> Result<Id> {
+        let (parent_v1, parent_v2) = match parent {
+            None => (None, None),
+            Some((v1, v2)) => (Some(v1), Some(v2)),
+        };
+        let all_changes: Vec<(ChangesetId, Vec<(MPath, PathChange)>)> = changes_by_cs
+            .iter()
+            .map(|(k, changes)| {
+                let changes = changes
+                    .iter()
+                    .map(|(name, change)| Ok((MPath::new(name)?, change.clone())))
+                    .collect::<Result<Vec<_>>>()?;
+                Ok((*k, changes))
+            })
+            .collect::<Result<_>>()?;
+        let v1_stack = DeletedManifestDeriver::<DeletedManifest>::derive_simple_stack(
+            ctx,
+            blobstore,
+            parent_v1,
+            all_changes.clone(),
+        );
+        let v2_stack = DeletedManifestDeriver::<DeletedManifestV2>::derive_simple_stack(
+            ctx,
+            blobstore,
+            parent_v2,
+            all_changes.clone(),
+        );
+        let (v1_stack, v2_stack) = futures::try_join!(v1_stack, v2_stack)?;
+        let mut parent = parent_v1;
+        let mut v1_single = Vec::with_capacity(changes_by_cs.len());
+        for (csid, changes) in all_changes {
+            let node = DeletedManifestDeriver::<DeletedManifest>::derive(
+                ctx,
+                blobstore,
+                csid,
+                parent.iter().cloned().collect(),
+                PathTree::from_iter(changes.into_iter().map(|(k, v)| (k, Some(v)))),
+            )
+            .await?;
+            v1_single.push(node);
+            parent = Some(node);
+        }
+        assert_eq!(v1_stack, v1_single);
+        assert_eq!(v2_stack.len(), v1_single.len());
+        let last_v1 = v1_stack.last().unwrap().clone();
+        let last_v2 = v2_stack.last().unwrap().clone();
+        stream::iter(
+            v1_stack
+                .into_iter()
+                .zip(v2_stack.into_iter())
+                .map(anyhow::Ok),
+        )
+        .try_for_each_concurrent(100, |(v1_id, v2_id)| {
+            assert_equal(ctx, blobstore, v1_id, v2_id)
+        })
+        .await?;
+        Ok((last_v1, last_v2))
+    }
+
+    #[fbinit::test]
+    async fn test_stack_derive(fb: FacebookInit) -> Result<()> {
+        let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let ctx = CoreContext::test_mock(fb);
+
+        let derive =
+            |parent: Option<Id>, changes| assert_derive_stack(&ctx, &blobstore, parent, changes);
+
+        let id = derive(
+            None,
+            btreemap! {
+                csid(1) => btreemap! {
+                    "/dira/a" => Add,
+                },
+                csid(2) => btreemap!{
+                    "/dirb/b" => Add,
+                },
+                csid(3) => btreemap!{
+                    "/dira/a" => Remove,
+                },
+                csid(4) => btreemap!{
+                    "/dira/a" => Add,
+                    "/dirc/c" => Add,
+                }
+            },
+        )
+        .await?;
+
+        derive(
+            Some(id),
+            btreemap! {
+                csid(5) => btreemap! {
+                    "/dirb/b" => Remove,
+                    "/dirc/c" => Remove,
+                },
+                csid(6) => btreemap! {
+                    "/dird/d" => Add,
+                    "/dirc/c/inner_c" => Add,
+                    "/new_file" => Add,
+                },
+                csid(7) => btreemap! {
+                    "/dird/d" => FileDirConflict,
+                    "/dird/d/inner_d" => Add,
+                    "/dir/c/inner_c" => Remove,
+                },
+                csid(8) => btreemap! {
+                    "/dird/d/inner_d" => Remove,
+                    "/new_file" => Remove,
+                    "/newer_file" => Add,
+                }
+            },
+        )
+        .await?;
+
+        // Let's try to get many operations on a single node, basically
+        // by deleting and re-adding the same files over and over again
+        let files = ["/dir/a", "/dir/b", "/dir/c", "/dir/d", "/other_dir/e"];
+        let mut has = vec![true; files.len()];
+        let mut changes: BTreeMap<ChangesetId, BTreeMap<&str, PathChange>> = BTreeMap::new();
+        // Initially add all files
+        changes.insert(csid(0), files.iter().map(|name| (*name, Add)).collect());
+        for idx in 1..100usize {
+            let idx1 = idx % files.len();
+            let idx2 = (idx * 173) % files.len();
+            let mut change = BTreeMap::new();
+            let has1 = has[idx1];
+            change.insert(files[idx1], if has1 { Remove } else { Add });
+            has[idx1] = !has1;
+            if idx2 != idx1 {
+                let has2 = has[idx2];
+                change.insert(files[idx2], if has2 { Remove } else { Add });
+                has[idx2] = !has2;
+            }
+            changes.insert(csid(idx as u8), change);
+        }
+        let id = derive(None, changes.clone()).await?;
+        // DM format shouldn't change easily, let's store it in a test.
+        assert_eq!(
+            id.1.blobstore_key(),
+            "deletedmanifest2.blake2.e95435b8be02a31dcc28465f7e9ba5d9eddd67be782f0c900b00b214d39f0395"
+        );
+        // Let's also try it in two batches and see if it works the same.
+        let mut i = 0usize;
+        let (batch1, batch2) = changes.into_iter().partition::<BTreeMap<_, _>, _>(|_| {
+            i += 1;
+            i <= 50
+        });
+        let id1 = derive(None, batch1).await?;
+        let id2 = derive(Some(id1), batch2).await?;
+        assert_eq!(id, id2);
+
+        Ok(())
+    }
 }

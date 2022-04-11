@@ -8,6 +8,7 @@
 #![deny(warnings)]
 
 mod derive;
+mod derive_batch;
 mod mapping;
 mod mapping_v1;
 mod mapping_v2;
