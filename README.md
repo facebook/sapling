@@ -103,6 +103,7 @@ team, so we unfortunately cannot guarantee prompt support at this time.
 
 # License
 
+GNU General Public License v2.0.
 See [LICENSE](LICENSE).
 
 # Build Notes
