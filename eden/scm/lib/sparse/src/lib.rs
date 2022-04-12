@@ -236,6 +236,10 @@ impl Profile {
         }
 
         let mut matchers: Vec<pathmatcher::TreeMatcher> = Vec::new();
+
+        // List of rule origins per-matcher.
+        let mut rule_origins: Vec<Vec<String>> = Vec::new();
+
         let mut rules: VecDeque<(Pattern, String)> = VecDeque::new();
 
         // Maintain the excludes-come-last ordering.
@@ -244,13 +248,20 @@ impl Profile {
             Pattern::Include(_) => rules.push_front((pat, src)),
         };
 
-        let prepare_rules = |rules: VecDeque<(Pattern, String)>| -> Result<Vec<String>, Error> {
-            let rules: Result<Vec<Vec<String>>, Error> = rules
-                .into_iter()
-                .map(|(p, _)| sparse_pat_to_matcher_rule(p))
-                .collect();
-            rules.map(|r| r.into_iter().flatten().collect())
-        };
+        let prepare_rules =
+            |rules: VecDeque<(Pattern, String)>| -> Result<(Vec<String>, Vec<String>), Error> {
+                let mut matcher_rules = Vec::new();
+                let mut origins = Vec::new();
+
+                for (pat, src) in rules {
+                    for expanded_rule in sparse_pat_to_matcher_rule(pat)? {
+                        matcher_rules.push(expanded_rule);
+                        origins.push(src.clone());
+                    }
+                }
+
+                Ok((matcher_rules, origins))
+            };
 
         let mut only_v1 = true;
         for entry in self.entries.iter() {
@@ -270,9 +281,10 @@ impl Profile {
                     // TODO(muirdm): make this only happen for root profile.
                     if child.is_v2() {
                         only_v1 = false;
-                        matchers.push(pathmatcher::TreeMatcher::from_rules(
-                            prepare_rules(child_rules)?.iter(),
-                        )?);
+
+                        let (matcher_rules, origins) = prepare_rules(child_rules)?;
+                        matchers.push(pathmatcher::TreeMatcher::from_rules(matcher_rules.iter())?);
+                        rule_origins.push(origins);
                     } else {
                         for rule in child_rules {
                             push_rule(rule);
@@ -293,17 +305,19 @@ impl Profile {
             "(builtin)".to_string(),
         ));
 
-        matchers.push(pathmatcher::TreeMatcher::from_rules(
-            prepare_rules(rules)?.iter(),
-        )?);
+        let (matcher_rules, origins) = prepare_rules(rules)?;
+        matchers.push(pathmatcher::TreeMatcher::from_rules(matcher_rules.iter())?);
+        rule_origins.push(origins);
 
-        Ok(Matcher::new(matchers))
+        Ok(Matcher::new(matchers, rule_origins))
     }
 }
 
 pub struct Matcher {
     always: bool,
     matchers: Vec<pathmatcher::TreeMatcher>,
+    // List of rule origins per-matcher.
+    rule_origins: Vec<Vec<String>>,
 }
 
 impl Matcher {
@@ -313,6 +327,25 @@ impl Matcher {
         } else {
             pathmatcher::UnionMatcher::matches_file(self.matchers.iter(), path)
         }
+    }
+
+    pub fn explain(&self, path: &RepoPath) -> anyhow::Result<(bool, String)> {
+        if self.always {
+            return Ok((true, "implicit match due to empty profile".to_string()));
+        }
+
+        for (i, m) in self.matchers.iter().enumerate() {
+            if let Some(idx) = m.matching_rule_indexes(path.as_str()).last() {
+                let rule_origin = self
+                    .rule_origins
+                    .get(i)
+                    .and_then(|o| o.get(*idx))
+                    .map_or("(unknown)".to_string(), |o| o.clone());
+                return Ok((m.matches(path.as_str()), rule_origin));
+            }
+        }
+
+        Ok((false, "no rules matched".to_string()))
     }
 }
 
@@ -331,15 +364,17 @@ impl pathmatcher::Matcher for Matcher {
 }
 
 impl Matcher {
-    fn new(matchers: Vec<pathmatcher::TreeMatcher>) -> Self {
+    fn new(matchers: Vec<pathmatcher::TreeMatcher>, rule_origins: Vec<Vec<String>>) -> Self {
         Self {
             always: false,
             matchers,
+            rule_origins,
         }
     }
     fn always() -> Self {
         Self {
             always: true,
+            rule_origins: Vec::new(),
             matchers: Vec::new(),
         }
     }
@@ -710,5 +745,62 @@ version = 2
         assert!(matcher.matches("c".try_into()?)?);
 
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_explain_empty() {
+        let prof = Profile::from_bytes(b"", "test".to_string()).unwrap();
+        let matcher = prof.matcher(|_| async move { Ok(vec![]) }).await.unwrap();
+
+        assert_eq!(
+            matcher.explain("a/b".try_into().unwrap()).unwrap(),
+            (true, "implicit match due to empty profile".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_explain_no_match() {
+        let prof = Profile::from_bytes(b"a", "test".to_string()).unwrap();
+        let matcher = prof.matcher(|_| async move { Ok(vec![]) }).await.unwrap();
+
+        assert_eq!(
+            matcher.explain("b".try_into().unwrap()).unwrap(),
+            (false, "no rules matched".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_explain_chain() {
+        let base = b"%include child_1";
+        let child_1 = b"%include child_2";
+        let child_2 = b"
+[include]
+glob:{a,b,c}
+
+[exclude]
+path:d
+";
+
+        let prof = Profile::from_bytes(base, "base".to_string()).unwrap();
+        let matcher = prof
+            .matcher(|path| async move {
+                match path.as_ref() {
+                    "child_1" => Ok(child_1.to_vec()),
+                    "child_2" => Ok(child_2.to_vec()),
+                    _ => unreachable!(),
+                }
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(
+            matcher.explain("b".try_into().unwrap()).unwrap(),
+            (true, "base -> child_1 -> child_2".to_string())
+        );
+
+        assert_eq!(
+            matcher.explain("d".try_into().unwrap()).unwrap(),
+            (false, "base -> child_1 -> child_2".to_string())
+        );
     }
 }
