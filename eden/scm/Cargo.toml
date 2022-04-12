@@ -93,6 +93,7 @@ members = [
   "lib/revisionstore/types",
   "lib/revlogindex",
   "lib/runlog",
+  "lib/sparse",
   "lib/spawn-ext",
   "lib/status",
   "lib/storemodel",
