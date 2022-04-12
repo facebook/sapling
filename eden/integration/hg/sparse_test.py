@@ -27,7 +27,6 @@ class SparseTest(EdenHgTestCase):
             "disable",
             "enable",
             "exclude",
-            "explain",
             "files someprofile",
             "importrules",
             "include",

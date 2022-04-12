@@ -2373,7 +2373,9 @@ def _explainprofile(ui, repo, *profiles, **opts):
 
     If --verbose is given, calculates the file size impact of a profile (slow).
     """
-    _checksparse(repo)
+    # Make it work in an edenfs checkout.
+    if "eden" in repo.requirements:
+        _wraprepo(ui, repo)
 
     # Disable fullcheckout warnings to allow users to sparse their fullcheckouts
     repo.ui.setconfig("sparse", "warnfullcheckout", None)
