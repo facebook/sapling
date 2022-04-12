@@ -156,19 +156,57 @@ pub fn absolute(path: impl AsRef<Path>) -> io::Result<PathBuf> {
         ));
     }
 
+    Ok(normalize(&path))
+}
+
+/// Normalize path to collapse "..", ".", and duplicate separators. This
+/// function does not access the filesystem, so it can return an
+/// incorrect result if the path contains symlinks.
+///
+///     # use std::path::Path;
+///     # use util::path::normalize;
+///     assert_eq!(normalize("foo/.//bar/../baz/".as_ref()), Path::new("foo/baz"));
+///
+///     // Interesting edge cases:
+///     assert_eq!(normalize("".as_ref()), Path::new("."));
+///     assert_eq!(normalize("..".as_ref()), Path::new(".."));
+///     assert_eq!(normalize("/..".as_ref()), Path::new("/"));
+///
+/// This behavior matches that of Python's `os.path.normpath` and Go's `path.Clean`.
+pub fn normalize(path: &Path) -> PathBuf {
     let mut result = PathBuf::new();
+    let mut poppable: usize = 0;
+    let mut has_root = false;
     for component in path.components() {
         match component {
-            Component::Normal(_) | Component::RootDir | Component::Prefix(_) => {
+            Component::Normal(_) => {
+                poppable += 1;
+                result.push(component);
+            }
+            Component::RootDir => {
+                has_root = true;
+                result.push(component);
+            }
+            Component::Prefix(_) => {
                 result.push(component);
             }
             Component::ParentDir => {
-                result.pop();
+                if poppable > 0 {
+                    result.pop();
+                    poppable -= 1;
+                } else if !has_root {
+                    result.push(component);
+                }
             }
             Component::CurDir => {}
         }
     }
-    Ok(result)
+
+    if result.as_os_str().is_empty() {
+        return ".".into();
+    }
+
+    result
 }
 
 /// Remove the file pointed by `path`.
@@ -500,6 +538,12 @@ mod tests {
                 Path::new("z:\\")
             );
         }
+
+        #[test]
+        fn test_normalize_path() {
+            assert_eq!(normalize(r"a/b\c\..\."), Path::new(r"a\b"));
+            assert_eq!(normalize("z:/a//b/./"), Path::new(r"z:\a\b"));
+        }
     }
 
     #[cfg(unix)]
@@ -517,6 +561,20 @@ mod tests {
                 Path::new("/foo/bar/baz")
             );
             assert_eq!(absolute("//").unwrap(), Path::new("/"));
+        }
+
+        #[test]
+        fn test_normalize_path() {
+            assert_eq!(normalize("/a/./b/../d/.".as_ref()), Path::new("/a/d"));
+            assert_eq!(normalize("./a/b/c/../../".as_ref()), Path::new("a"));
+            assert_eq!(normalize("".as_ref()), Path::new("."));
+            assert_eq!(normalize(".".as_ref()), Path::new("."));
+            assert_eq!(normalize("..".as_ref()), Path::new(".."));
+            assert_eq!(normalize("/..".as_ref()), Path::new("/"));
+            assert_eq!(normalize("/../..".as_ref()), Path::new("/"));
+            assert_eq!(normalize("./..".as_ref()), Path::new(".."));
+            assert_eq!(normalize("../../..".as_ref()), Path::new("../../.."));
+            assert_eq!(normalize("////".as_ref()), Path::new("/"));
         }
 
         #[test]
