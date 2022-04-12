@@ -40,7 +40,8 @@ enum Pattern {
 
 #[derive(Debug)]
 enum ProfileEntry {
-    Pattern(Pattern),
+    // Pattern plus additional source for this rule (e.g. "hgrc.dynamic").
+    Pattern(Pattern, Option<String>),
     Profile(String),
 }
 
@@ -94,6 +95,7 @@ impl Profile {
         let mut prof: Profile = Default::default();
         let mut current_metadata_val: Option<&mut String> = None;
         let mut section_type = SectionType::Include;
+        let mut dynamic_source: Option<String> = None;
 
         for (mut line_num, line) in BufReader::new(data.as_ref()).lines().enumerate() {
             line_num += 1;
@@ -101,9 +103,26 @@ impl Profile {
             let line = line?;
             let trimmed = line.trim();
 
-            // Ingore comments and empty lines.
-            if matches!(trimmed.chars().next(), Some('#' | ';') | None) {
-                continue;
+            // Ingore comments and emtpy lines.
+            let mut chars = trimmed.chars();
+            match chars.next() {
+                None => continue,
+                Some('#' | ';') => {
+                    let comment = chars.as_str().trim();
+                    if let Some((l, r)) = comment.split_once(&['=', ':']) {
+                        match (l.trim(), r.trim()) {
+                            // Allow a magic comment to specify additional
+                            // source information for particular rules. This way
+                            // it is backwards compatible with the python code
+                            // if a config like this ever gets written out.
+                            ("source", "") => dynamic_source = None,
+                            ("source", src) => dynamic_source = Some(src.to_string()),
+                            _ => {}
+                        }
+                    }
+                    continue;
+                }
+                _ => {}
             }
 
             if let Some(p) = trimmed.strip_prefix("%include ") {
@@ -145,11 +164,15 @@ impl Profile {
                 }
 
                 if section_type == SectionType::Include {
-                    prof.entries
-                        .push(ProfileEntry::Pattern(Pattern::Include(trimmed.to_string())));
+                    prof.entries.push(ProfileEntry::Pattern(
+                        Pattern::Include(trimmed.to_string()),
+                        dynamic_source.clone(),
+                    ));
                 } else {
-                    prof.entries
-                        .push(ProfileEntry::Pattern(Pattern::Exclude(trimmed.to_string())));
+                    prof.entries.push(ProfileEntry::Pattern(
+                        Pattern::Exclude(trimmed.to_string()),
+                        dynamic_source.clone(),
+                    ));
                 }
             }
         }
@@ -191,7 +214,9 @@ impl Profile {
 
                 for entry in prof.entries.iter() {
                     match entry {
-                        ProfileEntry::Pattern(p) => rules.push((p.clone(), source.clone())),
+                        ProfileEntry::Pattern(p, psrc) => {
+                            rules.push((p.clone(), join_source(source.clone(), psrc.as_deref())))
+                        }
                         ProfileEntry::Profile(child_path) => {
                             let entry = seen.entry(child_path.clone());
                             let data = match entry {
@@ -266,7 +291,9 @@ impl Profile {
         let mut only_v1 = true;
         for entry in self.entries.iter() {
             match entry {
-                ProfileEntry::Pattern(p) => push_rule((p.clone(), self.source.clone())),
+                ProfileEntry::Pattern(p, src) => {
+                    push_rule((p.clone(), join_source(self.source.clone(), src.as_deref())))
+                }
                 ProfileEntry::Profile(child_path) => {
                     let child =
                         Profile::from_bytes(fetch(child_path.clone()).await?, child_path.clone())?;
@@ -310,6 +337,13 @@ impl Profile {
         rule_origins.push(origins);
 
         Ok(Matcher::new(matchers, rule_origins))
+    }
+}
+
+fn join_source(main_source: String, opt_source: Option<&str>) -> String {
+    match opt_source {
+        None => main_source,
+        Some(opt) => format!("{} ({})", main_source, opt),
     }
 }
 
@@ -453,8 +487,8 @@ mod tests {
         let (mut inc, mut exc, mut profs) = (vec![], vec![], vec![]);
         for entry in &prof.entries {
             match entry {
-                ProfileEntry::Pattern(Pattern::Include(p)) => inc.push(p.as_ref()),
-                ProfileEntry::Pattern(Pattern::Exclude(p)) => exc.push(p.as_ref()),
+                ProfileEntry::Pattern(Pattern::Include(p), _) => inc.push(p.as_ref()),
+                ProfileEntry::Pattern(Pattern::Exclude(p), _) => exc.push(p.as_ref()),
                 ProfileEntry::Profile(p) => profs.push(p.as_ref()),
             }
         }
@@ -801,6 +835,44 @@ path:d
         assert_eq!(
             matcher.explain("d".try_into().unwrap()).unwrap(),
             (false, "base -> child_1 -> child_2".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_dynamic_rule_source() {
+        let config = b"
+one
+
+# source = banana
+two
+three
+
+# source =
+four
+";
+
+        let prof = Profile::from_bytes(config, "base".to_string()).unwrap();
+
+        let matcher = prof.matcher(|_| async { Ok(vec![]) }).await.unwrap();
+
+        assert_eq!(
+            matcher.explain("one".try_into().unwrap()).unwrap(),
+            (true, "base".to_string())
+        );
+
+        assert_eq!(
+            matcher.explain("two".try_into().unwrap()).unwrap(),
+            (true, "base (banana)".to_string())
+        );
+
+        assert_eq!(
+            matcher.explain("three".try_into().unwrap()).unwrap(),
+            (true, "base (banana)".to_string())
+        );
+
+        assert_eq!(
+            matcher.explain("four".try_into().unwrap()).unwrap(),
+            (true, "base".to_string())
         );
     }
 }
