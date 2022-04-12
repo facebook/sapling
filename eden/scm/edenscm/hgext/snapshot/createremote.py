@@ -6,6 +6,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from edenscm.mercurial import error
 from edenscm.mercurial.edenapi_upload import (
     filetypefromfile,
     uploadhgchangesets,
@@ -17,14 +18,20 @@ from edenscm.mercurial.revset import parseage
 from .metalog import fetchlatestbubble, storelatest
 
 
-def _backupcurrentcommit(repo):
-    """make sure the current commit is backed up in commitcloud"""
-    currentcommit = (repo["."].node(),)
+def _backupparents(repo, wctx):
+    """make sure this commit's ancestors are backed up in commitcloud"""
+    parents = (wctx.p1().node(), wctx.p2().node())
     draftrevs = repo.changelog.torevset(
-        repo.dageval(lambda: ancestors(currentcommit) & draft())
+        repo.dageval(lambda: ancestors(parents) & draft())
     )
 
-    uploadhgchangesets(repo, draftrevs)
+    (success, failed) = uploadhgchangesets(repo, draftrevs)
+    if failed:
+        raise error.Abort(
+            _("failed to upload ancestors to commit cloud: {}").format(
+                [repo[node].hex() for node in failed]
+            )
+        )
 
 
 def _parselifetime(opts):
@@ -105,10 +112,11 @@ def createremote(ui, repo, **opts):
     if ui.plain():
         overrides[("ui", "quiet")] = True
     with repo.lock(), ui.configoverride(overrides):
-        _backupcurrentcommit(repo)
-
         # Current working context
         wctx = repo[None]
+
+        hgparents = parentsfromwctx(ui, wctx)
+        _backupparents(repo, wctx)
 
         (time, tz) = wctx.date()
 
@@ -128,7 +136,7 @@ def createremote(ui, repo, **opts):
                 "author": wctx.user(),
                 "time": int(time),
                 "tz": tz,
-                "hg_parents": parentsfromwctx(ui, wctx),
+                "hg_parents": hgparents,
             },
             lifetime,
             previousbubble,
