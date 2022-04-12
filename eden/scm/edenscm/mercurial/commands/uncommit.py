@@ -32,9 +32,10 @@ from .. import (
     rewriteutil,
     scmutil,
     treestate,
+    util,
 )
 from ..i18n import _
-from ..node import nullid
+from ..node import hex, nullid
 from .cmdtable import command
 
 
@@ -201,6 +202,12 @@ def fixdirstate(repo, oldctx, newctx, status):
                 ds._map._tree.insert(f, state, mode, size, mtime, None)
             else:
                 ds.remove(f)
+
+    # The renamed() call below requires file history. Let's fetch it in bulk
+    # instead of one-by-one.
+    if util.safehasattr(repo, "fileservice"):
+        keys = list((f, hex(oldctx[f].filenode())) for f in s.modified + s.added)
+        repo.fileservice.prefetch(keys, fetchdata=False, fetchhistory=True)
 
     # Merge old parent and old working dir copies
     oldcopies = {}
