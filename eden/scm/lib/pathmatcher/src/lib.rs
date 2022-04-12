@@ -157,12 +157,13 @@ impl UnionMatcher {
     pub fn new(matchers: Vec<Arc<dyn 'static + Matcher + Send + Sync>>) -> Self {
         UnionMatcher { matchers }
     }
-}
 
-impl Matcher for UnionMatcher {
-    fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
+    pub fn matches_directory<M: Matcher, I: Iterator<Item = M>>(
+        matchers: I,
+        path: &RepoPath,
+    ) -> Result<DirectoryMatch> {
         let mut current = DirectoryMatch::Nothing;
-        for matcher in self.matchers.iter() {
+        for matcher in matchers {
             current = match matcher.matches_directory(path)? {
                 DirectoryMatch::Nothing => current,
                 DirectoryMatch::Everything => {
@@ -174,13 +175,26 @@ impl Matcher for UnionMatcher {
         Ok(current)
     }
 
-    fn matches_file(&self, path: &RepoPath) -> Result<bool> {
-        for matcher in self.matchers.iter() {
+    pub fn matches_file<M: Matcher, I: Iterator<Item = M>>(
+        matchers: I,
+        path: &RepoPath,
+    ) -> Result<bool> {
+        for matcher in matchers {
             if matcher.matches_file(path)? {
                 return Ok(true);
             }
         }
         Ok(false)
+    }
+}
+
+impl Matcher for UnionMatcher {
+    fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
+        UnionMatcher::matches_directory(self.matchers.iter(), path)
+    }
+
+    fn matches_file(&self, path: &RepoPath) -> Result<bool> {
+        UnionMatcher::matches_file(self.matchers.iter(), path)
     }
 }
 
