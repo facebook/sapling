@@ -359,7 +359,9 @@ impl Matcher {
         if self.always {
             Ok(true)
         } else {
-            pathmatcher::UnionMatcher::matches_file(self.matchers.iter(), path)
+            let result = pathmatcher::UnionMatcher::matches_file(self.matchers.iter(), path);
+            tracing::trace!(%path, ?result, "matches");
+            result
         }
     }
 
@@ -388,7 +390,9 @@ impl pathmatcher::Matcher for Matcher {
         if self.always {
             Ok(pathmatcher::DirectoryMatch::Everything)
         } else {
-            pathmatcher::UnionMatcher::matches_directory(self.matchers.iter(), path)
+            let result = pathmatcher::UnionMatcher::matches_directory(self.matchers.iter(), path);
+            tracing::trace!(%path, ?result, "matches_directory");
+            result
         }
     }
 
