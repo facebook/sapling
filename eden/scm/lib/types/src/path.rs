@@ -402,6 +402,14 @@ impl ToOwned for RepoPath {
     }
 }
 
+impl<'a> TryFrom<&'a str> for &'a RepoPath {
+    type Error = ParseError;
+
+    fn try_from(s: &'a str) -> Result<Self, Self::Error> {
+        RepoPath::from_str(s)
+    }
+}
+
 impl fmt::Display for RepoPath {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(&self.0, formatter)

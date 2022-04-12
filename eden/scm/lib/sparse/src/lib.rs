@@ -7,6 +7,7 @@
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -14,6 +15,7 @@ use std::io::BufReader;
 use futures::future::FutureExt;
 use futures::future::LocalBoxFuture;
 use futures::Future;
+use types::RepoPath;
 
 #[derive(Default, Debug)]
 pub struct Profile {
@@ -82,6 +84,9 @@ pub enum Error {
 
     #[error("unsuppported pattern type {0}")]
     UnsupportedPattern(String),
+
+    #[error(transparent)]
+    GlobsetError(#[from] globset::Error),
 }
 
 impl Profile {
@@ -154,16 +159,24 @@ impl Profile {
         Ok(prof)
     }
 
+    fn is_v2(&self) -> bool {
+        if let Some(version) = &self.version {
+            version == "2"
+        } else {
+            false
+        }
+    }
+
     // Recursively flatten this profile into a DFS ordered list of rules.
     // %import statements are resolved by fetching the imported profile's
     // contents using the fetch callback. Returns a vec of each Pattern paired
     // with a String describing its provenance.
     async fn rules<B: Future<Output = anyhow::Result<Vec<u8>>>>(
-        &mut self,
+        &self,
         mut fetch: impl FnMut(String) -> B,
     ) -> Result<Vec<(Pattern, String)>, Error> {
         fn rules_inner<'a, B: Future<Output = anyhow::Result<Vec<u8>>>>(
-            prof: &'a mut Profile,
+            prof: &'a Profile,
             fetch: &'a mut dyn FnMut(String) -> B,
             rules: &'a mut Vec<(Pattern, String)>,
             source: Option<&'a str>,
@@ -212,6 +225,123 @@ impl Profile {
         let mut rules = Vec::new();
         rules_inner(self, &mut fetch, &mut rules, None, &mut HashMap::new()).await?;
         Ok(rules)
+    }
+
+    pub async fn matcher<B: Future<Output = anyhow::Result<Vec<u8>>>>(
+        &self,
+        mut fetch: impl FnMut(String) -> B,
+    ) -> Result<Matcher, Error> {
+        if self.entries.is_empty() {
+            return Ok(Matcher::always());
+        }
+
+        let mut matchers: Vec<pathmatcher::TreeMatcher> = Vec::new();
+        let mut rules: VecDeque<(Pattern, String)> = VecDeque::new();
+
+        // Maintain the excludes-come-last ordering.
+        let mut push_rule = |(pat, src)| match pat {
+            Pattern::Exclude(_) => rules.push_back((pat, src)),
+            Pattern::Include(_) => rules.push_front((pat, src)),
+        };
+
+        let prepare_rules = |rules: VecDeque<(Pattern, String)>| -> Result<Vec<String>, Error> {
+            let rules: Result<Vec<Vec<String>>, Error> = rules
+                .into_iter()
+                .map(|(p, _)| sparse_pat_to_matcher_rule(p))
+                .collect();
+            rules.map(|r| r.into_iter().flatten().collect())
+        };
+
+        let mut only_v1 = true;
+        for entry in self.entries.iter() {
+            match entry {
+                ProfileEntry::Pattern(p) => push_rule((p.clone(), self.source.clone())),
+                ProfileEntry::Profile(child_path) => {
+                    let child =
+                        Profile::from_bytes(fetch(child_path.clone()).await?, child_path.clone())?;
+
+                    let child_rules: VecDeque<(Pattern, String)> = child
+                        .rules(&mut fetch)
+                        .await?
+                        .into_iter()
+                        .map(|(p, s)| (p, format!("{} -> {}", self.source, s)))
+                        .collect();
+
+                    // TODO(muirdm): make this only happen for root profile.
+                    if child.is_v2() {
+                        only_v1 = false;
+                        matchers.push(pathmatcher::TreeMatcher::from_rules(
+                            prepare_rules(child_rules)?.iter(),
+                        )?);
+                    } else {
+                        for rule in child_rules {
+                            push_rule(rule);
+                        }
+                    }
+                }
+            }
+        }
+
+        // If all user specified rules are exclude rules, add an
+        // implicit "**" to provide the default include of everything.
+        if only_v1 && (rules.is_empty() || matches!(&rules[0].0, Pattern::Exclude(_))) {
+            rules.push_front((Pattern::Include("**".to_string()), "(builtin)".to_string()))
+        }
+
+        rules.push_front((
+            Pattern::Include("glob:.hg*".to_string()),
+            "(builtin)".to_string(),
+        ));
+
+        matchers.push(pathmatcher::TreeMatcher::from_rules(
+            prepare_rules(rules)?.iter(),
+        )?);
+
+        Ok(Matcher::new(matchers))
+    }
+}
+
+pub struct Matcher {
+    always: bool,
+    matchers: Vec<pathmatcher::TreeMatcher>,
+}
+
+impl Matcher {
+    pub fn matches(&self, path: &RepoPath) -> anyhow::Result<bool> {
+        if self.always {
+            Ok(true)
+        } else {
+            pathmatcher::UnionMatcher::matches_file(self.matchers.iter(), path)
+        }
+    }
+}
+
+impl pathmatcher::Matcher for Matcher {
+    fn matches_directory(&self, path: &RepoPath) -> anyhow::Result<pathmatcher::DirectoryMatch> {
+        if self.always {
+            Ok(pathmatcher::DirectoryMatch::Everything)
+        } else {
+            pathmatcher::UnionMatcher::matches_directory(self.matchers.iter(), path)
+        }
+    }
+
+    fn matches_file(&self, path: &RepoPath) -> anyhow::Result<bool> {
+        self.matches(path)
+    }
+}
+
+impl Matcher {
+    fn new(matchers: Vec<pathmatcher::TreeMatcher>) -> Self {
+        Self {
+            always: false,
+            matchers,
+        }
+    }
+    fn always() -> Self {
+        Self {
+            always: true,
+            matchers: Vec::new(),
+        }
     }
 }
 
@@ -371,7 +501,7 @@ c
 title = grand_child
 ";
 
-        let mut base_prof = Profile::from_bytes(base, "test".to_string()).unwrap();
+        let base_prof = Profile::from_bytes(base, "test".to_string()).unwrap();
 
         let rules = base_prof
             .rules(|path| async move {
@@ -406,7 +536,7 @@ title = grand_child
         let a = b"%include b";
         let b = b"%include a";
 
-        let mut a_prof = Profile::from_bytes(a, "test".to_string()).unwrap();
+        let a_prof = Profile::from_bytes(a, "test".to_string()).unwrap();
 
         let res = a_prof
             .rules(|path| async move {
@@ -428,7 +558,7 @@ title = grand_child
 %include b
 ";
 
-        let mut a_prof = Profile::from_bytes(a, "test".to_string()).unwrap();
+        let a_prof = Profile::from_bytes(a, "test".to_string()).unwrap();
 
         let mut fetch_count = 0;
 
@@ -469,5 +599,116 @@ title = grand_child
         );
 
         assert!(sparse_pat_to_matcher_rule(Pattern::Include("re:.*".to_string())).is_err());
+    }
+
+    #[tokio::test]
+    async fn test_matcher_implicit_include() -> anyhow::Result<()> {
+        let config = b"
+[exclude]
+path:exc
+";
+
+        let prof = Profile::from_bytes(config, "test".to_string()).unwrap();
+
+        let matcher = prof.matcher(|_| async { Ok(vec![]) }).await?;
+
+        // Show we got an implicit rule that includes everything.
+        assert!(matcher.matches("a/b".try_into()?)?);
+
+        // Sanity that exclude works.
+        assert!(!matcher.matches("exc/foo".try_into()?)?);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_matcher_v1() -> anyhow::Result<()> {
+        let base = b"
+%include child
+
+[exclude]
+path:a/exc
+
+[include]
+path:a
+";
+
+        let child = b"
+[exclude]
+path:b/exc
+
+[include]
+path:b
+";
+
+        let prof = Profile::from_bytes(base, "test".to_string())?;
+        let matcher = prof.matcher(|_| async { Ok(child.to_vec()) }).await?;
+
+        // Exclude rule "wins" for v1 despite order in confing.
+        assert!(!matcher.matches("a/exc".try_into()?)?);
+        assert!(!matcher.matches("b/exc".try_into()?)?);
+        assert!(matcher.matches("a/inc".try_into()?)?);
+        assert!(matcher.matches("b/inc".try_into()?)?);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_matcher_v2() -> anyhow::Result<()> {
+        let base = b"
+%include child_1
+%include child_2
+
+[exclude]
+path:a/exc
+path:c
+
+[include]
+path:a
+";
+
+        let child_1 = b"
+[include]
+path:c
+
+[metadata]
+version = 2
+";
+
+        let child_2 = b"
+[exclude]
+path:b/exc
+path:c
+
+[include]
+path:b
+
+[metadata]
+version = 2
+";
+
+        let prof = Profile::from_bytes(base, "test".to_string())?;
+        let matcher = prof
+            .matcher(|path| async move {
+                match path.as_ref() {
+                    "child_1" => Ok(child_1.to_vec()),
+                    "child_2" => Ok(child_2.to_vec()),
+                    _ => unreachable!(),
+                }
+            })
+            .await?;
+
+        // Rules directly in root profile still get excludes-go-last ordering.
+        assert!(!matcher.matches("a/exc".try_into()?)?);
+        assert!(matcher.matches("a/inc".try_into()?)?);
+
+        // Order for v2 child profile is maintained - include rule wins.
+        assert!(matcher.matches("b/exc".try_into()?)?);
+        assert!(matcher.matches("b/inc".try_into()?)?);
+
+        // "c" is included due to unioning of v2 profiles.
+        assert!(matcher.matches("c".try_into()?)?);
+
+        Ok(())
     }
 }
