@@ -5,9 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
+
+use futures::future::FutureExt;
+use futures::future::LocalBoxFuture;
+use futures::Future;
 
 #[derive(Default, Debug)]
 pub struct Profile {
@@ -52,6 +58,18 @@ impl SectionType {
             _ => None,
         }
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error(transparent)]
+    Io(#[from] io::Error),
+
+    #[error("import cycle involving {0}")]
+    ImportCycle(String),
+
+    #[error(transparent)]
+    Fetch(#[from] anyhow::Error),
 }
 
 impl Profile {
@@ -123,10 +141,72 @@ impl Profile {
 
         Ok(prof)
     }
+
+    // Recursively flatten this profile into a DFS ordered list of rules.
+    // %import statements are resolved by fetching the imported profile's
+    // contents using the fetch callback. Returns a vec of each Pattern paired
+    // with a String describing its provenance.
+    async fn rules<B: Future<Output = anyhow::Result<Vec<u8>>>>(
+        &mut self,
+        mut fetch: impl FnMut(String) -> B,
+    ) -> Result<Vec<(Pattern, String)>, Error> {
+        fn rules_inner<'a, B: Future<Output = anyhow::Result<Vec<u8>>>>(
+            prof: &'a mut Profile,
+            fetch: &'a mut dyn FnMut(String) -> B,
+            rules: &'a mut Vec<(Pattern, String)>,
+            source: Option<&'a str>,
+            // path => (contents, in_progress)
+            seen: &'a mut HashMap<String, (Vec<u8>, bool)>,
+        ) -> LocalBoxFuture<'a, Result<(), Error>> {
+            async move {
+                let source = match source {
+                    Some(history) => format!("{} -> {}", history, prof.source),
+                    None => prof.source.clone(),
+                };
+
+                for entry in prof.entries.iter() {
+                    match entry {
+                        ProfileEntry::Pattern(p) => rules.push((p.clone(), source.clone())),
+                        ProfileEntry::Profile(child_path) => {
+                            let entry = seen.entry(child_path.clone());
+                            let data = match entry {
+                                Entry::Occupied(e) => match e.into_mut() {
+                                    (_, true) => {
+                                        return Err(Error::ImportCycle(child_path.clone()));
+                                    }
+                                    (data, false) => data,
+                                },
+                                Entry::Vacant(e) => {
+                                    let data = fetch(child_path.clone()).await?;
+                                    &e.insert((data, true)).0
+                                }
+                            };
+
+                            let mut child = Profile::from_bytes(&data, child_path.clone())?;
+                            rules_inner(&mut child, fetch, rules, Some(&source), seen).await?;
+
+                            if let Some((_, in_progress)) = seen.get_mut(child_path) {
+                                *in_progress = false;
+                            }
+                        }
+                    }
+                }
+
+                Ok(())
+            }
+            .boxed_local()
+        }
+
+        let mut rules = Vec::new();
+        rules_inner(self, &mut fetch, &mut rules, None, &mut HashMap::new()).await?;
+        Ok(rules)
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use anyhow::anyhow;
+
     use super::*;
 
     // Returns a profile's (includes, excludes, profiles).
@@ -185,5 +265,108 @@ hidden=your eyes
         assert_eq!(got.description.unwrap(), "howdy\ndoody");
         assert_eq!(got.hidden.unwrap(), "your eyes\nonly");
         assert_eq!(got.version.unwrap(), "123");
+    }
+
+    #[tokio::test]
+    async fn test_rules() -> anyhow::Result<()> {
+        let base = b"
+%include child
+
+[include]
+a
+
+[metadata]
+title = base
+";
+
+        let child = b"
+%include grand_child
+
+[include]
+b
+
+[metadata]
+title = child
+";
+
+        let grand_child = b"
+[include]
+c
+
+[metadata]
+title = grand_child
+";
+
+        let mut base_prof = Profile::from_bytes(base, "test".to_string()).unwrap();
+
+        let rules = base_prof
+            .rules(|path| async move {
+                match path.as_ref() {
+                    "child" => Ok(child.to_vec()),
+                    "grand_child" => Ok(grand_child.to_vec()),
+                    _ => Err(anyhow!("not found")),
+                }
+            })
+            .await?;
+
+        assert_eq!(
+            rules,
+            vec![
+                (
+                    Pattern::Include("c".to_string()),
+                    "test -> child -> grand_child".to_string()
+                ),
+                (
+                    Pattern::Include("b".to_string()),
+                    "test -> child".to_string()
+                ),
+                (Pattern::Include("a".to_string()), "test".to_string())
+            ]
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_recursive_imports() {
+        let a = b"%include b";
+        let b = b"%include a";
+
+        let mut a_prof = Profile::from_bytes(a, "test".to_string()).unwrap();
+
+        let res = a_prof
+            .rules(|path| async move {
+                match path.as_ref() {
+                    "a" => Ok(a.to_vec()),
+                    "b" => Ok(b.to_vec()),
+                    _ => Err(anyhow!("not found")),
+                }
+            })
+            .await;
+
+        assert_eq!(format!("{}", res.unwrap_err()), "import cycle involving b");
+    }
+
+    #[tokio::test]
+    async fn test_resolve_imports_caching() {
+        let a = b"
+%include b
+%include b
+";
+
+        let mut a_prof = Profile::from_bytes(a, "test".to_string()).unwrap();
+
+        let mut fetch_count = 0;
+
+        // Make sure we cache results from the callback.
+        let res = a_prof
+            .rules(|_path| {
+                fetch_count += 1;
+                assert_eq!(fetch_count, 1);
+                async { Ok(vec![]) }
+            })
+            .await;
+
+        assert!(res.is_ok());
     }
 }

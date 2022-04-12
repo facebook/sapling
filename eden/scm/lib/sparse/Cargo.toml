@@ -6,4 +6,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.51"
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
+thiserror = "1.0.30"
 tracing = "0.1.32"
+
+[dev-dependencies]
+tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
