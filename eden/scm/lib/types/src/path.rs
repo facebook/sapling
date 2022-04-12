@@ -357,6 +357,12 @@ impl RepoPath {
     pub fn to_lower_case(&self) -> RepoPathBuf {
         RepoPathBuf(self.0.to_lowercase())
     }
+
+    /// Create a std::Path::PathBuf from this RepoPath. "/" will be
+    /// converted to the system path separator.
+    pub fn to_path(&self) -> PathBuf {
+        self.components().map(PathComponent::as_str).collect()
+    }
 }
 
 impl Ord for RepoPath {
@@ -479,7 +485,7 @@ impl PathComponent {
         self.0.as_bytes()
     }
 
-    /// Returns the `str` interpretation of the `RepoPath`.
+    /// Returns the `str` interpretation of the `PathComponent`.
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -693,11 +699,11 @@ impl RepoPathRelativizer {
     pub fn relativize(&self, path: impl AsRef<RepoPath>) -> String {
         fn inner(relativizer: &RepoPathRelativizer, path: &RepoPath) -> String {
             // TODO: directly operate on the RepoPath components.
-            let path: &Path = path.as_str().as_ref();
+            let path = path.to_path();
 
             use self::RepoPathRelativizerConfig::*;
             let output = match &relativizer.config {
-                CwdUnderRepo { relative_cwd } => util::path::relativize(relative_cwd, path),
+                CwdUnderRepo { relative_cwd } => util::path::relativize(relative_cwd, &path),
                 CwdOutsideRepo { prefix } => prefix.join(path),
             };
             output.display().to_string()
@@ -1109,6 +1115,11 @@ mod tests {
         assert!(repo_path("foo/bar") > repo_path("foo"));
     }
 
+    // Convert to ["foo", "bar"] to "foo\bar" on Windows, else "foo/bar".
+    fn os_path(parts: &[&str]) -> String {
+        parts.iter().collect::<PathBuf>().to_string_lossy().into()
+    }
+
     #[test]
     fn test_relativize_path_from_repo_when_cwd_is_repo_root() {
         let repo_root = Path::new("/home/zuck/tfb");
@@ -1117,7 +1128,7 @@ mod tests {
         let check = |path, expected| {
             assert_eq!(relativizer.relativize(repo_path(path)), expected);
         };
-        check("foo/bar.txt", "foo/bar.txt");
+        check("foo/bar.txt", os_path(&["foo", "bar.txt"]));
     }
 
     #[test]
@@ -1139,7 +1150,7 @@ mod tests {
         let check = |path, expected| {
             assert_eq!(relativizer.relativize(repo_path(path)), expected);
         };
-        check("foo/bar.txt", "tfb/foo/bar.txt");
+        check("foo/bar.txt", os_path(&["tfb", "foo", "bar.txt"]));
     }
 
     #[test]
@@ -1148,6 +1159,9 @@ mod tests {
         let check = |path, expected| {
             assert_eq!(relativizer.relativize(repo_path(path)), expected);
         };
-        check("foo/bar.txt", "../../zuck/tfb/foo/bar.txt");
+        check(
+            "foo/bar.txt",
+            os_path(&["..", "..", "zuck", "tfb", "foo", "bar.txt"]),
+        );
     }
 }
