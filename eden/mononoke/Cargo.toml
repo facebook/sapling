@@ -147,9 +147,6 @@ daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a
 git-config = { git = "https://github.com/mzr/gitoxide", rev = "28c51a1d99af3f4e5ea8f6bb2319e0a5d812c891" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d174c6796d736b2b61dab0297670390f8" }
 mysql_async = { git = "https://github.com/mzr/mysql_async", rev = "76b6fa05d7bb3408402033e6f94042a756ab55ab" }
-prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
-prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
-prost-types = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
 reqwest = { git = "https://github.com/vmagro/reqwest", rev = "ccd29cb852eefc24d7d3943c201e47b6b2e2599a" }
 rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }
