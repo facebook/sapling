@@ -444,7 +444,7 @@ def _makerage(ui, repo, **opts):
             ),
         ),
         ("hg debugnetwork", lambda: hgcmd("debugnetwork")),
-        ("hg debugnetworkdoctor", lambda: shcmd("hg debugnetworkdoctor")),
+        ("hg debugnetworkdoctor", lambda: hgcmd("debugnetworkdoctor")),
         ("infinitepush backup state", lambda: readinfinitepushbackupstate(repo)),
         ("commit cloud workspace sync state", lambda: readcommitcloudstate(repo)),
         (
