@@ -18,6 +18,7 @@ use mononoke_types::{
     deleted_manifest_v2::DeletedManifestV2, BlobstoreBytes, BonsaiChangeset, ChangesetId,
     DeletedManifestV2Id,
 };
+use std::collections::HashMap;
 use unodes::RootUnodeManifestId;
 
 use derived_data_service_if::types as thrift;
@@ -94,6 +95,15 @@ impl BonsaiDerivable for RootDeletedManifestV2Id {
         changeset_id: ChangesetId,
     ) -> Result<Option<Self>> {
         RootDeletedManifestDeriver::fetch(ctx, derivation_ctx, changeset_id).await
+    }
+
+    async fn derive_batch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsais: Vec<BonsaiChangeset>,
+        gap_size: Option<usize>,
+    ) -> Result<HashMap<ChangesetId, Self>> {
+        RootDeletedManifestDeriver::derive_batch(ctx, derivation_ctx, bonsais, gap_size).await
     }
 
     fn from_thrift(data: thrift::DerivedData) -> Result<Self> {

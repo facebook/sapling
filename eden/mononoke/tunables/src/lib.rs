@@ -199,6 +199,9 @@ pub struct MononokeTunables {
     // if there are available hosts.
     derived_data_service_target_region: TunableString,
 
+    // Disable the parallel derivation for DM and default to serial
+    deleted_manifest_disable_new_parallel_derivation: AtomicBool,
+
     // multiplexed blobstore is_present/get new semantics rollout
     multiplex_blobstore_get_do_queue_lookup: AtomicBool,
     multiplex_blobstore_is_present_do_queue_lookup: AtomicBool,

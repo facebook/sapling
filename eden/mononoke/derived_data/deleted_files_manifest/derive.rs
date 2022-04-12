@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, format_err, Context, Error};
+use anyhow::{anyhow, bail, format_err, Context, Error};
 use blobstore::{Blobstore, Loadable};
 use borrowed::borrowed;
 use bounded_traversal::bounded_traversal;
 use cloned::cloned;
 use context::CoreContext;
+use derived_data::batch::{split_bonsais_in_linear_stacks, FileConflicts};
 use derived_data_manager::DerivationContext;
 use futures::{
     channel::mpsc,
@@ -22,9 +23,10 @@ use mononoke_types::{
     deleted_manifest_common::DeletedManifestCommon, BlobstoreKey, BonsaiChangeset, ChangesetId,
     MPath, MPathElement, ManifestUnodeId,
 };
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
-use std::{collections::BTreeMap, collections::HashSet};
 use tokio::sync::Mutex;
+use tunables::tunables;
 use unodes::RootUnodeManifestId;
 
 use crate::mapping::RootDeletedManifestIdCommon;
@@ -463,6 +465,19 @@ pub(crate) async fn get_changes(
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
 ) -> Result<PathTree<Option<PathChange>>, Error> {
+    let changes = get_changes_list(ctx, derivation_ctx, bonsai).await?;
+    Ok(PathTree::from_iter(
+        changes
+            .into_iter()
+            .map(|(path, change)| (path, Some(change))),
+    ))
+}
+
+async fn get_changes_list(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    bonsai: BonsaiChangeset,
+) -> Result<Vec<(MPath, PathChange)>, Error> {
     // Get file/directory changes between the current changeset and its parents
     //
     // get unode manifests first
@@ -502,11 +517,7 @@ pub(crate) async fn get_changes(
         diff_against_parents(ctx, derivation_ctx, unode_mf_id, parent_mf_ids).await
     }?;
 
-    Ok(PathTree::from_iter(
-        changes
-            .into_iter()
-            .map(|(path, change)| (path, Some(change))),
-    ))
+    Ok(changes)
 }
 
 async fn diff_against_parents(
@@ -579,6 +590,111 @@ impl<Root: RootDeletedManifestIdCommon> RootDeletedManifestDeriver<Root> {
         .await
         .with_context(|| format!("Deriving {}", Root::NAME))?;
         Ok(Root::new(id))
+    }
+
+    pub(crate) async fn derive_batch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsais: Vec<BonsaiChangeset>,
+        gap_size: Option<usize>,
+    ) -> Result<HashMap<ChangesetId, Root>, Error> {
+        if gap_size.is_some() {
+            bail!("Gap size not supported in deleted manifest")
+        }
+        let simple_stacks =
+            split_bonsais_in_linear_stacks(&bonsais, FileConflicts::AnyChange.into())?;
+        let id_to_bonsai: HashMap<ChangesetId, BonsaiChangeset> = bonsais
+            .into_iter()
+            .map(|bonsai| (bonsai.get_changeset_id(), bonsai))
+            .collect();
+        let use_new_parallel = !tunables().get_deleted_manifest_disable_new_parallel_derivation();
+        borrowed!(id_to_bonsai);
+        // Map of ids to derived values.
+        // We need to be careful to use this for self-references, since the intermediate derived
+        // values don't get stored in blobstore until after this function returns.
+        let mut derived: HashMap<ChangesetId, Root> = HashMap::with_capacity(id_to_bonsai.len());
+        for stack in simple_stacks {
+            let bonsais: Vec<BonsaiChangeset> = stack
+                .stack_items
+                .into_iter()
+                // Panic safety: ids were created from the received bonsais
+                .map(|item| id_to_bonsai.get(&item.cs_id).unwrap().clone())
+                .collect();
+            let parents: Vec<Root::Id> = stream::iter(stack.parents)
+                .then(|p| match derived.get(&p) {
+                    Some(root) => future::ok(root.clone()).left_future(),
+                    None => derivation_ctx.fetch_dependency(ctx, p).right_future(),
+                })
+                .map_ok(|root: Root| root.id().clone())
+                .try_collect()
+                .await?;
+            if use_new_parallel {
+                Self::derive_single_stack(ctx, derivation_ctx, bonsais, parents, &mut derived)
+                    .await?;
+            } else {
+                Self::derive_serially(ctx, derivation_ctx, bonsais, &mut derived).await?;
+            }
+        }
+        Ok(derived)
+    }
+
+    async fn derive_serially(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        stack: Vec<BonsaiChangeset>,
+        derived: &mut HashMap<ChangesetId, Root>,
+    ) -> Result<(), Error> {
+        for bonsai in stack {
+            let parents = derivation_ctx
+                .fetch_unknown_parents(ctx, Some(derived), &bonsai)
+                .await?;
+            let id = bonsai.get_changeset_id();
+            let root = Self::derive_single(ctx, derivation_ctx, bonsai, parents).await?;
+            derived.insert(id, root);
+        }
+        Ok(())
+    }
+
+    async fn derive_single_stack(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        stack: Vec<BonsaiChangeset>,
+        parents: Vec<Root::Id>,
+        derived: &mut HashMap<ChangesetId, Root>,
+    ) -> Result<(), Error> {
+        if parents.len() > 1 {
+            // We can't derive stack for merge commits. Let's derive normally.
+            // split_bonsais_in_linear_stacks promises us merges go in their own batch
+            assert_eq!(stack.len(), 1);
+            Self::derive_serially(ctx, derivation_ctx, stack, derived).await?;
+        } else {
+            let ids: Vec<_> = stack
+                .iter()
+                .map(|bonsai| bonsai.get_changeset_id())
+                .collect();
+            let all_changes = stream::iter(stack)
+                .map(|bonsai| async move {
+                    anyhow::Ok((
+                        bonsai.get_changeset_id(),
+                        get_changes_list(ctx, derivation_ctx, bonsai).await?,
+                    ))
+                })
+                .buffered(100)
+                .try_collect()
+                .await?;
+            let mf_ids = DeletedManifestDeriver::<Root::Manifest>::derive_simple_stack(
+                ctx,
+                derivation_ctx.blobstore(),
+                parents.into_iter().next(),
+                all_changes,
+            )
+            .await?;
+            derived.extend(
+                ids.into_iter()
+                    .zip(mf_ids.into_iter().map(|id| Root::new(id))),
+            );
+        }
+        Ok(())
     }
 
     pub(crate) async fn store_mapping(

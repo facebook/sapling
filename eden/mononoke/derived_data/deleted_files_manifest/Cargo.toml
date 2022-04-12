@@ -31,6 +31,7 @@ maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tunables = { version = "0.1.0", path = "../../tunables" }
 unodes = { version = "0.1.0", path = "../unodes" }
 
 [dev-dependencies]

@@ -51,7 +51,6 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
     // The root will of course be edited always, and the parallelisation won't help there, and in general
     // this optimisation does not improve the worst case (all commits modify the same files), but it
     // optimises the usual case (commits touch mostly different files) quite well.
-    #[allow(dead_code)]
     pub(crate) async fn derive_simple_stack(
         ctx: &CoreContext,
         blobstore: &Arc<dyn Blobstore>,
