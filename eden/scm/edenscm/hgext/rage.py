@@ -339,8 +339,9 @@ def _makerage(ui, repo, **opts):
     encoding.encodingmode = "replace"
 
     def hgcmd(cmdname, *args, **additional_opts):
-        cmdargs = ["hg", cmdname, *args]
+        cmdargs = ["hg", *cmdname.split(), *args]
         for flagname, flagvalue in additional_opts.items():
+            flagname = flagname.replace("_", "-")
             if isinstance(flagvalue, list):
                 cmdargs += [f"--{flagname}={v}" for v in flagvalue]
             else:
