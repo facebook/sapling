@@ -7,35 +7,27 @@
 
 #pragma once
 
-#include <folly/Format.h>
-#include <folly/Synchronized.h>
-#include <memory>
-#include <optional>
-#include <system_error>
 #include "eden/fs/inodes/InodePtr.h"
+#include "eden/fs/inodes/PathError.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
- * A subclass of std::system_error referring to a specific inode.
+ * A subclass of PathErrorBase referring to a specific inode.
  *
  * The main advantage of this class is that it can include the Inode path in
  * the error message.  However, it avoids computing the path until the error
  * message is actually needed.  If the error is caught and handled without
  * looking at the error message, then the path never needs to be computed.
  */
-class InodeError : public std::system_error {
+class InodeError : public PathErrorBase {
  public:
   InodeError(int errnum, InodePtr inode)
-      : std::system_error(errnum, std::generic_category()),
-        inode_(std::move(inode)) {}
+      : PathErrorBase(errnum), inode_(std::move(inode)) {}
   InodeError(int errnum, TreeInodePtr inode, PathComponentPiece child);
   InodeError(int errnum, InodePtr inode, std::string message)
-      : std::system_error(errnum, std::generic_category()),
-        inode_(std::move(inode)),
-        message_(std::move(message)) {}
+      : PathErrorBase(errnum, std::move(message)), inode_(std::move(inode)) {}
   InodeError(
       int errnum,
       TreeInodePtr inode,
@@ -62,26 +54,19 @@ class InodeError : public std::system_error {
             errnum,
             inode,
             child,
-            message_(folly::sformat(format, std::forward<Args>(args)...))) {}
-
-  const char* what() const noexcept override;
-
-  int errnum() const {
-    return code().value();
-  }
+            folly::sformat(format, std::forward<Args>(args)...)) {}
+  ~InodeError() override = default;
 
   InodeError(InodeError const&) = default;
   InodeError& operator=(InodeError const&) = default;
   InodeError(InodeError&&) = default;
   InodeError& operator=(InodeError&&) = default;
 
- private:
-  std::string computeMessage() const;
+ protected:
+  std::string computePath() const noexcept override;
 
+ private:
   InodePtr inode_;
   std::optional<PathComponent> child_;
-  std::string message_;
-  mutable folly::Synchronized<std::string> fullMessage_;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

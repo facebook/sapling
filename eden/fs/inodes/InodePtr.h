@@ -14,8 +14,7 @@
 #include <utility>
 #include "folly/logging/xlog.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * A custom smart pointer class for pointing to Inode objects.
@@ -246,9 +245,7 @@ class InodePtr : public InodePtrImpl<InodeBase> {
   static InodePtr newPtrLocked(InodeBase* value) noexcept {
     return InodePtr{value, InodePtrImpl<InodeBase>::LOCKED_INCREMENT};
   }
-  static InodePtr takeOwnership(std::unique_ptr<InodeBase> value) noexcept {
-    return InodePtr::newPtrLocked(value.release());
-  }
+  static InodePtr takeOwnership(std::unique_ptr<InodeBase> value) noexcept;
   static InodePtr newPtrFromExisting(InodeBase* value) noexcept {
     return InodePtr{value, InodePtrImpl<InodeBase>::NORMAL_INCREMENT};
   }
@@ -377,5 +374,4 @@ template <typename InodeTypeParam>
 bool operator!=(std::nullptr_t, const InodePtrImpl<InodeTypeParam>& ptr) {
   return bool(ptr);
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

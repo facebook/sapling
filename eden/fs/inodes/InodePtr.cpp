@@ -14,8 +14,8 @@
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/TreeInode.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
+
 template <typename SubclassRawPtrType>
 SubclassRawPtrType InodePtr::asSubclass() const {
   if (this->value_ == nullptr) {
@@ -136,10 +136,13 @@ TreeInodePtr InodePtr::asTreePtrOrNull() && {
   return extractSubclassPtrOrNull<TreeInodePtr>();
 }
 
+InodePtr InodePtr::takeOwnership(std::unique_ptr<InodeBase> value) noexcept {
+  return InodePtr::newPtrLocked(value.release());
+}
+
 // Explicitly instantiate InodePtrImpl for all inode class types
 template class InodePtrImpl<FileInode>;
 template class InodePtrImpl<TreeInode>;
 template FileInodePtr InodePtr::asSubclassPtrOrNull<FileInodePtr>() const&;
 template TreeInodePtr InodePtr::asSubclassPtrOrNull<TreeInodePtr>() const&;
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -10,11 +10,10 @@
 #include <folly/String.h>
 #include "eden/fs/inodes/TreeInode.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 InodeError::InodeError(int errnum, TreeInodePtr inode, PathComponentPiece child)
-    : std::system_error(errnum, std::generic_category()),
+    : PathErrorBase(errnum),
       inode_(std::move(inode)),
       child_(PathComponent{child}) {}
 
@@ -23,26 +22,11 @@ InodeError::InodeError(
     TreeInodePtr inode,
     PathComponentPiece child,
     std::string&& message)
-    : std::system_error(errnum, std::generic_category()),
+    : PathErrorBase(errnum, std::move(message)),
       inode_(std::move(inode)),
-      child_(PathComponent{child}),
-      message_(std::move(message)) {}
+      child_(PathComponent{child}) {}
 
-const char* InodeError::what() const noexcept {
-  try {
-    auto msg = fullMessage_.wlock();
-    if (msg->empty()) {
-      *msg = computeMessage();
-    }
-
-    return msg->c_str();
-  } catch (...) {
-    // Fallback value if anything goes wrong building the real message
-    return "<InodeError>";
-  }
-}
-
-std::string InodeError::computeMessage() const {
+std::string InodeError::computePath() const noexcept {
   std::string path;
   if (inode_) {
     if (child_.has_value()) {
@@ -57,11 +41,6 @@ std::string InodeError::computeMessage() const {
       path = inode_->getLogPath();
     }
   }
-
-  if (message_.empty()) {
-    return path + ": " + folly::errnoStr(errnum());
-  }
-  return path + ": " + message_ + ": " + folly::errnoStr(errnum());
+  return path;
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
