@@ -49,6 +49,15 @@ enum SectionType {
     Metadata,
 }
 
+impl Pattern {
+    fn as_str(&self) -> &str {
+        match self {
+            Self::Include(p) => p,
+            Self::Exclude(p) => p,
+        }
+    }
+}
+
 impl SectionType {
     fn from_str(value: &str) -> Option<Self> {
         match value {
@@ -70,6 +79,9 @@ pub enum Error {
 
     #[error(transparent)]
     Fetch(#[from] anyhow::Error),
+
+    #[error("unsuppported pattern type {0}")]
+    UnsupportedPattern(String),
 }
 
 impl Profile {
@@ -201,6 +213,68 @@ impl Profile {
         rules_inner(self, &mut fetch, &mut rules, None, &mut HashMap::new()).await?;
         Ok(rules)
     }
+}
+
+static ALL_PATTERN_KINDS: &[&str] = &[
+    "re",
+    "glob",
+    "path",
+    "relglob",
+    "relpath",
+    "relre",
+    "listfile",
+    "listfile0",
+    "set",
+    "include",
+    "subinclude",
+    "rootfilesin",
+];
+
+// Convert a sparse profile pattern into what the tree matcher
+// expects. We only support "glob" and "path" pattern types.
+fn sparse_pat_to_matcher_rule(pat: Pattern) -> Result<Vec<String>, Error> {
+    static DEFAULT_TYPE: &str = "glob";
+
+    let (pat_type, pat_text) = match pat.as_str().split_once(':') {
+        Some((t, p)) => match t {
+            "glob" | "path" => (t, p),
+            _ => {
+                if ALL_PATTERN_KINDS.contains(&t) {
+                    return Err(Error::UnsupportedPattern(t.to_string()));
+                } else {
+                    (DEFAULT_TYPE, pat.as_str())
+                }
+            }
+        },
+        None => (DEFAULT_TYPE, pat.as_str()),
+    };
+
+    let pats = match pat_type {
+        "glob" => pathmatcher::expand_curly_brackets(pat_text)
+            .iter()
+            .map(|s| pathmatcher::normalize_glob(s))
+            .collect(),
+        "path" => vec![pathmatcher::plain_to_glob(pat_text)],
+        _ => unreachable!(),
+    };
+
+    let make_recursive = |p: String| -> String {
+        if p.is_empty() || p.ends_with('/') {
+            p + "**"
+        } else {
+            p + "/**"
+        }
+    };
+
+    Ok(pats
+        .into_iter()
+        // Adjust glob to ensure sparse rules match everything below them.
+        .map(make_recursive)
+        .map(|p| match pat {
+            Pattern::Exclude(_) => format!("!{}", p),
+            Pattern::Include(_) => p,
+        })
+        .collect())
 }
 
 #[cfg(test)]
@@ -368,5 +442,32 @@ title = grand_child
             .await;
 
         assert!(res.is_ok());
+    }
+
+    #[test]
+    fn test_sparse_pat_to_matcher_rule() {
+        assert_eq!(
+            sparse_pat_to_matcher_rule(Pattern::Include("path:/foo/bar".to_string())).unwrap(),
+            vec!["/foo/bar/**"]
+        );
+
+        assert_eq!(
+            sparse_pat_to_matcher_rule(Pattern::Include("/foo/*/bar{1,{2,3}}/".to_string()))
+                .unwrap(),
+            vec!["/foo/*/bar1/**", "/foo/*/bar2/**", "/foo/*/bar3/**"],
+        );
+
+        assert_eq!(
+            sparse_pat_to_matcher_rule(Pattern::Include("path:/foo/*/bar{1,{2,3}}/".to_string()))
+                .unwrap(),
+            vec!["/foo/\\*/bar\\{1,\\{2,3\\}\\}/**"],
+        );
+
+        assert_eq!(
+            sparse_pat_to_matcher_rule(Pattern::Exclude("glob:**".to_string())).unwrap(),
+            vec!["!**/**"],
+        );
+
+        assert!(sparse_pat_to_matcher_rule(Pattern::Include("re:.*".to_string())).is_err());
     }
 }

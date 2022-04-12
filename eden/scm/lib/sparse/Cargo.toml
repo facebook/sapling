@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.51"
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
+pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 thiserror = "1.0.30"
 tracing = "0.1.32"
 
