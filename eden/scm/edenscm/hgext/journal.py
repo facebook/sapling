@@ -219,6 +219,10 @@ class journalentry(
 
     @classmethod
     def fromstorage(cls, line: bytes) -> "journalentry":
+        split = pycompat.decodeutf8(line).split("\n")
+        if len(split) != 7:
+            raise ValueError("incorrect journalentry '%s'" % line)
+
         (
             time,
             user,
@@ -227,7 +231,7 @@ class journalentry(
             name,
             oldhashes,
             newhashes,
-        ) = pycompat.decodeutf8(line).split("\n")
+        ) = split
         timestamp, tz = time.split()
         timestamp, tz = float(timestamp), int(tz)
         oldhashes = tuple(node.bin(hash) for hash in oldhashes.split(","))
@@ -484,7 +488,12 @@ class journalstorage(object):
         for line in lines:
             if not line:
                 continue
-            yield journalentry.fromstorage(line)
+            try:
+                yield journalentry.fromstorage(line)
+            except ValueError as ex:
+                self.ui.debug("skipping corrupt journalentry: %s" % ex)
+                # If a journal entry is corrupt, just skip it.
+                pass
 
 
 # journal reading
