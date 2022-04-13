@@ -14,5 +14,8 @@ serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_dep
 tracing = "0.1.32"
 tracing-subscriber = { version = "0.3.10", features = ["ansi", "env-filter", "fmt", "json", "parking_lot", "registry"] }
 
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3", features = ["everything"] }
+
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3.7", features = ["processthreadsapi"] }

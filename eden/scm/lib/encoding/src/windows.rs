@@ -14,8 +14,14 @@ use std::os::windows::ffi::OsStringExt;
 use std::path::Path;
 use std::path::PathBuf;
 
-const MB_ERR_INVALID_CHARS: winapi::DWORD = 0x00000008;
-const WC_COMPOSITECHECK: winapi::DWORD = 0x00000200;
+use winapi::shared::minwindef::DWORD;
+use winapi::shared::ntdef::LPSTR;
+use winapi::um::stringapiset::MultiByteToWideChar;
+use winapi::um::stringapiset::WideCharToMultiByte;
+use winapi::um::winnls::CP_ACP;
+
+const MB_ERR_INVALID_CHARS: DWORD = 0x00000008;
+const WC_COMPOSITECHECK: DWORD = 0x00000200;
 
 /// Convert bytes in the local encoding to an `OsStr`.
 ///
@@ -31,12 +37,12 @@ pub fn local_bytes_to_osstring(bytes: &[u8]) -> io::Result<Cow<OsStr>> {
     if bytes.len() == 0 {
         return Ok(Cow::Owned(OsString::new()));
     }
-    let codepage = winapi::CP_ACP;
+    let codepage = CP_ACP;
     let len = unsafe {
-        kernel32::MultiByteToWideChar(
+        MultiByteToWideChar(
             codepage,
             MB_ERR_INVALID_CHARS,
-            bytes.as_ptr() as winapi::LPSTR,
+            bytes.as_ptr() as LPSTR,
             bytes.len() as i32,
             std::ptr::null_mut(),
             0,
@@ -48,10 +54,10 @@ pub fn local_bytes_to_osstring(bytes: &[u8]) -> io::Result<Cow<OsStr>> {
     let mut wide: Vec<u16> = Vec::with_capacity(len as usize);
     let len = unsafe {
         wide.set_len(len as usize);
-        kernel32::MultiByteToWideChar(
+        MultiByteToWideChar(
             codepage,
             MB_ERR_INVALID_CHARS,
-            bytes.as_ptr() as winapi::LPSTR,
+            bytes.as_ptr() as LPSTR,
             bytes.len() as i32,
             wide.as_mut_ptr(),
             len,
@@ -92,13 +98,13 @@ pub fn local_bytes_to_path(bytes: &[u8]) -> io::Result<Cow<Path>> {
 /// from Windows' perspective and is more performant.
 #[inline]
 pub fn osstring_to_local_bytes(s: &OsStr) -> io::Result<Cow<[u8]>> {
-    let codepage = winapi::CP_ACP;
+    let codepage = CP_ACP;
     if s.len() == 0 {
         return Ok(Cow::Owned(Vec::new()));
     }
     let wstr: Vec<u16> = s.encode_wide().collect();
     let len = unsafe {
-        kernel32::WideCharToMultiByte(
+        WideCharToMultiByte(
             codepage,
             WC_COMPOSITECHECK,
             wstr.as_ptr(),
@@ -115,12 +121,12 @@ pub fn osstring_to_local_bytes(s: &OsStr) -> io::Result<Cow<[u8]>> {
     let mut astr: Vec<u8> = Vec::with_capacity(len as usize);
     let len = unsafe {
         astr.set_len(len as usize);
-        kernel32::WideCharToMultiByte(
+        WideCharToMultiByte(
             codepage,
             WC_COMPOSITECHECK,
             wstr.as_ptr(),
             wstr.len() as i32,
-            astr.as_mut_ptr() as winapi::LPSTR,
+            astr.as_mut_ptr() as LPSTR,
             len,
             std::ptr::null(),
             std::ptr::null_mut(),

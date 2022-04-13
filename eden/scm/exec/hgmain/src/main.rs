@@ -8,9 +8,9 @@
 use clidispatch::dispatch;
 
 mod buildinfo;
-#[cfg(feature = "with_chg")]
+#[cfg(all(feature = "with_chg", not(windows)))]
 mod chg;
-#[cfg(feature = "with_chg")]
+#[cfg(all(feature = "with_chg", not(windows)))]
 use chg::maybe_call_chg;
 
 #[cfg(windows)]
@@ -72,7 +72,7 @@ fn main() {
         _ => {}
     }
 
-    #[cfg(feature = "with_chg")]
+    #[cfg(all(feature = "with_chg", not(windows)))]
     maybe_call_chg(&full_args);
 
     #[cfg(windows)]

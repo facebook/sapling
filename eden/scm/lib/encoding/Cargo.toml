@@ -8,7 +8,9 @@ edition = "2021"
 [dependencies]
 types = { version = "0.1.0", path = "../types" }
 
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3", features = ["everything"] }
+
 [target.'cfg(windows)'.dependencies]
-kernel32-sys = "0.2.2"
 local-encoding = "*"
 winapi = "0.2.7"
