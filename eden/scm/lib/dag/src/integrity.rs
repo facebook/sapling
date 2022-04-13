@@ -126,7 +126,7 @@ where
                     expected_flags_max |= SegmentFlags::ONLY_HEAD;
                 }
                 let flags = seg.flags()?;
-                if !flags.contains(expected_flags_min) || !expected_flags_max.contains(flags)  {
+                if !flags.contains(expected_flags_min) || !expected_flags_max.contains(flags) {
                     add_problem(format!(
                         "has unexpected flags: {:?} (expected: min: {:?}, max: {:?})",
                         flags, expected_flags_min, expected_flags_max
