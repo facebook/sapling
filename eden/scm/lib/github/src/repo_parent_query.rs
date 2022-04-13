@@ -5,14 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
-use anyhow::bail;
+use crate::make_request::make_request;
 use anyhow::Result;
 use graphql_client::GraphQLQuery;
-use graphql_client::Response as GraphQLResponse;
-use http_client::Method;
-use http_client::Request;
-use url::Url;
 
 #[derive(GraphQLQuery)]
 #[graphql(
@@ -34,36 +29,9 @@ pub fn get_parent_repo(github_api_token: &str, repo: &GitHubRepo) -> Result<Opti
     };
 
     let query = RepoParent::build_query(repo_parent_variables);
-
-    let url = Url::parse("https://api.github.com/graphql")?;
-    let mut request = Request::new(url, Method::Post);
-    request.set_header("authorization", format!("Bearer {}", github_api_token));
-    // If User-Agent is not set, the request will fail with a 403:
-    // "Request forbidden by administrative rules. Please make sure your request
-    // has a User-Agent header".
-    request.set_header("User-Agent", "graphql-rust/0.10.0");
-    request.set_body(serde_json::to_vec(&query)?);
-
-    let response = request.send()?;
-    let status = response.status();
-    if !status.is_success() {
-        bail!(
-            "request failed ({}): {}",
-            status.as_u16(),
-            String::from_utf8_lossy(response.body())
-        );
-    }
-
-    match response
-        .json::<GraphQLResponse<repo_parent::ResponseData>>()?
-        .data
-    {
-        Some(response_data) => Ok(convert(response_data)),
-        None => Err(anyhow!(
-            "failed to parse '{}'",
-            String::from_utf8_lossy(response.body())
-        )),
-    }
+    let response_data =
+        make_request::<repo_parent::ResponseData, repo_parent::Variables>(github_api_token, query)?;
+    Ok(convert(response_data))
 }
 
 fn convert(response_data: repo_parent::ResponseData) -> Option<GitHubRepo> {

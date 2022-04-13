@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod make_request;
 mod repo_parent_query;
 
 pub use crate::repo_parent_query::get_parent_repo;
