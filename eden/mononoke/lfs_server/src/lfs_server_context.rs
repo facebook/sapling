@@ -605,7 +605,7 @@ mod test {
         pub fn test_builder(fb: FacebookInit) -> Result<TestContextBuilder<'static>, Error> {
             Ok(TestContextBuilder {
                 fb,
-                repo: TestRepoFactory::new()?.build()?,
+                repo: TestRepoFactory::new(fb)?.build()?,
                 self_uris: vec!["http://foo.com/"],
                 upstream_uri: Some("http://bar.com".to_string()),
                 config: ServerConfig::default(),

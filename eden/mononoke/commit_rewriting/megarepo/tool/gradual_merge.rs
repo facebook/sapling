@@ -569,7 +569,7 @@ mod test {
     async fn create_repo(
         ctx: &CoreContext,
     ) -> Result<(InnerRepo, ChangesetId, Vec<ChangesetId>), Error> {
-        let repo: InnerRepo = test_repo_factory::build_empty()?;
+        let repo: InnerRepo = test_repo_factory::build_empty(ctx.fb)?;
 
         let dag = create_from_dag(
             &ctx,

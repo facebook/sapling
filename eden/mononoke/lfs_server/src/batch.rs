@@ -1021,7 +1021,7 @@ mod test {
     #[fbinit::test]
     async fn test_resolve_redacted(fb: FacebookInit) -> Result<(), Error> {
         // Create a single factory with a blobstore we've created.
-        let mut factory = TestRepoFactory::new()?;
+        let mut factory = TestRepoFactory::new(fb)?;
         let stub_blobstore = Arc::new(Memblob::default());
         factory.with_blobstore(stub_blobstore.clone());
 
@@ -1096,7 +1096,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_resolve_size(fb: FacebookInit) -> Result<(), Error> {
-        let repo = TestRepoFactory::new()?.build::<BlobRepo>()?;
+        let repo = TestRepoFactory::new(fb)?.build::<BlobRepo>()?;
 
         let meta = filestore::store(
             repo.blobstore(),

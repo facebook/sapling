@@ -39,7 +39,7 @@ fn pushrebase_assigns_globalrevs(fb: FacebookInit) -> Result<(), Error> {
 
 async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = TestRepoFactory::new()?
+    let repo: BlobRepo = TestRepoFactory::new(fb)?
         .with_id(RepositoryId::new(1))
         .build()?;
     let mapping = repo.bonsai_globalrev_mapping().clone();
@@ -191,7 +191,7 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
     }
 
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = TestRepoFactory::new()?
+    let repo: BlobRepo = TestRepoFactory::new(fb)?
         .with_id(RepositoryId::new(1))
         .build()?;
     let mapping = repo.bonsai_globalrev_mapping().clone();

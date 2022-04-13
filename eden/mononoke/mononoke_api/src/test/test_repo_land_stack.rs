@@ -21,7 +21,7 @@ use tests_utils::drawdag::create_from_dag;
 use crate::repo::{BookmarkFreshness, Repo, RepoContext};
 
 async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, ChangesetId>)> {
-    let blob_repo: BlobRepo = test_repo_factory::build_empty()?;
+    let blob_repo: BlobRepo = test_repo_factory::build_empty(ctx.fb)?;
     let changesets = create_from_dag(
         ctx,
         &blob_repo,

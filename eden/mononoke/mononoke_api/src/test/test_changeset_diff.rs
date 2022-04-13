@@ -25,7 +25,7 @@ use tests_utils::CreateCommitContext;
 #[fbinit::test]
 async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo: BlobRepo = test_repo_factory::build_empty()?;
+    let blobrepo: BlobRepo = test_repo_factory::build_empty(fb)?;
     let root = CreateCommitContext::new_root(&ctx, &blobrepo)
         .add_file("file_to_move", "context1")
         .commit()
@@ -73,7 +73,7 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo: BlobRepo = test_repo_factory::build_empty()?;
+    let blobrepo: BlobRepo = test_repo_factory::build_empty(fb)?;
     let root = CreateCommitContext::new_root(&ctx, &blobrepo)
         .add_file("file_to_copy", "context1")
         .commit()
@@ -126,7 +126,7 @@ async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo: BlobRepo = test_repo_factory::build_empty()?;
+    let blobrepo: BlobRepo = test_repo_factory::build_empty(fb)?;
     let root = CreateCommitContext::new_root(&ctx, &blobrepo)
         .add_file("file_to_move", "context1")
         .commit()
@@ -291,7 +291,7 @@ fn check_diff_paths(diff_ctxs: &[ChangesetPathDiffContext], paths: &[&str]) {
 #[fbinit::test]
 async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo: BlobRepo = test_repo_factory::build_empty()?;
+    let blobrepo: BlobRepo = test_repo_factory::build_empty(fb)?;
     let root = CreateCommitContext::new_root(&ctx, &blobrepo)
         .add_file("root", "root")
         .commit()
@@ -497,7 +497,7 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo: BlobRepo = test_repo_factory::build_empty()?;
+    let blobrepo: BlobRepo = test_repo_factory::build_empty(fb)?;
 
     // List of file names to test in repo order.  Note in particular that
     // "j.txt" is after "j/k" even though "." is before "/" in lexicographic

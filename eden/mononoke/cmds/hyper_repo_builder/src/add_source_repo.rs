@@ -244,7 +244,7 @@ mod tests {
     #[fbinit::test]
     async fn add_source_repo_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let mut test_repo_factory = TestRepoFactory::new()?;
+        let mut test_repo_factory = TestRepoFactory::new(fb)?;
 
         let source_repo: BlobRepo = test_repo_factory
             .with_id(RepositoryId::new(0))
@@ -340,7 +340,7 @@ mod tests {
     #[fbinit::test]
     async fn add_source_repo_should_fail_file_intersections(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let mut test_repo_factory = TestRepoFactory::new()?;
+        let mut test_repo_factory = TestRepoFactory::new(fb)?;
 
         let source_repo: BlobRepo = test_repo_factory
             .with_id(RepositoryId::new(0))
@@ -389,7 +389,7 @@ mod tests {
     #[fbinit::test]
     async fn add_source_repo_simple_with_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let mut test_repo_factory = TestRepoFactory::new()?;
+        let mut test_repo_factory = TestRepoFactory::new(fb)?;
 
         let source_repo: BlobRepo = test_repo_factory
             .with_id(RepositoryId::new(0))
@@ -443,7 +443,7 @@ mod tests {
     #[fbinit::test]
     async fn add_source_repo_empty_wc(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let mut test_repo_factory = TestRepoFactory::new()?;
+        let mut test_repo_factory = TestRepoFactory::new(fb)?;
 
         let source_repo: BlobRepo = test_repo_factory
             .with_id(RepositoryId::new(0))

@@ -133,7 +133,7 @@ pub async fn init_small_large_repo(
     ),
     Error,
 > {
-    let mut factory = TestRepoFactory::new()?;
+    let mut factory = TestRepoFactory::new(ctx.fb)?;
     let megarepo: BlobRepo = factory.with_id(RepositoryId::new(1)).build()?;
     let mapping =
         SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone().into());

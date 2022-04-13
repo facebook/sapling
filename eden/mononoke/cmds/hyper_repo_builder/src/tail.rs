@@ -288,7 +288,7 @@ mod test {
     #[fbinit::test]
     async fn test_sync_commit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let mut test_repo_factory = TestRepoFactory::new()?;
+        let mut test_repo_factory = TestRepoFactory::new(fb)?;
 
         let source_repo: InnerRepo = test_repo_factory
             .with_id(RepositoryId::new(0))
@@ -352,7 +352,7 @@ mod test {
     #[fbinit::test]
     async fn test_tail_once_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let mut test_repo_factory = TestRepoFactory::new()?;
+        let mut test_repo_factory = TestRepoFactory::new(fb)?;
 
         let source_repo: InnerRepo = test_repo_factory
             .with_id(RepositoryId::new(0))

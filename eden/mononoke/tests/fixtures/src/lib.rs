@@ -168,7 +168,7 @@ pub trait TestRepoFixture {
     }
 
     async fn get_inner_repo_with_id(fb: FacebookInit, id: RepositoryId) -> InnerRepo {
-        let repo: InnerRepo = TestRepoFactory::new()
+        let repo: InnerRepo = TestRepoFactory::new(fb)
             .unwrap()
             .with_id(id)
             .with_name(Self::REPO_NAME.to_string())

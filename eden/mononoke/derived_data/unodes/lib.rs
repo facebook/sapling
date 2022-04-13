@@ -179,7 +179,7 @@ mod tests {
     #[fbinit::test]
     async fn test_find_unode_rename_sources(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
         borrowed!(ctx, repo);
 
         let c1 = CreateCommitContext::new_root(ctx, repo)

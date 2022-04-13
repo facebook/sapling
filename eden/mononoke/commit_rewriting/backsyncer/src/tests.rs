@@ -629,7 +629,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
 async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     // Initialize source and target repos
     let ctx = CoreContext::test_mock(fb);
-    let mut factory = TestRepoFactory::new()?;
+    let mut factory = TestRepoFactory::new(fb)?;
     let source_repo_id = RepositoryId::new(1);
     let source_repo: BlobRepo = factory.with_id(source_repo_id).build()?;
     let target_repo_id = RepositoryId::new(2);
@@ -1208,7 +1208,7 @@ async fn init_repos(
     bookmark_renamer_type: BookmarkRenamerType,
 ) -> Result<(CommitSyncer<SqlSyncedCommitMapping>, TargetRepoDbs), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mut factory = TestRepoFactory::new()?;
+    let mut factory = TestRepoFactory::new(fb)?;
     let source_repo_id = RepositoryId::new(1);
     let source_repo: BlobRepo = factory.with_id(source_repo_id).build()?;
     Linear::initrepo(fb, &source_repo).await;
@@ -1493,7 +1493,7 @@ async fn init_merged_repos(
 > {
     let ctx = CoreContext::test_mock(fb);
 
-    let mut factory = TestRepoFactory::new()?;
+    let mut factory = TestRepoFactory::new(fb)?;
     let large_repo_id = RepositoryId::new(num_repos as i32);
     let large_repo: BlobRepo = factory.with_id(large_repo_id).build()?;
 

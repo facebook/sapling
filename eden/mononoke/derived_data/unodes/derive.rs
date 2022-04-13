@@ -661,7 +661,7 @@ mod tests {
 
     async fn diamond_merge_unodes_v2(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let mut factory = TestRepoFactory::new()?;
+        let mut factory = TestRepoFactory::new(fb)?;
         let repo: BlobRepo = factory.build()?;
         let merged_files = "dir/file.txt";
         let root_commit = CreateCommitContext::new_root(&ctx, &repo)
@@ -763,7 +763,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_parent_order(fb: FacebookInit) -> Result<(), Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty(fb).unwrap();
         let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
         let ctx = CoreContext::test_mock(fb);
 

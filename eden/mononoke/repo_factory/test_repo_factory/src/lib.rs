@@ -29,6 +29,7 @@ use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable;
 use ephemeral_blobstore::{ArcRepoEphemeralStore, RepoEphemeralStore};
 use fastlog::RootFastlog;
+use fbinit::FacebookInit;
 use filenodes::ArcFilenodes;
 use filestore::{ArcFilestoreConfig, FilestoreConfig};
 use fsnodes::RootFsnodeId;
@@ -78,6 +79,8 @@ use unodes::RootUnodeManifestId;
 /// By default, it will use a single in-memory blobstore and a single
 /// in-memory metadata database for all repositories.
 pub struct TestRepoFactory {
+    /// Sometimes needed to construct a facet
+    pub fb: FacebookInit,
     name: String,
     config: RepoConfig,
     blobstore: Arc<dyn Blobstore>,
@@ -123,17 +126,18 @@ pub fn default_test_repo_config() -> RepoConfig {
 ///
 /// This covers the simplest case.  For more complicated repositories, use
 /// `TestRepoFactory`.
-pub fn build_empty<R>() -> Result<R>
+pub fn build_empty<R>(fb: FacebookInit) -> Result<R>
 where
     R: for<'builder> facet::Buildable<TestRepoFactoryBuilder<'builder>>,
 {
-    Ok(TestRepoFactory::new()?.build()?)
+    Ok(TestRepoFactory::new(fb)?.build()?)
 }
 
 impl TestRepoFactory {
     /// Create a new factory for test repositories with default settings.
-    pub fn new() -> Result<TestRepoFactory> {
+    pub fn new(fb: FacebookInit) -> Result<TestRepoFactory> {
         Self::with_sqlite_connection(
+            fb,
             SqliteConnection::open_in_memory()?,
             SqliteConnection::open_in_memory()?,
         )
@@ -142,6 +146,7 @@ impl TestRepoFactory {
     /// Create a new factory for test repositories with an existing Sqlite
     /// connection.
     pub fn with_sqlite_connection(
+        fb: FacebookInit,
         metadata_con: SqliteConnection,
         hg_mutation_con: SqliteConnection,
     ) -> Result<TestRepoFactory> {
@@ -166,6 +171,7 @@ impl TestRepoFactory {
             SqlConnectionsWithSchema::new_single(Connection::with_sqlite(hg_mutation_con));
 
         Ok(TestRepoFactory {
+            fb,
             name: "repo".to_string(),
             config: default_test_repo_config(),
             blobstore: Arc::new(Memblob::default()),

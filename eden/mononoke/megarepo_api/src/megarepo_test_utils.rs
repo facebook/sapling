@@ -35,7 +35,7 @@ pub struct MegarepoTest {
 impl MegarepoTest {
     pub async fn new(ctx: &CoreContext) -> Result<Self, Error> {
         let id = RepositoryId::new(0);
-        let mut factory = TestRepoFactory::new()?;
+        let mut factory = TestRepoFactory::new(ctx.fb)?;
         factory.with_id(id);
         let megarepo_mapping = factory.megarepo_mapping();
         let config = factory.repo_config();

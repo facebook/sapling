@@ -1168,7 +1168,7 @@ mod tests {
     #[fbinit::test]
     async fn test_find_underived_many(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty(fb).unwrap();
         let dag = create_from_dag(&ctx, &repo, "A-B-C").await?;
         let a = *dag.get("A").unwrap();
         let b = *dag.get("B").unwrap();
@@ -1235,7 +1235,7 @@ mod tests {
     #[fbinit::test]
     async fn multiple_independent_mappings(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty(fb).unwrap();
         let dag = create_from_dag(&ctx, &repo, "A-B-C").await?;
         let a = *dag.get("A").unwrap();
         let b = *dag.get("B").unwrap();

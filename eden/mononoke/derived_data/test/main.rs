@@ -67,7 +67,7 @@ async fn derive_for_master(
 #[fbinit::test]
 async fn test_derive_fixtures(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let mut factory = make_test_repo_factory();
+    let mut factory = make_test_repo_factory(fb);
 
     let repo = factory.with_id(RepositoryId::new(1)).build()?;
     BranchEven::initrepo(fb, &repo).await;
@@ -117,7 +117,7 @@ async fn test_derive_fixtures(fb: FacebookInit) -> Result<()> {
 /// derived changesets do not have their parents derived).
 async fn test_gapped_derivation(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let repo = make_test_repo_factory().build()?;
+    let repo = make_test_repo_factory(fb).build()?;
     Linear::initrepo(fb, &repo).await;
 
     let master = repo
@@ -174,7 +174,7 @@ async fn test_gapped_derivation(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_leases(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo = make_test_repo_factory().build()?;
+    let repo = make_test_repo_factory(fb).build()?;
     Linear::initrepo(fb, &repo).await;
 
     let master = repo
@@ -273,7 +273,7 @@ impl LeaseOps for FailingLease {
 #[fbinit::test]
 async fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo = make_test_repo_factory()
+    let repo = make_test_repo_factory(fb)
         .with_derived_data_lease(|| Arc::new(FailingLease))
         .build()?;
     Linear::initrepo(fb, &repo).await;
@@ -314,7 +314,7 @@ async fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_parallel_derivation(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = make_test_repo_factory().build()?;
+    let repo: BlobRepo = make_test_repo_factory(fb).build()?;
 
     // Create a commit with lots of parents, and make each derivation take
     // 2 seconds.  Check that derivations happen in parallel by ensuring
@@ -381,7 +381,7 @@ async fn ensure_tunables_disable_derivation(
 /// the appropriate values in tunables.
 async fn test_cancelling_slow_derivation(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = make_test_repo_factory().build()?;
+    let repo: BlobRepo = make_test_repo_factory(fb).build()?;
 
     let create_tunables = || {
         let tunables = MononokeTunables::default();

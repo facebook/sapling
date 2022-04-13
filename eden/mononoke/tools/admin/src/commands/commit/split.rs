@@ -240,7 +240,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_commit_simple(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty()?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("first", "a")
@@ -332,7 +332,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_commit_with_renames(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty()?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("first", "a")
@@ -374,7 +374,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_commit_renamed_to_multiple_dest(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: TestRepo = test_repo_factory::build_empty()?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("first", "a")

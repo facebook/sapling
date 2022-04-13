@@ -354,9 +354,10 @@ mod tests {
         I: IntoIterator<Item = FilelogDeltaed>,
         J: IntoIterator<Item = Filelog>,
     {
+        let repo_factory = test_repo_factory::build_empty(ctx.fb).unwrap();
         let result = convert_to_revlog_filelog(
             ctx,
-            test_repo_factory::build_empty().unwrap(),
+            repo_factory,
             iter(inp.into_iter().map(Ok).collect::<Vec<_>>()),
         )
         .try_collect::<Vec<_>>()
@@ -512,13 +513,10 @@ mod tests {
             vec![f2_deltaed, f1_deltaed]
         };
 
-        let result = convert_to_revlog_filelog(
-            ctx,
-            test_repo_factory::build_empty().unwrap(),
-            iter(inp.into_iter().map(Ok)),
-        )
-        .try_collect::<Vec<_>>()
-        .await;
+        let repo_factory = test_repo_factory::build_empty(ctx.fb).unwrap();
+        let result = convert_to_revlog_filelog(ctx, repo_factory, iter(inp.into_iter().map(Ok)))
+            .try_collect::<Vec<_>>()
+            .await;
 
         match result {
             Ok(_) => assert!(

@@ -226,7 +226,7 @@ mod test {
         let content_id = ONES_CTID;
         let reason = "test reason";
 
-        let repo = TestRepoFactory::new()?
+        let repo = TestRepoFactory::new(fb)?
             .redacted(Some(RedactedBlobs::FromSql(Arc::new(
                 hashmap! { content_id.blobstore_key() => RedactedMetadata {
                    task: reason.to_string(),

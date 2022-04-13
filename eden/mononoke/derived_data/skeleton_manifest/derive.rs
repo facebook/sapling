@@ -383,7 +383,7 @@ mod test {
     }
 
     async fn init_repo(ctx: &CoreContext) -> Result<(BlobRepo, BTreeMap<String, ChangesetId>)> {
-        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb).unwrap();
         let changesets = create_from_dag_with_changes(
             ctx,
             &repo,

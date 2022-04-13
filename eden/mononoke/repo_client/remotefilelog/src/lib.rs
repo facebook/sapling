@@ -408,7 +408,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_prepare_blob(fb: FacebookInit) -> Result<(), Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
         let blob = roundtrip_blob(fb, &repo, "foo", Some(3)).await?;
         assert_matches!(blob, RemotefilelogBlobKind::Inline(3));
         Ok(())
@@ -416,7 +416,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_prepare_blob_chunked(fb: FacebookInit) -> Result<(), Error> {
-        let repo: BlobRepo = TestRepoFactory::new()?
+        let repo: BlobRepo = TestRepoFactory::new(fb)?
             .with_config_override(|config| {
                 config.filestore = Some(FilestoreParams {
                     chunk_size: 1,
@@ -432,7 +432,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_prepare_blob_lfs(fb: FacebookInit) -> Result<(), Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
         let blob = roundtrip_blob(fb, &repo, "foo", Some(2)).await?;
         assert_matches!(blob, RemotefilelogBlobKind::Lfs(3));
         Ok(())

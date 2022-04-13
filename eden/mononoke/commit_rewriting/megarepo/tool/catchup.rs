@@ -255,7 +255,7 @@ mod test {
     async fn test_find_changed_files_with_revert(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
 
         let root_commit = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("file", "a")
@@ -358,7 +358,7 @@ mod test {
     }
 
     async fn prepare_repo(ctx: &CoreContext) -> Result<BlobRepo, Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(ctx.fb)?;
 
         let root_commit = CreateCommitContext::new_root(ctx, &repo)
             .add_file("unchanged/a", "a")

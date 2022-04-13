@@ -250,7 +250,7 @@ async fn get_changed_manifests_stream_test_base_path_impl(fb: FacebookInit) -> R
 #[fbinit::test]
 async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty()?;
+    let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
     let commit = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("largefile", "11111_11111")
         .commit()
@@ -316,7 +316,7 @@ async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_maybe_validate_pushed_bonsais(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty()?;
+    let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
     let commit = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("largefile", "11111_11111")
         .commit()

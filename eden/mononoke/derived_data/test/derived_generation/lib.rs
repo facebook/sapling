@@ -13,6 +13,7 @@ use async_trait::async_trait;
 use blobstore::{BlobstoreBytes, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
+use fbinit::FacebookInit;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use test_repo_factory::TestRepoFactory;
 
@@ -132,8 +133,8 @@ impl BonsaiDerivable for DerivedGeneration {
     }
 }
 
-pub fn make_test_repo_factory() -> TestRepoFactory {
-    let mut factory = TestRepoFactory::new().unwrap();
+pub fn make_test_repo_factory(fb: FacebookInit) -> TestRepoFactory {
+    let mut factory = TestRepoFactory::new(fb).unwrap();
     factory.with_config_override(|repo_config| {
         repo_config
             .derived_data_config

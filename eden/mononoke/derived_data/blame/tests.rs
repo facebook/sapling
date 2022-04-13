@@ -150,7 +150,7 @@ async fn test_blame_version(fb: FacebookInit, version: BlameVersion) -> Result<(
     //   4
     //
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = TestRepoFactory::new()?
+    let repo: BlobRepo = TestRepoFactory::new(fb)?
         .with_config_override(|config| {
             config
                 .derived_data_config
@@ -260,7 +260,7 @@ async fn test_blame_size_rejected_version(
     version: BlameVersion,
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+    let repo: BlobRepo = test_repo_factory::build_empty(fb).unwrap();
     borrowed!(ctx, repo);
     let file1 = "file1";
     let content = "content";
@@ -274,7 +274,7 @@ async fn test_blame_size_rejected_version(
     let (blame, _) = fetch_blame_compat(ctx, repo, c1, MPath::new(file1)?).await?;
     let _ = blame.ranges()?;
 
-    let repo: BlobRepo = TestRepoFactory::new()?
+    let repo: BlobRepo = TestRepoFactory::new(fb)?
         .with_config_override(|config| {
             config
                 .derived_data_config
@@ -311,7 +311,7 @@ async fn test_blame_size_rejected_version(
 #[fbinit::test]
 async fn test_blame_copy_source(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = TestRepoFactory::new()?
+    let repo: BlobRepo = TestRepoFactory::new(fb)?
         .with_config_override(|config| {
             config
                 .derived_data_config

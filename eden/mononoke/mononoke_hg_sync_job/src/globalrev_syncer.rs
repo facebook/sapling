@@ -122,10 +122,10 @@ mod test {
     async fn test_sync_darkstorm(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let orig_repo: BlobRepo = TestRepoFactory::new()?
+        let orig_repo: BlobRepo = TestRepoFactory::new(fb)?
             .with_id(RepositoryId::new(0))
             .build()?;
-        let darkstorm_repo: BlobRepo = TestRepoFactory::new()?
+        let darkstorm_repo: BlobRepo = TestRepoFactory::new(fb)?
             .with_id(RepositoryId::new(1))
             .build()?;
 

@@ -290,7 +290,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
 
         let file1 = "file1";
         let root = CreateCommitContext::new_root(&ctx, &repo)
@@ -386,7 +386,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_with_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
 
         let file1 = "file1";
         let root = CreateCommitContext::new_root(&ctx, &repo)
@@ -450,7 +450,7 @@ mod test {
     }
     #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_merge(fb: FacebookInit) -> Result<(), Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
         let ctx = CoreContext::test_mock(fb);
 
         let file1 = "file1";
@@ -524,7 +524,7 @@ mod test {
     async fn test_split_batch_in_linear_stacks_replace_dir_with_file(
         fb: FacebookInit,
     ) -> Result<(), Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
         let ctx = CoreContext::test_mock(fb);
 
         let dir = "dir";
@@ -567,7 +567,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_delete_file(fb: FacebookInit) -> Result<(), Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
         let ctx = CoreContext::test_mock(fb);
 
         let file1 = "file1";
@@ -608,7 +608,7 @@ mod test {
     async fn test_split_batch_in_linear_stacks_add_same_file(
         fb: FacebookInit,
     ) -> Result<(), Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
         let ctx = CoreContext::test_mock(fb);
 
         let file1 = "file1";
@@ -675,7 +675,7 @@ mod test {
         fb: FacebookInit,
     ) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir", "content1")
@@ -730,7 +730,7 @@ mod test {
     #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_copy_info(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir", "content1")

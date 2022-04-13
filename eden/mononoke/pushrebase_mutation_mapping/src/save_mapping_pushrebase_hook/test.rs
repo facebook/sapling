@@ -25,7 +25,7 @@ use crate::get_prepushrebase_ids;
 async fn pushrebase_saves_mapping(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
-    let mut repo_factory = TestRepoFactory::new()?;
+    let mut repo_factory = TestRepoFactory::new(fb)?;
     let repo: BlobRepo = repo_factory.with_id(repo::REPO_ONE).build()?;
 
     borrowed!(ctx, repo);

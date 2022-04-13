@@ -878,7 +878,7 @@ mod test {
     #[fbinit::test]
     async fn test_list_linear_history(fb: FacebookInit) -> Result<(), Error> {
         // generate couple of hundreds linear file changes and list history
-        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames;
         let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
@@ -950,7 +950,7 @@ mod test {
         //           A
         //
 
-        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames;
         let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
@@ -1021,7 +1021,7 @@ mod test {
         //           o
         //
 
-        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames;
         let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
@@ -1080,7 +1080,7 @@ mod test {
         //        |   |
         //        o   o
         //
-        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames;
         let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
@@ -1170,7 +1170,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_history_deleted(fb: FacebookInit) -> Result<(), Error> {
-        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames;
         let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
@@ -1263,7 +1263,7 @@ mod test {
         //     |
         //     A
         //
-        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames;
         let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
@@ -1391,7 +1391,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_history_across_deletions_linear(fb: FacebookInit) -> Result<(), Error> {
-        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames;
         let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
@@ -1445,7 +1445,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_history_across_deletions_with_merges(fb: FacebookInit) -> Result<(), Error> {
-        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames;
         let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
@@ -1525,7 +1525,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_history_with_mutable_renames(fb: FacebookInit) -> Result<(), Error> {
-        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames;
         let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
@@ -1687,7 +1687,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_different_order(fb: FacebookInit) -> Result<(), Error> {
-        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames;
         let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);
@@ -1778,7 +1778,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_simple_gen_num(fb: FacebookInit) -> Result<(), Error> {
-        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty().unwrap();
+        let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames;
         let repo = repo.blob_repo;
         let ctx = CoreContext::test_mock(fb);

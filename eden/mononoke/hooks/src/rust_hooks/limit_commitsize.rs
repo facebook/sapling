@@ -234,7 +234,7 @@ mod test {
     #[fbinit::test]
     async fn test_limitcommitsize(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
         borrowed!(ctx, repo);
 
         let cs_id = CreateCommitContext::new_root(ctx, repo)
@@ -314,7 +314,7 @@ mod test {
     #[fbinit::test]
     async fn test_limitcommitsize_removed_files(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
         borrowed!(ctx, repo);
 
         let parent_cs_id = CreateCommitContext::new_root(ctx, repo)
@@ -374,7 +374,7 @@ mod test {
     #[fbinit::test]
     async fn test_limitcommitsize_override(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
         borrowed!(ctx, repo);
 
         let cs_id = CreateCommitContext::new_root(ctx, repo)
@@ -418,7 +418,7 @@ mod test {
     #[fbinit::test]
     async fn test_limitcommitsize_override_hits_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
         borrowed!(ctx, repo);
 
         let cs_id = CreateCommitContext::new_root(ctx, repo)

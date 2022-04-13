@@ -28,7 +28,7 @@ fn pushrebase_populates_git_mapping(fb: FacebookInit) -> Result<(), Error> {
 
 async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = TestRepoFactory::new()?
+    let repo: BlobRepo = TestRepoFactory::new(fb)?
         .with_id(RepositoryId::new(1))
         .build()?;
     borrowed!(ctx, repo);

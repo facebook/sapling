@@ -49,7 +49,7 @@ use crate::{ChangesetHistoryOptions, ChangesetId, ChangesetPathHistoryOptions, R
 //
 // Commits e1, e2 and e3 are empty (contain no file changes).
 async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static str, ChangesetId>)> {
-    let blob_repo = test_repo_factory::build_empty()?;
+    let blob_repo = test_repo_factory::build_empty(ctx.fb)?;
     let mut changesets = HashMap::new();
 
     changesets.insert(
