@@ -87,25 +87,3 @@ impl WalkerGraphArgs {
         })
     }
 }
-
-#[derive(Args, Debug)]
-pub struct HashValidationArgs {
-    /// Node types for which we don't want to do hash validation.
-    // TODO: NODE_HASH_VALIDATION_POSSIBLE_VALUES
-    #[clap(long)]
-    pub exclude_hash_validation_node_type: Vec<String>,
-    /// Node types for which we want to do hash validation.
-    // TODO: NODE_HASH_VALIDATION_POSSIBLE_VALUES, also hide
-    #[clap(long)]
-    pub include_hash_validation_node_type: Vec<String>,
-}
-
-impl HashValidationArgs {
-    pub fn parse_args(&self) -> Result<HashSet<NodeType>, Error> {
-        parse_node_types(
-            self.include_hash_validation_node_type.iter(),
-            self.exclude_hash_validation_node_type.iter(),
-            &[],
-        )
-    }
-}

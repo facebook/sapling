@@ -187,6 +187,7 @@ static NODE_TYPE_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
     v
 });
 
+// migrated to the new walker
 static NODE_HASH_VALIDATION_POSSIBLE_VALUES: Lazy<Vec<&'static str>> =
     Lazy::new(|| vec![NodeType::HgFileEnvelope.into()]);
 

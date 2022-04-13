@@ -101,7 +101,7 @@ pub async fn setup_common<'a>(
     );
 
     let progress_options = common_args.progress.parse_args();
-    let hash_validation_node_types = common_args.hash_validation.parse_args()?;
+    let hash_validation_node_types = common_args.hash_validation.parse_args();
 
     let mysql_options = app.mysql_options();
 
