@@ -19,8 +19,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping edenscm/mercurial/httpclient/__init__.py it has no-che?k-code (glob)
   Skipping edenscm/mercurial/httpclient/_readers.py it has no-che?k-code (glob)
   Skipping edenscm/mercurial/statprof.py it has no-che?k-code (glob)
-  edenscm/hgext/extlib/phabricator/graphql.py:*: use foobar, not foo_bar naming --> ca_bundle = repo.ui.configpath("web", "cacerts") (glob)
-  edenscm/hgext/extlib/phabricator/graphql.py:*: use foobar, not foo_bar naming --> def scmquery_log( (glob)
 
 @commands in debugcommands.py should be in alphabetical order.
 
