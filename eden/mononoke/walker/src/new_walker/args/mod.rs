@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+pub mod arg_types;
 pub mod hash_validation;
 pub mod progress;
 pub mod sampling;
@@ -28,8 +29,7 @@ use clap::Args;
 use itertools::{process_results, Itertools};
 use std::collections::HashSet;
 use walker_commands_impl::graph::{EdgeType, NodeType};
-use walker_commands_impl::setup::{parse_edge_value, parse_interned_value, parse_node_value};
-use walker_commands_impl::state::InternedType;
+use walker_commands_impl::setup::{parse_edge_value, parse_node_value};
 
 #[derive(Args, Debug)]
 pub struct WalkerCommonArgs {
@@ -93,31 +93,6 @@ fn parse_node_values<'a>(
         return Ok(HashSet::from_iter(default.iter().cloned()));
     }
     Ok(node_values)
-}
-
-fn parse_interned_types<'a>(
-    include_types: impl Iterator<Item = &'a String>,
-    exclude_types: impl Iterator<Item = &'a String>,
-    default: &[InternedType],
-) -> Result<HashSet<InternedType>, Error> {
-    let mut include_types = parse_interned_values(include_types, default)?;
-    let exclude_types = parse_interned_values(exclude_types, &[])?;
-    include_types.retain(|x| !exclude_types.contains(x));
-    Ok(include_types)
-}
-
-fn parse_interned_values<'a>(
-    values: impl Iterator<Item = &'a String>,
-    default: &[InternedType],
-) -> Result<HashSet<InternedType>, Error> {
-    let values = process_results(values.map(|v| parse_interned_value(v, default)), |s| {
-        s.concat()
-    })?;
-
-    if values.is_empty() {
-        return Ok(default.iter().cloned().collect());
-    }
-    Ok(values)
 }
 
 pub(crate) fn parse_edge_types<'a>(

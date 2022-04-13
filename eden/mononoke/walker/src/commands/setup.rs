@@ -191,6 +191,7 @@ static NODE_TYPE_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
 static NODE_HASH_VALIDATION_POSSIBLE_VALUES: Lazy<Vec<&'static str>> =
     Lazy::new(|| vec![NodeType::HgFileEnvelope.into()]);
 
+// migrated to the new walker
 /// Default to clearing out all except HgChangesets ( and bonsai Changsets as no option to clear those)
 pub const DEFAULT_CHUNK_CLEAR_INTERNED_TYPES: &[InternedType] = &[
     InternedType::FileUnodeId,
@@ -200,6 +201,7 @@ pub const DEFAULT_CHUNK_CLEAR_INTERNED_TYPES: &[InternedType] = &[
     InternedType::MPathHash,
 ];
 
+// migrated to the new walker
 static INTERNED_TYPE_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
     let mut v = vec![ALL_VALUE_ARG, DEFAULT_VALUE_ARG];
     v.extend(InternedType::VARIANTS.iter());

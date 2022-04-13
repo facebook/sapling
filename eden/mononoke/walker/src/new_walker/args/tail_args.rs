@@ -13,11 +13,12 @@ use metaconfig_types::MetadataDatabaseConfig;
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::facebook::MysqlOptions;
 use std::time::Duration;
+
 use walker_commands_impl::checkpoint::{CheckpointsByName, SqlCheckpoints};
-use walker_commands_impl::setup::DEFAULT_CHUNK_CLEAR_INTERNED_TYPES;
 use walker_commands_impl::tail::{ChunkingParams, ClearStateParams, TailParams};
 
-use crate::args::{parse_interned_types, parse_node_types, parse_node_values};
+use crate::args::arg_types::{InternedTypeArg, DEFAULT_INTERNED_TYPES_STR};
+use crate::args::{parse_node_types, parse_node_values};
 
 #[derive(Args, Debug)]
 pub struct TailArgs {
@@ -70,13 +71,11 @@ pub struct ChunkingArgs {
     pub allow_remaining_deferred: bool,
 
     /// Include in InternedTypes to flush between chunks
-    // TODO: INTERNED_TYPE_POSSIBLE_VALUES
-    #[clap(long, short = 't')]
-    pub include_chunk_clear_interned_type: Option<String>,
+    #[clap(long, short = 't', default_values = &DEFAULT_INTERNED_TYPES_STR)]
+    pub include_chunk_clear_interned_type: Vec<InternedTypeArg>,
     /// Exclude from InternedTypes to flush between chunks
-    // TODO: INTERNED_TYPE_POSSIBLE_VALUES
     #[clap(long, short = 'T')]
-    pub exclude_chunk_clear_interned_type: Option<String>,
+    pub exclude_chunk_clear_interned_type: Vec<InternedTypeArg>,
 
     /// Include in NodeTypes to flush between chunks
     // TODO: NODE_TYPE_POSSIBLE_VALUES
@@ -114,11 +113,11 @@ impl ChunkingArgs {
         }
 
         let clear_state = if let Some(sample_rate) = &self.chunk_clear_sample_rate {
-            let interned_types = parse_interned_types(
-                self.include_chunk_clear_interned_type.iter(),
-                self.exclude_chunk_clear_interned_type.iter(),
-                DEFAULT_CHUNK_CLEAR_INTERNED_TYPES,
-            )?;
+            let mut include_int_types =
+                InternedTypeArg::parse_args(&self.include_chunk_clear_interned_type);
+            let exclude_int_types =
+                InternedTypeArg::parse_args(&self.exclude_chunk_clear_interned_type);
+            include_int_types.retain(|x| !exclude_int_types.contains(x));
 
             let node_types = parse_node_types(
                 self.include_chunk_clear_node_type.iter(),
@@ -128,7 +127,7 @@ impl ChunkingArgs {
 
             Some(ClearStateParams {
                 sample_rate: *sample_rate,
-                interned_types,
+                interned_types: include_int_types,
                 node_types,
             })
         } else {
