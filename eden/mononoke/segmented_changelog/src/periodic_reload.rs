@@ -38,7 +38,10 @@ impl Loader<LoadedSegmentedChangelog> for SegmentedChangelogLoader {
     }
 }
 
-pub struct PeriodicReloadSegmentedChangelog(Reloader<LoadedSegmentedChangelog>, AbortHandle);
+pub struct PeriodicReloadSegmentedChangelog {
+    reloader: Reloader<LoadedSegmentedChangelog>,
+    abort_handle: AbortHandle,
+}
 
 impl PeriodicReloadSegmentedChangelog {
     pub async fn start<L: Loader<LoadedSegmentedChangelog> + Send + Sync + 'static>(
@@ -79,8 +82,8 @@ impl PeriodicReloadSegmentedChangelog {
         let (fut, abort_handle) = abortable(fut);
         tokio::spawn(fut);
 
-        Ok(Self(
-            Reloader::reload_periodically_with_skew_and_force_reload(
+        Ok(Self {
+            reloader: Reloader::reload_periodically_with_skew_and_force_reload(
                 ctx.clone(),
                 period,
                 loader,
@@ -88,7 +91,7 @@ impl PeriodicReloadSegmentedChangelog {
             )
             .await?,
             abort_handle,
-        ))
+        })
     }
 
     pub async fn start_from_manager(
@@ -111,17 +114,17 @@ impl PeriodicReloadSegmentedChangelog {
 
     #[cfg(test)]
     pub async fn wait_for_update(&self) {
-        self.0.wait_for_update().await
+        self.reloader.wait_for_update().await
     }
 }
 
 segmented_changelog_delegate!(
     PeriodicReloadSegmentedChangelog,
-    |&self, ctx: &CoreContext| { self.0.load() }
+    |&self, ctx: &CoreContext| { self.reloader.load() }
 );
 
 impl Drop for PeriodicReloadSegmentedChangelog {
     fn drop(&mut self) {
-        self.1.abort()
+        self.abort_handle.abort()
     }
 }
