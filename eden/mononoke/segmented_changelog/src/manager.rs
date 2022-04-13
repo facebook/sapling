@@ -23,6 +23,7 @@ use crate::iddag::IdDagSaveStore;
 use crate::idmap::IdMapFactory;
 use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::owned::OwnedSegmentedChangelog;
+use crate::types::SegmentedChangelogVersion;
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::{
     segmented_changelog_delegate, CloneData, CloneHints, Location, SeedHead, SegmentedChangelog,
@@ -113,22 +114,7 @@ impl SegmentedChangelogManager {
 
     // public for builder only
     pub async fn load_owned(&self, ctx: &CoreContext) -> Result<OwnedSegmentedChangelog> {
-        let sc_version = self
-            .sc_version_store
-            .get(&ctx)
-            .await
-            .with_context(|| {
-                format!(
-                    "repo {}: error loading segmented changelog version",
-                    self.repo_id
-                )
-            })?
-            .ok_or_else(|| {
-                format_err!(
-                    "repo {}: segmented changelog metadata not found, maybe repo is not seeded",
-                    self.repo_id
-                )
-            })?;
+        let sc_version = self.latest_version(ctx).await?;
         let iddag = self
             .iddag_save_store
             .load(&ctx, sc_version.iddag_version)
@@ -147,6 +133,25 @@ impl SegmentedChangelogManager {
         );
         let owned = OwnedSegmentedChangelog::new(iddag, idmap);
         Ok(owned)
+    }
+
+    pub async fn latest_version(&self, ctx: &CoreContext) -> Result<SegmentedChangelogVersion> {
+        Ok(self
+            .sc_version_store
+            .get(ctx)
+            .await
+            .with_context(|| {
+                format!(
+                    "repo {}: error loading segmented changelog version",
+                    self.repo_id
+                )
+            })?
+            .ok_or_else(|| {
+                format_err!(
+                    "repo {}: segmented changelog metadata not found, maybe repo is not seeded",
+                    self.repo_id
+                )
+            })?)
     }
 }
 
