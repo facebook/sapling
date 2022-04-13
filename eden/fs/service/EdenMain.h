@@ -7,17 +7,35 @@
 
 #pragma once
 
+#include <map>
 #include <string>
 
+#include "eden/fs/service/EdenServer.h"
 #include "eden/fs/telemetry/IActivityRecorder.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class EdenConfig;
-class EdenServer;
 class IHiveLogger;
 struct SessionInfo;
+
+/**
+ * Allows EdenMain subclasses to register BackingStores.
+ */
+class DefaultBackingStoreFactory : public BackingStoreFactory {
+ public:
+  using Factory =
+      std::function<std::shared_ptr<BackingStore>(const CreateParams&)>;
+
+  std::shared_ptr<BackingStore> createBackingStore(
+      folly::StringPiece type,
+      const CreateParams& params) override;
+
+  void registerFactory(folly::StringPiece type, Factory factory);
+
+ private:
+  std::map<folly::StringPiece, Factory> registered_;
+};
 
 /**
  * Hooks to customize the flavor of the edenfs daemon build.
@@ -38,6 +56,22 @@ class EdenMain {
       std::shared_ptr<EdenConfig> edenConfig) = 0;
 
   void runServer(const EdenServer& server);
+
+  BackingStoreFactory* getBackingStoreFactory() {
+    return &backingStoreFactory_;
+  }
+
+ protected:
+  void registerStandardBackingStores();
+
+  void registerBackingStore(
+      folly::StringPiece type,
+      DefaultBackingStoreFactory::Factory factory) {
+    backingStoreFactory_.registerFactory(type, std::move(factory));
+  }
+
+ private:
+  DefaultBackingStoreFactory backingStoreFactory_;
 };
 
 /**
@@ -45,19 +79,18 @@ class EdenMain {
  */
 class DefaultEdenMain : public EdenMain {
  public:
-  virtual std::string getEdenfsBuildName() override;
-  virtual std::string getEdenfsVersion() override;
-  virtual std::string getLocalHostname() override;
-  virtual void didFollyInit() override;
-  virtual void prepare(const EdenServer& server) override;
-  virtual void cleanup() override {}
-  virtual ActivityRecorderFactory getActivityRecorderFactory() override;
-  virtual std::shared_ptr<IHiveLogger> getHiveLogger(
+  std::string getEdenfsBuildName() override;
+  std::string getEdenfsVersion() override;
+  std::string getLocalHostname() override;
+  void didFollyInit() override;
+  void prepare(const EdenServer& server) override;
+  void cleanup() override {}
+  ActivityRecorderFactory getActivityRecorderFactory() override;
+  std::shared_ptr<IHiveLogger> getHiveLogger(
       SessionInfo sessionInfo,
       std::shared_ptr<EdenConfig> edenConfig) override;
 };
 
 int runEdenMain(EdenMain&& main, int argc, char** argv);
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

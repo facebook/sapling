@@ -33,10 +33,6 @@ target_link_libraries(
 
 add_subdirectory(hg)
 
-if("${EDEN_HAVE_RECAS}")
-  add_subdirectory(recas)
-endif()
-
 if("${EDEN_HAVE_GIT}")
   add_subdirectory(git)
 endif()

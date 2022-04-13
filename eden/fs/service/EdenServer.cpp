@@ -79,6 +79,7 @@
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/TimeUtil.h"
 #include "eden/fs/utils/UserInfo.h"
+
 #ifndef _WIN32
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -89,14 +90,6 @@
 #else
 #include "eden/fs/notifications/WindowsNotifier.h" // @manual
 #endif // !_WIN32
-
-#ifdef EDEN_HAVE_RECAS
-#include "eden/fs/store/facebook/recas/ReCasBackingStore.h" //@manual
-#endif
-
-#ifdef EDEN_HAVE_GIT
-#include "eden/fs/store/git/GitBackingStore.h" // @manual
-#endif
 
 DEFINE_bool(
     debug,
@@ -357,11 +350,13 @@ EdenServer::EdenServer(
     std::unique_ptr<PrivHelper> privHelper,
     std::shared_ptr<const EdenConfig> edenConfig,
     ActivityRecorderFactory activityRecorderFactory,
+    BackingStoreFactory* backingStoreFactory,
     std::shared_ptr<IHiveLogger> hiveLogger,
     std::string version)
     : originalCommandLine_{std::move(originalCommandLine)},
       edenDir_{edenConfig->edenDir.getValue()},
-      activityRecorderFactory_(std::move(activityRecorderFactory)),
+      activityRecorderFactory_{std::move(activityRecorderFactory)},
+      backingStoreFactory_{backingStoreFactory},
       blobCache_{BlobCache::create(
           FLAGS_maximumBlobCacheSize,
           FLAGS_minimumBlobCacheEntryCount)},
@@ -1786,7 +1781,10 @@ shared_ptr<BackingStore> EdenServer::getBackingStore(
     return it->second;
   }
 
-  const auto store = createBackingStore(type, name);
+  const auto store = backingStoreFactory_->createBackingStore(
+      type,
+      BackingStoreFactory::CreateParams{
+          name, serverState_.get(), localStore_, getSharedStats()});
   lockedStores->emplace(key, store);
   return store;
 }
@@ -1834,55 +1832,6 @@ std::vector<size_t> EdenServer::collectHgQueuedBackingStoreCounters(
     counters.emplace_back(getCounterFromStore(*store));
   }
   return counters;
-}
-
-shared_ptr<BackingStore> EdenServer::createBackingStore(
-    StringPiece type,
-    StringPiece name) {
-  if (type == "null") {
-    return make_shared<EmptyBackingStore>();
-  } else if (type == "hg") {
-    const auto repoPath = realpath(name);
-    auto reloadableConfig = serverState_->getReloadableConfig();
-    auto store = std::make_unique<HgBackingStore>(
-        repoPath,
-        localStore_,
-        serverState_->getThreadPool().get(),
-        reloadableConfig,
-        getSharedStats(),
-        serverState_->getStructuredLogger());
-    return std::make_shared<LocalStoreCachedBackingStore>(
-        make_shared<HgQueuedBackingStore>(
-            localStore_,
-            getSharedStats(),
-            std::move(store),
-            reloadableConfig,
-            serverState_->getStructuredLogger(),
-            std::make_unique<BackingStoreLogger>(
-                serverState_->getStructuredLogger(),
-                serverState_->getProcessNameCache())),
-        localStore_,
-        getSharedStats());
-  } else if (type == "git") {
-#ifdef EDEN_HAVE_GIT
-    const auto repoPath = realpath(name);
-    return make_shared<LocalStoreCachedBackingStore>(
-        make_shared<GitBackingStore>(repoPath), localStore_, getSharedStats());
-#else // EDEN_HAVE_GIT
-    throw std::domain_error(
-        "support for Git was not enabled in this EdenFS build");
-#endif // EDEN_HAVE_GIT
-  } else if (type == "recas") {
-#ifdef EDEN_HAVE_RECAS
-    return make_shared<LocalStoreCachedBackingStore>(
-        make_shared<ReCasBackingStore>(), localStore_, getSharedStats());
-#else // EDEN_HAVE_RECAS
-    throw std::domain_error(
-        "support for RE CAS was not enabled in this EdenFS build");
-#endif // EDEN_HAVE_RECAS
-  }
-  throw std::domain_error(
-      folly::to<string>("unsupported backing store type: ", type));
 }
 
 Future<Unit> EdenServer::createThriftServer() {

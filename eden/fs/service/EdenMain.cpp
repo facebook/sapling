@@ -13,6 +13,7 @@
 #include <fb303/FollyLoggingHandler.h>
 #include <fb303/TFunctionStatHandler.h>
 #include <folly/Conv.h>
+#include <folly/MapUtil.h>
 #include <folly/experimental/FunctionScheduler.h>
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
@@ -33,11 +34,20 @@
 #include "eden/fs/service/EdenServiceHandler.h" // for kServiceName
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/Systemd.h"
+#include "eden/fs/store/BackingStoreLogger.h"
+#include "eden/fs/store/EmptyBackingStore.h"
+#include "eden/fs/store/LocalStoreCachedBackingStore.h"
+#include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
+#include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/UserInfo.h"
 #include "eden/fs/utils/WinStackTrace.h"
+
+#ifdef EDEN_HAVE_GIT
+#include "eden/fs/store/git/GitBackingStore.h" // @manual
+#endif
 
 DEFINE_bool(edenfs, false, "This legacy argument is ignored.");
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
@@ -52,8 +62,9 @@ FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
 using folly::StringPiece;
 using std::string;
 
+namespace facebook::eden {
+
 namespace {
-using namespace facebook::eden;
 
 SessionInfo makeSessionInfo(
     const UserInfo& userInfo,
@@ -69,13 +80,31 @@ SessionInfo makeSessionInfo(
   return env;
 }
 
-static constexpr int kExitCodeSuccess = 0;
-static constexpr int kExitCodeError = 1;
-static constexpr int kExitCodeUsage = 2;
+constexpr int kExitCodeSuccess = 0;
+constexpr int kExitCodeError = 1;
+constexpr int kExitCodeUsage = 2;
 
 } // namespace
 
-namespace facebook::eden {
+std::shared_ptr<BackingStore> DefaultBackingStoreFactory::createBackingStore(
+    folly::StringPiece type,
+    const CreateParams& params) {
+  if (auto* fn = folly::get_ptr(registered_, type)) {
+    return (*fn)(params);
+  }
+
+  throw std::domain_error(
+      folly::to<std::string>("unsupported backing store type: ", type));
+}
+
+void DefaultBackingStoreFactory::registerFactory(
+    folly::StringPiece type,
+    DefaultBackingStoreFactory::Factory factory) {
+  auto [it, inserted] = registered_.emplace(type, std::move(factory));
+  if (!inserted) {
+    EDEN_BUG() << "attempted to register BackingStore " << type << " twice";
+  }
+}
 
 void EdenMain::runServer(const EdenServer& server) {
   // ThriftServer::serve() will drive the current thread's EventBase.
@@ -94,6 +123,52 @@ void EdenMain::runServer(const EdenServer& server) {
 
   fb303::withThriftFunctionStats(
       kServiceName, server.getHandler().get(), [&] { server.serve(); });
+}
+
+void EdenMain::registerStandardBackingStores() {
+  using CreateParams = BackingStoreFactory::CreateParams;
+
+  registerBackingStore("null", [](const CreateParams&) {
+    return std::make_shared<EmptyBackingStore>();
+  });
+  registerBackingStore("hg", [](const CreateParams& params) {
+    const auto repoPath = realpath(params.name);
+    auto reloadableConfig = params.serverState->getReloadableConfig();
+    auto store = std::make_unique<HgBackingStore>(
+        repoPath,
+        params.localStore,
+        params.serverState->getThreadPool().get(),
+        reloadableConfig,
+        params.sharedStats,
+        params.serverState->getStructuredLogger());
+    return std::make_shared<LocalStoreCachedBackingStore>(
+        std::make_shared<HgQueuedBackingStore>(
+            params.localStore,
+            params.sharedStats,
+            std::move(store),
+            reloadableConfig,
+            params.serverState->getStructuredLogger(),
+            std::make_unique<BackingStoreLogger>(
+                params.serverState->getStructuredLogger(),
+                params.serverState->getProcessNameCache())),
+        params.localStore,
+        params.sharedStats);
+  });
+
+  registerBackingStore(
+      "git", [](const CreateParams& params) -> std::shared_ptr<BackingStore> {
+#ifdef EDEN_HAVE_GIT
+        const auto repoPath = realpath(params.name);
+        return std::make_shared<LocalStoreCachedBackingStore>(
+            std::make_shared<GitBackingStore>(repoPath),
+            params.localStore,
+            params.sharedStats);
+#else // EDEN_HAVE_GIT
+    (void)params;
+    throw std::domain_error(
+        "support for Git was not enabled in this EdenFS build");
+#endif // EDEN_HAVE_GIT
+      });
 }
 
 std::string DefaultEdenMain::getEdenfsBuildName() {
@@ -126,6 +201,8 @@ void DefaultEdenMain::didFollyInit() {}
 
 void DefaultEdenMain::prepare(const EdenServer& /*server*/) {
   fb303::registerFollyLoggingOptionHandlers();
+
+  registerStandardBackingStores();
 }
 
 ActivityRecorderFactory DefaultEdenMain::getActivityRecorderFactory() {
@@ -268,8 +345,11 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         std::move(privHelper),
         std::move(edenConfig),
         main.getActivityRecorderFactory(),
+        main.getBackingStoreFactory(),
         std::move(hiveLogger),
         main.getEdenfsVersion());
+
+    main.prepare(server.value());
 
     prepareFuture = server->prepare(startupLogger);
   } catch (const std::exception& ex) {
@@ -316,7 +396,6 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
                 DaemonStart{startTimeInSeconds, takeover, true /*success*/});
           });
 
-  main.prepare(server.value());
   while (true) {
     main.runServer(server.value());
     if (server->performCleanup()) {

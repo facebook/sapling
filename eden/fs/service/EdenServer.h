@@ -77,6 +77,32 @@ class UserInfo;
 class TakeoverServer;
 #endif
 
+/**
+ * To avoid EdenServer having a build dependency on every type of BackingStore
+ * supported by EdenFS, this layer of indirection allows unit tests to
+ * explicitly register a restricted subset.
+ */
+class BackingStoreFactory {
+ public:
+  /**
+   * The set of parameters a BackingStore's constructor might want. This struct
+   * will only be constructed on the stack and will only live for the duration
+   * of the createBackingStore call.
+   */
+  struct CreateParams {
+    folly::StringPiece name;
+    ServerState* serverState;
+    const std::shared_ptr<LocalStore>& localStore;
+    const std::shared_ptr<EdenStats>& sharedStats;
+  };
+
+  virtual ~BackingStoreFactory() = default;
+
+  virtual std::shared_ptr<BackingStore> createBackingStore(
+      folly::StringPiece type,
+      const CreateParams& params) = 0;
+};
+
 /*
  * EdenServer contains logic for running the Eden main loop.
  *
@@ -113,8 +139,9 @@ class EdenServer : private TakeoverHandler {
       std::unique_ptr<PrivHelper> privHelper,
       std::shared_ptr<const EdenConfig> edenConfig,
       ActivityRecorderFactory activityRecorderFactory,
+      BackingStoreFactory* backingStoreFactory,
       std::shared_ptr<IHiveLogger> hiveLogger,
-      std::string version = "");
+      std::string version = std::string{});
 
   virtual ~EdenServer();
 
@@ -466,9 +493,6 @@ class EdenServer : private TakeoverHandler {
   // all mounts.
   void unloadInodes();
 
-  std::shared_ptr<BackingStore> createBackingStore(
-      folly::StringPiece type,
-      folly::StringPiece name);
   FOLLY_NODISCARD folly::Future<folly::Unit> createThriftServer();
 
   void prepareThriftAddress() const;
@@ -592,6 +616,8 @@ class EdenServer : private TakeoverHandler {
   std::shared_ptr<ThriftServerEventHandler> serverEventHandler_;
 
   ActivityRecorderFactory activityRecorderFactory_;
+  BackingStoreFactory* const backingStoreFactory_;
+
   std::shared_ptr<LocalStore> localStore_;
   folly::Synchronized<BackingStoreMap> backingStores_;
   const std::shared_ptr<BlobCache> blobCache_;

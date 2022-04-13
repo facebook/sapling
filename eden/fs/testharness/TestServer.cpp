@@ -23,8 +23,21 @@ using std::make_shared;
 using std::make_unique;
 using std::unique_ptr;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
+
+namespace {
+
+class EmptyBackingStoreFactory : public BackingStoreFactory {
+  std::shared_ptr<BackingStore> createBackingStore(
+      folly::StringPiece,
+      const CreateParams&) override {
+    throw std::logic_error("TestServer has no BackingStores by default");
+  }
+};
+
+EmptyBackingStoreFactory gEmptyBackingStoreFactory;
+
+} // namespace
 
 TestServer::TestServer()
     : tmpDir_(makeTempDir()), server_(createServer(getTmpDir())) {
@@ -79,9 +92,9 @@ unique_ptr<EdenServer> TestServer::createServer(AbsolutePathPiece tmpDir) {
       [](std::shared_ptr<const EdenMount>) {
         return std::make_unique<NullActivityRecorder>();
       },
+      &gEmptyBackingStoreFactory,
       make_shared<NullHiveLogger>(),
       "test server");
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -48,9 +48,6 @@ target_link_libraries(
 )
 
 list(APPEND EDEN_STORE_IMPLEMENTATIONS eden_store_hg)
-if(EDEN_HAVE_RECAS)
-  list(APPEND EDEN_STORE_IMPLEMENTATIONS eden_store_recas)
-endif()
 
 if(EDEN_HAVE_GIT)
   list(APPEND EDEN_STORE_IMPLEMENTATIONS eden_store_git)
