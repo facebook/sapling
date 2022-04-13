@@ -43,10 +43,12 @@ use mercurial_types::HgChangesetId;
 pub use segmented_changelog_types::{
     dag, ArcSegmentedChangelog, CloneData, DagId, DagIdSet, FirstAncestorConstraint, FlatSegment,
     Group, InProcessIdDag, Location, MismatchedHeadsError, PreparedFlatSegments,
-    SegmentedChangelog,
+    SegmentedChangelog, SegmentedChangelogArc, SegmentedChangelogRef,
 };
 
-pub use crate::builder::{new_server_segmented_changelog, SegmentedChangelogSqlConnections};
+pub use crate::builder::{
+    new_server_segmented_changelog, new_test_segmented_changelog, SegmentedChangelogSqlConnections,
+};
 pub use crate::clone_hints::CloneHints;
 pub use crate::copy::copy_segmented_changelog;
 pub use crate::tailer::SegmentedChangelogTailer;
@@ -189,6 +191,11 @@ macro_rules! segmented_changelog_delegate {
             ) -> Result<Option<bool>> {
                 let delegate = $delegate;
                 delegate.is_ancestor($ctx, ancestor, descendant).await
+            }
+
+            async fn build_up_to_heads(&$self, $ctx: &CoreContext, heads: &[ChangesetId]) -> Result<bool> {
+                let delegate = $delegate;
+                delegate.build_up_to_heads($ctx, heads).await
             }
         }
     };

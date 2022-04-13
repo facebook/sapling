@@ -286,25 +286,6 @@ impl OnDemandUpdateSegmentedChangelog {
         }
     }
 
-    async fn build_up_to_heads(&self, ctx: &CoreContext, heads: &[ChangesetId]) -> Result<()> {
-        if !self.are_heads_assigned(ctx, heads).await? {
-            self.build_up_to_client_heads(ctx, heads).await?;
-            // The IdDag has two groups, the MASTER group and the NON_MASTER group. The MASTER
-            // group is reserved for the ancestors of the master bookmark. The MASTER group should
-            // contain the ancestors of master. The NON_MASTER group can contain all other
-            // changesets. When we don't know whether head is an ancestor of master, we need to
-            // update to master first then we might assign head to the NonMaster group if we need
-            // to. At the moment we only handle updating the MASTER group.
-            // Note for the future. We should pay attention to potential races between a changeset
-            // being used and the bookmark being updated.
-            if !self.are_heads_assigned(ctx, heads).await? {
-                let err = MismatchedHeadsError::new(self.repo_id, heads.to_vec());
-                return Err(err.into());
-            }
-        }
-        Ok(())
-    }
-
     async fn are_heads_assigned(&self, ctx: &CoreContext, heads: &[ChangesetId]) -> Result<bool> {
         let namedag = self.namedag.read().await;
         let idmap_wrapper = namedag.map();
@@ -450,6 +431,23 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
         let namedag = self.namedag.read().await;
         let read_dag = ReadOnlySegmentedChangelog::new(namedag.dag(), namedag.map().clone_idmap());
         read_dag.is_ancestor(ctx, ancestor, descendant).await
+    }
+
+    async fn build_up_to_heads(&self, ctx: &CoreContext, heads: &[ChangesetId]) -> Result<bool> {
+        if !self.are_heads_assigned(ctx, heads).await? {
+            self.build_up_to_client_heads(ctx, heads).await?;
+            // The IdDag has two groups, the MASTER group and the NON_MASTER group. The MASTER
+            // group is reserved for commits that can be "lazy" client-side e.g. ancestors of
+            // the master bookmark. The NON_MASTER group can contain all other changesets e.g.
+            // local commits. At the moment server-side we only handle updating the MASTER
+            // group. Note for the future. We should pay attention to potential races between
+            // a changeset being used and the bookmark being updated.
+            if !self.are_heads_assigned(ctx, heads).await? {
+                let err = MismatchedHeadsError::new(self.repo_id, heads.to_vec());
+                return Err(err.into());
+            }
+        }
+        Ok(true)
     }
 }
 

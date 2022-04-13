@@ -9,11 +9,12 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use blobstore::Blobstore;
-use bookmarks::Bookmarks;
+use bookmarks::ArcBookmarks;
 use changeset_fetcher::ArcChangesetFetcher;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::SegmentedChangelogConfig;
+use mononoke_types::RepositoryId;
 use repo_identity::RepoIdentity;
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::replication::NoReplicaLagMonitor;
@@ -45,6 +46,30 @@ impl SqlConstruct for SegmentedChangelogSqlConnections {
 
 impl SqlConstructFromMetadataDatabaseConfig for SegmentedChangelogSqlConnections {}
 
+pub fn new_test_segmented_changelog(
+    ctx: CoreContext,
+    repo_id: RepositoryId,
+    config: &SegmentedChangelogConfig,
+    changeset_fetcher: ArcChangesetFetcher,
+    bookmarks: ArcBookmarks,
+) -> Result<Arc<dyn SegmentedChangelog + Send + Sync>> {
+    if !config.enabled {
+        return Ok(Arc::new(DisabledSegmentedChangelog::new()));
+    }
+    let seed_heads =
+        seedheads_from_config(&ctx, config).context("finding segmented changelog heads")?;
+    Ok(Arc::new(OnDemandUpdateSegmentedChangelog::new(
+        ctx,
+        repo_id,
+        InProcessIdDag::new_in_process(),
+        Arc::new(ConcurrentMemIdMap::new()),
+        changeset_fetcher,
+        bookmarks,
+        seed_heads,
+        None,
+    )?))
+}
+
 pub async fn new_server_segmented_changelog<'a>(
     fb: FacebookInit,
     ctx: &'a CoreContext,
@@ -52,7 +77,7 @@ pub async fn new_server_segmented_changelog<'a>(
     config: SegmentedChangelogConfig,
     connections: SegmentedChangelogSqlConnections,
     changeset_fetcher: ArcChangesetFetcher,
-    bookmarks: Arc<dyn Bookmarks>,
+    bookmarks: ArcBookmarks,
     blobstore: Arc<dyn Blobstore>,
     cache_pool: Option<cachelib::VolatileLruCachePool>,
 ) -> Result<Arc<dyn SegmentedChangelog + Send + Sync>> {

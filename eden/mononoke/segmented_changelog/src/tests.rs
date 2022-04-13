@@ -16,7 +16,7 @@ use futures::stream;
 use futures::StreamExt;
 use once_cell::sync::Lazy;
 
-use blobrepo::BlobRepo;
+use blobrepo::{AsBlobRepo, BlobRepo};
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bookmarks::{BookmarkName, Bookmarks, BookmarksArc};
 use bulkops::PublicChangesetBulkFetch;
@@ -44,7 +44,7 @@ use crate::periodic_reload::PeriodicReloadSegmentedChangelog;
 use crate::tailer::SegmentedChangelogTailer;
 use crate::types::{IdDagVersion, IdMapVersion, SegmentedChangelogVersion};
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{InProcessIdDag, Location, SeedHead, SegmentedChangelog};
+use crate::{InProcessIdDag, Location, SeedHead, SegmentedChangelog, SegmentedChangelogRef};
 
 #[async_trait::async_trait]
 trait SegmentedChangelogExt {
@@ -206,22 +206,6 @@ async fn load_owned(
     Ok(OwnedSegmentedChangelog::new(iddag, idmap))
 }
 
-fn new_isolated_on_demand_update(
-    ctx: CoreContext,
-    blobrepo: &BlobRepo,
-) -> Result<OnDemandUpdateSegmentedChangelog> {
-    OnDemandUpdateSegmentedChangelog::new(
-        ctx,
-        blobrepo.get_repoid(),
-        InProcessIdDag::new_in_process(),
-        Arc::new(ConcurrentMemIdMap::new()),
-        blobrepo.get_changeset_fetcher(),
-        Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
-        vec![Some(BOOKMARK_NAME.clone()).into()],
-        None,
-    )
-}
-
 async fn validate_build_idmap(
     ctx: CoreContext,
     blobrepo: BlobRepo,
@@ -316,6 +300,33 @@ async fn test_build_idmap(fb: FacebookInit) -> Result<()> {
         "d35b1875cdd1ed2c687e86f1604b9d7e989450cb",
     )
     .await?;
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_is_ancestor(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo = MergeUneven::get_inner_repo(fb).await;
+    let sc = repo.segmented_changelog();
+    let blobrepo = repo.as_blob_repo();
+
+    // Graph looks like:
+    // a -> b -> c
+    //  \-> d -> e
+    let a = resolve_cs_id(&ctx, &blobrepo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await?;
+    let b = resolve_cs_id(&ctx, &blobrepo, "d7542c9db7f4c77dab4b315edd328edf1514952f").await?;
+    let c = resolve_cs_id(&ctx, &blobrepo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await?;
+    let d = resolve_cs_id(&ctx, &blobrepo, "3cda5c78aa35f0f5b09780d971197b51cad4613a").await?;
+    let e = resolve_cs_id(&ctx, &blobrepo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5").await?;
+
+    assert_eq!(sc.is_ancestor(&ctx, a, c).await?, None);
+    assert!(sc.build_up_to_heads(&ctx, &[c, e]).await?);
+    assert_eq!(sc.is_ancestor(&ctx, a, c).await?, Some(true));
+    assert_eq!(sc.is_ancestor(&ctx, b, d).await?, Some(false));
+    assert_eq!(sc.is_ancestor(&ctx, b, a).await?, Some(false));
+    assert_eq!(sc.is_ancestor(&ctx, d, e).await?, Some(true));
+    assert_eq!(sc.is_ancestor(&ctx, a, a).await?, Some(true));
+
     Ok(())
 }
 
@@ -600,8 +611,9 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
 
     {
         // linear
-        let blobrepo = Linear::getrepo(fb).await;
-        let sc = new_isolated_on_demand_update(ctx.clone(), &blobrepo)?;
+        let inner = Linear::get_inner_repo(fb).await;
+        let blobrepo = inner.as_blob_repo();
+        let sc = inner.segmented_changelog();
 
         let known_cs =
             resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
@@ -615,8 +627,9 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
     }
     {
         // merge_uneven
-        let blobrepo = MergeUneven::getrepo(fb).await;
-        let sc = new_isolated_on_demand_update(ctx.clone(), &blobrepo)?;
+        let inner = MergeUneven::get_inner_repo(fb).await;
+        let blobrepo = inner.as_blob_repo();
+        let sc = inner.segmented_changelog();
 
         let known_cs =
             resolve_cs_id(&ctx, &blobrepo, "264f01429683b3dd8042cb3979e8bf37007118bc").await?;
@@ -671,7 +684,8 @@ async fn test_two_repos(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = Linear::getrepo(fb).await;
+    let inner = Linear::get_inner_repo(fb).await;
+    let blobrepo = inner.as_blob_repo();
 
     // commit modified10 (11)
     let cs11 = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
@@ -683,7 +697,7 @@ async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit
     // commit 5
     let cs5 = resolve_cs_id(&ctx, &blobrepo, "cb15ca4a43a59acff5388cea9648c162afde8372").await?;
 
-    let sc = new_isolated_on_demand_update(ctx.clone(), &blobrepo)?;
+    let sc = inner.segmented_changelog();
     let answer = try_join_all(vec![
         sc.location_to_changeset_id(&ctx, Location::new(cs10, 5)),
         sc.location_to_changeset_id(&ctx, Location::new(cs6, 1)),
@@ -692,7 +706,9 @@ async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit
     .await?;
     assert_eq!(answer, vec![cs5, cs5, cs5]);
 
-    let sc = new_isolated_on_demand_update(ctx.clone(), &blobrepo)?;
+    // Recreate the test repo to reset the segmented changelog
+    let inner = Linear::get_inner_repo(fb).await;
+    let sc = inner.segmented_changelog();
     let answer = try_join_all(vec![
         sc.changeset_id_to_location(&ctx, vec![cs10], cs5),
         sc.changeset_id_to_location(&ctx, vec![cs6], cs5),
@@ -988,9 +1004,10 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_mismatched_heads(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = BranchEven::getrepo(fb).await;
+    let inner = BranchEven::get_inner_repo(fb).await;
+    let blobrepo = inner.as_blob_repo();
 
-    let dag = new_isolated_on_demand_update(ctx.clone(), &blobrepo)?;
+    let dag = inner.segmented_changelog();
     let h1 = resolve_cs_id(&ctx, &blobrepo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await?;
     let h1_parent =
         resolve_cs_id(&ctx, &blobrepo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await?;

@@ -23,6 +23,7 @@ use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
 use changeset_info::ChangesetInfo;
 use changesets::ArcChangesets;
 use changesets_impl::SqlChangesetsBuilder;
+use context::CoreContext;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
 use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestV2Id};
 use derived_data_filenodes::FilenodesOnlyPublic;
@@ -41,7 +42,8 @@ use memblob::Memblob;
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_mutation::{ArcHgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
-    ArcRepoConfig, DerivedDataConfig, DerivedDataTypesConfig, RepoConfig, UnodeVersion,
+    ArcRepoConfig, DerivedDataConfig, DerivedDataTypesConfig, RepoConfig, SegmentedChangelogConfig,
+    UnodeVersion,
 };
 use mononoke_types::RepositoryId;
 use mutable_counters::{ArcMutableCounters, SqlMutableCountersBuilder};
@@ -60,7 +62,7 @@ use repo_identity::{ArcRepoIdentity, RepoIdentity};
 use repo_permission_checker::{AlwaysAllowMockRepoPermissionChecker, ArcRepoPermissionChecker};
 use requests_table::SqlLongRunningRequestsQueue;
 use scuba_ext::MononokeScubaSampleBuilder;
-use segmented_changelog::DisabledSegmentedChangelog;
+use segmented_changelog::{new_test_segmented_changelog, SegmentedChangelogSqlConnections};
 use segmented_changelog_types::ArcSegmentedChangelog;
 use skeleton_manifest::RootSkeletonManifestId;
 use skiplist::{ArcSkiplistIndex, SkiplistIndex};
@@ -118,6 +120,11 @@ pub fn default_test_repo_config() -> RepoConfig {
             },
             "backfilling".to_string() => DerivedDataTypesConfig::default(),],
         },
+        segmented_changelog_config: SegmentedChangelogConfig {
+            enabled: true,
+            master_bookmark: Some("master".to_string()),
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -163,6 +170,7 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlLongRunningRequestsQueue::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlMutableRenamesStore::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
+        metadata_con.execute_batch(SegmentedChangelogSqlConnections::CREATION_QUERY)?;
         let metadata_db =
             SqlConnectionsWithSchema::new_single(Connection::with_sqlite(metadata_con));
 
@@ -394,8 +402,20 @@ impl TestRepoFactory {
 
     /// Construct Segmented Changelog.  Segmented changelog is disabled in
     /// test repos.
-    pub fn segmented_changelog(&self) -> ArcSegmentedChangelog {
-        Arc::new(DisabledSegmentedChangelog::new())
+    pub fn segmented_changelog(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+        changeset_fetcher: &ArcChangesetFetcher,
+        bookmarks: &ArcBookmarks,
+    ) -> Result<ArcSegmentedChangelog> {
+        new_test_segmented_changelog(
+            CoreContext::test_mock(self.fb),
+            repo_identity.id(),
+            &repo_config.segmented_changelog_config,
+            changeset_fetcher.clone(),
+            bookmarks.clone(),
+        )
     }
 
     /// Construct RepoDerivedData.  Derived data uses an in-process lease for

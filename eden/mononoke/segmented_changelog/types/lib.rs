@@ -236,6 +236,13 @@ pub trait SegmentedChangelog: Send + Sync {
         ancestor: ChangesetId,
         descendant: ChangesetId,
     ) -> Result<Option<bool>>;
+
+    /// Try update segmented changelog to given heads. No-op by default. Useful
+    /// for tests. Returns: `true` if update was successful; `false` if the
+    /// implementation doesn't support updates; an error otherwise.
+    async fn build_up_to_heads(&self, _ctx: &CoreContext, _heads: &[ChangesetId]) -> Result<bool> {
+        Ok(false)
+    }
 }
 
 #[derive(Debug, Error)]
