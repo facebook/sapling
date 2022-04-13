@@ -34,6 +34,7 @@
 #include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
+#include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/DiffCallback.h"
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ObjectStore.h"
@@ -2907,14 +2908,22 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   if (!oldScmEntry) {
     conflictType = ConflictType::UNTRACKED_ADDED;
   } else if (entry.getHash() != oldScmEntry->getHash()) {
-    // If the object IDs differ, it does not mean the files are different.
-    // Perhaps the hash scheme has changed, as with the hg:object-id-format
-    // ConfigSettiing.
-    // Unfortunately, the only way to know for sure is to load the inode.
-    auto inodeFuture = loadChildLocked(
-        contents, name, entry, pendingLoads, ctx->getFetchContext());
-    return make_unique<CheckoutAction>(
-        ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
+    if (getMount()
+            ->getObjectStore()
+            ->getBackingStore()
+            ->hasBijectiveBlobIds()) {
+      // Identical contents imply identical IDs, so we know this is a conflict.
+      conflictType = ConflictType::MODIFIED_MODIFIED;
+    } else {
+      // If the object IDs differ, it does not mean the files are different.
+      // Perhaps the hash scheme has changed, as with the hg:object-id-format
+      // ConfigSettiing.
+      // Unfortunately, the only way to know for sure is to load the inode.
+      auto inodeFuture = loadChildLocked(
+          contents, name, entry, pendingLoads, ctx->getFetchContext());
+      return make_unique<CheckoutAction>(
+          ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
+    }
   }
   if (conflictType != ConflictType::ERROR) {
     // If this is a directory we unfortunately have to load it and recurse into

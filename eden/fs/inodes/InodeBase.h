@@ -15,7 +15,6 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/InodeTimestamps.h"
-#include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -25,10 +24,10 @@
 #include "eden/fs/inodes/InodeMetadata.h"
 #endif
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class EdenMount;
+class ObjectFetchContext;
 class ParentInodeInfo;
 class RenameLock;
 class SharedRenameLock;
@@ -672,7 +671,7 @@ class InodeBaseMetadata : public InodeBase {
     InodeBase::updateMtimeAndCtime(now);
   }
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden
 
 #include "eden/fs/inodes/InodePtr-defs.h"

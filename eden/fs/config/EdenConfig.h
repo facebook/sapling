@@ -502,6 +502,19 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * In general, hg does not guarantee that blob IDs and contents are 1:1 [1].
+   * EdenFS can be slightly faster if they are, so this switch exists for the
+   * future possibility that they are, or if someone wants to live dangerously
+   * for the sake of performance.
+   *
+   * [1] hg blob IDs sometimes include file history.
+   */
+  ConfigSetting<bool> hgBijectiveBlobIds{
+      "hg:has-bijective-blob-ids",
+      false,
+      this};
+
+  /**
    * Controls the number of blob or prefetch import requests we batch in
    * HgBackingStore
    */

@@ -238,6 +238,10 @@ void HgQueuedBackingStore::processRequest() {
   }
 }
 
+bool HgQueuedBackingStore::hasBijectiveBlobIds() {
+  return config_->getEdenConfig()->hgBijectiveBlobIds.getValue();
+}
+
 RootId HgQueuedBackingStore::parseRootId(folly::StringPiece rootId) {
   // rootId can be 20-byte binary or 40-byte hex. Canonicalize, unconditionally
   // returning 40-byte hex.

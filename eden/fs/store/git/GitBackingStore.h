@@ -40,6 +40,10 @@ class GitBackingStore final : public BackingStore {
    */
   const char* getPath() const;
 
+  bool hasBijectiveBlobIds() override {
+    return true;
+  }
+
   RootId parseRootId(folly::StringPiece rootId) override;
   std::string renderRootId(const RootId& rootId) override;
   ObjectId parseObjectId(folly::StringPiece objectId) override;

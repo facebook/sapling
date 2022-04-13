@@ -45,6 +45,12 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   virtual ~BackingStore() {}
 
   /**
+   * Returns true iff the contents of a blob and its ID are exactly 1:1. This is
+   * true for purely content-addressed schemes.
+   */
+  virtual bool hasBijectiveBlobIds() = 0;
+
+  /**
    * Return the root Tree corresponding to the passed in RootId.
    */
   virtual folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(

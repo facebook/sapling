@@ -21,6 +21,12 @@ LocalStoreCachedBackingStore::LocalStoreCachedBackingStore(
       localStore_{std::move(localStore)},
       stats_{std::move(stats)} {}
 
+LocalStoreCachedBackingStore::~LocalStoreCachedBackingStore() {}
+
+bool LocalStoreCachedBackingStore::hasBijectiveBlobIds() {
+  return backingStore_->hasBijectiveBlobIds();
+}
+
 folly::SemiFuture<std::unique_ptr<Tree>>
 LocalStoreCachedBackingStore::getRootTree(
     const RootId& rootId,
