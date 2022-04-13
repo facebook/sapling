@@ -1210,7 +1210,6 @@ def getsparsepatterns(repo, rev, rawconfig=None, debugversion=None):
     if rev is None:
         raise error.Abort(_("cannot parse sparse patterns from working copy"))
 
-    isroot = False
     if rawconfig is None:
         if not repo.localvfs.exists("sparse"):
             _warnfullcheckout(repo)
@@ -1218,7 +1217,6 @@ def getsparsepatterns(repo, rev, rawconfig=None, debugversion=None):
 
         raw = repo.localvfs.readutf8("sparse")
         rawconfig = readsparseconfig(repo, raw, filename=repo.localvfs.join("sparse"))
-        isroot = True
     elif not isinstance(rawconfig, RawSparseConfig):
         raise error.ProgrammingError(
             "getsparsepatterns.rawconfig must "
@@ -1286,7 +1284,7 @@ def getsparsepatterns(repo, rev, rawconfig=None, debugversion=None):
         rules,
         profiles,
         rawconfig.metadata,
-        isroot,
+        True,  # isroot
         ruleorigins,
     )
 

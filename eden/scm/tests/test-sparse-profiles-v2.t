@@ -46,6 +46,8 @@ test sparse
   $ hg debugsparseexplainmatch inc/exc/incfile.txt
   inc/exc/incfile.txt: excluded by rule !inc/exc/** ($TESTTMP/myrepo/.hg/sparse -> base.sparse)
 
+  $ hg debugsparseexplainmatch -s main.sparse inc/exc/incfile.txt
+  inc/exc/incfile.txt: excluded by rule !inc/exc/** (base.sparse)
 
 # Upgrade main.sparse to v2
   $ cat > main.sparse <<EOF
@@ -86,8 +88,10 @@ Do not union profiles outside the root .hg/sparse config.
   > %include main.sparse
   > %include base.sparse
   > EOF
+  $ hg commit -Aqm "add temp.sparse"
   $ hg debugsparsematch -s temp.sparse inc/exc/incfile.txt
   considering 1 file(s)
+  inc/exc/incfile.txt
   $ rm temp.sparse
 
 Do union profiles in root .hg/sparse config.
