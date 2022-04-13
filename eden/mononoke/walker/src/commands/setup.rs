@@ -222,6 +222,7 @@ const CHUNK_BY_PUBLIC_NODE_TYPES: &[NodeType] = &[
     NodeType::UnodeMapping,
 ];
 
+// migrated to the new walker
 static CHUNK_BY_PUBLIC_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
     CHUNK_BY_PUBLIC_NODE_TYPES
         .iter()

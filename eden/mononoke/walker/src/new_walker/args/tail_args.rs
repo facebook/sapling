@@ -17,8 +17,8 @@ use std::time::Duration;
 use walker_commands_impl::checkpoint::{CheckpointsByName, SqlCheckpoints};
 use walker_commands_impl::tail::{ChunkingParams, ClearStateParams, TailParams};
 
-use crate::args::arg_types::{InternedTypeArg, DEFAULT_INTERNED_TYPES_STR};
-use crate::args::{parse_node_types, parse_node_values};
+use crate::args::arg_types::{ChunkByPublicArg, InternedTypeArg, DEFAULT_INTERNED_TYPES_STR};
+use crate::args::parse_node_types;
 
 #[derive(Args, Debug)]
 pub struct TailArgs {
@@ -53,9 +53,8 @@ impl TailArgs {
 #[derive(Args, Debug)]
 pub struct ChunkingArgs {
     /// Traverse using chunks of public changesets as roots to the specified node type
-    // TODO: CHUNK_BY_PUBLIC_POSSIBLE_VALUES
     #[clap(long, short = 'p')]
-    pub chunk_by_public: Vec<String>,
+    pub chunk_by_public: Vec<ChunkByPublicArg>,
     /// Set the direction to proceed through changesets
     #[clap(long, short = 'd', requires = "chunk-by-public")]
     pub chunk_direction: Option<Direction>,
@@ -107,8 +106,7 @@ impl ChunkingArgs {
         dbconfig: &MetadataDatabaseConfig,
         mysql_options: &MysqlOptions,
     ) -> Result<Option<ChunkingParams>, Error> {
-        let chunk_by = parse_node_values(self.chunk_by_public.iter(), &[])?;
-        if chunk_by.is_empty() {
+        if self.chunk_by_public.is_empty() {
             return Ok(None);
         }
 
@@ -140,7 +138,7 @@ impl ChunkingArgs {
             .unwrap_or(Direction::NewestFirst);
 
         Ok(Some(ChunkingParams {
-            chunk_by,
+            chunk_by: ChunkByPublicArg::parse_args(&self.chunk_by_public),
             chunk_size: self.chunk_size,
             direction,
             clear_state,

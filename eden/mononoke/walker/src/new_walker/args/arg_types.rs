@@ -11,6 +11,7 @@ use std::collections::HashSet;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumString, EnumVariantNames};
 
+use walker_commands_impl::graph::NodeType;
 use walker_commands_impl::state::InternedType;
 
 #[derive(Debug, Clone, Copy, ArgEnum, AsRefStr, EnumString, EnumVariantNames)]
@@ -72,3 +73,39 @@ pub static DEFAULT_INTERNED_TYPES_STR: Lazy<Vec<&'static str>> = Lazy::new(|| {
         .map(|int_type| int_type.as_ref())
         .collect()
 });
+
+/// We can jump for ChangesetId to all of these
+#[derive(Debug, Clone, Copy, ArgEnum, AsRefStr, EnumString, EnumVariantNames)]
+pub enum ChunkByPublicArg {
+    BonsaiHgMapping,
+    PhaseMapping,
+    Changeset,
+    ChangesetInfo,
+    ChangesetInfoMapping,
+    DeletedManifestMapping,
+    FsnodeMapping,
+    SkeletonManifestMapping,
+    UnodeMapping,
+}
+
+impl From<ChunkByPublicArg> for NodeType {
+    fn from(arg: ChunkByPublicArg) -> NodeType {
+        match arg {
+            ChunkByPublicArg::BonsaiHgMapping => NodeType::BonsaiHgMapping,
+            ChunkByPublicArg::PhaseMapping => NodeType::PhaseMapping,
+            ChunkByPublicArg::Changeset => NodeType::Changeset,
+            ChunkByPublicArg::ChangesetInfo => NodeType::ChangesetInfo,
+            ChunkByPublicArg::ChangesetInfoMapping => NodeType::ChangesetInfoMapping,
+            ChunkByPublicArg::DeletedManifestMapping => NodeType::DeletedManifestMapping,
+            ChunkByPublicArg::FsnodeMapping => NodeType::FsnodeMapping,
+            ChunkByPublicArg::SkeletonManifestMapping => NodeType::SkeletonManifestMapping,
+            ChunkByPublicArg::UnodeMapping => NodeType::UnodeMapping,
+        }
+    }
+}
+
+impl ChunkByPublicArg {
+    pub fn parse_args(args: &[Self]) -> HashSet<NodeType> {
+        args.iter().cloned().map(NodeType::from).collect()
+    }
+}
