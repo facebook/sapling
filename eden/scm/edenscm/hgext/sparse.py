@@ -2109,7 +2109,7 @@ def debugsparsematch(ui, repo, *args, **opts):
     ui.status_err(_("considering %d file(s)\n") % len(files))
 
     def getmatcher(profile):
-        raw = pycompat.decodeutf8(ctx[profile].data())
+        raw = "%%include %s" % profile
         return repo.sparsematch(
             config=readsparseconfig(repo, raw=raw, filename=profile)
         )
@@ -2152,9 +2152,8 @@ def debugsparseexplainmatch(ui, repo, *args, **opts):
     config = None
     profile = opts.get("sparse_profile")
     if profile:
-        config = readsparseconfig(
-            repo, raw=pycompat.decodeutf8(ctx[profile].data()), filename=profile
-        )
+        raw = "%%include %s" % profile
+        config = readsparseconfig(repo, raw=raw, filename=profile)
 
     m = scmutil.match(ctx, pats=args, opts=opts, default="path")
     files = m.files()

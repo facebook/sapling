@@ -51,32 +51,6 @@ Match files with one sparse profile
   considering 3 file(s)
   foo.py
 
-Match files with on the fly sparse profile
-
-  $ cat > temp.sparse <<EOF
-  > [metadata]
-  > title: first version of temporary profile that would never be committed
-  > [include]
-  > *.gooby
-  > *.py
-  > EOF
-  $ hg debugsparsematch --sparse-profile temp.sparse match.gooby flu/blu/thing.txt other.py
-  considering 3 file(s)
-  match.gooby
-  other.py
-
-  $ cat > temp.sparse <<EOF
-  > [metadata]
-  > title: second version of temporary profile that would never be committed
-  > [include]
-  > path:flu/blu/
-  > *.py
-  > EOF
-  $ hg debugsparsematch --sparse-profile temp.sparse --exclude-sparse-profile backend.sparse match.gooby flu/blu/thing.txt other.py
-  considering 3 file(s)
-  flu/blu/thing.txt
-  $ rm temp.sparse
-
 Match fileset
 NOTE - this command is used in validate_sparse_profiles scripts, so be careful with
 changing it!
