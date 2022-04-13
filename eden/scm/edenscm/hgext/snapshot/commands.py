@@ -44,7 +44,7 @@ subcmd = snapshot.subcommand(
         (
             "",
             "max-untracked-size",
-            "",
+            "1000",
             _("filter out any untracked files larger than this size, in megabytes"),
             _("MAX_SIZE"),
         ),

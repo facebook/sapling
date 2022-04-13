@@ -82,7 +82,17 @@ class workingcopy(object):
             if maxuntrackedsize is None:
                 return True
             else:
-                return Path(repo.root, f).stat().st_size <= maxuntrackedsize
+                size = Path(repo.root, f).lstat().st_size
+                if size <= maxuntrackedsize:
+                    return True
+                else:
+                    if not repo.ui.plain():
+                        repo.ui.warn(
+                            _(
+                                "Not snapshotting '{}' because it is {} bytes large, and max untracked size is {} bytes\n"
+                            ).format(f, size, maxuntrackedsize)
+                        )
+                    return False
 
         untracked = [f for f in wctx.status(listunknown=True).unknown if filterlarge(f)]
         removed = []
