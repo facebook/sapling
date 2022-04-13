@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::git_hub_repo::GitHubRepo;
 use crate::make_request::make_request;
 use anyhow::Result;
 use graphql_client::GraphQLQuery;
@@ -16,11 +17,6 @@ use graphql_client::GraphQLQuery;
     deprecated = "warn"
 )]
 struct RepoParent;
-
-pub struct GitHubRepo {
-    pub owner: String,
-    pub name: String,
-}
 
 pub fn get_parent_repo(github_api_token: &str, repo: &GitHubRepo) -> Result<Option<GitHubRepo>> {
     let repo_parent_variables = repo_parent::Variables {

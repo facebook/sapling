@@ -1,0 +1,26 @@
+query PullRequestQuery($owner: String!, $name: String!, $number: Int!) {
+  repository(name: $name, owner: $owner) {
+    pullRequest(number: $number) {
+      url
+      title
+      body
+
+      isDraft
+      state
+      closed
+      merged
+      reviewDecision
+
+      baseRefName
+      baseRefOid
+      baseRepository {
+        nameWithOwner
+      }
+      headRefName
+      headRefOid
+      headRepository {
+        nameWithOwner
+      }
+    }
+  }
+}
