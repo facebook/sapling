@@ -69,9 +69,12 @@ impl SegmentedChangelogManager {
     pub async fn load(
         &self,
         ctx: &CoreContext,
-    ) -> Result<Arc<dyn SegmentedChangelog + Send + Sync>> {
+    ) -> Result<(
+        Arc<dyn SegmentedChangelog + Send + Sync>,
+        SegmentedChangelogVersion,
+    )> {
         let monitored = async {
-            let on_demand = self.load_ondemand_update(ctx).await?;
+            let (on_demand, sc_version) = self.load_ondemand_update(ctx).await?;
             let asc: Arc<dyn SegmentedChangelog + Send + Sync> =
                 match self.update_to_master_bookmark_period {
                     None => on_demand,
@@ -79,7 +82,7 @@ impl SegmentedChangelogManager {
                         Arc::new(on_demand.with_periodic_update_to_master_bookmark(ctx, period))
                     }
                 };
-            Ok(asc)
+            Ok((asc, sc_version))
         };
 
         let (stats, ret) = monitored.timed().await;
@@ -96,24 +99,33 @@ impl SegmentedChangelogManager {
     async fn load_ondemand_update(
         &self,
         ctx: &CoreContext,
-    ) -> Result<Arc<OnDemandUpdateSegmentedChangelog>> {
-        let owned = self.load_owned(ctx).await.with_context(|| {
+    ) -> Result<(
+        Arc<OnDemandUpdateSegmentedChangelog>,
+        SegmentedChangelogVersion,
+    )> {
+        let (owned, sc_version) = self.load_owned(ctx).await.with_context(|| {
             format!("repo {}: failed to load segmented changelog", self.repo_id)
         })?;
-        Ok(Arc::new(OnDemandUpdateSegmentedChangelog::new(
-            ctx.clone(),
-            self.repo_id,
-            owned.iddag,
-            owned.idmap,
-            Arc::clone(&self.changeset_fetcher),
-            Arc::clone(&self.bookmarks),
-            self.seed_heads.clone(),
-            self.clone_hints.clone(),
-        )?))
+        Ok((
+            Arc::new(OnDemandUpdateSegmentedChangelog::new(
+                ctx.clone(),
+                self.repo_id,
+                owned.iddag,
+                owned.idmap,
+                Arc::clone(&self.changeset_fetcher),
+                Arc::clone(&self.bookmarks),
+                self.seed_heads.clone(),
+                self.clone_hints.clone(),
+            )?),
+            sc_version,
+        ))
     }
 
     // public for builder only
-    pub async fn load_owned(&self, ctx: &CoreContext) -> Result<OwnedSegmentedChangelog> {
+    pub async fn load_owned(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<(OwnedSegmentedChangelog, SegmentedChangelogVersion)> {
         let sc_version = self.latest_version(ctx).await?;
         let iddag = self
             .iddag_save_store
@@ -132,7 +144,7 @@ impl SegmentedChangelogManager {
             sc_version.iddag_version,
         );
         let owned = OwnedSegmentedChangelog::new(iddag, idmap);
-        Ok(owned)
+        Ok((owned, sc_version))
     }
 
     pub async fn latest_version(&self, ctx: &CoreContext) -> Result<SegmentedChangelogVersion> {
@@ -158,10 +170,11 @@ impl SegmentedChangelogManager {
 segmented_changelog_delegate!(SegmentedChangelogManager, |&self, ctx: &CoreContext| {
     // using load_owned for backwards compatibility until we deprecate upload algorithm
     // we would then remove this implementation for SegmentedChangelog
-    self.load_owned(&ctx).await.with_context(|| {
+    let (sc, _sc_version) = self.load_owned(ctx).await.with_context(|| {
         format!(
             "repo {}: error loading segmented changelog from save",
             self.repo_id
         )
-    })?
+    })?;
+    sc
 });

@@ -124,7 +124,10 @@ pub async fn new_server_segmented_changelog<'a>(
     );
     let name = repo_identity.name().to_string();
     let sc = match config.reload_dag_save_period {
-        None => manager.load(ctx).await?,
+        None => {
+            let (sc, _sc_version) = manager.load(ctx).await?;
+            sc
+        }
         Some(reload_period) => Arc::new(
             PeriodicReloadSegmentedChangelog::start_from_manager(ctx, reload_period, manager, name)
                 .await?,

@@ -34,7 +34,8 @@ type LoadedSegmentedChangelog = Arc<dyn SegmentedChangelog + Send + Sync>;
 #[async_trait]
 impl Loader<LoadedSegmentedChangelog> for SegmentedChangelogLoader {
     async fn load(&mut self) -> Result<Option<LoadedSegmentedChangelog>> {
-        Ok(Some(self.manager.load(&self.ctx).await?))
+        let (sc, _sc_version) = self.manager.load(&self.ctx).await?;
+        Ok(Some(sc))
     }
 }
 
