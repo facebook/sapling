@@ -33,7 +33,7 @@ use revset::AncestorsNodeStream;
 use sql_construct::SqlConstruct;
 use sql_ext::replication::NoReplicaLagMonitor;
 use tests_utils::{resolve_cs_id, CreateCommitContext};
-use tunables::with_tunables_async;
+use tunables::{override_tunables, with_tunables_async};
 
 use crate::builder::SegmentedChangelogSqlConnections;
 use crate::iddag::IdDagSaveStore;
@@ -1026,6 +1026,26 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     let master = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
     assert_eq!(sc.head(&ctx).await?, master);
 
+    // No updates should happen afterwards because there are no new commits.
+    assert!(
+        tokio::time::timeout(Duration::from_secs(45), sc.wait_for_update())
+            .await
+            .is_err()
+    );
+
+    // Force the reload should trigger even if there are not updates at all.
+    let tunables_override = Arc::new(tunables::MononokeTunables::default());
+    tunables_override.update_by_repo_ints(&hashmap! {
+        blobrepo.name().clone() => hashmap! {
+            "segmented_changelog_force_reload".to_string() => 2,
+        },
+    });
+    tunables_override.update_ints(&hashmap! {
+        "segmented_changelog_force_reload_jitter_secs".to_string() => 5,
+    });
+    override_tunables(Some(tunables_override.clone()));
+    tokio::time::timeout(Duration::from_secs(45), sc.wait_for_update()).await?;
+    override_tunables(None);
     Ok(())
 }
 
