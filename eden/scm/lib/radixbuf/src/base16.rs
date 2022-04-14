@@ -101,8 +101,7 @@ mod tests {
             (0..full.len()).all(|i| {
                 let v: Vec<u8> = iter.clone().skip(i).collect();
                 let r: Vec<u8> = iter.clone().skip(i).rev().rev().rev().collect();
-                v.capacity() == v.len() && v[..] == full[i..] &&
-                    r.capacity() == r.len() && r[..] == rev[..(rev.len() - i)]
+                v[..] == full[i..] && r[..] == rev[..(rev.len() - i)]
             })
         }
     }
@@ -128,7 +127,6 @@ mod tests {
         let x = [0x12, 0x34, 0x56u8];
         let i = Base16Iter::from_bin(&x).skip(3).take(3).rev(); // .rev() works directly
         let v: Vec<u8> = i.collect();
-        assert_eq!(v.capacity(), v.len());
         assert_eq!(v, vec![6, 5, 4]);
     }
 }
