@@ -6,7 +6,7 @@
  */
 
 #![type_length_limit = "4522397"]
-use anyhow::{format_err, Context, Error};
+use anyhow::{bail, format_err, Context, Error};
 use backsyncer::{backsync_latest, open_backsyncer_dbs, BacksyncLimit, TargetRepoDbs};
 use blobrepo::{save_bonsai_changesets, AsBlobRepo};
 use blobstore::Loadable;
@@ -42,6 +42,7 @@ use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime};
 use movers::{DefaultAction, Mover};
 use pushrebase::do_pushrebase_bonsai;
+use question::{Answer, Question};
 use repo_blobstore::RepoBlobstoreRef;
 use segmented_changelog::{seedheads_from_config, SeedHead, SegmentedChangelogTailer};
 use serde::{Deserialize, Serialize};
@@ -1349,6 +1350,20 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
+
+    let answer = Question::new("Does the git repo you're about to merge has multiple heads (unmerged branches)? It's unsafe to use this tool when it does.")
+        .show_defaults()
+        .confirm();
+    match answer {
+        Answer::NO => info!(ctx.logger(), "Let's get this merged!"),
+        Answer::YES => bail!(
+            "Try cloning with 'git clone -b master --single-branch $clone_path` to clone only ancestors of master. Then you should be good to go!"
+        ),
+        _ => bail!(
+            "If not sure, you must examine the git repo for such branches / heads. If it has them, it's unsafe to use this tool."
+        ),
+    };
+
     let repo = args::create_repo(fb, logger, &matches);
 
     block_execute(

@@ -56,11 +56,12 @@
 
 # Run setup checker
   $ cd "$TESTTMP"
-  $ repo_import \
+  $ echo n | repo_import \
   > check-additional-setup-steps \
   > --disable-phabricator-check \
   > --bookmark-suffix "new_repo" \
   > --dest-bookmark master_bookmark
+  Does the git repo you're about to merge has multiple heads (unmerged branches)? It's unsafe to use this tool when it does. (y/n) * Let's get this merged! (glob)
   * using repo "repo" repoid RepositoryId(0) (glob)
   * The importing bookmark name is: repo_import_new_repo. * (glob)
   * The destination bookmark name is: master_bookmark. * (glob)
@@ -79,11 +80,12 @@
   > }
   > EOF
 
-  $ repo_import \
+  $ echo n | repo_import \
   > check-additional-setup-steps \
   > --disable-phabricator-check \
   > --bookmark-suffix "new_repo" \
   > --dest-bookmark master_bookmark
+  Does the git repo you're about to merge has multiple heads (unmerged branches)? It's unsafe to use this tool when it does. (y/n) * Let's get this merged! (glob)
   * using repo "repo" repoid RepositoryId(0) (glob)
   * The importing bookmark name is: repo_import_new_repo. * (glob)
   * The destination bookmark name is: master_bookmark. * (glob)
@@ -102,7 +104,7 @@
 
 # Import the repo
 # Segmented changelog should be rebuild for newly imported commits along the way.
-  $ repo_import \
+  $ echo n | repo_import \
   > import \
   > "$GIT_REPO" \
   > --dest-path "new_dir/new_repo" \
@@ -114,6 +116,7 @@
   > --commit-author user \
   > --commit-message "merging" \
   > --recovery-file-path "$GIT_REPO/recovery_file.json"
+  Does the git repo you're about to merge has multiple heads (unmerged branches)? It's unsafe to use this tool when it does. (y/n) * Let's get this merged! (glob)
   * using repo "repo" repoid RepositoryId(0) (glob)
   * Started importing git commits to Mononoke (glob)
   * GitRepo:* commit 1 of 2 - Oid:* => Bid:* (glob)
