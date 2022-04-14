@@ -19,12 +19,17 @@ template <typename T>
 class Future;
 }
 
+namespace apache::thrift {
+template <class>
+class Client;
+} // namespace apache::thrift
+
 namespace facebook {
 namespace eden {
 
 class EdenConfig;
 class EdenInstance;
-class EdenServiceAsyncClient;
+class EdenService;
 class LogFile;
 
 /**
@@ -64,7 +69,7 @@ class EdenMonitor {
    * EdenServiceAsyncClient object immediately.  The connection attempt likely
    * will still be in progress when this function returns.
    */
-  std::shared_ptr<EdenServiceAsyncClient> createEdenThriftClient();
+  std::shared_ptr<apache::thrift::Client<EdenService>> createEdenThriftClient();
 
   /**
    * Request that this monitor daemon restart itself.
