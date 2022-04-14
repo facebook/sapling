@@ -1002,7 +1002,7 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     let manager = get_manager(&blobrepo, &conns, vec![], SegmentedChangelogType::Owned).await?;
     let sc = PeriodicReloadSegmentedChangelog::start_from_manager(
         &ctx,
-        Duration::from_secs(10),
+        Duration::from_secs(5),
         manager,
         blobrepo.name().to_string(),
     )
@@ -1010,14 +1010,19 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
 
     assert_eq!(sc.head(&ctx).await?, start_cs_id);
 
-    // Try waiting for segmented changelog update without tailer running
-    tokio::time::advance(Duration::from_secs(15)).await;
-    sc.wait_for_update().await; // Update happens even if there's nothing new to load.
+    // Try waiting for segmented changelog update without tailer running.  This
+    // should fail as we don't update the SC unless there's an update.
+    assert!(
+        tokio::time::timeout(Duration::from_secs(15), sc.wait_for_update())
+            .await
+            .is_err()
+    );
 
+    // Start the tailer.
     let tailer = new_tailer_for_tailing(&blobrepo, &conns).await?;
     let _ = tailer.once(&ctx, false).await?;
-    tokio::time::advance(Duration::from_secs(15)).await;
-    sc.wait_for_update().await;
+    // There was an update - wait_for_update should return.
+    tokio::time::timeout(Duration::from_secs(15), sc.wait_for_update()).await?;
     let master = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
     assert_eq!(sc.head(&ctx).await?, master);
 

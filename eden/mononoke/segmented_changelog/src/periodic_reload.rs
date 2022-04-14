@@ -21,12 +21,16 @@ use tokio::sync::Notify;
 use tunables::tunables;
 
 use crate::manager::SegmentedChangelogManager;
-use crate::{segmented_changelog_delegate, CloneData, Location, SegmentedChangelog};
+use crate::{
+    segmented_changelog_delegate, types::SegmentedChangelogVersion, CloneData, Location,
+    SegmentedChangelog,
+};
 use reloader::{Loader, Reloader};
 
 struct SegmentedChangelogLoader {
     manager: SegmentedChangelogManager,
     ctx: CoreContext,
+    last_loaded_version: Option<SegmentedChangelogVersion>,
 }
 
 type LoadedSegmentedChangelog = Arc<dyn SegmentedChangelog + Send + Sync>;
@@ -34,8 +38,13 @@ type LoadedSegmentedChangelog = Arc<dyn SegmentedChangelog + Send + Sync>;
 #[async_trait]
 impl Loader<LoadedSegmentedChangelog> for SegmentedChangelogLoader {
     async fn load(&mut self) -> Result<Option<LoadedSegmentedChangelog>> {
-        let (sc, _sc_version) = self.manager.load(&self.ctx).await?;
+        let (sc, sc_version) = self.manager.load(&self.ctx).await?;
+        self.last_loaded_version = Some(sc_version);
         Ok(Some(sc))
+    }
+
+    async fn needs_reload(&mut self) -> Result<bool> {
+        Ok(self.last_loaded_version != Some(self.manager.latest_version(&self.ctx).await?))
     }
 }
 
@@ -107,6 +116,7 @@ impl PeriodicReloadSegmentedChangelog {
             SegmentedChangelogLoader {
                 manager,
                 ctx: ctx.clone(),
+                last_loaded_version: None,
             },
             name,
         )

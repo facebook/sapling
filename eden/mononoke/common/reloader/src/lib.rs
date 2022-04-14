@@ -12,7 +12,7 @@ use arc_swap::ArcSwap;
 use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
-use futures::future;
+use futures::{select, FutureExt};
 use futures_ext::future::{spawn_controlled, ControlledHandle};
 use rand::Rng;
 use slog::warn;
@@ -54,7 +54,14 @@ impl<R> Reloader<R> {
 
 #[async_trait]
 pub trait Loader<R> {
+    // Load a new instance of R.
     async fn load(&mut self) -> Result<Option<R>>;
+
+    // Determines if R should be reloaded. This function is called to determine
+    // if periodic reload is necessary. It's ignored by forced reload.
+    async fn needs_reload(&mut self) -> Result<bool> {
+        Ok(true)
+    }
 }
 
 #[async_trait]
@@ -107,20 +114,39 @@ impl<R: 'static + Send + Sync> Reloader<R> {
             async move {
                 loop {
                     let interval = interval_getter();
-                    let sleep_fut = tokio::time::sleep(interval);
-                    let force_reload_fut = force_reload.notified();
+                    let sleep_fut = tokio::time::sleep(interval).fuse();
+                    let force_reload_fut = force_reload.notified().fuse();
                     futures::pin_mut!(sleep_fut, force_reload_fut);
-                    future::select(sleep_fut, force_reload_fut).await;
-
-                    match loader.load().await {
-                        Ok(Some(new)) => obj.store(Arc::new(new)),
-                        // Fetch was successful, but there's nothing to reload
-                        Ok(None) => {}
-                        Err(err) => {
-                            warn!(ctx.logger(), "Failed to reload: {:?}", err)
+                    let forced_reload = select! {
+                        _ = sleep_fut => false,
+                        _ = force_reload_fut => true,
+                    };
+                    let reload_now = if forced_reload {
+                        true
+                    } else {
+                        loader.needs_reload().await.unwrap_or_else(|err| {
+                            warn!(
+                                ctx.logger(),
+                                "Failed to check if reload needed, not reloading: {:?}", err
+                            );
+                            // I's better to keep a known-good SC than to reload an out-of-date version
+                            // and catch up again.
+                            //
+                            // Since the check for an update failed, keep the current version.
+                            false
+                        })
+                    };
+                    if reload_now {
+                        match loader.load().await {
+                            Ok(Some(new)) => obj.store(Arc::new(new)),
+                            // Fetch was successful, but there's nothing to reload
+                            Ok(None) => {}
+                            Err(err) => {
+                                warn!(ctx.logger(), "Failed to reload: {:?}", err)
+                            }
                         }
+                        notify.notify_waiters();
                     }
-                    notify.notify_waiters();
                 }
             }
         });

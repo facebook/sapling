@@ -47,11 +47,18 @@ impl IdDagSaveStore {
             Some(b) => b,
         };
 
-        let iddag = tokio::task::spawn_blocking(move || {
+        let deserialization = move || {
             let iddag: InProcessIdDag = mincode::deserialize(&bytes.into_raw_bytes())?;
             anyhow::Ok(iddag)
-        })
-        .await??;
+        };
+        // In tests we can't offload deserialization to spawn blocking because
+        // of a tokio bug where in time::pause environment the time
+        // auto-advancement won't wait for spawned blocking tasks.
+        let iddag = if cfg!(test) {
+            deserialization()?
+        } else {
+            tokio::task::spawn_blocking(deserialization).await??
+        };
 
         Ok(Some(iddag))
     }
