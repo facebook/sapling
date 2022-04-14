@@ -38,13 +38,16 @@ use tunables::with_tunables_async;
 use crate::builder::SegmentedChangelogSqlConnections;
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::{CacheHandlers, ConcurrentMemIdMap, IdMap, IdMapFactory, SqlIdMap};
+use crate::manager::{SegmentedChangelogManager, SegmentedChangelogType};
 use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::owned::OwnedSegmentedChangelog;
 use crate::periodic_reload::PeriodicReloadSegmentedChangelog;
 use crate::tailer::SegmentedChangelogTailer;
 use crate::types::{IdDagVersion, IdMapVersion, SegmentedChangelogVersion};
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{InProcessIdDag, Location, SeedHead, SegmentedChangelog, SegmentedChangelogRef};
+use crate::{
+    CloneHints, InProcessIdDag, Location, SeedHead, SegmentedChangelog, SegmentedChangelogRef,
+};
 
 #[async_trait::async_trait]
 trait SegmentedChangelogExt {
@@ -204,6 +207,36 @@ async fn load_owned(
     let iddag = load_iddag(ctx, blobrepo, connections).await?;
     let idmap = load_idmap(ctx, blobrepo.get_repoid(), connections).await?;
     Ok(OwnedSegmentedChangelog::new(iddag, idmap))
+}
+
+async fn get_manager(
+    blobrepo: &BlobRepo,
+    connections: &SegmentedChangelogSqlConnections,
+    seed_heads: Vec<SeedHead>,
+    segmented_changelog_type: SegmentedChangelogType,
+) -> Result<SegmentedChangelogManager> {
+    let repo_id = blobrepo.get_repoid();
+    let blobstore = Arc::new(blobrepo.get_blobstore());
+    let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
+    let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore.clone());
+    let clone_hints = CloneHints::new(connections.0.clone(), repo_id, blobstore);
+    let idmap_factory = IdMapFactory::new(
+        connections.0.clone(),
+        Arc::new(NoReplicaLagMonitor()),
+        repo_id,
+    );
+    let manager = SegmentedChangelogManager::new(
+        repo_id,
+        sc_version_store,
+        iddag_save_store,
+        idmap_factory,
+        blobrepo.get_changeset_fetcher(),
+        Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
+        seed_heads,
+        segmented_changelog_type,
+        Some(clone_hints),
+    );
+    Ok(manager)
 }
 
 async fn validate_build_idmap(
@@ -836,6 +869,7 @@ async fn test_caching(fb: FacebookInit) -> Result<()> {
     // It's easier to reason about cache hits and sets when the dag is already built
     let head = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
     seed(&ctx, &blobrepo, &conns, head).await?;
+
     let iddag = load_iddag(&ctx, &blobrepo, &conns).await?;
     let sc_version = load_sc_version(&ctx, blobrepo.get_repoid(), &conns).await?;
     let idmap = IdMapFactory::new(
@@ -959,37 +993,26 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     let blobrepo = Arc::new(Linear::getrepo(fb).await);
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
 
-    let load_fn = {
-        let ctx = ctx.clone();
-        let conns = conns.clone();
-        let blobrepo = blobrepo.clone();
-        move || {
-            let ctx = ctx.clone();
-            let conns = conns.clone();
-            let blobrepo = blobrepo.clone();
-            async move {
-                let asc: Arc<dyn SegmentedChangelog + Send + Sync> =
-                    Arc::new(load_owned(&ctx, &blobrepo, &conns).await?);
-                Ok(Some(asc))
-            }
-            .boxed()
-        }
-    };
-
     let start_hg_id = "607314ef579bd2407752361ba1b0c1729d08b281"; // commit 4
     let start_cs_id = resolve_cs_id(&ctx, &blobrepo, start_hg_id).await?;
 
     seed(&ctx, &blobrepo, &conns, start_cs_id).await?;
 
     tokio::time::pause();
-    let sc = PeriodicReloadSegmentedChangelog::start(
+    let manager = get_manager(&blobrepo, &conns, vec![], SegmentedChangelogType::Owned).await?;
+    let sc = PeriodicReloadSegmentedChangelog::start_from_manager(
         &ctx,
         Duration::from_secs(10),
-        load_fn,
+        manager,
         blobrepo.name().to_string(),
     )
     .await?;
+
     assert_eq!(sc.head(&ctx).await?, start_cs_id);
+
+    // Try waiting for segmented changelog update without tailer running
+    tokio::time::advance(Duration::from_secs(15)).await;
+    sc.wait_for_update().await; // Update happens even if there's nothing new to load.
 
     let tailer = new_tailer_for_tailing(&blobrepo, &conns).await?;
     let _ = tailer.once(&ctx, false).await?;

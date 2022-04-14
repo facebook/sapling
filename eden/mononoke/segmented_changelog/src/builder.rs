@@ -22,7 +22,7 @@ use sql_ext::SqlConnections;
 
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::{CacheHandlers, ConcurrentMemIdMap, IdMapFactory};
-use crate::manager::SegmentedChangelogManager;
+use crate::manager::{SegmentedChangelogManager, SegmentedChangelogType};
 use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::periodic_reload::PeriodicReloadSegmentedChangelog;
 use crate::version_store::SegmentedChangelogVersionStore;
@@ -119,7 +119,9 @@ pub async fn new_server_segmented_changelog<'a>(
         changeset_fetcher,
         bookmarks,
         seed_heads,
-        config.update_to_master_bookmark_period,
+        SegmentedChangelogType::OnDemand {
+            update_to_master_bookmark_period: config.update_to_master_bookmark_period,
+        },
         Some(clone_hints),
     );
     let name = repo_identity.name().to_string();

@@ -29,6 +29,14 @@ use crate::{
     segmented_changelog_delegate, CloneData, CloneHints, Location, SeedHead, SegmentedChangelog,
 };
 
+pub enum SegmentedChangelogType {
+    OnDemand {
+        update_to_master_bookmark_period: Option<Duration>,
+    },
+    #[cfg(test)]
+    Owned,
+}
+
 pub struct SegmentedChangelogManager {
     repo_id: RepositoryId,
     sc_version_store: SegmentedChangelogVersionStore,
@@ -37,7 +45,7 @@ pub struct SegmentedChangelogManager {
     changeset_fetcher: ArcChangesetFetcher,
     bookmarks: Arc<dyn Bookmarks>,
     seed_heads: Vec<SeedHead>,
-    update_to_master_bookmark_period: Option<Duration>,
+    segmented_changelog_type: SegmentedChangelogType,
     clone_hints: Option<CloneHints>,
 }
 
@@ -50,7 +58,7 @@ impl SegmentedChangelogManager {
         changeset_fetcher: ArcChangesetFetcher,
         bookmarks: Arc<dyn Bookmarks>,
         seed_heads: Vec<SeedHead>,
-        update_to_master_bookmark_period: Option<Duration>,
+        segmented_changelog_type: SegmentedChangelogType,
         clone_hints: Option<CloneHints>,
     ) -> Self {
         Self {
@@ -61,7 +69,7 @@ impl SegmentedChangelogManager {
             changeset_fetcher,
             bookmarks,
             seed_heads,
-            update_to_master_bookmark_period,
+            segmented_changelog_type,
             clone_hints,
         }
     }
@@ -74,12 +82,25 @@ impl SegmentedChangelogManager {
         SegmentedChangelogVersion,
     )> {
         let monitored = async {
-            let (on_demand, sc_version) = self.load_ondemand_update(ctx).await?;
-            let asc: Arc<dyn SegmentedChangelog + Send + Sync> =
-                match self.update_to_master_bookmark_period {
-                    None => on_demand,
-                    Some(period) => {
-                        Arc::new(on_demand.with_periodic_update_to_master_bookmark(ctx, period))
+            let (asc, sc_version): (Arc<dyn SegmentedChangelog + Send + Sync>, _) =
+                match self.segmented_changelog_type {
+                    SegmentedChangelogType::OnDemand {
+                        update_to_master_bookmark_period,
+                    } => {
+                        let (on_demand, sc_version) = self.load_ondemand_update(ctx).await?;
+                        let on_demand: Arc<dyn SegmentedChangelog + Send + Sync> =
+                            match update_to_master_bookmark_period {
+                                None => on_demand,
+                                Some(period) => Arc::new(
+                                    on_demand.with_periodic_update_to_master_bookmark(ctx, period),
+                                ),
+                            };
+                        (on_demand, sc_version)
+                    }
+                    #[cfg(test)]
+                    SegmentedChangelogType::Owned => {
+                        let (sc, sc_version) = self.load_owned(ctx).await?;
+                        (Arc::new(sc), sc_version)
                     }
                 };
             Ok((asc, sc_version))
