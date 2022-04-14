@@ -65,6 +65,12 @@ changing it!
   first.py
   second.py
   third.py
+  $ hg debugsparsematch --sparse-profile backend.sparse listfile:file_list.txt no_match.cpp third.py -0 > "$TESTTMP/out.bin"
+  considering 5 file(s)
+  $ f --hexdump "$TESTTMP/out.bin"
+  $TESTTMP/out.bin:
+  0000: 66 69 72 73 74 2e 70 79 00 73 65 63 6f 6e 64 2e |first.py.second.|
+  0010: 70 79 00 74 68 69 72 64 2e 70 79 00             |py.third.py.|
   $ rm file_list.txt
 
 Verify enabling two profiles works

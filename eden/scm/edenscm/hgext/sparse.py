@@ -2084,6 +2084,7 @@ def debugsparseprofilev2(ui, repo, profile, **opts):
     [
         ("s", "sparse-profile", [], "sparse profile to include"),
         ("x", "exclude-sparse-profile", [], "sparse profile to exclude"),
+        ("0", "print0", None, _("end filenames with NUL")),
     ],
     _("-s SPARSE_PROFILE [OPTION]... FILE..."),
 )
@@ -2130,9 +2131,13 @@ def debugsparsematch(ui, repo, *args, **opts):
             includematcher, negatematcher(excludematcher)
         )
 
+    use0separator = opts.get("print0")
     for path in files:
         if matcher(path):
-            ui.write(_("%s\n") % path)
+            if use0separator:
+                ui.write(_("%s\0") % path)
+            else:
+                ui.write(_("%s\n") % path)
 
 
 @command(
