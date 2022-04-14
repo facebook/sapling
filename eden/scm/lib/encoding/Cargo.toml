@@ -13,4 +13,4 @@ winapi = { version = "0.3", features = ["everything"] }
 
 [target.'cfg(windows)'.dependencies]
 local-encoding = "*"
-winapi = "0.2.7"
+winapi = "0.3"
