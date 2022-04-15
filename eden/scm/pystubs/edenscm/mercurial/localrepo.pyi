@@ -26,19 +26,46 @@ from typing import (
     Union,
 )
 
+# pyre-fixme[21]: Could not find module `edenscm.mercurial.connectionpool`.
 import edenscm.mercurial.connectionpool
+
+# pyre-fixme[21]: Could not find module `edenscm.mercurial.context`.
 import edenscm.mercurial.context
+
+# pyre-fixme[21]: Could not find module `edenscm.mercurial.filelog`.
 import edenscm.mercurial.filelog
+
+# pyre-fixme[21]: Could not find module `edenscm.mercurial.lock`.
 import edenscm.mercurial.lock
+
+# pyre-fixme[21]: Could not find module `edenscm.mercurial.namespaces`.
 import edenscm.mercurial.namespaces
+
+# pyre-fixme[21]: Could not find module `edenscm.mercurial.pathutil`.
 import edenscm.mercurial.pathutil
+
+# pyre-fixme[21]: Could not find module `edenscm.mercurial.peer`.
 import edenscm.mercurial.peer
+
+# pyre-fixme[21]: Could not find module `edenscm.mercurial.phases`.
 import edenscm.mercurial.phases
+
+# pyre-fixme[21]: Could not find module `edenscm.mercurial.repository`.
 import edenscm.mercurial.repository
+
+# pyre-fixme[21]: Could not find module `edenscm.mercurial.scmutil`.
 import edenscm.mercurial.scmutil
+
+# pyre-fixme[21]: Could not find module `edenscm.mercurial.store`.
 import edenscm.mercurial.store
+
+# pyre-fixme[21]: Could not find module `edenscm.mercurial.urllibcompat`.
 import edenscm.mercurial.urllibcompat
+
+# pyre-fixme[21]: Could not find module `edenscm.mercurial.util`.
 import edenscm.mercurial.util
+
+# pyre-fixme[21]: Could not find module `edenscm.mercurial.vfs`.
 import edenscm.mercurial.vfs
 
 _T = TypeVar("_T")
@@ -47,15 +74,18 @@ _T1 = TypeVar("_T1")
 _Tlocalpeer = TypeVar("_Tlocalpeer", bound="edenscm.mercurial.repository._basepeer")
 _Tlocalrepository = TypeVar("_Tlocalrepository", bound=localrepository)
 
+# pyre-fixme[11]: Annotation `filecache` is not defined as a type.
 class _basefilecache(edenscm.mercurial.scmutil.filecache):
     __doc__: str
     def __delete__(self, obj) -> None: ...
     def __get__(self, obj, type=...) -> Any: ...
     def __set__(self, obj, value) -> None: ...
 
+# pyre-fixme[11]: Annotation `propertycache` is not defined as a type.
 class filteredpropertycache(edenscm.mercurial.util.propertycache):
     __doc__: str
 
+# pyre-fixme[11]: Annotation `legacypeer` is not defined as a type.
 class locallegacypeer(edenscm.mercurial.repository.legacypeer, localpeer):
     __doc__: str
     _caps: Any
@@ -67,6 +97,7 @@ class locallegacypeer(edenscm.mercurial.repository.legacypeer, localpeer):
     def changegroup(self, nodes, kind) -> Any: ...
     def changegroupsubset(self, bases, heads, kind) -> Any: ...
 
+# pyre-fixme[11]: Annotation `peer` is not defined as a type.
 class localpeer(edenscm.mercurial.repository.peer):
     __doc__: str
     _caps: Any
@@ -83,11 +114,13 @@ class localpeer(edenscm.mercurial.repository.peer):
         self, source, heads=..., common=..., bundlecaps=..., **kwargs
     ) -> Any: ...
     def heads(self, *args, **kwargs) -> list: ...
+    # pyre-fixme[11]: Annotation `localiterbatcher` is not defined as a type.
     def iterbatch(self) -> edenscm.mercurial.peer.localiterbatcher: ...
     def known(self, nodes) -> Any: ...
     def listkeys(self, namespace) -> Any: ...
     def local(self) -> Any: ...
     def lookup(self, key) -> Any: ...
+    # pyre-fixme[11]: Annotation `_Tlocalpeer` is not defined as a type.
     def peer(self: _Tlocalpeer) -> _Tlocalpeer: ...
     def pushkey(self, namespace, key, old, new) -> Any: ...
     def stream_out(self, shallow=...) -> NoReturn: ...
@@ -111,19 +144,24 @@ class localrepository(object):
     _lockfreeprefix: Set[str]
     _lockref: Optional[_weakref.ReferenceType[Any]]
     _mutationstore: Any
+    # pyre-fixme[11]: Annotation `phasecache` is not defined as a type.
     _phasecache: edenscm.mercurial.phases.phasecache
     _phasedefaults: List[Any]
     _postdsstatus: List[Tuple[Any, Any]]
     _transref: Optional[_weakref.ReferenceType[Any]]
     _wlockfreeprefix: Set[str]
     _wlockref: Optional[_weakref.ReferenceType[Any]]
+    # pyre-fixme[11]: Annotation `pathauditor` is not defined as a type.
     auditor: edenscm.mercurial.pathutil.pathauditor
     # pyre-fixme[11]: Annotation `ui` is not defined as a type.
     baseui: edenscm.mercurial.ui.ui
     # pyre-fixme[11]: Annotation `vfs` is not defined as a type.
     cachevfs: edenscm.mercurial.vfs.vfs
+    # pyre-fixme[11]: Annotation `changelog` is not defined as a type.
     changelog: edenscm.mercurial.changelog.changelog
+    # pyre-fixme[11]: Annotation `connectionpool` is not defined as a type.
     connectionpool: edenscm.mercurial.connectionpool.connectionpool
+    # pyre-fixme[11]: Annotation `dirstate` is not defined as a type.
     dirstate: edenscm.mercurial.dirstate.dirstate
     disableeventreporting: Callable[..., contextlib._GeneratorContextManager]
     featuresetupfuncs: Set[Any]
@@ -133,6 +171,7 @@ class localrepository(object):
     filterpats: Dict[Any, List[Tuple[Any, Any, Any]]]
     localvfs: edenscm.mercurial.vfs.vfs
     manifestlog: Any
+    # pyre-fixme[11]: Annotation `namespaces` is not defined as a type.
     names: edenscm.mercurial.namespaces.namespaces
     nofsauditor: edenscm.mercurial.pathutil.pathauditor
     obsstore: Any
@@ -148,6 +187,7 @@ class localrepository(object):
     sharedvfs: Optional[edenscm.mercurial.vfs.vfs]
     sjoin: Callable[[Any], Any]
     spath: str
+    # pyre-fixme[11]: Annotation `basicstore` is not defined as a type.
     store: edenscm.mercurial.store.basicstore
     storefeaturesetupfuncs: Set[Any]
     storerequirements: Set[str]
@@ -200,6 +240,7 @@ class localrepository(object):
         releasefn,
         acquirefn,
         desc,
+        # pyre-fixme[11]: Annotation `lock` is not defined as a type.
     ) -> edenscm.mercurial.lock.lock: ...
     def _narrowheadsmigration(self) -> None: ...
     def _prefetchtrees(
@@ -231,7 +272,9 @@ class localrepository(object):
     def branchtip(self, branch, ignoremissing=...) -> Any: ...
     def cancopy(self) -> bool: ...
     def changectx(
-        self, changeid: Union[int, str, bytes, edenscm.mercurial.context.basectx]
+        self,
+        # pyre-fixme[11]: Annotation `basectx` is not defined as a type.
+        changeid: Union[int, str, bytes, edenscm.mercurial.context.basectx],
     ) -> edenscm.mercurial.context.basectx: ...
     def checkcommitpatterns(self, wctx, match, status, fail) -> None: ...
     def checkpush(self, pushop) -> None: ...
@@ -245,9 +288,14 @@ class localrepository(object):
     def debugwireargs(self, one, two, three=..., four=..., five=...) -> str: ...
     def destroyed(self) -> None: ...
     def destroying(self) -> None: ...
+    # pyre-fixme[11]: Annotation `filelog` is not defined as a type.
     def file(self, f) -> edenscm.mercurial.filelog.filelog: ...
     def filectx(
-        self, path, changeid=..., fileid=...
+        self,
+        path,
+        changeid=...,
+        fileid=...
+        # pyre-fixme[11]: Annotation `filectx` is not defined as a type.
     ) -> edenscm.mercurial.context.filectx: ...
     def getcwd(self) -> str: ...
     def headrevs(
