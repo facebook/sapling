@@ -124,8 +124,6 @@ class ExpectedFileSet(Mapping[Path, ExpectedFileBase]):
         key = Path(path)
         del self._entries[key]
 
-    # pyre-fixme[14]: `__contains__` overrides method defined in `Mapping`
-    #  inconsistently.
     def __contains__(self, path: object) -> bool:
         if isinstance(path, str):
             key = Path(path)

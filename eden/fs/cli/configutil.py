@@ -293,7 +293,6 @@ def _toml_type_name(type: Type) -> str:
 
 
 def _toml_value(value: Union[bool, str]) -> str:
-    # pyre-fixme[16]: Module `toml` has no attribute `TomlEncoder`.
     TomlEncoder: Type = toml.TomlEncoder
     value_toml: str = TomlEncoder().dump_inline_table(value)
     return value_toml.rstrip()

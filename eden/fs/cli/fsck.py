@@ -21,9 +21,13 @@ from . import overlay as overlay_mod
 
 
 class InodeType(enum.Enum):
+    # pyre-fixme[20]: Argument `value` expected.
     FILE = enum.auto()
+    # pyre-fixme[20]: Argument `value` expected.
     DIR = enum.auto()
+    # pyre-fixme[20]: Argument `value` expected.
     ERROR = enum.auto()
+    # pyre-fixme[20]: Argument `value` expected.
     DIR_ERROR = enum.auto()
 
 
