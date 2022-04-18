@@ -277,6 +277,66 @@ shift:
     '1 3\n2 2\n'
     >>> t('a() { echo $1 $#; shift 2; echo $1 $#; }; a 1 2 3 4')
     '1 4\n3 2\n'
+
+Commands on OS filesystem:
+
+    >>> from .osfs import OSFS
+    >>> import tempfile
+    >>> def f(code):
+    ...     with tempfile.TemporaryDirectory('.test-shinterp') as d:
+    ...         fs = OSFS()
+    ...         fs.chdir(d)
+    ...         env = Env(fs=fs, cmdtable=dict(stdlib.cmdtable))
+    ...         return sheval(code, env)
+
+cp, rm, mv:
+
+    >>> f('''
+    ... mkdir a
+    ... echo 1 > a/1
+    ... cp a/1 a/2
+    ... rm a/1
+    ... mv a/2 a/3
+    ... ls a
+    ... ''')
+    '3\n'
+
+cd:
+
+    >>> f('''
+    ... mkdir -p a/b a/c
+    ... cd a
+    ... touch d
+    ... ls
+    ... cd ..
+    ... ls
+    ... ''')
+    'b\nc\nd\na\n'
+
+cp -R, rm -R:
+
+    >>> f('''
+    ... mkdir -p a/1 a/2
+    ... cp -R a b
+    ... rm -R a
+    ... echo **/*
+    ... ''')
+    'b b/1 b/2\n'
+
+test:
+
+    >>> f('''
+    ... mkdir a; touch a/1
+    ... [ -d a ] && echo 'a is a dir'
+    ... [ -f a/1 ] && echo 'a/1 is a file'
+    ... ''')
+    'a is a dir\na/1 is a file\n'
+
+pwd == $PWD
+
+    >>> f('[ $(pwd) = $PWD ] && echo pwd match')
+    'pwd match\n'
+
 """
 
 from . import stdlib

@@ -235,6 +235,8 @@ class ShellFS(ABC):
     # shared fs state among clones
     state: Dict[str, Any] = field(default_factory=dict)
 
+    # open, glob, cwd are required by interp for redirect, and '*' expand
+
     @abstractmethod
     def open(self, path: str, mode: str) -> BinaryIO:
         raise NotImplementedError
@@ -246,7 +248,7 @@ class ShellFS(ABC):
     def cwd(self) -> str:
         return self.refcwd[0]
 
-    def chdir(self, path: str):
+    def _setcwd(self, path: str):
         self.refcwd[0] = path
 
     def clone(self, unsharecwd=False) -> ShellFS:
@@ -259,6 +261,50 @@ class ShellFS(ABC):
             kwargs["refcwd"] = kwargs["refcwd"][:]
         fs = self.__class__(**kwargs)
         return fs
+
+    # useful for stdlib but not interp
+
+    def chdir(self, path: str):
+        raise NotImplementedError("use _setcwd to implement chdir")
+
+    def chmod(self, path: str, mode: int):
+        raise NotImplementedError
+
+    def stat(self, path: str):
+        raise NotImplementedError
+
+    def utime(self, path: str, time: int):
+        raise NotImplementedError
+
+    def isdir(self, path: str):
+        raise NotImplementedError
+
+    def isfile(self, path: str):
+        raise NotImplementedError
+
+    def exists(self, path: str):
+        raise NotImplementedError
+
+    def listdir(self, path: str) -> List[str]:
+        raise NotImplementedError
+
+    def mkdir(self, path: str):
+        raise NotImplementedError
+
+    def mv(self, src: str, dst: str):
+        raise NotImplementedError
+
+    def rm(self, path: str):
+        raise NotImplementedError
+
+    def cp(self, src: str, dst: str):
+        raise NotImplementedError
+
+    def link(self, src: str, dst: str):
+        raise NotImplementedError
+
+    def symlink(self, src: str, dst: str):
+        raise NotImplementedError
 
 
 def _commandnotfound(env: Env) -> InterpResult:

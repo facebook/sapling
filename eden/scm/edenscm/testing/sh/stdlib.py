@@ -260,10 +260,25 @@ def test(args: List[str], arg0: str, env: Env):
                 istrue = not istrue
     elif len(args) == 2:
         op, arg = args
+        fs = env.fs
         if op == "-n":
             istrue = bool(arg)
         elif op == "-z":
             istrue = not bool(arg)
+        elif op == "-f":
+            istrue = fs.isfile(arg)
+        elif op == "-d":
+            istrue = fs.isdir(arg)
+        elif op == "-e":
+            try:
+                fs.stat(arg)
+                istrue = True
+            except FileNotFoundError:
+                istrue = False
+        elif op == "-x":
+            import stat
+
+            istrue = fs.stat(arg).st_mode & stat.S_IEXEC
     if istrue is None:
         raise NotImplementedError(f"test {args} is not implemented")
     if neg:
@@ -348,6 +363,175 @@ def shift(env: Env, args: List[str]):
     env.args[:] = env.args[0:1] + env.args[1 + n :]
 
 
+@command
+def chmod(args: List[str], fs: ShellFS):
+    recursive = False
+    if args[:1] == ["-R"]:
+        recursive = True
+        args = args[1:]
+    if len(args) < 2:
+        raise NotImplementedError(f"chmod {args=}")
+    modestr = args[0]
+    if modestr.isnumeric():
+        mode = int(modestr, base=8)
+        modefunc = lambda m, mode=mode: mode
+    else:
+        # parse the 'ug+rwx' mini language
+        op = "="
+        ugo = ""
+        rwx = ""
+        for ch in modestr:
+            if ch in "+-=":
+                op = ch
+            elif ch in "ugo":
+                ugo += ch
+            elif ch == "a":
+                ugo = "ugo"
+            elif ch in "rwxt":
+                rwx += ch
+            else:
+                raise NotImplementedError(f"chmod {modestr=}")
+
+        import stat
+
+        modemap = {
+            "ur": stat.S_IRUSR,
+            "uw": stat.S_IWUSR,
+            "ux": stat.S_IXUSR,
+            "gr": stat.S_IRGRP,
+            "gw": stat.S_IWGRP,
+            "gx": stat.S_IXGRP,
+            "or": stat.S_IROTH,
+            "ow": stat.S_IWOTH,
+            "ox": stat.S_IXOTH,
+            "t": stat.S_ISVTX,
+        }
+
+        # default ugo is "a"
+        ugo = ugo or "ugo"
+        # ugo, rwx => mode
+        mode = 0
+        for what in rwx:
+            if what in modemap:
+                mode |= modemap[what]
+                continue
+            for who in ugo:
+                mode |= modemap[f"{who}{what}"]
+
+        if op == "+":
+            modefunc = lambda m, mode=mode: m | mode
+        elif op == "-":
+            modefunc = lambda m, mode=mode: m - (m & mode)
+        else:
+            modefunc = lambda m, mode=mode: mode
+
+    paths = args[1:]
+    if recursive:
+        paths = [p2 for p in paths for p2 in fs.glob(p)]
+    for path in paths:
+        origmode = fs.stat(path).st_mode
+        newmode = modefunc(origmode)
+        fs.chmod(path, newmode)
+
+
+@command
+def cp(args: List[str], fs: ShellFS):
+    return _cpormv(args, fs, fs.cp)
+
+
+@command
+def mv(args: List[str], fs: ShellFS):
+    return _cpormv(args, fs, fs.mv)
+
+
+def _cpormv(args: List[str], fs: ShellFS, op):
+    paths = [a for a in args if not a.startswith("-")]
+    if len(paths) > 1:
+        dst = paths[-1]
+        for src in paths[:-1]:
+            op(src, dst)
+
+
+@command
+def rm(args: List[str], fs: ShellFS):
+    paths = [a for a in args if not a.startswith("-")]
+    for path in paths:
+        fs.rm(path)
+
+
+@command
+def ln(args: List[str], fs: ShellFS):
+    symlink = False
+    force = False
+    if len(args) == 3 and args[0].startswith("-"):
+        flags, *args = args
+        for flag in flags[1:]:
+            if flag == "s":
+                symlink = True
+            elif flag == "f":
+                force = True
+            else:
+                raise NotImplementedError(f"ln {flags}")
+    if len(args) == 2:
+        src, dst = args
+        if force:
+            fs.rm(dst)
+        if symlink:
+            fs.symlink(src, dst)
+        else:
+            fs.link(src, dst)
+    else:
+        raise NotImplementedError(f"ln f{args=}")
+
+
+@command
+def ls(args: List[str], fs: ShellFS):
+    entries = []
+    verbose = False
+
+    def listdir(path: str, fs=fs) -> List[str]:
+        return [f for f in fs.listdir(path) if not f.startswith(".")]
+
+    for arg in args:
+        if arg.startswith("-"):
+            if arg == "-l":
+                verbose = True
+            else:
+                raise NotImplementedError(f"ls with flag {arg}")
+        elif fs.isdir(arg):
+            entries += listdir(arg)
+        elif fs.exists(arg):
+            entries.append(arg)
+    if not args:
+        entries = listdir("")
+    entries = sorted(entries)
+    lines = [f"{path}\n" for path in entries]
+    return "".join(lines)
+
+
+@command
+def mkdir(args: List[str], fs: ShellFS):
+    for arg in args:
+        if arg.startswith("-"):
+            continue
+        fs.mkdir(arg)
+
+
+@command
+def chdir(args: List[str], env: Env, fs: ShellFS):
+    if args:
+        path = args[-1]
+    else:
+        path = env.getenv("HOME")
+    if path:
+        fs.chdir(path)
+
+
+@command
+def pwd(fs: ShellFS):
+    return "%s\n" % fs.cwd()
+
+
 def _parseheadtail(args) -> Tuple[int, List[str]]:
     """parse the -n parameter for head and tail
     return (n, paths)
@@ -402,3 +586,6 @@ cmdtable["["] = cmdtable["[["] = cmdtable["test"]
 cmdtable["."] = cmdtable["source"]
 cmdtable[":"] = cmdtable["true"]
 cmdtable["return"] = cmdtable["exit"]
+
+cmdtable["cd"] = cmdtable["chdir"]
+cmdtable["rmdir"] = cmdtable["unlink"] = cmdtable["rm"]
