@@ -103,7 +103,7 @@ from distutils.spawn import spawn, find_executable
 from distutils.sysconfig import get_config_var
 from distutils.version import StrictVersion
 
-from distutils_rust import RustBinary, BuildRustExt, InstallRustExt
+from distutils_rust import RustBinary, RustExtension, BuildRustExt, InstallRustExt
 
 havefb = os.path.exists("fb")
 isgetdepsbuild = os.environ.get("GETDEPS_BUILD") == "1"
@@ -1781,6 +1781,13 @@ hgmainfeatures = (
     ).strip()
     or None
 )
+rustextmodules = [
+    RustExtension(
+        "conch_parser",
+        package="",
+        manifest="edenscmnative/conch_parser/Cargo.toml",
+    )
+]
 rustextbinaries = [
     RustBinary(
         "hgmain",
@@ -1836,6 +1843,7 @@ setup(
     ext_modules=extmodules,
     libraries=libraries,
     rust_ext_binaries=rustextbinaries,
+    rust_ext_modules=rustextmodules,
     package_data=packagedata,
     cmdclass=cmdclass,
     distclass=hgdist,
