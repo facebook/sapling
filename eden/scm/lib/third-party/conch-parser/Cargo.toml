@@ -8,4 +8,5 @@ edition = "2021"
 license = "MIT"
 
 [dependencies]
+serde = { version = "1.0.126", features = ["derive", "rc"] }
 void = "1.0"

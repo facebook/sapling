@@ -2,6 +2,7 @@
 use std::rc::Rc;
 use std::sync::Arc;
 use std::{fmt, ops};
+use serde::Serialize;
 
 pub mod builder;
 
@@ -11,15 +12,18 @@ pub type DefaultParameter = Parameter<String>;
 /// Represents reading a parameter (or variable) value, e.g. `$foo`.
 ///
 /// Generic over the representation of variable names.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(tag="t", content="v")]
 pub enum Parameter<T> {
     /// $@
     At,
     /// $*
+    #[serde(rename="StarParameter")]
     Star,
     /// $#
     Pound,
     /// $?
+    #[serde(rename="QuestionParameter")]
     Question,
     /// $-
     Dash,
@@ -30,6 +34,7 @@ pub enum Parameter<T> {
     /// $0, $1, ..., $9, ${100}
     Positional(u32),
     /// $foo
+    #[serde(rename="VarParameter")]
     Var(T),
 }
 
@@ -45,7 +50,8 @@ pub type DefaultParameterSubstitution = ParameterSubstitution<
 ///
 /// Generic over the representations of parameters, shell words and
 /// commands, and arithmetic expansions.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(tag="t", content="v")]
 pub enum ParameterSubstitution<P, W, C, A> {
     /// Returns the standard output of running a command, e.g. `$(cmd)`
     Command(Vec<C>),
@@ -62,6 +68,7 @@ pub enum ParameterSubstitution<P, W, C, A> {
     /// e.g. `${param:=[word]}`.
     /// The boolean indicates the presence of a `:`, and that if the parameter has
     /// a null value, that situation should be treated as if the parameter is unset.
+    #[serde(rename="AssignSubstitution")]
     Assign(bool, P, Option<W>),
     /// If the parameter is null or unset, an error should result with the provided
     /// message, e.g. `${param:?[word]}`.
@@ -97,11 +104,13 @@ pub type DefaultComplexWord = ComplexWord<DefaultWord>;
 /// Represents whitespace delimited text.
 ///
 /// Generic over the representation of a whitespace delimited word.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(tag="t", content="v")]
 pub enum ComplexWord<W> {
     /// Several distinct words concatenated together.
     Concat(Vec<W>),
     /// A regular word.
+    #[serde(rename="SingleWord")]
     Single(W),
 }
 
@@ -111,9 +120,11 @@ pub type DefaultWord = Word<String, DefaultSimpleWord>;
 /// Represents whitespace delimited single, double, or non quoted text.
 ///
 /// Generic over the representation of single-quoted literals, and non-quoted words.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(tag="t", content="v")]
 pub enum Word<L, W> {
     /// A regular word.
+    #[serde(rename="SimpleWord")]
     Simple(W),
     /// List of words concatenated within double quotes.
     DoubleQuoted(Vec<W>),
@@ -129,9 +140,11 @@ pub type DefaultSimpleWord =
 /// Represents the smallest fragment of any text.
 ///
 /// Generic over the representation of a literals, parameters, and substitutions.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(tag="t", content="v")]
 pub enum SimpleWord<L, P, S> {
     /// A non-special literal word.
+    #[serde(rename="LiteralWord")]
     Literal(L),
     /// A token which normally has a special meaning is treated as a literal
     /// because it was escaped, typically with a backslash, e.g. `\"`.
@@ -141,8 +154,10 @@ pub enum SimpleWord<L, P, S> {
     /// A parameter substitution, e.g. `${param-word}`.
     Subst(S),
     /// Represents `*`, useful for handling pattern expansions.
+    #[serde(rename="StarWord")]
     Star,
     /// Represents `?`, useful for handling pattern expansions.
+    #[serde(rename="QuestionWord")]
     Question,
     /// Represents `[`, useful for handling pattern expansions.
     SquareOpen,
@@ -160,7 +175,8 @@ pub type DefaultRedirect = Redirect<TopLevelWord<String>>;
 /// Represents redirecting a command's file descriptors.
 ///
 /// Generic over the representation of a shell word.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(tag="t", content="v")]
 pub enum Redirect<W> {
     /// Open a file for reading, e.g. `[n]< file`.
     Read(Option<u16>, W),
@@ -181,7 +197,7 @@ pub enum Redirect<W> {
 }
 
 /// A grouping of guard and body commands.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct GuardBodyPair<C> {
     /// The guard commands, which if successful, should lead to the
     /// execution of the body commands.
@@ -191,7 +207,7 @@ pub struct GuardBodyPair<C> {
 }
 
 /// A grouping of patterns and body commands.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct PatternBodyPair<W, C> {
     /// Pattern alternatives to match against.
     pub patterns: Vec<W>,
@@ -203,7 +219,8 @@ pub struct PatternBodyPair<W, C> {
 pub type DefaultCommand = Command<DefaultAndOrList>;
 
 /// Represents any valid shell command.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(tag="t", content="v")]
 pub enum Command<T> {
     /// A command that runs asynchronously, that is, the shell will not wait
     /// for it to exit before running the next command, e.g. `foo &`.
@@ -244,7 +261,8 @@ pub type AtomicShellPipeableCommand<T, W, C> = PipeableCommand<
 >;
 
 /// A command which conditionally runs based on the exit status of the previous command.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(tag="t", content="v")]
 pub enum AndOr<T> {
     /// A compound command which should run only if the previously run command succeeded.
     And(T),
@@ -256,7 +274,7 @@ pub enum AndOr<T> {
 pub type DefaultAndOrList = AndOrList<DefaultListableCommand>;
 
 /// A nonempty list of `AndOr` commands, e.g. `foo && bar || baz`.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct AndOrList<T> {
     /// The first command that always runs.
     pub first: T,
@@ -268,7 +286,8 @@ pub struct AndOrList<T> {
 pub type DefaultListableCommand = ListableCommand<DefaultPipeableCommand>;
 
 /// Commands that can be used within an and/or list.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(tag="t", content="v")]
 pub enum ListableCommand<T> {
     /// A chain of concurrent commands where the standard output of the
     /// previous becomes the standard input of the next, e.g.
@@ -278,6 +297,7 @@ pub enum ListableCommand<T> {
     /// should be returned.
     Pipe(bool, Vec<T>),
     /// A single command not part of a pipeline.
+    #[serde(rename="SingleCommand")]
     Single(T),
 }
 
@@ -289,10 +309,12 @@ pub type DefaultPipeableCommand =
 ///
 /// Generic over the representations of function names, simple commands,
 /// compound commands, and function bodies.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(tag="t", content="v")]
 pub enum PipeableCommand<N, S, C, F> {
     /// The simplest possible command: an executable with arguments,
     /// environment variable assignments, and redirections.
+    #[serde(rename="SimpleCommand")]
     Simple(S),
     /// A class of commands where redirection is applied to a command group.
     Compound(C),
@@ -312,7 +334,7 @@ pub type DefaultCompoundCommand =
 ///
 /// Generic over the representation of a type of compound command, and the
 /// representation of a redirect.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct CompoundCommand<T, R> {
     /// The specific kind of compound command.
     pub kind: T,
@@ -327,7 +349,8 @@ pub type DefaultCompoundCommandKind =
 /// A specific kind of a `CompoundCommand`.
 ///
 /// Generic over the representation of shell words and commands.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(tag="t", content="v")]
 pub enum CompoundCommandKind<V, W, C> {
     /// A group of commands that should be executed in the current environment.
     Brace(Vec<C>),
@@ -373,7 +396,8 @@ pub enum CompoundCommandKind<V, W, C> {
 /// execution, the parser will preserve the order in which they were parsed.
 /// Thus we need a wrapper like this to disambiguate what was encountered in
 /// the source program.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(tag="t", content="v")]
 pub enum RedirectOrEnvVar<R, V, W> {
     /// A parsed redirect before a command was encountered.
     Redirect(R),
@@ -387,7 +411,8 @@ pub enum RedirectOrEnvVar<R, V, W> {
 /// execution, the parser will preserve the order in which they were parsed.
 /// Thus we need a wrapper like this to disambiguate what was encountered in
 /// the source program.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(tag="t", content="v")]
 pub enum RedirectOrCmdWord<R, W> {
     /// A parsed redirect after a command was encountered.
     Redirect(R),
@@ -403,7 +428,7 @@ pub type DefaultSimpleCommand =
 /// environment variable assignments, and redirections.
 ///
 /// Generic over representations of variable names, shell words, and redirects.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub struct SimpleCommand<V, W, R> {
     /// Redirections or environment variables that occur before any command
     /// in the order they were parsed.
@@ -418,11 +443,14 @@ pub type DefaultArithmetic = Arithmetic<String>;
 /// Represents an expression within an arithmetic subsitution.
 ///
 /// Generic over the representation of a variable name.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[serde(tag="t", content="v")]
 pub enum Arithmetic<T> {
     /// The value of a variable, e.g. `$var` or `var`.
+    #[serde(rename="VarArithmetic")]
     Var(T),
     /// A numeric literal such as `42` or `0xdeadbeef`.
+    #[serde(rename="LiteralArithmetic")]
     Literal(isize),
     /// `left ** right`.
     Pow(Box<Arithmetic<T>>, Box<Arithmetic<T>>),
@@ -484,6 +512,7 @@ pub enum Arithmetic<T> {
     Ternary(Box<Arithmetic<T>>, Box<Arithmetic<T>>, Box<Arithmetic<T>>),
     /// Assigns the value of an underlying expression to a
     /// variable and returns the value, e.g. `x = 5`, or `x += 2`.
+    #[serde(rename="AssignArithmetic")]
     Assign(T, Box<Arithmetic<T>>),
     /// `expr[, expr[, ...]]`
     Sequence(Vec<Arithmetic<T>>),
@@ -492,7 +521,7 @@ pub enum Arithmetic<T> {
 macro_rules! impl_top_level_cmd {
     ($(#[$attr:meta])* pub struct $Cmd:ident, $CmdList:ident, $Word:ident) => {
         $(#[$attr])*
-        #[derive(Debug, PartialEq, Eq, Clone)]
+        #[derive(Debug, PartialEq, Eq, Clone, ::serde::Serialize)]
         pub struct $Cmd<T>(pub Command<$CmdList<T, $Word<T>, $Cmd<T>>>);
 
         impl<T> ops::Deref for $Cmd<T> {
@@ -549,7 +578,7 @@ impl_top_level_cmd! {
 macro_rules! impl_top_level_word {
     ($(#[$attr:meta])* pub struct $Word:ident, $Cmd:ident) => {
         $(#[$attr])*
-        #[derive(Debug, PartialEq, Eq, Clone)]
+        #[derive(Debug, PartialEq, Eq, Clone, ::serde::Serialize)]
         pub struct $Word<T>(pub ShellWord<T, $Word<T>, $Cmd<T>>);
 
         impl<T> ops::Deref for $Word<T> {
