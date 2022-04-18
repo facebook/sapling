@@ -565,6 +565,18 @@ def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: Binar
         return 1
 
 
+@command
+def wc(args: List[str], stdin: BinaryIO, fs: ShellFS):
+    if args[0] == "-l":
+        linecounter = lambda l: 1
+    elif args[0] == "-c":
+        linecounter = lambda l: len(l)
+    else:
+        raise NotImplementedError(f"wc {args}")
+    count = sum(linecounter(l) for l in _lines(fs, args[1:], stdin))
+    return f"{count}\n"
+
+
 def _parseheadtail(args) -> Tuple[int, List[str]]:
     """parse the -n parameter for head and tail
     return (n, paths)

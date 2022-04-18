@@ -348,6 +348,13 @@ pwd == $PWD
     >>> f('[ $(pwd) = $PWD ] && echo pwd match')
     'pwd match\n'
 
+wc -l:
+
+    >>> t('seq 10 | wc -l')
+    '10\n'
+    >>> t('seq 10 > a; wc -l a')
+    '10\n'
+
 """
 
 from . import stdlib
