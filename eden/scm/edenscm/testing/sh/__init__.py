@@ -355,6 +355,18 @@ wc -l:
     >>> t('seq 10 > a; wc -l a')
     '10\n'
 
+sed:
+
+    >>> t("echo a a a c c c | sed -e 's#a#b' -e 's/c/d/g'")
+    'b a a d d d\n'
+
+    >>> t("seq 21 23 > a; sed -i 's#2#3' a; cat a")
+    '31\n32\n33\n'
+    >>> t('seq 3 | sed 2d')
+    '1\n3\n'
+    >>> t("seq 3 | sed '$d'")
+    '1\n2\n'
+
 """
 
 from . import stdlib

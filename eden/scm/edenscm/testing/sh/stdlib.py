@@ -317,6 +317,94 @@ def seq(args: List[str]) -> str:
 
 
 @command
+def sed(args: List[str], stdin: BinaryIO, stdout: BinaryIO, fs: ShellFS) -> str:
+    scripts = []
+    paths = []
+    inplace = False
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "-e":
+            i += 1
+            scripts.append(args[i])
+        elif arg == "-i":
+            inplace = True
+        elif not scripts:
+            scripts.append(arg)
+        else:
+            paths.append(arg)
+        i += 1
+
+    lines = [l.decode() for l in _lines(fs, paths, stdin)]
+
+    out = stdout
+    if inplace:
+        if len(paths) != 1:
+            raise NotImplementedError(f"sed -i with {paths=}")
+        out = fs.open(paths[0], "wb")
+
+    for script in scripts:
+        # line range selection
+        if script[0] == "$":
+            # last line
+            linerange = slice(len(lines) - 1, len(lines))
+            script = script[1:]
+        elif script[0].isdigit():
+            # single line
+            linenostr = "".join(ch.isdigit() and ch or " " for ch in script).split(
+                " ", 1
+            )[0]
+            lineno = int(linenostr)
+            script = script[len(linenostr) :]
+            linerange = slice(lineno - 1, lineno)
+        else:
+            # everything
+            linerange = slice(0, len(lines))
+        # apply the script
+        lines[linerange] = _sedscript(script, lines[linerange])
+
+    out.write("".join(lines).encode())
+
+
+def _sedscript(script: str, lines: List[str]) -> List[str]:
+    """run sed script on lines"""
+    import re
+
+    if script == "d":
+        return []
+    elif script.startswith("s"):
+        delimiter = script[1]
+        pat, replace, *rest = script[2:].split(delimiter)
+        count = 1
+        if "g" in rest:
+            count = 0
+
+        return [re.sub(pat, replace, line, count) for line in lines]
+    elif script.startswith("/") and script.count("/") > 1:
+        pat, rest = script[1:].split("/", 1)
+        patre = re.compile(pat)
+        newlines = []
+        if rest.startswith("i"):
+            # insert before match
+            insert = rest[1:].replace("\\\n", "").replace("\\n", "\n") + "\n"
+            for line in lines:
+                if patre.match(line):
+                    newlines.append(insert)
+                newlines.append(line)
+        elif rest == "p":
+            # duplicate matched lines
+            for line in lines:
+                if patre.match(line):
+                    newlines.append(line)
+                newlines.append(line)
+        else:
+            raise NotImplementedError(f"sed {script=}")
+        return newlines
+    else:
+        raise NotImplementedError(f"sed {script=}")
+
+
+@command
 def read(args: List[str], stdin: BinaryIO, env: Env) -> int:
     # do not consume the entire stdin
     line = stdin.readline().strip().decode()
