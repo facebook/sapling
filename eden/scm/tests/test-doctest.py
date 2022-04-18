@@ -92,3 +92,5 @@ testmod("edenscm.hgext.convert.convcmd")
 testmod("edenscm.hgext.convert.filemap")
 testmod("edenscm.hgext.convert.subversion")
 testmod("edenscm.hgext.convert.p4")
+
+testmod("edenscm.testing.sh")
