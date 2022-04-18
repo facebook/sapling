@@ -94,3 +94,4 @@ testmod("edenscm.hgext.convert.subversion")
 testmod("edenscm.hgext.convert.p4")
 
 testmod("edenscm.testing.sh")
+testmod("edenscm.testing.t.transform")
