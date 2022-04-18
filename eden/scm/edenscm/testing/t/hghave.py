@@ -58,6 +58,9 @@ def checkvers(name, desc, vers):
     return decorator
 
 
+_checkfeaturecache = {}
+
+
 def checkfeatures(features):
     result = {"error": [], "missing": [], "skipped": []}
 
@@ -71,8 +74,11 @@ def checkfeatures(features):
             continue
 
         check, desc = checks[feature]
+        available = _checkfeaturecache.get(feature)
         try:
-            available = check()
+            if available is None:
+                available = check()
+                _checkfeaturecache[feature] = available
         except Exception:
             result["error"].append("hghave check failed: %s" % feature)
             continue
