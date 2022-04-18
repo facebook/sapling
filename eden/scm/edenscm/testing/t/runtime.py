@@ -8,6 +8,29 @@
 import fnmatch
 import os
 import re
+import unittest
+
+
+def hasfeature(feature: str) -> bool:
+    """test if a feature is present
+
+    >>> hasfeature("true")
+    True
+    >>> hasfeature("no-true")
+    False
+    >>> hasfeature("false")
+    False
+    """
+    from . import hghave
+
+    res = hghave.checkfeatures([feature])
+    return all(not res.get(k) for k in ["error", "missing", "skipped"])
+
+
+def require(feature: str):
+    """require a feature to run a test"""
+    if not hasfeature(feature):
+        raise unittest.SkipTest(f"missing feature: {feature}")
 
 
 def eqglob(a: str, b: str) -> bool:
