@@ -532,6 +532,39 @@ def pwd(fs: ShellFS):
     return "%s\n" % fs.cwd()
 
 
+@command
+def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: BinaryIO):
+    import re
+
+    inverse = False
+    extended = arg0 == "egrep"
+
+    while args[0].startswith("-"):
+        flag, *args = args
+        if flag == "-v":
+            inverse = True
+        elif flag == "-e":
+            extended = True
+            arg0 = "egrep"
+        elif flag == "--":
+            break
+        else:
+            raise NotImplementedError(f"grep flag {flag}")
+
+    # unlike egrep, grep does not treat "(" or ")" specially
+    patstr = args[0]
+    if not extended:
+        patstr = patstr.replace("(", r"\(").replace(")", r"\)")
+
+    pat = re.compile(patstr)
+    paths = args[1:]
+    lines = [l.decode() for l in _lines(fs, paths, stdin)]
+    out = "".join(l for l in lines if bool(pat.search(l)) != inverse)
+    stdout.write(out.encode())
+    if not out:
+        return 1
+
+
 def _parseheadtail(args) -> Tuple[int, List[str]]:
     """parse the -n parameter for head and tail
     return (n, paths)
@@ -589,3 +622,4 @@ cmdtable["return"] = cmdtable["exit"]
 
 cmdtable["cd"] = cmdtable["chdir"]
 cmdtable["rmdir"] = cmdtable["unlink"] = cmdtable["rm"]
+cmdtable["egrep"] = cmdtable["grep"]

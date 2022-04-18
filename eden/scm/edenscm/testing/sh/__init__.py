@@ -278,6 +278,17 @@ shift:
     >>> t('a() { echo $1 $#; shift 2; echo $1 $#; }; a 1 2 3 4')
     '1 4\n3 2\n'
 
+grep:
+
+    >>> t('seq 20 | grep 2')
+    '2\n12\n20\n'
+    >>> t("seq 20 | grep '[12][05]'")
+    '10\n15\n20\n'
+    >>> t('seq 3 | grep -v 2')
+    '1\n3\n'
+    >>> t('echo a | grep b')
+    '[1]\n'
+
 Commands on OS filesystem:
 
     >>> from .osfs import OSFS
