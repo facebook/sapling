@@ -837,8 +837,6 @@ impl<I: Iterator<Item = Token>, B: Builder> Parser<I, B> {
     /// Note: this method expects that the caller provide a potential file
     /// descriptor for redirection.
     pub fn redirect_heredoc(&mut self, src_fd: Option<u16>) -> ParseResult<B::Redirect, B::Error> {
-        use std::iter::FromIterator;
-
         macro_rules! try_map {
             ($result:expr) => {
                 $result.map_err(|e: iter::UnmatchedError| ParseError::Unmatched(e.0, e.1))?
@@ -2060,14 +2058,14 @@ impl<I: Iterator<Item = Token>, B: Builder> Parser<I, B> {
 
         macro_rules! missing_in {
             () => {
-                |_| ParseError::IncompleteCmd(CASE, start_pos, IN, self.iter.pos());
-            };
+                |_| ParseError::IncompleteCmd(CASE, start_pos, IN, self.iter.pos())
+            }
         }
 
         macro_rules! missing_esac {
             () => {
-                |_| ParseError::IncompleteCmd(CASE, start_pos, ESAC, self.iter.pos());
-            };
+                |_| ParseError::IncompleteCmd(CASE, start_pos, ESAC, self.iter.pos())
+            }
         }
 
         self.reserved_word(&[CASE])
