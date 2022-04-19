@@ -162,5 +162,31 @@ inline post_op_attr statToPostOpAttr(const folly::Try<struct stat>& stat) {
   }
 }
 
+/**
+ * Determine which of the `desiredAccess`'s a client should be granted for a
+ * certain file or directory based on the the `stat` of that file or directory.
+ * This result is an advisory result for the access call. Clients use this call
+ * to block IO that user's do not have access for, but procedures are still
+ * welcome to refuse to perform an action due to access restrictions. Thus
+ * this result should err on the side of being more permissive than restrictive.
+ *
+ * Really this should look at the uid & gid of the client issuing the request.
+ * These credentials are sent as part of the RPC credentials. This gets
+ * complicated because many of the authentication protocols in NFS v3 allow
+ * clients to spoof their uid/gid very easily. We would need to use a
+ * complicated authentication protocol like RPCSEC_GSS to be able to perform
+ * proper access checks
+ *
+ * To simplify for now, we give user's the most permissive access they could
+ * have as any user except root (we highly discourage acting as root inside an
+ * EdenFS repo). This provides a little bit of access restriction, so that
+ * access calls behave some what normally. However, long term we likely need to
+ * implement full authentication and respond properly here. We also should
+ * enforce permissions on each procedure call.
+ */
+uint32_t getEffectiveAccessRights(
+    const struct stat& stat,
+    uint32_t desiredAccess);
+
 } // namespace facebook::eden
 #endif

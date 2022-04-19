@@ -44,6 +44,20 @@ target_link_libraries(
 )
 
 add_library(
+  eden_nfs_utils STATIC
+    "NfsUtils.cpp" "NfsUtils.h"
+)
+
+
+target_link_libraries(
+  eden_nfs_utils
+  PRIVATE
+    eden_nfs_nfsd_rpc
+    Folly::folly
+)
+
+
+add_library(
   eden_nfs_nfsd3 STATIC
     "Nfsd3.cpp" "Nfsd3.h" "NfsRequestContext.cpp" "NfsRequestContext.h"
 )
@@ -55,6 +69,7 @@ target_link_libraries(
     eden_nfs_rpc_server
   PRIVATE
     eden_nfs_nfsd_rpc
+    eden_nfs_utils
     Folly::folly
 )
 

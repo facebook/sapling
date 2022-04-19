@@ -465,66 +465,6 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::lookup(
       });
 }
 
-/**
- * Determine which of the `desiredAccess`'s a client should be granted for a
- * certain file or directory based on the the `stat` of that file or directory.
- * This result is an advisory result for the access call. Clients use this call
- * to block IO that user's do not have access for, but procedures are still
- * welcome to refuse to perform an action due to access restrictions. Thus
- * this result should err on the side of being more permissive than restrictive.
- *
- * Really this should look at the uid & gid of the client issuing the request.
- * These credentials are sent as part of the RPC credentials. This gets
- * complicated because many of the authentication protocols in NFS v3 allow
- * clients to spoof their uid/gid very easily. We would need to use a
- * complicated authentication protocol like RPCSEC_GSS to be able to perform
- * proper access checks
- *
- * To simplify for now, we give user's the most permissive access they could
- * have as any user except root (we highly discourage acting as root inside an
- * EdenFS repo). This provides a little bit of access restriction, so that
- * access calls behave some what normally. However, long term we likely need to
- * implement full authentication and respond properly here. We also should
- * enforce permissions on each procedure call.
- */
-uint32_t getEffectiveAccessRights(
-    const struct stat& stat,
-    uint32_t desiredAccess) {
-  bool accessRead = (stat.st_mode & S_IRUSR) | (stat.st_mode & S_IRGRP) |
-      (stat.st_mode & S_IROTH);
-  bool accessWrite = (stat.st_mode & S_IWUSR) | (stat.st_mode & S_IWGRP) |
-      (stat.st_mode & S_IWOTH);
-  bool accessExecute = (stat.st_mode & S_IXUSR) | (stat.st_mode & S_IXGRP) |
-      (stat.st_mode & S_IXOTH);
-
-  // The delete bit indicates whether entries can be deleted from a directory
-  // or not. NOT whether this file can be deleted. So this bit is kinda useless
-  // for files. The NFS spec suggests that NFS servers should return 0 for
-  // files, so we only set this bit for directories.
-  bool accessDelete = (stat.st_mode & S_IFDIR) && accessWrite;
-
-  uint32_t expandedAccessBits = 0;
-  if (accessRead) {
-    expandedAccessBits |= ACCESS3_READ;
-    expandedAccessBits |= ACCESS3_LOOKUP;
-  }
-
-  if (accessWrite) {
-    expandedAccessBits |= ACCESS3_MODIFY;
-    expandedAccessBits |= ACCESS3_EXTEND;
-  }
-
-  if (accessDelete) {
-    expandedAccessBits |= ACCESS3_DELETE;
-  }
-
-  if (accessExecute) {
-    expandedAccessBits |= ACCESS3_EXECUTE;
-  }
-
-  return desiredAccess & expandedAccessBits;
-}
-
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::access(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
