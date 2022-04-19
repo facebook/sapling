@@ -84,7 +84,8 @@ class OSFS(ShellFS):
         path = self._absjoin(path)
         try:
             os.unlink(path)
-        except IsADirectoryError:
+        except (IsADirectoryError, PermissionError):
+            # on macOS, unlink(dir) produces PermissionError
             shutil.rmtree(path)
         except FileNotFoundError:
             pass
