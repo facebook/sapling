@@ -113,11 +113,20 @@ impl EdenFsInstance {
     pub fn status_from_lock(&self) -> Result<i32, anyhow::Error> {
         let pid = self.pid()?;
 
-        let exe = get_executable(pid).ok_or_else(|| anyhow!("EdenFS is not running as {}", pid))?;
-        let name = exe
-            .file_name()
-            .ok_or_else(|| anyhow!("Unable to retrieve process information of PID={}", pid))?
-            .to_string_lossy();
+        let exe = match get_executable(pid) {
+            Some(exe) => exe,
+            None => {
+                tracing::debug!("PID {} is not running", pid);
+                return Err(anyhow!("EdenFS is not running"));
+            }
+        };
+        let name = match exe.file_name() {
+            Some(name) => name.to_string_lossy(),
+            None => {
+                tracing::debug!("Unable to retrieve information about PID {}", pid);
+                return Err(anyhow!("EdenFS is not running"));
+            }
+        };
 
         tracing::trace!(?name, "executable name");
 
