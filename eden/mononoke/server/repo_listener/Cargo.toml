@@ -13,7 +13,6 @@ backsyncer = { version = "0.1.0", path = "../../commit_rewriting/backsyncer" }
 base64 = "0.11.0"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bytes = { version = "1.1", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 cache_warmup = { version = "0.1.0", path = "../../cache_warmup" }
