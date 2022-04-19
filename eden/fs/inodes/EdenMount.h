@@ -25,6 +25,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/inodes/InodeOrTreeOrEntry.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -60,8 +61,7 @@ template <typename T>
 class Future;
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class BindMount;
 class BlobCache;
@@ -534,6 +534,25 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * the ObjectStore).
    */
   ImmediateFuture<InodePtr> getInode(
+      RelativePathPiece path,
+      ObjectFetchContext& context) const;
+
+  /**
+   * Look up the Inode, Tree, or TreeEntry for the specified path.
+   *
+   * When the source control object referenced by the path is
+   * materialized, an Inode will be returned. If the object is a file,
+   * a TreeEntry will be returned, a Tree otherwise.
+   *
+   * This may fail with a PathBaseError containing ENOENT if the path does not
+   * exist, or ENOTDIR if one of the intermediate components along the path is
+   * not a directory.
+   *
+   * This may also fail with other exceptions if something else goes wrong
+   * besides the path being invalid (for instance, an error loading data from
+   * the ObjectStore).
+   */
+  ImmediateFuture<InodeOrTreeOrEntry> getInodeOrTreeOrEntry(
       RelativePathPiece path,
       ObjectFetchContext& context) const;
 
@@ -1244,5 +1263,4 @@ class EdenMountCancelled : public std::runtime_error {
   explicit EdenMountCancelled();
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

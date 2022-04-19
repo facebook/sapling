@@ -357,8 +357,7 @@ facebook::eden::InodePtr inodeFromUserPath(
         pid);                                                         \
   }(__FILE__, __LINE__))
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 const char* const kServiceName = "EdenFS";
 
@@ -620,16 +619,12 @@ ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPath(
   }
 
   auto edenMount = server_->getMount(mountPoint);
+  auto objectStore = edenMount->getObjectStore();
   auto relativePath = RelativePathPiece{path};
-  return edenMount->getInode(relativePath, fetchContext)
-      .thenValue([&fetchContext](const InodePtr& inode) {
-        auto fileInode = inode.asFilePtr();
-        if (fileInode->getType() != dtype_t::Regular) {
-          // We intentionally want to refuse to compute the SHA1 of symlinks
-          return makeImmediateFuture<Hash20>(
-              InodeError(EINVAL, fileInode, "file is a symlink"));
-        }
-        return fileInode->getSha1(fetchContext);
+  return edenMount->getInodeOrTreeOrEntry(relativePath, fetchContext)
+      .thenValue([relativePath, objectStore, &fetchContext](
+                     const InodeOrTreeOrEntry& inodeOrTree) {
+        return inodeOrTree.getSHA1(relativePath, objectStore, fetchContext);
       });
 }
 
@@ -646,16 +641,14 @@ ImmediateFuture<BlobMetadata> EdenServiceHandler::getBlobMetadataForPath(
 
   try {
     auto edenMount = server_->getMount(mountPoint);
+    auto objectStore = edenMount->getObjectStore();
     auto relativePath = RelativePathPiece{path};
-    return edenMount->getInode(relativePath, fetchContext)
-        .thenValue([&fetchContext](const InodePtr& inode) {
-          auto fileInode = inode.asFilePtr();
-          if (fileInode->getType() != dtype_t::Regular) {
-            // We intentionally want to refuse to get the metadata of symlinks
-            return makeImmediateFuture<BlobMetadata>(
-                InodeError(EINVAL, fileInode, "file is a symlink"));
-          }
-          return fileInode->getBlobMetadata(fetchContext);
+
+    return edenMount->getInodeOrTreeOrEntry(relativePath, fetchContext)
+        .thenValue([relativePath, objectStore, &fetchContext](
+                       const InodeOrTreeOrEntry& inodeOrTree) {
+          return inodeOrTree.getBlobMetadata(
+              relativePath, objectStore, fetchContext);
         });
   } catch (const std::exception& e) {
     return ImmediateFuture<BlobMetadata>(
@@ -2957,5 +2950,4 @@ std::optional<pid_t> EdenServiceHandler::getAndRegisterClientPid() {
 #endif
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

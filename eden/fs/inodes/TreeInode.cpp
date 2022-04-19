@@ -207,45 +207,80 @@ ImmediateFuture<struct stat> TreeInode::stat(ObjectFetchContext& /*context*/) {
   return st;
 }
 
-ImmediateFuture<InodePtr> TreeInode::getOrLoadChild(
+ImmediateFuture<InodeOrTreeOrEntry> TreeInode::getOrFindChild(
     PathComponentPiece name,
-    ObjectFetchContext& context) {
-  TraceBlock block("getOrLoadChild");
+    ObjectFetchContext& context,
+    bool loadInodes) {
+  TraceBlock block("getOrFindChild");
+  auto mount = getMount();
 
 #ifndef _WIN32
   if (name == kDotEdenName && getNodeId() != kRootNodeId) {
     // If they ask for `.eden` in any subdir, return the magical
     // this-dir symlink inode that resolves to the path to the
     // root/.eden path.  We do this outside of the block below
-    // because getInode() will call TreeInode::getOrLoadChild()
+    // because getInode() will call TreeInode::getOrFindChild()
     // recursively, and it is cleaner to break this logic out
     // separately.
-    return getMount()->getInode(".eden/this-dir"_relpath, context);
+    return mount->getInode(".eden/this-dir"_relpath, context)
+        .thenValue([](auto&& inode) {
+          return ImmediateFuture{InodeOrTreeOrEntry{std::move(inode)}};
+        });
   }
 #endif // !_WIN32
 
-  return tryRlockCheckBeforeUpdate<ImmediateFuture<InodePtr>>(
+  auto objectStore = mount->getObjectStore();
+  return tryRlockCheckBeforeUpdate<ImmediateFuture<InodeOrTreeOrEntry>>(
              contents_,
              [&](const auto& contents)
-                 -> std::optional<ImmediateFuture<InodePtr>> {
+                 -> std::optional<ImmediateFuture<InodeOrTreeOrEntry>> {
                // Check if the child is already loaded and return it if so
                auto iter = contents.entries.find(name);
                if (iter == contents.entries.end()) {
                  XLOG(DBG7) << "attempted to load non-existent entry \"" << name
                             << "\" in " << getLogPath();
-                 return std::make_optional(
-                     ImmediateFuture<InodePtr>{folly::Try<InodePtr>{
+                 return std::make_optional(ImmediateFuture<InodeOrTreeOrEntry>{
+                     folly::Try<InodeOrTreeOrEntry>{
                          InodeError(ENOENT, inodePtrFromThis(), name)}});
                }
 
                // Check to see if the entry is already loaded
-               const auto& entry = iter->second;
-               if (entry.getInode()) {
-                 return ImmediateFuture<InodePtr>{entry.getInodePtr()};
+               auto& entry = iter->second;
+               if (auto inodePtr = entry.getInodePtr()) {
+                 return ImmediateFuture{
+                     InodeOrTreeOrEntry{std::move(inodePtr)}};
                }
-               return std::nullopt;
+
+               // The node is not loaded. If the caller requires that we load
+               // Inodes, or the entry is materialized, go on and load the inode
+               // by returning std::nullopt here.
+               if (loadInodes || entry.isMaterialized()) {
+                 return std::nullopt;
+               }
+
+               // Note that a child's inode may be currently loading. If it's
+               // currently being loaded there's no chance it's been
+               // modified/materialized yet (it has to have been loaded prior),
+               // so it's safe here to ignore the loading inode and instead
+               // query the object store for information about the path.
+               auto hash = entry.getHash();
+               if (entry.isDirectory()) {
+                 // This is a directory, always get the tree corresponding to
+                 // the hash
+                 return objectStore->getTree(hash, context)
+                     .thenValue([](std::shared_ptr<const Tree>&& tree) {
+                       return InodeOrTreeOrEntry(std::move(tree));
+                     });
+               }
+               // This is a file, return the DirEntry if this was the last
+               // path component. Note that because the entry is not loaded and
+               // is not materialized, it's guaranteed to have a hash set, and
+               // the constructor of UnmaterializedUnloadedBlobDirEntry can be
+               // called safely.
+               return ImmediateFuture{InodeOrTreeOrEntry{
+                   UnmaterializedUnloadedBlobDirEntry(entry)}};
              },
-             [&](auto& contents) {
+             [&](auto& contents) -> ImmediateFuture<InodeOrTreeOrEntry> {
                auto inodeLoadFuture =
                    Future<unique_ptr<InodeBase>>::makeEmpty();
                InodePtr childInodePtr;
@@ -292,9 +327,19 @@ ImmediateFuture<InodePtr> TreeInode::getOrLoadChild(
                  }
                }
 
-               return ImmediateFuture<InodePtr>{std::move(returnFuture)};
+               return ImmediateFuture<InodePtr>{std::move(returnFuture)}
+                   .thenValue(
+                       [](auto&& inode) { return InodeOrTreeOrEntry{inode}; });
              })
       .ensure([b = std::move(block)]() mutable { b.close(); });
+}
+
+ImmediateFuture<InodePtr> TreeInode::getOrLoadChild(
+    PathComponentPiece name,
+    ObjectFetchContext& context) {
+  return getOrFindChild(name, context, true).thenValue([](auto&& inodeOrEntry) {
+    return inodeOrEntry.asInodePtr();
+  });
 }
 
 ImmediateFuture<TreeInodePtr> TreeInode::getOrLoadChildTree(

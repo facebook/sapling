@@ -14,6 +14,7 @@
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
+#include "eden/fs/inodes/InodeOrTreeOrEntry.h"
 
 namespace facebook {
 namespace eden {
@@ -124,6 +125,19 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       folly::StringPiece name,
       ObjectFetchContext& context) override;
 #endif // !_WIN32
+
+  /**
+   * Get the inode object for a child of this directory.
+   *
+   * Implements getOrLoadChild if loadInodes is true. If loadInodes is false and
+   * the Inode load is already-in-progress, this may NOT return the loading
+   * inode. Otherwise, the returned InodeOrTreeOrEntry may contain a ObjectStore
+   * Tree or a DirEntry/TreeEntry representing the entry.
+   */
+  ImmediateFuture<InodeOrTreeOrEntry> getOrFindChild(
+      PathComponentPiece name,
+      ObjectFetchContext& context,
+      bool loadInodes);
 
   /**
    * Get the inode object for a child of this directory.

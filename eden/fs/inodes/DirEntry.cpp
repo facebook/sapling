@@ -25,8 +25,7 @@ static_assert(
     "standard constants shouldn't use top two bits");
 #endif // !_WIN32
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 InodeNumber DirEntry::getInodeNumber() const {
   return hasInodePointer_ ? inode_->getNodeId() : inodeNumber_;
@@ -66,5 +65,4 @@ InodeBase* DirEntry::clearInode() {
   return inode;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

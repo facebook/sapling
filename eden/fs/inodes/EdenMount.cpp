@@ -79,8 +79,7 @@ DEFINE_string(
     "edenfsctl",
     "the path to the edenfsctl executable");
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 #ifndef _WIN32
 namespace {
@@ -1137,6 +1136,66 @@ ImmediateFuture<InodePtr> EdenMount::getInode(
     RelativePathPiece path,
     ObjectFetchContext& context) const {
   return inodeMap_->getRootInode()->getChildRecursive(path, context);
+}
+
+namespace {
+
+class InodeOrTreeLookupProcessor {
+ public:
+  explicit InodeOrTreeLookupProcessor(
+      RelativePathPiece path,
+      ObjectStore* objectStore,
+      ObjectFetchContext& context)
+      : path_{path},
+        iterRange_{path_.components()},
+        iter_{iterRange_.begin()},
+        objectStore_(objectStore),
+        context_{context} {}
+
+  ImmediateFuture<InodeOrTreeOrEntry> next(InodeOrTreeOrEntry inodeTreeEntry) {
+    if (iter_ == iterRange_.end()) {
+      // Lookup terminated, return the existing entry
+      return ImmediateFuture{std::move(inodeTreeEntry)};
+    }
+
+    // There are path components left, recurse looking for the next child
+    auto childName = *iter_++;
+    return inodeTreeEntry
+        .getOrFindChild(childName, path_, objectStore_, context_)
+        .thenValue([this](InodeOrTreeOrEntry entry) {
+          return next(std::move(entry));
+        });
+  }
+
+ private:
+  RelativePath path_;
+  RelativePath::base_type::component_iterator_range iterRange_;
+  RelativePath::base_type::component_iterator iter_;
+  // The ObjectStore is guaranteed to be valid for the lifetime of the
+  // EdenMount. Since the lifetime of InodeOrTreeLookupProcessor is strictly
+  // less than the one of a request (and hence, the lifetime of the mount the
+  // request is against), we can safely store a pointer to the store, rather
+  // than a shared_ptr.
+  ObjectStore* objectStore_;
+  // The ObjectFetchContext is allocated at the beginning of a request and
+  // released once the request completes. Since the lifetime of
+  // InodeOrTreeLookupProcessor is strictly less than the one of a request, we
+  // can safely store a reference to the fetch context.
+  ObjectFetchContext& context_;
+};
+
+} // namespace
+
+ImmediateFuture<InodeOrTreeOrEntry> EdenMount::getInodeOrTreeOrEntry(
+    RelativePathPiece path,
+    ObjectFetchContext& context) const {
+  auto rootInode = static_cast<InodePtr>(getRootInode());
+
+  auto processor = std::make_unique<InodeOrTreeLookupProcessor>(
+      path, getObjectStore(), context);
+  auto future = processor->next(InodeOrTreeOrEntry(std::move(rootInode)));
+  return std::move(future).ensure(
+      [p = std::move(processor)]() mutable { p.reset(); });
 }
 
 folly::Future<std::string> EdenMount::loadFileContentsFromPath(
@@ -2245,5 +2304,4 @@ bool EdenMount::MountingUnmountingState::channelUnmountStarted()
 EdenMountCancelled::EdenMountCancelled()
     : std::runtime_error{"EdenMount was unmounted during initialization"} {}
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
