@@ -268,8 +268,9 @@ ImmediateFuture<InodeOrTreeOrEntry> TreeInode::getOrFindChild(
                  // This is a directory, always get the tree corresponding to
                  // the hash
                  return objectStore->getTree(hash, context)
-                     .thenValue([](std::shared_ptr<const Tree>&& tree) {
-                       return InodeOrTreeOrEntry(std::move(tree));
+                     .thenValue([mode = entry.getInitialMode()](
+                                    std::shared_ptr<const Tree>&& tree) {
+                       return InodeOrTreeOrEntry(std::move(tree), mode);
                      });
                }
                // This is a file, return the DirEntry if this was the last

@@ -49,6 +49,7 @@
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeLoader.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/InodeOrTreeOrEntryLoader.h"
 #include "eden/fs/inodes/Traverse.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
@@ -1366,25 +1367,23 @@ EdenServiceHandler::semifuture_getEntryInformation(
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   auto rootInode = edenMount->getRootInode();
+  auto objectStore = edenMount->getObjectStore();
   auto& fetchContext = helper->getFetchContext();
-
-  // TODO: applyToInodes currently forces allocation of inodes for all specified
-  // paths. It's possible to resolve this request directly from source control
-  // data. In the future, this should be changed to avoid allocating inodes when
-  // possible.
 
   return wrapImmediateFuture(
              std::move(helper),
              waitForPendingNotifications(*edenMount, syncTimeout)
                  .thenValue([rootInode = std::move(rootInode),
                              paths = std::move(paths),
+                             objectStore,
                              &fetchContext](auto&&) {
-                   return collectAll(applyToInodes(
+                   return collectAll(applyToInodeOrTreeOrEntry(
                                          rootInode,
                                          *paths,
-                                         [](InodePtr inode) {
-                                           return inode->getType();
+                                         [](const InodeOrTreeOrEntry& inode) {
+                                           return inode.getDtype();
                                          },
+                                         objectStore,
                                          fetchContext))
                        .deferValue([](vector<Try<dtype_t>> done) {
                          auto out = std::make_unique<
@@ -1420,23 +1419,31 @@ EdenServiceHandler::semifuture_getFileInformation(
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   auto rootInode = edenMount->getRootInode();
+  auto objectStore = edenMount->getObjectStore();
   auto& fetchContext = helper->getFetchContext();
-  // TODO: applyToInodes currently forces allocation of inodes for all specified
-  // paths. It's possible to resolve this request directly from source control
-  // data. In the future, this should be changed to avoid allocating inodes when
-  // possible.
+  auto lastCheckoutTime = edenMount->getLastCheckoutTime().toTimespec();
+
   return wrapImmediateFuture(
              std::move(helper),
              waitForPendingNotifications(*edenMount, syncTimeout)
                  .thenValue([rootInode = std::move(rootInode),
                              paths = std::move(paths),
+                             lastCheckoutTime,
+                             objectStore,
                              &fetchContext](auto&&) {
                    return collectAll(
-                              applyToInodes(
+                              applyToInodeOrTreeOrEntry(
                                   rootInode,
                                   *paths,
-                                  [&fetchContext](InodePtr inode) {
-                                    return inode->stat(fetchContext)
+                                  [lastCheckoutTime,
+                                   objectStore,
+                                   &fetchContext](
+                                      const InodeOrTreeOrEntry& inode) {
+                                    return inode
+                                        .stat(
+                                            lastCheckoutTime,
+                                            objectStore,
+                                            fetchContext)
                                         .thenValue([](struct stat st) {
                                           FileInformation info;
                                           info.size_ref() = st.st_size;
@@ -1454,6 +1461,7 @@ EdenServiceHandler::semifuture_getFileInformation(
                                         })
                                         .semi();
                                   },
+                                  objectStore,
                                   fetchContext))
                        .deferValue([](vector<Try<FileInformationOrError>>&&
                                           done) {

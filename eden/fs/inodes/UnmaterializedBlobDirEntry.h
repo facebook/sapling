@@ -26,14 +26,12 @@ namespace facebook::eden {
  * This class copies enough of the DirEntry to be able to reason about the
  * underlying objects, and is safe to copy around.
  */
-class UnmaterializedUnloadedBlobDirEntry {
+class UnmaterializedBlobDirEntry {
  public:
   // Note that these objects are only constructed when it is known that the
   // entry.getHash() exists. See TreeInode::getOrFindChild()
-  explicit UnmaterializedUnloadedBlobDirEntry(const DirEntry& entry)
-      : hash_(entry.getHash()),
-        dtype_(entry.getDtype()),
-        initialMode_(entry.getInitialMode()) {}
+  explicit UnmaterializedBlobDirEntry(const DirEntry& entry)
+      : hash_(entry.getHash()), dtype_(entry.getDtype()) {}
 
   const ObjectId getHash() const {
     return hash_;
@@ -43,21 +41,13 @@ class UnmaterializedUnloadedBlobDirEntry {
     return dtype_;
   }
 
-  /**
-   * The initial mode of the shadowed DirEntry.
-   *
-   * Note that these objects are only created for unloaded/unmaterialized
-   * inodes, so the initialMode is a good representation of the mode just after
-   * loading.
-   */
-  mode_t getInitialMode() const {
-    return initialMode_;
+  bool isDirectory() const {
+    return getDtype() == dtype_t::Dir;
   }
 
  private:
   ObjectId hash_;
   dtype_t dtype_;
-  mode_t initialMode_;
 };
 
 } // namespace facebook::eden

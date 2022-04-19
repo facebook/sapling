@@ -47,6 +47,19 @@ inline struct timespec stMtime(const struct stat& st) {
 #endif
 }
 
+/** Helper for setting the `mtime` field of a `struct stat` as a timespec.
+ * Linux and macOS have different names for this field. */
+inline void stMtime(struct stat& st, struct timespec ts) {
+#ifdef __APPLE__
+  st.st_mtimespec = ts;
+#elif defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || \
+    _POSIX_C_SOURCE >= 200809L || _XOPEN_SOURCE >= 700
+  st.st_mtim = ts;
+#else
+  st.st_mtime = ts.tv_sec;
+#endif
+}
+
 /** Helper for accessing the `ctime` field of a `struct stat` as a timespec.
  * Linux and macOS have different names for this field. */
 inline struct timespec stCtime(const struct stat& st) {

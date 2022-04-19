@@ -15,6 +15,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/Tracing.h"
 #include "eden/fs/utils/ImmediateFuture.h"
+#include "eden/fs/utils/StatTimes.h"
 
 namespace facebook::eden {
 
@@ -126,17 +127,79 @@ ImmediateFuture<BlobMetadata> InodeOrTreeOrEntry::getBlobMetadata(
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, InodePtr>) {
           return arg.asFilePtr()->getBlobMetadata(fetchContext);
-        } else if constexpr (std::is_same_v<
-                                 T,
-                                 UnmaterializedUnloadedBlobDirEntry>) {
+        } else if constexpr (
+            std::is_same_v<T, UnmaterializedUnloadedBlobDirEntry> ||
+            std::is_same_v<T, TreeEntry>) {
           return objectStore->getBlobMetadata(arg.getHash(), fetchContext);
         } else if constexpr (std::is_same_v<T, TreePtr>) {
           return makeImmediateFuture<BlobMetadata>(PathError(EISDIR, path));
-        } else if constexpr (std::is_same_v<T, TreeEntry>) {
-          return objectStore->getBlobMetadata(arg.getHash(), fetchContext);
         } else {
           static_assert(always_false_v<T>, "non-exhaustive visitor!");
         }
+      },
+      variant_);
+}
+
+// Returns a subset of `struct stat` required by
+// EdenServiceHandler::semifuture_getFileInformation()
+ImmediateFuture<struct stat> InodeOrTreeOrEntry::stat(
+    const struct timespec& lastCheckoutTime,
+    ObjectStore* objectStore,
+    ObjectFetchContext& fetchContext) const {
+  return std::visit(
+      [ lastCheckoutTime, treeMode = treeMode_, objectStore, &
+        fetchContext ](auto&& arg) -> ImmediateFuture<struct stat> {
+        using T = std::decay_t<decltype(arg)>;
+        ObjectId hash;
+        mode_t mode;
+        if constexpr (std::is_same_v<T, InodePtr>) {
+          // Note: there's no need to modify the return value of stat here, as
+          // the inode implementations are what all the other cases are trying
+          // to emulate.
+          return arg->stat(fetchContext);
+        } else if constexpr (std::is_same_v<
+                                 T,
+                                 UnmaterializedUnloadedBlobDirEntry>) {
+          hash = arg.getHash();
+          mode = arg.getInitialMode();
+          // fallthrough
+        } else if constexpr (std::is_same_v<T, TreePtr>) {
+          struct stat st = {};
+          st.st_mode = static_cast<decltype(st.st_mode)>(treeMode);
+          stMtime(st, lastCheckoutTime);
+#ifdef _WIN32
+          // Windows returns zero for st_mode and mtime
+          st.st_mode = static_cast<decltype(st.st_mode)>(0);
+          {
+            struct timespec ts0 {};
+            stMtime(st, ts0);
+          }
+#endif
+          st.st_size = 0U;
+          return ImmediateFuture{st};
+        } else if constexpr (std::is_same_v<T, TreeEntry>) {
+          hash = arg.getHash();
+          mode = modeFromTreeEntryType(arg.getType());
+          // fallthrough
+        } else {
+          static_assert(always_false_v<T>, "non-exhaustive visitor!");
+        }
+        return objectStore->getBlobMetadata(hash, fetchContext)
+            .thenValue([mode, lastCheckoutTime](const BlobMetadata& metadata) {
+              struct stat st = {};
+              st.st_mode = static_cast<decltype(st.st_mode)>(mode);
+              stMtime(st, lastCheckoutTime);
+#ifdef _WIN32
+              // Windows returns zero for st_mode and mtime
+              st.st_mode = static_cast<decltype(st.st_mode)>(0);
+              {
+                struct timespec ts0 {};
+                stMtime(st, ts0);
+              }
+#endif
+              st.st_size = static_cast<decltype(st.st_size)>(metadata.size);
+              return st;
+            });
       },
       variant_);
 }
@@ -145,7 +208,7 @@ ImmediateFuture<InodeOrTreeOrEntry> InodeOrTreeOrEntry::getOrFindChild(
     PathComponentPiece childName,
     RelativePathPiece path,
     ObjectStore* objectStore,
-    ObjectFetchContext& fetchContext) {
+    ObjectFetchContext& fetchContext) const {
   if (!isDirectory()) {
     return makeImmediateFuture<InodeOrTreeOrEntry>(PathError(ENOTDIR, path));
   }
@@ -162,8 +225,9 @@ ImmediateFuture<InodeOrTreeOrEntry> InodeOrTreeOrEntry::getOrFindChild(
         } else if constexpr (
             std::is_same_v<T, UnmaterializedUnloadedBlobDirEntry> ||
             std::is_same_v<T, TreeEntry>) {
+          // These represent files in InodeOrTreeOrEntry, and can't be descended
           return makeImmediateFuture<InodeOrTreeOrEntry>(
-              PathError(EINVAL, path, "variant is of unhandled type"));
+              PathError(ENOTDIR, path, "variant is of unhandled type"));
         } else {
           static_assert(always_false_v<T>, "non-exhaustive visitor!");
         }
@@ -191,10 +255,12 @@ ImmediateFuture<InodeOrTreeOrEntry> InodeOrTreeOrEntry::getOrFindChild(
   // Always descend if the treeEntry is a Tree
   if (treeEntry->isTree()) {
     return objectStore->getTree(treeEntry->getHash(), fetchContext)
-        .thenValue([](TreePtr tree) { return InodeOrTreeOrEntry{tree}; });
+        .thenValue(
+            [mode = modeFromTreeEntryType(treeEntry->getType())](TreePtr tree) {
+              return InodeOrTreeOrEntry{std::move(tree), mode};
+            });
   } else {
-    // This is a file, return the TreeEntry if this was the last path
-    // component
+    // This is a file, return the TreeEntry for it
     return ImmediateFuture{InodeOrTreeOrEntry{*treeEntry}};
   }
 }

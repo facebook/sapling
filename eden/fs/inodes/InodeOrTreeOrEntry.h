@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <sys/stat.h>
 #include <variant>
 
 #include <folly/String.h>
@@ -38,9 +39,10 @@ class InodeOrTreeOrEntry {
   explicit InodeOrTreeOrEntry(UnmaterializedUnloadedBlobDirEntry&& value)
       : variant_(std::move(value)) {}
 
-  explicit InodeOrTreeOrEntry(const detail::TreePtr& value) : variant_(value) {}
-  explicit InodeOrTreeOrEntry(detail::TreePtr&& value)
-      : variant_(std::move(value)) {}
+  explicit InodeOrTreeOrEntry(const detail::TreePtr& value, mode_t mode)
+      : variant_(value), treeMode_(mode) {}
+  explicit InodeOrTreeOrEntry(detail::TreePtr&& value, mode_t mode)
+      : variant_(std::move(value)), treeMode_(mode) {}
 
   explicit InodeOrTreeOrEntry(const TreeEntry& value) : variant_(value) {}
   explicit InodeOrTreeOrEntry(TreeEntry&& value) : variant_(std::move(value)) {}
@@ -69,7 +71,7 @@ class InodeOrTreeOrEntry {
       PathComponentPiece childName,
       RelativePathPiece path,
       ObjectStore* objectStore,
-      ObjectFetchContext& fetchContext);
+      ObjectFetchContext& fetchContext) const;
 
   ImmediateFuture<Hash20> getSHA1(
       RelativePathPiece path,
@@ -78,6 +80,19 @@ class InodeOrTreeOrEntry {
 
   ImmediateFuture<BlobMetadata> getBlobMetadata(
       RelativePathPiece path,
+      ObjectStore* objectStore,
+      ObjectFetchContext& fetchContext) const;
+
+  /**
+   * Emulate stat in a way that works for source control.
+   *
+   * Will just run stat on the Inode if possible, otherwise returns a stat
+   * structure with the st_mode and st_size data from the
+   * ObjectStore/DirEntry/TreeEntry, and the st_mtim set to the passed in
+   * lastCheckoutTime.
+   */
+  ImmediateFuture<struct stat> stat(
+      const struct timespec& lastCheckoutTime,
       ObjectStore* objectStore,
       ObjectFetchContext& fetchContext) const;
 
@@ -92,7 +107,18 @@ class InodeOrTreeOrEntry {
       ObjectStore* objectStore,
       ObjectFetchContext& fetchContext);
 
+  /**
+   * The main object this encapsulates
+   */
   detail::VariantInodeOrTreeOrEntry variant_;
+
+  /**
+   * The mode_t iff this contains a Tree
+   *
+   * The Tree's TreeEntry tells us about the mode_t of a tree, it must be saved
+   * here for return in the stat() call.
+   */
+  mode_t treeMode_{0};
 };
 
 } // namespace facebook::eden
