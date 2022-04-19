@@ -100,26 +100,20 @@ impl<T, E: Into<Error>> ResultPyErrExt<T> for Result<T, E> {
     fn map_pyerr(self, py: Python<'_>) -> PyResult<T> {
         self.map_err(|e| {
             let e: anyhow::Error = e.into();
-            let mut e = &e;
-            loop {
-                if let Some(e) = e.downcast_ref::<PyErr>() {
-                    return e.inner.clone_ref(py);
-                } else if let Some(inner) = e.downcast_ref::<anyhow::Error>() {
-                    e = inner;
-                    continue;
-                } else if let Some(e) = e.downcast_ref::<std::io::Error>() {
-                    return translate_io_error(py, e);
-                }
 
-                for func in INTO_PYERR_FUNC_LIST.lock().values() {
-                    if let Some(err) = (func)(py, e) {
-                        return err;
-                    }
-                }
-                // Nothing matches. Fallback to RuntimeError.
-                // Hopefully this is not really used.
-                return cpython::PyErr::new::<exc::RuntimeError, _>(py, format!("{:?}", e));
+            if let Some(e) = e.downcast_ref::<PyErr>() {
+                return e.inner.clone_ref(py);
             }
+
+            for func in INTO_PYERR_FUNC_LIST.lock().values() {
+                if let Some(err) = (func)(py, &e) {
+                    return err;
+                }
+            }
+
+            // Nothing matches. Fallback to RuntimeError.
+            // Hopefully this is not really used.
+            return cpython::PyErr::new::<exc::RuntimeError, _>(py, format!("{:?}", e));
         })
     }
 }
@@ -273,4 +267,24 @@ pub fn format_py_error(py: Python, err: &cpython::PyErr) -> PyResult<String> {
         .collect();
 
     Ok(lines.join(""))
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Context;
+
+    use super::*;
+
+    #[test]
+    fn test_dont_lose_anyhow_context() {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        let err: Result<()> = Err(anyhow::anyhow!("first")).context("second");
+
+        assert_eq!(
+            format!("{}", err.map_pyerr(py).unwrap_err().pvalue.unwrap()),
+            "second\n\nCaused by:\n    first"
+        );
+    }
 }

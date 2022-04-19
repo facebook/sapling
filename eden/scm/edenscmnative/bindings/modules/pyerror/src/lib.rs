@@ -52,7 +52,12 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 fn register_error_handlers() {
-    fn specific_error_handler(py: Python, e: &error::Error) -> Option<PyErr> {
+    fn specific_error_handler(py: Python, mut e: &error::Error) -> Option<PyErr> {
+        // We care about concrete errors, so peel away anyhow contextual layers.
+        while let Some(inner) = e.downcast_ref::<error::Error>() {
+            e = inner;
+        }
+
         // Extract inner io::Error out.
         // Why does Python need the low-level IOError? It doesn't have to.
         // Consider:
@@ -61,11 +66,16 @@ fn register_error_handlers() {
         //   IOError directly.
         // - Gain more explicit control about error types exposed to
         //   Python. This means dropping anyhow.
+        if let Some(e) = e.downcast_ref::<std::io::Error>() {
+            return Some(cpython_ext::error::translate_io_error(py, e));
+        }
+
         if let Some(revlogindex::Error::Corruption(e)) = e.downcast_ref::<revlogindex::Error>() {
             if let revlogindex::errors::CorruptionError::Io(e) = e.as_ref() {
                 return Some(cpython_ext::error::translate_io_error(py, e));
             }
         }
+
         if let Some(hgcommits::Error::Dag(e)) = e.downcast_ref::<hgcommits::Error>() {
             match e {
                 dag::Error::Backend(ref backend_error) => match backend_error.as_ref() {
