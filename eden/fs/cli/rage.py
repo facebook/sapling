@@ -18,7 +18,7 @@ import sys
 import traceback
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Callable, Generator, IO, List, Tuple, Optional, cast
+from typing import Callable, Generator, IO, List, Tuple, Optional, cast, Dict
 
 from . import (
     debug as debug_mod,
@@ -33,11 +33,14 @@ from . import (
 from .config import EdenInstance
 
 try:
-    from .facebook.rage import find_fb_cdb
+    from .facebook.rage import find_fb_cdb, setup_fb_env
 except ImportError:
 
     def find_fb_cdb() -> Optional[Path]:
         return None
+
+    def setup_fb_env(env: Dict[str, str]) -> Dict[str, str]:
+        return env
 
 
 def section_title(message: str, out: IO[bytes]) -> None:
@@ -486,7 +489,10 @@ def print_cdb_backtrace(pid: int, sink: IO[bytes]) -> None:
     ]
     cdb_cmd += [";".join(debugger_command)]
 
-    subprocess.run(cdb_cmd, check=True, stderr=subprocess.STDOUT, stdout=sink)
+    env = os.environ.copy()
+    env = setup_fb_env(env)
+
+    subprocess.run(cdb_cmd, check=True, stderr=subprocess.STDOUT, stdout=sink, env=env)
 
 
 def print_sample_trace(pid: int, sink: IO[bytes]) -> None:
