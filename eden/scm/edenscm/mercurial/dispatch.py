@@ -325,8 +325,13 @@ def _preimportmodules():
         extensions.preimport(extname)
 
 
+ischgserver = False
+
+
 def runchgserver():
     """start the chg server, pre-import bundled extensions"""
+    global ischgserver
+    ischgserver = True
     # Clean server - do not load any config files or repos.
     _initstdio()
     ui = uimod.ui()
