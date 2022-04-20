@@ -20,11 +20,20 @@ lto = false
 cpython_ext = { path = "../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.7", default-features = false }
 paste = "1.0"
+# see update_modules.sh
+# [[[cog
+# import cog, glob, os
+# for path in sorted(glob.glob('modules/py*/TARGETS')):
+#     name = os.path.basename(os.path.dirname(path))
+#     if name != "pycommands":
+#         cog.outl(f'{name} = {{ path = "modules/{name}" }}')
+# ]]]
 pyauth = { path = "modules/pyauth" }
-pycats = { path = "modules/pycats" }
 pyblackbox = { path = "modules/pyblackbox" }
 pybytes = { path = "modules/pybytes" }
+pycats = { path = "modules/pycats" }
 pycheckout = { path = "modules/pycheckout" }
+pyclientinfo = { path = "modules/pyclientinfo" }
 pycliparser = { path = "modules/pycliparser" }
 pyconfigparser = { path = "modules/pyconfigparser" }
 pydag = { path = "modules/pydag" }
@@ -35,6 +44,7 @@ pydrawdag = { path = "modules/pydrawdag" }
 pyeagerepo = { path = "modules/pyeagerepo" }
 pyedenapi = { path = "modules/pyedenapi" }
 pyerror = { path = "modules/pyerror" }
+pyexchange = { path = "modules/pyexchange" }
 pyfail = { path = "modules/pyfail" }
 pyfs = { path = "modules/pyfs" }
 pygitstore = { path = "modules/pygitstore" }
@@ -61,12 +71,11 @@ pyrevlogindex = { path = "modules/pyrevlogindex" }
 pysptui = { path = "modules/pysptui" }
 pystatus = { path = "modules/pystatus" }
 pythreading = { path = "modules/pythreading" }
-pytracing = { path = "modules/pytracing", default-features = false }
+pytracing = { path = "modules/pytracing" }
 pytreestate = { path = "modules/pytreestate" }
 pyvlq = { path = "modules/pyvlq" }
 pyworker = { path = "modules/pyworker" }
 pyworkingcopy = { path = "modules/pyworkingcopy" }
 pyzstd = { path = "modules/pyzstd" }
-pyclientinfo = { path = "modules/pyclientinfo" }
 pyzstore = { path = "modules/pyzstore" }
-pyexchange = { path = "modules/pyexchange" }
+# [[[end]]]

@@ -30,6 +30,14 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
         py,
         m,
         [
+            // see update_modules.sh
+            // [[[cog
+            // import cog, glob, os
+            // for path in sorted(glob.glob('modules/py*/TARGETS')):
+            //     name = os.path.basename(os.path.dirname(path))
+            //     if name != "pycommands":
+            //         cog.outl(f'{name[2:]},')
+            // ]]]
             auth,
             blackbox,
             bytes,
@@ -80,6 +88,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
             workingcopy,
             zstd,
             zstore,
+            // [[[end]]]
         ]
     );
 
