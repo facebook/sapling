@@ -8,8 +8,8 @@ name = "bindings"
 
 [features]
 default = []
-python2 = ["pybytes/python2", "pytracing/python2", "pyindexes/python2", "pydirs/python2"]
-python3 = ["pybytes/python3", "pytracing/python3", "pyindexes/python3", "pydirs/python3"]
+python2 = ["pybytes/python2", "pytracing/python2", "pydirs/python2"]
+python3 = ["pybytes/python3", "pytracing/python3", "pydirs/python3"]
 
 [profile.release]
 debug = true
@@ -39,7 +39,6 @@ pyfs = { path = "modules/pyfs" }
 pygitstore = { path = "modules/pygitstore" }
 pyhgmetrics = { path = "modules/pyhgmetrics" }
 pyhgtime = { path = "modules/pyhgtime" }
-pyindexes = { path = "modules/pyindexes", default-features = false }
 pyio = { path = "modules/pyio" }
 pylock = { path = "modules/pylock" }
 pylz4 = { path = "modules/pylz4" }
