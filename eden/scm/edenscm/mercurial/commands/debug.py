@@ -81,7 +81,7 @@ from .. import (
     vfs as vfsmod,
     visibility,
 )
-from ..i18n import _, _x
+from ..i18n import _, _x, _n
 from ..node import bin, hex, nullhex, nullid, nullrev, short
 from ..pycompat import decodeutf8, range
 from .cmdtable import command
@@ -3795,6 +3795,190 @@ def debugresetheads(ui, repo):
     # Remove all local bookmarks
     metalog["bookmarks"] = b""
     metalog.commit("debugresetheads")
+
+
+@command(
+    "debugruntest|debugrt",
+    [
+        ("i", "fix", False, _("update tests to match output")),
+        ("j", "jobs", 0, _("number of jobs to run in parallel")),
+        ("x", "ext", [], _("extension modules to import")),
+    ],
+    norepo=True,
+)
+def debugruntest(ui, *paths, **opts):
+    """run .t test"""
+    import textwrap
+    from multiprocessing import util as mputil
+    from unittest import SkipTest
+
+    from edenscm.mercurial import mdiff, patch
+    from edenscm.testing.t.runner import (
+        fixmismatches,
+        Mismatch,
+        MismatchError,
+        TestNotFoundError,
+        TestResult,
+        TestRunner,
+    )
+
+    lastname = ""
+
+    def writetitle(name: str):
+        """write a title with divider, skip if the same title was written"""
+        nonlocal lastname
+        if lastname == name:
+            return
+        lastname = name
+        title = []
+        if name:
+            title.append(f"{name} ")
+        divider = "-" * max(ui.termwidth() - 3 - len(name), 0)
+        if divider:
+            title.append(ui.label(divider, "testing.divider"))
+        ui.write(_("%s\n") % "".join(title))
+
+    mismatchcount = collections.defaultdict(int)
+    limit = ui.configint("testing", "max-mismatch-per-file") or 4
+
+    def writemismatch(mismatch: Mismatch):
+        """write output mismatch using diff output format"""
+        count = mismatchcount[mismatch.filename]
+        mismatchcount[mismatch.filename] += 1
+        if count > limit:
+            return
+
+        writetitle(mismatch.testname)
+
+        if count == limit:
+            ui.write(
+                _("  (exceeds testing.max-mismatch-per-file)\n\n"),
+                label="testing.exceeded",
+            )
+            return
+
+        diffopts = patch.diffopts(ui).copy(context=100)
+        lineloc = mismatch.srcloc + 1
+        ui.write(
+            _("%s%s")
+            % (
+                ui.label("%4s" % lineloc, "testing.lineloc"),
+                ui.label(textwrap.indent(mismatch.src, "     ")[4:], "testing.source"),
+            )
+        )
+
+        a = mismatch.expected.encode()
+        b = mismatch.actual.encode()
+        # ex. list(_unidiff(b'1\n2\n3\n4\n5\n6\n7\n',b'a\n2\n3\n4\n\n5\n6\nb\n'))
+        #  => [True,
+        #      ((1, 1, 1, 1), [b'@@ -1,1 +1,1 @@\n', b'-1\n', b'+a\n']),
+        #      ((4, 0, 5, 1), [b'@@ -4,0 +5,1 @@\n', b'+\n']),
+        #      ((7, 1, 8, 1), [b'@@ -7,1 +8,1 @@\n', b'-7\n', b'+b\n'])]
+        #  :  [has_hunk, (hunk_range, hunk_lines)...]
+        hunks = [
+            b"".join(hlines)
+            for hrange, hlines in list(mdiff._unidiff(a, b, diffopts))[1:]
+        ]
+        diffs = []
+        for chunk, label in patch.difflabel(lambda **kw: hunks, opts=diffopts):
+            # skip first @@ header
+            if chunk.startswith(b"@@") or chunk == b"\n" and not diffs:
+                continue
+            text = chunk.decode()
+            diffs.append(ui.label(text, label))
+        difftext = "".join(diffs)
+        difftext = textwrap.indent(difftext, "    ")
+        ui.write(_("%s\n") % difftext)
+
+    def writeexception(testresult: TestResult):
+        writetitle(testresult.testid.name)
+        msg = testresult.tb or str(testresult.exc)
+        ui.write(_("%s\n") % msg)
+
+    def writenames(verb, names, reason=""):
+        if names:
+            if reason:
+                reason = f" ({reason})"
+            names = sorted(set(names))
+            count = len(names)
+            countstr = _n("%s test" % count, "%s tests" % count, count)
+            namestr = "".join(f"  {n}\n" for n in names)
+            ui.write(f"{verb} {countstr}{reason}:\n{namestr}\n")
+
+    passed = []
+    skipped = collections.defaultdict(list)
+    failed = collections.defaultdict(list)
+    mismatches = []
+    fix = opts.get("fix")
+
+    exts = ["edenscm.testing.ext.hg", "edenscm.testing.ext.python"]
+    exts += opts.get("ext") or []
+    jobs = opts.get("jobs") or 0
+
+    # limit concurrency for stable order
+    if jobs == 0 and util.istest():
+        jobs = 1
+
+    # sys.executable is "hg" not "python" expected by
+    # multiprocessing libraries (used by TestRunner).
+    # patch it to make it work
+    def _args(orig):
+        args = orig()
+        args = ["debugpython", "--"] + args
+        return args
+
+    with extensions.wrappedfunction(
+        mputil, "_args_from_interpreter_flags", _args
+    ), TestRunner(paths, jobs=jobs, exts=exts) as r:
+        for item in r:
+            if isinstance(item, Mismatch):
+                mismatches.append(item)
+                if not ui.quiet and not fix:
+                    writemismatch(item)
+            else:
+                assert isinstance(item, TestResult)
+                if item.exc is None:
+                    passed.append(item.testid.name)
+                elif isinstance(item.exc, SkipTest):
+                    skipped[str(item.exc)].append(item.testid.name)
+                else:
+                    failed[str(item.exc)].append(item.testid.name)
+                    if not ui.quiet and not isinstance(
+                        item.exc, (MismatchError, TestNotFoundError)
+                    ):
+                        writeexception(item)
+
+    if fix and mismatches:
+        fixmismatches(mismatches)
+
+    if not ui.quiet:
+        writetitle("")
+        for verb, group in [(_("Skipped"), skipped), (_("Failed"), failed)]:
+            for reason, names in sorted(group.items()):
+                writenames(verb, names, reason=reason)
+
+        if ui.verbose:
+            writenames(_("Passed"), passed)
+
+        if fix:
+            writenames(_("Fixed"), [m.testname for m in mismatches])
+
+    def count(group):
+        return sum(len(names) for names in group.values())
+
+    total = len(passed) + count(skipped) + count(failed)
+    totalstr = _n("Ran %d tests" % total, "Ran %d tests" % total, total)
+    ui.status(
+        _("# %s, %s skipped, %s failed.\n") % (totalstr, count(skipped), count(failed))
+    )
+
+    if failed:
+        ret = 1
+    elif skipped:
+        ret = 80
+    else:
+        ret = 0
+    return ret
 
 
 @command("debugthrowrustexception", [], "")

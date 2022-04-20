@@ -101,6 +101,8 @@ class Mismatch:
     endloc: int
     indent: int
     filename: str
+    # optional associated test name
+    testname: Optional[str] = None
 
     def __str__(self):
         return f"{repr(self.actual)} != {self(self.expected)} at {self.filename} line {self.outloc}"

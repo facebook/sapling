@@ -70,6 +70,8 @@ ignore = [
     "pyreadline",  # for IPython on Windows to detect missing pyreadline
     "ctypes.windll",  # for IPython on Linux to detect missing "windll"
     "edenscm.mercurial.progress",  # module 'edenscm.mercurial.progress' has no attribute 'bar'
+    "multiprocessing",  # without this multiprocessing breaks on Windows pickling objects
+    "multiprocessing.reduction",  # module object for 'multiprocessing.reduction' substituted in sys.modules during a lazy load
 ]
 
 _pypy = "__pypy__" in sys.builtin_module_names

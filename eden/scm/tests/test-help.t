@@ -1058,6 +1058,7 @@ Test list of internal help commands
    debugrunlog   display runlog entries
    debugrunshell
                  run a shell command
+   debugruntest  run .t test
    debugscmstore
                  test file and tree fetching using scmstore
    debugscmstorereplay

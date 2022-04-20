@@ -140,6 +140,10 @@ _defaultstyles = {
     "ui.prefix.component": "cyan",
     "ui.prefix.error": "brightred:red",
     "ui.prefix.notice": "yellow",
+    "testing.divider": "brightblack:none",
+    "testing.lineloc": "brightblue:blue",
+    "testing.source": "none",
+    "testing.exceeded": "cyan",
 }
 
 
