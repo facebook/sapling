@@ -11,12 +11,12 @@ license = "GPLv2+"
 path = "src/commands/lib.rs"
 
 [[bin]]
-name = "new_walker"
-path = "src/new_walker/main.rs"
+name = "old_walker"
+path = "src/main.rs"
 
 [[bin]]
 name = "walker"
-path = "src/main.rs"
+path = "src/new_walker/main.rs"
 
 [dependencies]
 ahash = "0.7.4"
