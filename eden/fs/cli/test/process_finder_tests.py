@@ -139,7 +139,7 @@ class ProcUtilsTests(unittest.TestCase):
     def assert_age_near(self, age: timedelta, timestamp: float) -> None:
         now = time.time()
         absolute_age = time.time() - age.total_seconds()
-        if absolute_age > (timestamp - 1.0) and absolute_age < (timestamp + 1.0):
+        if absolute_age >= (timestamp - 30.0) and absolute_age <= (timestamp + 30.0):
             return
 
         def time_str(ts: float) -> str:
