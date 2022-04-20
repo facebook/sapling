@@ -800,17 +800,6 @@ Check '--raw-workspace-name' option
   current workspace is different than the workspace to sync
   [1]
 
-Check '--use-bgssh' option 
-  $ setconfig infinitepush.bgssh='trashssh'
-  $ mkcommit "trashssh test"
-  $ hg cloud sync --use-bgssh
-  commitcloud: synchronizing 'server' with 'user/test/default'
-  remote:*trashssh:*not found (glob)
-  abort: no suitable response from remote hg* (glob)
-  [255]
-  $ hg hide -r . -q
-  $ hg cloud sync -q
-
 Check handling of failures
 Simulate failure to backup a commit by setting the server maxbundlesize limit very low
 

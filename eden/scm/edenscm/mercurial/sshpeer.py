@@ -12,7 +12,10 @@
 
 from __future__ import absolute_import
 
+import io
+import os
 import re
+import subprocess
 import threading
 import weakref
 from typing import Any
@@ -206,7 +209,12 @@ class sshpeer(stdiopeer.stdiopeer):
 
         # while self._subprocess isn't used, having it allows the subprocess to
         # to clean up correctly later
-        sub = util.popen4(cmd, bufsize=0, env=sshenv)
+        if util.istest():
+            # spwan 'hg serve' directly, avoid depending on /bin/sh or python
+            # to run dummyssh
+            sub = _popen4testhgserve(self._path, env=sshenv)
+        else:
+            sub = util.popen4(cmd, bufsize=0, env=sshenv)
         pipeo, pipei, pipee, self._subprocess = sub
 
         self._pipee = threadedstderr(self.ui, pipee)
@@ -324,6 +332,51 @@ class sshpeer(stdiopeer.stdiopeer):
         )
 
     __del__ = _cleanup
+
+
+def _pipe():
+    rfd, wfd = os.pipe()
+    return os.fdopen(rfd, "rb"), os.fdopen(wfd, "wb")
+
+
+def _popen4testhgserve(path, env=None, newlines=False, bufsize=-1):
+    """spawn 'hg serve' without depending on /bin/sh or cmd.exe or /usr/bin/env python or dummyssh"""
+    assert util.istest()
+
+    path = path.split("?", 1)[0]
+    cmdargs = util.hgcmd() + ["-R", path, "serve", "--stdio"]
+    testtmp = os.getenv("TESTTMP")
+
+    p = subprocess.Popen(
+        cmdargs,
+        cwd=testtmp,
+        # shell=False avoids /bin/sh or cmd.exe
+        shell=False,
+        bufsize=bufsize,
+        close_fds=util.closefds,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=newlines,
+        env=env,
+    )
+
+    # see D19872612
+    def delayoutput(reader, writer):
+        buf = io.BytesIO()
+        while True:
+            ch = reader.read(1)
+            if not ch:
+                break
+            buf.write(ch)
+        writer.write(buf.getvalue())
+        writer.close()
+
+    errread, errwrite = _pipe()
+    t = threading.Thread(target=delayoutput, args=(p.stderr, errwrite), daemon=True)
+    t.start()
+
+    return p.stdin, p.stdout, errread, p
 
 
 instance = sshpeer

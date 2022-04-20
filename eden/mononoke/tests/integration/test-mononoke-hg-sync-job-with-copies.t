@@ -208,7 +208,6 @@ Mononoke filenode generation in merges is different to Mercurial's, so a replay 
 See `derive_hg_changeset.rs` function `store_file_changes` for the difference
   $ mononoke_hg_sync repo-hg 5 2>&1 | grep ReplayVerification
   remote: [ReplayVerification] Expected: ('master_bookmark', 'e09d568b9a5530903dcc9e4a2a60b1912141379c'). Actual: ('master_bookmark', 'aca179fa10740cb530e81a2d0ada525c2026ca2c')
-      remote: [ReplayVerification] Expected: ('master_bookmark', 'e09d568b9a5530903dcc9e4a2a60b1912141379c'). Actual: ('master_bookmark', 'aca179fa10740cb530e81a2d0ada525c2026ca2c')
 
   $ mononoke_hg_sync repo-hg 6 &> /dev/null
   [1]

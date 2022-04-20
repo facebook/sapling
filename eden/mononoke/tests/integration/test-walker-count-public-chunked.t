@@ -83,10 +83,10 @@ hg file node, chunked, deep.  Expect deferred as hg file node parents will point
   Walking edge types [BonsaiHgMappingToHgChangesetViaBonsai, HgChangesetToHgManifest, HgChangesetToHgManifestFileNode, HgChangesetViaBonsaiToHgChangeset, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgManifestFileNodeToHgCopyfromFileNode, HgManifestFileNodeToHgParentFileNode, HgManifestToChildHgManifest, HgManifestToHgFileNode]
   Walking node types [BonsaiHgMapping, HgChangeset, HgChangesetViaBonsai, HgFileNode, HgManifest, HgManifestFileNode]
   Seen,Loaded: 14,12
-  * Type:Walked,Checks,Children BonsaiHgMapping:2,*,4 HgChangeset:2,*,4 HgChangesetViaBonsai:2,* HgFileNode:3,*,0 HgManifest:2,*,3 HgManifestFileNode:3,*,1 (glob)
+  * Type:Walked,Checks,Children BonsaiHgMapping:2,*,4 HgChangeset:2,*,3 HgChangesetViaBonsai:2,* HgFileNode:3,*,0 HgManifest:2,*,3 HgManifestFileNode:3,*,2 (glob)
   Deferred: 1
   Seen,Loaded: 6,6
-  * Type:Walked,Checks,Children BonsaiHgMapping:3,*,6 HgChangeset:3,*,5 HgChangesetViaBonsai:3,* HgFileNode:4,*,0 HgManifest:3,*,3 HgManifestFileNode:4,*,1 (glob)
+  * Type:Walked,Checks,Children BonsaiHgMapping:3,*,6 HgChangeset:3,*,5 HgChangesetViaBonsai:3,* HgFileNode:4,*,0 HgManifest:3,*,3 HgManifestFileNode:4,*,2 (glob)
   Deferred: 0
 
 oldest, hg file node, chunked, deep.  Expect deferred as hg file node parents will point outside chunk

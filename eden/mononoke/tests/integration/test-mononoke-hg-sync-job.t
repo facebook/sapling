@@ -254,8 +254,6 @@ Verify that repo-hg-2 is locked for normal pushes
   remote: 1 new changeset from the server will be downloaded
   remote: [RepoLock] Repo locked for non-unbundlereplay pushes
   remote: pushkey-abort: prepushkey.lock hook failed
-  remote: transaction abort!
-  remote: rollback completed
   abort: updating bookmark master_bookmark failed!
   [255]
 

@@ -119,9 +119,9 @@ eq(
 sh % "hg push -r $A --to master --create" == r"""
 pushing rev * to destination ssh://user@dummy/serverpushrebasemerge bookmark master (glob)
 searching for changes
+exporting bookmark master
 remote: pushing 1 changeset:
 remote:     *  A (glob)
-exporting bookmark master
 """
 
 sh % "hg clone 'ssh://user@dummy/serverpushrebasemerge' $TESTTMP/clientpushrebasemerge -q" == r"""
@@ -166,17 +166,17 @@ eq(
 sh % "hg push --to=master -r $F" == r"""
     pushing rev c431bfe62c4c to destination ssh://user@dummy/serverpushrebasemerge bookmark master
     searching for changes
+    adding changesets
+    adding manifests
+    adding file changes
+    updating bookmark master
     remote: pushing 5 changesets:
     remote:     *  B (glob)
     remote:     *  C (glob)
     remote:     *  D (glob)
     remote:     *  E (glob)
     remote:     *  F (glob)
-    remote: 5 new changesets from the server will be downloaded
-    adding changesets
-    adding manifests
-    adding file changes
-    updating bookmark master"""
+    remote: 5 new changesets from the server will be downloaded"""
 
 sh % "hg files -r master" == r"""
     x/a
@@ -218,16 +218,16 @@ desc(E)
 sh % "hg push --to=master -r $J" == r"""
     pushing rev * to destination ssh://user@dummy/serverpushrebasemerge bookmark master (glob)
     searching for changes
+    adding changesets
+    adding manifests
+    adding file changes
+    updating bookmark master
     remote: pushing 4 changesets:
     remote:     *  G (glob)
     remote:     *  H (glob)
     remote:     *  I (glob)
     remote:     *  J (glob)
-    remote: 4 new changesets from the server will be downloaded
-    adding changesets
-    adding manifests
-    adding file changes
-    updating bookmark master"""
+    remote: 4 new changesets from the server will be downloaded"""
 
 # Check server after pushrebasing the branch whose parent is E
 sh % "cd $TESTTMP/serverpushrebasemerge"

@@ -1811,6 +1811,7 @@ class PythonTest(Test):
                 env["EDENSCM_TRACE_LEVEL"] = level
                 vlog("# EDENSCM_TRACE_LEVEL=%s" % level)
                 break
+        env["HG"] = self._hgcommand
         result = self._runcommand(cmd, env, normalizenewlines=normalizenewlines)
         if self._aborted:
             raise KeyboardInterrupt()

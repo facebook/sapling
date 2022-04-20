@@ -90,10 +90,10 @@
   uncompressed size of bundle content:
        205 (changelog)
        282  lfs-largefile
+  updating bookmark master_bookmark
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  updating bookmark master_bookmark
 
 # Check that an upload was sent to the LFS server
   $ cat "$LFS_LOG"

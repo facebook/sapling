@@ -111,10 +111,10 @@ push the commit back to the Mercurial server to check the null linkrevs don't le
   $ hg push --to test --create
   pushing rev 038218e96533 to destination ssh://user@dummy/repo-hg bookmark test
   searching for changes
+  exporting bookmark test
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  exporting bookmark test
   $ cd $TESTTMP/repo-hg
   $ hg debugindex file
      rev    offset  length  delta linkrev nodeid       p1           p2

@@ -41,6 +41,11 @@ def _setuptesttmp():
         shlib.mkdir(testtmp)
         os.chdir(testtmp)
 
+    hg = os.environ.get("HG")
+    if sys.argv[0].endswith("-t.py") and hg:
+        # fix sys.argv[0] to point to HG
+        sys.argv[0] = hg
+
     @normalizeoutput
     def replacetesttmp(out, testtmp=testtmp):
         return out.replace(testtmp, "$TESTTMP")
