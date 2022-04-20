@@ -50,6 +50,7 @@ pyfs = { path = "modules/pyfs" }
 pygitstore = { path = "modules/pygitstore" }
 pyhgmetrics = { path = "modules/pyhgmetrics" }
 pyhgtime = { path = "modules/pyhgtime" }
+pyindexedlog = { path = "modules/pyindexedlog" }
 pyio = { path = "modules/pyio" }
 pylock = { path = "modules/pylock" }
 pylz4 = { path = "modules/pylz4" }
