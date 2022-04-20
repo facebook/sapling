@@ -1357,6 +1357,7 @@ packages = [
     "edenscm.mercurial.thirdparty.attr",
     "edenscm.mercurial.utils",
     "edenscm.testing",
+    "edenscm.testing.ext",
     "edenscm.testing.sh",
     "edenscm.testing.t",
     "edenscmnative",
