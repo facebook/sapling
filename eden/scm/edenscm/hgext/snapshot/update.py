@@ -24,15 +24,11 @@ def _fullclean(ui, repo, exclude):
     # The order of operations to cleanup here is very deliberate, to avoid errors.
     # Most errors happen due to file/dir clashes, see https://fburl.com/jwyhd0fk
     # Step 1: Forget files that were "hg added"
-    cmdutil.forget(
-        ui,
-        repo,
-        scmutil.match(
-            repo[None], [f"path:{p}" for p in (set(repo[None].added()) - set(exclude))]
-        ),
-        prefix="",
-        explicitonly=True,
-    )
+    # WARNING: Don't call cmdutil.forget because it might be slow
+    wctx = repo[None]
+    forget = set(wctx.added()) - set(exclude)
+    if forget:
+        wctx.forget(list(forget), "")
     # Step 2: Remove "untracked changes" (e.g. untracked files)
     repo.dirstate._fs.purge(
         scmutil.match(repo[None], opts={"exclude": exclude}),
