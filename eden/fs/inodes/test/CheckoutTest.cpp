@@ -494,7 +494,7 @@ TEST(Checkout, modifyLoadedButNotReadyFileWithConflict) {
   // Call resetParent() to make the mount point at commit3, even though
   // the file state is from commit1.  This will cause a conflict in a
   // non-materialized file.
-  mount.getEdenMount()->resetParent(RootId{"3"}, nullptr);
+  mount.getEdenMount()->resetParent(RootId{"3"});
 
   // Perform the checkout.
   auto checkoutFuture =
@@ -556,7 +556,7 @@ void testModifyConflict(
   // resetCommit(), as the files will be materialized this way.
   auto commit1 = testMount.getBackingStore()->putCommit("a", builder1);
   commit1->setReady();
-  testMount.getEdenMount()->resetParent(RootId{"a"}, nullptr);
+  testMount.getEdenMount()->resetParent(RootId{"a"});
 
   // Prepare the destination tree
   auto builder2 = builder1.clone();
@@ -580,15 +580,12 @@ void testModifyConflict(
   EXPECT_EQ(path, *result.conflicts[0].path_ref());
   EXPECT_EQ(ConflictType::MODIFIED_MODIFIED, *result.conflicts[0].type_ref());
 
-  const auto currentParent = testMount.getEdenMount()->getParentCommit();
+  const auto currentParent = testMount.getEdenMount()->getWorkingCopyParent();
   const auto configParent =
       testMount.getEdenMount()->getCheckoutConfig()->getParentCommit();
   // Make sure both the mount parent and the config parent information was
   // updated
-  EXPECT_EQ(
-      ParentCommit(ParentCommit::WorkingCopyParentAndCheckedOutRevision{
-          currentParent, currentParent}),
-      configParent);
+  EXPECT_EQ(currentParent, configParent.getWorkingCopyParent());
 
   auto postInode = testMount.getFileInode(path);
   switch (checkoutMode) {
@@ -675,7 +672,7 @@ TEST(Checkout, modifyThenRevert) {
   srcBuilder.setFile("a/test.txt", "test contents\n");
   srcBuilder.setFile("a/xyz.txt", "bar\n");
   TestMount testMount{srcBuilder};
-  auto originalCommit = testMount.getEdenMount()->getParentCommit();
+  auto originalCommit = testMount.getEdenMount()->getCheckedOutRootId();
 
   // Modify a file.
   // We use the "normal" dispatcher APIs here, which will materialize the file.
@@ -1749,7 +1746,7 @@ TEST(Checkout, changing_hash_scheme_does_not_conflict_if_contents_are_same) {
   // Call resetParent() to make the mount point back at commit1, even though
   // the file state is from commit2.  They have the same contents, so a second
   // checkout also should not produce conflicts.
-  mount.getEdenMount()->resetParent(RootId{"1"}, nullptr);
+  mount.getEdenMount()->resetParent(RootId{"1"});
 
   result = mount.getEdenMount()
                ->checkout(RootId{"2"}, std::nullopt, __func__)

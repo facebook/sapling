@@ -524,10 +524,7 @@ void EdenServiceHandler::resetParentCommits(
         ->importManifestForRoot(parent1, rootManifest)
         .get();
   }
-  auto tree = edenMount->getObjectStore()
-                  ->getRootTree(parent1, helper->getFetchContext())
-                  .get();
-  edenMount->resetParent(parent1, std::move(tree));
+  edenMount->resetParent(parent1);
 }
 
 namespace {
@@ -1649,7 +1646,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
     }
   } else {
     const RootId& originRootId =
-        originRootIds->emplace_back(edenMount->getParentCommit());
+        originRootIds->emplace_back(edenMount->getCheckedOutRootId());
     globFutures.emplace_back(
         edenMount->getInode(searchRoot, fetchContext)
             .thenValue([&fetchContext,

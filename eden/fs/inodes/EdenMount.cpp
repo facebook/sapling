@@ -271,10 +271,11 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
       .thenValue([this,
                   progressCallback = std::move(progressCallback),
                   parent,
+                  workingCopyParentRootId = parentCommit.getWorkingCopyParent(),
                   inProgressCheckout = parentCommit.isCheckoutInProgress()](
                      std::shared_ptr<const Tree> parentTree) mutable {
-        *parentState_.wlock() =
-            ParentCommitState{parent, parentTree, inProgressCheckout};
+        *parentState_.wlock() = ParentCommitState{
+            parent, parentTree, workingCopyParentRootId, inProgressCheckout};
 
         // Record the transition from no snapshot to the current snapshot in
         // the journal.  This also sets things up so that we can carry the
@@ -649,7 +650,7 @@ folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
    * So we use read lock instead assuming the contents of loaded rootId
    * objects are not weaving too much
    */
-  auto oldParent = getParentCommit();
+  auto oldParent = getWorkingCopyParent();
   XLOG(DBG3) << "adding " << rootId << " to Eden mount " << this->getPath()
              << " at path" << path << " on top of " << oldParent;
 
@@ -975,8 +976,8 @@ TreeInodePtr EdenMount::getRootInode() const {
   return inodeMap_->getRootInode();
 }
 
-std::shared_ptr<const Tree> EdenMount::getRootTree() const {
-  return parentState_.rlock()->rootTree;
+std::shared_ptr<const Tree> EdenMount::getCheckedOutRootTree() const {
+  return parentState_.rlock()->checkedOutRootTree;
 }
 
 namespace {
@@ -1043,7 +1044,7 @@ ImmediateFuture<std::variant<std::shared_ptr<const Tree>, TreeEntry>>
 EdenMount::getTreeOrTreeEntry(
     RelativePathPiece path,
     ObjectFetchContext& context) const {
-  auto rootTree = getRootTree();
+  auto rootTree = getCheckedOutRootTree();
   if (path.empty()) {
     return ImmediateFuture{std::variant<std::shared_ptr<const Tree>, TreeEntry>{
         std::move(rootTree)}};
@@ -1117,7 +1118,7 @@ ImmediateFuture<RelativePath> EdenMount::canonicalizePathFromTree(
     return path.copy();
   }
 
-  auto tree = getRootTree();
+  auto tree = getCheckedOutRootTree();
   auto processor = std::make_unique<CanonicalizeProcessor>(
       path.copy(), objectStore_, context);
   auto future = processor->next(std::move(tree));
@@ -1343,7 +1344,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
     // operation, but this might lead to deadlocks on Windows due to callbacks
     // needing to access the parent commit to service callbacks.
     parentLock->checkoutInProgress = true;
-    oldParent = parentLock->commitHash;
+    oldParent = parentLock->workingCopyParentRootId;
   }
 
   auto ctx = std::make_shared<CheckoutContext>(
@@ -1651,16 +1652,16 @@ Future<Unit> EdenMount::diff(
           "cannot compute status while a checkout is currently in progress"));
     }
 
-    if (parentInfo->commitHash != commitHash) {
+    if (parentInfo->workingCopyParentRootId != commitHash) {
       // Log this occurrence to Scuba
-      getServerState()->getStructuredLogger()->logEvent(
-          ParentMismatch{commitHash.value(), parentInfo->commitHash.value()});
+      getServerState()->getStructuredLogger()->logEvent(ParentMismatch{
+          commitHash.value(), parentInfo->workingCopyParentRootId.value()});
       return makeFuture<Unit>(newEdenError(
           EdenErrorType::OUT_OF_DATE_PARENT,
           "error computing status: requested parent commit is out-of-date: requested ",
           commitHash,
           ", but current parent commit is ",
-          parentInfo->commitHash,
+          parentInfo->workingCopyParentRootId,
           ".\nTry running `eden doctor` to remediate"));
     }
 
@@ -1695,9 +1696,7 @@ folly::Future<std::unique_ptr<ScmStatus>> EdenMount::diff(
       });
 }
 
-void EdenMount::resetParent(
-    const RootId& parent,
-    std::shared_ptr<const Tree>&& rootTree) {
+void EdenMount::resetParent(const RootId& parent) {
   // Hold the snapshot lock around the entire operation.
   auto parentLock = parentState_.wlock();
 
@@ -1707,16 +1706,15 @@ void EdenMount::resetParent(
         "cannot reset parent while a checkout is currently in progress");
   }
 
-  auto oldParent = parentLock->commitHash;
+  auto oldParent = parentLock->workingCopyParentRootId;
   XLOG(DBG1) << "resetting snapshot for " << this->getPath() << " from "
              << oldParent << " to " << parent;
 
   // TODO: Maybe we should walk the inodes and see if we can dematerialize
   // some files using the new source control state.
 
-  checkoutConfig_->setParentCommit(parent);
-  parentLock->commitHash = parent;
-  parentLock->rootTree = std::move(rootTree);
+  checkoutConfig_->setWorkingCopyParentCommit(parent);
+  parentLock->workingCopyParentRootId = parent;
 
   journal_->recordHashUpdate(oldParent, parent);
 }

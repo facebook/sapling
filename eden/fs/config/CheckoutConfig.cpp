@@ -199,25 +199,57 @@ ParentCommit CheckoutConfig::getParentCommit() const {
   }
 }
 
-void CheckoutConfig::setParentCommit(const RootId& parent) const {
-  auto& parentString = parent.value();
-  XCHECK_LE(parentString.size(), std::numeric_limits<uint32_t>::max());
+namespace {
+void writeWorkingCopyParentAndCheckedOutRevisision(
+    AbsolutePathPiece path,
+    const RootId& workingCopy,
+    const RootId& checkedOut) {
+  const auto& workingCopyString = workingCopy.value();
+  XCHECK_LE(workingCopyString.size(), std::numeric_limits<uint32_t>::max());
+
+  const auto& checkedOutString = checkedOut.value();
+  XCHECK_LE(checkedOutString.size(), std::numeric_limits<uint32_t>::max());
 
   auto buf = IOBuf::create(
-      kSnapshotHeaderSize + sizeof(uint32_t) + parentString.size());
+      kSnapshotHeaderSize + 2 * sizeof(uint32_t) + workingCopyString.size() +
+      checkedOutString.size());
   folly::io::Appender cursor{buf.get(), 0};
 
   // Snapshot file format:
   // 4-byte identifier: "eden"
   cursor.push(ByteRange{kSnapshotFileMagic});
   // 4-byte format version identifier
-  cursor.writeBE<uint32_t>(kSnapshotFormatVersion2);
-  cursor.writeBE<uint32_t>(parentString.size());
-  // (Depends on the backing store, but usually this is:) 40-byte hex commit ID:
-  // parent1
-  cursor.push(folly::StringPiece{parentString});
-  writeFileAtomic(getSnapshotPath(), ByteRange{buf->data(), buf->length()})
-      .value();
+  cursor.writeBE<uint32_t>(
+      kSnapshotFormatWorkingCopyParentAndCheckedOutRevisionVersion);
+
+  // Working copy parent
+  cursor.writeBE<uint32_t>(workingCopyString.size());
+  cursor.push(folly::StringPiece{workingCopyString});
+
+  // Checked out commit
+  cursor.writeBE<uint32_t>(checkedOutString.size());
+  cursor.push(folly::StringPiece{checkedOutString});
+
+  writeFileAtomic(path, ByteRange{buf->data(), buf->length()}).value();
+}
+} // namespace
+
+void CheckoutConfig::setCheckedOutCommit(const RootId& commit) const {
+  // Pass the same commit for the working copy parent and the checked out
+  // commit as a checkout sets both to the same value.
+  writeWorkingCopyParentAndCheckedOutRevisision(
+      getSnapshotPath(), commit, commit);
+}
+
+void CheckoutConfig::setWorkingCopyParentCommit(const RootId& commit) const {
+  // The checked out commit doesn't change, re-use what's in the file currently
+  auto parentCommit = getParentCommit();
+  auto checkedOutRootId =
+      parentCommit.getLastCheckoutId(ParentCommit::RootIdPreference::OnlyStable)
+          .value();
+
+  writeWorkingCopyParentAndCheckedOutRevisision(
+      getSnapshotPath(), commit, checkedOutRootId);
 }
 
 void CheckoutConfig::setCheckoutInProgress(const RootId& from, const RootId& to)

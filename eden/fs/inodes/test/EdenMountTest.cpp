@@ -499,7 +499,7 @@ TEST(EdenMount, resetParents) {
   // Initialize the TestMount pointing at commit1
   testMount.initialize(RootId("1"));
   const auto& edenMount = testMount.getEdenMount();
-  EXPECT_EQ(RootId("1"), edenMount->getParentCommit());
+  EXPECT_EQ(RootId("1"), edenMount->getCheckedOutRootId());
   EXPECT_EQ(
       ParentCommit(ParentCommit::WorkingCopyParentAndCheckedOutRevision{
           RootId("1"), RootId("1")}),
@@ -512,12 +512,12 @@ TEST(EdenMount, resetParents) {
   EXPECT_FALSE(testMount.hasFileAt("src/extra.h"));
 
   // Reset the TestMount to pointing to commit2
-  edenMount->resetParent(RootId("2"), nullptr);
+  edenMount->resetParent(RootId("2"));
   // The snapshot ID should be updated, both in memory and on disk
-  EXPECT_EQ(RootId("2"), edenMount->getParentCommit());
+  EXPECT_EQ(RootId("1"), edenMount->getCheckedOutRootId());
   EXPECT_EQ(
       ParentCommit(ParentCommit::WorkingCopyParentAndCheckedOutRevision{
-          RootId("2"), RootId("2")}),
+          RootId("2"), RootId("1")}),
       edenMount->getCheckoutConfig()->getParentCommit());
   latestJournalEntry = edenMount->getJournal().getLatest();
   ASSERT_TRUE(latestJournalEntry);

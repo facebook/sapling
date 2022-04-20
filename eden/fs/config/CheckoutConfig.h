@@ -61,14 +61,19 @@ class CheckoutConfig {
   ParentCommit getParentCommit() const;
 
   /**
-   * Set the parent commit of the working directory.
+   * Set the currently checked out commit of the working copy.
    */
-  void setParentCommit(const RootId& parent) const;
+  void setCheckedOutCommit(const RootId& commit) const;
+
+  /**
+   * Set the working copy parent commit.
+   */
+  void setWorkingCopyParentCommit(const RootId& commit) const;
 
   /**
    * Indicate that a checkout operation is in progress.
    *
-   * A setParentCommit call should be made once checkout is complete.
+   * A setCheckedOutCommit call should be made once checkout is complete.
    */
   void setCheckoutInProgress(const RootId& from, const RootId& to) const;
 

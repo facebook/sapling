@@ -364,10 +364,23 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   const AbsolutePath& getPath() const;
 
   /**
-   * Get the commit ID of the working directory's parent commit.
+   * Get the RootId of the working directory's parent commit.
+   *
+   * EdenFS will populate the working copy from this RootId. This is set to the
+   * last RootId passed to checkout.
    */
-  RootId getParentCommit() const {
-    return parentState_.rlock()->commitHash;
+  RootId getCheckedOutRootId() const {
+    return parentState_.rlock()->checkedOutRootId;
+  }
+
+  /**
+   * Get the RootId of the working copy parent commit.
+   *
+   * This RootId is set when calling resetParent, and should be used when
+   * performing diff operation. A checkout operation will also set this.
+   */
+  RootId getWorkingCopyParent() const {
+    return parentState_.rlock()->workingCopyParentRootId;
   }
 
   /**
@@ -489,7 +502,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * copy parent (commit hash or root ID). Note that the returned Tree may not
    * corresponding to the mount's current inode structure.
    */
-  std::shared_ptr<const Tree> getRootTree() const;
+  std::shared_ptr<const Tree> getCheckedOutRootTree() const;
 
   /**
    * Look up the Tree or TreeEntry for the specified path.
@@ -603,6 +616,9 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 
   /**
    * Check out the specified commit.
+   *
+   * This updates the checkedOutRootId as well as the workingCopyParentRootId to
+   * the passed in snapshotHash.
    */
   folly::Future<CheckoutResult> checkout(
       const RootId& snapshotHash,
@@ -653,12 +669,11 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 
   /**
    * Reset the state to point to the specified parent commit, without
-   * modifying the working directory contents at all. The passed in rootTree
-   * must be the corresponding root tree for the commit.
+   * modifying the working directory contents at all.
+   *
+   * This set the workingCopyParentRootId to the passed in RootId.
    */
-  void resetParent(
-      const RootId& parent,
-      std::shared_ptr<const Tree>&& rootTree);
+  void resetParent(const RootId& parent);
 
   /**
    * Acquire the rename lock in exclusive mode.
@@ -1089,8 +1104,13 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   folly::SharedMutex renameMutex_;
 
   struct ParentCommitState {
-    RootId commitHash;
-    std::shared_ptr<const Tree> rootTree;
+    // RootId that the working copy is checked out to
+    RootId checkedOutRootId;
+    std::shared_ptr<const Tree> checkedOutRootTree;
+    // RootId that the working copy is reset to. This is usually the same as
+    // checkedOutRootId, except when a reset is done, in which case it will
+    // differ.
+    RootId workingCopyParentRootId;
     bool checkoutInProgress = false;
   };
 

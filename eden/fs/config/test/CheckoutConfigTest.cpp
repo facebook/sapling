@@ -182,6 +182,31 @@ TEST_F(CheckoutConfigTest, testInProgressRoundtrip) {
   EXPECT_EQ(inProgress, parent);
 }
 
+TEST_F(CheckoutConfigTest, testCheckedOutAndReset) {
+  auto config =
+      CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
+
+  auto from = RootId{"99887766554433221100aabbccddeeffabcdef99"};
+  auto to = RootId{"fedcba998887766554433221100ffeeddccbbaa99"};
+
+  config->setCheckedOutCommit(from);
+  config->setWorkingCopyParentCommit(to);
+
+  auto parent = config->getParentCommit();
+  EXPECT_EQ(
+      ParentCommit(
+          ParentCommit::WorkingCopyParentAndCheckedOutRevision{to, from}),
+      parent);
+
+  // Make sure that setCheckedOutCommit changes both.
+  config->setCheckedOutCommit(from);
+  parent = config->getParentCommit();
+  EXPECT_EQ(
+      ParentCommit(
+          ParentCommit::WorkingCopyParentAndCheckedOutRevision{from, from}),
+      parent);
+}
+
 TEST_F(CheckoutConfigTest, testVersion2ParentHex) {
   auto config =
       CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
@@ -211,7 +236,7 @@ TEST_F(CheckoutConfigTest, testWriteSnapshot) {
   RootId hash2{"abcdef98765432100123456789abcdef00112233"};
 
   // Write out a single parent and read it back
-  config->setParentCommit(hash1);
+  config->setCheckedOutCommit(hash1);
   auto parent = config->getParentCommit();
   EXPECT_EQ(
       ParentCommit(
@@ -219,7 +244,7 @@ TEST_F(CheckoutConfigTest, testWriteSnapshot) {
       parent);
 
   // Change the parent
-  config->setParentCommit(hash2);
+  config->setCheckedOutCommit(hash2);
   parent = config->getParentCommit();
   EXPECT_EQ(
       ParentCommit(
@@ -227,7 +252,7 @@ TEST_F(CheckoutConfigTest, testWriteSnapshot) {
       parent);
 
   // Change the parent back
-  config->setParentCommit(hash1);
+  config->setCheckedOutCommit(hash1);
   parent = config->getParentCommit();
   EXPECT_EQ(
       ParentCommit(

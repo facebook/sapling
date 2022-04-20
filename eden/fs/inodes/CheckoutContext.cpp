@@ -49,17 +49,18 @@ void CheckoutContext::start(
     std::optional<RootId> oldParent;
     if (parentLock) {
       XCHECK(parentLock->checkoutInProgress);
-      oldParent = parentLock->commitHash;
+      oldParent = parentLock->workingCopyParentRootId;
       // Update the in-memory snapshot ID
-      parentLock->commitHash = newSnapshot;
-      parentLock->rootTree = std::move(toTree);
+      parentLock->checkedOutRootId = newSnapshot;
+      parentLock->workingCopyParentRootId = newSnapshot;
+      parentLock->checkedOutRootTree = std::move(toTree);
     }
 
     auto config = mount_->getCheckoutConfig();
 
     // Save the new snapshot hash to the config
     if (!oldParent.has_value()) {
-      config->setParentCommit(std::move(newSnapshot));
+      config->setCheckedOutCommit(std::move(newSnapshot));
     } else {
       config->setCheckoutInProgress(oldParent.value(), newSnapshot);
     }
@@ -78,7 +79,7 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(RootId newSnapshot) {
         parentCommit.getLastCheckoutId(ParentCommit::RootIdPreference::To)
             .value(),
         newSnapshot);
-    config->setParentCommit(newSnapshot);
+    config->setCheckedOutCommit(newSnapshot);
   }
 
   // Release the rename lock.

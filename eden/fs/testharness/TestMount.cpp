@@ -408,7 +408,7 @@ void TestMount::resetCommit(
     rootTree->setReady();
   }
 
-  edenMount_->resetParent(commitHash, nullptr);
+  edenMount_->resetParent(commitHash);
 }
 
 bool TestMount::hasOverlayData(InodeNumber ino) const {
@@ -429,7 +429,7 @@ size_t TestMount::drainServerExecutor() {
 
 void TestMount::setInitialCommit(const RootId& commitHash) {
   // Write the commit hash to the snapshot file
-  config_->setParentCommit(commitHash);
+  config_->setCheckedOutCommit(commitHash);
 }
 
 void TestMount::setInitialCommit(
@@ -693,7 +693,7 @@ Future<Unit> TestMount::loadAllInodesFuture(const TreeInodePtr& treeInode) {
 }
 
 std::shared_ptr<const Tree> TestMount::getRootTree() const {
-  return edenMount_->getRootTree();
+  return edenMount_->getCheckedOutRootTree();
 }
 
 std::string TestMount::loadFileContentsFromPath(std::string path) {
