@@ -51,6 +51,7 @@ pub struct WalkerCommonArgs {
     pub limit_data_fetch: bool,
 
     /// Id of a storage group to operate over, e.g. manifold_xdb_multiplex
+    #[clap(long)]
     pub storage_id: Option<String>,
     /// If main blobstore in the storage config is a multiplexed one,
     /// use inner blobstore with this id.
