@@ -541,8 +541,8 @@ mod tests {
 
         #[test]
         fn test_normalize_path() {
-            assert_eq!(normalize(r"a/b\c\..\."), Path::new(r"a\b"));
-            assert_eq!(normalize("z:/a//b/./"), Path::new(r"z:\a\b"));
+            assert_eq!(normalize(r"a/b\c\..\.".as_ref()), Path::new(r"a\b"));
+            assert_eq!(normalize("z:/a//b/./".as_ref()), Path::new(r"z:\a\b"));
         }
     }
 
