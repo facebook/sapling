@@ -118,6 +118,11 @@ ImmediateFuture<T> ImmediateFuture<T>::ensure(Func&& func) && {
 }
 
 template <typename T>
+ImmediateFuture<folly::Unit> ImmediateFuture<T>::unit() && {
+  return std::move(*this).thenValue([](T&&) {});
+}
+
+template <typename T>
 bool ImmediateFuture<T>::isReady() const {
   switch (kind_) {
     case Kind::Immediate:

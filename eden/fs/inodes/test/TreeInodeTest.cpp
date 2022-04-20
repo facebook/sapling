@@ -463,3 +463,40 @@ TEST(TreeInode, removeRecursivelyConcurrentAddition) {
   // Since somedir/newfile.txt hasn't been removed, somedir should still exist.
   auto inode = mount.getTreeInode("somedir"_relpath);
 }
+
+#ifndef _WIN32
+
+TEST(TreeInode, setattr) {
+  FakeTreeBuilder builder;
+  builder.setFile("somedir/foo.txt", "test\n");
+  TestMount mount{builder};
+  auto somedir = mount.getTreeInode("somedir"_relpath);
+
+  EXPECT_FALSE(somedir->getContents().rlock()->isMaterialized());
+  DesiredMetadata emptyMetadata{};
+  somedir->setattr(emptyMetadata, ObjectFetchContext::getNullContext());
+  EXPECT_FALSE(somedir->getContents().rlock()->isMaterialized());
+
+  auto oldmetadata = somedir->getMetadata();
+  DesiredMetadata sameMetadata{
+      std::nullopt,
+      oldmetadata.mode,
+      oldmetadata.uid,
+      oldmetadata.gid,
+      oldmetadata.timestamps.atime.toTimespec(),
+      oldmetadata.timestamps.mtime.toTimespec()};
+  somedir->setattr(sameMetadata, ObjectFetchContext::getNullContext());
+  EXPECT_FALSE(somedir->getContents().rlock()->isMaterialized());
+
+  DesiredMetadata newMetadata{
+      std::nullopt,
+      oldmetadata.mode,
+      oldmetadata.uid + 1,
+      oldmetadata.gid + 1,
+      oldmetadata.timestamps.atime.toTimespec(),
+      oldmetadata.timestamps.mtime.toTimespec()};
+  somedir->setattr(newMetadata, ObjectFetchContext::getNullContext());
+  EXPECT_TRUE(somedir->getContents().rlock()->isMaterialized());
+}
+
+#endif

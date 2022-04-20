@@ -32,6 +32,33 @@ void InodeMetadata::updateFromDesired(
   timestamps.setattrTimes(clock, attr);
 }
 
+bool InodeMetadata::shouldShortCircuitMetadataUpdate(
+    const DesiredMetadata& desired) {
+  if (desired.size.has_value()) {
+    return false;
+  }
+  // Note we only update permission bits, so we only check the equivalence of
+  // those bits.
+  if (desired.mode.has_value() &&
+      (07777 & desired.mode.value()) != (07777 & mode)) {
+    return false;
+  }
+  if (desired.uid.has_value() && desired.uid != uid) {
+    return false;
+  }
+  if (desired.gid.has_value() && desired.gid != gid) {
+    return false;
+  }
+  if (desired.atime.has_value() && !(desired.atime == timestamps.atime)) {
+    return false;
+  }
+  if (desired.mtime.has_value() && !(desired.mtime == timestamps.mtime)) {
+    return false;
+  }
+
+  return true;
+}
+
 void InodeMetadata::applyToStat(struct stat& st) const {
   st.st_mode = mode;
   st.st_uid = uid;

@@ -2687,7 +2687,8 @@ void EdenServiceHandler::flushStatsNow() {
   server_->flushStatsNow();
 }
 
-Future<Unit> EdenServiceHandler::future_invalidateKernelInodeCache(
+folly::SemiFuture<Unit>
+EdenServiceHandler::semifuture_invalidateKernelInodeCache(
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> mountPoint,
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> path) {
 #ifndef _WIN32
@@ -2716,27 +2717,60 @@ Future<Unit> EdenServiceHandler::future_invalidateKernelInodeCache(
   }
 
   if (auto* nfsChannel = edenMount->getNfsdChannel()) {
-    auto canonicalMountPoint = canonicalPath(*mountPoint);
     inode->forceMetadataUpdate();
-    nfsChannel->invalidate(canonicalMountPoint + RelativePath{*path});
-    const auto treePtr = inode.asTreePtrOrNull();
-    // Invalidate all children as well. There isn't really a way to invalidate
-    // the entry cache for nfs so we settle for invalidating the children
-    // themselves.
-    if (treePtr != nullptr) {
-      const auto& dir = treePtr->getContents().rlock();
-      for (const auto& entry : dir->entries) {
-        auto childPath = RelativePath{*path} + entry.first;
-        auto childInode = inodeFromUserPath(
-            *edenMount,
-            childPath.stringPiece().str(),
-            helper->getFetchContext());
-        childInode->forceMetadataUpdate();
-        nfsChannel->invalidate(canonicalMountPoint + childPath);
-      }
-    }
-
-    return nfsChannel->flushInvalidations();
+    auto& fetchContext = helper->getFetchContext();
+    auto rawInodePtr = inode.get();
+    return wrapImmediateFuture(
+               std::move(helper),
+               rawInodePtr->stat(fetchContext)
+                   .thenValue(
+                       [nfsChannel,
+                        canonicalMountPoint = canonicalPath(*mountPoint),
+                        inode = std::move(inode),
+                        path = std::move(path),
+                        edenMount = std::move(edenMount),
+                        &fetchContext =
+                            fetchContext](struct stat&& stat) mutable
+                       -> ImmediateFuture<folly::Unit> {
+                         nfsChannel->invalidate(
+                             canonicalMountPoint + RelativePath{*path},
+                             stat.st_mode);
+                         const auto treePtr = inode.asTreePtrOrNull();
+                         // Invalidate all children as well. There isn't really
+                         // a way to invalidate the entry cache for nfs so we
+                         // settle for invalidating the children themselves.
+                         if (treePtr != nullptr) {
+                           const auto& dir = treePtr->getContents().rlock();
+                           std::vector<ImmediateFuture<folly::Unit>>
+                               childInvalidations{};
+                           for (const auto& entry : dir->entries) {
+                             auto childPath = RelativePath{*path} + entry.first;
+                             auto childInode = inodeFromUserPath(
+                                 *edenMount,
+                                 childPath.stringPiece().str(),
+                                 fetchContext);
+                             childInode->forceMetadataUpdate();
+                             childInvalidations.push_back(
+                                 childInode->stat(fetchContext)
+                                     .thenValue(
+                                         [nfsChannel,
+                                          canonicalMountPoint,
+                                          childPath](struct stat&& stat) {
+                                           nfsChannel->invalidate(
+                                               canonicalMountPoint + childPath,
+                                               stat.st_mode);
+                                           return folly::Unit();
+                                         }));
+                           }
+                           return collectAll(std::move(childInvalidations))
+                               .unit();
+                         }
+                         return folly::unit;
+                       })
+                   .ensure([nfsChannel]() {
+                     return nfsChannel->flushInvalidations();
+                   }))
+        .semi();
   }
 
   return EDEN_BUG_FUTURE(folly::Unit) << "Unsupported Channel type.";

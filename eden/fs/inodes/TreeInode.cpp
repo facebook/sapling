@@ -2641,6 +2641,8 @@ Future<Unit> TreeInode::checkout(
               // case we can't invalidate.
               {
                 auto contents = self->contents_.wlock();
+                self->updateMtimeAndCtimeLocked(
+                    contents->entries, self->getNow());
                 invalidation = self->invalidateChannelDirCache(*contents);
               }
               invalidation =
@@ -2654,9 +2656,6 @@ Future<Unit> TreeInode::checkout(
                               location.name,
                               success.exception());
                         }
-
-                        self->updateMtimeAndCtimeLocked(
-                            self->contents_.wlock()->entries, self->getNow());
                       });
             }
 
@@ -3127,7 +3126,14 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
       // below to force the old name to be removed and then re-added with its
       // new name.
     } else {
-      // TODO: Also apply permissions changes to the entry.
+      // TODO: SCM entries today have limited file modes. We have simplified
+      // checkout to only handle directory, symlink, file, executable file.
+      // If we were to support full file permissions being updated via
+      // checkout, we would need to do that in or after the checkout operation.
+      // NFS invalidation is a hack, and a hack that relies on directory
+      // permissions never being changed during the checkout operation. We
+      // would need to be more clever with our invalidation hack for NFS if we
+      // supported changing permissions on checkout.
       return treeInode->checkout(ctx, std::move(oldTree), std::move(newTree))
           .thenValue([](folly::Unit) { return InvalidationRequired::No; });
     }
@@ -3274,7 +3280,7 @@ folly::Try<folly::Unit> TreeInode::invalidateChannelEntryCache(
 }
 
 ImmediateFuture<folly::Unit> TreeInode::invalidateChannelDirCache(
-    TreeInodeState&) {
+    TreeInodeState& state) {
 #ifndef _WIN32
   if (auto* fuseChannel = getMount()->getFuseChannel()) {
     // FUSE_NOTIFY_INVAL_ENTRY is the appropriate invalidation function
@@ -3284,7 +3290,8 @@ ImmediateFuture<folly::Unit> TreeInode::invalidateChannelDirCache(
   } else if (auto* nfsdChannel = getMount()->getNfsdChannel()) {
     const auto path = getPath();
     if (path.has_value()) {
-      nfsdChannel->invalidate(getMount()->getPath() + *path);
+      auto mode = getMetadataLocked(state.entries).mode;
+      nfsdChannel->invalidate(getMount()->getPath() + *path, mode);
     }
   }
 #else
@@ -3760,16 +3767,35 @@ void TreeInode::prefetch(ObjectFetchContext& context) {
 folly::Future<struct stat> TreeInode::setattr(
     const DesiredMetadata& desired,
     ObjectFetchContext& /*fetchContext*/) {
-  materialize();
   struct stat result(getMount()->initStatData());
+  result.st_ino = getNodeId().get();
+
+  // ideally we would like to take the lock once for this function call,
+  // but we can not hold the lock while we materialize, so we have to take the
+  // lock two separate times.
+  {
+    auto contents = contents_.wlock();
+    auto existing = getMetadataLocked(contents->entries);
+
+    if (existing.shouldShortCircuitMetadataUpdate(desired)) {
+      // atime is fuzzy at best, but might as well update here, so that we
+      // remember that the kernel accessed the file here.
+      updateAtimeLocked(contents->entries);
+      existing.applyToStat(result);
+      XLOG(DBG7) << "Skipping materialization because setattr is a noop";
+      return result;
+    }
+  }
+  // The attributes actually changed we need to mark this directory as
+  // modified.
+  materialize();
 
   // We do not have size field for directories and currently TreeInode does
   // not have any field like FileInode::state_::mode to set the mode. May be
   // in the future if needed we can add a mode Field to TreeInode::contents_
   // but for now we are simply setting the mode to (S_IFDIR | 0755).
 
-  // Set InodeNumber, timeStamps, mode in the result.
-  result.st_ino = getNodeId().get();
+  // Set timeStamps, mode in the result.
   auto contents = contents_.wlock();
   auto metadata = getMount()->getInodeMetadataTable()->modifyOrThrow(
       getNodeId(),

@@ -59,6 +59,12 @@ struct InodeMetadata {
 
   void updateFromDesired(const Clock& clock, const DesiredMetadata& attr);
 
+  /**
+   * Checks if the desired metadata is the same as the current metadata,
+   * allowing us to skip updating the metadata.
+   */
+  bool shouldShortCircuitMetadataUpdate(const DesiredMetadata& desired);
+
   void applyToStat(struct stat& st) const;
 
   // Other potential things to include:

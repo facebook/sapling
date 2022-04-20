@@ -352,6 +352,7 @@ void InodeBase::updateAtime() {
 
 void InodeBase::updateMtimeAndCtime(FOLLY_MAYBE_UNUSED EdenTimestamp now) {
 #ifndef _WIN32
+  XLOG(DBG9) << "Updating timestamps for : " << ino_;
   getMount()->getInodeMetadataTable()->modifyOrThrow(
       getNodeId(), [&](auto& record) {
         record.timestamps.ctime = now;

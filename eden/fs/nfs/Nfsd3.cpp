@@ -1963,10 +1963,12 @@ void Nfsd3::initialize(folly::File&& connectedSocket) {
       RpcServer::InitialSocketType::CONNECTED_SOCKET);
 }
 
-void Nfsd3::invalidate(AbsolutePath path) {
-  invalidationExecutor_->add([path = std::move(path)]() {
+void Nfsd3::invalidate(AbsolutePath path, mode_t mode) {
+  invalidationExecutor_->add([path = std::move(path), mode]() {
     try {
-      folly::File(path.c_str());
+      XLOG(DBG9) << "Invalidating: " << path.c_str() << " mode: " << mode;
+      { chmod(path.c_str(), mode); }
+      XLOG(DBG9) << "Finished invalidating: " << path.c_str();
     } catch (const std::exception& ex) {
       if (const auto* system_error =
               dynamic_cast<const std::system_error*>(&ex)) {

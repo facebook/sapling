@@ -499,3 +499,38 @@ TEST(ImmediateFuture, collectAllSafeVectorValid) {
   EXPECT_EQ(res[0], 42);
   EXPECT_EQ(res[1], 43);
 }
+
+TEST(ImmediateFuture, unit_method) {
+  std::vector<ImmediateFuture<int>> vec;
+  vec.push_back(ImmediateFuture<int>{42});
+  vec.push_back(ImmediateFuture<int>{43});
+
+  auto future = collectAllSafe(std::move(vec)).unit();
+  EXPECT_TRUE(future.isReady());
+
+  auto res = std::move(future).get();
+  EXPECT_EQ(res, folly::unit);
+}
+
+TEST(ImmediateFuture, unit_method_error) {
+  auto [promise1, semiFut1] = folly::makePromiseContract<int>();
+  auto [promise2, semiFut2] = folly::makePromiseContract<int>();
+
+  auto f1 = ImmediateFuture{std::move(semiFut1)};
+  auto f2 = ImmediateFuture{std::move(semiFut2)};
+
+  auto future = collectAllSafe(std::move(f1), std::move(f2))
+                    .semi()
+                    .via(&folly::QueuedImmediateExecutor::instance())
+                    .unit();
+  EXPECT_FALSE(future.isReady());
+
+  promise1.setException(std::logic_error("Test"));
+  EXPECT_FALSE(future.isReady());
+
+  promise2.setValue(42);
+  EXPECT_TRUE(future.isReady());
+
+  auto res = std::move(future).getTry();
+  EXPECT_THROW_RE(res.value(), std::logic_error, "Test");
+}

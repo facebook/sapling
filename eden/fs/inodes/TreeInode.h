@@ -716,6 +716,10 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * A TreeInodeState is required as a way to ensure that contents_ lock is
    * being held to avoid races between invalidation during checkout and use
    * lookups.
+   *
+   * On NFS, we use the mode bits as part of invalidation. If this inode's
+   * permission bits are updated, invalidateChannelDirCache must be called on
+   * the parent inode afterwards.
    */
   FOLLY_NODISCARD ImmediateFuture<folly::Unit> invalidateChannelDirCache(
       TreeInodeState&);

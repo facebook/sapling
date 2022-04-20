@@ -138,6 +138,13 @@ class ImmediateFuture {
   ImmediateFuture<T> ensure(Func&& func) &&;
 
   /**
+   * Convenience method for ignoring the value and creating an
+   * ImmediateFuture<Unit>.
+   * Exceptions still propagate.
+   */
+  ImmediateFuture<folly::Unit> unit() &&;
+
+  /**
    * Returns true if a value is immediately available.
    *
    * That is, if isReady() returns true, calling `thenValue` or `thenTry` is

@@ -154,16 +154,35 @@ class Nfsd3 {
    * To avoid a very large amount of traffic between an NFS client and the
    * server, the client will cache attributes that the server previously
    * returned for a file. This allows stat(2) calls to be fully resolved on the
-   * client. However, clients do respect a close-to-open consistency (CTO)
-   * whereas opening a file will refresh the client attributes. This invalidate
-   * method simply tries to open the given file in a background thread.
+   * client.
    *
-   * Note that the open(2) call runs asynchronously in a background thread as
+   * NFS v3 does not support explicit invalidation. We are hacking this in.
+   *
+   * This invalidate method simply tries to chmod the given path in a
+   * background thread.
+   *
+   * We rely on 2 things here:
+   *   1. chmod goes all the way through the kernel to EdenFS. All "writes"
+   *   seem to function this way.
+   *   2. When the kernel sees the mtime in the post op attr in the response
+   *   from EdenFS has updated in the response to chmod, it will drop it's
+   *   caches for the children of the directory.
+   *
+   * 1. is implied by the NFS mode 2. isn't really guaranteed anywhere, but
+   * this works well enough on Linux and macOS and we don't have many other
+   * options.
+   *
+   * We use to just do an open call here. This was insufficient because the
+   * open and subsequent reads can be served purely from cache on macOS.
+   * This was sufficient on Linux as all open calls go to EdenFS and CTO
+   * (close-to-open) guarantees from NFS guarantees the caches must be flushed.
+   *
+   * Note that the chmod(2) call runs asynchronously in a background thread as
    * both the kernel and EdenFS are holding locks that would otherwise cause
    * EdenFS to deadlock. The flushInvalidations method below should be called
    * with all the locks released to wait for all the invalidation to complete.
    */
-  void invalidate(AbsolutePath path);
+  void invalidate(AbsolutePath path, mode_t mode);
 
   void takeoverStop();
 
@@ -229,6 +248,9 @@ class Nfsd3 {
   folly::Promise<StopData> stopPromise_;
   std::shared_ptr<RpcServer> server_;
   ProcessAccessLog processAccessLog_;
+  // It is critical that this is a SerialExecutor. invalidation for parent
+  // directories should happen after children, and we flush invalidations by
+  // adding one work item to the queue.
   folly::Executor::KeepAlive<folly::Executor> invalidationExecutor_;
   std::atomic<size_t> traceDetailedArguments_;
   // The TraceBus must be the last member because its subscribed functions may
