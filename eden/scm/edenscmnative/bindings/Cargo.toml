@@ -19,6 +19,7 @@ lto = false
 [dependencies]
 cpython_ext = { path = "../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.7", default-features = false }
+paste = "1.0"
 pyauth = { path = "modules/pyauth" }
 pycats = { path = "modules/pycats" }
 pyblackbox = { path = "modules/pyblackbox" }
