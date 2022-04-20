@@ -78,11 +78,6 @@ class DiffContext {
    */
   bool const listIgnored;
 
-  /**
-   * Controls the case sensitivity of the diff operation.
-   */
-  CaseSensitivity const caseSensitive;
-
   const GitIgnoreStack* getToplevelIgnore() const;
   bool isCancelled() const;
   LoadFileFunction getLoadFileContentsFromPath() const;
@@ -100,6 +95,9 @@ class DiffContext {
   const LoadFileFunction loadFileContentsFromPath_;
   apache::thrift::ResponseChannelRequest* const FOLLY_NULLABLE request_;
   StatsFetchContext fetchContext_;
+  /**
+   * Controls the case sensitivity of the diff operation.
+   */
   CaseSensitivity caseSensitive_;
 };
 

@@ -146,7 +146,7 @@ FOLLY_NODISCARD Future<Unit> computeTreeDiff(
       auto compare = comparePathComponent(
           scmEntries[scmIdx].getName(),
           wdEntries[wdIdx].getName(),
-          context->caseSensitive);
+          context->getCaseSensitive());
       if (compare == CompareResult::BEFORE) {
         processRemovedSide(
             context, childFutures, currentPath, scmEntries[scmIdx]);

@@ -2515,7 +2515,7 @@ Future<Unit> TreeInode::computeDiff(
         auto compare = comparePathComponent(
             scEntries[scIdx].getName(),
             inodeIter->first,
-            context->caseSensitive);
+            context->getCaseSensitive());
 
         if (compare == CompareResult::BEFORE) {
           processRemoved(scEntries[scIdx]);
