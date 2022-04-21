@@ -1315,7 +1315,8 @@ NfsArgsDetails formatSattr3(const sattr3& attr) {
   auto formatOpt = [](auto&& val, const char* fmtString = "{}") {
     using T = std::decay_t<decltype(val)>;
     if (val.tag) {
-      return fmt::format(fmtString, std::get<typename T::TrueVariant>(val.v));
+      return fmt::format(
+          fmt::runtime(fmtString), std::get<typename T::TrueVariant>(val.v));
     }
     return std::string();
   };
