@@ -24,6 +24,11 @@ Dump current entries
   $ quiet mononoke_newadmin dump-public-changesets -R repo --out-filename "$TESTTMP/init-dump"
   $ stat -c '%s %N' "$TESTTMP/init-dump"
   200 '$TESTTMP/init-dump'
+  $ quiet mononoke_newadmin dump-public-changesets -R repo --out-filename "$TESTTMP/init-dump.txt" --output-format plaintext
+  $ cat "$TESTTMP/init-dump.txt"
+  9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec
+  459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66
+  c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd (no-eol)
 
 Add a new commit
   $ hg up -q "min(all())"

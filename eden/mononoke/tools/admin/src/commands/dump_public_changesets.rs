@@ -17,6 +17,7 @@ use changesets::{
 };
 use clap::{ArgEnum, Parser};
 use futures::{future, stream, StreamExt, TryStreamExt};
+use itertools::Itertools;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
@@ -28,7 +29,10 @@ use crate::commit_id::parse_commit_id;
 
 #[derive(Debug, Clone, Copy, ArgEnum)]
 enum Format {
+    /// Thrift serialized ChangesetEntry, with info about repo, parents and generation number.
     Thrift,
+    /// One plaintext bonsai id per line, without any repo information
+    Plaintext,
 }
 
 /// Dump all public changeset entries to a file.
@@ -86,6 +90,7 @@ impl Format {
     fn serialize(self, entries: Vec<ChangesetEntry>) -> Bytes {
         match self {
             Self::Thrift => serialize_cs_entries(entries),
+            Self::Plaintext => Bytes::from(entries.into_iter().map(|e| e.cs_id).join("\n")),
         }
     }
 }

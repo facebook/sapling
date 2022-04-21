@@ -37,6 +37,7 @@ filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
+itertools = "0.10.3"
 manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_bundle_replay_data = { version = "0.1.0", path = "../../mercurial/bundle_replay_data" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
