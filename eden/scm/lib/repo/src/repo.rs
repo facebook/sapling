@@ -6,6 +6,7 @@
  */
 
 use std::fs;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -270,6 +271,24 @@ impl Repo {
 
     pub fn invalidate_dag_commits(&mut self) {
         self.dag_commits = None;
+    }
+
+    pub fn add_requirement(&self, requirement: &str) -> Result<()> {
+        fs::OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(self.shared_dot_hg_path().join("requires"))?
+            .write_all(requirement.as_bytes())?;
+        Ok(())
+    }
+
+    pub fn add_store_requirement(&self, requirement: &str) -> Result<()> {
+        fs::OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(self.store_path().join("requires"))?
+            .write_all(requirement.as_bytes())?;
+        Ok(())
     }
 }
 
