@@ -191,7 +191,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
     }
 
     /// Given a key, what's the value for that key, if any?
-    // See the detailed description of the logic in https://fburl.com/tlda3tzk
+    // See the detailed description of the logic in docs/sharded_map.md
     #[async_recursion]
     pub async fn lookup(
         &self,
@@ -286,7 +286,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
     /// Create a new map from this map with given replacements. It is a generalization of
     /// adding and removing, and should be faster than doing all operations separately.
     /// It does not rely on the added keys not existing or the removed keys existing.
-    // See the detailed description of the logic in https://fburl.com/lnusbzgl
+    // See the detailed description of the logic in docs/sharded_map.md
     #[async_recursion]
     pub async fn update(
         self,
@@ -479,7 +479,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
 
     /// Iterates through all values in the map, asynchronously and only loading
     /// blobs as needed.
-    // See the detailed description of the logic in https://fburl.com/53iumd6p
+    // See the detailed description of the logic in docs/sharded_map.md
     pub fn into_entries<'a>(
         self,
         ctx: &'a CoreContext,
