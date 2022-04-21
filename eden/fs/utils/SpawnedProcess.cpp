@@ -16,15 +16,18 @@
 #include <folly/logging/xlog.h>
 #include <folly/system/Shell.h>
 #include <signal.h>
-#ifndef _WIN32
-#include <sys/poll.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#endif
 #include <chrono>
 #include <memory>
 #include <system_error>
 #include <thread>
+
+#ifndef _WIN32
+#include <sys/poll.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#else
+#include "eden/common/utils/StringConv.h"
+#endif
 
 using folly::checkPosixError;
 using namespace std::chrono_literals;
@@ -360,29 +363,30 @@ void SpawnedProcess::Options::nullStdin() {
 }
 
 #ifdef _WIN32
-static std::string build_command_line(const std::vector<std::string>& args) {
+static std::wstring build_command_line(const std::vector<std::string>& args) {
   // Here be dragons.  More gory details in http://stackoverflow.com/q/4094699
   // Surely not complete here by any means
-  std::string result;
+  std::wstring result;
 
   for (auto& arg : args) {
     // Space separated
     if (!result.empty()) {
-      result.push_back(' ');
+      result.push_back(L' ');
     }
 
-    result.push_back('"');
-    // FIXME: multibyte?
-    for (auto& c : arg) {
+    result.push_back(L'"');
+
+    auto warg = multibyteToWideString(arg);
+    for (auto& c : warg) {
       switch (c) {
-        case '"':
-          result.append("\"\"\"");
+        case L'"':
+          result.append(L"\"\"\"");
           break;
         default:
           result.push_back(c);
       }
     }
-    result.push_back('"');
+    result.push_back(L'"');
   }
   return result;
 }
@@ -541,8 +545,8 @@ SpawnedProcess::SpawnedProcess(
   // Only handles listed in this vector will be inherited
   std::vector<HANDLE> handles;
 
-  STARTUPINFOEXA startupInfo{};
-  startupInfo.StartupInfo.cb = sizeof(STARTUPINFOEXA);
+  STARTUPINFOEXW startupInfo{};
+  startupInfo.StartupInfo.cb = sizeof(STARTUPINFOEXW);
   startupInfo.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
 
   for (auto& d : options.descriptors_) {
@@ -620,27 +624,39 @@ SpawnedProcess::SpawnedProcess(
   }
 
   auto cmdLine = build_command_line(args);
-  XLOG(DBG6) << "Creating the process: " << cmdLine;
+  XLOGF(
+      DBG6,
+      "Creating the process: {}",
+      wideToMultibyteString<std::string>(cmdLine));
   auto env = options.environment().asWin32EnvBlock();
 
+  std::wstring execPath, cwd;
+  if (options.execPath_) {
+    execPath = multibyteToWideString(options.execPath_->stringPiece());
+  }
+  if (options.cwd_) {
+    cwd = multibyteToWideString(options.cwd_->stringPiece());
+  }
   PROCESS_INFORMATION procInfo{};
-  auto status = CreateProcessA(
-      options.execPath_.has_value() ? options.execPath_->c_str() : NULL,
+  auto status = CreateProcessW(
+      options.execPath_.has_value() ? execPath.data() : NULL,
       cmdLine.data(),
       nullptr, // lpProcessAttributes
       nullptr, // lpThreadAttributes
       TRUE, // inherit the handles
       EXTENDED_STARTUPINFO_PRESENT,
       env.data(),
-      options.cwd_.has_value() ? options.cwd_->c_str() : NULL,
-      &startupInfo.StartupInfo,
+      options.cwd_.has_value() ? cwd.data() : NULL,
+      reinterpret_cast<LPSTARTUPINFOW>(&startupInfo),
       &procInfo);
 
   if (!status) {
     auto errorCode = GetLastError();
     auto err = makeWin32ErrorExplicit(
         errorCode,
-        folly::to<std::string>("CreateProcess(", cmdLine, ") failed"));
+        fmt::format(
+            "CreateProcess({}) failed",
+            wideToMultibyteString<std::string>(cmdLine)));
     XLOG(ERR) << folly::exceptionStr(err);
     throw err;
   }
