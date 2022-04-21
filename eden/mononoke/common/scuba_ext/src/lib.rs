@@ -131,6 +131,10 @@ impl MononokeScubaSampleBuilder {
             .add_opt("sandcastle_nonce", metadata.sandcastle_nonce());
         self.inner
             .add_opt("clientinfo_tag", metadata.clientinfo_u64tag());
+        self.inner
+            .add_opt("client_tw_job", metadata.clientinfo_tw_job());
+        self.inner
+            .add_opt("client_tw_task", metadata.clientinfo_tw_task());
 
         self
     }

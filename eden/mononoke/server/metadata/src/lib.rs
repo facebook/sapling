@@ -170,4 +170,12 @@ impl Metadata {
             .as_ref()
             .and_then(|ci| ci.fb.sandcastle_nonce())
     }
+
+    pub fn clientinfo_tw_job(&self) -> Option<&str> {
+        self.client_info.as_ref().and_then(|ci| ci.fb.tw_job())
+    }
+
+    pub fn clientinfo_tw_task(&self) -> Option<&str> {
+        self.client_info.as_ref().and_then(|ci| ci.fb.tw_task())
+    }
 }
