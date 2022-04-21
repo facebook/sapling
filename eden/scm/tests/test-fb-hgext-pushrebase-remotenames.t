@@ -251,6 +251,8 @@ Test that we still don't allow non-ff bm changes
   remote: pushing 1 changeset:
   remote:     2f9755549086  dd
   remote: 1 new changeset from the server will be downloaded
+  remote: transaction abort! (?)
+  remote: rollback completed (?)
   abort: updating bookmark bm failed!
   [255]
 
