@@ -16,6 +16,10 @@ impl FbClientInfo {
         None
     }
 
+    pub fn tw_task(&self) -> Option<&str> {
+        None
+    }
+
     pub fn sandcastle_nonce(&self) -> Option<&str> {
         None
     }
