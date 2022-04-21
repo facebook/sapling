@@ -5,10 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::env;
+use std::path::PathBuf;
+
 use async_runtime::block_unless_interrupted as block_on;
 use clidispatch::errors;
 use cliparser::define_flags;
 use edenapi::Builder;
+use repo::repo::Repo;
 
 use super::ConfigSet;
 use super::Result;
@@ -51,6 +55,12 @@ define_flags! {
         /// files to exclude in a sparse profile
         exclude: String,
 
+        /// config file
+        configfile: Vec<String>,
+
+        /// configs
+        config: Vec<String>,
+
         #[arg]
         source: String,
 
@@ -91,13 +101,47 @@ pub fn run(opts: CloneOpts, _io: &IO, mut config: ConfigSet) -> Result<u8> {
     {
         return Err(errors::FallbackToPython.into());
     }
-
     clone(opts, config)?;
     Ok(0)
 }
 
-fn clone(mut _opts: CloneOpts, mut _config: ConfigSet) -> Result<u8> {
-    Err(errors::FallbackToPython.into())
+fn clone(mut opts: CloneOpts, mut config: ConfigSet) -> Result<u8> {
+    tracing::trace!("performing rust clone");
+
+    let source = opts.source;
+    // This gets the reponame from the --configfile config.
+    // TODO: Parse the reponame from the source so the configfile isn't needed
+    let reponame = match config.get_opt::<String>("remotefilelog", "reponame")? {
+        Some(c) => c,
+        None => {
+            return Err(errors::Abort("remotefilelog.reponame config is not set".into()).into());
+        }
+    };
+
+    let destination = match opts.args.pop() {
+        Some(dest) => PathBuf::from(dest),
+        None => env::current_dir()?.join(reponame),
+    };
+
+    let mut hgrc_content = opts
+        .configfile
+        .into_iter()
+        .map(|file| format!("%include {}\n", file))
+        .collect::<String>();
+    hgrc_content.push_str(format!("\n[paths]\ndefault = {}\n", source).as_str());
+
+    let mut repo = Repo::init(&destination, &mut config, Some(hgrc_content))?;
+    repo.add_store_requirement("lazychangelog")?;
+    repo.add_requirement("remotefilelog")?;
+
+    let edenapi = repo.eden_api()?;
+    let metalog = repo.metalog()?;
+    let commits = repo.dag_commits()?;
+    let config = repo.config();
+
+    tracing::trace!("fetching lazy commit data and bookmarks");
+    exchange::clone(config, edenapi, &mut metalog.write(), &mut commits.write())?;
+    Ok(0)
 }
 
 pub fn name() -> &'static str {

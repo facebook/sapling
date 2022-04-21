@@ -47,7 +47,7 @@ newclientrepo() {
   if [ -z "$server" ]; then
       server="test:${reponame}_server"
   fi
-  hg clone --config "init.use-rust=True" --shallow -q "$server" "$TESTTMP/$reponame"
+  hg clone --config "init.use-rust=True" --config "clone.use-rust=True" --shallow -q "$server" "$TESTTMP/$reponame"
 
   cd "$TESTTMP/$reponame"
   for book in $bookmarks ; do
