@@ -1257,14 +1257,16 @@ impl LfsRemoteInner {
                 };
 
                 if let Some(backoff_time) = backoff_time {
-                    let sleep_time =
-                        Duration::from_secs_f32(thread_rng().gen_range(0.0..backoff_time));
-                    tracing::debug!(
-                        sleep_time = ?sleep_time,
-                        retry_strategy = ?retry_strategy,
-                        "retry",
-                    );
-                    sleep(sleep_time).await;
+                    if backoff_time > 0.0 {
+                        let sleep_time =
+                            Duration::from_secs_f32(thread_rng().gen_range(0.0..backoff_time));
+                        tracing::debug!(
+                            sleep_time = ?sleep_time,
+                            retry_strategy = ?retry_strategy,
+                            "retry",
+                        );
+                        sleep(sleep_time).await;
+                    }
                     continue;
                 }
 
@@ -3332,5 +3334,52 @@ mod tests {
             RetryStrategy::from_http_status(StatusCode::TOO_MANY_REQUESTS),
             RetryStrategy::RetryThrottled
         );
+    }
+
+    #[test]
+    fn test_lfs_zero_or_empty_backoff() -> Result<()> {
+        let test_with_config = |backoff_config: &'static str| -> Result<()> {
+            let blob1 = example_blob();
+            let blobs = vec![&blob1];
+            let req_count = backoff_config.split(',').count() + 1;
+
+            let m1 = get_lfs_batch_mock(200, &blobs).expect_at_least(1);
+            let m2 = get_lfs_download_mock(500, &blob1)
+                .pop()
+                .unwrap()
+                .expect_at_least(req_count);
+            let cachedir = TempDir::new()?;
+            let mut config = make_lfs_config(&cachedir, "test_download");
+
+            config.set(
+                "lfs",
+                "backofftimes",
+                Some(backoff_config),
+                &Default::default(),
+            );
+
+            let lfsdir = TempDir::new()?;
+            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let remote = LfsRemote::new(lfs, None, &config, None)?;
+            let objs = [(blobs[0].sha, blobs[0].size)]
+                .iter()
+                .cloned()
+                .collect::<HashSet<_>>();
+
+            // Make sure we get an error (but don't panic).
+            assert!(remote.batch_fetch(&objs, |_, _| Ok(()), |_, _| {}).is_err());
+
+            // Check request count.
+            m1.assert();
+            m2.assert();
+
+            Ok(())
+        };
+
+        test_with_config("")?;
+        test_with_config("0")?;
+        test_with_config("0,0,0")?;
+
+        Ok(())
     }
 }
