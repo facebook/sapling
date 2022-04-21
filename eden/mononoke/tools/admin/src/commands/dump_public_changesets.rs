@@ -15,7 +15,7 @@ use bytes::Bytes;
 use changesets::{
     deserialize_cs_entries, serialize_cs_entries, ChangesetEntry, Changesets, ChangesetsArc,
 };
-use clap::Parser;
+use clap::{ArgEnum, Parser};
 use futures::{future, stream, StreamExt, TryStreamExt};
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
@@ -25,6 +25,11 @@ use std::num::NonZeroU64;
 use std::path::Path;
 
 use crate::commit_id::parse_commit_id;
+
+#[derive(Debug, Clone, Copy, ArgEnum)]
+enum Format {
+    Thrift,
+}
 
 /// Dump all public changeset entries to a file.
 #[derive(Parser)]
@@ -51,6 +56,9 @@ pub struct CommandArgs {
     /// incrementally.
     #[clap(long)]
     limit: Option<NonZeroU64>,
+    /// What format to write to the file.
+    #[clap(long, arg_enum, default_value_t=Format::Thrift)]
+    output_format: Format,
 }
 
 #[facet::container]
@@ -72,6 +80,14 @@ pub struct Repo {
 
     #[facet]
     phases: dyn Phases,
+}
+
+impl Format {
+    fn serialize(self, entries: Vec<ChangesetEntry>) -> Bytes {
+        match self {
+            Self::Thrift => serialize_cs_entries(entries),
+        }
+    }
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -117,7 +133,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         file_css
     };
 
-    let serialized = serialize_cs_entries(css);
+    let serialized = args.output_format.serialize(css);
     tokio::fs::write(args.out_filename, serialized).await?;
 
     Ok(())
