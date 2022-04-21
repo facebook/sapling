@@ -5,12 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use async_runtime::block_unless_interrupted as block_on;
 use clidispatch::errors;
 use cliparser::define_flags;
+use edenapi::Builder;
 
 use super::ConfigSet;
 use super::Result;
 use super::IO;
+
+static SEGMENTED_CHANGELOG_CAPABILITY: &str = "segmented-changelog";
 
 define_flags! {
     pub struct CloneOpts {
@@ -47,12 +51,52 @@ define_flags! {
         /// files to exclude in a sparse profile
         exclude: String,
 
+        #[arg]
+        source: String,
+
         #[args]
         args: Vec<String>,
     }
 }
 
-pub fn run(_opts: CloneOpts, _io: &IO, _config: ConfigSet) -> Result<u8> {
+pub fn run(opts: CloneOpts, _io: &IO, mut config: ConfigSet) -> Result<u8> {
+    if !config.get_or_default::<bool>("clone", "use-rust")? {
+        return Err(errors::FallbackToPython.into());
+    }
+
+    if !opts.noupdate
+        || !opts.updaterev.is_empty()
+        || !opts.rev.is_empty()
+        || opts.pull
+        || opts.stream
+        || !opts.shallow
+        || opts.git
+        || !opts.enable_profile.is_empty()
+        || !opts.include.is_empty()
+        || !opts.exclude.is_empty()
+    {
+        return Err(errors::FallbackToPython.into());
+    }
+
+    // Rust clone only supports segmented changelog clone
+    // TODO: add binding for python streaming revlog download
+    config.set("paths", "default", Some(opts.source.clone()), &"arg".into());
+    let edenapi = Builder::from_config(&config)?
+        .correlator(Some(edenapi::DEFAULT_CORRELATOR.as_str()))
+        .build()?;
+    let capabilities: Vec<String> = block_on(edenapi.capabilities())??;
+    if !capabilities
+        .iter()
+        .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY)
+    {
+        return Err(errors::FallbackToPython.into());
+    }
+
+    clone(opts, config)?;
+    Ok(0)
+}
+
+fn clone(mut _opts: CloneOpts, mut _config: ConfigSet) -> Result<u8> {
     Err(errors::FallbackToPython.into())
 }
 
