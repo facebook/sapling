@@ -18,7 +18,11 @@ use configparser::hg::ConfigSetHgExt;
 use crate::constants::*;
 use crate::errors::InitError;
 
-pub fn init_hg_repo(root_path: &Path, config: &mut ConfigSet) -> Result<(), InitError> {
+pub fn init_hg_repo(
+    root_path: &Path,
+    config: &mut ConfigSet,
+    hgrc_contents: Option<String>,
+) -> Result<(), InitError> {
     if !root_path.exists() {
         create_dir(root_path)?;
     }
@@ -32,7 +36,7 @@ pub fn init_hg_repo(root_path: &Path, config: &mut ConfigSet) -> Result<(), Init
     write_reponame(hg_path, config)?;
     write_changelog(hg_path)?;
     #[cfg(feature = "fb")]
-    write_configs(hg_path, config)?;
+    write_configs(hg_path, config, hgrc_contents)?;
     write_requirements(hg_path)?;
     write_store_requirements(hg_path, config)?;
     // TODO(sggutier): Add cleanup for the .hg directory in the event of an error
@@ -86,7 +90,20 @@ fn write_changelog(path: &Path) -> Result<(), InitError> {
     )
 }
 
-fn write_configs(path: &Path, config: &mut ConfigSet) -> Result<(), InitError> {
+fn write_hgrc(path: &Path, hgrc_contents: Option<String>) -> Result<(), InitError> {
+    if let Some(hgrc_contents) = hgrc_contents {
+        let hgrc_path = path.join(HGRC_FILE);
+        create_file(hgrc_path.as_path(), hgrc_contents.as_bytes())?;
+    };
+    Ok(())
+}
+
+fn write_configs(
+    path: &Path,
+    config: &mut ConfigSet,
+    hgrc_contents: Option<String>,
+) -> Result<(), InitError> {
+    write_hgrc(path, hgrc_contents)?;
     match config.load::<String, String>(Some(path), None) {
         Ok(_) => Ok(()),
         Err(err) => Err(InitError::ConfigLoadingError(err)),
@@ -229,10 +246,14 @@ treestate
         let mut config = ConfigSet::new();
         let dynamic_path = tmp.path().join("hgrc.dynamic");
         let cache_path = tmp.path().join("hgrc.remote_cache");
-
-        write_configs(tmp.path(), &mut config).unwrap();
+        let hgrc = String::from("[paths]\ndefault=testpath");
+        write_configs(tmp.path(), &mut config, Some(hgrc)).unwrap();
         assert!(dynamic_path.exists());
         assert!(cache_path.exists());
+        let path = config
+            .get_or_default::<String>("paths", "default")
+            .unwrap_or_default();
+        assert_eq!(path, "testpath");
     }
 
     #[test]
@@ -241,7 +262,7 @@ treestate
         let repo_path = tmp.path().join("somerepo");
         let hg_path = repo_path.join(".hg");
 
-        init_hg_repo(repo_path.as_path(), &mut ConfigSet::new()).unwrap();
+        init_hg_repo(repo_path.as_path(), &mut ConfigSet::new(), None).unwrap();
         assert!(repo_path.exists());
         assert!(hg_path.exists());
         assert!(hg_path.join(CHANGELOG_FILE).exists());
@@ -256,7 +277,7 @@ treestate
 
         fs::remove_dir_all(repo_path.as_path()).unwrap();
         create_dir(repo_path.as_path()).unwrap();
-        init_hg_repo(repo_path.as_path(), &mut ConfigSet::new()).unwrap();
+        init_hg_repo(repo_path.as_path(), &mut ConfigSet::new(), None).unwrap();
 
         fs::remove_dir_all(repo_path.as_path()).unwrap();
         create_dir(repo_path.as_path()).unwrap();
@@ -265,7 +286,7 @@ treestate
             "repository `{}` already exists",
             repo_path.to_str().unwrap()
         );
-        let err = init_hg_repo(repo_path.as_path(), &mut ConfigSet::new())
+        let err = init_hg_repo(repo_path.as_path(), &mut ConfigSet::new(), None)
             .err()
             .unwrap();
         assert!(matches!(err, InitError::ExistingRepoError(_)));
@@ -279,12 +300,12 @@ treestate
         // Test recursive directory creation
         let new_dir_path = tmpdir.path().join("some").join("nested").join("directory");
         create_dir(new_dir_path.as_path()).unwrap();
-        init_hg_repo(new_dir_path.as_path(), &mut ConfigSet::new()).unwrap();
+        init_hg_repo(new_dir_path.as_path(), &mut ConfigSet::new(), None).unwrap();
 
         // Test getting an error when unable to create directory
         let new_dir_path = tmpdir.path().join("foo");
         File::create(new_dir_path.as_path()).unwrap();
-        let err = init_hg_repo(new_dir_path.as_path(), &mut ConfigSet::new())
+        let err = init_hg_repo(new_dir_path.as_path(), &mut ConfigSet::new(), None)
             .err()
             .unwrap();
         let partial_error_str =

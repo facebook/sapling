@@ -121,9 +121,13 @@ impl OptionalRepo {
 }
 
 impl Repo {
-    pub fn init(root_path: &Path, config: &mut ConfigSet) -> Result<Repo> {
+    pub fn init(
+        root_path: &Path,
+        config: &mut ConfigSet,
+        hgrc_contents: Option<String>,
+    ) -> Result<Repo> {
         let root_path = absolute(root_path)?;
-        init::init_hg_repo(&root_path, config)?;
+        init::init_hg_repo(&root_path, config, hgrc_contents)?;
         let mut repo = Self::load_with_config(&root_path, config.clone())?;
         repo.metalog()?.write().init_tracked()?;
         Ok(repo)
