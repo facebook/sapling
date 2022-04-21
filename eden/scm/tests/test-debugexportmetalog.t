@@ -15,15 +15,15 @@
 #if git
   $ cd exported
   $ git log -p -- visibleheads
-  commit 509a11fc8f9a1de6296585c539c3bf712a1c2caf
+  commit ca606bce3d0b617f7faeaefddc49cb515563099c
   Author: metalog <metalog@example.com>
   Date:   Thu Jan 1 00:00:00 1970 +0000
   
       commit -m A --config 'ui.allowemptycommit=1'
-      Parent: 433fb6a14b4e7044062a8886ddcb13ffa34a78c1
+      Parent: 22f7ca48c27ae55149b47e140c3f5b9a2bac9e95
       Transaction: commit
       
-      RootId: 31eb05f201b026715d65ecc01175269d9aa69c3e
+      RootId: 6ac66be1ccc652ab9dc0ca587305b2cc19fc5d54
   
   diff --git a/visibleheads b/visibleheads
   index e69de29..2b0abff 100644
@@ -33,13 +33,13 @@
   +v1
   +7b3f3d5e5faf6c5e4a16fa012fa57ee93d4a6fa1
   
-  commit f3993efaf8461778d22d2016019c65383a663e37
+  commit 09c4e1b6e0621e447ca8399f684aa1f89e1d199d
   Author: metalog <metalog@example.com>
   Date:   Thu Jan 1 00:00:00 1970 +0000
   
-      migrate from vfs
+      init tracked
       
-      RootId: 433fb6a14b4e7044062a8886ddcb13ffa34a78c1
+      RootId: 22f7ca48c27ae55149b47e140c3f5b9a2bac9e95
   
   diff --git a/visibleheads b/visibleheads
   new file mode 100644

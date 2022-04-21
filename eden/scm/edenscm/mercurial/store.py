@@ -18,6 +18,7 @@ import os
 import stat
 from typing import Optional
 
+import bindings
 from edenscmnative import parsers
 
 from . import encoding, error, hintutil, pycompat, util, vfs as vfsmod
@@ -764,11 +765,5 @@ def store(requirements, path, vfstype, uiconfig=None):
     store = fncachestore(path, vfstype, "dotencode" in requirements)
     # Change remotenames and visibleheads to be backed by metalog,
     # so they can be atomically read or written.
-    store.vfs.metapaths = {
-        "remotenames",
-        "visibleheads",
-        "bookmarks",
-        "config",
-        "tip",
-    }
+    store.vfs.metapaths = set(bindings.metalog.tracked())
     return store

@@ -9,6 +9,7 @@
 //!
 //! See [`MetaLog`] for the main structure.
 
+pub mod constants;
 mod errors;
 mod export;
 mod metalog;

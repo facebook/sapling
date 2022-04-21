@@ -11,6 +11,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::SystemTime;
 
+use ::metalog::constants::*;
 use ::metalog::CommitOptions;
 use ::metalog::Id20;
 use ::metalog::MetaLog;
@@ -28,6 +29,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "metalog"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<metalog>(py)?;
+    m.add(py, "tracked", py_fn!(py, tracked()))?;
     Ok(m)
 }
 
@@ -176,4 +178,11 @@ impl self::metalog {
     pub fn metalog_rwlock(&self, py: Python) -> Arc<RwLock<MetaLog>> {
         self.log(py).clone()
     }
+}
+
+fn tracked(_py: Python) -> PyResult<Vec<String>> {
+    Ok(METALOG_TRACKED
+        .into_iter()
+        .map(|key| key.to_string())
+        .collect())
 }

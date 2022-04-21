@@ -123,7 +123,9 @@ impl Repo {
     pub fn init(root_path: &Path, config: &mut ConfigSet) -> Result<Repo> {
         let root_path = absolute(root_path)?;
         init::init_hg_repo(&root_path, config)?;
-        Self::load_with_config(&root_path, config.clone())
+        let mut repo = Self::load_with_config(&root_path, config.clone())?;
+        repo.metalog()?.write().init_tracked()?;
+        Ok(repo)
     }
 
     /// Load the repo from explicit path.
