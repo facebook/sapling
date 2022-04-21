@@ -18,6 +18,7 @@ use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
+use deleted_files_manifest::DeletedManifestOps;
 use derived_data::BonsaiDerived;
 use fastlog::{
     list_file_history, CsAndPath, FastlogError, FollowMutableFileHistory, HistoryAcrossDeletions,
@@ -356,15 +357,10 @@ impl ChangesetPathHistoryContext {
                     let blobstore = changeset.repo().blob_repo().blobstore();
                     let root_deleted_manifest_id = changeset.root_deleted_manifest_id().await?;
                     if let Some(mpath) = path.into() {
-                        use deleted_files_manifest::{DeletedManifestOps, RootDeletedManifestId};
-                        RootDeletedManifestId::find_entry(
-                            ctx,
-                            blobstore,
-                            root_deleted_manifest_id.deleted_manifest_id().clone(),
-                            Some(mpath),
-                        )
-                        .await
-                        .map_err(MononokeError::from)
+                        root_deleted_manifest_id
+                            .find_entry(ctx, blobstore, Some(mpath))
+                            .await
+                            .map_err(MononokeError::from)
                     } else {
                         Ok(Some(root_deleted_manifest_id.deleted_manifest_id().clone()))
                     }

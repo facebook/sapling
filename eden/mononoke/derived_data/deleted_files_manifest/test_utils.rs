@@ -585,20 +585,20 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(fb: Fac
 
         {
             // check that it will yield only two deleted paths
-            let mut entries = Root::find_entries(
-                &ctx,
-                repo.blobstore(),
-                mf_id.clone(),
-                vec![
-                    PathOrPrefix::Path(Some(path("file.txt"))),
-                    PathOrPrefix::Path(Some(path("dir/f-2"))),
-                    PathOrPrefix::Path(Some(path("dir/sub/f-1"))),
-                ],
-            )
-            .map_ok(|(path, _)| path)
-            .try_collect::<Vec<_>>()
-            .await
-            .unwrap();
+            let mut entries = Root::new(mf_id)
+                .find_entries(
+                    &ctx,
+                    repo.blobstore(),
+                    vec![
+                        PathOrPrefix::Path(Some(path("file.txt"))),
+                        PathOrPrefix::Path(Some(path("dir/f-2"))),
+                        PathOrPrefix::Path(Some(path("dir/sub/f-1"))),
+                    ],
+                )
+                .map_ok(|(path, _)| path)
+                .try_collect::<Vec<_>>()
+                .await
+                .unwrap();
 
             entries.sort();
             let expected_entries = vec![Some(path("dir/f-2")), Some(path("dir/sub/f-1"))];
@@ -607,16 +607,16 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(fb: Fac
 
         {
             // check that it will yield recursively all deleted paths including dirs
-            let mut entries = Root::find_entries(
-                &ctx,
-                repo.blobstore(),
-                mf_id.clone(),
-                vec![PathOrPrefix::Prefix(Some(path("dir-2")))],
-            )
-            .map_ok(|(path, _)| path)
-            .try_collect::<Vec<_>>()
-            .await
-            .unwrap();
+            let mut entries = Root::new(mf_id)
+                .find_entries(
+                    &ctx,
+                    repo.blobstore(),
+                    vec![PathOrPrefix::Prefix(Some(path("dir-2")))],
+                )
+                .map_ok(|(path, _)| path)
+                .try_collect::<Vec<_>>()
+                .await
+                .unwrap();
 
             entries.sort();
             let expected_entries = vec![
@@ -629,19 +629,19 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(fb: Fac
 
         {
             // check that it will yield recursively even having a path patterns
-            let mut entries = Root::find_entries(
-                &ctx,
-                repo.blobstore(),
-                mf_id.clone(),
-                vec![
-                    PathOrPrefix::Prefix(Some(path("dir/sub"))),
-                    PathOrPrefix::Path(Some(path("dir/sub/f-1"))),
-                ],
-            )
-            .map_ok(|(path, _)| path)
-            .try_collect::<Vec<_>>()
-            .await
-            .unwrap();
+            let mut entries = Root::new(mf_id)
+                .find_entries(
+                    &ctx,
+                    repo.blobstore(),
+                    vec![
+                        PathOrPrefix::Prefix(Some(path("dir/sub"))),
+                        PathOrPrefix::Path(Some(path("dir/sub/f-1"))),
+                    ],
+                )
+                .map_ok(|(path, _)| path)
+                .try_collect::<Vec<_>>()
+                .await
+                .unwrap();
 
             entries.sort();
             let expected_entries = vec![
@@ -691,7 +691,8 @@ pub(crate) async fn test_list_all_entries<Root: RootDeletedManifestIdCommon>(fb:
 
         {
             // check that it will yield only two deleted paths
-            let entries = Root::list_all_entries(&ctx, repo.blobstore(), mf_id.clone())
+            let entries = Root::new(mf_id)
+                .list_all_entries(&ctx, repo.blobstore())
                 .try_collect::<Vec<_>>()
                 .await
                 .unwrap();

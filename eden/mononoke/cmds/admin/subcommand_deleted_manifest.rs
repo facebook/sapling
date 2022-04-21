@@ -139,15 +139,10 @@ async fn subcommand_manifest(
         ctx.logger(),
         "ROOT Deleted Files Manifest {:?}", root_manifest,
     );
-    let mf_id = root_manifest.deleted_manifest_id().clone();
-    let mut entries: Vec<_> = RootDeletedManifestId::find_entries(
-        &ctx,
-        repo.blobstore(),
-        mf_id,
-        Some(PathOrPrefix::Prefix(prefix)),
-    )
-    .try_collect()
-    .await?;
+    let mut entries: Vec<_> = root_manifest
+        .find_entries(&ctx, repo.blobstore(), Some(PathOrPrefix::Prefix(prefix)))
+        .try_collect()
+        .await?;
     entries.sort_by_key(|(path, _)| path.clone());
     for (path, mf_id) in entries {
         println!("{}/ {:?}", MPath::display_opt(path.as_ref()), mf_id);
@@ -220,12 +215,11 @@ async fn verify_single_commit(
     let file_changes = get_file_changes(ctx.clone(), repo.clone(), cs_id.clone());
     let deleted_manifest_paths = async move {
         let root_manifest = RootDeletedManifestId::derive(&ctx, &repo, cs_id).await?;
-        let mf_id = root_manifest.deleted_manifest_id().clone();
-        let entries: BTreeSet<_> =
-            RootDeletedManifestId::list_all_entries(&ctx, repo.blobstore(), mf_id)
-                .try_filter_map(|(path_opt, ..)| async move { Ok(path_opt) })
-                .try_collect()
-                .await?;
+        let entries: BTreeSet<_> = root_manifest
+            .list_all_entries(&ctx, repo.blobstore())
+            .try_filter_map(|(path_opt, ..)| async move { Ok(path_opt) })
+            .try_collect()
+            .await?;
         Ok(entries)
     };
     let ((paths_added, paths_deleted), deleted_manifest_paths) =

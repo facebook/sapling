@@ -120,8 +120,9 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
         // and try to find the given path
         if let Some(cs_id) = queue.pop_front() {
             let root_dfm_id = manager.derive::<Self>(&ctx, cs_id, None).await?;
-            let dfm_id = root_dfm_id.id();
-            let entry = Self::find_entry(&ctx, repo.blobstore(), *dfm_id, path.clone()).await?;
+            let entry = root_dfm_id
+                .find_entry(&ctx, repo.blobstore(), path.clone())
+                .await?;
 
             if let Some(mf_id) = entry {
                 // we need to get the linknode, so let's load the deleted manifest
@@ -210,11 +211,12 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
     /// and/or prefixes.
     ///
     fn find_entries<'a>(
+        &self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
-        manifest_id: Self::Id,
         paths_or_prefixes: impl IntoIterator<Item = impl Into<PathOrPrefix>>,
     ) -> BoxStream<'a, Result<(Option<MPath>, Self::Id), Error>> {
+        let root_id = self.id().clone();
         enum Pattern {
             Path,
             Prefix,
@@ -238,7 +240,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
             let s: BoxStream<'_, Result<(Option<MPath>, Self::Id), Error>> = bounded_traversal_stream(
                 256,
                 // starting point
-                Some((None, Selector::Selector(path_tree), manifest_id)),
+                Some((None, Selector::Selector(path_tree), root_id)),
                 move |(path, selector, manifest_id)| {
                     async move {
                         let mf = manifest_id.load(ctx, blobstore).await?;
@@ -317,12 +319,12 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
     /// Return Deleted Manifest entry for the given path
     ///
     async fn find_entry(
+        &self,
         ctx: &CoreContext,
         blobstore: &impl Blobstore,
-        manifest_id: Self::Id,
         path: Option<MPath>,
     ) -> Result<Option<Self::Id>, Error> {
-        let s = Self::find_entries(ctx, blobstore, manifest_id, vec![PathOrPrefix::Path(path)]);
+        let s = self.find_entries(ctx, blobstore, vec![PathOrPrefix::Path(path)]);
         pin_mut!(s);
         match s.next().await.transpose()? {
             Some((_path, mf_id)) => Ok(Some(mf_id)),
@@ -333,14 +335,15 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
     /// List all Deleted files manifest entries recursively, that represent deleted paths.
     ///
     fn list_all_entries<'a>(
+        &self,
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
-        manifest_id: Self::Id,
     ) -> BoxStream<'a, Result<(Option<MPath>, Self::Id), Error>> {
+        let root_id = self.id().clone();
         (async_stream::stream! {
             let ctx = ctx.borrow();
             let blobstore = &blobstore;
-            let s = bounded_traversal_stream(256, Some((None, manifest_id)), move |(path, manifest_id)| {
+            let s = bounded_traversal_stream(256, Some((None, root_id)), move |(path, manifest_id)| {
                 async move {
                     let manifest = manifest_id.load(ctx, blobstore).await?;
                     let entry = if manifest.is_deleted() {

@@ -456,26 +456,25 @@ impl ChangesetContext {
         impl Stream<Item = Result<ChangesetPathHistoryContext, MononokeError>> + '_,
         MononokeError,
     > {
-        Ok(RootDeletedManifestId::find_entries(
-            self.ctx(),
-            self.repo().blob_repo().blobstore(),
-            self.root_deleted_manifest_id()
-                .await?
-                .deleted_manifest_id()
-                .clone(),
-            paths.map(|path| path.into_mpath()),
-        )
-        .map_ok({
-            let changeset = self.clone();
-            move |(mpath, entry)| {
-                ChangesetPathHistoryContext::new_with_deleted_manifest(
-                    changeset.clone(),
-                    MononokePath::new(mpath),
-                    entry,
-                )
-            }
-        })
-        .map_err(MononokeError::from))
+        Ok(self
+            .root_deleted_manifest_id()
+            .await?
+            .find_entries(
+                self.ctx(),
+                self.repo().blob_repo().blobstore(),
+                paths.map(|path| path.into_mpath()),
+            )
+            .map_ok({
+                let changeset = self.clone();
+                move |(mpath, entry)| {
+                    ChangesetPathHistoryContext::new_with_deleted_manifest(
+                        changeset.clone(),
+                        MononokePath::new(mpath),
+                        entry,
+                    )
+                }
+            })
+            .map_err(MononokeError::from))
     }
 
     /// Get the `BonsaiChangeset` information for this changeset.
