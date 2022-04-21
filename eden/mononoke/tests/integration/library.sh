@@ -1902,15 +1902,6 @@ function backfill_derived_data() {
     "$@"
 }
 
-function dump_public_changeset_entries() {
-  "$MONONOKE_DUMP_PUBLIC_CHANGESET_ENTRIES" \
-    --debug \
-    "${COMMON_ARGS[@]}" \
-    --repo-id "$REPOID" \
-    --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    "$@"
-}
-
 function backfill_derived_data_multiple_repos() {
   IFS=':' read -r -a ids <<< "${REPOS[*]}"
   "$MONONOKE_BACKFILL_DERIVED_DATA" \

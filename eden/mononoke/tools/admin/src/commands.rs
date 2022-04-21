@@ -20,4 +20,5 @@ mononoke_app::subcommands! {
     mod repo_info;
     mod skiplist;
     mod ephemeral_store;
+    mod dump_public_changesets;
 }

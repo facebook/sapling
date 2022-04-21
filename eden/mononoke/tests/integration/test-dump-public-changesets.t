@@ -21,7 +21,7 @@ setup configuration
   cloning repo in hg client 'repo2'
 
 Dump current entries
-  $ quiet dump_public_changeset_entries --out-filename "$TESTTMP/init-dump"
+  $ quiet mononoke_newadmin dump-public-changesets -R repo --out-filename "$TESTTMP/init-dump"
   $ stat -c '%s %N' "$TESTTMP/init-dump"
   200 '$TESTTMP/init-dump'
 
@@ -32,7 +32,7 @@ Add a new commit
   $ hgmn push -r . --to master_bookmark -q
 
 Dump the extra entry only
-  $ quiet dump_public_changeset_entries --out-filename "$TESTTMP/incr-dump" --start-from-file-end "$TESTTMP/init-dump"
+  $ quiet mononoke_newadmin dump-public-changesets -R repo --out-filename "$TESTTMP/incr-dump" --start-from-file-end "$TESTTMP/init-dump"
   $ stat -c '%s %N' "$TESTTMP/incr-dump"
   79 '$TESTTMP/incr-dump'
 
@@ -43,8 +43,8 @@ Add a new commit
   $ hgmn push -r . --to master_bookmark -q
 
 Merge commit files, and compare to a straight dump
-  $ quiet dump_public_changeset_entries --out-filename "$TESTTMP/merge-dump" --start-from-file-end "$TESTTMP/incr-dump" --merge-file "$TESTTMP/init-dump" --merge-file "$TESTTMP/incr-dump"
-  $ quiet dump_public_changeset_entries --out-filename "$TESTTMP/full-dump"
+  $ quiet mononoke_newadmin dump-public-changesets -R repo --out-filename "$TESTTMP/merge-dump" --start-from-file-end "$TESTTMP/incr-dump" --merge-file "$TESTTMP/init-dump" --merge-file "$TESTTMP/incr-dump"
+  $ quiet mononoke_newadmin dump-public-changesets -R repo --out-filename "$TESTTMP/full-dump"
   $ cmp "$TESTTMP/merge-dump" "$TESTTMP/full-dump"
   $ stat -c '%s %N' "$TESTTMP/merge-dump" "$TESTTMP/full-dump"
   356 '$TESTTMP/merge-dump'

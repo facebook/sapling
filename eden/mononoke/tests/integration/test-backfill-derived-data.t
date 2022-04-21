@@ -22,11 +22,7 @@ setup configuration
 
 backfill derived data
   $ DERIVED_DATA_TYPE="fsnodes"
-  $ dump_public_changeset_entries --out-filename "$TESTTMP/prefetched_commits"
-  *] enabled stdlog with level: Error (set RUST_LOG to configure) (glob)
-  *] Initializing tunables: * (glob)
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
+  $ quiet mononoke_newadmin dump-public-changesets -R repo --out-filename "$TESTTMP/prefetched_commits"
 
   $ backfill_derived_data backfill --prefetched-commits-path "$TESTTMP/prefetched_commits" "$DERIVED_DATA_TYPE" --limit 1
   *] enabled stdlog with level: Error (set RUST_LOG to configure) (glob)

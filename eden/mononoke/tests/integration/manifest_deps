@@ -21,7 +21,6 @@ MONONOKE_BINS = {
     "MONONOKE_BLOBSTORE_HEALER": "blobstore_healer",
     "MONONOKE_BONSAI_VERIFY": "bonsai_verify",
     "MONONOKE_CHECK_GIT_WC": "check_git_wc",
-    "MONONOKE_DUMP_PUBLIC_CHANGESET_ENTRIES": "dump_public_changeset_entries",
     "MONONOKE_FASTREPLAY": "fastreplay",
     "MONONOKE_GITIMPORT": "gitimport",
     "MONONOKE_HG_SYNC": "mononoke_hg_sync_job",

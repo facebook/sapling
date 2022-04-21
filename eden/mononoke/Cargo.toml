@@ -33,11 +33,6 @@ name = "configlint"
 path = "cmds/configlint.rs"
 
 [[bin]]
-name = "dump_public_changeset_entries"
-path = "cmds/dump_public_changeset_entries.rs"
-test = false
-
-[[bin]]
 name = "dumprev"
 path = "cmds/dumprev.rs"
 test = false
