@@ -1,4 +1,7 @@
 #chg-compatible
+This test is broken while conch_parser is broken
+#require false
+
 
 Classic .t test:
 
