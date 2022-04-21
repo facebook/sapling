@@ -3341,13 +3341,17 @@ mod tests {
         let test_with_config = |backoff_config: &'static str| -> Result<()> {
             let blob1 = example_blob();
             let blobs = vec![&blob1];
-            let req_count = backoff_config.split(',').count() + 1;
+            let req_count = if backoff_config.is_empty() {
+                1
+            } else {
+                backoff_config.split(',').count() + 1
+            };
 
-            let m1 = get_lfs_batch_mock(200, &blobs).expect_at_least(1);
-            let m2 = get_lfs_download_mock(500, &blob1)
+            let m1 = get_lfs_batch_mock(200, &blobs).expect(1);
+            let m2 = get_lfs_download_mock(408, &blob1)
                 .pop()
                 .unwrap()
-                .expect_at_least(req_count);
+                .expect(req_count);
             let cachedir = TempDir::new()?;
             let mut config = make_lfs_config(&cachedir, "test_download");
 
