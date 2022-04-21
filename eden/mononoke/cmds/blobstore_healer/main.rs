@@ -6,6 +6,7 @@
  */
 
 #![deny(warnings)]
+#![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 #![feature(never_type)]
 
 mod dummy;
@@ -37,6 +38,8 @@ use sql_ext::{
     facebook::MysqlOptions,
     replication::{NoReplicaLagMonitor, ReplicaLagMonitor, WaitForReplicationConfig},
 };
+#[cfg(test)]
+use stats as _;
 #[cfg(not(test))]
 use stats::schedule_stats_aggregation_preview;
 use std::collections::HashMap;

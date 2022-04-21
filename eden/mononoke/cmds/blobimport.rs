@@ -6,6 +6,7 @@
  */
 
 #![deny(warnings)]
+#![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 
 use anyhow::{bail, format_err, Context, Error, Result};
 use ascii::AsciiString;

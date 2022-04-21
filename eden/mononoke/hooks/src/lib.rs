@@ -13,6 +13,7 @@
 //! The scripting language specific implementation of hooks are in the corresponding sub module.
 
 #![deny(warnings)]
+#![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 
 pub mod errors;
 #[cfg(fbcode_build)]

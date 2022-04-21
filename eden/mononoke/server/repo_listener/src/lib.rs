@@ -6,6 +6,7 @@
  */
 
 #![deny(warnings)]
+#![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 #![feature(never_type)]
 #![recursion_limit = "256"]
 

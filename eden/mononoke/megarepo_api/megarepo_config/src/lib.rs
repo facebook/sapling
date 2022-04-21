@@ -7,6 +7,7 @@
 
 #![feature(backtrace)]
 #![deny(warnings)]
+#![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 
 use async_trait::async_trait;
 use clap::Args;
