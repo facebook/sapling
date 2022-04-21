@@ -38,8 +38,8 @@ impl BackingStore {
 
         if !allow_retries {
             let source = configparser::config::Options::new().source("backingstore");
-            config.set("lfs", "backofftimes", Some("0"), &source);
-            config.set("lfs", "throttlebackofftimes", Some("0"), &source);
+            config.set("lfs", "backofftimes", Some(""), &source);
+            config.set("lfs", "throttlebackofftimes", Some(""), &source);
             config.set("edenapi", "max-retry-per-request", Some("0"), &source);
         }
 
