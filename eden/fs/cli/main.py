@@ -63,13 +63,20 @@ from .subcmd import Subcmd
 from .util import ShutdownError, print_stderr, get_environment_suitable_for_subprocess
 
 try:
-    from .facebook.util import migration_restart_help, get_migration_success_message
+    from .facebook.util import (
+        migration_restart_help,
+        get_migration_success_message,
+        stop_internal_processes,
+    )
 except ImportError:
 
     migration_restart_help = "This migrates ALL your mounts to a new mount protocol."
 
     def get_migration_success_message(migrate_to) -> str:
         return f"Successfully migrated all your mounts to {migrate_to}."
+
+    def stop_internal_processes(_: str) -> None:
+        pass
 
 
 if sys.platform != "win32":
@@ -1607,6 +1614,7 @@ def stop_aux_processes_for_path(
     for a given mount point/repo"""
     buck.stop_buckd_for_repo(repo_path)
     unmount_redirections_for_path(repo_path, complain_about_failing_to_unmount_redirs)
+    stop_internal_processes(repo_path)
 
 
 def stop_aux_processes(client: EdenClient) -> None:
