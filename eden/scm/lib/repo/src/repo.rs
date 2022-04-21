@@ -18,6 +18,7 @@ use edenapi::EdenApiError;
 use hgcommits::DagCommits;
 use metalog::MetaLog;
 use parking_lot::RwLock;
+use util::path::absolute;
 
 use crate::commits::open_dag_commits;
 use crate::errors;
@@ -119,8 +120,10 @@ impl OptionalRepo {
 }
 
 impl Repo {
-    pub fn init(root_path: &Path, config: &mut ConfigSet) -> Result<(), errors::InitError> {
-        init::init_hg_repo(root_path, config)
+    pub fn init(root_path: &Path, config: &mut ConfigSet) -> Result<Repo> {
+        let root_path = absolute(root_path)?;
+        init::init_hg_repo(&root_path, config)?;
+        Self::load_with_config(&root_path, config.clone())
     }
 
     /// Load the repo from explicit path.
