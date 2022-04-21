@@ -47,7 +47,6 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/GlobNode.h"
 #include "eden/fs/inodes/InodeError.h"
-#include "eden/fs/inodes/InodeLoader.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeOrTreeOrEntryLoader.h"
 #include "eden/fs/inodes/Traverse.h"

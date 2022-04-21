@@ -9,7 +9,7 @@ add_executable(
     DiffTest.cpp
     GlobNodeTest.cpp
     InodeBaseTest.cpp
-    InodeLoaderTest.cpp
+    InodeOrTreeOrEntryLoaderTest.cpp
     InodeMapTest.cpp
     InodePtrTest.cpp
     InodeTimestampsTest.cpp
