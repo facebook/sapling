@@ -22,7 +22,7 @@ setup configuration
 
 backfill derived data
   $ DERIVED_DATA_TYPE="fsnodes"
-  $ quiet mononoke_newadmin dump-public-changesets -R repo --out-filename "$TESTTMP/prefetched_commits"
+  $ quiet mononoke_newadmin dump-changesets -R repo --out-filename "$TESTTMP/prefetched_commits" fetch-public
 
   $ backfill_derived_data backfill --prefetched-commits-path "$TESTTMP/prefetched_commits" "$DERIVED_DATA_TYPE" --limit 1
   *] enabled stdlog with level: Error (set RUST_LOG to configure) (glob)

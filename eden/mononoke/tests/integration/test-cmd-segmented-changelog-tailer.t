@@ -62,7 +62,7 @@ Now test without head option (tailer will fetch it from config) and with prefetc
   > [segmented_changelog_config]
   > master_bookmark="master_bookmark"
   > CONFIG
-  $ quiet mononoke_newadmin dump-public-changesets -R repo --out-filename "$TESTTMP/prefetched_commits"
+  $ quiet mononoke_newadmin dump-changesets -R repo --out-filename "$TESTTMP/prefetched_commits" fetch-public
   $ quiet segmented_changelog_tailer_reseed --repo repo --prefetched-commits-path "$TESTTMP/prefetched_commits"
   $ grep -e "repo_id: 0" -e "segmented_changelog_tailer" "$TESTTMP/quiet.last.log"
   * reading prefetched commits from $TESTTMP/prefetched_commits (glob)

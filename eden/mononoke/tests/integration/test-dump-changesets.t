@@ -21,14 +21,18 @@ setup configuration
   cloning repo in hg client 'repo2'
 
 Dump current entries
-  $ quiet mononoke_newadmin dump-public-changesets -R repo --out-filename "$TESTTMP/init-dump"
+  $ quiet mononoke_newadmin dump-changesets -R repo --out-filename "$TESTTMP/init-dump" fetch-public
   $ stat -c '%s %N' "$TESTTMP/init-dump"
   200 '$TESTTMP/init-dump'
-  $ quiet mononoke_newadmin dump-public-changesets -R repo --out-filename "$TESTTMP/init-dump.txt" --output-format plaintext
+
+Test plaintext format
+  $ quiet mononoke_newadmin dump-changesets -R repo --out-filename "$TESTTMP/init-dump.txt" --output-format plaintext fetch-public
   $ cat "$TESTTMP/init-dump.txt"
   9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec
   459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66
   c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd (no-eol)
+  $ quiet mononoke_newadmin dump-changesets -R repo --out-filename "$TESTTMP/init-dump2.txt" --output-format plaintext --merge-file "$TESTTMP/init-dump" convert
+  $ diff "$TESTTMP/init-dump.txt" "$TESTTMP/init-dump2.txt"
 
 Add a new commit
   $ hg up -q "min(all())"
@@ -37,7 +41,7 @@ Add a new commit
   $ hgmn push -r . --to master_bookmark -q
 
 Dump the extra entry only
-  $ quiet mononoke_newadmin dump-public-changesets -R repo --out-filename "$TESTTMP/incr-dump" --start-from-file-end "$TESTTMP/init-dump"
+  $ quiet mononoke_newadmin dump-changesets -R repo --out-filename "$TESTTMP/incr-dump" fetch-public --start-from-file-end "$TESTTMP/init-dump"
   $ stat -c '%s %N' "$TESTTMP/incr-dump"
   79 '$TESTTMP/incr-dump'
 
@@ -48,8 +52,8 @@ Add a new commit
   $ hgmn push -r . --to master_bookmark -q
 
 Merge commit files, and compare to a straight dump
-  $ quiet mononoke_newadmin dump-public-changesets -R repo --out-filename "$TESTTMP/merge-dump" --start-from-file-end "$TESTTMP/incr-dump" --merge-file "$TESTTMP/init-dump" --merge-file "$TESTTMP/incr-dump"
-  $ quiet mononoke_newadmin dump-public-changesets -R repo --out-filename "$TESTTMP/full-dump"
+  $ quiet mononoke_newadmin dump-changesets -R repo --out-filename "$TESTTMP/merge-dump" --merge-file "$TESTTMP/init-dump" --merge-file "$TESTTMP/incr-dump" fetch-public --start-from-file-end "$TESTTMP/incr-dump"
+  $ quiet mononoke_newadmin dump-changesets -R repo --out-filename "$TESTTMP/full-dump" fetch-public
   $ cmp "$TESTTMP/merge-dump" "$TESTTMP/full-dump"
   $ stat -c '%s %N' "$TESTTMP/merge-dump" "$TESTTMP/full-dump"
   356 '$TESTTMP/merge-dump'

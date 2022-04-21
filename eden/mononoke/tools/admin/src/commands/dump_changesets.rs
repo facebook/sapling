@@ -15,7 +15,8 @@ use bytes::Bytes;
 use changesets::{
     deserialize_cs_entries, serialize_cs_entries, ChangesetEntry, Changesets, ChangesetsArc,
 };
-use clap::{ArgEnum, Parser};
+use clap::{ArgEnum, Args, Parser, Subcommand};
+use context::CoreContext;
 use futures::{future, stream, StreamExt, TryStreamExt};
 use itertools::Itertools;
 use mononoke_app::args::RepoArgs;
@@ -45,25 +46,43 @@ pub struct CommandArgs {
     /// File name where commits will be saved.
     #[clap(long)]
     out_filename: String,
+    /// Merge commits from this file into the final output. User is responsible for
+    /// avoiding duplicate commits between files and database fetch. Can be repeated.
+    #[clap(long)]
+    merge_file: Vec<String>,
+    /// What format to write to the file.
+    #[clap(long, arg_enum, default_value_t=Format::Thrift)]
+    output_format: Format,
+
+    #[clap(subcommand)]
+    subcommand: DumpChangesetsSubcommand,
+}
+
+#[derive(Subcommand)]
+pub enum DumpChangesetsSubcommand {
+    /// Fetch all public changesets before dumping.
+    FetchPublic(FetchPublicArgs),
+    /// Don't do any extra fetching of changesets, useful for merging dumps and changing formats.
+    Convert(ConvertArgs),
+}
+
+#[derive(Args)]
+pub struct FetchPublicArgs {
     /// Start fetching from this commit rather than the beginning of time.
     #[clap(long)]
     start_commit: Option<String>,
     /// Start fetching from the last commit in this file, for incremental updates.
     #[clap(long)]
     start_from_file_end: Option<String>,
-    /// Merge commits from this file into the final output. User is responsible for
-    /// avoiding duplicate commits between files and database fetch. Can be repeated.
-    #[clap(long)]
-    merge_file: Vec<String>,
     /// Only look at this many commits. Notice that this may output less than LIMIT
     /// commits if there are non-public commits, but it's a good way to do this command
     /// incrementally.
     #[clap(long)]
     limit: Option<NonZeroU64>,
-    /// What format to write to the file.
-    #[clap(long, arg_enum, default_value_t=Format::Thrift)]
-    output_format: Format,
 }
+
+#[derive(Args)]
+pub struct ConvertArgs {}
 
 #[facet::container]
 pub struct Repo {
@@ -95,28 +114,55 @@ impl Format {
     }
 }
 
+impl DumpChangesetsSubcommand {
+    async fn fetch_extra_changesets(
+        self,
+        ctx: &CoreContext,
+        repo: &Repo,
+    ) -> Result<Vec<ChangesetEntry>> {
+        match self {
+            Self::Convert(_) => Ok(vec![]),
+            Self::FetchPublic(args) => args.fetch_extra_changesets(ctx, repo).await,
+        }
+    }
+}
+
+impl FetchPublicArgs {
+    async fn fetch_extra_changesets(
+        self,
+        ctx: &CoreContext,
+        repo: &Repo,
+    ) -> Result<Vec<ChangesetEntry>> {
+        let fetcher = PublicChangesetBulkFetch::new(repo.changesets_arc(), repo.phases_arc());
+
+        let start_commit = {
+            if let Some(path) = self.start_from_file_end {
+                load_last_commit(path.as_ref()).await?
+            } else if let Some(start_commit) = self.start_commit {
+                Some(parse_commit_id(ctx, repo, &start_commit).await?)
+            } else {
+                None
+            }
+        };
+
+        let mut bounds = fetcher
+            .get_repo_bounds_after_commits(ctx, start_commit.into_iter().collect())
+            .await?;
+
+        if let Some(limit) = self.limit {
+            bounds.1 = bounds.1.min(bounds.0 + limit.get());
+        }
+
+        fetcher
+            .fetch_bounded(ctx, Direction::OldestFirst, Some(bounds))
+            .try_collect()
+            .await
+    }
+}
+
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_context();
     let repo: Repo = app.open_repo(&args.repo).await?;
-
-    let fetcher = PublicChangesetBulkFetch::new(repo.changesets_arc(), repo.phases_arc());
-
-    let start_commit = {
-        if let Some(path) = args.start_from_file_end {
-            load_last_commit(path.as_ref()).await?
-        } else if let Some(start_commit) = args.start_commit {
-            Some(parse_commit_id(&ctx, &repo, &start_commit).await?)
-        } else {
-            None
-        }
-    };
-
-    let mut bounds = fetcher
-        .get_repo_bounds_after_commits(&ctx, start_commit.into_iter().collect())
-        .await?;
-    if let Some(limit) = args.limit {
-        bounds.1 = bounds.1.min(bounds.0 + limit.get());
-    }
 
     let css = {
         let (mut file_css, db_css): (Vec<_>, Vec<_>) = future::try_join(
@@ -129,9 +175,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             )
             .buffered(2)
             .try_concat(),
-            fetcher
-                .fetch_bounded(&ctx, Direction::OldestFirst, Some(bounds))
-                .try_collect::<Vec<_>>(),
+            args.subcommand.fetch_extra_changesets(&ctx, &repo),
         )
         .await?;
         file_css.extend(db_css.into_iter());

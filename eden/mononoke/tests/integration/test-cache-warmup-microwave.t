@@ -36,7 +36,7 @@ Regenerate microwave snapshot. This will fail because we have no derived data:
 
 Derive data, then regenerate microwave snapshot:
 
-  $ quiet mononoke_newadmin dump-public-changesets -R repo --out-filename "$TESTTMP/prefetched_commits"
+  $ quiet mononoke_newadmin dump-changesets -R repo --out-filename "$TESTTMP/prefetched_commits" fetch-public
   $ quiet backfill_derived_data backfill --prefetched-commits-path "$TESTTMP/prefetched_commits" filenodes
   $ quiet microwave_builder --debug blobstore
 
