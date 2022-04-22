@@ -54,7 +54,7 @@ class RestartTestBase(ServiceTestCaseBase):
             restart_cmd[0],
             restart_cmd[1:],
             logfile=sys.stdout.buffer,
-            timeout=30,
+            timeout=120,
             env=env,
         )
 

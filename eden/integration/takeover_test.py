@@ -341,7 +341,7 @@ class TakeoverTest(TakeoverTestBase):
             restart_cmd[0],
             restart_cmd[1:],
             logfile=sys.stdout.buffer,
-            timeout=5,
+            timeout=120,
             env=env,
         )
 
