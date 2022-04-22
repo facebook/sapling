@@ -1472,9 +1472,11 @@ NfsArgsDetails formatMknod(folly::io::Cursor deser) {
           if constexpr (std::is_same_v<ArgType, devicedata3>) {
             // TODO(xavierd): format the specdata3 too.
             return fmt::format(
-                ", attr=({})", formatSattr3(arg.dev_attributes).str);
+                FMT_STRING(", attr=({})"),
+                formatSattr3(arg.dev_attributes).str);
           } else if constexpr (std::is_same_v<ArgType, sattr3>) {
-            return fmt::format(", attr=({})", formatSattr3(arg).str);
+            return fmt::format(
+                FMT_STRING(", attr=({})"), formatSattr3(arg).str);
           } else {
             return "";
           }
@@ -1866,7 +1868,7 @@ void Nfsd3ServerProcessor::onShutdown(RpcStopData data) {
 
 void Nfsd3ServerProcessor::clientConnected() {
   auto numberOfClients =
-      numberOfClients_.fetch_add(1, std::memory_order_acq_rel);
+      numberOfClients_.fetch_add(1, std::memory_order::memory_order_acq_rel);
   if (numberOfClients > 1) {
     structuredLogger_->logEvent(TooManyNfsClients{});
   }
