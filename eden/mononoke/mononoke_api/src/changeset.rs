@@ -31,7 +31,8 @@ use maplit::hashset;
 use mercurial_types::Globalrev;
 pub use mononoke_types::Generation;
 use mononoke_types::{
-    BonsaiChangeset, FileChange, MPath, MPathElement, SkeletonManifestId, Svnrev,
+    deleted_files_manifest::DeletedManifest, BonsaiChangeset, FileChange, MPath, MPathElement,
+    SkeletonManifestId, Svnrev,
 };
 use rand;
 use reachabilityindex::ReachabilityIndex;
@@ -467,7 +468,7 @@ impl ChangesetContext {
             .map_ok({
                 let changeset = self.clone();
                 move |(mpath, entry)| {
-                    ChangesetPathHistoryContext::new_with_deleted_manifest(
+                    ChangesetPathHistoryContext::new_with_deleted_manifest::<DeletedManifest>(
                         changeset.clone(),
                         MononokePath::new(mpath),
                         entry,

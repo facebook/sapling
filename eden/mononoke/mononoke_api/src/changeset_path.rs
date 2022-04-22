@@ -32,8 +32,8 @@ use futures_lazy_shared::LazyShared;
 use manifest::{Entry, ManifestOps};
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::{
-    ChangesetId, DeletedManifestId, FileType, FileUnodeId, FsnodeId, Generation, ManifestUnodeId,
-    SkeletonManifestId,
+    deleted_manifest_common::DeletedManifestCommon, ChangesetId, FileType, FileUnodeId, FsnodeId,
+    Generation, ManifestUnodeId, SkeletonManifestId,
 };
 use reachabilityindex::ReachabilityIndex;
 use skiplist::SkiplistIndex;
@@ -80,7 +80,7 @@ pub struct UnifiedDiff {
 type UnodeResult = Result<Option<Entry<ManifestUnodeId, FileUnodeId>>, MononokeError>;
 type FsnodeResult = Result<Option<Entry<FsnodeId, FsnodeFile>>, MononokeError>;
 type SkeletonResult = Result<Option<Entry<SkeletonManifestId, ()>>, MononokeError>;
-type DeletedResult = Result<Option<DeletedManifestId>, MononokeError>;
+type LinknodeResult = Result<Option<ChangesetId>, MononokeError>;
 
 /// Context that makes it cheap to fetch content info about a path within a changeset.
 ///
@@ -110,7 +110,7 @@ pub struct ChangesetPathHistoryContext {
     changeset: ChangesetContext,
     path: MononokePath,
     unode_id: LazyShared<UnodeResult>,
-    deleted_manifest_id: LazyShared<DeletedResult>,
+    linknode: LazyShared<LinknodeResult>,
 }
 
 impl fmt::Debug for ChangesetPathHistoryContext {
@@ -279,7 +279,7 @@ impl ChangesetPathHistoryContext {
             changeset,
             path: path.into(),
             unode_id: LazyShared::new_empty(),
-            deleted_manifest_id: LazyShared::new_empty(),
+            linknode: LazyShared::new_empty(),
         }
     }
 
@@ -292,20 +292,25 @@ impl ChangesetPathHistoryContext {
             changeset,
             path: path.into(),
             unode_id: LazyShared::new_ready(Ok(Some(unode_entry))),
-            deleted_manifest_id: LazyShared::new_empty(),
+            linknode: LazyShared::new_empty(),
         }
     }
 
-    pub(crate) fn new_with_deleted_manifest(
+    pub(crate) fn new_with_deleted_manifest<Manifest: DeletedManifestCommon>(
         changeset: ChangesetContext,
-        path: impl Into<MononokePath>,
-        deleted_manifest: DeletedManifestId,
+        path: MononokePath,
+        deleted_manifest_id: Manifest::Id,
     ) -> Self {
+        let ctx = changeset.ctx().clone();
+        let blobstore = changeset.repo().blob_repo().blobstore().clone();
         Self {
             changeset,
-            path: path.into(),
+            path,
             unode_id: LazyShared::new_empty(),
-            deleted_manifest_id: LazyShared::new_ready(Ok(Some(deleted_manifest))),
+            linknode: LazyShared::new_future(async move {
+                let deleted_manifest = deleted_manifest_id.load(&ctx, &blobstore).await?;
+                Ok(deleted_manifest.linknode().cloned())
+            }),
         }
     }
 
@@ -348,21 +353,27 @@ impl ChangesetPathHistoryContext {
             .await
     }
 
-    async fn deleted_manifest_id(&self) -> Result<Option<DeletedManifestId>, MononokeError> {
-        self.deleted_manifest_id
+    async fn linknode(&self) -> Result<Option<ChangesetId>, MononokeError> {
+        self.linknode
             .get_or_init(|| {
                 cloned!(self.changeset, self.path);
                 async move {
                     let ctx = changeset.ctx();
                     let blobstore = changeset.repo().blob_repo().blobstore();
                     let root_deleted_manifest_id = changeset.root_deleted_manifest_id().await?;
-                    if let Some(mpath) = path.into() {
+                    let maybe_id = if let Some(mpath) = path.into() {
                         root_deleted_manifest_id
                             .find_entry(ctx, blobstore, Some(mpath))
                             .await
-                            .map_err(MononokeError::from)
+                            .map_err(MononokeError::from)?
                     } else {
-                        Ok(Some(root_deleted_manifest_id.deleted_manifest_id().clone()))
+                        Some(root_deleted_manifest_id.deleted_manifest_id().clone())
+                    };
+                    if let Some(id) = maybe_id {
+                        let deleted_manifest = id.load(ctx, blobstore).await?;
+                        Ok(deleted_manifest.linknode().clone())
+                    } else {
+                        Ok(None)
                     }
                 }
             })
@@ -394,19 +405,10 @@ impl ChangesetPathHistoryContext {
     /// Returns the last commit that deleted this path.  If something exists
     /// at this path, or nothing ever existed at this path, returns `None`.
     pub async fn last_deleted(&self) -> Result<Option<ChangesetContext>, MononokeError> {
-        match self.deleted_manifest_id().await? {
-            Some(deleted_manifest_id) => {
-                let ctx = self.changeset.ctx();
-                let repo = self.changeset.repo().blob_repo();
-                let deleted_manifest = deleted_manifest_id.load(ctx, repo.blobstore()).await?;
-                if let Some(cs_id) = deleted_manifest.linknode() {
-                    Ok(Some(ChangesetContext::new(self.repo().clone(), *cs_id)))
-                } else {
-                    Ok(None)
-                }
-            }
-            None => Ok(None),
-        }
+        Ok(self
+            .linknode()
+            .await?
+            .map(|cs_id| ChangesetContext::new(self.repo().clone(), cs_id)))
     }
 
     async fn blame_impl(&self) -> Result<(CompatBlame, FileUnodeId), MononokeError> {
