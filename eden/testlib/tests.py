@@ -69,6 +69,28 @@ class TestLibTests(BaseTest):
         file.append("3")
         self.assertEqual(read(file.path), "bar23")
 
+    @hgtest
+    def test_working_copy_commit(self, repo: Repo, wc: WorkingCopy) -> None:
+        file = wc.file()
+        commit = wc.commit()
+        self.assertEquals(wc.hg.status().stdout, "")
+        self.assertEquals(wc.hg.status(change=commit.hash).stdout, f"A {file.path}\n")
+
+        file = wc.file(add=False)
+        commit = wc.commit(
+            message="my message",
+            author="my author",
+            date="1980-1-1 UTC",
+            addremove=True,
+        )
+        self.assertEqual(
+            wc.hg.log(
+                rev=commit.hash, template="{desc}\n{author}\n{date|isodate}"
+            ).stdout,
+            "my message\nmy author\n1980-01-01 00:00 +0000",
+        )
+        self.assertEquals(wc.hg.status(change=commit.hash).stdout, f"A {file.path}\n")
+
 
 if __name__ == "__main__":
     import unittest

@@ -5,12 +5,23 @@
 
 # pyre-strict
 
+from typing import Dict
+
 
 class RepoGenerator:
+    _commits: int
     _files: int
 
     def __init__(self) -> None:
+        self._commits = 0
         self._files = 0
+
+    def gen_commit_data(self) -> Dict[str, str]:
+        self._commits += 1
+        return {
+            "message": f"message{self._commits}",
+            "date": "1970-01-01",
+        }
 
     def gen_file_name(self) -> str:
         self._files += 1

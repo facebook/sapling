@@ -8,8 +8,9 @@
 import json
 import os
 from pathlib import Path
-from typing import Any, IO, BinaryIO, TextIO, Union
+from typing import Any, IO, BinaryIO, List, TextIO, Union
 
+from .commit import Commit
 from .generators import RepoGenerator
 from .hg import hg
 from .workingcopy import WorkingCopy
@@ -45,3 +46,10 @@ class Repo:
     def working_copy(self) -> WorkingCopy:
         # TODO: Eden support & new-work-dir support
         return self._wc
+
+    def commits(self, commits: str) -> List[Commit]:
+        output = self.hg.log(rev=commits, template="{node}\n").stdout
+        lines = output.split("\n")
+        if len(lines) == 0:
+            raise ValueError("unknown commit %s" % commits)
+        return [Commit(self, hash) for hash in lines[:-1]]

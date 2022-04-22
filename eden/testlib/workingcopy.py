@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, IO, Optional, TYPE_CHECKING, Union
+from typing import Any, IO, List, Optional, TYPE_CHECKING, Union
 
+from .commit import Commit
 from .file import File
 from .hg import hg
 from .types import PathLike
@@ -27,6 +28,35 @@ class WorkingCopy:
         self.repo = repo
         self.root = root
         self.hg = hg(self.root)
+
+    def commit(
+        self,
+        message: Optional[str] = None,
+        files: Optional[List[str]] = None,
+        author: Optional[str] = None,
+        date: Optional[str] = None,
+        addremove: bool = False,
+    ) -> Commit:
+        default_data = self.repo.gen.gen_commit_data()
+        files = files or []
+        if message is None:
+            message = default_data["message"]
+        if date is None:
+            date = default_data["date"]
+        if author is None:
+            author = "Tester Author"
+
+        options = dict(
+            message=message,
+            date=date,
+            addremove=addremove,
+            user=author,
+        )
+        self.hg.commit(*files, **options)
+        return self.current_commit()
+
+    def current_commit(self) -> Commit:
+        return self.repo.commits(".")[0]
 
     def file(
         self,
