@@ -15,6 +15,7 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
+use changesets::Changesets;
 use clap::{Parser, Subcommand};
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
@@ -59,6 +60,9 @@ pub struct Repo {
 
     #[facet]
     mutable_renames: MutableRenames,
+
+    #[facet]
+    changesets: dyn Changesets,
 }
 
 #[derive(Subcommand)]

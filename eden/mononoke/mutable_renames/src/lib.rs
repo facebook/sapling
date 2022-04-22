@@ -7,10 +7,12 @@
 
 #![deny(warnings)]
 
-use anyhow::Error;
+use anyhow::{anyhow, bail, Error};
 use cachelib::VolatileLruCachePool;
+use changesets::Changesets;
 use context::{CoreContext, PerfCounterType};
 use fbinit::FacebookInit;
+use futures::try_join;
 use manifest::Entry;
 use mononoke_types::{
     hash::Blake2, path_bytes_from_mpath, ChangesetId, FileUnodeId, MPath, ManifestUnodeId,
@@ -158,10 +160,35 @@ impl MutableRenames {
     pub async fn add_or_overwrite_renames(
         &self,
         ctx: &CoreContext,
+        changesets: &dyn Changesets,
         renames: Vec<MutableRenameEntry>,
     ) -> Result<(), Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
+
+        // Check to see if any of the added renames has an src that's a
+        // descendant of its dst. If so, we reject this as we cannot sanely
+        // handle cycles in history
+        for (src, dst) in renames.iter().map(|mre| (mre.src_cs_id, mre.dst_cs_id)) {
+            let (src_entry, dst_entry) = try_join!(
+                changesets.get(ctx.clone(), src),
+                changesets.get(ctx.clone(), dst)
+            )?;
+            let src_entry = src_entry.ok_or_else(|| anyhow!("Commit {} does not exist", src))?;
+            let dst_entry = dst_entry.ok_or_else(|| anyhow!("Commit {} does not exist", dst))?;
+            if src_entry.gen >= dst_entry.gen {
+                // The source commit could potentially be a descendant of the target
+                // Ideally, we'd do a proper check here to see if this forms a loop
+                // in history, allowing for both mutable and immutable history
+                //
+                // For now, though, just bail
+                bail!(
+                    "{} is a potential descendant of {} - rejecting to avoid loops in history",
+                    src_entry.cs_id,
+                    dst_entry.cs_id
+                );
+            }
+        }
 
         // First insert path <-> path_hash mapping
         let mut rows = vec![];

@@ -7,17 +7,40 @@
 
 use super::*;
 use anyhow::Error;
+use changesets::{ChangesetInsert, Changesets};
+use changesets_impl::{SqlChangesets, SqlChangesetsBuilder};
 use fbinit::FacebookInit;
 use mononoke_types_mocks::{
     changesetid::{ONES_CSID, TWOS_CSID},
     hash::{ONES, TWOS},
+    repo::REPO_ZERO,
 };
+use rendezvous::RendezVousOptions;
+
+async fn setup_changesets(ctx: &CoreContext) -> Result<SqlChangesets, Error> {
+    let changesets = SqlChangesetsBuilder::with_sqlite_in_memory()?
+        .build(RendezVousOptions::for_test(), REPO_ZERO);
+
+    let ones = ChangesetInsert {
+        cs_id: ONES_CSID,
+        parents: vec![],
+    };
+    let twos = ChangesetInsert {
+        cs_id: TWOS_CSID,
+        parents: vec![ONES_CSID],
+    };
+
+    changesets.add(ctx.clone(), ones).await?;
+    changesets.add(ctx.clone(), twos).await?;
+    Ok(changesets)
+}
 
 #[fbinit::test]
 async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let store = SqlMutableRenamesStore::with_sqlite_in_memory()?;
     let mutable_renames = MutableRenames::new_test(RepositoryId::new(0), store);
+    let changesets = setup_changesets(&ctx).await?;
 
     let dst_path = Some(MPath::new("dstpath")?);
     let src_path = Some(MPath::new("srcpath")?);
@@ -30,7 +53,7 @@ async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
     )?;
 
     mutable_renames
-        .add_or_overwrite_renames(&ctx, vec![entry.clone()])
+        .add_or_overwrite_renames(&ctx, &changesets, vec![entry.clone()])
         .await?;
     let res = mutable_renames
         .get_rename(&ctx, TWOS_CSID, dst_path)
@@ -45,6 +68,7 @@ async fn test_insert_multiple(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let store = SqlMutableRenamesStore::with_sqlite_in_memory()?;
     let mutable_renames = MutableRenames::new_test(RepositoryId::new(0), store);
+    let changesets = setup_changesets(&ctx).await?;
 
     let first_dst_path = Some(MPath::new("first_dstpath")?);
     let first_src_path = Some(MPath::new("second_srcpath")?);
@@ -67,7 +91,11 @@ async fn test_insert_multiple(fb: FacebookInit) -> Result<(), Error> {
     )?;
 
     mutable_renames
-        .add_or_overwrite_renames(&ctx, vec![first_entry.clone(), second_entry.clone()])
+        .add_or_overwrite_renames(
+            &ctx,
+            &changesets,
+            vec![first_entry.clone(), second_entry.clone()],
+        )
         .await?;
     let res = mutable_renames
         .get_rename(&ctx, TWOS_CSID, second_dst_path)
@@ -88,6 +116,7 @@ async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let store = SqlMutableRenamesStore::with_sqlite_in_memory()?;
     let mutable_renames = MutableRenames::new_test(RepositoryId::new(0), store);
+    let changesets = setup_changesets(&ctx).await?;
 
     let dst_path = Some(MPath::new("first_dstpath")?);
     let first_src_path = Some(MPath::new("first_srcpath")?);
@@ -100,7 +129,7 @@ async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
     )?;
 
     mutable_renames
-        .add_or_overwrite_renames(&ctx, vec![first_entry.clone()])
+        .add_or_overwrite_renames(&ctx, &changesets, vec![first_entry.clone()])
         .await?;
 
     let second_src_path = Some(MPath::new("second_srcpath")?);
@@ -114,7 +143,7 @@ async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
 
     assert_ne!(first_entry, second_entry);
     mutable_renames
-        .add_or_overwrite_renames(&ctx, vec![second_entry.clone()])
+        .add_or_overwrite_renames(&ctx, &changesets, vec![second_entry.clone()])
         .await?;
 
     let res = mutable_renames

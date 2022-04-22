@@ -7,6 +7,7 @@
 
 use anyhow::{bail, Context, Error, Result};
 use blobstore::Loadable;
+use changesets::ChangesetsRef;
 use clap::Args;
 use context::CoreContext;
 use futures::{stream, StreamExt, TryStreamExt};
@@ -111,7 +112,7 @@ pub async fn copy_immutable_impl(
     .await?;
 
     repo.mutable_renames()
-        .add_or_overwrite_renames(ctx, entries)
+        .add_or_overwrite_renames(ctx, repo.changesets(), entries)
         .await?;
     Ok(())
 }

@@ -11,6 +11,7 @@ use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use bytes::Bytes;
+use changesets::{Changesets, ChangesetsRef};
 use commit_transformation::{
     create_directory_source_to_target_multi_mover, create_source_to_target_multi_mover,
     DirectoryMultiMover, MultiMover,
@@ -616,6 +617,7 @@ pub trait MegarepoOp {
         scuba.log_with_msg("Started saving mutable renames", None);
         self.save_mutable_renames(
             ctx,
+            repo.changesets(),
             mutable_renames,
             moved_commits.iter().map(|(_, css)| &css.mutable_renames),
         )
@@ -628,13 +630,14 @@ pub trait MegarepoOp {
     async fn save_mutable_renames<'a>(
         &'a self,
         ctx: &'a CoreContext,
+        changesets: &'a dyn Changesets,
         mutable_renames: &'a Arc<MutableRenames>,
         entries_iter: impl Iterator<Item = &'a Vec<MutableRenameEntry>> + Send + 'async_trait,
     ) -> Result<(), Error> {
         for entries in entries_iter {
             for chunk in entries.chunks(100) {
                 mutable_renames
-                    .add_or_overwrite_renames(ctx, chunk.to_vec())
+                    .add_or_overwrite_renames(ctx, changesets, chunk.to_vec())
                     .await?;
             }
         }

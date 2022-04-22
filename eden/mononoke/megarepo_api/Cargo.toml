@@ -16,6 +16,7 @@ blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bytes = { version = "1.1", features = ["serde"] }
+changesets = { version = "0.1.0", path = "../changesets" }
 commit_transformation = { version = "0.1.0", path = "commit_transformation" }
 context = { version = "0.1.0", path = "../server/context" }
 derived_data = { version = "0.1.0", path = "../derived_data" }

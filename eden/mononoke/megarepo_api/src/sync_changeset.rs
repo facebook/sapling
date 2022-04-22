@@ -13,6 +13,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Loadable;
+use changesets::ChangesetsRef;
 use commit_transformation::{
     create_directory_source_to_target_multi_mover, create_source_to_target_multi_mover,
     rewrite_commit, upload_commits, CommitRewrittenToEmpty,
@@ -227,6 +228,7 @@ impl<'a> SyncChangeset<'a> {
         scuba.log_with_msg("Started saving mutable renames", None);
         self.save_mutable_renames(
             ctx,
+            target_repo.inner_repo().changesets(),
             self.mutable_renames,
             moved_commits.iter().map(|css| &css.mutable_renames),
         )

@@ -41,6 +41,7 @@ unodes = { version = "0.1.0", path = "../unodes" }
 [dev-dependencies]
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+changesets = { version = "0.1.0", path = "../../changesets" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

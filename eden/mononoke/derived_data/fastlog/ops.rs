@@ -856,6 +856,7 @@ async fn prefetch_fastlog_by_changeset(
 mod test {
     use super::*;
     use crate::mapping::RootFastlog;
+    use changesets::ChangesetsRef;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures::future::{FutureExt, TryFutureExt};
@@ -1606,6 +1607,7 @@ mod test {
         mutable_renames
             .add_or_overwrite_renames(
                 &ctx,
+                repo.changesets(),
                 vec![
                     MutableRenameEntry::new(
                         third_bcs_id,

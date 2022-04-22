@@ -6,6 +6,7 @@
  */
 
 use anyhow::{bail, Context, Result};
+use changesets::ChangesetsRef;
 use clap::Args;
 use context::CoreContext;
 use futures::TryStreamExt;
@@ -166,7 +167,7 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
 
     if !add_args.dry_run {
         repo.mutable_renames()
-            .add_or_overwrite_renames(ctx, entries)
+            .add_or_overwrite_renames(ctx, repo.changesets(), entries)
             .await?;
     }
     Ok(())
