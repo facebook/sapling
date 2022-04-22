@@ -99,6 +99,29 @@ class TestLibTests(BaseTest):
         wc.hg.bookmark("foo")
         self.assertEqual(repo.bookmarks()["foo"], commit)
 
+    @hgtest
+    def test_drawdag(self, repo: Repo, wc: WorkingCopy) -> None:
+        repo.drawdag(
+            """
+C
+|
+B
+|
+A
+"""
+        )
+
+        self.assertEqual(
+            repo.hg.smartlog(template="{desc}").stdout,
+            """o  C
+│
+o  B
+│
+o  A
+
+""",
+        )
+
 
 if __name__ == "__main__":
     import unittest

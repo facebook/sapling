@@ -71,3 +71,6 @@ class Repo:
             remote, name = name.split("/", 1)
             bookmarks[name] = Commit(self, entry["node"])
         return bookmarks
+
+    def drawdag(self, text: str) -> None:
+        self.hg.debugdrawdag(stdin=text)

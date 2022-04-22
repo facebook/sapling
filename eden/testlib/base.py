@@ -27,6 +27,7 @@ class BaseTest(unittest.TestCase):
             f.write(
                 f"""
 [commitcloud]
+enablestatus = False
 hostname = testhost
 remotebookmarkssync = True
 servicetype = local
