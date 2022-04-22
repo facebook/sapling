@@ -3,7 +3,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-strict
 from __future__ import annotations
 
 import os
@@ -26,9 +25,7 @@ class CliCmd:
         self.cwd = cwd
         self.env = env
 
-    def __getattr__(
-        self, command: str
-    ) -> Callable[..., Union[CompletedProcess[str], CompletedProcess[bytes]]]:
+    def __getattr__(self, command: str):
         """
         This magic allows a cli invocation like:
 
@@ -52,9 +49,7 @@ class CliCmd:
         future we can make this invoke the commands inside the test process.
         """
 
-        def func(
-            *args: str, **kwargs: str
-        ) -> Union[CompletedProcess[str], CompletedProcess[bytes]]:
+        def func(*args: str, **kwargs: str):
             input = kwargs.pop("stdin", None)
             if input:
                 input = input.encode("utf8")
@@ -107,7 +102,7 @@ class hg(CliCmd):
 
 
 class CommandFailure(Exception):
-    def __init__(self, result: CompletedProcess[bytes]) -> None:
+    def __init__(self, result) -> None:
         self.result = result
 
     def __str__(self) -> str:

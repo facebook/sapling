@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 from typing import Any, IO, BinaryIO, TextIO, Union
 
+from .generators import RepoGenerator
 from .hg import hg
 from .workingcopy import WorkingCopy
 
@@ -22,6 +23,7 @@ class Repo:
     def __init__(self, root: Path) -> None:
         self.root = root
         self._wc = WorkingCopy(self, root)
+        self.gen = RepoGenerator()
         self.hg = hg(self.root)
 
     def add_config(self, section: str, key: str, value: str) -> None:
