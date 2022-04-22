@@ -15,6 +15,7 @@ windows-sys = { git = "https://github.com/fanzeyi/windows-rs", rev = "8775afca5d
 
 [workspace]
 members = [
+  "edenscmnative/conch_parser",
   "exec/eden_apfs_mount_helper",
   "exec/fsprobe",
   "exec/github-cli",
