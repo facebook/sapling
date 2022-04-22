@@ -218,6 +218,10 @@ impl Repo {
         &self.config
     }
 
+    pub fn config_mut(&mut self) -> &mut ConfigSet {
+        &mut self.config
+    }
+
     pub fn repo_name(&self) -> Option<&str> {
         self.repo_name.as_ref().map(|s| s.as_ref())
     }

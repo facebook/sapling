@@ -141,6 +141,8 @@ fn clone(
     hgrc_content.push_str(format!("\n[paths]\ndefault = {}\n", source).as_str());
 
     let mut repo = Repo::init(&destination, &mut config, Some(hgrc_content))?;
+
+    repo.config_mut().set_overrides(&global_opts.config)?;
     repo.add_store_requirement("lazychangelog")?;
     repo.add_requirement("remotefilelog")?;
 

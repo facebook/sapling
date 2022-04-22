@@ -22,7 +22,11 @@ pub enum Error {
 
     /// Unable to parse a file due to syntax.
     #[error("{0:?}:\n{1}")]
-    Parse(PathBuf, String),
+    ParseFile(PathBuf, String),
+
+    /// Unable to parse a flag due to syntax.
+    #[error("malformed --config option: '{0}' (use --config section.name=value)")]
+    ParseFlag(String),
 
     /// Unable to read a file due to IO errors.
     #[error("{0:?}: {1}")]

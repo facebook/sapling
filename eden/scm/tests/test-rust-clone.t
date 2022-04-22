@@ -25,6 +25,7 @@ test rust clone
   > EOS
 
   $ hg push -r $E --to master --create -q
+  $ hg push -r $C --to stable --create -q
 
 Test that nonsupported options fallback to python:
 
@@ -54,14 +55,14 @@ Test that nonsupported options fallback to python:
   fetching selected remote bookmarks
 
 Test rust clone
-  $ hg clone -U test:e1 $TESTTMP/rust-clone
+  $ hg clone -U test:e1 $TESTTMP/rust-clone --config remotenames.selectivepulldefault='master, stable'
   TRACE hgcommands::commands::clone: performing rust clone
   TRACE hgcommands::commands::clone: fetching lazy commit data and bookmarks
   $ cd $TESTTMP/rust-clone
 
 Check metalog is written and keys are tracked correctly
   $ hg dbsh -c 'ui.write(str(ml.get("remotenames")))'
-  b'9bc730a19041f9ec7cb33c626e811aa233efb18c bookmarks remote/master\n' (no-eol)
+  b'9bc730a19041f9ec7cb33c626e811aa233efb18c bookmarks remote/master\n26805aba1e600a82e93661149f2313866a221a7b bookmarks remote/stable\n' (no-eol)
 
 Check configuration
   $ hg paths

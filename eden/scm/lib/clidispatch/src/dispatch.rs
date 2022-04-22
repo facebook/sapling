@@ -53,22 +53,7 @@ where
     for config_path in config_paths {
         errors.extend(config.load_path(config_path, &"--configfile".into()));
     }
-
-    for config_override in config_overrides {
-        let equals_pos = config_override
-            .find("=")
-            .ok_or_else(|| errors::MalformedConfigOption(config_override.to_string()))?;
-        let section_name_pair = &config_override[..equals_pos];
-        let value = &config_override[equals_pos + 1..];
-
-        let dot_pos = section_name_pair
-            .find(".")
-            .ok_or_else(|| errors::MalformedConfigOption(config_override.to_string()))?;
-        let section = &section_name_pair[..dot_pos];
-        let name = &section_name_pair[dot_pos + 1..];
-
-        config.set(section, name, Some(value), &"--config".into());
-    }
+    config.set_overrides(config_overrides)?;
 
     Ok(())
 }
