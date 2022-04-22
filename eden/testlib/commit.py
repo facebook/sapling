@@ -12,6 +12,9 @@ if TYPE_CHECKING:
     from .repo import Repo
 
 
+from .status import Status
+
+
 class Commit:
     hash: str
     repo: Repo
@@ -39,6 +42,9 @@ class Commit:
                 raise ValueError("reached end of history when traversing parents")
             commit = parents[0]
         return commit
+
+    def status(self) -> Status:
+        return Status(self.repo.hg.status(change=self.hash, template="json").stdout)
 
     def parents(self) -> List[Commit]:
         raw = self.repo.hg.log(rev=f"parents({self.hash})", template="{node}\n").stdout

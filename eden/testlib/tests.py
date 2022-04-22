@@ -35,13 +35,13 @@ class TestLibTests(BaseTest):
         file = wc.file()
         self.assertTrue(exists(file.path))
         self.assertEqual(read(file.path), file.path)
-        self.assertEquals(wc.hg.status().stdout, f"A {file.path}\n")
+        self.assertEqual(wc.status().added, [file.path])
 
         # Test remove
         file.remove()
         self.assertFalse(file.exists())
         wc.remove(file)
-        self.assertEquals(wc.hg.status().stdout, f"")
+        self.assertTrue(wc.status().empty())
 
         # Test adding a file in a directory
         file = wc.file(path="subdir/file")
@@ -53,11 +53,11 @@ class TestLibTests(BaseTest):
         file = wc.file(path="foo", content="bar", add=False)
         self.assertTrue(exists("foo"))
         self.assertEqual(read("foo"), "bar")
-        self.assertEquals(wc.hg.status().stdout, "? foo\n")
+        self.assertEqual(wc.status().untracked, ["foo"])
 
         # Test wc.add()
         wc.add(file)
-        self.assertEquals(wc.hg.status().stdout, f"A foo\n")
+        self.assertEqual(wc.status().added, ["foo"])
 
         # Test reads
         self.assertEqual(file.content(), "bar")
@@ -73,8 +73,8 @@ class TestLibTests(BaseTest):
     def test_working_copy_commit(self, repo: Repo, wc: WorkingCopy) -> None:
         file = wc.file()
         commit = wc.commit()
-        self.assertEquals(wc.hg.status().stdout, "")
-        self.assertEquals(wc.hg.status(change=commit.hash).stdout, f"A {file.path}\n")
+        self.assertTrue(wc.status().empty())
+        self.assertEqual(commit.status().added, [file.path])
 
         file = wc.file(add=False)
         commit = wc.commit(
@@ -89,7 +89,7 @@ class TestLibTests(BaseTest):
             ).stdout,
             "my message\nmy author\n1980-01-01 00:00 +0000",
         )
-        self.assertEquals(wc.hg.status(change=commit.hash).stdout, f"A {file.path}\n")
+        self.assertEqual(commit.status().added, [file.path])
 
     @hgtest
     def test_working_copy_bookmark(self, repo: Repo, wc: WorkingCopy) -> None:

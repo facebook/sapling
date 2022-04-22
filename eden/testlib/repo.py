@@ -47,6 +47,9 @@ class Repo:
         # TODO: Eden support & new-work-dir support
         return self._wc
 
+    def __getitem__(self, hash: str) -> Commit:
+        return self.commits(hash)[0]
+
     def commits(self, commits: str) -> List[Commit]:
         output = self.hg.log(rev=commits, template="{node}\n").stdout
         lines = output.split("\n")

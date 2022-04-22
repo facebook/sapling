@@ -13,6 +13,7 @@ from typing import Any, IO, List, Optional, TYPE_CHECKING, Union
 from .commit import Commit
 from .file import File
 from .hg import hg
+from .status import Status
 from .types import PathLike
 
 if TYPE_CHECKING:
@@ -28,6 +29,9 @@ class WorkingCopy:
         self.repo = repo
         self.root = root
         self.hg = hg(self.root)
+
+    def status(self) -> Status:
+        return Status(self.hg.status(template="json").stdout)
 
     def commit(
         self,
