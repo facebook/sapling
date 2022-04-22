@@ -6,11 +6,12 @@
 # pyre-strict
 
 import unittest
+from pathlib import Path
 from typing import Callable, TypeVar
 
 from .repo import Repo
 from .server import LocalServer, Server
-from .util import test_globals
+from .util import new_dir, test_globals
 from .workingcopy import WorkingCopy
 
 
@@ -19,6 +20,56 @@ class BaseTest(unittest.TestCase):
         test_globals.setup()
         self.server = self.new_server()
         self.repo = self.server.clone()
+        self._add_production_configs(Path(test_globals.env["HGRCPATH"]))
+
+    def _add_production_configs(self, hgrc: Path) -> None:
+        with open(hgrc, "w") as f:
+            f.write(
+                f"""
+[commitcloud]
+hostname = testhost
+remotebookmarkssync = True
+servicetype = local
+servicelocation = {new_dir()}
+token_enforced = False
+
+[experimental]
+changegroup3 = True
+evolution = obsolete
+narrow-heads = True
+
+[extensions]
+amend =
+commitcloud =
+infinitepush =
+rebase =
+remotefilelog =
+remotenames =
+smartlog =
+treemanifest =
+
+[mutation]
+date = "0 0"
+enabled = True
+record = True
+
+[remotefilelog]
+cachepath = {new_dir()}
+http = True
+
+[remotenames]
+hoist = remote
+rename.default = remote
+selectivepull = True
+selectivepulldefault = master
+
+[treemanifest]
+http = True
+
+[visibility]
+enabled = True
+"""
+            )
 
     def tearDown(self) -> None:
         test_globals.cleanup()

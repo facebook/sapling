@@ -5,6 +5,7 @@
 
 # pyre-strict
 
+import os
 import threading
 from pathlib import Path
 from typing import Dict
@@ -26,7 +27,9 @@ class GlobalTestState(threading.local):
     def setup(self) -> None:
         self.temp_mgr = TempFileManager()
         self.test_tmp = self.temp_mgr.make_temp_dir()
-        self.env = {}
+
+        hgrc_path = os.path.join(new_dir(), "global_hgrc")
+        self.env = {"HGRCPATH": hgrc_path}
 
     def cleanup(self) -> None:
         self.temp_mgr.cleanup()
