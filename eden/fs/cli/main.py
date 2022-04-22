@@ -1948,17 +1948,20 @@ re-open these files after EdenFS is restarted.
             print("Failed to start edenfs daemon!", file=sys.stderr)
             return exit_code
 
-        print(
-            """\
+        print()
+        print("Successfully restarted EdenFS.")
 
-Successfully restarted EdenFS.
+        if sys.platform != "win32":
+            print()
+            print(
+                """\
 Note: any programs running inside of an EdenFS-managed directory will need to cd
 out of and back into the repository to pick up the new working directory state.
 If you see "Transport endpoint not connected" errors from any program this
 means it is still attempting to use the old mount point from the previous edenfs
 process, and if you see this in your terminal, you should run "cd / && cd -" to
 update your shell's working directory."""
-        )
+            )
         return 0
 
 
