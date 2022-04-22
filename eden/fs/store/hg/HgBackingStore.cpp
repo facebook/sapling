@@ -44,14 +44,6 @@
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
-#ifdef EDEN_HAVE_SERVICEROUTER
-#include "servicerouter/common/TServiceRouterException.h" // @manual
-#include "servicerouter/common/gen-cpp2/error_types.h" // @manual
-
-using facebook::servicerouter::ErrorReason;
-using facebook::servicerouter::TServiceRouterException;
-#endif
-
 using folly::Future;
 using folly::IOBuf;
 using folly::makeFuture;
