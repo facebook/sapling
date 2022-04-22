@@ -53,6 +53,7 @@
   [master 2c01e4a] Add file3
    1 file changed, 1 insertion(+)
    create mode 100644 file3_repo/file3
+  $ GIT_MASTER_HASH=$(git log -n 1 --pretty=format:"%H" master)
 
 # Run setup checker
   $ cd "$TESTTMP"
@@ -109,6 +110,7 @@
   > "$GIT_REPO" \
   > --dest-path "new_dir/new_repo" \
   > --batch-size 3 \
+  > --git-merge-rev-id "$GIT_MASTER_HASH" \
   > --bookmark-suffix "new_repo" \
   > --disable-phabricator-check \
   > --disable-hg-sync-check \
@@ -189,6 +191,8 @@
     "datetime": * (glob)
     "dest_bookmark_name": "master_bookmark",
     "dest_path": "new_dir/new_repo",
+    "git_merge_bcs_id": "949a7a4d4df6d48ae385b4df86451a96b02433bc51b3912812c78c4bb0a6447a",
+    "git_merge_rev_id": "2c01e4a5658421e2bfcd08e31d9b69399319bcd3",
     "git_repo_path": "$TESTTMP/repo-git",
     "gitimport_bcs_ids": [
       "*", (glob)

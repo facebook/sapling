@@ -119,6 +119,7 @@ Before the change
   > --disable-phabricator-check \
   > --disable-hg-sync-check \
   > --dest-bookmark new_bookmark \
+  > --git-merge-rev-id master \
   > --commit-author user \
   > --commit-message "merging" \
   > --recovery-file-path "$GIT_REPO/recovery_file.json" &> /dev/null

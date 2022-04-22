@@ -27,6 +27,7 @@ use futures::{
     future::{self, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
+use git2::Repository;
 use import_tools::{FullRepoImport, GitimportPreferences};
 use itertools::Itertools;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
@@ -138,6 +139,7 @@ pub struct RecoveryFields {
     import_stage: ImportStage,
     recovery_file_path: String,
     git_repo_path: String,
+    git_merge_rev_id: String,
     dest_path: String,
     bookmark_suffix: String,
     batch_size: usize,
@@ -158,6 +160,7 @@ pub struct RecoveryFields {
     shifted_bcs_ids: Option<Vec<ChangesetId>>,
     /// ChangesetIds of the gitimported commits
     gitimport_bcs_ids: Option<Vec<ChangesetId>>,
+    git_merge_bcs_id: Option<ChangesetId>,
 }
 
 async fn rewrite_file_paths(
@@ -165,9 +168,12 @@ async fn rewrite_file_paths(
     repo: &Repo,
     mover: &Mover,
     gitimport_bcs_ids: &[ChangesetId],
-) -> Result<Vec<ChangesetId>, Error> {
+    git_merge_bcs_id: &ChangesetId,
+) -> Result<(Vec<ChangesetId>, Option<ChangesetId>), Error> {
     let mut remapped_parents: HashMap<ChangesetId, ChangesetId> = HashMap::new();
     let mut bonsai_changesets = vec![];
+
+    let mut git_merge_shifted_bcs_id = None;
 
     let len = gitimport_bcs_ids.len();
     let gitimport_changesets = stream::iter(gitimport_bcs_ids.iter().map(|bcs_id| async move {
@@ -202,6 +208,9 @@ async fn rewrite_file_paths(
                 bcs_id,
                 rewritten_bcs_id,
             );
+            if *git_merge_bcs_id == bcs_id {
+                git_merge_shifted_bcs_id = Some(rewritten_bcs_id);
+            }
             bonsai_changesets.push(rewritten_bcs);
         }
     }
@@ -211,7 +220,7 @@ async fn rewrite_file_paths(
     info!(ctx.logger(), "Saving shifted bonsai changesets");
     save_bonsai_changesets(bonsai_changesets, ctx.clone(), repo).await?;
     info!(ctx.logger(), "Saved shifted bonsai changesets");
-    Ok(bcs_ids)
+    Ok((bcs_ids, git_merge_shifted_bcs_id))
 }
 
 async fn find_mapping_version(
@@ -1053,6 +1062,16 @@ async fn repo_import(
             import_tools::gitimport(&ctx, repo.as_blob_repo(), path, &target, prefs).await?;
         info!(ctx.logger(), "Added commits to Mononoke");
 
+        let git_repo = Repository::open(path)?;
+        let git_merge_oid = git_repo
+            .revparse_single(&recovery_fields.git_merge_rev_id)?
+            .id();
+
+        let git_merge_bcs_id = match import_map.get(&git_merge_oid) {
+            Some((a, _)) => a.clone(),
+            None => return Err(format_err!("Git commit doesn't exist")),
+        };
+
         let bonsai_values: Vec<(ChangesetId, BonsaiChangeset)> =
             import_map.values().cloned().collect();
         let gitimport_bcs: Vec<BonsaiChangeset> =
@@ -1064,6 +1083,7 @@ async fn repo_import(
         save_bonsai_changesets(gitimport_bcs.clone(), ctx.clone(), &repo).await?;
         info!(ctx.logger(), "Saved gitimported bonsai changesets");
 
+        recovery_fields.git_merge_bcs_id = Some(git_merge_bcs_id);
         recovery_fields.import_stage = ImportStage::RewritePaths;
         recovery_fields.gitimport_bcs_ids = Some(gitimport_bcs_ids);
         save_importing_state(&recovery_fields).await?;
@@ -1074,12 +1094,28 @@ async fn repo_import(
             .gitimport_bcs_ids
             .as_ref()
             .ok_or_else(|| format_err!("gitimported changeset ids are not found"))?;
-        let shifted_bcs_ids =
-            rewrite_file_paths(&ctx, &repo, &combined_mover, &gitimport_bcs_ids).await?;
-        let imported_cs_id = match shifted_bcs_ids.last() {
+        let git_merge_bcs_id = recovery_fields
+            .git_merge_bcs_id
+            .as_ref()
+            .ok_or_else(|| format_err!("gitimported changeset ids are not found"))?;
+        let (shifted_bcs_ids, git_merge_shifted_bcs_id) = rewrite_file_paths(
+            &ctx,
+            &repo,
+            &combined_mover,
+            gitimport_bcs_ids,
+            git_merge_bcs_id,
+        )
+        .await?;
+
+        let imported_cs_id = match git_merge_shifted_bcs_id {
             Some(bcs_id) => bcs_id,
-            None => return Err(format_err!("There is no bonsai changeset present")),
+            None => {
+                return Err(format_err!(
+                    "There is no bonsai changeset corresponding for the git commit to be merged"
+                ));
+            }
         };
+
         recovery_fields.import_stage = ImportStage::DeriveBonsais;
         recovery_fields.imported_cs_id = Some(imported_cs_id.clone());
         recovery_fields.shifted_bcs_ids = Some(shifted_bcs_ids);

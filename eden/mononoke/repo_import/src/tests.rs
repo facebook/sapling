@@ -97,6 +97,8 @@ mod tests {
             import_stage: ImportStage::GitImport,
             recovery_file_path: "recovery_path".to_string(),
             git_repo_path: "git_repo_path".to_string(),
+            git_merge_bcs_id: None,
+            git_merge_rev_id: "master".to_string(),
             dest_path: "dest_path".to_string(),
             bookmark_suffix: "bookmark_suffix".to_string(),
             batch_size: 2,
@@ -699,8 +701,14 @@ mod tests {
             Ok(Some(mutable_path))
         });
 
-        let shifted_bcs_ids =
-            rewrite_file_paths(&ctx, &large_repo, &combined_mover, &cs_ids).await?;
+        let (shifted_bcs_ids, _git_merge_shifted_bcs_id) = rewrite_file_paths(
+            &ctx,
+            &large_repo,
+            &combined_mover,
+            &cs_ids,
+            cs_ids.last().unwrap(),
+        )
+        .await?;
 
         let large_repo_cs_a = &shifted_bcs_ids[0]
             .load(&ctx, large_repo.repo_blobstore())
@@ -858,8 +866,14 @@ mod tests {
             Ok(Some(mutable_path))
         });
 
-        let large_repo_cs_ids =
-            rewrite_file_paths(&ctx, &large_repo, &combined_mover, &cs_ids).await?;
+        let (large_repo_cs_ids, _) = rewrite_file_paths(
+            &ctx,
+            &large_repo,
+            &combined_mover,
+            &cs_ids,
+            cs_ids.last().unwrap(),
+        )
+        .await?;
         let small_repo_cs_ids = back_sync_commits_to_small_repo(
             &ctx,
             &small_repo,

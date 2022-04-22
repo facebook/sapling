@@ -14,6 +14,7 @@ use std::num::NonZeroUsize;
 
 pub const IMPORT: &str = "import";
 pub const ARG_GIT_REPOSITORY_PATH: &str = "git-repository-path";
+pub const ARG_GIT_MERGE_REV_ID: &str = "git-merge-rev-id";
 pub const ARG_DEST_PATH: &str = "dest-path";
 pub const ARG_BATCH_SIZE: &str = "batch-size";
 pub const ARG_BOOKMARK_SUFFIX: &str = "bookmark-suffix";
@@ -67,6 +68,13 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                     Arg::with_name(ARG_GIT_REPOSITORY_PATH)
                         .required(true)
                         .help("Path to a git repository to import"),
+                )
+                .arg(
+                    Arg::with_name(ARG_GIT_MERGE_REV_ID)
+                        .long(ARG_GIT_MERGE_REV_ID)
+                        .takes_value(true)
+                        .required(true)
+                        .help("Revision in a git repo which should be merged"),
                 )
                 .arg(
                     Arg::with_name(ARG_DEST_PATH)
@@ -169,6 +177,7 @@ pub fn setup_import_args(matches: &ArgMatches<'_>) -> Result<RecoveryFields, Err
     let import_stage = ImportStage::GitImport;
     let recovery_file_path = matches.value_of(ARG_RECOVERY_FILE_PATH).unwrap();
     let git_repo_path = matches.value_of(ARG_GIT_REPOSITORY_PATH).unwrap();
+    let git_merge_rev_id = matches.value_of(ARG_GIT_MERGE_REV_ID).unwrap();
     let dest_path = matches.value_of(ARG_DEST_PATH).unwrap();
     let bookmark_suffix = matches.value_of(ARG_BOOKMARK_SUFFIX).unwrap();
     let batch_size = matches.value_of(ARG_BATCH_SIZE).unwrap();
@@ -185,10 +194,10 @@ pub fn setup_import_args(matches: &ArgMatches<'_>) -> Result<RecoveryFields, Err
         Some(date) => DateTime::from_rfc3339(date)?,
         None => DateTime::now(),
     };
-
     Ok(RecoveryFields {
         import_stage,
         recovery_file_path: recovery_file_path.to_string(),
+        git_merge_rev_id: git_merge_rev_id.to_string(),
         git_repo_path: git_repo_path.to_string(),
         dest_path: dest_path.to_string(),
         bookmark_suffix: bookmark_suffix.to_string(),
@@ -206,5 +215,6 @@ pub fn setup_import_args(matches: &ArgMatches<'_>) -> Result<RecoveryFields, Err
         shifted_bcs_ids: None,
         gitimport_bcs_ids: None,
         merged_cs_id: None,
+        git_merge_bcs_id: None,
     })
 }
