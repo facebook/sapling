@@ -20,6 +20,14 @@ class Commit:
         self.hash = hash
         self.repo = repo
 
+    def __repr__(self) -> str:
+        return "Commit-%s" % self.hash
+
+    def __eq__(self, other: Commit) -> bool:
+        if isinstance(other, Commit):
+            return self.hash == other.hash
+        return super().__eq__(other)
+
     def ancestor(self, idx: int) -> Commit:
         commit = self
         # This could be more efficient, instead of execing hg for every step of

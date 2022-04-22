@@ -8,7 +8,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Any, IO, BinaryIO, List, TextIO, Union
+from typing import Any, Dict, IO, BinaryIO, List, TextIO, Union
 
 from .commit import Commit
 from .generators import RepoGenerator
@@ -53,3 +53,21 @@ class Repo:
         if len(lines) == 0:
             raise ValueError("unknown commit %s" % commits)
         return [Commit(self, hash) for hash in lines[:-1]]
+
+    def bookmarks(self) -> Dict[str, Commit]:
+        output = json.loads(self.hg.bookmarks(template="json").stdout)
+        bookmarks = {}
+        for entry in output:
+            bookmarks[entry["bookmark"]] = Commit(self, entry["node"])
+        return bookmarks
+
+    def remote_bookmarks(self) -> Dict[str, str]:
+        output = json.loads(
+            self.hg.bookmarks(list_subcriptions=True, template="json").stdout
+        )
+        bookmarks = {}
+        for entry in output:
+            name = entry["remotebookmark"]
+            remote, name = name.split("/", 1)
+            bookmarks[name] = Commit(self, entry["node"])
+        return bookmarks

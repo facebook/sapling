@@ -91,6 +91,14 @@ class TestLibTests(BaseTest):
         )
         self.assertEquals(wc.hg.status(change=commit.hash).stdout, f"A {file.path}\n")
 
+    @hgtest
+    def test_working_copy_bookmark(self, repo: Repo, wc: WorkingCopy) -> None:
+        wc.file()
+        commit = wc.commit()
+
+        wc.hg.bookmark("foo")
+        self.assertEqual(repo.bookmarks()["foo"], commit)
+
 
 if __name__ == "__main__":
     import unittest
