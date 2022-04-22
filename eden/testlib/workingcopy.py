@@ -30,6 +30,11 @@ class WorkingCopy:
         self.root = root
         self.hg = hg(self.root)
 
+    def checkout(self, destination: Union[str, Commit], clean: bool = False) -> None:
+        if isinstance(destination, Commit):
+            destination = destination.hash
+        self.hg.checkout(destination, clean=clean)
+
     def status(self) -> Status:
         return Status(self.hg.status(template="json").stdout)
 
@@ -60,7 +65,7 @@ class WorkingCopy:
         return self.current_commit()
 
     def current_commit(self) -> Commit:
-        return self.repo.commits(".")[0]
+        return self.repo["."]
 
     def file(
         self,

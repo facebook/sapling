@@ -100,6 +100,18 @@ class TestLibTests(BaseTest):
         self.assertEqual(repo.bookmarks()["foo"], commit)
 
     @hgtest
+    def test_working_copy_checkout(self, repo: Repo, wc: WorkingCopy) -> None:
+        wc.file()
+        commit1 = wc.commit()
+        wc.file()
+        commit2 = wc.commit()
+
+        wc.checkout(commit1)
+        self.assertEqual(wc.current_commit(), commit1)
+        wc.checkout(commit2)
+        self.assertEqual(wc.current_commit(), commit2)
+
+    @hgtest
     def test_drawdag(self, repo: Repo, wc: WorkingCopy) -> None:
         repo.drawdag(
             """
