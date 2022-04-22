@@ -16,10 +16,12 @@ use configparser::config::ConfigSet;
 use repo::repo::OptionalRepo;
 use repo::repo::Repo;
 
+use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
 
 pub enum CommandFunc {
     NoRepo(Box<dyn Fn(ParseOutput, &IO, ConfigSet) -> Result<u8>>),
+    NoRepoGlobalOpts(Box<dyn Fn(ParseOutput, HgGlobalOpts, &IO, ConfigSet) -> Result<u8>>),
     OptionalRepo(Box<dyn Fn(ParseOutput, &IO, OptionalRepo) -> Result<u8>>),
     Repo(Box<dyn Fn(ParseOutput, &IO, Repo) -> Result<u8>>),
 }
@@ -150,6 +152,24 @@ where
         self.insert_aliases(name);
         let func = move |opts: ParseOutput, io: &IO, repo: Repo| f(opts.try_into()?, io, repo);
         let func = CommandFunc::Repo(Box::new(func));
+        let def = CommandDefinition::new(name, doc, S::flags, func);
+        self.commands.insert(name.to_string(), def);
+    }
+}
+
+// NoRepoGlobalOpts commands.
+impl<S, FN> Register<FN, ((), (), (), S)> for CommandTable
+where
+    S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
+    FN: Fn(S, HgGlobalOpts, &IO, ConfigSet) -> Result<u8> + 'static,
+{
+    fn register(&mut self, f: FN, name: &str, doc: &str) {
+        self.insert_aliases(name);
+        let func =
+            move |opts: ParseOutput, global_opts: HgGlobalOpts, io: &IO, config: ConfigSet| {
+                f(opts.try_into()?, global_opts, io, config)
+            };
+        let func = CommandFunc::NoRepoGlobalOpts(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func);
         self.commands.insert(name.to_string(), def);
     }

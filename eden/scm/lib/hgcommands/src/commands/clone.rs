@@ -10,6 +10,7 @@ use std::path::PathBuf;
 
 use async_runtime::block_unless_interrupted as block_on;
 use clidispatch::errors;
+use clidispatch::global_flags::HgGlobalOpts;
 use cliparser::define_flags;
 use edenapi::Builder;
 use repo::repo::Repo;
@@ -55,12 +56,6 @@ define_flags! {
         /// files to exclude in a sparse profile
         exclude: String,
 
-        /// config file
-        configfile: Vec<String>,
-
-        /// configs
-        config: Vec<String>,
-
         #[arg]
         source: String,
 
@@ -69,28 +64,38 @@ define_flags! {
     }
 }
 
-pub fn run(opts: CloneOpts, _io: &IO, mut config: ConfigSet) -> Result<u8> {
+pub fn run(
+    clone_opts: CloneOpts,
+    global_opts: HgGlobalOpts,
+    _io: &IO,
+    mut config: ConfigSet,
+) -> Result<u8> {
     if !config.get_or_default::<bool>("clone", "use-rust")? {
         return Err(errors::FallbackToPython.into());
     }
 
-    if !opts.noupdate
-        || !opts.updaterev.is_empty()
-        || !opts.rev.is_empty()
-        || opts.pull
-        || opts.stream
-        || !opts.shallow
-        || opts.git
-        || !opts.enable_profile.is_empty()
-        || !opts.include.is_empty()
-        || !opts.exclude.is_empty()
+    if !clone_opts.noupdate
+        || !clone_opts.updaterev.is_empty()
+        || !clone_opts.rev.is_empty()
+        || clone_opts.pull
+        || clone_opts.stream
+        || !clone_opts.shallow
+        || clone_opts.git
+        || !clone_opts.enable_profile.is_empty()
+        || !clone_opts.include.is_empty()
+        || !clone_opts.exclude.is_empty()
     {
         return Err(errors::FallbackToPython.into());
     }
 
     // Rust clone only supports segmented changelog clone
     // TODO: add binding for python streaming revlog download
-    config.set("paths", "default", Some(opts.source.clone()), &"arg".into());
+    config.set(
+        "paths",
+        "default",
+        Some(clone_opts.source.clone()),
+        &"arg".into(),
+    );
     let edenapi = Builder::from_config(&config)?
         .correlator(Some(edenapi::DEFAULT_CORRELATOR.as_str()))
         .build()?;
@@ -101,14 +106,19 @@ pub fn run(opts: CloneOpts, _io: &IO, mut config: ConfigSet) -> Result<u8> {
     {
         return Err(errors::FallbackToPython.into());
     }
-    clone(opts, config)?;
+
+    clone(clone_opts, global_opts, config)?;
     Ok(0)
 }
 
-fn clone(mut opts: CloneOpts, mut config: ConfigSet) -> Result<u8> {
+fn clone(
+    mut clone_opts: CloneOpts,
+    global_opts: HgGlobalOpts,
+    mut config: ConfigSet,
+) -> Result<u8> {
     tracing::trace!("performing rust clone");
 
-    let source = opts.source;
+    let source = clone_opts.source;
     // This gets the reponame from the --configfile config.
     // TODO: Parse the reponame from the source so the configfile isn't needed
     let reponame = match config.get_opt::<String>("remotefilelog", "reponame")? {
@@ -118,12 +128,12 @@ fn clone(mut opts: CloneOpts, mut config: ConfigSet) -> Result<u8> {
         }
     };
 
-    let destination = match opts.args.pop() {
+    let destination = match clone_opts.args.pop() {
         Some(dest) => PathBuf::from(dest),
         None => env::current_dir()?.join(reponame),
     };
 
-    let mut hgrc_content = opts
+    let mut hgrc_content = global_opts
         .configfile
         .into_iter()
         .map(|file| format!("%include {}\n", file))

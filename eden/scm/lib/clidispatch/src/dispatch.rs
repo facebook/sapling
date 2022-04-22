@@ -330,6 +330,9 @@ impl Dispatcher {
             }
             CommandFunc::OptionalRepo(f) => f(parsed, io, optional_repo),
             CommandFunc::NoRepo(f) => f(parsed, io, optional_repo.take_config()),
+            CommandFunc::NoRepoGlobalOpts(f) => {
+                f(parsed, global_opts, io, optional_repo.take_config())
+            }
         }
     }
 }
