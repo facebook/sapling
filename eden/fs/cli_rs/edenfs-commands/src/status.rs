@@ -9,6 +9,7 @@
 
 use std::time::Duration;
 
+use anyhow::anyhow;
 use async_trait::async_trait;
 use clap::Parser;
 use tokio::time;
@@ -43,6 +44,9 @@ impl StatusCmd {
                     ?health,
                     "Connected to EdenFS daemon but daemon reported unhealthy status"
                 );
+                if let Some(status) = health.status {
+                    return Err(anyhow!("EdenFS is {}", status).into());
+                }
             }
             Ok(Err(e)) => {
                 event!(Level::DEBUG, ?e, "Error while connecting to EdenFS daemon");
