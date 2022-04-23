@@ -362,7 +362,7 @@ Test absolute paths:
 
 Test patterns:
 
-  $ hg debugwalk glob:\*
+  $ hg debugwalk 'glob:*'
   matcher: <treematcher rules=['*']>
   f  fennel      fennel
   f  fenugreek   fenugreek
@@ -372,7 +372,7 @@ Test patterns:
   $ hg addremove
   adding glob:glob
   warning: filename contains ':', which is reserved on Windows: 'glob:glob'
-  $ hg debugwalk glob:\*
+  $ hg debugwalk 'glob:*'
   matcher: <treematcher rules=['*']>
   f  fennel      fennel
   f  fenugreek   fenugreek
