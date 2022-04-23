@@ -555,58 +555,6 @@ Test pushing bookmark with no new commit
 
   $ cd ..
 
-Test that the prepushrebase hook can run against the bundle repo
-
-  $ cat >> $TESTTMP/prerebase.sh <<EOF
-  > hg log -r tip
-  > echo "Checking if lock exists (it should not):"
-  > ls -l .hg/store/lock
-  > EOF
-  $ chmod a+x $TESTTMP/prerebase.sh
-  $ hg init prepushrebaseserver
-  $ cd prepushrebaseserver
-  $ cat >> .hg/hgrc <<EOF
-  > [hooks]
-  > prepushrebase = $TESTTMP/prerebase.sh
-  > [extensions]
-  > pushrebase=
-  > [experimental]
-  > bundle2lazylocking = True
-  > EOF
-  $ touch a && hg add a && hg commit -qm a
-  $ hg book master
-  $ cd ..
-
-  $ hg clone ssh://user@dummy/prepushrebaseserver prepushrebaseclient
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd prepushrebaseclient
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > pushrebase=
-  > EOF
-  $ touch b && hg add b && hg commit -qm b
-  $ hg push --to master
-  pushing rev 0e067c57feba to destination ssh://user@dummy/prepushrebaseserver bookmark master
-  searching for changes
-  remote: prepushrebase hook exited with status * (glob)
-  remote: commit:      3903775176ed
-  remote: bookmark:    master
-  remote: user:        test
-  remote: date:        Thu Jan 01 00:00:00 1970 +0000
-  remote: summary:     a
-  remote: 
-  remote: Checking if lock exists (it should not):
-  remote: ls: *.hg/store/lock*: $ENOENT$ (glob)
-  abort: push failed on remote
-  [255]
-
-  $ cd ..
-
 Test that hooks are fired with the correct variables
 
   $ hg init hookserver
