@@ -574,8 +574,11 @@ Test modifying in interactive mode combined with to
   $ echo bar > bar
   $ hg ci -m "two" -Aq
   $ echo more >> baz
-  $ echo -e "start\n$(cat foo)" > foo
-  $ echo end >> foo
+  $ cat > foo << EOF
+  > start
+  > foo
+  > end
+  > EOF
   $ cat <<EOS | hg amend -i --to "desc(one)" --config ui.interactive=1
   > n
   > y
