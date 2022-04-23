@@ -251,6 +251,17 @@ source:
     ... ''')
     '2\n2\n'
 
+sh:
+
+    >>> t("echo 'echo 1' > a.sh; sh a.sh")
+    '1\n'
+    >>> t("sh -c 'export A=1; echo INNER: $A'; echo OUTER: $A")
+    'INNER: 1\nOUTER:\n'
+    >>> t("echo 'echo [ $@ ]' > a.sh; sh a.sh 1 2")
+    '[ 1 2 ]\n'
+    >>> t("echo 'seq 10 | grep 9' > a.sh; sh a.sh")
+    '9\n'
+
 return:
 
     >>> t('{ echo 0; { echo 1; return 2; echo 3; }; echo 4; }')

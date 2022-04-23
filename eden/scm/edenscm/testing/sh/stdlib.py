@@ -430,6 +430,37 @@ def source(args: List[str], env: Env):
 
 
 @command
+def sh(args: List[str], env: Env, stdout: BinaryIO, stderr: BinaryIO, stdin: BinaryIO):
+    env = env.nested(Scope.SHELL)
+    env.stdin = stdin
+    env.stdout = stdout
+    env.stderr = stderr
+    codelist = []
+    i = 0
+    shargs = []
+    while i < len(args):
+        arg = args[i]
+        i += 1
+        if arg == "-c":
+            codelist.append(args[i])
+            shargs.append("sh")
+            i += 1
+        elif not codelist:
+            with env.fs.open(arg, "rb") as f:
+                codelist.append(f.read().decode())
+            shargs.append(arg)
+        else:
+            shargs.append(arg)
+
+    code = "\n".join(codelist)
+    env.args = shargs
+
+    from .interp import interpcode
+
+    return interpcode(code, env).exitcode
+
+
+@command
 def exit(args: List[str], arg0: str):
     code = 0
     if args:
