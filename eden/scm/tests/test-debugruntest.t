@@ -127,3 +127,91 @@ Autofix:
 
   $ hg debugruntest test-fail-sh.t
   # Ran 1 tests, 0 skipped, 0 failed.
+
+
+#if no-bash
+Doctest:
+
+  $ cat >> testmodule.py << 'EOF'
+  > """
+  > A module for doctest testing
+  >   >>> 1+1
+  >   3
+  > """
+  > def plus(a, b):
+  >     r"""a+b
+  >        >>> plus(10, 20)
+  >        31
+  >        32
+  >        >>> plus('a', 'b')
+  >        >>> plus('a', 3)
+  >     """
+  >     return a + b
+  > EOF
+
+  $ ls testmodule.py
+  testmodule.py
+
+  >>> import testmodule
+
+  $ hg debugruntest doctest:testmodule
+  doctest:testmodule -----------------------------------------------------------
+     3 >>> 1+1
+      -3
+      +2
+  
+     8 >>> plus(10, 20)
+      -31
+      -32
+      +30
+  
+    11 >>> plus('a', 'b')
+      +'ab'
+  
+    12 >>> plus('a', 3)
+      +Traceback (most recent call last):
+      +  ...
+      +TypeError: can only concatenate str (not "int") to str
+  
+  -----------------------------------------------------------------------------
+  Failed 1 test (output mismatch):
+    doctest:testmodule
+  
+  # Ran 1 tests, 0 skipped, 1 failed.
+  [1]
+
+Doctest can be auto fixed too:
+
+  $ hg debugruntest -q --fix doctest:testmodule
+  [1]
+  $ cat testmodule.py
+  """
+  A module for doctest testing
+    >>> 1+1
+    2
+  """
+  def plus(a, b):
+      r"""a+b
+         >>> plus(10, 20)
+         30
+         >>> plus('a', 'b')
+         'ab'
+         >>> plus('a', 3)
+         Traceback (most recent call last):
+           ...
+         TypeError: can only concatenate str (not "int") to str
+      """
+      return a + b
+
+Reload the cached module:
+
+    from importlib import reload
+    import testmodule
+    reload(testmodule)
+
+The doctest passes with the autofix changes:
+
+  $ hg debugruntest doctest:testmodule
+  # Ran 1 tests, 0 skipped, 0 failed.
+
+#endif

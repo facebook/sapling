@@ -4,8 +4,10 @@
 # GNU General Public License version 2.
 
 import collections
+import doctest
 import multiprocessing
 import os
+import re
 import sys
 import textwrap
 import threading
@@ -27,9 +29,44 @@ class TestId:
 
     @classmethod
     def frompath(cls, path: str):
+        if path.startswith("doctest:"):
+            name = path
+            modname = name[8:]
+            __import__(modname)
+            path = sys.modules[modname].__file__
+            return cls(name=name, path=path)
+
         path = os.path.abspath(path)
-        name = os.path.basename(path)
-        return cls(name=name, path=path)
+        if path.endswith(".py"):
+            # try to convert the .py path to doctest:module
+            modnames = sorted(n for n in sys.modules if "." not in n)
+            for name in modnames:
+                mod = sys.modules[name]
+                modpath = getattr(mod, "__file__", None)
+                if not modpath or os.path.basename(modpath) != "__init__.py":
+                    continue
+                prefix = os.path.join(os.path.dirname(modpath), "")
+                if not path.startswith(prefix):
+                    continue
+                relpath = path[len(prefix) :].replace("\\", "/")
+                for suffix in ["/__init__.py", ".py"]:
+                    if relpath.endswith(suffix):
+                        relpath = relpath[: -len(suffix)]
+                        break
+                modname = f"{mod.__name__}.{relpath.replace('/', '.')}"
+                return cls.frompath(f"doctest:{modname}")
+            raise RuntimeError(
+                f"cannot find Python module name for {path=} to run doctest"
+            )
+        else:
+            name = os.path.basename(path)
+            return cls(name=name, path=path)
+
+    @property
+    def modname(self) -> Optional[str]:
+        if self.name.startswith("doctest:"):
+            return self.name.split(":", 1)[1]
+        return None
 
 
 @dataclass
@@ -175,6 +212,69 @@ def runtest(testid: TestId, exts: List[str], mismatchcb: Callable[[Mismatch], No
     The generated Python code is written at __pycache__/ttest/<test>.py.
     Return output mismatches.
     """
+    if testid.modname:
+        return rundoctest(testid, mismatchcb)
+    else:
+        return runttest(testid, exts, mismatchcb)
+
+
+class doctestrunner(doctest.DocTestRunner):
+    """doctest runner that reports output mismatches as Mismatch"""
+
+    def __init__(self, testname: str, mismatchcb: Callable[[Mismatch], None]):
+        optionflags = doctest.IGNORE_EXCEPTION_DETAIL
+        super().__init__(verbose=False, optionflags=optionflags)
+        self.testname = testname
+        self.mismatchcb = mismatchcb
+
+    def report_failure(
+        self, out, test: doctest.DocTest, example: doctest.Example, got: str
+    ):
+        # see doctest.OutputChecker.output_difference
+        if not (self.optionflags & doctest.DONT_ACCEPT_BLANKLINE):
+            got = re.sub("(?m)^[ ]*(?=\n)", doctest.BLANKLINE_MARKER, got)
+
+        srcloc = test.lineno + example.lineno
+        outloc = srcloc + example.source.count("\n")
+        endloc = outloc + example.want.count("\n")
+        src = ">>> " + textwrap.indent(example.source, "... ")[4:]
+        mismatch = Mismatch(
+            actual=got,
+            expected=example.want,
+            src=src,
+            srcloc=srcloc,
+            outloc=outloc,
+            endloc=endloc,
+            indent=example.indent,
+            filename=test.filename,
+            testname=self.testname,
+        )
+        self.mismatchcb(mismatch)
+
+    def report_unexpected_exception(self, out, test, example, excinfo):
+        exctype, excvalue, exctb = excinfo
+        excmsg = str(excvalue)
+        exctypestr = exctype.__name__
+        if excmsg:
+            excstr = f"{exctypestr}: {excmsg}"
+        else:
+            excstr = exctypestr
+        got = f"Traceback (most recent call last):\n  ...\n{excstr}\n"
+        return self.report_failure(out, test, example, got)
+
+
+def rundoctest(testid: TestId, mismatchcb: Callable[[Mismatch], None]):
+    """run doctest for the given module, report Mismatch via mismatchcb"""
+    modname = testid.modname
+    __import__(modname)
+    mod = sys.modules[modname]
+    finder = doctest.DocTestFinder()
+    runner = doctestrunner(testid.name, mismatchcb)
+    for test in finder.find(mod):
+        runner.run(test)
+
+
+def runttest(testid: TestId, exts: List[str], mismatchcb: Callable[[Mismatch], None]):
     path = Path(testid.path)
     testdir = path.parent
 
