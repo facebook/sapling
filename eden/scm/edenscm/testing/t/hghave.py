@@ -63,6 +63,25 @@ def checkvers(name, desc, vers):
     return decorator
 
 
+def checkexe(name):
+    f = lambda name=name: os.path.isfile(f"/bin/{name}")
+    checks[name] = (f, f"{name} executable")
+    exes.add(name)
+
+
+checkexe("cmp")
+checkexe("dd")
+checkexe("diff")
+checkexe("echo")
+checkexe("gunzip")
+checkexe("gzip")
+checkexe("mkfifo")
+checkexe("tar")
+checkexe("tr")
+checkexe("umask")
+checkexe("unzip")
+
+
 _checkfeaturecache = {}
 
 

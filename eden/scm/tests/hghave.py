@@ -28,6 +28,24 @@ def check(name, desc):
     return decorator
 
 
+def checkexe(name):
+    f = lambda name=name: os.path.isfile(f"/bin/{name}")
+    checks[name] = (f, f"{name} executable")
+
+
+checkexe("cmp")
+checkexe("dd")
+checkexe("diff")
+checkexe("echo")
+checkexe("gunzip")
+checkexe("gzip")
+checkexe("mkfifo")
+checkexe("tar")
+checkexe("tr")
+checkexe("umask")
+checkexe("unzip")
+
+
 def checkvers(name, desc, vers):
     """Registers a check function for each of a series of versions.
 
