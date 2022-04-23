@@ -28,11 +28,11 @@ Setup client
   $ cd client
   $ touch file1
   $ hg add file1
-  $ commit_time=`expr $now - 15 \* 60`
+  $ commit_time=$(($now - 15 * 60))
   $ hg commit -d "$commit_time 0" -m "Public changeset"
   $ touch file2
   $ hg add file2
-  $ commit_time=`expr $now - 15 \* 60`
+  $ commit_time=$(($now - 15 * 60))
   $ hg commit -d "$commit_time 0" -m "Public changeset 2"
   $ hg push --to master --create --force
   pushing rev c46481f83c9b to destination ssh://user@dummy/repo bookmark master
@@ -44,10 +44,10 @@ Setup client
   $ hg up 00e8a1efc6e28bc6f64a6e5f365f5ad0a2cebb11
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo a > file1
-  $ changeset_time=`expr $now - 13 \* 60`
+  $ changeset_time=$(($now - 13 * 60))
   $ hg commit -d "$commit_time 0" -m "Backed up changeset"
   $ echo a1 > file1
-  $ changeset_time=`expr $now - 12 \* 60`
+  $ changeset_time=$(($now - 12 * 60))
   $ hg commit -d "$commit_time 0" -m "Backed up changeset 2"
   $ hg cloud backup
   backing up stack rooted at * (glob)
@@ -77,10 +77,10 @@ Revset does not crash if paths.default is unset
 
 Create some changesets that aren't backed up
   $ echo b > file1
-  $ commit_time=`expr $now - 11 \* 60`
+  $ commit_time=$(($now - 11 * 60))
   $ hg commit -d "$commit_time 0" -m "Not backed up changeset"
   $ echo c > file1
-  $ commit_time=`expr $now - 9 \* 60`
+  $ commit_time=$(($now - 9 * 60))
   $ hg commit -d "$commit_time 0" -m "Backup pending changeset"
 
 Check backup status of commits
@@ -131,7 +131,7 @@ Check smartlog summary with multiple unbacked up changesets
   $ hg up 6a37606e3792afff17078859861bbbbdb1227bc2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b2 > file1
-  $ commit_time=`expr $now - 11 \* 60`
+  $ commit_time=$(($now - 11 * 60))
   $ hg commit -d "$commit_time 0" -m "Not backed up changeset 2"
   $ hg smartlog -T '{desc}\n' --config infinitepushbackup.autobackup=yes
   o  Public changeset 2
@@ -156,7 +156,7 @@ Check backup status with an unbacked up changeset that is disjoint from existing
   $ hg up 'max(desc(Public))'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b > file2
-  $ commit_time=`expr $now - 11 \* 60`
+  $ commit_time=$(($now - 11 * 60))
   $ hg commit -d "$commit_time 0" -m "Not backed up changeset 3"
   $ hg log -T '{desc}\n' -r 'notbackedup()'
   Not backed up changeset
@@ -211,7 +211,7 @@ Test sl when infinitepushbackup is disabled but disabling has been expired / not
   (if this fails, please report to the Source Control Team)
 
 Advance time so that the disable has expired
-  $ hg sl --config fakedate.date="1452175000 0" -T '{desc}\n'
+  $ hg sl --config fakedate.date="1452175000 0" -T '{desc}\n' --config infinitepushbackup.enablestatus=no
   @  Not backed up changeset 3
   │
   o  Public changeset 2
@@ -228,9 +228,6 @@ Advance time so that the disable has expired
   ├─╯
   o  Public changeset
   
-  note: 4 changesets are not backed up.
-  (run 'hg cloud backup' to perform a backup)
-  (if this fails, please report to the Source Control Team)
 
 Hide or obsolete some of the non-backed-up commits.  The hidden commits that
 have not been backed up should no longer show up as "not backed up", even if
@@ -238,7 +235,7 @@ have not been backed up should no longer show up as "not backed up", even if
 show as backed up if '--hidden' is passed.
 
   $ echo c > file2
-  $ commit_time=`expr $now - 11 \* 60`
+  $ commit_time=$(($now - 11 * 60))
   $ hg amend -d "$commit_time 0" -m "Not backed up changeset 3 (amended)"
   $ hg hide -q 9d434400bf7f325460bd0b304582414f2848ae03
   $ hg log -T '{desc}\n' -r 'backedup()'
