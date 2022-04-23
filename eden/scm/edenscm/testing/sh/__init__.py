@@ -289,6 +289,11 @@ grep:
     >>> t('echo a | grep b')
     '[1]\n'
 
+sort
+
+    >>> t('for i in c a b; do echo $i; done | sort')
+    'a\nb\nc\n'
+
 Commands on OS filesystem:
 
     >>> from .osfs import OSFS

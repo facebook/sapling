@@ -654,6 +654,14 @@ def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: Binar
 
 
 @command
+def sort(args: List[str], stdin: BinaryIO, fs: ShellFS):
+    paths = args
+    lines = [l.decode() for l in _lines(fs, paths, stdin)]
+    lines = sorted(lines)
+    return "".join(lines)
+
+
+@command
 def wc(args: List[str], stdin: BinaryIO, fs: ShellFS):
     if args[0] == "-l":
         linecounter = lambda l: 1
