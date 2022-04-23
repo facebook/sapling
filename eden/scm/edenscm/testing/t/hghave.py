@@ -821,3 +821,8 @@ def has_mononoke():
 @check("bucktest", "Tests are being run from Buck")
 def has_bucktest():
     return "HGTEST_HG" in os.environ
+
+
+@check("bash", "running via real bash")
+def has_bash():
+    return False
