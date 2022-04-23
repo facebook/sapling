@@ -88,14 +88,14 @@ this should show the rename information in the metadata
   copy: a
   copyrev: b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
 
-  $ md5sum.py .hg/store/data/b.i
-  44913824c8f5890ae218f9829535922e  .hg/store/data/b.i
+  $ f --md5 .hg/store/data/b.i
+  .hg/store/data/b.i: md5=44913824c8f5890ae218f9829535922e
   $ hg cat b > bsum
-  $ md5sum.py bsum
-  60b725f10c9c85c70d97880dfe8191b3  bsum
+  $ f --md5 bsum
+  bsum: md5=60b725f10c9c85c70d97880dfe8191b3
   $ hg cat a > asum
-  $ md5sum.py asum
-  60b725f10c9c85c70d97880dfe8191b3  asum
+  $ f --md5 asum
+  asum: md5=60b725f10c9c85c70d97880dfe8191b3
   $ hg verify
   warning: verify does not actually check anything in this repo
 

@@ -19,7 +19,6 @@ This can be used instead of tools like:
   stat
   tail
   test
-  md5sum.py
 """
 
 from __future__ import absolute_import
