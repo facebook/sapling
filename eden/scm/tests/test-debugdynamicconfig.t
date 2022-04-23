@@ -60,8 +60,8 @@ Verify it can be automatically synchronously generated
   key=value
   
 #if no-windows
-  $ ls -l .hg/hgrc.dynamic
-   *-rw-r--r--.* (re)
+  $ f -m .hg/hgrc.dynamic
+  .hg/hgrc.dynamic: mode=644
 #endif
 
 Verify it can be automatically asynchronously regenerated

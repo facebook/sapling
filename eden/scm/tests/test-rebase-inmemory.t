@@ -134,8 +134,8 @@ Ensure symlink and executable files were rebased properly:
   $ hg up -Cq 'desc(c)'
   $ f e
   e -> somefile
-  $ ls -l f | cut -c -10
-  -rwxr-xr-x
+  $ f -m f
+  f: mode=755
   $ cd ..
 
 Make a change that only changes the flags of a file and ensure it rebases
@@ -160,8 +160,8 @@ cleanly.
   $ hg rebase -r 'desc(change)' -d .
   rebasing 0666f6a71f74 "change a's flags"
   $ hg up -q tip
-  $ ls -l a | cut -c -10
-  -rwxr-xr-x
+  $ f -m a
+  a: mode=755
   $ cd ..
 
 Rebase the working copy parent:

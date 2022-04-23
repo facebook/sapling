@@ -325,8 +325,8 @@ Test file permissions changing across a sparse profile change
   $ hg up -q 'desc(initial)'
   $ hg sparse enableprofile .hgsparse
   $ hg up -q 'desc(update)'
-  $ ls -l b
-  -rwxr-xr-x* b (glob)
+  $ f -m b
+  b: mode=755
 
   $ cd ..
 

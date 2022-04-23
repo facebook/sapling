@@ -1,4 +1,5 @@
 #chg-compatible
+#require bash
 
   $ enable progress
   $ setconfig extensions.rustprogresstest="$TESTDIR/runlogtest.py" runlog.enable=True runlog.progress-refresh=0

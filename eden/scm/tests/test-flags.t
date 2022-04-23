@@ -132,9 +132,7 @@ the changelog should mention file a:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
-  $ ls -l ../test[123]/a > foo
-  $ cut -b 1-10 < foo
-  -rwxr-x---
-  -rwxr-x---
-  -rwxr-x---
-
+  $ f -m ../test1/a ../test2/a ../test3/a
+  ../test1/a: mode=750
+  ../test2/a: mode=750
+  ../test3/a: mode=750
