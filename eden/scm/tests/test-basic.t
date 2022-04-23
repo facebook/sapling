@@ -10,8 +10,8 @@ Create a repository:
   devel.all-warnings=true
   devel.collapse-traceback=true
   devel.default-date=0 0
-  experimental.metalog=true
-  extensions.patchrmdir=
+  experimental.metalog=true (?)
+  extensions.patchrmdir= (?)
   extensions.fsmonitor= (fsmonitor !)
   extensions.treemanifest=!
   format.use-segmented-changelog=1
@@ -53,12 +53,14 @@ Writes to stdio succeed and fail appropriately
   [255]
 #endif
 
+#if bash
 Commands can succeed without a stdin
   $ hg log -r tip 0<&-
   commit:      000000000000
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000
   
+#endif
 
 #if devfull no-chg
   $ hg status >/dev/full 2>&1
@@ -97,7 +99,7 @@ Verify that updating to revision acb14030fe0a via commands.update() works proper
   > EOF
   $ hg up null
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg debugpython -- ./update_to_rev0.py
+  $ hg debugshell ./update_to_rev0.py
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg identify -n
   72057594037927936
