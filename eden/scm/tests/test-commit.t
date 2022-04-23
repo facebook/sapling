@@ -26,7 +26,8 @@ commit date test
   hg: parse error: invalid date: 'foo bar'
   [255]
 #if linuxormacos
-  $ hg commit -d ' 1 4444' -l <(echo commit-6)
+  $ echo commit-6 > $TESTTMP/commit-msg
+  $ hg commit -d ' 1 4444' -l $TESTTMP/commit-msg
 #else
   $ hg commit -d ' 1 4444' -m commit-6
 #endif
