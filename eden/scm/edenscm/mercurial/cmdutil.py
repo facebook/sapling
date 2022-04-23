@@ -4233,9 +4233,11 @@ def _performrevert(
     node = ctx.node()
     excluded_files = []
     matcher_opts = {"exclude": excluded_files}
+    wctx = repo[None]
 
     def checkout(f):
         fc = ctx[f]
+        wctx[f].clearunknown()
         repo.wwrite(f, fc.data(), fc.flags())
 
     def doremove(f):
