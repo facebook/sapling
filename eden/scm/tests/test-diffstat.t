@@ -2,7 +2,7 @@
 
   $ hg init repo
   $ cd repo
-  $ i=0; while [ "$i" -lt 213 ]; do echo a >> a; i=`expr $i + 1`; done
+  >>> with open("a", "wb") as f: f.write(b"a\n" * 213) and None
   $ hg add a
   $ cp a b
   $ hg add b
