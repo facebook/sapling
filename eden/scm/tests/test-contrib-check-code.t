@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ run_check_code() {
-  >   PYTHONPATH= "$TESTDIR"/../contrib/check-code.py "$@"
+  >   PYTHONPATH= python "$TESTDIR/../contrib/check-code.py" "$@"
   > }
 
   $ cat > correct.py <<EOF
