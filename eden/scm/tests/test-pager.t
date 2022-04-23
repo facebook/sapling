@@ -21,7 +21,7 @@ fake pager that lets us see when the pager was running.
   $ echo a >> a
   $ hg add a
   $ hg ci -m 'add a'
-  $ for x in `$PYTHON $TESTDIR/seq.py 1 10`; do
+  $ for x in `seq 1 10`; do
   >   echo a $x >> a
   >   hg ci -m "modify a $x"
   > done

@@ -148,7 +148,7 @@ amend.autorestack=no-conflict, and mergeable changes (expect restack)
   > A
   > EOS
   $ hg update B -q
-  $ $TESTDIR/seq.py 0 2 > file
+  $ seq 0 2 > file
   $ hg amend
   custom autorestack message
   rebasing ca039b450ae0 "C" (C)
@@ -176,7 +176,7 @@ amend.autorestack=no-conflict, and mergeable changes, but dirty WC (expect no re
   > EOS
   $ hg update B -q
   $ echo "new content" > other
-  $ $TESTDIR/seq.py 0 2 > file
+  $ seq 0 2 > file
   $ cat <<EOS | hg amend -i --config ui.interactive=1
   > y
   > y

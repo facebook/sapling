@@ -73,7 +73,7 @@ prepare repo with small and big file to cover both code paths in emitrevlogdata
 
   $ hg init repo
   $ touch repo/f1
-  $ $TESTDIR/seq.py 50000 > repo/f2
+  $ seq 50000 > repo/f2
   $ hg -R repo ci -Aqm "0"
 
   $ cat >>repo/.hg/hgrc <<EOF

@@ -55,12 +55,12 @@ Confirm the flag fails without IMM:
 
 Confirm that it rebases a three-way merge, but no conflict:
   $ newrepo
-  $ $TESTDIR/seq.py 1 5 > a
+  $ seq 1 5 > a
   $ hg commit -Aq -m "base"
-  $ $TESTDIR/seq.py 1 10 > a
+  $ seq 1 10 > a
   $ hg commit -q -m "extend to 10"
   $ hg up -q .~1
-  $ $TESTDIR/seq.py 0 5 > a
+  $ seq 0 5 > a
   $ hg commit -q -m "prepend with 0"
   $ hg log -G -r 'desc(base)':: -T '{desc}'
   @  prepend with 0

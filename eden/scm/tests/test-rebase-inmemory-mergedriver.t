@@ -33,7 +33,7 @@ Test mergedriver invalidation with IMM.
 A dummy file (FILE) is created to force a simple three-way merge (without
 conflicts, though a conflict would work too). Otherwise, mergedriver won't run.
 
-  $ $TESTDIR/seq.py 1 10 > FILE
+  $ seq 1 10 > FILE
   $ hg add FILE
   $ hg commit -Aq -m "base mergedriver"
   $ hg book -r . "base"
@@ -63,7 +63,7 @@ Next, off of BASE, make an API change to the driver.
   >     repo.ui.write("new_required_arg = %s\n" % new_required_arg)
   >     pass
   > EOF
-  $ $TESTDIR/seq.py 1 11 > FILE
+  $ seq 1 11 > FILE
   $ hg com -m "new driver"
   $ hg book -r . new_driver
   $ hg up -q .~1
@@ -76,7 +76,7 @@ Next make a change to the dummy file off BASE.
   $ hg up -C .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark base)
-  $ $TESTDIR/seq.py 0 10 > FILE
+  $ seq 0 10 > FILE
   $ hg commit -m "prefix FILE with 0"
   $ hg book -r . "base_1"
 

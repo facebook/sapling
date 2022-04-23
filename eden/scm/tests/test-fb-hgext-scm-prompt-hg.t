@@ -220,7 +220,7 @@ Test locked repo states (generally due to concurrency so tests are kinda fake)
 Test many remotenames
   $ hg log -r . -T '{node}\n'
   4c449fd97125b3e1dafad3e702a521194c14672a
-  $ for i in `$PYTHON $TESTDIR/seq.py 1 10`; do
+  $ for i in `seq 1 10`; do
   > echo 4c449fd97125b3e1dafad3e702a521194c14672a bookmarks remote/remote$i >> .hg/store/remotenames
   > done
   $ cmd
