@@ -350,6 +350,11 @@ cp -R, rm -R:
     ... ''')
     'b b/1 b/2\n'
 
+tee:
+
+    >>> f('echo a b | tee d e; cat d e')
+    'a b\na b\na b\n'
+
 test:
 
     >>> f('''

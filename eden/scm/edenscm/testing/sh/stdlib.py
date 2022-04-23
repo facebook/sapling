@@ -208,6 +208,17 @@ def cat(
 
 
 @command
+def tee(
+    args: List[str], stdout: BinaryIO, stderr: BinaryIO, stdin: BinaryIO, fs: ShellFS
+):
+    data = stdin.read()
+    for path in args:
+        with fs.open(path, "wb") as f:
+            f.write(data)
+    stdout.write(data)
+
+
+@command
 def touch(args: List[str], fs: ShellFS):
     if args[0] == "-t":
         utimestr, *args = args[1:]
