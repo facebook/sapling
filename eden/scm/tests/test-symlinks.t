@@ -1,7 +1,7 @@
 #chg-compatible
   $ setconfig experimental.allowfilepeer=True
 
-#require symlink
+#require symlink mkfifo
 
 == tests added in 0.7 ==
 

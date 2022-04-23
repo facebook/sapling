@@ -1,4 +1,5 @@
 #chg-compatible
+#require mkfifo
 
   $ hg init t
   $ cd t
