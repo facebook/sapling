@@ -4,9 +4,10 @@
   $ cd repo
 
 Empty
-  $ hg log --configfile | head -1
+  $ hg log --configfile
   hg log: option --configfile requires argument
   (use 'hg log -h' to get help)
+  [255]
 
 Simple file
   $ cat >> $TESTTMP/simple.rc <<EOF
