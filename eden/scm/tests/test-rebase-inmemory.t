@@ -125,14 +125,14 @@ Write files to the working copy, and ensure they're still there after the rebase
 Ensure working copy files are still there:
   $ cat a
   abc
-  $ readlink.py b
+  $ f b
   b -> def
   $ cat e
   mno
 
 Ensure symlink and executable files were rebased properly:
   $ hg up -Cq 'desc(c)'
-  $ readlink.py e
+  $ f e
   e -> somefile
   $ ls -l f | cut -c -10
   -rwxr-xr-x

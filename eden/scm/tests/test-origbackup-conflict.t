@@ -88,7 +88,7 @@ Cause two symlinks to be backed up that points to a valid location from the back
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark b1)
 #if symlink
-  $ readlink.py .hg/origbackups/b
+  $ f .hg/origbackups/b
   .hg/origbackups/b -> ../../../sym-link-target
 #endif
 

@@ -73,7 +73,7 @@ Update - local symlink conflicts with remote directory:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark dir)
 #if symlink
-  $ readlink.py a/b.orig
+  $ f a/b.orig
   a/b.orig -> x
 #endif
   $ rm a/b.orig
@@ -110,7 +110,7 @@ Update - local directory conflicts with remote symlink
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark link)
 #if symlink
-  $ readlink.py a/b
+  $ f a/b
   a/b -> c
 #endif
   $ test -d a/b.orig

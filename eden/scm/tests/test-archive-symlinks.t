@@ -17,7 +17,7 @@ files
 
   $ cd "$TESTTMP"
   $ cd archive
-  $ readlink.py dangling
+  $ f dangling
   dangling -> nothing
 
 tar
@@ -25,7 +25,7 @@ tar
   $ cd "$TESTTMP"
   $ tar xf archive.tar
   $ cd tar
-  $ readlink.py dangling
+  $ f dangling
   dangling -> nothing
 
 #if unziplinks
@@ -34,7 +34,7 @@ zip
   $ cd "$TESTTMP"
   $ unzip archive.zip > /dev/null 2>&1
   $ cd zip
-  $ readlink.py dangling
+  $ f dangling
   dangling -> nothing
 #endif
 

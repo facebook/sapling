@@ -217,13 +217,13 @@ commit and update back
   
   $ hg manifest --debug
   2564acbe54bbbedfbf608479340b359f04597f80 644 @ dangling
-  $ readlink.py dangling
+  $ f dangling
   dangling -> nothing
 
   $ rm dangling
   $ ln -s void dangling
   $ hg commit -m 'change symlink'
-  $ readlink.py dangling
+  $ f dangling
   dangling -> void
 
 
@@ -231,7 +231,7 @@ modifying link
 
   $ rm dangling
   $ ln -s empty dangling
-  $ readlink.py dangling
+  $ f dangling
   dangling -> empty
 
 
@@ -239,7 +239,7 @@ reverting to rev 0:
 
   $ hg revert -r 'desc(add)' -a
   reverting dangling
-  $ readlink.py dangling
+  $ f dangling
   dangling -> nothing
 
   $ hg up -C
@@ -252,7 +252,7 @@ copies
   $ hg st -Cmard
   A dangling2
     dangling
-  $ readlink.py dangling dangling2
+  $ f dangling dangling2
   dangling -> void
   dangling2 -> void
 

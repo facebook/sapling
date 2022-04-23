@@ -4,16 +4,7 @@
 #require symlink execbit
 
   $ tellmeabout() {
-  > if [ -h $1 ]; then
-  >     echo $1 is a symlink:
-  >     $TESTDIR/readlink.py $1
-  > elif [ -x $1 ]; then
-  >     echo $1 is an executable file with content:
-  >     cat $1
-  > else
-  >     echo $1 is a plain file with content:
-  >     cat $1
-  > fi
+  >   f -Dxt "$@"
   > }
 
   $ hg init test1
@@ -49,13 +40,14 @@ Symlink is local parent, executable is other:
   [1]
 
   $ tellmeabout a
-  a is a symlink:
-  a -> symlink
+  a -> symlink: link
   $ hg resolve a --tool internal:other
   (no more unresolved files)
   $ tellmeabout a
-  a is an executable file with content:
+  a: file, exe
+  >>>
   a
+  <<<
   $ hg st
   M a
   ? a.orig
@@ -83,8 +75,10 @@ Symlink is other parent, executable is local:
   [1]
 
   $ tellmeabout a
-  a is an executable file with content:
+  a: file, exe
+  >>>
   a
+  <<<
 
   $ hg update -C 'desc(executable)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -107,8 +101,10 @@ Symlink is other parent, executable is local:
   [1]
 
   $ tellmeabout a
-  a is an executable file with content:
+  a: file, exe
+  >>>
   a
+  <<<
 
   $ hg update -C 'desc(executable)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -130,8 +126,10 @@ Symlink is other parent, executable is local:
   [1]
 
   $ tellmeabout a
-  a is an executable file with content:
+  a: file, exe
+  >>>
   a
+  <<<
 
   $ hg update -C 'desc(executable)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -153,8 +151,10 @@ Symlink is other parent, executable is local:
   [1]
 
   $ tellmeabout a
-  a is an executable file with content:
+  a: file, exe
+  >>>
   a
+  <<<
 
 Update to link without local change should get us a symlink (issue3316):
 
@@ -222,8 +222,7 @@ where that was what happened.
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ tellmeabout f
-  f is a symlink:
-  f -> base
+  f -> base: link
 
   $ hg up -Cqr'desc(1)'
   $ hg merge
@@ -234,9 +233,11 @@ where that was what happened.
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ tellmeabout f
-  f is a plain file with content:
+  f: file
+  >>>
   file
   content
+  <<<
 
   $ cd ..
 
@@ -261,8 +262,7 @@ Test removed 'x' flag merged with change to symlink
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ tellmeabout f
-  f is a symlink:
-  f -> dangling
+  f -> dangling: link
 
   $ hg up -Cqr'desc(1)'
   $ hg merge
@@ -273,8 +273,10 @@ Test removed 'x' flag merged with change to symlink
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ tellmeabout f
-  f is a plain file with content:
+  f: file
+  >>>
   f
+  <<<
 
 Test removed 'x' flag merged with content change - both ways
 
@@ -285,16 +287,20 @@ Test removed 'x' flag merged with content change - both ways
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ tellmeabout f
-  f is a plain file with content:
+  f: file
+  >>>
   change
+  <<<
 
   $ hg up -qCr'desc(1)'
   $ hg merge -r'desc(3)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ tellmeabout f
-  f is a plain file with content:
+  f: file
+  >>>
   change
+  <<<
 
   $ cd ..
 
@@ -372,37 +378,38 @@ h: l vs l, different
   U f
   U h
   $ tellmeabout a
-  a is a plain file with content:
+  a: file
+  >>>
   <<<<<<< working copy: 0c617753b41b - test: 2
   2
   =======
   1
   >>>>>>> merge rev:    2e60aa20b912 - test: 1
+  <<<
   $ tellmeabout b
-  b is a plain file with content:
+  b: file
+  >>>
   <<<<<<< working copy: 0c617753b41b - test: 2
   2
   =======
   1
   >>>>>>> merge rev:    2e60aa20b912 - test: 1
+  <<<
   $ tellmeabout c
-  c is a plain file with content:
+  c: file
+  >>>
   x
+  <<<
   $ tellmeabout d
-  d is a symlink:
-  d -> 2
+  d -> 2: link
   $ tellmeabout e
-  e is a symlink:
-  e -> x
+  e -> x: link
   $ tellmeabout f
-  f is a symlink:
-  f -> 2
+  f -> 2: link
   $ tellmeabout g
-  g is a symlink:
-  g -> x
+  g -> x: link
   $ tellmeabout h
-  h is a symlink:
-  h -> 2
+  h -> 2: link
 
   $ hg up -Cqr'desc(1)'
   $ hg merge
@@ -427,36 +434,49 @@ h: l vs l, different
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ tellmeabout a
-  a is a plain file with content:
+  a: file
+  >>>
   <<<<<<< working copy: 2e60aa20b912 - test: 1
   1
   =======
   2
   >>>>>>> merge rev:    0c617753b41b - test: 2
+  <<<
   $ tellmeabout b
-  b is an executable file with content:
+  b: file, exe
+  >>>
   <<<<<<< working copy: 2e60aa20b912 - test: 1
   1
   =======
   2
   >>>>>>> merge rev:    0c617753b41b - test: 2
+  <<<
   $ tellmeabout c
-  c is an executable file with content:
+  c: file, exe
+  >>>
   x
+  <<<
   $ tellmeabout d
-  d is an executable file with content:
+  d: file, exe
+  >>>
   1
+  <<<
   $ tellmeabout e
-  e is an executable file with content:
-  x (no-eol)
+  e: file, exe
+  >>>
+  x
+  <<< no trailing newline
   $ tellmeabout f
-  f is a plain file with content:
+  f: file
+  >>>
   1
+  <<<
   $ tellmeabout g
-  g is a plain file with content:
-  x (no-eol)
+  g: file
+  >>>
+  x
+  <<< no trailing newline
   $ tellmeabout h
-  h is a symlink:
-  h -> 1
+  h -> 1: link
 
   $ cd ..

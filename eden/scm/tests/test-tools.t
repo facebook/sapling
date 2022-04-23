@@ -16,7 +16,7 @@ Tests of the file helper tool
 
   $ echo foo > foo
   $ f foo
-  foo:
+  foo
 
 #if symlink
   $ f foo --mode
@@ -57,7 +57,7 @@ Convert CRLF -> LF for consistency
   .: directory with 3 files, mode=755
   ./bar: file, size=21, mode=755, md5=3b03, sha1=612c
   ./foo: file, size=4, mode=644, md5=d3b0, sha1=f1d2
-  ./l: link, size=5, md5=2faa, sha1=af93
+  ./l -> yadda: link, size=5
 #endif
 
   $ f --quiet bar -DL 3
@@ -76,6 +76,5 @@ Yadda is a symlink
   0010: 39                                              |9|
   dir/foo:
   0000: 66 6f 6f 0a                                     |foo.|
-  dir/l: (symlink !)
-  0000: 79 61 64 64 61                                  |yadda| (symlink !)
+  dir/l -> yadda (symlink !)
 

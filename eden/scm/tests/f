@@ -19,7 +19,6 @@ This can be used instead of tools like:
   stat
   tail
   test
-  readlink.py
   md5sum.py
 """
 
@@ -30,6 +29,7 @@ import hashlib
 import optparse
 import os
 import re
+import stat as statmod
 import sys
 
 # Python 3 adapters
@@ -60,16 +60,20 @@ def visit(opts, filenames, outfile, infile):
         dirfiles = None
         content = None
         facts = []
+        fdisplay = f
         if isfile:
             if opts.type:
                 facts.append("file")
+            if opts.exe and os.stat(f).st_mode & statmod.S_IEXEC:
+                facts.append("exe")
             if opts.hexdump or opts.dump or opts.md5:
                 with open(f, "rb") as fp:
                     content = fp.read()
         elif islink:
             if opts.type:
                 facts.append("link")
-            content = os.readlink(f).encode("utf-8")
+            dest = os.readlink(f)
+            fdisplay = "%s -> %s" % (f, dest)
         elif isstdin:
             content = infile.read()
             if opts.size:
@@ -104,10 +108,12 @@ def visit(opts, filenames, outfile, infile):
             outfile.write(", ".join(facts).encode("utf-8") + b"\n")
         elif facts:
             outfile.write(
-                b"%s: %s\n" % (f.encode("utf-8"), ", ".join(facts).encode("utf-8"))
+                b"%s: %s\n"
+                % (fdisplay.encode("utf-8"), ", ".join(facts).encode("utf-8"))
             )
         elif not quiet:
-            outfile.write(b"%s:\n" % f.encode("utf-8"))
+            colon = content and (opts.hexdump or opts.dump) and b":" or b""
+            outfile.write(b"%s%s\n" % (fdisplay.encode("utf-8"), colon))
         if content is not None:
             chunk = content
             if not islink:
@@ -152,6 +158,9 @@ def main(args, stdout, stdin):
         "-t", "--type", action="store_true", help="show file type (file or directory)"
     )
     parser.add_option("-m", "--mode", action="store_true", help="show file mode")
+    parser.add_option(
+        "-x", "--exe", action="store_true", help="show if file is executable"
+    )
     parser.add_option("-l", "--links", action="store_true", help="show number of links")
     parser.add_option("-s", "--size", action="store_true", help="show size of file")
     parser.add_option(

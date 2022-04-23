@@ -748,9 +748,9 @@ revision 1
   $Header$$Header$Header$
 
 crazy_symlink
-  $ readlink.py crazy_symlink+k
+  $ f crazy_symlink+k
   crazy_symlink+k -> target_$Header: //depot/test-mercurial-import/crazy_symlink+k#1 $
-  $ readlink.py dst/crazy_symlink+k
+  $ f dst/crazy_symlink+k
   dst/crazy_symlink+k -> target_$Header$
 
 exit trap:
