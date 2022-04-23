@@ -347,9 +347,7 @@ Check ui.interface logic for the chunkselector
 The default interface is text
   $ cp $HGRCPATH.pretest $HGRCPATH
   $ chunkselectorinterface() {
-  > hg debugpython -- <<EOF
-  > from edenscm.mercurial import hg, ui;\
-  > repo = hg.repository(ui.ui.load(), ".");\
+  > hg debugshell -- <<'EOF'
   > print(repo.ui.interface("chunkselector"))
   > EOF
   > }
