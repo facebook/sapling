@@ -85,8 +85,7 @@ now test that we fixed the bug for all scripts/extensions
   >     print("revision %s files: %s" % (rev, repo[rev].files()))
   > 
   > repo = hg.repository(ui.ui.load(), '.')
-  > assert len(repo) == 6, \
-  >        "initial: len(repo): %d, expected: 6" % len(repo)
+  > assert len(repo) == 6, "initial: len(repo): %d, expected: 6" % len(repo)
   > 
   > replacebyte("bugfix", b"u")
   > sleep(2)
