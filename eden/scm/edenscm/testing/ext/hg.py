@@ -42,6 +42,24 @@ def testsetup(t: TestTmp):
                 testname = os.path.basename(testfile)
                 setup(testname, str(hgrcpath))
 
+    # the 'f' utility in $TESTDIR/f
+    fpath = os.path.join(testdir, "f")
+    if os.path.exists(fpath):
+        fmain = None
+
+        @t.command
+        def f(args, stdout, stdin, fs, fpath=fpath) -> int:
+            nonlocal fmain
+            if fmain is None:
+                fmain = _execpython(fpath)["main"]
+            os.chdir(fs.cwd())
+            try:
+                fmain(args, stdout=stdout, stdin=stdin)
+            except SystemExit as e:
+                return int(e.code)
+            else:
+                return 0
+
     environ = {
         "CHGDISABLE": "0",
         "COLUMNS": "80",
@@ -172,6 +190,16 @@ def _rawsystem(
     if res.out:
         env.stdout.write(res.out.encode())
     return res.exitcode
+
+
+def _execpython(path):
+    """execute python code at path, return its globals"""
+    with open(path, "r") as f:
+        src = f.read()
+    code = compile(src, path, "exec")
+    env = {}
+    exec(code, env)
+    return env
 
 
 INITIAL_HGRC = b"""

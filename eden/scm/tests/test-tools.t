@@ -2,28 +2,6 @@
 
 Tests of the file helper tool
 
-  $ f -h
-  ?sage: f [options] [filenames] (glob)
-  
-  ?ptions: (glob)
-    -h, --help            show this help message and exit
-    -t, --type            show file type (file or directory)
-    -m, --mode            show file mode
-    -l, --links           show number of links
-    -s, --size            show size of file
-    -n NEWER, --newer=NEWER
-                          check if file is newer (or same)
-    -r, --recurse         recurse into directories
-    -S, --sha1            show sha1 hash of the content
-    -M, --md5             show md5 hash of the content
-    -D, --dump            dump file content
-    -H, --hexdump         hexdump file content
-    -B BYTES, --bytes=BYTES
-                          number of characters to dump
-    -L LINES, --lines=LINES
-                          number of lines to dump
-    -q, --quiet           no default output
-
   $ mkdir dir
   $ cd dir
 

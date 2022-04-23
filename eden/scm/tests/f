@@ -45,7 +45,7 @@ else:
     iterbytes = iter
 
 
-def visit(opts, filenames, outfile):
+def visit(opts, filenames, outfile, infile):
     """Process filenames in the way specified in opts, writing output to
     outfile."""
     for f in sorted(filenames):
@@ -71,7 +71,7 @@ def visit(opts, filenames, outfile):
                 facts.append("link")
             content = os.readlink(f).encode("utf-8")
         elif isstdin:
-            content = getattr(sys.stdin, "buffer", sys.stdin).read()
+            content = infile.read()
             if opts.size:
                 facts.append("size=%s" % len(content))
         elif isdir:
@@ -143,10 +143,10 @@ def visit(opts, filenames, outfile):
                         outfile.write(b"\n<<< no trailing newline\n")
         if opts.recurse and dirfiles:
             assert not isstdin
-            visit(opts, dirfiles, outfile)
+            visit(opts, dirfiles, outfile, infile)
 
 
-if __name__ == "__main__":
+def main(args, stdout, stdin):
     parser = optparse.OptionParser("%prog [options] [filenames]")
     parser.add_option(
         "-t", "--type", action="store_true", help="show file type (file or directory)"
@@ -173,8 +173,14 @@ if __name__ == "__main__":
     parser.add_option("-B", "--bytes", type="int", help="number of characters to dump")
     parser.add_option("-L", "--lines", type="int", help="number of lines to dump")
     parser.add_option("-q", "--quiet", action="store_true", help="no default output")
-    (opts, filenames) = parser.parse_args(sys.argv[1:])
+    (opts, filenames) = parser.parse_args(args)
     if not filenames:
         filenames = ["-"]
 
-    visit(opts, filenames, getattr(sys.stdout, "buffer", sys.stdout))
+    visit(opts, filenames, stdout, stdin)
+
+
+if __name__ == "__main__":
+    stdin = sys.stdin.buffer
+    stdout = sys.stdout.buffer
+    main(sys.argv[1:], stdout=stdout, stdin=stdin)
