@@ -8,7 +8,6 @@
   > EOF
 
   $ ( hg dbsh sleep.py && echo exited; ) >out 2>err &
-  $ disown
 
   $ cat > interrupt.py << 'EOF'
   > import time, os, signal, sys
@@ -35,3 +34,7 @@ Should have "interrupted!" printed by dispatch.py:
 Should not have "exited" printed by "echo exited" because non-zero exit code:
 
   $ cat out
+
+Clean up background jobs:
+
+  $ wait
