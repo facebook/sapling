@@ -26,7 +26,7 @@ class EdenServerInspector(object):
         self._mount_point = mount_point
 
     def create_thrift_client(self) -> EdenClient:
-        return self._eden.get_thrift_client()
+        return self._eden.get_thrift_client_legacy()
 
     def unload_inode_for_path(self, path: str = "") -> None:
         """path: relative path to a directory under the mount."""

@@ -57,7 +57,7 @@ class CloneTest(testcase.EdenRepoTest):
             msg="clone should succeed in empty directory",
         )
 
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             active_mount_points: Set[Optional[str]] = {
                 os.fsdecode(mount.mountPoint) for mount in client.listMounts()
             }

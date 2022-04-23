@@ -221,7 +221,7 @@ class JournalInfoTest(testcase.EdenRepoTest):
         )
 
     def journal_stats(self) -> JournalInfo:
-        with self.get_thrift_client() as thrift_client:
+        with self.get_thrift_client_legacy() as thrift_client:
             thrift_client.synchronizeWorkingCopy(
                 self.mount.encode("utf-8"), SynchronizeWorkingCopyParams()
             )

@@ -159,7 +159,7 @@ class TakeoverTest(TakeoverTestBase):
         # Previously this thrift call caused Eden to create temporary inode
         # objects outside of the normal root inode tree, and this would cause
         # Eden to crash when shutting down afterwards.
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             client.getScmStatusBetweenRevisions(
                 os.fsencode(self.mount),
                 self.commit1.encode("utf-8"),
@@ -388,7 +388,7 @@ class TakeoverTest(TakeoverTestBase):
 
     def test_stop_during_takeover(self) -> None:
         # block graceful restart
-        with self.eden.get_thrift_client() as client:
+        with self.eden.get_thrift_client_legacy() as client:
             client.injectFault(
                 FaultDefinition(
                     keyClass="takeover", keyValueRegex="server_shutdown", block=True
@@ -486,7 +486,7 @@ class TakeoverRocksDBStressTest(testcase.EdenRepoTest):
 
         graceful_restart_startup_time = 5.0
 
-        with self.eden.get_thrift_client() as client:
+        with self.eden.get_thrift_client_legacy() as client:
             for key_class in ["local store get single", "local store get batch"]:
                 client.injectFault(
                     FaultDefinition(

@@ -20,7 +20,7 @@ class DebugBlobTest(testcase.EdenRepoTest):
 
     # TODO: enable when using the modern Python 3 Thrift API
     def xtest_debug_blob_prints_binary_data(self) -> None:
-        with self.eden.get_thrift_client() as client:
+        with self.eden.get_thrift_client_legacy() as client:
             debugInfo = client.debugInodeStatus(
                 os.fsencode(self.mount), b".", flags=0, sync=SyncBehavior()
             )

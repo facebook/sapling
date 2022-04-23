@@ -58,7 +58,7 @@ class ThriftTest(testcase.EdenRepoTest):
         self.commit3 = self.repo.commit("Commit 3.")
 
     def get_loaded_inodes_count(self, path: str) -> int:
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             result = client.debugInodeStatus(
                 self.mount_path_bytes, os.fsencode(path), flags=0, sync=SyncBehavior()
             )
@@ -82,13 +82,13 @@ class ThriftTest(testcase.EdenRepoTest):
         )
         touch_p.communicate()
 
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             counts = client.getAccessCounts(1)
             accesses = counts.accessesByMount[self.mount_path_bytes]
             self.assertLessEqual(2, accesses.fetchCountsByPid[touch_p.pid])
 
     def test_list_mounts(self) -> None:
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             mounts = client.listMounts()
         self.assertEqual(1, len(mounts))
 
@@ -107,7 +107,7 @@ class ThriftTest(testcase.EdenRepoTest):
         expected_sha1_for_adir_file = hashlib.sha1(b"foo!\n").digest()
         result_for_adir_file = SHA1Result(expected_sha1_for_adir_file)
 
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             self.assertEqual(
                 [result_for_hello, result_for_adir_file],
                 client.getSHA1(
@@ -118,7 +118,7 @@ class ThriftTest(testcase.EdenRepoTest):
             )
 
     def test_get_sha1_throws_for_path_with_dot_components(self) -> None:
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             results = client.getSHA1(
                 self.mount_path_bytes, [b"./hello"], sync=SyncBehavior()
             )
@@ -131,13 +131,13 @@ class ThriftTest(testcase.EdenRepoTest):
         )
 
     def test_get_sha1_throws_for_empty_string(self) -> None:
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             results = client.getSHA1(self.mount_path_bytes, [b""], sync=SyncBehavior())
         self.assertEqual(1, len(results))
         self.assert_sha1_error(results[0], "path cannot be the empty string")
 
     def test_get_sha1_throws_for_directory(self) -> None:
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             results = client.getSHA1(
                 self.mount_path_bytes, [b"adir"], sync=SyncBehavior(60)
             )
@@ -145,7 +145,7 @@ class ThriftTest(testcase.EdenRepoTest):
         self.assert_sha1_error(results[0], "adir: Is a directory")
 
     def test_get_sha1_throws_for_non_existent_file(self) -> None:
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             results = client.getSHA1(
                 self.mount_path_bytes, [b"i_do_not_exist"], sync=SyncBehavior()
             )
@@ -154,7 +154,7 @@ class ThriftTest(testcase.EdenRepoTest):
 
     def test_get_sha1_throws_for_symlink(self) -> None:
         """Fails because caller should resolve the symlink themselves."""
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             results = client.getSHA1(
                 self.mount_path_bytes, [b"slink"], sync=SyncBehavior()
             )
@@ -183,7 +183,7 @@ class ThriftTest(testcase.EdenRepoTest):
     def get_attributes(
         self, files: List[bytes], req_attr: int
     ) -> GetAttributesFromFilesResult:
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             thrift_params = GetAttributesFromFilesParams(
                 self.mount_path_bytes,
                 files,
@@ -350,7 +350,7 @@ class ThriftTest(testcase.EdenRepoTest):
         age = TimeSpec()
         age.seconds = 0
         age.nanoSeconds = 0
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             unload_count = client.unloadInodeForPath(self.mount_path_bytes, b"", age)
 
         self.assertGreaterEqual(
@@ -363,7 +363,7 @@ class ThriftTest(testcase.EdenRepoTest):
         age = TimeSpec()
         age.seconds = 0
         age.nanoSeconds = 0
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             unload_count = client.unloadInodeForPath(self.mount_path_bytes, b".", age)
 
         self.assertGreater(
@@ -375,7 +375,7 @@ class ThriftTest(testcase.EdenRepoTest):
 
     def test_diff_revisions(self) -> None:
         # Convert the commit hashes to binary for the thrift call
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             diff = client.getScmStatusBetweenRevisions(
                 os.fsencode(self.mount),
                 binascii.unhexlify(self.commit1),
@@ -395,7 +395,7 @@ class ThriftTest(testcase.EdenRepoTest):
     def test_diff_revisions_hex(self) -> None:
         # Watchman currently calls getScmStatusBetweenRevisions()
         # with 40-byte hexadecimal commit IDs, so make sure that works.
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             diff = client.getScmStatusBetweenRevisions(
                 os.fsencode(self.mount),
                 self.commit1.encode("utf-8"),
@@ -414,7 +414,7 @@ class ThriftTest(testcase.EdenRepoTest):
 
     def test_diff_revisions_with_reverted_file(self) -> None:
         # Convert the commit hashes to binary for the thrift call
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             diff = client.getScmStatusBetweenRevisions(
                 os.fsencode(self.mount),
                 binascii.unhexlify(self.commit1),

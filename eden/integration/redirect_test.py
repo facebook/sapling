@@ -70,7 +70,7 @@ via-profile = "bind"
 
         mount_point_bytes = mount_point.encode("utf-8")
         dir_to_mount_bytes = dir_to_mount.encode("utf-8")
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             with self.assertRaises(Exception) as ctx:
                 client.addBindMount(
                     mount_point_bytes, mount_point_bytes, dir_to_mount_bytes

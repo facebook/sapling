@@ -45,7 +45,7 @@ class DebugGetParentsTest(EdenHgTestCase):
         # second commit
         parents = WorkingDirectoryParents(parent1=self.commit1.encode("utf-8"))
         params = ResetParentCommitsParams()
-        with self.eden.get_thrift_client() as client:
+        with self.eden.get_thrift_client_legacy() as client:
             client.resetParentCommits(
                 mountPoint=bytes(mount_path), parents=parents, params=params
             )

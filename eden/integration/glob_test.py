@@ -50,7 +50,7 @@ class GlobTest(testcase.EdenRepoTest):
 
         super().setUp()
 
-        self.client = self.get_thrift_client()
+        self.client = self.get_thrift_client_legacy()
         self.client.open()
         self.addCleanup(self.client.close)
 

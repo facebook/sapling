@@ -38,7 +38,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         return {"overlay": ["enable_tree_overlay=true"]}
 
     def _eden_status(self, listIgnored: bool = False):
-        with self.eden.get_thrift_client() as client:
+        with self.eden.get_thrift_client_legacy() as client:
             status = client.getScmStatusV2(
                 GetScmStatusParams(
                     mountPoint=self.mount.encode(),

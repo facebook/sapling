@@ -36,7 +36,7 @@ stats-interval = "100ms"
         self.eden.user_rc_path.write_text(initial_config)
 
         counter_regex = r"local_store\..*"
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             # Makes sure that EdenFS picks up our updated config,
             # since we wrote it out after EdenFS started.
             client.reloadConfig()

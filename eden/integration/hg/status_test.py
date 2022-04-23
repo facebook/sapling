@@ -93,7 +93,7 @@ class StatusTest(EdenHgTestCase):
         initial_commit_hex = self.repo.get_head_hash()
         initial_commit = binascii.unhexlify(initial_commit_hex)
 
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             # Test with a clean status.
             expected_status = ScmStatus(entries={}, errors={})
             self.thoroughly_get_scm_status(
@@ -129,7 +129,7 @@ enforce-parents = false
 """
         edenrc = os.path.join(self.home_dir, ".edenrc")
 
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             # Add file to commit
             self.touch("new_tracked.txt")
             self.hg("add", "new_tracked.txt")

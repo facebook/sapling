@@ -403,7 +403,7 @@ class UpdateTest(EdenHgTestCase):
         self.backing_repo.write_file("foo/bar.txt", "new contents")
         new_commit = self.backing_repo.commit("Update foo/bar.txt")
 
-        with self.eden.get_thrift_client() as client:
+        with self.eden.get_thrift_client_legacy() as client:
             client.injectFault(
                 FaultDefinition(
                     keyClass="inodeCheckout", keyValueRegex=".*", block=True

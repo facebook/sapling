@@ -126,7 +126,7 @@ class MountTest(testcase.EdenRepoTest):
         self.eden.run_cmd("unmount", self.mount)
         self.assertEqual({self.mount: "NOT_RUNNING"}, self.eden.list_cmd_simple())
 
-        with self.eden.get_thrift_client() as client:
+        with self.eden.get_thrift_client_legacy() as client:
             fault = FaultDefinition(keyClass="mount", keyValueRegex=".*", block=True)
             client.injectFault(fault)
 
@@ -197,7 +197,7 @@ class MountTest(testcase.EdenRepoTest):
 
         def is_initializing() -> Optional[bool]:
             try:
-                with self.eden.get_thrift_client() as client:
+                with self.eden.get_thrift_client_legacy() as client:
                     # Return successfully when listMounts() reports the number of
                     # mounts that we expect.
                     mounts = client.listMounts()
@@ -222,7 +222,7 @@ class MountTest(testcase.EdenRepoTest):
         # Wait for eden to report the mount point in the listMounts() output
         self._wait_until_initializing()
 
-        with self.eden.get_thrift_client() as client:
+        with self.eden.get_thrift_client_legacy() as client:
             # Since we blocked mount initialization the mount should still
             # report as INITIALIZING, and edenfs should report itself STARTING
             self.assertEqual({self.mount: "INITIALIZING"}, self.eden.list_cmd_simple())
@@ -326,7 +326,7 @@ class MountTest(testcase.EdenRepoTest):
         # Wait for eden to have started mount point initialization
         self._wait_until_initializing(num_mounts=3)
 
-        with self.eden.get_thrift_client() as client:
+        with self.eden.get_thrift_client_legacy() as client:
             # Since we blocked mount initialization the mount should still
             # report as INITIALIZING, and edenfs should report itself STARTING
             self.assertEqual(
@@ -361,6 +361,6 @@ class MountTest(testcase.EdenRepoTest):
         )
         # The startup_mount_failures counter should indicate that 2 mounts failed to
         # remount.
-        with self.eden.get_thrift_client() as client:
+        with self.eden.get_thrift_client_legacy() as client:
             mount_failures = client.getCounter("startup_mount_failures")
             self.assertEqual(2, mount_failures)

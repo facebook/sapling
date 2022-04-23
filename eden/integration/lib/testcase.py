@@ -31,7 +31,7 @@ from typing import (
 
 import eden.config
 from eden.test_support.testcase import EdenTestCaseBase
-from eden.thrift.legacy import EdenClient
+from eden.thrift import legacy
 
 from . import edenclient, gitrepo, hgrepo, repobase, skip
 from .find_executables import FindExe
@@ -184,14 +184,14 @@ class EdenTestCase(EdenTestCaseBase):
     def make_temporary_directory(self, prefix: Optional[str] = None) -> str:
         return str(self.temp_mgr.make_temp_dir(prefix=prefix))
 
-    def get_thrift_client(self) -> EdenClient:
+    def get_thrift_client_legacy(self) -> legacy.EdenClient:
         """
         Get a thrift client to the edenfs daemon.
         """
-        return self.eden.get_thrift_client()
+        return self.eden.get_thrift_client_legacy()
 
     def get_counters(self) -> typing.Mapping[str, float]:
-        with self.get_thrift_client() as thrift_client:
+        with self.get_thrift_client_legacy() as thrift_client:
             thrift_client.flushStatsNow()
             return thrift_client.getCounters()
 
@@ -392,13 +392,6 @@ class EdenRepoTest(EdenTestCase):
             "implemented automatically by "
             "@eden_repo_test"
         )
-
-    def get_thrift_client(self) -> EdenClient:
-        # get_thrift_client() is also defined in our parent class, but for some reason
-        # mypy gets confused when get_thrift_client() is used in our subclasses unless
-        # we define it here.  (mypy knows that the method exists but cannot figure out
-        # its return type for some reason.)
-        return super().get_thrift_client()
 
     def assert_checkout_root_entries(
         self,

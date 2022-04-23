@@ -33,7 +33,7 @@ class ConfigTest(testcase.EdenTestCase):
     def test_get_config(self) -> None:
         self.maxDiff = None
 
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             # Check the initial config values
             config = client.getConfig(GetConfigParams())
 
@@ -91,7 +91,7 @@ ignoreFile = "{new_ignore_path}"
             )
 
     def test_periodic_reload(self) -> None:
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             self._test_periodic_reload(client)
 
     def _test_periodic_reload(self, client: EdenClient) -> None:

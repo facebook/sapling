@@ -20,6 +20,7 @@ from types import TracebackType
 from typing import Any, Dict, List, Optional, Union, cast, TextIO, Tuple
 
 from eden.fs.cli import util
+from eden.thrift import legacy
 from eden.thrift.legacy import EdenClient, create_thrift_client
 from facebook.eden.ttypes import MountState
 
@@ -132,8 +133,10 @@ class EdenFS(object):
             return
         self.shutdown()
 
-    def get_thrift_client(self, timeout: Optional[float] = None) -> EdenClient:
-        return create_thrift_client(str(self._eden_dir), timeout=timeout)
+    def get_thrift_client_legacy(
+        self, timeout: Optional[float] = None
+    ) -> legacy.EdenClient:
+        return legacy.create_thrift_client(str(self._eden_dir), timeout=timeout)
 
     def run_cmd(
         self,
@@ -220,7 +223,7 @@ class EdenFS(object):
         health = util.wait_for_daemon_healthy(
             proc=process,
             config_dir=self._eden_dir,
-            get_client=self.get_thrift_client,
+            get_client=self.get_thrift_client_legacy,
             timeout=timeout,
         )
         return health.is_healthy()
@@ -251,7 +254,7 @@ class EdenFS(object):
         util.wait_for_daemon_healthy(
             proc=process,
             config_dir=self._eden_dir,
-            get_client=self.get_thrift_client,
+            get_client=self.get_thrift_client_legacy,
             timeout=timeout,
             exclude_pid=takeover_from,
         )
@@ -382,7 +385,7 @@ class EdenFS(object):
         # Before shutting down, get the current pid. This may differ from process.pid when
         # edenfs is started with sudo.
         daemon_pid = util.check_health(
-            self.get_thrift_client, self.eden_dir, timeout=30
+            self.get_thrift_client_legacy, self.eden_dir, timeout=30
         ).pid
 
         # Run "edenfsctl stop" with a timeout of 0 to tell it not to wait for the EdenFS
@@ -416,7 +419,7 @@ class EdenFS(object):
         self.start()
 
     def get_pid_via_thrift(self) -> int:
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             return client.getDaemonInfo().pid
 
     def graceful_restart(self, timeout: float = EDENFS_START_TIMEOUT) -> None:
@@ -535,7 +538,7 @@ class EdenFS(object):
         this mount path.
         """
         if client is None:
-            with self.get_thrift_client() as client:
+            with self.get_thrift_client_legacy() as client:
                 return self.get_mount_state(mount, client)
         else:
             for entry in client.listMounts():
@@ -583,7 +586,7 @@ class EdenFS(object):
         return cmd_result.returncode == 0
 
     def set_log_level(self, category: str, level: str) -> None:
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             client.setOption("logging", f"{category}={level}")
 
     def client_dir_for_mount(self, mount_path: pathlib.Path) -> pathlib.Path:
