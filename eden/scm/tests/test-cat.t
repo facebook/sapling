@@ -53,16 +53,17 @@ Test fileset
   $ hg cat --output tmp/h_%h c
   $ hg cat --output tmp/r_%r c
   $ hg cat --output tmp/%s_s c
-  $ hg cat --output tmp/%d%%_d c
+  $ hg cat --output tmp/d_%d%% c
   $ hg cat --output tmp/%p_p c
   $ hg log -r . --template "{node|short}\n"
   45116003780e
-  $ find tmp -type f | LC_ALL=C sort
-  tmp/.%_d
+  $ f -r tmp
+  tmp: directory with 7 files
   tmp/HH_45116003780e3678b333fb2c99fa7d559c8457e9
   tmp/RR_2
   tmp/c_p
   tmp/c_s
+  tmp/d_.%
   tmp/h_45116003780e
   tmp/r_2
 
