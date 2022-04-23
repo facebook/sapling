@@ -1,6 +1,6 @@
 #chg-compatible
 
-#require symlink
+#require symlink tar unzip
 
   $ newrepo repo
   $ ln -s nothing dangling
