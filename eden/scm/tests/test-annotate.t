@@ -635,7 +635,7 @@ merge
   $ hg up 56fc739c091f342d6390b46cd18746150b93704d --quiet
   $ echo 7 >> baz
   $ hg ci -m 'one more line, out of line range'
-  $ sed 's/3+/3-/' baz > baz.new
+  $ sed 's/3[+]/3-/' baz > baz.new
   $ mv baz.new baz
   $ hg ci -m 'baz:3+->3-'
   $ hg log -T '{desc}\n' -r 'followlines(baz, 5:7)'
