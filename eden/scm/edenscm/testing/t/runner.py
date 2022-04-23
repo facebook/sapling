@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Set, Callable, Optional, Iterable, Union
 
+from . import hghave
 from .runtime import TestTmp, Mismatch, hasfeature
 from .transform import transform
 
@@ -284,7 +285,15 @@ def runttest(testid: TestId, exts: List[str], mismatchcb: Callable[[Mismatch], N
     except FileNotFoundError as e:
         raise TestNotFoundError(e)
 
-    body = transform(tcode, indent=4, filename=str(path), hasfeature=hasfeature)
+    exeneeded = set()
+
+    def hasfeaturetracked(feature):
+        result = hasfeature(feature)
+        if result and feature in hghave.exes:
+            exeneeded.add(feature)
+        return result
+
+    body = transform(tcode, indent=4, filename=str(path), hasfeature=hasfeaturetracked)
 
     extcode = []
     for ext in exts:
@@ -305,6 +314,9 @@ t = TestTmp(tmpprefix={repr(path.name)})
 t.setenv("TESTFILE", TESTFILE)
 t.setenv("TESTDIR", TESTDIR)
 t.setenv("RUNTESTDIR", TESTDIR)  # compatibility: path of run-tests.py
+
+for exe in {sorted(exeneeded)}:
+    t.requireexe(exe)
 
 sys.path += [TESTDIR, str(t.path)]
 
