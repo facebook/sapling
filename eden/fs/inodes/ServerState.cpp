@@ -24,14 +24,6 @@ DEFINE_bool(
     "Block mount attempts via the fault injection framework.  "
     "Requires --enable_fault_injection.");
 
-namespace {
-#if defined(EDEN_HAVE_HIVE_LOGGER)
-constexpr auto kHasHiveLogger = true;
-#else
-constexpr auto kHasHiveLogger = false;
-#endif
-} // namespace
-
 namespace facebook {
 namespace eden {
 
@@ -83,7 +75,7 @@ ServerState::ServerState(
           kSystemIgnoreMinPollSeconds}},
       notifier_{std::move(notifier)},
       fsEventLogger_{
-          (kHasHiveLogger && initialConfig.requestSamplesPerMinute.getValue())
+          initialConfig.requestSamplesPerMinute.getValue()
               ? std::make_shared<FsEventLogger>(config_, hiveLogger_)
               : nullptr} {
   // It would be nice if we eventually built a more generic mechanism for
