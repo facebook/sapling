@@ -1,4 +1,5 @@
 #chg-compatible
+#require bash
 
   $ enable progress
   $ setconfig extensions.progresstest="$TESTDIR/progresstest.py"
