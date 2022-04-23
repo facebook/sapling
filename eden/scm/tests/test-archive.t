@@ -1,6 +1,6 @@
 #chg-compatible
 
-#require serve
+#require serve tar unzip
 
   $ enable share
   $ hg init test
@@ -143,7 +143,7 @@ show an error when a provided pattern matches no files
   abort: no files match the archive pattern
   [255]
 
-  $ hg archive -X * ../empty.zip
+  $ hg archive -X '*' ../empty.zip
   abort: no files match the archive pattern
   [255]
 
