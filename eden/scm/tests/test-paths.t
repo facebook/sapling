@@ -7,7 +7,7 @@
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd a
 
-with no paths:
+With no paths:
 
   $ hg paths
   $ hg paths unknown
@@ -17,7 +17,7 @@ with no paths:
   [
   ]
 
-with paths:
+With paths:
 
   $ echo '[paths]' >> .hg/hgrc
   $ echo 'dupe = ../b#tip' >> .hg/hgrc
