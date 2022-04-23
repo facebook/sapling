@@ -49,7 +49,7 @@ Diff output:
   >   $ seq 3
   >   0
   >   1
-  >   2
+  >   * (glob)
   > 
   >   >>> 1+2
   >   5
@@ -83,7 +83,7 @@ Test output:
      1 $ seq 3
       -0
        1
-       2
+       * (glob)
       +3
   
      6 >>> 1+2
@@ -127,6 +127,12 @@ Autofix:
 
   $ hg debugruntest test-fail-sh.t
   # Ran 1 tests, 0 skipped, 0 failed.
+
+  $ head -4 test-fail-sh.t
+    $ seq 3
+    1
+    * (glob)
+    3
 
 
 #if no-bash

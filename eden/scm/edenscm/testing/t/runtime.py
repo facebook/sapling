@@ -67,26 +67,59 @@ def eqglob(a: str, b: str) -> bool:
     if len(alines) != len(blines):
         return False
     for aline, bline in zip(alines, blines):
-        if bline.endswith(" (esc)"):
-            # If it's a unicode string that contains escapes, turn it to binary
-            # first.
-            bline = bline[:-6].encode("raw_unicode_escape").decode("unicode-escape")
-        if os.name == "nt":
-            # Normalize path on Windows.
-            aline = aline.replace("\\", "/")
-            bline = bline.replace("\\", "/")
-        if bline.endswith(" (glob)"):
-            # As an approximation, use fnmatch to do the job.
-            # "[]" do not have special meaning in run-tests.py glob patterns.
-            # Replace them with "?".
-            globline = bline[:-7].replace("[", "?").replace("]", "?")
-            if not fnmatch.fnmatch(aline, globline):
-                return False
-        elif bline.endswith(" (re)"):
-            if not re.match(bline[:-5] + r"\Z", aline):
-                return False
-        elif aline != bline:
+        if not _matchline(aline, bline):
             return False
+    return True
+
+
+def normalizeeqglob(a: str, b: str) -> str:
+    r"""normalize 'a' to use glob patterns in 'b'
+
+    >>> normalizeeqglob("a\nb\nc\n", "x\na\n* (glob)\nd\n")
+    'a\n* (glob)\nc\n'
+    """
+    # avoid hard dependency on edenscm's bindings (xdiff)
+    import difflib
+
+    alines = a.splitlines(True)
+    blines = b.splitlines(True)
+    outlines = []
+    for (tag, i1, i2, j1, j2) in difflib.SequenceMatcher(
+        a=alines, b=blines
+    ).get_opcodes():
+        if tag in ("delete", "equal"):
+            outlines += alines[i1:i2]
+        elif tag == "replace":
+            for i in range(i1, i2):
+                j = i + j1 - i1
+                if j < j2 and _matchline(alines[i].rstrip(), blines[j].rstrip()):
+                    outlines.append(blines[j])
+                else:
+                    outlines.append(alines[i])
+    return "".join(outlines)
+
+
+def _matchline(aline: str, bline: str) -> bool:
+    if bline.endswith(" (esc)"):
+        # If it's a unicode string that contains escapes, turn it to binary
+        # first.
+        bline = bline[:-6].encode("raw_unicode_escape").decode("unicode-escape")
+    if os.name == "nt":
+        # Normalize path on Windows.
+        aline = aline.replace("\\", "/")
+        bline = bline.replace("\\", "/")
+    if bline.endswith(" (glob)"):
+        # As an approximation, use fnmatch to do the job.
+        # "[]" do not have special meaning in run-tests.py glob patterns.
+        # Replace them with "?".
+        globline = bline[:-7].replace("[", "?").replace("]", "?")
+        if not fnmatch.fnmatch(aline, globline):
+            return False
+    elif bline.endswith(" (re)"):
+        if not re.match(bline[:-5] + r"\Z", aline):
+            return False
+    elif aline != bline:
+        return False
     return True
 
 
@@ -138,7 +171,7 @@ def checkoutput(
     if not eqglob(a, b):
         # collect the output mismatch in 'mismatchmap'
         mismatch = Mismatch(
-            actual=a,
+            actual=normalizeeqglob(a, b),
             expected=b,
             src=src,
             srcloc=srcloc,
