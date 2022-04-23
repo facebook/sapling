@@ -34,7 +34,7 @@ HgRepo::HgRepo(AbsolutePathPiece path, AbsolutePath hgCmd)
 
   // Set up hgEnv_
   std::vector<const char*> passthroughVars{
-      {"HG_REAL_BIN", "LLVM_PROFILE_FILE", "PATH"}};
+      {"HG_REAL_BIN", "HGEXECUTABLEPATH", "LLVM_PROFILE_FILE", "PATH"}};
   hgEnv_.clear();
   for (const char* varName : passthroughVars) {
     auto value = getenv(varName);
