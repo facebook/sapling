@@ -26,13 +26,18 @@ checks = {
     "false": (lambda: False, "nail clipper"),
 }
 
+exes = set()
 
-def check(name, desc):
+
+def check(name, desc, exe: bool = False):
     """Registers a check function for a feature."""
 
     def decorator(func):
         checks[name] = (func, desc)
         return func
+
+    if exe:
+        exes.add(name)
 
     return decorator
 
@@ -130,12 +135,12 @@ def matchoutput(cmd, regexp, ignorestatus=False):
     return (ignorestatus or not ret) and r.search(s)
 
 
-@check("baz", "GNU Arch baz client")
+@check("baz", "GNU Arch baz client", exe=True)
 def has_baz():
     return matchoutput("baz --version 2>&1", br"baz Bazaar version")
 
 
-@check("bzr", "Canonical's Bazaar client")
+@check("bzr", "Canonical's Bazaar client", exe=True)
 def has_bzr():
     try:
         import bzrlib
@@ -188,7 +193,7 @@ def has_common_zlib():
     )
 
 
-@check("cvs", "cvs client/server")
+@check("cvs", "cvs client/server", exe=True)
 def has_cvs():
     re = br"Concurrent Versions System.*?server"
     return matchoutput("cvs --version 2>&1", re) and not has_msys()
@@ -200,18 +205,18 @@ def has_cvs112():
     return matchoutput("cvs --version 2>&1", re) and not has_msys()
 
 
-@check("cvsnt", "cvsnt client/server")
+@check("cvsnt", "cvsnt client/server", exe=True)
 def has_cvsnt():
     re = br"Concurrent Versions System \(CVSNT\) (\d+).(\d+).*\(client/server\)"
     return matchoutput("cvsnt --version 2>&1", re)
 
 
-@check("darcs", "darcs client")
+@check("darcs", "darcs client", exe=True)
 def has_darcs():
     return matchoutput("darcs --version", br"\b2\.([2-9]|\d{2})", True)
 
 
-@check("mtn", "monotone client (>= 1.0)")
+@check("mtn", "monotone client (>= 1.0)", exe=True)
 def has_mtn():
     return matchoutput("mtn --version", br"monotone", True) and not matchoutput(
         "mtn --version", br"monotone 0\.", True
@@ -364,7 +369,7 @@ def has_gettext():
     return matchoutput("msgfmt --version", br"GNU gettext-tools")
 
 
-@check("git", "git command line client")
+@check("git", "git command line client", exe=True)
 def has_git():
     return matchoutput("git --version 2>&1", br"^git version")
 
@@ -405,12 +410,12 @@ def has_docutils():
         return False
 
 
-@check("p4", "Perforce server and client")
+@check("p4", "Perforce server and client", exe=True)
 def has_p4():
     return matchoutput("p4 -V", br"Rev\. P4/") and matchoutput("p4d -V", br"Rev\. P4D/")
 
 
-@check("jq", "json processing tool")
+@check("jq", "json processing tool", exe=True)
 def has_jq():
     return matchoutput("jq --help", br"Usage:\W+jq .*")
 
@@ -466,12 +471,12 @@ def has_rmcwd():
             pass
 
 
-@check("tla", "GNU Arch tla client")
+@check("tla", "GNU Arch tla client", exe=True)
 def has_tla():
     return matchoutput("tla --version 2>&1", br"The GNU Arch Revision")
 
 
-@check("gpg", "gpg client")
+@check("gpg", "gpg client", exe=True)
 def has_gpg():
     return matchoutput("gpg --version 2>&1", br"GnuPG")
 
@@ -514,7 +519,7 @@ def has_root():
     return getattr(os, "geteuid", None) and os.geteuid() == 0
 
 
-@check("pyflakes", "Pyflakes python linter")
+@check("pyflakes", "Pyflakes python linter", exe=True)
 def has_pyflakes():
     pyflakespath = os.environ.get("HGTEST_PYFLAKES_PATH", "pyflakes")
     return matchoutput(
@@ -524,19 +529,19 @@ def has_pyflakes():
     )
 
 
-@check("pylint", "Pylint python linter")
+@check("pylint", "Pylint python linter", exe=True)
 def has_pylint():
     return matchoutput("pylint --help", br"Usage:  pylint", True)
 
 
-@check("clang-format", "clang-format C code formatter")
+@check("clang-format", "clang-format C code formatter", exe=True)
 def has_clang_format():
     return matchoutput(
         "clang-format --help", br"^OVERVIEW: A tool to format C/C\+\+[^ ]+ code."
     )
 
 
-@check("jshint", "JSHint static code analysis tool")
+@check("jshint", "JSHint static code analysis tool", exe=True)
 def has_jshint():
     return matchoutput("jshint --version 2>&1", br"jshint v")
 
