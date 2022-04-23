@@ -26,6 +26,11 @@ from facebook.eden.ttypes import MountState
 
 from .find_executables import FindExe
 
+try:
+    from eden.thrift import client  # @manual
+except ImportError:
+    # Thrift-py3 is not supported in the CMake build yet.
+    pass
 
 # Two minutes is very generous, but 30 seconds is not enough CI hosts
 # and many-core machines under load.
@@ -137,6 +142,11 @@ class EdenFS(object):
         self, timeout: Optional[float] = None
     ) -> legacy.EdenClient:
         return legacy.create_thrift_client(str(self._eden_dir), timeout=timeout)
+
+    def get_thrift_client(self, timeout: Optional[float] = None) -> "client.EdenClient":
+        return client.create_thrift_client(
+            eden_dir=str(self._eden_dir), timeout=timeout
+        )
 
     def run_cmd(
         self,

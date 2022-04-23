@@ -453,9 +453,7 @@ class EdenInstance:
         """Return the paths of the set mount points stored in config.json"""
         return [str(path) for path in self._get_directory_map().keys()]
 
-    async def get_thrift_client(
-        self, timeout: Optional[float] = None
-    ) -> "client.EdenClient":
+    def get_thrift_client(self, timeout: Optional[float] = None) -> "client.EdenClient":
         return client.create_thrift_client(
             eden_dir=str(self._config_dir),
             timeout=timeout,
