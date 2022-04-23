@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/CancellationToken.h>
 #include <folly/Range.h>
 #include <folly/futures/Future.h>
 
@@ -17,12 +18,6 @@ namespace folly {
 template <typename T>
 class Future;
 } // namespace folly
-
-namespace apache {
-namespace thrift {
-class ResponseChannelRequest;
-}
-} // namespace apache
 
 namespace facebook::eden {
 
@@ -50,12 +45,12 @@ class DiffContext {
 
   DiffContext(
       DiffCallback* cb,
+      folly::CancellationToken cancellation,
       bool listIgnored,
       CaseSensitivity caseSensitive,
       const ObjectStore* os,
       std::unique_ptr<TopLevelIgnores> topLevelIgnores,
-      LoadFileFunction loadFileContentsFromPath,
-      apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request = nullptr);
+      LoadFileFunction loadFileContentsFromPath);
 
   /**
    * Test only constructor.
@@ -93,7 +88,7 @@ class DiffContext {
  private:
   std::unique_ptr<TopLevelIgnores> topLevelIgnores_;
   const LoadFileFunction loadFileContentsFromPath_;
-  apache::thrift::ResponseChannelRequest* const FOLLY_NULLABLE request_;
+  const folly::CancellationToken cancellation_;
   StatsFetchContext fetchContext_;
   /**
    * Controls the case sensitivity of the diff operation.

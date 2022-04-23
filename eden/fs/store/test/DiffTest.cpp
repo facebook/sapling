@@ -110,6 +110,7 @@ class DiffTest : public ::testing::Test {
     auto gitIgnoreStack = topLevelIgnores->getStack();
     auto diffContext = DiffContext(
         callbackPtr,
+        folly::CancellationToken{},
         listIgnored,
         caseSensitive,
         store_.get(),

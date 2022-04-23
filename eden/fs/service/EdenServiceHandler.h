@@ -154,14 +154,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   apache::thrift::ServerStream<HgEvent> traceHgEvents(
       std::unique_ptr<std::string> mountPoint) override;
 
-  void async_tm_getScmStatusV2(
-      std::unique_ptr<apache::thrift::HandlerCallback<
-          std::unique_ptr<GetScmStatusResult>>> callback,
+  folly::Future<std::unique_ptr<GetScmStatusResult>> future_getScmStatusV2(
       std::unique_ptr<GetScmStatusParams> params) override;
 
-  void async_tm_getScmStatus(
-      std::unique_ptr<
-          apache::thrift::HandlerCallback<std::unique_ptr<ScmStatus>>> callback,
+  folly::Future<std::unique_ptr<ScmStatus>> future_getScmStatus(
       std::unique_ptr<std::string> mountPoint,
       bool listIgnored,
       std::unique_ptr<std::string> commitHash) override;

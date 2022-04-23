@@ -47,12 +47,6 @@
 
 DECLARE_string(edenfsctlPath);
 
-namespace apache {
-namespace thrift {
-class ResponseChannelRequest;
-}
-} // namespace apache
-
 namespace folly {
 class EventBase;
 class File;
@@ -653,9 +647,9 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   FOLLY_NODISCARD folly::Future<std::unique_ptr<ScmStatus>> diff(
       const RootId& commitHash,
+      folly::CancellationToken cancellation,
       bool listIgnored = false,
-      bool enforceCurrentParent = true,
-      apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request = nullptr);
+      bool enforceCurrentParent = true);
 
   /**
    * This version of diff is primarily intended for testing.
@@ -976,9 +970,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   std::unique_ptr<DiffContext> createDiffContext(
       DiffCallback* callback,
-      bool listIgnored = false,
-      apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request =
-          nullptr) const;
+      folly::CancellationToken cancellation,
+      bool listIgnored = false) const;
 
   /**
    * This accepts a callback which will be invoked as differences are found.
@@ -992,7 +985,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       const RootId& commitHash,
       bool listIgnored,
       bool enforceCurrentParent,
-      apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request) const;
+      folly::CancellationToken cancellation) const;
 
   /**
    * Signal to unmount() that fuseMount() or takeoverFuse() has started.

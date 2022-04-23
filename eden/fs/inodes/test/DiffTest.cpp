@@ -91,6 +91,7 @@ class DiffTest {
         };
     DiffContext diffContext{
         &callback,
+        folly::CancellationToken{},
         listIgnored,
         caseSensitive,
         mount_.getEdenMount()->getObjectStore(),
@@ -106,6 +107,7 @@ class DiffTest {
     auto commitHash = mount_.getEdenMount()->getWorkingCopyParent();
     auto diffFuture = mount_.getEdenMount()->diff(
         commitHash,
+        folly::CancellationToken{},
         listIgnored,
         /*enforceCurrentParent=*/false);
     return std::move(diffFuture)
@@ -1490,6 +1492,7 @@ TEST(DiffTest, fileNotReady) {
   // Run the diff
   auto diffFuture = mount.getEdenMount()->diff(
       commitHash2,
+      folly::CancellationToken{},
       /*listIgnored=*/false,
       /*enforceCurrentParent=*/false);
 
@@ -1579,6 +1582,53 @@ TEST(DiffTest, fileNotReady) {
           std::make_pair("doc/d.txt", ScmFileStatus::MODIFIED)));
 }
 
+TEST(DiffTest, cancelledDiff) {
+  TestMount mount;
+  auto backingStore = mount.getBackingStore();
+
+  FakeTreeBuilder builder1;
+  builder1.setFiles({
+      {"a.txt", "a.txt from builder1\n"},
+      {"src/b.txt", "src/b.txt from builder1\n"},
+  });
+
+  auto builder2 = builder1.clone();
+  builder2.replaceFile("a.txt", "a.txt from builder2\n");
+  builder2.replaceFile("src/b.txt", "src/b.txt from builder2\n");
+
+  mount.initialize(builder1);
+
+  auto rootTree2 = builder2.finalize(backingStore, /*setReady=*/false);
+  auto commitHash2 = mount.nextCommitHash();
+  auto* commit2 =
+      backingStore->putCommit(commitHash2, rootTree2->get().getHash());
+  commit2->setReady();
+  builder2.getRoot()->setReady();
+
+  auto cancellationSource = folly::CancellationSource{};
+
+  auto diffFuture = mount.getEdenMount()->diff(
+      commitHash2,
+      cancellationSource.getToken(),
+      /*listIgnored=*/false,
+      /*enforceCurrentParent=*/false);
+  EXPECT_FALSE(diffFuture.isReady());
+
+  cancellationSource.requestCancellation();
+  EXPECT_FALSE(diffFuture.isReady());
+
+  builder2.setReady("a.txt");
+  EXPECT_FALSE(diffFuture.isReady());
+  builder2.setReady("src");
+  EXPECT_TRUE(diffFuture.isReady());
+
+  auto result = std::move(diffFuture).get(10ms);
+
+  EXPECT_THAT(
+      *result->entries_ref(),
+      UnorderedElementsAre(std::make_pair("a.txt", ScmFileStatus::MODIFIED)));
+}
+
 class DiffTestNonMateralized : public ::testing::Test {
  protected:
   void SetUp() override {
@@ -1604,6 +1654,7 @@ class DiffTestNonMateralized : public ::testing::Test {
     return testMount_.getEdenMount()
         ->diff(
             hash,
+            folly::CancellationToken{},
             /*listIgnored=*/true,
             /*enforceCurrentParent=*/false)
         .get(10ms);

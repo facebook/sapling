@@ -1958,74 +1958,66 @@ folly::Future<Unit> EdenServiceHandler::future_chown(
 #endif // !_WIN32
 }
 
-void EdenServiceHandler::async_tm_getScmStatusV2(
-    unique_ptr<apache::thrift::HandlerCallback<unique_ptr<GetScmStatusResult>>>
-        callback,
+folly::Future<std::unique_ptr<GetScmStatusResult>>
+EdenServiceHandler::future_getScmStatusV2(
     unique_ptr<GetScmStatusParams> params) {
-  auto* request = callback->getRequest();
-  folly::makeFutureWith([&, func = __func__, pid = getAndRegisterClientPid()] {
-    auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID(
-        DBG2,
-        func,
-        pid,
-        *params->mountPoint_ref(),
-        folly::to<string>("commitHash=", logHash(*params->commit_ref())),
-        folly::to<string>("listIgnored=", *params->listIgnored_ref()));
+  auto* context = getRequestContext();
 
-    auto mountPath = AbsolutePathPiece{*params->mountPoint_ref()};
-    auto mount = server_->getMount(mountPath);
-    auto rootId = mount->getObjectStore()->parseRootId(*params->commit_ref());
-    const auto& enforceParents = server_->getServerState()
-                                     ->getReloadableConfig()
-                                     ->getEdenConfig()
-                                     ->enforceParents.getValue();
-    return wrapFuture(
-        std::move(helper),
-        mount->diff(rootId, *params->listIgnored_ref(), enforceParents, request)
-            .thenValue([this, mount](std::unique_ptr<ScmStatus>&& status) {
-              auto result = std::make_unique<GetScmStatusResult>();
-              *result->status_ref() = std::move(*status);
-              *result->version_ref() = server_->getVersion();
-              return result;
-            }));
-  })
-      .thenTry([cb = std::move(callback)](
-                   folly::Try<std::unique_ptr<GetScmStatusResult>>&& result) {
-        cb->complete(std::move(result));
-      });
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG2,
+      *params->mountPoint_ref(),
+      folly::to<string>("commitHash=", logHash(*params->commit_ref())),
+      folly::to<string>("listIgnored=", *params->listIgnored_ref()));
+
+  auto mountPath = AbsolutePathPiece{*params->mountPoint_ref()};
+  auto mount = server_->getMount(mountPath);
+  auto rootId = mount->getObjectStore()->parseRootId(*params->commit_ref());
+  const auto& enforceParents = server_->getServerState()
+                                   ->getReloadableConfig()
+                                   ->getEdenConfig()
+                                   ->enforceParents.getValue();
+  return wrapFuture(
+      std::move(helper),
+      mount
+          ->diff(
+              rootId,
+              context->getConnectionContext()->getCancellationToken(),
+              *params->listIgnored_ref(),
+              enforceParents)
+          .thenValue([this, mount](std::unique_ptr<ScmStatus>&& status) {
+            auto result = std::make_unique<GetScmStatusResult>();
+            result->status_ref() = std::move(*status);
+            result->version_ref() = server_->getVersion();
+            return result;
+          }));
 }
 
-void EdenServiceHandler::async_tm_getScmStatus(
-    unique_ptr<apache::thrift::HandlerCallback<unique_ptr<ScmStatus>>> callback,
+folly::Future<std::unique_ptr<ScmStatus>>
+EdenServiceHandler::future_getScmStatus(
     unique_ptr<string> mountPoint,
     bool listIgnored,
     unique_ptr<string> commitHash) {
-  auto* request = callback->getRequest();
-  folly::makeFutureWith([&, func = __func__, pid = getAndRegisterClientPid()] {
-    auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID(
-        DBG2,
-        func,
-        pid,
-        *mountPoint,
-        folly::to<string>("listIgnored=", listIgnored ? "true" : "false"),
-        folly::to<string>("commitHash=", logHash(*commitHash)));
+  auto* context = getRequestContext();
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG2,
+      *mountPoint,
+      folly::to<string>("listIgnored=", listIgnored ? "true" : "false"),
+      folly::to<string>("commitHash=", logHash(*commitHash)));
 
-    // Unlike getScmStatusV2(), this older getScmStatus() call does not enforce
-    // that the caller specified the current commit.  In the future we might
-    // want to enforce that even for this call, if we confirm that all existing
-    // callers of this method can deal with the error.
-    auto mountPath = AbsolutePathPiece{*mountPoint};
-    auto mount = server_->getMount(mountPath);
-    auto hash = mount->getObjectStore()->parseRootId(*commitHash);
-    return wrapFuture(
-        std::move(helper),
-        mount->diff(
-            hash, listIgnored, /*enforceCurrentParent=*/false, request));
-  })
-      .thenTry([cb = std::move(callback)](
-                   folly::Try<std::unique_ptr<ScmStatus>>&& result) {
-        cb->complete(std::move(result));
-      });
+  // Unlike getScmStatusV2(), this older getScmStatus() call does not enforce
+  // that the caller specified the current commit.  In the future we might
+  // want to enforce that even for this call, if we confirm that all existing
+  // callers of this method can deal with the error.
+  auto mountPath = AbsolutePathPiece{*mountPoint};
+  auto mount = server_->getMount(mountPath);
+  auto hash = mount->getObjectStore()->parseRootId(*commitHash);
+  return wrapFuture(
+      std::move(helper),
+      mount->diff(
+          hash,
+          context->getConnectionContext()->getCancellationToken(),
+          listIgnored,
+          /*enforceCurrentParent=*/false));
 }
 
 Future<unique_ptr<ScmStatus>>

@@ -1619,7 +1619,9 @@ TEST(Checkout, diffFailsOnInProgressCheckout) {
   auto commitHash = RootId{"1"};
 
   try {
-    testMount.getEdenMount()->diff(commitHash).get();
+    testMount.getEdenMount()
+        ->diff(commitHash, folly::CancellationToken{})
+        .get();
     FAIL()
         << "diff should have failed with EdenErrorType::CHECKOUT_IN_PROGRESS";
   } catch (const EdenError& exception) {
@@ -1633,7 +1635,8 @@ TEST(Checkout, diffFailsOnInProgressCheckout) {
   EXPECT_TRUE(waitedCheckoutTo1.isReady());
 
   // Try to diff again just to make sure we don't block again.
-  auto diff2 = testMount.getEdenMount()->diff(commitHash);
+  auto diff2 =
+      testMount.getEdenMount()->diff(commitHash, folly::CancellationToken{});
   EXPECT_NO_THROW(std::move(diff2).get());
 }
 

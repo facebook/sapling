@@ -65,7 +65,6 @@
 #include "eden/fs/inodes/InodeTable.h"
 #endif
 
-using apache::thrift::ResponseChannelRequest;
 using folly::Future;
 using folly::makeFuture;
 using folly::Try;
@@ -130,7 +129,8 @@ class EdenMount::JournalDiffCallback : public DiffCallback {
       EdenMount* mount,
       TreeInodePtr rootInode,
       std::shared_ptr<const Tree> rootTree) {
-    auto diffContext = mount->createDiffContext(this);
+    auto diffContext =
+        mount->createDiffContext(this, folly::CancellationToken{});
     auto rawContext = diffContext.get();
 
     return rootInode
@@ -1595,8 +1595,8 @@ file.
 */
 std::unique_ptr<DiffContext> EdenMount::createDiffContext(
     DiffCallback* callback,
-    bool listIgnored,
-    ResponseChannelRequest* request) const {
+    folly::CancellationToken cancellation,
+    bool listIgnored) const {
   // We hold a reference to the root inode to ensure that
   // the EdenMount cannot be destroyed while the DiffContext
   // is still using it.
@@ -1608,12 +1608,12 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
   };
   return make_unique<DiffContext>(
       callback,
+      cancellation,
       listIgnored,
       getCheckoutConfig()->getCaseSensitive(),
       getObjectStore(),
       serverState_->getTopLevelIgnores(),
-      std::move(loadContents),
-      request);
+      std::move(loadContents));
 }
 
 Future<Unit> EdenMount::diff(DiffContext* ctxPtr, const RootId& commitHash)
@@ -1642,7 +1642,7 @@ Future<Unit> EdenMount::diff(
     const RootId& commitHash,
     bool listIgnored,
     bool enforceCurrentParent,
-    ResponseChannelRequest* request) const {
+    folly::CancellationToken cancellation) const {
   if (enforceCurrentParent) {
     auto parentInfo = parentState_.rlock();
 
@@ -1671,7 +1671,8 @@ Future<Unit> EdenMount::diff(
   }
 
   // Create a DiffContext object for this diff operation.
-  auto context = createDiffContext(callback, listIgnored, request);
+  auto context =
+      createDiffContext(callback, std::move(cancellation), listIgnored);
   DiffContext* ctxPtr = context.get();
 
   // stateHolder() exists to ensure that the DiffContext and GitIgnoreStack
@@ -1683,14 +1684,18 @@ Future<Unit> EdenMount::diff(
 
 folly::Future<std::unique_ptr<ScmStatus>> EdenMount::diff(
     const RootId& commitHash,
+    folly::CancellationToken cancellation,
     bool listIgnored,
-    bool enforceCurrentParent,
-    ResponseChannelRequest* request) {
+    bool enforceCurrentParent) {
   auto callback = std::make_unique<ScmStatusDiffCallback>();
   auto callbackPtr = callback.get();
   return this
       ->diff(
-          callbackPtr, commitHash, listIgnored, enforceCurrentParent, request)
+          callbackPtr,
+          commitHash,
+          listIgnored,
+          enforceCurrentParent,
+          std::move(cancellation))
       .thenValue([callback = std::move(callback)](auto&&) {
         return std::make_unique<ScmStatus>(callback->extractStatus());
       });
