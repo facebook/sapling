@@ -782,6 +782,17 @@ def wc(args: List[str], stdin: BinaryIO, fs: ShellFS):
     return f"{count}\n"
 
 
+@command
+def sleep(args: List[str]):
+    if len(args) != 1:
+        raise NotImplementedError(f"sleep {args}")
+    duration = float(args[0])
+
+    import time
+
+    time.sleep(duration)
+
+
 def _parseheadtail(args) -> Tuple[int, List[str]]:
     """parse the -n parameter for head and tail
     return (n, paths)
