@@ -101,10 +101,12 @@ Let the background sync we started earlier continue, and start a concurrent clou
   adding manifests
   adding file changes
   visibility: removed 0 heads []; added 1 heads [79089e97b9e7]
+  visibility: removed 0 heads []; added 1 heads [79089e97b9e7] (?)
   remote: pushing 1 commit:
   remote:     1292cc1f1c17  commit2
   commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted)
   visibility: wrote 2 heads: 79089e97b9e7, 1292cc1f1c17
+  visibility: wrote 2 heads: 79089e97b9e7, 1292cc1f1c17 (?)
   commitcloud_sync: synced to workspace user/test/default version 3: 2 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted)
   commitcloud: commits synchronized
   finished in 0.00 sec
