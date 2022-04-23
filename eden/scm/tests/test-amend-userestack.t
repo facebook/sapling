@@ -62,13 +62,13 @@ Test that the operation field on the metadata is correctly set.
   $ hg debugmutation -r "all()"
    *  1f0dee641bb7258c56bd60e93edfa2405381c41e
   
-   \*  * amend by test at 1970-01-01T00:00:00 from: (glob)
+   * amend by test at 1970-01-01T00:00:00 from: (glob)
       7c3bad9141dcb46ff89abf5f61856facd56e476c
   
-   \*  * rebase by test at 1970-01-01T00:00:00 from: (glob)
+   * rebase by test at 1970-01-01T00:00:00 from: (glob)
       4538525df7e2b9f09423636c61ef63a4cb872a2d
   
-   \*  * rebase by test at 1970-01-01T00:00:00 from: (glob)
+   * rebase by test at 1970-01-01T00:00:00 from: (glob)
       47d2a3944de8b013de3be9578e8e344ea2e6c097
   
 
