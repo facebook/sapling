@@ -662,6 +662,73 @@ def sort(args: List[str], stdin: BinaryIO, fs: ShellFS):
 
 
 @command
+def find(args: List[str], fs: ShellFS):
+    i = 0
+    findpaths = []
+    filters = []
+    negate = False
+    origcwd = fs.cwd()
+
+    def appendfilter(func):
+        nonlocal negate
+        if negate:
+            filters.append(lambda p: not func(p))
+            negate = False
+        else:
+            filters.append(func)
+
+    while i < len(args):
+        arg = args[i]
+        i += 1
+        if arg == "-type":
+            typestr = args[i]
+            i += 1
+            if typestr == "f":
+                appendfilter(lambda p: fs.isfile(p))
+            elif typestr == "d":
+                appendfilter(lambda p: fs.isdir(p))
+            else:
+                raise NotImplementedError(f"find -type {typestr}")
+        elif arg == "-perm":
+            modestr = args[i]
+            i += 1
+            if modestr.startswith("-"):
+                mode = int(modestr[1:], 8)
+                appendfilter(lambda p: (fs.stat(p).st_mode & mode) == mode)
+            else:
+                raise NotImplementedError(f"find -perm {modestr}")
+        elif arg == "-not":
+            negate = True
+        elif arg == "-wholename":
+            patstr = args[i]
+            i += 1
+
+            from fnmatch import fnmatch
+
+            appendfilter(lambda p, pat=patstr: fnmatch(p, pat))
+        elif arg.startswith("-"):
+            raise NotImplementedError(f"find {arg}")
+        elif arg == ".":
+            findpaths.append("")
+        else:
+            findpaths.append(arg)
+
+    outpaths = []
+    for findpath in findpaths:
+        fs.chdir(origcwd)
+        if findpath:
+            fs.chdir(findpath)
+        paths = [fs.joinpath(findpath, p) for p in fs.glob("**/*")]
+        fs.chdir(origcwd)
+        paths = [p for p in paths if all(f(p) for f in filters)]
+        outpaths += paths
+
+    fs.chdir(origcwd)
+
+    return "".join(f"{p}\n" for p in outpaths)
+
+
+@command
 def wc(args: List[str], stdin: BinaryIO, fs: ShellFS):
     if args[0] == "-l":
         linecounter = lambda l: 1

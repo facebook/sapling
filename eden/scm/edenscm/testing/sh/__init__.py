@@ -348,6 +348,27 @@ test:
     ... ''')
     'a is a dir\na/1 is a file\n'
 
+find:
+
+    >>> print(f('''
+    ... mkdir -p a/b/c d/b/z; touch a/b/d d/e
+    ... echo find files:
+    ... find . -type f
+    ... echo find ../d:
+    ... cd a; find ../d; cd ..
+    ... echo find with patterns:
+    ... find . -not -wholename '**/b/**' -type f
+    ... ''').strip())
+    find files:
+    a/b/d
+    d/e
+    find ../d:
+    ../d/b
+    ../d/b/z
+    ../d/e
+    find with patterns:
+    d/e
+
 pwd == $PWD
 
     >>> f('[ $(pwd) = $PWD ] && echo pwd match')
