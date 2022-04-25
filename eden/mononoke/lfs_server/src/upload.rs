@@ -169,7 +169,7 @@ where
         STATS::internal_success.add_value(1);
     }
 
-    Ok(())
+    res.map(|_| ())
 }
 
 async fn upstream_upload<S>(
