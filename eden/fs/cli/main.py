@@ -1969,6 +1969,11 @@ update your shell's working directory."""
 class RageCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Print the rage without any side-effects (i.e. creating a paste)",
+        )
+        parser.add_argument(
             "--stdout",
             action="store_true",
             help="Print the rage report to stdout: ignore reporter.",
@@ -1979,9 +1984,9 @@ class RageCmd(Subcmd):
             help="Print the rage report to stderr: ignore reporter.",
         )
         parser.add_argument(
-            "--dry-run",
+            "--report",
             action="store_true",
-            help="Print the rage without any side-effects (i.e. creating a paste)",
+            help="Ask the user for additional information and upload a report",
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -1989,28 +1994,39 @@ class RageCmd(Subcmd):
         instance.log_sample("eden_rage")
         rage_processor = instance.get_config_value("rage.reporter", default="")
 
-        if args.dry_run:
-            rage_processor = None
-
-        proc: Optional[subprocess.Popen] = None
-        if rage_processor and not args.stdout and not args.stderr:
-            proc = subprocess.Popen(shlex.split(rage_processor), stdin=subprocess.PIPE)
-            sink = proc.stdin
-        elif args.stderr:
-            proc = None
-            sink = sys.stderr.buffer
+        if args.report:
+            rage_mod.report_edenfs_bug(instance, rage_processor)
+            return 0
         else:
-            proc = None
-            sink = sys.stdout.buffer
+            if args.dry_run:
+                rage_processor = None
 
-        # pyre-fixme[6]: Expected `IO[bytes]` for 2nd param but got
-        #  `Optional[typing.IO[typing.Any]]`.
-        rage_mod.print_diagnostic_info(instance, sink, args.dry_run)
-        if proc:
-            # pyre-fixme[16]: `Optional` has no attribute `close`.
-            sink.close()
-            proc.wait()
-        return 0
+            proc: Optional[subprocess.Popen] = None
+            sink: typing.IO[bytes]
+            # potential "deadlock" here. This works because rage reporters are not expected
+            # to produce any stdout until they've taken all of their stdin. But if they
+            # violate that, then the proc.wait() could fail if its stdout pipe was full,
+            # since we don't consume it until afterwards.
+            if rage_processor:
+                proc = subprocess.Popen(
+                    shlex.split(rage_processor),
+                    stdin=subprocess.PIPE,
+                )
+                sink = typing.cast(typing.IO[bytes], proc.stdin)
+            elif args.stderr:
+                proc = None
+                sink = sys.stderr.buffer
+            else:
+                proc = None
+                sink = sys.stdout.buffer
+
+            rage_mod.print_diagnostic_info(instance, sink, args.dry_run)
+
+            if proc:
+                sink.close()
+                proc.wait()
+
+            return 0
 
 
 @subcmd("uptime", "Determine uptime of the EdenFS service")

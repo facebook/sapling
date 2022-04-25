@@ -43,6 +43,19 @@ except ImportError:
         return env
 
 
+try:
+    from .facebook.rage import _report_edenfs_bug
+except ImportError:
+
+    def _report_edenfs_bug(
+        rage_lambda: Callable[[EdenInstance, IO[bytes]], None],
+        instance: EdenInstance,
+        reporter: str,
+    ) -> None:
+        print("_report_edenfs_bug() is unimplemented.", file=sys.stderr)
+        return None
+
+
 def section_title(message: str, out: IO[bytes]) -> None:
     out.write(util_mod.underlined(message).encode())
 
@@ -130,6 +143,13 @@ def print_diagnostic_info(
     print_env_variables(out)
 
     print_system_mount_table(out)
+
+
+def report_edenfs_bug(instance: EdenInstance, reporter: str) -> None:
+    rage_lambda: Callable[
+        [EdenInstance, IO[bytes]], None
+    ] = lambda inst, sink: print_diagnostic_info(inst, sink, False)
+    _report_edenfs_bug(rage_lambda, instance, reporter)
 
 
 def print_rpm_version(out: IO[bytes]) -> None:
