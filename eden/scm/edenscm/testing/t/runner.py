@@ -279,7 +279,6 @@ def runttest(testid: TestId, exts: List[str], mismatchcb: Callable[[Mismatch], N
     path = Path(testid.path)
     testdir = path.parent
 
-
     try:
         tcode = path.read_bytes().decode()
     except FileNotFoundError as e:
