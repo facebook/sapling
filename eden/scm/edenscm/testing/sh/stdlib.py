@@ -760,7 +760,8 @@ def find(args: List[str], fs: ShellFS):
         fs.chdir(origcwd)
         if findpath:
             fs.chdir(findpath)
-        paths = [fs.joinpath(findpath, p) for p in fs.glob("**/*")]
+        prefix = findpath and f"{findpath}/" or ""
+        paths = [f"{prefix}{p}" for p in fs.glob("**/*")]
         fs.chdir(origcwd)
         paths = [p for p in paths if all(f(p) for f in filters)]
         outpaths += paths

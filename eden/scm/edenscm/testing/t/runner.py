@@ -46,7 +46,7 @@ class TestId:
                 modpath = getattr(mod, "__file__", None)
                 if not modpath or os.path.basename(modpath) != "__init__.py":
                     continue
-                prefix = os.path.join(os.path.dirname(modpath), "")
+                prefix = os.path.dirname(modpath) + os.path.sep
                 if not path.startswith(prefix):
                     continue
                 relpath = path[len(prefix) :].replace("\\", "/")
