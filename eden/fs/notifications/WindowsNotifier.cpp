@@ -51,6 +51,7 @@ const wchar_t kEdenUptime[] = L"Eden Daemon Uptime: ";
 const wchar_t kMenuOptionsStr[] = L"Options";
 const wchar_t kDisableNotifications[] = L"Disable Notifications";
 const wchar_t kEnableNotifications[] = L"Enable Notifications";
+const wchar_t kMenuReport[] = L"Report Issue";
 
 constexpr UINT IDM_EXIT = 124;
 constexpr UINT IDM_EDENNOTIFICATION = 125;
@@ -58,6 +59,7 @@ constexpr UINT IDM_EDENDEBUGNOTIFICATION = 126;
 constexpr UINT IDM_EDENDEBUGNETWORKNOTIFICATION = 127;
 constexpr UINT IDM_EDENINFO = 128;
 constexpr UINT IDM_TOGGLENOTIFICATIONS = 129;
+constexpr UINT IDM_EDENREPORT = 130;
 
 void check(bool opResult, std::string_view context) {
   if (opResult) {
@@ -310,6 +312,22 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
             return 0;
           }
 
+          case IDM_EDENREPORT: {
+            SHELLEXECUTEINFOW pExecInfo = {};
+            pExecInfo.cbSize = sizeof(pExecInfo);
+            // TODO(@cuev): Allow users to specify what shell they want us to
+            // launch the report command with
+            pExecInfo.fMask = SEE_MASK_NOASYNC;
+            pExecInfo.lpVerb = L"open";
+            pExecInfo.lpFile = L"edenfsctl";
+            pExecInfo.lpParameters = L"rage --report";
+            pExecInfo.nShow = SW_SHOWNORMAL;
+            checkNonZero(
+                ShellExecuteExW(&pExecInfo),
+                "Failed to launch EdenFS report script");
+            return 0;
+          }
+
           default:
             return DefWindowProc(hwnd, message, wParam, lParam);
         }
@@ -466,6 +484,8 @@ MenuHandle WindowsNotifier::createEdenMenu() {
   if (debugIsEnabled()) {
     appendDebugMenu(hMenu.get());
   }
+  appendMenuEntry(
+      hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_EDENREPORT, kMenuReport);
   appendMenuEntry(
       hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_EXIT, kMenuCloseStr);
   return hMenu;
