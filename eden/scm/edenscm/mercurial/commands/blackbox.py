@@ -6,6 +6,7 @@
 import time
 
 from .. import blackbox as blackboxmod
+from .. import json
 from ..i18n import _
 from .cmdtable import command
 
@@ -53,20 +54,31 @@ def blackbox(ui, repo, **opts):
     showtimestamp = opts.get("timestamp", True)
     showsid = opts.get("sid", True)
     now = time.time()
-    timepattern = '{"start": {"timestamp_ms": ["range", %d, %d]}}' % (
-        (now - start * 60) * 1000,
-        (now - end * 60 + 1) * 1000,
-    )
+    timepattern = {
+        "start": {
+            "timestamp_ms": [
+                "range",
+                int((now - start * 60) * 1000),
+                int((now - end * 60 + 1) * 1000),
+            ]
+        }
+    }
 
     sessions = blackboxmod.sessions(timepattern)
-    events = blackboxmod.events(sessions, opts.get("pattern") or "{}")
+
+    patternstr = opts.get("pattern")
+    if patternstr:
+        pattern = json.loads(patternstr)
+    else:
+        pattern = {}
+    events = blackboxmod.events(sessions, pattern)
 
     ui.pager("blackbox")
     sidcolor = {}
     debugflag = ui.debugflag
     # sort by timestamp
     events = sorted(events, key=lambda t: t[1])
-    for sid, ts, msg, json in events:
+    for sid, ts, msg, jsondata in events:
         if showtimestamp:
             localtime = time.localtime(ts)
             timestr = time.strftime("%Y/%m/%d %H:%M:%S", localtime) + (
@@ -85,7 +97,7 @@ def blackbox(ui, repo, **opts):
             ui.write("%10d" % sid, label="blackbox.session.%d" % color)
             ui.write(" ")
         if debugflag:
-            ui.write(json, label="blackbox.json")
+            ui.write(jsondata, label="blackbox.json")
         else:
             ui.write(msg.strip(), label="blackbox.message")
         ui.write("\n")
