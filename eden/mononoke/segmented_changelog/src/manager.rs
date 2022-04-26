@@ -37,6 +37,7 @@ pub enum SegmentedChangelogType {
     Owned,
 }
 
+#[facet::facet]
 pub struct SegmentedChangelogManager {
     repo_id: RepositoryId,
     sc_version_store: SegmentedChangelogVersionStore,

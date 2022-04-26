@@ -47,10 +47,12 @@ pub use segmented_changelog_types::{
 };
 
 pub use crate::builder::{
-    new_server_segmented_changelog, new_test_segmented_changelog, SegmentedChangelogSqlConnections,
+    new_server_segmented_changelog, new_server_segmented_changelog_manager,
+    new_test_segmented_changelog, SegmentedChangelogSqlConnections,
 };
 pub use crate::clone_hints::CloneHints;
 pub use crate::copy::copy_segmented_changelog;
+pub use crate::manager::{ArcSegmentedChangelogManager, SegmentedChangelogManager};
 pub use crate::tailer::SegmentedChangelogTailer;
 pub use crate::update::{seedheads_from_config, SeedHead};
 

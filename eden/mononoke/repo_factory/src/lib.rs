@@ -76,7 +76,10 @@ use repo_identity::{ArcRepoIdentity, RepoIdentity};
 use repo_permission_checker::{ArcRepoPermissionChecker, ProdRepoPermissionChecker};
 use requests_table::{ArcLongRunningRequestsQueue, SqlLongRunningRequestsQueue};
 use scuba_ext::MononokeScubaSampleBuilder;
-use segmented_changelog::{new_server_segmented_changelog, SegmentedChangelogSqlConnections};
+use segmented_changelog::{
+    new_server_segmented_changelog, new_server_segmented_changelog_manager,
+    ArcSegmentedChangelogManager, SegmentedChangelogSqlConnections,
+};
 use segmented_changelog_types::ArcSegmentedChangelog;
 use skiplist::{ArcSkiplistIndex, SkiplistIndex};
 use slog::o;
@@ -493,6 +496,9 @@ pub enum RepoFactoryError {
     #[error("Error opening segmented changelog")]
     SegmentedChangelog,
 
+    #[error("Error starting segmented changelog manager")]
+    SegmentedChangelogManager,
+
     #[error("Missing cache pool: {0}")]
     MissingCachePool(String),
 
@@ -801,6 +807,35 @@ impl RepoFactory {
         .await
         .context(RepoFactoryError::SegmentedChangelog)?;
         Ok(Arc::new(segmented_changelog))
+    }
+
+    pub async fn segmented_changelog_manager(
+        &self,
+        repo_config: &ArcRepoConfig,
+        repo_identity: &ArcRepoIdentity,
+        changeset_fetcher: &ArcChangesetFetcher,
+        bookmarks: &ArcBookmarks,
+        repo_blobstore: &ArcRepoBlobstore,
+    ) -> Result<ArcSegmentedChangelogManager> {
+        let sql_connections = self
+            .open::<SegmentedChangelogSqlConnections>(&repo_config.storage_config.metadata)
+            .await
+            .context(RepoFactoryError::SegmentedChangelog)?;
+        let pool = self.maybe_volatile_pool("segmented_changelog")?;
+        let manager = new_server_segmented_changelog_manager(
+            self.env.fb,
+            &self.ctx(Some(repo_identity)),
+            repo_identity,
+            repo_config.segmented_changelog_config.clone(),
+            sql_connections,
+            changeset_fetcher.clone(),
+            bookmarks.clone(),
+            repo_blobstore.clone(),
+            pool,
+        )
+        .await
+        .context(RepoFactoryError::SegmentedChangelogManager)?;
+        Ok(Arc::new(manager))
     }
 
     pub fn repo_derived_data(
