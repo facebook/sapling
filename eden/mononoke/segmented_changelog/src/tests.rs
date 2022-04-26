@@ -1050,6 +1050,41 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
 }
 
 #[fbinit::test]
+async fn test_manager_check_if_indexed(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let blobrepo = Arc::new(Linear::getrepo(fb).await);
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+
+    let start_cs_id =
+        resolve_cs_id(&ctx, &blobrepo, "607314ef579bd2407752361ba1b0c1729d08b281").await?;
+    let master = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
+
+    seed(&ctx, &blobrepo, &conns, start_cs_id).await?;
+
+    tokio::time::pause();
+    let manager = get_manager(&blobrepo, &conns, vec![], SegmentedChangelogType::Owned).await?;
+
+    // Changeset is not part of segmented changelog before tailer run.
+    let version = manager.latest_version(&ctx).await?;
+    assert!(
+        !manager
+            .check_if_changeset_indexed(&ctx, &version, master)
+            .await?
+    );
+
+    let tailer = new_tailer_for_tailing(&blobrepo, &conns).await?;
+    let _ = tailer.once(&ctx, false).await?;
+    // Changeset is part of segmented changelog after tailer run.
+    let version = manager.latest_version(&ctx).await?;
+    assert!(
+        manager
+            .check_if_changeset_indexed(&ctx, &version, master)
+            .await?
+    );
+    Ok(())
+}
+
+#[fbinit::test]
 async fn test_mismatched_heads(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let inner = BranchEven::get_inner_repo(fb).await;

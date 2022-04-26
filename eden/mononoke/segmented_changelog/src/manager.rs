@@ -186,6 +186,26 @@ impl SegmentedChangelogManager {
                 )
             })?)
     }
+
+    /// Checks if given changeset is indexed by given segmented changelog version.
+    #[cfg(test)]
+    pub async fn check_if_changeset_indexed(
+        &self,
+        ctx: &CoreContext,
+        sc_version: &SegmentedChangelogVersion,
+        cs_id: ChangesetId,
+    ) -> Result<bool> {
+        let iddag = self
+            .iddag_save_store
+            .load(ctx, sc_version.iddag_version)
+            .await
+            .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
+        let idmap = self
+            .idmap_factory
+            .for_server(ctx, sc_version.idmap_version, &iddag)?;
+        let result = idmap.find_dag_id(ctx, cs_id).await?;
+        Ok(result.is_some())
+    }
 }
 
 segmented_changelog_delegate!(SegmentedChangelogManager, |&self, ctx: &CoreContext| {
