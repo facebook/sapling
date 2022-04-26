@@ -345,7 +345,24 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             let target = commits
                 .get(&name)
                 .ok_or_else(|| anyhow!("No commit {} for bookmark {}", name, bookmark))?;
-            txn.force_set(&bookmark, *target, BookmarkUpdateReason::TestMove, None)?;
+            let old_value = repo
+                .bookmarks()
+                .get(ctx.clone(), &bookmark)
+                .await
+                .with_context(|| format!("Failed to resolve bookmark '{}'", bookmark))?;
+            // It's better to update/create rather than force_set which doesn't
+            // save the old cid to the bookmark update log. (So it looks like
+            // creation but it's update)
+            match old_value {
+                Some(old_value) => txn.update(
+                    &bookmark,
+                    *target,
+                    old_value,
+                    BookmarkUpdateReason::TestMove,
+                    None,
+                ),
+                None => txn.create(&bookmark, *target, BookmarkUpdateReason::TestMove, None),
+            }?;
         }
         txn.commit().await?;
     }

@@ -200,6 +200,28 @@ function mononoke_backup_sync {
     "mononoke://$(mononoke_address)/$HG_REPO" "$@" "$SYNC_MODE" --start-id "$START_ID"
 }
 
+function mononoke_backup_sync_loop_forever {
+  HG_REPO="$1"
+  START_ID="$2"
+  shift
+  shift
+
+  GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
+    "${COMMON_ARGS[@]}" \
+    --retry-num 1 \
+    --repo-id $REPOID \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --verify-server-bookmark-on-failure \
+    --darkstorm-backup-repo-id "$BACKUP_REPO_ID" \
+    "mononoke://$(mononoke_address)/$HG_REPO" "$@" \
+    sync-loop \
+    --start-id "$START_ID" \
+    --loop-forever  >> "$TESTTMP/backup_sync.out" 2>&1 &
+  export BACKUP_SYNC_PID=$!
+  echo "$BACKUP_SYNC_PID" >> "$DAEMON_PIDS"
+}
+
+
 function megarepo_tool {
   GLOG_minloglevel=5 "$MEGAREPO_TOOL" \
     "${COMMON_ARGS[@]}" \
@@ -2045,4 +2067,11 @@ function verify_integrity_service() {
   wait_for_server "Verify Integrity service" VI_SERVICE_PORT "$TESTTMP/verify_integrity_service.out" \
     "${VI_SERVICE_START_TIMEOUT:-"$VI_SERVICE_DEFAULT_START_TIMEOUT"}" "$VI_SERVICE_ADDR_FILE" \
     verify_integrity_service_health
+}
+
+# Wrapper for drawdag that loads all the commit aliases to env variables
+# so they can be used to refer to commits instead of hashes.
+function testtool_drawdag() {
+  # shellcheck disable=SC2046
+  export $(mononoke_testtool drawdag "$@" | tee /dev/fd/2)
 }
