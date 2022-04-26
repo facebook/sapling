@@ -56,7 +56,7 @@ tracing-subscriber = { version = "0.3.10", features = ["ansi", "env-filter", "fm
 types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }
 version = { version = "0.1.0", path = "../version" }
-zstd = "0.9.0+zstd.1.5.0"
+zstd = "0.11.1+zstd.1.5.2"
 
 [features]
 default = ["python3"]

@@ -6,6 +6,6 @@ edition = "2021"
 [dependencies]
 cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.7", default-features = false }
-zstd = "0.9.0+zstd.1.5.0"
-zstd-safe = "4.1.1+zstd.1.5.0"
+zstd = "0.11.1+zstd.1.5.2"
+zstd-safe = "5.0.1+zstd.1.5.2"
 zstdelta = { path = "../../../../lib/zstdelta/" }

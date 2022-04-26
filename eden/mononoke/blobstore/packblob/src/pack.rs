@@ -23,7 +23,7 @@ use std::{
     collections::HashMap,
     io::{self, Cursor, Write},
 };
-use zstd::block::Compressor;
+use zstd::bulk::Compressor;
 use zstd::dict::EncoderDictionary;
 use zstd::stream::read::Decoder as ZstdDecoder;
 use zstd::stream::write::Encoder as ZstdEncoder;
@@ -38,8 +38,8 @@ impl SingleCompressed {
     /// if the result of compression is an increase in size
     pub fn new(zstd_level: i32, blob: BlobstoreBytes) -> Result<SingleCompressed> {
         let value = blob.into_bytes();
-        let mut compressor = Compressor::new();
-        let compressed = compressor.compress(&value, zstd_level)?;
+        let mut compressor = Compressor::new(zstd_level)?;
+        let compressed = compressor.compress(&value)?;
         let value = if compressed.len() < value.len() {
             SingleValue::Zstd(Bytes::from(compressed))
         } else {

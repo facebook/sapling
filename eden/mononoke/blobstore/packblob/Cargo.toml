@@ -20,7 +20,7 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 packblob_thrift = { version = "0.1.0", path = "if" }
-zstd = "0.9.0+zstd.1.5.0"
+zstd = "0.11.1+zstd.1.5.2"
 
 [dev-dependencies]
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
