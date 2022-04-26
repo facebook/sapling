@@ -359,11 +359,11 @@ pub fn create_shared_dir(path: impl AsRef<Path>) -> io::Result<()> {
     create_dir_with_mode(path.as_ref(), 0o2775)
 }
 
-/// Create the directory and ancestors with group write permission on UNIX systems.
-pub fn create_shared_dir_all(path: impl AsRef<Path>) -> io::Result<()> {
+/// Create the directory and its ancestors. The mode argument is ignored on non-UNIX systems.
+pub fn create_dir_all_with_mode(path: impl AsRef<Path>, mode: u32) -> io::Result<()> {
     let mut to_create = vec![path.as_ref()];
     while let Some(dir) = to_create.pop() {
-        match create_shared_dir(dir) {
+        match create_dir_with_mode(dir, mode) {
             Ok(()) => continue,
             Err(err) if err.kind() == io::ErrorKind::AlreadyExists => continue,
             Err(err) if err.kind() == io::ErrorKind::NotFound => {
@@ -377,6 +377,11 @@ pub fn create_shared_dir_all(path: impl AsRef<Path>) -> io::Result<()> {
         }
     }
     Ok(())
+}
+
+/// Create the directory and ancestors with group write permission on UNIX systems.
+pub fn create_shared_dir_all(path: impl AsRef<Path>) -> io::Result<()> {
+    create_dir_all_with_mode(path, 0o2775)
 }
 
 /// Expand the user's home directory and any environment variables references in
@@ -625,6 +630,24 @@ mod tests {
         }
     }
 
+    fn test_create_dir_all_fn(
+        create_fn: &dyn Fn(&PathBuf) -> io::Result<()>,
+        mode: u32,
+    ) -> Result<()> {
+        let tempdir = TempDir::new()?;
+        let path = tempdir.path().join("foo").join("bar");
+        create_fn(&path)?;
+        assert!(path.is_dir());
+
+        #[cfg(unix)]
+        {
+            let metadata = path.metadata()?;
+            assert_eq!(metadata.permissions().mode(), mode);
+        }
+
+        Ok(())
+    }
+
     #[test]
     fn test_atomic_write_symlink() -> Result<()> {
         let dir = tempfile::tempdir().unwrap();
@@ -753,18 +776,12 @@ mod tests {
 
     #[test]
     fn test_create_shared_dir_all() -> Result<()> {
-        let tempdir = TempDir::new()?;
-        let path = tempdir.path().join("foo").join("bar");
-        create_shared_dir_all(&path)?;
-        assert!(path.is_dir());
+        test_create_dir_all_fn(&|path| create_shared_dir_all(path), 0o42775)
+    }
 
-        #[cfg(unix)]
-        {
-            let metadata = path.metadata()?;
-            assert_eq!(metadata.permissions().mode(), 0o42775);
-        }
-
-        Ok(())
+    #[test]
+    fn test_create_dir_all_with_mode() -> Result<()> {
+        test_create_dir_all_fn(&|path| create_dir_all_with_mode(path, 0o777), 0o40777)
     }
 
     #[test]
