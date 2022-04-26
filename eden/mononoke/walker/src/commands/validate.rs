@@ -18,10 +18,7 @@ use crate::progress::{
     progress_stream, report_state, sort_by_string, ProgressOptions, ProgressRecorder,
     ProgressRecorderUnprotected, ProgressReporter, ProgressReporterUnprotected, ProgressStateMutex,
 };
-use crate::setup::{
-    parse_progress_args, setup_common, JobParams, JobWalkParams, RepoSubcommandParams,
-    EXCLUDE_CHECK_TYPE_ARG, INCLUDE_CHECK_TYPE_ARG, VALIDATE,
-};
+use crate::setup::{JobParams, JobWalkParams, RepoSubcommandParams};
 use crate::state::{InternedType, StepStats, WalkState};
 use crate::tail::walk_exact_tail;
 use crate::walk::{
@@ -33,9 +30,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
 use bulkops::Direction;
-use clap_old::ArgMatches;
 use cloned::cloned;
-use cmdlib::args::MononokeMatches;
 use context::CoreContext;
 use derive_more::AddAssign;
 use fbinit::FacebookInit;
@@ -52,7 +47,6 @@ use std::{
     collections::{HashMap, HashSet},
     fmt,
     hash::Hash,
-    str::FromStr,
     time::Instant,
 };
 
@@ -574,19 +568,6 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
     }
 }
 
-fn parse_check_types(sub_m: &ArgMatches<'_>) -> Result<HashSet<CheckType>, Error> {
-    let mut include_types: HashSet<CheckType> = match sub_m.values_of(INCLUDE_CHECK_TYPE_ARG) {
-        None => Ok(HashSet::from_iter(DEFAULT_CHECK_TYPES.iter().cloned())),
-        Some(values) => values.map(CheckType::from_str).collect(),
-    }?;
-    let exclude_types: HashSet<CheckType> = match sub_m.values_of(EXCLUDE_CHECK_TYPE_ARG) {
-        None => Ok(HashSet::new()),
-        Some(values) => values.map(CheckType::from_str).collect(),
-    }?;
-    include_types.retain(|x| !exclude_types.contains(x));
-    Ok(include_types)
-}
-
 struct ValidateProgressState {
     logger: Logger,
     fb: FacebookInit,
@@ -841,22 +822,6 @@ impl ValidateCommand {
         self.include_check_types
             .retain(|t| repo_params.include_node_types.contains(&t.node_type()));
     }
-}
-
-pub async fn parse_args<'a>(
-    fb: FacebookInit,
-    logger: Logger,
-    matches: &'a MononokeMatches<'a>,
-    sub_m: &'a ArgMatches<'a>,
-) -> Result<(JobParams, ValidateCommand), Error> {
-    let job_params = setup_common(VALIDATE, fb, &logger, None, None, matches, sub_m).await?;
-
-    let command = ValidateCommand {
-        include_check_types: parse_check_types(sub_m)?,
-        progress_options: parse_progress_args(&sub_m),
-    };
-
-    Ok((job_params, command))
 }
 
 // Subcommand entry point for validation of mononoke commit graph and dependent data

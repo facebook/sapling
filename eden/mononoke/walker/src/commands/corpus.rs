@@ -15,18 +15,13 @@ use crate::sampling::{
     WalkPayloadMtime, WalkSampleMapping,
 };
 use crate::scrub::ScrubStats;
-use crate::setup::{
-    parse_progress_args, parse_sampling_args, setup_common, JobParams, JobWalkParams,
-    RepoSubcommandParams, CORPUS, OUTPUT_DIR_ARG, SAMPLE_PATH_REGEX_ARG,
-};
+use crate::setup::{JobParams, JobWalkParams, RepoSubcommandParams, CORPUS};
 use crate::tail::walk_exact_tail;
 use crate::walk::{RepoWalkParams, RepoWalkTypeParams};
 
 use anyhow::Error;
 use blobstore::BlobstoreGetData;
-use clap_old::ArgMatches;
 use cloned::cloned;
-use cmdlib::args::MononokeMatches;
 use context::{CoreContext, SamplingKey};
 use fbinit::FacebookInit;
 use filetime::{self, FileTime};
@@ -39,7 +34,6 @@ use mononoke_types::datetime::DateTime;
 use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 use regex::Regex;
 use samplingblob::SamplingHandler;
-use slog::Logger;
 use std::{
     collections::{HashMap, HashSet},
     io::Write,
@@ -360,50 +354,6 @@ impl CorpusCommand {
         self.sampling_options
             .retain_or_default(&repo_params.include_node_types);
     }
-}
-
-pub async fn parse_args<'a>(
-    fb: FacebookInit,
-    logger: Logger,
-    matches: &'a MononokeMatches<'a>,
-    sub_m: &'a ArgMatches<'a>,
-) -> Result<(JobParams, CorpusCommand), Error> {
-    let output_dir = sub_m.value_of(OUTPUT_DIR_ARG).map(|s| s.to_string());
-    let sampler = Arc::new(CorpusSamplingHandler::<CorpusSample>::new(
-        output_dir.clone(),
-    ));
-
-    let job_params = setup_common(
-        CORPUS,
-        fb,
-        &logger,
-        Some(sampler.clone()),
-        None,
-        matches,
-        sub_m,
-    )
-    .await?;
-
-    let sampling_path_regex = sub_m
-        .value_of(SAMPLE_PATH_REGEX_ARG)
-        .map(|s| Regex::new(s))
-        .transpose()?;
-
-    if let Some(output_dir) = &output_dir {
-        if !std::path::Path::new(output_dir).exists() {
-            std::fs::create_dir(output_dir).map_err(Error::from)?
-        }
-    }
-
-    let command = CorpusCommand {
-        output_dir,
-        progress_options: parse_progress_args(&sub_m),
-        sampling_options: parse_sampling_args(&sub_m, 100)?,
-        sampling_path_regex,
-        sampler,
-    };
-
-    Ok((job_params, command))
 }
 
 // Subcommand entry point for dumping a corpus of blobs to disk

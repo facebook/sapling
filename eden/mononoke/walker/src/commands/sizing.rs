@@ -14,10 +14,7 @@ use crate::sampling::{
     PathTrackingRoute, SamplingOptions, SamplingWalkVisitor, WalkKeyOptPath, WalkPayloadMtime,
     WalkSampleMapping,
 };
-use crate::setup::{
-    parse_progress_args, parse_sampling_args, setup_common, JobParams, JobWalkParams,
-    RepoSubcommandParams, COMPRESSION_BENEFIT, COMPRESSION_LEVEL_ARG,
-};
+use crate::setup::{JobParams, JobWalkParams, RepoSubcommandParams, COMPRESSION_BENEFIT};
 use crate::tail::walk_exact_tail;
 use crate::walk::{RepoWalkParams, RepoWalkTypeParams};
 
@@ -25,9 +22,7 @@ use anyhow::Error;
 use async_compression::{metered::MeteredWrite, Compressor, CompressorType};
 use blobstore::BlobstoreGetData;
 use bytes::Bytes;
-use clap_old::ArgMatches;
 use cloned::cloned;
-use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use derive_more::{Add, Div, Mul, Sub};
 use fbinit::FacebookInit;
@@ -38,7 +33,7 @@ use futures::{
 use maplit::hashset;
 use mononoke_types::BlobstoreBytes;
 use samplingblob::SamplingHandler;
-use slog::{info, Logger};
+use slog::info;
 use std::{
     cmp::min,
     collections::{HashMap, HashSet},
@@ -292,35 +287,6 @@ impl SizingCommand {
         self.sampling_options
             .retain_or_default(&repo_params.include_node_types);
     }
-}
-
-pub async fn parse_args<'a>(
-    fb: FacebookInit,
-    logger: Logger,
-    matches: &'a MononokeMatches<'a>,
-    sub_m: &'a ArgMatches<'a>,
-) -> Result<(JobParams, SizingCommand), Error> {
-    let sampler = Arc::new(WalkSampleMapping::<Node, SizingSample>::new());
-
-    let job_params = setup_common(
-        COMPRESSION_BENEFIT,
-        fb,
-        &logger,
-        Some(sampler.clone()),
-        None,
-        matches,
-        sub_m,
-    )
-    .await?;
-
-    let command = SizingCommand {
-        compression_level: args::get_i32_opt(&sub_m, COMPRESSION_LEVEL_ARG).unwrap_or(3),
-        progress_options: parse_progress_args(&sub_m),
-        sampling_options: parse_sampling_args(&sub_m, 100)?,
-        sampler,
-    };
-
-    Ok((job_params, command))
 }
 
 // Subcommand entry point for estimate of file compression benefit

@@ -16,12 +16,7 @@ use crate::sampling::{
     PathTrackingRoute, SamplingOptions, SamplingWalkVisitor, WalkKeyOptPath, WalkPayloadMtime,
     WalkSampleMapping,
 };
-use crate::setup::{
-    parse_node_types, parse_pack_info_log_args, parse_progress_args, parse_sampling_args,
-    setup_common, JobParams, JobWalkParams, OutputFormat, RepoSubcommandParams,
-    EXCLUDE_OUTPUT_NODE_TYPE_ARG, INCLUDE_OUTPUT_NODE_TYPE_ARG, LIMIT_DATA_FETCH_ARG,
-    OUTPUT_FORMAT_ARG, SCRUB,
-};
+use crate::setup::{JobParams, JobWalkParams, OutputFormat, RepoSubcommandParams, SCRUB};
 use crate::sizing::SizingSample;
 use crate::tail::walk_exact_tail;
 use crate::validate::TOTAL;
@@ -30,9 +25,7 @@ use crate::walk::{EmptyRoute, RepoWalkParams, RepoWalkTypeParams};
 use anyhow::{format_err, Error};
 use blobstore::BlobstoreGetData;
 use blobstore::SizeMetadata;
-use clap_old::ArgMatches;
 use cloned::cloned;
-use cmdlib::args::MononokeMatches;
 use context::CoreContext;
 use derive_more::{Add, Div, Mul, Sub};
 use fbinit::FacebookInit;
@@ -44,12 +37,11 @@ use futures::{
 use metaconfig_types::BlobstoreId;
 use mononoke_types::datetime::DateTime;
 use samplingblob::ComponentSamplingHandler;
-use slog::{info, Logger};
+use slog::info;
 use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     fmt,
-    str::FromStr,
     sync::Arc,
     time::Duration,
 };
@@ -431,48 +423,6 @@ impl ScrubCommand {
         self.sampling_options
             .retain_or_default(&repo_params.include_node_types);
     }
-}
-
-pub async fn parse_args<'a>(
-    fb: FacebookInit,
-    logger: Logger,
-    matches: &'a MononokeMatches<'a>,
-    sub_m: &'a ArgMatches<'a>,
-) -> Result<(JobParams, ScrubCommand), Error> {
-    let component_sampler = Arc::new(WalkSampleMapping::<Node, ScrubSample>::new());
-
-    let job_params = setup_common(
-        SCRUB,
-        fb,
-        &logger,
-        None,
-        Some(component_sampler.clone()),
-        matches,
-        sub_m,
-    )
-    .await?;
-
-    let output_format = sub_m
-        .value_of(OUTPUT_FORMAT_ARG)
-        .map_or(Ok(OutputFormat::PrettyDebug), OutputFormat::from_str)?;
-    let output_node_types = parse_node_types(
-        sub_m,
-        INCLUDE_OUTPUT_NODE_TYPE_ARG,
-        EXCLUDE_OUTPUT_NODE_TYPE_ARG,
-        &[],
-    )?;
-
-    let command = ScrubCommand {
-        limit_data_fetch: sub_m.is_present(LIMIT_DATA_FETCH_ARG),
-        output_format,
-        output_node_types,
-        progress_options: parse_progress_args(&sub_m),
-        sampling_options: parse_sampling_args(&sub_m, 1)?,
-        pack_info_log_options: parse_pack_info_log_args(fb, &sub_m)?,
-        sampler: component_sampler,
-    };
-
-    Ok((job_params, command))
 }
 
 // Starts from the graph, (as opposed to walking from blobstore enumeration)
