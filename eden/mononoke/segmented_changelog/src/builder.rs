@@ -70,7 +70,7 @@ pub fn new_test_segmented_changelog(
     )?))
 }
 
-pub async fn new_server_segmented_changelog<'a>(
+pub async fn new_server_segmented_changelog_manager<'a>(
     fb: FacebookInit,
     ctx: &'a CoreContext,
     repo_identity: &'a RepoIdentity,
@@ -80,29 +80,10 @@ pub async fn new_server_segmented_changelog<'a>(
     bookmarks: ArcBookmarks,
     blobstore: Arc<dyn Blobstore>,
     cache_pool: Option<cachelib::VolatileLruCachePool>,
-) -> Result<Arc<dyn SegmentedChangelog + Send + Sync>> {
-    if !config.enabled {
-        return Ok(Arc::new(DisabledSegmentedChangelog::new()));
-    }
+) -> Result<SegmentedChangelogManager> {
     let repo_id = repo_identity.id();
     let seed_heads =
         seedheads_from_config(ctx, &config).context("finding segmented changelog heads")?;
-    if config.skip_dag_load_at_startup {
-        // This is a special case. We build Segmented Changelog using an in process iddag and idmap
-        // and update then on demand.
-        // All other configuration is ignored, for example there won't be periodic updates
-        // following a bookmark.
-        return Ok(Arc::new(OnDemandUpdateSegmentedChangelog::new(
-            ctx.clone(),
-            repo_id,
-            InProcessIdDag::new_in_process(),
-            Arc::new(ConcurrentMemIdMap::new()),
-            changeset_fetcher,
-            bookmarks,
-            seed_heads,
-            None,
-        )?));
-    }
     let replica_lag_monitor = Arc::new(NoReplicaLagMonitor());
     let mut idmap_factory = IdMapFactory::new(connections.0.clone(), replica_lag_monitor, repo_id);
     if let Some(pool) = cache_pool {
@@ -124,8 +105,57 @@ pub async fn new_server_segmented_changelog<'a>(
         },
         Some(clone_hints),
     );
+    Ok(manager)
+}
+
+pub async fn new_server_segmented_changelog<'a>(
+    fb: FacebookInit,
+    ctx: &'a CoreContext,
+    repo_identity: &'a RepoIdentity,
+    config: SegmentedChangelogConfig,
+    connections: SegmentedChangelogSqlConnections,
+    changeset_fetcher: ArcChangesetFetcher,
+    bookmarks: ArcBookmarks,
+    blobstore: Arc<dyn Blobstore>,
+    cache_pool: Option<cachelib::VolatileLruCachePool>,
+) -> Result<Arc<dyn SegmentedChangelog + Send + Sync>> {
+    if !config.enabled {
+        return Ok(Arc::new(DisabledSegmentedChangelog::new()));
+    }
+    if config.skip_dag_load_at_startup {
+        let repo_id = repo_identity.id();
+        let seed_heads =
+            seedheads_from_config(ctx, &config).context("finding segmented changelog heads")?;
+        // This is a special case. We build Segmented Changelog using an in process iddag and idmap
+        // and update then on demand.
+        // All other configuration is ignored, for example there won't be periodic updates
+        // following a bookmark.
+        return Ok(Arc::new(OnDemandUpdateSegmentedChangelog::new(
+            ctx.clone(),
+            repo_id,
+            InProcessIdDag::new_in_process(),
+            Arc::new(ConcurrentMemIdMap::new()),
+            changeset_fetcher,
+            bookmarks,
+            seed_heads,
+            None,
+        )?));
+    }
+    let reload_dag_save_period = config.reload_dag_save_period;
+    let manager = new_server_segmented_changelog_manager(
+        fb,
+        ctx,
+        repo_identity,
+        config,
+        connections,
+        changeset_fetcher,
+        bookmarks,
+        blobstore,
+        cache_pool,
+    )
+    .await?;
     let name = repo_identity.name().to_string();
-    let sc = match config.reload_dag_save_period {
+    let sc = match reload_dag_save_period {
         None => {
             let (sc, _sc_version) = manager.load(ctx).await?;
             sc
