@@ -238,14 +238,6 @@ function megarepo_tool_multirepo {
     "$@"
 }
 
-function mononoke_new_walker {
-  GLOG_minloglevel=5 "$MONONOKE_NEW_WALKER" \
-    "${COMMON_ARGS[@]}" \
-    --repo-id $REPOID \
-    --mononoke-config-path "$TESTTMP"/mononoke-config \
-    "$@"
-}
-
 function mononoke_walker {
   GLOG_minloglevel=5 "$MONONOKE_WALKER" \
     "${COMMON_ARGS[@]}" \

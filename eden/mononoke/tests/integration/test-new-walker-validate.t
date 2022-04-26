@@ -18,7 +18,7 @@ setup configuration
   blobimporting
 
 validate, expecting all valid
-  $ mononoke_new_walker validate -I deep -q -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker validate -I deep -q -b master_bookmark 2>&1 | strip_glog
   Walking edge types * (glob)
   Walking node types * (glob)
   Performing check types [HgLinkNodePopulated]
@@ -28,7 +28,7 @@ validate, expecting all valid
 
 
 validate, check route is logged on unexpected error (forced with chaos blob)
-  $ mononoke_new_walker --scuba-log-file scuba-error.json --blobstore-read-chaos-rate=1 --blobstore-cachelib-only -l validate validate -q -I deep -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --scuba-log-file scuba-error.json --blobstore-read-chaos-rate=1 --blobstore-cachelib-only -l validate validate -q -I deep -b master_bookmark 2>&1 | strip_glog
   Performing check types [HgLinkNodePopulated]
   Error: Could not step to OutgoingEdge * (glob)
   * (glob)
@@ -45,7 +45,7 @@ Remove all filenodes
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM filenodes where linknode=x'112478962961147124EDD43549AEDD1A335E44BF'";
 
 validate, expecting validation fails
-  $ mononoke_new_walker --scuba-log-file scuba.json -l validate validate -q -I deep -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --scuba-log-file scuba.json -l validate validate -q -I deep -b master_bookmark 2>&1 | strip_glog
   Performing check types [HgLinkNodePopulated]
   Validation failed: *hg_link_node_populated* (glob)
   Nodes,Pass,Fail:39,2,1; EdgesChecked:7; CheckType:Pass,Fail Total:2,1 HgLinkNodePopulated:2,1
@@ -60,7 +60,7 @@ repair by blobimport.
   $ blobimport repo-hg/.hg repo
 
 validate, expecting all valid, this time checking marker types as well
-  $ mononoke_new_walker -l validate validate -q -I deep -I marker -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker -l validate validate -q -I deep -I marker -b master_bookmark 2>&1 | strip_glog
   Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
   Nodes,Pass,Fail:43,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 ChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
 
@@ -68,13 +68,13 @@ Remove the phase information, linknodes already point to them
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM phases where repo_id >= 0";
 
 validate, expect no failures on phase info, as the commits are still public, just not marked as so in the phases table
-  $ mononoke_new_walker -l validate validate -q -I deep -I marker -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker -l validate validate -q -I deep -I marker -b master_bookmark 2>&1 | strip_glog
   Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
   Nodes,Pass,Fail:43,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 ChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
 
 Remove all filenodes for the last commit, validation should succeed (i.e. filenodes were not derived yet)
   $ cd "$TESTTMP"
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM filenodes where HEX(linknode) like '26805aba1e600a82e93661149f2313866a221a7b'";
-  $ mononoke_new_walker -l validate validate -q -I deep -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker -l validate validate -q -I deep -b master_bookmark 2>&1 | strip_glog
   Performing check types [HgLinkNodePopulated]
   Nodes,Pass,Fail:34,2,0; EdgesChecked:6; CheckType:Pass,Fail Total:2,0 HgLinkNodePopulated:2,0

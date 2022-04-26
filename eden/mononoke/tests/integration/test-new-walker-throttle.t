@@ -21,12 +21,12 @@ Drain the healer queue
   $ sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "DELETE FROM blobstore_sync_queue";
 
 Base case, check can walk fine
-  $ mononoke_new_walker -l loaded scrub -q -I deep -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker -l loaded scrub -q -I deep -b master_bookmark 2>&1 | strip_glog
   Seen,Loaded: 40,40
 
 Check reads throttle by qps
   $ START_SECS=$(/bin/date "+%s")
-  $ mononoke_new_walker --blobstore-read-qps=4 -l loaded scrub -q -I deep -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --blobstore-read-qps=4 -l loaded scrub -q -I deep -b master_bookmark 2>&1 | strip_glog
   Seen,Loaded: 40,40
   $ END_SECS=$(/bin/date "+%s")
   $ ELAPSED_SECS=$(( "$END_SECS" - "$START_SECS" ))
@@ -35,7 +35,7 @@ Check reads throttle by qps
 
 Check reads throttle by bytes
   $ START_SECS=$(/bin/date "+%s")
-  $ mononoke_new_walker --blobstore-bytes-min-throttle=1 --blobstore-read-burst-bytes-s=200 --blobstore-read-bytes-s=200 -l loaded scrub -q -I deep -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --blobstore-bytes-min-throttle=1 --blobstore-read-burst-bytes-s=200 --blobstore-read-bytes-s=200 -l loaded scrub -q -I deep -b master_bookmark 2>&1 | strip_glog
   Seen,Loaded: 40,40
   $ END_SECS=$(/bin/date "+%s")
   $ ELAPSED_SECS=$(( "$END_SECS" - "$START_SECS" ))
@@ -44,7 +44,7 @@ Check reads throttle by bytes
 
 Check reads throttle by bytes and qps
   $ START_SECS=$(/bin/date "+%s")
-  $ mononoke_new_walker --blobstore-bytes-min-throttle=1 --blobstore-read-burst-bytes-s=200 --blobstore-read-bytes-s=200 --blobstore-read-qps=4 -l loaded scrub -q -I deep -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --blobstore-bytes-min-throttle=1 --blobstore-read-burst-bytes-s=200 --blobstore-read-bytes-s=200 --blobstore-read-qps=4 -l loaded scrub -q -I deep -b master_bookmark 2>&1 | strip_glog
   Seen,Loaded: 40,40
   $ END_SECS=$(/bin/date "+%s")
   $ ELAPSED_SECS=$(( "$END_SECS" - "$START_SECS" ))
@@ -58,7 +58,7 @@ Delete all data from one side of the multiplex
 
 Check writes throttle by qps in Repair mode
   $ START_SECS=$(/bin/date "+%s")
-  $ mononoke_new_walker --blobstore-write-qps=4 -l loaded --blobstore-scrub-action=Repair scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker --blobstore-write-qps=4 -l loaded --blobstore-scrub-action=Repair scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   * scrub: blobstore_id BlobstoreId(0) repaired for repo0000. (glob)
   1 Seen,Loaded: 40,40
   $ END_SECS=$(/bin/date "+%s")
@@ -75,7 +75,7 @@ Delete all data from one side of the multiplex again
 
 Check writes throttle by bytes in Repair mode
   $ START_SECS=$(/bin/date "+%s")
-  $ mononoke_new_walker --blobstore-bytes-min-throttle=1 --blobstore-write-burst-bytes-s=200 --blobstore-write-bytes-s=200 -l loaded --blobstore-scrub-action=Repair scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker --blobstore-bytes-min-throttle=1 --blobstore-write-burst-bytes-s=200 --blobstore-write-bytes-s=200 -l loaded --blobstore-scrub-action=Repair scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   * scrub: blobstore_id BlobstoreId(0) repaired for repo0000. (glob)
   1 Seen,Loaded: 40,40
   $ END_SECS=$(/bin/date "+%s")
@@ -92,7 +92,7 @@ Delete all data from one side of the multiplex again
 
 Check writes throttle by bytes and qps in Repair mode
   $ START_SECS=$(/bin/date "+%s")
-  $ mononoke_new_walker --blobstore-bytes-min-throttle=1 --blobstore-write-bytes-s=200 --blobstore-read-qps=4 -l loaded --blobstore-scrub-action=Repair scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker --blobstore-bytes-min-throttle=1 --blobstore-write-bytes-s=200 --blobstore-read-qps=4 -l loaded --blobstore-scrub-action=Repair scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   * scrub: blobstore_id BlobstoreId(0) repaired for repo0000. (glob)
   1 Seen,Loaded: 40,40
   $ END_SECS=$(/bin/date "+%s")

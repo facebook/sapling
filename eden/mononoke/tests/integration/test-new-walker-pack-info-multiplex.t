@@ -29,7 +29,7 @@ Pack the blobs in the two packed stores differently
   $ (cd blobstore/0/blobs; ls) | sed -e 's/^blob-//' -e 's/.pack$//' | packer --zstd-level=19 --inner-blobstore-id 1
 
 Run a scrub, need a scrub action to put ScrubBlobstore in the stack, which is necessary to make sure all the inner stores of the multiplex are read
-  $ mononoke_new_walker -l loaded --blobstore-scrub-action=ReportOnly scrub -q -I deep -i bonsai -i FileContent -b master_bookmark -a all --pack-log-scuba-file pack-info-packed.json 2>&1 | strip_glog
+  $ mononoke_walker -l loaded --blobstore-scrub-action=ReportOnly scrub -q -I deep -i bonsai -i FileContent -b master_bookmark -a all --pack-log-scuba-file pack-info-packed.json 2>&1 | strip_glog
   Seen,Loaded: 7,7
 
 Check logged pack info now the store is packed. Expecting to see two packed stores and one unpacked

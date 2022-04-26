@@ -24,21 +24,21 @@ check blobstore numbers, walk will do some more steps for mappings
   27
 
 Full edge base case, sample all in one go.  We are excluding BonsaiHgMapping from sampling as it has no blobstore form, was being creditted with its filenode lookups
-  $ mononoke_new_walker -l sizing compression-benefit -q -b master_bookmark --sample-rate 1 --exclude-sample-node-type BonsaiHgMapping -I deep 2>&1 | strip_glog
+  $ mononoke_walker -l sizing compression-benefit -q -b master_bookmark --sample-rate 1 --exclude-sample-node-type BonsaiHgMapping -I deep 2>&1 | strip_glog
   * Run */s,*/s,1887,1858,1%,*s;* (glob)
 
 Reduced edge base case, sample all in one go.  We are excluding several edges from the usual deep walk to force path tracking to work harder
-  $ mononoke_new_walker -l sizing compression-benefit -q -b master_bookmark --sample-rate 1 --exclude-sample-node-type BonsaiHgMapping -I deep -X ChangesetToBonsaiParent -X HgFileEnvelopeToFileContent -X HgChangesetToHgParent 2>&1 | strip_glog
+  $ mononoke_walker -l sizing compression-benefit -q -b master_bookmark --sample-rate 1 --exclude-sample-node-type BonsaiHgMapping -I deep -X ChangesetToBonsaiParent -X HgFileEnvelopeToFileContent -X HgChangesetToHgParent 2>&1 | strip_glog
   * Run */s,*/s,1887,1858,1%,*s;* (glob)
 
 Three separate cycles allowing all edges, total bytes should be the same as full edge base case
-  $ for i in {0..2}; do mononoke_new_walker -l sizing compression-benefit -q -b master_bookmark -I deep --sample-rate=3 --exclude-sample-node-type BonsaiHgMapping --sample-offset=$i 2>&1; done | strip_glog
+  $ for i in {0..2}; do mononoke_walker -l sizing compression-benefit -q -b master_bookmark -I deep --sample-rate=3 --exclude-sample-node-type BonsaiHgMapping --sample-offset=$i 2>&1; done | strip_glog
   * Run */s,*/s,1045,1016,2%,*s; * (glob)
   * Run */s,*/s,364,364,0%,*s;* (glob)
   * Run */s,*/s,478,478,0%,*s; * (glob)
 
 Reduced edge three separate cycles moving offset each time, total in each cycle should be the same as above.
-  $ for i in {0..2}; do mononoke_new_walker -l sizing compression-benefit -q -b master_bookmark -I deep -X ChangesetToBonsaiParent -X HgFileEnvelopeToFileContent -X HgChangesetToHgParent --sample-rate=3 --exclude-sample-node-type BonsaiHgMapping --sample-offset=$i 2>&1; done | strip_glog
+  $ for i in {0..2}; do mononoke_walker -l sizing compression-benefit -q -b master_bookmark -I deep -X ChangesetToBonsaiParent -X HgFileEnvelopeToFileContent -X HgChangesetToHgParent --sample-rate=3 --exclude-sample-node-type BonsaiHgMapping --sample-offset=$i 2>&1; done | strip_glog
   * Run */s,*/s,1045,1016,2%,*s; * (glob)
   * Run */s,*/s,364,364,0%,*s;* (glob)
   * Run */s,*/s,478,478,0%,*s; * (glob)

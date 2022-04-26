@@ -25,7 +25,7 @@ setup configuration with some compressable files
   $ blobimport repo-hg-nolfs/.hg repo
 
 Run a scrub with the pack logging enabled
-  $ mononoke_new_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -b master_bookmark -a all --pack-log-scuba-file pack-info.json 2>&1 | strip_glog
+  $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -b master_bookmark -a all --pack-log-scuba-file pack-info.json 2>&1 | strip_glog
   Seen,Loaded: 7,7
 
 Check logged pack info. Commit time is forced to zero in tests, hence mtime is 0. Expect compressed sizes and no pack_key yet
@@ -41,7 +41,7 @@ Now pack the blobs
   $ (cd blobstore/blobs; ls) | sed -e 's/^blob-//' -e 's/.pack$//' | packer --zstd-level=3
 
 Run a scrub again now the storage is packed
-  $ mononoke_new_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -p Changeset --checkpoint-name=bonsai_packed --checkpoint-path=test_sqlite -a all --pack-log-scuba-file pack-info-packed.json 2>&1 | strip_glog
+  $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -p Changeset --checkpoint-name=bonsai_packed --checkpoint-path=test_sqlite -a all --pack-log-scuba-file pack-info-packed.json 2>&1 | strip_glog
   Seen,Loaded: 6,6
   Deferred: 0
 

@@ -31,7 +31,7 @@ Drain the healer queue
   $ sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "DELETE FROM blobstore_sync_queue";
 
 Base case, check can walk fine, one repo
-  $ mononoke_new_walker scrub -I deep -q -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker scrub -I deep -q -b master_bookmark 2>&1 | strip_glog
   Walking edge types * (glob)
   Walking node types * (glob)
   Seen,Loaded: 40,40
@@ -39,7 +39,7 @@ Base case, check can walk fine, one repo
   Walked* (glob)
 
 Check that multi repo runs for all repos specified
-  $ mononoke_new_walker --repo-name repo2 scrub -I deep -q -b master_bookmark 2>&1 | strip_glog > multi_repo.log
+  $ mononoke_walker --repo-name repo2 scrub -I deep -q -b master_bookmark 2>&1 | strip_glog > multi_repo.log
   $ grep repo2 multi_repo.log
   Walking repos ["repo", "repo2"]
   Walking edge types *, repo: repo2 (glob)
@@ -60,24 +60,24 @@ Delete all data from one side of the multiplex
   $ rm blobstore/0/blobs/*
 
 Check fails on only the deleted side
-  $ mononoke_new_walker -L graph scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker -L graph scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | strip_glog
   Error: Could not step to OutgoingEdge { label: BookmarkToChangeset, target: Changeset(ChangesetKey { inner: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)), filenode_known_derived: false })* (glob)
   * (glob)
   Caused by:
       changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd is missing
 
 Check can walk fine on the only remaining side
-  $ mononoke_new_walker -L graph scrub -q --inner-blobstore-id=1 -I deep -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker -L graph scrub -q --inner-blobstore-id=1 -I deep -b master_bookmark 2>&1 | strip_glog
   Seen,Loaded: 40,40
   Bytes/s,Keys/s,Bytes,Keys; Delta */s,*/s,2168,30,0s; Run */s,*/s,2168,30,*s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiHgMapping:281,3 Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadata:351,3 HgBonsaiMapping:0,0 HgChangeset:281,3 HgChangesetViaBonsai:0,0 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3* (glob)
 
 
 Check can walk fine on the multiplex remaining side
-  $ mononoke_new_walker -l loaded scrub -q -I deep -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker -l loaded scrub -q -I deep -b master_bookmark 2>&1 | strip_glog
   Seen,Loaded: 40,40
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in ReportOnly mode, should log the scrub repairs needed
-  $ mononoke_new_walker -l loaded --blobstore-scrub-action=ReportOnly --scuba-log-file scuba-reportonly.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker -l loaded --blobstore-scrub-action=ReportOnly --scuba-log-file scuba-reportonly.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   * scrub: blobstore_id BlobstoreId(0) not repaired for repo0000. (glob)
   1 Seen,Loaded: 40,40
 
@@ -115,13 +115,13 @@ Note - we might get duplicate reports, we just expect that there should not be a
   1,"scrub_repair","repo0000.hgmanifest.sha1.eb79886383871977bccdb3000c275a279f0d4c99","repo","scrub",1* (glob)
 
 Check that walking with a grace period does not report the errors as the keys are too new
-  $ mononoke_new_walker -l loaded --blobstore-scrub-grace=3600 --blobstore-scrub-action=ReportOnly --scuba-log-file scuba-reportonly-grace.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker -l loaded --blobstore-scrub-grace=3600 --blobstore-scrub-action=ReportOnly --scuba-log-file scuba-reportonly-grace.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   1 Seen,Loaded: 40,40
   $ LINES="$(wc -l < scuba-reportonly-grace.json)"
   $ [[ $LINES -lt 1 ]]
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in Repair mode, should also log the scrub repairs done
-  $ mononoke_new_walker -l loaded --blobstore-scrub-action=Repair --scuba-log-file scuba-repair.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker -l loaded --blobstore-scrub-action=Repair --scuba-log-file scuba-repair.json scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   * scrub: blobstore_id BlobstoreId(0) repaired for repo0000. (glob)
   1 Seen,Loaded: 40,40
 
@@ -159,7 +159,7 @@ Note - we might get duplicate repairs, we just expect that there should not be a
   0,"scrub_repair","repo0000.hgmanifest.sha1.eb79886383871977bccdb3000c275a279f0d4c99","repo","scrub",1* (glob)
 
 Check that all is repaired by running on only the deleted side
-  $ mononoke_new_walker -l loaded scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker -l loaded scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | strip_glog
   Seen,Loaded: 40,40
 
 Check the files after restore.  The blobstore filenode_lookup representation is currently not traversed, so remains as a difference
