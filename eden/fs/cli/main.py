@@ -1543,8 +1543,13 @@ class StartCmd(Subcmd):
         # Check to see if edenfs is already running
         health_info = instance.check_health()
         if not is_takeover:
+            msg = None
             if health_info.is_healthy():
                 msg = f"EdenFS is already running (pid {health_info.pid})"
+            elif health_info.is_starting():
+                msg = f"EdenFS is already starting (pid {health_info.pid})"
+
+            if msg:
                 if args.if_not_running:
                     print(msg)
                     return 0

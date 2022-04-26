@@ -71,6 +71,9 @@ class HealthStatus(object):
     def is_healthy(self) -> bool:
         return self.status == fb303_status.ALIVE
 
+    def is_starting(self) -> bool:
+        return self.status == fb303_status.STARTING
+
     def __str__(self) -> str:
         return "(%s, pid=%s, uptime=%s, detail=%r)" % (
             fb303_status._VALUES_TO_NAMES.get(self.status, str(self.status)),
