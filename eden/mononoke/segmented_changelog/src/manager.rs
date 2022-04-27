@@ -189,7 +189,6 @@ impl SegmentedChangelogManager {
     }
 
     /// Checks if given changeset is indexed by given segmented changelog version.
-    #[cfg(test)]
     pub async fn check_if_changeset_indexed(
         &self,
         ctx: &CoreContext,
