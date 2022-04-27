@@ -1318,6 +1318,12 @@ class RemoveCmd(Subcmd):
         # We also track a bool indicating if this checkout is currently mounted
         mounts: List[Tuple[str, RemoveType]] = []
         for path in args.paths:
+            if not os.path.exists(path):
+                print(
+                    f"error: {path} is neither an EdenFS mount nor an existing directory",
+                    file=sys.stderr,
+                )
+                return 1
             try:
                 mount_path = util.get_eden_mount_name(path)
                 remove_type = RemoveType.ACTIVE_MOUNT
