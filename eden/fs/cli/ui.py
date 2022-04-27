@@ -11,11 +11,8 @@ from typing import BinaryIO, Dict, Optional, TextIO, Tuple
 
 
 class Color(enum.Enum):
-    # pyre-fixme[20]: Argument `value` expected.
     RED = enum.auto()
-    # pyre-fixme[20]: Argument `value` expected.
     GREEN = enum.auto()
-    # pyre-fixme[20]: Argument `value` expected.
     YELLOW = enum.auto()
 
 
