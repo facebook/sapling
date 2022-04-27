@@ -194,3 +194,71 @@ async fn bookmark_with_options(
             .await?,
     ))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use blobrepo::BlobRepo;
+    use fbinit::FacebookInit;
+    use fixtures::{set_bookmark, BranchWide, TestRepoFixture};
+
+    async fn prep_branch_wide_repo(fb: FacebookInit) -> Result<Arc<BlobRepo>> {
+        let blobrepo = BranchWide::getrepo(fb).await;
+        let second = BookmarkName::new("second")?;
+        set_bookmark(
+            fb,
+            blobrepo.clone(),
+            "04decbb0d1a65789728250ddea2fe8d00248e01c",
+            second,
+        )
+        .await;
+        let third = BookmarkName::new("third")?;
+        set_bookmark(
+            fb,
+            blobrepo.clone(),
+            "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12",
+            third,
+        )
+        .await;
+        Ok(Arc::new(blobrepo))
+    }
+
+    #[fbinit::test]
+    async fn test_bookmark_with_options(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = prep_branch_wide_repo(fb).await?;
+        let second = BookmarkName::new("second")?;
+
+        let res = bookmark_with_options(&ctx, Some(&second), repo.bookmarks().as_ref()).await?;
+        assert_eq!(
+            res.vertexes(),
+            vec![VertexName::from_hex(
+                b"5ec506306edb84a4a47f901a55cedeec3113eb118bfae119982f45382481e3dc"
+            )?,]
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_all_bookmarks_with_options(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = prep_branch_wide_repo(fb).await?;
+
+        let res = bookmark_with_options(&ctx, None, repo.bookmarks().as_ref()).await?;
+        assert_eq!(
+            res.vertexes(),
+            vec![
+                VertexName::from_hex(
+                    b"56da5b997e27f2f9020f6ff2d87b321774369e23579bd2c4ce675efad363f4f4"
+                )?,
+                VertexName::from_hex(
+                    b"5ec506306edb84a4a47f901a55cedeec3113eb118bfae119982f45382481e3dc"
+                )?,
+                VertexName::from_hex(
+                    b"7097e8d1e72af16e8135047d8693fb381246be1bc74c1b6c0cb013fc05331fc1"
+                )?,
+            ]
+        );
+        Ok(())
+    }
+}
