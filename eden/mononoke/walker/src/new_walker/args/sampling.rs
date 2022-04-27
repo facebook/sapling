@@ -10,7 +10,7 @@ use clap::Args;
 use regex::Regex;
 use walker_commands_impl::sampling::SamplingOptions;
 
-use crate::args::{parse_node_types, parse_node_values};
+use crate::args::graph_arg_types::NodeTypeArg;
 
 #[derive(Args, Debug)]
 pub struct SamplingArgs {
@@ -23,10 +23,10 @@ pub struct SamplingArgs {
     pub sample_offset: u64,
     /// Node types to exclude from the sample.
     #[clap(long, short = 'S')]
-    pub exclude_sample_node_type: Vec<String>,
+    pub exclude_sample_node_type: Vec<NodeTypeArg>,
     /// Node types to include in the sample, defaults to same as the walk.
     #[clap(long, short = 's')]
-    pub include_sample_node_type: Vec<String>,
+    pub include_sample_node_type: Vec<NodeTypeArg>,
     /// If provided, only sample paths that match.
     #[clap(long)]
     pub sample_path_regex: Option<Regex>,
@@ -35,12 +35,11 @@ pub struct SamplingArgs {
 impl SamplingArgs {
     pub fn parse_args(&self, default_sample_rate: u64) -> Result<SamplingOptions, Error> {
         let sample_rate = self.sample_rate.clone().unwrap_or(default_sample_rate);
-        let node_types = parse_node_types(
-            self.include_sample_node_type.iter(),
-            self.exclude_sample_node_type.iter(),
-            &[],
-        )?;
-        let exclude_types = parse_node_values(self.exclude_sample_node_type.iter(), &[])?;
+        let node_types = NodeTypeArg::filter_nodes(
+            &self.include_sample_node_type,
+            &self.exclude_sample_node_type,
+        );
+        let exclude_types = NodeTypeArg::parse_args(&self.exclude_sample_node_type);
         Ok(SamplingOptions {
             sample_rate,
             sample_offset: self.sample_offset,

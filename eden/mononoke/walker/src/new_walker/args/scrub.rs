@@ -13,24 +13,23 @@ use std::collections::HashSet;
 use walker_commands_impl::graph::NodeType;
 use walker_commands_impl::pack::PackInfoLogOptions;
 
-use crate::args::parse_node_types;
+use crate::args::graph_arg_types::NodeTypeArg;
 
 #[derive(Args, Debug)]
 pub struct ScrubOutputNodeArgs {
     /// Node types not to output in debug stdout
     #[clap(long, short = 'O')]
-    pub exclude_output_node_type: Vec<String>,
+    pub exclude_output_node_type: Vec<NodeTypeArg>,
     /// Node types to output in debug stdout
     #[clap(long, short = 'o')]
-    pub include_output_node_type: Vec<String>,
+    pub include_output_node_type: Vec<NodeTypeArg>,
 }
 
 impl ScrubOutputNodeArgs {
-    pub fn parse_args(&self) -> Result<HashSet<NodeType>, Error> {
-        parse_node_types(
-            self.include_output_node_type.iter(),
-            self.exclude_output_node_type.iter(),
-            &[],
+    pub fn parse_args(&self) -> HashSet<NodeType> {
+        NodeTypeArg::filter_nodes(
+            &self.include_output_node_type,
+            &self.exclude_output_node_type,
         )
     }
 }
@@ -39,10 +38,10 @@ impl ScrubOutputNodeArgs {
 pub struct ScrubPackLogArgs {
     /// Node types not to log pack info for
     #[clap(long, short = 'A')]
-    pub exclude_pack_log_node_type: Vec<String>,
+    pub exclude_pack_log_node_type: Vec<NodeTypeArg>,
     /// Node types to log pack info for
     #[clap(long, short = 'a')]
-    pub include_pack_log_node_type: Vec<String>,
+    pub include_pack_log_node_type: Vec<NodeTypeArg>,
     /// Scuba table for logging pack info data to. e.g. mononoke_packinfo
     #[clap(long, requires = "include-pack-log-node-type")]
     pub pack_log_scuba_table: Option<String>,
@@ -53,11 +52,10 @@ pub struct ScrubPackLogArgs {
 
 impl ScrubPackLogArgs {
     pub fn parse_args(&self, fb: FacebookInit) -> Result<Option<PackInfoLogOptions>, Error> {
-        let log_node_types = parse_node_types(
-            self.include_pack_log_node_type.iter(),
-            self.exclude_pack_log_node_type.iter(),
-            &[],
-        )?;
+        let log_node_types = NodeTypeArg::filter_nodes(
+            &self.include_pack_log_node_type,
+            &self.exclude_pack_log_node_type,
+        );
 
         if !log_node_types.is_empty() {
             let mut scuba_builder =

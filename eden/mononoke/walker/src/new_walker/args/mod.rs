@@ -6,6 +6,7 @@
  */
 
 pub mod arg_types;
+mod graph_arg_types;
 pub mod hash_validation;
 pub mod progress;
 pub mod sampling;
@@ -28,8 +29,8 @@ use anyhow::Error;
 use clap::Args;
 use itertools::{process_results, Itertools};
 use std::collections::HashSet;
-use walker_commands_impl::graph::{EdgeType, NodeType};
-use walker_commands_impl::setup::{parse_edge_value, parse_node_value};
+use walker_commands_impl::graph::EdgeType;
+use walker_commands_impl::setup::parse_edge_value;
 
 #[derive(Args, Debug)]
 pub struct WalkerCommonArgs {
@@ -71,29 +72,6 @@ pub struct WalkerCommonArgs {
     pub progress: ProgressArgs,
     #[clap(flatten, next_help_heading = "TAILING OPTIONS")]
     pub tailing: TailArgs,
-}
-
-fn parse_node_types<'a>(
-    include_node_types: impl Iterator<Item = &'a String>,
-    exclude_node_types: impl Iterator<Item = &'a String>,
-    default: &[NodeType],
-) -> Result<HashSet<NodeType>, Error> {
-    let mut include_node_types = parse_node_values(include_node_types, default)?;
-    let exclude_node_types = parse_node_values(exclude_node_types, &[])?;
-    include_node_types.retain(|x| !exclude_node_types.contains(x));
-    Ok(include_node_types)
-}
-
-fn parse_node_values<'a>(
-    values: impl Iterator<Item = &'a String>,
-    default: &[NodeType],
-) -> Result<HashSet<NodeType>, Error> {
-    let node_values = process_results(values.map(|x| parse_node_value(x)), |s| s.concat())?;
-
-    if node_values.is_empty() {
-        return Ok(HashSet::from_iter(default.iter().cloned()));
-    }
-    Ok(node_values)
 }
 
 pub(crate) fn parse_edge_types<'a>(

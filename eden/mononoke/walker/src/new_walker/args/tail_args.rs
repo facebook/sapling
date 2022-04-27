@@ -18,7 +18,7 @@ use walker_commands_impl::checkpoint::{CheckpointsByName, SqlCheckpoints};
 use walker_commands_impl::tail::{ChunkingParams, ClearStateParams, TailParams};
 
 use crate::args::arg_types::{ChunkByPublicArg, InternedTypeArg, DEFAULT_INTERNED_TYPES_STR};
-use crate::args::parse_node_types;
+use crate::args::graph_arg_types::NodeTypeArg;
 
 #[derive(Args, Debug)]
 pub struct TailArgs {
@@ -77,13 +77,11 @@ pub struct ChunkingArgs {
     pub exclude_chunk_clear_interned_type: Vec<InternedTypeArg>,
 
     /// Include in NodeTypes to flush between chunks
-    // TODO: NODE_TYPE_POSSIBLE_VALUES
     #[clap(long, short = 'n')]
-    pub include_chunk_clear_node_type: Option<String>,
+    pub include_chunk_clear_node_type: Vec<NodeTypeArg>,
     /// Exclude from NodeTypes to flush between chunks
-    // TODO: NODE_TYPE_POSSIBLE_VALUES
     #[clap(long, short = 'N')]
-    pub exclude_chunk_clear_node_type: Option<String>,
+    pub exclude_chunk_clear_node_type: Vec<NodeTypeArg>,
 
     /// Set the repo upper bound used by chunking instead of loading it.
     /// Inclusive. Useful for reproducing issues from a particular chunk.
@@ -117,16 +115,15 @@ impl ChunkingArgs {
                 InternedTypeArg::parse_args(&self.exclude_chunk_clear_interned_type);
             include_int_types.retain(|x| !exclude_int_types.contains(x));
 
-            let node_types = parse_node_types(
-                self.include_chunk_clear_node_type.iter(),
-                self.exclude_chunk_clear_node_type.iter(),
-                &[],
-            )?;
+            let include_nodes = NodeTypeArg::filter_nodes(
+                &self.include_chunk_clear_node_type,
+                &self.exclude_chunk_clear_node_type,
+            );
 
             Some(ClearStateParams {
                 sample_rate: *sample_rate,
                 interned_types: include_int_types,
-                node_types,
+                node_types: include_nodes,
             })
         } else {
             None

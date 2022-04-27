@@ -8,16 +8,15 @@
 use clap::Args;
 use std::time::Duration;
 use walker_commands_impl::progress::ProgressOptions;
-use walker_commands_impl::setup::{PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE};
 
 #[derive(Args, Debug)]
 pub struct ProgressArgs {
     /// Minimum interval between progress reports in seconds.
-    #[clap(long, default_value_t = PROGRESS_SAMPLE_DURATION_S)]
+    #[clap(long, default_value_t = 5)]
     pub progress_interval: u64,
     /// Sample the walk output stream for progress roughly 1 in N steps.
     /// Only log if progress-interval has passed.
-    #[clap(long, default_value_t = PROGRESS_SAMPLE_RATE)]
+    #[clap(long, default_value_t = 100)]
     pub progress_sample_rate: u64,
 }
 

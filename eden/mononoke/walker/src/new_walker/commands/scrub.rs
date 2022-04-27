@@ -64,7 +64,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<(), Error> {
     let command = ScrubCommand {
         limit_data_fetch: common_args.limit_data_fetch,
         output_format,
-        output_node_types: output_nodes.parse_args()?,
+        output_node_types: output_nodes.parse_args(),
         progress_options: common_args.progress.parse_args(),
         sampling_options: sampling.parse_args(1)?,
         pack_info_log_options: pack_log_info.parse_args(app.fb)?,
