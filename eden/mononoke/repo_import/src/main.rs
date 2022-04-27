@@ -1224,7 +1224,7 @@ async fn repo_import(
     let merged_cs_id = recovery_fields
         .merged_cs_id
         .ok_or_else(|| format_err!("Changeset id for the merged commit is not found"))?;
-    push_merge_commit(
+    let pushrebased_cs_id = push_merge_commit(
         &ctx,
         &repo,
         merged_cs_id,
@@ -1232,6 +1232,36 @@ async fn repo_import(
         &repo_config,
     )
     .await?;
+
+    let old_csid = repo
+        .bookmarks()
+        .get(ctx.clone(), &repo_import_setting.importing_bookmark)
+        .await?
+        .expect("The importing_bookmark should be set");
+
+    let mut transaction = repo.bookmarks().create_transaction(ctx.clone());
+    transaction.update(
+        &repo_import_setting.importing_bookmark,
+        pushrebased_cs_id.clone(),
+        old_csid.clone(),
+        BookmarkUpdateReason::ManualMove,
+        None,
+    )?;
+
+    if !transaction.commit().await? {
+        return Err(format_err!(
+            "Logical failure while setting {:?} to the merge commit",
+            &repo_import_setting.importing_bookmark,
+        ));
+    }
+
+    info!(
+        ctx.logger(),
+        "Set bookmark {:?} to the merge commit: {:?}",
+        &repo_import_setting.importing_bookmark,
+        pushrebased_cs_id
+    );
+
     Ok(())
 }
 
