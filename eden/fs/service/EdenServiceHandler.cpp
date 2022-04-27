@@ -811,6 +811,37 @@ RequestInfo thriftRequestInfo(pid_t pid, ProcessNameCache& processNameCache) {
 }
 #endif
 
+template <typename T>
+class ThriftStreamPublisherOwner {
+ public:
+  explicit ThriftStreamPublisherOwner(
+      apache::thrift::ServerStreamPublisher<T> publisher)
+      : owner(true), publisher{std::move(publisher)} {}
+
+  ThriftStreamPublisherOwner(ThriftStreamPublisherOwner&& that) noexcept
+      : owner{std::exchange(that.owner, false)},
+        publisher{std::move(that.publisher)} {}
+
+  ThriftStreamPublisherOwner& operator=(ThriftStreamPublisherOwner&&) = delete;
+
+  void next(T payload) const {
+    XCHECK(owner);
+    publisher.next(std::move(payload));
+  }
+
+  // Destroying a publisher without calling complete() aborts the process, so
+  // ensure complete() is called when this object is dropped.
+  ~ThriftStreamPublisherOwner() {
+    if (owner) {
+      std::move(publisher).complete();
+    }
+  }
+
+ private:
+  bool owner;
+  apache::thrift::ServerStreamPublisher<T> publisher;
+};
+
 } // namespace
 
 #ifndef _WIN32
@@ -950,35 +981,11 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
         // on disconnect, release context and the TraceSubscriptionHandle
       });
 
-  struct PublisherOwner {
-    explicit PublisherOwner(
-        apache::thrift::ServerStreamPublisher<FsEvent> publisher)
-        : owner(true), publisher{std::move(publisher)} {}
-
-    PublisherOwner(PublisherOwner&& that) noexcept
-        : owner{std::exchange(that.owner, false)},
-          publisher{std::move(that.publisher)} {}
-
-    PublisherOwner& operator=(PublisherOwner&&) = delete;
-
-    // Destroying a publisher without calling complete() aborts the process, so
-    // ensure complete() is called when the TraceBus deletes the subscriber (as
-    // occurs during unmount).
-    ~PublisherOwner() {
-      if (owner) {
-        std::move(publisher).complete();
-      }
-    }
-
-    bool owner;
-    apache::thrift::ServerStreamPublisher<FsEvent> publisher;
-  };
-
 #ifdef _WIN32
   if (prjfsChannel) {
     context->subHandle = prjfsChannel->getTraceBusPtr()->subscribeFunction(
         folly::to<std::string>("strace-", edenMount->getPath().basename()),
-        [owner = PublisherOwner{std::move(publisher)},
+        [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
          serverState =
              server_->getServerState()](const PrjfsTraceEvent& event) {
           FsEvent te;
@@ -1005,14 +1012,14 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
 
           te.requestInfo_ref() = RequestInfo{};
 
-          owner.publisher.next(te);
+          publisher.next(te);
         });
   }
 #else
   if (fuseChannel) {
     context->subHandle = fuseChannel->getTraceBus().subscribeFunction(
         folly::to<std::string>("strace-", edenMount->getPath().basename()),
-        [owner = PublisherOwner{std::move(publisher)},
+        [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
          serverState = server_->getServerState(),
          eventCategoryMask](const FuseTraceEvent& event) {
           if (isEventMasked(eventCategoryMask, event)) {
@@ -1048,12 +1055,12 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
           te.requestInfo_ref() = thriftRequestInfo(
               event.getRequest().pid, *serverState->getProcessNameCache());
 
-          owner.publisher.next(te);
+          publisher.next(te);
         });
   } else if (nfsdChannel) {
     context->subHandle = nfsdChannel->getTraceBus().subscribeFunction(
         folly::to<std::string>("strace-", edenMount->getPath().basename()),
-        [owner = PublisherOwner{std::move(publisher)},
+        [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
          serverState = server_->getServerState(),
          eventCategoryMask](const NfsTraceEvent& event) {
           if (isEventMasked(eventCategoryMask, event)) {
@@ -1084,7 +1091,7 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
 
           te.requestInfo_ref() = RequestInfo{};
 
-          owner.publisher.next(te);
+          publisher.next(te);
         });
   }
 #endif // _WIN32
@@ -1134,33 +1141,9 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
         // on disconnect, release context and the TraceSubscriptionHandle
       });
 
-  struct PublisherOwner {
-    explicit PublisherOwner(
-        apache::thrift::ServerStreamPublisher<HgEvent> publisher)
-        : owner(true), publisher{std::move(publisher)} {}
-
-    PublisherOwner(PublisherOwner&& that) noexcept
-        : owner{std::exchange(that.owner, false)},
-          publisher{std::move(that.publisher)} {}
-
-    PublisherOwner& operator=(PublisherOwner&&) = delete;
-
-    // Destroying a publisher without calling complete() aborts the process, so
-    // ensure complete() is called when the TraceBus deletes the subscriber (as
-    // occurs during unmount).
-    ~PublisherOwner() {
-      if (owner) {
-        std::move(publisher).complete();
-      }
-    }
-
-    bool owner;
-    apache::thrift::ServerStreamPublisher<HgEvent> publisher;
-  };
-
   context->subHandle = hgBackingStore->getTraceBus().subscribeFunction(
       folly::to<std::string>("hgtrace-", edenMount->getPath().basename()),
-      [owner = PublisherOwner{std::move(publisher)},
+      [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
        serverState =
            server_->getServerState()](const HgImportTraceEvent& event) {
         HgEvent te;
@@ -1221,7 +1204,7 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
         // TODO: trace requesting pid
         // te.requestInfo_ref() = thriftRequestInfo(pid);
 
-        owner.publisher.next(te);
+        publisher.next(te);
       });
 
   return std::move(serverStream);
