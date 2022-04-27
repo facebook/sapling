@@ -571,8 +571,12 @@ std::wstring getDaemonUptime(
     std::chrono::time_point<std::chrono::steady_clock> startTime) {
   auto uptimeSec = std::chrono::duration_cast<std::chrono::seconds>(
       std::chrono::steady_clock::now() - startTime);
-  auto uptimeStr =
-      fmt::format("{:%H hours, %M minutes, %S seconds}", uptimeSec);
+  auto days = std::chrono::floor<std::chrono::hours>(uptimeSec) / 24;
+  std::string dayStr = "";
+  if (days.count() > 0) {
+    dayStr = fmt::format("{} days ", days.count());
+  }
+  auto uptimeStr = fmt::format("{}{:%H:%M:%S}", dayStr, uptimeSec);
   return std::wstring(kEdenUptime) + multibyteToWideString(uptimeStr);
 }
 
