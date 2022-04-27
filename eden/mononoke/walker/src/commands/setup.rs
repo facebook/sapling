@@ -5,28 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{EdgeType, NodeType, SqlShardInfo};
-use crate::log;
-use crate::progress::{
-    sort_by_string, ProgressOptions, ProgressStateCountByType, ProgressStateMutex, ProgressSummary,
-};
+use crate::graph::{EdgeType, NodeType};
+use crate::progress::{ProgressStateCountByType, ProgressStateMutex, ProgressSummary};
 use crate::state::StepStats;
 use crate::tail::TailParams;
-use crate::validate::REPO;
-use crate::walk::{OutgoingEdge, RepoWalkParams};
+use crate::walk::RepoWalkParams;
 
 use anyhow::{format_err, Context, Error};
-use blobrepo::BlobRepo;
-use cmdlib::args::ResolvedRepo;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
-use fbinit::FacebookInit;
 use maplit::hashset;
 use mercurial_derived_data::MappedHgChangesetId;
 use once_cell::sync::Lazy;
-use repo_factory::RepoFactory;
-use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{info, o, Logger};
 use std::{
     collections::{HashMap, HashSet},
     str::FromStr,
@@ -362,146 +352,6 @@ pub fn parse_edge_value(arg: &str) -> Result<HashSet<EdgeType>, Error> {
             .map(|e| hashset![e])
             .with_context(|| format_err!("Unknown EdgeType {}", arg))?,
     })
-}
-
-fn reachable_graph_elements(
-    mut include_edge_types: HashSet<EdgeType>,
-    mut include_node_types: HashSet<NodeType>,
-    root_node_types: &HashSet<NodeType>,
-) -> (HashSet<EdgeType>, HashSet<NodeType>) {
-    // This stops us logging that we're walking unreachable edge/node types
-    let mut param_count = &include_edge_types.len() + &include_node_types.len();
-    let mut last_param_count = 0;
-    while param_count != last_param_count {
-        let include_edge_types_stable = include_edge_types.clone();
-        // Only retain edge types that are traversable
-        include_edge_types.retain(|e| {
-            e.incoming_type()
-                .map(|t|
-                    // its an incoming_type we want
-                    (include_node_types.contains(&t) || root_node_types.contains(&t)) &&
-                    // Another existing edge can get us to this node type
-                    (root_node_types.contains(&t) || include_edge_types_stable.iter().any(|o| &o.outgoing_type() == &t)))
-                .unwrap_or(true)
-                // its an outgoing_type we want
-                && include_node_types.contains(&e.outgoing_type())
-        });
-        // Only retain node types we expect to step to after graph entry
-        include_node_types.retain(|t| {
-            include_edge_types.iter().any(|e| {
-                &e.outgoing_type() == t || e.incoming_type().map(|ot| &ot == t).unwrap_or(false)
-            })
-        });
-        last_param_count = param_count;
-        param_count = &include_edge_types.len() + &include_node_types.len();
-    }
-    (include_edge_types, include_node_types)
-}
-
-// Setup for just one repo. Try and keep clap parsing out of here, should be done beforehand
-pub async fn setup_repo<'a>(
-    walk_stats_key: &'static str,
-    fb: FacebookInit,
-    logger: &'a Logger,
-    repo_factory: &'a RepoFactory,
-    mut scuba_builder: MononokeScubaSampleBuilder,
-    sql_shard_info: SqlShardInfo,
-    scheduled_max: usize,
-    repo_count: usize,
-    resolved: &'a ResolvedRepo,
-    walk_roots: Vec<OutgoingEdge>,
-    mut tail_params: TailParams,
-    include_edge_types: HashSet<EdgeType>,
-    mut include_node_types: HashSet<NodeType>,
-    hash_validation_node_types: HashSet<NodeType>,
-    progress_options: ProgressOptions,
-) -> Result<(RepoSubcommandParams, RepoWalkParams), Error> {
-    let logger = if repo_count > 1 {
-        logger.new(o!("repo" => resolved.name.clone()))
-    } else {
-        logger.clone()
-    };
-
-    let scheduled_max = scheduled_max / repo_count;
-    scuba_builder.add(REPO, resolved.name.clone());
-
-    // Only walk derived node types that the repo is configured to contain
-    include_node_types.retain(|t| {
-        if let Some(t) = t.derived_data_name() {
-            resolved.config.derived_data_config.is_enabled(t)
-        } else {
-            true
-        }
-    });
-
-    let mut root_node_types: HashSet<_> =
-        walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
-
-    if let Some(ref mut chunking) = tail_params.chunking {
-        chunking.chunk_by.retain(|t| {
-            if let Some(t) = t.derived_data_name() {
-                resolved.config.derived_data_config.is_enabled(t)
-            } else {
-                true
-            }
-        });
-
-        root_node_types.extend(chunking.chunk_by.iter().cloned());
-    }
-
-    let (include_edge_types, include_node_types) =
-        reachable_graph_elements(include_edge_types, include_node_types, &root_node_types);
-    info!(
-        logger,
-        #log::GRAPH,
-        "Walking edge types {:?}",
-        sort_by_string(&include_edge_types)
-    );
-    info!(
-        logger,
-        #log::GRAPH,
-        "Walking node types {:?}",
-        sort_by_string(&include_node_types)
-    );
-
-    scuba_builder.add(REPO, resolved.name.clone());
-
-    let mut progress_node_types = include_node_types.clone();
-    for e in &walk_roots {
-        progress_node_types.insert(e.target.get_type());
-    }
-
-    let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
-        fb,
-        logger.clone(),
-        walk_stats_key,
-        resolved.name.clone(),
-        progress_node_types,
-        progress_options,
-    ));
-
-    let repo: BlobRepo = repo_factory
-        .build(resolved.name.clone(), resolved.config.clone())
-        .await?;
-
-    Ok((
-        RepoSubcommandParams {
-            progress_state,
-            tail_params,
-            lfs_threshold: resolved.config.lfs.threshold,
-        },
-        RepoWalkParams {
-            repo,
-            logger: logger.clone(),
-            scheduled_max,
-            sql_shard_info,
-            walk_roots,
-            include_node_types,
-            include_edge_types,
-            hash_validation_node_types,
-            scuba_builder,
-        },
-    ))
 }
 
 #[cfg(test)]

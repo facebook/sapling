@@ -6,6 +6,7 @@
  */
 
 use anyhow::{bail, format_err, Context, Error};
+use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use blobstore_factory::ScrubHandler;
 use cloned::cloned;
@@ -18,20 +19,21 @@ use newfilenodes::NewFilenodesBuilder;
 use repo_factory::RepoFactory;
 use samplingblob::{ComponentSamplingHandler, SamplingBlobstore, SamplingHandler};
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{info, warn, Logger};
+use slog::{info, o, warn, Logger};
 use sql_ext::facebook::MysqlOptions;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use walker_commands_impl::{
     blobstore::{replace_blobconfig, StatsScrubHandler},
-    graph::SqlShardInfo,
-    progress::sort_by_string,
-    setup::{setup_repo, JobParams, JobWalkParams},
+    graph::{EdgeType, NodeType, SqlShardInfo},
+    log,
+    progress::{sort_by_string, ProgressOptions, ProgressStateCountByType, ProgressStateMutex},
+    setup::{JobParams, JobWalkParams, RepoSubcommandParams},
     tail::TailParams,
-    validate::WALK_TYPE,
-    walk::OutgoingEdge,
+    validate::{REPO, WALK_TYPE},
+    walk::{OutgoingEdge, RepoWalkParams},
 };
 
 use crate::args::{TailArgs, WalkerCommonArgs, WalkerGraphParams};
@@ -286,4 +288,143 @@ fn parse_tail_params(
     }
 
     Ok(parsed_tail_params)
+}
+
+// Setup for just one repo. Try and keep clap parsing out of here, should be done beforehand
+async fn setup_repo<'a>(
+    walk_stats_key: &'static str,
+    fb: FacebookInit,
+    logger: &'a Logger,
+    repo_factory: &'a RepoFactory,
+    mut scuba_builder: MononokeScubaSampleBuilder,
+    sql_shard_info: SqlShardInfo,
+    scheduled_max: usize,
+    repo_count: usize,
+    resolved: &'a ResolvedRepo,
+    walk_roots: Vec<OutgoingEdge>,
+    mut tail_params: TailParams,
+    include_edge_types: HashSet<EdgeType>,
+    mut include_node_types: HashSet<NodeType>,
+    hash_validation_node_types: HashSet<NodeType>,
+    progress_options: ProgressOptions,
+) -> Result<(RepoSubcommandParams, RepoWalkParams), Error> {
+    let logger = if repo_count > 1 {
+        logger.new(o!("repo" => resolved.name.clone()))
+    } else {
+        logger.clone()
+    };
+
+    let scheduled_max = scheduled_max / repo_count;
+    scuba_builder.add(REPO, resolved.name.clone());
+
+    // Only walk derived node types that the repo is configured to contain
+    include_node_types.retain(|t| {
+        if let Some(t) = t.derived_data_name() {
+            resolved.config.derived_data_config.is_enabled(t)
+        } else {
+            true
+        }
+    });
+
+    let mut root_node_types: HashSet<_> =
+        walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
+
+    if let Some(ref mut chunking) = tail_params.chunking {
+        chunking.chunk_by.retain(|t| {
+            if let Some(t) = t.derived_data_name() {
+                resolved.config.derived_data_config.is_enabled(t)
+            } else {
+                true
+            }
+        });
+
+        root_node_types.extend(chunking.chunk_by.iter().cloned());
+    }
+
+    let (include_edge_types, include_node_types) =
+        reachable_graph_elements(include_edge_types, include_node_types, &root_node_types);
+    info!(
+        logger,
+        #log::GRAPH,
+        "Walking edge types {:?}",
+        sort_by_string(&include_edge_types)
+    );
+    info!(
+        logger,
+        #log::GRAPH,
+        "Walking node types {:?}",
+        sort_by_string(&include_node_types)
+    );
+
+    scuba_builder.add(REPO, resolved.name.clone());
+
+    let mut progress_node_types = include_node_types.clone();
+    for e in &walk_roots {
+        progress_node_types.insert(e.target.get_type());
+    }
+
+    let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
+        fb,
+        logger.clone(),
+        walk_stats_key,
+        resolved.name.clone(),
+        progress_node_types,
+        progress_options,
+    ));
+
+    let repo: BlobRepo = repo_factory
+        .build(resolved.name.clone(), resolved.config.clone())
+        .await?;
+
+    Ok((
+        RepoSubcommandParams {
+            progress_state,
+            tail_params,
+            lfs_threshold: resolved.config.lfs.threshold,
+        },
+        RepoWalkParams {
+            repo,
+            logger: logger.clone(),
+            scheduled_max,
+            sql_shard_info,
+            walk_roots,
+            include_node_types,
+            include_edge_types,
+            hash_validation_node_types,
+            scuba_builder,
+        },
+    ))
+}
+
+fn reachable_graph_elements(
+    mut include_edge_types: HashSet<EdgeType>,
+    mut include_node_types: HashSet<NodeType>,
+    root_node_types: &HashSet<NodeType>,
+) -> (HashSet<EdgeType>, HashSet<NodeType>) {
+    // This stops us logging that we're walking unreachable edge/node types
+    let mut param_count = include_edge_types.len() + include_node_types.len();
+    let mut last_param_count = 0;
+    while param_count != last_param_count {
+        let include_edge_types_stable = include_edge_types.clone();
+        // Only retain edge types that are traversable
+        include_edge_types.retain(|e| {
+            e.incoming_type()
+                .map_or(true, |t|
+                    // its an incoming_type we want
+                    (include_node_types.contains(&t) || root_node_types.contains(&t)) &&
+                    // Another existing edge can get us to this node type
+                    (root_node_types.contains(&t) || include_edge_types_stable.iter().any(|o| o.outgoing_type() == t)))
+                // its an outgoing_type we want
+                && include_node_types.contains(&e.outgoing_type())
+        });
+        // Only retain node types we expect to step to after graph entry
+        include_node_types.retain(|t| {
+            include_edge_types
+                .iter()
+                .any(|e| &e.outgoing_type() == t || e.incoming_type().map_or(false, |ot| &ot == t))
+        });
+        last_param_count = param_count;
+        param_count = include_edge_types.len() + include_node_types.len();
+    }
+    (include_edge_types, include_node_types)
 }
