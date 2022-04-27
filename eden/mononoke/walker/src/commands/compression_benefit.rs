@@ -10,19 +10,23 @@ use clap::Parser;
 use mononoke_app::MononokeApp;
 use std::sync::Arc;
 
-use crate::commands::CORPUS;
-use crate::detail::corpus::{corpus, CorpusCommand, CorpusSample, CorpusSamplingHandler};
+use crate::commands::COMPRESSION_BENEFIT;
+use crate::detail::{
+    graph::Node,
+    sampling::WalkSampleMapping,
+    sizing::{compression_benefit, SizingCommand, SizingSample},
+};
 
 use crate::args::{SamplingArgs, WalkerCommonArgs};
 use crate::setup::setup_common;
 use crate::WalkerArgs;
 
-/// Dump a sampled corpus of blobstore data.
+/// Estimate compression benefit.
 #[derive(Parser)]
 pub struct CommandArgs {
-    /// Where to write the output corpus. Default is to to a dry run with no output.
-    #[clap(long)]
-    pub output_dir: Option<String>,
+    /// Zstd compression level to use.
+    #[clap(long, default_value = "3")]
+    pub compression_level: i32,
 
     #[clap(flatten, next_help_heading = "SAMPLING OPTIONS")]
     pub sampling: SamplingArgs,
@@ -33,16 +37,14 @@ pub struct CommandArgs {
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<(), Error> {
     let CommandArgs {
-        output_dir,
+        compression_level,
         sampling,
         common_args,
     } = args;
 
-    let sampler = Arc::new(CorpusSamplingHandler::<CorpusSample>::new(
-        output_dir.clone(),
-    ));
+    let sampler = Arc::new(WalkSampleMapping::<Node, SizingSample>::new());
     let job_params = setup_common(
-        CORPUS,
+        COMPRESSION_BENEFIT,
         &app,
         &app.args::<WalkerArgs>()?.repos,
         &common_args,
@@ -51,19 +53,12 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<(), Error> {
     )
     .await?;
 
-    if let Some(output_dir) = &output_dir {
-        if !std::path::Path::new(output_dir).exists() {
-            std::fs::create_dir(output_dir).map_err(Error::from)?
-        }
-    }
-
-    let command = CorpusCommand {
-        output_dir,
+    let command = SizingCommand {
+        compression_level,
         progress_options: common_args.progress.parse_args(),
         sampling_options: sampling.parse_args(100 /* default_sample_rate */)?,
-        sampling_path_regex: sampling.sample_path_regex.clone(),
         sampler,
     };
 
-    corpus(app.fb, job_params, command).await
+    compression_benefit(app.fb, job_params, command).await
 }
