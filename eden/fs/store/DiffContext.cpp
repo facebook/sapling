@@ -29,14 +29,6 @@ DiffContext::DiffContext(
       cancellation_{std::move(cancellation)},
       caseSensitive_{caseSensitive} {}
 
-DiffContext::DiffContext(DiffCallback* cb, const ObjectStore* os)
-    : callback{cb},
-      store{os},
-      listIgnored{true},
-      topLevelIgnores_{std::unique_ptr<TopLevelIgnores>()},
-      loadFileContentsFromPath_{nullptr},
-      caseSensitive_{kPathMapDefaultCaseSensitive} {}
-
 DiffContext::~DiffContext() = default;
 
 const GitIgnoreStack* DiffContext::getToplevelIgnore() const {

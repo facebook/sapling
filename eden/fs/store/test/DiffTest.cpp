@@ -24,6 +24,7 @@
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
+#include "eden/fs/utils/Future.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
@@ -84,11 +85,76 @@ class DiffTest : public ::testing::Test {
         rawEdenConfig);
   }
 
-  Future<std::unique_ptr<ScmStatus>> diffCommits(
-      StringPiece commit1,
-      StringPiece commit2) {
-    return diffCommitsForStatus(
-        store_.get(), RootId{commit1.str()}, RootId{commit2.str()});
+  std::unique_ptr<DiffContext> makeDiffContext(
+      ScmStatusDiffCallback* callback,
+      std::unique_ptr<TopLevelIgnores> topLevelIgnores,
+      DiffContext::LoadFileFunction loadFileContentsFromPath,
+      bool listIgnored = true,
+      CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive) {
+    return std::make_unique<DiffContext>(
+        callback,
+        folly::CancellationToken{},
+        listIgnored,
+        caseSensitive,
+        store_.get(),
+        std::move(topLevelIgnores),
+        loadFileContentsFromPath);
+  }
+
+  Future<ScmStatus> diffCommitsFuture(
+      ObjectId hash1,
+      ObjectId hash2,
+      std::string gitIgnoreContents = {},
+      std::string userIgnoreContents = {},
+      std::string systemIgnoreContents = {},
+      bool listIgnored = true,
+      CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive) {
+    auto callback = std::make_unique<ScmStatusDiffCallback>();
+    auto topLevelIgnores = std::make_unique<TopLevelIgnores>(
+        std::move(userIgnoreContents), std::move(systemIgnoreContents));
+    auto gitIgnoreStack = topLevelIgnores->getStack();
+    auto mockedLoadFile = [gitIgnoreContents](
+                              ObjectFetchContext&, RelativePathPiece /**/) {
+      return folly::makeFuture(gitIgnoreContents);
+    };
+    auto diffContext = makeDiffContext(
+        callback.get(),
+        std::move(topLevelIgnores),
+        mockedLoadFile,
+        listIgnored,
+        caseSensitive);
+
+    auto fut = diffTrees(
+        diffContext.get(),
+        RelativePathPiece{},
+        hash1,
+        hash2,
+        gitIgnoreStack,
+        false);
+    return std::move(fut)
+        .thenValue([callback = std::move(callback)](auto&&) {
+          return callback->extractStatus();
+        })
+        .ensure([context = std::move(diffContext)] {});
+  }
+
+  Future<ScmStatus> diffCommits(
+      folly::StringPiece commit1,
+      folly::StringPiece commit2) {
+    return folly::makeFutureWith([=]() {
+      auto tree1Future = store_->getRootTree(
+          RootId{commit1.str()}, ObjectFetchContext::getNullContext());
+      auto tree2Future = store_->getRootTree(
+          RootId{commit2.str()}, ObjectFetchContext::getNullContext());
+
+      return collectSafe(std::move(tree1Future), std::move(tree2Future))
+          .thenValue([this](std::tuple<
+                            std::shared_ptr<const Tree>,
+                            std::shared_ptr<const Tree>>&& tup) {
+            const auto& [tree1, tree2] = tup;
+            return diffCommitsFuture(tree1->getHash(), tree2->getHash());
+          });
+    });
   }
 
   ScmStatus diffCommitsWithGitIgnore(
@@ -99,34 +165,14 @@ class DiffTest : public ::testing::Test {
       std::string systemIgnoreContents = {},
       bool listIgnored = true,
       CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive) {
-    auto callback = std::make_unique<ScmStatusDiffCallback>();
-    auto callbackPtr = callback.get();
-    auto mockedLoadFile = [gitIgnoreContents](
-                              ObjectFetchContext&, RelativePathPiece /**/) {
-      return folly::makeFuture(gitIgnoreContents);
-    };
-    auto topLevelIgnores = std::make_unique<TopLevelIgnores>(
-        userIgnoreContents, systemIgnoreContents);
-    auto gitIgnoreStack = topLevelIgnores->getStack();
-    auto diffContext = DiffContext(
-        callbackPtr,
-        folly::CancellationToken{},
-        listIgnored,
-        caseSensitive,
-        store_.get(),
-        std::move(topLevelIgnores),
-        mockedLoadFile);
-
-    return diffTrees(
-               &diffContext,
-               RelativePathPiece{},
+    return diffCommitsFuture(
                hash1,
                hash2,
-               gitIgnoreStack,
-               false)
-        .thenValue([callback = std::move(callback)](auto&&) {
-          return callback->extractStatus();
-        })
+               gitIgnoreContents,
+               userIgnoreContents,
+               systemIgnoreContents,
+               listIgnored,
+               caseSensitive)
         .get(100ms);
   }
 
@@ -149,8 +195,8 @@ TEST_F(DiffTest, sameCommit) {
   backingStore_->putCommit("1", builder)->setReady();
 
   auto result = diffCommits("1", "1").get(100ms);
-  EXPECT_THAT(*result->errors_ref(), UnorderedElementsAre());
-  EXPECT_THAT(*result->entries_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.entries_ref(), UnorderedElementsAre());
 }
 
 TEST_F(DiffTest, basicDiff) {
@@ -175,9 +221,9 @@ TEST_F(DiffTest, basicDiff) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommits("1", "2").get(100ms);
-  EXPECT_THAT(*result->errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result->entries_ref(),
+      *result.entries_ref(),
       UnorderedElementsAre(
           Pair("src/main.c", ScmFileStatus::MODIFIED),
           Pair("src/test/test2.c", ScmFileStatus::ADDED),
@@ -203,17 +249,17 @@ TEST_F(DiffTest, directoryOrdering) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommits("1", "2").get(100ms);
-  EXPECT_THAT(*result->errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result->entries_ref(),
+      *result.entries_ref(),
       UnorderedElementsAre(
           Pair("src/foo/aaa.txt", ScmFileStatus::ADDED),
           Pair("src/foo/zzz.txt", ScmFileStatus::ADDED)));
 
   auto result2 = diffCommits("2", "1").get(100ms);
-  EXPECT_THAT(*result2->errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result2.errors_ref(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result2->entries_ref(),
+      *result2.entries_ref(),
       UnorderedElementsAre(
           Pair("src/foo/aaa.txt", ScmFileStatus::REMOVED),
           Pair("src/foo/zzz.txt", ScmFileStatus::REMOVED)));
@@ -235,15 +281,15 @@ TEST_F(DiffTest, modeChange) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommits("1", "2").get(100ms);
-  EXPECT_THAT(*result->errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result->entries_ref(),
+      *result.entries_ref(),
       UnorderedElementsAre(Pair("some_file", ScmFileStatus::MODIFIED)));
 
   auto result2 = diffCommits("2", "1").get(100ms);
-  EXPECT_THAT(*result2->errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result2.errors_ref(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result2->entries_ref(),
+      *result2.entries_ref(),
       UnorderedElementsAre(Pair("some_file", ScmFileStatus::MODIFIED)));
 }
 #endif // !_WIN32
@@ -267,9 +313,9 @@ TEST_F(DiffTest, newDirectory) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommits("1", "2").get(100ms);
-  EXPECT_THAT(*result->errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result->entries_ref(),
+      *result.entries_ref(),
       UnorderedElementsAre(
           Pair("src/foo/a/b/c.txt", ScmFileStatus::ADDED),
           Pair("src/foo/a/b/d.txt", ScmFileStatus::ADDED),
@@ -279,9 +325,9 @@ TEST_F(DiffTest, newDirectory) {
           Pair("src/foo/z/y/w.txt", ScmFileStatus::ADDED)));
 
   auto result2 = diffCommits("2", "1").get(100ms);
-  EXPECT_THAT(*result2->errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result2.errors_ref(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result2->entries_ref(),
+      *result2.entries_ref(),
       UnorderedElementsAre(
           Pair("src/foo/a/b/c.txt", ScmFileStatus::REMOVED),
           Pair("src/foo/a/b/d.txt", ScmFileStatus::REMOVED),
@@ -312,9 +358,9 @@ TEST_F(DiffTest, fileToDirectory) {
   backingStore_->putCommit("2", builder2)->setReady();
 
   auto result = diffCommits("1", "2").get(100ms);
-  EXPECT_THAT(*result->errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result->entries_ref(),
+      *result.entries_ref(),
       UnorderedElementsAre(
           Pair("src/foo/a", ScmFileStatus::REMOVED),
           Pair("src/foo/a/b/c.txt", ScmFileStatus::ADDED),
@@ -325,9 +371,9 @@ TEST_F(DiffTest, fileToDirectory) {
           Pair("src/foo/z/y/w.txt", ScmFileStatus::ADDED)));
 
   auto result2 = diffCommits("2", "1").get(100ms);
-  EXPECT_THAT(*result2->errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result2.errors_ref(), UnorderedElementsAre());
   EXPECT_THAT(
-      *result2->entries_ref(),
+      *result2.entries_ref(),
       UnorderedElementsAre(
           Pair("src/foo/a", ScmFileStatus::ADDED),
           Pair("src/foo/a/b/c.txt", ScmFileStatus::REMOVED),
@@ -414,12 +460,12 @@ TEST_F(DiffTest, blockedFutures) {
   EXPECT_TRUE(resultFuture.isReady());
 
   auto result = std::move(resultFuture).get();
-  EXPECT_THAT(*result->errors_ref(), UnorderedElementsAre());
+  EXPECT_THAT(*result.errors_ref(), UnorderedElementsAre());
 
   // TODO: T66590035
 #ifndef _WIN32
   EXPECT_THAT(
-      *result->entries_ref(),
+      *result.entries_ref(),
       UnorderedElementsAre(
           Pair("src/main.c", ScmFileStatus::MODIFIED),
           Pair("src/test/test2.c", ScmFileStatus::ADDED),
@@ -484,12 +530,12 @@ TEST_F(DiffTest, loadTreeError) {
 
   auto result = std::move(resultFuture).get();
   EXPECT_THAT(
-      *result->errors_ref(),
+      *result.errors_ref(),
       UnorderedElementsAre(Pair(
           "x/y/z",
           folly::exceptionStr(std::runtime_error("oh noes")).c_str())));
   EXPECT_THAT(
-      *result->entries_ref(),
+      *result.entries_ref(),
       UnorderedElementsAre(Pair("a/b/3.txt", ScmFileStatus::MODIFIED)));
 }
 
@@ -553,11 +599,12 @@ TEST_F(DiffTest, nonignored_added_files) {
 
   // Test calling in directly with path to added entries
   auto callback2 = std::make_unique<ScmStatusDiffCallback>();
-  auto callbackPtr2 = callback2.get();
-  auto diffContext2 = DiffContext(callbackPtr2, store_.get());
+  auto topLevelIgnores = std::make_unique<TopLevelIgnores>("", "");
+  auto diffContext2 =
+      makeDiffContext(callback2.get(), std::move(topLevelIgnores), nullptr);
 
   auto result2 = diffAddedTree(
-                     &diffContext2,
+                     diffContext2.get(),
                      RelativePathPiece{"src/bar/foo"},
                      builder2.getStoredTree(RelativePathPiece{"src/bar/foo"})
                          ->get()
@@ -607,11 +654,12 @@ TEST_F(DiffTest, nonignored_removed_files) {
 
   // Test calling in directly with path to removed entries
   auto callback2 = std::make_unique<ScmStatusDiffCallback>();
-  auto callbackPtr2 = callback2.get();
-  auto diffContext2 = DiffContext(callbackPtr2, store_.get());
+  auto topLevelIgnores = std::make_unique<TopLevelIgnores>("", "");
+  auto diffContext2 =
+      makeDiffContext(callback2.get(), std::move(topLevelIgnores), nullptr);
 
   auto result2 = diffRemovedTree(
-                     &diffContext2,
+                     diffContext2.get(),
                      RelativePathPiece{"src/bar/foo"},
                      builder.getStoredTree(RelativePathPiece{"src/bar/foo"})
                          ->get()

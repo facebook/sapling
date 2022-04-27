@@ -52,11 +52,6 @@ class DiffContext {
       std::unique_ptr<TopLevelIgnores> topLevelIgnores,
       LoadFileFunction loadFileContentsFromPath);
 
-  /**
-   * Test only constructor.
-   */
-  DiffContext(DiffCallback* cb, const ObjectStore* os);
-
   DiffContext(const DiffContext&) = delete;
   DiffContext& operator=(const DiffContext&) = delete;
   DiffContext(DiffContext&&) = delete;

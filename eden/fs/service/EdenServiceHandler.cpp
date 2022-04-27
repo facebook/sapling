@@ -2020,11 +2020,12 @@ EdenServiceHandler::future_getScmStatus(
           /*enforceCurrentParent=*/false));
 }
 
-Future<unique_ptr<ScmStatus>>
-EdenServiceHandler::future_getScmStatusBetweenRevisions(
+folly::SemiFuture<unique_ptr<ScmStatus>>
+EdenServiceHandler::semifuture_getScmStatusBetweenRevisions(
     unique_ptr<string> mountPoint,
     unique_ptr<string> oldHash,
     unique_ptr<string> newHash) {
+  auto* context = getRequestContext();
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG2,
       *mountPoint,
@@ -2032,11 +2033,14 @@ EdenServiceHandler::future_getScmStatusBetweenRevisions(
       folly::to<string>("newHash=", logHash(*newHash)));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto mount = server_->getMount(mountPath);
-  auto id1 = mount->getObjectStore()->parseRootId(*oldHash);
-  auto id2 = mount->getObjectStore()->parseRootId(*newHash);
-  return wrapFuture(
-      std::move(helper),
-      diffCommitsForStatus(mount->getObjectStore(), id1, id2));
+
+  return wrapImmediateFuture(
+             std::move(helper),
+             mount->diffBetweenRoots(
+                 mount->getObjectStore()->parseRootId(*oldHash),
+                 mount->getObjectStore()->parseRootId(*newHash),
+                 context->getConnectionContext()->getCancellationToken()))
+      .semi();
 }
 
 void EdenServiceHandler::debugGetScmTree(

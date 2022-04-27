@@ -51,14 +51,6 @@ struct ChildFutures {
   vector<Future<Unit>> futures;
 };
 
-struct DiffState {
-  explicit DiffState(const ObjectStore* store)
-      : callback{}, context{&callback, store} {}
-
-  ScmStatusDiffCallback callback;
-  DiffContext context;
-};
-
 static constexpr PathComponentPiece kIgnoreFilename{".gitignore"};
 
 Future<Unit> diffAddedTree(
@@ -605,13 +597,9 @@ FOLLY_NODISCARD Future<Unit> waitOnResults(
       });
 }
 
-/**
- * Diff two commits.
- *
- * The differences will be recorded using a callback inside of DiffState and
- * will be extracted and returned to the caller.
- */
-FOLLY_NODISCARD Future<Unit>
+} // namespace
+
+Future<Unit>
 diffRoots(DiffContext* context, const RootId& root1, const RootId& root2) {
   auto future1 = context->store->getRootTree(root1, context->getFetchContext());
   auto future2 = context->store->getRootTree(root2, context->getFetchContext());
@@ -631,22 +619,6 @@ diffRoots(DiffContext* context, const RootId& root1, const RootId& root2) {
         return diffTrees(
             context, RelativePathPiece{}, *tree1, *tree2, nullptr, false);
       });
-}
-} // namespace
-
-Future<std::unique_ptr<ScmStatus>> diffCommitsForStatus(
-    const ObjectStore* store,
-    const RootId& root1,
-    const RootId& root2) {
-  return folly::makeFutureWith([&] {
-    auto state = std::make_unique<DiffState>(store);
-    auto statePtr = state.get();
-    auto contextPtr = &(statePtr->context);
-    return diffRoots(contextPtr, root1, root2)
-        .thenValue([state = std::move(state)](auto&&) {
-          return std::make_unique<ScmStatus>(state->callback.extractStatus());
-        });
-  });
 }
 
 FOLLY_NODISCARD Future<Unit> diffTrees(

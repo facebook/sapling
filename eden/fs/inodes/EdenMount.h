@@ -652,6 +652,18 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       bool enforceCurrentParent = true);
 
   /**
+   * Compute the difference between the passed in roots.
+   *
+   * The order of the roots matters: a file added in toRoot will be returned as
+   * ScmFileStatus::ADDED, while if the order of arguments were reversed, it
+   * would be returned as ScmFileStatus::REMOVED.
+   */
+  FOLLY_NODISCARD ImmediateFuture<std::unique_ptr<ScmStatus>> diffBetweenRoots(
+      const RootId& fromRoot,
+      const RootId& toRoot,
+      folly::CancellationToken cancellation);
+
+  /**
    * This version of diff is primarily intended for testing.
    * Use diff(DiffCallback* callback, bool listIgnored) instead.
    * The caller must ensure that the DiffContext object ctsPtr points to

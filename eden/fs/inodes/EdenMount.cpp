@@ -38,6 +38,7 @@
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobAccess.h"
+#include "eden/fs/store/Diff.h"
 #include "eden/fs/store/DiffCallback.h"
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ObjectStore.h"
@@ -1699,6 +1700,20 @@ folly::Future<std::unique_ptr<ScmStatus>> EdenMount::diff(
       .thenValue([callback = std::move(callback)](auto&&) {
         return std::make_unique<ScmStatus>(callback->extractStatus());
       });
+}
+
+ImmediateFuture<std::unique_ptr<ScmStatus>> EdenMount::diffBetweenRoots(
+    const RootId& fromRoot,
+    const RootId& toRoot,
+    folly::CancellationToken cancellation) {
+  auto callback = std::make_unique<ScmStatusDiffCallback>();
+  auto diffContext = createDiffContext(callback.get(), cancellation, true);
+  auto fut =
+      ImmediateFuture{diffRoots(diffContext.get(), fromRoot, toRoot).semi()};
+  return std::move(fut).thenValue([diffContext = std::move(diffContext),
+                                   callback = std::move(callback)](auto&&) {
+    return std::make_unique<ScmStatus>(callback->extractStatus());
+  });
 }
 
 void EdenMount::resetParent(const RootId& parent) {

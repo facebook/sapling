@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -19,24 +18,22 @@ namespace facebook::eden {
 
 class ObjectId;
 class Hash20;
-class ObjectStore;
 class Tree;
 class DiffContext;
 class GitIgnoreStack;
 class RootId;
 
 /**
- * Compute the diff between two commits.
+ * Compute the diff between two roots.
  *
- * The caller is responsible for ensuring that the ObjectStore remains valid
+ * The caller is responsible for ensuring that the DiffContext remains valid
  * until the returned Future completes.
  *
- * The differences will be returned to the caller.
+ * The differences will be recorded using the callback inside the passed
+ * DiffContext.
  */
-folly::Future<std::unique_ptr<ScmStatus>> diffCommitsForStatus(
-    const ObjectStore* store,
-    const RootId& root1,
-    const RootId& root2);
+folly::Future<folly::Unit>
+diffRoots(DiffContext* context, const RootId& root1, const RootId& root2);
 
 /**
  * Compute the diff between a source control Tree and the current directory
