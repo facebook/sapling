@@ -603,9 +603,18 @@ mod test {
 
     impl RepositoryRequestContext {
         pub fn test_builder(fb: FacebookInit) -> Result<TestContextBuilder<'static>, Error> {
+            let repo = TestRepoFactory::new(fb)?.build()?;
+
+            Self::test_builder_with_repo(fb, repo)
+        }
+
+        pub fn test_builder_with_repo(
+            fb: FacebookInit,
+            repo: BlobRepo,
+        ) -> Result<TestContextBuilder<'static>, Error> {
             Ok(TestContextBuilder {
                 fb,
-                repo: TestRepoFactory::new(fb)?.build()?,
+                repo,
                 self_uris: vec!["http://foo.com/"],
                 upstream_uri: Some("http://bar.com".to_string()),
                 config: ServerConfig::default(),

@@ -426,8 +426,13 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
 #[cfg(test)]
 mod test {
     use super::*;
+    use chaosblob::{ChaosBlobstore, ChaosOptions};
     use fbinit::FacebookInit;
     use futures::{future, stream};
+    use memblob::Memblob;
+    use std::num::NonZeroU32;
+    use std::sync::Arc;
+    use test_repo_factory::TestRepoFactory;
 
     #[fbinit::test]
     async fn test_upload_from_client_discard_upstream(fb: FacebookInit) -> Result<(), Error> {
@@ -441,6 +446,32 @@ mod test {
         let size = 6;
 
         upload_from_client(&ctx, oid, size, body, &mut None).await?;
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_upload_from_client_failing_internal(fb: FacebookInit) -> Result<(), Error> {
+        // Create a test repo with a blobstore that fails all reads and writes.
+        let repo = TestRepoFactory::new(fb)?
+            .with_blobstore(Arc::new(ChaosBlobstore::new(
+                Memblob::default(),
+                ChaosOptions::new(NonZeroU32::new(1), NonZeroU32::new(1)),
+            )))
+            .build()?;
+
+        let ctx = RepositoryRequestContext::test_builder_with_repo(fb, repo)?
+            .upstream_uri(None)
+            .build()?;
+
+        let body = stream::once(future::ready(Ok(Bytes::from("foobar"))));
+        let oid =
+            Sha256::from_str("c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2")?;
+        let size = 6;
+
+        let r = upload_from_client(&ctx, oid, size, body, &mut None).await;
+
+        assert!(r.is_err());
 
         Ok(())
     }
