@@ -45,9 +45,8 @@ const wchar_t kSendTestNetworkNotification[] =
     L"Send Test Network Notification";
 const wchar_t kWindowTitle[] = L"EdenFSMenu";
 const wchar_t kMenuToolTip[] = L"EdenFS Menu";
-const wchar_t kEdenInfoTitle[] = L"EdenFS Info";
-const wchar_t kEdenVersion[] = L"Running Eden Version: ";
-const wchar_t kEdenUptime[] = L"Eden Daemon Uptime: ";
+const wchar_t kEdenVersion[] = L"Running EdenFS ";
+const wchar_t kEdenUptime[] = L"Uptime: ";
 const wchar_t kMenuOptionsStr[] = L"Options";
 const wchar_t kDisableNotifications[] = L"Disable Notifications";
 const wchar_t kEnableNotifications[] = L"Enable Notifications";
@@ -299,7 +298,7 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
                 MessageBoxExW(
                     hwnd,
                     msgBodyStr.c_str(),
-                    kEdenInfoTitle,
+                    kMenuAboutStr,
                     MB_OK,
                     MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL)),
                 "Failed to populate EdenFS Info");
