@@ -40,6 +40,7 @@ std::unique_ptr<StructuredLogger> makeDefaultStructuredLogger(
   return std::make_unique<ScubaStructuredLogger>(
       std::move(logger), std::move(sessionInfo));
 #else
+  (void)sessionInfo;
   return std::make_unique<NullStructuredLogger>();
 #endif
 }

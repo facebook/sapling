@@ -3295,6 +3295,7 @@ ImmediateFuture<folly::Unit> TreeInode::invalidateChannelDirCache(
     }
   }
 #else
+  (void)state;
   if (auto* fsChannel = getMount()->getPrjfsChannel()) {
     const auto path = getPath();
     if (path.has_value()) {
