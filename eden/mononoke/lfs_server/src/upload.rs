@@ -10,10 +10,7 @@ use std::str::{self, FromStr};
 
 use anyhow::{Context, Error};
 use bytes::Bytes;
-use futures::{
-    channel::mpsc::{self, channel},
-    SinkExt, Stream, StreamExt, TryStreamExt,
-};
+use futures::{channel::mpsc::channel, SinkExt, Stream, StreamExt, TryStreamExt};
 use futures_util::try_join;
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
@@ -211,11 +208,7 @@ where
         STATS::upstream_uploads.add_value(1);
         let ObjectAction { href, .. } = action;
 
-        // TODO: Fix this after updating Hyper: https://github.com/hyperium/hyper/pull/2187
-        let (sender, receiver) = mpsc::channel(0);
-        tokio::spawn(data.map(Ok).forward(sender));
-
-        let body = Body::wrap_stream(receiver);
+        let body = Body::wrap_stream(data);
         let req = Request::put(href)
             .header("Content-Length", &size.to_string())
             .body(body.into())?;
