@@ -27,7 +27,7 @@ pub struct ScrubOutputNodeArgs {
 
 impl ScrubOutputNodeArgs {
     pub fn parse_args(&self) -> HashSet<NodeType> {
-        NodeTypeArg::filter_nodes(
+        NodeTypeArg::filter(
             &self.include_output_node_type,
             &self.exclude_output_node_type,
         )
@@ -52,7 +52,7 @@ pub struct ScrubPackLogArgs {
 
 impl ScrubPackLogArgs {
     pub fn parse_args(&self, fb: FacebookInit) -> Result<Option<PackInfoLogOptions>, Error> {
-        let log_node_types = NodeTypeArg::filter_nodes(
+        let log_node_types = NodeTypeArg::filter(
             &self.include_pack_log_node_type,
             &self.exclude_pack_log_node_type,
         );

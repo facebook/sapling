@@ -115,7 +115,7 @@ impl ChunkingArgs {
                 InternedTypeArg::parse_args(&self.exclude_chunk_clear_interned_type);
             include_int_types.retain(|x| !exclude_int_types.contains(x));
 
-            let include_nodes = NodeTypeArg::filter_nodes(
+            let include_nodes = NodeTypeArg::filter(
                 &self.include_chunk_clear_node_type,
                 &self.exclude_chunk_clear_node_type,
             );

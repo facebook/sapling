@@ -25,12 +25,7 @@ pub use validate::ValidateCheckTypeArgs;
 pub use walk_params::{WalkerGraphArgs, WalkerGraphParams};
 pub use walk_root::WalkRootArgs;
 
-use anyhow::Error;
 use clap::Args;
-use itertools::{process_results, Itertools};
-use std::collections::HashSet;
-use walker_commands_impl::graph::EdgeType;
-use walker_commands_impl::setup::parse_edge_value;
 
 #[derive(Args, Debug)]
 pub struct WalkerCommonArgs {
@@ -72,26 +67,4 @@ pub struct WalkerCommonArgs {
     pub progress: ProgressArgs,
     #[clap(flatten, next_help_heading = "TAILING OPTIONS")]
     pub tailing: TailArgs,
-}
-
-pub(crate) fn parse_edge_types<'a>(
-    include_types: impl ExactSizeIterator<Item = &'a String>,
-    exclude_types: impl ExactSizeIterator<Item = &'a String>,
-    default: &[EdgeType],
-) -> Result<HashSet<EdgeType>, Error> {
-    let mut include_edge_types = parse_edge_values(include_types, default)?;
-    let exclude_edge_types = parse_edge_values(exclude_types, &[])?;
-    include_edge_types.retain(|x| !exclude_edge_types.contains(x));
-    Ok(include_edge_types)
-}
-
-fn parse_edge_values<'a>(
-    values: impl ExactSizeIterator<Item = &'a String>,
-    default: &[EdgeType],
-) -> Result<HashSet<EdgeType>, Error> {
-    if values.len() == 0 {
-        Ok(default.iter().cloned().collect())
-    } else {
-        process_results(values.map(|v| parse_edge_value(v)), |s| s.concat())
-    }
 }

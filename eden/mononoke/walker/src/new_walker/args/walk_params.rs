@@ -9,10 +9,8 @@ use anyhow::Error;
 use clap::Args;
 use std::collections::HashSet;
 use walker_commands_impl::graph::{EdgeType, NodeType};
-use walker_commands_impl::setup::DEEP_INCLUDE_EDGE_TYPES;
 
-use crate::args::graph_arg_types::{NodeTypeArg, DEFAULT};
-use crate::args::parse_edge_types;
+use crate::args::graph_arg_types::{EdgeTypeArg, NodeTypeArg, DEEP, DEFAULT};
 
 #[derive(Args, Debug)]
 pub struct WalkerGraphArgs {
@@ -26,13 +24,11 @@ pub struct WalkerGraphArgs {
 
     /// Graph edge types to exclude from walk. Can pass pre-configured sets
     /// via deep, shallow, hg, bonsai, etc as well as individual types.
-    // TODO: EDGE_TYPE_POSSIBLE_VALUES
     #[clap(long, short = 'X')]
-    pub exclude_edge_type: Vec<String>,
+    pub exclude_edge_type: Vec<EdgeTypeArg>,
     /// Graph edge types to include in the walk. Defaults to deep traversal.
-    // TODO: EDGE_TYPE_POSSIBLE_VALUES, default = DEEP_VALUE_ARG, also hide
-    #[clap(long, short = 'I')]
-    pub include_edge_type: Vec<String>,
+    #[clap(long, short = 'I', default_values = &[DEEP])]
+    pub include_edge_type: Vec<EdgeTypeArg>,
 
     /// Use this to continue walking even if walker found an error. Types of
     /// nodes to allow the walker to convert an ErrorKind::NotTraversable to
@@ -43,7 +39,7 @@ pub struct WalkerGraphArgs {
     /// to a NodeData::ErrorAsData(NotTraversable). If empty then allow all
     /// edges for the nodes specified via error-as-data-node-type.
     #[clap(long, short = 'E')]
-    pub error_as_data_edge_type: Vec<String>,
+    pub error_as_data_edge_type: Vec<EdgeTypeArg>,
 }
 
 pub struct WalkerGraphParams {
@@ -56,20 +52,14 @@ pub struct WalkerGraphParams {
 impl WalkerGraphArgs {
     pub fn parse_args(&self) -> Result<WalkerGraphParams, Error> {
         let include_node_types =
-            NodeTypeArg::filter_nodes(&self.include_node_type, &self.exclude_node_type);
+            NodeTypeArg::filter(&self.include_node_type, &self.exclude_node_type);
 
-        let include_edge_types = parse_edge_types(
-            self.include_edge_type.iter(),
-            self.exclude_edge_type.iter(),
-            DEEP_INCLUDE_EDGE_TYPES,
-        )?;
+        let include_edge_types =
+            EdgeTypeArg::filter(&self.include_edge_type, &self.exclude_edge_type);
 
         let error_as_data_node_types = NodeTypeArg::parse_args(&self.error_as_data_node_type);
-        let error_as_data_edge_types = parse_edge_types(
-            self.error_as_data_edge_type.iter(),
-            self.exclude_edge_type.iter(),
-            &[],
-        )?;
+        let error_as_data_edge_types =
+            EdgeTypeArg::filter(&self.error_as_data_edge_type, &self.exclude_edge_type);
 
         Ok(WalkerGraphParams {
             include_node_types,

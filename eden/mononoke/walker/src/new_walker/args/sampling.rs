@@ -35,7 +35,7 @@ pub struct SamplingArgs {
 impl SamplingArgs {
     pub fn parse_args(&self, default_sample_rate: u64) -> Result<SamplingOptions, Error> {
         let sample_rate = self.sample_rate.clone().unwrap_or(default_sample_rate);
-        let node_types = NodeTypeArg::filter_nodes(
+        let node_types = NodeTypeArg::filter(
             &self.include_sample_node_type,
             &self.exclude_sample_node_type,
         );
