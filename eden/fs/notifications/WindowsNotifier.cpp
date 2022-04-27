@@ -37,7 +37,7 @@ constexpr UINT WMAPP_NOTIFYDESTROY = WM_APP + 2;
 const wchar_t kWinClassNameStr[] = L"EdenFSMenu";
 const wchar_t kMenuWelcomeStr[] = L"Welcome to the E-Menu";
 const wchar_t kMenuAboutStr[] = L"About EdenFS";
-const wchar_t kMenuCloseStr[] = L"Quit E-Menu";
+const wchar_t kMenuCloseStr[] = L"Hide Notification Icon";
 const wchar_t kDebugMenu[] = L"Debug Menu";
 const wchar_t kSendTestGenericNotification[] =
     L"Send Test Generic Notification";
