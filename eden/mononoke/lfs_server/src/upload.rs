@@ -154,7 +154,7 @@ where
 {
     STATS::internal_uploads.add_value(1);
 
-    let res = filestore::store(
+    filestore::store(
         ctx.repo.blobstore(),
         ctx.repo.filestore_config(),
         &ctx.ctx,
@@ -162,14 +162,11 @@ where
         data,
     )
     .await
-    .context(ErrorKind::FilestoreWriteFailure)
-    .map_err(Error::from);
+    .context(ErrorKind::FilestoreWriteFailure)?;
 
-    if !res.is_err() {
-        STATS::internal_success.add_value(1);
-    }
+    STATS::internal_success.add_value(1);
 
-    res.map(|_| ())
+    Ok(())
 }
 
 async fn upstream_upload<S>(
