@@ -167,16 +167,16 @@ pub fn read_file_contents<F: Seek + Read>(f: &mut F) -> Result<String> {
 pub async fn wait_for_latest_log_id_to_be_synced(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    sleep_secs: u64,
+    sleep_duration: Duration,
 ) -> Result<(), Error> {
-    wait_for_latest_log_id_for_repo_to_be_synced(ctx, repo, repo, sleep_secs).await
+    wait_for_latest_log_id_for_repo_to_be_synced(ctx, repo, repo, sleep_duration).await
 }
 
 pub async fn wait_for_latest_log_id_for_repo_to_be_synced(
     ctx: &CoreContext,
     repo: &BlobRepo,
     target_repo: &BlobRepo,
-    sleep_secs: u64,
+    sleep_duration: Duration,
 ) -> Result<(), Error> {
     let target_repo_id = target_repo.get_repoid();
     let largest_id = match repo
@@ -215,7 +215,7 @@ pub async fn wait_for_latest_log_id_for_repo_to_be_synced(
                 mut_counters_value,
                 target_repo.name(),
             );
-            time::sleep(time::Duration::from_secs(sleep_secs)).await;
+            time::sleep(sleep_duration).await;
         } else {
             break;
         }

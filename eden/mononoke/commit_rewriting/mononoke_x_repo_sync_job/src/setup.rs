@@ -11,6 +11,7 @@ use clap_old::ArgMatches;
 use cmdlib::{args::MononokeMatches, helpers};
 use context::CoreContext;
 use mononoke_types::ChangesetId;
+use std::time::Duration;
 
 use scuba_ext::MononokeScubaSampleBuilder;
 
@@ -45,11 +46,12 @@ pub fn get_scuba_sample<'a>(
     scuba_sample
 }
 
-pub fn get_sleep_secs<'a>(matches: &ArgMatches<'a>) -> Result<u64, Error> {
-    match matches.value_of(ARG_SLEEP_SECS) {
+pub fn get_sleep_duration<'a>(matches: &ArgMatches<'a>) -> Result<Duration, Error> {
+    let secs = match matches.value_of(ARG_SLEEP_SECS) {
         Some(sleep_secs_str) => sleep_secs_str
             .parse::<u64>()
             .map_err(|_| format_err!("{} must be a valid u64", ARG_SLEEP_SECS)),
         None => Ok(DEFAULT_SLEEP_SECS),
-    }
+    }?;
+    Ok(Duration::from_secs(secs))
 }

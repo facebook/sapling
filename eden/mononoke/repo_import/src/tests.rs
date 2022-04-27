@@ -106,7 +106,7 @@ mod tests {
             phab_check_disabled: true,
             x_repo_check_disabled: true,
             hg_sync_check_disabled: true,
-            sleep_time: 1,
+            sleep_time: Duration::from_secs(1),
             dest_bookmark_name: "dest_bookmark_name".to_string(),
             commit_author: "commit_author".to_string(),
             commit_message: "commit_message".to_string(),
@@ -263,7 +263,7 @@ mod tests {
             hg_sync_check_disabled: false,
         };
         let call_sign = None;
-        let sleep_time = 1;
+        let sleep_time = Duration::from_secs(1);
         let bookmark = create_bookmark_name("book");
 
         assert!(

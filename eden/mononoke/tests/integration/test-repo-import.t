@@ -233,7 +233,10 @@
       "dc499d83522455400be709b4abea4440077855d80e9d9f41a8a352127a63d66d",
       "4d8f98568393aa024eef343bf5bb4695dbf1386824dc0775faa7fe5e95707115"
     ],
-    "sleep_time": 5,
+    "sleep_time": {
+      "nanos": 0,
+      "secs": 5
+    },
     "x_repo_check_disabled": false
   }
 

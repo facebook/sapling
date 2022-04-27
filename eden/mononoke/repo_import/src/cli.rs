@@ -11,6 +11,7 @@ use clap::{Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeClapApp};
 use mononoke_types::DateTime;
 use std::num::NonZeroUsize;
+use std::time::Duration;
 
 pub const IMPORT: &str = "import";
 pub const ARG_GIT_REPOSITORY_PATH: &str = "git-repository-path";
@@ -186,7 +187,7 @@ pub fn setup_import_args(matches: &ArgMatches<'_>) -> Result<RecoveryFields, Err
     let x_repo_check_disabled = matches.is_present(ARG_X_REPO_CHECK_DISABLED);
     let hg_sync_check_disabled = matches.is_present(ARG_HG_SYNC_CHECK_DISABLED);
     let sleep_time = matches.value_of(ARG_SLEEP_TIME).unwrap();
-    let sleep_time = sleep_time.parse::<u64>()?;
+    let sleep_time = Duration::from_secs(sleep_time.parse::<u64>()?);
     let dest_bookmark_name = matches.value_of(ARG_DEST_BOOKMARK).unwrap();
     let commit_author = matches.value_of(ARG_COMMIT_AUTHOR).unwrap();
     let commit_message = matches.value_of(ARG_COMMIT_MESSAGE).unwrap();

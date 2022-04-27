@@ -53,6 +53,7 @@ use sql_ext::facebook::MysqlOptions;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::Arc;
+use std::time::Duration;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 use tokio::{
     fs,
@@ -147,7 +148,7 @@ pub struct RecoveryFields {
     phab_check_disabled: bool,
     x_repo_check_disabled: bool,
     hg_sync_check_disabled: bool,
-    sleep_time: u64,
+    sleep_time: Duration,
     dest_bookmark_name: String,
     commit_author: String,
     commit_message: String,
@@ -652,7 +653,7 @@ async fn check_dependent_systems(
     repo: &Repo,
     checker_flags: &CheckerFlags,
     hg_csid: HgChangesetId,
-    sleep_time: u64,
+    sleep_time: Duration,
     maybe_call_sign: &Option<String>,
 ) -> Result<(), Error> {
     // if a check is disabled, we have already passed the check
@@ -668,7 +669,7 @@ async fn check_dependent_systems(
                 ctx.logger(),
                 "Phabricator hasn't parsed commit: {:?}", hg_csid
             );
-            time::sleep(time::Duration::from_secs(sleep_time)).await;
+            time::sleep(sleep_time).await;
         }
     }
 

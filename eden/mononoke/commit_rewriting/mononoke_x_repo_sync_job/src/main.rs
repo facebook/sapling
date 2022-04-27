@@ -88,7 +88,7 @@ use crate::cli::{
     ARG_DERIVED_DATA_TYPES, ARG_HG_SYNC_BACKPRESSURE, ARG_ONCE, ARG_TAIL, ARG_TARGET_BOOKMARK,
 };
 use crate::reporting::{add_common_fields, log_bookmark_update_result, log_noop_iteration};
-use crate::setup::{get_scuba_sample, get_sleep_secs, get_starting_commit};
+use crate::setup::{get_scuba_sample, get_sleep_duration, get_starting_commit};
 use crate::sync::{sync_commit_and_ancestors, sync_single_bookmark_update_log};
 
 fn print_error(ctx: CoreContext, error: &Error) {
@@ -157,7 +157,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
     backpressure_params: BackpressureParams,
     derived_data_types: Vec<String>,
     tailing_args: TailingArgs<M>,
-    sleep_secs: u64,
+    sleep_duration: Duration,
     maybe_bookmark_regex: Option<Regex>,
 ) -> Result<(), Error> {
     match tailing_args {
@@ -173,7 +173,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
                 &target_skiplist_index,
                 &backpressure_params,
                 &derived_data_types,
-                sleep_secs,
+                sleep_duration,
                 &maybe_bookmark_regex,
             )
             .await?;
@@ -193,7 +193,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
                 // Pushredirection is enabled - we need to disable forward sync in that case
                 if enabled {
                     log_noop_iteration(scuba_sample);
-                    tokio::time::sleep(Duration::new(sleep_secs, 0)).await;
+                    tokio::time::sleep(sleep_duration).await;
                     continue;
                 }
 
@@ -207,14 +207,14 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
                     &target_skiplist_index,
                     &backpressure_params,
                     &derived_data_types,
-                    sleep_secs,
+                    sleep_duration,
                     &maybe_bookmark_regex,
                 )
                 .await?;
 
                 if !synced_something {
                     log_noop_iteration(scuba_sample);
-                    tokio::time::sleep(Duration::new(sleep_secs, 0)).await;
+                    tokio::time::sleep(sleep_duration).await;
                 }
             }
         }
@@ -233,7 +233,7 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
     backpressure_params: &BackpressureParams,
     derived_data_types: &[String],
-    sleep_secs: u64,
+    sleep_duration: Duration,
     maybe_bookmark_regex: &Option<Regex>,
 ) -> Result<bool, Error> {
     let source_repo = commit_syncer.get_source_repo();
@@ -301,7 +301,7 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
                         backpressure_params,
                         commit_syncer.get_target_repo(),
                         scuba_sample.clone(),
-                        sleep_secs,
+                        sleep_duration,
                     )
                     .await?;
                 }
@@ -332,7 +332,7 @@ async fn maybe_apply_backpressure(
     backpressure_params: &BackpressureParams,
     target_repo: &BlobRepo,
     scuba_sample: MononokeScubaSampleBuilder,
-    sleep_secs: u64,
+    sleep_duration: Duration,
 ) -> Result<(), Error> {
     let target_repo_id = target_repo.get_repoid();
     let limit = 10;
@@ -376,14 +376,14 @@ async fn maybe_apply_backpressure(
 
         if max_further_entries > limit {
             reporting::log_backpressure(ctx, max_further_entries, scuba_sample.clone());
-            tokio::time::sleep(Duration::from_secs(sleep_secs)).await;
+            tokio::time::sleep(sleep_duration).await;
         } else {
             break;
         }
     }
 
     if backpressure_params.wait_for_target_repo_hg_sync {
-        wait_for_latest_log_id_to_be_synced(ctx, target_repo, sleep_secs).await?;
+        wait_for_latest_log_id_to_be_synced(ctx, target_repo, sleep_duration).await?;
     }
     Ok(())
 }
@@ -452,7 +452,7 @@ async fn run<'a>(
         (ARG_TAIL, Some(sub_m)) => {
             add_common_fields(&mut scuba_sample, &commit_syncer);
 
-            let sleep_secs = get_sleep_secs(sub_m)?;
+            let sleep_duration = get_sleep_duration(sub_m)?;
             let tailing_args = if sub_m.is_present(ARG_CATCH_UP_ONCE) {
                 TailingArgs::CatchUpOnce(commit_syncer)
             } else {
@@ -486,7 +486,7 @@ async fn run<'a>(
                 backpressure_params,
                 derived_data_types,
                 tailing_args,
-                sleep_secs,
+                sleep_duration,
                 maybe_bookmark_regex,
             )
             .await
