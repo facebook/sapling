@@ -102,7 +102,8 @@ class WindowsNotifier : public Notifier {
   }
 
   /*
-   * Turn off notifications from within the E-Menu
+   * Turn off notifications from within the E-Menu. This should only be called
+   * from within the event loop thread to avoid a potential race condition.
    */
   void toggleNotificationsEnabled() {
     notificationStatus_ ^= (1 << kNotificationsEnabledBit);
@@ -118,6 +119,8 @@ class WindowsNotifier : public Notifier {
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
   std::thread eventThread_;
   std::queue<std::unique_ptr<WindowsNotification>> notifQ_;
+  // Should only be updated from event loop thread using
+  // toggleNotificationsEnabled() to avoid potential race
   uint8_t notificationStatus_;
 };
 
