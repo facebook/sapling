@@ -33,5 +33,4 @@ extern const uint64_t Eden_BuildInfo_kTimeUnix;
 #cmakedefine EDEN_HAVE_ROCKSDB
 #cmakedefine EDEN_HAVE_SELINUX
 #cmakedefine EDEN_HAVE_SQLITE3
-#cmakedefine EDEN_HAVE_SYSTEMD
 #cmakedefine EDEN_HAVE_USAGE_SERVICE

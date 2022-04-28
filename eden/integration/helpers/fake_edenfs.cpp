@@ -27,7 +27,6 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/StartupLogger.h"
-#include "eden/fs/service/Systemd.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UserInfo.h"
@@ -311,12 +310,6 @@ int main(int argc, char** argv) {
       std::vector<std::string>{&argv[0], &argv[argc]};
 
   auto init = folly::Init(&argc, &argv);
-
-#if EDEN_HAVE_SYSTEMD
-  if (FLAGS_experimentalSystemd) {
-    XLOG(INFO) << "Running in experimental systemd mode";
-  }
-#endif
 
   // Reference FLAGS_edenfsctlPath so that it is linked into fake_edenfs
   // when compiling in opt mode.  Without this reference the linker will

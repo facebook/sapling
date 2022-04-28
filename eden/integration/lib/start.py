@@ -19,15 +19,10 @@ def run_eden_start_with_real_daemon(
     eden_dir: pathlib.Path,
     etc_eden_dir: pathlib.Path,
     home_dir: pathlib.Path,
-    systemd: bool,
 ) -> Generator[None, None, None]:
     edenfsctl, edenfsctl_env = FindExe.get_edenfsctl_env()
     env = dict(os.environ)
     env.update(edenfsctl_env)
-    if systemd:
-        env["EDEN_EXPERIMENTAL_SYSTEMD"] = "1"
-    else:
-        env.pop("EDEN_EXPERIMENTAL_SYSTEMD", None)
     eden_cli_args: List[str] = [
         edenfsctl,
         "--config-dir",
@@ -50,7 +45,7 @@ def run_eden_start_with_real_daemon(
     if privhelper is not None:
         extra_daemon_args.extend(["--privhelper_path", privhelper])
 
-    if eden_start_needs_allow_root_option(systemd=systemd):
+    if eden_start_needs_allow_root_option():
         extra_daemon_args.append("--allowRoot")
 
     if extra_daemon_args:
@@ -65,5 +60,5 @@ def run_eden_start_with_real_daemon(
     subprocess.check_call(stop_cmd, env=env)
 
 
-def eden_start_needs_allow_root_option(systemd: bool) -> bool:
-    return not systemd and "SANDCASTLE" in os.environ
+def eden_start_needs_allow_root_option() -> bool:
+    return "SANDCASTLE" in os.environ

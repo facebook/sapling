@@ -25,9 +25,7 @@ from .lib.pexpect import (
 )
 from .lib.service_test_case import (
     ServiceTestCaseBase,
-    SystemdServiceTest,
     service_test,
-    systemd_test,
 )
 from .lib.testcase import EdenTestCase
 
@@ -170,16 +168,6 @@ class StopTest(StopTestBase, PexpectAssertionMixin):
         with self.spawn_fake_edenfs(self.eden_dir, ["--exitWithoutCleanupOnStop"]):
             stop_process = self.spawn_stop(["--timeout", "10"])
             self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
-
-
-@systemd_test
-class StopWithSystemdTest(SystemdServiceTest, StopTestBase, PexpectAssertionMixin):
-    def test_stop_stops_systemd_service(self) -> None:
-        with self.spawn_fake_edenfs(self.eden_dir):
-            stop_process = self.spawn_stop(["--timeout", "5"])
-            stop_process.expect_exact("edenfs exited cleanly.")
-            self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
-            self.assert_systemd_service_is_stopped(eden_dir=self.eden_dir)
 
 
 class AutoStopTest(EdenTestCase):

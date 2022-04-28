@@ -33,7 +33,6 @@
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/EdenServiceHandler.h" // for kServiceName
 #include "eden/fs/service/StartupLogger.h"
-#include "eden/fs/service/Systemd.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStoreCachedBackingStore.h"
@@ -275,12 +274,6 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   }
 
   main.didFollyInit();
-
-#if EDEN_HAVE_SYSTEMD
-  if (FLAGS_experimentalSystemd) {
-    XLOG(INFO) << "Running in experimental systemd mode";
-  }
-#endif
 
   // Temporary hack until client is migrated to supported channel
   THRIFT_FLAG_SET_MOCK(server_header_reject_framed, false);

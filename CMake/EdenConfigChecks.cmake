@@ -140,9 +140,6 @@ else()
   set(EDEN_HAVE_USAGE_SERVICE OFF)
 endif()
 
-# TODO(strager): Support systemd in the opensource build.
-set(EDEN_HAVE_SYSTEMD OFF)
-
 if (WIN32)
   set(DEFAULT_ETC_EDEN_DIR "C:/ProgramData/Facebook/eden")
 else()

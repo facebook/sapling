@@ -107,19 +107,12 @@ def sigkill_process(pid: int, timeout: float = DEFAULT_SIGKILL_TIMEOUT) -> None:
         )
 
 
-async def start_edenfs_service(
+def start_edenfs_service(
     instance: EdenInstance,
     daemon_binary: Optional[str] = None,
     edenfs_args: Optional[List[str]] = None,
 ) -> int:
     """Start the edenfs daemon."""
-    if instance.should_use_experimental_systemd_mode():
-        from . import systemd_service
-
-        return await systemd_service.start_systemd_service(
-            instance=instance, daemon_binary=daemon_binary, edenfs_args=edenfs_args
-        )
-
     return _start_edenfs_service(
         instance=instance,
         daemon_binary=daemon_binary,
@@ -134,9 +127,6 @@ def gracefully_restart_edenfs_service(
     edenfs_args: Optional[List[str]] = None,
 ) -> int:
     """Gracefully restart the EdenFS service"""
-    if instance.should_use_experimental_systemd_mode():
-        raise NotImplementedError("TODO(T33122320): Implement 'eden start --takeover'")
-
     return _start_edenfs_service(
         instance=instance,
         daemon_binary=daemon_binary,

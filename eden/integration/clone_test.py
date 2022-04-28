@@ -19,9 +19,7 @@ from .lib.fake_edenfs import get_fake_edenfs_argv
 from .lib.find_executables import FindExe
 from .lib.service_test_case import (
     ServiceTestCaseBase,
-    SystemdServiceTest,
     service_test,
-    systemd_test,
 )
 
 
@@ -369,34 +367,15 @@ class CloneFakeEdenFSTest(CloneFakeEdenFSTestBase):
         )
 
         argv = get_fake_edenfs_argv(self.eden_dir)
-        if "--experimentalSystemd" in argv:
-            expected = extra_daemon_args
-        else:
-            expected = extra_daemon_args + [
-                "--foreground",
-                "--logPath",
-                str(self.eden_dir / "logs/edenfs.log"),
-                "--startupLoggerFd",
-                "5",
-            ]
+        expected = extra_daemon_args + [
+            "--foreground",
+            "--logPath",
+            str(self.eden_dir / "logs/edenfs.log"),
+            "--startupLoggerFd",
+            "5",
+        ]
         self.assertEqual(
             argv[-len(expected) :],
             expected,
             f"fake_edenfs should have received arguments verbatim\nargv: {argv}",
         )
-
-
-@systemd_test
-class CloneFakeEdenFSWithSystemdTest(SystemdServiceTest, CloneFakeEdenFSTestBase):
-    def test_clone_starts_systemd_service(self) -> None:
-        repo = self.make_dummy_hg_repo()
-        mount_path = Path(self.make_temporary_directory())
-        clone_process = self.spawn_clone(
-            repo_path=Path(repo.path), mount_path=mount_path
-        )
-        self.assertIn(
-            "edenfs daemon is not currently running. Starting...",
-            clone_process.stdout,
-        )
-        self.assertIn("Started EdenFS", clone_process.stderr)
-        self.assert_systemd_service_is_active(eden_dir=self.eden_dir)

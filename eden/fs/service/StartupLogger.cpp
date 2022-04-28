@@ -7,7 +7,6 @@
 
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/EdenInit.h"
-#include "eden/fs/service/Systemd.h"
 #include "eden/fs/telemetry/SessionId.h"
 
 #include <folly/Exception.h>
@@ -94,12 +93,6 @@ void StartupLogger::success(uint64_t startTimeInSeconds) {
           ") in ",
           startTimeInSeconds,
           "s"));
-
-#if EDEN_HAVE_SYSTEMD
-  if (FLAGS_experimentalSystemd) {
-    Systemd::notifyReady();
-  }
-#endif
 
   successImpl();
 }

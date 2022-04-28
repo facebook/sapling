@@ -22,7 +22,7 @@
 #include "eden/fs/monitor/LogRotation.h"
 #include "eden/fs/service/gen-cpp2/EdenServiceAsyncClient.h"
 
-#if EDEN_HAVE_SYSTEMD
+#ifdef __linux__
 #include <systemd/sd-daemon.h> // @manual
 #endif
 
@@ -123,7 +123,7 @@ Future<Unit> EdenMonitor::start() {
   return getEdenInstance().thenValue([this](auto&&) {
     XCHECK(edenfs_ != nullptr);
     state_ = State::Running;
-#if EDEN_HAVE_SYSTEMD
+#ifdef __linux__
     auto rc = sd_notify(/*unset_environment=*/false, "READY=1");
     if (rc < 0) {
       XLOG(ERR) << "sd_notify READY=1 failed: " << folly::errnoStr(-rc);

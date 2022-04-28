@@ -59,7 +59,6 @@ class ServiceLogRealEdenFSTest(ManagedFakeEdenFSMixin, ServiceLogTestBase):
                 eden_dir=self.eden_dir,
                 etc_eden_dir=self.etc_eden_dir,
                 home_dir=self.home_dir,
-                systemd=False,
             )
         )
         self.assertTrue(

@@ -142,31 +142,6 @@ class FindExeClass(object):
         )
 
     @cached_property
-    def FORCE_SD_BOOTED(self) -> str:
-        return self._find_exe(
-            "force_sd_booted",
-            env="EDENFS_FORCE_SD_BOOTED_PATH",
-            buck_path="eden/integration/helpers/force_sd_booted",
-        )
-
-    @cached_property
-    def SYSTEMD_FB_EDENFS_SERVICE(self) -> str:
-        return self._find_src_asset(
-            "EDENFS_SYSTEMD_UNIT", "eden/fs/service", "fb-edenfs@.service"
-        )
-
-    @cached_property
-    def SYSTEMD(self) -> str:
-        # systemd is installed at /usr/lib/systemd/systemd on RedHat-like distributions,
-        # and /bin/systemd on Debian-like distributions.
-        candidates = ["/usr/lib/systemd/systemd", "/bin/systemd"]
-        for path in candidates:
-            if os.access(path, os.X_OK):
-                return path
-
-        raise Exception(f"unable to find systemd: candidates checked={candidates}")
-
-    @cached_property
     def TAKEOVER_TOOL(self) -> str:
         return self._find_exe(
             "takeover_tool",

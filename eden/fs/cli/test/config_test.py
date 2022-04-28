@@ -84,8 +84,6 @@ class TomlConfigTest(EdenTestCaseBase):
         self._config_d.mkdir(exist_ok=True, parents=True)
         self._home_dir.mkdir(exist_ok=True, parents=True)
 
-        self.unsetenv("EDEN_EXPERIMENTAL_SYSTEMD")
-
     def copy_config_files(self) -> None:
         path = self._config_d / "defaults.toml"
         path.write_text(get_toml_test_file_defaults())
@@ -199,69 +197,6 @@ test_option = "test value"
             "test value",
         )
 
-    def test_experimental_systemd_is_disabled_by_default(self) -> None:
-        self.assertFalse(self.get_config().should_use_experimental_systemd_mode())
-
-    def test_experimental_systemd_is_enabled_with_environment_variable(self) -> None:
-        if not sys.platform.startswith("linux"):
-            return
-
-        self.setenv("EDEN_EXPERIMENTAL_SYSTEMD", "1")
-        self.assertTrue(self.get_config().should_use_experimental_systemd_mode())
-
-    def test_experimental_systemd_is_enabled_with_user_config_setting(self) -> None:
-        if not sys.platform.startswith("linux"):
-            return
-
-        self.write_user_config(
-            """[service]
-experimental_systemd = true
-"""
-        )
-        self.assertTrue(self.get_config().should_use_experimental_systemd_mode())
-
-    def test_experimental_systemd_environment_variable_overrides_config(self) -> None:
-        if not sys.platform.startswith("linux"):
-            return
-
-        self.setenv("EDEN_EXPERIMENTAL_SYSTEMD", "1")
-        self.write_user_config(
-            f"""[service]
-experimental_systemd = false
-"""
-        )
-        self.assertTrue(self.get_config().should_use_experimental_systemd_mode())
-
-        self.setenv("EDEN_EXPERIMENTAL_SYSTEMD", "0")
-        self.write_user_config(
-            f"""[service]
-experimental_systemd = true
-"""
-        )
-        self.assertFalse(self.get_config().should_use_experimental_systemd_mode())
-
-    def test_empty_experimental_systemd_environment_variable_does_not_override_config(
-        self,
-    ) -> None:
-        if not sys.platform.startswith("linux"):
-            return
-
-        self.setenv("EDEN_EXPERIMENTAL_SYSTEMD", "")
-        self.write_user_config(
-            f"""[service]
-experimental_systemd = true
-"""
-        )
-        self.assertTrue(self.get_config().should_use_experimental_systemd_mode())
-
-        self.setenv("EDEN_EXPERIMENTAL_SYSTEMD", "")
-        self.write_user_config(
-            f"""[service]
-experimental_systemd = false
-"""
-        )
-        self.assertFalse(self.get_config().should_use_experimental_systemd_mode())
-
     def test_user_id_variable_is_set_to_process_uid(self) -> None:
         config = self.get_config_without_stub_variables()
         self.write_user_config(
@@ -275,24 +210,6 @@ testoption = "My user ID is ${USER_ID}."
         self.assertEqual(
             config.get_config_value("testsection.testoption", default=""),
             f"My user ID is {uid}.",
-        )
-
-    def test_default_fallback_systemd_xdg_runtime_dir_is_run_user_uid(self) -> None:
-        self.assertEqual(
-            self.get_config().get_fallback_systemd_xdg_runtime_dir(), "/run/user/42"
-        )
-
-    def test_configured_fallback_systemd_xdg_runtime_dir_expands_user_and_user_id(
-        self,
-    ) -> None:
-        self.write_user_config(
-            """
-[service]
-fallback_systemd_xdg_runtime_dir = "/var/run/${USER}/${USER_ID}"
-"""
-        )
-        self.assertEqual(
-            self.get_config().get_fallback_systemd_xdg_runtime_dir(), "/var/run/bob/42"
         )
 
     def test_printed_config_is_valid_toml(self) -> None:
@@ -328,8 +245,8 @@ path = "/data/users/${USER}/fbsource"
     def test_printed_config_writes_booleans_as_booleans(self) -> None:
         self.write_user_config(
             """
-[service]
-experimental_systemd = true
+[experimental]
+use-edenapi = true
 """
         )
 
@@ -337,7 +254,7 @@ experimental_systemd = true
         self.get_config().print_full_config(printed_config)
         parsed_config = printed_config.getvalue().decode("utf-8")
 
-        self.assertRegex(parsed_config, r"experimental_systemd\s*=\s*true")
+        self.assertRegex(parsed_config, r"use-edenapi\s*=\s*true")
 
     def get_config(self) -> EdenInstance:
         return EdenInstance(

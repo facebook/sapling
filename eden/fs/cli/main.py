@@ -718,7 +718,7 @@ class CloneCmd(Subcmd):
             help="Clone path as backing store instead of a source control repository. Currently only support 'recas' (Linux only).",
         )
 
-    async def run(self, args: argparse.Namespace) -> int:
+    def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
 
         # Make sure the destination directory does not exist or is an empty
@@ -845,7 +845,7 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
             print("edenfs daemon is not currently running. Starting...")
             # Sometimes this returns a non-zero exit code if it does not finish
             # startup within the default timeout.
-            exit_code = await daemon.start_edenfs_service(
+            exit_code = daemon.start_edenfs_service(
                 instance, args.daemon_binary, args.edenfs_args
             )
             if exit_code != 0:
@@ -978,7 +978,7 @@ class StraceCmd(Subcmd):
             help="Limit trace to write operations",
         )
 
-    async def run(self, args: argparse.Namespace) -> int:
+    def run(self, args: argparse.Namespace) -> int:
         print_stderr("No longer supported, use `eden trace fs` instead.")
         return 1
 
@@ -1516,7 +1516,7 @@ class StartCmd(Subcmd):
             "to the edenfs daemon.",
         )
 
-    async def run(self, args: argparse.Namespace) -> int:
+    def run(self, args: argparse.Namespace) -> int:
         # If the user put an "--" argument before the edenfs args, argparse passes
         # that through to us.  Strip it out.
         try:
@@ -1569,9 +1569,7 @@ class StartCmd(Subcmd):
                 instance, daemon_binary, args.edenfs_args
             )
 
-        return await daemon.start_edenfs_service(
-            instance, daemon_binary, args.edenfs_args
-        )
+        return daemon.start_edenfs_service(instance, daemon_binary, args.edenfs_args)
 
     def start_in_foreground(
         self, instance: EdenInstance, daemon_binary: str, args: argparse.Namespace
@@ -1712,7 +1710,7 @@ class RestartCmd(Subcmd):
             help=migration_restart_help,
         )
 
-    async def run(self, args: argparse.Namespace) -> int:
+    def run(self, args: argparse.Namespace) -> int:
         self.args = args
         if args.restart_type is None:
             # Default to a full restart for now
@@ -1741,9 +1739,9 @@ class RestartCmd(Subcmd):
         if health.is_healthy():
             assert edenfs_pid is not None
             if self.args.restart_type == RESTART_MODE_GRACEFUL:
-                return await self._graceful_restart(instance)
+                return self._graceful_restart(instance)
             else:
-                status = await self._full_restart(instance, edenfs_pid, args.migrate_to)
+                status = self._full_restart(instance, edenfs_pid, args.migrate_to)
                 success = status == 0
                 instance.log_sample("full_restart", success=success)
                 return status
@@ -1753,7 +1751,7 @@ class RestartCmd(Subcmd):
                 print("EdenFS not running; not starting EdenFS")
                 return 0
             else:
-                return await self._start(instance)
+                return self._start(instance)
         else:
             if health.status == fb303_status.STARTING:
                 print(
@@ -1788,9 +1786,9 @@ class RestartCmd(Subcmd):
                     "Use `eden restart --force` if you want to forcibly restart the current daemon"
                 )
                 return 4
-            return await self._force_restart(instance, edenfs_pid, stop_timeout)
+            return self._force_restart(instance, edenfs_pid, stop_timeout)
 
-    async def _recover_after_failed_graceful_restart(
+    def _recover_after_failed_graceful_restart(
         self, instance: EdenInstance, telemetry_sample: TelemetrySample
     ) -> int:
         health = instance.check_health()
@@ -1802,7 +1800,7 @@ class RestartCmd(Subcmd):
                 "starting it"
             )
             telemetry_sample.fail("EdenFS was not running after graceful restart")
-            return await self._start(instance)
+            return self._start(instance)
 
         print(
             "Attempting to recover the current edenfs daemon "
@@ -1839,7 +1837,7 @@ class RestartCmd(Subcmd):
             # timeout waiting and by the time we call os.kill, just
             # continue on with the restart
             pass
-        if await self._finish_restart(instance) == 0:
+        if self._finish_restart(instance) == 0:
             telemetry_sample.fail(
                 "EdenFS was not healthy after graceful restart; performed a "
                 "hard restart"
@@ -1852,43 +1850,38 @@ class RestartCmd(Subcmd):
             )
             return 3
 
-    async def _graceful_restart(self, instance: EdenInstance) -> int:
+    def _graceful_restart(self, instance: EdenInstance) -> int:
         print("Performing a graceful restart...")
-        if instance.should_use_experimental_systemd_mode():
-            raise NotImplementedError(
-                "TODO(T33122320): Implement 'eden restart --graceful'"
+        with instance.get_telemetry_logger().new_sample(
+            "graceful_restart"
+        ) as telemetry_sample:
+            # The status here is returned by the exit status of the startup
+            # logger. If this is successful, we will ensure the new process
+            # itself starts. If this was not successful, we will assume that
+            # the process didn't start up correctly and continue directly to
+            # our recovery logic.
+            status = daemon.gracefully_restart_edenfs_service(
+                instance, daemon_binary=self.args.daemon_binary
             )
-        else:
-            with instance.get_telemetry_logger().new_sample(
-                "graceful_restart"
-            ) as telemetry_sample:
-                # The status here is returned by the exit status of the startup
-                # logger. If this is successful, we will ensure the new process
-                # itself starts. If this was not successful, we will assume that
-                # the process didn't start up correctly and continue directly to
-                # our recovery logic.
-                status = daemon.gracefully_restart_edenfs_service(
-                    instance, daemon_binary=self.args.daemon_binary
-                )
-                success = status == 0
-                if success:
-                    print("Successful graceful restart")
-                    return 0
+            success = status == 0
+            if success:
+                print("Successful graceful restart")
+                return 0
 
-                # After this point, the initial graceful restart was unsuccessful.
-                # Make sure that the old process recovers. If it does not recover,
-                # run start to make sure that an EdenFS process is running.
-                return await self._recover_after_failed_graceful_restart(
-                    instance, telemetry_sample
-                )
+            # After this point, the initial graceful restart was unsuccessful.
+            # Make sure that the old process recovers. If it does not recover,
+            # run start to make sure that an EdenFS process is running.
+            return self._recover_after_failed_graceful_restart(
+                instance, telemetry_sample
+            )
 
-    async def _start(self, instance: EdenInstance) -> int:
+    def _start(self, instance: EdenInstance) -> int:
         print("edenfs daemon is not currently running. Starting...")
-        return await daemon.start_edenfs_service(
+        return daemon.start_edenfs_service(
             instance, daemon_binary=self.args.daemon_binary
         )
 
-    async def _full_restart(
+    def _full_restart(
         self, instance: EdenInstance, old_pid: int, migrate_to: Optional[str]
     ) -> int:
         print(
@@ -1907,9 +1900,9 @@ re-open these files after EdenFS is restarted.
         self._do_stop(instance, old_pid, timeout=15)
         if migrate_to is not None:
             self._do_migration(instance, migrate_to)
-        return await self._finish_restart(instance)
+        return self._finish_restart(instance)
 
-    async def _force_restart(
+    def _force_restart(
         self, instance: EdenInstance, old_pid: int, stop_timeout: int
     ) -> int:
         print("Forcing a full restart...")
@@ -1920,7 +1913,7 @@ re-open these files after EdenFS is restarted.
         else:
             self._do_stop(instance, old_pid, stop_timeout)
 
-        return await self._finish_restart(instance)
+        return self._finish_restart(instance)
 
     def _wait_for_stop(self, instance: EdenInstance, pid: int, timeout: float) -> None:
         # If --shutdown-timeout was specified on the command line that always takes
@@ -1951,8 +1944,8 @@ re-open these files after EdenFS is restarted.
 
         print(get_migration_success_message(migrate_to))
 
-    async def _finish_restart(self, instance: EdenInstance) -> int:
-        exit_code = await daemon.start_edenfs_service(
+    def _finish_restart(self, instance: EdenInstance) -> int:
+        exit_code = daemon.start_edenfs_service(
             instance, daemon_binary=self.args.daemon_binary
         )
         if exit_code != 0:

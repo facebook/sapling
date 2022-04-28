@@ -20,9 +20,7 @@ from .lib.fake_edenfs import get_fake_edenfs_argv
 from .lib.find_executables import FindExe
 from .lib.service_test_case import (
     ServiceTestCaseBase,
-    SystemdServiceTest,
     service_test,
-    systemd_test,
 )
 
 
@@ -59,7 +57,7 @@ class StartTest(testcase.EdenTestCase):
         self.eden.shutdown()
         self.assertFalse(self.eden.is_healthy())
         # `eden start --if-necessary` should start edenfs now
-        if start.eden_start_needs_allow_root_option(systemd=False):
+        if start.eden_start_needs_allow_root_option():
             output = self.eden.run_cmd(
                 "start",
                 "--if-necessary",
@@ -156,7 +154,6 @@ class StartWithRepoTest(testcase.EdenRepoTest):
             eden_dir=pathlib.Path(self.eden_dir),
             etc_eden_dir=pathlib.Path(self.etc_eden_dir),
             home_dir=pathlib.Path(self.home_dir),
-            systemd=False,
         ):
             self.assert_checkout_is_mounted()
 
@@ -302,17 +299,14 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase):
         self.start_edenfs(extra_args=["--"] + extra_daemon_args)
 
         argv = get_fake_edenfs_argv(self.eden_dir)
-        if "--experimentalSystemd" in argv:
-            expected = extra_daemon_args
-        else:
-            expected = [
-                "--allowExtraArgs",
-                "--foreground",
-                "--logPath",
-                str(self.eden_dir / "logs/edenfs.log"),
-                "--startupLoggerFd",
-                "5",
-            ] + extra_daemon_args[1:]
+        expected = [
+            "--allowExtraArgs",
+            "--foreground",
+            "--logPath",
+            str(self.eden_dir / "logs/edenfs.log"),
+            "--startupLoggerFd",
+            "5",
+        ] + extra_daemon_args[1:]
 
         self.assertEqual(
             argv[-len(expected) :],
@@ -334,25 +328,17 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase):
         )
 
         argv = get_fake_edenfs_argv(self.eden_dir)
-        if "--experimentalSystemd" in argv:
-            expected_extra_daemon_args = [
-                "hello world",
-                "another fake_edenfs argument",
-                "--allowExtraArgs",
-                "arg_after_dashdash",
-            ]
-        else:
-            expected_extra_daemon_args = [
-                "hello world",
-                "another fake_edenfs argument",
-                "--allowExtraArgs",
-                "arg_after_dashdash",
-                "--foreground",
-                "--logPath",
-                str(self.eden_dir / "logs/edenfs.log"),
-                "--startupLoggerFd",
-                "5",
-            ]
+        expected_extra_daemon_args = [
+            "hello world",
+            "another fake_edenfs argument",
+            "--allowExtraArgs",
+            "arg_after_dashdash",
+            "--foreground",
+            "--logPath",
+            str(self.eden_dir / "logs/edenfs.log"),
+            "--startupLoggerFd",
+            "5",
+        ]
 
         self.assertEqual(
             argv[-len(expected_extra_daemon_args) :],
@@ -427,26 +413,3 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase):
             "--failDuringStartup was specified",
             extra_args=["--", "--failDuringStartup"],
         )
-
-
-@systemd_test
-class StartWithSystemdTest(SystemdServiceTest, StartFakeEdenFSTestBase):
-    def test_eden_start_fails_if_service_is_running(self) -> None:
-        with self.spawn_fake_edenfs(self.eden_dir):
-            # Make fake_edenfs inaccessible and undetectable (without talking to
-            # systemd), but keep the systemd service alive.
-            (self.eden_dir / "lock").unlink()
-            (self.eden_dir / "socket").unlink()
-            health: HealthStatus = EdenInstance(
-                str(self.eden_dir), etc_eden_dir=None, home_dir=None
-            ).check_health()
-            self.assertEqual(health.status, fb303_status.DEAD)
-            service = self.get_edenfs_systemd_service(eden_dir=self.eden_dir)
-            self.assertEqual(service.query_active_state(), "active")
-
-            proc = self.expect_start_failure(
-                "error: EdenFS systemd service is already running"
-            )
-            # edenfsctl should show the output of 'systemctl status'.
-            self.assertRegex(proc.stdout, r"\bfb-edenfs@.*?\.service\b")
-            self.assertRegex(proc.stdout, r"Active:[^\n]*active \(running\)")

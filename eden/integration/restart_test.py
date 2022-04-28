@@ -17,9 +17,7 @@ from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, PexpectSpawnType, pexpect_spawn
 from .lib.service_test_case import (
     ServiceTestCaseBase,
-    SystemdServiceTest,
     service_test,
-    systemd_test,
 )
 
 
@@ -293,31 +291,3 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         )
         restart_process.expect_exact("Failed to start edenfs")
         self.assert_process_fails(restart_process, 1)
-
-
-@systemd_test
-class RestartWithSystemdTest(
-    SystemdServiceTest, RestartTestBase, PexpectAssertionMixin
-):
-    def test_eden_restart_starts_service_if_not_running(self) -> None:
-        restart_process = self._spawn_restart()
-        restart_process.expect_exact(
-            "edenfs daemon is not currently running. Starting..."
-        )
-        restart_process.expect_exact("Started EdenFS")
-        self.assert_process_succeeds(restart_process)
-        self.assert_systemd_service_is_active(eden_dir=self.eden_dir)
-
-    def test_service_is_active_after_full_eden_restart(self) -> None:
-        self._start_fake_edenfs()
-        restart_process = self._spawn_restart("--force")
-        self.assert_process_succeeds(restart_process)
-        self.assert_systemd_service_is_active(eden_dir=self.eden_dir)
-
-    def test_graceful_restart_is_not_supported_yet(self) -> None:
-        self._start_fake_edenfs()
-        restart_process = self._spawn_restart("--graceful")
-        restart_process.expect_exact("NotImplementedError")
-        restart_process.expect_exact("eden restart --graceful")
-        self.assert_process_fails(restart_process, 1)
-        self.assert_systemd_service_is_active(eden_dir=self.eden_dir)

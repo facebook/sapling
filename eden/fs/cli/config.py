@@ -414,34 +414,6 @@ class EdenInstance:
         section, option = key.split(".", 1)
         return parser.get_bool(section, option, default=default)
 
-    def should_use_experimental_systemd_mode(self) -> bool:
-        if not sys.platform.startswith("linux"):
-            return False
-
-        # TODO(T33122320): Delete this environment variable when systemd is properly
-        # integrated.
-        env_var_value = os.getenv("EDEN_EXPERIMENTAL_SYSTEMD")
-        if env_var_value == "1":
-            return True
-        if env_var_value == "0":
-            return False
-
-        if self._loadConfig().get_bool(
-            "service", "experimental_systemd", default=False
-        ):
-            return True
-
-        return False
-
-    def get_fallback_systemd_xdg_runtime_dir(self) -> str:
-        xdg_runtime_dir = self.get_config_value(
-            "service.fallback_systemd_xdg_runtime_dir", default=""
-        )
-        if xdg_runtime_dir == "":
-            user_id = self._config_variables["USER_ID"]
-            xdg_runtime_dir = f"/run/user/{user_id}"
-        return xdg_runtime_dir
-
     def print_full_config(self, out: IO[bytes]) -> None:
         parser = self._loadConfig()
         data: Dict[str, Mapping[str, str]] = {}
