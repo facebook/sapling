@@ -16,8 +16,8 @@ use metaconfig_types::{
     ComparableRegex, DerivedDataConfig, DerivedDataTypesConfig, HookBypass, HookConfig,
     HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams,
     PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs, SegmentedChangelogConfig,
-    ServiceWriteRestrictions, SourceControlServiceMonitoring, SourceControlServiceParams,
-    UnodeVersion,
+    SegmentedChangelogHeadConfig, ServiceWriteRestrictions, SourceControlServiceMonitoring,
+    SourceControlServiceParams, UnodeVersion,
 };
 use mononoke_types::{ChangesetId, MPath, PrefixTrie};
 use regex::Regex;
@@ -25,8 +25,8 @@ use repos::{
     RawBookmarkConfig, RawBundle2ReplayParams, RawCacheWarmupConfig, RawDerivedDataConfig,
     RawDerivedDataTypesConfig, RawHookConfig, RawHookManagerParams, RawInfinitepushParams,
     RawLfsParams, RawPushParams, RawPushrebaseParams, RawRepoClientKnobs,
-    RawSegmentedChangelogConfig, RawServiceWriteRestrictions, RawSourceControlServiceMonitoring,
-    RawSourceControlServiceParams,
+    RawSegmentedChangelogConfig, RawSegmentedChangelogHeadConfig, RawServiceWriteRestrictions,
+    RawSourceControlServiceMonitoring, RawSourceControlServiceParams,
 };
 
 use crate::convert::Convert;
@@ -387,6 +387,35 @@ impl Convert for RawRepoClientKnobs {
     }
 }
 
+impl Convert for RawSegmentedChangelogHeadConfig {
+    type Output = SegmentedChangelogHeadConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        let res = match self {
+            Self::all_public_bookmarks_except(exceptions) => {
+                SegmentedChangelogHeadConfig::AllPublicBookmarksExcept(
+                    exceptions
+                        .into_iter()
+                        .map(BookmarkName::new)
+                        .collect::<Result<Vec<BookmarkName>>>()?,
+                )
+            }
+            Self::bookmark(bookmark_name) => {
+                SegmentedChangelogHeadConfig::Bookmark(BookmarkName::new(bookmark_name)?)
+            }
+            Self::bonsai_changeset(changeset_id) => {
+                SegmentedChangelogHeadConfig::Changeset(ChangesetId::from_str(&changeset_id)?)
+            }
+            Self::UnknownField(_) => {
+                return Err(anyhow!(
+                    "Unknown variant of RawSegmentedChangelogHeadConfig!"
+                ));
+            }
+        };
+        Ok(res)
+    }
+}
+
 impl Convert for RawSegmentedChangelogConfig {
     type Output = SegmentedChangelogConfig;
 
@@ -409,6 +438,18 @@ impl Convert for RawSegmentedChangelogConfig {
             .map(|s| ChangesetId::from_str(&s))
             .collect();
 
+        let heads_to_include = self
+            .heads_to_include
+            .into_iter()
+            .map(|raw| raw.convert())
+            .collect::<Result<Vec<_>>>()?;
+
+        let extra_heads_to_include_in_background_jobs = self
+            .extra_heads_to_include_in_background_jobs
+            .into_iter()
+            .map(|raw| raw.convert())
+            .collect::<Result<Vec<_>>>()?;
+
         let default = SegmentedChangelogConfig::default();
         Ok(SegmentedChangelogConfig {
             enabled: self.enabled.unwrap_or(default.enabled),
@@ -429,6 +470,8 @@ impl Convert for RawSegmentedChangelogConfig {
                 default.update_to_master_bookmark_period,
             )?,
             bonsai_changesets_to_include: bonsai_changesets_to_include?,
+            heads_to_include,
+            extra_heads_to_include_in_background_jobs,
         })
     }
 }

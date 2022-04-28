@@ -1585,6 +1585,11 @@ pub struct SegmentedChangelogConfig {
     /// `bonsai_changesets_to_include` then every reseeding would add B and it's
     /// ancestors to the reseeded segmented changelog.
     pub bonsai_changesets_to_include: Vec<ChangesetId>,
+    /// All the heads that should be part of segmented changelog.
+    pub heads_to_include: Vec<SegmentedChangelogHeadConfig>,
+    /// Heads that should be indexed by segmented changelog offline jobs but
+    /// shouldn't be kept-up-to-date in online serving jobs.
+    pub extra_heads_to_include_in_background_jobs: Vec<SegmentedChangelogHeadConfig>,
 }
 
 impl Default for SegmentedChangelogConfig {
@@ -1597,6 +1602,10 @@ impl Default for SegmentedChangelogConfig {
             reload_dag_save_period: Some(Duration::from_secs(3600)),
             update_to_master_bookmark_period: Some(Duration::from_secs(60)),
             bonsai_changesets_to_include: vec![],
+            heads_to_include: vec![SegmentedChangelogHeadConfig::AllPublicBookmarksExcept(
+                vec![],
+            )],
+            extra_heads_to_include_in_background_jobs: vec![],
         }
     }
 }

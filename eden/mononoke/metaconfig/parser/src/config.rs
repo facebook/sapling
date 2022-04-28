@@ -473,9 +473,9 @@ mod test {
         HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams, LocalDatabaseConfig,
         MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PushParams, PushrebaseFlags,
         PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, RepoClientKnobs,
-        SegmentedChangelogConfig, ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig,
-        SmallRepoCommitSyncConfig, SourceControlServiceMonitoring, SourceControlServiceParams,
-        UnodeVersion,
+        SegmentedChangelogConfig, SegmentedChangelogHeadConfig, ShardableRemoteDatabaseConfig,
+        ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig, SourceControlServiceMonitoring,
+        SourceControlServiceParams, UnodeVersion,
     };
     use mononoke_types::MPath;
     use mononoke_types_mocks::changesetid::ONES_CSID;
@@ -809,6 +809,10 @@ mod test {
             skip_dag_load_at_startup = true
             reload_dag_save_period_secs = 0
             update_to_master_bookmark_period_secs = 120
+            heads_to_include = [
+                { bookmark = "test_bookmark" },
+            ]
+            extra_heads_to_include_in_background_jobs = []
 
             [backup_config]
             verification_enabled = false
@@ -829,6 +833,10 @@ mod test {
             hgsql_name = "www-foobar"
             hgsql_globalrevs_name = "www-barfoo"
             phabricator_callsign="WWW"
+            [segmented_changelog_config]
+            heads_to_include = [
+                { all_public_bookmarks_except = [] }
+            ]
         "#;
         let www_repo_def = r#"
             repo_id=1
@@ -1121,6 +1129,10 @@ mod test {
                     reload_dag_save_period: None,
                     update_to_master_bookmark_period: Some(Duration::from_secs(120)),
                     bonsai_changesets_to_include: vec![],
+                    heads_to_include: vec![SegmentedChangelogHeadConfig::Bookmark(
+                        BookmarkName::new("test_bookmark").unwrap(),
+                    )],
+                    extra_heads_to_include_in_background_jobs: vec![],
                 },
                 repo_client_knobs: RepoClientKnobs {
                     allow_short_getpack_history: true,
@@ -1203,6 +1215,10 @@ mod test {
                     reload_dag_save_period: Some(Duration::from_secs(3600)),
                     update_to_master_bookmark_period: Some(Duration::from_secs(60)),
                     bonsai_changesets_to_include: vec![],
+                    heads_to_include: vec![SegmentedChangelogHeadConfig::AllPublicBookmarksExcept(
+                        vec![],
+                    )],
+                    extra_heads_to_include_in_background_jobs: vec![],
                 },
                 repo_client_knobs: RepoClientKnobs::default(),
                 phabricator_callsign: Some("WWW".to_string()),
