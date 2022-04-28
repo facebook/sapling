@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 ctor = "0.1"
 tracing = "0.1.32"
-tracing-subscriber = { version = "0.3.10", features = ["ansi", "env-filter", "fmt", "json", "parking_lot", "registry"] }
+tracing-subscriber = { version = "0.3.11", features = ["ansi", "env-filter", "fmt", "json", "parking_lot", "registry"] }
