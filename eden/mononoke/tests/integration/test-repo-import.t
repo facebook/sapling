@@ -104,7 +104,9 @@
 # run segmented changelog tailer on master bookmark
   $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
   > [segmented_changelog_config]
-  > master_bookmark="master_bookmark"
+  > heads_to_include = [
+  >    { bookmark = "master_bookmark" },
+  > ]
   > CONFIG
   $ segmented_changelog_tailer_reseed --repo repo  2>&1 | grep -e successfully -e segmented_changelog_tailer
   * repo name 'repo' translates to id 0 (glob)
@@ -149,7 +151,7 @@
   * Start deriving data types (glob)
   * Finished deriving data types (glob)
   * Start tailing segmented changelog (glob)
-  * using 'Bookmark(BookmarkName { bookmark: "master_bookmark" })' for head (glob)
+  * Using the following segmented changelog heads: [Bookmark(BookmarkName { bookmark: "master_bookmark" })] (glob)
   * SegmentedChangelogTailer initialized (glob)
   * starting incremental update to segmented changelog (glob)
   * iddag initialized, it covers 3 ids (glob)

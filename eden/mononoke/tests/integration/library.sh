@@ -1080,7 +1080,9 @@ if [[ -n "${SEGMENTED_CHANGELOG_ENABLE:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [segmented_changelog_config]
 enabled=true
-master_bookmark="master_bookmark"
+heads_to_include = [
+   { bookmark = "master_bookmark" },
+]
 skip_dag_load_at_startup=true
 CONFIG
 fi

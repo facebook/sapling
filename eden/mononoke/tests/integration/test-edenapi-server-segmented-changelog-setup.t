@@ -61,7 +61,9 @@ Start up EdenAPI server.
   $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
   > [segmented_changelog_config]
   > enabled=true
-  > master_bookmark="master_bookmark"
+  > heads_to_include = [
+  >    { bookmark = "master_bookmark" },
+  > ]
   > CONFIG
 
   $ start_and_wait_for_mononoke_server

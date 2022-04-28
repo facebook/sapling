@@ -13,7 +13,9 @@ Setup repository
 Run Segmented Changelog Tailer to seed the repo.
   $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
   > [segmented_changelog_config]
-  > master_bookmark="master_bookmark"
+  > heads_to_include = [
+  >    { bookmark = "master_bookmark" },
+  > ]
   > CONFIG
   $ quiet segmented_changelog_tailer_reseed --repo repo
   $ grep 'successfully' "$TESTTMP/quiet.last.log"

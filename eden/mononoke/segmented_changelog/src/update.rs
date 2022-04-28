@@ -61,26 +61,18 @@ pub enum JobType {
 pub fn seedheads_from_config(
     ctx: &CoreContext,
     config: &SegmentedChangelogConfig,
-    _job_type: JobType,
+    job_type: JobType,
 ) -> Result<Vec<SeedHead>> {
-    let head = config
-        .master_bookmark
-        .as_ref()
-        .map(BookmarkName::new)
-        .transpose()?
-        .into();
-    let bonsai_changesets_to_include = &config.bonsai_changesets_to_include;
+    let mut heads = config.heads_to_include.clone();
 
-    info!(ctx.logger(), "using '{:?}' for head", head);
-    if bonsai_changesets_to_include.len() > 0 {
-        info!(
-            ctx.logger(),
-            "also adding {:?} to segmented changelog", bonsai_changesets_to_include
-        );
+    if job_type == JobType::Background {
+        heads.extend(config.extra_heads_to_include_in_background_jobs.clone());
     }
 
-    let mut heads = vec![head];
-    heads.extend(bonsai_changesets_to_include.into_iter().map(SeedHead::from));
+    info!(
+        ctx.logger(),
+        "Using the following segmented changelog heads: {:?}", heads
+    );
     Ok(heads)
 }
 

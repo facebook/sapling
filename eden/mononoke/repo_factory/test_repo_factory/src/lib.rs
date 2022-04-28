@@ -17,7 +17,7 @@ use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingBuilder};
 use bonsai_globalrev_mapping::{ArcBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMappingBuilder};
 use bonsai_hg_mapping::{ArcBonsaiHgMapping, SqlBonsaiHgMappingBuilder};
 use bonsai_svnrev_mapping::{ArcBonsaiSvnrevMapping, SqlBonsaiSvnrevMappingBuilder};
-use bookmarks::{bookmark_heads_fetcher, ArcBookmarkUpdateLog, ArcBookmarks};
+use bookmarks::{bookmark_heads_fetcher, ArcBookmarkUpdateLog, ArcBookmarks, BookmarkName};
 use cacheblob::{InProcessLease, LeaseOps};
 use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
 use changeset_info::ChangesetInfo;
@@ -43,7 +43,7 @@ use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_mutation::{ArcHgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
     ArcRepoConfig, DerivedDataConfig, DerivedDataTypesConfig, RepoConfig, SegmentedChangelogConfig,
-    UnodeVersion,
+    SegmentedChangelogHeadConfig, UnodeVersion,
 };
 use mononoke_types::RepositoryId;
 use mutable_counters::{ArcMutableCounters, SqlMutableCountersBuilder};
@@ -122,6 +122,9 @@ pub fn default_test_repo_config() -> RepoConfig {
         },
         segmented_changelog_config: SegmentedChangelogConfig {
             enabled: true,
+            heads_to_include: vec![SegmentedChangelogHeadConfig::Bookmark(
+                BookmarkName::new("master").unwrap(),
+            )],
             master_bookmark: Some("master".to_string()),
             ..Default::default()
         },

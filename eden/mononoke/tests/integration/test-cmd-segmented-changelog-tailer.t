@@ -60,14 +60,19 @@ Run Segmented Changelog Tailer. This seeds the segmented changelog.
 Now test without head option (tailer will fetch it from config) and with prefetched commits
   $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
   > [segmented_changelog_config]
-  > master_bookmark="master_bookmark"
+  > heads_to_include = [
+  >    { all_public_bookmarks_except = ["master_bookmark"] },
+  > ]
+  > extra_heads_to_include_in_background_jobs = [
+  >    {  bookmark = "master_bookmark" },
+  > ]
   > CONFIG
   $ quiet mononoke_newadmin dump-changesets -R repo --out-filename "$TESTTMP/prefetched_commits" fetch-public
   $ quiet segmented_changelog_tailer_reseed --repo repo --prefetched-commits-path "$TESTTMP/prefetched_commits"
   $ grep -e "repo_id: 0" -e "segmented_changelog_tailer" "$TESTTMP/quiet.last.log"
   * reading prefetched commits from $TESTTMP/prefetched_commits (glob)
   * repo name 'repo' translates to id 0 (glob)
-  * using 'Bookmark(BookmarkName { bookmark: "master_bookmark" })' for head, repo_id: 0 (glob)
+  * Using the following segmented changelog heads: [AllPublicBookmarksExcept([BookmarkName { bookmark: "master_bookmark" }]), Bookmark(BookmarkName { bookmark: "master_bookmark" })], repo_id: 0 (glob)
   * SegmentedChangelogTailer initialized, repo_id: 0 (glob)
   * starting incremental update to segmented changelog, repo_id: 0 (glob)
   * iddag initialized, it covers 0 ids, repo_id: 0 (glob)
@@ -89,7 +94,7 @@ Add a new commit, and see the tailer tail it in properly
   $ blobimport repo-hg/.hg repo --derived-data-type fsnodes
   $ quiet segmented_changelog_tailer_once --repo repo
   $ grep "repo_id: 0" "$TESTTMP/quiet.last.log"
-  * using 'Bookmark(BookmarkName { bookmark: "master_bookmark" })' for head, repo_id: 0 (glob)
+  * Using the following segmented changelog heads: [AllPublicBookmarksExcept([BookmarkName { bookmark: "master_bookmark" }]), Bookmark(BookmarkName { bookmark: "master_bookmark" })], repo_id: 0 (glob)
   * SegmentedChangelogTailer initialized, repo_id: 0 (glob)
   * starting incremental update to segmented changelog, repo_id: 0 (glob)
   * iddag initialized, it covers 3 ids, repo_id: 0 (glob)
