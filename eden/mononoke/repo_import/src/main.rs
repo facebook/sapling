@@ -45,7 +45,7 @@ use movers::{DefaultAction, Mover};
 use pushrebase::do_pushrebase_bonsai;
 use question::{Answer, Question};
 use repo_blobstore::RepoBlobstoreRef;
-use segmented_changelog::{seedheads_from_config, SeedHead, SegmentedChangelogTailer};
+use segmented_changelog::{self, seedheads_from_config, SeedHead, SegmentedChangelogTailer};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use slog::info;
@@ -1274,7 +1274,11 @@ async fn tail_segmented_changelog(
     mysql_options: &MysqlOptions,
     segmented_changelog_config: &SegmentedChangelogConfig,
 ) -> Result<(), Error> {
-    let mut seed_heads = seedheads_from_config(&ctx, &segmented_changelog_config)?;
+    let mut seed_heads = seedheads_from_config(
+        ctx,
+        segmented_changelog_config,
+        segmented_changelog::JobType::Background,
+    )?;
     seed_heads.push(SeedHead::from(imported_cs_id));
 
     let segmented_changelog_tailer = SegmentedChangelogTailer::build_from(

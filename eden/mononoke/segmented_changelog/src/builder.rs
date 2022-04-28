@@ -27,7 +27,7 @@ use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::periodic_reload::PeriodicReloadSegmentedChangelog;
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::{
-    seedheads_from_config, CloneHints, DisabledSegmentedChangelog, InProcessIdDag,
+    seedheads_from_config, CloneHints, DisabledSegmentedChangelog, InProcessIdDag, JobType,
     SegmentedChangelog,
 };
 
@@ -56,8 +56,8 @@ pub fn new_test_segmented_changelog(
     if !config.enabled {
         return Ok(Arc::new(DisabledSegmentedChangelog::new()));
     }
-    let seed_heads =
-        seedheads_from_config(&ctx, config).context("finding segmented changelog heads")?;
+    let seed_heads = seedheads_from_config(&ctx, config, JobType::Server)
+        .context("finding segmented changelog heads")?;
     Ok(Arc::new(OnDemandUpdateSegmentedChangelog::new(
         ctx,
         repo_id,
@@ -82,8 +82,8 @@ pub async fn new_server_segmented_changelog_manager<'a>(
     cache_pool: Option<cachelib::VolatileLruCachePool>,
 ) -> Result<SegmentedChangelogManager> {
     let repo_id = repo_identity.id();
-    let seed_heads =
-        seedheads_from_config(ctx, &config).context("finding segmented changelog heads")?;
+    let seed_heads = seedheads_from_config(ctx, &config, JobType::Server)
+        .context("finding segmented changelog heads")?;
     let replica_lag_monitor = Arc::new(NoReplicaLagMonitor());
     let mut idmap_factory = IdMapFactory::new(connections.0.clone(), replica_lag_monitor, repo_id);
     if let Some(pool) = cache_pool {
@@ -124,8 +124,8 @@ pub async fn new_server_segmented_changelog<'a>(
     }
     if config.skip_dag_load_at_startup {
         let repo_id = repo_identity.id();
-        let seed_heads =
-            seedheads_from_config(ctx, &config).context("finding segmented changelog heads")?;
+        let seed_heads = seedheads_from_config(ctx, &config, JobType::Server)
+            .context("finding segmented changelog heads")?;
         // This is a special case. We build Segmented Changelog using an in process iddag and idmap
         // and update then on demand.
         // All other configuration is ignored, for example there won't be periodic updates

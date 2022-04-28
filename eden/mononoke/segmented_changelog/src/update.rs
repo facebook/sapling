@@ -52,9 +52,16 @@ impl IntoVertexList for SeedHead {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum JobType {
+    Background,
+    Server,
+}
+
 pub fn seedheads_from_config(
     ctx: &CoreContext,
     config: &SegmentedChangelogConfig,
+    _job_type: JobType,
 ) -> Result<Vec<SeedHead>> {
     let head = config
         .master_bookmark

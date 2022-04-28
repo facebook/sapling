@@ -54,7 +54,7 @@ pub use crate::clone_hints::CloneHints;
 pub use crate::copy::copy_segmented_changelog;
 pub use crate::manager::{ArcSegmentedChangelogManager, SegmentedChangelogManager};
 pub use crate::tailer::SegmentedChangelogTailer;
-pub use crate::update::{seedheads_from_config, SeedHead};
+pub use crate::update::{seedheads_from_config, JobType, SeedHead};
 
 // public for benchmarking
 pub use crate::idmap::{ConcurrentMemIdMap, IdMap};

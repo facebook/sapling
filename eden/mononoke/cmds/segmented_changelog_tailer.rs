@@ -24,7 +24,7 @@ use cmdlib::{
 };
 use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
-use segmented_changelog::{seedheads_from_config, SegmentedChangelogTailer};
+use segmented_changelog::{self, seedheads_from_config, SegmentedChangelogTailer};
 
 const ONCE_ARG: &str = "once";
 const REPO_ARG: &str = "repo";
@@ -169,7 +169,11 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             let head_args = matches.values_of(HEAD_ARG);
             let head_args_len = head_args.as_ref().map_or(0, |a| a.len());
             let mut heads = if head_args.is_none() || matches.is_present(CONFIG_HEADS_ARG) {
-                let mut heads = seedheads_from_config(&ctx, &config.segmented_changelog_config)?;
+                let mut heads = seedheads_from_config(
+                    &ctx,
+                    &config.segmented_changelog_config,
+                    segmented_changelog::JobType::Background,
+                )?;
                 heads.reserve(head_args_len);
                 heads
             } else {
