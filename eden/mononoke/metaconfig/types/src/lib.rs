@@ -1489,6 +1489,44 @@ impl AsRef<String> for HgsqlGlobalrevsName {
     }
 }
 
+/// An unit of configuration for what should be indexed by Segmented Changelog.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum SegmentedChangelogHeadConfig {
+    /// All public bookmarks with exceptions.
+    AllPublicBookmarksExcept(Vec<BookmarkName>),
+    /// A single bookmark.
+    Bookmark(BookmarkName),
+    /// A single changeset.
+    Changeset(ChangesetId),
+}
+
+impl From<Option<BookmarkName>> for SegmentedChangelogHeadConfig {
+    fn from(f: Option<BookmarkName>) -> Self {
+        match f {
+            None => Self::AllPublicBookmarksExcept(vec![]),
+            Some(n) => Self::Bookmark(n),
+        }
+    }
+}
+
+impl From<BookmarkName> for SegmentedChangelogHeadConfig {
+    fn from(n: BookmarkName) -> Self {
+        Self::Bookmark(n)
+    }
+}
+
+impl From<ChangesetId> for SegmentedChangelogHeadConfig {
+    fn from(c: ChangesetId) -> Self {
+        Self::Changeset(c)
+    }
+}
+
+impl From<&ChangesetId> for SegmentedChangelogHeadConfig {
+    fn from(c: &ChangesetId) -> Self {
+        Self::Changeset(*c)
+    }
+}
+
 /// Configuration for Segmented Changelog.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SegmentedChangelogConfig {

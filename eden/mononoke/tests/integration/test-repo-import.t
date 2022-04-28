@@ -149,7 +149,7 @@
   * Start deriving data types (glob)
   * Finished deriving data types (glob)
   * Start tailing segmented changelog (glob)
-  * using 'Bookmark master_bookmark' for head (glob)
+  * using 'Bookmark(BookmarkName { bookmark: "master_bookmark" })' for head (glob)
   * SegmentedChangelogTailer initialized (glob)
   * starting incremental update to segmented changelog (glob)
   * iddag initialized, it covers 3 ids (glob)

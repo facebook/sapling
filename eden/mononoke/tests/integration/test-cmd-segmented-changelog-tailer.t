@@ -67,7 +67,7 @@ Now test without head option (tailer will fetch it from config) and with prefetc
   $ grep -e "repo_id: 0" -e "segmented_changelog_tailer" "$TESTTMP/quiet.last.log"
   * reading prefetched commits from $TESTTMP/prefetched_commits (glob)
   * repo name 'repo' translates to id 0 (glob)
-  * using 'Bookmark master_bookmark' for head, repo_id: 0 (glob)
+  * using 'Bookmark(BookmarkName { bookmark: "master_bookmark" })' for head, repo_id: 0 (glob)
   * SegmentedChangelogTailer initialized, repo_id: 0 (glob)
   * starting incremental update to segmented changelog, repo_id: 0 (glob)
   * iddag initialized, it covers 0 ids, repo_id: 0 (glob)
@@ -89,7 +89,7 @@ Add a new commit, and see the tailer tail it in properly
   $ blobimport repo-hg/.hg repo --derived-data-type fsnodes
   $ quiet segmented_changelog_tailer_once --repo repo
   $ grep "repo_id: 0" "$TESTTMP/quiet.last.log"
-  * using 'Bookmark master_bookmark' for head, repo_id: 0 (glob)
+  * using 'Bookmark(BookmarkName { bookmark: "master_bookmark" })' for head, repo_id: 0 (glob)
   * SegmentedChangelogTailer initialized, repo_id: 0 (glob)
   * starting incremental update to segmented changelog, repo_id: 0 (glob)
   * iddag initialized, it covers 3 ids, repo_id: 0 (glob)

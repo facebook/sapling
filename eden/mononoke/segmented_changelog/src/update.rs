@@ -17,67 +17,37 @@ use bookmarks::{
     BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Bookmarks, Freshness,
 };
 use context::CoreContext;
-use metaconfig_types::SegmentedChangelogConfig;
+use metaconfig_types::{SegmentedChangelogConfig, SegmentedChangelogHeadConfig};
 use mononoke_types::ChangesetId;
 
 use crate::dag::{NameDagBuilder, VertexListWithOptions, VertexName, VertexOptions};
 use crate::idmap::{vertex_name_from_cs_id, IdMap, IdMapWrapper};
 use crate::{Group, InProcessIdDag};
 
-#[derive(Debug, Clone)]
-pub enum SeedHead {
-    Changeset(ChangesetId),
-    Bookmark(BookmarkName),
-    AllBookmarks,
+pub type SeedHead = SegmentedChangelogHeadConfig;
+
+#[async_trait::async_trait]
+trait IntoVertexList {
+    async fn into_vertex_list(
+        &self,
+        ctx: &CoreContext,
+        bookmarks: &dyn Bookmarks,
+    ) -> Result<VertexListWithOptions>;
 }
 
-impl From<Option<BookmarkName>> for SeedHead {
-    fn from(f: Option<BookmarkName>) -> Self {
-        match f {
-            None => Self::AllBookmarks,
-            Some(n) => Self::Bookmark(n),
-        }
-    }
-}
-
-impl From<BookmarkName> for SeedHead {
-    fn from(n: BookmarkName) -> Self {
-        Self::Bookmark(n)
-    }
-}
-
-impl From<ChangesetId> for SeedHead {
-    fn from(c: ChangesetId) -> Self {
-        Self::Changeset(c)
-    }
-}
-
-impl From<&ChangesetId> for SeedHead {
-    fn from(c: &ChangesetId) -> Self {
-        Self::Changeset(*c)
-    }
-}
-
-impl SeedHead {
-    pub async fn into_vertex_list(
+#[async_trait::async_trait]
+impl IntoVertexList for SeedHead {
+    async fn into_vertex_list(
         &self,
         ctx: &CoreContext,
         bookmarks: &dyn Bookmarks,
     ) -> Result<VertexListWithOptions> {
         match self {
             Self::Changeset(id) => Ok(VertexListWithOptions::from(vec![head_with_options(id)])),
-            Self::AllBookmarks => all_bookmarks_except_with_options(ctx, &[], bookmarks).await,
+            Self::AllPublicBookmarksExcept(exceptions) => {
+                all_bookmarks_except_with_options(ctx, exceptions, bookmarks).await
+            }
             Self::Bookmark(name) => bookmark_with_options(ctx, name, bookmarks).await,
-        }
-    }
-}
-
-impl std::fmt::Display for SeedHead {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Changeset(id) => write!(f, "Bonsai CS {}", id),
-            Self::Bookmark(name) => write!(f, "Bookmark {}", name),
-            Self::AllBookmarks => write!(f, "All Bookmarks"),
         }
     }
 }
@@ -94,7 +64,7 @@ pub fn seedheads_from_config(
         .into();
     let bonsai_changesets_to_include = &config.bonsai_changesets_to_include;
 
-    info!(ctx.logger(), "using '{}' for head", head);
+    info!(ctx.logger(), "using '{:?}' for head", head);
     if bonsai_changesets_to_include.len() > 0 {
         info!(
             ctx.logger(),
