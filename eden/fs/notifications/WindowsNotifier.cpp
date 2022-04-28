@@ -49,6 +49,7 @@ const wchar_t kWindowTitle[] = L"EdenFSMenu";
 const wchar_t kMenuToolTip[] = L"EdenFS Menu";
 const wchar_t kEdenVersion[] = L"Running EdenFS ";
 const wchar_t kEdenUptime[] = L"Uptime: ";
+const wchar_t kCheckoutToolTip[] = L"EdenFS is performing a checkout...";
 const wchar_t kMenuOptionsStr[] = L"Options";
 const wchar_t kDisableNotifications[] = L"Disable Notifications";
 const wchar_t kEnableNotifications[] = L"Enable Notifications";
@@ -536,9 +537,16 @@ void WindowsNotifier::changeIconColor(UINT iconType) {
   iconData.hWnd = hwnd_.get();
   // add the icon, setting the icon, tooltip, and callback message.
   // the icon will be identified with the GUID
-  iconData.uFlags = NIF_ICON;
+  iconData.uFlags = NIF_ICON | NIF_TIP | NIF_SHOWTIP;
   auto guid = getGuid();
   setGuidOrUid(iconData, hwnd_.get(), guid);
+  if (iconType == IDI_ONOTIFICATIONICON) {
+    StringCchPrintfW(
+        iconData.szTip, std::size(iconData.szTip), L"%s", kCheckoutToolTip);
+  } else {
+    StringCchPrintfW(
+        iconData.szTip, std::size(iconData.szTip), L"%s", kMenuToolTip);
+  }
   iconData.hIcon = checkNonZero(
       static_cast<HICON>(LoadImage(
           GetModuleHandle(NULL),
