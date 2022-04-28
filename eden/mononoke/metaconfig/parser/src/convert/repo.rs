@@ -431,13 +431,6 @@ impl Convert for RawSegmentedChangelogConfig {
             }
         }
 
-        let bonsai_changesets_to_include: Result<Vec<_>> = self
-            .bonsai_changesets_to_include
-            .unwrap_or(vec![])
-            .into_iter()
-            .map(|s| ChangesetId::from_str(&s))
-            .collect();
-
         let heads_to_include = self
             .heads_to_include
             .into_iter()
@@ -453,7 +446,6 @@ impl Convert for RawSegmentedChangelogConfig {
         let default = SegmentedChangelogConfig::default();
         Ok(SegmentedChangelogConfig {
             enabled: self.enabled.unwrap_or(default.enabled),
-            master_bookmark: self.master_bookmark,
             tailer_update_period: maybe_secs_to_duration(
                 self.tailer_update_period_secs,
                 default.tailer_update_period,
@@ -469,7 +461,6 @@ impl Convert for RawSegmentedChangelogConfig {
                 self.update_to_master_bookmark_period_secs,
                 default.update_to_master_bookmark_period,
             )?,
-            bonsai_changesets_to_include: bonsai_changesets_to_include?,
             heads_to_include,
             extra_heads_to_include_in_background_jobs,
         })

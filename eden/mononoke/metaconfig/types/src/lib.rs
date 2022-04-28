@@ -1534,8 +1534,6 @@ pub struct SegmentedChangelogConfig {
     /// This can mean that functionality is disabled to shed load, that the required data is not
     /// curretly being computed or that it was never computed for this repository.
     pub enabled: bool,
-    /// The bookmark that is followed to construct the Master group of the Dag.
-    pub master_bookmark: Option<String>,
     /// How often the tailer should check for updates on the master_bookmark.
     /// Defaults to 5 minutes.
     pub tailer_update_period: Option<Duration>,
@@ -1550,10 +1548,19 @@ pub struct SegmentedChangelogConfig {
     /// How often the in process Dag will check the master bookmark to update itself.
     /// The Dag will not check master when unset.
     pub update_to_master_bookmark_period: Option<Duration>,
-    /// List of bonsai changeset to include in the segmented changelog during reseeding.
+    /// All the heads that should be part of segmented changelog.
+    pub heads_to_include: Vec<SegmentedChangelogHeadConfig>,
+    /// Heads that should be indexed by segmented changelog offline jobs but
+    /// shouldn't be kept-up-to-date in online serving jobs.
     ///
-    /// To explain why we might need `bonsai_changesets_to_include` - say we have a
-    /// commit graph like this:
+    /// There are two usecases for including extra stuff there:
+    ///
+    /// The first one is repo imports, we don't want to overwhelm prod jobs with
+    /// doing the job for the branches we aren't going to be serving anytime
+    /// soon.
+    ///
+    /// The second usecase is backwards master moves:  say we have a commit
+    /// graph like this:
     /// ```text
     ///  B <- master
     ///  |
@@ -1580,15 +1587,6 @@ pub struct SegmentedChangelogConfig {
     /// It might lead to problems - clients might fail because server doesn't know about
     /// a commit they assume it should know of, and server would do expensive sql requests
     /// (see S242328).
-    ///
-    /// `bonsai_changesets_to_include` might help with that - if we add `B` to
-    /// `bonsai_changesets_to_include` then every reseeding would add B and it's
-    /// ancestors to the reseeded segmented changelog.
-    pub bonsai_changesets_to_include: Vec<ChangesetId>,
-    /// All the heads that should be part of segmented changelog.
-    pub heads_to_include: Vec<SegmentedChangelogHeadConfig>,
-    /// Heads that should be indexed by segmented changelog offline jobs but
-    /// shouldn't be kept-up-to-date in online serving jobs.
     pub extra_heads_to_include_in_background_jobs: Vec<SegmentedChangelogHeadConfig>,
 }
 
@@ -1596,12 +1594,10 @@ impl Default for SegmentedChangelogConfig {
     fn default() -> Self {
         SegmentedChangelogConfig {
             enabled: false,
-            master_bookmark: None,
             tailer_update_period: Some(Duration::from_secs(45)),
             skip_dag_load_at_startup: false,
             reload_dag_save_period: Some(Duration::from_secs(3600)),
             update_to_master_bookmark_period: Some(Duration::from_secs(60)),
-            bonsai_changesets_to_include: vec![],
             heads_to_include: vec![SegmentedChangelogHeadConfig::AllPublicBookmarksExcept(
                 vec![],
             )],

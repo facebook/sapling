@@ -1123,12 +1123,10 @@ mod test {
                 repo_client_use_warm_bookmarks_cache: true,
                 segmented_changelog_config: SegmentedChangelogConfig {
                     enabled: true,
-                    master_bookmark: Some(String::from("test_bookmark")),
                     tailer_update_period: None,
                     skip_dag_load_at_startup: true,
                     reload_dag_save_period: None,
                     update_to_master_bookmark_period: Some(Duration::from_secs(120)),
-                    bonsai_changesets_to_include: vec![],
                     heads_to_include: vec![SegmentedChangelogHeadConfig::Bookmark(
                         BookmarkName::new("test_bookmark").unwrap(),
                     )],
@@ -1209,12 +1207,10 @@ mod test {
                 repo_client_use_warm_bookmarks_cache: false,
                 segmented_changelog_config: SegmentedChangelogConfig {
                     enabled: false,
-                    master_bookmark: None,
                     tailer_update_period: Some(Duration::from_secs(45)),
                     skip_dag_load_at_startup: false,
                     reload_dag_save_period: Some(Duration::from_secs(3600)),
                     update_to_master_bookmark_period: Some(Duration::from_secs(60)),
-                    bonsai_changesets_to_include: vec![],
                     heads_to_include: vec![SegmentedChangelogHeadConfig::AllPublicBookmarksExcept(
                         vec![],
                     )],

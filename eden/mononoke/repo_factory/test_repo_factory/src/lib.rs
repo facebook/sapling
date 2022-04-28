@@ -125,7 +125,6 @@ pub fn default_test_repo_config() -> RepoConfig {
             heads_to_include: vec![SegmentedChangelogHeadConfig::Bookmark(
                 BookmarkName::new("master").unwrap(),
             )],
-            master_bookmark: Some("master".to_string()),
             ..Default::default()
         },
         ..Default::default()
