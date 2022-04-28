@@ -64,4 +64,5 @@ void CommandNotifier::showNetworkNotification(const std::exception& err) {
 
   SpawnedProcess(args).detach();
 }
+
 } // namespace facebook::eden

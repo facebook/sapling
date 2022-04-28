@@ -1748,6 +1748,11 @@ void EdenMount::setLastCheckoutTime(EdenTimestamp time) {
   lastCheckoutTime_.store(time, std::memory_order_release);
 }
 
+bool EdenMount::isCheckoutInProgress() {
+  auto parentLock = parentState_.rlock();
+  return parentLock->checkoutInProgress;
+}
+
 RenameLock EdenMount::acquireRenameLock() {
   return RenameLock{this};
 }

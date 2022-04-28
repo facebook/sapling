@@ -7,4 +7,7 @@
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 
-IDI_NOTIFICATIONICON       ICON         "edenw256.ico"
+IDI_WNOTIFICATIONICON       ICON         "edenw256.ico"
+IDI_ONOTIFICATIONICON       ICON         "edeno256.ico"
+IDI_GNOTIFICATIONICON       ICON         "edeng256.ico"
+IDI_RNOTIFICATIONICON       ICON         "edenr256.ico"

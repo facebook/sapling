@@ -43,6 +43,8 @@ const wchar_t kSendTestGenericNotification[] =
     L"Send Test Generic Notification";
 const wchar_t kSendTestNetworkNotification[] =
     L"Send Test Network Notification";
+const wchar_t kEndCheckout[] = L"Simulate Ending Checkout";
+const wchar_t kStartCheckout[] = L"Simulate Starting Checkout";
 const wchar_t kWindowTitle[] = L"EdenFSMenu";
 const wchar_t kMenuToolTip[] = L"EdenFS Menu";
 const wchar_t kEdenVersion[] = L"Running EdenFS ";
@@ -59,6 +61,9 @@ constexpr UINT IDM_EDENDEBUGNETWORKNOTIFICATION = 127;
 constexpr UINT IDM_EDENINFO = 128;
 constexpr UINT IDM_TOGGLENOTIFICATIONS = 129;
 constexpr UINT IDM_EDENREPORT = 130;
+constexpr UINT IDM_SIGNALCHECKOUT = 131;
+constexpr UINT IDM_SIGNALSTARTCHECKOUT = 132;
+constexpr UINT IDM_SIGNALENDCHECKOUT = 133;
 
 void check(bool opResult, std::string_view context) {
   if (opResult) {
@@ -135,11 +140,11 @@ void addNotificationIcon(HWND hwnd) {
   iconData.hIcon = checkNonZero(
       static_cast<HICON>(LoadImage(
           GetModuleHandle(NULL),
-          MAKEINTRESOURCE(IDI_NOTIFICATIONICON),
+          MAKEINTRESOURCE(IDI_WNOTIFICATIONICON),
           IMAGE_ICON,
           32,
           32,
-          LR_DEFAULTCOLOR)),
+          LR_DEFAULTCOLOR | LR_SHARED)),
       "LoadImage failed");
 
   // We might have a stale icon if eden was uncleanly terminated. We
@@ -202,6 +207,16 @@ void appendDebugMenu(HMENU hMenu) {
       MF_BYPOSITION | MF_STRING,
       IDM_EDENDEBUGNETWORKNOTIFICATION,
       kSendTestNetworkNotification);
+  appendMenuEntry(
+      subMenu.get(),
+      MF_BYPOSITION | MF_STRING,
+      IDM_SIGNALSTARTCHECKOUT,
+      kStartCheckout);
+  appendMenuEntry(
+      subMenu.get(),
+      MF_BYPOSITION | MF_STRING,
+      IDM_SIGNALENDCHECKOUT,
+      kEndCheckout);
   appendMenuEntry(
       hMenu,
       MF_BYPOSITION | MF_POPUP,
@@ -327,6 +342,25 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
             return 0;
           }
 
+          case IDM_SIGNALCHECKOUT: {
+            auto notifier = getWindowsNotifier(hwnd);
+            auto numActive = static_cast<size_t>(lParam);
+            notifier->updateIconColor(numActive);
+            return 0;
+          }
+
+          case IDM_SIGNALSTARTCHECKOUT: {
+            auto notifier = getWindowsNotifier(hwnd);
+            notifier->signalCheckout(1);
+            return 0;
+          }
+
+          case IDM_SIGNALENDCHECKOUT: {
+            auto notifier = getWindowsNotifier(hwnd);
+            notifier->signalCheckout(0);
+            return 0;
+          }
+
           default:
             return DefWindowProc(hwnd, message, wParam, lParam);
         }
@@ -403,6 +437,41 @@ int windowsEventLoop(
   }
   return 0;
 }
+
+void cacheIconImages() {
+  // Load all icon images so that they're cached for future use. This is
+  // achieved with the LR_SHARED flag. The LR_SHARED flag makes all future
+  // invocations of LoadImage load the image from cache
+  LoadImage(
+      GetModuleHandle(NULL),
+      MAKEINTRESOURCE(IDI_WNOTIFICATIONICON),
+      IMAGE_ICON,
+      32,
+      32,
+      LR_DEFAULTCOLOR | LR_SHARED);
+  LoadImage(
+      GetModuleHandle(NULL),
+      MAKEINTRESOURCE(IDI_ONOTIFICATIONICON),
+      IMAGE_ICON,
+      32,
+      32,
+      LR_DEFAULTCOLOR | LR_SHARED);
+  LoadImage(
+      GetModuleHandle(NULL),
+      MAKEINTRESOURCE(IDI_RNOTIFICATIONICON),
+      IMAGE_ICON,
+      32,
+      32,
+      LR_DEFAULTCOLOR | LR_SHARED);
+  LoadImage(
+      GetModuleHandle(NULL),
+      MAKEINTRESOURCE(IDI_GNOTIFICATIONICON),
+      IMAGE_ICON,
+      32,
+      32,
+      LR_DEFAULTCOLOR | LR_SHARED);
+}
+
 } // namespace
 
 WindowsNotifier::WindowsNotifier(
@@ -415,6 +484,7 @@ WindowsNotifier::WindowsNotifier(
                                    : std::optional<Guid>(EMenuGuid)},
       version_{version},
       startTime_{startTime} {
+  cacheIconImages();
   // We only use 1 bit of the uint8_t to indicate notifs are enabled/disabled
   notificationStatus_ = notificationsEnabledInConfig()
       ? (1 << kNotificationsEnabledBit)
@@ -440,6 +510,46 @@ WindowsNotifier::~WindowsNotifier() {
       NULL,
       reinterpret_cast<LPARAM>(this));
   eventThread_.join();
+}
+
+void WindowsNotifier::signalCheckout(size_t numActive) {
+  PostMessage(
+      hwnd_.get(),
+      WM_COMMAND,
+      IDM_SIGNALCHECKOUT,
+      static_cast<LPARAM>(numActive));
+}
+
+void WindowsNotifier::updateIconColor(size_t numActive) {
+  // In-progress checkouts (orange) take priority over unhealthy EdenFS mounts
+  // (red). Default to white if we're healthy and have no in-progress checkouts.
+  if (numActive > 0) {
+    changeIconColor(IDI_ONOTIFICATIONICON);
+  } else {
+    changeIconColor(IDI_WNOTIFICATIONICON);
+  }
+}
+
+void WindowsNotifier::changeIconColor(UINT iconType) {
+  NOTIFYICONDATAW iconData = {};
+  iconData.cbSize = sizeof(iconData);
+  iconData.hWnd = hwnd_.get();
+  // add the icon, setting the icon, tooltip, and callback message.
+  // the icon will be identified with the GUID
+  iconData.uFlags = NIF_ICON;
+  auto guid = getGuid();
+  setGuidOrUid(iconData, hwnd_.get(), guid);
+  iconData.hIcon = checkNonZero(
+      static_cast<HICON>(LoadImage(
+          GetModuleHandle(NULL),
+          MAKEINTRESOURCE(iconType),
+          IMAGE_ICON,
+          32,
+          32,
+          LR_DEFAULTCOLOR | LR_SHARED)),
+      "LoadImage failed");
+  // Ignore failures. It's not essential to E-Menu functioning
+  (void)Shell_NotifyIconW(NIM_MODIFY, &iconData);
 }
 
 void WindowsNotifier::appendOptionsMenu(HMENU hMenu) {

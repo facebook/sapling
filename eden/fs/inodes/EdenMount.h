@@ -717,6 +717,11 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   void setLastCheckoutTime(EdenTimestamp time);
 
   /**
+   * Returns true if a checkout is in progress, false otherwise.
+   */
+  bool isCheckoutInProgress();
+
+  /**
    * Returns the key value to an fb303 counter.
    */
   std::string getCounterName(CounterName name);

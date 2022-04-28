@@ -444,6 +444,19 @@ class EdenServer : private TakeoverHandler {
       std::chrono::milliseconds timeout,
       std::function<void()> fn);
 
+  /**
+   * Returns the number of in progress checkouts that EdenFS is aware of
+   */
+  size_t enumerateInProgressCheckouts() {
+    size_t numActive = 0;
+    auto mountPoints = mountPoints_.rlock();
+    for (auto& entry : *mountPoints) {
+      auto& info = entry.second;
+      numActive += info.edenMount->isCheckoutInProgress() ? 1 : 0;
+    }
+    return numActive;
+  }
+
  private:
   // Struct to store EdenMount along with SharedPromise that is set
   // during unmount to allow synchronization between unmountFinished

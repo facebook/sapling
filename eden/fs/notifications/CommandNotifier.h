@@ -32,7 +32,9 @@ class CommandNotifier : public Notifier {
       std::string_view notifBody,
       std::string_view mount) override;
 
-  virtual void showNetworkNotification(const std::exception& err) override;
+  void showNetworkNotification(const std::exception& err) override;
+
+  void signalCheckout(size_t /*numActive*/) override {}
 };
 
 } // namespace eden

@@ -109,10 +109,14 @@ class WindowsNotifier : public Notifier {
     notificationStatus_ ^= (1 << kNotificationsEnabledBit);
   }
 
+  void signalCheckout(size_t numActive) override;
+
+  void updateIconColor(size_t numActive);
+
  private:
   void appendOptionsMenu(HMENU hMenu);
   MenuHandle createEdenMenu();
-
+  void changeIconColor(UINT iconType);
   std::optional<Guid> guid_;
   WindowHandle hwnd_;
   std::string version_;

@@ -1712,10 +1712,15 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
         ->importManifestForRoot(rootId, rootManifest)
         .get();
   }
+  // the +1 is so we count the current checkout that hasn't quite started yet
+  getServerState()->getNotifier()->signalCheckout(
+      enumerateInProgressCheckouts() + 1);
   return edenMount->checkout(rootId, clientPid, callerName, checkoutMode)
       .via(mainEventBase_)
       .thenValue([this, checkoutMode, edenMount, mountPath](
                      CheckoutResult&& result) {
+        getServerState()->getNotifier()->signalCheckout(
+            enumerateInProgressCheckouts());
         if (checkoutMode == CheckoutMode::DRY_RUN) {
           return std::move(result);
         }

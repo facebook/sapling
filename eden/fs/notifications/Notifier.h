@@ -45,6 +45,12 @@ class Notifier {
    */
   virtual void showNetworkNotification(const std::exception& err) = 0;
 
+  /**
+   * Signal to the notifier that the count of live checkout operations has
+   * changed.
+   */
+  virtual void signalCheckout(size_t numActive) = 0;
+
  protected:
   bool updateLastShown();
   std::shared_ptr<ReloadableConfig> config_;
