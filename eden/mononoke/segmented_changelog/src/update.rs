@@ -8,9 +8,10 @@
 use std::sync::Arc;
 
 use anyhow::{format_err, Context, Error, Result};
-use futures::future::{FutureExt, TryFutureExt};
-use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::future;
+use futures::stream::{self, TryStreamExt};
 use slog::info;
+use std::collections::HashSet;
 
 use bookmarks::{
     BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Bookmarks, Freshness,
@@ -65,8 +66,8 @@ impl SeedHead {
     ) -> Result<VertexListWithOptions> {
         match self {
             Self::Changeset(id) => Ok(VertexListWithOptions::from(vec![head_with_options(id)])),
-            Self::AllBookmarks => bookmark_with_options(ctx, None, bookmarks).await,
-            Self::Bookmark(name) => bookmark_with_options(ctx, Some(&name), bookmarks).await,
+            Self::AllBookmarks => all_bookmarks_except_with_options(ctx, &[], bookmarks).await,
+            Self::Bookmark(name) => bookmark_with_options(ctx, name, bookmarks).await,
         }
     }
 }
@@ -145,54 +146,46 @@ fn head_with_options(head: &ChangesetId) -> (VertexName, VertexOptions) {
     (vertex_name_from_cs_id(head), options)
 }
 
-async fn bookmark_with_options(
+async fn all_bookmarks_except_with_options(
     ctx: &CoreContext,
-    bookmark: Option<&BookmarkName>,
+    exceptions: &[BookmarkName],
     bookmarks: &dyn Bookmarks,
 ) -> Result<VertexListWithOptions> {
-    let bm_stream = match bookmark {
-        None => bookmarks
-            .list(
-                ctx.clone(),
-                Freshness::MaybeStale,
-                &BookmarkPrefix::empty(),
-                BookmarkKind::ALL_PUBLISHING,
-                &BookmarkPagination::FromStart,
-                u64::MAX,
-            )
-            .map_ok(|(_bookmark, cs_id)| cs_id)
-            .left_stream(),
-        Some(bookmark_name) => stream::once(
-            bookmarks
-                .get(ctx.clone(), bookmark_name)
-                .and_then({
-                    let bookmark_name = bookmark_name.clone();
-                    move |opt_cs_id| async move {
-                        opt_cs_id.ok_or_else({
-                            move || format_err!("'{}' bookmark could not be found", bookmark_name)
-                        })
-                    }
-                })
-                .map({
-                    let bookmark_name = bookmark_name.clone();
-                    move |r| {
-                        r.with_context(|| {
-                            format!(
-                                "error while fetching changeset for bookmark {}",
-                                bookmark_name
-                            )
-                        })
-                    }
-                }),
+    let exceptions: HashSet<_> = exceptions.iter().cloned().collect();
+    Ok(bookmarks
+        .list(
+            ctx.clone(),
+            Freshness::MaybeStale,
+            &BookmarkPrefix::empty(),
+            BookmarkKind::ALL_PUBLISHING,
+            &BookmarkPagination::FromStart,
+            u64::MAX,
         )
-        .right_stream(),
-    };
-    Ok(VertexListWithOptions::from(
-        bm_stream
-            .map_ok(|cs| head_with_options(&cs))
-            .try_collect::<Vec<_>>()
-            .await?,
-    ))
+        .try_filter_map(|(bookmark, cs_id)| {
+            let res = if exceptions.contains(bookmark.name()) {
+                None
+            } else {
+                Some(cs_id)
+            };
+            future::ready(Ok(res))
+        })
+        .map_ok(|cs| head_with_options(&cs))
+        .try_collect::<Vec<_>>()
+        .await?
+        .into())
+}
+
+async fn bookmark_with_options(
+    ctx: &CoreContext,
+    bookmark: &BookmarkName,
+    bookmarks: &dyn Bookmarks,
+) -> Result<VertexListWithOptions> {
+    let cs = bookmarks
+        .get(ctx.clone(), bookmark)
+        .await
+        .with_context(|| format!("error while fetching changeset for bookmark {}", bookmark))?
+        .ok_or_else(move || format_err!("'{}' bookmark could not be found", bookmark))?;
+    Ok(VertexListWithOptions::from(vec![head_with_options(&cs)]))
 }
 
 #[cfg(test)]
@@ -229,7 +222,7 @@ mod tests {
         let repo = prep_branch_wide_repo(fb).await?;
         let second = BookmarkName::new("second")?;
 
-        let res = bookmark_with_options(&ctx, Some(&second), repo.bookmarks().as_ref()).await?;
+        let res = bookmark_with_options(&ctx, &second, repo.bookmarks().as_ref()).await?;
         assert_eq!(
             res.vertexes(),
             vec![VertexName::from_hex(
@@ -240,11 +233,13 @@ mod tests {
     }
 
     #[fbinit::test]
-    async fn test_all_bookmarks_with_options(fb: FacebookInit) -> Result<()> {
+    async fn test_all_bookmarks_except_with_options(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo = prep_branch_wide_repo(fb).await?;
 
-        let res = bookmark_with_options(&ctx, None, repo.bookmarks().as_ref()).await?;
+        let res =
+            all_bookmarks_except_with_options(&ctx, vec![].as_slice(), repo.bookmarks().as_ref())
+                .await?;
         assert_eq!(
             res.vertexes(),
             vec![
@@ -253,6 +248,24 @@ mod tests {
                 )?,
                 VertexName::from_hex(
                     b"5ec506306edb84a4a47f901a55cedeec3113eb118bfae119982f45382481e3dc"
+                )?,
+                VertexName::from_hex(
+                    b"7097e8d1e72af16e8135047d8693fb381246be1bc74c1b6c0cb013fc05331fc1"
+                )?,
+            ]
+        );
+
+        let res = all_bookmarks_except_with_options(
+            &ctx,
+            vec![BookmarkName::new("second")?].as_slice(),
+            repo.bookmarks().as_ref(),
+        )
+        .await?;
+        assert_eq!(
+            res.vertexes(),
+            vec![
+                VertexName::from_hex(
+                    b"56da5b997e27f2f9020f6ff2d87b321774369e23579bd2c4ce675efad363f4f4"
                 )?,
                 VertexName::from_hex(
                     b"7097e8d1e72af16e8135047d8693fb381246be1bc74c1b6c0cb013fc05331fc1"
