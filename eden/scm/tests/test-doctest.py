@@ -95,5 +95,6 @@ testmod("edenscm.hgext.convert.p4")
 
 if sys.platform == "linux":
     testmod("edenscm.testing.sh")
+    testmod("edenscm.testing.t.diff")
     testmod("edenscm.testing.t.runtime")
     testmod("edenscm.testing.t.transform")

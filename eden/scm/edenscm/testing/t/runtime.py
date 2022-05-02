@@ -7,7 +7,6 @@
 
 from __future__ import annotations
 
-import fnmatch
 import io
 import os
 import re
@@ -18,12 +17,13 @@ import textwrap
 import unittest
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional
 
 from .. import sh
 from ..sh.osfs import OSFS
 from ..sh.types import Env, Scope
 from . import shext
+from .diff import MultiLineMatcher
 
 
 def hasfeature(feature: str) -> bool:
@@ -46,81 +46,6 @@ def require(feature: str):
     """require a feature to run a test"""
     if not hasfeature(feature):
         raise unittest.SkipTest(f"missing feature: {feature}")
-
-
-def eqglob(a: str, b: str) -> bool:
-    r"""compare multi-line strings, with '(glob)', '(re)', '(esc)' support
-
-    >>> eqglob("a\na\n", "a\na\n")
-    True
-    >>> eqglob("a\na\n", "a\nb\n")
-    False
-    >>> eqglob("a\na\n", "[ab] (re)\n* (glob)\n")
-    True
-    >>> eqglob("c\n", "[ab] (re)")
-    False
-    """
-    if not (isinstance(a, str) and isinstance(b, str)):
-        return False
-    alines = a.splitlines()
-    blines = b.splitlines()
-    if len(alines) != len(blines):
-        return False
-    for aline, bline in zip(alines, blines):
-        if not _matchline(aline, bline):
-            return False
-    return True
-
-
-def normalizeeqglob(a: str, b: str) -> str:
-    r"""normalize 'a' to use glob patterns in 'b'
-
-    >>> normalizeeqglob("a\nb\nc\n", "x\na\n* (glob)\nd\n")
-    'a\n* (glob)\nc\n'
-    """
-    # avoid hard dependency on edenscm's bindings (xdiff)
-    import difflib
-
-    alines = a.splitlines(True)
-    blines = b.splitlines(True)
-    outlines = []
-    for (tag, i1, i2, j1, j2) in difflib.SequenceMatcher(
-        a=alines, b=blines
-    ).get_opcodes():
-        if tag in ("delete", "equal"):
-            outlines += alines[i1:i2]
-        elif tag == "replace":
-            for i in range(i1, i2):
-                j = i + j1 - i1
-                if j < j2 and _matchline(alines[i].rstrip(), blines[j].rstrip()):
-                    outlines.append(blines[j])
-                else:
-                    outlines.append(alines[i])
-    return "".join(outlines)
-
-
-def _matchline(aline: str, bline: str) -> bool:
-    if bline.endswith(" (esc)"):
-        # If it's a unicode string that contains escapes, turn it to binary
-        # first.
-        bline = bline[:-6].encode("raw_unicode_escape").decode("unicode-escape")
-    if os.name == "nt":
-        # Normalize path on Windows.
-        aline = aline.replace("\\", "/")
-        bline = bline.replace("\\", "/")
-    if bline.endswith(" (glob)"):
-        # As an approximation, use fnmatch to do the job.
-        # "[]" do not have special meaning in run-tests.py glob patterns.
-        # Replace them with "?".
-        globline = bline[:-7].replace("[", "?").replace("]", "?")
-        if not fnmatch.fnmatch(aline, globline):
-            return False
-    elif bline.endswith(" (re)"):
-        if not re.match(bline[:-5] + r"\Z", aline):
-            return False
-    elif aline != bline:
-        return False
-    return True
 
 
 @dataclass
@@ -165,13 +90,13 @@ def checkoutput(
     """compare output (a) with reference (b)
     report mismatch via globals()['mismatchcb']
     """
-    # ensure ending with a single "\n"
-    a = _normalizetrailingspace(a)
-    b = _normalizetrailingspace(b)
-    if not eqglob(a, b):
+    hasfeature = sys._getframe(1).f_globals.get("hasfeature")
+    matcher = MultiLineMatcher(b, hasfeature)
+    if not matcher.match(a):
+        a, b = matcher.normalize(a)
         # collect the output mismatch in 'mismatchmap'
         mismatch = Mismatch(
-            actual=normalizeeqglob(a, b),
+            actual=a,
             expected=b,
             src=src,
             srcloc=srcloc,

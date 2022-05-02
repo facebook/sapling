@@ -48,6 +48,8 @@ Diff output:
   $ cat > test-fail-sh.t << 'EOF'
   >   $ seq 3
   >   0
+  >   a (false !)
+  >   b (?)
   >   1
   >   * (glob)
   > 
@@ -82,11 +84,13 @@ Test output:
   test-fail-sh.t ---------------------------------------------------------------
      1 $ seq 3
       -0
+       a (false !)
+       b (?)
        1
        * (glob)
       +3
   
-     6 >>> 1+2
+     8 >>> 1+2
       -5
       +3
   
@@ -128,8 +132,10 @@ Autofix:
   $ hg debugruntest test-fail-sh.t
   # Ran 1 tests, 0 skipped, 0 failed.
 
-  $ head -4 test-fail-sh.t
+  $ head -6 test-fail-sh.t
     $ seq 3
+    a (false !)
+    b (?)
     1
     * (glob)
     3
