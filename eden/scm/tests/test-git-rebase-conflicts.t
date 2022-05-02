@@ -6,7 +6,6 @@ Test that rebasing in a git repo with conflicts work.
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=true ui.allowemptycommit=true
   $ enable rebase
-  $ shorttraceback
 
 Prepare the repo
 
@@ -36,5 +35,9 @@ Rebase with merge.printcandidatecommits:
   $ hg rebase -r $B -d $A7 --config merge.printcandidatecommmits=1
   rebasing 5c2dbc94ad6b "B"
   merging A
-  AttributeError: 'gitfilelog' object has no attribute 'linkrev'
-  [255]
+  warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
+   2 commits might have introduced this conflict:
+    - [ff6d58de9da5] A5
+    - [b7b8bbe2022e] A3
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]

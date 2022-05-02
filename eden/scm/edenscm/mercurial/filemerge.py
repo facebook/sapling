@@ -521,25 +521,47 @@ def _findconflictingcommits(repo, fcd, fca, maxcommits=10):
 
     Returns changectx[], max_hit?
     """
-    # (In a remotefilelog repo this will trigger a loose file download -- max
-    # one per call to _find_conflicting_commits)
-    # fcd is often workingfilectx, but not always.
-    current = fcd.parents()[:1]
+    # current (fcd might be workingfilectx)
+    #  :
+    # common ancestor (fca)
     candidates = []
-    while current:
-        ctx = current[0].changectx()
+    if (
+        repo.ui.configbool("experimental", "pathhistory.find-merge-conflicts")
+        and repo.changelog.algorithmbackend == "segments"
+    ):
+        # use pathhistory to find conflicts
+        paths = [fcd.path()]
+        dnode = fcd.node()
+        if dnode is None:
+            dnode = fcd.changectx().p1().node()
+        if dnode:
+            anode = fca.node()
+            nodes = repo.dageval(lambda: only([dnode], anode and [anode] or []))
+            history = repo.pathhistory(paths, nodes)
+            for node in history:
+                candidates.append(repo[node])
+                if len(candidates) >= maxcommits:
+                    break
+    else:
+        # use linkrev to find conflicts (crashes with git)
+        # (In a remotefilelog repo this will trigger a loose file download -- max
+        # one per call to _find_conflicting_commits)
+        # fcd is often workingfilectx, but not always.
+        current = fcd.parents()[:1]
+        while current:
+            ctx = current[0].changectx()
 
-        # Stop once we go beyond the common ancestor.
-        if repo.changelog.isancestor(ctx.node(), fca.node()):
-            break
+            # Stop once we go beyond the common ancestor.
+            if repo.changelog.isancestor(ctx.node(), fca.node()):
+                break
 
-        candidates.append(ctx)
-        if len(candidates) >= maxcommits:
-            break
+            candidates.append(ctx)
+            if len(candidates) >= maxcommits:
+                break
 
-        # Ignoring p2 path for simplicity. Ideally, we also follow p2, and
-        # can draw the graph DAG to the user.
-        current = current[0].parents()[:1]
+            # Ignoring p2 path for simplicity. Ideally, we also follow p2, and
+            # can draw the graph DAG to the user.
+            current = current[0].parents()[:1]
 
     return candidates, len(candidates) >= maxcommits
 
