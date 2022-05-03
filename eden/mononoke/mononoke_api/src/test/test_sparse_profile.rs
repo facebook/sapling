@@ -125,7 +125,7 @@ async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
     let changeset_a = ChangesetContext::new(repo.clone(), a);
     let size = get_profile_size(&ctx, &changeset_a, &MPath::new("sparse/include")?).await?;
 
-    assert_eq!(size, 45);
+    assert_eq!(size, Some(45));
 
     // change size of a file which is included in sparse profile
     // profile size should change.
@@ -137,7 +137,7 @@ async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
 
     let changeset_b = ChangesetContext::new(repo.clone(), b);
     let size = get_profile_size(&ctx, &changeset_b, &MPath::new("sparse/include")?).await?;
-    assert_eq!(size, 37);
+    assert_eq!(size, Some(37));
 
     // change size of file which is NOT included in sparse profile
     // profile size should not change.
@@ -149,7 +149,7 @@ async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
 
     let changeset_c = ChangesetContext::new(repo, c);
     let size = get_profile_size(&ctx, &changeset_c, &MPath::new("sparse/include")?).await?;
-    assert_eq!(size, 37);
+    assert_eq!(size, Some(37));
 
     Ok(())
 }

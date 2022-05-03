@@ -5,15 +5,18 @@
  * GNU General Public License version 2.
  */
 
+use crate::errors::MononokeError;
 use crate::ChangesetContext;
+use crate::ChangesetFileOrdering;
+use crate::MononokePath;
 use anyhow::{anyhow, Context, Error, Result};
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future::BoxFuture, FutureExt, TryStreamExt};
+use futures::{future::BoxFuture, FutureExt, Stream, StreamExt, TryStreamExt};
 use mononoke_types::{fsnode::FsnodeEntry, MPath};
-#[allow(unused)]
 use pathmatcher::{DirectoryMatch, Matcher, TreeMatcher};
+use slog::info;
 use types::RepoPath;
 
 use std::sync::Arc;
@@ -24,7 +27,6 @@ pub enum SparseProfileEntry {
     Exclude(String),
 }
 
-#[allow(unused)]
 impl SparseProfileEntry {
     fn as_path(&self) -> String {
         match self {
@@ -45,7 +47,7 @@ pub fn parse_sparse_profile_content<'a>(
     ctx: &'a CoreContext,
     changeset: &'a ChangesetContext,
     path: &'a MPath,
-) -> BoxFuture<'a, Result<Vec<SparseProfileEntry>>> {
+) -> BoxFuture<'a, Result<Vec<SparseProfileEntry>, MononokeError>> {
     enum Section {
         Include,
         Exclude,
@@ -57,7 +59,7 @@ pub fn parse_sparse_profile_content<'a>(
         let file_ctx = path_with_content
             .file()
             .await?
-            .ok_or_else(|| anyhow!("{:?} not found", path))?;
+            .ok_or_else(|| anyhow!("While parsing_sparse_profile_content {:?} not found", path))?;
         let content = file_ctx.content_concat().await?;
 
         let content =
@@ -99,7 +101,6 @@ pub fn parse_sparse_profile_content<'a>(
     .boxed()
 }
 
-#[allow(unused)]
 pub(crate) fn build_tree_matcher(entries: Vec<SparseProfileEntry>) -> Result<TreeMatcher> {
     let mut rules_includes = vec![];
     let mut rules_excludes = vec![];
@@ -120,7 +121,6 @@ pub(crate) fn build_tree_matcher(entries: Vec<SparseProfileEntry>) -> Result<Tre
     Ok(matcher)
 }
 
-#[allow(unused)]
 fn convert_to_globs(s: String) -> Option<Vec<String>> {
     let (kind, pat) = match s.split_once(':') {
         Some((kind, pat)) => (kind, pat),
@@ -153,7 +153,6 @@ fn convert_to_globs(s: String) -> Option<Vec<String>> {
     }
 }
 
-#[allow(unused)]
 fn makeglobrecursive(mut s: String) -> String {
     if s.ends_with('/') || s.is_empty() {
         s.push_str("**")
@@ -167,19 +166,43 @@ pub async fn get_profile_size(
     ctx: &CoreContext,
     changeset: &ChangesetContext,
     path: &MPath,
-) -> Result<u64> {
-    let entries = parse_sparse_profile_content(ctx, changeset, path).await?;
+) -> Result<Option<u64>, MononokeError> {
+    let entries = match parse_sparse_profile_content(ctx, changeset, path).await {
+        Err(e) => {
+            info!(
+                ctx.logger(),
+                "error during parsing profile {}: {}",
+                path.to_string(),
+                e
+            );
+            return Ok(None);
+        }
+        Ok(entries) => entries,
+    };
 
-    let matcher = Arc::new(build_tree_matcher(entries)?);
+    let matcher = match build_tree_matcher(entries) {
+        Err(e) => {
+            info!(
+                ctx.logger(),
+                "error during building tree matcher for {}: {}",
+                path.to_string(),
+                e
+            );
+            return Ok(None);
+        }
+        Ok(m) => m,
+    };
 
-    calculate_size(ctx, changeset, matcher).await
+    Ok(Some(
+        calculate_size(ctx, changeset, Arc::new(matcher)).await?,
+    ))
 }
 
 async fn calculate_size(
     ctx: &CoreContext,
     changeset: &ChangesetContext,
     matcher: Arc<TreeMatcher>,
-) -> Result<u64> {
+) -> Result<u64, MononokeError> {
     let root_fsnode_id = changeset.root_fsnode_id().await?;
     let root: Option<MPath> = None;
     let sizes = bounded_traversal::bounded_traversal_stream(
@@ -224,4 +247,19 @@ async fn calculate_size(
     .try_collect::<Vec<_>>()
     .await?;
     Ok(sizes.iter().sum())
+}
+
+pub async fn get_all_profiles(
+    changeset: &ChangesetContext,
+) -> Result<impl Stream<Item = MPath>, MononokeError> {
+    // TODO: read profile location from config
+    let prefixes = vec![MononokePath::try_from("tools/scm/sparse")?];
+    Ok(changeset
+        .find_files(Some(prefixes), None, ChangesetFileOrdering::Unordered)
+        .await?
+        .filter_map(|path| async move {
+            path.ok()?
+                .into_mpath()
+                .filter(|p| p.basename().as_ref() != b"README.md")
+        }))
 }

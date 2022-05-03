@@ -11,7 +11,6 @@ use scuba_ext::{MononokeScubaSampleBuilder, ScubaValue};
 use source_control as thrift;
 
 use crate::commit_id::CommitIdExt;
-use crate::methods::commit_sparse_profile_info::SparseProfilesExt;
 use crate::scuba_common::{hex, report_megarepo_target, Reported};
 
 /// A trait for logging a thrift `Params` struct to scuba.
@@ -297,13 +296,39 @@ impl AddScubaParams for thrift::CommitMultiplePathLastChangedParams {
 impl AddScubaParams for thrift::CommitSparseProfileDeltaParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("other_commit", self.other_id.to_string());
-        scuba.add("param_sparse_profiles", self.profiles.to_string());
+        scuba.add(
+            "param_paths",
+            match &self.profiles {
+                thrift::SparseProfiles::all_profiles(_) => {
+                    ScubaValue::from("all sparse profiles".to_string())
+                }
+                thrift::SparseProfiles::profiles(profiles) => {
+                    profiles.iter().collect::<ScubaValue>()
+                }
+                thrift::SparseProfiles::UnknownField(t) => {
+                    ScubaValue::from(format!("unknown SparseProfiles type {}", t))
+                }
+            },
+        );
     }
 }
 
 impl AddScubaParams for thrift::CommitSparseProfileSizeParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("param_sparse_profiles", self.profiles.to_string());
+        scuba.add(
+            "param_paths",
+            match &self.profiles {
+                thrift::SparseProfiles::all_profiles(_) => {
+                    ScubaValue::from("all sparse profiles".to_string())
+                }
+                thrift::SparseProfiles::profiles(profiles) => {
+                    profiles.iter().collect::<ScubaValue>()
+                }
+                thrift::SparseProfiles::UnknownField(t) => {
+                    ScubaValue::from(format!("unknown SparseProfiles type {}", t))
+                }
+            },
+        );
     }
 }
 
