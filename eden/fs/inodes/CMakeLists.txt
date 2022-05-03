@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 if(WIN32)
-  file(GLOB INODES_SRCS "*.cpp" "sqliteoverlay/*.cpp")
+  file(GLOB INODES_SRCS "*.cpp")
   list(
     REMOVE_ITEM
     INODES_SRCS

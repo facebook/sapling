@@ -326,7 +326,12 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
   config->requireUtf8Path_ = requireUtf8Path ? *requireUtf8Path : true;
 
   auto enableTreeOverlay = repository->get_as<bool>(kEnableTreeOverlay.str());
+#ifdef _WIN32
+  // Treeoverlay is default on Windows
+  config->enableTreeOverlay_ = enableTreeOverlay.value_or(true);
+#else
   config->enableTreeOverlay_ = enableTreeOverlay.value_or(false);
+#endif
 
 #ifdef _WIN32
   auto guid = repository->get_as<std::string>(kRepoGuid.str());

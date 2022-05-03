@@ -19,7 +19,6 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
-#include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/DirType.h"

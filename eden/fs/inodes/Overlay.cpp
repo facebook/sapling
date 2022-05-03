@@ -53,7 +53,11 @@ std::unique_ptr<IOverlay> makeOverlay(
         localDir, TreeOverlayStore::SynchronousMode::Off);
   }
 #ifdef _WIN32
-  return std::make_unique<SqliteOverlay>(localDir);
+  if (overlayType == Overlay::OverlayType::Legacy) {
+    throw std::runtime_error(
+        "Legacy overlay type is not supported. Please reclone.");
+  }
+  return std::make_unique<TreeOverlay>(localDir);
 #else
   return std::make_unique<FsOverlay>(localDir);
 #endif
@@ -211,9 +215,9 @@ void Overlay::initOverlay(
 
     optNextInodeNumber = checker.getNextInodeNumber();
 #else
-    // SqliteOverlay will always return the value of next Inode number, if we
+    // TreeOverlay will always return the value of next Inode number, if we
     // end up here - it's a bug.
-    EDEN_BUG() << "Sqlite Overlay is null value for NextInodeNumber";
+    EDEN_BUG() << "Tree Overlay is null value for NextInodeNumber";
 #endif
   } else {
     hadCleanStartup_ = true;
