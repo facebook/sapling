@@ -85,6 +85,8 @@ class TreeOverlay : public IOverlay {
 
   bool hasOverlayData(InodeNumber inodeNumber) override;
 
+  void updateUsedInodeNumber(uint64_t) override {}
+
   void addChild(
       InodeNumber parent,
       PathComponentPiece name,
@@ -106,6 +108,10 @@ class TreeOverlay : public IOverlay {
    * directory when EdenFS is not running.
    */
   InodeNumber scanLocalChanges(AbsolutePathPiece mountPath);
+
+  void maintenance() override {
+    store_.maintenance();
+  }
 
  private:
   AbsolutePath path_;

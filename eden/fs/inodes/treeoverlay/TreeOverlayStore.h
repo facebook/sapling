@@ -136,6 +136,10 @@ class TreeOverlayStore {
 
   std::unique_ptr<SqliteDatabase> takeDatabase();
 
+  void maintenance() {
+    db_->checkpoint();
+  }
+
  private:
   FRIEND_TEST(TreeOverlayStoreTest, testRecoverInodeEntryNumber);
 

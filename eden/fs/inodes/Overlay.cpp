@@ -640,5 +640,9 @@ void Overlay::renameChild(
     }
   }
 }
+
+void Overlay::maintenance() {
+  backingOverlay_->maintenance();
+}
 } // namespace eden
 } // namespace facebook
