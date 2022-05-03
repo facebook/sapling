@@ -14,6 +14,10 @@
 #include <folly/CPortability.h>
 #include <folly/portability/Windows.h>
 
+#include "eden/common/utils/StringConv.h"
+#include "eden/common/utils/WinError.h"
+#include "eden/fs/utils/PathFuncs.h"
+
 #ifndef OUT
 #define OUT
 #endif
@@ -39,12 +43,67 @@ int formatString(char* buffer, size_t size, const char* format, ...) {
   return length;
 }
 
+std::optional<AbsolutePath> getBinaryDirectory(HANDLE proc) {
+  constexpr size_t kBufferSize = 1024;
+
+  wchar_t buffer[kBufferSize];
+  DWORD buffer_size = kBufferSize;
+
+  if (!QueryFullProcessImageNameW(proc, 0, buffer, &buffer_size)) {
+    // We can't throw exception in exception handling code, logging it instead.
+    XLOGF(
+        WARN,
+        "Failed to QueryFullProcessImageNameW: {}",
+        win32ErrorToString(GetLastError()));
+    return std::nullopt;
+  }
+
+  auto binary = AbsolutePath{std::wstring_view{buffer, buffer_size}};
+  return binary.dirname().copy();
+}
+
+void setUpSearchPath(HANDLE proc) {
+  // Get current configured symbol search path
+  wchar_t buffer[1024];
+  if (!SymGetSearchPathW(proc, buffer, 1024)) {
+    XLOGF(
+        WARN,
+        "Failed to SymGetSearchPathW: {}",
+        win32ErrorToString(GetLastError()));
+    return;
+  }
+
+  auto size = wcsnlen_s(buffer, 1024);
+  std::wstring searchPath{buffer, size};
+
+  // Add the directory containing the binary to the search path
+  if (auto parent = getBinaryDirectory(proc)) {
+    searchPath += L";";
+    searchPath += parent->wide();
+
+    SymSetSearchPathW(proc, searchPath.data());
+
+    XLOGF(
+        DBG6,
+        "Setting symbol search path to {}",
+        wideToMultibyteString<std::string>(searchPath));
+
+    // Force dbghelp to load PDB from the newly updated path
+    SymRefreshModuleList(proc);
+  }
+}
+
 HANDLE initSym() {
   HANDLE proc = GetCurrentProcess();
-  SymInitialize(proc, NULL, TRUE);
   SymSetOptions(
       SYMOPT_LOAD_LINES | SYMOPT_FAIL_CRITICAL_ERRORS | SYMOPT_NO_PROMPTS |
       SYMOPT_UNDNAME);
+  SymInitializeW(proc, NULL, TRUE);
+  try {
+    setUpSearchPath(proc);
+  } catch (const std::exception& ex) {
+    XLOGF(DBG6, "Failed to set up symbol search path: {}", ex.what());
+  }
   return proc;
 }
 
@@ -187,6 +246,18 @@ LONG WINAPI windowsExceptionFilter(LPEXCEPTION_POINTERS excep) {
 
 void installWindowsExceptionFilter() {
   SetUnhandledExceptionFilter(windowsExceptionFilter);
+
+  // Call `getSymProc` to set up the environment for loading symbols. This way
+  // we won't need to load symbol when exception happens but at startup. Less
+  // risks.
+  getSymProc();
+}
+
+void printCurrentStack() {
+  void* frames[kMaxFrames];
+  size_t size = backtrace(frames, kMaxFrames);
+  HANDLE err = GetStdHandle(STD_ERROR_HANDLE);
+  backtraceSymbols(frames, size, err);
 }
 } // namespace facebook::eden
 #endif

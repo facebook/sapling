@@ -10,5 +10,7 @@
 
 namespace facebook::eden {
 void installWindowsExceptionFilter();
+
+void printCurrentStack();
 } // namespace facebook::eden
 #endif
