@@ -1493,7 +1493,6 @@ impl RepoContext {
 
         self.ctx = self.ctx.with_mutated_scuba(|mut scuba| {
             scuba.add("write_permissions_model", "service");
-            scuba.add("service_identity", service_identity.as_str());
             scuba
         });
 
@@ -1553,7 +1552,6 @@ impl RepoContext {
 
         self.ctx = self.ctx.with_mutated_scuba(|mut scuba| {
             scuba.add("write_permissions_model", "service");
-            scuba.add("service_identity", service_identity.as_str());
             scuba
         });
 

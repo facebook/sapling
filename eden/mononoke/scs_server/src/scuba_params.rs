@@ -62,6 +62,9 @@ impl AddScubaParams for thrift::RepoCreateCommitParams {
         scuba.add("param_changes_count", self.changes.len() - deletes_count);
         scuba.add("param_deletes_count", deletes_count);
         self.identity_schemes.add_scuba_params(scuba);
+        if let Some(service_identity) = self.service_identity.as_deref() {
+            scuba.add("service_identity", service_identity);
+        }
     }
 }
 
@@ -69,6 +72,9 @@ impl AddScubaParams for thrift::RepoCreateBookmarkParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("bookmark_name", self.bookmark.as_str());
         scuba.add("commit", self.target.to_string());
+        if let Some(service_identity) = self.service_identity.as_deref() {
+            scuba.add("service_identity", service_identity);
+        }
     }
 }
 
@@ -83,6 +89,9 @@ impl AddScubaParams for thrift::RepoMoveBookmarkParams {
             "param_allow_non_fast_forward_move",
             self.allow_non_fast_forward_move as i32,
         );
+        if let Some(service_identity) = self.service_identity.as_deref() {
+            scuba.add("service_identity", service_identity);
+        }
     }
 }
 
@@ -91,6 +100,9 @@ impl AddScubaParams for thrift::RepoDeleteBookmarkParams {
         scuba.add("bookmark_name", self.bookmark.as_str());
         if let Some(old_target) = &self.old_target {
             scuba.add("param_old_target", old_target.to_string());
+        }
+        if let Some(service_identity) = self.service_identity.as_deref() {
+            scuba.add("service_identity", service_identity);
         }
     }
 }
@@ -109,6 +121,9 @@ impl AddScubaParams for thrift::RepoLandStackParams {
                     .map(ToString::to_string)
                     .collect::<ScubaValue>(),
             );
+        }
+        if let Some(service_identity) = self.service_identity.as_deref() {
+            scuba.add("service_identity", service_identity);
         }
     }
 }
