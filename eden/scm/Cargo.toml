@@ -36,6 +36,7 @@ members = [
   "lib/clidispatch",
   "lib/clientinfo",
   "lib/cliparser",
+  "lib/clone",
   "lib/commitcloudsubscriber",
   "lib/configmodel",
   "lib/configparser",
