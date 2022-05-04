@@ -160,15 +160,6 @@ TEST(InodeMap, recursiveLookup) {
   TestMount testMount{builder, false};
   const auto& edenMount = testMount.getEdenMount();
 
-  // Call EdenMount::getInodeSlow() on the root
-  auto rootFuture =
-      edenMount->getInodeSlow(""_relpath, ObjectFetchContext::getNullContext())
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
-  ASSERT_TRUE(rootFuture.isReady());
-  auto rootResult = std::move(rootFuture).get();
-  EXPECT_EQ(edenMount->getRootInode(), rootResult);
-
   // Call EdenMount::getInodeSlow() to do a recursive lookup
   auto fileFuture =
       edenMount
@@ -197,15 +188,6 @@ TEST(InodeMap, recursiveLookupError) {
   builder.setFile("a/b/c/d/file.txt", "this is a test file");
   TestMount testMount{builder, false};
   const auto& edenMount = testMount.getEdenMount();
-
-  // Call EdenMount::getInodeSlow() on the root
-  auto rootFuture =
-      edenMount->getInodeSlow(""_relpath, ObjectFetchContext::getNullContext())
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
-  ASSERT_TRUE(rootFuture.isReady());
-  auto rootResult = std::move(rootFuture).get();
-  EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInodeSlow() to do a recursive lookup
   auto fileFuture =
@@ -239,15 +221,6 @@ TEST(InodeMap, renameDuringRecursiveLookup) {
   TestMount testMount{builder, false};
   const auto& edenMount = testMount.getEdenMount();
 
-  // Call EdenMount::getInodeSlow() on the root
-  auto rootFuture =
-      edenMount->getInodeSlow(""_relpath, ObjectFetchContext::getNullContext())
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
-  ASSERT_TRUE(rootFuture.isReady());
-  auto rootResult = std::move(rootFuture).get();
-  EXPECT_EQ(edenMount->getRootInode(), rootResult);
-
   // Call EdenMount::getInodeSlow() to do a recursive lookup
   auto fileFuture =
       edenMount
@@ -264,13 +237,7 @@ TEST(InodeMap, renameDuringRecursiveLookup) {
   builder.setReady("a/b");
   EXPECT_FALSE(fileFuture.isReady());
 
-  auto bFuture =
-      edenMount
-          ->getInodeSlow("a/b"_relpath, ObjectFetchContext::getNullContext())
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
-  ASSERT_TRUE(bFuture.isReady());
-  auto bInode = std::move(bFuture).get().asTreePtr();
+  auto bInode = testMount.getTreeInode("a/b"_relpath);
 
   // Rename c to x after the recursive resolution should have
   // already looked it up
@@ -300,15 +267,6 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
   TestMount testMount{builder, false};
   const auto& edenMount = testMount.getEdenMount();
 
-  // Call EdenMount::getInodeSlow() on the root
-  auto rootFuture =
-      edenMount->getInodeSlow(""_relpath, ObjectFetchContext::getNullContext())
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
-  ASSERT_TRUE(rootFuture.isReady());
-  auto rootResult = std::move(rootFuture).get();
-  EXPECT_EQ(edenMount->getRootInode(), rootResult);
-
   // Call EdenMount::getInodeSlow() to do a recursive lookup
   auto fileFuture =
       edenMount
@@ -323,13 +281,7 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
   builder.setReady("a/b");
   EXPECT_FALSE(fileFuture.isReady());
 
-  auto bFuture =
-      edenMount
-          ->getInodeSlow("a/b"_relpath, ObjectFetchContext::getNullContext())
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
-  ASSERT_TRUE(bFuture.isReady());
-  auto bInode = std::move(bFuture).get().asTreePtr();
+  auto bInode = testMount.getTreeInode("a/b"_relpath);
 
   // Rename c to x while the recursive resolution is still trying
   // to look it up.
@@ -366,16 +318,8 @@ TEST(InodeMap, unloadedUnlinkedTreesAreRemovedFromOverlay) {
   auto edenMount = mount.getEdenMount();
 
   auto root = edenMount->getRootInode();
-  auto dir1 =
-      edenMount
-          ->getInodeSlow("dir1"_relpath, ObjectFetchContext::getNullContext())
-          .get()
-          .asTreePtr();
-  auto dir2 =
-      edenMount
-          ->getInodeSlow("dir2"_relpath, ObjectFetchContext::getNullContext())
-          .get()
-          .asTreePtr();
+  auto dir1 = mount.getTreeInode("dir1"_relpath);
+  auto dir2 = mount.getTreeInode("dir2"_relpath);
   auto dir1ino = dir1->getNodeId();
   auto dir2ino = dir2->getNodeId();
 
@@ -426,32 +370,12 @@ TEST(InodeMap, unloadedFileMetadataIsForgotten) {
   auto edenMount = mount.getEdenMount();
 
   auto root = edenMount->getRootInode();
-  auto dir1 =
-      edenMount
-          ->getInodeSlow(
-              RelativePathPiece{"dir1"}, ObjectFetchContext::getNullContext())
-          .get()
-          .asTreePtr();
-  auto dir2 =
-      edenMount
-          ->getInodeSlow(
-              RelativePathPiece{"dir2"}, ObjectFetchContext::getNullContext())
-          .get()
-          .asTreePtr();
+  auto dir1 = mount.getTreeInode("dir1"_relpath);
+  auto dir2 = mount.getTreeInode("dir2"_relpath);
 
-  auto file1 = edenMount
-                   ->getInodeSlow(
-                       RelativePathPiece{"dir1/file.txt"},
-                       ObjectFetchContext::getNullContext())
-                   .get()
-                   .asFilePtr();
+  auto file1 = mount.getFileInode("dir1/file.txt"_relpath);
   auto file1ino = file1->getNodeId();
-  auto file2 = edenMount
-                   ->getInodeSlow(
-                       RelativePathPiece{"dir2/file.txt"},
-                       ObjectFetchContext::getNullContext())
-                   .get()
-                   .asFilePtr();
+  auto file2 = mount.getFileInode("dir2/file.txt"_relpath);
   auto file2ino = file2->getNodeId();
 
   EXPECT_TRUE(mount.hasMetadata(file1ino));
@@ -498,20 +422,9 @@ struct InodePersistenceTakeoverTest : InodePersistenceTreeTest {
   void SetUp() override {
     InodePersistenceTreeTest::SetUp();
 
-    auto tree =
-        edenMount
-            ->getInodeSlow("dir"_relpath, ObjectFetchContext::getNullContext())
-            .get();
-    auto file1 =
-        edenMount
-            ->getInodeSlow(
-                "dir/file1.txt"_relpath, ObjectFetchContext::getNullContext())
-            .get();
-    auto file2 =
-        edenMount
-            ->getInodeSlow(
-                "dir/file2.txt"_relpath, ObjectFetchContext::getNullContext())
-            .get();
+    auto tree = testMount.getInode("dir"_relpath);
+    auto file1 = testMount.getInode("dir/file1.txt"_relpath);
+    auto file2 = testMount.getInode("dir/file2.txt"_relpath);
 
     // Pretend FUSE is keeping references to these.
     tree->incFsRefcount();
@@ -550,20 +463,9 @@ TEST_F(
     InodePersistenceTakeoverTest,
     preservesInodeNumbersForLoadedInodesDuringTakeover_lookupFirstByName) {
   // Look up in a different order to avoid allocating the same numbers.
-  auto tree =
-      edenMount
-          ->getInodeSlow("dir"_relpath, ObjectFetchContext::getNullContext())
-          .get();
-  auto file2 =
-      edenMount
-          ->getInodeSlow(
-              "dir/file2.txt"_relpath, ObjectFetchContext::getNullContext())
-          .get();
-  auto file1 =
-      edenMount
-          ->getInodeSlow(
-              "dir/file1.txt"_relpath, ObjectFetchContext::getNullContext())
-          .get();
+  auto tree = testMount.getInode("dir"_relpath);
+  auto file2 = testMount.getInode("dir/file2.txt"_relpath);
+  auto file1 = testMount.getInode("dir/file1.txt"_relpath);
 
 #ifndef _WIN32
   EXPECT_EQ(1, tree->debugGetFsRefcount());
@@ -608,20 +510,9 @@ TEST_F(
       edenMount->getInodeMap()->lookupInode(oldFile2Id).get()->getLogPath());
 
   // Verify the same inodes can be looked up by name too.
-  auto tree =
-      edenMount
-          ->getInodeSlow("dir"_relpath, ObjectFetchContext::getNullContext())
-          .get();
-  auto file2 =
-      edenMount
-          ->getInodeSlow(
-              "dir/file2.txt"_relpath, ObjectFetchContext::getNullContext())
-          .get();
-  auto file1 =
-      edenMount
-          ->getInodeSlow(
-              "dir/file1.txt"_relpath, ObjectFetchContext::getNullContext())
-          .get();
+  auto tree = testMount.getInode("dir"_relpath);
+  auto file2 = testMount.getInode("dir/file2.txt"_relpath);
+  auto file1 = testMount.getInode("dir/file1.txt"_relpath);
 
 #ifndef _WIN32
   EXPECT_EQ(1, tree->debugGetFsRefcount());
@@ -648,20 +539,9 @@ TEST_F(
   TestMount testMount{builder};
   auto edenMount = testMount.getEdenMount();
 
-  auto tree =
-      edenMount
-          ->getInodeSlow("dir"_relpath, ObjectFetchContext::getNullContext())
-          .get();
-  auto file1 =
-      edenMount
-          ->getInodeSlow(
-              "dir/file1.txt"_relpath, ObjectFetchContext::getNullContext())
-          .get();
-  auto file2 =
-      edenMount
-          ->getInodeSlow(
-              "dir/file2.txt"_relpath, ObjectFetchContext::getNullContext())
-          .get();
+  auto tree = testMount.getInode("dir"_relpath);
+  auto file1 = testMount.getInode("dir/file1.txt"_relpath);
+  auto file2 = testMount.getInode("dir/file2.txt"_relpath);
 
   tree->incFsRefcount();
   file1->incFsRefcount();
@@ -692,17 +572,9 @@ TEST_F(
   edenMount = testMount.getEdenMount();
 
   // Look up in a different order.
-  tree = edenMount
-             ->getInodeSlow("dir"_relpath, ObjectFetchContext::getNullContext())
-             .get();
-  file2 = edenMount
-              ->getInodeSlow(
-                  "dir/file2.txt"_relpath, ObjectFetchContext::getNullContext())
-              .get();
-  file1 = edenMount
-              ->getInodeSlow(
-                  "dir/file1.txt"_relpath, ObjectFetchContext::getNullContext())
-              .get();
+  tree = testMount.getInode("dir"_relpath);
+  file2 = testMount.getInode("dir/file2.txt"_relpath);
+  file1 = testMount.getInode("dir/file1.txt"_relpath);
 
   EXPECT_EQ(oldTreeId, tree->getNodeId());
   EXPECT_EQ(oldFile1Id, file1->getNodeId());

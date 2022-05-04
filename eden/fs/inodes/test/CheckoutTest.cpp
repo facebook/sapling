@@ -1010,19 +1010,10 @@ TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
   commit2->setReady();
 
   // Load "dir/sub".
-  auto subTree =
-      testMount.getEdenMount()
-          ->getInodeSlow(
-              "dir/sub"_relpath, ObjectFetchContext::getNullContext())
-          .get(1ms)
-          .asTreePtr();
+  auto subTree = testMount.getTreeInode("dir/sub"_relpath);
   auto subInodeNumber = subTree->getNodeId();
-  auto fileInodeNumber = testMount.getEdenMount()
-                             ->getInodeSlow(
-                                 RelativePathPiece{"dir/sub/file.txt"},
-                                 ObjectFetchContext::getNullContext())
-                             .get(1ms)
-                             ->getNodeId();
+  auto fileInodeNumber =
+      testMount.getFileInode("dir/sub/file.txt"_relpath)->getNodeId();
   subTree.reset();
 
   // Allocated inode numbers are saved during takeover.
@@ -1066,12 +1057,7 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
   commit2->setReady();
 
   // Load "dir/sub" on behalf of a FUSE connection.
-  auto subTree =
-      testMount.getEdenMount()
-          ->getInodeSlow(
-              "dir/sub"_relpath, ObjectFetchContext::getNullContext())
-          .get(1ms)
-          .asTreePtr();
+  auto subTree = testMount.getTreeInode("dir/sub"_relpath);
   auto subInodeNumber = subTree->getNodeId();
   subTree->incFsRefcount();
   subTree.reset();
@@ -1099,11 +1085,7 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
     EXPECT_TRUE(subTreeContents->isMaterialized());
   }
 
-  auto dirTree =
-      testMount.getEdenMount()
-          ->getInodeSlow("dir"_relpath, ObjectFetchContext::getNullContext())
-          .get(1ms)
-          .asTreePtr();
+  auto dirTree = testMount.getTreeInode("dir"_relpath);
   auto dirContents = dirTree->getContents().rlock();
   EXPECT_FALSE(dirContents->isMaterialized());
 }
@@ -1121,12 +1103,7 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   commit2->setReady();
 
   // Load "dir/sub" on behalf of a FUSE connection.
-  auto subTree =
-      testMount.getEdenMount()
-          ->getInodeSlow(
-              "dir/sub"_relpath, ObjectFetchContext::getNullContext())
-          .get(1ms)
-          .asTreePtr();
+  auto subTree = testMount.getTreeInode("dir/sub"_relpath);
   auto dirInodeNumber = subTree->getParentRacy()->getNodeId();
   auto subInodeNumber = subTree->getNodeId();
   subTree->incFsRefcount();
@@ -1151,12 +1128,7 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   EXPECT_EQ(dirInodeNumber, subTree->getParentRacy()->getNodeId());
   EXPECT_EQ(subInodeNumber, subTree->getNodeId());
 
-  auto subTree2 =
-      testMount.getEdenMount()
-          ->getInodeSlow(
-              "dir/sub"_relpath, ObjectFetchContext::getNullContext())
-          .get(1ms)
-          .asTreePtr();
+  auto subTree2 = testMount.getTreeInode("dir/sub"_relpath);
   EXPECT_EQ(dirInodeNumber, subTree2->getParentRacy()->getNodeId());
   EXPECT_EQ(subInodeNumber, subTree2->getNodeId());
 
@@ -1164,11 +1136,7 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   subTree.reset();
   subTree2.reset();
 
-  subTree = testMount.getEdenMount()
-                ->getInodeSlow(
-                    "dir/sub"_relpath, ObjectFetchContext::getNullContext())
-                .get(1ms)
-                .asTreePtr();
+  subTree = testMount.getTreeInode("dir/sub"_relpath);
   EXPECT_EQ(dirInodeNumber, subTree->getParentRacy()->getNodeId());
   EXPECT_EQ(subInodeNumber, subTree->getNodeId());
 }
@@ -1488,45 +1456,25 @@ TYPED_TEST(
   auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
   commit2->setReady();
 
-  auto edenMount = testMount.getEdenMount();
-
-  auto abcfile1 = edenMount
-                      ->getInodeSlow(
-                          "root/a/b/c/file1.txt"_relpath,
-                          ObjectFetchContext::getNullContext())
-                      .get(1ms)
-                      .asFilePtr();
+  auto abcfile1 = testMount.getFileInode("root/a/b/c/file1.txt"_relpath);
   auto abcfile1InodeNumber = abcfile1->getNodeId();
   auto abcInodeNumber = abcfile1->getParentRacy()->getNodeId();
   abcfile1->incFsRefcount();
   abcfile1.reset();
 
-  auto deffile2 = edenMount
-                      ->getInodeSlow(
-                          "root/d/e/f/file2.txt"_relpath,
-                          ObjectFetchContext::getNullContext())
-                      .get(1ms)
-                      .asFilePtr();
+  auto deffile2 = testMount.getFileInode("root/d/e/f/file2.txt"_relpath);
   auto deffile2InodeNumber = deffile2->getNodeId();
   auto defInodeNumber = deffile2->getParentRacy()->getNodeId();
   deffile2->getParentRacy()->incFsRefcount();
   deffile2.reset();
 
-  auto ghifile3 = edenMount
-                      ->getInodeSlow(
-                          "root/g/h/i/file3.txt"_relpath,
-                          ObjectFetchContext::getNullContext())
-                      .get(1ms)
-                      .asFilePtr();
+  auto ghifile3 = testMount.getFileInode("root/g/h/i/file3.txt"_relpath);
   auto ghifile3InodeNumber = ghifile3->getNodeId();
   auto ghiInodeNumber = ghifile3->getParentRacy()->getNodeId();
   ghifile3.reset();
 
-  auto unloaded = this->unloader.unload(
-      *edenMount
-           ->getInodeSlow("root"_relpath, ObjectFetchContext::getNullContext())
-           .get(1ms)
-           .asTreePtr());
+  auto unloaded =
+      this->unloader.unload(*testMount.getTreeInode("root"_relpath));
   // Everything was unloaded.
   EXPECT_EQ(12, unloaded);
 
@@ -1545,60 +1493,35 @@ TYPED_TEST(
   // Files always change inode numbers during a checkout.
   EXPECT_NE(
       abcfile1InodeNumber,
-      edenMount
-          ->getInodeSlow(
-              "root/a/b/c/file1.txt"_relpath,
-              ObjectFetchContext::getNullContext())
-          .get(1ms)
-          ->getNodeId());
+      testMount.getFileInode("root/a/b/c/file1.txt"_relpath)->getNodeId());
 
   EXPECT_EQ(
       abcInodeNumber,
-      edenMount
-          ->getInodeSlow(
-              "root/a/b/c"_relpath, ObjectFetchContext::getNullContext())
-          .get(1ms)
-          ->getNodeId());
+      testMount.getTreeInode("root/a/b/c"_relpath)->getNodeId());
 
   // Files always change inode numbers during a checkout.
   EXPECT_NE(
       deffile2InodeNumber,
-      edenMount
-          ->getInodeSlow(
-              "root/d/e/f/file2.txt"_relpath,
-              ObjectFetchContext::getNullContext())
-          .get(1ms)
-          ->getNodeId());
+      testMount.getFileInode("root/d/e/f/file2.txt"_relpath)->getNodeId());
 
   EXPECT_EQ(
       defInodeNumber,
-      edenMount
-          ->getInodeSlow(
-              "root/d/e/f"_relpath, ObjectFetchContext::getNullContext())
-          .get(1ms)
-          ->getNodeId());
+      testMount.getTreeInode("root/d/e/f"_relpath)->getNodeId());
 
   // Files always change inode numbers during a checkout.
   EXPECT_NE(
       ghifile3InodeNumber,
-      edenMount
-          ->getInodeSlow(
-              "root/g/h/i/file3.txt"_relpath,
-              ObjectFetchContext::getNullContext())
-          .get(1ms)
-          ->getNodeId());
+      testMount.getFileInode("root/g/h/i/file3.txt"_relpath)->getNodeId());
 
   // This tree never had its FUSE refcount incremented, so its inode number has
   // been forgotten.
   EXPECT_NE(
       ghiInodeNumber,
-      edenMount
-          ->getInodeSlow(
-              "root/g/h/i"_relpath, ObjectFetchContext::getNullContext())
-          .get(1ms)
-          ->getNodeId());
+      testMount.getTreeInode("root/g/h/i"_relpath)->getNodeId());
 
   // Replaced files should be unlinked.
+
+  auto edenMount = testMount.getEdenMount();
 
   abcfile1 =
       edenMount->getInodeMap()->lookupFileInode(abcfile1InodeNumber).get(1ms);

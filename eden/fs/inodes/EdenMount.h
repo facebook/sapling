@@ -540,7 +540,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * besides the path being invalid (for instance, an error loading data from
    * the ObjectStore).
    *
-   * This function is marked unsafe due to forcing to load inodes that may not
+   * This function is marked slow due to forcing to load inodes that may not
    * have been loaded previously. Loading an Inode is unfortunately both
    * expensive to load (due to writing to the overlay), and may slow down
    * future checkout operations. The method getInodeOrTreeOrEntry below should

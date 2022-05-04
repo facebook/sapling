@@ -151,21 +151,13 @@ TEST(EdenMount, loadFileContents) {
   TestMount testMount{builder};
   const auto& edenMount = testMount.getEdenMount();
 
-  const auto getInode = [edenMount](std::string path) {
-    return edenMount
-        ->getInodeSlow(
-            RelativePathPiece{folly::StringPiece{path}},
-            ObjectFetchContext::getNullContext())
-        .get();
-  };
-
   const auto loadFileContents = [edenMount](const InodePtr& pInode) {
     return edenMount
         ->loadFileContents(ObjectFetchContext::getNullContext(), pInode)
         .get(1s);
   };
 
-  const InodePtr filePtr{getInode(".gitignore")};
+  const InodePtr filePtr = testMount.getInode(".gitignore"_relpath);
 
   const std::string contents{loadFileContents(filePtr)};
 
@@ -296,12 +288,8 @@ TEST(EdenMount, loadFileContentsInvalidInodePtr) {
   TestMount testMount{builder};
   const auto& edenMount = testMount.getEdenMount();
 
-  const auto getInode = [edenMount](std::string path) {
-    return edenMount
-        ->getInodeSlow(
-            RelativePathPiece{folly::StringPiece{path}},
-            ObjectFetchContext::getNullContext())
-        .get();
+  const auto getInode = [&testMount](std::string path) {
+    return testMount.getInode(RelativePathPiece{folly::StringPiece{path}});
   };
 
   const auto loadFileContents = [edenMount](const InodePtr& pInode) {
@@ -381,12 +369,8 @@ TEST(EdenMount, resolveSymlink) {
   TestMount testMount{builder};
   const auto& edenMount = testMount.getEdenMount();
 
-  const auto getInode = [edenMount](std::string path) {
-    return edenMount
-        ->getInodeSlow(
-            RelativePathPiece{folly::StringPiece{path}},
-            ObjectFetchContext::getNullContext())
-        .get();
+  const auto getInode = [&testMount](std::string path) {
+    return testMount.getInode(RelativePathPiece{folly::StringPiece{path}});
   };
 
   const auto resolveSymlink = [edenMount](const InodePtr& pInode) {
@@ -452,11 +436,7 @@ TEST(EdenMount, resolveSymlinkDelayed) {
   // ready "a" and get a INodePtr to it
   builder.setReady("a");
   const auto& edenMount = testMount.getEdenMount();
-  const InodePtr pA{edenMount
-                        ->getInodeSlow(
-                            RelativePathPiece{folly::StringPiece{"a"}},
-                            ObjectFetchContext::getNullContext())
-                        .get()};
+  const InodePtr pA = testMount.getInode("a"_relpath);
   EXPECT_EQ(dtype_t::Symlink, pA->getType());
 
   auto bFuture =
@@ -466,11 +446,7 @@ TEST(EdenMount, resolveSymlinkDelayed) {
   builder.setReady("a2");
   builder.setReady("b");
 
-  const InodePtr pB{edenMount
-                        ->getInodeSlow(
-                            RelativePathPiece{folly::StringPiece{"b"}},
-                            ObjectFetchContext::getNullContext())
-                        .get()};
+  const InodePtr pB = testMount.getInode("b"_relpath);
   EXPECT_EQ(dtype_t::Regular, pB->getType());
 
   const auto pResolvedB = std::move(bFuture).get(1s);
@@ -761,11 +737,7 @@ class ChownTest : public ::testing::Test {
   }
 
   InodeNumber load() {
-    auto file =
-        edenMount_
-            ->getInodeSlow(
-                "file.txt"_relpath, ObjectFetchContext::getNullContext())
-            .get();
+    auto file = testMount_->getInode("file.txt"_relpath);
     // Load the file into the inode map
     file->incFsRefcount();
     file->getNodeId();
