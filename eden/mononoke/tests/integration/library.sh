@@ -1883,17 +1883,6 @@ function background_segmented_changelog_tailer() {
   echo "$pid" >> "$DAEMON_PIDS"
 }
 
-function fastreplay() {
-  setup_configerator_configs
-
-  "$MONONOKE_FASTREPLAY" \
-    "${COMMON_ARGS[@]}" \
-    --no-skiplist \
-    --no-cache-warmup \
-    --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    "$@"
-}
-
 function microwave_builder() {
   "$MONONOKE_MICROWAVE_BUILDER" \
     "${COMMON_ARGS[@]}" \
