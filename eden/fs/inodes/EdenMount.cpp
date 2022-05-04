@@ -1134,7 +1134,7 @@ InodeNumber EdenMount::getDotEdenInodeNumber() const {
 
 #endif // !_WIN32
 
-ImmediateFuture<InodePtr> EdenMount::getInode(
+ImmediateFuture<InodePtr> EdenMount::getInodeSlow(
     RelativePathPiece path,
     ObjectFetchContext& context) const {
   return inodeMap_->getRootInode()->getChildRecursive(path, context);
@@ -1204,7 +1204,7 @@ folly::Future<std::string> EdenMount::loadFileContentsFromPath(
     ObjectFetchContext& fetchContext,
     RelativePathPiece path,
     CacheHint cacheHint) const {
-  return getInode(path, fetchContext)
+  return getInodeSlow(path, fetchContext)
       .semi()
       .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([this, &fetchContext, cacheHint](InodePtr fileInodePtr) {
@@ -1292,7 +1292,7 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
         // statements due to C++14 semantics (fixed in C++17) wherein RHS may
         // be executed before LHS, thus moving value of joinedExpected (in
         // RHS) before using it in LHS
-        auto f = getInode(
+        auto f = getInodeSlow(
                      joinedExpected.value(),
                      fetchContext)
                      .semi()

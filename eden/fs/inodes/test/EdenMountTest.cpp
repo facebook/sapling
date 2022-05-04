@@ -153,7 +153,7 @@ TEST(EdenMount, loadFileContents) {
 
   const auto getInode = [edenMount](std::string path) {
     return edenMount
-        ->getInode(
+        ->getInodeSlow(
             RelativePathPiece{folly::StringPiece{path}},
             ObjectFetchContext::getNullContext())
         .get();
@@ -298,7 +298,7 @@ TEST(EdenMount, loadFileContentsInvalidInodePtr) {
 
   const auto getInode = [edenMount](std::string path) {
     return edenMount
-        ->getInode(
+        ->getInodeSlow(
             RelativePathPiece{folly::StringPiece{path}},
             ObjectFetchContext::getNullContext())
         .get();
@@ -383,7 +383,7 @@ TEST(EdenMount, resolveSymlink) {
 
   const auto getInode = [edenMount](std::string path) {
     return edenMount
-        ->getInode(
+        ->getInodeSlow(
             RelativePathPiece{folly::StringPiece{path}},
             ObjectFetchContext::getNullContext())
         .get();
@@ -453,7 +453,7 @@ TEST(EdenMount, resolveSymlinkDelayed) {
   builder.setReady("a");
   const auto& edenMount = testMount.getEdenMount();
   const InodePtr pA{edenMount
-                        ->getInode(
+                        ->getInodeSlow(
                             RelativePathPiece{folly::StringPiece{"a"}},
                             ObjectFetchContext::getNullContext())
                         .get()};
@@ -467,7 +467,7 @@ TEST(EdenMount, resolveSymlinkDelayed) {
   builder.setReady("b");
 
   const InodePtr pB{edenMount
-                        ->getInode(
+                        ->getInodeSlow(
                             RelativePathPiece{folly::StringPiece{"b"}},
                             ObjectFetchContext::getNullContext())
                         .get()};
@@ -763,7 +763,8 @@ class ChownTest : public ::testing::Test {
   InodeNumber load() {
     auto file =
         edenMount_
-            ->getInode("file.txt"_relpath, ObjectFetchContext::getNullContext())
+            ->getInodeSlow(
+                "file.txt"_relpath, ObjectFetchContext::getNullContext())
             .get();
     // Load the file into the inode map
     file->incFsRefcount();

@@ -306,7 +306,7 @@ facebook::eden::InodePtr inodeFromUserPath(
     StringPiece rootRelativePath,
     ObjectFetchContext& context) {
   auto relPath = relpathFromUserPath(rootRelativePath);
-  return mount.getInode(relPath, context).get();
+  return mount.getInodeSlow(relPath, context).get();
 }
 } // namespace
 
@@ -1630,7 +1630,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
     const RootId& originRootId =
         originRootIds->emplace_back(edenMount->getCheckedOutRootId());
     globFutures.emplace_back(
-        edenMount->getInode(searchRoot, fetchContext)
+        edenMount->getInodeSlow(searchRoot, fetchContext)
             .thenValue([&fetchContext,
                         globRoot,
                         edenMount,
@@ -1802,8 +1802,9 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeRecursively(
   auto relativePath = RelativePath{repoPath};
   auto& fetchContext = helper->getFetchContext();
 
-  TreeInodePtr inode =
-      edenMount->getInode(relativePath, fetchContext).get()->getParentRacy();
+  TreeInodePtr inode = edenMount->getInodeSlow(relativePath, fetchContext)
+                           .get()
+                           ->getParentRacy();
   return wrapImmediateFuture(
              std::move(helper),
              waitForPendingNotifications(*edenMount, syncTimeout)

@@ -539,8 +539,14 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * This may also fail with other exceptions if something else goes wrong
    * besides the path being invalid (for instance, an error loading data from
    * the ObjectStore).
+   *
+   * This function is marked unsafe due to forcing to load inodes that may not
+   * have been loaded previously. Loading an Inode is unfortunately both
+   * expensive to load (due to writing to the overlay), and may slow down
+   * future checkout operations. The method getInodeOrTreeOrEntry below should
+   * instead be preferred as it doesn't suffer from these pathological cases.
    */
-  ImmediateFuture<InodePtr> getInode(
+  ImmediateFuture<InodePtr> getInodeSlow(
       RelativePathPiece path,
       ObjectFetchContext& context) const;
 

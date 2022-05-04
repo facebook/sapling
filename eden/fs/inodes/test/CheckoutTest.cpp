@@ -917,7 +917,8 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
   // Begin loading "dir/sub".
   auto inodeFuture =
       testMount.getEdenMount()
-          ->getInode("dir/sub"_relpath, ObjectFetchContext::getNullContext())
+          ->getInodeSlow(
+              "dir/sub"_relpath, ObjectFetchContext::getNullContext())
           .semi()
           .via(&folly::QueuedImmediateExecutor::instance());
   EXPECT_FALSE(inodeFuture.isReady());
@@ -1011,12 +1012,13 @@ TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
   // Load "dir/sub".
   auto subTree =
       testMount.getEdenMount()
-          ->getInode("dir/sub"_relpath, ObjectFetchContext::getNullContext())
+          ->getInodeSlow(
+              "dir/sub"_relpath, ObjectFetchContext::getNullContext())
           .get(1ms)
           .asTreePtr();
   auto subInodeNumber = subTree->getNodeId();
   auto fileInodeNumber = testMount.getEdenMount()
-                             ->getInode(
+                             ->getInodeSlow(
                                  RelativePathPiece{"dir/sub/file.txt"},
                                  ObjectFetchContext::getNullContext())
                              .get(1ms)
@@ -1066,7 +1068,8 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
   // Load "dir/sub" on behalf of a FUSE connection.
   auto subTree =
       testMount.getEdenMount()
-          ->getInode("dir/sub"_relpath, ObjectFetchContext::getNullContext())
+          ->getInodeSlow(
+              "dir/sub"_relpath, ObjectFetchContext::getNullContext())
           .get(1ms)
           .asTreePtr();
   auto subInodeNumber = subTree->getNodeId();
@@ -1098,7 +1101,7 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
 
   auto dirTree =
       testMount.getEdenMount()
-          ->getInode("dir"_relpath, ObjectFetchContext::getNullContext())
+          ->getInodeSlow("dir"_relpath, ObjectFetchContext::getNullContext())
           .get(1ms)
           .asTreePtr();
   auto dirContents = dirTree->getContents().rlock();
@@ -1120,7 +1123,8 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   // Load "dir/sub" on behalf of a FUSE connection.
   auto subTree =
       testMount.getEdenMount()
-          ->getInode("dir/sub"_relpath, ObjectFetchContext::getNullContext())
+          ->getInodeSlow(
+              "dir/sub"_relpath, ObjectFetchContext::getNullContext())
           .get(1ms)
           .asTreePtr();
   auto dirInodeNumber = subTree->getParentRacy()->getNodeId();
@@ -1149,7 +1153,8 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
 
   auto subTree2 =
       testMount.getEdenMount()
-          ->getInode("dir/sub"_relpath, ObjectFetchContext::getNullContext())
+          ->getInodeSlow(
+              "dir/sub"_relpath, ObjectFetchContext::getNullContext())
           .get(1ms)
           .asTreePtr();
   EXPECT_EQ(dirInodeNumber, subTree2->getParentRacy()->getNodeId());
@@ -1159,11 +1164,11 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   subTree.reset();
   subTree2.reset();
 
-  subTree =
-      testMount.getEdenMount()
-          ->getInode("dir/sub"_relpath, ObjectFetchContext::getNullContext())
-          .get(1ms)
-          .asTreePtr();
+  subTree = testMount.getEdenMount()
+                ->getInodeSlow(
+                    "dir/sub"_relpath, ObjectFetchContext::getNullContext())
+                .get(1ms)
+                .asTreePtr();
   EXPECT_EQ(dirInodeNumber, subTree->getParentRacy()->getNodeId());
   EXPECT_EQ(subInodeNumber, subTree->getNodeId());
 }
@@ -1486,7 +1491,7 @@ TYPED_TEST(
   auto edenMount = testMount.getEdenMount();
 
   auto abcfile1 = edenMount
-                      ->getInode(
+                      ->getInodeSlow(
                           "root/a/b/c/file1.txt"_relpath,
                           ObjectFetchContext::getNullContext())
                       .get(1ms)
@@ -1497,7 +1502,7 @@ TYPED_TEST(
   abcfile1.reset();
 
   auto deffile2 = edenMount
-                      ->getInode(
+                      ->getInodeSlow(
                           "root/d/e/f/file2.txt"_relpath,
                           ObjectFetchContext::getNullContext())
                       .get(1ms)
@@ -1508,7 +1513,7 @@ TYPED_TEST(
   deffile2.reset();
 
   auto ghifile3 = edenMount
-                      ->getInode(
+                      ->getInodeSlow(
                           "root/g/h/i/file3.txt"_relpath,
                           ObjectFetchContext::getNullContext())
                       .get(1ms)
@@ -1518,7 +1523,8 @@ TYPED_TEST(
   ghifile3.reset();
 
   auto unloaded = this->unloader.unload(
-      *edenMount->getInode("root"_relpath, ObjectFetchContext::getNullContext())
+      *edenMount
+           ->getInodeSlow("root"_relpath, ObjectFetchContext::getNullContext())
            .get(1ms)
            .asTreePtr());
   // Everything was unloaded.
@@ -1540,7 +1546,7 @@ TYPED_TEST(
   EXPECT_NE(
       abcfile1InodeNumber,
       edenMount
-          ->getInode(
+          ->getInodeSlow(
               "root/a/b/c/file1.txt"_relpath,
               ObjectFetchContext::getNullContext())
           .get(1ms)
@@ -1549,7 +1555,8 @@ TYPED_TEST(
   EXPECT_EQ(
       abcInodeNumber,
       edenMount
-          ->getInode("root/a/b/c"_relpath, ObjectFetchContext::getNullContext())
+          ->getInodeSlow(
+              "root/a/b/c"_relpath, ObjectFetchContext::getNullContext())
           .get(1ms)
           ->getNodeId());
 
@@ -1557,7 +1564,7 @@ TYPED_TEST(
   EXPECT_NE(
       deffile2InodeNumber,
       edenMount
-          ->getInode(
+          ->getInodeSlow(
               "root/d/e/f/file2.txt"_relpath,
               ObjectFetchContext::getNullContext())
           .get(1ms)
@@ -1566,7 +1573,8 @@ TYPED_TEST(
   EXPECT_EQ(
       defInodeNumber,
       edenMount
-          ->getInode("root/d/e/f"_relpath, ObjectFetchContext::getNullContext())
+          ->getInodeSlow(
+              "root/d/e/f"_relpath, ObjectFetchContext::getNullContext())
           .get(1ms)
           ->getNodeId());
 
@@ -1574,7 +1582,7 @@ TYPED_TEST(
   EXPECT_NE(
       ghifile3InodeNumber,
       edenMount
-          ->getInode(
+          ->getInodeSlow(
               "root/g/h/i/file3.txt"_relpath,
               ObjectFetchContext::getNullContext())
           .get(1ms)
@@ -1585,7 +1593,8 @@ TYPED_TEST(
   EXPECT_NE(
       ghiInodeNumber,
       edenMount
-          ->getInode("root/g/h/i"_relpath, ObjectFetchContext::getNullContext())
+          ->getInodeSlow(
+              "root/g/h/i"_relpath, ObjectFetchContext::getNullContext())
           .get(1ms)
           ->getNodeId());
 

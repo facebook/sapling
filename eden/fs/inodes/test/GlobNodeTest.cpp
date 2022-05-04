@@ -325,7 +325,8 @@ TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
   builder.setReady("dir");
   ASSERT_FALSE(
       mount.getEdenMount()
-          ->getInode("dir/subdir"_relpath, ObjectFetchContext::getNullContext())
+          ->getInodeSlow(
+              "dir/subdir"_relpath, ObjectFetchContext::getNullContext())
           .semi()
           .isReady())
       << "Loading dir/subdir should hang indefinitely";
@@ -347,7 +348,7 @@ TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
 
     EXPECT_FALSE(
         mount.getEdenMount()
-            ->getInode(
+            ->getInodeSlow(
                 "dir/subdir"_relpath, ObjectFetchContext::getNullContext())
             .semi()
             .isReady())

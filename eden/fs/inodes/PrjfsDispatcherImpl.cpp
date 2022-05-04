@@ -163,7 +163,7 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
                     // executor to avoid deadlocks. This is guaranteed to 1) run
                     // before any other changes to this inode, and 2) before
                     // checkout starts invalidating files/directories.
-                    mount.getInode(path, *context)
+                    mount.getInodeSlow(path, *context)
                         .thenValue(
                             [](InodePtr inode) { inode->incFsRefcount(); })
                         .get();
@@ -247,7 +247,7 @@ ImmediateFuture<TreeInodePtr> createDirInode(
     RelativePath path,
     ObjectFetchContext& context) {
   auto treeInodeFut =
-      mount.getInode(path, context).thenValue([](const InodePtr inode) {
+      mount.getInodeSlow(path, context).thenValue([](const InodePtr inode) {
         return inode.asTreePtr();
       });
   return std::move(treeInodeFut)

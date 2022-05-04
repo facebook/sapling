@@ -219,10 +219,10 @@ ImmediateFuture<InodeOrTreeOrEntry> TreeInode::getOrFindChild(
     // If they ask for `.eden` in any subdir, return the magical
     // this-dir symlink inode that resolves to the path to the
     // root/.eden path.  We do this outside of the block below
-    // because getInode() will call TreeInode::getOrFindChild()
+    // because getInodeSlow() will call TreeInode::getOrFindChild()
     // recursively, and it is cleaner to break this logic out
     // separately.
-    return mount->getInode(".eden/this-dir"_relpath, context)
+    return mount->getInodeSlow(".eden/this-dir"_relpath, context)
         .thenValue([](auto&& inode) {
           return ImmediateFuture{InodeOrTreeOrEntry{std::move(inode)}};
         });
