@@ -3305,7 +3305,16 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
               return InvalidationRequired::Yes;
             }
 
-            XDCHECK(!newScmEntry->isTree());
+            // On case insensitive mounts, a change of casing would lead to a
+            // removal of this TreeInode followed by the insertion of the
+            // different cased TreeInode.
+            if (newScmEntry->isTree()) {
+              XDCHECK_EQ(
+                  parentInode->getMount()
+                      ->getCheckoutConfig()
+                      ->getCaseSensitive(),
+                  CaseSensitivity::Insensitive);
+            }
 
             bool inserted;
             {

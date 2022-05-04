@@ -127,8 +127,6 @@ if sys.platform == "win32":
         "hg.update_test.UpdateTestTreeOnly": [
             # TODO: A \r\n is used
             "test_mount_state_during_unmount_with_in_progress_checkout",
-            # TODO: crash EdenFS with TreeInode.cpp:3035] Check failed: !newScmEntry->isTree()
-            "test_change_casing_of_populated",
         ],
         "stale_inode_test.StaleInodeTestHgNFS": True,
     }
