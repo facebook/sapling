@@ -13,12 +13,12 @@ use anyhow::{anyhow, Error};
 use async_trait::async_trait;
 use blame::{fetch_blame_compat, fetch_content_for_blame, BlameError, CompatBlame};
 use blobrepo::BlobRepo;
-use blobstore::Loadable;
+use blobstore::{Blobstore, Loadable};
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
-use deleted_files_manifest::DeletedManifestOps;
+use deleted_files_manifest::{DeletedManifestOps, RootDeletedManifestIdCommon};
 use derived_data::BonsaiDerived;
 use fastlog::{
     list_file_history, CsAndPath, FastlogError, FollowMutableFileHistory, HistoryAcrossDeletions,
@@ -30,6 +30,7 @@ use futures::stream::{Stream, TryStreamExt};
 use futures::try_join;
 use futures_lazy_shared::LazyShared;
 use manifest::{Entry, ManifestOps};
+use metaconfig_types::DeletedManifestVersion;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::{
     deleted_manifest_common::DeletedManifestCommon, ChangesetId, FileType, FileUnodeId, FsnodeId,
@@ -353,28 +354,62 @@ impl ChangesetPathHistoryContext {
             .await
     }
 
+    async fn linknode_from_id(
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+        root: impl RootDeletedManifestIdCommon + 'static,
+        path: MononokePath,
+    ) -> Result<Option<ChangesetId>, MononokeError> {
+        let maybe_id = if let Some(mpath) = path.into() {
+            root.find_entry(ctx, blobstore, Some(mpath))
+                .await
+                .map_err(MononokeError::from)?
+        } else {
+            Some(root.id().clone())
+        };
+        if let Some(id) = maybe_id {
+            let deleted_manifest = id.load(ctx, blobstore).await?;
+            Ok(deleted_manifest.linknode().cloned())
+        } else {
+            Ok(None)
+        }
+    }
+
     async fn linknode(&self) -> Result<Option<ChangesetId>, MononokeError> {
         self.linknode
             .get_or_init(|| {
                 cloned!(self.changeset, self.path);
                 async move {
+                    use DeletedManifestVersion::*;
                     let ctx = changeset.ctx();
                     let blobstore = changeset.repo().blob_repo().blobstore();
-                    let root_deleted_manifest_id = changeset.root_deleted_manifest_id().await?;
-                    let maybe_id = if let Some(mpath) = path.into() {
-                        root_deleted_manifest_id
-                            .find_entry(ctx, blobstore, Some(mpath))
-                            .await
-                            .map_err(MononokeError::from)?
-                    } else {
-                        Some(root_deleted_manifest_id.deleted_manifest_id().clone())
-                    };
-                    if let Some(id) = maybe_id {
-                        let deleted_manifest = id.load(ctx, blobstore).await?;
-                        Ok(deleted_manifest.linknode().clone())
-                    } else {
-                        Ok(None)
-                    }
+                    Ok(
+                        match changeset
+                            .repo()
+                            .blob_repo()
+                            .get_active_derived_data_types_config()
+                            .deleted_manifest_version
+                        {
+                            V1 => {
+                                Self::linknode_from_id(
+                                    ctx,
+                                    blobstore,
+                                    changeset.root_deleted_manifest_id().await?,
+                                    path,
+                                )
+                                .await?
+                            }
+                            V2 => {
+                                Self::linknode_from_id(
+                                    ctx,
+                                    blobstore,
+                                    changeset.root_deleted_manifest_v2_id().await?,
+                                    path,
+                                )
+                                .await?
+                            }
+                        },
+                    )
                 }
             })
             .await

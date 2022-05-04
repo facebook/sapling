@@ -14,6 +14,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
+use metaconfig_types::DeletedManifestVersion;
 use mononoke_types::{
     deleted_manifest_v2::DeletedManifestV2, BlobstoreBytes, BonsaiChangeset, ChangesetId,
     DeletedManifestV2Id,
@@ -29,6 +30,7 @@ pub struct RootDeletedManifestV2Id(DeletedManifestV2Id);
 impl RootDeletedManifestIdCommon for RootDeletedManifestV2Id {
     type Manifest = DeletedManifestV2;
     type Id = DeletedManifestV2Id;
+    const VERSION: DeletedManifestVersion = DeletedManifestVersion::V2;
 
     fn id(&self) -> &Self::Id {
         &self.0
@@ -67,7 +69,7 @@ impl From<RootDeletedManifestV2Id> for BlobstoreBytes {
 
 #[async_trait]
 impl BonsaiDerivable for RootDeletedManifestV2Id {
-    const NAME: &'static str = "deleted_manifest2";
+    const NAME: &'static str = "deleted_manifest";
 
     type Dependencies = dependencies![RootUnodeManifestId];
 

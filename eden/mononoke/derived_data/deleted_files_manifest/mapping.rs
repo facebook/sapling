@@ -8,6 +8,7 @@
 use blobstore::{BlobstoreGetData, Loadable};
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
+use metaconfig_types::DeletedManifestVersion;
 use mononoke_types::{
     deleted_manifest_common::DeletedManifestCommon, BlobstoreBytes, ChangesetId, MononokeId,
 };
@@ -25,6 +26,8 @@ pub trait RootDeletedManifestIdCommon:
     /// The id type (Manifest::Id)
     // Basically just a type alias to Manifest::Id, but Rust makes us be a bit more verbose
     type Id: MononokeId<Value = Self::Manifest> + Loadable<Value = Self::Manifest>;
+    /// Version of deleted manifest
+    const VERSION: DeletedManifestVersion;
 
     /// Create a root DM id
     fn new(id: Self::Id) -> Self;

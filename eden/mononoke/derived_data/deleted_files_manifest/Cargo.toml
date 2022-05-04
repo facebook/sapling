@@ -28,6 +28,7 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 itertools = "0.10.3"
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }

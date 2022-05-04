@@ -26,6 +26,7 @@ filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }

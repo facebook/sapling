@@ -28,6 +28,7 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 itertools = "0.10.3"
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
 mutable_renames = { version = "0.1.0", path = "../../mutable_renames" }

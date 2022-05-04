@@ -25,7 +25,7 @@ use changesets::ArcChangesets;
 use changesets_impl::SqlChangesetsBuilder;
 use context::CoreContext;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
-use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestV2Id};
+use deleted_files_manifest::RootDeletedManifestV2Id;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable;
 use ephemeral_blobstore::{ArcRepoEphemeralStore, RepoEphemeralStore};
@@ -42,8 +42,8 @@ use memblob::Memblob;
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_mutation::{ArcHgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
-    ArcRepoConfig, DerivedDataConfig, DerivedDataTypesConfig, RepoConfig, SegmentedChangelogConfig,
-    SegmentedChangelogHeadConfig, UnodeVersion,
+    ArcRepoConfig, DeletedManifestVersion, DerivedDataConfig, DerivedDataTypesConfig, RepoConfig,
+    SegmentedChangelogConfig, SegmentedChangelogHeadConfig, UnodeVersion,
 };
 use mononoke_types::RepositoryId;
 use mutable_counters::{ArcMutableCounters, SqlMutableCountersBuilder};
@@ -97,28 +97,31 @@ pub struct TestRepoFactory {
 ///
 /// This configuration enables all derived data types at the latest version.
 pub fn default_test_repo_config() -> RepoConfig {
+    let derived_data_types_config = DerivedDataTypesConfig {
+        types: hashset! {
+            BlameRoot::NAME.to_string(),
+            FilenodesOnlyPublic::NAME.to_string(),
+            ChangesetInfo::NAME.to_string(),
+            RootFastlog::NAME.to_string(),
+            RootFsnodeId::NAME.to_string(),
+            RootDeletedManifestV2Id::NAME.to_string(),
+            RootUnodeManifestId::NAME.to_string(),
+            TreeHandle::NAME.to_string(),
+            MappedHgChangesetId::NAME.to_string(),
+            RootSkeletonManifestId::NAME.to_string(),
+        },
+        unode_version: UnodeVersion::V2,
+        deleted_manifest_version: DeletedManifestVersion::V2,
+        ..Default::default()
+    };
     RepoConfig {
         derived_data_config: DerivedDataConfig {
             scuba_table: None,
             enabled_config_name: "default".to_string(),
-            available_configs: hashmap!["default".to_string() =>DerivedDataTypesConfig {
-                types: hashset! {
-                    BlameRoot::NAME.to_string(),
-                    FilenodesOnlyPublic::NAME.to_string(),
-                    ChangesetInfo::NAME.to_string(),
-                    RootFastlog::NAME.to_string(),
-                    RootFsnodeId::NAME.to_string(),
-                    RootSkeletonManifestId::NAME.to_string(),
-                    RootDeletedManifestId::NAME.to_string(),
-                    RootDeletedManifestV2Id::NAME.to_string(),
-                    RootUnodeManifestId::NAME.to_string(),
-                    TreeHandle::NAME.to_string(),
-                    MappedHgChangesetId::NAME.to_string(),
-                },
-                unode_version: UnodeVersion::V2,
-                ..Default::default()
-            },
-            "backfilling".to_string() => DerivedDataTypesConfig::default(),],
+            available_configs: hashmap![
+                "default".to_string() => derived_data_types_config.clone(),
+                "backfilling".to_string() => derived_data_types_config
+            ],
         },
         segmented_changelog_config: SegmentedChangelogConfig {
             enabled: true,

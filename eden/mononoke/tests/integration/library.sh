@@ -1064,6 +1064,10 @@ types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "f
 CONFIG
 fi
 
+cat >> "repos/$reponame/server.toml" <<CONFIG
+deleted_manifest_version = 2
+CONFIG
+
 if [[ -n "${BLAME_VERSION}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 blame_version = $BLAME_VERSION

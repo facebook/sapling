@@ -17,7 +17,9 @@ use changesets::ChangesetsRef;
 use chrono::{DateTime, FixedOffset};
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use deleted_files_manifest::{DeletedManifestOps, RootDeletedManifestId};
+use deleted_files_manifest::{
+    DeletedManifestOps, RootDeletedManifestId, RootDeletedManifestIdCommon, RootDeletedManifestV2Id,
+};
 use derived_data::BonsaiDerived;
 use derived_data_manager::BonsaiDerivable;
 use fsnodes::RootFsnodeId;
@@ -29,10 +31,10 @@ use manifest::{
 };
 use maplit::hashset;
 use mercurial_types::Globalrev;
+use metaconfig_types::DeletedManifestVersion;
 pub use mononoke_types::Generation;
 use mononoke_types::{
-    deleted_files_manifest::DeletedManifest, BonsaiChangeset, FileChange, MPath, MPathElement,
-    SkeletonManifestId, Svnrev,
+    BonsaiChangeset, FileChange, MPath, MPathElement, SkeletonManifestId, Svnrev,
 };
 use rand;
 use reachabilityindex::ReachabilityIndex;
@@ -96,6 +98,7 @@ pub struct ChangesetContext {
     root_fsnode_id: LazyShared<Result<RootFsnodeId, MononokeError>>,
     root_skeleton_manifest_id: LazyShared<Result<RootSkeletonManifestId, MononokeError>>,
     root_deleted_manifest_id: LazyShared<Result<RootDeletedManifestId, MononokeError>>,
+    root_deleted_manifest_v2_id: LazyShared<Result<RootDeletedManifestV2Id, MononokeError>>,
     /// None if no mutable history, else map from supplied paths to data fetched
     mutable_history: Option<HashMap<MononokePath, PathMutableHistory>>,
 }
@@ -140,6 +143,7 @@ impl ChangesetContext {
         let root_fsnode_id = LazyShared::new_empty();
         let root_skeleton_manifest_id = LazyShared::new_empty();
         let root_deleted_manifest_id = LazyShared::new_empty();
+        let root_deleted_manifest_v2_id = LazyShared::new_empty();
         Self {
             repo,
             id,
@@ -149,6 +153,7 @@ impl ChangesetContext {
             root_fsnode_id,
             root_skeleton_manifest_id,
             root_deleted_manifest_id,
+            root_deleted_manifest_v2_id,
             mutable_history: None,
         }
     }
@@ -291,6 +296,14 @@ impl ChangesetContext {
     ) -> Result<RootDeletedManifestId, MononokeError> {
         self.root_deleted_manifest_id
             .get_or_init(|| self.derive::<RootDeletedManifestId>())
+            .await
+    }
+
+    pub(crate) async fn root_deleted_manifest_v2_id(
+        &self,
+    ) -> Result<RootDeletedManifestV2Id, MononokeError> {
+        self.root_deleted_manifest_v2_id
+            .get_or_init(|| self.derive::<RootDeletedManifestV2Id>())
             .await
     }
 
@@ -446,36 +459,56 @@ impl ChangesetContext {
             .map_err(MononokeError::from))
     }
 
+    fn deleted_paths_impl<Root: RootDeletedManifestIdCommon>(
+        &self,
+        root: Root,
+        paths: impl Iterator<Item = MononokePath> + 'static,
+    ) -> impl Stream<Item = Result<ChangesetPathHistoryContext, MononokeError>> + '_ {
+        root.find_entries(
+            self.ctx(),
+            self.repo().blob_repo().blobstore(),
+            paths.map(|path| path.into_mpath()),
+        )
+        .map_ok({
+            let changeset = self.clone();
+            move |(mpath, entry)| {
+                ChangesetPathHistoryContext::new_with_deleted_manifest::<Root::Manifest>(
+                    changeset.clone(),
+                    MononokePath::new(mpath),
+                    entry,
+                )
+            }
+        })
+        .map_err(MononokeError::from)
+    }
+
     /// Returns a stream of path history contexts for a set of paths.
     ///
     /// This performs an efficient manifest traversal, and as such returns
     /// contexts only for **deleted paths which have existed previously**.
     pub async fn deleted_paths(
         &self,
-        paths: impl Iterator<Item = MononokePath>,
+        paths: impl Iterator<Item = MononokePath> + 'static,
     ) -> Result<
         impl Stream<Item = Result<ChangesetPathHistoryContext, MononokeError>> + '_,
         MononokeError,
     > {
-        Ok(self
-            .root_deleted_manifest_id()
-            .await?
-            .find_entries(
-                self.ctx(),
-                self.repo().blob_repo().blobstore(),
-                paths.map(|path| path.into_mpath()),
-            )
-            .map_ok({
-                let changeset = self.clone();
-                move |(mpath, entry)| {
-                    ChangesetPathHistoryContext::new_with_deleted_manifest::<DeletedManifest>(
-                        changeset.clone(),
-                        MononokePath::new(mpath),
-                        entry,
-                    )
-                }
-            })
-            .map_err(MononokeError::from))
+        use DeletedManifestVersion::*;
+        Ok(
+            match self
+                .repo()
+                .blob_repo()
+                .get_active_derived_data_types_config()
+                .deleted_manifest_version
+            {
+                V1 => self
+                    .deleted_paths_impl(self.root_deleted_manifest_id().await?, paths)
+                    .left_stream(),
+                V2 => self
+                    .deleted_paths_impl(self.root_deleted_manifest_v2_id().await?, paths)
+                    .right_stream(),
+            },
+        )
     }
 
     /// Get the `BonsaiChangeset` information for this changeset.

@@ -62,6 +62,7 @@ fn roots_for_chunk(
                 NodeType::ChangesetInfo => Node::ChangesetInfo(id),
                 NodeType::ChangesetInfoMapping => Node::ChangesetInfoMapping(id),
                 NodeType::DeletedManifestMapping => Node::DeletedManifestMapping(id),
+                NodeType::DeletedManifestV2Mapping => Node::DeletedManifestV2Mapping(id),
                 NodeType::FsnodeMapping => Node::FsnodeMapping(id),
                 NodeType::SkeletonManifestMapping => Node::SkeletonManifestMapping(id),
                 NodeType::UnodeMapping => Node::UnodeMapping(id),

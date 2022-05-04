@@ -285,7 +285,7 @@ pub struct DerivedDataTypesConfig {
     /// `derived_root_fsnode.HASH` becomes `derived_root_fsnode.PREFIXHASH`.
     pub mapping_key_prefixes: HashMap<String, String>,
 
-    /// What unode version should be used. Default: V1.
+    /// What unode version should be used.
     pub unode_version: UnodeVersion,
 
     /// Override the file size limit for blame. Blame won't be derived for files which
@@ -296,8 +296,11 @@ pub struct DerivedDataTypesConfig {
     /// hg changesets.
     pub hg_set_committer_extra: bool,
 
-    /// What blame version should be used. Default: V1.
+    /// What blame version should be used.
     pub blame_version: BlameVersion,
+
+    /// What deleted manifest version should be used.
+    pub deleted_manifest_version: DeletedManifestVersion,
 }
 
 /// What type of unode derived data to generate
@@ -327,6 +330,21 @@ pub enum BlameVersion {
 impl Default for BlameVersion {
     fn default() -> Self {
         BlameVersion::V1
+    }
+}
+
+/// What type of deleted manifest derived data to generate
+#[derive(Eq, Clone, Copy, Debug, PartialEq)]
+pub enum DeletedManifestVersion {
+    /// Deleted manifest v1
+    V1,
+    /// Deleted manifest v2
+    V2,
+}
+
+impl Default for DeletedManifestVersion {
+    fn default() -> Self {
+        Self::V1
     }
 }
 

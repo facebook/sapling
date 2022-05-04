@@ -12,7 +12,9 @@ use blobstore::{Loadable, LoadableError};
 use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
 use cloned::cloned;
 use context::CoreContext;
-use deleted_files_manifest::{DeletedManifestOps, PathState, RootDeletedManifestId};
+use deleted_files_manifest::{
+    DeletedManifestOps, PathState, RootDeletedManifestId, RootDeletedManifestV2Id,
+};
 use derived_data::{BonsaiDerived, DeriveError};
 use futures::{
     future,
@@ -22,6 +24,7 @@ use futures_stats::futures03::TimedFutureExt;
 use futures_util::{StreamExt, TryStreamExt};
 use itertools::Itertools;
 use manifest::{Entry, ManifestOps};
+use metaconfig_types::DeletedManifestVersion;
 use mononoke_types::{ChangesetId, FileUnodeId, Generation, MPath, ManifestUnodeId};
 use mutable_renames::MutableRenames;
 use stats::prelude::*;
@@ -237,6 +240,22 @@ impl TraversalOrder {
     }
 }
 
+async fn resolve_path_state(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: ChangesetId,
+    path: &Option<MPath>,
+) -> Result<Option<PathState>, Error> {
+    use DeletedManifestVersion::*;
+    match repo
+        .get_active_derived_data_types_config()
+        .deleted_manifest_version
+    {
+        V1 => RootDeletedManifestId::resolve_path_state(ctx, repo, cs_id, path).await,
+        V2 => RootDeletedManifestV2Id::resolve_path_state(ctx, repo, cs_id, path).await,
+    }
+}
+
 /// Returns a full history of the given path starting from the given unode in BFS order.
 /// ```text
 /// Accepts a `Visitor` object which controls the flow by filtering out the unwanted changesets
@@ -289,8 +308,7 @@ pub async fn list_file_history(
 ) -> Result<impl NewStream<Item = Result<ChangesetId, Error>>, FastlogError> {
     let path = Arc::new(path);
     // get unode entry
-    let resolved =
-        RootDeletedManifestId::resolve_path_state(&ctx, &repo, changeset_id, &path).await?;
+    let resolved = resolve_path_state(&ctx, &repo, changeset_id, &path).await?;
 
     let mut visited = HashSet::new();
     let mut history_graph = HashMap::new();
@@ -733,7 +751,7 @@ async fn find_where_file_was_deleted(
     let resolved_path_states = future::try_join_all(
         parents
             .into_iter()
-            .map(|p| RootDeletedManifestId::resolve_path_state(ctx, repo, p, path)),
+            .map(|p_id| resolve_path_state(ctx, repo, p_id, path)),
     )
     .await?;
 

@@ -65,9 +65,22 @@ macro_rules! impl_deleted_manifest_tests {
 }
 pub(crate) use impl_deleted_manifest_tests;
 
+fn build_repo<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) -> Result<BlobRepo, Error> {
+    Ok(test_repo_factory::TestRepoFactory::new(fb)?
+        .with_config_override(|c| {
+            c.derived_data_config
+                .available_configs
+                .values_mut()
+                .for_each(|c| {
+                    c.deleted_manifest_version = Root::VERSION;
+                });
+        })
+        .build()?)
+}
+
 pub(crate) async fn linear_test<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) {
     // Test simple separate files and whole dir deletions
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).unwrap();
+    let repo: BlobRepo = build_repo::<Root>(fb).unwrap();
     let ctx = CoreContext::test_mock(fb);
 
     // create parent deleted files manifest
@@ -334,7 +347,7 @@ pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
     //  | /
     //  A
     //
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).unwrap();
+    let repo: BlobRepo = build_repo::<Root>(fb).unwrap();
     let ctx = CoreContext::test_mock(fb);
 
     let a = CreateCommitContext::new_root(&ctx, &repo)
@@ -542,7 +555,7 @@ pub(crate) async fn merged_history_test<Root: RootDeletedManifestIdCommon>(
 
 pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) {
     // Test simple separate files and whole dir deletions
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).unwrap();
+    let repo: BlobRepo = build_repo::<Root>(fb).unwrap();
     let ctx = CoreContext::test_mock(fb);
 
     // create parent deleted files manifest
@@ -656,7 +669,7 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(fb: Fac
 
 pub(crate) async fn test_list_all_entries<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) {
     // Test simple separate files and whole dir deletions
-    let repo: BlobRepo = test_repo_factory::build_empty(fb).unwrap();
+    let repo: BlobRepo = build_repo::<Root>(fb).unwrap();
     let ctx = CoreContext::test_mock(fb);
 
     // create parent deleted files manifest
