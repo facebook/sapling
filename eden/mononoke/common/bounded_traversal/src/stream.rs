@@ -44,6 +44,10 @@ where
     In: 'caller,
     Out: 'caller,
     UErr: 'caller,
+    // We use BoxFuture here because the `Unfold` future can be very large.
+    // As a result, it's more efficient to keep it in one place (the heap)
+    // than to move it around on the stack all the time.
+    // https://fburl.com/m3cdcdko
     Unfold: FnMut(In) -> BoxFuture<'caller, Result<(Out, Ins), UErr>> + 'caller,
     InsInit: IntoIterator<Item = In> + 'caller,
     Ins: IntoIterator<Item = In> + 'caller,
@@ -176,6 +180,10 @@ where
     Out: 'caller,
     UErr: 'caller,
     Ins: IntoIterator<Item = In> + 'caller,
+    // We use BoxFuture here because the `Unfold` future can be very large.
+    // As a result, it's more efficient to keep it in one place (the heap)
+    // than to move it around on the stack all the time.
+    // https://fburl.com/m3cdcdko
     Unfold: FnMut(In) -> BoxFuture<'caller, Result<(Out, BoxStream<'caller, Result<In, UErr>>), UErr>>
         + 'caller,
 {

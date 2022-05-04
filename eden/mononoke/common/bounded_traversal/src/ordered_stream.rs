@@ -897,6 +897,10 @@ pub fn bounded_traversal_ordered_stream<'caller, In, InsInit, Out, Unfold, Unfol
 where
     In: 'caller,
     Out: 'caller,
+    // We use BoxFuture here because the `Unfold` future can be very large.
+    // As a result, it's more efficient to keep it in one place (the heap)
+    // than to move it around on the stack all the time.
+    // https://fburl.com/m3cdcdko
     Unfold: FnMut(In) -> BoxFuture<'caller, Result<Unfolded, TErr>> + 'caller,
     InsInit: IntoIterator<Item = (usize, In)> + 'caller,
     Unfolded: IntoIterator<Item = OrderedTraversal<Out, In>> + 'caller,
@@ -929,6 +933,10 @@ pub fn bounded_traversal_limited_ordered_stream<'caller, In, InsInit, Out, Unfol
 where
     In: 'caller,
     Out: 'caller,
+    // We use BoxFuture here because the `Unfold` future can be very large.
+    // As a result, it's more efficient to keep it in one place (the heap)
+    // than to move it around on the stack all the time.
+    // https://fburl.com/m3cdcdko
     Unfold: FnMut(In) -> BoxFuture<'caller, Result<Unfolded, TErr>> + 'caller,
     InsInit: IntoIterator<Item = (usize, In)> + 'caller,
     Unfolded: IntoIterator<Item = OrderedTraversal<Out, In>> + 'caller,

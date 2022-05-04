@@ -65,6 +65,10 @@ where
     In: Eq + Hash + Clone + 'caller,
     Out: Clone + 'caller,
     OutCtx: 'caller,
+    // We use BoxFuture here because the `Unfold` future can be very large.
+    // As a result, it's more efficient to keep it in one place (the heap)
+    // than to move it around on the stack all the time.
+    // https://fburl.com/m3cdcdko
     Unfold: FnMut(In) -> BoxFuture<'caller, Result<(OutCtx, Ins), Err>> + 'caller,
     Ins: IntoIterator<Item = In> + 'caller,
     Fold: FnMut(OutCtx, Iter<Out>) -> BoxFuture<'caller, Result<Out, Err>> + 'caller,
