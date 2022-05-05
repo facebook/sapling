@@ -1425,6 +1425,16 @@ class DebugThriftCmd(Subcmd):
                 print(f"  {fn_info}")
 
 
+@debug_cmd("drop-fetch-requests", "Drop all pending source control object fetches")
+class DropRequestsCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        instance = cmd_util.get_eden_instance(args)
+        with instance.get_thrift_client_legacy() as client:
+            num_dropped = client.debugDropAllPendingRequests()
+            print(f"Dropped {num_dropped} source control fetch requests")
+            return 0
+
+
 @subcmd_mod.subcmd("debug", "Internal commands for examining EdenFS state")
 # pyre-fixme[13]: Attribute `parser` is never initialized.
 class DebugCmd(Subcmd):
