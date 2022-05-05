@@ -184,7 +184,7 @@ even though stdout is no longer a tty.
 An invalid pager command name is reported sensibly if we don't have to
 use shell=True in the subprocess call:
   $ hg log --limit 3 --config pager.pager=/this-command-better-never-exist
-  missing pager command '/this-command-better-never-exist', skipping pager
+  missing pager command '*/this-command-better-never-exist', skipping pager (glob)
   \x1b[0;93mcommit:      46106edeeb38\x1b[0m (esc)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
