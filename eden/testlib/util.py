@@ -29,7 +29,10 @@ class GlobalTestState(threading.local):
         self.test_tmp = self.temp_mgr.make_temp_dir()
 
         hgrc_path = os.path.join(new_dir(), "global_hgrc")
-        self.env = {"HGRCPATH": hgrc_path}
+        self.env = {
+            "HGRCPATH": hgrc_path,
+            "TESTTMP": str(self.test_tmp),
+        }
 
     def cleanup(self) -> None:
         self.temp_mgr.cleanup()
@@ -44,3 +47,9 @@ test_globals = GlobalTestState()
 def new_dir() -> Path:
     temp = test_globals.temp_mgr
     return temp.make_temp_dir()
+
+
+def new_file() -> Path:
+    temp = test_globals.temp_mgr
+    with temp.make_temp_file() as f:
+        return Path(f.name)

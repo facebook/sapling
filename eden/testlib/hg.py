@@ -97,7 +97,6 @@ class hg(CliCmd):
 
     def __init__(self, root: Path) -> None:
         env = test_globals.env.copy()
-        env["TESTTMP"] = str(test_globals.test_tmp)
         super().__init__(root, env)
 
 

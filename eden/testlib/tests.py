@@ -17,8 +17,8 @@ from .workingcopy import WorkingCopy
 class TestLibTests(BaseTest):
     @hgtest
     def test_repo_setup(self, repo: Repo, wc: WorkingCopy) -> None:
-        self.assertEqual(repo.root, wc.root)
         self.assertTrue(os.path.exists(os.path.join(repo.root, ".hg")))
+        self.assertTrue(os.path.exists(os.path.join(wc.root, ".hg")))
 
     @hgtest
     def test_working_copy_edits(self, repo: Repo, wc: WorkingCopy) -> None:

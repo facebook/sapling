@@ -8,22 +8,20 @@
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, IO, BinaryIO, List, TextIO, Union
+from typing import Any, Dict, IO, List, Optional
 
 from .commit import Commit
 from .generators import RepoGenerator
 from .hg import hg
-from .workingcopy import WorkingCopy
+from .workingcopy import EdenWorkingCopy, WorkingCopy
 
 
 class Repo:
     root: Path
-    _wc: WorkingCopy
     hg: hg
 
     def __init__(self, root: Path) -> None:
         self.root = root
-        self._wc = WorkingCopy(self, root)
         self.gen = RepoGenerator()
         self.hg = hg(self.root)
 
@@ -44,9 +42,17 @@ class Repo:
         # pyre-fixme[7]: Expected `Path` but got `str`.
         return os.path.join(self.root, ".hg", path)
 
-    def working_copy(self) -> WorkingCopy:
-        # TODO: Eden support & new-work-dir support
-        return self._wc
+    def new_working_copy(
+        self, path: Optional[Path] = None, eden: bool = False
+    ) -> WorkingCopy:
+        if path is None:
+            if eden:
+                raise ValueError("cannot get the default working copy as EdenFS")
+            return WorkingCopy(self, self.root)
+        else:
+            if not eden:
+                raise ValueError("non-eden shared working copies is not yet supported")
+            return EdenWorkingCopy(self, path)
 
     def __getitem__(self, hash: str) -> Commit:
         return self.commits(hash)[0]

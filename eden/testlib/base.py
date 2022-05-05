@@ -5,6 +5,7 @@
 
 # pyre-strict
 
+import os
 import unittest
 from pathlib import Path
 from typing import Callable, TypeVar
@@ -18,6 +19,7 @@ from .workingcopy import WorkingCopy
 class BaseTest(unittest.TestCase):
     def setUp(self) -> None:
         test_globals.setup()
+        self.addCleanup(test_globals.cleanup)
         self.server = self.new_server()
         self.repo = self.server.clone()
         self._add_production_configs(Path(test_globals.env["HGRCPATH"]))
@@ -72,9 +74,6 @@ enabled = True
 """
             )
 
-    def tearDown(self) -> None:
-        test_globals.cleanup()
-
     def new_server(self) -> Server:
         return LocalServer()
 
@@ -88,6 +87,12 @@ TBase = TypeVar("TBase", bound=BaseTest)
 
 def hgtest(func: Callable[[TBase, Repo, WorkingCopy], None]) -> Callable[[TBase], None]:
     def wrapper(self: TBase) -> None:
-        func(self, self.repo, self.repo.working_copy())
+        use_eden = os.environ.get("USE_EDEN", False)
+        if use_eden:
+            wc = self.repo.new_working_copy(path=new_dir(), eden=True)
+            self.addCleanup(wc.cleanup)
+        else:
+            wc = self.repo.new_working_copy()
+        return func(self, self.repo, wc)
 
     return wrapper

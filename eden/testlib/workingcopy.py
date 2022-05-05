@@ -10,11 +10,14 @@ import os
 from pathlib import Path
 from typing import Any, IO, List, Optional, TYPE_CHECKING, Union
 
+from eden.integration.lib import edenclient
+
 from .commit import Commit
 from .file import File
 from .hg import hg
 from .status import Status
 from .types import PathLike
+from .util import new_dir, new_file
 
 if TYPE_CHECKING:
     from .repo import Repo
@@ -65,7 +68,7 @@ class WorkingCopy:
         return self.current_commit()
 
     def current_commit(self) -> Commit:
-        return self.repo["."]
+        return Commit(self.repo, self.hg.log(rev=".", template="{node}").stdout)
 
     def file(
         self,
@@ -106,3 +109,35 @@ class WorkingCopy:
     def join(self, path: PathLike) -> Path:
         # pyre-fixme[7]: Expected `Path` but got `str`.
         return os.path.join(self.root, str(path))
+
+
+class EdenWorkingCopy(WorkingCopy):
+    eden: edenclient.EdenFS
+
+    def __init__(self, repo: Repo, path: Path) -> None:
+        scratch_config = new_file()
+        with open(scratch_config, "w+") as f:
+            template_dir = str(new_dir()).replace("\\", "\\\\")
+            f.write(
+                f"""
+template = {template_dir}
+overrides = {{}}
+"""
+            )
+
+        os.environ["SCRATCH_CONFIG_PATH"] = str(scratch_config)
+        os.environ["HG_REAL_BIN"] = str(hg.EXEC)
+        self.eden = edenclient.EdenFS(
+            base_dir=new_dir(),
+            extra_args=["--eden_logview"],
+            storage_engine="memory",
+        )
+        self.eden.start()
+        self.eden.clone(str(repo.root), str(path), allow_empty=True)
+        os.environ.pop("SCRATCH_CONFIG_PATH")
+        os.environ.pop("HG_REAL_BIN")
+
+        super().__init__(repo, path)
+
+    def cleanup(self) -> None:
+        self.eden.cleanup()
