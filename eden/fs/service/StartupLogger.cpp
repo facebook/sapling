@@ -127,6 +127,9 @@ void DaemonStartupLogger::writeMessageImpl(
 }
 
 void DaemonStartupLogger::sendResult(ResultType result) {
+  // Close the original stderr file descriptors once initialization is complete.
+  origStderr_.close();
+
   if (pipe_) {
     auto try_ = pipe_.writeFull(&result, sizeof(result));
     if (try_.hasException()) {
@@ -135,9 +138,6 @@ void DaemonStartupLogger::sendResult(ResultType result) {
     }
     pipe_.close();
   }
-
-  // Close the original stderr file descriptors once initialization is complete.
-  origStderr_.close();
 
 #ifndef _WIN32
   // Call setsid() to create a new process group and detach from the
@@ -152,11 +152,44 @@ void DaemonStartupLogger::spawn(
     StringPiece logPath,
     PrivHelper* privHelper,
     const std::vector<std::string>& argv) {
-  auto [proc, pipe] = spawnImpl(logPath, privHelper, argv);
-  runParentProcess(std::move(pipe), std::move(proc), logPath);
+  auto child = spawnImpl(logPath, privHelper, argv);
+  runParentProcess(std::move(child), logPath);
 }
 
-std::pair<SpawnedProcess, FileDescriptor> DaemonStartupLogger::spawnImpl(
+DaemonStartupLogger::ChildHandler::ChildHandler(
+    SpawnedProcess&& proc,
+    FileDescriptor pipe)
+    : process{std::move(proc)}, exitStatusPipe{std::move(pipe)} {
+#ifdef _WIN32
+  stderrBridge_ = std::thread([this]() {
+    auto fd = process.stderrFd();
+    auto stderrHandle = GetStdHandle(STD_ERROR_HANDLE);
+
+    constexpr size_t size = 256;
+    char buffer[size];
+
+    while (true) {
+      auto read = fd.readNoInt(&buffer, size);
+
+      // Read will end when the other end of the pipe is closed.
+      if (read.hasException()) {
+        break;
+      }
+
+      DWORD written = 0;
+      WriteFile(stderrHandle, buffer, *read, &written, nullptr);
+    }
+  });
+#endif
+}
+
+DaemonStartupLogger::ChildHandler::~ChildHandler() {
+  if (stderrBridge_.joinable()) {
+    stderrBridge_.join();
+  }
+}
+
+DaemonStartupLogger::ChildHandler DaemonStartupLogger::spawnImpl(
     StringPiece logPath,
     FOLLY_MAYBE_UNUSED PrivHelper* privHelper,
     const std::vector<std::string>& argv) {
@@ -177,6 +210,14 @@ std::pair<SpawnedProcess, FileDescriptor> DaemonStartupLogger::spawnImpl(
   SpawnedProcess::Options opts;
   opts.executablePath(exePath);
   opts.nullStdin();
+
+#ifdef _WIN32
+  // Redirect to a pipe. See `StartupLogger::ChildHandler` for detail.
+  opts.pipeStderr();
+  // Setting `CREATE_NO_WINDOW` will make sure the daemon process is detached
+  // from user's interactive console.
+  opts.creationFlags(CREATE_NO_WINDOW);
+#endif
 
   // We want to append arguments to the argv list, but we need to take
   // care for the case where the args look like:
@@ -215,14 +256,14 @@ std::pair<SpawnedProcess, FileDescriptor> DaemonStartupLogger::spawnImpl(
 #endif
 
   // Set up a pipe for the child to pass back startup status
-  Pipe pipe;
+  Pipe exitStatusPipe;
   args.push_back("--startupLoggerFd");
-  args.push_back(
-      folly::to<std::string>(opts.inheritDescriptor(std::move(pipe.write))));
+  args.push_back(folly::to<std::string>(
+      opts.inheritDescriptor(std::move(exitStatusPipe.write))));
 
   args.insert(args.end(), extraArgs.begin(), extraArgs.end());
   SpawnedProcess proc(args, std::move(opts));
-  return std::make_pair(std::move(proc), std::move(pipe.read));
+  return ChildHandler{std::move(proc), std::move(exitStatusPipe.read)};
 }
 
 void DaemonStartupLogger::initClient(
@@ -243,13 +284,13 @@ void DaemonStartupLogger::initClient(
 }
 
 void DaemonStartupLogger::runParentProcess(
-    FileDescriptor&& readPipe,
-    SpawnedProcess&& childProc,
+    DaemonStartupLogger::ChildHandler&& child,
     folly::StringPiece logPath) {
   // Wait for the child to finish initializing itself and then exit
   // without ever returning to the caller.
   try {
-    auto result = waitForChildStatus(readPipe, childProc, logPath);
+    auto result =
+        waitForChildStatus(child.exitStatusPipe, child.process, logPath);
     if (!result.errorMessage.empty()) {
       fprintf(stderr, "%s\n", result.errorMessage.c_str());
       fflush(stderr);

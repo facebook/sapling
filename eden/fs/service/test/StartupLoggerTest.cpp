@@ -122,12 +122,11 @@ class DaemonStartupLoggerTest : public StartupLoggerTestBase {
     auto args = originalCommandLine;
     args.push_back(name.str());
     args.push_back(logPath().stringPiece().str());
-    auto [proc, pipe] =
-        logger.spawnImpl(logPath().stringPiece(), nullptr, args);
-    auto result =
-        logger.waitForChildStatus(pipe, proc, logPath().stringPiece());
-    proc.kill();
-    proc.wait();
+    auto child = logger.spawnImpl(logPath().stringPiece(), nullptr, args);
+    auto result = logger.waitForChildStatus(
+        child.exitStatusPipe, child.process, logPath().stringPiece());
+    child.process.kill();
+    child.process.wait();
     return result;
   }
 };

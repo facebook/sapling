@@ -18,6 +18,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/utils/FileDescriptor.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/SpawnedProcess.h"
 
 namespace facebook {
 namespace eden {
@@ -26,7 +27,6 @@ DECLARE_int32(startupLoggerFd);
 
 class StartupLogger;
 class PrivHelper;
-class SpawnedProcess;
 class FileDescriptor;
 
 /**
@@ -188,14 +188,40 @@ class DaemonStartupLogger : public StartupLogger {
     std::string errorMessage;
   };
 
-  std::pair<SpawnedProcess, FileDescriptor> spawnImpl(
+  /*
+   * On Windows, we can't share stderr of the parent process to the daemon
+   * process, as the daemon will terminate once the console is closed.  As a
+   * result, we will be redirecting the stderr output from the daemon to a pipe,
+   * then spawn a new thread to write it to the parent process's stderr until
+   * the startup process is finished.
+   *
+   * This struct manages that redirection thread.
+   */
+  struct ChildHandler {
+    ChildHandler(SpawnedProcess&& process, FileDescriptor exitStatusPipe);
+
+    ~ChildHandler();
+
+    ChildHandler(const ChildHandler&) = delete;
+    ChildHandler& operator=(const ChildHandler&) = delete;
+
+    ChildHandler(ChildHandler&& other) noexcept = delete;
+    ChildHandler& operator=(ChildHandler&& other) noexcept = delete;
+
+    SpawnedProcess process;
+    FileDescriptor exitStatusPipe;
+
+   private:
+    std::thread stderrBridge_;
+  };
+
+  ChildHandler spawnImpl(
       folly::StringPiece logPath,
       PrivHelper* privHelper,
       const std::vector<std::string>& argv);
 
   [[noreturn]] void runParentProcess(
-      FileDescriptor&& readPipe,
-      SpawnedProcess&& childProc,
+      ChildHandler&& child,
       folly::StringPiece logPath);
   void redirectOutput(folly::StringPiece logPath);
 

@@ -156,9 +156,6 @@ def _start_edenfs_service(
     cmd, eden_env = prepare_edenfs_privileges(daemon_binary, cmd, eden_env)
 
     creation_flags = 0
-    if sys.platform == "win32":
-        CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
-        creation_flags = CREATE_NO_WINDOW
 
     return subprocess.call(
         cmd, stdin=subprocess.DEVNULL, env=eden_env, creationflags=creation_flags
