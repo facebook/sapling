@@ -363,6 +363,10 @@ void SpawnedProcess::Options::nullStdin() {
 }
 
 #ifdef _WIN32
+void SpawnedProcess::Options::creationFlags(DWORD flags) {
+  flags_ = flags;
+}
+
 static std::wstring build_command_line(const std::vector<std::string>& args) {
   // Here be dragons.  More gory details in http://stackoverflow.com/q/4094699
   // Surely not complete here by any means
@@ -644,7 +648,7 @@ SpawnedProcess::SpawnedProcess(
       nullptr, // lpProcessAttributes
       nullptr, // lpThreadAttributes
       TRUE, // inherit the handles
-      EXTENDED_STARTUPINFO_PRESENT,
+      EXTENDED_STARTUPINFO_PRESENT | options.flags_.value_or(0),
       env.data(),
       options.cwd_.has_value() ? cwd.data() : NULL,
       reinterpret_cast<LPSTARTUPINFOW>(&startupInfo),

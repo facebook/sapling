@@ -177,6 +177,10 @@ class SpawnedProcess {
     // system handle in the child.
     FileDescriptor::system_handle_type inheritDescriptor(FileDescriptor&& fd);
 
+#ifdef _WIN32
+    void creationFlags(DWORD flags);
+#endif
+
    private:
     // The descriptors to pass to the child
     std::unordered_map<int, FileDescriptor> descriptors_;
@@ -188,6 +192,9 @@ class SpawnedProcess {
     std::optional<AbsolutePath> cwd_;
     // Alternative executable image path
     std::optional<AbsolutePath> execPath_;
+#ifdef _WIN32
+    std::optional<DWORD> flags_;
+#endif
 
     friend class SpawnedProcess;
   };
