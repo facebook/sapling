@@ -73,17 +73,16 @@ TEST(GitTree, testDeserialize) {
       << "SHA-1 of contents should match key";
 
   // Ordinary, non-executable file.
-  auto babelrc = tree->getEntryAt(0);
+  auto babelrc = tree->getEntryAt(".babelrc"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("3a8f8eb91101860fd8484154885838bf322964d0"),
       babelrc.getHash());
   EXPECT_EQ(".babelrc", babelrc.getName());
   EXPECT_EQ(false, babelrc.isTree());
   EXPECT_EQ(facebook::eden::TreeEntryType::REGULAR_FILE, babelrc.getType());
-  EXPECT_EQ(babelrc.getName(), tree->getEntryAt(".babelrc"_pc).getName());
 
   // Executable file.
-  auto nuclideStartServer = tree->getEntryAt(4);
+  auto nuclideStartServer = tree->getEntryAt("nuclide-start-server"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("006babcf5734d028098961c6f4b6b6719656924b"),
       nuclideStartServer.getHash());
@@ -95,19 +94,15 @@ TEST(GitTree, testDeserialize) {
       facebook::eden::TreeEntryType::EXECUTABLE_FILE,
       nuclideStartServer.getType());
 #endif
-  EXPECT_EQ(
-      nuclideStartServer.getName(),
-      tree->getEntryAt("nuclide-start-server"_pc).getName());
 
   // Directory.
-  auto lib = tree->getEntryAt(3);
+  auto lib = tree->getEntryAt("lib"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("e95798e17f694c227b7a8441cc5c7dae50a187d0"),
       lib.getHash());
   EXPECT_EQ("lib", lib.getName());
   EXPECT_EQ(true, lib.isTree());
   EXPECT_EQ(facebook::eden::TreeEntryType::TREE, lib.getType());
-  EXPECT_EQ(lib.getName(), tree->getEntryAt("lib"_pc).getName());
 
   // lab sorts before lib but is not present in the Tree, so ensure that
   // we don't get an entry back here
@@ -146,7 +141,7 @@ TEST(GitTree, testDeserializeWithSymlink) {
       << "SHA-1 of contents should match key";
 
   // Ordinary, non-executable file.
-  auto contributing = tree->getEntryAt(4);
+  auto contributing = tree->getEntryAt("contributing.md"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"),
       contributing.getHash());
@@ -234,10 +229,6 @@ TEST(GitTree, serializeTree) {
       PathComponent{"README.md"},
       TreeEntryType::REGULAR_FILE));
   serializer.addEntry(TreeEntry(
-      ObjectId::fromHex("a3c8e5c25e5523322f0ea490173dbdc1d844aefb"),
-      PathComponent{"run-tests.sh"},
-      TreeEntryType::EXECUTABLE_FILE));
-  serializer.addEntry(TreeEntry(
       ObjectId::fromHex("de0b8287939193ed239834991be65b96cbfc4508"),
       PathComponent{"build-instructions"},
       TreeEntryType::TREE));
@@ -249,6 +240,10 @@ TEST(GitTree, serializeTree) {
       ObjectId::fromHex("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"),
       PathComponent{"contributing.md"},
       TreeEntryType::SYMLINK));
+  serializer.addEntry(TreeEntry(
+      ObjectId::fromHex("a3c8e5c25e5523322f0ea490173dbdc1d844aefb"),
+      PathComponent{"run-tests.sh"},
+      TreeEntryType::EXECUTABLE_FILE));
 
   auto buf = serializer.finalize();
 
@@ -257,17 +252,23 @@ TEST(GitTree, serializeTree) {
 #ifndef _WIN32
   // Make sure the tree hash is what we expect
   EXPECT_EQ(
-      ObjectId::fromHex("dc2c3be02dd3753c64c8f196a33522905c88c435"), treeHash);
+      ObjectId::fromHex("f96d6b1ef3ededc0f549baf6e2e25731cfde8bae"), treeHash);
 #endif
 
   // Make sure we can deserialize it and get back the expected entries.
   auto tree = deserializeGitTree(treeHash, &buf);
   EXPECT_EQ(5, tree->getTreeEntries().size());
-  EXPECT_EQ("README.md", tree->getEntryAt(0).getName());
-  EXPECT_EQ("run-tests.sh", tree->getEntryAt(1).getName());
-  EXPECT_EQ("build-instructions", tree->getEntryAt(2).getName());
-  EXPECT_EQ("contributing-to-packages.md", tree->getEntryAt(3).getName());
-  EXPECT_EQ("contributing.md", tree->getEntryAt(4).getName());
+  XLOG(WARN) << fmt::format("{}", fmt::join(tree->getEntryNames(), ", "));
+  EXPECT_EQ("README.md", tree->getEntryAt("README.md"_pc).getName());
+  EXPECT_EQ("run-tests.sh", tree->getEntryPtr("run-tests.sh"_pc)->getName());
+  EXPECT_EQ(
+      "build-instructions",
+      tree->getEntryAt("build-instructions"_pc).getName());
+  EXPECT_EQ(
+      "contributing-to-packages.md",
+      tree->getEntryAt("contributing-to-packages.md"_pc).getName());
+  EXPECT_EQ(
+      "contributing.md", tree->getEntryAt("contributing.md"_pc).getName());
 }
 
 // Test using GitTreeSerializer after moving it

@@ -34,10 +34,6 @@ class Tree {
     return entries_;
   }
 
-  const TreeEntry& getEntryAt(size_t index) const {
-    return entries_.at(index);
-  }
-
   const TreeEntry* getEntryPtr(PathComponentPiece path) const {
     auto iter = std::lower_bound(
         entries_.cbegin(),

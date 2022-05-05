@@ -146,10 +146,10 @@ TEST_F(FakeBackingStoreTest, getTree) {
   auto* rootDir = store_->putTree(
       rootHash,
       {
-          {"zzz", foo, FakeBlobType::REGULAR_FILE},
+          {"bar", bar},
           {"dir1", dir1},
           {"readonly", dir2},
-          {"bar", bar},
+          {"zzz", foo, FakeBlobType::REGULAR_FILE},
       });
 
   // Try getting the root tree but failing it with triggerError()
@@ -173,22 +173,25 @@ TEST_F(FakeBackingStoreTest, getTree) {
   auto tree2 = std::move(future2).get().tree;
   EXPECT_EQ(rootHash, tree2->getHash());
   EXPECT_EQ(4, tree2->getTreeEntries().size());
-  // Tree entries are always alphabetically sorted so we don't have to worry
-  // about order here
-  EXPECT_EQ("bar"_pc, tree2->getEntryAt(0).getName());
-  EXPECT_EQ(bar->get().getHash(), tree2->getEntryAt(0).getHash());
-  EXPECT_EQ(TreeEntryType::REGULAR_FILE, tree2->getEntryAt(0).getType());
-  EXPECT_EQ("dir1"_pc, tree2->getEntryAt(1).getName());
-  EXPECT_EQ(dir1->get().getHash(), tree2->getEntryAt(1).getHash());
-  EXPECT_EQ(TreeEntryType::TREE, tree2->getEntryAt(1).getType());
-  EXPECT_EQ("readonly"_pc, tree2->getEntryAt(2).getName());
-  EXPECT_EQ(dir2->get().getHash(), tree2->getEntryAt(2).getHash());
+
+  auto barTreeEntry = tree2->getEntryAt("bar"_pc);
+  auto dir1TreeEntry = tree2->getEntryAt("dir1"_pc);
+  auto readonlyTreeEntry = tree2->getEntryAt("readonly"_pc);
+  auto zzzTreeEntry = tree2->getEntryAt("zzz"_pc);
+  EXPECT_EQ("bar"_pc, barTreeEntry.getName());
+  EXPECT_EQ(bar->get().getHash(), barTreeEntry.getHash());
+  EXPECT_EQ(TreeEntryType::REGULAR_FILE, barTreeEntry.getType());
+  EXPECT_EQ("dir1"_pc, dir1TreeEntry.getName());
+  EXPECT_EQ(dir1->get().getHash(), dir1TreeEntry.getHash());
+  EXPECT_EQ(TreeEntryType::TREE, dir1TreeEntry.getType());
+  EXPECT_EQ("readonly"_pc, readonlyTreeEntry.getName());
+  EXPECT_EQ(dir2->get().getHash(), readonlyTreeEntry.getHash());
   // TreeEntry objects only tracking the owner executable bit, so even though we
   // input the permissions as 0500 above this really ends up returning 0755
-  EXPECT_EQ(TreeEntryType::TREE, tree2->getEntryAt(2).getType());
-  EXPECT_EQ("zzz"_pc, tree2->getEntryAt(3).getName());
-  EXPECT_EQ(foo->get().getHash(), tree2->getEntryAt(3).getHash());
-  EXPECT_EQ(TreeEntryType::REGULAR_FILE, tree2->getEntryAt(3).getType());
+  EXPECT_EQ(TreeEntryType::TREE, readonlyTreeEntry.getType());
+  EXPECT_EQ("zzz"_pc, zzzTreeEntry.getName());
+  EXPECT_EQ(foo->get().getHash(), zzzTreeEntry.getHash());
+  EXPECT_EQ(TreeEntryType::REGULAR_FILE, zzzTreeEntry.getType());
 
   EXPECT_EQ(rootHash, std::move(future3).get().tree->getHash());
 

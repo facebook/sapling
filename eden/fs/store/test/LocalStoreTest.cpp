@@ -117,7 +117,7 @@ TEST_P(LocalStoreTest, testReadsAndWriteTree) {
       tree->getHash());
   EXPECT_EQ(11, tree->getTreeEntries().size());
 
-  auto readmeEntry = tree->getEntryAt(2);
+  auto readmeEntry = tree->getEntryAt("README.md"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("c5f15617ed29cd35964dc197a7960aeaedf2c2d5"),
       readmeEntry.getHash());
