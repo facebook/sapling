@@ -888,6 +888,16 @@ def rebase(ui, repo, *args, **kwargs):
     ui.status((str(cmd)), "\n")
 
 
+def restore(ui, repo, *args, **kwargs):
+    cmdoptions = []
+    args, opts = parseoptions(ui, cmdoptions, args)
+
+    cmd = Command("revert")
+    cmd.extend(args)
+
+    ui.status((str(cmd)), "\n")
+
+
 def reflog(ui, repo, *args, **kwargs):
     cmdoptions = [("", "all", None, "")]
     args, opts = parseoptions(ui, cmdoptions, args)
@@ -1164,6 +1174,7 @@ gitcommands = {
     "pull": pull,
     "push": push,
     "rebase": rebase,
+    "restore": restore,
     "reflog": reflog,
     "reset": reset,
     "revert": revert,
