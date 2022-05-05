@@ -2533,6 +2533,18 @@ void EdenServiceHandler::debugCompactLocalStorage() {
   server_->getLocalStore()->compactStorage();
 }
 
+// TODO(T119221752): add more BackingStore subclasses to this command. We
+// currently only support HgQueuedBackingStores
+int64_t EdenServiceHandler::debugDropAllPendingRequests() {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG1);
+  auto stores = server_->getHgQueuedBackingStores();
+  int64_t numDropped = 0;
+  for (auto& store : stores) {
+    numDropped += store->dropAllPendingRequestsFromQueue();
+  }
+  return numDropped;
+}
+
 int64_t EdenServiceHandler::unloadInodeForPath(
     FOLLY_MAYBE_UNUSED unique_ptr<string> mountPoint,
     FOLLY_MAYBE_UNUSED std::unique_ptr<std::string> path,

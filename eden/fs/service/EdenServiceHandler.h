@@ -237,6 +237,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   void debugCompactLocalStorage() override;
 
+  int64_t debugDropAllPendingRequests() override;
+
   int64_t unloadInodeForPath(
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::string> path,
