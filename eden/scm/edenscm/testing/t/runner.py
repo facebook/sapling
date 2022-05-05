@@ -34,6 +34,7 @@ class TestId:
             name = path
             modname = name[8:]
             __import__(modname)
+            # pyre-fixme[9]: path has type `str`; used as `Optional[str]`.
             path = sys.modules[modname].__file__
             return cls(name=name, path=path)
 
@@ -114,6 +115,7 @@ class TestRunner:
     def __next__(self) -> Union[TestResult, Mismatch]:
         """obtain next test result, or mismatch block"""
         try:
+            # pyre-fixme[16]: `TestRunner` has no attribute `resultqueue`.
             v = self.resultqueue.get()
             if v is StopIteration:
                 raise StopIteration
@@ -171,6 +173,7 @@ class TestRunner:
 def _spawnmain(
     testid: TestId,
     exts: List[str],
+    # pyre-fixme[11]: Annotation `Semaphore` is not defined as a type.
     sem: multiprocessing.Semaphore,
     resultqueue: multiprocessing.Queue,
 ):
@@ -235,6 +238,8 @@ class doctestrunner(doctest.DocTestRunner):
         if not (self.optionflags & doctest.DONT_ACCEPT_BLANKLINE):
             got = re.sub("(?m)^[ ]*(?=\n)", doctest.BLANKLINE_MARKER, got)
 
+        # pyre-fixme[58]: `+` is not supported for operand types `Optional[int]` and
+        #  `int`.
         srcloc = test.lineno + example.lineno
         outloc = srcloc + example.source.count("\n")
         endloc = outloc + example.want.count("\n")
@@ -247,6 +252,7 @@ class doctestrunner(doctest.DocTestRunner):
             outloc=outloc,
             endloc=endloc,
             indent=example.indent,
+            # pyre-fixme[6]: For 8th param expected `str` but got `Optional[str]`.
             filename=test.filename,
             testname=self.testname,
         )
@@ -267,7 +273,9 @@ class doctestrunner(doctest.DocTestRunner):
 def rundoctest(testid: TestId, mismatchcb: Callable[[Mismatch], None]):
     """run doctest for the given module, report Mismatch via mismatchcb"""
     modname = testid.modname
+    # pyre-fixme[6]: For 1st param expected `str` but got `Optional[str]`.
     __import__(modname)
+    # pyre-fixme[6]: For 1st param expected `str` but got `Optional[str]`.
     mod = sys.modules[modname]
     finder = doctest.DocTestFinder()
     runner = doctestrunner(testid.name, mismatchcb)

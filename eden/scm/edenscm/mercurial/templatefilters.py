@@ -394,7 +394,6 @@ def stringescape(text):
 
 @templatefilter("stringify")
 def stringify(thing):
-    # type: Any -> str
     """Any type. Turns the value into text by converting values into
     text and concatenating them.
     """
@@ -409,7 +408,6 @@ def stringify(thing):
 
 
 def byteify(thing):
-    # type: Any -> bytes
     """Any type. Turns the value into text by converting values into
     text bytes and concatenating them.
     """

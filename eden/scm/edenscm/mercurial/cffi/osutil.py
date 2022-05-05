@@ -34,12 +34,19 @@ if pycompat.isdarwin:
 
     attrkinds = [None] * 20  # we need the max no for enum VXXX, 20 is plenty
 
+    # pyre-fixme[6]: For 2nd param expected `None` but got `int`.
     attrkinds[lib.VREG] = statmod.S_IFREG
+    # pyre-fixme[6]: For 2nd param expected `None` but got `int`.
     attrkinds[lib.VDIR] = statmod.S_IFDIR
+    # pyre-fixme[6]: For 2nd param expected `None` but got `int`.
     attrkinds[lib.VLNK] = statmod.S_IFLNK
+    # pyre-fixme[6]: For 2nd param expected `None` but got `int`.
     attrkinds[lib.VBLK] = statmod.S_IFBLK
+    # pyre-fixme[6]: For 2nd param expected `None` but got `int`.
     attrkinds[lib.VCHR] = statmod.S_IFCHR
+    # pyre-fixme[6]: For 2nd param expected `None` but got `int`.
     attrkinds[lib.VFIFO] = statmod.S_IFIFO
+    # pyre-fixme[6]: For 2nd param expected `None` but got `int`.
     attrkinds[lib.VSOCK] = statmod.S_IFSOCK
 
     class stat_res(object):

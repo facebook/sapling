@@ -34,7 +34,10 @@ def python(
         with env.fs.open(args[0], "rb") as f:
             code = f.read()
     env.args = args
+    # pyre-fixme[7]: Expected `int` but got implicit return value of `None`.
     with shellenv(env, stdin=stdin, stdout=stdout, stderr=stderr):
+        # pyre-fixme[6]: For 2nd param expected `Union[_PathLike[typing.Any], bytes,
+        #  str]` but got `Union[List[str], str]`.
         code = compile(code, args and args[0] or "<stdin>", "exec")
         try:
             exec(code, {"__name__": "__main__"})

@@ -293,6 +293,7 @@ class TestTmp:
             with shext.shellenv(self.shenv):
                 # run code using the parent frame globals and locals
                 exec(compiled, f.f_globals, f.f_locals)
+            # pyre-fixme[16]: `TextIO` has no attribute `getvalue`.
             out = sys.stdout.getvalue()
         except Exception as e:
             out = str(e)
@@ -318,6 +319,7 @@ class TestTmp:
             ext = ""
             if os.name == "nt":
                 ext = ".exe"
+            # pyre-fixme[16]: `Optional` has no attribute `split`.
             paths = os.getenv("PATH").split(os.pathsep)
             paths += os.defpath.split(os.pathsep)
             for path in paths:

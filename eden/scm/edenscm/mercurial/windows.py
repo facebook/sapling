@@ -647,6 +647,7 @@ def _cleanuptemplockfiles(dirname: str, basename: str) -> None:
             pass
 
 
+# pyre-fixme[9]: checkdeadlock has type `bool`; used as `None`.
 def makelock(info: str, pathname: str, checkdeadlock: bool = None) -> "Optional[int]":
     dirname = os.path.dirname(pathname)
     basename = os.path.basename(pathname)

@@ -197,7 +197,6 @@ def lock(*args, ui=None, **kwargs):
     return lockclass(*args, ui=ui, **kwargs)
 
 
-# pyre-fixme[30]: Terminating analysis - type `lock` not defined.
 class pythonlock(object):
     """An advisory lock held by one process to control access to a set
     of files.  Non-cooperating processes or incorrectly written scripts

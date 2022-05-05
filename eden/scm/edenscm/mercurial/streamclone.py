@@ -118,7 +118,6 @@ def canperformstreamclone(
 
 
 def maybeperformlegacystreamclone(pullop):
-    # type: Any -> bool
     """Possibly perform a legacy stream clone operation.
 
     Legacy stream clones are performed as part of pull but before all other
@@ -179,7 +178,6 @@ def maybeperformlegacystreamclone(pullop):
 
 
 def allowservergeneration(repo):
-    # type: Any -> bool
     """Whether streaming clones are allowed from the server."""
     if not repo.ui.configbool("server", "uncompressed", untrusted=True):
         return False
@@ -195,12 +193,10 @@ def allowservergeneration(repo):
 
 # This is it's own function so extensions can override it.
 def _walkstreamfiles(repo):
-    # type: Any -> Iterable[(str, str, int)]
     return repo.store.walk()
 
 
 def generatev1(repo):
-    # type: Any -> Tuple[int, int, Iterable[bytes]]
     """Emit content for version 1 of a streaming clone.
 
     This returns a 3-tuple of (file count, byte size, data iterator).
@@ -245,7 +241,6 @@ def generatev1(repo):
     debugflag = repo.ui.debugflag
 
     def emitrevlogdata():
-        # type: -> Iterable[bytes]
         for name, size in entries:
             if debugflag:
                 repo.ui.debug("sending %s (%d bytes)\n" % (name, size))
@@ -278,7 +273,6 @@ def generatev1(repo):
 
 
 def generatev1wireproto(repo):
-    # type: Any -> Iterable[bytes]
     """Emit content for version 1 of streaming clone suitable for the wire.
 
     This is the data output from ``generatev1()`` with a header line
@@ -321,7 +315,6 @@ def generatebundlev1(
     requires = encodeutf8(",".join(sorted(requirements)))
 
     def gen():
-        # type: -> Iterable[bytes]
         yield b"HGS1"
         yield compression
 
@@ -424,7 +417,6 @@ def consumev1(repo: "Any", fp: "Any", filecount: int, bytecount: int) -> None:
 
 
 def readbundle1header(fp):
-    # type: Any -> Tuple[int, int, Set[str]]
     compression = fp.read(2)
     if compression != b"UN":
         raise error.Abort(
@@ -474,9 +466,7 @@ class streamcloneapplier(object):
     """
 
     def __init__(self, fh):
-        # type: Any -> None
         self._fh = fh
 
     def apply(self, repo):
-        # type: Any -> None
         return applybundlev1(repo, self._fh)

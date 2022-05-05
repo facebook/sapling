@@ -784,8 +784,6 @@ class HgServer(object):
         return self.get_file_attribute(path, rev_hash, "size", lambda fctx: fctx.size())
 
     def get_file_attribute(self, path, rev_hash, attr, attr_of):
-        # type: (str, str, bytes, Callable[[context.filectx], AttributeType])
-        #       -> AttributeType
         try:
             fctx = self.repo.filectx(path, fileid=rev_hash)
             # Disable very slow code paths loading the flags via

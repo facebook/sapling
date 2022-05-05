@@ -115,6 +115,8 @@ ParentChangeCallback = Callable[
 ]
 
 
+# pyre-fixme[3]: Return type must be annotated.
+# pyre-fixme[2]: Parameter must be annotated.
 def fastreadp1(repopath):
     """Read dirstate p1 node without constructing repo or dirstate objects
 
@@ -447,7 +449,7 @@ class dirstate(object):
             if ce:
                 ce.refresh()
         except:  # re-raises
-            # pyre-fixme[16]: `BinaryIO` has no attribute `discard`
+            # pyre-fixme[16]: `BinaryIO` has no attribute `discard`.
             f.discard()
             raise
 
@@ -963,6 +965,8 @@ class dirstate(object):
                 )
                 tree = tempmap._tree
             else:
+                # pyre-fixme[16]: Item `dirstatemap` of `Union[dirstatemap,
+                #  treedirstatemap, treestatemap]` has no attribute `_tree`.
                 tree = self._map._tree
 
             status = bindings.workingcopy.status.compute(
@@ -1326,6 +1330,8 @@ class dirstate(object):
                     return list(files)
         elif self._istreestate:
             # Treestate native path. Avoid visiting directories.
+            # pyre-fixme[16]: Item `dirstatemap` of `Union[dirstatemap,
+            #  treedirstatemap, treestatemap]` has no attribute `matches`.
             return dmap.matches(match)
         # Slow path: scan all files in dirstate.
         return [f for f in dmap if match(f)]

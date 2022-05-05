@@ -100,7 +100,6 @@ class repomanifest(object):
         self._defaultelement = self._finddefaultelement()
 
     def _normalize(self, filename, fetchfn):
-        # type: Callable[[str], str] ->  xml.dom.minidom.Document
         # Breadth-first traversal of all includes to apply files
         # Merge includes into unified DOM
         roottext = fetchfn(filename)

@@ -509,7 +509,6 @@ class bundlerepository(localrepo.localrepository):
         return self._url
 
     def file(self, f):
-        # type: () -> filelog.filelog
         if not self._cgfilespos:
             self._cgunpacker.seek(self.filestart)
             self._cgfilespos = _getfilestarts(self._cgunpacker)

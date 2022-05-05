@@ -230,6 +230,7 @@ class ShellFS(ABC):
     """interface for simple shinterp fs use-cases"""
 
     # shared (or not shared) "cwd" among clones
+    # pyre-fixme[8]: Attribute has type `Optional[str]`; used as `List[str]`.
     refcwd: Optional[str] = field(default_factory=lambda: [""])
 
     # shared fs state among clones
@@ -246,9 +247,11 @@ class ShellFS(ABC):
         raise NotImplementedError
 
     def cwd(self) -> str:
+        # pyre-fixme[16]: `Optional` has no attribute `__getitem__`.
         return self.refcwd[0]
 
     def _setcwd(self, path: str):
+        # pyre-fixme[16]: `Optional` has no attribute `__setitem__`.
         self.refcwd[0] = path
 
     def clone(self, unsharecwd=False) -> ShellFS:
@@ -259,6 +262,7 @@ class ShellFS(ABC):
         kwargs = dict(self.__dict__)
         if unsharecwd:
             kwargs["refcwd"] = kwargs["refcwd"][:]
+        # pyre-fixme[45]: Cannot instantiate abstract class `ShellFS`.
         fs = self.__class__(**kwargs)
         return fs
 

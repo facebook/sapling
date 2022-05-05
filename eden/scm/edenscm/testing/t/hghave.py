@@ -162,10 +162,19 @@ def has_baz():
 @check("bzr", "Canonical's Bazaar client", exe=True)
 def has_bzr():
     try:
+        # pyre-fixme[21]: Could not find module `bzrlib`.
         import bzrlib
+
+        # pyre-fixme[21]: Could not find module `bzrlib.bzrdir`.
         import bzrlib.bzrdir
+
+        # pyre-fixme[21]: Could not find module `bzrlib.errors`.
         import bzrlib.errors
+
+        # pyre-fixme[21]: Could not find module `bzrlib.revision`.
         import bzrlib.revision
+
+        # pyre-fixme[21]: Could not find module `bzrlib.revisionspec`.
         import bzrlib.revisionspec
 
         bzrlib.revisionspec.RevisionSpec
@@ -320,6 +329,7 @@ def has_killdaemons():
 @check("lsprof", "python lsprof module")
 def has_lsprof():
     try:
+        # pyre-fixme[21]: Could not find module `_lsprof`.
         import _lsprof
 
         _lsprof.Profiler  # silence unused import warning
@@ -762,6 +772,7 @@ def has_slow():
 @check("hypothesis", "Hypothesis automated test generation")
 def has_hypothesis():
     try:
+        # pyre-fixme[21]: Could not find module `hypothesis`.
         import hypothesis
 
         hypothesis.given
@@ -794,6 +805,7 @@ def has_dev_full():
 @check("virtualenv", "Python virtualenv support")
 def has_virtualenv():
     try:
+        # pyre-fixme[21]: Could not find module `virtualenv`.
         import virtualenv
 
         virtualenv.ACTIVATE_SH
@@ -810,6 +822,7 @@ def has_fsmonitor():
 @check("fuzzywuzzy", "Fuzzy string matching library")
 def has_fuzzywuzzy():
     try:
+        # pyre-fixme[21]: Could not find module `fuzzywuzzy`.
         import fuzzywuzzy
 
         fuzzywuzzy.__version__

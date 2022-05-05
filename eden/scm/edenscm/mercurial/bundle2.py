@@ -223,9 +223,10 @@ def _makefpartparamsizes(nbparams):
 parthandlermapping = {}
 
 
-# pyre-fixme[31]: Expression `unbundlepart), None)])]` is not a valid type.
 def parthandler(
-    parttype: str, params: "Tuple[str, ...]" = ()
+    parttype: str,
+    params: "Tuple[str, ...]" = ()
+    # pyre-fixme[31]: Expression `unbundlepart), None)])]` is not a valid type.
 ) -> "Callable[Callable[(bundleoperation, unbundlepart), None], Callable[(bundleoperation, unbundlepart), None]]":
     """decorator that register a function as a bundle2 part handler
 
@@ -239,7 +240,6 @@ def parthandler(
     validateparttype(parttype)
 
     def _decorator(func):
-        # type: Callable[(bundleoperation, unbundlepart), None] -> Callable[(bundleoperation, unbundlepart), None]
         lparttype = parttype.lower()  # enforce lower case matching.
         assert lparttype not in parthandlermapping
         parthandlermapping[lparttype] = func
@@ -701,7 +701,6 @@ class bundle20(object):
         self._parts.append(part)
 
     def newpart(self, typeid, *args, **kwargs):
-        # type: (str, ...) -> bundlepart
         """create a new part and add it to the containers
 
         As the part is directly added to the containers. For now, this means
@@ -763,7 +762,6 @@ class bundle20(object):
         yield _pack(_fpartheadersize, 0)
 
     def salvageoutput(self):
-        # type: List[str]
         """return a list with a copy of all output parts in the bundle
 
         This is meant to be used during error handling to make sure we preserve
@@ -904,7 +902,6 @@ class unbundle20(unpackermixin):
             handler(self, name, value)
 
     def _forwardchunks(self):
-        # type: Iterable[bytes]
         """utility to transfer a bundle2 as binary
 
         This is made necessary by the fact the 'getbundle' command over 'ssh'
@@ -943,7 +940,6 @@ class unbundle20(unpackermixin):
             yield self._readexact(size)
 
     def iterparts(self, seekable=False):
-        # type: Optional[bool] -> Iterable[unbundlepart]
         """yield all parts contained in the stream"""
         cls = seekableunbundlepart if seekable else unbundlepart
         # make sure param have been loaded
@@ -1082,7 +1078,6 @@ class bundlepart(object):
 
     @data.setter
     def data(self, data):
-        # type: bytes -> None
         if self._generated is not None:
             raise error.ReadOnlyPartError("part is being generated")
         if not (
@@ -1227,7 +1222,6 @@ class bundlepart(object):
         self._generated = True
 
     def _payloadchunks(self, ui):
-        # type: () -> Iterable[bytes]
         """yield chunks of a the part payload
 
         Exists to handle the different methods to provide data to a part."""
@@ -1246,8 +1240,6 @@ class bundlepart(object):
                 assert isinstance(chunk, bytes)
                 yield chunk
                 chunk = buff.read(preferedchunksize)
-        # pyre-fixme[6]: Expected `Sized` for 1st param but got
-        #  `Union[typing.Iterator[bytes], bytes]`.
         elif len(data):
             assert isinstance(data, bytes)
             yield data

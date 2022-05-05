@@ -303,7 +303,6 @@ class server(object):
         versionmod = sys.modules.get("edenscm.mercurial.__version__")
         if versionmod:
             hellomsg += "\n"
-            # pyre-fixme[16]: `ModuleType` has no attribute `versionhash`.
             hellomsg += "versionhash: %s" % versionmod.versionhash
         if util.safehasattr(os, "getpgid"):
             hellomsg += "\n"

@@ -118,11 +118,8 @@ class localrepository(object):
     _wlockfreeprefix: Set[str]
     _wlockref: Optional[_weakref.ReferenceType[Any]]
     auditor: edenscm.mercurial.pathutil.pathauditor
-    # pyre-fixme[11]: Annotation `ui` is not defined as a type.
     baseui: edenscm.mercurial.ui.ui
-    # pyre-fixme[11]: Annotation `vfs` is not defined as a type.
     cachevfs: edenscm.mercurial.vfs.vfs
-    changelog: edenscm.mercurial.changelog.changelog
     connectionpool: edenscm.mercurial.connectionpool.connectionpool
     dirstate: edenscm.mercurial.dirstate.dirstate
     disableeventreporting: Callable[..., contextlib._GeneratorContextManager]
@@ -192,15 +189,6 @@ class localrepository(object):
     ]: ...
     def _loadextensions(self) -> None: ...
     def _loadfilter(self, filter) -> List[Tuple[Any, Any, Any]]: ...
-    def _lock(
-        self,
-        vfs,
-        lockname,
-        wait,
-        releasefn,
-        acquirefn,
-        desc,
-    ) -> edenscm.mercurial.lock.lock: ...
     def _narrowheadsmigration(self) -> None: ...
     def _prefetchtrees(
         self,

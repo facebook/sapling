@@ -83,7 +83,6 @@ class shallowcg1packer(changegroup.cg1packer):
         )
 
     def group(self, nodelist, revlog, lookup, prog=None, reorder=None):
-        # type: (Sequence[bytes], Any, Callable[..., Any], Any) -> Iterable[bytes]
         return shallowgroup(shallowcg1packer, self, nodelist, revlog, lookup, prog=prog)
 
     def _cansendflat(self, mfnodes):
@@ -369,7 +368,6 @@ if util.safehasattr(changegroup, "cg2packer"):
     @shallowutil.interposeclass(changegroup, "cg2packer")
     class shallowcg2packer(changegroup.cg2packer, shallowcg1packer):
         def group(self, nodelist, revlog, lookup, prog=None, reorder=None):
-            # type: (Sequence[bytes], Any, Callable[..., Any], Optional[Any]) -> Iterable[bytes]
             # for revlogs, shallowgroup will be called twice in the same stack
             # -- once here, once up the inheritance hierarchy in
             # shallowcg1packer. That's fine though because for revlogs,
@@ -388,7 +386,6 @@ if util.safehasattr(changegroup, "cg3packer"):
         def generatemanifests(
             self, commonrevs, clrevorder, fastpathlinkrev, mfs, fnodes, *args, **kwargs
         ):
-            # type: (Sequence[int], Mapping[bytes, int], bool, Any, MutableMapping[str, Any], Any) -> Iterable[bytes]
             chunks = super(shallowcg3packer, self).generatemanifests(
                 commonrevs, clrevorder, fastpathlinkrev, mfs, fnodes, *args, **kwargs
             )

@@ -21,6 +21,7 @@ from . import encoding, identity, pycompat
 
 
 # modelled after templater.templatepath:
+# pyre-fixme[16]: Module `sys` has no attribute `frozen`.
 if getattr(sys, "frozen", None) is not None:
     module = pycompat.sysexecutable
 else:

@@ -49,7 +49,7 @@ from __future__ import annotations
 import textwrap
 from ast import parse
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 
 def transform(
@@ -397,6 +397,7 @@ def commentinvalid(code: str) -> str:
                 i += 1
                 continue
             else:
+                # pyre-fixme[9]: skipping has type `Optional[LineInfo]`; used as `bool`.
                 skipping = False
 
         # find a Python code block starting from line i, looks like:

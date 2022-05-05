@@ -66,7 +66,6 @@ def readexactly(stream: "BinaryIO", n: int) -> bytes:
 
 
 def getchunk(stream):
-    # type: BinaryIO -> bytes
     """return the next chunk from stream as a string"""
     d = readexactly(stream, 4)
     l = struct.unpack(b">l", d)[0]
@@ -78,7 +77,6 @@ def getchunk(stream):
 
 
 def chunkheader(length):
-    # type: int -> bytes
     """return a changegroup chunk header (string)"""
     return struct.pack(b">l", length + 4)
 
@@ -180,11 +178,9 @@ class cg1unpacker(object):
         return self._type is not None and self._type != "UN"
 
     def read(self, l):
-        # type: () -> bytes
         return self._stream.read(l)
 
     def seek(self, pos):
-        # type: int -> int
         return self._stream.seek(pos)
 
     def tell(self) -> int:
@@ -233,7 +229,6 @@ class cg1unpacker(object):
         return node, p1, p2, deltabase, cs, flags
 
     def deltachunk(self, prevnode):
-        # type: bytes -> Tuple[bytes, bytes, bytes, bytes, bytes, bytes, int]
         l = self._chunklength()
         if not l:
             return {}
@@ -536,7 +531,6 @@ class headerlessfixup(object):
         self._fh = fh
 
     def read(self, n):
-        # type: int -> bytes
         if self._h:
             d, self._h = self._h[:n], self._h[n:]
             if len(d) < n:
@@ -595,7 +589,6 @@ class cg1packer(object):
         return closechunk()
 
     def fileheader(self, fname):
-        # type: str -> bytes
         fname = encodeutf8(fname)
         return chunkheader(len(fname)) + fname
 
@@ -1043,7 +1036,6 @@ _packermap = {
 
 
 def allsupportedversions(repo):
-    # type: Any -> Set(str)
     versions = set(_packermap.keys())
     if not (
         repo.ui.configbool("experimental", "changegroup3")
@@ -1056,13 +1048,11 @@ def allsupportedversions(repo):
 
 # Changegroup versions that can be applied to the repo
 def supportedincomingversions(repo):
-    # type: Any -> Set(str)
     return allsupportedversions(repo)
 
 
 # Changegroup versions that can be created from the repo
 def supportedoutgoingversions(repo):
-    # type: Any -> Set(str)
     versions = allsupportedversions(repo)
     versions.discard("01")
     # developer config: format.allowbundle1
@@ -1085,14 +1075,12 @@ def supportedoutgoingversions(repo):
 
 
 def localversion(repo):
-    # type: Any -> Set(str)
     # Finds the best version to use for bundles that are meant to be used
     # locally, such as those from strip and shelve, and temporary bundles.
     return max(supportedoutgoingversions(repo))
 
 
 def safeversion(repo):
-    # type: Any -> str
     # Finds the smallest version that it's safe to assume clients of the repo
     # will support. For example, all hg versions that support generaldelta also
     # support changegroup 02.

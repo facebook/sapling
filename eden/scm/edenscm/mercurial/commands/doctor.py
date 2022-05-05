@@ -71,6 +71,7 @@ def doctor(ui, **opts) -> typing.Optional[int]:
     ui.write(_("checking internal storage\n"))
 
     ml = repairsvfs(ui, svfs, "metalog", metalog.metalog)
+    # pyre-fixme[16]: `vfs` has no attribute `metalog`.
     svfs.metalog = ml
 
     if ui.configbool("mutation", "enabled"):
@@ -136,7 +137,6 @@ def repairsvfs(ui, svfs, name: str, fixobj) -> None:
 
 
 def repair(ui, name, path, fixfunc, *args, **kwargs):
-    # type: (..., str, str, ...) -> None
     """Attempt to repair path by using fixfunc"""
     with progress.spinner(ui, "checking %s" % name):
         oldfshash = fshash(path)

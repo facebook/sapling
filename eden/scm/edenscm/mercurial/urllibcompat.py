@@ -110,9 +110,7 @@ if sys.version_info[0] >= 3:
         s = pycompat.encodeutf8(urllib.parse.urlencode(query, doseq=doseq))
         return s
 
-    # pyre-fixme[16]: `_pycompatstub` has no attribute `quote`.
     urlreq.quote = quote
-    # pyre-fixme[16]: `_pycompatstub` has no attribute `urlencode`.
     urlreq.urlencode = urlencode
 
     def getfullurl(req):

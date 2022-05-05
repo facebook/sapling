@@ -261,11 +261,7 @@ class chgcmdserver(commandserver.server):
         l = self._readlist()
         try:
             newenv = dict(  # ignore below bc pyre doesn't like list to kv conversion
-                # pyre-fixme[6]: Expected `Mapping[Variable[_KT], Variable[_VT]]`
-                #  for 1st param but got `Generator[List[str], None, None]`.
-                s.split("=", 1)
-                for s in l
-                if "=" in s
+                s.split("=", 1) for s in l if "=" in s
             )
         except ValueError:
             raise ValueError("unexpected value in setenv request")

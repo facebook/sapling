@@ -143,6 +143,7 @@ def env(args: List[str], env: Env) -> str:
 @command
 def export(args: List[str], env: Env):
     # affect the shared "exportedenvvars"
+    # pyre-fixme[9]: env has type `Env`; used as `Optional[Env]`.
     env = env.parent
     for arg in args:
         if "=" in arg:
@@ -155,6 +156,7 @@ def export(args: List[str], env: Env):
 
 @command
 def unset(args: List[str], env: Env):
+    # pyre-fixme[9]: env has type `Env`; used as `Optional[Env]`.
     env = env.parent
     for name in args:
         env.unset(name, Scope.SHELL)
@@ -289,6 +291,7 @@ def test(args: List[str], arg0: str, env: Env):
         elif op == "-x":
             import stat
 
+            # pyre-fixme[9]: istrue has type `Optional[bool]`; used as `int`.
             istrue = fs.stat(arg).st_mode & stat.S_IEXEC
     if istrue is None:
         raise NotImplementedError(f"test {args} is not implemented")
@@ -374,6 +377,7 @@ def sed(args: List[str], stdin: BinaryIO, stdout: BinaryIO, fs: ShellFS) -> str:
         # apply the script
         lines[linerange] = _sedscript(script, lines[linerange])
 
+    # pyre-fixme[7]: Expected `str` but got implicit return value of `None`.
     out.write("".join(lines).encode())
 
 
@@ -429,6 +433,7 @@ def read(args: List[str], stdin: BinaryIO, env: Env) -> int:
 
 @command
 def source(args: List[str], env: Env):
+    # pyre-fixme[9]: env has type `Env`; used as `Optional[Env]`.
     env = env.parent
     code = ""
     for path in args:

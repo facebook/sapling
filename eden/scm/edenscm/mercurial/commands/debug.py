@@ -3809,6 +3809,8 @@ def debugresetheads(ui, repo):
 def debugruntest(ui, *paths, **opts):
     """run .t test"""
     import textwrap
+
+    # pyre-fixme[21]: Could not find name `util` in `multiprocessing` (stubbed).
     from multiprocessing import util as mputil
     from unittest import SkipTest
 
@@ -3848,6 +3850,7 @@ def debugruntest(ui, *paths, **opts):
         if count > limit:
             return
 
+        # pyre-fixme[6]: For 1st param expected `str` but got `Optional[str]`.
         writetitle(mismatch.testname)
 
         if count == limit:

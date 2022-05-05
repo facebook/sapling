@@ -170,6 +170,7 @@ def _fm1encodeonemarker(marker):
 # mapping to read/write various marker formats
 # <version> -> (decoder, encoder)
 formats = {
+    # pyre-fixme[16]: Module `parsers` has no attribute `fm1readmarkers`.
     _fm1version: (parsers.fm1readmarkers, _fm1encodeonemarker),
 }
 

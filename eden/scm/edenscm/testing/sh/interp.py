@@ -17,6 +17,7 @@ from functools import partial
 from io import BytesIO
 from typing import List, Optional
 
+# pyre-fixme[21]: Could not find module `conch_parser`.
 import conch_parser
 
 from .types import InterpResult, Env, ShellReturn, ShellExit, Scope
@@ -167,6 +168,7 @@ def interpsubst(v, env: Env) -> InterpResult:
     env = env.nested(Scope.SHELL)
     env.stdout = BytesIO()
     res = interp(v, env)
+    # pyre-fixme[16]: `Optional` has no attribute `getvalue`.
     res.out += env.stdout.getvalue().decode()
     res.out = res.out.rstrip()
     return res
@@ -228,6 +230,7 @@ def interppipe(v, env: Env) -> InterpResult:
         if i > 0:
             # stdout of previous comamnd is stdin for the next command
             stdin = env.stdout
+            # pyre-fixme[16]: `Optional` has no attribute `seek`.
             stdin.seek(0)
             env.stdin = stdin
             env.stdout = BytesIO()
@@ -235,6 +238,7 @@ def interppipe(v, env: Env) -> InterpResult:
     if negate:
         res.exitcode = int(not res.exitcode)
     if allocatedstdout:
+        # pyre-fixme[16]: `Optional` has no attribute `getvalue`.
         out = env.stdout.getvalue()
         if origenv.stdout is None:
             res.out = out.decode() + res.out
@@ -245,6 +249,7 @@ def interppipe(v, env: Env) -> InterpResult:
         if origenv.stderr is None:
             res.out = res.out + err.decode()
         else:
+            # pyre-fixme[61]: `out` is undefined, or not always defined.
             origenv.stderr.write(out)
     return res
 

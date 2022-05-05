@@ -86,7 +86,6 @@ class abstractvfs(pycompat.ABC):
         raise NotImplementedError("must be implemented by subclasses")
 
     def tryread(self, path):
-        # type: str -> bytes
         """gracefully return an empty string for missing files"""
         try:
             return self.read(path)
@@ -96,11 +95,9 @@ class abstractvfs(pycompat.ABC):
         return b""
 
     def tryreadutf8(self, path):
-        # type: str -> str
         return decodeutf8(self.tryread(path))
 
     def tryreadlines(self, path, mode="rb"):
-        # type: str -> List[bytes]
         """gracefully return an empty array for missing files"""
         try:
             return self.readlines(path, mode=mode)
@@ -335,7 +332,6 @@ class abstractvfs(pycompat.ABC):
         return util.unlinkpath(self.join(path), ignoremissing=ignoremissing)
 
     def utime(self, path=None, t=None):
-        # type: (Optional[str], Optional[Tuple[float, float]]]) -> None
         return os.utime(self.join(path), t)
 
     def walk(
@@ -380,6 +376,8 @@ class abstractvfs(pycompat.ABC):
             # pyre-fixme[7]: Expected `ContextManager[backgroundfilecloser]` but got
             #  `Generator[None, None, None]`.
             yield
+            # pyre-fixme[7]: Expected `ContextManager[backgroundfilecloser]` but got
+            #  `Generator[typing.Any, typing.Any, None]`.
             return
         vfs = getattr(self, "vfs", self)
         if vfs._backgroundfilecloser is not None:

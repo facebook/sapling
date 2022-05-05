@@ -21,6 +21,7 @@ class OSFS(ShellFS):
             return NullIO()
         if "b" not in mode:
             mode += "b"
+        # pyre-fixme[7]: Expected `BinaryIO` but got `IO[typing.Any]`.
         return open(path, mode)
 
     def glob(self, pat: str) -> List[str]:

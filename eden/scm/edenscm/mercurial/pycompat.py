@@ -112,7 +112,6 @@ if sys.version_info[0] >= 3:
     shlexsplit = shlex.split
 
     def encodeutf8(s, errors="strict"):
-        # type: (str) -> bytes
         return s.encode("utf-8", errors=errors)
 
     def decodeutf8(s: bytes, errors: str = "strict") -> str:
@@ -131,7 +130,6 @@ if sys.version_info[0] >= 3:
         return s.values()
 
     def ensurestr(s):
-        # type: Union[str, bytes] -> str
         if isinstance(s, bytes):
             s = s.decode("utf-8")
         return s
@@ -214,7 +212,6 @@ else:
     rawinput = raw_input  # noqa
 
     def encodeutf8(s, errors="strict"):
-        # type: (str) -> bytes
         if istest():
             assert isinstance(s, str), "expected str, actual %s" % s.__class__
 
@@ -238,7 +235,6 @@ else:
         return s.itervalues()
 
     def ensurestr(s):
-        # type: Union[str, unicode] -> str
         if isinstance(s, unicode):
             s = s.encode("utf-8")
         return s

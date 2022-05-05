@@ -9,6 +9,7 @@ import os
 import time
 import warnings
 
+# pyre-fixme[21]: Could not find module `mysql.connector`.
 import mysql.connector
 from edenscm.mercurial import error, pycompat, util
 from edenscm.mercurial.i18n import _
@@ -406,6 +407,7 @@ class sqlindex(object):
         )
 
 
+# pyre-fixme[11]: Annotation `MySQLConverter` is not defined as a type.
 class CustomConverter(mysql.connector.conversion.MySQLConverter):
     """Ensure that all values being returned are returned as python string
     (versus the default byte arrays)."""

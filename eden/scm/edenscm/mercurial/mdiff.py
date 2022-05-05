@@ -270,9 +270,6 @@ def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
 
 
 def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
-    # type: (bytes, str, bytes, str, str, str, diffopts, bool) ->
-    # type: Tuple[List[bytes],
-    #            Iterator[Tuple[Optional[Tuple[int,int,int,int], List[bytes]]]]]
     """Return a unified diff as a (headers, hunks) tuple.
 
     If the diff is not null, `headers` is a list with unified diff header

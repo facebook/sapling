@@ -1137,6 +1137,7 @@ def _filelogbaseparents(
     """Return (base, parents) useful for annotate history traversal.
     This implementation is based on filelog.
     """
+    # pyre-fixme[16]: `basefilectx` has no attribute `_repo`.
     getlog = util.lrucachefunc(lambda x: fctx._repo.file(x))
 
     def parents(f):

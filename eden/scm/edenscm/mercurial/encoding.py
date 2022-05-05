@@ -422,7 +422,6 @@ def getutf8char(s, pos):
 
 
 def toutf8b(s):
-    # type: bytes -> bytes
     """convert a local, possibly-binary string into UTF-8b
 
     This is intended as a generic method to preserve data when working

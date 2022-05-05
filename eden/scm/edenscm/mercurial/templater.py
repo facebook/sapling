@@ -1499,7 +1499,6 @@ byteify = templatefilters.byteify
 
 
 def _flatten(thing):
-    # type: Any -> Iterable[str]
     """yield a single stream from a possibly nested set of iterators"""
     thing = templatekw.unwraphybrid(thing)
     if isinstance(thing, str):

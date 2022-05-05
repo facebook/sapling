@@ -1889,7 +1889,6 @@ class paths(util.sortdict):
                 raise error.RepoError(_("repository %s does not exist") % name)
 
     def getname(self, rawloc, forremotenames=False):
-        # type: (str) -> Optional[str]
         """Return name from a raw location.
 
         If this function is about to return $name, and

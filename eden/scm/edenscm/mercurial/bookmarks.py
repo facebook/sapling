@@ -1250,6 +1250,7 @@ class lazyremotenamedict(pycompat.Mapping):
         else:
             return None
 
+    # pyre-fixme[15]: `keys` overrides method defined in `Mapping` inconsistently.
     def keys(self) -> typing.AbstractSet[str]:
         """Get a list of bookmark names"""
         if not self.loaded:

@@ -1682,7 +1682,6 @@ class binhunk(object):
 
 
 def parsefilename(s):
-    # type: bytes -> str
     # --- filename \t|space stuff
     s = pycompat.decodeutf8(s)[4:].rstrip("\r\n")
     i = s.find("\t")
@@ -3212,7 +3211,6 @@ def diffstatsum(stats):
 
 
 def diffstatdata(lines):
-    # type: Sequence[bytes] -> List[Tuple[str, int, int, bool]]
     diffre = re.compile(b"^diff .*-r [a-z0-9]+\\s(.*)$")
 
     results = []

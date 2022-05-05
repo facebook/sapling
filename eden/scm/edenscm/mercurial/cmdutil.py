@@ -67,7 +67,6 @@ stringio = util.stringio
 
 
 def _typedflags(flags):
-    # type: List[Tuple[str, str, Union[str, None, List[str]], str]] -> List[Tuple[str, str, Union[str, None, List[str]], str]]
     return flags
 
 

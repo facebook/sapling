@@ -284,7 +284,6 @@ class _httprequesthandlerssl(_httprequesthandler):
 try:
     import threading
 
-    # pyre-fixme[16]: Module `threading` has no attribute `activeCount`.
     threading.activeCount()  # silence pyflakes and bypass demandimport
     _mixin = socketserver.ThreadingMixIn
 except ImportError:

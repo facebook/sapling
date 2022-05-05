@@ -517,7 +517,6 @@ class revlog(object):
         return self._nodecache
 
     def hasnode(self, node):
-        # type: bytes -> bool
         try:
             self.rev(node)
             return True
@@ -544,7 +543,6 @@ class revlog(object):
             self._nodepos = None
 
     def rev(self, node):
-        # type: bytes -> int
         try:
             return self._nodecache[node]
         except TypeError:
@@ -629,7 +627,6 @@ class revlog(object):
             raise
 
     def node(self, rev):
-        # type: int -> bytes
         try:
             return self.index[rev][7]
         except IndexError:
@@ -1092,7 +1089,6 @@ class revlog(object):
         return [self.node(r) for r in heads]
 
     def children(self, node):
-        # type: bytes -> List[bytes]
         """find the children of a given node"""
         c = []
         p = self.rev(node)

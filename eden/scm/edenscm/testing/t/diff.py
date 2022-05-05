@@ -82,6 +82,7 @@ class ExpectLine:
         if os.name == "nt":
             line = line.replace("\\", "/")
         if self.isre:
+            # pyre-fixme[7]: Expected `bool` but got `Optional[Match[str]]`.
             return re.match(self.body + r"\Z", line)
         else:
             return self.body == line
@@ -186,6 +187,8 @@ class MultiLineMatcher:
         Return (actual, expected) pair, which is more friendly for a plain
         text diff algorithm.
         """
+        # pyre-fixme[7]: Expected `Tuple[str, str]` but got `Tuple[Union[bool, str],
+        #  ...]`.
         return self._matchandnormalizecached(actual)[1:]
 
     def _matchandnormalizecached(self, actual: str) -> Tuple[bool, str, str]:

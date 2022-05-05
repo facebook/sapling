@@ -183,6 +183,7 @@ setsignalhandler = platform.setsignalhandler
 shellquote = platform.shellquote
 split = platform.split
 sshargs = platform.sshargs
+# pyre-fixme[16]: Module `osutil` has no attribute `statfiles`.
 statfiles = getattr(osutil, "statfiles", platform.statfiles)
 statisexec = platform.statisexec
 statislink = platform.statislink
@@ -1181,6 +1182,7 @@ def mainfrozen():
 
 
 # the location of data files matching the source code
+# pyre-fixme[16]: Module `sys` has no attribute `frozen`.
 if mainfrozen() and getattr(sys, "frozen", None) != "macosx_app":
     # executable version (py2exe) doesn't support __file__
     datapath = os.path.dirname(pycompat.sysexecutable)
@@ -1907,8 +1909,6 @@ class atomictempfile(BinaryIO):
     def __enter__(self) -> "atomictempfile":
         return self
 
-    # pyre-fixme[14]: `__exit__` overrides method defined in `IO` inconsistently.
-    # pyre-fixme[14]: `__exit__` overrides method defined in `IO` inconsistently.
     def __exit__(
         self,
         exctype: "Optional[Type[BaseException]]",
