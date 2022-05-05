@@ -189,6 +189,8 @@ class HgQueuedBackingStore final : public BackingStore {
     return *backingStore_;
   }
 
+  int64_t dropAllPendingRequestsFromQueue() override;
+
  private:
   // Forbidden copy constructor and assignment operator
   HgQueuedBackingStore(const HgQueuedBackingStore&) = delete;

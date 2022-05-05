@@ -619,4 +619,38 @@ void HgQueuedBackingStore::periodicManagementTask() {
   backingStore_->periodicManagementTask();
 }
 
+namespace {
+void dropBlobImportRequest(std::shared_ptr<HgImportRequest>& request) {
+  auto* promise = request->getPromise<std::unique_ptr<Blob>>();
+  if (promise != nullptr) {
+    if (!promise->isFulfilled()) {
+      promise->setException(std::runtime_error("Request forcibly dropped"));
+    }
+  }
+}
+
+void dropTreeImportRequest(std::shared_ptr<HgImportRequest>& request) {
+  auto* promise = request->getPromise<std::unique_ptr<Tree>>();
+  if (promise != nullptr) {
+    if (!promise->isFulfilled()) {
+      promise->setException(std::runtime_error("Request forcibly dropped"));
+    }
+  }
+}
+} // namespace
+
+int64_t HgQueuedBackingStore::dropAllPendingRequestsFromQueue() {
+  auto requestVec = queue_.combineAndClearRequestQueues();
+  for (auto& request : requestVec) {
+    if (request->isType<HgImportRequest::BlobImport>()) {
+      XLOG(DBG7, "Dropping blob request");
+      dropBlobImportRequest(request);
+    } else if (request->isType<HgImportRequest::TreeImport>()) {
+      XLOG(DBG7, "Dropping tree request");
+      dropTreeImportRequest(request);
+    }
+  }
+  return requestVec.size();
+}
+
 } // namespace facebook::eden

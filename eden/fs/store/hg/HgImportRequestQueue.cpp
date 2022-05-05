@@ -91,6 +91,27 @@ folly::Future<Ret> HgImportRequestQueue::enqueue(
   return promise->getFuture();
 }
 
+std::vector<std::shared_ptr<HgImportRequest>>
+HgImportRequestQueue::combineAndClearRequestQueues() {
+  auto state = state_.lock();
+  auto treeQSz = state->treeQueue.size();
+  auto blobQSz = state->blobQueue.size();
+  XLOGF(
+      DBG5,
+      "combineAndClearRequestQueues: tree queue size = {}, blob queue size = {}",
+      treeQSz,
+      blobQSz);
+  auto res = std::move(state->treeQueue);
+  res.insert(
+      res.end(),
+      std::make_move_iterator(state->blobQueue.begin()),
+      std::make_move_iterator(state->blobQueue.end()));
+  state->treeQueue.clear();
+  state->blobQueue.clear();
+  XCHECK_EQ(res.size(), treeQSz + blobQSz);
+  return res;
+}
+
 std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue() {
   size_t count;
   std::vector<std::shared_ptr<HgImportRequest>>* queue = nullptr;

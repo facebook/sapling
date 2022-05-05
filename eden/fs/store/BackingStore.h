@@ -175,6 +175,8 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
     return std::nullopt;
   }
 
+  virtual int64_t dropAllPendingRequestsFromQueue() = 0;
+
  private:
   // Forbidden copy constructor and assignment operator
   BackingStore(BackingStore const&) = delete;

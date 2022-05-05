@@ -84,6 +84,14 @@ class LocalStoreCachedBackingStore : public BackingStore {
     return backingStore_;
   }
 
+  // TODO(T119221752): Implement for all BackingStore subclasses
+  int64_t dropAllPendingRequestsFromQueue() override {
+    XLOG(
+        WARN,
+        "dropAllPendingRequestsFromQueue() is not implemented for LocalStoreCachedBackingStore");
+    return 0;
+  }
+
  private:
   std::shared_ptr<BackingStore> backingStore_;
   std::shared_ptr<LocalStore> localStore_;

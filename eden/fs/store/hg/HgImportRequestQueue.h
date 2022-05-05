@@ -111,6 +111,11 @@ class HgImportRequestQueue {
     }
   }
 
+  /**
+   * Combines all requests into 1 vec and clears the contents of the originals.
+   */
+  std::vector<std::shared_ptr<HgImportRequest>> combineAndClearRequestQueues();
+
  private:
   /**
    * Puts an item into the queue.

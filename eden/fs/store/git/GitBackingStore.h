@@ -66,6 +66,14 @@ class GitBackingStore final : public BackingStore {
       const ObjectId& id,
       ObjectFetchContext& context) override;
 
+  // TODO(T119221752): Implement for all BackingStore subclasses
+  int64_t dropAllPendingRequestsFromQueue() override {
+    XLOG(
+        WARN,
+        "dropAllPendingRequestsFromQueue() is not implemented for GitBackingStore");
+    return 0;
+  }
+
  private:
   GitBackingStore(GitBackingStore const&) = delete;
   GitBackingStore& operator=(GitBackingStore const&) = delete;

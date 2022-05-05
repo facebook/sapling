@@ -156,6 +156,14 @@ class FakeBackingStore final : public BackingStore {
    */
   size_t getAccessCount(const ObjectId& hash) const;
 
+  // TODO(T119221752): Implement for all BackingStore subclasses
+  int64_t dropAllPendingRequestsFromQueue() override {
+    XLOG(
+        WARN,
+        "dropAllPendingRequestsFromQueue() is not implemented for FakeBackingStore");
+    return 0;
+  }
+
  private:
   struct Data {
     std::unordered_map<RootId, std::unique_ptr<StoredHash>> commits;
