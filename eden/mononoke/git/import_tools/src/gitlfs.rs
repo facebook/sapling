@@ -106,12 +106,16 @@ impl GitImportLfs {
     pub fn new_disabled() -> Self {
         GitImportLfs { inner: None }
     }
-    pub fn new(lfs_server: String, conn_limit: Option<usize>) -> Result<Self, Error> {
+    pub fn new(
+        lfs_server: String,
+        allow_not_found: bool,
+        conn_limit: Option<usize>,
+    ) -> Result<Self, Error> {
         let connector = HttpsConnector::new().map_err(Error::from)?;
         let client: Client<_, body::Body> = Client::builder().build(connector);
         let inner = GitImportLfsInner {
             lfs_server,
-            allow_not_found: true,
+            allow_not_found,
             max_attempts: 30,
             time_ms_between_attempts: 10000,
             conn_limit_sem: conn_limit.map(|x| Arc::new(Semaphore::new(x))),
