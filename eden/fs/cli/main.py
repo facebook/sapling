@@ -2172,6 +2172,11 @@ def create_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Enable debug mode (more verbose logging, traceback, etc..)",
     )
+    parser.add_argument(
+        "--press-to-continue",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
 
     subcmd_add_list: List[Type[Subcmd]] = [
         subcmd_mod.HelpCmd,
@@ -2307,7 +2312,10 @@ def main() -> int:
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     try:
-        return asyncio_run(async_main(parser, args))
+        ret = asyncio_run(async_main(parser, args))
+        if args.press_to_continue:
+            input("\n\nPress enter to continue...")
+        return ret
     except KeyboardInterrupt:
         # If a Thrift stream is interrupted, Folly EventBus/NotificationQueue
         # gets into a wonky state, and attempting to garbage collect the

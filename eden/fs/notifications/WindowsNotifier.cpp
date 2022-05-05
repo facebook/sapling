@@ -248,6 +248,22 @@ void showWinNotification(HWND hwnd, const WindowsNotification& notif) {
       "Failed to show E-Menu notification");
 }
 
+void executeShellCommand(std::string_view cmd, std::string_view params) {
+  SHELLEXECUTEINFOW pExecInfo = {};
+  pExecInfo.cbSize = sizeof(pExecInfo);
+  // TODO(@cuev): Allow users to specify what shell they want us to
+  // launch the report command with
+  pExecInfo.fMask = SEE_MASK_NOASYNC;
+  pExecInfo.lpVerb = L"open";
+  auto cmdStr = multibyteToWideString(cmd);
+  auto paramsStr = multibyteToWideString(params);
+  pExecInfo.lpFile = cmdStr.c_str();
+  pExecInfo.lpParameters = paramsStr.c_str();
+  pExecInfo.nShow = SW_SHOWNORMAL;
+  auto errStr = fmt::format("Failed to excute command: {} {}", cmd, params);
+  checkNonZero(ShellExecuteExW(&pExecInfo), errStr);
+}
+
 LRESULT CALLBACK
 WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
   try {
@@ -328,18 +344,8 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
           }
 
           case IDM_EDENREPORT: {
-            SHELLEXECUTEINFOW pExecInfo = {};
-            pExecInfo.cbSize = sizeof(pExecInfo);
-            // TODO(@cuev): Allow users to specify what shell they want us to
-            // launch the report command with
-            pExecInfo.fMask = SEE_MASK_NOASYNC;
-            pExecInfo.lpVerb = L"open";
-            pExecInfo.lpFile = L"edenfsctl";
-            pExecInfo.lpParameters = L"rage --report";
-            pExecInfo.nShow = SW_SHOWNORMAL;
-            checkNonZero(
-                ShellExecuteExW(&pExecInfo),
-                "Failed to launch EdenFS report script");
+            executeShellCommand(
+                "edenfsctl", "--press-to-continue rage --report");
             return 0;
           }
 
