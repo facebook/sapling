@@ -32,6 +32,7 @@ class GlobalTestState(threading.local):
         self.env = {
             "HGRCPATH": hgrc_path,
             "TESTTMP": str(self.test_tmp),
+            "TEST_PROD_CONFIGS": "true",
         }
 
     def cleanup(self) -> None:

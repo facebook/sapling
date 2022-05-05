@@ -25,52 +25,24 @@ class BaseTest(unittest.TestCase):
         self._add_production_configs(Path(test_globals.env["HGRCPATH"]))
 
     def _add_production_configs(self, hgrc: Path) -> None:
+        # Most production configs should be loaded via dynamicconfig. The ones
+        # below are test-specific overrides to do things like pin timestamps,
+        # set test cache directories, disable certain user-oriented output, etc.
+        # data usage and f
         with open(hgrc, "w") as f:
             f.write(
                 f"""
 [commitcloud]
 enablestatus = False
 hostname = testhost
-remotebookmarkssync = True
 servicetype = local
 servicelocation = {new_dir()}
-token_enforced = False
-
-[experimental]
-changegroup3 = True
-evolution = obsolete
-narrow-heads = True
-
-[extensions]
-amend =
-commitcloud =
-infinitepush =
-rebase =
-remotefilelog =
-remotenames =
-smartlog =
-treemanifest =
 
 [mutation]
 date = "0 0"
-enabled = True
-record = True
 
 [remotefilelog]
 cachepath = {new_dir()}
-http = True
-
-[remotenames]
-hoist = remote
-rename.default = remote
-selectivepull = True
-selectivepulldefault = master
-
-[treemanifest]
-http = True
-
-[visibility]
-enabled = True
 """
             )
 

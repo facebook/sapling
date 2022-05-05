@@ -7,8 +7,9 @@
 from __future__ import annotations
 
 import os
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, IO, List, Optional, TYPE_CHECKING, Union
+from typing import Any, Dict, Generator, IO, List, Optional, TYPE_CHECKING, Union
 
 from eden.integration.lib import edenclient
 
@@ -17,7 +18,7 @@ from .file import File
 from .hg import hg
 from .status import Status
 from .types import PathLike
-from .util import new_dir, new_file
+from .util import new_dir, new_file, test_globals
 
 if TYPE_CHECKING:
     from .repo import Repo
@@ -125,19 +126,39 @@ overrides = {{}}
 """
             )
 
-        os.environ["SCRATCH_CONFIG_PATH"] = str(scratch_config)
-        os.environ["HG_REAL_BIN"] = str(hg.EXEC)
-        self.eden = edenclient.EdenFS(
-            base_dir=new_dir(),
-            extra_args=["--eden_logview"],
-            storage_engine="memory",
+        overrides = dict(test_globals.env)
+        overrides.update(
+            {
+                "SCRATCH_CONFIG_PATH": str(scratch_config),
+                "HG_REAL_BIN": str(hg.EXEC),
+            }
         )
-        self.eden.start()
-        self.eden.clone(str(repo.root), str(path), allow_empty=True)
-        os.environ.pop("SCRATCH_CONFIG_PATH")
-        os.environ.pop("HG_REAL_BIN")
+        with override_environ(overrides):
+            self.eden = edenclient.EdenFS(
+                base_dir=new_dir(),
+                extra_args=["--eden_logview"],
+                storage_engine="memory",
+            )
+            self.eden.start()
+            self.eden.clone(str(repo.root), str(path), allow_empty=True)
 
         super().__init__(repo, path)
 
     def cleanup(self) -> None:
         self.eden.cleanup()
+
+
+@contextmanager
+def override_environ(values: Dict[str, str]) -> Generator[None, None, None]:
+    backup = {}
+    for key, value in values.items():
+        old = os.environ.get(key, None)
+        if old is not None:
+            backup[key] = old
+        os.environ[key] = value
+    yield
+    for key in values.keys():
+        os.environ.pop(key)
+        old = backup.get(key, None)
+        if old is not None:
+            os.environ[key] = old
