@@ -59,25 +59,157 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
             b"bdir/test.sh",
             b"slink",
         ]
-        info_list = self.client.getFileInformation(self.mount_path_bytes, paths)
-        self.assertEqual(len(paths), len(info_list))
 
-        for idx, path in enumerate(paths):
+        info_list_pre = self.client.getFileInformation(self.mount_path_bytes, paths)
+        self.assertEqual(len(paths), len(info_list_pre))
+
+        # Check that stat doesn't change over the materialization of a file.
+        contents = {}
+        stats = []
+        for path in paths:
+            statpath = path if path else b"."
+            # skip the non-existent file
+            if statpath == b"not-exist":
+                continue
+
+            realpath = os.path.join(self.mount, os.fsdecode(statpath))
+            st = os.lstat(realpath)
+            self.assertNotEqual(0, st.st_mode)
+            stats.append(st)
+
+            if stat.S_ISREG(st.st_mode):
+                with open(realpath, "a+b") as f:
+                    f.seek(0, 0)  # beginning
+                    contents[realpath] = f.read()
+                    f.seek(0, 2)  # end
+                    f.write(b"AppendedData")
+
+            st = os.lstat(realpath)
+            self.assertNotEqual(0, st.st_mode)
+
+            # Don't bother checking against the info_list_pre elements, as we assert their equality with
+            # info_list_post below, and they are checked against the stat information.
+        info_list_post = self.client.getFileInformation(self.mount_path_bytes, paths)
+        self.assertEqual(len(paths), len(info_list_post))
+
+        # Check the getFileInformation things from before/after load are the same
+        statidx = -1
+        for path, a, b in zip(paths, info_list_pre, info_list_post):
+            self.assertEqual(
+                a.getType(),
+                b.getType(),
+                msg="have same pre and post loads for " + repr(path),
+            )
+
+            if a.getType() == FileInformationOrError.INFO:
+                a = a.get_info()
+                b = b.get_info()
+                statidx += 1
+                st = stats[statidx]
+                self.assertEqual(
+                    a.mode,
+                    b.mode,
+                    msg="have same FileInformation.mode for " + repr(path),
+                )
+
+                # The files were modified above, ensure b.mtime increased
+                if os.name == "nt":
+                    # mtime is zero on Windows
+                    self.assertEqual(
+                        a.mtime.seconds,
+                        0,
+                        msg="have zero mtime on windows for " + repr(path),
+                    )
+                    self.assertEqual(
+                        a.mtime.nanoSeconds,
+                        0,
+                        msg="have zero mtime on windows for " + repr(path),
+                    )
+                    self.assertEqual(
+                        a.mtime,
+                        b.mtime,
+                        msg="have same FileInformation.mtime for " + repr(path),
+                    )
+                elif stat.S_ISREG(st.st_mode):
+                    self.assertTrue(
+                        (a.mtime.seconds < b.mtime.seconds)
+                        or (
+                            (a.mtime.seconds == b.mtime.seconds)
+                            and (a.mtime.nanoSeconds < b.mtime.nanoSeconds)
+                        ),
+                        msg=f"have s={a.mtime.seconds},ns={a.mtime.nanoSeconds}< FileInformation.mtime s={b.mtime.seconds},ns={b.mtime.nanoSeconds} after modification for "
+                        + repr(path),
+                    )
+                else:
+                    self.assertEqual(
+                        a.mtime,
+                        b.mtime,
+                        msg="have same FileInformation.mtime for " + repr(path),
+                    )
+
+                # The second info came from the modified file, adjust the size
+                asize = a.size
+                if stat.S_ISREG(st.st_mode):
+                    asize += 12
+                self.assertEqual(
+                    asize,
+                    b.size,
+                    msg="have same FileInformation.size for " + repr(path),
+                )
+            else:
+                a = a.get_error()
+                b = b.get_error()
+                self.assertEqual(a, b, msg="have same Error for " + repr(path))
+
+        # Reset the repo contents so the length/size checks below are correct
+        # TODO: While the below works on HG, it's not portable to the other backing repos this is tested on.
+        # self.repo.reset(self.repo.log()[0], keep=False)
+
+        for path, info_or_error in zip(paths, info_list_post):
             try:
-                st = os.lstat(os.path.join(self.mount, os.fsdecode(path)))
+                st = os.lstat(
+                    os.path.join(self.mount, os.fsdecode(path if path else b"."))
+                )
                 self.assertEqual(
                     FileInformationOrError.INFO,
-                    info_list[idx].getType(),
+                    info_or_error.getType(),
                     msg="have non-error result for " + repr(path),
                 )
-                info = info_list[idx].get_info()
-                self.assertEqual(
-                    st.st_mode, info.mode, msg="mode matches for " + repr(path)
-                )
-                self.assertEqual(
-                    st.st_size, info.size, msg="size matches for " + repr(path)
-                )
-                self.assertEqual(int(st.st_mtime), info.mtime.seconds)
+                info = info_or_error.get_info()
+                # Windows's FileInode/TreeInode returns zero for mode
+                if os.name == "nt":
+                    self.assertEqual(
+                        0, info.mode, msg="mode is zero on windows for " + repr(path)
+                    )
+                else:
+                    self.assertEqual(
+                        f"{st.st_mode:#o}",
+                        f"{info.mode:#o}",
+                        msg="mode matches for " + repr(path),
+                    )
+                if os.name == "nt" and stat.S_ISDIR(st.st_mode):
+                    # TreeInode assumes directories are zero-size on Windows
+                    self.assertEqual(
+                        0,
+                        info.size,
+                        msg="size is zero on windows on directory for " + repr(path),
+                    )
+                else:
+                    self.assertEqual(
+                        st.st_size, info.size, msg="size matches for " + repr(path)
+                    )
+                if os.name == "nt":
+                    self.assertEqual(
+                        0,
+                        info.mtime.seconds,
+                        msg="mtime is zero on windows for " + repr(path),
+                    )
+                else:
+                    self.assertEqual(
+                        int(st.st_mtime),
+                        info.mtime.seconds,
+                        msg="mtime matches for " + repr(path),
+                    )
                 if not stat.S_ISDIR(st.st_mode):
                     self.assertNotEqual(0, st.st_mtime)
                     self.assertNotEqual(0, st.st_ctime)
@@ -85,10 +217,10 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
             except OSError as e:
                 self.assertEqual(
                     FileInformationOrError.ERROR,
-                    info_list[idx].getType(),
+                    info_or_error.getType(),
                     msg="have error result for " + repr(path),
                 )
-                err = info_list[idx].get_error()
+                err = info_or_error.get_error()
                 self.assertEqual(
                     e.errno, err.errorCode, msg="error code matches for " + repr(path)
                 )
