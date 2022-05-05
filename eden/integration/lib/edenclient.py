@@ -301,6 +301,9 @@ class EdenFS(object):
         if extra_args:
             extra_daemon_args.extend(extra_args)
 
+        # Tell the daemon where to find edenfsctl
+        extra_daemon_args += ["--edenfsctlPath", FindExe.get_edenfsctl_env()[0]]
+
         return extra_daemon_args
 
     def spawn_nowait(
