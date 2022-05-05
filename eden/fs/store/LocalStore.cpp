@@ -134,14 +134,7 @@ folly::Future<optional<BlobMetadata>> LocalStore::getBlobMetadata(
 }
 
 folly::IOBuf LocalStore::serializeTree(const Tree& tree) {
-  if (!tree.isGitTreeCompatible()) {
-    return tree.serialize();
-  }
-  GitTreeSerializer serializer;
-  for (auto& entry : tree.getTreeEntries()) {
-    serializer.addEntry(std::move(entry));
-  }
-  return serializer.finalize();
+  return tree.serialize();
 }
 
 bool LocalStore::hasKey(KeySpace keySpace, const ObjectId& id) const {

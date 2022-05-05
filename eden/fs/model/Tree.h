@@ -79,15 +79,6 @@ class Tree {
     return results;
   }
 
-  bool isGitTreeCompatible() const {
-    for (const auto& entry : entries_) {
-      if (entry.getHash().size() != Hash20::RAW_SIZE) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   /**
    * Serialize tree using custom format.
    */

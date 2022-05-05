@@ -7,19 +7,15 @@
 
 #include "eden/fs/model/git/GitTree.h"
 #include <fmt/format.h>
-#include <folly/String.h>
-#include <array>
+#include <folly/io/Cursor.h>
 #include <cstdio>
 #include <cstring>
-#include <string>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
-#include "eden/fs/utils/EnumValue.h"
 
 using folly::IOBuf;
 using std::invalid_argument;
-using std::string;
 using std::vector;
 
 namespace facebook::eden {
@@ -105,100 +101,6 @@ std::unique_ptr<Tree> deserializeGitTree(
     folly::ByteRange treeData) {
   IOBuf buf(IOBuf::WRAP_BUFFER, treeData);
   return deserializeGitTree(hash, &buf);
-}
-
-enum size_t {
-  // Initially allocate 4kb of data for the tree buffer.
-  INITIAL_TREE_BUF_SIZE = 4096,
-  // Grow by 4kb at a time if we need more space
-  TREE_BUF_GROW_SIZE = 4096,
-  // Leave 32 bytes of headroom for the "tree+<size>" prefix
-  TREE_PREFIX_HEADROOM = 32
-};
-
-GitTreeSerializer::GitTreeSerializer()
-    : buf_(IOBuf::CREATE, INITIAL_TREE_BUF_SIZE),
-      appender_(&buf_, TREE_BUF_GROW_SIZE) {
-  // Leave a bit of headroom, so we can stuff in the "tree" and size
-  // prefix afterwards.
-  buf_.advance(TREE_PREFIX_HEADROOM);
-}
-
-GitTreeSerializer::GitTreeSerializer(GitTreeSerializer&& other) noexcept
-    : buf_(std::move(other.buf_)), appender_(&buf_, TREE_BUF_GROW_SIZE) {
-  // Reset other.appender_ too, just for safety's sake,
-  // even though the caller shouldn't use it any more.
-  other.appender_ = folly::io::Appender(&other.buf_, TREE_BUF_GROW_SIZE);
-}
-
-GitTreeSerializer& GitTreeSerializer::operator=(
-    GitTreeSerializer&& other) noexcept {
-  // Moving the IOBuf invalidates the Appender pointing at it
-  // so we can't simply move other.appender_, we have to initialize our
-  // Appender from scratch.
-  buf_ = std::move(other.buf_);
-  appender_ = folly::io::Appender(&buf_, TREE_BUF_GROW_SIZE);
-  // Reset other.appender_ too, just for safety's sake, even though the
-  // caller shouldn't use it any more.
-  other.appender_ = folly::io::Appender(&other.buf_, TREE_BUF_GROW_SIZE);
-  return *this;
-}
-
-GitTreeSerializer::~GitTreeSerializer() {}
-
-void GitTreeSerializer::addEntry(const TreeEntry& entry) {
-  // Note: We don't do any sorting of the entries.  We simply serialize them in
-  // the order given to us by the caller.  It is up to the caller to ensure
-  // that the entries are sorted in the correct order.  (The sorting order does
-  // affect the final tree hash.)
-
-  mode_t mode = 0;
-  switch (entry.getType()) {
-    case TreeEntryType::EXECUTABLE_FILE:
-      mode = GitModeMask::REGULAR_EXECUTABLE_FILE;
-      break;
-    case TreeEntryType::REGULAR_FILE:
-      mode = GitModeMask::REGULAR_FILE;
-      break;
-    case TreeEntryType::TREE:
-      mode = GitModeMask::DIRECTORY;
-      break;
-    case TreeEntryType::SYMLINK:
-      mode = GitModeMask::SYMLINK;
-      break;
-  }
-  if (!mode) {
-    throw std::runtime_error(folly::to<string>(
-        "unsupported entry type ",
-        enumValue(entry.getType()),
-        " for ",
-        entry.getName().stringPiece()));
-  }
-
-  appender_.printf("%o ", mode);
-  appender_.push(entry.getName().stringPiece());
-  appender_.write<uint8_t>(0);
-  auto bytes = entry.getHash().getBytes();
-  CHECK_EQ(bytes.size(), Hash20::RAW_SIZE);
-  appender_.push(bytes);
-}
-
-folly::IOBuf GitTreeSerializer::finalize() {
-  // Add the header onto the tree buffer
-  std::array<char, TREE_PREFIX_HEADROOM> header;
-  auto headerLength = snprintf(
-      header.data(), header.size(), "tree %zu", buf_.computeChainDataLength());
-  if (headerLength < 0 || static_cast<size_t>(headerLength) >= header.size()) {
-    // This shouldn't ever happen in practice
-    throw std::runtime_error("error formatting tree header");
-  }
-  headerLength += 1; // Include the terminating NUL byte
-
-  XCHECK_GE(buf_.headroom(), static_cast<size_t>(headerLength));
-  buf_.prepend(headerLength);
-  memcpy(buf_.writableData(), header.data(), headerLength);
-
-  return std::move(buf_);
 }
 
 } // namespace facebook::eden
