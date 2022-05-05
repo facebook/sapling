@@ -390,6 +390,7 @@ members = [
   "time_window_counter",
   "tools/admin",
   "tools/example",
+  "tools/executor",
   "tools/testtool",
   "tunables",
   "tunables/tunables-derive",
