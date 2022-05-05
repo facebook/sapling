@@ -34,37 +34,48 @@ constexpr UINT EMenuUid = 123;
 constexpr UINT WMAPP_NOTIFYCALLBACK = WM_APP + 1;
 constexpr UINT WMAPP_NOTIFYDESTROY = WM_APP + 2;
 
+// Window Strings
 const wchar_t kWinClassNameStr[] = L"EdenFSMenu";
+const wchar_t kWinTitle[] = L"EdenFS Menu";
+
+// Tooltips
+const wchar_t kToolTipDefault[] = L"EdenFS Menu";
+const wchar_t kToolTipCheckout[] = L"EdenFS is performing a checkout...";
+
+// Top level menu strings
 const wchar_t kMenuWelcomeStr[] = L"Welcome to the E-Menu";
 const wchar_t kMenuAboutStr[] = L"About EdenFS";
-const wchar_t kMenuCloseStr[] = L"Hide Notification Icon";
-const wchar_t kDebugMenu[] = L"Debug Menu";
-const wchar_t kSendTestGenericNotification[] =
-    L"Send Test Generic Notification";
-const wchar_t kSendTestNetworkNotification[] =
-    L"Send Test Network Notification";
-const wchar_t kEndCheckout[] = L"Simulate Ending Checkout";
-const wchar_t kStartCheckout[] = L"Simulate Starting Checkout";
-const wchar_t kWindowTitle[] = L"EdenFSMenu";
-const wchar_t kMenuToolTip[] = L"EdenFS Menu";
-const wchar_t kEdenVersion[] = L"Running EdenFS ";
-const wchar_t kEdenUptime[] = L"Uptime: ";
-const wchar_t kCheckoutToolTip[] = L"EdenFS is performing a checkout...";
 const wchar_t kMenuOptionsStr[] = L"Options";
-const wchar_t kDisableNotifications[] = L"Disable Notifications";
-const wchar_t kEnableNotifications[] = L"Enable Notifications";
+const wchar_t kMenuDebug[] = L"Debug Menu";
 const wchar_t kMenuReport[] = L"Report Issue";
+const wchar_t kMenuCloseStr[] = L"Hide Notification Icon";
 
-constexpr UINT IDM_EXIT = 124;
-constexpr UINT IDM_EDENNOTIFICATION = 125;
-constexpr UINT IDM_EDENDEBUGNOTIFICATION = 126;
-constexpr UINT IDM_EDENDEBUGNETWORKNOTIFICATION = 127;
-constexpr UINT IDM_EDENINFO = 128;
-constexpr UINT IDM_TOGGLENOTIFICATIONS = 129;
-constexpr UINT IDM_EDENREPORT = 130;
-constexpr UINT IDM_SIGNALCHECKOUT = 131;
-constexpr UINT IDM_SIGNALSTARTCHECKOUT = 132;
-constexpr UINT IDM_SIGNALENDCHECKOUT = 133;
+// Debug menu strings
+const wchar_t kDebugSendGeneric[] = L"Send Test Generic Notification";
+const wchar_t kDebugSendNetwork[] = L"Send Test Network Notification";
+const wchar_t kDebugStartCheckout[] = L"Simulate Starting Checkout";
+const wchar_t kDebugEndCheckout[] = L"Simulate Ending Checkout";
+
+// About EdenFS strings
+const wchar_t kAboutVersion[] = L"Running EdenFS ";
+const wchar_t kAboutUptime[] = L"Uptime: ";
+
+// Options strings
+const wchar_t kOptionDisable[] = L"Disable Notifications";
+const wchar_t kOptionEnable[] = L"Enable Notifications";
+
+enum MenuCommand : UINT {
+  IDM_DEBUG_GEN_NOTIFICATION = 124,
+  IDM_DEBUG_NET_NOTIFICATION,
+  IDM_DEBUG_SIGNAL_START,
+  IDM_DEBUG_SIGNAL_END,
+  IDM_EXIT,
+  IDM_INFO,
+  IDM_NOTIFICATION,
+  IDM_REPORT_BUG,
+  IDM_SIGNAL_CHECKOUT,
+  IDM_TOGGLE_NOTIFICATIONS,
+};
 
 void check(bool opResult, std::string_view context) {
   if (opResult) {
@@ -137,7 +148,7 @@ void addNotificationIcon(HWND hwnd) {
   setGuidOrUid(iconData, hwnd, guid);
   iconData.uCallbackMessage = WMAPP_NOTIFYCALLBACK;
   StringCchPrintfW(
-      iconData.szTip, std::size(iconData.szTip), L"%s", kMenuToolTip);
+      iconData.szTip, std::size(iconData.szTip), L"%s", kToolTipDefault);
   iconData.hIcon = checkNonZero(
       static_cast<HICON>(LoadImage(
           GetModuleHandle(NULL),
@@ -201,28 +212,28 @@ void appendDebugMenu(HMENU hMenu) {
   appendMenuEntry(
       subMenu.get(),
       MF_BYPOSITION | MF_STRING,
-      IDM_EDENDEBUGNOTIFICATION,
-      kSendTestGenericNotification);
+      IDM_DEBUG_GEN_NOTIFICATION,
+      kDebugSendGeneric);
   appendMenuEntry(
       subMenu.get(),
       MF_BYPOSITION | MF_STRING,
-      IDM_EDENDEBUGNETWORKNOTIFICATION,
-      kSendTestNetworkNotification);
+      IDM_DEBUG_NET_NOTIFICATION,
+      kDebugSendNetwork);
   appendMenuEntry(
       subMenu.get(),
       MF_BYPOSITION | MF_STRING,
-      IDM_SIGNALSTARTCHECKOUT,
-      kStartCheckout);
+      IDM_DEBUG_SIGNAL_START,
+      kDebugStartCheckout);
   appendMenuEntry(
       subMenu.get(),
       MF_BYPOSITION | MF_STRING,
-      IDM_SIGNALENDCHECKOUT,
-      kEndCheckout);
+      IDM_DEBUG_SIGNAL_END,
+      kDebugEndCheckout);
   appendMenuEntry(
       hMenu,
       MF_BYPOSITION | MF_POPUP,
       reinterpret_cast<UINT_PTR>(subMenu.get()),
-      kDebugMenu);
+      kMenuDebug);
 }
 
 void showWinNotification(HWND hwnd, const WindowsNotification& notif) {
@@ -296,20 +307,20 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
             deleteNotificationIcon(hwnd);
             return 0;
 
-          case IDM_EDENNOTIFICATION: {
+          case IDM_NOTIFICATION: {
             auto notifier = getWindowsNotifier(hwnd);
             showWinNotification(hwnd, *notifier->popNextNotification());
             return 0;
           }
 
-          case IDM_EDENDEBUGNETWORKNOTIFICATION: {
+          case IDM_DEBUG_NET_NOTIFICATION: {
             auto notifier = getWindowsNotifier(hwnd);
             const auto excp = std::exception{};
             notifier->showNetworkNotification(excp);
             return 0;
           }
 
-          case IDM_EDENDEBUGNOTIFICATION: {
+          case IDM_DEBUG_GEN_NOTIFICATION: {
             auto notifier = getWindowsNotifier(hwnd);
             constexpr std::string_view title =
                 "EdenFS Test Notification - which is way too long and should be truncated!";
@@ -323,7 +334,7 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
             return 0;
           }
 
-          case IDM_EDENINFO: {
+          case IDM_INFO: {
             auto notifier = getWindowsNotifier(hwnd);
             auto msgBodyStr = notifier->getEdenInfoStr();
             checkNonZero(
@@ -337,32 +348,32 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
             return 0;
           }
 
-          case IDM_TOGGLENOTIFICATIONS: {
+          case IDM_TOGGLE_NOTIFICATIONS: {
             auto notifier = getWindowsNotifier(hwnd);
             notifier->toggleNotificationsEnabled();
             return 0;
           }
 
-          case IDM_EDENREPORT: {
+          case IDM_REPORT_BUG: {
             executeShellCommand(
                 "edenfsctl", "--press-to-continue rage --report");
             return 0;
           }
 
-          case IDM_SIGNALCHECKOUT: {
+          case IDM_SIGNAL_CHECKOUT: {
             auto notifier = getWindowsNotifier(hwnd);
             auto numActive = static_cast<size_t>(lParam);
             notifier->updateIconColor(numActive);
             return 0;
           }
 
-          case IDM_SIGNALSTARTCHECKOUT: {
+          case IDM_DEBUG_SIGNAL_START: {
             auto notifier = getWindowsNotifier(hwnd);
             notifier->signalCheckout(1);
             return 0;
           }
 
-          case IDM_SIGNALENDCHECKOUT: {
+          case IDM_DEBUG_SIGNAL_END: {
             auto notifier = getWindowsNotifier(hwnd);
             notifier->signalCheckout(0);
             return 0;
@@ -421,7 +432,7 @@ int windowsEventLoop(
     auto windowHandle = WindowHandle{checkNonZero(
         CreateWindowW(
             kWinClassNameStr,
-            kWindowTitle,
+            kWinTitle,
             0,
             CW_USEDEFAULT,
             0,
@@ -523,7 +534,7 @@ void WindowsNotifier::signalCheckout(size_t numActive) {
   PostMessage(
       hwnd_.get(),
       WM_COMMAND,
-      IDM_SIGNALCHECKOUT,
+      IDM_SIGNAL_CHECKOUT,
       static_cast<LPARAM>(numActive));
 }
 
@@ -548,10 +559,10 @@ void WindowsNotifier::changeIconColor(UINT iconType) {
   setGuidOrUid(iconData, hwnd_.get(), guid);
   if (iconType == IDI_ONOTIFICATIONICON) {
     StringCchPrintfW(
-        iconData.szTip, std::size(iconData.szTip), L"%s", kCheckoutToolTip);
+        iconData.szTip, std::size(iconData.szTip), L"%s", kToolTipCheckout);
   } else {
     StringCchPrintfW(
-        iconData.szTip, std::size(iconData.szTip), L"%s", kMenuToolTip);
+        iconData.szTip, std::size(iconData.szTip), L"%s", kToolTipDefault);
   }
   iconData.hIcon = checkNonZero(
       static_cast<HICON>(LoadImage(
@@ -575,16 +586,15 @@ void WindowsNotifier::appendOptionsMenu(HMENU hMenu) {
     appendMenuEntry(
         optionsMenu.get(),
         MF_BYPOSITION | MF_STRING,
-        IDM_TOGGLENOTIFICATIONS,
-        areNotificationsEnabled() ? kDisableNotifications
-                                  : kEnableNotifications);
+        IDM_TOGGLE_NOTIFICATIONS,
+        areNotificationsEnabled() ? kOptionDisable : kOptionEnable);
   } else {
     // Gray out the menu item so they can't choose to enable notifs
     appendMenuEntry(
         optionsMenu.get(),
         MF_BYPOSITION | MF_STRING | MF_GRAYED,
         NULL,
-        kEnableNotifications);
+        kOptionEnable);
   }
   appendMenuEntry(
       hMenu,
@@ -602,13 +612,13 @@ MenuHandle WindowsNotifier::createEdenMenu() {
       NULL,
       kMenuWelcomeStr);
   appendMenuEntry(
-      hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_EDENINFO, kMenuAboutStr);
+      hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_INFO, kMenuAboutStr);
   appendOptionsMenu(hMenu.get());
   if (debugIsEnabled()) {
     appendDebugMenu(hMenu.get());
   }
   appendMenuEntry(
-      hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_EDENREPORT, kMenuReport);
+      hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_REPORT_BUG, kMenuReport);
   appendMenuEntry(
       hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_EXIT, kMenuCloseStr);
   return hMenu;
@@ -672,7 +682,7 @@ void WindowsNotifier::showNotification(
   PostMessage(
       hwnd_.get(),
       WM_COMMAND,
-      IDM_EDENNOTIFICATION,
+      IDM_NOTIFICATION,
       reinterpret_cast<LPARAM>(this));
 }
 
@@ -701,11 +711,11 @@ std::wstring getDaemonUptime(
     dayStr = fmt::format("{} days ", days.count());
   }
   auto uptimeStr = fmt::format("{}{:%H:%M:%S}", dayStr, uptimeSec);
-  return std::wstring(kEdenUptime) + multibyteToWideString(uptimeStr);
+  return std::wstring(kAboutUptime) + multibyteToWideString(uptimeStr);
 }
 
 std::wstring getDaemonVersion(std::string ver) {
-  return std::wstring(kEdenVersion) + multibyteToWideString(ver);
+  return std::wstring(kAboutVersion) + multibyteToWideString(ver);
 }
 
 } // namespace
