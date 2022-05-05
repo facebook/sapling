@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Callable, TypeVar
 
 from .repo import Repo
-from .server import LocalServer, Server
+from .server import LocalServer, MononokeServer, Server
 from .util import new_dir, test_globals
 from .workingcopy import WorkingCopy
 
@@ -21,8 +21,9 @@ class BaseTest(unittest.TestCase):
         test_globals.setup()
         self.addCleanup(test_globals.cleanup)
         self.server = self.new_server()
-        self.repo = self.server.clone()
+        self.addCleanup(self.server.cleanup)
         self._add_production_configs(Path(test_globals.env["HGRCPATH"]))
+        self.repo = self.server.clone()
 
     def _add_production_configs(self, hgrc: Path) -> None:
         # Most production configs should be loaded via dynamicconfig. The ones
@@ -46,8 +47,35 @@ cachepath = {new_dir()}
 """
             )
 
+            if os.environ.get("USE_MONONOKE", False):
+                cert_dir = os.environ["HGTEST_CERTDIR"]
+                f.write(
+                    f"""
+[auth]
+mononoke.cert={cert_dir}/localhost.crt
+mononoke.key={cert_dir}/localhost.key
+mononoke.cacerts={cert_dir}/root-ca.crt
+mononoke.prefix=mononoke://*
+mononoke.cn=localhost
+edenapi.cert={cert_dir}/localhost.crt
+edenapi.key={cert_dir}/localhost.key
+edenapi.prefix=localhost
+edenapi.schemes=https
+edenapi.cacerts={cert_dir}/root-ca.crt
+
+[web]
+cacerts={cert_dir}/root-ca.crt
+
+[edenapi]
+url=https://localhost:{self.server.port}/edenapi
+"""
+                )
+
     def new_server(self) -> Server:
-        return LocalServer()
+        if os.environ.get("USE_MONONOKE", False):
+            return MononokeServer()
+        else:
+            return LocalServer()
 
 
 # Contravariance rules in pyre mean we can't specify a base type directly as an
