@@ -67,7 +67,7 @@ pub fn build(
 
     let handler = MononokeHttpHandler::builder()
         .add(TlsSessionDataMiddleware::new(tls_session_data_log_path)?)
-        .add(ClientIdentityMiddleware::new())
+        .add(ClientIdentityMiddleware::new(fb, logger.clone()))
         .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
             "edenapi_server",
         )))

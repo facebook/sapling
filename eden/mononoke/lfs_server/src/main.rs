@@ -402,7 +402,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
             let handler = MononokeHttpHandler::builder()
                 .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
-                .add(ClientIdentityMiddleware::new())
+                .add(ClientIdentityMiddleware::new(fb, logger.clone()))
                 .add(PostResponseMiddleware::with_config(config_handle))
                 .add(RequestContextMiddleware::new(fb, logger.clone()))
                 .add(LoadMiddleware::new())
