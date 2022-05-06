@@ -174,10 +174,10 @@ TEST_F(FakeBackingStoreTest, getTree) {
   EXPECT_EQ(rootHash, tree2->getHash());
   EXPECT_EQ(4, tree2->getTreeEntries().size());
 
-  auto barTreeEntry = tree2->getEntryAt("bar"_pc);
-  auto dir1TreeEntry = tree2->getEntryAt("dir1"_pc);
-  auto readonlyTreeEntry = tree2->getEntryAt("readonly"_pc);
-  auto zzzTreeEntry = tree2->getEntryAt("zzz"_pc);
+  auto barTreeEntry = *tree2->getEntryPtr("bar"_pc);
+  auto dir1TreeEntry = *tree2->getEntryPtr("dir1"_pc);
+  auto readonlyTreeEntry = *tree2->getEntryPtr("readonly"_pc);
+  auto zzzTreeEntry = *tree2->getEntryPtr("zzz"_pc);
   EXPECT_EQ("bar"_pc, barTreeEntry.getName());
   EXPECT_EQ(bar->get().getHash(), barTreeEntry.getHash());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, barTreeEntry.getType());

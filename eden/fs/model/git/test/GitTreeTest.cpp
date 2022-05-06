@@ -73,7 +73,7 @@ TEST(GitTree, testDeserialize) {
       << "SHA-1 of contents should match key";
 
   // Ordinary, non-executable file.
-  auto babelrc = tree->getEntryAt(".babelrc"_pc);
+  auto babelrc = *tree->getEntryPtr(".babelrc"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("3a8f8eb91101860fd8484154885838bf322964d0"),
       babelrc.getHash());
@@ -82,7 +82,7 @@ TEST(GitTree, testDeserialize) {
   EXPECT_EQ(facebook::eden::TreeEntryType::REGULAR_FILE, babelrc.getType());
 
   // Executable file.
-  auto nuclideStartServer = tree->getEntryAt("nuclide-start-server"_pc);
+  auto nuclideStartServer = *tree->getEntryPtr("nuclide-start-server"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("006babcf5734d028098961c6f4b6b6719656924b"),
       nuclideStartServer.getHash());
@@ -96,7 +96,7 @@ TEST(GitTree, testDeserialize) {
 #endif
 
   // Directory.
-  auto lib = tree->getEntryAt("lib"_pc);
+  auto lib = *tree->getEntryPtr("lib"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("e95798e17f694c227b7a8441cc5c7dae50a187d0"),
       lib.getHash());
@@ -107,7 +107,6 @@ TEST(GitTree, testDeserialize) {
   // lab sorts before lib but is not present in the Tree, so ensure that
   // we don't get an entry back here
   EXPECT_EQ(nullptr, tree->getEntryPtr("lab"_pc));
-  EXPECT_THROW(tree->getEntryAt("lab"_pc), std::out_of_range);
 }
 
 TEST(GitTree, testDeserializeWithSymlink) {
@@ -141,7 +140,7 @@ TEST(GitTree, testDeserializeWithSymlink) {
       << "SHA-1 of contents should match key";
 
   // Ordinary, non-executable file.
-  auto contributing = tree->getEntryAt("contributing.md"_pc);
+  auto contributing = *tree->getEntryPtr("contributing.md"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"),
       contributing.getHash());

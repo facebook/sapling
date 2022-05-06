@@ -61,15 +61,6 @@ class Tree {
     return &*iter;
   }
 
-  const TreeEntry& getEntryAt(PathComponentPiece path) const {
-    auto entry = getEntryPtr(path);
-    if (!entry) {
-      throw std::out_of_range(
-          folly::to<std::string>(path, " is not present in this Tree"));
-    }
-    return *entry;
-  }
-
   /**
    * Serialize tree using custom format.
    */
