@@ -103,9 +103,8 @@ Test cloning failures
   TRACE hgcommands::commands::clone: fetching lazy commit data and bookmarks
   abort: Injected clone failure
   [255]
-  $ ls $TESTTMP/failure-clone
-  ls: cannot access '$TESTTMP/failure-clone': $ENOENT$
-  [2]
+  $ [ -d $TESTTMP/failure-clone ]
+  [1]
 
 Check that preexisting directory is not removed in failure case
   $ mkdir failure-clone
