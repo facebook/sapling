@@ -54,23 +54,23 @@ IOBuf Tree::serialize() const {
   return buf;
 }
 
-std::optional<Tree> Tree::tryDeserialize(
+std::unique_ptr<Tree> Tree::tryDeserialize(
     ObjectId hash,
     folly::StringPiece data) {
   if (data.size() < sizeof(uint32_t)) {
     XLOG(ERR) << "Can not read tree version, bytes remaining " << data.size();
-    return std::nullopt;
+    return nullptr;
   }
   uint32_t version;
   memcpy(&version, data.data(), sizeof(uint32_t));
   data.advance(sizeof(uint32_t));
   if (version != V1_VERSION) {
-    return std::nullopt;
+    return nullptr;
   }
 
   if (data.size() < sizeof(uint32_t)) {
     XLOG(ERR) << "Can not read tree size, bytes remaining " << data.size();
-    return std::nullopt;
+    return nullptr;
   }
   uint32_t num_entries;
   memcpy(&num_entries, data.data(), sizeof(uint32_t));
@@ -81,17 +81,17 @@ std::optional<Tree> Tree::tryDeserialize(
   for (size_t i = 0; i < num_entries; i++) {
     auto entry = TreeEntry::deserialize(data);
     if (!entry) {
-      return std::nullopt;
+      return nullptr;
     }
     entries.push_back(*entry);
   }
 
   if (data.size() != 0u) {
     XLOG(ERR) << "Corrupted tree data, extra bytes remaining " << data.size();
-    return std::nullopt;
+    return nullptr;
   }
 
-  return Tree(std::move(entries), std::move(hash));
+  return std::make_unique<Tree>(std::move(entries), std::move(hash));
 }
 
 } // namespace facebook::eden

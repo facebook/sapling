@@ -68,14 +68,14 @@ class Tree {
 
   /**
    * Deserialize tree if possible.
-   * Returns nullopt if serialization format is not supported.
+   * Returns nullptr if serialization format is not supported.
    *
    * First byte is used to identify serialization format.
    * Git tree starts with 'tree', so we can use any bytes other then 't' as a
    * version identifier. Currently only V1_VERSION is supported, along with git
    * tree format.
    */
-  static std::optional<Tree> tryDeserialize(
+  static std::unique_ptr<Tree> tryDeserialize(
       ObjectId hash,
       folly::StringPiece data);
 

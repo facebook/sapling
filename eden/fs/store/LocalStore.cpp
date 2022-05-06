@@ -97,9 +97,9 @@ folly::Future<std::unique_ptr<Tree>> LocalStore::getTree(
         if (!data.isValid()) {
           return std::unique_ptr<Tree>(nullptr);
         }
-        auto try_tree = Tree::tryDeserialize(id, StringPiece{data.bytes()});
-        if (try_tree) {
-          return std::make_unique<Tree>(*try_tree);
+        auto tree = Tree::tryDeserialize(id, StringPiece{data.bytes()});
+        if (tree) {
+          return tree;
         }
         return deserializeGitTree(id, data.bytes());
       });
