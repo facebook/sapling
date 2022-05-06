@@ -6,6 +6,8 @@
  */
 
 use std::env;
+use std::fs;
+use std::path::Path;
 use std::path::PathBuf;
 
 use async_runtime::block_unless_interrupted as block_on;
@@ -13,6 +15,7 @@ use clidispatch::errors;
 use clidispatch::global_flags::HgGlobalOpts;
 use cliparser::define_flags;
 use edenapi::Builder;
+use repo::constants::HG_PATH;
 use repo::repo::Repo;
 
 use super::ConfigSet;
@@ -65,7 +68,7 @@ define_flags! {
 }
 
 pub fn run(
-    clone_opts: CloneOpts,
+    mut clone_opts: CloneOpts,
     global_opts: HgGlobalOpts,
     _io: &IO,
     mut config: ConfigSet,
@@ -107,17 +110,6 @@ pub fn run(
         return Err(errors::FallbackToPython.into());
     }
 
-    clone(clone_opts, global_opts, config)?;
-    Ok(0)
-}
-
-fn clone(
-    mut clone_opts: CloneOpts,
-    global_opts: HgGlobalOpts,
-    mut config: ConfigSet,
-) -> Result<u8> {
-    tracing::trace!("performing rust clone");
-
     let source = clone_opts.source;
     // This gets the reponame from the --configfile config.
     // TODO: Parse the reponame from the source so the configfile isn't needed
@@ -132,6 +124,35 @@ fn clone(
         Some(dest) => PathBuf::from(dest),
         None => env::current_dir()?.join(reponame),
     };
+
+    let dest_preexists = destination.exists();
+    let dest_hg = destination.join(HG_PATH);
+    if dest_hg.exists() {
+        return Err(
+            errors::Abort(".hg directory already exists at clone destination".into()).into(),
+        );
+    }
+
+    if let Err(e) = clone_metadata(global_opts, config, source, &destination) {
+        let removal_dir = if dest_preexists {
+            destination.join(HG_PATH)
+        } else {
+            destination
+        };
+        fs::remove_dir_all(removal_dir)?;
+        return Err(e);
+    }
+
+    Ok(0)
+}
+
+fn clone_metadata(
+    global_opts: HgGlobalOpts,
+    mut config: ConfigSet,
+    source: String,
+    destination: &Path,
+) -> Result<u8> {
+    tracing::trace!("performing rust clone");
 
     let mut hgrc_content = global_opts
         .configfile
@@ -153,6 +174,10 @@ fn clone(
 
     tracing::trace!("fetching lazy commit data and bookmarks");
     exchange::clone(config, edenapi, &mut metalog.write(), &mut commits.write())?;
+
+    ::fail::fail_point!("run::clone", |_| {
+        Err(errors::Abort("Injected clone failure".to_string().into()).into())
+    });
     Ok(0)
 }
 

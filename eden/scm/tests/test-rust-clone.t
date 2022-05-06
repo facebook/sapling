@@ -94,3 +94,33 @@ Test cloning with default destination
   $ cd test-repo
   $ hg log -r tip -T "{desc}\n"
   E
+
+Test cloning failures
+
+  $ cd $TESTTMP
+  $ FAILPOINTS=run::clone=return hg clone -U test:e1 $TESTTMP/failure-clone
+  TRACE hgcommands::commands::clone: performing rust clone
+  TRACE hgcommands::commands::clone: fetching lazy commit data and bookmarks
+  abort: Injected clone failure
+  [255]
+  $ ls $TESTTMP/failure-clone
+  ls: cannot access '$TESTTMP/failure-clone': $ENOENT$
+  [2]
+
+Check that preexisting directory is not removed in failure case
+  $ mkdir failure-clone
+  $ FAILPOINTS=run::clone=return hg clone -U test:e1 $TESTTMP/failure-clone
+  TRACE hgcommands::commands::clone: performing rust clone
+  TRACE hgcommands::commands::clone: fetching lazy commit data and bookmarks
+  abort: Injected clone failure
+  [255]
+  $ [ -d $TESTTMP/failure-clone ]
+  $ [ -d $TESTTMP/failure-clone/.hg ]
+  [1]
+
+Check that prexisting repo is not modified
+  $ mkdir $TESTTMP/failure-clone/.hg
+  $ hg clone -U test:e1 $TESTTMP/failure-clone
+  abort: .hg directory already exists at clone destination
+  [255]
+  $ [ -d $TESTTMP/failure-clone/.hg ]
