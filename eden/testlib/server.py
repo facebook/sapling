@@ -60,7 +60,9 @@ class MononokeServer(Server):
     repo_count: int
     url_prefix: str
 
+    # pyre-fixme[2]: Parameter must be annotated.
     def __init__(self, repo_count=5) -> None:
+        # pyre-fixme[23]: Unable to unpack 3 values, 2 were expected.
         self.process, self.port = _start(repo_count)
         self.repo_count = repo_count
 
@@ -80,6 +82,7 @@ class MononokeServer(Server):
         self.process.wait(timeout=5)
 
 
+# pyre-fixme[2]: Parameter must be annotated.
 def _start(repo_count) -> Tuple[subprocess.Popen[bytes], str, str]:
     executable = os.environ["HGTEST_MONONOKE_SERVER"]
     temp_dir = new_dir()
@@ -88,9 +91,11 @@ def _start(repo_count) -> Tuple[subprocess.Popen[bytes], str, str]:
     configerator_path = str(new_dir())
     tunables_path = "mononoke_tunables.json"
 
+    # pyre-fixme[53]: Captured variable `temp_dir` is not annotated.
     def tjoin(path: str) -> str:
         return os.path.join(temp_dir, path)
 
+    # pyre-fixme[53]: Captured variable `cert_dir` is not annotated.
     def cjoin(path: str) -> str:
         return os.path.join(cert_dir, path)
 
@@ -147,11 +152,18 @@ def _start(repo_count) -> Tuple[subprocess.Popen[bytes], str, str]:
         cjoin("root-ca.crt"),
     )
 
+    # pyre-fixme[7]: Expected `Tuple[Popen[bytes], str, str]` but got
+    #  `Tuple[Popen[typing.Any], Tuple[str, str]]`.
     return process, port
 
 
 def _wait(
-    process: subprocess.Popen, addr_file: str, cert: str, key: str, ca_cert: str
+    # pyre-fixme[24]: Generic type `subprocess.Popen` expects 1 type parameter.
+    process: subprocess.Popen,
+    addr_file: str,
+    cert: str,
+    key: str,
+    ca_cert: str,
 ) -> Tuple[str, str]:
     start = time.time()
     while not os.path.exists(addr_file) and (time.time() - start < 60):
@@ -160,6 +172,7 @@ def _wait(
         if state is not None:
             raise Exception(
                 "Mononoke server exited early (%s):\n%s\n%s"
+                # pyre-fixme[16]: Optional type has no attribute `read`.
                 % (state, process.stdout.read(), process.stderr.read())
             )
 
@@ -178,6 +191,7 @@ def _wait(
     )
     response.raise_for_status()
 
+    # pyre-fixme[7]: Expected `Tuple[str, str]` but got `str`.
     return port
 
 
