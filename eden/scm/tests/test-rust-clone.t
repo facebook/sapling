@@ -123,3 +123,18 @@ Check that prexisting repo is not modified
   abort: .hg directory already exists at clone destination
   [255]
   $ [ -d $TESTTMP/failure-clone/.hg ]
+
+Test default-destination-dir
+  $ hg clone -U test:e1 --config clone.default-destination-dir="$TESTTMP/manually-set-dir"
+  TRACE hgcommands::commands::clone: performing rust clone
+  TRACE hgcommands::commands::clone: fetching lazy commit data and bookmarks
+  $ ls $TESTTMP | grep manually-set-dir
+  manually-set-dir
+
+Test that we get an error when not specifying a destination directory and running in plain mode
+  $ HGPLAIN=1 hg clone -U test:e1
+  abort: DEST was not specified
+  [255]
+  $ HGPLAINEXCEPT=default_clone_dir hg clone -U test:e1 --config remotefilelog.reponame=test-repo-notquite
+  TRACE hgcommands::commands::clone: performing rust clone
+  TRACE hgcommands::commands::clone: fetching lazy commit data and bookmarks

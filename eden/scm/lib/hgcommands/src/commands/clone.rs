@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::env;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
@@ -122,7 +121,13 @@ pub fn run(
 
     let destination = match clone_opts.args.pop() {
         Some(dest) => PathBuf::from(dest),
-        None => env::current_dir()?.join(reponame),
+        None => {
+            if configparser::hg::is_plain(Some("default_clone_dir")) {
+                return Err(errors::Abort("DEST was not specified".into()).into());
+            } else {
+                clone::get_default_directory(&config)?.join(&reponame)
+            }
+        }
     };
 
     let dest_preexists = destination.exists();
