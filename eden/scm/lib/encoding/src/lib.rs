@@ -115,7 +115,7 @@ mod tests {
 
     #[cfg(windows)]
     fn get_encoded_sample() -> (String, Vec<u8>) {
-        match unsafe { kernel32::GetACP() } {
+        match unsafe { winapi::um::winnls::GetACP() } {
             1250 => ("Ł".into(), vec![163]),
             1251 => ("Ї".into(), vec![175]),
             1252 => ("ü".into(), vec![252]),
