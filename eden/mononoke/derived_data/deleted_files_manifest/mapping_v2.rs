@@ -40,9 +40,14 @@ impl RootDeletedManifestIdCommon for RootDeletedManifestV2Id {
         Self(id)
     }
 
-    fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
+    fn format_key(_derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
         let root_prefix = "derived_root_deleted_manifest2.";
-        let key_prefix = derivation_ctx.mapping_key_prefix::<RootDeletedManifestV2Id>();
+        // TODO(yancouto): Re-enable key_prefix once fully migrated to DMv2
+        // Key prefixes are done by derived data name, which is the same for V1 and V2.
+        // However, since it's the first time we're deriving, we don't want to have prefixes
+        // for DMv2. So let's ignore this for now, and re-add it when fully derived.
+        //let key_prefix = derivation_ctx.mapping_key_prefix::<RootDeletedManifestV2Id>();
+        let key_prefix = "";
         format!("{}{}{}", root_prefix, key_prefix, changeset_id)
     }
 }
