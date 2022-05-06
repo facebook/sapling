@@ -1783,11 +1783,9 @@ def _pullcommitgraph(pullop):
         commits.addgraphnodes(graphnodes)
         pullop.cgresult = 2  # changed
         if repo.ui.configbool("pull", "httpmutation"):
-            allnodes = {
-                node
-                for node, _ps in graphnodes
-                if repo._phasecache.phase(repo, repo[node].rev()) != phases.public
-            }
+            allnodes = repo.dageval(
+                lambda: sort([n for n, _p in graphnodes]) - public()
+            )
             mutations = repo.edenapi.commitmutations(list(allnodes))
             mutations = [
                 mutation.createsyntheticentry(
