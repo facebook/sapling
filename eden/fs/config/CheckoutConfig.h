@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/Portability.h>
 #include <folly/dynamic.h>
 #include <optional>
 #include "eden/fs/config/MountProtocol.h"
@@ -147,7 +148,10 @@ class CheckoutConfig {
   MountProtocol mountProtocol_;
   CaseSensitivity caseSensitive_{kPathMapDefaultCaseSensitive};
   bool requireUtf8Path_{true};
-  bool enableTreeOverlay_{false};
+
+  // Tree Overlay is default on Windows
+  bool enableTreeOverlay_{folly::kIsWindows};
+
 #ifdef _WIN32
   Guid repoGuid_;
 #endif
