@@ -70,15 +70,6 @@ class Tree {
     return *entry;
   }
 
-  std::vector<PathComponent> getEntryNames() const {
-    std::vector<PathComponent> results;
-    results.reserve(entries_.size());
-    for (const auto& entry : entries_) {
-      results.emplace_back(entry.getName());
-    }
-    return results;
-  }
-
   /**
    * Serialize tree using custom format.
    */

@@ -98,6 +98,17 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
   std::shared_ptr<ObjectStore> objectStore;
 };
 
+namespace {
+std::vector<PathComponent> getTreeNames(
+    const std::shared_ptr<const Tree>& tree) {
+  std::vector<PathComponent> names;
+  for (const auto& entry : tree->getTreeEntries()) {
+    names.emplace_back(entry.getName());
+  }
+  return names;
+}
+} // namespace
+
 TEST_F(
     HgBackingStoreTest,
     getTreeForCommit_reimports_tree_if_it_was_deleted_after_import) {
@@ -106,7 +117,7 @@ TEST_F(
           .get(0ms);
   EXPECT_TRUE(tree1);
   ASSERT_THAT(
-      tree1->getEntryNames(),
+      getTreeNames(tree1),
       ::testing::ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
 
   localStore->clearKeySpace(KeySpace::TreeFamily);
@@ -115,6 +126,6 @@ TEST_F(
           .get(0ms);
   EXPECT_TRUE(tree2);
   ASSERT_THAT(
-      tree1->getEntryNames(),
+      getTreeNames(tree1),
       ::testing::ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
 }
