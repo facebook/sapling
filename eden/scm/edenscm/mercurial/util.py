@@ -414,16 +414,16 @@ def version():
         return "unknown"
 
 
-def isoldversion():
-    """Returns approximate date information for the current version if available"""
+def versionagedays() -> int:
+    """Returns approximate age in days of the current version, or 0 if not available."""
     try:
         v = version()
         parts = remod.split("_", v)
         approxbuilddate = datetime.datetime.strptime(parts[1], "%Y%m%d")
         now = datetime.datetime.now()
-        return (now - approxbuilddate).days > 31
+        return (now - approxbuilddate).days
     except Exception:
-        return None
+        return 0
 
 
 def versiontuple(v=None, n=4):

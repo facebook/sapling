@@ -467,8 +467,10 @@ def dispatch(req):
                 )
         blackbox.sync()
 
-    if util.isoldversion():
-        hintutil.trigger("old-version")
+    versionthresholddays = req.ui.configint("ui", "version-age-threshold-days")
+    versionagedays = util.versionagedays()
+    if versionthresholddays and versionagedays > versionthresholddays:
+        hintutil.trigger("old-version", versionagedays)
 
     # by registering this exit handler here, we guarantee that it runs
     # after other exithandlers, like the killpager one
