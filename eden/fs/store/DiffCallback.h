@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -29,10 +30,10 @@ class DiffCallback {
   DiffCallback() {}
   virtual ~DiffCallback() {}
 
-  virtual void ignoredFile(RelativePathPiece path) = 0;
-  virtual void addedFile(RelativePathPiece path) = 0;
-  virtual void removedFile(RelativePathPiece path) = 0;
-  virtual void modifiedFile(RelativePathPiece path) = 0;
+  virtual void ignoredPath(RelativePathPiece path, dtype_t type) = 0;
+  virtual void addedPath(RelativePathPiece path, dtype_t type) = 0;
+  virtual void removedPath(RelativePathPiece path, dtype_t type) = 0;
+  virtual void modifiedPath(RelativePathPiece path, dtype_t type) = 0;
 
   virtual void diffError(
       RelativePathPiece path,

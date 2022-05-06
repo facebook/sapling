@@ -2361,16 +2361,6 @@ Future<Unit> TreeInode::computeDiff(
   XDCHECK(isIgnored || ignore != nullptr)
       << "the ignore stack is required if this directory is not ignored";
 
-  // A list of entries that have been removed
-  std::vector<const TreeEntry*> removedEntries;
-
-  // A list of untracked files
-  std::vector<PathComponent> untrackedFiles;
-  // A list of ignored files
-  std::vector<PathComponent> ignoredFiles;
-  // A list of modified files
-  std::vector<PathComponent> modifiedFiles;
-
   std::vector<std::unique_ptr<DeferredDiffEntry>> deferredEntries;
   auto self = inodePtrFromThis();
 
@@ -2409,6 +2399,17 @@ Future<Unit> TreeInode::computeDiff(
           return;
         }
         entryIgnored = (ignoreStatus == GitIgnore::EXCLUDE);
+      }
+
+      if (!entryIgnored) {
+        XLOG(DBG8) << "diff: untracked file: " << entryPath;
+        context->callback->addedPath(entryPath, inodeEntry->getDtype());
+      } else if (context->listIgnored) {
+        XLOG(DBG9) << "diff: ignored file: " << entryPath;
+        context->callback->ignoredPath(entryPath, inodeEntry->getDtype());
+      } else {
+        // Don't bother reporting this ignored file since
+        // listIgnored is false.
       }
 
       if (inodeEntry->isDirectory()) {
@@ -2450,28 +2451,16 @@ Future<Unit> TreeInode::computeDiff(
                 entryIgnored));
           }
         }
-      } else {
-        if (!entryIgnored) {
-          XLOG(DBG8) << "diff: untracked file: " << entryPath;
-          context->callback->addedFile(entryPath);
-        } else if (context->listIgnored) {
-          XLOG(DBG9) << "diff: ignored file: " << entryPath;
-          context->callback->ignoredFile(entryPath);
-        } else {
-          // Don't bother reporting this ignored file since
-          // listIgnored is false.
-        }
       }
     };
 
     auto processRemoved = [&](const TreeEntry& scmEntry) {
+      XLOG(DBG5) << "diff: removed file: " << currentPath + scmEntry.getName();
+      context->callback->removedPath(
+          currentPath + scmEntry.getName(), scmEntry.getDType());
       if (scmEntry.isTree()) {
         deferredEntries.emplace_back(DeferredDiffEntry::createRemovedScmEntry(
             context, currentPath + scmEntry.getName(), scmEntry.getHash()));
-      } else {
-        XLOG(DBG5) << "diff: removed file: "
-                   << currentPath + scmEntry.getName();
-        context->callback->removedFile(currentPath + scmEntry.getName());
       }
     };
 
@@ -2539,6 +2528,7 @@ Future<Unit> TreeInode::computeDiff(
         // This is a modified directory. Since it is not materialized we can
         // directly compare the source control objects.
 
+        context->callback->modifiedPath(entryPath, inodeEntry->getDtype());
         // Collect this future to complete with other deferred entries.
         deferredEntries.emplace_back(DeferredDiffEntry::createModifiedScmEntry(
             context,
@@ -2555,12 +2545,13 @@ Future<Unit> TreeInode::computeDiff(
         if (entryIgnored) {
           if (context->listIgnored) {
             XLOG(DBG6) << "diff: directory --> ignored file: " << entryPath;
-            context->callback->ignoredFile(entryPath);
+            context->callback->ignoredPath(entryPath, inodeEntry->getDtype());
           }
         } else {
           XLOG(DBG6) << "diff: directory --> untracked file: " << entryPath;
-          context->callback->addedFile(entryPath);
+          context->callback->addedPath(entryPath, inodeEntry->getDtype());
         }
+        context->callback->removedPath(entryPath, scmEntry.getDType());
         deferredEntries.emplace_back(DeferredDiffEntry::createRemovedScmEntry(
             context, entryPath, scmEntry.getHash()));
       } else {
@@ -2581,14 +2572,18 @@ Future<Unit> TreeInode::computeDiff(
             scmEntry.getType()) {
           // The mode is definitely modified
           XLOG(DBG5) << "diff: file modified due to mode change: " << entryPath;
-          context->callback->modifiedFile(entryPath);
+          context->callback->modifiedPath(entryPath, inodeEntry->getDtype());
         } else {
           // TODO: Hopefully at some point we will track file sizes in the
           // parent TreeInode::Entry and the TreeEntry.  Once we have file
           // sizes, we could check for differing file sizes first, and
           // avoid loading the blob if they are different.
           deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
-              context, entryPath, scmEntry, inodeEntry->getHash()));
+              context,
+              entryPath,
+              scmEntry,
+              inodeEntry->getHash(),
+              inodeEntry->getDtype()));
         }
       }
     };

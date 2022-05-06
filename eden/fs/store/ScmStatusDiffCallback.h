@@ -24,10 +24,10 @@ namespace facebook::eden {
 
 class ScmStatusDiffCallback : public DiffCallback {
  public:
-  void ignoredFile(RelativePathPiece path) override;
-  void addedFile(RelativePathPiece path) override;
-  void removedFile(RelativePathPiece path) override;
-  void modifiedFile(RelativePathPiece path) override;
+  void ignoredPath(RelativePathPiece path, dtype_t type) override;
+  void addedPath(RelativePathPiece path, dtype_t type) override;
+  void removedPath(RelativePathPiece path, dtype_t type) override;
+  void modifiedPath(RelativePathPiece path, dtype_t type) override;
 
   void diffError(RelativePathPiece path, const folly::exception_wrapper& ew)
       override;

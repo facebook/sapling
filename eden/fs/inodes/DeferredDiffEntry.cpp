@@ -153,16 +153,17 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       if (isIgnored_) {
         if (context_->listIgnored) {
           XLOG(DBG6) << "directory --> ignored file: " << getPath();
-          context_->callback->ignoredFile(getPath());
+          context_->callback->ignoredPath(getPath(), inode_->getType());
         }
       } else {
         XLOG(DBG6) << "directory --> untracked file: " << getPath();
-        context_->callback->addedFile(getPath());
+        context_->callback->addedPath(getPath(), inode_->getType());
       }
       // Since this is a file or symlink in the current filesystem state, but a
       // Tree in the source control state, we have to record the files from the
       // Tree as removed. We can delegate this work to the source control tree
       // differ.
+      context_->callback->removedPath(getPath(), scmEntry_.getDType());
       return diffRemovedTree(context_, getPath(), scmEntry_.getHash());
     }
 
@@ -174,6 +175,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
           // and it matches the scmEntry we're diffing against.
           return makeFuture();
         } else {
+          context_->callback->modifiedPath(getPath(), scmEntry_.getDType());
           auto contentsHash = contents->treeHash.value();
           contents.unlock();
           return diffTrees(
@@ -206,8 +208,10 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       // in the current filesystem state.
       // Report this file as removed, and everything in the source control
       // tree as untracked/ignored.
-      XLOG(DBG5) << "removed file: " << getPath();
-      context_->callback->removedFile(getPath());
+      auto path = getPath();
+      XLOG(DBG5) << "removed file: " << path;
+      context_->callback->removedPath(path, scmEntry_.getDType());
+      context_->callback->addedPath(path, inode_->getType());
       auto treeInode = inode_.asTreePtr();
       if (isIgnored_ && !context_->listIgnored) {
         return makeFuture();
@@ -223,7 +227,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
         .thenValue([this](bool isSame) {
           if (!isSame) {
             XLOG(DBG5) << "modified file: " << getPath();
-            context_->callback->modifiedFile(getPath());
+            context_->callback->modifiedPath(getPath(), inode_->getType());
           }
         })
         .semi()
@@ -244,10 +248,12 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
       DiffContext* context,
       RelativePath path,
       const TreeEntry& scmEntry,
-      ObjectId currentBlobHash)
+      ObjectId currentBlobHash,
+      dtype_t currentDType)
       : DeferredDiffEntry{context, std::move(path)},
         scmEntry_{scmEntry},
-        currentBlobHash_{currentBlobHash} {}
+        currentBlobHash_{std::move(currentBlobHash)},
+        currentDType_{currentDType} {}
 
   folly::Future<folly::Unit> run() override {
     auto f1 = context_->store->getBlobSha1(
@@ -259,7 +265,7 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
           const auto& [info1, info2] = info;
           if (info1 != info2) {
             XLOG(DBG5) << "modified file: " << getPath();
-            context_->callback->modifiedFile(getPath());
+            context_->callback->modifiedPath(getPath(), currentDType_);
           }
         })
         .semi()
@@ -269,6 +275,7 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
  private:
   TreeEntry scmEntry_;
   ObjectId currentBlobHash_;
+  dtype_t currentDType_;
 };
 
 class ModifiedScmDiffEntry : public DeferredDiffEntry {
@@ -389,9 +396,14 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedEntry(
     DiffContext* context,
     RelativePath path,
     const TreeEntry& scmEntry,
-    ObjectId currentBlobHash) {
+    ObjectId currentBlobHash,
+    dtype_t currentDType) {
   return make_unique<ModifiedBlobDiffEntry>(
-      context, std::move(path), scmEntry, currentBlobHash);
+      context,
+      std::move(path),
+      scmEntry,
+      std::move(currentBlobHash),
+      currentDType);
 }
 
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedScmEntry(

@@ -106,16 +106,20 @@ class EdenMount::JournalDiffCallback : public DiffCallback {
   explicit JournalDiffCallback()
       : data_{folly::in_place, std::unordered_set<RelativePath>()} {}
 
-  void ignoredFile(RelativePathPiece) override {}
+  void ignoredPath(RelativePathPiece, dtype_t) override {}
 
-  void addedFile(RelativePathPiece) override {}
+  void addedPath(RelativePathPiece, dtype_t) override {}
 
-  void removedFile(RelativePathPiece path) override {
-    data_.wlock()->uncleanPaths.insert(path.copy());
+  void removedPath(RelativePathPiece path, dtype_t type) override {
+    if (type != dtype_t::Dir) {
+      data_.wlock()->uncleanPaths.insert(path.copy());
+    }
   }
 
-  void modifiedFile(RelativePathPiece path) override {
-    data_.wlock()->uncleanPaths.insert(path.copy());
+  void modifiedPath(RelativePathPiece path, dtype_t type) override {
+    if (type != dtype_t::Dir) {
+      data_.wlock()->uncleanPaths.insert(path.copy());
+    }
   }
 
   void diffError(RelativePathPiece path, const folly::exception_wrapper& ew)

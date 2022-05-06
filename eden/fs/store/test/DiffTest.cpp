@@ -86,7 +86,7 @@ class DiffTest : public ::testing::Test {
   }
 
   std::unique_ptr<DiffContext> makeDiffContext(
-      ScmStatusDiffCallback* callback,
+      DiffCallback* callback,
       std::unique_ptr<TopLevelIgnores> topLevelIgnores,
       DiffContext::LoadFileFunction loadFileContentsFromPath,
       bool listIgnored = true,
@@ -1320,4 +1320,107 @@ TEST_F(DiffTest, caseSensitivity) {
       UnorderedElementsAre(
           Pair("a/b.txt", ScmFileStatus::REMOVED),
           Pair("a/B.txt", ScmFileStatus::ADDED)));
+}
+
+struct DirectoryOnlyDiffCallback : public DiffCallback {
+ public:
+  void ignoredPath(RelativePathPiece path, dtype_t type) override {
+    if (type == dtype_t::Dir) {
+      data_.wlock()->emplace(path.copy(), ScmFileStatus::IGNORED);
+    }
+  }
+
+  void addedPath(RelativePathPiece path, dtype_t type) override {
+    if (type == dtype_t::Dir) {
+      data_.wlock()->emplace(path.copy(), ScmFileStatus::ADDED);
+    }
+  }
+
+  void removedPath(RelativePathPiece path, dtype_t type) override {
+    if (type == dtype_t::Dir) {
+      data_.wlock()->emplace(path.copy(), ScmFileStatus::REMOVED);
+    }
+  }
+
+  void modifiedPath(RelativePathPiece path, dtype_t type) override {
+    if (type == dtype_t::Dir) {
+      data_.wlock()->emplace(path.copy(), ScmFileStatus::MODIFIED);
+    }
+  }
+
+  void diffError(RelativePathPiece /*path*/, const folly::exception_wrapper& ew)
+      override {
+    ew.throw_exception();
+  }
+
+  std::unordered_map<RelativePath, ScmFileStatus> extractStatus() {
+    auto res = std::move(*data_.wlock());
+    return res;
+  }
+
+ private:
+  folly::Synchronized<std::unordered_map<RelativePath, ScmFileStatus>> data_;
+};
+
+TEST_F(DiffTest, directoryDiff) {
+  FakeTreeBuilder builder1;
+
+  builder1.setFile("a.txt", "a.txt\n");
+  builder1.setFile("a/b.txt", "b.txt\n");
+  builder1.setFile("a/c", "c\n");
+  builder1.setFile("d/e", "e\n");
+  builder1.setFile("d/e2", "e2\n");
+  builder1.mkdir("f/g");
+  builder1.finalize(backingStore_, /* setReady */ true);
+  backingStore_->putCommit("1", builder1)->setReady();
+
+  auto builder2 = builder1.clone();
+  // Replace a/c by a directory
+  builder2.removeFile("a/c");
+  builder2.mkdir("a/c");
+
+  // Remove d/e to force a change to d
+  builder2.removeFile("d/e");
+
+  // Replace f/g by a file.
+  builder2.removeFile("f/g");
+  builder2.setFile("f/g", "g\n");
+
+  // Create a directory at the root.
+  builder2.mkdir("h");
+
+  builder2.finalize(backingStore_, /* setReady */ true);
+  backingStore_->putCommit("2", builder2)->setReady();
+
+  auto callback = std::make_unique<DirectoryOnlyDiffCallback>();
+  auto topLevelIgnores = std::make_unique<TopLevelIgnores>("", "");
+  auto gitIgnoreStack = topLevelIgnores->getStack();
+  auto diffContext =
+      makeDiffContext(callback.get(), std::move(topLevelIgnores), nullptr);
+
+  diffTrees(
+      diffContext.get(),
+      RelativePathPiece{},
+      builder1.getRoot()->get().getHash(),
+      builder2.getRoot()->get().getHash(),
+      gitIgnoreStack,
+      false)
+      .get();
+  auto status = callback->extractStatus();
+  EXPECT_THAT(
+      status,
+      UnorderedElementsAre(
+          // tree -> file
+          std::make_pair(RelativePath{"f/g"}, ScmFileStatus::REMOVED),
+          // removed sub file for f and d
+          std::make_pair(RelativePath{"f"}, ScmFileStatus::MODIFIED),
+          std::make_pair(RelativePath{"d"}, ScmFileStatus::MODIFIED),
+          // file -> tree
+          std::make_pair(RelativePath{"a/c"}, ScmFileStatus::ADDED),
+          // added and removed sub-file
+          std::make_pair(RelativePath{"a"}, ScmFileStatus::MODIFIED),
+          // created directory
+          std::make_pair(RelativePath{"h"}, ScmFileStatus::ADDED)));
+  // TODO(xavierd): Are we missing a change to the root whenever a file to the
+  // root is created/removed?
 }

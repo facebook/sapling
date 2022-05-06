@@ -16,24 +16,32 @@
 
 namespace facebook::eden {
 
-void ScmStatusDiffCallback::ignoredFile(RelativePathPiece path) {
-  data_.wlock()->entries_ref()->emplace(
-      path.stringPiece().str(), ScmFileStatus::IGNORED);
+void ScmStatusDiffCallback::ignoredPath(RelativePathPiece path, dtype_t type) {
+  if (type != dtype_t::Dir) {
+    data_.wlock()->entries_ref()->emplace(
+        path.stringPiece().str(), ScmFileStatus::IGNORED);
+  }
 }
 
-void ScmStatusDiffCallback::addedFile(RelativePathPiece path) {
-  data_.wlock()->entries_ref()->emplace(
-      path.stringPiece().str(), ScmFileStatus::ADDED);
+void ScmStatusDiffCallback::addedPath(RelativePathPiece path, dtype_t type) {
+  if (type != dtype_t::Dir) {
+    data_.wlock()->entries_ref()->emplace(
+        path.stringPiece().str(), ScmFileStatus::ADDED);
+  }
 }
 
-void ScmStatusDiffCallback::removedFile(RelativePathPiece path) {
-  data_.wlock()->entries_ref()->emplace(
-      path.stringPiece().str(), ScmFileStatus::REMOVED);
+void ScmStatusDiffCallback::removedPath(RelativePathPiece path, dtype_t type) {
+  if (type != dtype_t::Dir) {
+    data_.wlock()->entries_ref()->emplace(
+        path.stringPiece().str(), ScmFileStatus::REMOVED);
+  }
 }
 
-void ScmStatusDiffCallback::modifiedFile(RelativePathPiece path) {
-  data_.wlock()->entries_ref()->emplace(
-      path.stringPiece().str(), ScmFileStatus::MODIFIED);
+void ScmStatusDiffCallback::modifiedPath(RelativePathPiece path, dtype_t type) {
+  if (type != dtype_t::Dir) {
+    data_.wlock()->entries_ref()->emplace(
+        path.stringPiece().str(), ScmFileStatus::MODIFIED);
+  }
 }
 
 void ScmStatusDiffCallback::diffError(

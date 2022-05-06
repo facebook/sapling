@@ -9,6 +9,7 @@
 
 #include <memory>
 #include "eden/fs/inodes/InodePtrFwd.h"
+#include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -97,7 +98,8 @@ class DeferredDiffEntry {
       DiffContext* context,
       RelativePath path,
       const TreeEntry& scmEntry,
-      ObjectId currentBlobHash);
+      ObjectId currentBlobHash,
+      dtype_t currentDType);
 
   static std::unique_ptr<DeferredDiffEntry> createModifiedScmEntry(
       DiffContext* context,

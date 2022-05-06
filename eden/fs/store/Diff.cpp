@@ -401,8 +401,9 @@ void processRemovedSide(
     ChildFutures& childFutures,
     RelativePathPiece currentPath,
     const TreeEntry& scmEntry) {
+  context->callback->removedPath(
+      currentPath + scmEntry.getName(), scmEntry.getDType());
   if (!scmEntry.isTree()) {
-    context->callback->removedFile(currentPath + scmEntry.getName());
     return;
   }
   auto entryPath = currentPath + scmEntry.getName();
@@ -438,20 +439,20 @@ void processAddedSide(
     entryIgnored = (ignoreStatus == GitIgnore::EXCLUDE);
   }
 
+  if (!entryIgnored) {
+    context->callback->addedPath(entryPath, wdEntry.getDType());
+  } else if (context->listIgnored) {
+    context->callback->ignoredPath(entryPath, wdEntry.getDType());
+  } else {
+    // Don't bother reporting this ignored file since
+    // listIgnored is false.
+  }
+
   if (wdEntry.isTree()) {
     if (!entryIgnored || context->listIgnored) {
       auto childFuture = diffAddedTree(
           context, entryPath, wdEntry.getHash(), ignore, entryIgnored);
       childFutures.add(std::move(entryPath), std::move(childFuture));
-    }
-  } else {
-    if (!entryIgnored) {
-      context->callback->addedFile(entryPath);
-    } else if (context->listIgnored) {
-      context->callback->ignoredFile(entryPath);
-    } else {
-      // Don't bother reporting this ignored file since
-      // listIgnored is false.
     }
   }
 }
@@ -499,6 +500,7 @@ void processBothPresent(
       if (scmEntry.getHash() == wdEntry.getHash()) {
         return;
       }
+      context->callback->modifiedPath(entryPath, wdEntry.getDType());
       auto childFuture = diffTrees(
           context,
           entryPath,
@@ -509,16 +511,17 @@ void processBothPresent(
       childFutures.add(std::move(entryPath), std::move(childFuture));
     } else {
       // tree-to-file
-      // Add a ADDED entry for this path
+      // Add a ADDED entry for this path and a removal of the directory
       if (entryIgnored) {
         if (context->listIgnored) {
-          context->callback->ignoredFile(entryPath);
+          context->callback->ignoredPath(entryPath, wdEntry.getDType());
         }
       } else {
-        context->callback->addedFile(entryPath);
+        context->callback->addedPath(entryPath, wdEntry.getDType());
       }
 
       // Report everything in scmTree as REMOVED
+      context->callback->removedPath(entryPath, scmEntry.getDType());
       auto childFuture =
           diffRemovedTree(context, entryPath, scmEntry.getHash());
       childFutures.add(std::move(entryPath), std::move(childFuture));
@@ -527,9 +530,10 @@ void processBothPresent(
     if (isTreeWD) {
       // file-to-tree
       // Add a REMOVED entry for this path
-      context->callback->removedFile(entryPath);
+      context->callback->removedPath(entryPath, scmEntry.getDType());
 
       // Report everything in wdEntry as ADDED
+      context->callback->addedPath(entryPath, wdEntry.getDType());
       auto childFuture = diffAddedTree(
           context, entryPath, wdEntry.getHash(), ignore, entryIgnored);
       childFutures.add(std::move(entryPath), std::move(childFuture));
@@ -541,7 +545,7 @@ void processBothPresent(
       // the same but the blobs would have different hashes
       // If the types are different, then this entry is definitely modified
       if (scmEntry.getType() != wdEntry.getType()) {
-        context->callback->modifiedFile(entryPath);
+        context->callback->modifiedPath(entryPath, wdEntry.getDType());
       } else {
         // If Mercurial eventually switches to using blob IDs that are solely
         // based on the file contents (as opposed to file contents + history)
@@ -558,10 +562,12 @@ void processBothPresent(
                   wdEntry.getHash(), context->getFetchContext());
               return collectAllSafe(scmFuture, wdFuture)
                   .thenValue([entryPath = entryPath.copy(),
-                              context](const std::tuple<Hash20, Hash20>& info) {
+                              context,
+                              dtype = scmEntry.getDType()](
+                                 const std::tuple<Hash20, Hash20>& info) {
                     const auto& [scmHash, wdHash] = info;
                     if (scmHash != wdHash) {
-                      context->callback->modifiedFile(entryPath);
+                      context->callback->modifiedPath(entryPath, dtype);
                     }
                   })
                   .semi()
