@@ -214,6 +214,12 @@ folly::SemiFuture<folly::Unit> RpcTcpHandler::resetReader(
         proc->onShutdown(std::move(data));
       });
 }
+namespace {
+std::string displayBuffer(folly::IOBuf* buf) {
+  auto bytes = buf->coalesce();
+  return folly::hexDump(bytes.data(), bytes.size());
+}
+} // namespace
 
 void RpcTcpHandler::tryConsumeReadBuffer() noexcept {
   // Iterate over all the complete fragments and dispatch these to the
@@ -229,20 +235,36 @@ void RpcTcpHandler::tryConsumeReadBuffer() noexcept {
     // requests that can be handled concurrently.
     threadPool_->add(
         [this, buf = std::move(buf), guard = DestructorGuard(this)]() mutable {
-          XLOG(DBG8) << "Received:\n"
-                     << folly::hexDump(buf->data(), buf->length());
-          auto data = buf->data();
-          auto fragmentHeader = folly::Endian::big(*(uint32_t*)data);
-          bool isLast = (fragmentHeader & 0x80000000) != 0;
+          XLOG(DBG8) << "Received:\n" << displayBuffer(buf.get());
+          // We use a scope so that the cursor is not still around after we
+          // delete part of the IOBuf later. Attempting to use this cursor
+          // after mutating the buffer could result in bad memory accesses.
+          {
+            folly::io::Cursor c(buf.get());
+            uint32_t fragmentHeader = c.readBE<uint32_t>();
+            bool isLast = (fragmentHeader & 0x80000000) != 0;
 
-          // Supporting multiple fragments is expensive and requires playing
-          // with IOBuf to avoid copying data. Since neither macOS nor Linux
-          // are sending requests spanning multiple segments, let's not support
-          // these.
-          XCHECK(isLast);
-          buf->trimStart(sizeof(uint32_t));
+            // Supporting multiple fragments is expensive and requires playing
+            // with IOBuf to avoid copying data. Since neither macOS nor Linux
+            // are sending requests spanning multiple segments, let's not
+            // support these.
+            XCHECK(isLast);
+          }
 
-          dispatchAndReply(std::move(buf), std::move(guard));
+          // Trim off the fragment header.
+          // We need to upgrade to an IOBufQueue because the IOBuf here is
+          // actually part of a chain. The first buffer in the chain may not
+          // have the full fragment header. Thus we need to be trimming off the
+          // whole chain and not just from the first buffer.
+          //
+          // For example, this IOBuf might be the head of a chain of two IOBufs,
+          // and the first IOBuf only contains 2 bytes. Trimming the IOBuf
+          // would fail in this case.
+          folly::IOBufQueue bufQueue{};
+          bufQueue.append(std::move(buf));
+          bufQueue.trimStart(sizeof(uint32_t));
+
+          dispatchAndReply(bufQueue.move(), std::move(guard));
         });
   }
 }
