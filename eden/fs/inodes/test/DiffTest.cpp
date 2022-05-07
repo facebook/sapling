@@ -2055,13 +2055,15 @@ TEST(DiffTest, diffBetweenRoots) {
   testMount.initialize(RootId("1"));
   const auto& edenMount = testMount.getEdenMount();
 
-  auto result = edenMount
-                    ->diffBetweenRoots(
-                        RootId("1"), RootId("2"), folly::CancellationToken{})
-                    .get(100ms);
+  auto callback = ScmStatusDiffCallback{};
+  edenMount
+      ->diffBetweenRoots(
+          RootId("1"), RootId("2"), folly::CancellationToken{}, &callback)
+      .get(100ms);
+  auto result = callback.extractStatus();
 
   EXPECT_THAT(
-      *result->entries_ref(),
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("a", ScmFileStatus::MODIFIED),
           std::make_pair("c", ScmFileStatus::REMOVED),

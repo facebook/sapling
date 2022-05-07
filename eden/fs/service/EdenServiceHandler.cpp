@@ -32,7 +32,6 @@
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/nfs/Nfsd3.h"
-#include "eden/fs/store/ScmStatusDiffCallback.h"
 #else
 #include "eden/fs/prjfs/PrjfsChannel.h" // @manual
 #endif // !_WIN32
@@ -69,6 +68,7 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/PathLoader.h"
+#include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/telemetry/Tracing.h"
@@ -89,6 +89,7 @@ using folly::Unit;
 using std::string;
 using std::unique_ptr;
 using std::vector;
+using namespace std::literals::string_view_literals;
 
 namespace {
 using namespace facebook::eden;
@@ -825,8 +826,16 @@ class ThriftStreamPublisherOwner {
   ThriftStreamPublisherOwner& operator=(ThriftStreamPublisherOwner&&) = delete;
 
   void next(T payload) const {
-    XCHECK(owner);
-    publisher.next(std::move(payload));
+    if (owner) {
+      publisher.next(std::move(payload));
+    }
+  }
+
+  void next(folly::exception_wrapper ew) && {
+    if (owner) {
+      owner = false;
+      std::move(publisher).complete(std::move(ew));
+    }
   }
 
   // Destroying a publisher without calling complete() aborts the process, so
@@ -1210,6 +1219,200 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
   return std::move(serverStream);
 }
 
+namespace {
+void checkMountGeneration(
+    const JournalPosition& position,
+    const std::shared_ptr<EdenMount>& mount,
+    std::string_view fieldName) {
+  if (folly::to_unsigned(*position.mountGeneration()) !=
+      mount->getMountGeneration()) {
+    throw newEdenError(
+        ERANGE,
+        EdenErrorType::MOUNT_GENERATION_CHANGED,
+        fieldName,
+        ".mountGeneration does not match the current "
+        "mountGeneration.  "
+        "You need to compute a new basis for delta queries.");
+  }
+}
+
+void publishFile(
+    const folly::Synchronized<ThriftStreamPublisherOwner<ChangedFileResult>>&
+        publisher,
+    folly::StringPiece path,
+    ScmFileStatus status,
+    dtype_t type) {
+  ChangedFileResult fileResult;
+  fileResult.name() = path.str();
+  fileResult.status() = status;
+  fileResult.dtype() = static_cast<Dtype>(type);
+  publisher.rlock()->next(std::move(fileResult));
+}
+
+class StreamingDiffCallback : public DiffCallback {
+ public:
+  explicit StreamingDiffCallback(
+      std::shared_ptr<
+          folly::Synchronized<ThriftStreamPublisherOwner<ChangedFileResult>>>
+          publisher)
+      : publisher_{std::move(publisher)} {}
+
+  void ignoredPath(RelativePathPiece, dtype_t) override {}
+
+  void addedPath(RelativePathPiece path, dtype_t type) override {
+    publishFile(*publisher_, path.stringPiece(), ScmFileStatus::ADDED, type);
+  }
+
+  void removedPath(RelativePathPiece path, dtype_t type) override {
+    publishFile(*publisher_, path.stringPiece(), ScmFileStatus::REMOVED, type);
+  }
+
+  void modifiedPath(RelativePathPiece path, dtype_t type) override {
+    publishFile(*publisher_, path.stringPiece(), ScmFileStatus::MODIFIED, type);
+  }
+
+  void diffError(RelativePathPiece /*path*/, const folly::exception_wrapper& ew)
+      override {
+    auto publisher = std::move(*publisher_->wlock());
+    std::move(publisher).next(newEdenError(ew));
+  }
+
+ private:
+  std::shared_ptr<
+      folly::Synchronized<ThriftStreamPublisherOwner<ChangedFileResult>>>
+      publisher_;
+};
+
+} // namespace
+
+apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
+EdenServiceHandler::streamChangesSince(
+    std::unique_ptr<StreamChangesSinceParams> params) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *params->mountPoint_ref());
+  auto mountPath = AbsolutePathPiece{*params->mountPoint_ref()};
+  auto edenMount = server_->getMount(mountPath);
+  const auto& fromPosition = *params->fromPosition_ref();
+
+  // Streaming in Thrift can be done via a Stream Generator, or via a Stream
+  // Publisher. We're using the latter here as the former can only be used with
+  // coroutines which EdenFS hasn't been converted to. Generators also have the
+  // property to be driven by the client, internally, Thrift will wait for the
+  // client to have consumed an element before requesting more from the server.
+  // Publishers on the other hand are driven by the server and are publishing
+  // as fast as possible.
+  //
+  // What this means is that in the case where EdenFS can publish elements
+  // faster than the client can read them, EdenFS's memory usage can grow
+  // potentially unbounded.
+
+  checkMountGeneration(fromPosition, edenMount, "fromPosition"sv);
+
+  // The +1 is because the core merge stops at the item prior to
+  // its limitSequence parameter and we want the changes *since*
+  // the provided sequence number.
+  auto summed = edenMount->getJournal().accumulateRange(
+      *fromPosition.sequenceNumber_ref() + 1);
+
+  ChangesSinceResult result;
+  if (!summed) {
+    // No changes, just return the fromPosition and an empty stream.
+    result.toPosition_ref() = fromPosition;
+
+    return {
+        std::move(result),
+        apache::thrift::ServerStream<ChangedFileResult>::createEmpty()};
+  }
+
+  if (summed->isTruncated) {
+    throw newEdenError(
+        EDOM,
+        EdenErrorType::JOURNAL_TRUNCATED,
+        "Journal entry range has been truncated.");
+  }
+
+  auto cancellationSource = std::make_shared<folly::CancellationSource>();
+  auto [serverStream, publisher] =
+      apache::thrift::ServerStream<ChangedFileResult>::createPublisher(
+          [cancellationSource] { cancellationSource->requestCancellation(); });
+  auto sharedPublisher = std::make_shared<
+      folly::Synchronized<ThriftStreamPublisherOwner<ChangedFileResult>>>(
+      ThriftStreamPublisherOwner{std::move(publisher)});
+
+  RootIdCodec& rootIdCodec = *edenMount->getObjectStore();
+
+  JournalPosition toPosition;
+  toPosition.mountGeneration_ref() = edenMount->getMountGeneration();
+  toPosition.sequenceNumber_ref() = summed->toSequence;
+  toPosition.snapshotHash_ref() =
+      rootIdCodec.renderRootId(summed->snapshotTransitions.back());
+  result.toPosition_ref() = toPosition;
+
+  for (auto& entry : summed->changedFilesInOverlay) {
+    const auto& changeInfo = entry.second;
+
+    ScmFileStatus status;
+    if (!changeInfo.existedBefore && changeInfo.existedAfter) {
+      status = ScmFileStatus::ADDED;
+    } else if (changeInfo.existedBefore && !changeInfo.existedAfter) {
+      status = ScmFileStatus::REMOVED;
+    } else {
+      status = ScmFileStatus::MODIFIED;
+    }
+
+    publishFile(
+        *sharedPublisher,
+        entry.first.stringPiece().str(),
+        status,
+        dtype_t::Unknown);
+  }
+
+  for (const auto& name : summed->uncleanPaths) {
+    publishFile(
+        *sharedPublisher,
+        name.stringPiece().str(),
+        ScmFileStatus::MODIFIED,
+        dtype_t::Unknown);
+  }
+
+  if (summed->snapshotTransitions.size() > 1) {
+    auto callback = std::make_shared<StreamingDiffCallback>(sharedPublisher);
+
+    std::vector<ImmediateFuture<folly::Unit>> futures;
+    for (auto rootIt = summed->snapshotTransitions.begin();
+         std::next(rootIt) != summed->snapshotTransitions.end();
+         ++rootIt) {
+      const auto& from = *rootIt;
+      const auto& to = *(rootIt + 1);
+
+      futures.push_back(edenMount->diffBetweenRoots(
+          from, to, cancellationSource->getToken(), callback.get()));
+    }
+
+    folly::futures::detachOn(
+        server_->getServerState()->getThreadPool().get(),
+        collectAllSafe(std::move(futures))
+            // Make sure that the edenMount, callback, helper and
+            // cancellationSource lives for the duration of the stream by
+            // copying them.
+            .thenTry(
+                [edenMount,
+                 sharedPublisher,
+                 callback = std::move(callback),
+                 helper = std::move(helper),
+                 cancellationSource](
+                    folly::Try<std::vector<folly::Unit>>&& result) mutable {
+                  if (result.hasException()) {
+                    auto publisher = std::move(*sharedPublisher->wlock());
+                    std::move(publisher).next(
+                        newEdenError(std::move(result).exception()));
+                  }
+                })
+            .semi());
+  }
+
+  return {std::move(result), std::move(serverStream)};
+}
+
 void EdenServiceHandler::getFilesChangedSince(
     FileDelta& out,
     std::unique_ptr<std::string> mountPoint,
@@ -1218,15 +1421,7 @@ void EdenServiceHandler::getFilesChangedSince(
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
 
-  if (*fromPosition->mountGeneration_ref() !=
-      static_cast<ssize_t>(edenMount->getMountGeneration())) {
-    throw newEdenError(
-        ERANGE,
-        EdenErrorType::MOUNT_GENERATION_CHANGED,
-        "fromPosition.mountGeneration does not match the current "
-        "mountGeneration.  "
-        "You need to compute a new basis for delta queries.");
-  }
+  checkMountGeneration(*fromPosition, edenMount, "fromPosition"sv);
 
   // The +1 is because the core merge stops at the item prior to
   // its limitSequence parameter and we want the changes *since*
@@ -2018,12 +2213,19 @@ EdenServiceHandler::semifuture_getScmStatusBetweenRevisions(
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto mount = server_->getMount(mountPath);
 
+  auto callback = std::make_unique<ScmStatusDiffCallback>();
+  auto diffFuture = mount->diffBetweenRoots(
+      mount->getObjectStore()->parseRootId(*oldHash),
+      mount->getObjectStore()->parseRootId(*newHash),
+      context->getConnectionContext()->getCancellationToken(),
+      callback.get());
   return wrapImmediateFuture(
              std::move(helper),
-             mount->diffBetweenRoots(
-                 mount->getObjectStore()->parseRootId(*oldHash),
-                 mount->getObjectStore()->parseRootId(*newHash),
-                 context->getConnectionContext()->getCancellationToken()))
+             std::move(diffFuture)
+                 .thenValue([callback = std::move(callback)](auto&&) {
+                   return std::make_unique<ScmStatus>(
+                       callback->extractStatus());
+                 }))
       .semi();
 }
 

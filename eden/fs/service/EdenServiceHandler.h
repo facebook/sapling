@@ -157,6 +157,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   folly::Future<std::unique_ptr<GetScmStatusResult>> future_getScmStatusV2(
       std::unique_ptr<GetScmStatusParams> params) override;
 
+  apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
+  streamChangesSince(std::unique_ptr<StreamChangesSinceParams> params) override;
+
   folly::Future<std::unique_ptr<ScmStatus>> future_getScmStatus(
       std::unique_ptr<std::string> mountPoint,
       bool listIgnored,

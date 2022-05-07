@@ -664,10 +664,11 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * ScmFileStatus::ADDED, while if the order of arguments were reversed, it
    * would be returned as ScmFileStatus::REMOVED.
    */
-  FOLLY_NODISCARD ImmediateFuture<std::unique_ptr<ScmStatus>> diffBetweenRoots(
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> diffBetweenRoots(
       const RootId& fromRoot,
       const RootId& toRoot,
-      folly::CancellationToken cancellation);
+      folly::CancellationToken cancellation,
+      DiffCallback* callback);
 
   /**
    * This version of diff is primarily intended for testing.

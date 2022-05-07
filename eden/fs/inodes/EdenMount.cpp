@@ -1706,18 +1706,15 @@ folly::Future<std::unique_ptr<ScmStatus>> EdenMount::diff(
       });
 }
 
-ImmediateFuture<std::unique_ptr<ScmStatus>> EdenMount::diffBetweenRoots(
+ImmediateFuture<folly::Unit> EdenMount::diffBetweenRoots(
     const RootId& fromRoot,
     const RootId& toRoot,
-    folly::CancellationToken cancellation) {
-  auto callback = std::make_unique<ScmStatusDiffCallback>();
-  auto diffContext = createDiffContext(callback.get(), cancellation, true);
+    folly::CancellationToken cancellation,
+    DiffCallback* callback) {
+  auto diffContext = createDiffContext(callback, cancellation, true);
   auto fut =
       ImmediateFuture{diffRoots(diffContext.get(), fromRoot, toRoot).semi()};
-  return std::move(fut).thenValue([diffContext = std::move(diffContext),
-                                   callback = std::move(callback)](auto&&) {
-    return std::make_unique<ScmStatus>(callback->extractStatus());
-  });
+  return std::move(fut).ensure([diffContext = std::move(diffContext)] {});
 }
 
 void EdenMount::resetParent(const RootId& parent) {

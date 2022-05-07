@@ -4,6 +4,10 @@
 # GNU General Public License version 2.
 
 file(GLOB HG_INTEGRATION_SRCS "*.py")
+list(REMOVE_ITEM HG_INTEGRATION_SRCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/eden_journal_test.py
+)
+
 add_fb_python_unittest(
   hg_integration_tests
   SOURCES ${HG_INTEGRATION_SRCS}
