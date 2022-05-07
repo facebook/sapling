@@ -91,7 +91,7 @@ Check that bookmark moved correctly
 Pull should succeed and local bookmark should be moved back.
   $ LOG=pull::fastpath=debug hgedenapi pull
   pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
-  DEBUG pull::fastpath: master: c2f72b3cb5e9ea5ce6b764fc5b4f7c7b23208217 => 26805aba1e600a82e93661149f2313866a221a7b
+  DEBUG pull::fastpath: master_bookmark: c2f72b3cb5e9ea5ce6b764fc5b4f7c7b23208217 => 26805aba1e600a82e93661149f2313866a221a7b
   imported commit graph for 0 commits (0 segments)
 
 Check that segmented changelog IdMap in DB didn't change. 

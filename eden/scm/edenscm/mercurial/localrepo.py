@@ -1029,18 +1029,31 @@ class localrepository(object):
                         ):
                             # The remotenames might be stale. Try to get the
                             # head from the master group.
-                            dag = self.changelog.dag
-                            mastergroup = dag.mastergroup()
-                            masterheads = dag.heads(mastergroup)
-                            oldnode = masterheads.first()
+                            publicheads = self.dageval(lambda dag: dag.heads(public()))
+                            masterheads = self.dageval(
+                                lambda dag: dag.heads(dag.mastergroup())
+                            )
+
+                            # The "masterheads" might contain some
+                            # "uninteresting" heads that are no longer referred
+                            # by main public remote bookmarks. Try to ignore
+                            # them by selecting heads that are actually
+                            # referred by public remote bookmarks.
+                            oldnodes = masterheads & publicheads
+
+                            oldnode = oldnodes.last() or masterheads.last()
                             if oldnode == newnode:
                                 tracing.debug(
-                                    "master: %s (unchanged)" % (hexnode,),
+                                    "%s: %s (unchanged)"
+                                    % (
+                                        name,
+                                        hexnode,
+                                    ),
                                     target="pull::fastpath",
                                 )
                             elif oldnode is not None:
                                 tracing.debug(
-                                    "master: %s => %s" % (hex(oldnode), hexnode),
+                                    "%s: %s => %s" % (name, hex(oldnode), hexnode),
                                     target="pull::fastpath",
                                 )
                                 fastpath.append((oldnode, newnode))
@@ -1160,8 +1173,8 @@ class localrepository(object):
                 # able to provide only public heads and cannot use this
                 # optimization.
                 if self.ui.configbool("experimental", "narrow-heads"):
-                    public = self.heads(includepublic=True, includedraft=False)
-                    heads = sorted(set(heads) - set(public))
+                    nondraftheads = self.heads(includepublic=True, includedraft=False)
+                    heads = sorted(set(heads) - set(nondraftheads))
                 if heads:
                     visibility.add(self, heads)
 
