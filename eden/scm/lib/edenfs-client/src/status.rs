@@ -124,8 +124,7 @@ async fn maybe_status_fastpath_internal(
         return Err(FallbackToPython.into());
     }
 
-    let stdout = io::stdout();
-    let use_color = stdout.can_color();
+    let use_color = io.output().can_color();
 
     let status = get_status_helper(
         &client,

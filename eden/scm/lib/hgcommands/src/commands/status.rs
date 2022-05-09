@@ -142,7 +142,7 @@ pub fn run(opts: StatusOpts, io: &IO, repo: Repo) -> Result<u8> {
         copies: opts.copies,
         endl: if opts.print0 { '\0' } else { '\n' },
         root_relative: opts.root_relative,
-        use_color: std::io::stdout().can_color(),
+        use_color: io.output().can_color(),
     };
 
     // Attempt to fetch status information from EdenFS.
