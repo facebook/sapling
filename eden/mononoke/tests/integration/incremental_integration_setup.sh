@@ -19,6 +19,8 @@ else
     TARGET=":$1-manifest"
 fi
 
+shift
+
 set -x
 
-$BUCK build //eden/mononoke/tests/integration:integration_runner_real "//eden/mononoke/tests/integration$TARGET"
+$BUCK build "$@" //eden/mononoke/tests/integration:integration_runner_real "//eden/mononoke/tests/integration$TARGET"
