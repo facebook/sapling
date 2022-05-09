@@ -76,7 +76,7 @@ else()
     eden_inodes
     PUBLIC
       eden_fuse
-      eden_overlay
+      eden_fsoverlay
       eden_service
   )
 endif()
@@ -112,5 +112,6 @@ target_link_libraries(
 )
 
 add_subdirectory(overlay)
+add_subdirectory(fsoverlay)
 add_subdirectory(treeoverlay)
 add_subdirectory(test)

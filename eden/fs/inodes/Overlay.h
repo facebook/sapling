@@ -17,7 +17,7 @@
 #include <optional>
 #include <thread>
 #include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/inodes/overlay/OverlayChecker.h"
+#include "eden/fs/inodes/fsoverlay/OverlayChecker.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/CaseSensitivity.h"
@@ -25,7 +25,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifndef _WIN32
-#include "eden/fs/inodes/overlay/FsOverlay.h"
+#include "eden/fs/inodes/fsoverlay/FsOverlay.h"
 #endif
 
 namespace facebook {

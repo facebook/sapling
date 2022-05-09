@@ -14,8 +14,8 @@
 #include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 
-#include "eden/fs/inodes/overlay/FsOverlay.h"
-#include "eden/fs/inodes/overlay/OverlayChecker.h"
+#include "eden/fs/inodes/fsoverlay/FsOverlay.h"
+#include "eden/fs/inodes/fsoverlay/OverlayChecker.h"
 
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
 

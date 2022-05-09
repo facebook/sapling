@@ -8,7 +8,7 @@
 #ifndef _WIN32
 
 #include "eden/fs/inodes/Overlay.h"
-#include "eden/fs/inodes/overlay/FsOverlay.h"
+#include "eden/fs/inodes/fsoverlay/FsOverlay.h"
 
 #include <folly/Exception.h>
 #include <folly/Expected.h>

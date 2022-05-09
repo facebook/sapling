@@ -7,7 +7,7 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/inodes/overlay/FsOverlay.h"
+#include "eden/fs/inodes/fsoverlay/FsOverlay.h"
 
 #include <boost/filesystem.hpp>
 #include <algorithm>
