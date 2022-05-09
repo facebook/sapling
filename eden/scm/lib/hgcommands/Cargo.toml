@@ -13,6 +13,7 @@ blackbox = { version = "0.1.0", path = "../blackbox" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clidispatch = { version = "0.1.0", path = "../clidispatch" }
 cliparser = { version = "0.1.0", path = "../cliparser", features = ["python"] }
+clone = { version = "0.1.0", path = "../clone" }
 comfy-table = "4.0.1"
 configparser = { version = "0.1.0", path = "../configparser" }
 cpython = { version = "0.7", default-features = false }
@@ -52,7 +53,7 @@ terminal_size = "0.1"
 tracing = "0.1.32"
 tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
 tracing-sampler = { version = "0.1.0", path = "../tracing-sampler" }
-tracing-subscriber = { version = "0.3.11", features = ["ansi", "env-filter", "fmt", "json", "parking_lot", "registry"] }
+tracing-subscriber = { version = "0.3.11", features = ["ansi", "env-filter", "fmt", "json", "local-time", "parking_lot", "registry"] }
 types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }
 version = { version = "0.1.0", path = "../version" }
