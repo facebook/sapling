@@ -308,7 +308,7 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
   }
 
   if (unlink((localDir + "next-inode-number"_pc).c_str())) {
-    folly::throwSystemError("removing saved inode numebr");
+    folly::throwSystemError("removing saved inode number");
   }
 
   auto overlay = Overlay::create(
@@ -345,7 +345,7 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
         break;
       case OverlayRestartMode::UNCLEAN:
         if (unlink((getLocalDir() + "next-inode-number"_pc).c_str())) {
-          folly::throwSystemError("removing saved inode numebr");
+          folly::throwSystemError("removing saved inode number");
         }
         break;
     }
