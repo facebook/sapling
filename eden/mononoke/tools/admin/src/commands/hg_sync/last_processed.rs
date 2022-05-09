@@ -84,7 +84,7 @@ pub async fn last_processed(
             .ok_or_else(|| anyhow!("No valid counter position to skip ahead to"))?;
 
         if last_processed_args.dry_run {
-            print!(
+            println!(
                 "Counter for {} ({}) would be updated to {}",
                 repo_name, repo_id, new_value
             );
