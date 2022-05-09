@@ -2002,6 +2002,7 @@ class RageCmd(Subcmd):
             rage_mod.report_edenfs_bug(instance, rage_processor)
             return 0
         else:
+            rage_mod.hint_rage_report()
             if args.dry_run:
                 rage_processor = None
 

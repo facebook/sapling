@@ -44,7 +44,7 @@ except ImportError:
 
 
 try:
-    from .facebook.rage import _report_edenfs_bug
+    from .facebook.rage import _report_edenfs_bug, _hint_rage_report
 except ImportError:
 
     def _report_edenfs_bug(
@@ -54,6 +54,9 @@ except ImportError:
     ) -> None:
         print("_report_edenfs_bug() is unimplemented.", file=sys.stderr)
         return None
+
+    def _hint_rage_report() -> None:
+        None
 
 
 def section_title(message: str, out: IO[bytes]) -> None:
@@ -150,6 +153,10 @@ def report_edenfs_bug(instance: EdenInstance, reporter: str) -> None:
         [EdenInstance, IO[bytes]], None
     ] = lambda inst, sink: print_diagnostic_info(inst, sink, False)
     _report_edenfs_bug(rage_lambda, instance, reporter)
+
+
+def hint_rage_report() -> None:
+    _hint_rage_report()
 
 
 def print_rpm_version(out: IO[bytes]) -> None:
