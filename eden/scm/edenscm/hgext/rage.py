@@ -262,47 +262,9 @@ def checkproxyagentstate(ui):
     if not ui.config("auth_proxy", "x2pagentd"):
         return "Not enabled"
 
-    status = "OS not supported"
+    x2prage = shcmd("x2pagentctl rage -n")
 
-    version = shcmd("x2pagentd --version")
-
-    if pycompat.iswindows:
-        os.environ["COMSPEC"] = "powershell"
-        status = shcmd(
-            "Get-WmiObject win32_process | ? CommandLine -match 'x2pagentd.exe'"
-        )
-    elif pycompat.islinux:
-        status = shcmd("systemctl status --user x2pagentd.service")
-    elif pycompat.isdarwin:
-        status = shcmd("launchctl list com.fb.chef.x2pagentd")
-
-    logs = "OS not supported"
-    if pycompat.iswindows:
-        username = util.getuser()
-        logs = _tail(
-            "C:\\Users\\{}\\AppData\\Local\\facebook\\fb-x2pagentd".format(username),
-            ["fb-x2pagentd.log"],
-            nlines=100,
-        )
-    elif pycompat.islinux:
-        logs = shcmd("journalctl --user-unit x2pagentd.service | tail -n 100")
-    elif pycompat.isdarwin:
-        logs = _tail(
-            os.path.expanduser("~/Library/Application Support/fb-x2pagentd"),
-            ["fb-x2pagentd.log"],
-            nlines=100,
-        )
-
-    return """{}
-
-x2pagentd status:
-{}
-
-x2pagentd logs (might be truncated):
-{}
-""".format(
-        version, status, logs
-    )
+    return "x2pagentd rage:\n\n{}".format(x2prage)
 
 
 def sksagentrage(ui):
