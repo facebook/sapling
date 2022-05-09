@@ -691,10 +691,6 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
           config.checkValidityInterval.getValue()));
 #endif
 
-  overlayTask_.updateInterval(
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          config.overlayMaintenanceInterval.getValue()));
-
   localStoreTask_.updateInterval(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           config.localStoreManagementInterval.getValue()));
@@ -2106,15 +2102,6 @@ void EdenServer::refreshBackingStore() {
 
   for (auto& store : backingStores) {
     store->periodicManagementTask();
-  }
-}
-
-void EdenServer::manageOverlay() {
-  const auto mountPoints = mountPoints_.rlock();
-  for (const auto& [_, info] : *mountPoints) {
-    const auto& mount = info.edenMount;
-
-    mount->getOverlay()->maintenance();
   }
 }
 

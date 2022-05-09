@@ -266,9 +266,9 @@ void TreeOverlayStore::saveTree(
   db_->transaction([&](auto& txn) {
     // When `saveTree` gets called, caller is expected to rewrite the tree
     // content. So we need to remove the previously stored version.
-    auto stmt = cache_->deleteParent.get(txn);
-    stmt->bind(1, inodeNumber.get());
-    stmt->step();
+    auto& stmt = cache_->deleteParent.get(txn);
+    stmt.bind(1, inodeNumber.get());
+    stmt.step();
 
     // The following section generates the insertion SQLite statements based
     // on number of entries in `OverlayDir`. This is faster than inserting
@@ -284,29 +284,29 @@ void TreeOverlayStore::saveTree(
     auto entries_iter = odir.entries_ref()->cbegin();
 
     if (batch_count != 0) {
-      auto batch_insert = cache_->batchInsert[kBatchInsertSize - 1].get(txn);
+      auto& batch_insert = cache_->batchInsert[kBatchInsertSize - 1].get(txn);
       for (size_t i = 0; i < batch_count; i++) {
         // One batch
         for (size_t n = 0; n < kBatchInsertSize; n++, entries_iter++) {
           auto name = PathComponentPiece{entries_iter->first};
           const auto& entry = entries_iter->second;
-          insertInodeEntry(*batch_insert, n, inodeNumber, name, entry);
+          insertInodeEntry(batch_insert, n, inodeNumber, name, entry);
         }
 
-        batch_insert->step();
-        batch_insert->reset();
+        batch_insert.step();
+        batch_insert.reset();
       }
     }
 
     if (remaining != 0) {
-      auto insert = cache_->batchInsert[remaining - 1].get(txn);
+      auto& insert = cache_->batchInsert[remaining - 1].get(txn);
       for (size_t n = 0; entries_iter != odir.entries_ref()->cend();
            entries_iter++, n++) {
         auto name = PathComponentPiece{entries_iter->first};
         const auto& entry = entries_iter->second;
-        insertInodeEntry(*insert, n, inodeNumber, name, entry);
+        insertInodeEntry(insert, n, inodeNumber, name, entry);
       }
-      insert->step();
+      insert.step();
     }
   });
 }
@@ -315,16 +315,16 @@ overlay::OverlayDir TreeOverlayStore::loadTree(InodeNumber inode) {
   overlay::OverlayDir dir;
 
   db_->transaction([&](auto& txn) {
-    auto query = cache_->selectTree.get(txn);
-    query->bind(1, inode.get());
+    auto& query = cache_->selectTree.get(txn);
+    query.bind(1, inode.get());
 
-    while (query->step()) {
-      auto name = query->columnBlob(0);
+    while (query.step()) {
+      auto name = query.columnBlob(0);
       overlay::OverlayEntry entry;
       entry.mode_ref() =
-          dtype_to_mode(static_cast<dtype_t>(query->columnUint64(1)));
-      entry.inodeNumber_ref() = query->columnUint64(2);
-      entry.hash_ref() = query->columnBlob(3).toString();
+          dtype_to_mode(static_cast<dtype_t>(query.columnUint64(1)));
+      entry.inodeNumber_ref() = query.columnUint64(2);
+      entry.hash_ref() = query.columnBlob(3).toString();
       dir.entries_ref()->emplace(std::make_pair(name, entry));
     }
   });
@@ -337,23 +337,23 @@ overlay::OverlayDir TreeOverlayStore::loadAndRemoveTree(InodeNumber inode) {
 
   db_->transaction([&](auto& txn) {
     // SQLite does not support select-and-delete in one query.
-    auto query = cache_->selectTree.get(txn);
-    query->bind(1, inode.get());
+    auto& query = cache_->selectTree.get(txn);
+    query.bind(1, inode.get());
 
-    while (query->step()) {
-      auto name = query->columnBlob(0);
+    while (query.step()) {
+      auto name = query.columnBlob(0);
       overlay::OverlayEntry entry;
       entry.mode_ref() =
-          dtype_to_mode(static_cast<dtype_t>(query->columnUint64(1)));
-      entry.inodeNumber_ref() = query->columnUint64(2);
-      entry.hash_ref() = query->columnBlob(3).toString();
+          dtype_to_mode(static_cast<dtype_t>(query.columnUint64(1)));
+      entry.inodeNumber_ref() = query.columnUint64(2);
+      entry.hash_ref() = query.columnBlob(3).toString();
       dir.entries_ref()->emplace(std::make_pair(name, entry));
     }
 
-    auto deleteInode = cache_->deleteTree.get(txn);
-    deleteInode->reset();
-    deleteInode->bind(1, inode.get());
-    deleteInode->step();
+    auto& deleteInode = cache_->deleteTree.get(txn);
+    deleteInode.reset();
+    deleteInode.bind(1, inode.get());
+    deleteInode.step();
   });
 
   return dir;
@@ -361,26 +361,26 @@ overlay::OverlayDir TreeOverlayStore::loadAndRemoveTree(InodeNumber inode) {
 
 void TreeOverlayStore::removeTree(InodeNumber inode) {
   db_->transaction([&](auto& txn) {
-    auto children = cache_->countChildren.get(txn);
-    children->bind(1, inode.get());
+    auto& children = cache_->countChildren.get(txn);
+    children.bind(1, inode.get());
 
-    if (!children->step() || children->columnUint64(0) != 0) {
+    if (!children.step() || children.columnUint64(0) != 0) {
       throw TreeOverlayNonEmptyError("cannot delete non-empty directory");
     }
 
-    auto deleteInode = cache_->deleteTree.get(txn);
-    deleteInode->reset();
-    deleteInode->bind(1, inode.get());
-    deleteInode->step();
+    auto& deleteInode = cache_->deleteTree.get(txn);
+    deleteInode.reset();
+    deleteInode.bind(1, inode.get());
+    deleteInode.step();
   });
 }
 
 bool TreeOverlayStore::hasTree(InodeNumber inode) {
   auto db = db_->lock();
-  auto query = cache_->hasTree.get(db);
-  query->bind(1, inode.get());
-  if (query->step()) {
-    return query->columnUint64(0) == 1;
+  auto& query = cache_->hasTree.get(db);
+  query.bind(1, inode.get());
+  if (query.step()) {
+    return query.columnUint64(0) == 1;
   }
   return false;
 }
@@ -390,19 +390,19 @@ void TreeOverlayStore::addChild(
     PathComponentPiece name,
     overlay::OverlayEntry entry) {
   auto db = db_->lock();
-  auto stmt = cache_->insertChild.get(db);
-  insertInodeEntry(*stmt, 0, parent, name, entry);
-  stmt->step();
+  auto& stmt = cache_->insertChild.get(db);
+  insertInodeEntry(stmt, 0, parent, name, entry);
+  stmt.step();
 }
 
 void TreeOverlayStore::removeChild(
     InodeNumber parent,
     PathComponentPiece childName) {
   auto db = db_->lock();
-  auto stmt = cache_->deleteChild.get(db);
-  stmt->bind(1, parent.get());
-  stmt->bind(2, childName.stringPiece());
-  stmt->step();
+  auto& stmt = cache_->deleteChild.get(db);
+  stmt.bind(1, parent.get());
+  stmt.bind(2, childName.stringPiece());
+  stmt.step();
 }
 
 void TreeOverlayStore::renameChild(
@@ -413,26 +413,26 @@ void TreeOverlayStore::renameChild(
   // When rename also overwrites some file in the destination, we need to make
   // sure this is transactional.
   db_->transaction([&](auto& txn) {
-    auto overwriteEmpty = cache_->hasChild.get(txn);
-    overwriteEmpty->bind(1, dst.get());
-    overwriteEmpty->bind(2, dstName.stringPiece());
+    auto& overwriteEmpty = cache_->hasChild.get(txn);
+    overwriteEmpty.bind(1, dst.get());
+    overwriteEmpty.bind(2, dstName.stringPiece());
 
-    if (!(overwriteEmpty->step() && overwriteEmpty->columnUint64(0) == 0)) {
+    if (!(overwriteEmpty.step() && overwriteEmpty.columnUint64(0) == 0)) {
       throw TreeOverlayNonEmptyError("cannot overwrite non-empty directory");
     }
 
     // If all the check passes, we delete the child being overwritten
-    auto deleteStmt = cache_->deleteChild.get(txn);
-    deleteStmt->bind(1, dst.get());
-    deleteStmt->bind(2, dstName.stringPiece());
-    deleteStmt->step();
+    auto& deleteStmt = cache_->deleteChild.get(txn);
+    deleteStmt.bind(1, dst.get());
+    deleteStmt.bind(2, dstName.stringPiece());
+    deleteStmt.step();
 
-    auto stmt = cache_->renameChild.get(txn);
-    stmt->bind(1, dst.get());
-    stmt->bind(2, dstName.stringPiece());
-    stmt->bind(3, src.get());
-    stmt->bind(4, srcName.stringPiece());
-    stmt->step();
+    auto& stmt = cache_->renameChild.get(txn);
+    stmt.bind(1, dst.get());
+    stmt.bind(2, dstName.stringPiece());
+    stmt.bind(3, src.get());
+    stmt.bind(4, srcName.stringPiece());
+    stmt.step();
   });
 }
 

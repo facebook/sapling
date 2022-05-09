@@ -196,8 +196,6 @@ class FsOverlay : public IOverlay {
 
   bool hasOverlayData(InodeNumber inodeNumber) override;
 
-  void maintenance() override {}
-
   static constexpr folly::StringPiece kMetadataFile{"metadata.table"};
 
   /**

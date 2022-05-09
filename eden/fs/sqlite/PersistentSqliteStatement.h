@@ -57,32 +57,14 @@ class PersistentSqliteStatement {
   PersistentSqliteStatement(PersistentSqliteStatement&&) = default;
   PersistentSqliteStatement& operator=(PersistentSqliteStatement&&) = default;
 
-  struct Guard {
-    explicit Guard(SqliteStatement& stmt) : stmt_(stmt) {}
-
-    ~Guard() {
-      stmt_.reset();
-    }
-
-    SqliteStatement& operator*() {
-      return stmt_;
-    }
-
-    SqliteStatement* operator->() {
-      return &stmt_;
-    }
-
-   private:
-    SqliteStatement& stmt_;
-  };
-
   /**
    * Obtain the cached statement for usage. The caller must be holding the
    * database lock in order to use the prepared statement. This function will
    * also take care of resetting the state of the given statement.
    */
-  Guard get(folly::Synchronized<sqlite3*>::LockedPtr&) & {
-    return Guard{stmt_};
+  SqliteStatement& get(folly::Synchronized<sqlite3*>::LockedPtr&) & {
+    stmt_.reset();
+    return stmt_;
   }
 
  private:

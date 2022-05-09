@@ -81,35 +81,13 @@ SqliteDatabase::Connection SqliteDatabase::lock() {
 void SqliteDatabase::transaction(const std::function<void(Connection&)>& func) {
   auto conn = lock();
   try {
-    cache_->beginTransaction.get(conn)->step();
+    cache_->beginTransaction.get(conn).step();
     func(conn);
-    cache_->commitTransaction.get(conn)->step();
+    cache_->commitTransaction.get(conn).step();
   } catch (const std::exception& ex) {
-    cache_->rollbackTransaction.get(conn)->step();
+    cache_->rollbackTransaction.get(conn).step();
     XLOG(WARN) << "SQLite transaction failed: " << ex.what();
     throw;
-  }
-}
-
-void SqliteDatabase::checkpoint() {
-  if (auto conn = db_.tryWLock()) {
-    XLOG(DBG6) << "Checkpoint thread acquired SQLite lock";
-    try {
-      int pnLog, pnCkpt;
-      checkSqliteResult(
-          *conn,
-          sqlite3_wal_checkpoint_v2(
-              *conn, nullptr, SQLITE_CHECKPOINT_FULL, &pnLog, &pnCkpt));
-      XLOGF(
-          DBG6,
-          "Checkpoint saved. Size of frames: {}. Saved: {}",
-          pnLog,
-          pnCkpt);
-    } catch (const std::exception&) {
-      // Exception is logged in `checkSqliteResult`
-    }
-  } else {
-    XLOG(DBG6) << "Checkpoint skipped: write lock is held by other threads";
   }
 }
 } // namespace facebook::eden

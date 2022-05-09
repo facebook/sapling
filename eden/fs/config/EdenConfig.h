@@ -796,15 +796,6 @@ class EdenConfig : private ConfigSettingManager {
       "normal",
       this};
 
-  /**
-   * This option controls how often we run SQLite WAL checkpoint in tree
-   * overlay. This option is ignored in other overlay types.
-   */
-  ConfigSetting<std::chrono::nanoseconds> overlayMaintenanceInterval{
-      "overlay:maintenance-interval",
-      std::chrono::minutes(1),
-      this};
-
   // [clone]
 
   /**
