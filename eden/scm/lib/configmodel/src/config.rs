@@ -77,23 +77,30 @@ impl Config for &dyn Config {
     }
 }
 
-impl Config for BTreeMap<String, String> {
+impl Config for BTreeMap<&str, &str> {
     fn keys(&self, section: &str) -> Vec<Text> {
         let prefix = format!("{}.", section);
-        BTreeMap::keys(&self)
-            .filter_map(|k| {
-                if k.starts_with(&prefix) {
-                    Some(k[prefix.len()..].to_string().into())
-                } else {
-                    None
-                }
-            })
+        BTreeMap::keys(self)
+            .filter_map(|k| k.strip_prefix(&prefix).map(|k| k.to_string().into()))
             .collect()
     }
 
     fn get(&self, section: &str, name: &str) -> Option<Text> {
-        let name = format!("{}.{}", section, name);
-        BTreeMap::get(self, &name).map(|v| v.to_string().into())
+        let key: &str = &format!("{}.{}", section, name);
+        BTreeMap::get(self, &key).map(|v| v.to_string().into())
+    }
+}
+
+impl Config for BTreeMap<String, String> {
+    fn keys(&self, section: &str) -> Vec<Text> {
+        let prefix = format!("{}.", section);
+        BTreeMap::keys(self)
+            .filter_map(|k| k.strip_prefix(&prefix).map(|k| k.to_string().into()))
+            .collect()
+    }
+
+    fn get(&self, section: &str, name: &str) -> Option<Text> {
+        BTreeMap::get(self, &format!("{}.{}", section, name)).map(|v| v.clone().into())
     }
 }
 
@@ -103,9 +110,7 @@ mod tests {
 
     #[test]
     fn test_btreemap_config() {
-        let map: BTreeMap<String, String> = vec![("foo.bar".to_string(), "baz".to_string())]
-            .into_iter()
-            .collect();
+        let map: BTreeMap<&str, &str> = vec![("foo.bar", "baz")].into_iter().collect();
         assert_eq!(format!("{:?}", Config::keys(&map, "foo")), "[\"bar\"]");
         assert_eq!(
             format!("{:?}", Config::get(&map, "foo", "bar")),

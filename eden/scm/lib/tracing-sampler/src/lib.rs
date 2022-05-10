@@ -184,13 +184,11 @@ mod tests {
             // layer not configured, shouldn't show up.
             tracing::info!(target: "banana", foo = "bar");
 
-            let config = BTreeMap::<String, String>::from([
-                (
-                    "sampling.filepath".to_string(),
-                    out_path.to_string_lossy().to_string(),
-                ),
-                ("sampling.key.banana".to_string(), "pear".to_string()),
-                ("sampling.key.orange".to_string(), "melon".to_string()),
+            let filepath = out_path.to_string_lossy();
+            let config = BTreeMap::<&str, &str>::from([
+                ("sampling.filepath", filepath.as_ref()),
+                ("sampling.key.banana", "pear"),
+                ("sampling.key.orange", "melon"),
             ]);
 
             sc.set(SamplingConfig::new(&config).unwrap()).unwrap();

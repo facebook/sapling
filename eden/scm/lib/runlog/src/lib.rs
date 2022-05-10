@@ -224,8 +224,8 @@ mod tests {
     #[test]
     fn test_close() -> Result<()> {
         let mut cfg = BTreeMap::new();
-        cfg.insert("runlog.boring-commands".to_string(), "boring".to_string());
-        cfg.insert("runlog.enable".to_string(), "1".to_string());
+        cfg.insert("runlog.boring-commands", "boring");
+        cfg.insert("runlog.enable", "1");
 
         let cleaned_up_files = |cfg, name: &str, exit: i32| -> Result<bool> {
             let td = tempdir()?;
@@ -250,12 +250,12 @@ mod tests {
 
         // Infer boringness from blackbox disablement.
         let mut no_bb_cfg = cfg.clone();
-        no_bb_cfg.insert("extensions.blackbox".to_string(), "!".to_string());
+        no_bb_cfg.insert("extensions.blackbox", "!");
         assert!(cleaned_up_files(&no_bb_cfg, "blackbox_disabled", 0)?);
 
         // Infer boringness from empty blackbox.trace.
         let mut no_bb_trace = cfg.clone();
-        no_bb_trace.insert("blackbox.track".to_string(), "".to_string());
+        no_bb_trace.insert("blackbox.track", "");
         assert!(cleaned_up_files(&no_bb_trace, "blackbox_disabled", 0)?);
 
         Ok(())
@@ -265,7 +265,7 @@ mod tests {
     fn test_empty_command() -> Result<()> {
         let td = tempdir()?;
         let mut cfg = BTreeMap::new();
-        cfg.insert("runlog.enable".to_string(), "1".to_string());
+        cfg.insert("runlog.enable", "1");
 
         // Don't crash.
         Logger::new(&cfg, td.path(), vec![])?;

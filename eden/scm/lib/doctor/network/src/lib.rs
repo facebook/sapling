@@ -527,11 +527,8 @@ mod tests {
         // Both corp and external fail.
         {
             let mut cfg = BTreeMap::new();
-            cfg.insert("edenapi.url".to_string(), non_working_url.to_string());
-            cfg.insert(
-                "doctor.external-host-check-url".to_string(),
-                non_working_url.to_string(),
-            );
+            cfg.insert("edenapi.url", non_working_url);
+            cfg.insert("doctor.external-host-check-url", non_working_url);
 
             let mut doc = Doctor::new();
             doc.tcp_connect_timeout = Duration::from_millis(1);
@@ -549,11 +546,8 @@ mod tests {
         // External works.
         {
             let mut cfg = BTreeMap::new();
-            cfg.insert("edenapi.url".to_string(), non_working_url.to_string());
-            cfg.insert(
-                "doctor.external-host-check-url".to_string(),
-                working_url.to_string(),
-            );
+            cfg.insert("edenapi.url", non_working_url);
+            cfg.insert("doctor.external-host-check-url", &working_url);
 
             let doc = Doctor::new();
             assert!(matches!(
@@ -564,12 +558,9 @@ mod tests {
 
         // Corp works.
         {
-            let mut cfg = BTreeMap::new();
-            cfg.insert("edenapi.url".to_string(), working_url.to_string());
-            cfg.insert(
-                "doctor.external-host-check-url".to_string(),
-                working_url.to_string(),
-            );
+            let mut cfg: BTreeMap<&str, &str> = BTreeMap::new();
+            cfg.insert("edenapi.url", &working_url);
+            cfg.insert("doctor.external-host-check-url", &working_url);
 
             let doc = Doctor::new();
             assert!(matches!(doc.check_corp_connectivity(&cfg), Ok(())));
@@ -586,23 +577,11 @@ mod tests {
         std::fs::write(&fake_cert_path, "foo").unwrap();
 
         let mut cfg = BTreeMap::new();
-        cfg.insert(
-            "edenapi.url".to_string(),
-            "https://example.com/edenapi/".to_string(),
-        );
-        cfg.insert(
-            "remotefilelog.reponame".to_string(),
-            "some_repo".to_string(),
-        );
-        cfg.insert("auth.test.prefix".to_string(), "*".to_string());
-        cfg.insert(
-            "auth.test.cert".to_string(),
-            fake_cert_path.to_string_lossy().to_string(),
-        );
-        cfg.insert(
-            "auth.test.key".to_string(),
-            fake_cert_path.to_string_lossy().to_string(),
-        );
+        cfg.insert("edenapi.url", "https://example.com/edenapi/");
+        cfg.insert("remotefilelog.reponame", "some_repo");
+        cfg.insert("auth.test.prefix", "*");
+        cfg.insert("auth.test.cert", fake_cert_path.to_str().unwrap());
+        cfg.insert("auth.test.key", fake_cert_path.to_str().unwrap());
 
         // Happy path - server returns 200 for /capabilities.
         {
@@ -633,14 +612,8 @@ mod tests {
         {
             let mut cfg = cfg.clone();
 
-            cfg.insert(
-                "auth_proxy.unix_socket_path".to_string(),
-                "/dev/null".to_string(),
-            );
-            cfg.insert(
-                "auth_proxy.unix_socket_domains".to_string(),
-                "example.com".to_string(),
-            );
+            cfg.insert("auth_proxy.unix_socket_path", "/dev/null");
+            cfg.insert("auth_proxy.unix_socket_domains", "example.com");
 
             // Simulate x2pagentd specific problem.
             doc.stub_healthcheck_response = Some(Box::new(|_url, x2p| {
@@ -665,12 +638,9 @@ mod tests {
         {
             let mut cfg = cfg.clone();
 
-            cfg.insert(
-                "edenapi.url".to_string(),
-                "http://example.com/edenapi/".to_string(),
-            );
+            cfg.insert("edenapi.url", "http://example.com/edenapi/");
 
-            cfg.insert("auth.test.prefix".to_string(), "doesnt_match".to_string());
+            cfg.insert("auth.test.prefix", "doesnt_match");
 
             doc.stub_healthcheck_response =
                 Some(Box::new(|_url, _x2p| Ok(response!(http::StatusCode::OK))));
@@ -681,7 +651,7 @@ mod tests {
         {
             let mut cfg = cfg.clone();
 
-            cfg.insert("auth.test.prefix".to_string(), "doesnt_match".to_string());
+            cfg.insert("auth.test.prefix", "doesnt_match");
 
             doc.stub_healthcheck_response =
                 Some(Box::new(|_url, _x2p| Ok(response!(http::StatusCode::OK))));

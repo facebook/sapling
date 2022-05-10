@@ -203,14 +203,14 @@ mod tests {
 
     #[test]
     fn test_convert_cert_config() {
-        let mut hg_config = BTreeMap::<String, String>::new();
+        let mut hg_config = BTreeMap::<&str, &str>::new();
 
         assert_eq!(cfg!(windows), http_config(&hg_config, None).convert_cert);
 
-        hg_config.insert("http.convert-cert".into(), "True".into());
+        hg_config.insert("http.convert-cert", "True");
         assert!(http_config(&hg_config, None).convert_cert);
 
-        hg_config.insert("http.convert-cert".into(), "false".into());
+        hg_config.insert("http.convert-cert", "false");
         assert!(!http_config(&hg_config, None).convert_cert);
     }
 }
