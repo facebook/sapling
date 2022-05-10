@@ -586,6 +586,58 @@ class UpdateTest(EdenHgTestCase):
             {"FILE1", "FILE2"},
         )
 
+    def test_change_casing_of_materialized_file(self) -> None:
+        self.repo.update(self.commit1)
+        self.repo.write_file("dir2/FILE1", "one upper")
+        upper = self.repo.commit("Upper")
+
+        self.repo.remove_file("dir2/FILE1")
+        self.repo.commit("Removed")
+
+        self.repo.write_file("dir2/file1", "one lower")
+        self.repo.commit("Lower")
+
+        self.repo.update(upper)
+
+        # And verify that status is clean
+        self.assert_status_empty()
+
+        self.assertEqual(self.read_file("dir2/FILE1"), "one upper")
+
+        dir2listing = os.listdir(os.path.join(self.repo.path, "dir2"))
+        self.assertEqual({"FILE1"}, set(dir2listing))
+
+    def test_change_casing_non_populated(self) -> None:
+        self.repo.update(self.commit1)
+        self.repo.write_file("dir2/FILE1", "one upper")
+        upper = self.repo.commit("Upper")
+
+        self.repo.remove_file("dir2/FILE1")
+        self.repo.commit("Removed")
+
+        self.repo.write_file("dir2/file1", "one lower")
+        lower = self.repo.commit("Lower")
+
+        # First, let's dematerialize everything
+        self.repo.update(self.commit1)
+
+        # Go to the lower cased commit
+        self.repo.update(lower)
+
+        # Then simply list all the entries
+        os.listdir(os.path.join(self.repo.path, "dir2"))
+
+        # Finally, update to the upper cased commit
+        self.repo.update(upper)
+
+        # And verify that status is clean
+        self.assert_status_empty()
+
+        self.assertEqual(self.read_file("dir2/FILE1"), "one upper")
+
+        dir2listing = os.listdir(os.path.join(self.repo.path, "dir2"))
+        self.assertEqual({"FILE1"}, set(dir2listing))
+
     def test_update_to_null_with_untracked_directory(self) -> None:
         self.mkdir("foo/subdir/bar")
         self.repo.update("null")
