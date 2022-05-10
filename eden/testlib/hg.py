@@ -11,7 +11,7 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from typing import Any, Callable, Dict, Union
 
-from .util import test_globals
+from .util import test_globals, trace
 
 hg_bin = Path(os.environ["HGTEST_HG"])
 
@@ -55,7 +55,7 @@ class CliCmd:
                 input = input.encode("utf8")
             binary = kwargs.get("binary_output", False)
 
-            cmd_args = list(args)
+            cmd_args = [str(a) for a in args]
             for key, value in kwargs.items():
                 key = key.replace("_", "-")
                 prefix = "--" if len(key) != 1 else "-"
@@ -72,6 +72,13 @@ class CliCmd:
 
             env = os.environ.copy()
             env.update(self.env)
+
+            trace_output = f"$ hg {command}"
+            for arg in cmd_args:
+                if " " in arg:
+                    arg = f'"{arg}"'
+                trace_output += f" {arg}"
+            trace(trace_output)
             result = subprocess.run(
                 [str(type(self).EXEC), command] + cmd_args,
                 capture_output=True,
@@ -79,14 +86,26 @@ class CliCmd:
                 env=env,
                 input=input,
             )
-            # Raise our own exception instead of using check=True because the
-            # default exception doesn't have the stdout/stderr output.
-            if result.returncode != 0:
-                raise CommandFailure(result)
-
             if not binary:
                 result.stdout = result.stdout.decode("utf8", errors="replace")
                 result.stderr = result.stderr.decode("utf8", errors="replace")
+
+            if result.stdout:
+                trace(result.stdout)
+            if result.stderr:
+                trace(result.stderr)
+            if not result.stdout and not result.stderr:
+                trace("(no output)")
+
+            # Raise our own exception instead of using check=True because the
+            # default exception doesn't have the stdout/stderr output.
+            if result.returncode != 0:
+                trace(f"(exit code: {result.returncode})")
+                raise CommandFailure(result)
+
+            # Newline to space out the commands.
+            trace("")
+
             return result
 
         return func
@@ -107,6 +126,6 @@ class CommandFailure(Exception):
     def __str__(self) -> str:
         return "Command Failure: %s\nStdOut: %s\nStdErr: %s\n" % (
             " ".join(str(s) for s in self.result.args),
-            self.result.stdout.decode("utf8", errors="replace"),
-            self.result.stderr.decode("utf8", errors="replace"),
+            self.result.stdout,
+            self.result.stderr,
         )

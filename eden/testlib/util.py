@@ -8,7 +8,7 @@
 import os
 import threading
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 from eden.test_support.temporary_directory import TempFileManager
 
@@ -54,3 +54,11 @@ def new_file() -> Path:
     temp = test_globals.temp_mgr
     with temp.make_temp_file() as f:
         return Path(f.name)
+
+
+tracing: Optional[str] = os.environ.get("HGTEST_TRACING")
+
+
+def trace(value: str) -> None:
+    if tracing:
+        print(value)
