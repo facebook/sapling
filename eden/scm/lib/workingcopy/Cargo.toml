@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.56"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
+configmodel = { version = "0.1.0", path = "../configmodel" }
 crossbeam = "0.8"
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../manifest" }
@@ -17,6 +18,7 @@ pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 status = { version = "0.1.0", path = "../status" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 thiserror = "1.0.30"
+tracing = "0.1.32"
 treestate = { version = "0.1.0", path = "../treestate" }
 types = { version = "0.1.0", path = "../types" }
 vfs = { version = "0.1.0", path = "../vfs" }

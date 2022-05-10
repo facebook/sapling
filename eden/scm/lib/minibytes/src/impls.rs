@@ -172,3 +172,9 @@ impl fmt::Debug for Text {
         fmt::Debug::fmt(self.as_slice(), f)
     }
 }
+
+impl fmt::Display for Text {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self.as_slice(), f)
+    }
+}
