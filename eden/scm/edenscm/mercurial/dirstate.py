@@ -1630,7 +1630,8 @@ class dirstatemap(object):
         return d in self._alldirs
 
     @util.propertycache
-    def _dirs(self) -> "bindings.dirs.dirs":
+    # pyre-fixme[3]: Return type must be annotated.
+    def _dirs(self):
         """
         Build a set of directories present in the dirstate.
 
@@ -1640,7 +1641,8 @@ class dirstatemap(object):
         return util.dirs((p for (p, s) in pycompat.iteritems(self._map) if s[0] != "r"))
 
     @util.propertycache
-    def _alldirs(self) -> "bindings.dirs.dirs":
+    # pyre-fixme[3]: Return type must be annotated.
+    def _alldirs(self):
         return util.dirs(self._map)
 
     def _opendirstatefile(self) -> "BinaryIO":
@@ -1759,7 +1761,6 @@ class dirstatemap(object):
         f = {}
         normcase = util.normcase
         if "_dirs" in self.__dict__:
-            # pyre-fixme[16]: Iterable has no attribute __next__
             for name in self._dirs:
                 f[normcase(name)] = name
         return f

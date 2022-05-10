@@ -12,4 +12,5 @@ mod run;
 
 pub use run::run_command;
 
+pub use crate::hgpython::prepare_builtin_modules;
 pub use crate::hgpython::HgPython;

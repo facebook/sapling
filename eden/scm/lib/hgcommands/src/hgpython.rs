@@ -60,7 +60,13 @@ impl HgPython {
         let py = gil.python();
 
         // If this fails, it's a fatal error.
-        prepare_builtin_modules(py).unwrap();
+        let name = "bindings";
+        let bindings_module = PyModule::new(py, &name).unwrap();
+        prepare_builtin_modules(py, &bindings_module).unwrap();
+        // Putting the module in sys.modules makes it importable.
+        let sys = py.import("sys").unwrap();
+        let sys_modules = PyDict::extract(py, &sys.get(py, "modules").unwrap()).unwrap();
+        sys_modules.set_item(py, name, bindings_module).unwrap();
     }
 
     fn args_to_local_cstrings(args: &[String]) -> Vec<CString> {
@@ -280,21 +286,17 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
 /// This is more difficult if the bindings project is compiled as a separate
 /// Python extension, because `blackbox` will be compiled separately, and
 /// the global instance might be different.
-fn prepare_builtin_modules(py: Python<'_>) -> PyResult<()> {
+pub fn prepare_builtin_modules(py: Python<'_>, module: &PyModule) -> PyResult<()> {
     let span = debug_span!("Initialize bindings");
     let _guard = span.enter();
 
-    let name = "bindings";
-    let bindings_module = PyModule::new(py, &name)?;
-
     // Prepare `bindings.command`. This cannot be done in the bindings
     // crate because it forms a circular dependency.
-    bindings_module.add(py, "commands", init_bindings_commands(py, name)?)?;
-    bindings::populate_module(py, &bindings_module)?;
-
-    // Putting the module in sys.modules makes it importable.
-    let sys = py.import("sys")?;
-    let sys_modules = PyDict::extract(py, &sys.get(py, "modules")?)?;
-    sys_modules.set_item(py, name, bindings_module)?;
+    module.add(
+        py,
+        "commands",
+        init_bindings_commands(py, module.name(py)?)?,
+    )?;
+    bindings::populate_module(py, &module)?;
     Ok(())
 }
