@@ -25,8 +25,7 @@ paste = "1.0"
 # import cog, glob, os
 # for path in sorted(glob.glob('modules/py*/TARGETS')):
 #     name = os.path.basename(os.path.dirname(path))
-#     if name != "pycommands":
-#         cog.outl(f'{name} = {{ path = "modules/{name}" }}')
+#     cog.outl(f'{name} = {{ path = "modules/{name}" }}')
 # ]]]
 pyauth = { path = "modules/pyauth" }
 pyblackbox = { path = "modules/pyblackbox" }
