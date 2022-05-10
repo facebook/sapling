@@ -194,11 +194,11 @@ impl Profile {
     // %import statements are resolved by fetching the imported profile's
     // contents using the fetch callback. Returns a vec of each Pattern paired
     // with a String describing its provenance.
-    async fn rules<B: Future<Output = anyhow::Result<Vec<u8>>>>(
+    async fn rules<B: Future<Output = anyhow::Result<Option<Vec<u8>>>>>(
         &self,
         mut fetch: impl FnMut(String) -> B,
     ) -> Result<Vec<(Pattern, String)>, Error> {
-        fn rules_inner<'a, B: Future<Output = anyhow::Result<Vec<u8>>>>(
+        fn rules_inner<'a, B: Future<Output = anyhow::Result<Option<Vec<u8>>>>>(
             prof: &'a Profile,
             fetch: &'a mut dyn FnMut(String) -> B,
             rules: &'a mut Vec<(Pattern, String)>,
@@ -227,8 +227,11 @@ impl Profile {
                                     (data, false) => data,
                                 },
                                 Entry::Vacant(e) => {
-                                    let data = fetch(child_path.clone()).await?;
-                                    &e.insert((data, true)).0
+                                    if let Some(data) = fetch(child_path.clone()).await? {
+                                        &e.insert((data, true)).0
+                                    } else {
+                                        continue;
+                                    }
                                 }
                             };
 
@@ -252,7 +255,7 @@ impl Profile {
         Ok(rules)
     }
 
-    pub async fn matcher<B: Future<Output = anyhow::Result<Vec<u8>>>>(
+    pub async fn matcher<B: Future<Output = anyhow::Result<Option<Vec<u8>>>>>(
         &self,
         mut fetch: impl FnMut(String) -> B,
     ) -> Result<Matcher, Error> {
@@ -295,8 +298,10 @@ impl Profile {
                     push_rule((p.clone(), join_source(self.source.clone(), src.as_deref())))
                 }
                 ProfileEntry::Profile(child_path) => {
-                    let child =
-                        Profile::from_bytes(fetch(child_path.clone()).await?, child_path.clone())?;
+                    let child = match fetch(child_path.clone()).await? {
+                        Some(data) => Profile::from_bytes(data, child_path.clone())?,
+                        None => continue,
+                    };
 
                     let child_rules: VecDeque<(Pattern, String)> = child
                         .rules(&mut fetch)
@@ -579,8 +584,8 @@ title = grand_child
         let rules = base_prof
             .rules(|path| async move {
                 match path.as_ref() {
-                    "child" => Ok(child.to_vec()),
-                    "grand_child" => Ok(grand_child.to_vec()),
+                    "child" => Ok(Some(child.to_vec())),
+                    "grand_child" => Ok(Some(grand_child.to_vec())),
                     _ => Err(anyhow!("not found")),
                 }
             })
@@ -614,8 +619,8 @@ title = grand_child
         let res = a_prof
             .rules(|path| async move {
                 match path.as_ref() {
-                    "a" => Ok(a.to_vec()),
-                    "b" => Ok(b.to_vec()),
+                    "a" => Ok(Some(a.to_vec())),
+                    "b" => Ok(Some(b.to_vec())),
                     _ => Err(anyhow!("not found")),
                 }
             })
@@ -640,7 +645,7 @@ title = grand_child
             .rules(|_path| {
                 fetch_count += 1;
                 assert_eq!(fetch_count, 1);
-                async { Ok(vec![]) }
+                async { Ok(Some(vec![])) }
             })
             .await;
 
@@ -683,7 +688,7 @@ path:exc
 
         let prof = Profile::from_bytes(config, "test".to_string()).unwrap();
 
-        let matcher = prof.matcher(|_| async { Ok(vec![]) }).await?;
+        let matcher = prof.matcher(|_| async { Ok(Some(vec![])) }).await?;
 
         // Show we got an implicit rule that includes everything.
         assert!(matcher.matches("a/b".try_into()?)?);
@@ -715,7 +720,7 @@ path:b
 ";
 
         let prof = Profile::from_bytes(base, "test".to_string())?;
-        let matcher = prof.matcher(|_| async { Ok(child.to_vec()) }).await?;
+        let matcher = prof.matcher(|_| async { Ok(Some(child.to_vec())) }).await?;
 
         // Exclude rule "wins" for v1 despite order in confing.
         assert!(!matcher.matches("a/exc".try_into()?)?);
@@ -764,8 +769,8 @@ version = 2
         let matcher = prof
             .matcher(|path| async move {
                 match path.as_ref() {
-                    "child_1" => Ok(child_1.to_vec()),
-                    "child_2" => Ok(child_2.to_vec()),
+                    "child_1" => Ok(Some(child_1.to_vec())),
+                    "child_2" => Ok(Some(child_2.to_vec())),
                     _ => unreachable!(),
                 }
             })
@@ -786,9 +791,31 @@ version = 2
     }
 
     #[tokio::test]
+    async fn test_matcher_missing_include() -> anyhow::Result<()> {
+        let config = b"
+%include banana
+foo
+";
+
+        let prof = Profile::from_bytes(config, "test".to_string()).unwrap();
+
+        let matcher = prof.matcher(|_| async { Ok(None) }).await?;
+
+        // We ignore missing includes so that things don't completely
+        // break if someone accidentally deletes an in-use sparse
+        // profile.
+        assert!(matcher.matches("foo".try_into()?)?);
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_explain_empty() {
         let prof = Profile::from_bytes(b"", "test".to_string()).unwrap();
-        let matcher = prof.matcher(|_| async move { Ok(vec![]) }).await.unwrap();
+        let matcher = prof
+            .matcher(|_| async move { Ok(Some(vec![])) })
+            .await
+            .unwrap();
 
         assert_eq!(
             matcher.explain("a/b".try_into().unwrap()).unwrap(),
@@ -799,7 +826,10 @@ version = 2
     #[tokio::test]
     async fn test_explain_no_match() {
         let prof = Profile::from_bytes(b"a", "test".to_string()).unwrap();
-        let matcher = prof.matcher(|_| async move { Ok(vec![]) }).await.unwrap();
+        let matcher = prof
+            .matcher(|_| async move { Ok(Some(vec![])) })
+            .await
+            .unwrap();
 
         assert_eq!(
             matcher.explain("b".try_into().unwrap()).unwrap(),
@@ -823,8 +853,8 @@ path:d
         let matcher = prof
             .matcher(|path| async move {
                 match path.as_ref() {
-                    "child_1" => Ok(child_1.to_vec()),
-                    "child_2" => Ok(child_2.to_vec()),
+                    "child_1" => Ok(Some(child_1.to_vec())),
+                    "child_2" => Ok(Some(child_2.to_vec())),
                     _ => unreachable!(),
                 }
             })
@@ -857,7 +887,7 @@ four
 
         let prof = Profile::from_bytes(config, "base".to_string()).unwrap();
 
-        let matcher = prof.matcher(|_| async { Ok(vec![]) }).await.unwrap();
+        let matcher = prof.matcher(|_| async { Ok(Some(vec![])) }).await.unwrap();
 
         assert_eq!(
             matcher.explain("one".try_into().unwrap()).unwrap(),
