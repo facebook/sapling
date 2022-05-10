@@ -14,6 +14,7 @@ use crate::convert::FromConfigValue;
 use crate::Result;
 
 /// Readable config. This can be used as a trait object.
+#[auto_impl::auto_impl(&)]
 pub trait Config {
     /// Get config names in the given section. Sorted by insertion order.
     fn keys(&self, section: &str) -> Vec<Text>;
@@ -67,16 +68,6 @@ pub trait ConfigExt: Config {
 
 impl<T: Config> ConfigExt for T {}
 
-impl Config for &dyn Config {
-    fn keys(&self, section: &str) -> Vec<Text> {
-        (*self).keys(section)
-    }
-
-    fn get(&self, section: &str, name: &str) -> Option<Text> {
-        (*self).get(section, name)
-    }
-}
-
 impl Config for BTreeMap<&str, &str> {
     fn keys(&self, section: &str) -> Vec<Text> {
         let prefix = format!("{}.", section);
@@ -108,6 +99,8 @@ impl Config for BTreeMap<String, String> {
 mod tests {
     use super::*;
 
+    fn wants_impl(_: impl Config) {}
+
     #[test]
     fn test_btreemap_config() {
         let map: BTreeMap<&str, &str> = vec![("foo.bar", "baz")].into_iter().collect();
@@ -117,5 +110,8 @@ mod tests {
             "Some(\"baz\")"
         );
         assert_eq!(format!("{:?}", Config::get(&map, "foo", "baz")), "None");
+
+        // Make sure we can pass BTreeMap config to generic func.
+        wants_impl(&map);
     }
 }
