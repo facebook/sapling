@@ -30,6 +30,7 @@ use crate::StoreKey;
 use crate::StoreResult;
 
 // Wrapper types to workaround Rust's orphan rule.
+#[derive(Clone)]
 pub struct ArcFileStore(pub Arc<FileStore>);
 
 pub struct ArcRemoteDataStore<T: ?Sized>(pub Arc<T>);
