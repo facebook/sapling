@@ -12,6 +12,7 @@
 //! whether deleted or not, etc. These can be useful for source control to determine if the file
 //! is tracked, or has changed, etc.
 
+pub mod dirstate;
 pub mod errors;
 pub mod filestate;
 pub mod filestore;

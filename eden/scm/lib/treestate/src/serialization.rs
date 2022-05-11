@@ -25,6 +25,7 @@ use twox_hash::XxHash;
 use vlqencoding::VLQDecode;
 use vlqencoding::VLQEncode;
 
+use crate::dirstate::Dirstate;
 use crate::errors::*;
 use crate::filestate::FileState;
 use crate::filestate::FileStateV2;
@@ -356,5 +357,32 @@ impl Serializable for Metadata {
             data.insert(String::from_utf8(key)?, String::from_utf8(value)?);
         }
         Ok(Self(data))
+    }
+}
+
+const DIRSTATE_HEADER: &[u8] = b"\ntreestate\n\0";
+
+impl Serializable for Dirstate {
+    fn serialize(&self, w: &mut dyn Write) -> Result<()> {
+        w.write_all(self.p0.as_ref())?;
+        w.write_all(self.p1.as_ref())?;
+        w.write_all(DIRSTATE_HEADER)?;
+
+        let mut meta = Metadata(BTreeMap::from([
+            ("filename".to_string(), self.tree_filename.clone()),
+            ("rootid".to_string(), self.tree_root_id.0.to_string()),
+        ]));
+        if let Some(threshold) = self.repack_threshold {
+            meta.0
+                .insert("threshold".to_string(), threshold.to_string());
+        }
+
+        meta.serialize(w)?;
+
+        Ok(())
+    }
+
+    fn deserialize(_r: &mut dyn Read) -> Result<Self> {
+        unimplemented!()
     }
 }
