@@ -8,12 +8,10 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.56"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
-configparser = { version = "0.1.0", path = "../configparser" }
 dag = { version = "0.1.0", path = "../dag" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 hgcommits = { version = "0.1.0", path = "../hgcommits" }
 metalog = { version = "0.1.0", path = "../metalog" }
 refencode = { version = "0.1.0", path = "../refencode" }
 repo = { version = "0.1.0", path = "../repo" }
-thiserror = "1.0.30"
 types = { version = "0.1.0", path = "../types" }

@@ -138,3 +138,8 @@ Test that we get an error when not specifying a destination directory and runnin
   $ HGPLAINEXCEPT=default_clone_dir hg clone -U test:e1 --config remotefilelog.reponame=test-repo-notquite
   TRACE hgcommands::commands::clone: performing rust clone
   TRACE hgcommands::commands::clone: fetching lazy commit data and bookmarks
+
+Not an error for bookmarks to not exist
+  $ hg clone -U test:e1 $TESTTMP/no-bookmarks --config remotenames.selectivepulldefault=banana
+  TRACE hgcommands::commands::clone: performing rust clone
+  TRACE hgcommands::commands::clone: fetching lazy commit data and bookmarks

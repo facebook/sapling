@@ -16,23 +16,14 @@ use edenapi::EdenApi;
 use hgcommits::DagCommits;
 use metalog::CommitOptions;
 use metalog::MetaLog;
-use thiserror::Error;
 use types::HgId;
-
-#[derive(Error, Debug)]
-pub enum ExchangeError {
-    #[error("could not find config option: {0}")]
-    ConfigError(String),
-    #[error("Unable to fetch bookmark: {0}")]
-    BookmarkFetchError(String),
-}
 
 // TODO: move to a bookmarks crate
 fn convert_to_remote(bookmark: &str) -> String {
     return format!("remote/{}", bookmark);
 }
 
-/// Download commit data via lazy pull endpoint
+/// Download commit data via lazy pull endpoint. Returns hash of bookmarks, if any.
 pub fn clone(
     edenapi: Arc<dyn EdenApi>,
     metalog: &mut MetaLog,
@@ -42,11 +33,8 @@ pub fn clone(
     let bookmarks = block_on(edenapi.bookmarks(bookmarks))??;
     let bookmarks = bookmarks
         .into_iter()
-        .map(|bm| match bm.hgid {
-            Some(hgid) => Ok((bm.bookmark, hgid)),
-            None => Err(ExchangeError::BookmarkFetchError(bm.bookmark)),
-        })
-        .collect::<Result<BTreeMap<String, HgId>, ExchangeError>>()?;
+        .filter_map(|bm| bm.hgid.map(|id| (bm.bookmark, id)))
+        .collect::<BTreeMap<String, HgId>>();
 
     let heads = bookmarks.values().cloned().collect();
     let clone_data = block_on(edenapi.pull_lazy(vec![], heads))??;
