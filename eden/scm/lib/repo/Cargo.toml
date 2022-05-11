@@ -12,6 +12,8 @@ edenapi = { version = "0.1.0", path = "../edenapi" }
 hgcommits = { version = "0.1.0", path = "../hgcommits" }
 metalog = { version = "0.1.0", path = "../metalog" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
+revisionstore = { version = "0.1.0", path = "../revisionstore" }
+storemodel = { version = "0.1.0", path = "../storemodel" }
 thiserror = "1.0.30"
 tracing = "0.1.32"
 util = { version = "0.1.0", path = "../util" }

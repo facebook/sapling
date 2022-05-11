@@ -31,6 +31,7 @@ use types::Key;
 use types::RepoPath;
 
 #[async_trait]
+#[auto_impl::auto_impl(Arc)]
 pub trait ReadFileContents {
     type Error;
 

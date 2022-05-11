@@ -13,12 +13,18 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use configparser::config::ConfigSet;
+use configparser::Config;
 use edenapi::Builder;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
 use hgcommits::DagCommits;
 use metalog::MetaLog;
 use parking_lot::RwLock;
+use revisionstore::scmstore::FileStoreBuilder;
+use revisionstore::trait_impls::ArcFileStore;
+use revisionstore::EdenApiFileStore;
+use revisionstore::MemcacheStore;
+use storemodel::ReadFileContents;
 use util::path::absolute;
 
 use crate::commits::open_dag_commits;
@@ -37,6 +43,7 @@ pub struct Repo {
     metalog: Option<Arc<RwLock<MetaLog>>>,
     eden_api: Option<Arc<dyn EdenApi>>,
     dag_commits: Option<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
+    file_store: Option<Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>>,
 }
 
 /// Either an optional [`Repo`] which owns a [`ConfigSet`], or a [`ConfigSet`]
@@ -169,9 +176,6 @@ impl Repo {
                     .get("remotefilelog", "reponame")
                     .map(|v| v.to_string())
             });
-        let metalog = None;
-        let eden_api = None;
-        let dag_commits = None;
 
         Ok(Repo {
             path,
@@ -182,9 +186,10 @@ impl Repo {
             dot_hg_path,
             shared_dot_hg_path,
             repo_name,
-            metalog,
-            eden_api,
-            dag_commits,
+            metalog: None,
+            eden_api: None,
+            dag_commits: None,
+            file_store: None,
         })
     }
 
@@ -297,6 +302,38 @@ impl Repo {
             .open(self.store_path().join("requires"))?
             .write_all(requirement.as_bytes())?;
         Ok(())
+    }
+
+    pub fn file_store(
+        &mut self,
+    ) -> Result<Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>> {
+        if let Some(fs) = &self.file_store {
+            return Ok(fs.clone());
+        }
+
+        let eden_api = self.eden_api()?;
+        let mut file_builder = FileStoreBuilder::new(self.config())
+            .edenapi(EdenApiFileStore::new(eden_api))
+            .local_path(self.store_path())
+            .correlator(edenapi::DEFAULT_CORRELATOR.as_str());
+
+        if self.config.get_or_default("scmstore", "auxindexedlog")? {
+            file_builder = file_builder.store_aux_data();
+        }
+
+        if self
+            .config
+            .get_nonempty("remotefilelog", "cachekey")
+            .is_some()
+        {
+            file_builder = file_builder.memcache(Arc::new(MemcacheStore::new(&self.config)?));
+        }
+
+        let fs = Arc::new(ArcFileStore(Arc::new(file_builder.build()?)));
+
+        self.file_store = Some(fs.clone());
+
+        Ok(fs)
     }
 }
 
