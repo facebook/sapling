@@ -56,6 +56,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/service/EdenServer.h"
+#include "eden/fs/service/ThriftGlobImpl.h"
 #include "eden/fs/service/ThriftPermissionChecker.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/service/gen-cpp2/eden_constants.h"
@@ -1728,225 +1729,6 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
       .semi();
 }
 
-folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
-    folly::StringPiece mountPoint,
-    std::vector<std::string> globs,
-    std::vector<std::string> rootHashes,
-    folly::StringPiece searchRootUser,
-    GlobOptions globOptions,
-    folly::StringPiece caller,
-    std::optional<pid_t> pid) {
-  auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID(
-      DBG3,
-      caller,
-      pid,
-      mountPoint,
-      toLogArg(globs),
-      globOptions.includeDotfiles);
-  auto mountPath = AbsolutePathPiece{mountPoint};
-  auto edenMount = server_->getMount(mountPath);
-
-  // Compile the list of globs into a tree
-  auto globRoot = std::make_shared<GlobNode>(globOptions.includeDotfiles);
-  try {
-    for (auto& globString : globs) {
-      try {
-        globRoot->parse(globString);
-      } catch (const std::domain_error& exc) {
-        throw newEdenError(
-            EdenErrorType::ARGUMENT_ERROR,
-            "Invalid glob (",
-            exc.what(),
-            "): ",
-            globString);
-      }
-    }
-  } catch (const std::system_error& exc) {
-    throw newEdenError(exc);
-  }
-
-  auto fileBlobsToPrefetch = globOptions.prefetchFiles
-      ? std::make_shared<GlobNode::PrefetchList>()
-      : nullptr;
-
-  auto& fetchContext = helper->getPrefetchFetchContext();
-
-  // These hashes must outlive the GlobResult created by evaluate as the
-  // GlobResults will hold on to references to these hashes
-  auto originRootIds = std::make_unique<std::vector<RootId>>();
-
-  // Globs will be evaluated against the specified commits or the current commit
-  // if none are specified. The results will be collected here.
-  std::vector<folly::Future<folly::Unit>> globFutures{};
-  auto globResults = std::make_shared<GlobNode::ResultList>();
-
-  auto searchRoot = relpathFromUserPath(searchRootUser);
-
-  if (!rootHashes.empty()) {
-    // Note that we MUST reserve here, otherwise while emplacing we might
-    // invalidate the earlier commitHash refrences
-    globFutures.reserve(rootHashes.size());
-    originRootIds->reserve(rootHashes.size());
-    for (auto& rootHash : rootHashes) {
-      const RootId& originRootId = originRootIds->emplace_back(
-          edenMount->getObjectStore()->parseRootId(rootHash));
-
-      globFutures.emplace_back(
-          edenMount->getObjectStore()
-              ->getRootTree(originRootId, fetchContext)
-              .thenValue([edenMount, globRoot, &fetchContext, searchRoot](
-                             std::shared_ptr<const Tree>&& rootTree) {
-                return resolveTree(
-                    *edenMount->getObjectStore(),
-                    fetchContext,
-                    std::move(rootTree),
-                    searchRoot);
-              })
-              .thenValue(
-                  [edenMount,
-                   globRoot,
-                   &fetchContext,
-                   fileBlobsToPrefetch,
-                   globResults,
-                   &originRootId](std::shared_ptr<const Tree>&& tree) mutable {
-                    return globRoot
-                        ->evaluate(
-                            edenMount->getObjectStore(),
-                            fetchContext,
-                            RelativePathPiece(),
-                            std::move(tree),
-                            fileBlobsToPrefetch.get(),
-                            *globResults,
-                            originRootId)
-                        .semi();
-                  }));
-    }
-  } else {
-    const RootId& originRootId =
-        originRootIds->emplace_back(edenMount->getCheckedOutRootId());
-    globFutures.emplace_back(
-        edenMount->getInodeSlow(searchRoot, fetchContext)
-            .thenValue([&fetchContext,
-                        globRoot,
-                        edenMount,
-                        fileBlobsToPrefetch,
-                        globResults,
-                        &originRootId](InodePtr inode) mutable {
-              return globRoot->evaluate(
-                  edenMount->getObjectStore(),
-                  fetchContext,
-                  RelativePathPiece(),
-                  inode.asTreePtr(),
-                  fileBlobsToPrefetch.get(),
-                  *globResults,
-                  originRootId);
-            })
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance()));
-  }
-
-  auto prefetchFuture = wrapFuture(
-      std::move(helper),
-      folly::collectAllUnsafe(std::move(globFutures))
-          .thenValue([fileBlobsToPrefetch,
-                      globResults = std::move(globResults),
-                      suppressFileList = globOptions.suppressFileList](
-                         std::vector<folly::Try<folly::Unit>>&& tries) {
-            std::vector<GlobNode::GlobResult> sortedResults;
-            if (!suppressFileList) {
-              std::swap(sortedResults, *globResults->wlock());
-              for (auto& try_ : tries) {
-                try_.throwUnlessValue();
-              }
-              std::sort(sortedResults.begin(), sortedResults.end());
-              auto resultsNewEnd =
-                  std::unique(sortedResults.begin(), sortedResults.end());
-              sortedResults.erase(resultsNewEnd, sortedResults.end());
-            }
-
-            // fileBlobsToPrefetch is deduplicated as an optimization.
-            // The BackingStore layer does not deduplicate fetches, so lets
-            // avoid causing too many duplicates here.
-            if (fileBlobsToPrefetch) {
-              auto fileBlobsToPrefetchLocked = fileBlobsToPrefetch->wlock();
-              std::sort(
-                  fileBlobsToPrefetchLocked->begin(),
-                  fileBlobsToPrefetchLocked->end());
-              auto fileBlobsToPrefetchNewEnd = std::unique(
-                  fileBlobsToPrefetchLocked->begin(),
-                  fileBlobsToPrefetchLocked->end());
-              fileBlobsToPrefetchLocked->erase(
-                  fileBlobsToPrefetchNewEnd, fileBlobsToPrefetchLocked->end());
-            }
-
-            return sortedResults;
-          })
-          .thenValue([edenMount,
-                      wantDtype = globOptions.wantDtype,
-                      fileBlobsToPrefetch,
-                      suppressFileList = globOptions.suppressFileList,
-                      listOnlyFiles = globOptions.listOnlyFiles,
-                      &fetchContext,
-                      config = server_->getServerState()->getEdenConfig()](
-                         std::vector<GlobNode::GlobResult>&& results) mutable {
-            auto out = std::make_unique<Glob>();
-
-            if (!suppressFileList) {
-              // already deduplicated at this point, no need to de-dup
-              for (auto& entry : results) {
-                if (!listOnlyFiles || entry.dtype != dtype_t::Dir) {
-                  out->matchingFiles_ref()->emplace_back(
-                      entry.name.stringPiece().toString());
-
-                  if (wantDtype) {
-                    out->dtypes_ref()->emplace_back(
-                        static_cast<OsDtype>(entry.dtype));
-                  }
-
-                  out->originHashes_ref()->emplace_back(
-                      edenMount->getObjectStore()->renderRootId(
-                          *entry.originHash));
-                }
-              }
-            }
-            if (fileBlobsToPrefetch) {
-              std::vector<folly::Future<folly::Unit>> futures;
-
-              auto store = edenMount->getObjectStore();
-              auto blobs = fileBlobsToPrefetch->rlock();
-              auto range = folly::Range{blobs->data(), blobs->size()};
-
-              while (range.size() > 20480) {
-                auto curRange = range.subpiece(0, 20480);
-                range.advance(20480);
-                futures.emplace_back(
-                    store->prefetchBlobs(curRange, fetchContext));
-              }
-              if (!range.empty()) {
-                futures.emplace_back(store->prefetchBlobs(range, fetchContext));
-              }
-
-              return folly::collectUnsafe(futures).thenValue(
-                  [glob = std::move(out), fileBlobsToPrefetch](auto&&) mutable {
-                    return makeFuture(std::move(glob));
-                  });
-            }
-            return makeFuture(std::move(out));
-          })
-          .ensure([globRoot, originRootIds = std::move(originRootIds)]() {
-            // keep globRoot and originRootIds alive until the end
-          }));
-
-  if (!globOptions.background) {
-    return prefetchFuture;
-  } else {
-    folly::futures::detachOn(
-        server_->getServerState()->getThreadPool().get(),
-        std::move(prefetchFuture).semi());
-    return folly::makeFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>());
-  }
-}
-
 folly::Future<std::unique_ptr<SetPathObjectIdResult>>
 EdenServiceHandler::future_setPathObjectId(
     std::unique_ptr<SetPathObjectIdParams> params) {
@@ -2014,34 +1796,28 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeRecursively(
       .semi();
 }
 
-EdenServiceHandler::GlobOptions::GlobOptions(const GlobParams& params)
-    : includeDotfiles{*params.includeDotfiles_ref()},
-      prefetchFiles{*params.prefetchFiles_ref()},
-      suppressFileList{*params.suppressFileList_ref()},
-      wantDtype{*params.wantDtype_ref()},
-      background{*params.background_ref()},
-      listOnlyFiles{*params.listOnlyFiles_ref()} {}
-
 folly::Future<std::unique_ptr<Glob>>
 EdenServiceHandler::future_predictiveGlobFiles(
     std::unique_ptr<GlobParams> params) {
 #ifdef EDEN_HAVE_USAGE_SERVICE
-  // TODO: since we call INSTRUMENT_THRIFT_CALL in _globFiles, the time
-  // of getTopUsedDirs won't be taken into account
+  ThriftGlobImpl globber{*params};
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID(
+      DBG3,
+      __func__,
+      getAndRegisterClientPid(),
+      *params->mountPoint_ref(),
+      globber.logString());
+
   auto& mountPoint = *params->mountPoint_ref();
-  auto& revisions = *params->revisions_ref();
-  auto& searchRoot = *params->searchRoot_ref();
   /* set predictive glob fetch parameters */
   // if numResults is not specified, use default predictivePrefetchProfileSize
-  auto numResults = server_->getServerState()
-                        ->getEdenConfig()
-                        ->predictivePrefetchProfileSize.getValue();
+  auto& serverState = server_->getServerState();
+  auto numResults =
+      serverState->getEdenConfig()->predictivePrefetchProfileSize.getValue();
   // if user is not specified, get user info from the server state
-  auto user = folly::StringPiece{
-      server_->getServerState()->getUserInfo().getUsername()};
-  auto backingStore = server_->getMount(AbsolutePathPiece{mountPoint})
-                          ->getObjectStore()
-                          ->getBackingStore();
+  auto user = folly::StringPiece{serverState->getUserInfo().getUsername()};
+  auto edenMount = server_->getMount(AbsolutePathPiece{mountPoint});
+  auto backingStore = edenMount->getObjectStore()->getBackingStore();
   // if repo is not specified, get repository name from the backingstore
   auto repo_optional = backingStore->getRepoName();
   if (repo_optional == std::nullopt) {
@@ -2084,27 +1860,23 @@ EdenServiceHandler::future_predictiveGlobFiles(
         : endTime;
   }
 
-  GlobOptions globOptions{*params};
+  auto& fetchContext = helper->getPrefetchFetchContext();
 
   return spServiceEndpoint_
       ->getTopUsedDirs(
           user, repo, numResults, os, startTime, endTime, sandcastleAlias)
-      .thenValue([mountPoint,
-                  revisions,
-                  searchRoot,
-                  func = __func__,
-                  pid = getAndRegisterClientPid(),
-                  this,
-                  globOptions](std::vector<std::string>&& globs) {
-        return globFilesImpl(
-            mountPoint, globs, revisions, searchRoot, globOptions, func, pid);
+      .thenValue([globber = std::move(globber),
+                  edenMount = std::move(edenMount),
+                  serverState,
+                  &fetchContext](std::vector<std::string>&& globs) mutable {
+        return globber.glob(edenMount, serverState, globs, fetchContext);
       })
       .thenError([](folly::exception_wrapper&& ew) {
         XLOG(ERR) << "Error fetching predictive file globs: "
                   << folly::exceptionStr(ew);
         return makeFuture<std::unique_ptr<Glob>>(std::move(ew));
       })
-      .ensure([params = std::move(params)]() {});
+      .ensure([params = std::move(params), helper = std::move(helper)]() {});
 #else // !EDEN_HAVE_USAGE_SERVICE
   (void)params;
   NOT_IMPLEMENTED();
@@ -2113,15 +1885,22 @@ EdenServiceHandler::future_predictiveGlobFiles(
 
 folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
     std::unique_ptr<GlobParams> params) {
-  GlobOptions globOptions{*params};
-  return globFilesImpl(
-      *params->mountPoint_ref(),
-      *params->globs_ref(),
-      *params->revisions_ref(),
-      *params->searchRoot_ref(),
-      globOptions,
+  ThriftGlobImpl globber{*params};
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID(
+      DBG3,
       __func__,
-      getAndRegisterClientPid());
+      getAndRegisterClientPid(),
+      *params->mountPoint_ref(),
+      toLogArg(*params->globs_ref()),
+      globber.logString());
+  auto& context = helper->getPrefetchFetchContext();
+  return globber
+      .glob(
+          server_->getMount(AbsolutePathPiece{*params->mountPoint_ref()}),
+          server_->getServerState(),
+          *params->globs_ref(),
+          context)
+      .ensure([helper = std::move(helper)] {});
 }
 
 folly::Future<Unit> EdenServiceHandler::future_chown(
