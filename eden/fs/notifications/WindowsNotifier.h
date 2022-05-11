@@ -115,6 +115,7 @@ class WindowsNotifier : public Notifier {
 
  private:
   void appendOptionsMenu(HMENU hMenu);
+  void appendActionsMenu(HMENU hMenu);
   MenuHandle createEdenMenu();
   void changeIconColor(UINT iconType);
   std::optional<Guid> guid_;

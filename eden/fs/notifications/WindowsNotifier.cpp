@@ -47,6 +47,7 @@ const wchar_t kToolTipCheckout[] = L"EdenFS is performing a checkout...";
 const wchar_t kMenuWelcomeStr[] = L"Welcome to the E-Menu";
 const wchar_t kMenuAboutStr[] = L"About EdenFS";
 const wchar_t kMenuOptionsStr[] = L"Options";
+const wchar_t kMenuActionsStr[] = L"Actions";
 const wchar_t kMenuDebug[] = L"Debug Menu";
 const wchar_t kMenuReport[] = L"Report Issue";
 const wchar_t kMenuCloseStr[] = L"Hide Notification Icon";
@@ -65,8 +66,16 @@ const wchar_t kAboutUptime[] = L"Uptime: ";
 const wchar_t kOptionDisable[] = L"Disable Notifications";
 const wchar_t kOptionEnable[] = L"Enable Notifications";
 
+// Actions strings
+const wchar_t kActionDoctor[] = L"Diagnose EdenFS Issues (doctor)";
+const wchar_t kActionRage[] = L"Collect Diagnostics (rage)";
+const wchar_t kActionList[] = L"List Checkouts (list)";
+
 enum MenuCommand : UINT {
-  IDM_DEBUG_GEN_NOTIFICATION = 124,
+  IDM_ACTION_DOCTOR = 124,
+  IDM_ACTION_RAGE,
+  IDM_ACTION_LIST,
+  IDM_DEBUG_GEN_NOTIFICATION,
   IDM_DEBUG_NET_NOTIFICATION,
   IDM_DEBUG_SIGNAL_START,
   IDM_DEBUG_SIGNAL_END,
@@ -361,6 +370,21 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
             return 0;
           }
 
+          case IDM_ACTION_DOCTOR: {
+            executeShellCommand("edenfsctl", "--press-to-continue doctor");
+            return 0;
+          }
+
+          case IDM_ACTION_RAGE: {
+            executeShellCommand("edenfsctl", "--press-to-continue rage");
+            return 0;
+          }
+
+          case IDM_ACTION_LIST: {
+            executeShellCommand("edenfsctl", "--press-to-continue list");
+            return 0;
+          }
+
           case IDM_SIGNAL_CHECKOUT: {
             auto notifier = getWindowsNotifier(hwnd);
             auto numActive = static_cast<size_t>(lParam);
@@ -606,6 +630,33 @@ void WindowsNotifier::appendOptionsMenu(HMENU hMenu) {
       kMenuOptionsStr);
 }
 
+void WindowsNotifier::appendActionsMenu(HMENU hMenu) {
+  MenuHandle actionMenu{
+      checkNonZero(CreatePopupMenu(), "CreatePopupMenu failed"), &DestroyMenu};
+  appendMenuEntry(
+      actionMenu.get(),
+      MF_BYPOSITION | MF_STRING,
+      IDM_ACTION_DOCTOR,
+      kActionDoctor);
+  appendMenuEntry(
+      actionMenu.get(),
+      MF_BYPOSITION | MF_STRING,
+      IDM_ACTION_RAGE,
+      kActionRage);
+  appendMenuEntry(
+      actionMenu.get(),
+      MF_BYPOSITION | MF_STRING,
+      IDM_ACTION_LIST,
+      kActionList);
+
+  // append actions menu to top-level menu
+  appendMenuEntry(
+      hMenu,
+      MF_BYPOSITION | MF_POPUP,
+      reinterpret_cast<UINT_PTR>(actionMenu.get()),
+      kMenuActionsStr);
+}
+
 MenuHandle WindowsNotifier::createEdenMenu() {
   MenuHandle hMenu{
       checkNonZero(CreatePopupMenu(), "CreatePopupMenu failed"), &DestroyMenu};
@@ -617,6 +668,7 @@ MenuHandle WindowsNotifier::createEdenMenu() {
   appendMenuEntry(
       hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_INFO, kMenuAboutStr);
   appendOptionsMenu(hMenu.get());
+  appendActionsMenu(hMenu.get());
   if (debugIsEnabled()) {
     appendDebugMenu(hMenu.get());
   }
