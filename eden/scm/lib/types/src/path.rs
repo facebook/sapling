@@ -410,6 +410,14 @@ impl<'a> TryFrom<&'a str> for &'a RepoPath {
     }
 }
 
+impl TryFrom<String> for RepoPathBuf {
+    type Error = ParseError;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        RepoPathBuf::from_string(s)
+    }
+}
+
 impl fmt::Display for RepoPath {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(&self.0, formatter)

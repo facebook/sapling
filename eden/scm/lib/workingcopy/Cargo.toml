@@ -15,6 +15,7 @@ manifest = { version = "0.1.0", path = "../manifest" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
+sparse = { version = "0.1.0", path = "../sparse" }
 status = { version = "0.1.0", path = "../status" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 thiserror = "1.0.30"
@@ -24,5 +25,6 @@ types = { version = "0.1.0", path = "../types" }
 vfs = { version = "0.1.0", path = "../vfs" }
 
 [dev-dependencies]
+async-trait = "0.1.52"
 tempdir = "0.3"
 tempfile = "3.3"
