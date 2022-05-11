@@ -53,10 +53,12 @@ const wchar_t kMenuReport[] = L"Report Issue";
 const wchar_t kMenuCloseStr[] = L"Hide Notification Icon";
 
 // Debug menu strings
-const wchar_t kDebugSendGeneric[] = L"Send Test Generic Notification";
-const wchar_t kDebugSendNetwork[] = L"Send Test Network Notification";
-const wchar_t kDebugStartCheckout[] = L"Simulate Starting Checkout";
-const wchar_t kDebugEndCheckout[] = L"Simulate Ending Checkout";
+const wchar_t kDebugNotifications[] = L"Send Test Notifications";
+const wchar_t kDebugSendGeneric[] = L"Generic Notification";
+const wchar_t kDebugSendNetwork[] = L"Network Notification";
+const wchar_t kDebugSimulations[] = L"Simulate EdenFS Events";
+const wchar_t kDebugStartCheckout[] = L"Starting Checkout";
+const wchar_t kDebugEndCheckout[] = L"Ending Checkout";
 
 // About EdenFS strings
 const wchar_t kAboutVersion[] = L"Running EdenFS ";
@@ -219,26 +221,46 @@ using MenuHandle =
 void appendDebugMenu(HMENU hMenu) {
   MenuHandle subMenu{
       checkNonZero(CreatePopupMenu(), "CreatePopupMenu failed"), &DestroyMenu};
+
+  // Notifications sub-menu
+  MenuHandle notificationsMenu{
+      checkNonZero(CreatePopupMenu(), "CreatePopupMenu failed"), &DestroyMenu};
   appendMenuEntry(
-      subMenu.get(),
+      notificationsMenu.get(),
       MF_BYPOSITION | MF_STRING,
       IDM_DEBUG_GEN_NOTIFICATION,
       kDebugSendGeneric);
   appendMenuEntry(
-      subMenu.get(),
+      notificationsMenu.get(),
       MF_BYPOSITION | MF_STRING,
       IDM_DEBUG_NET_NOTIFICATION,
       kDebugSendNetwork);
   appendMenuEntry(
       subMenu.get(),
+      MF_BYPOSITION | MF_POPUP,
+      reinterpret_cast<UINT_PTR>(notificationsMenu.get()),
+      kDebugNotifications);
+
+  // Simulation sub-menu
+  MenuHandle simulationsMenu{
+      checkNonZero(CreatePopupMenu(), "CreatePopupMenu failed"), &DestroyMenu};
+  appendMenuEntry(
+      simulationsMenu.get(),
       MF_BYPOSITION | MF_STRING,
       IDM_DEBUG_SIGNAL_START,
       kDebugStartCheckout);
   appendMenuEntry(
-      subMenu.get(),
+      simulationsMenu.get(),
       MF_BYPOSITION | MF_STRING,
       IDM_DEBUG_SIGNAL_END,
       kDebugEndCheckout);
+  appendMenuEntry(
+      subMenu.get(),
+      MF_BYPOSITION | MF_POPUP,
+      reinterpret_cast<UINT_PTR>(simulationsMenu.get()),
+      kDebugSimulations);
+
+  // Append to top-level menu
   appendMenuEntry(
       hMenu,
       MF_BYPOSITION | MF_POPUP,
