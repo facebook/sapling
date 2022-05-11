@@ -17,6 +17,7 @@ use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
 use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::bail;
 use anyhow::Result;
@@ -62,6 +63,9 @@ pub struct FileStore {
 
     /// Cache of data loaded from disk.  Used when iterating over the whole dirstate.
     cache: Option<Vec<u8>>,
+
+    /// The path to underlying file.
+    path: PathBuf,
 }
 
 impl FileStore {
@@ -83,6 +87,7 @@ impl FileStore {
             at_end: RefCell::new(true),
             read_only: false,
             cache: None,
+            path: path.as_ref().to_path_buf(),
         })
     }
 
@@ -124,6 +129,7 @@ impl FileStore {
             at_end: RefCell::new(true),
             read_only,
             cache: None,
+            path: path.as_ref().to_path_buf(),
         })
     }
 
@@ -148,6 +154,10 @@ impl FileStore {
 
     pub fn position(&self) -> u64 {
         self.position
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
     }
 }
 

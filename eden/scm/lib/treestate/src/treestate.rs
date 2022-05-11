@@ -65,6 +65,10 @@ impl TreeState {
         }
     }
 
+    pub fn path(&self) -> &Path {
+        self.store.path()
+    }
+
     /// Flush dirty entries. Return new `root_id` that can be passed to `open`.
     pub fn flush(&mut self) -> Result<BlockId> {
         let tree_block_id = { self.tree.write_delta(&mut self.store)? };
