@@ -568,7 +568,12 @@ ImmediateFuture<folly::Unit> fileNotification(
   folly::via(executor, [&mount, path, context = std::move(context)]() mutable {
     return fileNotificationImpl(mount, std::move(path), *context).get();
   }).thenError([path](const folly::exception_wrapper& ew) {
-    XLOG(ERR) << "While handling notification on: " << path << ": " << ew;
+    // These should in theory never happen, but they sometimes happen
+    // due to filesystem errors, antivirus scanning, etc. During
+    // test, these should be treated as fatal errors, so we don't let
+    // errors silently pass tests. In release builds, let's be less
+    // aggressive and just log.
+    XLOG(DFATAL) << "While handling notification on: " << path << ": " << ew;
   });
   return folly::unit;
 }
