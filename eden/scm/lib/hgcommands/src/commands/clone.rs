@@ -177,12 +177,27 @@ fn clone_metadata(
     let commits = repo.dag_commits()?;
     let config = repo.config();
 
+    let bookmarks: Vec<String> = match config.get_opt("remotenames", "selectivepulldefault")? {
+        Some(bms) => bms,
+        None => {
+            return Err(
+                errors::Abort("remotenames.selectivepulldefault config is not set".into()).into(),
+            );
+        }
+    };
+
     tracing::trace!("fetching lazy commit data and bookmarks");
-    exchange::clone(config, edenapi, &mut metalog.write(), &mut commits.write())?;
+    exchange::clone(
+        edenapi,
+        &mut metalog.write(),
+        &mut commits.write(),
+        bookmarks,
+    )?;
 
     ::fail::fail_point!("run::clone", |_| {
         Err(errors::Abort("Injected clone failure".to_string().into()).into())
     });
+
     Ok(0)
 }
 

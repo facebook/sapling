@@ -131,10 +131,13 @@ def segmentsclone(source, repo):
         repo.requirements.add("remotefilelog")
         repo._writerequirements()
 
+        remote = bookmod.remotenameforurl(repo.ui, repo.ui.paths.getpath(source).rawloc)
+        bookmarks = bookmod.selectivepullbookmarknames(repo, remote)
+
         repo.ui.status(_("populating main commit graph\n"))
         if repo.ui.configbool("clone", "nativepull"):
             bindings.exchange.clone(
-                repo.ui._rcfg._rcfg, repo.edenapi, repo.metalog(), repo.changelog.inner
+                repo.edenapi, repo.metalog(), repo.changelog.inner, bookmarks
             )
         else:
             clonedata = repo.edenapi.clonedata()
@@ -145,10 +148,5 @@ def segmentsclone(source, repo):
                 repo.svfs.write("tip", tip)
 
             repo.ui.status(_("fetching selected remote bookmarks\n"))
-            remote = bookmod.remotenameforurl(
-                repo.ui, repo.ui.paths.getpath(source).rawloc
-            )
             assert remote is not None
-            repo.pull(
-                source, bookmarknames=bookmod.selectivepullbookmarknames(repo, remote)
-            )
+            repo.pull(source, bookmarknames=bookmarks)
