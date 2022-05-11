@@ -5,9 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use std::{fs, fs::File, io, path::Path};
+use std::fs;
+use std::fs::File;
 #[cfg(unix)]
-use std::{fs::Permissions, os::unix::fs::PermissionsExt};
+use std::fs::Permissions;
+use std::io;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+use std::path::Path;
 
 /// Create a temp file and then rename it into the specified path to
 /// achieve atomicity. The temp file is created in the same directory
@@ -23,15 +28,15 @@ use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 ///
 /// Note that the rename operation will fail on windows if the
 /// destination file exists and is open.
-pub fn atomic_write<P: AsRef<Path>>(
-    path: P,
+pub fn atomic_write(
+    path: &Path,
     #[allow(dead_code)] mode_perms: u32,
     fsync: bool,
     op: impl FnOnce(&mut File) -> io::Result<()>,
 ) -> io::Result<File> {
-    let dir = match path.as_ref().parent() {
+    let dir = match path.parent() {
         Some(dir) => dir,
-        None => return Err(io::ErrorKind::InvalidInput.into()),
+        None => return Err(io::Error::from(io::ErrorKind::InvalidInput)),
     };
 
     let mut temp = tempfile::NamedTempFile::new_in(dir)?;
@@ -74,9 +79,9 @@ pub fn atomic_write<P: AsRef<Path>>(
                 // Windows fails with "Access Denied" if destination file is open.
                 // Retry a few times.
                 tracing::info!(
-                    name = "atomic_write rename failed with EPERM. Will retry.",
-                    retry = retry,
-                    path = AsRef::<str>::as_ref(&path.as_ref().display().to_string()),
+                    retry,
+                    ?path,
+                    "atomic_write rename failed with EPERM. Will retry.",
                 );
                 std::thread::sleep(std::time::Duration::from_millis(1 << retry));
                 temp = e.file;

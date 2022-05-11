@@ -10,11 +10,11 @@
 use std::borrow::Cow;
 use std::env;
 use std::ffi::OsStr;
+use std::fs;
 use std::fs::remove_file as fs_remove_file;
-use std::fs::{self};
+use std::io;
 use std::io::ErrorKind;
 use std::io::Write;
-use std::io::{self};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Component;

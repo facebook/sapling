@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::fs::File;
+use std::io;
+use std::path::Path;
+
 #[cfg(unix)]
 use once_cell::sync::Lazy;
 
@@ -21,4 +25,6 @@ pub fn apply_umask(mode: u32) -> u32 {
     mode & !*UMASK
 }
 
-pub use atomicfile::atomic_write;
+pub fn atomic_write(path: &Path, op: impl FnOnce(&mut File) -> io::Result<()>) -> io::Result<File> {
+    atomicfile::atomic_write(path, 0o644, false, op)
+}
