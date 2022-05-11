@@ -13,6 +13,7 @@
 #include <shellapi.h> // @manual
 #include <strsafe.h> // @manual
 #include <wchar.h>
+#include <windowsx.h> // @manual
 #include <thread>
 
 #include <fmt/chrono.h>
@@ -399,7 +400,9 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
             // is prerable to listening to mouse clicks and key presses
             // directly.
           case WM_CONTEXTMENU: {
-            POINT const pt = {LOWORD(wParam), HIWORD(wParam)};
+            POINT pt = {};
+            pt.x = GET_X_LPARAM(wParam);
+            pt.y = GET_Y_LPARAM(wParam);
             auto notifier = getWindowsNotifier(hwnd);
             notifier->showContextMenu(hwnd, pt);
           } break;
