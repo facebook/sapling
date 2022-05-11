@@ -7,8 +7,10 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 
 use anyhow::anyhow;
+use anyhow::Error;
 use async_runtime::try_block_unless_interrupted;
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -26,7 +28,7 @@ pub fn sparse_matcher(
     config: impl Config,
     root_profile: impl AsRef<[u8]>,
     root_profile_source: String,
-    manifest: impl Manifest,
+    manifest: impl Manifest + Send + Sync + 'static,
     store: impl ReadFileContents<Error = anyhow::Error>,
     dot_hg_path: &Path,
 ) -> anyhow::Result<sparse::Matcher> {
@@ -38,24 +40,39 @@ pub fn sparse_matcher(
         Ok(())
     })?;
 
+    let manifest = Arc::new(manifest);
+
     let matcher = try_block_unless_interrupted(prof.matcher(|path| async {
         let path = path;
 
-        let repo_path = RepoPathBuf::from_string(path.clone())?;
-        let file_id = match manifest.get(&repo_path)? {
-            None => {
-                tracing::warn!(?path, "non-existent sparse profile include");
-                return Ok(None);
-            }
-            Some(fs_node) => match fs_node {
-                FsNodeMetadata::File(FileMetadata { hgid, .. }) => hgid,
-                FsNodeMetadata::Directory(_) => {
-                    tracing::warn!(?path, "sparse profile include is a directory");
-                    return Ok(None);
+        let file_id = {
+            let manifest = manifest.clone();
+            let repo_path = RepoPathBuf::from_string(path.clone())?;
+
+            // Work around nested block_on() calls by spawning a new thread.
+            // Once the Manifest is async this can go away.
+            tokio::task::spawn_blocking(move || match manifest.get(&repo_path)? {
+                None => {
+                    tracing::warn!(?repo_path, "non-existent sparse profile include");
+                    Ok::<_, Error>(None)
                 }
-            },
+                Some(fs_node) => match fs_node {
+                    FsNodeMetadata::File(FileMetadata { hgid, .. }) => Ok(Some(hgid)),
+                    FsNodeMetadata::Directory(_) => {
+                        tracing::warn!(?repo_path, "sparse profile include is a directory");
+                        Ok(None)
+                    }
+                },
+            })
+            .await??
         };
 
+        let file_id = match file_id {
+            Some(id) => id,
+            None => return Ok(None),
+        };
+
+        let repo_path = RepoPathBuf::from_string(path.clone())?;
         let mut stream = store
             .read_file_contents(vec![Key::new(repo_path.clone(), file_id.clone())])
             .await;
@@ -198,8 +215,8 @@ exc",
             &config,
             "%include tools/sparse/base",
             "root".to_string(),
-            &commit,
-            &commit,
+            commit.clone(),
+            commit.clone(),
             td.path(),
         )
         .unwrap();
@@ -236,6 +253,7 @@ exc",
         );
     }
 
+    #[derive(Clone)]
     struct StubCommit {
         files: HashMap<RepoPathBuf, Vec<u8>>,
     }
@@ -262,7 +280,7 @@ exc",
     }
 
     #[allow(unused_variables)]
-    impl Manifest for &StubCommit {
+    impl Manifest for StubCommit {
         fn get(&self, path: &RepoPath) -> anyhow::Result<Option<FsNodeMetadata>> {
             match self.file_id(path) {
                 None => Ok(None),
@@ -327,7 +345,7 @@ exc",
     }
 
     #[async_trait::async_trait]
-    impl ReadFileContents for &StubCommit {
+    impl ReadFileContents for StubCommit {
         type Error = anyhow::Error;
 
         async fn read_file_contents(
