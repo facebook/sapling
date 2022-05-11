@@ -18,7 +18,6 @@ pymanifest = { path = "../pymanifest" }
 pystatus = { path = "../pystatus" }
 pytreestate = { path = "../pytreestate" }
 storemodel = { path = "../../../../lib/storemodel" }
-tracing = "0.1"
 treestate = { path = "../../../../lib/treestate" }
 types = { path = "../../../../lib/types" }
 vfs = { path = "../../../../lib/vfs" }

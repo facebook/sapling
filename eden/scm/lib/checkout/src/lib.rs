@@ -38,6 +38,7 @@ use progress_model::Registry;
 use storemodel::ReadFileContents;
 use tracing::debug;
 use tracing::warn;
+use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::HgId;
@@ -1051,4 +1052,36 @@ impl fmt::Display for CheckoutPlan {
         }
         Ok(())
     }
+}
+
+pub fn file_state(vfs: &VFS, path: &RepoPath) -> Result<FileStateV2> {
+    let meta = vfs.metadata(path)?;
+    #[cfg(unix)]
+    let mode = std::os::unix::fs::PermissionsExt::mode(&meta.permissions());
+    #[cfg(windows)]
+    let mode = 0o644; // todo figure this out
+    let mtime = meta
+        .modified()?
+        .duration_since(SystemTime::UNIX_EPOCH)?
+        .as_secs();
+    let mtime = truncate_u64("mtime", path, mtime);
+    let size = meta.len();
+    let size = truncate_u64("size", path, size);
+    let state = StateFlags::EXIST_P1 | StateFlags::EXIST_NEXT;
+    Ok(FileStateV2 {
+        mode,
+        size,
+        mtime,
+        state,
+        copied: None,
+    })
+}
+
+fn truncate_u64(f: &str, path: &RepoPath, v: u64) -> i32 {
+    const RANGE_MASK: u64 = 0x7FFFFFFF;
+    let truncated = v & RANGE_MASK;
+    if truncated != v {
+        warn!("{} for {} is truncated {}=>{}", f, path, v, truncated);
+    }
+    truncated as i32
 }

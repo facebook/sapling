@@ -9,7 +9,6 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::SystemTime;
 
 use anyhow::Result;
 use async_runtime::try_block_unless_interrupted;
@@ -37,10 +36,6 @@ use pypathmatcher::extract_option_matcher;
 use pystatus::status as PyStatus;
 use pytreestate::treestate as PyTreeState;
 use storemodel::ReadFileContents;
-use tracing::warn;
-use treestate::filestate::FileStateV2;
-use treestate::filestate::StateFlags;
-use types::RepoPath;
 use vfs::VFS;
 
 type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
@@ -169,7 +164,7 @@ py_class!(class checkoutplan |py| {
             }
 
             for updated in plan.updated_content_files().chain(plan.updated_meta_files()) {
-                let fstate = file_state(vfs, updated)?;
+                let fstate = checkout::file_state(vfs, updated)?;
                 state.insert(updated, &fstate)?;
                 bar.increase_position(1);
             }
@@ -284,35 +279,3 @@ py_class!(class manifestbuilder |py| {
         Ok(self._modifiedconflicts(py).clone())
     }
 });
-
-fn file_state(vfs: &VFS, path: &RepoPath) -> Result<FileStateV2> {
-    let meta = vfs.metadata(path)?;
-    #[cfg(unix)]
-    let mode = std::os::unix::fs::PermissionsExt::mode(&meta.permissions());
-    #[cfg(windows)]
-    let mode = 0o644; // todo figure this out
-    let mtime = meta
-        .modified()?
-        .duration_since(SystemTime::UNIX_EPOCH)?
-        .as_secs();
-    let mtime = truncate_u64("mtime", path, mtime);
-    let size = meta.len();
-    let size = truncate_u64("size", path, size);
-    let state = StateFlags::EXIST_P1 | StateFlags::EXIST_NEXT;
-    Ok(FileStateV2 {
-        mode,
-        size,
-        mtime,
-        state,
-        copied: None,
-    })
-}
-
-fn truncate_u64(f: &str, path: &RepoPath, v: u64) -> i32 {
-    const RANGE_MASK: u64 = 0x7FFFFFFF;
-    let truncated = v & RANGE_MASK;
-    if truncated != v {
-        warn!("{} for {} is truncated {}=>{}", f, path, v, truncated);
-    }
-    truncated as i32
-}
