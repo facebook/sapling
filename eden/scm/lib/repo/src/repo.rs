@@ -21,10 +21,13 @@ use hgcommits::DagCommits;
 use metalog::MetaLog;
 use parking_lot::RwLock;
 use revisionstore::scmstore::FileStoreBuilder;
+use revisionstore::scmstore::TreeStoreBuilder;
 use revisionstore::trait_impls::ArcFileStore;
 use revisionstore::EdenApiFileStore;
+use revisionstore::EdenApiTreeStore;
 use revisionstore::MemcacheStore;
 use storemodel::ReadFileContents;
+use storemodel::TreeStore;
 use util::path::absolute;
 
 use crate::commits::open_dag_commits;
@@ -44,6 +47,7 @@ pub struct Repo {
     eden_api: Option<Arc<dyn EdenApi>>,
     dag_commits: Option<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
     file_store: Option<Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>>,
+    tree_store: Option<Arc<dyn TreeStore + Send + Sync>>,
 }
 
 /// Either an optional [`Repo`] which owns a [`ConfigSet`], or a [`ConfigSet`]
@@ -190,6 +194,7 @@ impl Repo {
             eden_api: None,
             dag_commits: None,
             file_store: None,
+            tree_store: None,
         })
     }
 
@@ -334,6 +339,21 @@ impl Repo {
         self.file_store = Some(fs.clone());
 
         Ok(fs)
+    }
+
+    pub fn tree_store(&mut self) -> Result<Arc<dyn TreeStore + Send + Sync>> {
+        if let Some(ts) = &self.tree_store {
+            return Ok(ts.clone());
+        }
+
+        let eden_api = self.eden_api()?;
+        let tree_builder = TreeStoreBuilder::new(self.config())
+            .edenapi(EdenApiTreeStore::new(eden_api))
+            .local_path(self.store_path())
+            .suffix("manifests");
+        let ts = Arc::new(tree_builder.build()?);
+        self.tree_store = Some(ts.clone());
+        Ok(ts)
     }
 }
 

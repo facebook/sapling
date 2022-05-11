@@ -11,7 +11,10 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use ::types::Key;
+use ::types::Node;
+use ::types::RepoPath;
 use ::types::RepoPathBuf;
+use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
 use crossbeam::channel::unbounded;
@@ -569,5 +572,34 @@ impl ContentDataStore for TreeStore {
 
     fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
         Ok(StoreResult::NotFound(key))
+    }
+}
+
+impl storemodel::TreeStore for TreeStore {
+    fn get(&self, path: &RepoPath, node: Node) -> Result<storemodel::bytes::Bytes> {
+        if node.is_null() {
+            return Ok(Default::default());
+        }
+
+        let key = Key::new(path.to_owned(), node);
+        match self.fetch_batch(std::iter::once(key.clone()))?.single()? {
+            Some(entry) => Ok(storemodel::bytes::Bytes::from(
+                entry
+                    .content
+                    .expect("no tree content")
+                    .hg_content()?
+                    .into_vec(),
+            )),
+            None => Err(anyhow!("key {:?} not found in manifest", key)),
+        }
+    }
+
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
+        self.fetch_batch(keys.into_iter())?.consume();
+        Ok(())
+    }
+
+    fn insert(&self, _path: &RepoPath, _node: Node, _data: storemodel::bytes::Bytes) -> Result<()> {
+        unimplemented!("not needed yet");
     }
 }
