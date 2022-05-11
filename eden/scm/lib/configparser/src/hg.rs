@@ -235,6 +235,8 @@ impl ConfigSetHgExt for ConfigSet {
             opts = opts.readonly_items(readonly_items);
         }
 
+        errors.append(&mut self.parse(HG_PY_CORE_CONFIG, &"builtin.rc".into()));
+
         // Only load builtin configs if HGRCPATH is not set.
         if std::env::var(HGRCPATH).is_err() {
             errors.append(&mut self.parse(MERGE_TOOLS_CONFIG, &"merge-tools.rc".into()));
@@ -1019,6 +1021,13 @@ mod tests {
         assert_eq!(cfg.get("y", "b"), None);
         assert_eq!(cfg.get("z", "c"), Some("3".into()));
     }
+
+    #[test]
+    fn test_py_core_items() {
+        let mut cfg = ConfigSet::new();
+        cfg.load::<String, String>(None, None).unwrap();
+        assert_eq!(cfg.get("treestate", "repackfactor").unwrap(), "3");
+    }
 }
 
 const MERGE_TOOLS_CONFIG: &str = r#"# Some default global settings for common merge tools
@@ -1167,4 +1176,13 @@ UltraCompare.gui = True
 UltraCompare.binary = True
 UltraCompare.check = conflicts,changed
 UltraCompare.diffargs=$child $parent -title1 $clabel -title2 $plabel1
+"#;
+
+// Config items from python's configitems.py which previously were
+// only available in Python. They have the lowest priority.
+static HG_PY_CORE_CONFIG: &str = r#"
+[treestate]
+mingcage=900
+minrepackthreshold=10M
+repackfactor=3
 "#;

@@ -1903,7 +1903,9 @@ def config(ui, repo, *values, **opts):
                     fm.write("value", "%s\n", value)
                     fm.data(name=entryname)
                     matched = True
-        else:
+        elif not source.startswith("<builtin>"):
+            # Maintain backwards compatibility - don't write
+            # builtin.rc values (formerly configitems.py) by default.
             fm.startitem()
             fm.condwrite(ui.debugflag, "source", "%s: ", source)
             fm.write("name value", "%s=%s\n", entryname, value)
