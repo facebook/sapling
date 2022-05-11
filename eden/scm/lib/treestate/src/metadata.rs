@@ -8,7 +8,7 @@
 use std::collections::BTreeMap;
 
 #[derive(Debug, PartialEq)]
-pub struct Metadata(pub(crate) BTreeMap<String, String>);
+pub struct Metadata(pub BTreeMap<String, String>);
 
 #[cfg(test)]
 mod test {

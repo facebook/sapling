@@ -51,6 +51,7 @@ use vfs::VFS;
 
 #[allow(dead_code)]
 mod actions;
+pub mod clone;
 #[allow(dead_code)]
 mod conflict;
 #[allow(dead_code)]
