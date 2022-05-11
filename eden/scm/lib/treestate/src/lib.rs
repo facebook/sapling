@@ -15,6 +15,7 @@
 pub mod errors;
 pub mod filestate;
 pub mod filestore;
+pub mod metadata;
 pub mod serialization;
 pub mod store;
 pub mod tree;
