@@ -6,6 +6,7 @@
 add_executable(
   edenfs
   service/oss/main.cpp
+  notifications/edenfs.exe.manifest
 )
 
 install(TARGETS edenfs RUNTIME DESTINATION bin)
