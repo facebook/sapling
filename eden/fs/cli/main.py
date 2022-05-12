@@ -17,6 +17,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import traceback
 import typing
 import uuid
 from pathlib import Path
@@ -1408,11 +1409,19 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
             try:
                 if remove_type != RemoveType.CLEANUP_ONLY:
                     instance.destroy_mount(mount, args.preserve_mount_point)
-                else:
-                    instance.cleanup_mount(Path(mount), args.preserve_mount_point)
             except Exception as ex:
                 print_stderr(f"error deleting configuration for {mount}: {ex}")
                 exit_code = 1
+                if args.debug:
+                    traceback.print_exc()
+            else:
+                try:
+                    instance.cleanup_mount(Path(mount), args.preserve_mount_point)
+                except Exception as ex:
+                    print_stderr(f"error cleaning up mount {mount}: {ex}")
+                    exit_code = 1
+                    if args.debug:
+                        traceback.print_exc()
                 # Continue around the loop removing any other mount points
 
         if exit_code == 0:

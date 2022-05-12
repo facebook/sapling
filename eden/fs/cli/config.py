@@ -802,7 +802,9 @@ Do you want to run `eden mount %s` instead?"""
             print("If you want to find out which process is still using the repo, run:")
             print(f"    handle.exe {mount}\n")
             return
-        parsed = [line.split() for line in output.decode().splitlines() if line]
+        parsed = [
+            line.split() for line in output.decode(errors="ignore").splitlines() if line
+        ]
         non_edenfs_process = any(filter(lambda x: x[0].lower() != "edenfs.exe", parsed))
 
         # When no handle is found in the repo, handle.exe will report `"No
@@ -833,7 +835,6 @@ Do you want to run `eden mount %s` instead?"""
         path = Path(path)
         shutil.rmtree(self._get_client_dir_for_mount_point(path))
         self._remove_path_from_directory_map(path)
-        self.cleanup_mount(path, preserve_mount_point)
 
     def cleanup_mount(self, path: Path, preserve_mount_point: bool = False) -> None:
         if sys.platform != "win32":
