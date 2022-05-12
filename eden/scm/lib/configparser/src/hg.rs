@@ -235,11 +235,13 @@ impl ConfigSetHgExt for ConfigSet {
             opts = opts.readonly_items(readonly_items);
         }
 
-        errors.append(&mut self.parse(HG_PY_CORE_CONFIG, &"builtin.rc".into()));
+        errors.append(&mut self.parse(HG_PY_CORE_CONFIG, &opts.clone().source("builtin.rc")));
 
         // Only load builtin configs if HGRCPATH is not set.
         if std::env::var(HGRCPATH).is_err() {
-            errors.append(&mut self.parse(MERGE_TOOLS_CONFIG, &"merge-tools.rc".into()));
+            errors.append(
+                &mut self.parse(MERGE_TOOLS_CONFIG, &opts.clone().source("merge-tools.rc")),
+            );
         }
         #[cfg(feature = "fb")]
         errors.append(&mut self.load_dynamic(repo_path, opts.clone())?);
