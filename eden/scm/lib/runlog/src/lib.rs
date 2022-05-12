@@ -145,7 +145,7 @@ fn accidentally_running_as_root(shared_path: &Path) -> bool {
 pub struct Entry {
     pub id: String,
     pub command: Vec<String>,
-    pub pid: u64,
+    pub pid: u32,
     pub download_bytes: usize,
     pub upload_bytes: usize,
     pub start_time: chrono::DateTime<chrono::Utc>,
@@ -171,7 +171,7 @@ impl Entry {
                 .map(char::from)
                 .collect(),
             command,
-            pid: unsafe { libc::getpid() } as u64,
+            pid: std::process::id(),
             download_bytes: 0,
             upload_bytes: 0,
             start_time: chrono::Utc::now(),
