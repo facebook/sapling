@@ -26,7 +26,6 @@ if pycompat.iswindows:
         # "C:\\repo1\\.hg\\scratchbranches\\index\\bookmarkmap\\infinitepush/backups/test/HOSTNAME/C:\\repo2/heads"
         return path.replace(":", "")
 
-
 else:
 
     def _normalizepath(path):

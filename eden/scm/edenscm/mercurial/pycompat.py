@@ -58,7 +58,6 @@ if "TESTTMP" in os.environ or "testutil" in sys.modules:
     def istest():
         return True
 
-
 else:
 
     def istest():

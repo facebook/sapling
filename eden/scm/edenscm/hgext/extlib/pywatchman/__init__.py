@@ -199,7 +199,6 @@ if _debugging:
             % (time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime()), fmt % args[:])
         )
 
-
 else:
 
     def log(fmt, *args):

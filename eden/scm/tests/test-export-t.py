@@ -223,7 +223,7 @@ color =
     >> "$HGRCPATH"
 )
 
-sh % "hg export --color always --nodates tip" == br"""
+sh % "hg export --color always --nodates tip" == rb"""
     # HG changeset patch
     # User test
     # Date 0 0

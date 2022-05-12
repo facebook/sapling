@@ -33,7 +33,6 @@ if TYPE_CHECKING:
     class Strs(Tuple[str, ...]):
         pass
 
-
 else:
 
     class Strs(tuple):

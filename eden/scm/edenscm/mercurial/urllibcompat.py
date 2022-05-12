@@ -128,7 +128,6 @@ if sys.version_info[0] >= 3:
     def hasdata(req):
         return req.data is not None
 
-
 else:
     import BaseHTTPServer
     import CGIHTTPServer

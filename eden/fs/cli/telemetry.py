@@ -335,7 +335,7 @@ def get_session_id() -> int:
     global _session_id
     sid = _session_id
     if sid is None:
-        sid = random.randrange(2 ** 32)
+        sid = random.randrange(2**32)
         _session_id = sid
     return sid
 

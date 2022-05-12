@@ -88,7 +88,7 @@ def loads(string):
         # XXX: This should round-trip with "dumps". But it might be non-trivial to
         # do so.
         def encode(s):
-            if isinstance(s, type(u"")):
+            if isinstance(s, type("")):
                 return pycompat.decodeutf8(s.encode("utf-8"))
             else:
                 return s

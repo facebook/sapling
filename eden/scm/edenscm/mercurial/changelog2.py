@@ -816,18 +816,15 @@ def migratetolazy(repo):
     if repo.changelog.algorithmbackend == "revlog":
         migratetodoublewrite(repo)
 
-    if (
-        not any(
-            s in repo.storerequirements
-            for s in (
-                "lazytextchangelog",
-                "hybridchangelog",
-                "doublewritechangelog",
-                "lazytext",
-            )
+    if not any(
+        s in repo.storerequirements
+        for s in (
+            "lazytextchangelog",
+            "hybridchangelog",
+            "doublewritechangelog",
+            "lazytext",
         )
-        and not _isempty(repo)
-    ):
+    ) and not _isempty(repo):
         raise error.Abort(
             _(
                 "lazy backend can only be migrated from hybrid or doublewrite, or lazytext"

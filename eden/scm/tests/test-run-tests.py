@@ -43,7 +43,7 @@ def lm(expected, output):
     """
     assert expected.endswith(b"\n") and output.endswith(b"\n"), "missing newline"
     assert not re.search(
-        br"[^ \w\\/\r\n()*?]", expected + output
+        rb"[^ \w\\/\r\n()*?]", expected + output
     ), b"single backslash or unknown char"
     test = run_tests.TTest("test-run-test.t", ".", ".")
     match = test.linematch(expected, output)

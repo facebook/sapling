@@ -26,7 +26,6 @@ if compat.PYTHON3:
         # returns None.
         return sys.getfilesystemencoding()
 
-
 else:
     # Python 2 doesn't support surrogateescape, so use 'strict' by
     # default. Users can register a custom surrogateescape error handler and use

@@ -183,7 +183,6 @@ if sys.version_info > (3, 5, 0):
             return p
         return p.decode("utf-8")
 
-
 elif sys.version_info >= (3, 0, 0):
     print(
         "%s is only supported on Python 3.5+ and 2.7, not %s"
@@ -860,7 +859,7 @@ def vlog(*msg):
 
 # Bytes that break XML even in a CDATA block: control characters 0-31
 # sans \t, \n and \r
-CDATA_EVIL = re.compile(br"[\000-\010\013\014\016-\037]")
+CDATA_EVIL = re.compile(rb"[\000-\010\013\014\016-\037]")
 
 # Match feature conditionalized output lines in the form, capturing the feature
 # list in group 2, and the preceeding line output in group 1:
@@ -966,7 +965,6 @@ if os.name == "nt":
                 _kernel32.TerminateJobObject(self._hjob, 0)
                 _kernel32.CloseHandle(self._hjob)
                 self._hjob = 0
-
 
 else:
 
@@ -1421,7 +1419,7 @@ class Test(unittest.TestCase):
 
     def _portmap(self, i):
         offset = b"" if i == 0 else b"%d" % i
-        return (br":%d\b" % (self._startport + i), b":$HGPORT%s" % offset)
+        return (rb":%d\b" % (self._startport + i), b":$HGPORT%s" % offset)
 
     def _getreplacements(self):
         """Obtain a mapping of text replacements to apply to test output.
@@ -1438,25 +1436,25 @@ class Test(unittest.TestCase):
             # This hack allows us to have same outputs for ipv4 and v6 urls:
             # [ipv6]:port
             (
-                br"([^0-9:])\[%s\]:[0-9]+" % re.escape(_bytespath(self._localip())),
-                br"\1$LOCALIP:$LOCAL_PORT",
+                rb"([^0-9:])\[%s\]:[0-9]+" % re.escape(_bytespath(self._localip())),
+                rb"\1$LOCALIP:$LOCAL_PORT",
             ),
             # [ipv6]
             (
-                br"([^0-9:])\[%s\]" % re.escape(_bytespath(self._localip())),
-                br"\1$LOCALIP",
+                rb"([^0-9:])\[%s\]" % re.escape(_bytespath(self._localip())),
+                rb"\1$LOCALIP",
             ),
             # ipv4:port
             (
-                br"([^0-9])%s:[0-9]+" % re.escape(_bytespath(self._localip())),
-                br"\1$LOCALIP:$LOCAL_PORT",
+                rb"([^0-9])%s:[0-9]+" % re.escape(_bytespath(self._localip())),
+                rb"\1$LOCALIP:$LOCAL_PORT",
             ),
             # [ipv4]
-            (br"([^0-9])%s" % re.escape(_bytespath(self._localip())), br"\1$LOCALIP"),
-            (br"\bHG_TXNID=TXN:[a-f0-9]{40}\b", br"HG_TXNID=TXN:$ID$"),
+            (rb"([^0-9])%s" % re.escape(_bytespath(self._localip())), rb"\1$LOCALIP"),
+            (rb"\bHG_TXNID=TXN:[a-f0-9]{40}\b", rb"HG_TXNID=TXN:$ID$"),
         ]
         r.append((_bytespath(self._escapepath(self._testtmp)), b"$TESTTMP"))
-        r.append((br"eager:///", br"eager://"))
+        r.append((rb"eager:///", rb"eager://"))
 
         replacementfile = os.path.join(self._testdir, "common-pattern.py")
 
@@ -1842,9 +1840,9 @@ class TTest(Test):
     SKIPPED_PREFIX = b"skipped: "
     FAILED_PREFIX = b"hghave check failed: "
 
-    ESCAPESUB = re.compile(br"[\x00-\x08\x0b-\x1f\\\x7f-\xff]").sub
-    ESCAPEMAP = dict((bchr(i), br"\x%02x" % i) for i in range(256))
-    ESCAPEMAP.update({b"\\": b"\\\\", b"\r": br"\r"})
+    ESCAPESUB = re.compile(rb"[\x00-\x08\x0b-\x1f\\\x7f-\xff]").sub
+    ESCAPEMAP = dict((bchr(i), rb"\x%02x" % i) for i in range(256))
+    ESCAPEMAP.update({b"\\": b"\\\\", b"\r": rb"\r"})
 
     def __init__(self, path, *args, **kwds):
         # accept an extra "case" parameter
@@ -2142,7 +2140,7 @@ class TTest(Test):
                 if not lout.endswith(b"\n"):
                     if b"\x1b" in lout or b"\r" in lout:
                         lout = (
-                            lout.replace(b"\x1b", br"\x1b").replace(b"\r", br"\r")
+                            lout.replace(b"\x1b", rb"\x1b").replace(b"\r", rb"\r")
                             + b" (no-eol) (esc)\n"
                         )
                     else:
@@ -2222,8 +2220,8 @@ class TTest(Test):
             el = b"(?:" + el + b")"
             # use \Z to ensure that the regex matches to the end of the string
             if os.name == "nt":
-                return re.match(el + br"\r?\n\Z", l)
-            return re.match(el + br"\n\Z", l)
+                return re.match(el + rb"\r?\n\Z", l)
+            return re.match(el + rb"\n\Z", l)
         except re.error:
             # el is an invalid regex
             return False
@@ -3109,9 +3107,9 @@ class TextTestRunner(unittest.TextTestRunner):
             data = pread(bisectcmd + ["--command", rtc])
             m = re.search(
                 (
-                    br"\nThe first (?P<goodbad>bad|good) revision "
-                    br"is:\ncommit: +(?P<node>[a-f0-9]+)\n.*\n"
-                    br"summary: +(?P<summary>[^\n]+)\n"
+                    rb"\nThe first (?P<goodbad>bad|good) revision "
+                    rb"is:\ncommit: +(?P<node>[a-f0-9]+)\n.*\n"
+                    rb"summary: +(?P<summary>[^\n]+)\n"
                 ),
                 data,
                 (re.MULTILINE | re.DOTALL),

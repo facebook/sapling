@@ -137,7 +137,7 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 # The default depth to fetch during tree fetches
-TREE_DEPTH_MAX = 2 ** 16
+TREE_DEPTH_MAX = 2**16
 
 configtable = {}
 configitem = registrar.configitem(configtable)
@@ -1285,7 +1285,7 @@ def servergettreepack(repo, proto, args):
         raise error.Abort(_("cannot fetch remote files over non-ssh protocol"))
 
     rootdir = args["rootdir"]
-    depth = int(args.get("depth", str(2 ** 16)))
+    depth = int(args.get("depth", str(2**16)))
 
     mfnodes = wireproto.decodelist(args["mfnodes"])
     basemfnodes = wireproto.decodelist(args["basemfnodes"])

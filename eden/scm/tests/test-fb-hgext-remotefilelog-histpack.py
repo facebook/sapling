@@ -23,7 +23,7 @@ from edenscm.mercurial.node import nullid
 from hghave import require
 
 
-SMALLFANOUTCUTOFF = int(2 ** 16 / 8)
+SMALLFANOUTCUTOFF = int(2**16 / 8)
 LARGEFANOUTPREFIX = 2
 
 try:

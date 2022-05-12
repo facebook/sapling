@@ -732,7 +732,6 @@ elif pycompat.sysplatform == "cygwin":
     def checklink(path: str) -> bool:
         return False
 
-
 else:
     # os.path.normcase is a no-op, which doesn't help us on non-native
     # filesystems

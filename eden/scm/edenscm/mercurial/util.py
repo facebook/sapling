@@ -2066,10 +2066,10 @@ class chunkbuffer(object):
         def splitbig(chunks):
             for chunk in chunks:
                 assert isinstance(chunk, bytes)
-                if len(chunk) > 2 ** 20:
+                if len(chunk) > 2**20:
                     pos = 0
                     while pos < len(chunk):
-                        end = pos + 2 ** 18
+                        end = pos + 2**18
                         yield chunk[pos:end]
                         pos = end
                 else:
@@ -2093,7 +2093,7 @@ class chunkbuffer(object):
         while left > 0:
             # refill the queue
             if not queue:
-                target = 2 ** 18
+                target = 2**18
                 for chunk in self.iter:
                     assert isinstance(chunk, bytes)
                     queue.append(chunk)
@@ -2754,7 +2754,6 @@ if pyplatform.python_implementation() == "CPython" and sys.version_info < (3, 0)
         else:
             return _safeiterfile(fp)
 
-
 else:
     # PyPy and CPython 3 do not have the EINTR issue thus no workaround needed.
     def iterfile(fp):
@@ -3200,7 +3199,7 @@ class url(object):
             return True  # remote URL
         if hasdriveletter(self.path):
             return True  # absolute for our purposes - can't be joined()
-        if self.path.startswith(br"\\"):
+        if self.path.startswith(rb"\\"):
             return True  # Windows UNC path
         if self.path.startswith("/"):
             return True  # POSIX-style
@@ -3285,14 +3284,14 @@ _timenesting = [0]
 
 _sizeunits = (
     ("b", 1),
-    ("kb", 2 ** 10),
-    ("mb", 2 ** 20),
-    ("gb", 2 ** 30),
-    ("tb", 2 ** 40),
-    ("m", 2 ** 20),
-    ("k", 2 ** 10),
-    ("g", 2 ** 30),
-    ("t", 2 ** 40),
+    ("kb", 2**10),
+    ("mb", 2**20),
+    ("gb", 2**30),
+    ("tb", 2**40),
+    ("m", 2**20),
+    ("k", 2**10),
+    ("g", 2**30),
+    ("t", 2**40),
 )
 
 tracewrap = bindings.tracing.wrapfunc
@@ -3789,7 +3788,7 @@ class _zlibengine(compressionengine):
             for chunk in filechunkiter(fh):
                 while chunk:
                     # Limit output size to limit memory.
-                    yield d.decompress(chunk, 2 ** 18)
+                    yield d.decompress(chunk, 2**18)
                     chunk = d.unconsumed_tail
 
         return chunkbuffer(gen())
@@ -3817,7 +3816,7 @@ class _zlibengine(compressionengine):
                 parts = []
                 pos = 0
                 while pos < insize:
-                    pos2 = pos + 2 ** 20
+                    pos2 = pos + 2**20
                     parts.append(z.compress(data[pos:pos2]))
                     pos = pos2
                 parts.append(z.flush())

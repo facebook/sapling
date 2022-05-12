@@ -402,7 +402,6 @@ if pycompat.iswindows:
         finally:
             closehandler(h)
 
-
 elif pycompat.isdarwin:
     import ctypes.util
 
@@ -430,7 +429,6 @@ elif pycompat.isdarwin:
             return ret
         finally:
             os.close(fd)
-
 
 else:
 

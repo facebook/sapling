@@ -132,7 +132,6 @@ try:
             build_time=typing.cast(int, build_info_dict.get("time", 0)),
         )
 
-
 except ImportError:
 
     def get_build_info_from_pid(

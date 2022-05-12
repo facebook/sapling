@@ -24,8 +24,8 @@ source_suffix = [".rst", ".md"]
 master_doc = "index"
 
 # General information about the project.
-project = u"FB Mercurial Documentation"
-copyright = u"2018 Facebook, Inc"
+project = "FB Mercurial Documentation"
+copyright = "2018 Facebook, Inc"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -165,8 +165,8 @@ latex_documents = [
     (
         "index",
         "FBMercurialDeveloperGuide.tex",
-        u"FB Mercurial Developer Guide Documentation",
-        u"Facebook Source Control Team",
+        "FB Mercurial Developer Guide Documentation",
+        "Facebook Source Control Team",
         "manual",
     )
 ]

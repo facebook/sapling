@@ -391,7 +391,7 @@ def _raiseoserror(name):
     # See https://bugs.python.org/issue28474
     code = _kernel32.GetLastError()
     if code > 0x7FFFFFFF:
-        code -= 2 ** 32
+        code -= 2**32
     err = ctypes.WinError(code=code)
     raise OSError(err.errno, "%s: %s" % (name, encoding.strtolocal(err.strerror)))
 

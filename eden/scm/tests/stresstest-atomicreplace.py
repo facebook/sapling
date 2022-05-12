@@ -48,7 +48,7 @@ def run_stress_test(n, binary, kill_median, kill_half_width):
             proc.kill()
             if not os.path.exists(filename):
                 print(
-                    u"ALARM! Iteration %i failed. File not found. Slept: %fs"
+                    "ALARM! Iteration %i failed. File not found. Slept: %fs"
                     % (p, tosleep)
                 )
     finally:

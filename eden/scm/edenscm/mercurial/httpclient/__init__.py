@@ -402,7 +402,6 @@ try:
                 return "unknown"
         return False
 
-
 except AttributeError:
 
     def _handlesarg(func, arg):

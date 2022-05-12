@@ -507,7 +507,6 @@ if sys.version_info[0] >= 3:
     def upper(s):
         return s.upper()
 
-
 else:
     colwidth = _colwidth
     fromlocal = pycompat.identity
@@ -527,7 +526,6 @@ if sys.version_info[0] < 3:
             except Exception:
                 pass
         return s
-
 
 else:
     localtooutput = pycompat.identity

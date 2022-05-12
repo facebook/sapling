@@ -206,7 +206,7 @@ def genbits(n):
     That is to say, given any x, y where both x, and y are in range(2 ** n),
     there is an x followed immediately by y in the generated sequence.
     """
-    m = 2 ** n
+    m = 2**n
 
     # Gray Code. See https://en.wikipedia.org/wiki/Gray_code
     gray = lambda x: x ^ (x >> 1)

@@ -155,7 +155,6 @@ elif safehasattr(cmdutil, "command"):
                 commands.norepo += " %s" % " ".join(parsealiases(name))
             return _command(name, list(options), synopsis)
 
-
 else:
     # for "historical portability":
     # define "@command" annotation locally, because cmdutil.command
@@ -843,7 +842,7 @@ def perfchangeset(ui, repo, rev, **opts):
 @command("perfindex", formatteropts)
 def perfindex(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
-    revlog._prereadsize = 2 ** 24  # disable lazy parser in old hg
+    revlog._prereadsize = 2**24  # disable lazy parser in old hg
     n = repo["tip"].node()
     svfs = getsvfs(repo)
 
@@ -932,7 +931,7 @@ def perfrevrange(ui, repo, *specs, **opts):
 @command("perfnodelookup", formatteropts)
 def perfnodelookup(ui, repo, rev, **opts):
     timer, fm = gettimer(ui, opts)
-    revlog._prereadsize = 2 ** 24  # disable lazy parser in old hg
+    revlog._prereadsize = 2**24  # disable lazy parser in old hg
     n = repo[rev].node()
     cl = revlog.revlog(getsvfs(repo), "00changelog.i")
 

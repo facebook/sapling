@@ -430,7 +430,7 @@ class bundlerepository(localrepo.localrepository):
         with util.fdopen(fdtemp, "wb") as fptemp:
             fptemp.write(pycompat.encodeutf8(header))
             while True:
-                chunk = readfn(2 ** 18)
+                chunk = readfn(2**18)
                 if not chunk:
                     break
                 fptemp.write(chunk)

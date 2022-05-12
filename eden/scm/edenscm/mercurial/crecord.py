@@ -28,7 +28,7 @@ stringio = util.stringio
 
 # This is required for ncurses to display non-ASCII characters in default user
 # locale encoding correctly.  --immerrr
-locale.setlocale(locale.LC_ALL, u"")
+locale.setlocale(locale.LC_ALL, "")
 
 # patch comments based on the git one
 diffhelptext = _(
@@ -998,7 +998,7 @@ class curseschunkselector(object):
         # strip \n, and convert control characters to ^[char] representation
         text = text.strip(b"\n")
         text = re.sub(
-            br"[\x00-\x08\x0a-\x1f]",
+            rb"[\x00-\x08\x0a-\x1f]",
             lambda m: b"^%s" % bytearray([ord(m.group()) + 64]),
             text,
         )

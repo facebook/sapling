@@ -194,7 +194,7 @@ state = ProfileState()
 class CodeSite(object):
     cache = {}
 
-    __slots__ = (u"path", u"lineno", u"function", u"source")
+    __slots__ = ("path", "lineno", "function", "source")
 
     def __init__(self, path, lineno, function):
         self.path = path
@@ -249,7 +249,7 @@ class CodeSite(object):
 
 
 class Sample(object):
-    __slots__ = (u"stack", u"time")
+    __slots__ = ("stack", "time")
 
     def __init__(self, stack, time):
         self.stack = stack

@@ -26,9 +26,9 @@ _faketime = faketime()
 time.time = _faketime.time
 
 unicodeloopitems = [
-    pycompat.ensurestr(u"\u3042\u3044"),  # 2 x 2 = 4 columns
-    pycompat.ensurestr(u"\u3042\u3044\u3046"),  # 2 x 3 = 6 columns
-    pycompat.ensurestr(u"\u3042\u3044\u3046\u3048"),  # 2 x 4 = 8 columns
+    pycompat.ensurestr("\u3042\u3044"),  # 2 x 2 = 4 columns
+    pycompat.ensurestr("\u3042\u3044\u3046"),  # 2 x 3 = 6 columns
+    pycompat.ensurestr("\u3042\u3044\u3046\u3048"),  # 2 x 4 = 8 columns
 ]
 
 
@@ -50,7 +50,7 @@ def progresstest(ui, loops, total, **opts):
     nested = opts.get("nested", None)
     useunicode = opts.get("unicode", False)
     if useunicode:
-        topic = pycompat.ensurestr(u"\u3042\u3044\u3046\u3048")
+        topic = pycompat.ensurestr("\u3042\u3044\u3046\u3048")
     else:
         topic = "progress test"
     with progress.bar(ui, topic, "cycles", total) as prog:

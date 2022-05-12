@@ -41,7 +41,6 @@ if pycompat.iswindows:
         fileno = open_osfhandle(handle, os_mode)
         return util.fdopen(fileno, mode)
 
-
 else:
 
     def fdopen(handle: int, mode: str) -> IO[Any]:

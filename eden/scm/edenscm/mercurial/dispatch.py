@@ -545,7 +545,7 @@ def dispatch(req):
                 return millis
 
             for power in range(3, 19):
-                threshold = 10 ** power
+                threshold = 10**power
                 if millis < threshold:
                     factor = int(threshold / 1000)
                     return int(millis / factor) * factor

@@ -12,7 +12,6 @@ if sys.version_info[0] >= 3:
     def escape(s):
         return str(s.encode("utf-8"))[2:-1]
 
-
 else:
 
     def escape(s):

@@ -49,9 +49,9 @@ from .pycompat import decodeutf8, encodeutf8, range
 
 stringio = util.stringio
 
-gitre = re.compile(br"diff --git a/(.*) b/(.*)")
-tabsplitter = re.compile(br"(\t+|[^\t]+)")
-wordsplitter = re.compile(br"(\t+| +|[a-zA-Z0-9_\x80-\xff]+|[^ \ta-zA-Z0-9_\x80-\xff])")
+gitre = re.compile(rb"diff --git a/(.*) b/(.*)")
+tabsplitter = re.compile(rb"(\t+|[^\t]+)")
+wordsplitter = re.compile(rb"(\t+| +|[a-zA-Z0-9_\x80-\xff]+|[^ \ta-zA-Z0-9_\x80-\xff])")
 
 PatchError = error.PatchError
 
@@ -212,10 +212,10 @@ def extract(ui, fileobj):
     # attempt to detect the start of a patch
     # (this heuristic is borrowed from quilt)
     diffre = re.compile(
-        br"^(?:Index:[ \t]|diff[ \t]-|RCS file: |"
-        br"retrieving revision [0-9]+(\.[0-9]+)*$|"
-        br"---[ \t].*?^\+\+\+[ \t]|"
-        br"\*\*\*[ \t].*?^---[ \t])",
+        rb"^(?:Index:[ \t]|diff[ \t]-|RCS file: |"
+        rb"retrieving revision [0-9]+(\.[0-9]+)*$|"
+        rb"---[ \t].*?^\+\+\+[ \t]|"
+        rb"\*\*\*[ \t].*?^---[ \t])",
         re.MULTILINE | re.DOTALL,
     )
 
@@ -606,7 +606,7 @@ class filestore(object):
         self.created = 0
         self.maxsize = maxsize
         if self.maxsize is None:
-            self.maxsize = 4 * (2 ** 20)
+            self.maxsize = 4 * (2**20)
         self.size = 0
         self.data = {}
 
@@ -2000,7 +2000,7 @@ def scanpatch(fp):
     - ('hunk',    [hunk_lines])
     - ('range',   (-start,len, +start,len, proc))
     """
-    lines_re = re.compile(br"@@ -(\d+),(\d+) \+(\d+),(\d+) @@\s*(.*)")
+    lines_re = re.compile(rb"@@ -(\d+),(\d+) \+(\d+),(\d+) @@\s*(.*)")
     lr = linereader(fp)
 
     def scanwhile(first, p):

@@ -348,7 +348,7 @@ def headdecode(s):
     """Decodes RFC-2047 header"""
     uparts = []
     for part, charset in email.header.decode_header(s):
-        if isinstance(part, type(u"")):
+        if isinstance(part, type("")):
             uparts.append(part)
             continue
         if charset is not None:
@@ -363,4 +363,4 @@ def headdecode(s):
         except UnicodeDecodeError:
             pass
         uparts.append(part.decode("ISO-8859-1"))
-    return encoding.unitolocal(u" ".join(uparts))
+    return encoding.unitolocal(" ".join(uparts))

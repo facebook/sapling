@@ -18,7 +18,7 @@ from testutil.dott import testtmp  # noqa: F401
 
 writefile(
     "a.rc",
-    br"""[a]
+    rb"""[a]
 x=1
 y=2
 %include b.rc
@@ -27,7 +27,7 @@ y=2
 
 writefile(
     "b.rc",
-    br"""%include b.rc
+    rb"""%include b.rc
 [b]
 z = 3
 [a]
@@ -36,7 +36,7 @@ z = 3
 """,
 )
 
-writefile("broken.rc", br"%not-implemented")
+writefile("broken.rc", rb"%not-implemented")
 
 
 def createConfig():

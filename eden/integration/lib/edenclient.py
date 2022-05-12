@@ -622,10 +622,13 @@ class EdenCommandError(subprocess.CalledProcessError):
 
     def __str__(self) -> str:
         cmd_str = " ".join(shlex.quote(arg) for arg in self.cmd)
-        return "edenfsctl command returned non-zero exit status %d\n\nCommand:\n[%s]\n\nStderr:\n%s" % (
-            self.returncode,
-            cmd_str,
-            self.stderr,
+        return (
+            "edenfsctl command returned non-zero exit status %d\n\nCommand:\n[%s]\n\nStderr:\n%s"
+            % (
+                self.returncode,
+                cmd_str,
+                self.stderr,
+            )
         )
 
 

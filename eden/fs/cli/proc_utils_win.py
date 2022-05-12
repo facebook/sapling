@@ -36,7 +36,6 @@ if sys.platform == "win32":
     def raise_win_error() -> NoReturn:
         raise ctypes.WinError()
 
-
 else:
     # This entire file is only ever imported in Windows.  However on our continuous
     # integration environments Pyre currently does all of its type checking assuming

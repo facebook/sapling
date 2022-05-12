@@ -64,7 +64,7 @@ from .subcmd import Subcmd
 from .util import format_cmd, format_mount, split_inodes_by_operation_type, print_stderr
 
 
-MB: int = 1024 ** 2
+MB: int = 1024**2
 debug_cmd = subcmd_mod.Decorator()
 
 
@@ -850,7 +850,7 @@ class UnloadInodesCmd(Subcmd):
             # set the age in nanoSeconds
             age = TimeSpec()
             age.seconds = int(args.age)
-            age.nanoSeconds = int((args.age - age.seconds) * 10 ** 9)
+            age.nanoSeconds = int((args.age - age.seconds) * 10**9)
             count = client.unloadInodeForPath(
                 bytes(checkout.path), bytes(rel_path), age
             )
