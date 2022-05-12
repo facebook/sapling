@@ -27,6 +27,22 @@ use configmodel::ConfigExt;
 use fs2::FileExt;
 use util::lock::PathLock;
 
+const WORKING_COPY_NAME: &str = "wlock";
+
+pub fn lock_working_copy(config: &dyn Config, dot_hg: &Path) -> anyhow::Result<File, LockError> {
+    lock(
+        config,
+        dot_hg,
+        WORKING_COPY_NAME,
+        format!(
+            "{}:{}",
+            hostname::get()?.to_string_lossy(),
+            std::process::id()
+        )
+        .as_bytes(),
+    )
+}
+
 /// lock loops until it can acquire the specified lock, subject to
 /// ui.timeout timeout. Errors other than lock contention are
 /// propagated immediately with no retries.
@@ -279,6 +295,32 @@ mod tests {
         assert!(lock(&cfg, tmp.path(), "foo", "contents".as_bytes()).is_ok());
 
         dropper.join().unwrap();
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_working_copy() -> Result<()> {
+        let tmp = tempfile::tempdir()?;
+
+        let cfg = BTreeMap::<&str, &str>::new();
+
+        let _wlock = lock_working_copy(&cfg, tmp.path())?;
+
+        // Make sure locked the right file, and check the contents.
+        match try_lock(tmp.path(), WORKING_COPY_NAME, "foo".as_bytes()) {
+            Err(LockError::Contended(LockContendedError { contents, .. })) => {
+                assert_eq!(
+                    String::from_utf8(contents)?,
+                    format!(
+                        "{}:{}",
+                        hostname::get()?.to_string_lossy(),
+                        std::process::id()
+                    )
+                );
+            }
+            _ => panic!("lock should be contended"),
+        };
 
         Ok(())
     }
