@@ -42,13 +42,14 @@ const wchar_t kMenuAboutStr[] = L"About EdenFS";
 const wchar_t kOptionEnable[] = L"Enable Notifications";
 
 enum MenuCommand : UINT {
-  IDM_ACTION_DOCTOR = 124,
-  IDM_ACTION_RAGE,
+  IDM_ACTION_CLEAN = 124,
+  IDM_ACTION_DOCTOR,
   IDM_ACTION_LIST,
+  IDM_ACTION_RAGE,
   IDM_DEBUG_GEN_NOTIFICATION,
   IDM_DEBUG_NET_NOTIFICATION,
-  IDM_DEBUG_SIGNAL_START,
   IDM_DEBUG_SIGNAL_END,
+  IDM_DEBUG_SIGNAL_START,
   IDM_EXIT,
   IDM_INFO,
   IDM_NOTIFICATION,
@@ -375,6 +376,11 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
             return 0;
           }
 
+          case IDM_ACTION_CLEAN: {
+            executeShellCommand("edenfsctl", "--press-to-continue du --clean");
+            return 0;
+          }
+
           case IDM_SIGNAL_CHECKOUT: {
             auto notifier = getWindowsNotifier(hwnd);
             auto numActive = static_cast<size_t>(lParam);
@@ -641,6 +647,11 @@ void WindowsNotifier::appendActionsMenu(HMENU hMenu) {
       MF_BYPOSITION | MF_STRING,
       IDM_ACTION_LIST,
       L"List Checkouts (list)");
+  appendMenuEntry(
+      actionMenu.get(),
+      MF_BYPOSITION | MF_STRING,
+      IDM_ACTION_CLEAN,
+      L"Clean EdenFS Disk (du --clean)");
 
   // append actions menu to top-level menu
   appendMenuEntry(
