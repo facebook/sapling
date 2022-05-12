@@ -2241,9 +2241,9 @@ class localrepository(object):
         warntimeout = None
         if wait:
             timeout = self.ui.configint("ui", "timeout")
-            warntimeout = self.ui.configint("ui", "timeout.warn", None)
+            warntimeout = self.ui.configint("ui", "timeout.warn")
 
-        l = lockmod.trylock(
+        return lockmod.trylock(
             self.ui,
             vfs,
             lockname,
@@ -2253,7 +2253,6 @@ class localrepository(object):
             acquirefn=acquirefn,
             desc=desc,
         )
-        return l
 
     def _afterlock(self, callback):
         """add a callback to be run when the repository is fully unlocked

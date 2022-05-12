@@ -1187,4 +1187,7 @@ static HG_PY_CORE_CONFIG: &str = r#"
 mingcage=900
 minrepackthreshold=10M
 repackfactor=3
+
+[ui]
+timeout=600
 "#;
