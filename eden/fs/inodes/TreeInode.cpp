@@ -2350,24 +2350,25 @@ Future<Unit> TreeInode::computeDiff(
       }
     };
 
-    auto processRemoved = [&](const TreeEntry& scmEntry) {
-      XLOG(DBG5) << "diff: removed file: " << currentPath + scmEntry.getName();
+    auto processRemoved = [&](const Tree::value_type& scmEntry) {
+      XLOG(DBG5) << "diff: removed file: " << currentPath + scmEntry.first;
       context->callback->removedPath(
-          currentPath + scmEntry.getName(), scmEntry.getDType());
-      if (scmEntry.isTree()) {
+          currentPath + scmEntry.first, scmEntry.second.getDType());
+      if (scmEntry.second.isTree()) {
         deferredEntries.emplace_back(DeferredDiffEntry::createRemovedScmEntry(
-            context, currentPath + scmEntry.getName(), scmEntry.getHash()));
+            context, currentPath + scmEntry.first, scmEntry.second.getHash()));
       }
     };
 
-    auto processBothPresent = [&](const TreeEntry& scmEntry,
+    auto processBothPresent = [&](const Tree::value_type& scmEntry,
                                   DirEntry* inodeEntry) {
       // We only need to know the ignored status if this is a directory.
       // If this is a regular file on disk and in source control, then it
       // is always included since it is already tracked in source control.
       bool entryIgnored = isIgnored;
-      auto entryPath = currentPath + scmEntry.getName();
-      if (!isIgnored && (inodeEntry->isDirectory() || scmEntry.isTree())) {
+      auto entryPath = currentPath + scmEntry.first;
+      if (!isIgnored &&
+          (inodeEntry->isDirectory() || scmEntry.second.isTree())) {
         auto fileType = inodeEntry->isDirectory() ? GitIgnore::TYPE_DIR
                                                   : GitIgnore::TYPE_FILE;
         auto ignoreStatus = ignore->match(entryPath, fileType);
@@ -2389,7 +2390,7 @@ Future<Unit> TreeInode::computeDiff(
         deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
             context,
             entryPath,
-            scmEntry,
+            scmEntry.second,
             std::move(childInodePtr),
             ignore.get(),
             entryIgnored));
@@ -2398,7 +2399,7 @@ Future<Unit> TreeInode::computeDiff(
         // We'll have to load it to confirm if it is the same or different.
         auto inodeFuture = self->loadChildLocked(
             contents->entries,
-            scmEntry.getName(),
+            scmEntry.first,
             *inodeEntry,
             pendingLoads,
             context->getFetchContext());
@@ -2406,7 +2407,7 @@ Future<Unit> TreeInode::computeDiff(
             DeferredDiffEntry::createModifiedEntryFromInodeFuture(
                 context,
                 entryPath,
-                scmEntry,
+                scmEntry.second,
                 std::move(inodeFuture),
                 ignore.get(),
                 entryIgnored));
@@ -2416,8 +2417,8 @@ Future<Unit> TreeInode::computeDiff(
           // metadata changes will cause the inode to be materialized, and
           // the previous path will be taken.
           treeEntryTypeFromMode(inodeEntry->getInitialMode()) ==
-              scmEntry.getType() &&
-          inodeEntry->getHash() == scmEntry.getHash()) {
+              scmEntry.second.getType() &&
+          inodeEntry->getHash() == scmEntry.second.getHash()) {
         // This file or directory is unchanged.  We can skip it.
         XLOG(DBG9) << "diff: unchanged unloaded file: " << entryPath;
       } else if (inodeEntry->isDirectory()) {
@@ -2429,11 +2430,11 @@ Future<Unit> TreeInode::computeDiff(
         deferredEntries.emplace_back(DeferredDiffEntry::createModifiedScmEntry(
             context,
             entryPath,
-            scmEntry.getHash(),
+            scmEntry.second.getHash(),
             inodeEntry->getHash(),
             ignore.get(),
             entryIgnored));
-      } else if (scmEntry.isTree()) {
+      } else if (scmEntry.second.isTree()) {
         // This used to be a directory in the source control state,
         // but is now a file or symlink.  Report the new file, then add a
         // deferred entry to report the entire source control Tree as
@@ -2447,9 +2448,9 @@ Future<Unit> TreeInode::computeDiff(
           XLOG(DBG6) << "diff: directory --> untracked file: " << entryPath;
           context->callback->addedPath(entryPath, inodeEntry->getDtype());
         }
-        context->callback->removedPath(entryPath, scmEntry.getDType());
+        context->callback->removedPath(entryPath, scmEntry.second.getDType());
         deferredEntries.emplace_back(DeferredDiffEntry::createRemovedScmEntry(
-            context, entryPath, scmEntry.getHash()));
+            context, entryPath, scmEntry.second.getHash()));
       } else {
         // This file corresponds to a different blob hash, or has a
         // different mode.
@@ -2465,7 +2466,7 @@ Future<Unit> TreeInode::computeDiff(
         // janky hashing scheme for mercurial data, we should be able just
         // immediately assume the file is different here, without checking.
         if (treeEntryTypeFromMode(inodeEntry->getInitialMode()) !=
-            scmEntry.getType()) {
+            scmEntry.second.getType()) {
           // The mode is definitely modified
           XLOG(DBG5) << "diff: file modified due to mode change: " << entryPath;
           context->callback->modifiedPath(entryPath, inodeEntry->getDtype());
@@ -2477,7 +2478,7 @@ Future<Unit> TreeInode::computeDiff(
           deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
               context,
               entryPath,
-              scmEntry,
+              scmEntry.second,
               inodeEntry->getHash(),
               inodeEntry->getDtype()));
         }
@@ -2506,20 +2507,20 @@ Future<Unit> TreeInode::computeDiff(
         ++inodeIter;
       } else if (inodeIter == inodeEntries.end()) {
         // This entry is present in the old tree but not the old one.
-        processRemoved(scIter->second);
+        processRemoved(*scIter);
         ++scIter;
       } else {
         auto compare = comparePathComponent(
             scIter->first, inodeIter->first, context->getCaseSensitive());
 
         if (compare == CompareResult::BEFORE) {
-          processRemoved(scIter->second);
+          processRemoved(*scIter);
           ++scIter;
         } else if (compare == CompareResult::AFTER) {
           processUntracked(inodeIter->first, &inodeIter->second);
           ++inodeIter;
         } else {
-          processBothPresent(scIter->second, &inodeIter->second);
+          processBothPresent(*scIter, &inodeIter->second);
           ++scIter;
           ++inodeIter;
         }
@@ -2763,7 +2764,7 @@ void TreeInode::computeCheckoutActions(
           ctx,
           *contents,
           nullptr,
-          &newIter->second,
+          &*newIter,
           pendingLoads,
           wasDirectoryListModified);
       ++newIter;
@@ -2772,7 +2773,7 @@ void TreeInode::computeCheckoutActions(
       action = processCheckoutEntry(
           ctx,
           *contents,
-          &oldIter->second,
+          &*oldIter,
           nullptr,
           pendingLoads,
           wasDirectoryListModified);
@@ -2787,7 +2788,7 @@ void TreeInode::computeCheckoutActions(
         action = processCheckoutEntry(
             ctx,
             *contents,
-            &oldIter->second,
+            &*oldIter,
             nullptr,
             pendingLoads,
             wasDirectoryListModified);
@@ -2797,7 +2798,7 @@ void TreeInode::computeCheckoutActions(
             ctx,
             *contents,
             nullptr,
-            &newIter->second,
+            &*newIter,
             pendingLoads,
             wasDirectoryListModified);
         ++newIter;
@@ -2805,8 +2806,8 @@ void TreeInode::computeCheckoutActions(
         action = processCheckoutEntry(
             ctx,
             *contents,
-            &oldIter->second,
-            &newIter->second,
+            &*oldIter,
+            &*newIter,
             pendingLoads,
             wasDirectoryListModified);
         ++oldIter;
@@ -2823,13 +2824,18 @@ void TreeInode::computeCheckoutActions(
 unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     CheckoutContext* ctx,
     TreeInodeState& state,
-    const TreeEntry* oldScmEntry,
-    const TreeEntry* newScmEntry,
+    const Tree::value_type* oldScmEntry,
+    const Tree::value_type* newScmEntry,
     vector<IncompleteInodeLoad>& pendingLoads,
     bool& wasDirectoryListModified) {
-  XLOG(DBG5) << "processCheckoutEntry(" << getLogPath()
-             << "): " << (oldScmEntry ? oldScmEntry->toLogString() : "(null)")
-             << " -> " << (newScmEntry ? newScmEntry->toLogString() : "(null)");
+  XLOG(DBG5) << "processCheckoutEntry(" << getLogPath() << "): "
+             << (oldScmEntry
+                     ? oldScmEntry->second.toLogString(oldScmEntry->first)
+                     : "(null)")
+             << " -> "
+             << (newScmEntry
+                     ? newScmEntry->second.toLogString(newScmEntry->first)
+                     : "(null)");
   // At most one of oldScmEntry and newScmEntry may be null.
   XDCHECK(oldScmEntry || newScmEntry);
 
@@ -2841,8 +2847,8 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   // revert them to the desired state if they were modified in the local
   // filesystem.
   if (!ctx->forceUpdate() && oldScmEntry && newScmEntry &&
-      oldScmEntry->getType() == newScmEntry->getType() &&
-      oldScmEntry->getHash() == newScmEntry->getHash()) {
+      oldScmEntry->second.getType() == newScmEntry->second.getType() &&
+      oldScmEntry->second.getHash() == newScmEntry->second.getHash()) {
     // TODO: Should we perhaps fall through anyway to report conflicts for
     // locally modified files?
     return nullptr;
@@ -2850,8 +2856,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
 
   // Look to see if we have a child entry with this name.
   bool contentsUpdated = false;
-  const auto& name =
-      oldScmEntry ? oldScmEntry->getName() : newScmEntry->getName();
+  const auto& name = oldScmEntry ? oldScmEntry->first : newScmEntry->first;
   auto& contents = state.entries;
   auto it = contents.find(name);
   if (it == contents.end()) {
@@ -2868,12 +2873,11 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
       // we are already in the desired state.
       //
       // We can proceed, but we still flag this as a conflict.
-      ctx->addConflict(
-          ConflictType::MISSING_REMOVED, this, oldScmEntry->getName());
+      ctx->addConflict(ConflictType::MISSING_REMOVED, this, oldScmEntry->first);
     } else {
       // The file was removed locally, but modified in the new tree.
       ctx->addConflict(
-          ConflictType::REMOVED_MODIFIED, this, oldScmEntry->getName());
+          ConflictType::REMOVED_MODIFIED, this, oldScmEntry->first);
       if (ctx->forceUpdate()) {
         XDCHECK(!ctx->isDryRun());
         contentsUpdated = true;
@@ -2891,10 +2895,10 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
       auto success = invalidateChannelEntryCache(state, name, std::nullopt);
       if (success.hasValue()) {
         auto [it, inserted] = contents.emplace(
-            newScmEntry->getName(),
-            modeFromTreeEntryType(newScmEntry->getType()),
+            newScmEntry->first,
+            modeFromTreeEntryType(newScmEntry->second.getType()),
             getOverlay()->allocateInodeNumber(),
-            newScmEntry->getHash());
+            newScmEntry->second.getHash());
         XDCHECK(inserted);
       } else {
         ctx->addError(this, name, success.exception());
@@ -2945,7 +2949,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   auto conflictType = ConflictType::ERROR;
   if (!oldScmEntry) {
     conflictType = ConflictType::UNTRACKED_ADDED;
-  } else if (entry.getHash() != oldScmEntry->getHash()) {
+  } else if (entry.getHash() != oldScmEntry->second.getHash()) {
     if (getMount()
             ->getObjectStore()
             ->getBackingStore()
@@ -3003,10 +3007,10 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   contents.erase(it);
   if (newScmEntry) {
     contents.emplace(
-        newScmEntry->getName(),
-        modeFromTreeEntryType(newScmEntry->getType()),
+        newScmEntry->first,
+        modeFromTreeEntryType(newScmEntry->second.getType()),
         getOverlay()->allocateInodeNumber(),
-        newScmEntry->getHash());
+        newScmEntry->second.getHash());
   }
 
   wasDirectoryListModified = true;
@@ -3046,7 +3050,7 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
     InodePtr inode,
     std::shared_ptr<const Tree> oldTree,
     std::shared_ptr<const Tree> newTree,
-    const std::optional<TreeEntry>& newScmEntry) {
+    const std::optional<Tree::value_type>& newScmEntry) {
   auto treeInode = inode.asTreePtrOrNull();
   if (!treeInode) {
     // If the target of the update is not a directory, then we know we do not
@@ -3091,10 +3095,10 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
 
       if (newScmEntry) {
         auto [it, inserted] = contents->entries.emplace(
-            newScmEntry->getName(),
-            modeFromTreeEntryType(newScmEntry->getType()),
+            newScmEntry->first,
+            modeFromTreeEntryType(newScmEntry->second.getType()),
             getOverlay()->allocateInodeNumber(),
-            newScmEntry->getHash());
+            newScmEntry->second.getHash());
         XDCHECK(inserted);
       }
     }
@@ -3109,11 +3113,11 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
   // is call checkout().
   if (newTree) {
     XCHECK(newScmEntry.has_value());
-    XCHECK(newScmEntry->isTree());
+    XCHECK(newScmEntry->second.isTree());
 
     if (getMount()->getCheckoutConfig()->getCaseSensitive() ==
             CaseSensitivity::Insensitive &&
-        newScmEntry->getName() != getInodeName(ctx, treeInode)) {
+        newScmEntry->first != getInodeName(ctx, treeInode)) {
       // For case insensitive mount, the name of the new and old entries might
       // differ in casing. In that case, we want to fallthrough to the case
       // below to force the old name to be removed and then re-added with its
@@ -3195,7 +3199,7 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
             // On case insensitive mounts, a change of casing would lead to a
             // removal of this TreeInode followed by the insertion of the
             // different cased TreeInode.
-            if (newScmEntry->isTree()) {
+            if (newScmEntry->second.isTree()) {
               XDCHECK_EQ(
                   parentInode->getMount()
                       ->getCheckoutConfig()
@@ -3207,10 +3211,10 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
             {
               auto contents = parentInode->contents_.wlock();
               auto ret = contents->entries.emplace(
-                  newScmEntry->getName(),
-                  modeFromTreeEntryType(newScmEntry->getType()),
+                  newScmEntry->first,
+                  modeFromTreeEntryType(newScmEntry->second.getType()),
                   parentInode->getOverlay()->allocateInodeNumber(),
-                  newScmEntry->getHash());
+                  newScmEntry->second.getHash());
               inserted = ret.second;
             }
 

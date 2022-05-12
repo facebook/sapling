@@ -45,30 +45,21 @@ std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode);
 
 class TreeEntry {
  public:
-  explicit TreeEntry(
-      const ObjectId& hash,
-      PathComponent name,
-      TreeEntryType type)
-      : type_(type), hash_(hash), name_(std::move(name)) {}
+  explicit TreeEntry(const ObjectId& hash, TreeEntryType type)
+      : type_(type), hash_(std::move(hash)) {}
 
   explicit TreeEntry(
       const ObjectId& hash,
-      PathComponent name,
       TreeEntryType type,
       std::optional<uint64_t> size,
       std::optional<Hash20> contentSha1)
       : type_(type),
-        hash_(hash),
-        name_(std::move(name)),
+        hash_(std::move(hash)),
         size_(size),
         contentSha1_(contentSha1) {}
 
   const ObjectId& getHash() const {
     return hash_;
-  }
-
-  const PathComponent& getName() const {
-    return name_;
   }
 
   bool isTree() const {
@@ -108,7 +99,7 @@ class TreeEntry {
     }
   }
 
-  std::string toLogString() const;
+  std::string toLogString(PathComponentPiece name) const;
 
   const std::optional<uint64_t>& getSize() const {
     return size_;
@@ -117,12 +108,6 @@ class TreeEntry {
   const std::optional<Hash20>& getContentSha1() const {
     return contentSha1_;
   }
-
-  /**
-   * An estimate of the memory footprint of this treeEntry outside of the data
-   * directly stored in this object.
-   */
-  size_t getIndirectSizeBytes() const;
 
   /**
    * Computes exact serialized size of this entry.
@@ -143,7 +128,6 @@ class TreeEntry {
  private:
   TreeEntryType type_;
   ObjectId hash_;
-  PathComponent name_;
   std::optional<uint64_t> size_;
   std::optional<Hash20> contentSha1_;
 

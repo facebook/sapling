@@ -47,8 +47,7 @@ DirEntry makeDirEntry() {
 
 Tree::value_type makeTreeEntry(folly::StringPiece name) {
   return {
-      PathComponent{name},
-      TreeEntry{ObjectId{}, PathComponent{name}, TreeEntryType::REGULAR_FILE}};
+      PathComponent{name}, TreeEntry{ObjectId{}, TreeEntryType::REGULAR_FILE}};
 }
 } // namespace
 

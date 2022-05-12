@@ -13,20 +13,14 @@
 using namespace facebook::eden;
 
 TEST(TreeEntry, modeAndLogString) {
-  TreeEntry rwFile(
-      makeTestHash("faceb00c"),
-      PathComponent{"file.txt"},
-      TreeEntryType::REGULAR_FILE);
+  TreeEntry rwFile(makeTestHash("faceb00c"), TreeEntryType::REGULAR_FILE);
   EXPECT_EQ(S_IFREG | 0644, modeFromTreeEntryType(rwFile.getType()));
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, treeEntryTypeFromMode(S_IFREG | 0644));
   EXPECT_EQ(
       "(file.txt, 00000000000000000000000000000000faceb00c, f)",
-      rwFile.toLogString());
+      rwFile.toLogString("file.txt"_pc));
 
-  TreeEntry rwxFile(
-      makeTestHash("789"),
-      PathComponent{"file.exe"},
-      TreeEntryType::EXECUTABLE_FILE);
+  TreeEntry rwxFile(makeTestHash("789"), TreeEntryType::EXECUTABLE_FILE);
 #ifndef _WIN32
   EXPECT_EQ(S_IFREG | 0755, modeFromTreeEntryType(rwxFile.getType()));
   EXPECT_EQ(
@@ -34,25 +28,23 @@ TEST(TreeEntry, modeAndLogString) {
 #endif
   EXPECT_EQ(
       "(file.exe, 0000000000000000000000000000000000000789, x)",
-      rwxFile.toLogString());
+      rwxFile.toLogString("file.exe"_pc));
 
-  TreeEntry rwxLink(
-      makeTestHash("b"), PathComponent{"to-file.exe"}, TreeEntryType::SYMLINK);
+  TreeEntry rwxLink(makeTestHash("b"), TreeEntryType::SYMLINK);
 #ifndef _WIN32
   EXPECT_EQ(S_IFLNK | 0755, modeFromTreeEntryType(rwxLink.getType()));
   EXPECT_EQ(TreeEntryType::SYMLINK, treeEntryTypeFromMode(S_IFLNK | 0755));
 #endif
   EXPECT_EQ(
       "(to-file.exe, 000000000000000000000000000000000000000b, l)",
-      rwxLink.toLogString());
+      rwxLink.toLogString("to-file.exe"_pc));
 
-  TreeEntry directory(
-      makeTestHash("abc"), PathComponent{"src"}, TreeEntryType::TREE);
+  TreeEntry directory(makeTestHash("abc"), TreeEntryType::TREE);
   EXPECT_EQ(S_IFDIR | 0755, modeFromTreeEntryType(directory.getType()));
   EXPECT_EQ(TreeEntryType::TREE, treeEntryTypeFromMode(S_IFDIR | 0755));
   EXPECT_EQ(
       "(src, 0000000000000000000000000000000000000abc, d)",
-      directory.toLogString());
+      directory.toLogString("src"_pc));
 
 #ifndef _WIN32
   EXPECT_EQ(std::nullopt, treeEntryTypeFromMode(S_IFSOCK | 0700));
@@ -60,14 +52,11 @@ TEST(TreeEntry, modeAndLogString) {
 }
 
 TEST(TreeEntry, testEntrySize) {
-  std::string name{"file.txt"};
   auto type = TreeEntryType::REGULAR_FILE;
-  TreeEntry rwFile{makeTestHash("faceb00c"), PathComponent{name}, type};
+  TreeEntry rwFile{makeTestHash("faceb00c"), type};
 
   auto sizeofSize = sizeof(rwFile);
-  auto getEntryIndirectBytesSize = rwFile.getIndirectSizeBytes();
-  auto totalSize = sizeofSize + getEntryIndirectBytesSize;
+  auto totalSize = sizeofSize;
 
-  EXPECT_LE(
-      name.length() + Hash20::RAW_SIZE + sizeof(TreeEntryType), totalSize);
+  EXPECT_LE(Hash20::RAW_SIZE + sizeof(TreeEntryType), totalSize);
 }

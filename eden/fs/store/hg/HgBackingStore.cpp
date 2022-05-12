@@ -478,7 +478,7 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
         (hgObjectIdFormat != HgObjectIdFormat::ProxyHash) ? nullptr
                                                           : writeBatch);
 
-    auto treeEntry = TreeEntry{proxyHash, entry.name, entry.type};
+    auto treeEntry = TreeEntry{proxyHash, entry.type};
     entries.emplace_back(std::move(entry.name), std::move(treeEntry));
   }
 

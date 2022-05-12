@@ -44,10 +44,8 @@ folly::SemiFuture<std::unique_ptr<TreeEntry>>
 LocalStoreCachedBackingStore::getTreeEntryForRootId(
     const RootId& rootId,
     TreeEntryType treeEntryType,
-    facebook::eden::PathComponentPiece pathComponentPiece,
     ObjectFetchContext& context) {
-  return backingStore_->getTreeEntryForRootId(
-      rootId, treeEntryType, pathComponentPiece, context);
+  return backingStore_->getTreeEntryForRootId(rootId, treeEntryType, context);
 }
 
 folly::SemiFuture<BackingStore::GetTreeRes>

@@ -154,8 +154,7 @@ class ObjectStore : public IObjectStore,
    */
   folly::Future<std::shared_ptr<TreeEntry>> getTreeEntryForRootId(
       const RootId& rootId,
-      facebook::eden::TreeEntryType treeEntryType,
-      facebook::eden::PathComponentPiece pathComponentPiece,
+      TreeEntryType treeEntryType,
       ObjectFetchContext& context) const;
 
   /**

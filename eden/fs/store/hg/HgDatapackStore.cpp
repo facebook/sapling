@@ -64,7 +64,7 @@ Tree::value_type fromRawTreeEntry(
       HgProxyHash::store(fullPath, hash, hgObjectIdFormat, writeBatch);
 
   auto treeEntry = TreeEntry{
-      proxyHash, name, fromRawTreeEntryType(entry.ttype), size, contentSha1};
+      proxyHash, fromRawTreeEntryType(entry.ttype), size, contentSha1};
   return {std::move(name), std::move(treeEntry)};
 }
 

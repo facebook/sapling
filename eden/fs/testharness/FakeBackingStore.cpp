@@ -55,12 +55,9 @@ folly::SemiFuture<std::unique_ptr<TreeEntry>>
 FakeBackingStore::getTreeEntryForRootId(
     const RootId& commitID,
     TreeEntryType treeEntryType,
-    facebook::eden::PathComponentPiece pathComponentPiece,
     ObjectFetchContext& /* context */) {
-  return folly::makeSemiFuture(std::make_unique<TreeEntry>(
-      ObjectId{commitID.value()},
-      PathComponent{pathComponentPiece},
-      treeEntryType));
+  return folly::makeSemiFuture(
+      std::make_unique<TreeEntry>(ObjectId{commitID.value()}, treeEntryType));
 }
 
 SemiFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
@@ -192,10 +189,7 @@ FakeBackingStore::TreeEntryData::TreeEntryData(
     FakeBlobType type)
     : entry{
           PathComponent{name},
-          TreeEntry{
-              blob.getHash(),
-              PathComponent{name},
-              treeEntryTypeFromBlobType(type)}} {}
+          TreeEntry{blob.getHash(), treeEntryTypeFromBlobType(type)}} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
@@ -203,30 +197,21 @@ FakeBackingStore::TreeEntryData::TreeEntryData(
     FakeBlobType type)
     : entry{
           PathComponent{name},
-          TreeEntry{
-              blob->get().getHash(),
-              PathComponent{name},
-              treeEntryTypeFromBlobType(type)}} {}
+          TreeEntry{blob->get().getHash(), treeEntryTypeFromBlobType(type)}} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const Tree& tree)
     : entry{
           PathComponent{name},
-          TreeEntry{
-              tree.getHash(),
-              PathComponent{name},
-              TreeEntryType::TREE}} {}
+          TreeEntry{tree.getHash(), TreeEntryType::TREE}} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const StoredTree* tree)
     : entry{
           PathComponent{name},
-          TreeEntry{
-              tree->get().getHash(),
-              PathComponent{name},
-              TreeEntryType::TREE}} {}
+          TreeEntry{tree->get().getHash(), TreeEntryType::TREE}} {}
 
 StoredTree* FakeBackingStore::putTree(
     const std::initializer_list<TreeEntryData>& entryArgs) {

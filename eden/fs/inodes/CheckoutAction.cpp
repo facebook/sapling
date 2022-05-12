@@ -27,8 +27,8 @@ namespace eden {
 
 CheckoutAction::CheckoutAction(
     CheckoutContext* ctx,
-    const TreeEntry* oldScmEntry,
-    const TreeEntry* newScmEntry,
+    const Tree::value_type* oldScmEntry,
+    const Tree::value_type* newScmEntry,
     InodePtr&& inode)
     : ctx_(ctx), inode_(std::move(inode)) {
   XDCHECK(oldScmEntry || newScmEntry);
@@ -43,8 +43,8 @@ CheckoutAction::CheckoutAction(
 CheckoutAction::CheckoutAction(
     InternalConstructor,
     CheckoutContext* ctx,
-    const TreeEntry* oldScmEntry,
-    const TreeEntry* newScmEntry,
+    const Tree::value_type* oldScmEntry,
+    const Tree::value_type* newScmEntry,
     folly::Future<InodePtr> inodeFuture)
     : ctx_(ctx), inodeFuture_(std::move(inodeFuture)) {
   XDCHECK(oldScmEntry || newScmEntry);
@@ -60,8 +60,8 @@ CheckoutAction::~CheckoutAction() {}
 
 PathComponentPiece CheckoutAction::getEntryName() const {
   XDCHECK(oldScmEntry_.has_value() || newScmEntry_.has_value());
-  return oldScmEntry_.has_value() ? oldScmEntry_.value().getName()
-                                  : newScmEntry_.value().getName();
+  return oldScmEntry_.has_value() ? oldScmEntry_.value().first
+                                  : newScmEntry_.value().first;
 }
 
 class CheckoutAction::LoadingRefcount {
@@ -119,8 +119,9 @@ Future<InvalidationRequired> CheckoutAction::run(
   try {
     // Load the Blob or Tree for the old TreeEntry.
     if (oldScmEntry_.has_value()) {
-      if (oldScmEntry_.value().isTree()) {
-        store->getTree(oldScmEntry_.value().getHash(), ctx->getFetchContext())
+      const auto& oldEntry = oldScmEntry_.value();
+      if (oldEntry.second.isTree()) {
+        store->getTree(oldEntry.second.getHash(), ctx->getFetchContext())
             .thenValue([rc = LoadingRefcount(this)](
                            std::shared_ptr<const Tree> oldTree) {
               rc->setOldTree(std::move(oldTree));
@@ -132,9 +133,7 @@ Future<InvalidationRequired> CheckoutAction::run(
                   rc->error("error getting old tree", ew);
                 });
       } else {
-        store
-            ->getBlobSha1(
-                oldScmEntry_.value().getHash(), ctx->getFetchContext())
+        store->getBlobSha1(oldEntry.second.getHash(), ctx->getFetchContext())
             .thenValue([rc = LoadingRefcount(this)](Hash20 oldBlobSha1) {
               rc->setOldBlob(std::move(oldBlobSha1));
             })
@@ -150,8 +149,8 @@ Future<InvalidationRequired> CheckoutAction::run(
     // If we have a new TreeEntry, load the corresponding Blob or Tree
     if (newScmEntry_.has_value()) {
       const auto& newEntry = newScmEntry_.value();
-      if (newEntry.isTree()) {
-        store->getTree(newEntry.getHash(), ctx->getFetchContext())
+      if (newEntry.second.isTree()) {
+        store->getTree(newEntry.second.getHash(), ctx->getFetchContext())
             .thenValue([rc = LoadingRefcount(this)](
                            std::shared_ptr<const Tree> newTree) {
               rc->setNewTree(std::move(newTree));
@@ -345,9 +344,9 @@ Future<bool> CheckoutAction::hasConflict() {
     // Check that the file contents are the same as the old source control entry
     return fileInode
         ->isSameAs(
-            oldScmEntry_.value().getHash(),
+            oldScmEntry_.value().second.getHash(),
             oldBlobSha1_.value(),
-            oldScmEntry_.value().getType(),
+            oldScmEntry_.value().second.getType(),
             ctx_->getFetchContext())
         .thenValue([this](bool isSame) {
           if (isSame) {
@@ -377,7 +376,7 @@ Future<bool> CheckoutAction::hasConflict() {
 
   auto localIsFile = inode_.asFilePtrOrNull() != nullptr;
   if (localIsFile) {
-    auto remoteIsFile = !newScmEntry_->isTree();
+    auto remoteIsFile = !newScmEntry_->second.isTree();
     if (remoteIsFile) {
       // This entry is a file that did not exist in the old source control tree,
       // but it exists as a tracked file in the new tree.

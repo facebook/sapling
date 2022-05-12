@@ -90,9 +90,7 @@ std::unique_ptr<Tree> deserializeGitTree(
 
     auto pathName = PathComponent{std::move(name)};
     entries.emplace_back(
-        pathName,
-        TreeEntry{
-            ObjectId(hashBytes), PathComponent{std::move(name)}, fileType});
+        std::move(pathName), TreeEntry{ObjectId(hashBytes), fileType});
   }
 
   return std::make_unique<Tree>(std::move(entries), hash);

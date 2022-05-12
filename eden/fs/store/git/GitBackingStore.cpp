@@ -163,7 +163,7 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const ObjectId& id) {
     }
     auto entryHash = oid2Hash(git_tree_entry_id(gitEntry));
     auto name = PathComponent{std::move(entryName)};
-    entries.emplace_back(name, TreeEntry{entryHash, name, fileType});
+    entries.emplace_back(std::move(name), TreeEntry{entryHash, fileType});
   }
   return make_unique<Tree>(std::move(entries), id);
 }

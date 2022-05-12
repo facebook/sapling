@@ -174,22 +174,22 @@ TEST_F(FakeBackingStoreTest, getTree) {
   EXPECT_EQ(rootHash, tree2->getHash());
   EXPECT_EQ(4, tree2->size());
 
-  auto barTreeEntry = tree2->find("bar"_pc)->second;
-  auto dir1TreeEntry = tree2->find("dir1"_pc)->second;
-  auto readonlyTreeEntry = tree2->find("readonly"_pc)->second;
-  auto zzzTreeEntry = tree2->find("zzz"_pc)->second;
-  EXPECT_EQ("bar"_pc, barTreeEntry.getName());
+  auto [barName, barTreeEntry] = *tree2->find("bar"_pc);
+  auto [dir1Name, dir1TreeEntry] = *tree2->find("dir1"_pc);
+  auto [readonlyName, readonlyTreeEntry] = *tree2->find("readonly"_pc);
+  auto [zzzName, zzzTreeEntry] = *tree2->find("zzz"_pc);
+  EXPECT_EQ("bar"_pc, barName);
   EXPECT_EQ(bar->get().getHash(), barTreeEntry.getHash());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, barTreeEntry.getType());
-  EXPECT_EQ("dir1"_pc, dir1TreeEntry.getName());
+  EXPECT_EQ("dir1"_pc, dir1Name);
   EXPECT_EQ(dir1->get().getHash(), dir1TreeEntry.getHash());
   EXPECT_EQ(TreeEntryType::TREE, dir1TreeEntry.getType());
-  EXPECT_EQ("readonly"_pc, readonlyTreeEntry.getName());
+  EXPECT_EQ("readonly"_pc, readonlyName);
   EXPECT_EQ(dir2->get().getHash(), readonlyTreeEntry.getHash());
   // TreeEntry objects only tracking the owner executable bit, so even though we
   // input the permissions as 0500 above this really ends up returning 0755
   EXPECT_EQ(TreeEntryType::TREE, readonlyTreeEntry.getType());
-  EXPECT_EQ("zzz"_pc, zzzTreeEntry.getName());
+  EXPECT_EQ("zzz"_pc, zzzName);
   EXPECT_EQ(foo->get().getHash(), zzzTreeEntry.getHash());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, zzzTreeEntry.getType());
 

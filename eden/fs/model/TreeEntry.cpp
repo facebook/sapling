@@ -62,7 +62,7 @@ std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode) {
   }
 }
 
-std::string TreeEntry::toLogString() const {
+std::string TreeEntry::toLogString(PathComponentPiece name) const {
   char fileTypeChar = '?';
   switch (type_) {
     case TreeEntryType::TREE:
@@ -80,7 +80,7 @@ std::string TreeEntry::toLogString() const {
   }
 
   return folly::to<std::string>(
-      "(", name_, ", ", hash_, ", ", fileTypeChar, ")");
+      "(", name, ", ", hash_, ", ", fileTypeChar, ")");
 }
 
 std::ostream& operator<<(std::ostream& os, TreeEntryType type) {
@@ -100,18 +100,11 @@ std::ostream& operator<<(std::ostream& os, TreeEntryType type) {
 
 bool operator==(const TreeEntry& entry1, const TreeEntry& entry2) {
   return (entry1.getHash() == entry2.getHash()) &&
-      (entry1.getType() == entry2.getType()) &&
-      (entry1.getName() == entry2.getName());
+      (entry1.getType() == entry2.getType());
 }
 
 bool operator!=(const TreeEntry& entry1, const TreeEntry& entry2) {
   return !(entry1 == entry2);
-}
-
-size_t TreeEntry::getIndirectSizeBytes() const {
-  // TODO: we should consider using a standard memory framework across
-  // eden for this type of thing. D17174143 is one such idea.
-  return estimateIndirectMemoryUsage(name_.value());
 }
 
 size_t TreeEntry::serializedSize(PathComponentPiece name) const {
@@ -125,7 +118,6 @@ void TreeEntry::serialize(PathComponentPiece name, Appender& appender) const {
   XCHECK_LE(hash.size(), std::numeric_limits<uint16_t>::max());
   appender.write<uint16_t>(folly::to_narrow(hash.size()));
   appender.push(hash);
-  XCHECK_EQ(name_, name);
   auto nameStringPiece = name.stringPiece();
   XCHECK_LE(nameStringPiece.size(), std::numeric_limits<uint16_t>::max());
   appender.write<uint16_t>(folly::to_narrow(nameStringPiece.size()));
@@ -221,7 +213,7 @@ std::optional<std::pair<PathComponent, TreeEntry>> TreeEntry::deserialize(
   }
 
   return std::pair{
-      name, TreeEntry{hash, name, (TreeEntryType)type, size, sha1}};
+      std::move(name), TreeEntry{hash, (TreeEntryType)type, size, sha1}};
 }
 
 } // namespace facebook::eden

@@ -144,14 +144,11 @@ Future<shared_ptr<const Tree>> ObjectStore::getRootTree(
 
 folly::Future<std::shared_ptr<TreeEntry>> ObjectStore::getTreeEntryForRootId(
     const RootId& rootId,
-    facebook::eden::TreeEntryType treeEntryType,
-    facebook::eden::PathComponentPiece pathComponentPiece,
+    TreeEntryType treeEntryType,
     ObjectFetchContext& context) const {
   XLOG(DBG3) << "getTreeEntryForRootId(" << rootId << ")";
 
-  return backingStore_
-      ->getTreeEntryForRootId(
-          rootId, treeEntryType, pathComponentPiece, context)
+  return backingStore_->getTreeEntryForRootId(rootId, treeEntryType, context)
       .via(executor_);
 }
 

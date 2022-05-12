@@ -39,7 +39,7 @@ TEST(Tree, testFind) {
   Tree::container entries;
   auto aFileName = PathComponent{"a_file"};
   entries.emplace_back(
-      aFileName, TreeEntry{testHash, aFileName, TreeEntryType::REGULAR_FILE});
+      aFileName, TreeEntry{testHash, TreeEntryType::REGULAR_FILE});
   Tree tree(std::move(entries), testHash);
 
   // Verify existent path.
@@ -76,8 +76,8 @@ TEST(Tree, testFind) {
 TEST(Tree, testSize) {
   std::string entryName{"file.txt"};
   auto entryType = TreeEntryType::REGULAR_FILE;
-  TreeEntry entry{testHash, PathComponent{entryName}, entryType};
-  auto entrySize = sizeof(entry) + entry.getIndirectSizeBytes();
+  TreeEntry entry{testHash, entryType};
+  auto entrySize = sizeof(entry);
 
   auto numEntries = 5;
 

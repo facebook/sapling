@@ -684,20 +684,18 @@ folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
       ? objectStore_->getRootTree(rootId, ctx->getFetchContext())
       : objectStore_
             ->getTreeEntryForRootId(
-                rootId,
-                toEdenTreeEntryType(objectType),
-                path.basename(),
-                ctx->getFetchContext())
-            .thenValue([](std::shared_ptr<TreeEntry> treeEntry) {
-              // Make up a fake ObjectId for this tree.
-              // WARNING: This is dangerous -- this ObjectId cannot be used to
-              // look up this synthesized tree from the BackingStore.
-              ObjectId fakeObjectId{};
-              Tree::container treeEntries;
-              treeEntries.emplace_back(treeEntry->getName(), *treeEntry);
-              return std::make_shared<Tree>(
-                  std::move(treeEntries), fakeObjectId);
-            });
+                rootId, toEdenTreeEntryType(objectType), ctx->getFetchContext())
+            .thenValue(
+                [name = path.basename()](std::shared_ptr<TreeEntry> treeEntry) {
+                  // Make up a fake ObjectId for this tree.
+                  // WARNING: This is dangerous -- this ObjectId cannot be used
+                  // to look up this synthesized tree from the BackingStore.
+                  ObjectId fakeObjectId{};
+                  Tree::container treeEntries;
+                  treeEntries.emplace_back(name, *treeEntry);
+                  return std::make_shared<Tree>(
+                      std::move(treeEntries), fakeObjectId);
+                });
 
   return collectSafe(getTargetTreeInodeFuture, getRootTreeFuture)
       .thenValue([ctx, setPathObjectIdTime, stopWatch, rootId](

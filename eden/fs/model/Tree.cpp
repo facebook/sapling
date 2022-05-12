@@ -30,8 +30,7 @@ size_t Tree::getSizeBytes() const {
       folly::goodMallocSize(sizeof(TreeEntry) * entries_.capacity());
 
   for (auto& entry : entries_) {
-    indirect_size += estimateIndirectMemoryUsage(entry.first.value()) +
-        entry.second.getIndirectSizeBytes();
+    indirect_size += estimateIndirectMemoryUsage(entry.first.value());
   }
   return internal_size + indirect_size;
 }

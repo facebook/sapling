@@ -34,7 +34,7 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   // Test getTree().
   Tree::container entries1;
   entries1.emplace_back(
-      aFilePath, TreeEntry{fileHash, aFilePath, TreeEntryType::REGULAR_FILE});
+      aFilePath, TreeEntry{fileHash, TreeEntryType::REGULAR_FILE});
   Tree tree1(std::move(entries1), tree1Hash);
   store.addTree(std::move(tree1));
   auto foundTree = store.getTree(tree1Hash).get();
@@ -52,7 +52,7 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   // Test getTreeForCommit().
   Tree::container entries2;
   entries2.emplace_back(
-      aFilePath, TreeEntry{fileHash, aFilePath, TreeEntryType::REGULAR_FILE});
+      aFilePath, TreeEntry{fileHash, TreeEntryType::REGULAR_FILE});
   Tree tree2(std::move(entries2), tree2Hash);
   store.setTreeForCommit(commHash, std::move(tree2));
   auto foundTreeForCommit = store.getRootTree(commHash).get();

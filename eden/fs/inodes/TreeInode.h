@@ -423,7 +423,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       InodePtr inode,
       std::shared_ptr<const Tree> oldTree,
       std::shared_ptr<const Tree> newTree,
-      const std::optional<TreeEntry>& newScmEntry);
+      const std::optional<Tree::value_type>& newScmEntry);
 
   /**
    * Returns a copy of this inode's metadata.
@@ -701,8 +701,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   std::unique_ptr<CheckoutAction> processCheckoutEntry(
       CheckoutContext* ctx,
       TreeInodeState& contents,
-      const TreeEntry* oldScmEntry,
-      const TreeEntry* newScmEntry,
+      const Tree::value_type* oldScmEntry,
+      const Tree::value_type* newScmEntry,
       std::vector<IncompleteInodeLoad>& pendingLoads,
       bool& wasDirectoryListModified);
   void saveOverlayPostCheckout(CheckoutContext* ctx, const Tree* tree);

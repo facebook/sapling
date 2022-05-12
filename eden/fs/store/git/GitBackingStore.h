@@ -55,7 +55,6 @@ class GitBackingStore final : public BackingStore {
   folly::SemiFuture<std::unique_ptr<TreeEntry>> getTreeEntryForRootId(
       const RootId& /* rootId */,
       TreeEntryType /* treeEntryType */,
-      facebook::eden::PathComponentPiece /* pathComponentPiece */,
       ObjectFetchContext& /* context */) override {
     throw std::domain_error("unimplemented");
   }

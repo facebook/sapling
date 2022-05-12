@@ -43,11 +43,11 @@ const auto entry2Name = PathComponent{"c"};
 const auto entry3Name = PathComponent{"d"};
 const auto entry4Name = PathComponent{"e"};
 
-const auto entry0 = TreeEntry{hash0, entry0Name, TreeEntryType::REGULAR_FILE};
-const auto entry1 = TreeEntry{hash1, entry1Name, TreeEntryType::REGULAR_FILE};
-const auto entry2 = TreeEntry{hash2, entry2Name, TreeEntryType::REGULAR_FILE};
-const auto entry3 = TreeEntry{hash3, entry3Name, TreeEntryType::REGULAR_FILE};
-const auto entry4 = TreeEntry{hash4, entry4Name, TreeEntryType::REGULAR_FILE};
+const auto entry0 = TreeEntry{hash0, TreeEntryType::REGULAR_FILE};
+const auto entry1 = TreeEntry{hash1, TreeEntryType::REGULAR_FILE};
+const auto entry2 = TreeEntry{hash2, TreeEntryType::REGULAR_FILE};
+const auto entry3 = TreeEntry{hash3, TreeEntryType::REGULAR_FILE};
+const auto entry4 = TreeEntry{hash4, TreeEntryType::REGULAR_FILE};
 
 const auto tree0 =
     std::make_shared<const Tree>(Tree::container{{entry0Name, entry0}}, hash5);
@@ -70,7 +70,7 @@ const auto tree4 = std::make_shared<const Tree>(
         {entry4Name, entry4}},
     hash9);
 
-const auto entrySize = sizeof(entry0) + entry0.getIndirectSizeBytes();
+const auto entrySize = sizeof(entry0);
 const auto smallTreeSize = tree0 -> getSizeBytes();
 const auto bigTreeSize = tree4 -> getSizeBytes();
 const auto cacheMaxSize = smallTreeSize * 3 + 1; // cache fits 3 small trees
@@ -106,7 +106,7 @@ TEST_F(TreeCacheTest, testAssumptions) {
 
   // we assume all the entries have the same size
   for (auto& entry : {entry0, entry1, entry2, entry3, entry4}) {
-    EXPECT_EQ(entrySize, sizeof(entry) + entry.getIndirectSizeBytes());
+    EXPECT_EQ(entrySize, sizeof(entry));
   }
 
   // we assume all the little trees are the same size
