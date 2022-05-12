@@ -21,13 +21,15 @@ class Repo:
     root: Path
     hg: hg
     url: str
+    name: str
 
-    def __init__(self, root: Path, url: str) -> None:
+    def __init__(self, root: Path, url: str, name: str) -> None:
         self.root = root
         self.gen = RepoGenerator()
         self.hg = hg(self.root)
         self.config = Config(self._join("hgrc"))
         self.url = url
+        self.name = name
 
     # pyre-ignore[3] - pyre doesn't like that this can return str and bytes
     def _open(self, path: str, mode: str = "r") -> IO[Any]:

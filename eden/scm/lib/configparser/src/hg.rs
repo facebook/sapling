@@ -489,7 +489,7 @@ fn read_set_repo_name(config: &mut ConfigSet, repo_path: &Path) -> crate::Result
         if name.is_empty() {
             tracing::warn!("repo name: no remotefilelog.reponame");
             let path: String = config.get_or_default("paths", "default")?;
-            name = get_url_basename(&path).unwrap_or_default();
+            name = repo_name_from_url(&path).unwrap_or_default();
             if name.is_empty() {
                 tracing::warn!("repo name: no path.default reponame: {}", &path);
             }
@@ -605,7 +605,7 @@ impl ConfigSet {
     }
 }
 
-fn get_url_basename(s: &str) -> Option<String> {
+pub fn repo_name_from_url(s: &str) -> Option<String> {
     // Use a base_url to support non-absolute urls.
     let base_url = Url::parse("file:///.").unwrap();
     let parse_opts = Url::options().base_url(Some(&base_url));

@@ -98,14 +98,32 @@ pub fn run(
         return Err(errors::FallbackToPython.into());
     }
 
-    // Rust clone only supports segmented changelog clone
-    // TODO: add binding for python streaming revlog download
     config.set(
         "paths",
         "default",
         Some(clone_opts.source.clone()),
         &"arg".into(),
     );
+
+    let reponame = match config.get_opt::<String>("remotefilelog", "reponame")? {
+        // This gets the reponame from the --configfile config.
+        Some(c) => c,
+        None => match configparser::hg::repo_name_from_url(&clone_opts.source) {
+            Some(name) => {
+                config.set(
+                    "remotefilelog",
+                    "reponame",
+                    Some(&name),
+                    &"clone source".into(),
+                );
+                name
+            }
+            None => return Err(errors::Abort("could not determine repo name".into()).into()),
+        },
+    };
+
+    // Rust clone only supports segmented changelog clone
+    // TODO: add binding for python streaming revlog download
     let edenapi = Builder::from_config(&config)?
         .correlator(Some(edenapi::DEFAULT_CORRELATOR.as_str()))
         .build()?;
@@ -122,15 +140,6 @@ pub fn run(
 
         return Err(errors::FallbackToPython.into());
     }
-
-    // This gets the reponame from the --configfile config.
-    // TODO: Parse the reponame from the source so the configfile isn't needed
-    let reponame = match config.get_opt::<String>("remotefilelog", "reponame")? {
-        Some(c) => c,
-        None => {
-            return Err(errors::Abort("remotefilelog.reponame config is not set".into()).into());
-        }
-    };
 
     let destination = match clone_opts.args.pop() {
         Some(dest) => PathBuf::from(dest),
@@ -151,7 +160,14 @@ pub fn run(
         );
     }
 
-    match clone_metadata(io, &clone_opts, global_opts, config, &destination) {
+    match clone_metadata(
+        io,
+        &clone_opts,
+        global_opts,
+        config,
+        &destination,
+        &reponame,
+    ) {
         Ok((mut repo, target)) => {
             if let Some(target) = target {
                 clone::init_working_copy(&mut repo, target, clone_opts.enable_profile.clone())?;
@@ -177,12 +193,23 @@ fn clone_metadata(
     global_opts: HgGlobalOpts,
     mut config: ConfigSet,
     destination: &Path,
+    reponame: &str,
 ) -> Result<(Repo, Option<HgId>)> {
     tracing::trace!("performing rust clone");
     tracing::debug!(target: "rust_clone", rust_clone="true");
 
-    let mut hgrc_content = global_opts
-        .configfile
+    let mut includes = global_opts.configfile.clone();
+    if let Some(mut repo_config) = config.get_opt::<PathBuf>("clone", "repo-specific-config-dir")? {
+        repo_config.push(format!("{}.rc", reponame));
+        if repo_config.exists() {
+            let repo_config = repo_config.into_os_string().into_string().unwrap();
+            if !includes.contains(&repo_config) {
+                includes.push(repo_config);
+            }
+        }
+    }
+
+    let mut hgrc_content = includes
         .into_iter()
         .map(|file| format!("%include {}\n", file))
         .collect::<String>();

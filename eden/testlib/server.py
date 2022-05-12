@@ -22,21 +22,25 @@ from .util import new_dir
 class Server:
     def _clone(self, repoid: int, url: str) -> Repo:
         root = new_dir()
+        repo_name = self.reponame(repoid)
         hg(root).clone(
-            url, root, noupdate=True, config=f"remotefilelog.reponame=repo{repoid}"
+            url, root, noupdate=True, config=f"remotefilelog.reponame={repo_name}"
         )
         with open(os.path.join(root, ".hg", "hgrc"), "a+") as f:
             f.write(
                 f"""
 [remotefilelog]
-reponame=repo{repoid}
+reponame={repo_name}
 """
             )
 
-        return Repo(root, url)
+        return Repo(root, url, repo_name)
 
     def cleanup(self) -> None:
         pass
+
+    def reponame(self, repoid: int = 0) -> str:
+        return f"repo{repoid}"
 
 
 class LocalServer(Server):
@@ -75,7 +79,7 @@ class MononokeServer(Server):
                 "cannot request repo %s when there are only %s repos"
                 % (repoid, self.repo_count)
             )
-        return self._clone(repoid, self.url_prefix + f"/repo{repoid}")
+        return self._clone(repoid, self.url_prefix + "/" + self.reponame(repoid))
 
     def cleanup(self) -> None:
         self.process.kill()
