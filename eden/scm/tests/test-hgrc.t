@@ -35,24 +35,13 @@ Issue1199: Can't use '%' in hgrc (eg url encoded username)
   $ newclientrepo "foo%bar"
   $ newclientrepo foobar test:foo%bar_server
   $ cat .hg/hgrc
-  # example repository config (see 'hg help config' for more info)
+  
   [paths]
-  default = test:foo%EF%BF%BDr_server
-  
-  # path aliases to other clones of this repo in URLs or filesystem paths
-  # (see 'hg help config.paths' for more info)
-  #
-  # default:pushurl = ssh://jdoe@example.net/hg/jdoes-fork
-  # my-fork         = ssh://jdoe@example.net/hg/jdoes-fork
-  # my-clone        = /home/jdoe/jdoes-clone
-  
-  [ui]
-  # name and email (local to this repository, optional), e.g.
-  # username = Jane Doe <jdoe@example.com>
+  default = test:foo%bar_server
   $ hg paths
   default = test:foo%EF%BF%BDr_server
   $ hg showconfig paths
-  paths.default=test:foo%EF%BF%BDr_server
+  paths.default=test:foo%bar_server
   $ hg showconfig bundle
   bundle.mainreporoot=$TESTTMP/foobar
   $ cd ..

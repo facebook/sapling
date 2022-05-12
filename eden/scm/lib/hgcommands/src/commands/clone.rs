@@ -6,6 +6,7 @@
  */
 
 use std::fs;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -16,6 +17,7 @@ use cliparser::define_flags;
 use edenapi::Builder;
 use repo::constants::HG_PATH;
 use repo::repo::Repo;
+use types::HgId;
 
 use super::ConfigSet;
 use super::Result;
@@ -50,7 +52,7 @@ define_flags! {
         git: bool,
 
         /// enable a sparse profile
-        enable_profile: String,
+        enable_profile: Option<String>,
 
         /// files to include in a sparse profile
         include: String,
@@ -69,21 +71,19 @@ define_flags! {
 pub fn run(
     mut clone_opts: CloneOpts,
     global_opts: HgGlobalOpts,
-    _io: &IO,
+    io: &IO,
     mut config: ConfigSet,
 ) -> Result<u8> {
     if !config.get_or_default::<bool>("clone", "use-rust")? {
         return Err(errors::FallbackToPython.into());
     }
 
-    if !clone_opts.noupdate
-        || !clone_opts.updaterev.is_empty()
+    if !clone_opts.updaterev.is_empty()
         || !clone_opts.rev.is_empty()
         || clone_opts.pull
         || clone_opts.stream
         || !clone_opts.shallow
         || clone_opts.git
-        || !clone_opts.enable_profile.is_empty()
         || !clone_opts.include.is_empty()
         || !clone_opts.exclude.is_empty()
     {
@@ -109,7 +109,6 @@ pub fn run(
         return Err(errors::FallbackToPython.into());
     }
 
-    let source = clone_opts.source;
     // This gets the reponame from the --configfile config.
     // TODO: Parse the reponame from the source so the configfile isn't needed
     let reponame = match config.get_opt::<String>("remotefilelog", "reponame")? {
@@ -138,25 +137,33 @@ pub fn run(
         );
     }
 
-    if let Err(e) = clone_metadata(global_opts, config, source, &destination) {
-        let removal_dir = if dest_preexists {
-            destination.join(HG_PATH)
-        } else {
-            destination
-        };
-        fs::remove_dir_all(removal_dir)?;
-        return Err(e);
+    match clone_metadata(io, &clone_opts, global_opts, config, &destination) {
+        Ok((mut repo, target)) => {
+            if let Some(target) = target {
+                clone::init_working_copy(&mut repo, target, clone_opts.enable_profile.clone())?;
+            }
+        }
+        Err(e) => {
+            let removal_dir = if dest_preexists {
+                destination.join(HG_PATH)
+            } else {
+                destination
+            };
+            fs::remove_dir_all(removal_dir)?;
+            return Err(e);
+        }
     }
 
     Ok(0)
 }
 
 fn clone_metadata(
+    io: &IO,
+    clone_opts: &CloneOpts,
     global_opts: HgGlobalOpts,
     mut config: ConfigSet,
-    source: String,
     destination: &Path,
-) -> Result<u8> {
+) -> Result<(Repo, Option<HgId>)> {
     tracing::trace!("performing rust clone");
     tracing::debug!(target: "rust_clone", rust_clone="true");
 
@@ -165,7 +172,7 @@ fn clone_metadata(
         .into_iter()
         .map(|file| format!("%include {}\n", file))
         .collect::<String>();
-    hgrc_content.push_str(format!("\n[paths]\ndefault = {}\n", source).as_str());
+    hgrc_content.push_str(format!("\n[paths]\ndefault = {}\n", clone_opts.source).as_str());
 
     let mut repo = Repo::init(&destination, &mut config, Some(hgrc_content))?;
 
@@ -178,7 +185,7 @@ fn clone_metadata(
     let commits = repo.dag_commits()?;
     let config = repo.config();
 
-    let bookmarks: Vec<String> = match config.get_opt("remotenames", "selectivepulldefault")? {
+    let bookmark_names: Vec<String> = match config.get_opt("remotenames", "selectivepulldefault")? {
         Some(bms) => bms,
         None => {
             return Err(
@@ -188,18 +195,32 @@ fn clone_metadata(
     };
 
     tracing::trace!("fetching lazy commit data and bookmarks");
-    exchange::clone(
+    let bookmark_ids = exchange::clone(
         edenapi,
         &mut metalog.write(),
         &mut commits.write(),
-        bookmarks,
+        bookmark_names.clone(),
     )?;
 
     ::fail::fail_point!("run::clone", |_| {
         Err(errors::Abort("Injected clone failure".to_string().into()).into())
     });
 
-    Ok(0)
+    if !clone_opts.noupdate {
+        if let Some(default_bm) = bookmark_names.first() {
+            if let Some(target) = bookmark_ids.get(default_bm) {
+                return Ok((repo, Some(target.clone())));
+            } else if !global_opts.quiet {
+                write!(
+                    io.error(),
+                    "Server has no '{}' bookmark - skipping checkout.\n",
+                    default_bm
+                )?;
+            }
+        }
+    }
+
+    Ok((repo, None))
 }
 
 pub fn name() -> &'static str {

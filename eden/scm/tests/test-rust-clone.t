@@ -30,15 +30,6 @@ test rust clone
 Test that nonsupported options fallback to python:
 
   $ cd $TESTTMP
-  $ hg clone test:e1 $TESTTMP/update-clone
-  fetching lazy changelog
-  populating main commit graph
-  tip commit: 9bc730a19041f9ec7cb33c626e811aa233efb18c
-  fetching selected remote bookmarks
-  updating to branch default
-  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-  $ cd $TESTTMP
   $ hg clone -U -r $D test:e1 $TESTTMP/rev-clone
   fetching lazy changelog
   populating main commit graph
@@ -47,12 +38,6 @@ Test that nonsupported options fallback to python:
 
   $ git init -q git-source
   $ hg clone --git "$TESTTMP/git-source" $TESTTMP/git-clone
-
-  $ hg clone -U --enable-profile test_profile test:e1 $TESTTMP/sparse-clone --config extensions.sparse=
-  fetching lazy changelog
-  populating main commit graph
-  tip commit: 9bc730a19041f9ec7cb33c626e811aa233efb18c
-  fetching selected remote bookmarks
 
 Test rust clone
   $ hg clone -U test:e1 $TESTTMP/rust-clone --config remotenames.selectivepulldefault='master, stable'
