@@ -13,13 +13,66 @@ use std::fs::OpenOptions;
 use std::fs::Permissions;
 use std::io;
 use std::io::Write;
+use std::ops::Add;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
+use std::thread::sleep;
+use std::time::Duration;
+use std::time::SystemTime;
 
+use configmodel::Config;
+use configmodel::ConfigExt;
 use fs2::FileExt;
 use util::lock::PathLock;
+
+/// lock loops until it can acquire the specified lock, subject to
+/// ui.timeout timeout. Errors other than lock contention are
+/// propagated immediately with no retries.
+pub fn lock(
+    config: &dyn Config,
+    dir: &Path,
+    name: &str,
+    contents: &[u8],
+) -> anyhow::Result<File, LockError> {
+    let now = SystemTime::now();
+
+    let deadline = now.add(Duration::from_secs_f64(
+        config.get_or_default("ui", "timeout")?,
+    ));
+
+    let warn_deadline = now.add(Duration::from_secs_f64(
+        config.get_or_default("ui", "timeout.warn")?,
+    ));
+
+    let backoff = Duration::from_secs_f64(config.get_or("devel", "lock_backoff", || 1.0)?);
+
+    loop {
+        match try_lock(dir, name, contents) {
+            Ok(f) => return Ok(f),
+            Err(err) => match err {
+                LockError::Contended(_) => {
+                    // TODO: add user friendly debugging similar to Python locks.
+
+                    let now = SystemTime::now();
+                    if now >= warn_deadline {
+                        tracing::warn!(name, "lock contended");
+                    } else {
+                        tracing::info!(name, "lock contended");
+                    };
+
+                    if now >= deadline {
+                        return Err(err);
+                    }
+
+                    sleep(backoff)
+                }
+                _ => return Err(err),
+            },
+        }
+    }
+}
 
 /// try_lock attempts to acquire an advisory file lock and write
 /// specified contents. Lock acquisition and content writing are
@@ -82,6 +135,8 @@ fn sanitize_lock_name(name: &str) -> String {
 #[derive(thiserror::Error, Debug)]
 pub enum LockError {
     #[error(transparent)]
+    ConfigError(#[from] configmodel::Error),
+    #[error(transparent)]
     Contended(#[from] LockContendedError),
     #[error(transparent)]
     Io(#[from] io::Error),
@@ -103,7 +158,9 @@ impl fmt::Display for LockContendedError {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
     use std::thread;
+    use std::thread::spawn;
 
     use anyhow::Result;
 
@@ -195,6 +252,33 @@ mod tests {
         for t in threads {
             t.join().unwrap();
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_lock_loop() -> Result<()> {
+        let tmp = tempfile::tempdir()?;
+
+        let mut cfg = BTreeMap::from([("ui.timeout", "0.001"), ("devel.lock_backoff", "0.001")]);
+
+        let first = lock(&cfg, tmp.path(), "foo", "contents".as_bytes())?;
+
+        assert!(matches!(
+            lock(&cfg, tmp.path(), "foo", "contents".as_bytes()),
+            Err(LockError::Contended(_))
+        ));
+
+        cfg.insert("ui.timeout", "60");
+
+        let dropper = spawn(move || {
+            sleep(Duration::from_millis(5));
+            drop(first);
+        });
+
+        assert!(lock(&cfg, tmp.path(), "foo", "contents".as_bytes()).is_ok());
+
+        dropper.join().unwrap();
 
         Ok(())
     }

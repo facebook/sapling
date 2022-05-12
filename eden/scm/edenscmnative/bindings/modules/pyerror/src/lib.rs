@@ -102,14 +102,19 @@ fn register_error_handlers() {
         }
 
         if let Some(e) = e.downcast_ref::<repolock::LockError>() {
-            return match e {
+            match e {
                 repolock::LockError::Contended(repolock::LockContendedError {
                     contents, ..
-                }) => Some(PyErr::new::<LockContendedError, _>(
-                    py,
-                    cpython_ext::Str::from(contents.clone()),
-                )),
-                repolock::LockError::Io(e) => Some(cpython_ext::error::translate_io_error(py, e)),
+                }) => {
+                    return Some(PyErr::new::<LockContendedError, _>(
+                        py,
+                        cpython_ext::Str::from(contents.clone()),
+                    ));
+                }
+                repolock::LockError::Io(e) => {
+                    return Some(cpython_ext::error::translate_io_error(py, e));
+                }
+                _ => {}
             };
         }
 
