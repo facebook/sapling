@@ -158,6 +158,7 @@ fn clone_metadata(
     destination: &Path,
 ) -> Result<u8> {
     tracing::trace!("performing rust clone");
+    tracing::debug!(target: "rust_clone", rust_clone="true");
 
     let mut hgrc_content = global_opts
         .configfile
