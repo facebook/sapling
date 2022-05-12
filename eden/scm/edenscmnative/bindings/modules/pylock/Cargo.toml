@@ -7,4 +7,4 @@ edition = "2018"
 cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.7", default-features = false }
 fs2 = "0.4"
-vfs = { path = "../../../../lib/vfs" }
+repolock = { path = "../../../../lib/repolock" }

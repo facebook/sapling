@@ -9,11 +9,9 @@ edition = "2021"
 anyhow = "1.0.56"
 crossbeam = "0.8"
 dashmap = { version = "4.0.2", features = ["rayon", "serde"] }
-fs2 = "0.4"
 fsinfo = { version = "0.1.0", path = "../fsinfo" }
 libc = "0.2.121"
 minibytes = { version = "0.1.0", path = "../minibytes" }
-thiserror = "1.0.30"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }

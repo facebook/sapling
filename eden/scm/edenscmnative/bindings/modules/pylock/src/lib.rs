@@ -27,8 +27,12 @@ py_class!(class pathlock |py| {
     data lock: Cell<Option<File>>;
 
     @classmethod def trylock(_cls, dir: PyPathBuf, name: String, contents: String) -> PyResult<pathlock> {
-        let vfs = vfs::VFS::new(dir.to_path_buf()).map_pyerr(py)?;
-        Self::create_instance(py, Cell::new(Some(vfs.try_lock(&name, contents.as_bytes()).map_pyerr(py)?)))
+        Self::create_instance(
+            py,
+            Cell::new(Some(
+                repolock::try_lock(dir.as_path(), &name, contents.as_bytes()).map_pyerr(py)?,
+            )),
+        )
     }
 
     def unlock(&self) -> PyResult<PyNone> {
