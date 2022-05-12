@@ -22,6 +22,9 @@ use std::str;
 use std::time::Duration;
 use structopt::StructOpt;
 
+#[cfg(feature = "fb")]
+mod facebook;
+
 // Take care with the full path to the utility so that we are not so easily
 // tricked into running something scary if we are setuid root.
 const DISKUTIL: &'static str = "/usr/sbin/diskutil";
@@ -516,6 +519,13 @@ fn mount_scratch_space_on(input_mount_point: &str) -> Result<()> {
         ])
         .output()?;
     if !output.status.success() {
+        // See [`crate::facebook::write_apfs_issue_marker`] for detail
+        #[cfg(feature = "fb")]
+        if let Some(code) = output.status.code() {
+            if code == 16896 {
+                crate::facebook::write_apfs_issue_marker();
+            }
+        }
         anyhow::bail!(
             "failed to execute mount_apfs /dev/{} {}: {:#?}",
             volume.device_identifier,
