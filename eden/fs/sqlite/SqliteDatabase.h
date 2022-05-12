@@ -72,6 +72,8 @@ class SqliteDatabase {
    */
   void transaction(const std::function<void(Connection&)>& func);
 
+  void checkpoint();
+
  private:
   struct StatementCache;
 

@@ -600,6 +600,9 @@ class EdenServer : private TakeoverHandler {
   // while.
   void refreshBackingStore();
 
+  // Tree overlay needs periodically run checkpoint to flush its journal file.
+  void manageOverlay();
+
   // Cancel all subscribers on all mounts so that we can tear
   // down the thrift server without blocking
   void shutdownSubscribers();
@@ -760,10 +763,10 @@ class EdenServer : private TakeoverHandler {
   PeriodicFnTask<&EdenServer::manageLocalStore> localStoreTask_{
       this,
       "local_store"};
-
   PeriodicFnTask<&EdenServer::refreshBackingStore> backingStoreTask_{
       this,
       "backing_store"};
+  PeriodicFnTask<&EdenServer::manageOverlay> overlayTask_{this, "overlay"};
 };
 } // namespace eden
 } // namespace facebook

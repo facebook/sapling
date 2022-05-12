@@ -18,6 +18,7 @@
 
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
+#include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -146,21 +147,33 @@ class IOverlay {
    * This is required in current SQLite implementation due to the lack of fsck.
    * We can remove this once we can reliable get inode number.
    */
-  virtual void updateUsedInodeNumber(uint64_t /* usedInodeNumber */) {}
+  virtual void updateUsedInodeNumber(uint64_t /* usedInodeNumber */) {
+    EDEN_BUG() << "UNIMPLEMENTED";
+  }
 
   virtual void addChild(
       InodeNumber /* parent */,
       PathComponentPiece /* name */,
-      overlay::OverlayEntry /* entry */) {}
+      overlay::OverlayEntry /* entry */) {
+    EDEN_BUG() << "UNIMPLEMENTED";
+  }
 
   virtual void removeChild(
       InodeNumber /* parent */,
-      PathComponentPiece /* childName */) {}
+      PathComponentPiece /* childName */) {
+    EDEN_BUG() << "UNIMPLEMENTED";
+  }
 
   virtual void renameChild(
       InodeNumber /* src */,
       InodeNumber /* dst */,
       PathComponentPiece /* srcName */,
-      PathComponentPiece /* destName */) {}
+      PathComponentPiece /* destName */) {
+    EDEN_BUG() << "UNIMPLEMENTED";
+  }
+
+  virtual void maintenance() {
+    EDEN_BUG() << "UNIMPLEMENTED";
+  }
 };
 } // namespace facebook::eden
