@@ -136,7 +136,7 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const ObjectId& id) {
     git_tree_free(gitTree);
   };
 
-  std::vector<TreeEntry> entries;
+  Tree::container entries;
   size_t numEntries = git_tree_entrycount(gitTree);
   for (size_t i = 0; i < numEntries; ++i) {
     auto gitEntry = git_tree_entry_byindex(gitTree, i);
@@ -162,7 +162,8 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const ObjectId& id) {
           id));
     }
     auto entryHash = oid2Hash(git_tree_entry_id(gitEntry));
-    entries.emplace_back(entryHash, PathComponent{entryName}, fileType);
+    auto name = PathComponent{std::move(entryName)};
+    entries.emplace_back(name, TreeEntry{entryHash, name, fileType});
   }
   return make_unique<Tree>(std::move(entries), id);
 }

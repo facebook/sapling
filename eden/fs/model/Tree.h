@@ -17,7 +17,13 @@ namespace facebook::eden {
 
 class Tree {
  public:
-  explicit Tree(std::vector<TreeEntry>&& entries, const ObjectId& hash)
+  using key_type = PathComponent;
+  using mapped_type = TreeEntry;
+  using value_type = std::pair<key_type, mapped_type>;
+  using container = std::vector<value_type>;
+  using const_iterator = container::const_iterator;
+
+  explicit Tree(container&& entries, const ObjectId& hash)
       : hash_(hash), entries_(std::move(entries)) {}
 
   const ObjectId& getHash() const {
@@ -30,35 +36,29 @@ class Tree {
    */
   size_t getSizeBytes() const;
 
-  const std::vector<TreeEntry>& getTreeEntries() const {
-    return entries_;
+  /**
+   * Find an entry in this Tree whose name match the passed in path.
+   */
+  const_iterator find(PathComponentPiece name) const;
+
+  const_iterator cbegin() const {
+    return entries_.cbegin();
   }
 
-  const TreeEntry* getEntryPtr(PathComponentPiece path) const {
-    auto iter = std::lower_bound(
-        entries_.cbegin(),
-        entries_.cend(),
-        path,
-        [](const TreeEntry& entry, PathComponentPiece piece) {
-          return entry.getName() < piece;
-        });
-    if (UNLIKELY(iter == entries_.cend() || iter->getName() != path)) {
-#ifdef _WIN32
-      // On Windows we need to do a case insensitive lookup for the file and
-      // directory names. For performance, we will do a case sensitive search
-      // first which should cover most of the cases and if not found then do a
-      // case sensitive search.
-      const auto& fileName = path.stringPiece();
-      for (const auto& entry : entries_) {
-        if (entry.getName().stringPiece().equals(
-                fileName, folly::AsciiCaseInsensitive())) {
-          return &entry;
-        }
-      }
-#endif
-      return nullptr;
-    }
-    return &*iter;
+  const_iterator begin() const {
+    return cbegin();
+  }
+
+  const_iterator cend() const {
+    return entries_.cend();
+  }
+
+  const_iterator end() const {
+    return cend();
+  }
+
+  size_t size() const {
+    return entries_.size();
   }
 
   /**
@@ -80,8 +80,10 @@ class Tree {
       folly::StringPiece data);
 
  private:
-  const ObjectId hash_;
-  const std::vector<TreeEntry> entries_;
+  friend bool operator==(const Tree& tree1, const Tree& tree2);
+
+  ObjectId hash_;
+  container entries_;
 
   static constexpr uint32_t V1_VERSION = 1u;
 };

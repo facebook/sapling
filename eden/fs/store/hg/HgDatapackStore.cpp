@@ -40,7 +40,7 @@ TreeEntryType fromRawTreeEntryType(RustTreeEntryType type) {
              << " loaded from data store";
 }
 
-TreeEntry fromRawTreeEntry(
+Tree::value_type fromRawTreeEntry(
     RustTreeEntry entry,
     RelativePathPiece path,
     HgObjectIdFormat hgObjectIdFormat,
@@ -63,12 +63,9 @@ TreeEntry fromRawTreeEntry(
   auto proxyHash =
       HgProxyHash::store(fullPath, hash, hgObjectIdFormat, writeBatch);
 
-  return TreeEntry{
-      proxyHash,
-      std::move(name),
-      fromRawTreeEntryType(entry.ttype),
-      size,
-      contentSha1};
+  auto treeEntry = TreeEntry{
+      proxyHash, name, fromRawTreeEntryType(entry.ttype), size, contentSha1};
+  return {std::move(name), std::move(treeEntry)};
 }
 
 std::unique_ptr<Tree> fromRawTree(
@@ -77,13 +74,13 @@ std::unique_ptr<Tree> fromRawTree(
     RelativePathPiece path,
     HgObjectIdFormat hgObjectIdFormat,
     LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch) {
-  std::vector<TreeEntry> entries;
+  Tree::container entries;
 
   for (uintptr_t i = 0; i < tree->length; i++) {
     try {
       auto entry = fromRawTreeEntry(
           tree->entries[i], path, hgObjectIdFormat, writeBatch);
-      entries.push_back(entry);
+      entries.push_back(std::move(entry));
     } catch (const PathComponentContainsDirectorySeparator& ex) {
       XLOG(WARN) << "Ignoring directory entry: " << ex.what();
     }

@@ -45,9 +45,10 @@ DirEntry makeDirEntry() {
   return DirEntry{S_IFREG | 0644, 1_ino, ObjectId{}};
 }
 
-TreeEntry makeTreeEntry(folly::StringPiece name) {
-  return TreeEntry{
-      ObjectId{}, PathComponent{name}, TreeEntryType::REGULAR_FILE};
+Tree::value_type makeTreeEntry(folly::StringPiece name) {
+  return {
+      PathComponent{name},
+      TreeEntry{ObjectId{}, PathComponent{name}, TreeEntryType::REGULAR_FILE}};
 }
 } // namespace
 

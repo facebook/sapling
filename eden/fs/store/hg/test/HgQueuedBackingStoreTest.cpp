@@ -101,19 +101,21 @@ TEST_F(HgQueuedBackingStoreTest, getBlob) {
           .via(&folly::QueuedImmediateExecutor::instance())
           .get(kTestTimeout);
 
-  for (auto& entry : tree->getTreeEntries()) {
-    if (entry.getName() == "foo.txt") {
+  for (auto& entry : *tree) {
+    if (entry.first == "foo.txt") {
       auto [blob, origin] =
           queuedStore
-              ->getBlob(entry.getHash(), ObjectFetchContext::getNullContext())
+              ->getBlob(
+                  entry.second.getHash(), ObjectFetchContext::getNullContext())
               .via(&folly::QueuedImmediateExecutor::instance())
               .get(kTestTimeout);
 
       EXPECT_EQ(blob->getContents().cloneAsValue().moveToFbString(), "foo\n");
-    } else if (entry.getName() == "bar.txt") {
+    } else if (entry.first == "bar.txt") {
       auto [blob, origin] =
           queuedStore
-              ->getBlob(entry.getHash(), ObjectFetchContext::getNullContext())
+              ->getBlob(
+                  entry.second.getHash(), ObjectFetchContext::getNullContext())
               .via(&folly::QueuedImmediateExecutor::instance())
               .get(kTestTimeout);
 

@@ -693,8 +693,10 @@ folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
               // WARNING: This is dangerous -- this ObjectId cannot be used to
               // look up this synthesized tree from the BackingStore.
               ObjectId fakeObjectId{};
+              Tree::container treeEntries;
+              treeEntries.emplace_back(treeEntry->getName(), *treeEntry);
               return std::make_shared<Tree>(
-                  std::vector<TreeEntry>{*treeEntry}, fakeObjectId);
+                  std::move(treeEntries), fakeObjectId);
             });
 
   return collectSafe(getTargetTreeInodeFuture, getRootTreeFuture)
@@ -1003,28 +1005,28 @@ class TreeLookupProcessor {
       std::shared_ptr<const Tree> tree) {
     using RetType = std::variant<std::shared_ptr<const Tree>, TreeEntry>;
     auto name = *iter_++;
-    auto* treeEntry = tree->getEntryPtr(name);
+    auto it = tree->find(name);
 
-    if (!treeEntry) {
+    if (it == tree->cend()) {
       return makeImmediateFuture<RetType>(
           std::system_error(ENOENT, std::generic_category()));
     }
 
     if (iter_ == iterRange_.end()) {
-      if (treeEntry->isTree()) {
-        return objectStore_->getTree(treeEntry->getHash(), context_)
+      if (it->second.isTree()) {
+        return objectStore_->getTree(it->second.getHash(), context_)
             .thenValue([](std::shared_ptr<const Tree> tree) -> RetType {
               return tree;
             });
       } else {
-        return ImmediateFuture{RetType{*treeEntry}};
+        return ImmediateFuture{RetType{it->second}};
       }
     } else {
-      if (!treeEntry->isTree()) {
+      if (!it->second.isTree()) {
         return makeImmediateFuture<RetType>(
             std::system_error(ENOTDIR, std::generic_category()));
       } else {
-        return objectStore_->getTree(treeEntry->getHash(), context_)
+        return objectStore_->getTree(it->second.getHash(), context_)
             .thenValue([this](std::shared_ptr<const Tree> tree) {
               return next(std::move(tree));
             });
@@ -1077,23 +1079,23 @@ class CanonicalizeProcessor {
 
   ImmediateFuture<RelativePath> next(std::shared_ptr<const Tree> tree) {
     auto name = *iter_++;
-    auto* treeEntry = tree->getEntryPtr(name);
+    auto it = tree->find(name);
 
-    if (!treeEntry) {
+    if (it == tree->cend()) {
       return makeImmediateFuture<RelativePath>(
           std::system_error(ENOENT, std::generic_category()));
     }
 
-    retPath_ = retPath_ + treeEntry->getName();
+    retPath_ = retPath_ + it->first;
 
     if (iter_ == iterRange_.end()) {
       return ImmediateFuture{retPath_};
     } else {
-      if (!treeEntry->isTree()) {
+      if (!it->second.isTree()) {
         return makeImmediateFuture<RelativePath>(
             std::system_error(ENOTDIR, std::generic_category()));
       } else {
-        return objectStore_->getTree(treeEntry->getHash(), context_)
+        return objectStore_->getTree(it->second.getHash(), context_)
             .thenValue([this](std::shared_ptr<const Tree> tree) {
               return next(std::move(tree));
             });

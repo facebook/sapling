@@ -68,45 +68,46 @@ TEST(GitTree, testDeserialize) {
       toBinaryHash("9ed5bbccd1b9b0077561d14c0130dc086ab27e04"));
 
   auto tree = deserializeGitTree(hash, StringPiece(gitTreeObject));
-  EXPECT_EQ(11, tree->getTreeEntries().size());
+  EXPECT_EQ(11, tree->size());
   EXPECT_EQ(treeHash, Hash20::sha1(StringPiece{gitTreeObject}).toString())
       << "SHA-1 of contents should match key";
 
   // Ordinary, non-executable file.
-  auto babelrc = *tree->getEntryPtr(".babelrc"_pc);
+  auto babelrc = *tree->find(".babelrc"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("3a8f8eb91101860fd8484154885838bf322964d0"),
-      babelrc.getHash());
-  EXPECT_EQ(".babelrc", babelrc.getName());
-  EXPECT_EQ(false, babelrc.isTree());
-  EXPECT_EQ(facebook::eden::TreeEntryType::REGULAR_FILE, babelrc.getType());
+      babelrc.second.getHash());
+  EXPECT_EQ(".babelrc", babelrc.first);
+  EXPECT_EQ(false, babelrc.second.isTree());
+  EXPECT_EQ(
+      facebook::eden::TreeEntryType::REGULAR_FILE, babelrc.second.getType());
 
   // Executable file.
-  auto nuclideStartServer = *tree->getEntryPtr("nuclide-start-server"_pc);
+  auto nuclideStartServer = *tree->find("nuclide-start-server"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("006babcf5734d028098961c6f4b6b6719656924b"),
-      nuclideStartServer.getHash());
-  EXPECT_EQ("nuclide-start-server", nuclideStartServer.getName());
-  EXPECT_EQ(false, nuclideStartServer.isTree());
+      nuclideStartServer.second.getHash());
+  EXPECT_EQ("nuclide-start-server", nuclideStartServer.first);
+  EXPECT_EQ(false, nuclideStartServer.second.isTree());
   // TODO: T66590035
 #ifndef _WIN32
   EXPECT_EQ(
       facebook::eden::TreeEntryType::EXECUTABLE_FILE,
-      nuclideStartServer.getType());
+      nuclideStartServer.second.getType());
 #endif
 
   // Directory.
-  auto lib = *tree->getEntryPtr("lib"_pc);
+  auto lib = *tree->find("lib"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("e95798e17f694c227b7a8441cc5c7dae50a187d0"),
-      lib.getHash());
-  EXPECT_EQ("lib", lib.getName());
-  EXPECT_EQ(true, lib.isTree());
-  EXPECT_EQ(facebook::eden::TreeEntryType::TREE, lib.getType());
+      lib.second.getHash());
+  EXPECT_EQ("lib", lib.first);
+  EXPECT_EQ(true, lib.second.isTree());
+  EXPECT_EQ(facebook::eden::TreeEntryType::TREE, lib.second.getType());
 
   // lab sorts before lib but is not present in the Tree, so ensure that
   // we don't get an entry back here
-  EXPECT_EQ(nullptr, tree->getEntryPtr("lab"_pc));
+  EXPECT_EQ(tree->end(), tree->find("lab"_pc));
 }
 
 TEST(GitTree, testDeserializeWithSymlink) {
@@ -135,21 +136,22 @@ TEST(GitTree, testDeserializeWithSymlink) {
       toBinaryHash("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"));
 
   auto tree = deserializeGitTree(hash, StringPiece(gitTreeObject));
-  EXPECT_EQ(5, tree->getTreeEntries().size());
+  EXPECT_EQ(5, tree->size());
   EXPECT_EQ(treeHash, Hash20::sha1(StringPiece{gitTreeObject}).toString())
       << "SHA-1 of contents should match key";
 
   // Ordinary, non-executable file.
-  auto contributing = *tree->getEntryPtr("contributing.md"_pc);
+  auto contributing = *tree->find("contributing.md"_pc);
   EXPECT_EQ(
       ObjectId::fromHex("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"),
-      contributing.getHash());
-  EXPECT_EQ("contributing.md", contributing.getName());
-  EXPECT_EQ(false, contributing.isTree());
+      contributing.second.getHash());
+  EXPECT_EQ("contributing.md", contributing.first);
+  EXPECT_EQ(false, contributing.second.isTree());
 
   // TODO: T66590035
 #ifndef _WIN32
-  EXPECT_EQ(facebook::eden::TreeEntryType::SYMLINK, contributing.getType());
+  EXPECT_EQ(
+      facebook::eden::TreeEntryType::SYMLINK, contributing.second.getType());
 #endif
 }
 
@@ -157,7 +159,7 @@ TEST(GitTree, deserializeEmpty) {
   // Test deserializing the empty tree
   auto data = StringPiece("tree 0\x00", 7);
   auto tree = deserializeGitTree(ObjectId::sha1(data), data);
-  EXPECT_EQ(0, tree->getTreeEntries().size());
+  EXPECT_EQ(0, tree->size());
 }
 
 TEST(GitTree, testBadDeserialize) {

@@ -626,13 +626,14 @@ static std::vector<std::string> computeEntryDifferences(
     const Tree& tree) {
   std::set<std::string> differences;
   for (const auto& entry : dir) {
-    if (!tree.getEntryPtr(entry.first)) {
+    auto it = tree.find(entry.first);
+    if (it == tree.cend()) {
       differences.insert("- " + entry.first.stringPiece().str());
     }
   }
-  for (const auto& entry : tree.getTreeEntries()) {
-    if (!dir.count(entry.getName())) {
-      differences.insert("+ " + entry.getName().stringPiece().str());
+  for (const auto& entry : tree) {
+    if (!dir.count(entry.first)) {
+      differences.insert("+ " + entry.first.stringPiece().str());
     }
   }
   return std::vector<std::string>{differences.begin(), differences.end()};
@@ -642,11 +643,12 @@ std::optional<std::vector<std::string>> findEntryDifferences(
     const DirContents& dir,
     const Tree& tree) {
   // Avoid allocations in the case where the tree and dir agree.
-  if (dir.size() != tree.getTreeEntries().size()) {
+  if (dir.size() != tree.size()) {
     return computeEntryDifferences(dir, tree);
   }
   for (const auto& entry : dir) {
-    if (!tree.getEntryPtr(entry.first)) {
+    auto it = tree.find(entry.first);
+    if (it == tree.cend()) {
       return computeEntryDifferences(dir, tree);
     }
   }
@@ -923,12 +925,12 @@ DirContents TreeInode::buildDirFromTree(
 
   DirContents dir(caseSensitive);
   // TODO: O(N^2)
-  for (const auto& treeEntry : tree->getTreeEntries()) {
+  for (const auto& treeEntry : *tree) {
     dir.emplace(
-        treeEntry.getName(),
-        modeFromTreeEntryType(treeEntry.getType()),
+        treeEntry.first,
+        modeFromTreeEntryType(treeEntry.second.getType()),
         overlay->allocateInodeNumber(),
-        treeEntry.getHash());
+        treeEntry.second.getHash());
   }
   return dir;
 }
@@ -2487,13 +2489,13 @@ Future<Unit> TreeInode::computeDiff(
     //
     // This code relies on the fact that the source control entries and our
     // inode entries are both sorted in the same order.
-    vector<TreeEntry> emptyEntries;
-    const auto& scEntries = tree ? tree->getTreeEntries() : emptyEntries;
+    Tree::container emptyEntries;
+    auto scEnd = tree ? tree->cend() : emptyEntries.cend();
+    auto scIter = tree ? tree->cbegin() : emptyEntries.cbegin();
     auto& inodeEntries = contents->entries;
-    size_t scIdx = 0;
     auto inodeIter = inodeEntries.begin();
     while (true) {
-      if (scIdx >= scEntries.size()) {
+      if (scIter == scEnd) {
         if (inodeIter == inodeEntries.end()) {
           // All Done
           break;
@@ -2504,26 +2506,22 @@ Future<Unit> TreeInode::computeDiff(
         ++inodeIter;
       } else if (inodeIter == inodeEntries.end()) {
         // This entry is present in the old tree but not the old one.
-        processRemoved(scEntries[scIdx]);
-        ++scIdx;
+        processRemoved(scIter->second);
+        ++scIter;
       } else {
         auto compare = comparePathComponent(
-            scEntries[scIdx].getName(),
-            inodeIter->first,
-            context->getCaseSensitive());
+            scIter->first, inodeIter->first, context->getCaseSensitive());
 
         if (compare == CompareResult::BEFORE) {
-          processRemoved(scEntries[scIdx]);
-          ++scIdx;
+          processRemoved(scIter->second);
+          ++scIter;
         } else if (compare == CompareResult::AFTER) {
           processUntracked(inodeIter->first, &inodeIter->second);
           ++inodeIter;
         } else {
-          const auto& scmEntry = scEntries[scIdx];
-          auto* inodeEntry = &inodeIter->second;
-          ++scIdx;
+          processBothPresent(scIter->second, &inodeIter->second);
+          ++scIter;
           ++inodeIter;
-          processBothPresent(scmEntry, inodeEntry);
         }
       }
     }
@@ -2746,16 +2744,16 @@ void TreeInode::computeCheckoutActions(
   // Note that we completely ignore entries in our current contents_ that don't
   // appear in either fromTree or toTree.  These are untracked in both the old
   // and new trees.
-  size_t oldIdx = 0;
-  size_t newIdx = 0;
-  vector<TreeEntry> emptyEntries;
-  const auto& oldEntries = fromTree ? fromTree->getTreeEntries() : emptyEntries;
-  const auto& newEntries = toTree ? toTree->getTreeEntries() : emptyEntries;
+  Tree::container emptyEntries;
+  auto oldIter = fromTree ? fromTree->cbegin() : emptyEntries.cbegin();
+  auto oldEnd = fromTree ? fromTree->cend() : emptyEntries.cend();
+  auto newIter = toTree ? toTree->cbegin() : emptyEntries.cbegin();
+  auto newEnd = toTree ? toTree->cend() : emptyEntries.cend();
   while (true) {
     unique_ptr<CheckoutAction> action;
 
-    if (oldIdx >= oldEntries.size()) {
-      if (newIdx >= newEntries.size()) {
+    if (oldIter == oldEnd) {
+      if (newIter == newEnd) {
         // All Done
         break;
       }
@@ -2765,54 +2763,54 @@ void TreeInode::computeCheckoutActions(
           ctx,
           *contents,
           nullptr,
-          &newEntries[newIdx],
+          &newIter->second,
           pendingLoads,
           wasDirectoryListModified);
-      ++newIdx;
-    } else if (newIdx >= newEntries.size()) {
+      ++newIter;
+    } else if (newIter == newEnd) {
       // This entry is present in the old tree but not the old one.
       action = processCheckoutEntry(
           ctx,
           *contents,
-          &oldEntries[oldIdx],
+          &oldIter->second,
           nullptr,
           pendingLoads,
           wasDirectoryListModified);
-      ++oldIdx;
+      ++oldIter;
     } else {
       auto compare = comparePathComponent(
-          oldEntries[oldIdx].getName(),
-          newEntries[newIdx].getName(),
+          oldIter->first,
+          newIter->first,
           getMount()->getCheckoutConfig()->getCaseSensitive());
 
       if (compare == CompareResult::BEFORE) {
         action = processCheckoutEntry(
             ctx,
             *contents,
-            &oldEntries[oldIdx],
+            &oldIter->second,
             nullptr,
             pendingLoads,
             wasDirectoryListModified);
-        ++oldIdx;
+        ++oldIter;
       } else if (compare == CompareResult::AFTER) {
         action = processCheckoutEntry(
             ctx,
             *contents,
             nullptr,
-            &newEntries[newIdx],
+            &newIter->second,
             pendingLoads,
             wasDirectoryListModified);
-        ++newIdx;
+        ++newIter;
       } else {
         action = processCheckoutEntry(
             ctx,
             *contents,
-            &oldEntries[oldIdx],
-            &newEntries[newIdx],
+            &oldIter->second,
+            &newIter->second,
             pendingLoads,
             wasDirectoryListModified);
-        ++oldIdx;
-        ++newIdx;
+        ++oldIter;
+        ++newIter;
       }
     }
 
@@ -3349,18 +3347,17 @@ void TreeInode::saveOverlayPostCheckout(
         return std::nullopt;
       }
 
-      const auto& scmEntries = tree->getTreeEntries();
       // If we have a different number of entries we must be different from
       // the Tree, and therefore must be materialized.
-      if (scmEntries.size() != contents->entries.size()) {
+      if (tree->size() != contents->entries.size()) {
         return std::nullopt;
       }
 
       // This code relies on the fact that our contents->entries PathMap sorts
       // paths in the same order as Tree's entry list.
       auto inodeIter = contents->entries.begin();
-      auto scmIter = scmEntries.begin();
-      for (; scmIter != scmEntries.end(); ++inodeIter, ++scmIter) {
+      auto scmIter = tree->begin();
+      for (; scmIter != tree->end(); ++inodeIter, ++scmIter) {
         // If any of our children are materialized, we need to be materialized
         // too to record the fact that we have materialized children.
         //
@@ -3377,7 +3374,7 @@ void TreeInode::saveOverlayPostCheckout(
         // If the child is not materialized, it is the same as some source
         // control object.  However, if it isn't the same as the object in our
         // Tree, we have to materialize ourself.
-        if (inodeIter->second.getHash() != scmIter->getHash()) {
+        if (inodeIter->second.getHash() != scmIter->second.getHash()) {
           return std::nullopt;
         }
       }

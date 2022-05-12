@@ -2032,12 +2032,14 @@ void EdenServiceHandler::debugGetScmTree(
         ENOENT, EdenErrorType::POSIX_ERROR, "no tree found for id ", id);
   }
 
-  for (const auto& entry : tree->getTreeEntries()) {
+  for (const auto& entry : *tree) {
+    const auto& [name, treeEntry] = entry;
     entries.emplace_back();
     auto& out = entries.back();
-    out.name_ref() = entry.getName().stringPiece().str();
-    out.mode_ref() = modeFromTreeEntryType(entry.getType());
-    out.id_ref() = edenMount->getObjectStore()->renderObjectId(entry.getHash());
+    out.name_ref() = name.stringPiece().str();
+    out.mode_ref() = modeFromTreeEntryType(treeEntry.getType());
+    out.id_ref() =
+        edenMount->getObjectStore()->renderObjectId(treeEntry.getHash());
   }
 }
 

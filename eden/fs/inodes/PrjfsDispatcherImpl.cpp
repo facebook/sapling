@@ -78,19 +78,18 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
                      std::variant<std::shared_ptr<const Tree>, TreeEntry>
                          treeOrTreeEntry) mutable {
         auto& tree = std::get<std::shared_ptr<const Tree>>(treeOrTreeEntry);
-        auto& treeEntries = tree->getTreeEntries();
 
         std::vector<PrjfsDirEntry> ret;
-        ret.reserve(treeEntries.size() + isRoot);
-        for (const auto& treeEntry : treeEntries) {
-          if (treeEntry.isTree()) {
+        ret.reserve(tree->size() + isRoot);
+        for (const auto& treeEntry : *tree) {
+          if (treeEntry.second.isTree()) {
             ret.emplace_back(
-                treeEntry.getName(), true, ImmediateFuture<uint64_t>(0));
+                treeEntry.first, true, ImmediateFuture<uint64_t>(0));
           } else {
             auto sizeFut =
-                objectStore->getBlobSize(treeEntry.getHash(), *context)
+                objectStore->getBlobSize(treeEntry.second.getHash(), *context)
                     .ensure([context]() {});
-            ret.emplace_back(treeEntry.getName(), false, std::move(sizeFut));
+            ret.emplace_back(treeEntry.first, false, std::move(sizeFut));
           }
         }
 

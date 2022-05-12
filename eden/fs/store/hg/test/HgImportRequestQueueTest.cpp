@@ -237,7 +237,7 @@ TEST_F(HgImportRequestQueueTest, mixedPriority) {
     folly::Try<std::unique_ptr<Tree>> tree = folly::makeTryWith(
         [hash = dequeuedRequest->getRequest<HgImportRequest::TreeImport>()
                     ->hash]() {
-          return std::make_unique<Tree>(std::vector<TreeEntry>{}, hash);
+          return std::make_unique<Tree>(Tree::container{}, hash);
         });
     queue.markImportAsFinished<Tree>(
         dequeuedRequest->getRequest<HgImportRequest::TreeImport>()->hash, tree);
@@ -299,7 +299,7 @@ TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
     folly::Try<std::unique_ptr<Tree>> tree = folly::makeTryWith(
         [hash = dequeuedRequest->getRequest<HgImportRequest::TreeImport>()
                     ->hash]() {
-          return std::make_unique<Tree>(std::vector<TreeEntry>{}, hash);
+          return std::make_unique<Tree>(Tree::container{}, hash);
         });
     queue.markImportAsFinished<Tree>(
         dequeuedRequest->getRequest<HgImportRequest::TreeImport>()->hash, tree);

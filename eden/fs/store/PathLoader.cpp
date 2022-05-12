@@ -31,8 +31,8 @@ folly::Future<std::shared_ptr<const Tree>> resolveTree(
     return std::move(root);
   }
 
-  auto* child = root->getEntryPtr(ctx->components[index]);
-  if (!child) {
+  auto child = root->find(ctx->components[index]);
+  if (child == root->end()) {
     throw newEdenError(
         ENOENT,
         EdenErrorType::POSIX_ERROR,
@@ -40,7 +40,7 @@ folly::Future<std::shared_ptr<const Tree>> resolveTree(
         ctx->components[index]);
   }
 
-  if (!child->isTree()) {
+  if (!child->second.isTree()) {
     throw newEdenError(
         ENOTDIR,
         EdenErrorType::POSIX_ERROR,
@@ -48,7 +48,7 @@ folly::Future<std::shared_ptr<const Tree>> resolveTree(
         ctx->components[index]);
   }
 
-  return objectStore.getTree(child->getHash(), fetchContext)
+  return objectStore.getTree(child->second.getHash(), fetchContext)
       .semi()
       .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([ctx = std::move(ctx), &objectStore, &fetchContext, index](

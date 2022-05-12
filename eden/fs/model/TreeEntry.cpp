@@ -114,21 +114,22 @@ size_t TreeEntry::getIndirectSizeBytes() const {
   return estimateIndirectMemoryUsage(name_.value());
 }
 
-size_t TreeEntry::serializedSize() const {
+size_t TreeEntry::serializedSize(PathComponentPiece name) const {
   return sizeof(uint8_t) + sizeof(uint16_t) + hash_.size() + sizeof(uint16_t) +
-      name_.stringPiece().size() + sizeof(uint64_t) + Hash20::RAW_SIZE;
+      name.stringPiece().size() + sizeof(uint64_t) + Hash20::RAW_SIZE;
 }
 
-void TreeEntry::serialize(Appender& appender) const {
+void TreeEntry::serialize(PathComponentPiece name, Appender& appender) const {
   appender.write<uint8_t>(static_cast<uint8_t>(type_));
   auto hash = hash_.getBytes();
   XCHECK_LE(hash.size(), std::numeric_limits<uint16_t>::max());
   appender.write<uint16_t>(folly::to_narrow(hash.size()));
   appender.push(hash);
-  auto name = name_.stringPiece();
-  XCHECK_LE(name.size(), std::numeric_limits<uint16_t>::max());
-  appender.write<uint16_t>(folly::to_narrow(name.size()));
-  appender.push(name);
+  XCHECK_EQ(name_, name);
+  auto nameStringPiece = name.stringPiece();
+  XCHECK_LE(nameStringPiece.size(), std::numeric_limits<uint16_t>::max());
+  appender.write<uint16_t>(folly::to_narrow(nameStringPiece.size()));
+  appender.push(nameStringPiece);
   if (size_) {
     appender.write<uint64_t>(*size_);
   } else {
@@ -141,7 +142,8 @@ void TreeEntry::serialize(Appender& appender) const {
   }
 }
 
-std::optional<TreeEntry> TreeEntry::deserialize(folly::StringPiece& data) {
+std::optional<std::pair<PathComponent, TreeEntry>> TreeEntry::deserialize(
+    folly::StringPiece& data) {
   uint8_t type;
   if (data.size() < sizeof(uint8_t)) {
     XLOG(ERR) << "Can not read tree entry type, bytes remaining "
@@ -218,7 +220,8 @@ std::optional<TreeEntry> TreeEntry::deserialize(folly::StringPiece& data) {
     sha1 = sha1_raw;
   }
 
-  return TreeEntry{hash, name, (TreeEntryType)type, size, sha1};
+  return std::pair{
+      name, TreeEntry{hash, name, (TreeEntryType)type, size, sha1}};
 }
 
 } // namespace facebook::eden

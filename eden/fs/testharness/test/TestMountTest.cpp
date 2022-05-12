@@ -22,8 +22,7 @@ TEST(TestMount, createEmptyMount) {
   FakeTreeBuilder builder;
   TestMount testMount{builder};
   auto rootTree = testMount.getRootTree();
-  EXPECT_EQ(0, rootTree->getTreeEntries().size())
-      << "Initially, the tree should be empty.";
+  EXPECT_EQ(0, rootTree->size()) << "Initially, the tree should be empty.";
 }
 
 TEST(TestMount, createSimpleTestMount) {
@@ -59,7 +58,7 @@ TEST(TestMount, createSimpleTestMount) {
   }
 
   auto rootTree = testMount.getRootTree();
-  EXPECT_EQ(3, rootTree->getTreeEntries().size())
+  EXPECT_EQ(3, rootTree->size())
       << "Root Tree object should have 3 entries: path1, path2, path3";
 }
 
@@ -78,8 +77,7 @@ TEST(TestMount, addFileAfterMountIsCreated) {
   }
 
   auto rootTree = testMount.getRootTree();
-  EXPECT_EQ(1, rootTree->getTreeEntries().size())
-      << "New entry is not in the Tree, though.";
+  EXPECT_EQ(1, rootTree->size()) << "New entry is not in the Tree, though.";
 }
 
 TEST(TestMount, overwriteFile) {

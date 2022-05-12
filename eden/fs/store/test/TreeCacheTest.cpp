@@ -37,43 +37,37 @@ const auto hash8 =
 const auto hash9 =
     ObjectId::fromHex("0000000000000000000000000000000000000009");
 
-const auto entry0 =
-    TreeEntry{hash0, PathComponent{"a"}, TreeEntryType::REGULAR_FILE};
-const auto entry1 =
-    TreeEntry{hash1, PathComponent{"b"}, TreeEntryType::REGULAR_FILE};
-const auto entry2 =
-    TreeEntry{hash2, PathComponent{"c"}, TreeEntryType::REGULAR_FILE};
-const auto entry3 =
-    TreeEntry{hash3, PathComponent{"d"}, TreeEntryType::REGULAR_FILE};
-const auto entry4 =
-    TreeEntry{hash4, PathComponent{"e"}, TreeEntryType::REGULAR_FILE};
+const auto entry0Name = PathComponent{"a"};
+const auto entry1Name = PathComponent{"b"};
+const auto entry2Name = PathComponent{"c"};
+const auto entry3Name = PathComponent{"d"};
+const auto entry4Name = PathComponent{"e"};
 
-const auto tree0 = std::make_shared<const Tree>(
-    std::vector<TreeEntry>{
-        entry0,
-    },
-    hash5);
+const auto entry0 = TreeEntry{hash0, entry0Name, TreeEntryType::REGULAR_FILE};
+const auto entry1 = TreeEntry{hash1, entry1Name, TreeEntryType::REGULAR_FILE};
+const auto entry2 = TreeEntry{hash2, entry2Name, TreeEntryType::REGULAR_FILE};
+const auto entry3 = TreeEntry{hash3, entry3Name, TreeEntryType::REGULAR_FILE};
+const auto entry4 = TreeEntry{hash4, entry4Name, TreeEntryType::REGULAR_FILE};
 
-const auto tree1 = std::make_shared<const Tree>(
-    std::vector<TreeEntry>{
-        entry1,
-    },
-    hash6);
+const auto tree0 =
+    std::make_shared<const Tree>(Tree::container{{entry0Name, entry0}}, hash5);
 
-const auto tree2 = std::make_shared<const Tree>(
-    std::vector<TreeEntry>{
-        entry2,
-    },
-    hash7);
+const auto tree1 =
+    std::make_shared<const Tree>(Tree::container{{entry1Name, entry1}}, hash6);
 
-const auto tree3 = std::make_shared<const Tree>(
-    std::vector<TreeEntry>{
-        entry3,
-    },
-    hash8);
+const auto tree2 =
+    std::make_shared<const Tree>(Tree::container{{entry2Name, entry2}}, hash7);
+
+const auto tree3 =
+    std::make_shared<const Tree>(Tree::container{{entry3Name, entry3}}, hash8);
 
 const auto tree4 = std::make_shared<const Tree>(
-    std::vector<TreeEntry>{entry0, entry1, entry2, entry3, entry4},
+    Tree::container{
+        {entry0Name, entry0},
+        {entry1Name, entry1},
+        {entry2Name, entry2},
+        {entry3Name, entry3},
+        {entry4Name, entry4}},
     hash9);
 
 const auto entrySize = sizeof(entry0) + entry0.getIndirectSizeBytes();

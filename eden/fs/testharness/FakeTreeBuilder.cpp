@@ -118,7 +118,7 @@ void FakeTreeBuilder::setReady(RelativePathPiece path) {
   }
 
   auto* parent = getStoredTree(path.dirname());
-  const auto& entry = *parent->get().getEntryPtr(path.basename());
+  const auto& entry = parent->get().find(path.basename())->second;
   if (entry.isTree()) {
     store_->getStoredTree(entry.getHash())->setReady();
   } else {
@@ -138,12 +138,12 @@ void FakeTreeBuilder::setAllReadyUnderTree(RelativePathPiece path) {
 
 void FakeTreeBuilder::setAllReadyUnderTree(StoredTree* tree) {
   tree->setReady();
-  for (const auto& entry : tree->get().getTreeEntries()) {
-    if (entry.isTree()) {
-      auto* child = store_->getStoredTree(entry.getHash());
+  for (const auto& entry : tree->get()) {
+    if (entry.second.isTree()) {
+      auto* child = store_->getStoredTree(entry.second.getHash());
       setAllReadyUnderTree(child);
     } else {
-      auto* child = store_->getStoredBlob(entry.getHash());
+      auto* child = store_->getStoredBlob(entry.second.getHash());
       child->setReady();
     }
   }
@@ -160,7 +160,7 @@ void FakeTreeBuilder::triggerError(
   }
 
   auto* parent = getStoredTree(path.dirname());
-  const auto& entry = *parent->get().getEntryPtr(path.basename());
+  const auto& entry = parent->get().find(path.basename())->second;
   if (entry.isTree()) {
     store_->getStoredTree(entry.getHash())->triggerError(std::move(ew));
   } else {
@@ -234,7 +234,7 @@ StoredTree* FakeTreeBuilder::getStoredTree(RelativePathPiece path) {
 
   StoredTree* current = finalizedRoot_;
   for (auto name : path.components()) {
-    const auto& entry = *current->get().getEntryPtr(name);
+    const auto& entry = current->get().find(name)->second;
     if (!entry.isTree()) {
       throw std::runtime_error(folly::to<string>(
           "tried to look up stored tree ",
@@ -252,7 +252,7 @@ StoredTree* FakeTreeBuilder::getStoredTree(RelativePathPiece path) {
 
 StoredBlob* FakeTreeBuilder::getStoredBlob(RelativePathPiece path) {
   auto* parent = getStoredTree(path.dirname());
-  const auto& entry = *parent->get().getEntryPtr(path.basename());
+  const auto& entry = parent->get().find(path.basename())->second;
   if (entry.isTree()) {
     throw std::runtime_error(folly::to<string>(
         "tried to look up stored blob at ",
@@ -284,7 +284,7 @@ StoredTree* FakeTreeBuilder::EntryInfo::finalizeTree(
     bool setReady) const {
   XCHECK(type == TreeEntryType::TREE);
 
-  std::vector<TreeEntry> treeEntries;
+  Tree::container treeEntries;
   for (const auto& e : *entries) {
     const auto& entryInfo = e.second;
     ObjectId hash;
@@ -295,7 +295,7 @@ StoredTree* FakeTreeBuilder::EntryInfo::finalizeTree(
       auto* storedBlob = entryInfo.finalizeBlob(builder, setReady);
       hash = storedBlob->get().getHash();
     }
-    treeEntries.emplace_back(hash, e.first, entryInfo.type);
+    treeEntries.emplace_back(e.first, TreeEntry{hash, e.first, entryInfo.type});
   }
 
   auto* storedTree = builder->store_->maybePutTree(treeEntries).first;

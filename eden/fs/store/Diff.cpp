@@ -110,13 +110,11 @@ FOLLY_NODISCARD Future<Unit> computeTreeDiff(
 
   // Walk through the entries in both trees.
   // This relies on the fact that the entry list in each tree is always sorted.
-  const auto& scmEntries = scmTree.getTreeEntries();
-  const auto& wdEntries = wdTree.getTreeEntries();
-  size_t scmIdx = 0;
-  size_t wdIdx = 0;
+  auto scmEntries = scmTree.cbegin();
+  auto wdEntries = wdTree.cbegin();
   while (true) {
-    if (scmIdx >= scmEntries.size()) {
-      if (wdIdx >= wdEntries.size()) {
+    if (scmEntries == scmTree.cend()) {
+      if (wdEntries == wdTree.cend()) {
         // All Done
         break;
       }
@@ -125,44 +123,42 @@ FOLLY_NODISCARD Future<Unit> computeTreeDiff(
           context,
           childFutures,
           currentPath,
-          wdEntries[wdIdx],
+          wdEntries->second,
           ignore.get(),
           isIgnored);
-      ++wdIdx;
-    } else if (wdIdx >= wdEntries.size()) {
+      ++wdEntries;
+    } else if (wdEntries == wdTree.cend()) {
       // This entry is present in scmTree but not wdTree
       processRemovedSide(
-          context, childFutures, currentPath, scmEntries[scmIdx]);
-      ++scmIdx;
+          context, childFutures, currentPath, scmEntries->second);
+      ++scmEntries;
     } else {
       auto compare = comparePathComponent(
-          scmEntries[scmIdx].getName(),
-          wdEntries[wdIdx].getName(),
-          context->getCaseSensitive());
+          scmEntries->first, wdEntries->first, context->getCaseSensitive());
       if (compare == CompareResult::BEFORE) {
         processRemovedSide(
-            context, childFutures, currentPath, scmEntries[scmIdx]);
-        ++scmIdx;
+            context, childFutures, currentPath, scmEntries->second);
+        ++scmEntries;
       } else if (compare == CompareResult::AFTER) {
         processAddedSide(
             context,
             childFutures,
             currentPath,
-            wdEntries[wdIdx],
+            wdEntries->second,
             ignore.get(),
             isIgnored);
-        ++wdIdx;
+        ++wdEntries;
       } else {
         processBothPresent(
             context,
             childFutures,
             currentPath,
-            scmEntries[scmIdx],
-            wdEntries[wdIdx],
+            scmEntries->second,
+            wdEntries->second,
             ignore.get(),
             isIgnored);
-        ++scmIdx;
-        ++wdIdx;
+        ++scmEntries;
+        ++wdEntries;
       }
     }
   }
@@ -243,10 +239,10 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
   }
 
   // If this directory has a .gitignore file, load it first.
-  const auto* gitIgnoreEntry = wdTree.getEntryPtr(kIgnoreFilename);
-  if (gitIgnoreEntry && !gitIgnoreEntry->isTree()) {
+  const auto it = wdTree.find(kIgnoreFilename);
+  if (it != wdTree.cend() && !it->second.isTree()) {
     return loadGitIgnoreThenDiffTrees(
-        *gitIgnoreEntry,
+        it->second,
         context,
         currentPath,
         scmTree,
@@ -271,12 +267,12 @@ FOLLY_NODISCARD Future<Unit> processAddedChildren(
     std::unique_ptr<GitIgnoreStack> ignore,
     bool isIgnored) {
   ChildFutures childFutures;
-  for (const auto& childEntry : wdTree.getTreeEntries()) {
+  for (const auto& childEntry : wdTree) {
     processAddedSide(
         context,
         childFutures,
         currentPath,
-        childEntry,
+        childEntry.second,
         ignore.get(),
         isIgnored);
   }
@@ -356,10 +352,10 @@ FOLLY_NODISCARD Future<Unit> diffAddedTree(
   }
 
   // If this directory has a .gitignore file, load it first.
-  const auto* gitIgnoreEntry = wdTree.getEntryPtr(kIgnoreFilename);
-  if (gitIgnoreEntry && !gitIgnoreEntry->isTree()) {
+  const auto it = wdTree.find(kIgnoreFilename);
+  if (it != wdTree.cend() && !it->second.isTree()) {
     return loadGitIgnoreThenProcessAddedChildren(
-        *gitIgnoreEntry, context, currentPath, wdTree, parentIgnore, isIgnored);
+        it->second, context, currentPath, wdTree, parentIgnore, isIgnored);
   }
 
   return processAddedChildren(
@@ -383,8 +379,8 @@ FOLLY_NODISCARD Future<Unit> diffRemovedTree(
     return makeFuture();
   }
   ChildFutures childFutures;
-  for (const auto& childEntry : scmTree.getTreeEntries()) {
-    processRemovedSide(context, childFutures, currentPath, childEntry);
+  for (const auto& childEntry : scmTree) {
+    processRemovedSide(context, childFutures, currentPath, childEntry.second);
   }
   return waitOnResults(context, std::move(childFutures));
 }

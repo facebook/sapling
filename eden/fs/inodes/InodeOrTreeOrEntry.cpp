@@ -242,8 +242,8 @@ ImmediateFuture<InodeOrTreeOrEntry> InodeOrTreeOrEntry::getOrFindChild(
     ObjectStore* objectStore,
     ObjectFetchContext& fetchContext) {
   // Lookup the next child
-  auto* treeEntry = tree->getEntryPtr(childName);
-  if (!treeEntry) {
+  const auto it = tree->find(childName);
+  if (it == tree->cend()) {
     // Note that the path printed below is the requested path that is being
     // walked, childName may appear anywhere in the path.
     XLOG(DBG7) << "attempted to find non-existent TreeEntry \"" << childName
@@ -253,6 +253,7 @@ ImmediateFuture<InodeOrTreeOrEntry> InodeOrTreeOrEntry::getOrFindChild(
   }
 
   // Always descend if the treeEntry is a Tree
+  const auto* treeEntry = &it->second;
   if (treeEntry->isTree()) {
     return objectStore->getTree(treeEntry->getHash(), fetchContext)
         .thenValue(

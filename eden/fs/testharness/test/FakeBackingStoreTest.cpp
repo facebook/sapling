@@ -172,12 +172,12 @@ TEST_F(FakeBackingStoreTest, getTree) {
 
   auto tree2 = std::move(future2).get().tree;
   EXPECT_EQ(rootHash, tree2->getHash());
-  EXPECT_EQ(4, tree2->getTreeEntries().size());
+  EXPECT_EQ(4, tree2->size());
 
-  auto barTreeEntry = *tree2->getEntryPtr("bar"_pc);
-  auto dir1TreeEntry = *tree2->getEntryPtr("dir1"_pc);
-  auto readonlyTreeEntry = *tree2->getEntryPtr("readonly"_pc);
-  auto zzzTreeEntry = *tree2->getEntryPtr("zzz"_pc);
+  auto barTreeEntry = tree2->find("bar"_pc)->second;
+  auto dir1TreeEntry = tree2->find("dir1"_pc)->second;
+  auto readonlyTreeEntry = tree2->find("readonly"_pc)->second;
+  auto zzzTreeEntry = tree2->find("zzz"_pc)->second;
   EXPECT_EQ("bar"_pc, barTreeEntry.getName());
   EXPECT_EQ(bar->get().getHash(), barTreeEntry.getHash());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, barTreeEntry.getType());

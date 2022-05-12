@@ -10,7 +10,6 @@
 #include <initializer_list>
 #include <memory>
 #include <unordered_map>
-#include <vector>
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -104,8 +103,8 @@ class FakeBackingStore final : public BackingStore {
   StoredTree* putTree(
       ObjectId hash,
       const std::initializer_list<TreeEntryData>& entries);
-  StoredTree* putTree(std::vector<TreeEntry> entries);
-  StoredTree* putTree(ObjectId hash, std::vector<TreeEntry> entries);
+  StoredTree* putTree(Tree::container entries);
+  StoredTree* putTree(ObjectId hash, Tree::container entries);
 
   /**
    * Add a tree to the backing store, or return the StoredTree already present
@@ -116,7 +115,7 @@ class FakeBackingStore final : public BackingStore {
    */
   std::pair<StoredTree*, bool> maybePutTree(
       const std::initializer_list<TreeEntryData>& entries);
-  std::pair<StoredTree*, bool> maybePutTree(std::vector<TreeEntry> entries);
+  std::pair<StoredTree*, bool> maybePutTree(Tree::container entries);
 
   /**
    * Add a mapping from a commit ID to a root tree hash.
@@ -174,16 +173,14 @@ class FakeBackingStore final : public BackingStore {
     std::unordered_map<ObjectId, size_t> accessCounts;
   };
 
-  static std::vector<TreeEntry> buildTreeEntries(
+  static Tree::container buildTreeEntries(
       const std::initializer_list<TreeEntryData>& entryArgs);
-  static void sortTreeEntries(std::vector<TreeEntry>& entries);
-  static ObjectId computeTreeHash(const std::vector<TreeEntry>& sortedEntries);
-  StoredTree* putTreeImpl(
-      ObjectId hash,
-      std::vector<TreeEntry>&& sortedEntries);
+  static void sortTreeEntries(Tree::container& entries);
+  static ObjectId computeTreeHash(const Tree::container& sortedEntries);
+  StoredTree* putTreeImpl(ObjectId hash, Tree::container&& sortedEntries);
   std::pair<StoredTree*, bool> maybePutTreeImpl(
       ObjectId hash,
-      std::vector<TreeEntry>&& sortedEntries);
+      Tree::container&& sortedEntries);
 
   folly::Synchronized<Data> data_;
 };
@@ -214,7 +211,7 @@ struct FakeBackingStore::TreeEntryData {
   // tree
   TreeEntryData(folly::StringPiece name, const StoredTree* tree);
 
-  TreeEntry entry;
+  Tree::value_type entry;
 };
 } // namespace eden
 } // namespace facebook

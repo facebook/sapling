@@ -191,28 +191,42 @@ FakeBackingStore::TreeEntryData::TreeEntryData(
     const Blob& blob,
     FakeBlobType type)
     : entry{
-          blob.getHash(),
           PathComponent{name},
-          treeEntryTypeFromBlobType(type)} {}
+          TreeEntry{
+              blob.getHash(),
+              PathComponent{name},
+              treeEntryTypeFromBlobType(type)}} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const StoredBlob* blob,
     FakeBlobType type)
     : entry{
-          blob->get().getHash(),
           PathComponent{name},
-          treeEntryTypeFromBlobType(type)} {}
+          TreeEntry{
+              blob->get().getHash(),
+              PathComponent{name},
+              treeEntryTypeFromBlobType(type)}} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const Tree& tree)
-    : entry{tree.getHash(), PathComponent{name}, TreeEntryType::TREE} {}
+    : entry{
+          PathComponent{name},
+          TreeEntry{
+              tree.getHash(),
+              PathComponent{name},
+              TreeEntryType::TREE}} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const StoredTree* tree)
-    : entry{tree->get().getHash(), PathComponent{name}, TreeEntryType::TREE} {}
+    : entry{
+          PathComponent{name},
+          TreeEntry{
+              tree->get().getHash(),
+              PathComponent{name},
+              TreeEntryType::TREE}} {}
 
 StoredTree* FakeBackingStore::putTree(
     const std::initializer_list<TreeEntryData>& entryArgs) {
@@ -228,15 +242,13 @@ StoredTree* FakeBackingStore::putTree(
   return putTreeImpl(hash, std::move(entries));
 }
 
-StoredTree* FakeBackingStore::putTree(std::vector<TreeEntry> entries) {
+StoredTree* FakeBackingStore::putTree(Tree::container entries) {
   sortTreeEntries(entries);
   auto hash = computeTreeHash(entries);
   return putTreeImpl(hash, std::move(entries));
 }
 
-StoredTree* FakeBackingStore::putTree(
-    ObjectId hash,
-    std::vector<TreeEntry> entries) {
+StoredTree* FakeBackingStore::putTree(ObjectId hash, Tree::container entries) {
   sortTreeEntries(entries);
   return putTreeImpl(hash, std::move(entries));
 }
@@ -247,15 +259,15 @@ std::pair<StoredTree*, bool> FakeBackingStore::maybePutTree(
 }
 
 std::pair<StoredTree*, bool> FakeBackingStore::maybePutTree(
-    std::vector<TreeEntry> entries) {
+    Tree::container entries) {
   sortTreeEntries(entries);
   auto hash = computeTreeHash(entries);
   return maybePutTreeImpl(hash, std::move(entries));
 }
 
-std::vector<TreeEntry> FakeBackingStore::buildTreeEntries(
+Tree::container FakeBackingStore::buildTreeEntries(
     const std::initializer_list<TreeEntryData>& entryArgs) {
-  std::vector<TreeEntry> entries;
+  Tree::container entries;
   for (const auto& arg : entryArgs) {
     entries.push_back(arg.entry);
   }
@@ -264,15 +276,15 @@ std::vector<TreeEntry> FakeBackingStore::buildTreeEntries(
   return entries;
 }
 
-void FakeBackingStore::sortTreeEntries(std::vector<TreeEntry>& entries) {
-  auto cmpEntry = [](const TreeEntry& a, const TreeEntry& b) {
-    return a.getName() < b.getName();
+void FakeBackingStore::sortTreeEntries(Tree::container& entries) {
+  auto cmpEntry = [](const Tree::value_type& a, const Tree::value_type& b) {
+    return a.first < b.first;
   };
   std::sort(entries.begin(), entries.end(), cmpEntry);
 }
 
 ObjectId FakeBackingStore::computeTreeHash(
-    const std::vector<TreeEntry>& sortedEntries) {
+    const Tree::container& sortedEntries) {
   // Compute a SHA-1 hash over the entry contents.
   // This doesn't match how we generate hashes for either git or mercurial
   // backed stores, but that doesn't really matter.  We only need to be
@@ -281,9 +293,9 @@ ObjectId FakeBackingStore::computeTreeHash(
   digest.hash_init(EVP_sha1());
 
   for (const auto& entry : sortedEntries) {
-    digest.hash_update(ByteRange{entry.getName().stringPiece()});
-    digest.hash_update(entry.getHash().getBytes());
-    mode_t mode = modeFromTreeEntryType(entry.getType());
+    digest.hash_update(ByteRange{entry.first.stringPiece()});
+    digest.hash_update(entry.second.getHash().getBytes());
+    mode_t mode = modeFromTreeEntryType(entry.second.getType());
     digest.hash_update(
         ByteRange(reinterpret_cast<const uint8_t*>(&mode), sizeof(mode)));
   }
@@ -296,7 +308,7 @@ ObjectId FakeBackingStore::computeTreeHash(
 
 StoredTree* FakeBackingStore::putTreeImpl(
     ObjectId hash,
-    std::vector<TreeEntry>&& sortedEntries) {
+    Tree::container&& sortedEntries) {
   auto ret = maybePutTreeImpl(hash, std::move(sortedEntries));
   if (!ret.second) {
     throw std::domain_error(
@@ -307,7 +319,7 @@ StoredTree* FakeBackingStore::putTreeImpl(
 
 std::pair<StoredTree*, bool> FakeBackingStore::maybePutTreeImpl(
     ObjectId hash,
-    std::vector<TreeEntry>&& sortedEntries) {
+    Tree::container&& sortedEntries) {
   auto storedTree =
       make_unique<StoredTree>(Tree{std::move(sortedEntries), hash});
 

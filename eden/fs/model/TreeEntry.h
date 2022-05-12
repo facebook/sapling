@@ -127,17 +127,18 @@ class TreeEntry {
   /**
    * Computes exact serialized size of this entry.
    */
-  size_t serializedSize() const;
+  size_t serializedSize(PathComponentPiece name) const;
 
   /**
    * Serializes entry into appender, consuming exactly serializedSize() bytes.
    */
-  void serialize(folly::io::Appender& appender) const;
+  void serialize(PathComponentPiece name, folly::io::Appender& appender) const;
 
   /**
    * Deserialize tree entry.
    */
-  static std::optional<TreeEntry> deserialize(folly::StringPiece& data);
+  static std::optional<std::pair<PathComponent, TreeEntry>> deserialize(
+      folly::StringPiece& data);
 
  private:
   TreeEntryType type_;

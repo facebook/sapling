@@ -102,8 +102,8 @@ namespace {
 std::vector<PathComponent> getTreeNames(
     const std::shared_ptr<const Tree>& tree) {
   std::vector<PathComponent> names;
-  for (const auto& entry : tree->getTreeEntries()) {
-    names.emplace_back(entry.getName());
+  for (const auto& entry : *tree) {
+    names.emplace_back(entry.first);
   }
   return names;
 }
