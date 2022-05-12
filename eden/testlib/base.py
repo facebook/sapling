@@ -10,6 +10,7 @@ import unittest
 from pathlib import Path
 from typing import Callable, TypeVar
 
+from .config import Config
 from .repo import Repo
 from .server import LocalServer, MononokeServer, Server
 from .util import new_dir, test_globals
@@ -22,17 +23,17 @@ class BaseTest(unittest.TestCase):
         self.addCleanup(test_globals.cleanup)
         self.server = self.new_server()
         self.addCleanup(self.server.cleanup)
-        self._add_production_configs(Path(test_globals.env["HGRCPATH"]))
+        self.config = Config(Path(test_globals.env["HGRCPATH"]))
+        self._add_production_configs()
         self.repo = self.server.clone()
 
-    def _add_production_configs(self, hgrc: Path) -> None:
+    def _add_production_configs(self) -> None:
         # Most production configs should be loaded via dynamicconfig. The ones
         # below are test-specific overrides to do things like pin timestamps,
         # set test cache directories, disable certain user-oriented output, etc.
         # data usage and f
-        with open(hgrc, "w") as f:
-            f.write(
-                f"""
+        self.config.append(
+            f"""
 [commitcloud]
 enablestatus = False
 hostname = testhost
@@ -45,12 +46,12 @@ date = "0 0"
 [remotefilelog]
 cachepath = {new_dir()}
 """
-            )
+        )
 
-            if os.environ.get("USE_MONONOKE", False):
-                cert_dir = os.environ["HGTEST_CERTDIR"]
-                f.write(
-                    f"""
+        if os.environ.get("USE_MONONOKE", False):
+            cert_dir = os.environ["HGTEST_CERTDIR"]
+            self.config.append(
+                f"""
 [auth]
 mononoke.cert={cert_dir}/localhost.crt
 mononoke.key={cert_dir}/localhost.key
@@ -69,7 +70,7 @@ cacerts={cert_dir}/root-ca.crt
 [edenapi]
 url=https://localhost:{self.server.port}/edenapi
 """
-                )
+            )
 
     def new_server(self) -> Server:
         if os.environ.get("USE_MONONOKE", False):

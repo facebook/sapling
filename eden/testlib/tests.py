@@ -139,6 +139,19 @@ o  A
 """,
         )
 
+    @hgtest
+    def test_config(self, repo: Repo, wc: WorkingCopy) -> None:
+        # global config
+        self.config.add("foo", "bar", "baz")
+
+        # this repo's config
+        repo.config.add("foo", "bar", "qux")
+
+        self.assertEqual(repo.hg.config("foo.bar").stdout.rstrip(), "qux")
+
+        other_repo = self.server.clone()
+        self.assertEqual(other_repo.hg.config("foo.bar").stdout.rstrip(), "baz")
+
 
 if __name__ == "__main__":
     import unittest

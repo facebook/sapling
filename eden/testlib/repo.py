@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, IO, List, Optional
 
 from .commit import Commit
+from .config import Config
 from .generators import RepoGenerator
 from .hg import hg
 from .workingcopy import EdenWorkingCopy, WorkingCopy
@@ -24,15 +25,7 @@ class Repo:
         self.root = root
         self.gen = RepoGenerator()
         self.hg = hg(self.root)
-
-    def add_config(self, section: str, key: str, value: str) -> None:
-        with self._open("hgrc", mode="a+") as f:
-            f.write(
-                f"""
-[{section}]
-{key}={value}
-"""
-            )
+        self.config = Config(self._join("hgrc"))
 
     # pyre-ignore[3] - pyre doesn't like that this can return str and bytes
     def _open(self, path: str, mode: str = "r") -> IO[Any]:
