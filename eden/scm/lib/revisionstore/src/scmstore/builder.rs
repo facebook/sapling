@@ -583,13 +583,5 @@ impl<'a> TreeStoreBuilder<'a> {
 }
 
 fn use_edenapi_via_config(config: &dyn Config) -> Result<bool> {
-    let use_edenapi = config.get_or_default::<bool>("remotefilelog", "http")?
-        // EdenApi client cannot be initialized if reponame or url is missing.
-        // In some tests (ex. scm/lib), remotefilelog.http is true but the reponame is empty.
-        && !config
-            .get("remotefilelog", "reponame")
-            .unwrap_or_default()
-            .is_empty()
-        && !config.get("edenapi", "url").unwrap_or_default().is_empty();
-    Ok(use_edenapi)
+    Ok(config.get_or_default("remotefilelog", "http")?)
 }
