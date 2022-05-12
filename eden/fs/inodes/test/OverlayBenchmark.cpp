@@ -20,19 +20,30 @@ DEFINE_string(overlayPath, "", "Directory where the test overlay is created");
 
 namespace {
 
+#ifndef _WIN32
+constexpr Overlay::OverlayType kOverlayType = Overlay::OverlayType::Legacy;
+#else
+constexpr Overlay::OverlayType kOverlayType = Overlay::OverlayType::Tree;
+#endif
+
 void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
   // A large mount will contain 500,000 trees. If they're all loaded, they
   // will all be written into the overlay. This benchmark simulates that
   // workload and measures how long it takes.
   //
   // overlayPath is parameterized to measure on different filesystem types.
+  printf("Creating Overlay...\n");
 
   auto overlay = Overlay::create(
       overlayPath,
       kPathMapDefaultCaseSensitive,
-      Overlay::OverlayType::Legacy,
+      kOverlayType,
       std::make_shared<NullStructuredLogger>());
+  printf("Initalizing Overlay...\n");
+
   overlay->initialize().get();
+
+  printf("Overlay initalized. Starting benchmark...\n");
 
   ObjectId hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
   ObjectId hash2{folly::ByteRange{"01234012340123401234"_sp}};
@@ -78,6 +89,17 @@ void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
           std::chrono::duration_cast<std::chrono::duration<double, std::micro>>(
               elapsed / N)
               .count()));
+
+  folly::stop_watch<> closeTimer;
+
+  overlay->close();
+
+  auto closeElapsed = closeTimer.elapsed();
+
+  printf(
+      "Total elapsed time to close Overlay: %.2f s\n",
+      std::chrono::duration_cast<std::chrono::duration<double>>(closeElapsed)
+          .count());
 }
 
 } // namespace
