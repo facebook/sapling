@@ -74,7 +74,9 @@ pub fn run(
     io: &IO,
     mut config: ConfigSet,
 ) -> Result<u8> {
-    if !config.get_or_default::<bool>("clone", "use-rust")? {
+    let force_rust = config.get_or_default("clone", "force-rust")?;
+    let use_rust = force_rust || config.get_or_default("clone", "use-rust")?;
+    if !use_rust {
         return Err(errors::FallbackToPython.into());
     }
 
@@ -87,6 +89,12 @@ pub fn run(
         || !clone_opts.include.is_empty()
         || !clone_opts.exclude.is_empty()
     {
+        if force_rust {
+            return Err(
+                errors::Abort("clone.force-rust=True but falling back to Python!".into()).into(),
+            );
+        }
+
         return Err(errors::FallbackToPython.into());
     }
 
@@ -106,6 +114,12 @@ pub fn run(
         .iter()
         .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY)
     {
+        if force_rust {
+            return Err(
+                errors::Abort("clone.force-rust=True but falling back to Python!".into()).into(),
+            );
+        }
+
         return Err(errors::FallbackToPython.into());
     }
 

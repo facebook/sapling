@@ -22,3 +22,6 @@ class Config:
     def append(self, text: str) -> None:
         with open(self.path, mode="a+") as f:
             f.write("\n" + text + "\n")
+
+    def enable(self, extension: str) -> None:
+        self.add("extensions", extension, "")

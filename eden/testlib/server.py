@@ -33,7 +33,7 @@ reponame=repo{repoid}
 """
             )
 
-        return Repo(root)
+        return Repo(root, url)
 
     def cleanup(self) -> None:
         pass
