@@ -78,7 +78,10 @@ void SqliteStatement::bind(size_t paramNo, uint32_t id) {
 
 void SqliteStatement::reset() {
   XLOG(DBG9) << "reset bindings";
-  checkSqliteResult(db_, sqlite3_reset(stmt_));
+  // We are intentionally not checking the result here since `sqlite3_reset`
+  // will simply return the same result from `sqlite3_step` -- it should already
+  // be handled.
+  sqlite3_reset(stmt_);
   checkSqliteResult(db_, sqlite3_clear_bindings(stmt_));
 }
 
