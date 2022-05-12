@@ -43,6 +43,10 @@ pub fn checkout(
     target: HgId,
     matcher: &dyn Matcher,
 ) -> anyhow::Result<()> {
+    let dot_hg = wc_path.join(".hg");
+
+    let _wlock = repolock::lock_working_copy(config, &dot_hg)?;
+
     let diff = Diff::new(source_mf, target_mf, matcher)?;
     let actions = ActionMap::from_diff(diff)?;
 
@@ -50,7 +54,6 @@ pub fn checkout(
     let checkout = Checkout::from_config(vfs.clone(), config)?;
     let plan = checkout.plan_action_map(actions);
 
-    let dot_hg = wc_path.join(".hg");
     atomic_write(&dot_hg.join("updatestate"), |f| {
         f.write_all(target.to_hex().as_bytes())
     })?;

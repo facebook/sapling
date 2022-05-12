@@ -43,6 +43,10 @@ pub fn lock_working_copy(config: &dyn Config, dot_hg: &Path) -> anyhow::Result<F
     )
 }
 
+pub fn lock_store(_config: &dyn Config, _dot_hg: &Path) -> anyhow::Result<File, LockError> {
+    todo!("be sure to enforce wlock -> lock acquisition order to avoid deadlocks")
+}
+
 /// lock loops until it can acquire the specified lock, subject to
 /// ui.timeout timeout. Errors other than lock contention are
 /// propagated immediately with no retries.
