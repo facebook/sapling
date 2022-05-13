@@ -14,7 +14,7 @@ use scuba_ext::{MononokeScubaSampleBuilder, ScubaValue};
 use strum_macros::{AsRefStr, Display, EnumString, EnumVariantNames};
 use time_ext::DurationExt;
 
-use blobstore::{BlobstoreGetData, OverwriteStatus};
+use blobstore::{BlobstoreGetData, BlobstoreIsPresent, OverwriteStatus};
 use context::PerfCounters;
 use metaconfig_types::BlobstoreId;
 use tunables::tunables;
@@ -31,6 +31,8 @@ const QUEUE: &str = "queue";
 const SESSION: &str = "session";
 const SIZE: &str = "size";
 const WRITE_ORDER: &str = "write_order";
+/// Was the blob found during the get/is_present operations?
+const BLOB_PRESENT: &str = "blob_present";
 
 const OVERWRITE_STATUS: &str = "overwrite_status";
 
@@ -129,13 +131,60 @@ pub fn record_get_stats(
                 scuba.unsampled();
             }
             scuba.add(SIZE, size);
+            scuba.add(BLOB_PRESENT, true);
         }
         Err(error) => {
             // Always log errors
             scuba.unsampled();
             scuba.add(ERROR, format!("{:#}", error));
         }
-        Ok(None) => {}
+        Ok(None) => {
+            scuba.add(BLOB_PRESENT, false);
+        }
+    }
+
+    scuba.log();
+}
+
+pub fn record_is_present_stats(
+    scuba: &mut MononokeScubaSampleBuilder,
+    pc: &PerfCounters,
+    stats: FutureStats,
+    result: Result<&BlobstoreIsPresent, &Error>,
+    key: &str,
+    session: &str,
+    operation: OperationType,
+    blobstore_id: Option<BlobstoreId>,
+    blobstore_type: impl ToString,
+) {
+    add_common_values(
+        scuba,
+        pc,
+        key,
+        session,
+        stats,
+        operation,
+        blobstore_id,
+        blobstore_type,
+    );
+
+    match result {
+        Ok(BlobstoreIsPresent::Present) => {
+            scuba.add(BLOB_PRESENT, true);
+        }
+        Ok(BlobstoreIsPresent::Absent) => {
+            scuba.add(BLOB_PRESENT, false);
+        }
+        Ok(BlobstoreIsPresent::ProbablyNotPresent(error)) => {
+            // Always log errors
+            scuba.unsampled();
+            scuba.add(BLOB_PRESENT, false);
+            scuba.add(ERROR, format!("{:#}", error));
+        }
+        Err(error) => {
+            scuba.unsampled();
+            scuba.add(ERROR, format!("{:#}", error));
+        }
     }
 
     scuba.log();

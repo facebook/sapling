@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use blobstore::{
     Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, OverwriteStatus, PutBehaviour,
 };
-use blobstore_stats::{record_get_stats, record_put_stats, OperationType};
+use blobstore_stats::{record_get_stats, record_is_present_stats, record_put_stats, OperationType};
 use blobstore_sync_queue::OperationKey;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType, SessionClass};
@@ -572,35 +572,31 @@ impl Blobstore for MultiplexedBlobstoreBase {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<BlobstoreIsPresent> {
+        let mut scuba = self.scuba.clone();
+        scuba.sampled(self.scuba_sample_rate);
+        let is_logged = scuba.sampling().is_logged();
         let blobstores_count = self.blobstores.len() + self.write_mostly_blobstores.len();
         let mut needed_not_present: usize = self.not_present_read_quorum.get();
         let comprehensive_lookup = matches!(
             ctx.session().session_class(),
             SessionClass::ComprehensiveLookup
         );
-        let is_present_timeout =
-            Duration::from_millis(match tunables().get_is_present_timeout_ms().try_into() {
-                Ok(duration) if duration > 0 => duration,
-                _ => DEFAULT_IS_PRESENT_TIMEOUT_MS,
-            } as u64);
 
-        let main_requests: FuturesUnordered<_> = self
-            .blobstores
-            .iter()
-            .cloned()
-            .map(|(blobstore_id, blobstore)| async move {
-                (blobstore_id, blobstore.is_present(ctx, key).await)
-            })
-            .collect();
+        let main_requests: FuturesUnordered<_> = multiplexed_is_present(
+            ctx.clone(),
+            &self.blobstores.clone(),
+            key.to_owned(),
+            scuba.clone(),
+        )
+        .collect();
 
-        let write_mostly_requests: FuturesUnordered<_> = self
-            .write_mostly_blobstores
-            .iter()
-            .cloned()
-            .map(|(blobstore_id, blobstore)| async move {
-                (blobstore_id, blobstore.is_present(ctx, key).await)
-            })
-            .collect();
+        let write_mostly_requests: FuturesUnordered<_> = multiplexed_is_present(
+            ctx.clone(),
+            &self.write_mostly_blobstores.clone(),
+            key.to_owned(),
+            scuba,
+        )
+        .collect();
 
         // Lookup algorithm supports two strategies:
         // "comprehensive" and "regular"
@@ -613,7 +609,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
         let mut requests = main_requests.chain(write_mostly_requests);
         let (stats, result) = {
             let blobstores = &self.blobstores;
-            timeout(is_present_timeout, async move {
+            async move {
                 let mut errors = HashMap::new();
                 let mut present_counter = 0;
                 ctx.perf_counters()
@@ -622,6 +618,12 @@ impl Blobstore for MultiplexedBlobstoreBase {
                     match result {
                         (_, Ok(BlobstoreIsPresent::Present)) => {
                             if !comprehensive_lookup {
+                                if is_logged {
+                                    // Allow the other requests to complete so that we can record some
+                                    // metrics for the blobstore. This will also log metrics for write-mostly
+                                    // blobstores, which helps us decide whether they're good
+                                    spawn_stream_completion(requests);
+                                }
                                 return Ok(BlobstoreIsPresent::Present);
                             }
                             present_counter = present_counter + 1;
@@ -629,6 +631,9 @@ impl Blobstore for MultiplexedBlobstoreBase {
                         (_, Ok(BlobstoreIsPresent::Absent)) => {
                             needed_not_present = needed_not_present.saturating_sub(1);
                             if comprehensive_lookup || needed_not_present == 0 {
+                                if is_logged {
+                                    spawn_stream_completion(requests);
+                                }
                                 return Ok(BlobstoreIsPresent::Absent);
                             }
                         }
@@ -679,7 +684,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
                         }
                     }
                 }
-            })
+            }
             .timed()
             .await
         };
@@ -688,15 +693,6 @@ impl Blobstore for MultiplexedBlobstoreBase {
             PerfCounterType::BlobPresenceChecksMaxLatency,
             stats.completion_time.as_millis_unchecked() as i64,
         );
-
-        let result = match result {
-            Ok(result) => result,
-            Err(err) => {
-                let err = Error::from(err)
-                    .context("Request timeout. One of the blobstores is too slow to respond.");
-                Ok(BlobstoreIsPresent::ProbablyNotPresent(err))
-            }
-        };
 
         Ok(result?)
     }
@@ -997,4 +993,58 @@ fn multiplexed_get<'fut: 'iter, 'iter>(
             .await
         }
     })
+}
+
+fn multiplexed_is_present<'fut: 'iter, 'iter>(
+    ctx: impl Borrow<CoreContext> + Clone + 'fut,
+    blobstores: &'iter [(BlobstoreId, Arc<dyn BlobstorePutOps>)],
+    key: impl Borrow<str> + Clone + 'fut,
+    scuba: MononokeScubaSampleBuilder,
+) -> impl Iterator<Item = impl Future<Output = (BlobstoreId, Result<BlobstoreIsPresent>)> + 'fut> + 'iter
+{
+    blobstores.iter().map(move |(blobstore_id, blobstore)| {
+        let ctx = ctx.borrow().clone();
+        cloned!(blobstore, blobstore_id, key, scuba);
+        async move {
+            multiplexed_is_present_one(ctx, blobstore.as_ref(), blobstore_id, key.borrow(), scuba)
+                .await
+        }
+    })
+}
+
+async fn multiplexed_is_present_one<'a>(
+    mut ctx: CoreContext,
+    blobstore: &'a dyn BlobstorePutOps,
+    blobstore_id: BlobstoreId,
+    key: &'a str,
+    mut scuba: MononokeScubaSampleBuilder,
+) -> (BlobstoreId, Result<BlobstoreIsPresent>) {
+    let is_present_timeout = {
+        let duration = tunables().get_is_present_timeout_ms();
+        Duration::from_millis(if duration > 0 {
+            duration
+        } else {
+            DEFAULT_IS_PRESENT_TIMEOUT_MS
+        } as u64)
+    };
+    let (pc, (stats, timeout_or_res)) = {
+        let pc = ctx.fork_perf_counters();
+        let ret = timeout(is_present_timeout, blobstore.is_present(&ctx, key))
+            .timed()
+            .await;
+        (pc, ret)
+    };
+    let result = remap_timeout_result(timeout_or_res);
+    record_is_present_stats(
+        &mut scuba,
+        &pc,
+        stats,
+        result.as_ref(),
+        key,
+        ctx.metadata().session_id().as_str(),
+        OperationType::IsPresent,
+        Some(blobstore_id),
+        blobstore,
+    );
+    (blobstore_id, result)
 }

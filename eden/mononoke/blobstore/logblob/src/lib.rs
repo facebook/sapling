@@ -1,10 +1,11 @@
-#![deny(warnings)]
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2.
  */
+
+#![deny(warnings)]
 
 use std::num::NonZeroU64;
 
@@ -16,7 +17,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use blobstore::{
     Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, OverwriteStatus, PutBehaviour,
 };
-use blobstore_stats::{record_get_stats, record_put_stats, OperationType};
+use blobstore_stats::{record_get_stats, record_is_present_stats, record_put_stats, OperationType};
 use context::{CoreContext, PerfCounterType};
 use mononoke_types::BlobstoreBytes;
 
@@ -96,9 +97,30 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<BlobstoreIsPresent> {
+        let mut ctx = ctx.clone();
+        let mut scuba = self.scuba.clone();
+        scuba.sampled(self.scuba_sample_rate);
+
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobPresenceChecks);
-        self.inner.is_present(ctx, key).await
+
+        let pc = ctx.fork_perf_counters();
+
+        let is_present = self.inner.is_present(&ctx, key);
+        let (stats, result) = is_present.timed().await;
+        record_is_present_stats(
+            &mut scuba,
+            &pc,
+            stats,
+            result.as_ref(),
+            key,
+            ctx.metadata().session_id().as_str(),
+            OperationType::IsPresent,
+            None,
+            &self.inner,
+        );
+
+        result
     }
 
     async fn put<'a>(
