@@ -5,9 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::sparse_profile::{
-    build_tree_matcher, get_profile_size, parse_sparse_profile_content, SparseProfileEntry,
-};
+use crate::sparse_profile::{fetch, get_profile_size};
 use crate::ChangesetContext;
 use crate::Mononoke;
 use crate::RepoContext;
@@ -19,6 +17,7 @@ use maplit::btreemap;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, MPath};
 use pathmatcher::Matcher;
+use sparse::Profile;
 use tests_utils::{store_files, CreateCommitContext};
 use types::RepoPath;
 
@@ -87,17 +86,10 @@ async fn sparse_profile_parsing(fb: FacebookInit) -> Result<()> {
 
     let changeset = ChangesetContext::new(repo, a);
 
-    let entries =
-        parse_sparse_profile_content(&ctx, &changeset, &MPath::new("sparse/include")?).await?;
-    assert_eq!(
-        entries,
-        vec![
-            SparseProfileEntry::Include("path:dir2".to_string()),
-            SparseProfileEntry::Include("path:dir1/subdir1".to_string())
-        ]
-    );
-
-    let matcher = build_tree_matcher(entries)?;
+    let path = "sparse/include".to_string();
+    let content = fetch(path.clone(), &changeset).await?.unwrap();
+    let profile = Profile::from_bytes(content, path)?;
+    let matcher = profile.matcher(|path| fetch(path, &changeset)).await?;
 
     assert!(!matcher.matches_file(RepoPath::from_str("1")?)?);
     assert!(!matcher.matches_file(RepoPath::from_str("dir1/file1")?)?);

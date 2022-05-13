@@ -29,7 +29,7 @@ pub fn sparse_matcher(
     root_profile: impl AsRef<[u8]>,
     root_profile_source: String,
     manifest: impl Manifest + Send + Sync + 'static,
-    store: impl ReadFileContents<Error = anyhow::Error>,
+    store: impl ReadFileContents<Error = anyhow::Error> + Send + Sync,
     dot_hg_path: &Path,
 ) -> anyhow::Result<sparse::Matcher> {
     let prof = sparse::Profile::from_bytes(root_profile, root_profile_source)?;

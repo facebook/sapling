@@ -12,8 +12,8 @@ use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
 
+use futures::future::BoxFuture;
 use futures::future::FutureExt;
-use futures::future::LocalBoxFuture;
 use futures::Future;
 use types::RepoPath;
 
@@ -194,18 +194,18 @@ impl Profile {
     // %import statements are resolved by fetching the imported profile's
     // contents using the fetch callback. Returns a vec of each Pattern paired
     // with a String describing its provenance.
-    async fn rules<B: Future<Output = anyhow::Result<Option<Vec<u8>>>>>(
+    async fn rules<B: Future<Output = anyhow::Result<Option<Vec<u8>>>> + Send>(
         &self,
-        mut fetch: impl FnMut(String) -> B,
+        mut fetch: impl FnMut(String) -> B + Send + Sync,
     ) -> Result<Vec<(Pattern, String)>, Error> {
-        fn rules_inner<'a, B: Future<Output = anyhow::Result<Option<Vec<u8>>>>>(
+        fn rules_inner<'a, B: Future<Output = anyhow::Result<Option<Vec<u8>>>> + Send>(
             prof: &'a Profile,
-            fetch: &'a mut dyn FnMut(String) -> B,
+            fetch: &'a mut (dyn FnMut(String) -> B + Send + Sync),
             rules: &'a mut Vec<(Pattern, String)>,
             source: Option<&'a str>,
             // path => (contents, in_progress)
             seen: &'a mut HashMap<String, (Vec<u8>, bool)>,
-        ) -> LocalBoxFuture<'a, Result<(), Error>> {
+        ) -> BoxFuture<'a, Result<(), Error>> {
             async move {
                 let source = match source {
                     Some(history) => format!("{} -> {}", history, prof.source),
@@ -247,7 +247,7 @@ impl Profile {
 
                 Ok(())
             }
-            .boxed_local()
+            .boxed()
         }
 
         let mut rules = Vec::new();
@@ -255,9 +255,9 @@ impl Profile {
         Ok(rules)
     }
 
-    pub async fn matcher<B: Future<Output = anyhow::Result<Option<Vec<u8>>>>>(
+    pub async fn matcher<B: Future<Output = anyhow::Result<Option<Vec<u8>>>> + Send>(
         &self,
-        mut fetch: impl FnMut(String) -> B,
+        mut fetch: impl FnMut(String) -> B + Send + Sync,
     ) -> Result<Matcher, Error> {
         if self.entries.is_empty() {
             return Ok(Matcher::always());
