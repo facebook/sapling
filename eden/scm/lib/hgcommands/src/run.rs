@@ -37,6 +37,7 @@ use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use progress_model::Registry;
+use repo::repo::Repo;
 use tracing::dispatcher::Dispatch;
 use tracing::dispatcher::{self};
 use tracing::Level;
@@ -134,6 +135,8 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
                 if let Some(sc) = SamplingConfig::new(config) {
                     sampling_config.set(sc).unwrap();
                 }
+
+                log_repo_path_and_exe_version(dispatcher.repo());
 
                 run_logger = match runlog::Logger::from_repo(dispatcher.repo(), args[1..].to_vec())
                 {
@@ -648,6 +651,26 @@ fn epoch_ms(time: SystemTime) -> u64 {
 
 fn is_inside_test() -> bool {
     std::env::var_os("TESTTMP").is_some()
+}
+
+fn log_repo_path_and_exe_version(repo: Option<&Repo>) {
+    // The "version" and "repo" fields are consumed by telemetry.
+    if let Some(repo) = repo {
+        let config = repo.config();
+        let opt_path_default: std::result::Result<Option<String>, _> =
+            config.get_or_default("paths", "default");
+        if let Ok(Some(path_default)) = opt_path_default {
+            if let Some(repo_name) = configparser::hg::repo_name_from_url(&path_default) {
+                tracing::info!(
+                    target: "command_info",
+                    version = version::VERSION,
+                    repo = repo_name.as_str(),
+                );
+                return;
+            }
+        }
+    }
+    tracing::info!(target: "command_info", version = version::VERSION);
 }
 
 // TODO: Replace this with the 'exitcode' crate once it's available.
