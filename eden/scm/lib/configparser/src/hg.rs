@@ -399,21 +399,28 @@ impl ConfigSetHgExt for ConfigSet {
                     // is brand new and has an age of 0.
                     .unwrap_or(Duration::from_secs(0));
                 if mtime_age > generation_time {
+                    let config_regen_command: Vec<String> =
+                        self.get_or("configs", "regen-command", || {
+                            vec!["hg".to_string(), "debugdynamicconfig".to_string()]
+                        })?;
                     tracing::debug!(
-                        "spawn debugdynamicconfig because mtime {:?} > generation_time {:?}",
+                        "spawn {:?} because mtime {:?} > generation_time {:?}",
+                        &config_regen_command,
                         mtime_age,
                         generation_time
                     );
-                    let mut command = Command::new("hg");
-                    command
-                        .arg("debugdynamicconfig")
-                        .env("HG_DEBUGDYNAMICCONFIG", "1");
+                    if !config_regen_command.is_empty() {
+                        let mut command = Command::new(&config_regen_command[0]);
+                        command
+                            .args(&config_regen_command[1..])
+                            .env("HG_DEBUGDYNAMICCONFIG", "1");
 
-                    if let Some(repo_path) = repo_path {
-                        command.args(&["--cwd", &repo_path.to_string_lossy()]);
+                        if let Some(repo_path) = repo_path {
+                            command.current_dir(&repo_path);
+                        }
+
+                        let _ = run_background(command);
                     }
-
-                    let _ = run_background(command);
                 } else {
                     skip_reason = Some("mtime <= configs.generationtime");
                 }
