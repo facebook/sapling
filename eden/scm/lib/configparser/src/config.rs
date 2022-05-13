@@ -554,7 +554,7 @@ impl ConfigSet {
                                 .map(|a| a.contains(&(sname, kname)))
                                 != Some(true)
                         {
-                            tracing::debug!(
+                            tracing::trace!(
                                 "dropping {}.{}={} set by {}",
                                 sname.as_ref(),
                                 kname.as_ref(),

@@ -387,6 +387,7 @@ impl ConfigSetHgExt for ConfigSet {
         // Regenerate if mtime is old.
         let generation_time: Option<u64> = self.get_opt("configs", "generationtime")?;
         let recursion_marker = env::var("HG_DEBUGDYNAMICCONFIG");
+        let mut skip_reason = None;
 
         if recursion_marker.is_err() {
             if let Some(generation_time) = generation_time {
@@ -398,6 +399,11 @@ impl ConfigSetHgExt for ConfigSet {
                     // is brand new and has an age of 0.
                     .unwrap_or(Duration::from_secs(0));
                 if mtime_age > generation_time {
+                    tracing::debug!(
+                        "spawn debugdynamicconfig because mtime {:?} > generation_time {:?}",
+                        mtime_age,
+                        generation_time
+                    );
                     let mut command = Command::new("hg");
                     command
                         .arg("debugdynamicconfig")
@@ -408,8 +414,17 @@ impl ConfigSetHgExt for ConfigSet {
                     }
 
                     let _ = run_background(command);
+                } else {
+                    skip_reason = Some("mtime <= configs.generationtime");
                 }
+            } else {
+                skip_reason = Some("configs.generationtime is not set");
             }
+        } else {
+            skip_reason = Some("HG_DEBUGDYNAMICCONFIG is set");
+        }
+        if let Some(reason) = skip_reason {
+            tracing::debug!("skip spawning debugdynamicconfig because {}", reason);
         }
 
         Ok(errors)
@@ -703,6 +718,12 @@ pub fn generate_dynamicconfig(
     use filetime::FileTime;
     use tempfile::tempfile_in;
 
+    tracing::debug!(
+        repo_path = ?repo_path,
+        canary = ?canary,
+        "generate_dynamicconfig",
+    );
+
     // Resolve sharedpath
     let config_dir = get_config_dir(repo_path)?;
 
@@ -737,8 +758,11 @@ pub fn generate_dynamicconfig(
 
     // If the file exists and will be unchanged, just update the mtime.
     if hgrc_path.exists() && read_to_string(&hgrc_path).unwrap_or_default() == config_str {
-        set_file_mtime(hgrc_path, FileTime::now())?;
+        let time = FileTime::now();
+        tracing::debug!("bump {:?} mtime to {:?}", &hgrc_path, &time);
+        set_file_mtime(hgrc_path, time)?;
     } else {
+        tracing::debug!("rewrite {:?}", &hgrc_path);
         util::file::atomic_write(&hgrc_path, |f| {
             f.write_all(config_str.as_bytes())?;
             Ok(())
