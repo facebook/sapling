@@ -17,6 +17,7 @@ use std::path::PathBuf;
 use std::str;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Error;
@@ -70,6 +71,28 @@ pub fn maybe_status_fastpath(
     rt.block_on(maybe_status_fastpath_internal(repo_root, io, list_ignored))
 }
 
+fn get_eden_root(repo_root: &Path) -> Result<String> {
+    // Look up the mount point name where Eden thinks this repository is
+    // located.  This may be different from repo_root if a parent directory
+    // of the Eden mount has been bind mounted to another location, resulting
+    // in the Eden mount appearing at multiple separate locations.
+    let eden_root = repo_root.join(".eden").join("root");
+    let eden_root = read_link(eden_root)?;
+    eden_root
+        .into_os_string()
+        .into_string()
+        .map_err(|_| anyhow!("Failed to get eden root"))
+}
+
+#[cfg(unix)]
+async fn get_socket_transport(repo_root: &Path) -> Result<SocketTransport<UnixStream>> {
+    // Look up Eden's socket address.
+    let sock_addr = repo_root.join(".eden").join("socket");
+    let sock_addr = read_link(sock_addr)?;
+    let sock = UnixStream::connect(&sock_addr).await?;
+    Ok(SocketTransport::new(sock))
+}
+
 #[cfg(windows)]
 async fn maybe_status_fastpath_internal(
     repo_root: &Path,
@@ -79,37 +102,48 @@ async fn maybe_status_fastpath_internal(
     Err(FallbackToPython.into())
 }
 
+pub fn get_status(repo_root: &Path) -> Result<GetScmStatusResult> {
+    let rt = tokio::runtime::Runtime::new()?;
+
+    rt.block_on(get_status_internal(repo_root))
+}
+
+#[cfg(windows)]
+async fn get_status_internal(_repo_root: &Path) -> Result<GetScmStatusResult> {
+    Err(FallbackToPython.into())
+}
+
+#[cfg(unix)]
+async fn get_status_internal(repo_root: &Path) -> Result<GetScmStatusResult> {
+    let eden_root = get_eden_root(repo_root)?;
+
+    let transport = get_socket_transport(repo_root).await?;
+    let client = <dyn EdenService>::new(BinaryProtocol, transport);
+
+    let transport = get_socket_transport(repo_root).await?;
+    let fb303_client = <dyn BaseService>::new(BinaryProtocol, transport);
+
+    let dirstate_data = read_hg_dirstate(repo_root)?;
+
+    get_status_helper(&client, &fb303_client, &eden_root, dirstate_data.p1, false).await
+}
+
 #[cfg(unix)]
 async fn maybe_status_fastpath_internal(
     repo_root: &Path,
     io: &IO,
     list_ignored: bool,
 ) -> Result<(status::Status, HashMap<RepoPathBuf, RepoPathBuf>)> {
-    // Look up the mount point name where Eden thinks this repository is
-    // located.  This may be different from repo_root if a parent directory
-    // of the Eden mount has been bind mounted to another location, resulting
-    // in the Eden mount appearing at multiple separate locations.
-    let eden_root = repo_root.join(".eden").join("root");
-    let eden_root = read_link(eden_root).map_err(|_| FallbackToPython)?;
-    let eden_root = eden_root
-        .into_os_string()
-        .into_string()
-        .map_err(|_| FallbackToPython)?;
+    let eden_root = get_eden_root(repo_root).map_err(|_| FallbackToPython)?;
 
-    // Look up Eden's socket address.
-    let sock_addr = repo_root.join(".eden").join("socket");
-    let sock_addr = read_link(sock_addr).map_err(|_| FallbackToPython)?;
-    let sock = UnixStream::connect(&sock_addr)
+    let transport = get_socket_transport(repo_root)
         .await
         .map_err(|_| FallbackToPython)?;
-
-    let transport = SocketTransport::new(sock);
     let client = <dyn EdenService>::new(BinaryProtocol, transport);
-    let sock2 = UnixStream::connect(sock_addr)
+
+    let transport = get_socket_transport(repo_root)
         .await
         .map_err(|_| FallbackToPython)?;
-
-    let transport = SocketTransport::new(sock2);
     let fb303_client = <dyn BaseService>::new(BinaryProtocol, transport);
 
     // TODO(mbolin): Run read_hg_dirstate() and core.run() in parallel.

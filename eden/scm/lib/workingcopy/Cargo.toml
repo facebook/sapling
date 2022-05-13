@@ -10,6 +10,7 @@ anyhow = "1.0.56"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
 configmodel = { version = "0.1.0", path = "../configmodel" }
 crossbeam = "0.8"
+edenfs_client = { version = "0.1.0", path = "../edenfs-client" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../manifest" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
@@ -20,6 +21,7 @@ sparse = { version = "0.1.0", path = "../sparse" }
 status = { version = "0.1.0", path = "../status" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 thiserror = "1.0.30"
+thrift-types = { version = "0.1.0", path = "../thrift-types" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tracing = "0.1.32"
 treestate = { version = "0.1.0", path = "../treestate" }
