@@ -23,7 +23,6 @@ hostname = "0.3"
 http-client = { version = "0.1.0", path = "../http-client", optional = true }
 indexmap = { version = "1.8.0", features = ["rayon", "serde-1"] }
 minibytes = { version = "0.1.0", path = "../minibytes" }
-os_info = { version = "3.0.7", optional = true }
 pest = "2.1"
 regex = { version = "1.5.4", optional = true }
 serde = { version = "1.0.136", features = ["derive", "rc"], optional = true }
@@ -47,4 +46,4 @@ tempfile = "3.3"
 
 [features]
 default = []
-fb = ["filetime", "hgtime", "hostcaps/fb", "http-client", "os_info", "regex", "serde", "serde_json", "serde_urlencoded", "sha2", "sha2", "tempfile", "types", "zstd"]
+fb = ["filetime", "hgtime", "hostcaps/fb", "http-client", "regex", "serde", "serde_json", "serde_urlencoded", "sha2", "sha2", "tempfile", "types", "zstd"]
