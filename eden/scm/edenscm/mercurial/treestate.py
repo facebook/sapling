@@ -8,7 +8,7 @@
 from __future__ import absolute_import
 
 import errno
-import uuid
+import os
 
 from bindings import treestate
 
@@ -341,7 +341,7 @@ class treestatemap(object):
             except (KeyError, ValueError):
                 raise error.Abort(_("working directory state appears damaged!"))
         else:
-            filename = "%s" % uuid.uuid4()
+            filename = _random_filename()
             rootid = 0
             threshold = 0
 
@@ -397,7 +397,7 @@ class treestatemap(object):
         If filename is None, generate it randomly.
         """
         if filename is None:
-            filename = "%s" % uuid.uuid4()
+            filename = _random_filename()
             assert self._filename != filename
         self.fileinuse.add(filename)
         self._filename = filename
@@ -732,3 +732,8 @@ def automigrate(repo):
             % version
         )
     migrate(repo.ui, repo, version)
+
+
+def _random_filename():
+    """generate a file name that is likely unique"""
+    return node.hex(os.urandom(20))
