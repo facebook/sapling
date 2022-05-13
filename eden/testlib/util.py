@@ -4,11 +4,13 @@
 # GNU General Public License version 2.
 
 # pyre-strict
+from __future__ import annotations
 
 import os
 import threading
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Generator, Optional
 
 from eden.test_support.temporary_directory import TempFileManager
 
@@ -62,3 +64,19 @@ tracing: Optional[str] = os.environ.get("HGTEST_TRACING")
 def trace(value: str) -> None:
     if tracing:
         print(value)
+
+
+@contextmanager
+def override_environ(values: Dict[str, str]) -> Generator[None, None, None]:
+    backup = {}
+    for key, value in values.items():
+        old = os.environ.get(key, None)
+        if old is not None:
+            backup[key] = old
+        os.environ[key] = value
+    yield
+    for key in values.keys():
+        os.environ.pop(key)
+        old = backup.get(key, None)
+        if old is not None:
+            os.environ[key] = old

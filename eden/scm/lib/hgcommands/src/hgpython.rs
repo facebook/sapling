@@ -235,16 +235,23 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
         fout: Option<PyObject>,
         ferr: Option<PyObject>,
     ) -> PyResult<i32> {
-        let io = if let (Some(fin), Some(fout), Some(ferr)) = (fin, fout, ferr) {
+        if let (Some(fin), Some(fout), Some(ferr)) = (fin, fout, ferr) {
             let fin = wrap_pyio(fin);
             let fout = wrap_pyio(fout);
             let ferr = wrap_pyio(ferr);
-            IO::new(fin, fout, Some(ferr))
+            let old_io = IO::main();
+            let io = IO::new(fin, fout, Some(ferr));
+            io.set_main();
+            let result = Ok(crate::run_command(args, &io));
+            if let Ok(old_io) = old_io {
+                old_io.set_main();
+            }
+            result
         } else {
             // Reuse the main IO.
-            IO::main().map_pyerr(py)?
-        };
-        Ok(crate::run_command(args, &io))
+            let io = IO::main().map_pyerr(py)?;
+            Ok(crate::run_command(args, &io))
+        }
     }
 
     fn table_py(py: Python) -> PyResult<PyDict> {

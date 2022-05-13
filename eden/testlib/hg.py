@@ -5,13 +5,16 @@
 
 from __future__ import annotations
 
+import io
 import os
 import subprocess
 from pathlib import Path
 from subprocess import CompletedProcess
-from typing import Any, Callable, Dict, Union
+from typing import Dict, List
 
-from .util import test_globals, trace
+import bindings
+
+from .util import override_environ, test_globals, trace
 
 hg_bin = Path(os.environ["HGTEST_HG"])
 
@@ -50,9 +53,7 @@ class CliCmd:
         """
 
         def func(*args: str, **kwargs: str):
-            input = kwargs.pop("stdin", None)
-            if input:
-                input = input.encode("utf8")
+            input = kwargs.pop("stdin", "").encode("utf8")
             binary = kwargs.get("binary_output", False)
 
             cmd_args = [str(a) for a in args]
@@ -79,13 +80,12 @@ class CliCmd:
                     arg = f'"{arg}"'
                 trace_output += f" {arg}"
             trace(trace_output)
-            result = subprocess.run(
-                [str(type(self).EXEC), command] + cmd_args,
-                capture_output=True,
-                cwd=self.cwd,
-                env=env,
-                input=input,
-            )
+
+            if os.environ.get("HGTEST_SHELLOUT", False):
+                result = self._shellout(command, cmd_args, env, input)
+            else:
+                result = self._inproc(command, cmd_args, env, input)
+
             if not binary:
                 result.stdout = result.stdout.decode("utf8", errors="replace")
                 result.stderr = result.stderr.decode("utf8", errors="replace")
@@ -109,6 +109,36 @@ class CliCmd:
             return result
 
         return func
+
+    def _shellout(
+        self, command: str, args: List[str], env: Dict[str, str], stdin: bytes
+    ):
+        return subprocess.run(
+            [str(type(self).EXEC), command] + args,
+            capture_output=True,
+            cwd=self.cwd,
+            env=env,
+            input=stdin,
+        )
+
+    def _inproc(self, command: str, args: List[str], env: Dict[str, str], stdin: bytes):
+        with override_environ(env):
+            old_cwd = os.getcwd()
+            os.chdir(self.cwd)
+            try:
+                args = ["hg", command] + args
+                fout = io.BytesIO()
+                ferr = io.BytesIO()
+                fin = io.BytesIO(stdin or b"")
+                returncode = bindings.commands.run(args, fin, fout, ferr)
+                return subprocess.CompletedProcess(
+                    args,
+                    returncode,
+                    stdout=fout.getvalue(),
+                    stderr=ferr.getvalue(),
+                )
+            finally:
+                os.chdir(old_cwd)
 
 
 class hg(CliCmd):

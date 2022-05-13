@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import os
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Generator, IO, List, Optional, TYPE_CHECKING, Union
 
@@ -18,7 +17,7 @@ from .file import File
 from .hg import hg
 from .status import Status
 from .types import PathLike
-from .util import new_dir, new_file, test_globals
+from .util import new_dir, new_file, override_environ, test_globals
 
 if TYPE_CHECKING:
     from .repo import Repo
@@ -146,19 +145,3 @@ overrides = {{}}
 
     def cleanup(self) -> None:
         self.eden.cleanup()
-
-
-@contextmanager
-def override_environ(values: Dict[str, str]) -> Generator[None, None, None]:
-    backup = {}
-    for key, value in values.items():
-        old = os.environ.get(key, None)
-        if old is not None:
-            backup[key] = old
-        os.environ[key] = value
-    yield
-    for key in values.keys():
-        os.environ.pop(key)
-        old = backup.get(key, None)
-        if old is not None:
-            os.environ[key] = old

@@ -70,6 +70,7 @@ IF UNAME_SYSNAME != "Windows":
         return n
 
     def _rmdir(orig, path, dir_fd=None):
+        path = str(path) # In case it is type Path
         path = pycompat.encodeutf8(path)
         if dir_fd is not None:
             n = _countdirat(dir_fd, path)
