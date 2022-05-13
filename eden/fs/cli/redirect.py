@@ -407,8 +407,17 @@ class Redirection:
             # the disposition is still a bind mount
             return self.remove_existing(checkout, True)
         if disposition == RepoPathDisposition.IS_EMPTY_DIR:
-            repo_path.rmdir()
-            return RepoPathDisposition.DOES_NOT_EXIST
+            try:
+                repo_path.rmdir()
+                return RepoPathDisposition.DOES_NOT_EXIST
+            except OSError as err:
+                # we won't be able to remove the directory on a read-only file
+                # system, but we can still try to mount the redirect over the
+                # directory.
+                if err.errno == errno.EROFS:
+                    return disposition
+                else:
+                    raise
         return disposition
 
     def _apply_symlink(self, checkout_path: Path, target: Path) -> None:
