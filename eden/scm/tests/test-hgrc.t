@@ -78,7 +78,6 @@ make sure global options given on the cmdline take precedence
 
   $ hg showconfig --config ui.verbose=True --quiet ui
   ui.timeout=600
-  ui.timeout.warn=0
   ui.slash=True
   ui.interactive=False
   ui.mergemarkers=detailed
