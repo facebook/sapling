@@ -31,7 +31,7 @@ use panichandler::Fate;
 use slog::info;
 use source_control::server::make_SourceControlService_server;
 use srserver::service_framework::{
-    BuildModule, Fb303Module, ProfileModule, ServiceFramework, ThriftStatsModule,
+    BuildModule, ContextPropModule, Fb303Module, ProfileModule, ServiceFramework, ThriftStatsModule,
 };
 use srserver::{ThriftServer, ThriftServerBuilder};
 use tokio::task;
@@ -162,6 +162,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     service_framework.add_module(ThriftStatsModule)?;
     service_framework.add_module(Fb303Module)?;
     service_framework.add_module(ProfileModule)?;
+    service_framework.add_module(ContextPropModule)?;
 
     service_framework
         .serve_background()
