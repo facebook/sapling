@@ -47,7 +47,6 @@ use tracing_sampler::SamplingLayer;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::fmt::Layer as FmtLayer;
 use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::EnvFilter;
 use tracing_subscriber::Layer;
 
 use crate::commands;
@@ -270,19 +269,34 @@ fn setup_tracing(
     let data = pytracing::DATA.clone();
 
     let is_test = is_inside_test();
-    let log_env_name = ["EDENSCM_LOG", "LOG"]
+    let mut env_filter_dirs: Option<String> = ["EDENSCM_LOG", "LOG"]
         .iter()
         .take(if is_test { 2 } else { 1 }) /* Only consider $LOG in tests */
-        .find(|s| std::env::var_os(s).is_some());
-    if let Some(env_name) = log_env_name {
+        .filter_map(|s| std::env::var(s).ok())
+        .next();
+    // Ensure EnvFilter is used in tests so it can be changed on the
+    // fly. Don't enable if EDENSCM_TRACE_LEVEL is set because that
+    // indicates test is testing tracing/sampling.
+    if is_test && std::env::var("EDENSCM_TRACE_LEVEL").is_err() && env_filter_dirs.is_none() {
+        env_filter_dirs = Some(String::new());
+    }
+
+    if let Some(dirs) = env_filter_dirs {
+        // Apply "reload" side effects first.
+        let error = io.error();
+        let can_color = error.can_color();
+        tracing_reload::update_writer(Box::new(error));
+        tracing_reload::update_env_filter_directives(&dirs)?;
+
+        // This might error out if called 2nd time per process.
+        let env_filter = tracing_reload::reloadable_env_filter()?;
+
         // The env_filter does the actual filtering. No need to filter by level.
         let collector = tracing_collector::default_collector(data.clone(), Level::TRACE);
-        let env_filter = EnvFilter::from_env(env_name);
-        let error = io.error();
         let env_logger = FmtLayer::new()
             .with_span_events(FmtSpan::ACTIVE)
-            .with_ansi(error.can_color())
-            .with_writer(move || error.clone());
+            .with_ansi(can_color)
+            .with_writer(tracing_reload::reloadable_writer);
         if is_test {
             // In tests, disable color and timestamps for cleaner output.
             let env_logger = env_logger.without_time().with_ansi(false);

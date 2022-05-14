@@ -120,7 +120,7 @@ Test env-var logging:
 Test rust traces make it to sampling file as well:
   $ > $LOGDIR/samplingpath.txt
   $ setconfig sampling.key.from_rust=hello
-  $ hg debugshell -c "from edenscm import tracing; tracing.info('msg', target='from_rust', hi='there')"
+  $ EDENSCM_TRACE_LEVEL=info hg debugshell -c "from edenscm import tracing; tracing.info('msg', target='from_rust', hi='there')"
   atexit handler executed
   >>> import json
   >>> with open("$LOGDIR/samplingpath.txt") as f:

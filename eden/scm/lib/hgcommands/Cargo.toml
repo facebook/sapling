@@ -52,6 +52,7 @@ status = { version = "0.1.0", path = "../status" }
 terminal_size = "0.1"
 tracing = "0.1.32"
 tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
+tracing-reload = { version = "0.1.0", path = "../tracing-reload" }
 tracing-sampler = { version = "0.1.0", path = "../tracing-sampler" }
 tracing-subscriber = { version = "0.3.11", features = ["ansi", "env-filter", "fmt", "json", "local-time", "parking_lot", "registry"] }
 types = { version = "0.1.0", path = "../types" }
