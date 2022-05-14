@@ -63,6 +63,8 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<instrument>(py)?;
     impl_getsetattr::<InstrumentFunction>(py);
 
+    m.add(py, "updateenvfilter", py_fn!(py, updateenvfilter(dirs: &str)))?;
+
     Ok(m)
 }
 
@@ -1028,3 +1030,8 @@ const LEVEL_DEBUG: usize = 1;
 const LEVEL_INFO: usize = 2;
 const LEVEL_WARN: usize = 3;
 const LEVEL_ERROR: usize = 4;
+
+fn updateenvfilter(py: Python, dirs: &str) -> PyResult<PyNone> {
+    tracing_reload::update_env_filter_directives(dirs).map_pyerr(py)?;
+    Ok(PyNone)
+}
