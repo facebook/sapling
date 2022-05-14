@@ -110,6 +110,7 @@ members = [
   "lib/thrift-types",
   "lib/tracing-analyzer",
   "lib/tracing-collector",
+  "lib/tracing-reload",
   "lib/tracing-runtime-callsite",
   "lib/tracing-sampler",
   "lib/treestate",
