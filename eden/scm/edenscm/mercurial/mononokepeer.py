@@ -39,9 +39,9 @@ import ssl
 from enum import Enum
 from struct import pack, unpack
 
-from bindings import clientinfo, zstd, cats
+from bindings import cats, clientinfo, zstd
 
-from . import error, progress, httpconnection, sslutil, util, stdiopeer
+from . import error, httpconnection, progress, sslutil, stdiopeer, util
 from .i18n import _
 from .pycompat import decodeutf8, encodeutf8, iswindows
 

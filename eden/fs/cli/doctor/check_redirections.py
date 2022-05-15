@@ -9,10 +9,10 @@ from eden.fs.cli import mtab
 from eden.fs.cli.config import EdenCheckout, EdenInstance
 from eden.fs.cli.doctor.problem import FixableProblem, ProblemTracker
 from eden.fs.cli.redirect import (
+    get_effective_redirections,
     Redirection,
     RedirectionState,
     RedirectionType,
-    get_effective_redirections,
 )
 
 

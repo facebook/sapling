@@ -5,8 +5,7 @@
 
 import time
 
-from .. import blackbox as blackboxmod
-from .. import json
+from .. import blackbox as blackboxmod, json
 from ..i18n import _
 from .cmdtable import command
 

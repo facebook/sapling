@@ -8,8 +8,8 @@ import pathlib
 
 from .lib.service_test_case import (
     ManagedFakeEdenFSMixin,
-    ServiceTestCaseBase,
     service_test,
+    ServiceTestCaseBase,
 )
 from .lib.start import run_eden_start_with_real_daemon
 

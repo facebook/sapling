@@ -16,7 +16,7 @@ import re
 import struct
 import zlib
 from hashlib import sha1
-from typing import TYPE_CHECKING, Iterator, List, Optional, Tuple
+from typing import Iterator, List, Optional, Tuple, TYPE_CHECKING
 
 from edenscmnative import bdiff, mpatch, xdiff
 

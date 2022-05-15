@@ -8,7 +8,7 @@ import os.path
 import tempfile
 import unittest
 
-from eden.thrift.client import EdenNotRunningError, create_thrift_client
+from eden.thrift.client import create_thrift_client, EdenNotRunningError
 
 
 class EdenClientTest(unittest.IsolatedAsyncioTestCase):

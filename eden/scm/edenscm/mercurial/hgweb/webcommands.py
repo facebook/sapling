@@ -36,11 +36,11 @@ from ..node import hex, short
 from ..pycompat import range
 from . import webutil
 from .common import (
+    ErrorResponse,
+    get_contact,
     HTTP_FORBIDDEN,
     HTTP_NOT_FOUND,
     HTTP_OK,
-    ErrorResponse,
-    get_contact,
     paritygen,
     staticfile,
 )

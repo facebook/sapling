@@ -8,7 +8,7 @@ import contextlib
 import unittest
 import warnings
 from pathlib import Path
-from typing import Optional, Union, cast
+from typing import cast, Optional, Union
 
 from . import environment_variable as env_module
 from .temporary_directory import TempFileManager

@@ -26,7 +26,7 @@ import heapq
 import os
 import struct
 import zlib
-from typing import IO, Any, List, Optional, Tuple, Union
+from typing import Any, IO, List, Optional, Tuple, Union
 
 import bindings
 from edenscmnative import parsers

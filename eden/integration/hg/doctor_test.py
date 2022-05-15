@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 from eden.integration.lib import hgrepo
-from facebook.eden.ttypes import WorkingDirectoryParents, ResetParentCommitsParams
+from facebook.eden.ttypes import ResetParentCommitsParams, WorkingDirectoryParents
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 

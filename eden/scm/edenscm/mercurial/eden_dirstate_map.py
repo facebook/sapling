@@ -12,7 +12,7 @@ from typing import BinaryIO
 import eden.dirstate as eden_dirstate_serializer
 from edenscmnative import parsers
 
-from . import EdenThriftClient, dirstate, localrepo, pycompat, ui as ui_mod, util, vfs
+from . import dirstate, EdenThriftClient, localrepo, pycompat, ui as ui_mod, util, vfs
 
 
 MERGE_STATE_NOT_APPLICABLE = eden_dirstate_serializer.MERGE_STATE_NOT_APPLICABLE

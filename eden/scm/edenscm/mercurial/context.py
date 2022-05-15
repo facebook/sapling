@@ -47,15 +47,15 @@ from .node import (
     bin,
     hex,
     modifiednodeid,
-    nullid,
     nullhex,
+    nullid,
     nullrev,
     short,
     wdirid,
     wdirnodes,
     wdirrev,
 )
-from .pycompat import encodeutf8, range, isint
+from .pycompat import encodeutf8, isint, range
 from .thirdparty import attr
 
 

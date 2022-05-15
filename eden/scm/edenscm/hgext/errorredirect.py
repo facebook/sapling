@@ -38,7 +38,7 @@ import sys
 import time
 import traceback
 
-from edenscm.mercurial import dispatch, encoding, extensions, pycompat, util, registrar
+from edenscm.mercurial import dispatch, encoding, extensions, pycompat, registrar, util
 
 
 configtable = {}

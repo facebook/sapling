@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import struct
 import time
 from collections import defaultdict
-from typing import IO, Dict, Generator, Iterable, List, Optional, Sequence, Tuple, cast
+from typing import cast, Dict, Generator, IO, Iterable, List, Optional, Sequence, Tuple
 
 from edenscm.mercurial import perftrace, progress, pycompat
 from edenscm.mercurial.i18n import _

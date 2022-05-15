@@ -5,9 +5,7 @@
 
 import time
 
-from .. import merge as mergemod
-from .. import progress
-from .. import util
+from .. import merge as mergemod, progress, util
 from ..i18n import _
 from .cmdtable import command
 

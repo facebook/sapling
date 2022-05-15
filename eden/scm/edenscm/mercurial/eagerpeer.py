@@ -6,9 +6,9 @@
 import bindings
 from edenscm import tracing
 
-from . import repository, util, peer, error, bookmarks as bookmod
+from . import bookmarks as bookmod, error, peer, repository, util
 from .i18n import _
-from .node import hex, bin, nullid
+from .node import bin, hex, nullid
 from .revlog import textwithheader
 
 EagerRepo = bindings.eagerepo.EagerRepo

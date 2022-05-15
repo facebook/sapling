@@ -21,32 +21,17 @@ import time
 import typing
 import uuid
 from pathlib import Path
-from typing import (
-    KeysView,
-    IO,
-    Any,
-    Dict,
-    List,
-    Mapping,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-)
+from typing import Any, Dict, IO, KeysView, List, Mapping, Optional, Set, Tuple, Union
 
 import facebook.eden.ttypes as eden_ttypes
 import toml
 from eden.thrift import legacy
 from eden.thrift.legacy import EdenNotRunningError
 from facebook.eden.ttypes import MountInfo as ThriftMountInfo, MountState
-from filelock import FileLock, BaseFileLock
+from filelock import BaseFileLock, FileLock
 
 from . import configinterpolator, configutil, telemetry, util, version
-from .util import (
-    HealthStatus,
-    print_stderr,
-    write_file_atomically,
-)
+from .util import HealthStatus, print_stderr, write_file_atomically
 
 
 try:

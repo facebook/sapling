@@ -9,7 +9,7 @@ import binascii
 import hashlib
 import struct
 import sys
-from typing import IO, Callable, Dict, Tuple
+from typing import Callable, Dict, IO, Tuple
 
 
 # Version number for the format of the .hg/dirstate file that is read/written by

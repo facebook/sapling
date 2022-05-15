@@ -16,8 +16,7 @@ import stat
 from typing import Callable, Iterable, Optional, Tuple
 
 from bindings import workingcopy
-from edenscm.mercurial import match as matchmod
-from edenscm.mercurial import progress
+from edenscm.mercurial import match as matchmod, progress
 
 from . import encoding, error, pathutil, util, vfs as vfsmod
 from .i18n import _

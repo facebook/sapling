@@ -53,9 +53,9 @@ import io
 
 from bindings import checkout as nativecheckout
 from edenscm.mercurial import (
-    context,
     cmdutil,
     commands,
+    context,
     error,
     extensions,
     hintutil,
@@ -67,20 +67,10 @@ from edenscm.mercurial import (
     scmutil,
 )
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import short, nullid
+from edenscm.mercurial.node import nullid, short
 
 from .. import rebase as rebasemod
-from . import (
-    common,
-    fold,
-    hide,
-    metaedit,
-    movement,
-    restack,
-    revsets,
-    split,
-    unamend,
-)
+from . import common, fold, hide, metaedit, movement, restack, revsets, split, unamend
 
 
 revsetpredicate = revsets.revsetpredicate

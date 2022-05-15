@@ -49,8 +49,8 @@ from edenscm import tracing
 from edenscm.mercurial import (
     cmdutil,
     config,
-    error,
     context,
+    error,
     extensions,
     localrepo,
     match as matchmod,

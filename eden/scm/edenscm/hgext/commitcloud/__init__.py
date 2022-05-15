@@ -136,6 +136,7 @@ from . import (
     backupstate,
     checkoutlocations,
     commands as cccommands,
+    debughiddencommit,
     dependencies,
     status,
     sync,
@@ -143,7 +144,6 @@ from . import (
     util as ccutil,
     workspace,
 )
-from . import debughiddencommit
 
 debughiddencommit.command  # Suppressing "unused import" lint
 

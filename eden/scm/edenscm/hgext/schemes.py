@@ -56,8 +56,8 @@ from edenscm.mercurial import (
     pycompat,
     registrar,
     templater,
-    util,
     ui as uimod,
+    util,
 )
 from edenscm.mercurial.i18n import _
 

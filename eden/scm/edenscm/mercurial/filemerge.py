@@ -22,6 +22,7 @@ from . import (
     error,
     formatter,
     match,
+    pathutil,
     pycompat,
     registrar,
     scmutil,
@@ -30,7 +31,6 @@ from . import (
     templatekw,
     templater,
     util,
-    pathutil,
 )
 from .i18n import _
 from .node import nullid, short

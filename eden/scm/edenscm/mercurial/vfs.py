@@ -22,11 +22,11 @@ import tempfile
 import threading
 import typing
 from typing import (
-    IO,
     Any,
     BinaryIO,
     Callable,
     ContextManager,
+    IO,
     Iterable,
     List,
     Optional,

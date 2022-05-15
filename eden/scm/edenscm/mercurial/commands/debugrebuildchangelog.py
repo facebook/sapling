@@ -13,19 +13,19 @@ import time
 import bindings
 
 from .. import (
+    bookmarks as bookmod,
     changelog2,
     clone,
+    error,
+    extensions,
     hg,
     progress,
-    error,
     pycompat,
     util,
-    extensions,
-    bookmarks as bookmod,
     visibility,
 )
 from ..i18n import _
-from ..node import nullid, short, hex
+from ..node import hex, nullid, short
 from ..revlog import hash as revloghash
 from .cmdtable import command
 

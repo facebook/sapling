@@ -16,7 +16,7 @@ import stat
 import subprocess
 import sys
 from pathlib import Path
-from typing import Set, Dict, Iterable, Optional
+from typing import Dict, Iterable, Optional, Set
 
 from thrift.Thrift import TApplicationException
 

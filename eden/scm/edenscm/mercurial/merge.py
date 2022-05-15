@@ -17,9 +17,11 @@ import hashlib
 import shutil
 import struct
 
-from bindings import checkout as nativecheckout
-from bindings import status as nativestatus
-from bindings import worker as rustworker
+from bindings import (
+    checkout as nativecheckout,
+    status as nativestatus,
+    worker as rustworker,
+)
 from edenscm import tracing
 
 from . import (
@@ -37,10 +39,10 @@ from . import (
     progress,
     pycompat,
     scmutil,
+    treestate,
     util,
     worker,
 )
-from . import treestate
 from .i18n import _
 from .node import addednodeid, bin, hex, modifiednodeid, nullhex, nullid, nullrev
 from .pycompat import decodeutf8, encodeutf8

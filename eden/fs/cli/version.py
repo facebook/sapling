@@ -7,7 +7,7 @@
 # pyre-strict
 
 import subprocess
-from typing import Optional, Tuple, cast
+from typing import cast, Optional, Tuple
 
 
 # returns (installed_version, release) tuple

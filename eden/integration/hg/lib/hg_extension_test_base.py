@@ -14,7 +14,7 @@ import re
 import textwrap
 import typing
 from textwrap import dedent
-from typing import Any, Dict, List, Optional, Set, Tuple, Union, Type, Iterable
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, Union
 
 import eden.config
 from eden.integration.lib import hgrepo, testcase

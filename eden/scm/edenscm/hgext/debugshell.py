@@ -21,8 +21,7 @@ import time
 import bindings
 import edenscm
 import edenscmnative
-from edenscm import hgdemandimport
-from edenscm import hgext, mercurial, traceimport
+from edenscm import hgdemandimport, hgext, mercurial, traceimport
 from edenscm.hgext import commitcloud as cc
 from edenscm.mercurial import pycompat, registrar, util
 from edenscm.mercurial.i18n import _

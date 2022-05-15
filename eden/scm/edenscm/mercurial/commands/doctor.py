@@ -22,17 +22,17 @@ from bindings import (
 
 from .. import (
     bookmarks as bookmod,
+    edenapi,
     error,
     extensions,
-    edenapi,
     hg,
+    localrepo,
     progress,
     revlog,
+    scmutil,
     treestate,
     util,
     vfs as vfsmod,
-    scmutil,
-    localrepo,
 )
 from ..i18n import _
 from ..node import bin, hex, nullhex, nullid, short

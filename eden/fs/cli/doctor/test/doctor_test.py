@@ -17,8 +17,8 @@ import eden.fs.cli.doctor as doctor
 from eden.fs.cli.config import EdenCheckout, EdenInstance
 from eden.fs.cli.doctor import check_hg, check_watchman
 from eden.fs.cli.doctor.check_filesystems import (
-    check_materialized_are_accessible,
     check_loaded_content,
+    check_materialized_are_accessible,
 )
 from eden.fs.cli.doctor.test.lib.fake_client import ResetParentsCommitsArgs
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
@@ -30,7 +30,7 @@ from eden.fs.cli.doctor.test.lib.problem_collector import ProblemCollector
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
 from eden.fs.cli.test.lib.output import TestOutput
-from facebook.eden.ttypes import TreeInodeDebugInfo, TreeInodeEntryDebugInfo, SHA1Result
+from facebook.eden.ttypes import SHA1Result, TreeInodeDebugInfo, TreeInodeEntryDebugInfo
 from fb303_core.ttypes import fb303_status
 
 

@@ -8,7 +8,7 @@
 
 import unittest
 
-from ..top import Process, format_duration
+from ..top import format_duration, Process
 from ..util import format_cmd, format_mount
 
 

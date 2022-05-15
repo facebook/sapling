@@ -86,15 +86,7 @@ import re
 
 import bindings
 
-from . import (
-    bookmarks,
-    context,
-    error,
-    mutation,
-    pycompat,
-    scmutil,
-    visibility,
-)
+from . import bookmarks, context, error, mutation, pycompat, scmutil, visibility
 from .i18n import _
 from .node import hex, nullid, short
 

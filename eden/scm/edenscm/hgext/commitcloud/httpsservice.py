@@ -15,14 +15,14 @@ import time
 from subprocess import PIPE, Popen
 
 from edenscm.mercurial import (
+    commands,
     error,
+    httpclient,
+    httpconnection,
     json,
     perftrace,
     pycompat,
     util,
-    commands,
-    httpconnection,
-    httpclient,
 )
 from edenscm.mercurial.i18n import _
 

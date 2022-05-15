@@ -14,11 +14,8 @@ from eden.fs.cli.util import HealthStatus
 from eden.thrift import legacy
 
 from .lib.find_executables import FindExe
-from .lib.pexpect import PexpectAssertionMixin, PexpectSpawnType, pexpect_spawn
-from .lib.service_test_case import (
-    ServiceTestCaseBase,
-    service_test,
-)
+from .lib.pexpect import pexpect_spawn, PexpectAssertionMixin, PexpectSpawnType
+from .lib.service_test_case import service_test, ServiceTestCaseBase
 
 
 class RestartTestBase(ServiceTestCaseBase):

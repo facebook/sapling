@@ -81,7 +81,7 @@ from .. import (
     vfs as vfsmod,
     visibility,
 )
-from ..i18n import _, _x, _n
+from ..i18n import _, _n, _x
 from ..node import bin, hex, nullhex, nullid, nullrev, short
 from ..pycompat import decodeutf8, range
 from .cmdtable import command

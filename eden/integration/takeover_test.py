@@ -10,7 +10,7 @@ import sys
 import threading
 from multiprocessing import Process
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 import pexpect
 from eden.fs.cli.util import get_pid_using_lockfile, poll_until

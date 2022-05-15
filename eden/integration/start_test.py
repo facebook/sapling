@@ -8,20 +8,16 @@ import os
 import pathlib
 import subprocess
 import sys
-from typing import List, Optional, Sequence, Tuple, Dict
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.util import HealthStatus
 from fb303_core.ttypes import fb303_status
 
-from .lib import start
-from .lib import testcase
+from .lib import start, testcase
 from .lib.fake_edenfs import get_fake_edenfs_argv
 from .lib.find_executables import FindExe
-from .lib.service_test_case import (
-    ServiceTestCaseBase,
-    service_test,
-)
+from .lib.service_test_case import service_test, ServiceTestCaseBase
 
 
 class StartTest(testcase.EdenTestCase):

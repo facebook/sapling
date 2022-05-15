@@ -73,7 +73,7 @@ if DUMMYSSH is None:
 
 try:
     import bindings
-    from edenscm.mercurial import encoding, util, pycompat
+    from edenscm.mercurial import encoding, pycompat, util
 except ImportError:
     raise RuntimeError("Cannot find edenscm")
 

@@ -33,7 +33,7 @@ from .. import (
 from ..i18n import _
 from ..node import hex, nullid, short
 from ..pycompat import range
-from .common import HTTP_BAD_REQUEST, HTTP_NOT_FOUND, ErrorResponse, paritygen
+from .common import ErrorResponse, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, paritygen
 
 
 def up(p):

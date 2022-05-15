@@ -20,7 +20,7 @@ import threading
 import weakref
 from typing import Any
 
-from . import error, progress, util, stdiopeer
+from . import error, progress, stdiopeer, util
 from .i18n import _
 from .pycompat import decodeutf8, encodeutf8
 

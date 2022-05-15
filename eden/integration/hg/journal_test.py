@@ -6,7 +6,7 @@
 
 from eden.integration.lib import hgrepo
 
-from .lib.hg_extension_test_base import EdenHgTestCase, JournalEntry, hg_test
+from .lib.hg_extension_test_base import EdenHgTestCase, hg_test, JournalEntry
 
 
 @hg_test

@@ -67,8 +67,8 @@ from .. import (
     visibility,
 )
 from ..i18n import _
-from ..node import bin, hex, nullid, nullhex, short
-from ..pycompat import range, isint
+from ..node import bin, hex, nullhex, nullid, short
+from ..pycompat import isint, range
 from . import cmdtable
 
 

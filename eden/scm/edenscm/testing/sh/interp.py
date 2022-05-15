@@ -20,7 +20,7 @@ from typing import List, Optional
 # pyre-fixme[21]: Could not find module `conch_parser`.
 import conch_parser
 
-from .types import InterpResult, Env, ShellReturn, ShellExit, Scope
+from .types import Env, InterpResult, Scope, ShellExit, ShellReturn
 
 
 def sheval(code, env: Env) -> str:

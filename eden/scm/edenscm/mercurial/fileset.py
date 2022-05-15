@@ -13,7 +13,7 @@
 from __future__ import absolute_import
 
 import re
-from typing import Optional, List, Tuple
+from typing import List, Optional, Tuple
 
 from . import error, merge, parser, pycompat, registrar, scmutil, util, winutil
 from .i18n import _

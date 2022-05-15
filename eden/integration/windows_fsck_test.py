@@ -6,7 +6,7 @@
 
 import sys
 import unittest
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
 
 from facebook.eden.ttypes import GetScmStatusParams
 

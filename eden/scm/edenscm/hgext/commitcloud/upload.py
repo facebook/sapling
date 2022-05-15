@@ -5,7 +5,7 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import node as nodemod, edenapi_upload
+from edenscm.mercurial import edenapi_upload, node as nodemod
 from edenscm.mercurial.i18n import _, _n
 
 

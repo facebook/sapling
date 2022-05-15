@@ -44,9 +44,9 @@ from . import (
     sync,
     syncstate,
     token as tokenmod,
+    upload,
     util as ccutil,
     workspace,
-    upload,
 )
 
 

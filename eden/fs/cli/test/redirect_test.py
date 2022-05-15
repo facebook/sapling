@@ -13,10 +13,10 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
-from eden.fs.cli.redirect import RedirectionType, RedirectionState, FixupCmd
+from eden.fs.cli.redirect import FixupCmd, RedirectionState, RedirectionType
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
-from ..redirect import RepoPathDisposition, Redirection
+from ..redirect import Redirection, RepoPathDisposition
 
 
 class RedirectTest(unittest.TestCase, TemporaryDirectoryMixin):

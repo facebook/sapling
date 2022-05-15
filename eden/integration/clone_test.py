@@ -17,10 +17,7 @@ from eden.integration.lib.hgrepo import HgRepository
 from .lib import edenclient, testcase
 from .lib.fake_edenfs import get_fake_edenfs_argv
 from .lib.find_executables import FindExe
-from .lib.service_test_case import (
-    ServiceTestCaseBase,
-    service_test,
-)
+from .lib.service_test_case import service_test, ServiceTestCaseBase
 
 
 @testcase.eden_repo_test

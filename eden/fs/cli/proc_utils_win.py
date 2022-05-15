@@ -12,8 +12,8 @@ from ctypes.wintypes import (
     BOOL as _BOOL,
     DWORD as _DWORD,
     HANDLE as _HANDLE,
-    LPWSTR as _LPWSTR,
     LPDWORD as _LPDWORD,
+    LPWSTR as _LPWSTR,
 )
 from pathlib import Path
 from typing import Iterable, NoReturn, Optional, Type

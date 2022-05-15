@@ -32,13 +32,13 @@ from .. import (
 from ..i18n import _
 from . import hgweb_mod, webutil, wsgicgi
 from .common import (
+    cspvalues,
+    ErrorResponse,
+    get_contact,
+    get_mtime,
     HTTP_NOT_FOUND,
     HTTP_OK,
     HTTP_SERVER_ERROR,
-    ErrorResponse,
-    cspvalues,
-    get_contact,
-    get_mtime,
     ismember,
     paritygen,
     staticfile,

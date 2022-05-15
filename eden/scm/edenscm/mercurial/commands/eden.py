@@ -13,7 +13,7 @@ import struct
 import sys
 import time
 import typing
-from typing import IO, Any, Callable, Optional, Tuple, TypeVar
+from typing import Any, Callable, IO, Optional, Tuple, TypeVar
 
 from .. import (
     context,
@@ -271,7 +271,7 @@ class HgServer(object):
         return (name is not None) and (name != "unknown")
 
     def _gen_options(self) -> bytes:
-        from edenscm.hgext.remotefilelog import shallowutil, constants
+        from edenscm.hgext.remotefilelog import constants, shallowutil
 
         repo_name = getattr(self.repo, "name", None)
         use_treemanifest = (self.treemanifest is not None) and bool(repo_name)

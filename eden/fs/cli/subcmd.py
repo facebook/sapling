@@ -7,7 +7,7 @@
 import abc
 import argparse
 import typing
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Type, Union, cast
+from typing import Any, Awaitable, Callable, cast, Dict, List, Optional, Type, Union
 
 from . import util
 

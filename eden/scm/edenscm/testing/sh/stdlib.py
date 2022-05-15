@@ -12,9 +12,9 @@ instead.
 
 from functools import wraps
 from io import BytesIO
-from typing import BinaryIO, Optional, List, Tuple, Iterator, Dict, Callable
+from typing import BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple
 
-from .types import Env, InterpResult, ShellFS, ShellReturn, ShellExit, Scope
+from .types import Env, InterpResult, Scope, ShellExit, ShellFS, ShellReturn
 
 cmdtable = {}
 

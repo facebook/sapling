@@ -18,17 +18,17 @@ import sys
 import traceback
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Callable, Generator, IO, List, Tuple, Optional, cast, Dict
+from typing import Callable, cast, Dict, Generator, IO, List, Optional, Tuple
 
 from . import (
     debug as debug_mod,
     doctor as doctor_mod,
     redirect as redirect_mod,
     stats as stats_mod,
+    top as top_mod,
     ui as ui_mod,
     util as util_mod,
     version as version_mod,
-    top as top_mod,
 )
 from .config import EdenInstance
 
@@ -44,7 +44,7 @@ except ImportError:
 
 
 try:
-    from .facebook.rage import _report_edenfs_bug, _hint_rage_report
+    from .facebook.rage import _hint_rage_report, _report_edenfs_bug
 except ImportError:
 
     def _report_edenfs_bug(

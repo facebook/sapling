@@ -24,6 +24,7 @@ import weakref
 from typing import (
     BinaryIO,
     Callable,
+    cast,
     Dict,
     Generator,
     Iterable,
@@ -34,7 +35,6 @@ from typing import (
     Tuple,
     Type,
     Union,
-    cast,
 )
 
 import bindings

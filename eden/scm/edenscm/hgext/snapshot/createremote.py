@@ -7,10 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from edenscm.mercurial import error
-from edenscm.mercurial.edenapi_upload import (
-    filetypefromfile,
-    uploadhgchangesets,
-)
+from edenscm.mercurial.edenapi_upload import filetypefromfile, uploadhgchangesets
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullid
 from edenscm.mercurial.revset import parseage

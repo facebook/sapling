@@ -11,10 +11,10 @@ from pathlib import Path
 
 from eden.fs.cli import main as main_mod
 from eden.fs.cli.config import (
-    EdenCheckout,
-    EdenInstance,
     CheckoutConfig,
     DEFAULT_REVISION,
+    EdenCheckout,
+    EdenInstance,
 )
 from facebook.eden.ttypes import MountInfo, MountState
 

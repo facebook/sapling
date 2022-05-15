@@ -13,14 +13,7 @@ import shutil
 import tempfile
 from os import path
 
-from edenscm.mercurial import (
-    encoding,
-    error,
-    extensions,
-    phases,
-    registrar,
-    scmutil,
-)
+from edenscm.mercurial import encoding, error, extensions, phases, registrar, scmutil
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex
 

@@ -15,7 +15,7 @@ import sys
 import tempfile
 import typing
 from collections import defaultdict
-from typing import IO, Any, Dict, Mapping, Tuple
+from typing import Any, Dict, IO, Mapping, Tuple
 
 from edenscm.mercurial import error, filelog, pycompat, revlog, util
 from edenscm.mercurial.i18n import _

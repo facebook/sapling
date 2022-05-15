@@ -19,7 +19,7 @@ import sys
 import time
 import typing
 from pathlib import Path
-from typing import Dict, TYPE_CHECKING, Any, Callable, List, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING, TypeVar, Union
 
 import thrift.transport
 from eden.thrift.legacy import EdenClient, EdenNotRunningError

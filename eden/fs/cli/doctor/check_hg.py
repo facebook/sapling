@@ -17,9 +17,9 @@ from eden.fs.cli import hg_util, proc_utils
 from eden.fs.cli.config import EdenCheckout, InProgressCheckoutError
 from eden.fs.cli.doctor.problem import (
     FixableProblem,
+    Problem,
     ProblemTracker,
     UnexpectedCheckError,
-    Problem,
 )
 from eden.fs.cli.util import get_tip_commit_hash
 

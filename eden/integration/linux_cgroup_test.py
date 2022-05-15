@@ -13,7 +13,7 @@ import unittest
 from .lib.testcase import IntegrationTestCase
 
 if platform.system() != "Windows":
-    from .lib.linux import LinuxCgroup, is_cgroup_v2_mounted
+    from .lib.linux import is_cgroup_v2_mounted, LinuxCgroup
 else:
 
     def is_cgroup_v2_mounted():

@@ -13,7 +13,7 @@ import bindings
 from edenscm.mercurial import error, node, util
 from edenscm.mercurial.i18n import _
 
-from .pycompat import encodeutf8, decodeutf8
+from .pycompat import decodeutf8, encodeutf8
 
 
 def _convertfromobsolete(repo):

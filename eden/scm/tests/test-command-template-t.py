@@ -13,8 +13,7 @@ import os
 import sys
 import warnings
 
-from edenscm.mercurial import namespaces
-from edenscm.mercurial import pycompat
+from edenscm.mercurial import namespaces, pycompat
 from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 

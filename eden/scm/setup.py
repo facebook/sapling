@@ -84,8 +84,7 @@ ispypy = "PyPy" in sys.version
 
 
 import distutils
-from distutils import file_util
-from distutils import log
+from distutils import file_util, log
 from distutils.ccompiler import new_compiler
 from distutils.command.build import build
 from distutils.command.build_ext import build_ext
@@ -94,16 +93,15 @@ from distutils.command.build_scripts import build_scripts
 from distutils.command.install import install
 from distutils.command.install_lib import install_lib
 from distutils.command.install_scripts import install_scripts
-from distutils.core import Command, Extension
-from distutils.core import setup
+from distutils.core import Command, Extension, setup
 from distutils.dir_util import copy_tree
 from distutils.dist import Distribution
 from distutils.errors import CCompilerError, DistutilsExecError
-from distutils.spawn import spawn, find_executable
+from distutils.spawn import find_executable, spawn
 from distutils.sysconfig import get_config_var
 from distutils.version import StrictVersion
 
-from distutils_rust import RustBinary, RustExtension, BuildRustExt, InstallRustExt
+from distutils_rust import BuildRustExt, InstallRustExt, RustBinary, RustExtension
 
 havefb = os.path.exists("fb")
 isgetdepsbuild = os.environ.get("GETDEPS_BUILD") == "1"

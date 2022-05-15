@@ -9,7 +9,7 @@ import os
 
 import bindings
 
-from . import node as nodemod, error, mutation
+from . import error, mutation, node as nodemod
 from .i18n import _, _n
 
 TOKEN_KEY = "token"

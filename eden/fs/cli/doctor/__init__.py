@@ -9,25 +9,25 @@
 import os
 import shlex
 import sys
-from datetime import datetime, date
+from datetime import date, datetime
 from pathlib import Path
 from textwrap import dedent
-from typing import Set, List, Dict, Optional
+from typing import Dict, List, Optional, Set
 
 from eden.fs.cli import (
     config as config_mod,
     filesystem,
     mtab,
+    prjfs,
     proc_utils as proc_utils_mod,
     ui,
     version,
-    prjfs,
 )
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.doctor.util import (
     CheckoutInfo,
-    hg_doctor_in_backing_repo,
     get_dependent_repos,
+    hg_doctor_in_backing_repo,
 )
 from facebook.eden.ttypes import MountState
 from fb303_core.ttypes import fb303_status

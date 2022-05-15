@@ -12,8 +12,12 @@ import unittest.mock as mock
 
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.configutil import EdenConfigParser
-from eden.fs.cli.prefetch_profile import DisableProfileCmd, DisablePredictiveProfileCmd
-from eden.fs.cli.prefetch_profile import EnableProfileCmd, EnablePredictiveProfileCmd
+from eden.fs.cli.prefetch_profile import (
+    DisablePredictiveProfileCmd,
+    DisableProfileCmd,
+    EnablePredictiveProfileCmd,
+    EnableProfileCmd,
+)
 
 
 class PrefetchProfileTest(unittest.TestCase):

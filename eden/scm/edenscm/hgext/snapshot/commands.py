@@ -6,7 +6,7 @@
 from edenscm.mercurial import error, registrar
 from edenscm.mercurial.i18n import _
 
-from . import createremote, update, show, latest, isworkingcopy
+from . import createremote, isworkingcopy, latest, show, update
 
 cmdtable = {}
 command = registrar.command(cmdtable)

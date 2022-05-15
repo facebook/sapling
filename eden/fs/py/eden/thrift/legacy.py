@@ -7,7 +7,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os
 import sys
-from typing import Any, Optional, cast  # noqa: F401
+from typing import Any, cast, Optional  # noqa: F401
 
 from facebook.eden import EdenService
 from facebook.eden.ttypes import DaemonInfo
@@ -18,7 +18,7 @@ from thrift.transport.TTransport import TTransportException
 
 
 if sys.platform == "win32":
-    from eden.thrift.windows_thrift import WinTSocket, WindowsSocketException  # @manual
+    from eden.thrift.windows_thrift import WindowsSocketException, WinTSocket  # @manual
 else:
     from thrift.transport.TSocket import TSocket
 

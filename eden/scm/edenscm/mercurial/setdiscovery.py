@@ -54,7 +54,7 @@ from edenscm import tracing
 from . import error, progress, util
 from .eagerpeer import unwrap
 from .i18n import _
-from .node import nullid, bin
+from .node import bin, nullid
 
 
 def _limitsample(sample, desiredlen):
@@ -233,7 +233,7 @@ def _findcommonheadsnew(
             and local.nullableedenapi is not None
         )
 
-    from .bookmarks import selectivepullbookmarknames, remotenameforurl
+    from .bookmarks import remotenameforurl, selectivepullbookmarknames
 
     sample = set(_limitsample(localheads, initialsamplesize))
     remotename = remotenameforurl(ui, remote.url())  # ex. 'default' or 'remote'

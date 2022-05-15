@@ -18,7 +18,7 @@ import errno
 import socket
 
 from .. import pycompat, util
-from .common import HTTP_NOT_MODIFIED, ErrorResponse, statusmessage
+from .common import ErrorResponse, HTTP_NOT_MODIFIED, statusmessage
 
 
 shortcuts = {

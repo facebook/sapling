@@ -149,7 +149,7 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
         return python(args, stdin, stdout, stderr, env)
 
     import bindings
-    from edenscm.mercurial import encoding, pycompat, util, extensions
+    from edenscm.mercurial import encoding, extensions, pycompat, util
 
     # emulate ui.system via sheval
     rawsystem = partial(_rawsystem, env, stdin, stdout, stderr)

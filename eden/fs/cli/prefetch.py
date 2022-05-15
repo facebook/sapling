@@ -7,7 +7,7 @@ import argparse
 import os
 import sys
 from pathlib import Path
-from typing import NamedTuple, List
+from typing import List, NamedTuple
 
 from facebook.eden.ttypes import GlobParams
 

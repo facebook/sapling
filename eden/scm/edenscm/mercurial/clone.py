@@ -7,7 +7,7 @@
 
 import bindings
 
-from . import bookmarks as bookmod, error, streamclone, changelog2
+from . import bookmarks as bookmod, changelog2, error, streamclone
 from .i18n import _
 from .node import hex
 

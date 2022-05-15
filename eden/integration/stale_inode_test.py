@@ -8,7 +8,7 @@
 
 import os
 import time
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 from eden.integration.hg.lib.hg_extension_test_base import EdenHgTestCase
 from eden.integration.lib import hgrepo

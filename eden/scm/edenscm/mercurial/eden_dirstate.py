@@ -9,10 +9,10 @@ import stat
 from eden.dirstate import MERGE_STATE_BOTH_PARENTS, MERGE_STATE_OTHER_PARENT
 
 from . import (
-    EdenThriftClient as thrift,
     dirstate,
     eden_dirstate_fs,
     eden_dirstate_map,
+    EdenThriftClient as thrift,
     encoding,
     localrepo,
     match as matchmod,

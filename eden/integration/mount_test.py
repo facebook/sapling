@@ -18,10 +18,10 @@ from facebook.eden.ttypes import (
     EdenErrorType,
     FaultDefinition,
     MountState,
-    UnblockFaultArg,
-    WorkingDirectoryParents,
     ResetParentCommitsParams,
     SyncBehavior,
+    UnblockFaultArg,
+    WorkingDirectoryParents,
 )
 from fb303_core.ttypes import fb303_status
 from thrift.Thrift import TException  # @manual=//thrift/lib/py:base

@@ -11,7 +11,7 @@ import json
 import os
 import stat
 import time
-from typing import IO, Dict, Iterable, List, Set
+from typing import Dict, IO, Iterable, List, Set
 
 from edenscm.mercurial import (
     changegroup,

@@ -12,13 +12,13 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import List, Set, Tuple, Callable
+from typing import Callable, List, Set, Tuple
 
-from eden.fs.cli.config import EdenInstance, EdenCheckout
+from eden.fs.cli.config import EdenCheckout, EdenInstance
 from eden.fs.cli.doctor.problem import Problem, ProblemSeverity, ProblemTracker
 from eden.fs.cli.filesystem import FsUtil
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
-from facebook.eden.constants import DIS_REQUIRE_MATERIALIZED, DIS_REQUIRE_LOADED
+from facebook.eden.constants import DIS_REQUIRE_LOADED, DIS_REQUIRE_MATERIALIZED
 from facebook.eden.ttypes import SyncBehavior
 
 

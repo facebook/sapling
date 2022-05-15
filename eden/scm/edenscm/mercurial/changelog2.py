@@ -23,10 +23,10 @@ from . import (
     revlog,
     smartset,
     util,
-    visibility,
     vfs as vfsmod,
+    visibility,
 )
-from .changelog import changelogrevision, hgcommittext, gitcommittext, readfiles
+from .changelog import changelogrevision, gitcommittext, hgcommittext, readfiles
 from .i18n import _
 from .node import hex, nullid, nullrev, wdirid, wdirrev
 from .pycompat import encodeutf8

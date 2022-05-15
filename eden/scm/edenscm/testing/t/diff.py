@@ -8,7 +8,7 @@ from __future__ import annotations
 import difflib
 import os
 import re
-from typing import Optional, List, Callable, Tuple
+from typing import Callable, List, Optional, Tuple
 
 
 class ExpectLine:

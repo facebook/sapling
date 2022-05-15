@@ -7,7 +7,7 @@ from edenscm.mercurial import error, node
 from edenscm.mercurial.edenapi_upload import filetypefromfile
 from edenscm.mercurial.i18n import _
 
-from .createremote import workingcopy, parsemaxuntracked
+from .createremote import parsemaxuntracked, workingcopy
 from .metalog import fetchlatestsnapshot
 from .update import fetchsnapshot
 

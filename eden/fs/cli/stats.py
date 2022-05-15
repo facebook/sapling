@@ -10,13 +10,9 @@ import logging
 import os
 import sys
 import textwrap
-from typing import NamedTuple, Dict, List, Optional, cast
+from typing import cast, Dict, List, NamedTuple, Optional
 
-from facebook.eden.constants import (
-    STATS_MOUNTS_STATS,
-    STATS_RSS_BYTES,
-    STATS_ALL,
-)
+from facebook.eden.constants import STATS_ALL, STATS_MOUNTS_STATS, STATS_RSS_BYTES
 from facebook.eden.ttypes import GetStatInfoParams
 from thrift.protocol.TSimpleJSONProtocol import TSimpleJSONProtocolFactory
 from thrift.util import Serializer as ThriftSerializer

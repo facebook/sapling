@@ -7,12 +7,10 @@
 # pyre-strict
 
 from eden.fs.service.eden.types import (
-    ScmFileStatus,
     JournalPosition as JournalPosition_py3,
+    ScmFileStatus,
 )
-from eden.fs.service.streamingeden.types import (
-    StreamChangesSinceParams,
-)
+from eden.fs.service.streamingeden.types import StreamChangesSinceParams
 from eden.integration.lib import hgrepo
 from facebook.eden.ttypes import JournalPosition as JournalPosition_py
 from thrift.py3.converter import to_py3_struct

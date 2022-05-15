@@ -18,15 +18,12 @@ from eden.fs.cli.util import poll_until
 
 from .lib.find_executables import FindExe
 from .lib.pexpect import (
+    pexpect_spawn,
     PexpectAssertionMixin,
     PexpectSpawnType,
-    pexpect_spawn,
     wait_for_pexpect_process,
 )
-from .lib.service_test_case import (
-    ServiceTestCaseBase,
-    service_test,
-)
+from .lib.service_test_case import service_test, ServiceTestCaseBase
 from .lib.testcase import EdenTestCase
 
 

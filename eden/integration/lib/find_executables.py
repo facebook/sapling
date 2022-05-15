@@ -16,7 +16,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Callable, Dict, Optional, Tuple, Type, Generic, TypeVar, Any
+from typing import Any, Callable, Dict, Generic, Optional, Tuple, Type, TypeVar
 
 import eden.config
 

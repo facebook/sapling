@@ -350,7 +350,7 @@ class state_update(object):
 
 
 if pycompat.iswindows:
-    from ctypes.wintypes import HANDLE, DWORD
+    from ctypes.wintypes import DWORD, HANDLE
 
     def openfilewin(path):
 

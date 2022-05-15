@@ -109,10 +109,10 @@ from edenscm.mercurial import (
     changegroup,
     discovery,
     error,
-    registrar,
     extensions,
     node as nodemod,
     pycompat,
+    registrar,
     util,
 )
 from edenscm.mercurial.i18n import _

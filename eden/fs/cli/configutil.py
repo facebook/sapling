@@ -7,8 +7,8 @@
 import collections
 import configparser
 from typing import (
-    TYPE_CHECKING,
     Any,
+    cast,
     DefaultDict,
     Dict,
     List,
@@ -18,9 +18,9 @@ from typing import (
     Sequence,
     Tuple,
     Type,
+    TYPE_CHECKING,
     TypeVar,
     Union,
-    cast,
 )
 
 import toml

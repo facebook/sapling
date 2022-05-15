@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import IntEnum
 from io import BytesIO
-from typing import Dict, List, Set, Callable, Optional, BinaryIO, Any, Tuple
+from typing import Any, BinaryIO, Callable, Dict, List, Optional, Set, Tuple
 
 
 @dataclass

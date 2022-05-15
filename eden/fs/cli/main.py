@@ -24,13 +24,13 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Type
 
 import thrift.transport
-from eden.fs.cli.buck import run_buck_command, get_buck_command
+from eden.fs.cli.buck import get_buck_command, run_buck_command
 from eden.fs.cli.telemetry import TelemetrySample
 from eden.fs.cli.util import (
     check_health_using_lockfile,
-    wait_for_instance_healthy,
-    is_apple_silicon,
     get_protocol,
+    is_apple_silicon,
+    wait_for_instance_healthy,
 )
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
 from facebook.eden import EdenService
@@ -57,16 +57,16 @@ from . import (
     util,
     version as version_mod,
 )
-from .cmd_util import get_eden_instance, require_checkout, prompt_confirmation
+from .cmd_util import get_eden_instance, prompt_confirmation, require_checkout
 from .config import EdenCheckout, EdenInstance, ListMountInfo
 from .stats_print import format_size
 from .subcmd import Subcmd
-from .util import ShutdownError, print_stderr, get_environment_suitable_for_subprocess
+from .util import get_environment_suitable_for_subprocess, print_stderr, ShutdownError
 
 try:
     from .facebook.util import (
-        migration_restart_help,
         get_migration_success_message,
+        migration_restart_help,
         stop_internal_processes,
     )
 except ImportError:

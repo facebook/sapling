@@ -8,9 +8,9 @@
 import os
 import subprocess
 from pathlib import Path
-from typing import Set, List, Optional
+from typing import List, Optional, Set
 
-from eden.fs.cli.config import EdenInstance, EdenCheckout
+from eden.fs.cli.config import EdenCheckout, EdenInstance
 from eden.fs.cli.util import get_environment_suitable_for_subprocess
 from facebook.eden.ttypes import MountState
 

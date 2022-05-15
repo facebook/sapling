@@ -21,9 +21,9 @@ from __future__ import absolute_import
 import errno
 import functools
 
-from . import encoding, error, pycompat, util, json
+from . import encoding, error, json, pycompat, util
 from .i18n import _
-from .node import hex, bin
+from .node import bin, hex
 from .pycompat import decodeutf8, encodeutf8
 
 

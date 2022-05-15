@@ -10,18 +10,18 @@ import os
 import re
 import subprocess
 from pathlib import Path
-from typing import Pattern, Union, TypeVar, List
+from typing import List, Pattern, TypeVar, Union
 
 from facebook.eden.ttypes import (
-    ScmFileStatus,
-    SHA1Result,
-    TimeSpec,
     FileAttributeData,
     FileAttributeDataOrError,
     FileAttributes,
     GetAttributesFromFilesParams,
     GetAttributesFromFilesResult,
+    ScmFileStatus,
+    SHA1Result,
     SyncBehavior,
+    TimeSpec,
 )
 
 from .lib import testcase

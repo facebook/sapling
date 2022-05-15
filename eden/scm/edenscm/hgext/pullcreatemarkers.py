@@ -22,14 +22,7 @@ Config::
     # It is currently only useful for test compatibility.
     hook-pull = true
 """
-from ..mercurial import (
-    commands,
-    extensions,
-    mutation,
-    phases,
-    registrar,
-    visibility,
-)
+from ..mercurial import commands, extensions, mutation, phases, registrar, visibility
 from ..mercurial.i18n import _, _n
 from ..mercurial.node import short
 from .extlib.phabricator import arcconfig, diffprops, graphql

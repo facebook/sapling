@@ -7,7 +7,7 @@
 # pyre-strict
 
 import unittest
-from typing import List, NamedTuple, Tuple, Dict, Union
+from typing import Dict, List, NamedTuple, Tuple, Union
 
 from eden.fs.cli.debug import FileStatsCMD
 

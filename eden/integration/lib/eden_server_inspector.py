@@ -8,7 +8,7 @@ import os
 from typing import Iterable
 
 from eden.thrift.legacy import EdenClient
-from facebook.eden.ttypes import TimeSpec, SyncBehavior
+from facebook.eden.ttypes import SyncBehavior, TimeSpec
 
 from . import edenclient
 

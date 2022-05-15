@@ -56,7 +56,6 @@ import ssl
 import sys
 
 from .. import pycompat
-from .. import pycompat
 from . import _readers
 
 if pycompat.iswindows:

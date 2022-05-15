@@ -21,7 +21,7 @@ from __future__ import absolute_import
 import os
 import shutil
 import tempfile
-from typing import IO, Any, Optional, Union
+from typing import Any, IO, Optional, Union
 
 from . import (
     bundle2,
