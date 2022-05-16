@@ -44,3 +44,8 @@ class Status:
         return not (
             self.added + self.deleted + self.modified + self.removed + self.untracked
         )
+
+    def __str__(self) -> str:
+        return "\n".join(
+            f"{k}: {v}" for (k, v) in sorted(vars(self).items()) if len(v) > 0
+        )

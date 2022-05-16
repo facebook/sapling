@@ -1221,4 +1221,7 @@ repackfactor=3
 
 [ui]
 timeout=600
+
+[checkout]
+resumable=True
 "#;

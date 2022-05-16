@@ -10,7 +10,7 @@ import os
 import subprocess
 from pathlib import Path
 from subprocess import CompletedProcess
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import bindings
 
@@ -21,12 +21,12 @@ hg_bin = Path(os.environ["HGTEST_HG"])
 
 class CliCmd:
     cwd: Path
-    env: Dict[str, str]
+    _env: Dict[str, str]
     EXEC: Path = Path("")
 
     def __init__(self, cwd: Path, env: Dict[str, str]) -> None:
         self.cwd = cwd
-        self.env = env
+        self._env = env
 
     def __getattr__(self, command: str):
         """
@@ -52,9 +52,13 @@ class CliCmd:
         future we can make this invoke the commands inside the test process.
         """
 
-        def func(*args: str, **kwargs: str):
+        def func(*args: Any, **kwargs: Any):
             input = kwargs.pop("stdin", "").encode("utf8")
             binary = kwargs.get("binary_output", False)
+
+            env = os.environ.copy()
+            env.update(self._env)
+            env.update(kwargs.pop("env", {}))
 
             cmd_args = [str(a) for a in args]
             for key, value in kwargs.items():
@@ -70,9 +74,6 @@ class CliCmd:
                     raise ValueError(
                         "clicmd does not support type %s ('%s')" % (type(value), value)
                     )
-
-            env = os.environ.copy()
-            env.update(self.env)
 
             trace_output = f"$ hg {command}"
             for arg in cmd_args:

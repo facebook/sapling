@@ -52,7 +52,12 @@ pub fn checkout(
 
     let vfs = VFS::new(wc_path.to_path_buf())?;
     let checkout = Checkout::from_config(vfs.clone(), config)?;
-    let plan = checkout.plan_action_map(actions);
+    let mut plan = checkout.plan_action_map(actions);
+
+    if config.get_or_default("checkout", "resumable")? {
+        let progress_path = dot_hg.join("updateprogress");
+        plan.add_progress(progress_path)?;
+    }
 
     atomic_write(&dot_hg.join("updatestate"), |f| {
         f.write_all(target.to_hex().as_bytes())

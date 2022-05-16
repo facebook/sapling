@@ -147,7 +147,6 @@ coreconfigitem("bundle2", "rechunkthreshold", default="1MB")
 # bundle.reorder: experimental config
 coreconfigitem("bundle", "reorder", default="auto")
 coreconfigitem("censor", "policy", default="abort")
-coreconfigitem("checkout", "resumable", default=True)
 coreconfigitem("chgserver", "idletimeout", default=3600)
 coreconfigitem("chgserver", "skiphash", default=False)
 coreconfigitem("clone", "prefer-edenapi-clonedata", default=True)

@@ -466,6 +466,7 @@ impl CheckoutPlan {
 
         if let Some(progress) = progress {
             progress.lock().record_writes(paths);
+            fail::fail_point!("checkout-post-progress", |_| { bail!("oh no!") });
         }
         bar.increase_position(count as u64);
 
