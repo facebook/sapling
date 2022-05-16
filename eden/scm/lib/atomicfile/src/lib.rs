@@ -13,6 +13,9 @@ use std::io;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
+use std::path::PathBuf;
+
+use tempfile::NamedTempFile;
 
 /// Create a temp file and then rename it into the specified path to
 /// achieve atomicity. The temp file is created in the same directory
@@ -34,59 +37,88 @@ pub fn atomic_write(
     fsync: bool,
     op: impl FnOnce(&mut File) -> io::Result<()>,
 ) -> io::Result<File> {
-    let dir = match path.parent() {
-        Some(dir) => dir,
-        None => return Err(io::Error::from(io::ErrorKind::InvalidInput)),
-    };
+    let mut af = AtomicFile::open(path, mode_perms, fsync)?;
+    op(af.as_file())?;
+    af.save()
+}
 
-    let mut temp = tempfile::NamedTempFile::new_in(dir)?;
-    let f = temp.as_file_mut();
+pub struct AtomicFile {
+    file: NamedTempFile,
+    path: PathBuf,
+    dir: PathBuf,
+    fsync: bool,
+}
 
-    #[cfg(unix)]
-    f.set_permissions(Permissions::from_mode(mode_perms))?;
+impl AtomicFile {
+    pub fn open(path: &Path, #[allow(dead_code)] mode_perms: u32, fsync: bool) -> io::Result<Self> {
+        let dir = match path.parent() {
+            Some(dir) => dir,
+            None => return Err(io::Error::from(io::ErrorKind::InvalidInput)),
+        };
 
-    op(f)?;
+        let mut temp = NamedTempFile::new_in(dir)?;
+        let f = temp.as_file_mut();
 
-    if fsync {
-        f.sync_data()?;
+        #[cfg(unix)]
+        f.set_permissions(Permissions::from_mode(mode_perms))?;
+
+        Ok(Self {
+            file: temp,
+            path: path.to_path_buf(),
+            dir: dir.to_path_buf(),
+            fsync,
+        })
     }
 
-    let max_retries = if cfg!(windows) { 5u16 } else { 0 };
-    let mut retry = 0;
-    loop {
-        match temp.persist(&path) {
-            Ok(persisted) => {
-                if fsync {
-                    persisted.sync_all()?;
+    pub fn as_file(&mut self) -> &mut File {
+        self.file.as_file_mut()
+    }
 
-                    // Also sync the directory on Unix.
-                    // Windows does not support syncing a directory.
-                    #[cfg(unix)]
-                    {
-                        if let Ok(opened) = fs::OpenOptions::new().read(true).open(dir) {
-                            let _ = opened.sync_all();
+    pub fn save(self) -> io::Result<File> {
+        let (mut temp, path, dir, fsync) = (self.file, self.path, self.dir, self.fsync);
+        let f = temp.as_file_mut();
+
+        if fsync {
+            f.sync_data()?;
+        }
+
+        let max_retries = if cfg!(windows) { 5u16 } else { 0 };
+        let mut retry = 0;
+        loop {
+            match temp.persist(&path) {
+                Ok(persisted) => {
+                    if fsync {
+                        persisted.sync_all()?;
+
+                        // Also sync the directory on Unix.
+                        // Windows does not support syncing a directory.
+                        #[cfg(unix)]
+                        {
+                            if let Ok(opened) = fs::OpenOptions::new().read(true).open(dir) {
+                                let _ = opened.sync_all();
+                            }
                         }
                     }
+
+                    break Ok(persisted);
                 }
+                Err(e) => {
+                    if retry == max_retries || e.error.kind() != io::ErrorKind::PermissionDenied {
+                        break Err(e.error);
+                    }
 
-                break Ok(persisted);
-            }
-            Err(e) => {
-                if retry == max_retries || e.error.kind() != io::ErrorKind::PermissionDenied {
-                    break Err(e.error);
+                    // Windows fails with "Access Denied" if destination file is open.
+                    // Retry a few times.
+                    tracing::info!(
+                        retry,
+                        ?path,
+                        "atomic_write rename failed with EPERM. Will retry.",
+                    );
+                    std::thread::sleep(std::time::Duration::from_millis(1 << retry));
+                    temp = e.file;
+
+                    retry += 1;
                 }
-
-                // Windows fails with "Access Denied" if destination file is open.
-                // Retry a few times.
-                tracing::info!(
-                    retry,
-                    ?path,
-                    "atomic_write rename failed with EPERM. Will retry.",
-                );
-                std::thread::sleep(std::time::Duration::from_millis(1 << retry));
-                temp = e.file;
-
-                retry += 1;
             }
         }
     }
