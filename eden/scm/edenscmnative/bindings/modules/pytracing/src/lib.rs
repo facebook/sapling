@@ -63,7 +63,11 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<instrument>(py)?;
     impl_getsetattr::<InstrumentFunction>(py);
 
-    m.add(py, "updateenvfilter", py_fn!(py, updateenvfilter(dirs: &str)))?;
+    m.add(
+        py,
+        "updateenvfilter",
+        py_fn!(py, updateenvfilter(dirs: &str)),
+    )?;
 
     Ok(m)
 }
