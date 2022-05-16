@@ -152,6 +152,15 @@ o  A
         other_repo = self.server.clone()
         self.assertEqual(other_repo.hg.config("foo.bar").stdout.rstrip(), "baz")
 
+    @hgtest
+    def test_multiple_cli_args(self, repo: Repo, wc: WorkingCopy) -> None:
+        self.assertEqual(
+            repo.hg.config(
+                "foo", config=["foo.bar=one", "foo.baz=two"]
+            ).stdout.rstrip(),
+            "foo.bar=one\nfoo.baz=two",
+        )
+
 
 if __name__ == "__main__":
     import unittest

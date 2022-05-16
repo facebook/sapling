@@ -61,7 +61,8 @@ class CliCmd:
             env.update(kwargs.pop("env", {}))
 
             cmd_args = [str(a) for a in args]
-            for key, value in kwargs.items():
+
+            def process_arg(key: str, value: Any):
                 key = key.replace("_", "-")
                 prefix = "--" if len(key) != 1 else "-"
                 option = "%s%s" % (prefix, key)
@@ -70,10 +71,16 @@ class CliCmd:
                         cmd_args.append(option)
                 elif isinstance(value, str):
                     cmd_args.extend([option, value])
+                elif isinstance(value, list):
+                    for v in value:
+                        process_arg(key, v)
                 else:
                     raise ValueError(
                         "clicmd does not support type %s ('%s')" % (type(value), value)
                     )
+
+            for key, value in kwargs.items():
+                process_arg(key, value)
 
             trace_output = f"$ hg {command}"
             for arg in cmd_args:
