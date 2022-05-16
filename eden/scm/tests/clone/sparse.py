@@ -73,3 +73,23 @@ class TestSparseClone(BaseTest):
             sorted(sparse_wc.hg.files().stdout.rstrip().split("\n")),
             ["a", "sparse/base"],
         )
+
+    @hgtest
+    def test_multiple_profiles(self, repo: Repo, wc: WorkingCopy) -> None:
+        wc.file(path="sparse/a", content="sparse/a\na\n")
+        wc.file(path="sparse/b", content="sparse/b\nb\n")
+        wc.file(path="a")
+        wc.file(path="b")
+        wc.file(path="c")
+        commit1 = wc.commit()
+
+        wc.hg.push(rev=commit1.hash, to="master", create=True)
+
+        sparse_wc = WorkingCopy(repo, new_dir())
+        repo.hg.clone(repo.url, sparse_wc.root, enable_profile=["sparse/a", "sparse/b"])
+
+        self.assertEqual(
+            sorted(sparse_wc.hg.files().stdout.rstrip().split("\n")),
+            ["a", "b", "sparse/a", "sparse/b"],
+        )
+        self.assertTrue(sparse_wc.status().empty())

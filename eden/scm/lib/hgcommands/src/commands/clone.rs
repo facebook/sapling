@@ -52,7 +52,7 @@ define_flags! {
         git: bool,
 
         /// enable a sparse profile
-        enable_profile: Option<String>,
+        enable_profile: Vec<String>,
 
         /// files to include in a sparse profile
         include: String,

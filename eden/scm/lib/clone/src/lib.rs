@@ -47,7 +47,7 @@ pub enum WorkingCopyError {
 pub fn init_working_copy(
     repo: &mut Repo,
     target: HgId,
-    sparse_profile: Option<String>,
+    sparse_profiles: Vec<String>,
 ) -> Result<(), WorkingCopyError> {
     let roots = repo.dag_commits()?.read().to_dyn_read_root_tree_ids();
     let tree_id = match block_on(roots.read_root_tree_ids(vec![target.clone()]))??
@@ -66,8 +66,11 @@ pub fn init_working_copy(
 
     let mut matcher: Box<dyn pathmatcher::Matcher> = Box::new(pathmatcher::AlwaysMatcher::new());
 
-    if let Some(sparse) = sparse_profile {
-        let sparse_contents = format!("%include {}\n", sparse).into_bytes();
+    if !sparse_profiles.is_empty() {
+        let mut sparse_contents: Vec<u8> = Vec::new();
+        for profile in sparse_profiles {
+            write!(&mut sparse_contents, "%include {}\n", profile)?;
+        }
         atomic_write(&repo.dot_hg_path().join("sparse"), |f| {
             f.write_all(&sparse_contents)
         })?;
