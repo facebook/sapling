@@ -11,6 +11,7 @@
 #include <string>
 
 #include "eden/fs/service/EdenServer.h"
+#include "eden/fs/store/BackingStore.h"
 #include "eden/fs/telemetry/IActivityRecorder.h"
 
 namespace facebook::eden {
@@ -28,13 +29,13 @@ class DefaultBackingStoreFactory : public BackingStoreFactory {
       std::function<std::shared_ptr<BackingStore>(const CreateParams&)>;
 
   std::shared_ptr<BackingStore> createBackingStore(
-      folly::StringPiece type,
+      BackingStoreType type,
       const CreateParams& params) override;
 
-  void registerFactory(folly::StringPiece type, Factory factory);
+  void registerFactory(BackingStoreType type, Factory factory);
 
  private:
-  std::map<folly::StringPiece, Factory> registered_;
+  std::map<BackingStoreType, Factory> registered_;
 };
 
 /**
@@ -65,7 +66,7 @@ class EdenMain {
   void registerStandardBackingStores();
 
   void registerBackingStore(
-      folly::StringPiece type,
+      BackingStoreType type,
       DefaultBackingStoreFactory::Factory factory) {
     backingStoreFactory_.registerFactory(type, std::move(factory));
   }

@@ -1432,6 +1432,21 @@ Future<Unit> EdenServer::completeTakeoverStart(
   }
 }
 
+BackingStoreType toBackingStoreType(const std::string& type) {
+  if (type == "git") {
+    return BackingStoreType::GIT;
+  } else if (type == "hg") {
+    return BackingStoreType::HG;
+  } else if (type == "recas") {
+    return BackingStoreType::RECAS;
+  } else if (type == "") {
+    return BackingStoreType::EMPTY;
+  } else {
+    throw std::domain_error(
+        folly::to<std::string>("unsupported backing store type: ", type));
+  }
+}
+
 folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
     std::unique_ptr<CheckoutConfig> initialConfig,
     bool readOnly,
@@ -1440,7 +1455,8 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   folly::stop_watch<> mountStopWatch;
 
   auto backingStore = getBackingStore(
-      initialConfig->getRepoType(), initialConfig->getRepoSource());
+      toBackingStoreType(initialConfig->getRepoType()),
+      initialConfig->getRepoSource());
 
   auto objectStore = ObjectStore::create(
       getLocalStore(),
@@ -1780,9 +1796,9 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
 }
 
 shared_ptr<BackingStore> EdenServer::getBackingStore(
-    StringPiece type,
+    BackingStoreType type,
     StringPiece name) {
-  BackingStoreKey key{type.str(), name.str()};
+  BackingStoreKey key{type, name.str()};
   auto lockedStores = backingStores_.wlock();
   const auto it = lockedStores->find(key);
   if (it != lockedStores->end()) {

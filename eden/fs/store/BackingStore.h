@@ -30,6 +30,8 @@ class Tree;
 class TreeEntry;
 enum class TreeEntryType : uint8_t;
 
+enum BackingStoreType : uint8_t { EMPTY, GIT, HG, RECAS };
+
 /**
  * Abstract interface for a BackingStore.
  *

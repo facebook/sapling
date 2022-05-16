@@ -86,7 +86,7 @@ constexpr int kExitCodeUsage = 2;
 } // namespace
 
 std::shared_ptr<BackingStore> DefaultBackingStoreFactory::createBackingStore(
-    folly::StringPiece type,
+    BackingStoreType type,
     const CreateParams& params) {
   if (auto* fn = folly::get_ptr(registered_, type)) {
     return (*fn)(params);
@@ -97,7 +97,7 @@ std::shared_ptr<BackingStore> DefaultBackingStoreFactory::createBackingStore(
 }
 
 void DefaultBackingStoreFactory::registerFactory(
-    folly::StringPiece type,
+    BackingStoreType type,
     DefaultBackingStoreFactory::Factory factory) {
   auto [it, inserted] = registered_.emplace(type, std::move(factory));
   if (!inserted) {
@@ -127,10 +127,10 @@ void EdenMain::runServer(const EdenServer& server) {
 void EdenMain::registerStandardBackingStores() {
   using CreateParams = BackingStoreFactory::CreateParams;
 
-  registerBackingStore("null", [](const CreateParams&) {
+  registerBackingStore(BackingStoreType::EMPTY, [](const CreateParams&) {
     return std::make_shared<EmptyBackingStore>();
   });
-  registerBackingStore("hg", [](const CreateParams& params) {
+  registerBackingStore(BackingStoreType::HG, [](const CreateParams& params) {
     const auto repoPath = realpath(params.name);
     auto reloadableConfig = params.serverState->getReloadableConfig();
     auto store = std::make_unique<HgBackingStore>(
@@ -155,7 +155,8 @@ void EdenMain::registerStandardBackingStores() {
   });
 
   registerBackingStore(
-      "git", [](const CreateParams& params) -> std::shared_ptr<BackingStore> {
+      BackingStoreType::GIT,
+      [](const CreateParams& params) -> std::shared_ptr<BackingStore> {
 #ifdef EDEN_HAVE_GIT
         const auto repoPath = realpath(params.name);
         return std::make_shared<LocalStoreCachedBackingStore>(
@@ -163,9 +164,9 @@ void EdenMain::registerStandardBackingStores() {
             params.localStore,
             params.sharedStats);
 #else // EDEN_HAVE_GIT
-    (void)params;
-    throw std::domain_error(
-        "support for Git was not enabled in this EdenFS build");
+        (void)params;
+        throw std::domain_error(
+            "support for Git was not enabled in this EdenFS build");
 #endif // EDEN_HAVE_GIT
       });
 }

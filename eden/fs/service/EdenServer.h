@@ -32,6 +32,7 @@
 #include "eden/fs/service/EdenStateDir.h"
 #include "eden/fs/service/PeriodicTask.h"
 #include "eden/fs/service/StartupLogger.h"
+#include "eden/fs/store/BackingStore.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -99,7 +100,7 @@ class BackingStoreFactory {
   virtual ~BackingStoreFactory() = default;
 
   virtual std::shared_ptr<BackingStore> createBackingStore(
-      folly::StringPiece type,
+      BackingStoreType type,
       const CreateParams& params) = 0;
 };
 
@@ -336,7 +337,7 @@ class EdenServer : private TakeoverHandler {
    * return the existing BackingStore that was previously created.
    */
   std::shared_ptr<BackingStore> getBackingStore(
-      folly::StringPiece type,
+      BackingStoreType type,
       folly::StringPiece name);
 
   AbsolutePathPiece getEdenDir() const {
@@ -480,7 +481,7 @@ class EdenServer : private TakeoverHandler {
     }
   };
 
-  using BackingStoreKey = std::pair<std::string, std::string>;
+  using BackingStoreKey = std::pair<BackingStoreType, std::string>;
   using BackingStoreMap =
       std::unordered_map<BackingStoreKey, std::shared_ptr<BackingStore>>;
   using MountMap = PathMap<struct EdenMountInfo, AbsolutePath>;

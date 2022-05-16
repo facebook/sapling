@@ -12,6 +12,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/StartupLogger.h"
+#include "eden/fs/store/BackingStore.h"
 #include "eden/fs/telemetry/IActivityRecorder.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
 #include "eden/fs/telemetry/SessionInfo.h"
@@ -29,7 +30,7 @@ namespace {
 
 class EmptyBackingStoreFactory : public BackingStoreFactory {
   std::shared_ptr<BackingStore> createBackingStore(
-      folly::StringPiece,
+      BackingStoreType,
       const CreateParams&) override {
     throw std::logic_error("TestServer has no BackingStores by default");
   }
