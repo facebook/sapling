@@ -11,6 +11,7 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use anyhow::anyhow;
 use async_runtime::try_block_unless_interrupted as block_on;
@@ -27,6 +28,7 @@ use treestate::serialization::Serializable;
 use treestate::treestate::TreeState;
 use types::hgid::NULL_ID;
 use types::HgId;
+use util::file::atomic_open;
 use util::file::atomic_write;
 use util::path::remove_file;
 use vfs::VFS;
@@ -134,6 +136,23 @@ fn flush_dirstate(
     // Flush treestate then write .hg/dirstate that points to the
     // current treestate file.
 
+    let dirstate_path = dot_hg_path.join("dirstate");
+    let mut dirstate_file = atomic_open(&dirstate_path)?;
+
+    // Get "now" from the atomic temp file we just created's mtime.
+    // This ensures we use a sane mtime in case the file system
+    // doesn't match our local clock, for whatever reason.
+    let now = dirstate_file
+        .as_file()
+        .metadata()?
+        .modified()?
+        .duration_since(SystemTime::UNIX_EPOCH)?
+        .as_secs();
+
+    // Invalidate entries with mtime >= now so we can notice user
+    // edits to files in the same second the checkout completes.
+    ts.invalidate_mtime(now.try_into()?)?;
+
     let tree_root_id = ts.flush()?;
 
     let tree_file = ts
@@ -162,9 +181,10 @@ fn flush_dirstate(
         tree_root_id,
         repack_threshold: Some(threshold),
     };
-    let mut ds_buf: Vec<u8> = Vec::new();
-    ds.serialize(&mut ds_buf)?;
-    atomic_write(&dot_hg_path.join("dirstate"), |f| f.write_all(&ds_buf))?;
+
+    ds.serialize(dirstate_file.as_file())?;
+
+    dirstate_file.save()?;
 
     Ok(())
 }
