@@ -259,7 +259,14 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
         let py_table: PyDict = PyDict::new(py);
         for def in table.values() {
             let doc = Str::from(Bytes::from(def.doc().to_string()));
-            py_table.set_item(py, def.name(), (doc, def.flags()))?;
+            if let Some(synopsis) = def
+                .synopsis()
+                .map(|s| Str::from(Bytes::from(s.to_string())))
+            {
+                py_table.set_item(py, def.name(), (doc, def.flags(), synopsis))?;
+            } else {
+                py_table.set_item(py, def.name(), (doc, def.flags()))?;
+            }
         }
         Ok(py_table)
     }
