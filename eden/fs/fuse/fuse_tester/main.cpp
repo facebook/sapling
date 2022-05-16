@@ -138,7 +138,8 @@ int main(int argc, char** argv) {
       /*notifications=*/nullptr,
       CaseSensitivity::Sensitive,
       /*requireUtf8Path=*/true,
-      /*maximumBackgroundRequests=*/12 /* the default on Linux */));
+      /*maximumBackgroundRequests=*/12 /* the default on Linux */,
+      /*useWriteBackCache=*/false));
 
   XLOG(INFO) << "Starting FUSE...";
   auto completionFuture = channel->initialize().get();

@@ -81,7 +81,8 @@ class FuseChannelTest : public ::testing::Test {
         /*notifications=*/nullptr,
         CaseSensitivity::Sensitive,
         /*requireUtf8Path=*/true,
-        /*maximumBackgroundRequests=*/12));
+        /*maximumBackgroundRequests=*/12,
+        /*useWriteBackCache=*/false));
   }
 
   FuseChannel::StopFuture performInit(

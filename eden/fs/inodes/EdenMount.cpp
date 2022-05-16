@@ -1815,7 +1815,8 @@ std::unique_ptr<FuseChannel, FuseChannelDeleter> makeFuseChannel(
       mount->getServerState()->getNotifier(),
       mount->getCheckoutConfig()->getCaseSensitive(),
       mount->getCheckoutConfig()->getRequireUtf8Path(),
-      edenConfig->fuseMaximumRequests.getValue())};
+      edenConfig->fuseMaximumRequests.getValue(),
+      mount->getCheckoutConfig()->getUseWriteBackCache())};
 }
 
 folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(

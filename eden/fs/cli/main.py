@@ -874,6 +874,12 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
 
         return overlay_type == "tree"
 
+    def _get_use_write_back_cache(self, backing_store_type: Optional[str]) -> bool:
+        if backing_store_type is None:
+            return False
+        # Enable write back cache feature for RE CAS backing store
+        return backing_store_type == "recas"
+
     def _get_repo_info(
         self,
         instance: EdenInstance,
@@ -904,6 +910,8 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
 
         enable_tree_overlay = self._get_enable_tree_overlay(instance, overlay_type)
 
+        use_write_back_cache = self._get_use_write_back_cache(backing_store_type)
+
         # New clones on macOS and Windows are case insensitive.
         case_sensitive = sys.platform == "linux"
 
@@ -922,6 +930,7 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
             predictive_prefetch_profiles_active=False,
             predictive_prefetch_num_dirs=0,
             enable_tree_overlay=enable_tree_overlay,
+            use_write_back_cache=use_write_back_cache,
         )
 
         return repo, repo_config

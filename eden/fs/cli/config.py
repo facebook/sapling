@@ -164,6 +164,7 @@ class CheckoutConfig(typing.NamedTuple):
     predictive_prefetch_profiles_active: bool
     predictive_prefetch_num_dirs: int
     enable_tree_overlay: bool
+    use_write_back_cache: bool
 
 
 class ListMountInfo(typing.NamedTuple):
@@ -1158,6 +1159,7 @@ class EdenCheckout:
                 "case-sensitive": checkout_config.case_sensitive,
                 "require-utf8-path": checkout_config.require_utf8_path,
                 "enable-tree-overlay": checkout_config.enable_tree_overlay,
+                "use-write-back-cache": checkout_config.use_write_back_cache,
             },
             "redirections": redirections,
             "profiles": {
@@ -1292,6 +1294,10 @@ class EdenCheckout:
         if not isinstance(enable_tree_overlay, bool):
             enable_tree_overlay = False
 
+        use_write_back_cache = repository.get("use-write-back-cache")
+        if not isinstance(use_write_back_cache, bool):
+            use_write_back_cache = False
+
         return CheckoutConfig(
             backing_repo=Path(get_field("path")),
             scm_type=scm_type,
@@ -1307,6 +1313,7 @@ class EdenCheckout:
             predictive_prefetch_profiles_active=predictive_prefetch_active,
             predictive_prefetch_num_dirs=predictive_num_dirs,
             enable_tree_overlay=enable_tree_overlay,
+            use_write_back_cache=use_write_back_cache,
         )
 
     def get_snapshot(self) -> SnapshotState:

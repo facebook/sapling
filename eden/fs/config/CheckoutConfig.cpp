@@ -34,6 +34,7 @@ constexpr folly::StringPiece kRepoCaseSensitiveKey{"case-sensitive"};
 constexpr folly::StringPiece kMountProtocol{"protocol"};
 constexpr folly::StringPiece kRequireUtf8Path{"require-utf8-path"};
 constexpr folly::StringPiece kEnableTreeOverlay{"enable-tree-overlay"};
+constexpr folly::StringPiece kUseWriteBackCache{"use-write-back-cache"};
 #ifdef _WIN32
 constexpr folly::StringPiece kRepoGuid{"guid"};
 #endif
@@ -329,6 +330,8 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
   // Treeoverlay is default on Windows
   config->enableTreeOverlay_ = enableTreeOverlay.value_or(folly::kIsWindows);
 
+  auto useWriteBackCache = repository->get_as<bool>(kUseWriteBackCache.str());
+  config->useWriteBackCache_ = useWriteBackCache.value_or(false);
 #ifdef _WIN32
   auto guid = repository->get_as<std::string>(kRepoGuid.str());
   config->repoGuid_ = guid ? Guid{*guid} : Guid::generate();

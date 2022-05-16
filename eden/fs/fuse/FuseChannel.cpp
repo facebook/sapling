@@ -810,7 +810,8 @@ FuseChannel::FuseChannel(
     std::shared_ptr<Notifier> notifier,
     CaseSensitivity caseSensitive,
     bool requireUtf8Path,
-    int32_t maximumBackgroundRequests)
+    int32_t maximumBackgroundRequests,
+    bool useWriteBackCache)
     : bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
       numThreads_(numThreads),
       dispatcher_(std::move(dispatcher)),
@@ -821,6 +822,7 @@ FuseChannel::FuseChannel(
       caseSensitive_{caseSensitive},
       requireUtf8Path_{requireUtf8Path},
       maximumBackgroundRequests_{maximumBackgroundRequests},
+      useWriteBackCache_{useWriteBackCache},
       fuseDevice_(std::move(fuseDevice)),
       processAccessLog_(std::move(processNameCache)),
       traceDetailedArguments_(std::make_shared<std::atomic<size_t>>(0)),
@@ -1474,6 +1476,16 @@ void FuseChannel::readInitPacket() {
   // We can handle almost any request in parallel.
   want |= FUSE_PARALLEL_DIROPS;
 #endif
+
+#ifdef FUSE_WRITEBACK_CACHE
+  if (useWriteBackCache_) {
+    // Writes go to the cache then write back to the underlying fs.
+    want |= FUSE_WRITEBACK_CACHE;
+  }
+#else
+  (void)useWriteBackCache_;
+#endif
+
 #ifdef FUSE_NO_OPEN_SUPPORT
   // File handles are stateless so the kernel does not need to send open() and
   // release().

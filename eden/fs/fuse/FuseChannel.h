@@ -232,7 +232,8 @@ class FuseChannel {
       std::shared_ptr<Notifier> notifier,
       CaseSensitivity caseSensitive,
       bool requireUtf8Path,
-      int32_t maximumBackgroundRequests);
+      int32_t maximumBackgroundRequests,
+      bool useWriteBackCache);
 
   /**
    * Destroy the FuseChannel.
@@ -747,6 +748,7 @@ class FuseChannel {
   CaseSensitivity caseSensitive_;
   bool requireUtf8Path_;
   int32_t maximumBackgroundRequests_;
+  bool useWriteBackCache_;
 
   /*
    * connInfo_ is modified during the initialization process,

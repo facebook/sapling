@@ -133,6 +133,11 @@ class CheckoutConfig {
     return enableTreeOverlay_;
   }
 
+  /** Whether use FUSE write back cache feature */
+  bool getUseWriteBackCache() const {
+    return useWriteBackCache_;
+  }
+
 #ifdef _WIN32
   /** Guid for that repository */
   Guid getRepoGuid() const {
@@ -151,6 +156,8 @@ class CheckoutConfig {
 
   // Tree Overlay is default on Windows
   bool enableTreeOverlay_{folly::kIsWindows};
+
+  bool useWriteBackCache_{false};
 
 #ifdef _WIN32
   Guid repoGuid_;
