@@ -22,3 +22,7 @@ pub fn name() -> &'static str {
 pub fn doc() -> &'static str {
     "output version and copyright information"
 }
+
+pub fn synopsis() -> Option<&'static str> {
+    None
+}

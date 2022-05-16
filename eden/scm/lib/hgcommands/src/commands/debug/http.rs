@@ -26,3 +26,7 @@ pub fn name() -> &'static str {
 pub fn doc() -> &'static str {
     "check whether the EdenAPI server is reachable"
 }
+
+pub fn synopsis() -> Option<&'static str> {
+    None
+}

@@ -76,3 +76,7 @@ pub fn name() -> &'static str {
 pub fn doc() -> &'static str {
     "outputs information about all running commands for the current repository"
 }
+
+pub fn synopsis() -> Option<&'static str> {
+    None
+}

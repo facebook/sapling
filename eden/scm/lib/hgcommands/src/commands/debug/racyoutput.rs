@@ -129,3 +129,7 @@ pub fn name() -> &'static str {
 pub fn doc() -> &'static str {
     "exercise racy stdout / stderr / progress outputs"
 }
+
+pub fn synopsis() -> Option<&'static str> {
+    None
+}

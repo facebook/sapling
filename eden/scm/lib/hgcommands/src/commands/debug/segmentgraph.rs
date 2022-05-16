@@ -55,3 +55,7 @@ pub fn name() -> &'static str {
 pub fn doc() -> &'static str {
     "display segment graph for a given group and level"
 }
+
+pub fn synopsis() -> Option<&'static str> {
+    None
+}

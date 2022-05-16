@@ -80,3 +80,7 @@ pub fn name() -> &'static str {
 pub fn doc() -> &'static str {
     "print information about blobstore"
 }
+
+pub fn synopsis() -> Option<&'static str> {
+    None
+}

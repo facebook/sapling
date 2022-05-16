@@ -16,7 +16,8 @@ macro_rules! commands {
                 use self::$module as m;
                 let command_name = m::name();
                 let doc = m::doc();
-                ::clidispatch::command::Register::register(table, m::run, &command_name, &doc, None);
+                let synopsis = m::synopsis();
+                ::clidispatch::command::Register::register(table, m::run, &command_name, &doc, synopsis.as_deref());
             }
             )*
         }

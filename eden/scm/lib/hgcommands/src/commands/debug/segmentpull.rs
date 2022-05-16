@@ -83,3 +83,7 @@ pub fn name() -> &'static str {
 pub fn doc() -> &'static str {
     "pull a repository using segmented changelog. This command does not do discovery and requrires specifying old/new master revisions"
 }
+
+pub fn synopsis() -> Option<&'static str> {
+    None
+}

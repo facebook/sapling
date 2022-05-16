@@ -72,3 +72,7 @@ Otherwise, print config values specified by the arguments.
 An argument should be in the format ``section.name``.
 "
 }
+
+pub fn synopsis() -> Option<&'static str> {
+    None
+}

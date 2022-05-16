@@ -31,3 +31,7 @@ pub fn name() -> &'static str {
 pub fn doc() -> &'static str {
     "run python interpreter"
 }
+
+pub fn synopsis() -> Option<&'static str> {
+    None
+}

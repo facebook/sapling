@@ -42,3 +42,7 @@ pub fn doc() -> &'static str {
 
     Returns 0 on success."#
 }
+
+pub fn synopsis() -> Option<&'static str> {
+    None
+}

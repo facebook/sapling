@@ -116,3 +116,7 @@ pub fn name() -> &'static str {
 pub fn doc() -> &'static str {
     "test file and tree fetching using scmstore"
 }
+
+pub fn synopsis() -> Option<&'static str> {
+    None
+}

@@ -74,3 +74,7 @@ pub fn name() -> &'static str {
 pub fn doc() -> &'static str {
     "export tracing information"
 }
+
+pub fn synopsis() -> Option<&'static str> {
+    None
+}
