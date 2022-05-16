@@ -55,7 +55,7 @@ class TestSparseClone(BaseTest):
         wc.hg.push(rev=commit1.hash, to="master", create=True)
 
         # We support sparse rules coming from dynamic config.
-        repo.config.add("sparseprofile", "include.blah.sparse/base", "a")
+        self.config.add("sparseprofile", "include.blah.sparse/base", "a")
 
         sparse_wc = WorkingCopy(repo, new_dir())
         repo.hg.clone(repo.url, sparse_wc.root, enable_profile="sparse/base")
@@ -93,3 +93,14 @@ class TestSparseClone(BaseTest):
             ["a", "b", "sparse/a", "sparse/b"],
         )
         self.assertTrue(sparse_wc.status().empty())
+
+    @hgtest
+    def test_clone_within_repo(self, repo: Repo, wc: WorkingCopy) -> None:
+        repo.config.add("clone", "force-rust", "\0oops")
+
+        other_repo = self.server.clone(1)
+        other_wc = WorkingCopy(other_repo, new_dir())
+
+        # clone repo1 from within repo0
+        # we shouldn't see the invalid config value from repo0's config
+        wc.hg.clone(other_repo.url, other_wc.root)

@@ -207,16 +207,29 @@ impl Dispatcher {
         }
     }
 
+    /// Return config without a repo's influence even if we are in a repo.
+    pub fn no_repo_config(self) -> Result<ConfigSet> {
+        if let OptionalRepo::None(config) = self.optional_repo {
+            return Ok(config);
+        }
+
+        let mut config = configparser::hg::load::<String, String>(None, None)?;
+        override_config(
+            &mut config,
+            &self.global_opts.configfile,
+            &self.global_opts.config,
+        )?;
+        Ok(config)
+    }
+
     /// Run a command. Return exit code if the command completes.
     pub fn run_command(self, command_table: &CommandTable, io: &IO) -> Result<u8> {
         let args = &self.args;
         let early_result = &self.early_result;
-        let optional_repo = self.optional_repo;
-        let config = optional_repo.config();
-        let global_opts = self.global_opts;
+        let config = self.optional_repo.config();
 
-        if !global_opts.cwd.is_empty() {
-            env::set_current_dir(global_opts.cwd)?;
+        if !self.global_opts.cwd.is_empty() {
+            env::set_current_dir(&self.global_opts.cwd)?;
         }
 
         initialize_indexedlog(&config)?;
@@ -290,16 +303,16 @@ impl Dispatcher {
         let global_opts: HgGlobalOpts = parsed.clone().try_into()?;
         last_chance_to_abort(&global_opts)?;
 
-        initialize_blackbox(&optional_repo)?;
+        initialize_blackbox(&self.optional_repo)?;
 
         if global_opts.pager == "always" {
-            io.start_pager(optional_repo.config())?;
+            io.start_pager(self.optional_repo.config())?;
         }
 
         let handler = def.func();
         match handler {
             CommandFunc::Repo(f) => {
-                match optional_repo {
+                match self.optional_repo {
                     OptionalRepo::Some(repo) => f(parsed, io, repo),
                     OptionalRepo::None(_config) => {
                         // FIXME: Try to "infer repo" here.
@@ -313,11 +326,9 @@ impl Dispatcher {
                     }
                 }
             }
-            CommandFunc::OptionalRepo(f) => f(parsed, io, optional_repo),
-            CommandFunc::NoRepo(f) => f(parsed, io, optional_repo.take_config()),
-            CommandFunc::NoRepoGlobalOpts(f) => {
-                f(parsed, global_opts, io, optional_repo.take_config())
-            }
+            CommandFunc::OptionalRepo(f) => f(parsed, io, self.optional_repo),
+            CommandFunc::NoRepo(f) => f(parsed, io, self.no_repo_config()?),
+            CommandFunc::NoRepoGlobalOpts(f) => f(parsed, global_opts, io, self.no_repo_config()?),
         }
     }
 }
