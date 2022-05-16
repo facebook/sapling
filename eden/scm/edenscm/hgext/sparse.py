@@ -292,11 +292,12 @@ def _hassparse(repo):
     return "eden" not in repo.requirements and util.safehasattr(repo, "sparsematch")
 
 
-def _setupupdates(ui):
+def _setupupdates(_ui):
     def _calculateupdates(
         orig, repo, wctx, mctx, ancestors, branchmerge, *arg, **kwargs
     ):
         """Filter updates to only lay out files that match the sparse rules."""
+        ui = repo.ui
         actions, diverge, renamedelete = orig(
             repo, wctx, mctx, ancestors, branchmerge, *arg, **kwargs
         )
