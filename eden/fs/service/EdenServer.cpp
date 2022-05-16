@@ -1447,7 +1447,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       backingStore,
       treeCache_,
       getSharedStats(),
-      serverState_->getThreadPool().get(),
       serverState_->getProcessNameCache(),
       serverState_->getStructuredLogger(),
       serverState_->getReloadableConfig()->getEdenConfig());

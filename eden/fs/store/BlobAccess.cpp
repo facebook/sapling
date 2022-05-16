@@ -10,6 +10,7 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/IObjectStore.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
 
@@ -34,7 +35,9 @@ folly::Future<BlobCache::GetResult> BlobAccess::getBlob(
                   interest](std::shared_ptr<const Blob> blob) {
         auto interestHandle = blobCache->insert(blob, interest);
         return BlobCache::GetResult{std::move(blob), std::move(interestHandle)};
-      });
+      })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 } // namespace facebook::eden

@@ -228,7 +228,6 @@ void TestMount::createMount() {
       backingStore_,
       treeCache_,
       stats_,
-      &folly::QueuedImmediateExecutor::instance(),
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
       edenConfig_);
@@ -314,7 +313,6 @@ void TestMount::remount() {
       backingStore_,
       treeCache_,
       stats_,
-      &folly::QueuedImmediateExecutor::instance(),
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
       edenConfig_);
@@ -352,7 +350,6 @@ void TestMount::remountGracefully() {
       backingStore_,
       treeCache_,
       stats_,
-      &folly::QueuedImmediateExecutor::instance(),
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
       edenConfig_);

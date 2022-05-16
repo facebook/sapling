@@ -271,7 +271,9 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
       .thenValue([this, parent](auto&&) {
         static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
             "EdenMount::initialize");
-        return objectStore_->getRootTree(parent, *context);
+        return objectStore_->getRootTree(parent, *context)
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance());
       })
       .thenValue([this,
                   progressCallback = std::move(progressCallback),
@@ -636,7 +638,7 @@ TreeEntryType toEdenTreeEntryType(facebook::eden::ObjectType objectType) {
 
 } // namespace
 
-folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
+ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
     RelativePathPiece path,
     const RootId& rootId,
     ObjectType objectType,
@@ -674,11 +676,8 @@ folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
   setLastCheckoutTime(EdenTimestamp{clock_->getRealtime()});
   bool isTree = (objectType == facebook::eden::ObjectType::TREE);
 
-  auto getTargetTreeInodeFuture =
-      ensureDirectoryExists(
-          isTree ? path : path.dirname(), ctx->getFetchContext())
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+  auto getTargetTreeInodeFuture = ensureDirectoryExists(
+      isTree ? path : path.dirname(), ctx->getFetchContext());
 
   auto getRootTreeFuture = isTree
       ? objectStore_->getRootTree(rootId, ctx->getFetchContext())
@@ -686,29 +685,31 @@ folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
             ->getTreeEntryForRootId(
                 rootId, toEdenTreeEntryType(objectType), ctx->getFetchContext())
             .thenValue(
-                [name = path.basename()](std::shared_ptr<TreeEntry> treeEntry) {
+                [name = path.basename()](std::shared_ptr<TreeEntry> treeEntry)
+                    -> std::shared_ptr<const Tree> {
                   // Make up a fake ObjectId for this tree.
                   // WARNING: This is dangerous -- this ObjectId cannot be used
                   // to look up this synthesized tree from the BackingStore.
                   ObjectId fakeObjectId{};
                   Tree::container treeEntries;
                   treeEntries.emplace_back(name, *treeEntry);
-                  return std::make_shared<Tree>(
+                  return std::make_shared<const Tree>(
                       std::move(treeEntries), fakeObjectId);
                 });
 
-  return collectSafe(getTargetTreeInodeFuture, getRootTreeFuture)
+  return collectAllSafe(getTargetTreeInodeFuture, getRootTreeFuture)
       .thenValue([ctx, setPathObjectIdTime, stopWatch, rootId](
                      std::tuple<TreeInodePtr, shared_ptr<const Tree>> results) {
         setPathObjectIdTime->didLookupTreesOrGetInodeByPath =
             stopWatch.elapsed();
         auto [targetTreeInode, incomingTree] = results;
         targetTreeInode->unloadChildrenUnreferencedByFs();
-        return targetTreeInode->checkout(ctx.get(), nullptr, incomingTree);
+        return targetTreeInode->checkout(ctx.get(), nullptr, incomingTree)
+            .semi();
       })
       .thenValue([ctx, setPathObjectIdTime, stopWatch, rootId](auto&&) {
         setPathObjectIdTime->didCheckout = stopWatch.elapsed();
-        return ctx->flush();
+        return ctx->flush().semi();
       })
       .thenValue([ctx, setPathObjectIdTime, stopWatch](
                      std::vector<CheckoutConflict>&& conflicts) {
@@ -1373,7 +1374,9 @@ folly::Future<CheckoutResult> EdenMount::checkout(
             objectStore_->getRootTree(parent1Hash, ctx->getFetchContext());
         auto toTreeFuture =
             objectStore_->getRootTree(snapshotHash, ctx->getFetchContext());
-        return collectSafe(fromTreeFuture, toTreeFuture);
+        return collectAllSafe(fromTreeFuture, toTreeFuture)
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance());
       })
       .thenValue(
           [this](std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
@@ -1626,11 +1629,11 @@ Future<Unit> EdenMount::diff(DiffContext* ctxPtr, const RootId& commitHash)
   auto rootInode = getRootInode();
   return objectStore_->getRootTree(commitHash, ctxPtr->getFetchContext())
       .thenValue([this](std::shared_ptr<const Tree> rootTree) {
-        return waitForPendingNotifications()
-            .thenValue(
-                [rootTree = std::move(rootTree)](auto&&) { return rootTree; })
-            .semi();
+        return waitForPendingNotifications().thenValue(
+            [rootTree = std::move(rootTree)](auto&&) { return rootTree; });
       })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([ctxPtr, rootInode = std::move(rootInode)](
                      std::shared_ptr<const Tree>&& rootTree) {
         return rootInode->diff(

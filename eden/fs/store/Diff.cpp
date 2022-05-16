@@ -603,7 +603,9 @@ Future<Unit>
 diffRoots(DiffContext* context, const RootId& root1, const RootId& root2) {
   auto future1 = context->store->getRootTree(root1, context->getFetchContext());
   auto future2 = context->store->getRootTree(root2, context->getFetchContext());
-  return collectSafe(future1, future2)
+  return collectAllSafe(future1, future2)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([context](std::tuple<
                            std::shared_ptr<const Tree>,
                            std::shared_ptr<const Tree>>&& tup) {

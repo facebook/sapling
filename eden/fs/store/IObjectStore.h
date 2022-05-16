@@ -44,13 +44,13 @@ class IObjectStore {
    * resulting future is complete.
    */
 
-  virtual folly::Future<std::shared_ptr<const Tree>> getRootTree(
+  virtual ImmediateFuture<std::shared_ptr<const Tree>> getRootTree(
       const RootId& rootId,
       ObjectFetchContext& context) const = 0;
   virtual ImmediateFuture<std::shared_ptr<const Tree>> getTree(
       const ObjectId& id,
       ObjectFetchContext& context) const = 0;
-  virtual folly::Future<std::shared_ptr<const Blob>> getBlob(
+  virtual ImmediateFuture<std::shared_ptr<const Blob>> getBlob(
       const ObjectId& id,
       ObjectFetchContext& context) const = 0;
 
@@ -58,9 +58,9 @@ class IObjectStore {
    * Prefetch all the blobs represented by the HashRange.
    *
    * The caller is responsible for making sure that the HashRange stays valid
-   * for as long as the returned SemiFuture.
+   * for as long as the returned ImmediateFuture.
    */
-  virtual folly::Future<folly::Unit> prefetchBlobs(
+  virtual ImmediateFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
       ObjectFetchContext& context) const = 0;
 };

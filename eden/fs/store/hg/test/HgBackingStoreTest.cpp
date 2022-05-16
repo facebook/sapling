@@ -25,6 +25,7 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/HgRepo.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -67,7 +68,6 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
         backingStore,
         treeCache,
         stats,
-        &folly::QueuedImmediateExecutor::instance(),
         std::make_shared<ProcessNameCache>(),
         std::make_shared<NullStructuredLogger>(),
         rawEdenConfig);

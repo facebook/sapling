@@ -220,8 +220,7 @@ ImmediateFuture<std::string> PrjfsDispatcherImpl::read(
                      std::variant<std::shared_ptr<const Tree>, TreeEntry>
                          treeOrTreeEntry) {
         auto& treeEntry = std::get<TreeEntry>(treeOrTreeEntry);
-        return ImmediateFuture{
-            objectStore->getBlob(treeEntry.getHash(), context).semi()}
+        return objectStore->getBlob(treeEntry.getHash(), context)
             .thenValue([](std::shared_ptr<const Blob> blob) {
               // TODO(xavierd): directly return the Blob to the caller.
               std::string res;

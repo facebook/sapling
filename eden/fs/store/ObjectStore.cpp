@@ -8,7 +8,6 @@
 #include "ObjectStore.h"
 
 #include <folly/Conv.h>
-#include <folly/Executor.h>
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 
@@ -39,7 +38,6 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
     shared_ptr<BackingStore> backingStore,
     shared_ptr<TreeCache> treeCache,
     shared_ptr<EdenStats> stats,
-    folly::Executor::KeepAlive<folly::Executor> executor,
     std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::shared_ptr<const EdenConfig> edenConfig) {
@@ -48,7 +46,6 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
       std::move(backingStore),
       std::move(treeCache),
       std::move(stats),
-      executor,
       processNameCache,
       structuredLogger,
       edenConfig}};
@@ -59,7 +56,6 @@ ObjectStore::ObjectStore(
     shared_ptr<BackingStore> backingStore,
     shared_ptr<TreeCache> treeCache,
     shared_ptr<EdenStats> stats,
-    folly::Executor::KeepAlive<folly::Executor> executor,
     std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::shared_ptr<const EdenConfig> edenConfig)
@@ -68,7 +64,6 @@ ObjectStore::ObjectStore(
       localStore_{std::move(localStore)},
       backingStore_{std::move(backingStore)},
       stats_{std::move(stats)},
-      executor_{executor},
       pidFetchCounts_{std::make_unique<PidFetchCounts>()},
       processNameCache_(processNameCache),
       structuredLogger_(structuredLogger),
@@ -123,33 +118,33 @@ std::string ObjectStore::renderObjectId(const ObjectId& objectId) {
   return backingStore_->renderObjectId(objectId);
 }
 
-Future<shared_ptr<const Tree>> ObjectStore::getRootTree(
+ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getRootTree(
     const RootId& rootId,
     ObjectFetchContext& context) const {
   XLOG(DBG3) << "getRootTree(" << rootId << ")";
-  return backingStore_->getRootTree(rootId, context)
-      .via(executor_)
-      .thenValue(
-          [treeCache = treeCache_, rootId](std::shared_ptr<const Tree> tree) {
-            if (!tree) {
-              throw std::domain_error(
-                  folly::to<string>("unable to import root ", rootId));
-            }
+  return ImmediateFuture{backingStore_->getRootTree(rootId, context)}.thenValue(
+      [treeCache = treeCache_, rootId](std::shared_ptr<const Tree> tree) {
+        if (!tree) {
+          throw std::domain_error(
+              folly::to<string>("unable to import root ", rootId));
+        }
 
-            treeCache->insert(tree);
+        treeCache->insert(tree);
 
-            return tree;
-          });
+        return tree;
+      });
 }
 
-folly::Future<std::shared_ptr<TreeEntry>> ObjectStore::getTreeEntryForRootId(
+ImmediateFuture<std::shared_ptr<TreeEntry>> ObjectStore::getTreeEntryForRootId(
     const RootId& rootId,
     TreeEntryType treeEntryType,
     ObjectFetchContext& context) const {
   XLOG(DBG3) << "getTreeEntryForRootId(" << rootId << ")";
 
-  return backingStore_->getTreeEntryForRootId(rootId, treeEntryType, context)
-      .via(executor_);
+  auto future =
+      backingStore_->getTreeEntryForRootId(rootId, treeEntryType, context);
+  return ImmediateFuture{std::move(future)}.thenValue(
+      [](std::shared_ptr<TreeEntry> treeEntry) { return treeEntry; });
 }
 
 ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
@@ -179,10 +174,9 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
 
   deprioritizeWhenFetchHeavy(fetchContext);
 
-  return backingStore_->getTree(id, fetchContext)
-      .via(executor_)
-      .thenValue([self = shared_from_this(), id, &fetchContext](
-                     BackingStore::GetTreeRes result) {
+  return ImmediateFuture{backingStore_->getTree(id, fetchContext)}.thenValue(
+      [self = shared_from_this(), id, &fetchContext](
+          BackingStore::GetTreeRes result) {
         if (!result.tree) {
           // TODO: Perhaps we should do some short-term negative
           // caching?
@@ -196,11 +190,10 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
         fetchContext.didFetch(ObjectFetchContext::Tree, id, result.origin);
         self->updateProcessFetch(fetchContext);
         return sharedTree;
-      })
-      .semi();
+      });
 }
 
-folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
+ImmediateFuture<folly::Unit> ObjectStore::prefetchBlobs(
     ObjectIdRange ids,
     ObjectFetchContext& fetchContext) const {
   // In theory we could/should ask the localStore_ to filter the list
@@ -214,37 +207,38 @@ folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
   if (ids.empty()) {
     return folly::unit;
   }
-  return backingStore_->prefetchBlobs(ids, fetchContext).via(executor_);
+  return backingStore_->prefetchBlobs(ids, fetchContext);
 }
 
-Future<shared_ptr<const Blob>> ObjectStore::getBlob(
+ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
     const ObjectId& id,
     ObjectFetchContext& fetchContext) const {
   deprioritizeWhenFetchHeavy(fetchContext);
-  return backingStore_->getBlob(id, fetchContext)
-      .via(executor_)
-      .thenValue([self = shared_from_this(), id, &fetchContext](
-                     BackingStore::GetBlobRes result) {
-        if (!result.blob) {
-          // TODO: Perhaps we should do some short-term negative caching?
-          XLOG(DBG2) << "unable to find blob " << id;
-          throw std::domain_error(fmt::format("blob {} not found", id));
-        }
-        // Quick check in-memory cache first, before doing expensive
-        // calculations. If metadata is present in cache, it most certainly
-        // exists in local store too.
-        // Additionally check if we use aux metadata from mercurial, and do not
-        // compute it in this case.
-        if (!self->edenConfig_->useAuxMetadata.getValue() &&
-            !self->metadataCache_.rlock()->exists(id)) {
-          auto metadata =
-              self->localStore_->putBlobMetadata(id, result.blob.get());
-          self->metadataCache_.wlock()->set(id, metadata);
-        }
-        self->updateProcessFetch(fetchContext);
-        fetchContext.didFetch(ObjectFetchContext::Blob, id, result.origin);
-        return std::move(result.blob);
-      });
+  return ImmediateFuture<BackingStore::GetBlobRes>{
+      backingStore_->getBlob(id, fetchContext)}
+      .thenValue(
+          [self = shared_from_this(), id, &fetchContext](
+              BackingStore::GetBlobRes result) -> std::shared_ptr<const Blob> {
+            if (!result.blob) {
+              // TODO: Perhaps we should do some short-term negative caching?
+              XLOG(DBG2) << "unable to find blob " << id;
+              throw std::domain_error(fmt::format("blob {} not found", id));
+            }
+            // Quick check in-memory cache first, before doing expensive
+            // calculations. If metadata is present in cache, it most certainly
+            // exists in local store too.
+            // Additionally check if we use aux metadata from mercurial, and do
+            // not compute it in this case.
+            if (!self->edenConfig_->useAuxMetadata.getValue() &&
+                !self->metadataCache_.rlock()->exists(id)) {
+              auto metadata =
+                  self->localStore_->putBlobMetadata(id, result.blob.get());
+              self->metadataCache_.wlock()->set(id, metadata);
+            }
+            self->updateProcessFetch(fetchContext);
+            fetchContext.didFetch(ObjectFetchContext::Blob, id, result.origin);
+            return std::move(result.blob);
+          });
 }
 
 ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
@@ -309,8 +303,12 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
         //
         // TODO: This should probably check the LocalStore for the blob first,
         // especially when we begin to expire entries in RocksDB.
-        return self->backingStore_->getBlob(id, context)
-            .via(self->executor_)
+        return self->backingStore_
+            ->getBlob(id, context)
+            // Non-blocking statistics and cache updates should happen ASAP
+            // rather than waiting for callbacks to be scheduled on the
+            // consuming thread.
+            .toUnsafeFuture()
             .thenValue([self, id, &context](BackingStore::GetBlobRes result) {
               if (result.blob) {
                 self->stats_->getObjectStoreStatsForCurrentThread()

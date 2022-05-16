@@ -11,8 +11,8 @@
 #include <folly/futures/Future.h>
 #include "eden/fs/utils/ImmediateFuture.h"
 
-using folly::Future;
-using folly::makeFuture;
+using folly::makeSemiFuture;
+using folly::SemiFuture;
 using std::make_shared;
 using std::shared_ptr;
 
@@ -43,17 +43,17 @@ void FakeObjectStore::setTreeForCommit(const RootId& commitID, Tree&& tree) {
   }
 }
 
-Future<shared_ptr<const Tree>> FakeObjectStore::getRootTree(
+ImmediateFuture<shared_ptr<const Tree>> FakeObjectStore::getRootTree(
     const RootId& commitID,
     ObjectFetchContext&) const {
   ++commitAccessCounts_[commitID];
   auto iter = commits_.find(commitID);
   if (iter == commits_.end()) {
-    return makeFuture<shared_ptr<const Tree>>(
+    return makeSemiFuture<shared_ptr<const Tree>>(
         std::domain_error(folly::to<std::string>(
             "tree data for commit ", commitID, " not found")));
   }
-  return makeFuture(make_shared<Tree>(iter->second));
+  return make_shared<const Tree>(iter->second);
 }
 
 ImmediateFuture<std::shared_ptr<const Tree>> FakeObjectStore::getTree(
@@ -68,19 +68,19 @@ ImmediateFuture<std::shared_ptr<const Tree>> FakeObjectStore::getTree(
   return make_shared<const Tree>(iter->second);
 }
 
-Future<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(
+ImmediateFuture<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(
     const ObjectId& id,
     ObjectFetchContext&) const {
   ++accessCounts_[id];
   auto iter = blobs_.find(id);
   if (iter == blobs_.end()) {
-    return makeFuture<shared_ptr<const Blob>>(
+    return makeImmediateFuture<shared_ptr<const Blob>>(
         std::domain_error(fmt::format("blob {} not found", id)));
   }
-  return makeFuture(make_shared<Blob>(iter->second));
+  return make_shared<const Blob>(iter->second);
 }
 
-folly::Future<folly::Unit> FakeObjectStore::prefetchBlobs(
+ImmediateFuture<folly::Unit> FakeObjectStore::prefetchBlobs(
     ObjectIdRange,
     ObjectFetchContext&) const {
   return folly::unit;

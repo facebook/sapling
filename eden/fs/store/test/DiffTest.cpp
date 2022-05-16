@@ -25,6 +25,7 @@
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/Future.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
@@ -79,7 +80,6 @@ class DiffTest : public ::testing::Test {
         backingStore_,
         treeCache,
         std::make_shared<EdenStats>(),
-        &folly::QueuedImmediateExecutor::instance(),
         std::make_shared<ProcessNameCache>(),
         std::make_shared<NullStructuredLogger>(),
         rawEdenConfig);
@@ -147,7 +147,9 @@ class DiffTest : public ::testing::Test {
       auto tree2Future = store_->getRootTree(
           RootId{commit2.str()}, ObjectFetchContext::getNullContext());
 
-      return collectSafe(std::move(tree1Future), std::move(tree2Future))
+      return collectAllSafe(std::move(tree1Future), std::move(tree2Future))
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance())
           .thenValue([this](std::tuple<
                             std::shared_ptr<const Tree>,
                             std::shared_ptr<const Tree>>&& tup) {

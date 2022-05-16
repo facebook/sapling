@@ -1729,8 +1729,8 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
       .semi();
 }
 
-folly::Future<std::unique_ptr<SetPathObjectIdResult>>
-EdenServiceHandler::future_setPathObjectId(
+folly::SemiFuture<std::unique_ptr<SetPathObjectIdResult>>
+EdenServiceHandler::semifuture_setPathObjectId(
     std::unique_ptr<SetPathObjectIdParams> params) {
 #ifndef _WIN32
   auto mountPoint = params->get_mountPoint();
@@ -1747,19 +1747,20 @@ EdenServiceHandler::future_setPathObjectId(
   if (auto requestInfo = params->requestInfo_ref()) {
     fetchContext.updateRequestInfo(std::move(*requestInfo));
   }
-  return wrapFuture(
-      std::move(helper),
-      edenMount
-          ->setPathObjectId(
-              RelativePathPiece{repoPath},
-              parsedRootId,
-              params->get_type(),
-              params->get_mode(),
-              fetchContext)
-          .thenValue([](auto&& resultAndTimes) {
-            return std::make_unique<SetPathObjectIdResult>(
-                std::move(resultAndTimes.result));
-          }));
+  return wrapImmediateFuture(
+             std::move(helper),
+             edenMount
+                 ->setPathObjectId(
+                     RelativePathPiece{repoPath},
+                     parsedRootId,
+                     params->get_type(),
+                     params->get_mode(),
+                     fetchContext)
+                 .thenValue([](auto&& resultAndTimes) {
+                   return std::make_unique<SetPathObjectIdResult>(
+                       std::move(resultAndTimes.result));
+                 }))
+      .semi();
 #else
   (void)params;
   NOT_IMPLEMENTED();

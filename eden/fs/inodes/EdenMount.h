@@ -876,7 +876,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * other contents will disappear
    * 3. In DRYRUN mode, no action action will be executed.
    */
-  FOLLY_NODISCARD folly::Future<SetPathObjectIdResultAndTimes> setPathObjectId(
+  FOLLY_NODISCARD ImmediateFuture<SetPathObjectIdResultAndTimes>
+  setPathObjectId(
       RelativePathPiece path,
       const RootId& rootId,
       ObjectType objectType,

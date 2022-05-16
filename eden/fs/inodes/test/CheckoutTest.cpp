@@ -1171,11 +1171,7 @@ void runTestSetPathObjectId(
           facebook::eden::CheckoutMode::NORMAL,
           ObjectFetchContext::getNullContext());
 
-  auto executor = testMount.getServerExecutor().get();
-  auto waitedSetPathObjectIdResultAndTimesAndTimes =
-      std::move(setPathObjectIdResultAndTimesAndTimes).waitVia(executor);
-  ASSERT_TRUE(waitedSetPathObjectIdResultAndTimesAndTimes.isReady());
-  auto result = std::move(waitedSetPathObjectIdResultAndTimesAndTimes).get();
+  auto result = std::move(setPathObjectIdResultAndTimesAndTimes).get();
   EXPECT_EQ(0, result.result.conflicts_ref()->size());
 
   // Confirm that the tree has been updated correctly.
@@ -1246,11 +1242,7 @@ TEST(Checkout, testSetPathObjectIdConflict) {
           facebook::eden::CheckoutMode::NORMAL,
           ObjectFetchContext::getNullContext());
 
-  auto executor = testMount.getServerExecutor().get();
-  auto waitedSetPathObjectIdResultAndTimes =
-      std::move(setPathObjectIdResultAndTimes).waitVia(executor);
-  ASSERT_TRUE(waitedSetPathObjectIdResultAndTimes.isReady());
-  auto result = std::move(waitedSetPathObjectIdResultAndTimes).get();
+  auto result = std::move(setPathObjectIdResultAndTimes).get();
   ASSERT_TRUE(result.result.conflicts_ref().has_value());
   EXPECT_EQ(1, result.result.conflicts_ref()->size());
   EXPECT_THAT(
@@ -1322,11 +1314,7 @@ TEST(Checkout, testSetPathObjectIdLastCheckoutTime) {
           facebook::eden::CheckoutMode::NORMAL,
           ObjectFetchContext::getNullContext());
 
-  auto executor = testMount.getServerExecutor().get();
-  auto waitedSetPathObjectIdResultAndTimes =
-      std::move(setPathObjectIdResultAndTimes).waitVia(executor);
-  ASSERT_TRUE(waitedSetPathObjectIdResultAndTimes.isReady());
-  auto result = std::move(waitedSetPathObjectIdResultAndTimes).get();
+  auto result = std::move(setPathObjectIdResultAndTimes).get();
   EXPECT_EQ(0, result.result.conflicts_ref()->size());
 
   struct timespec updatedLastCheckoutTime =
@@ -1365,11 +1353,7 @@ TEST(Checkout, testSetPathObjectIdCheckoutSingleFile) {
           facebook::eden::CheckoutMode::NORMAL,
           ObjectFetchContext::getNullContext());
 
-  auto executor = testMount.getServerExecutor().get();
-  auto waitedSetPathObjectIdResultAndTimes =
-      std::move(setPathObjectIdResultAndTimes).waitVia(executor);
-  ASSERT_TRUE(waitedSetPathObjectIdResultAndTimes.isReady());
-  auto result = std::move(waitedSetPathObjectIdResultAndTimes).get();
+  auto result = std::move(setPathObjectIdResultAndTimes).get();
   EXPECT_EQ(0, result.result.conflicts_ref()->size());
 
   // Confirm that the blob has been updated correctly.
@@ -1397,11 +1381,7 @@ TEST(Checkout, testSetPathObjectIdCheckoutMultipleFiles) {
           facebook::eden::CheckoutMode::NORMAL,
           ObjectFetchContext::getNullContext());
 
-  auto executor = testMount.getServerExecutor().get();
-  auto waitedSetPathObjectIdResultAndTimes =
-      std::move(setPathObjectIdResultAndTimes).waitVia(executor);
-  ASSERT_TRUE(waitedSetPathObjectIdResultAndTimes.isReady());
-  auto result = std::move(waitedSetPathObjectIdResultAndTimes).get();
+  auto result = std::move(setPathObjectIdResultAndTimes).get();
   EXPECT_EQ(0, result.result.conflicts_ref()->size());
 
   // Confirm that the blob has been updated correctly.
@@ -1415,10 +1395,7 @@ TEST(Checkout, testSetPathObjectIdCheckoutMultipleFiles) {
           facebook::eden::CheckoutMode::NORMAL,
           ObjectFetchContext::getNullContext());
 
-  auto waitedSetPathObjectIdResultAndTimes2 =
-      std::move(setPathObjectIdResultAndTimes2).waitVia(executor);
-  ASSERT_TRUE(waitedSetPathObjectIdResultAndTimes2.isReady());
-  auto result2 = std::move(waitedSetPathObjectIdResultAndTimes2).get();
+  auto result2 = std::move(setPathObjectIdResultAndTimes2).get();
   EXPECT_EQ(0, result2.result.conflicts_ref()->size());
 
   EXPECT_FILE_INODE(testMount.getFileInode(path), contents, 0644);
