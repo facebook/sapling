@@ -191,7 +191,7 @@ fn clone_metadata(
     io: &IO,
     clone_opts: &CloneOpts,
     global_opts: HgGlobalOpts,
-    mut config: ConfigSet,
+    config: ConfigSet,
     destination: &Path,
     reponame: &str,
 ) -> Result<(Repo, Option<HgId>)> {
@@ -215,7 +215,7 @@ fn clone_metadata(
         .collect::<String>();
     hgrc_content.push_str(format!("\n[paths]\ndefault = {}\n", clone_opts.source).as_str());
 
-    let mut repo = Repo::init(&destination, &mut config, Some(hgrc_content))?;
+    let mut repo = Repo::init(destination, config, Some(hgrc_content))?;
 
     repo.config_mut().set_overrides(&global_opts.config)?;
     repo.add_store_requirement("lazychangelog")?;

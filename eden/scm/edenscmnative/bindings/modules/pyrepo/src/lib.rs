@@ -32,9 +32,7 @@ py_class!(pub class repo |py| {
 
     @staticmethod
     def initialize(path: PyPathBuf, config: &config) -> PyResult<PyNone> {
-        let mut config = config.get_cfg(py);
-        let repopath = path.as_path();
-        Repo::init(repopath, &mut config, None).map_pyerr(py)?;
+        Repo::init(path.as_path(), config.get_cfg(py), None).map_pyerr(py)?;
         Ok(PyNone)
     }
 

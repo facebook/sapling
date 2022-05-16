@@ -13,14 +13,13 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use configparser::config::ConfigSet;
-use configparser::hg::ConfigSetHgExt;
 
 use crate::constants::*;
 use crate::errors::InitError;
 
 pub fn init_hg_repo(
     root_path: &Path,
-    config: &mut ConfigSet,
+    config: &ConfigSet,
     hgrc_contents: Option<String>,
 ) -> Result<(), InitError> {
     if !root_path.exists() {
@@ -35,8 +34,7 @@ pub fn init_hg_repo(
 
     write_reponame(hg_path, config)?;
     write_changelog(hg_path)?;
-    #[cfg(feature = "fb")]
-    write_configs(hg_path, config, hgrc_contents)?;
+    write_hgrc(hg_path, hgrc_contents)?;
     write_requirements(hg_path)?;
     write_store_requirements(hg_path, config)?;
     // TODO(sggutier): Add cleanup for the .hg directory in the event of an error
@@ -96,18 +94,6 @@ fn write_hgrc(path: &Path, hgrc_contents: Option<String>) -> Result<(), InitErro
         create_file(hgrc_path.as_path(), hgrc_contents.as_bytes())?;
     };
     Ok(())
-}
-
-fn write_configs(
-    path: &Path,
-    config: &mut ConfigSet,
-    hgrc_contents: Option<String>,
-) -> Result<(), InitError> {
-    write_hgrc(path, hgrc_contents)?;
-    match config.load::<String, String>(Some(path), None) {
-        Ok(_) => Ok(()),
-        Err(err) => Err(InitError::ConfigLoadingError(err)),
-    }
 }
 
 fn write_requirements_file(path: &Path, requirements: HashSet<&str>) -> Result<(), InitError> {
@@ -239,23 +225,6 @@ treestate
         assert_eq!(fs::read_to_string(path).unwrap(), expected.join("\n"));
     }
 
-    #[cfg(feature = "fb")]
-    #[test]
-    fn test_config_load() {
-        let tmp = tempfile::tempdir().unwrap();
-        let mut config = ConfigSet::new();
-        let dynamic_path = tmp.path().join("hgrc.dynamic");
-        let cache_path = tmp.path().join("hgrc.remote_cache");
-        let hgrc = String::from("[paths]\ndefault=testpath");
-        write_configs(tmp.path(), &mut config, Some(hgrc)).unwrap();
-        assert!(dynamic_path.exists());
-        assert!(cache_path.exists());
-        let path = config
-            .get_or_default::<String>("paths", "default")
-            .unwrap_or_default();
-        assert_eq!(path, "testpath");
-    }
-
     #[test]
     fn test_init_hg_repo() {
         let tmp = tempfile::tempdir().unwrap();
@@ -266,11 +235,6 @@ treestate
         assert!(repo_path.exists());
         assert!(hg_path.exists());
         assert!(hg_path.join(CHANGELOG_FILE).exists());
-        #[cfg(feature = "fb")]
-        {
-            assert!(hg_path.join("hgrc.dynamic").exists());
-            assert!(hg_path.join("hgrc.remote_cache").exists());
-        }
         assert!(hg_path.join(REQUIREMENTS_FILE).exists());
         assert!(hg_path.join(STORE_PATH).exists());
         assert!(hg_path.join(STORE_PATH).join(REQUIREMENTS_FILE).exists());
