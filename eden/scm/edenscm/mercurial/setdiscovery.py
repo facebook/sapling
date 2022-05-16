@@ -163,6 +163,8 @@ def _findcommonheadsnew(
             # With selectivepull, limit heads for discovery for both local and
             # remote repo - no invisible heads for the local repo.
             localheads = local.heads()
+            if cl.algorithmbackend == "segments":
+                localheads = list(set(localheads) | set(dag.heads(dag.mastergroup())))
         else:
             localheads = list(dag.headsancestors(dag.all()))
     else:
