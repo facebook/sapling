@@ -12,6 +12,7 @@ use std::path::Path;
 use anyhow::Result;
 
 use crate::filestate::FileStateV2;
+use crate::filestate::StateFlags;
 use crate::filestore::FileStore;
 use crate::serialization::Serializable;
 use crate::store::BlockId;
@@ -187,6 +188,58 @@ impl TreeState {
     {
         self.tree
             .path_complete(&self.store, prefix, full_paths, acceptable, visitor)
+    }
+
+    // Distrust changed files with a mtime of `fsnow`. Rewrite their mtime to -1.
+    // See mercurial/pure/parsers.py:pack_dirstate in core Mercurial for motivation.
+    // Basically, this is required for the following case:
+    //
+    // $ hg update rev; write foo; hg commit -m update-foo
+    //
+    //   Time (second) | 0   | 1           |
+    //   hg update       ...----|
+    //   write foo               |--|
+    //   hg commit                   |---...
+    //
+    // If "write foo" changes a file without changing its mtime and size, the file
+    // change won't be detected. Therefore if mtime is `fsnow`, reset it to a different
+    // value and mark it as NEED_CHECK, at the end of update to workaround the issue.
+    // Here, hg assumes nobody else is touching the working copy when it holds wlock
+    // (ex. during second 0).
+    //
+    // This is used before "flush" or "saveas".
+    //
+    // Note: In TreeState's case, NEED_CHECK might mean "perform a quick mtime check",
+    // or "perform a content check" depending on the caller. Be careful when removing
+    // "mtime = -1" statement.
+    pub fn invalidate_mtime(&mut self, now: i32) -> Result<()> {
+        self.visit(
+            &mut |_, state| {
+                if state.mtime >= now {
+                    state.mtime = -1;
+                    state.state |= StateFlags::NEED_CHECK;
+                    Ok(VisitorResult::Changed)
+                } else {
+                    Ok(VisitorResult::NotChanged)
+                }
+            },
+            &|_, dir| {
+                if !dir.is_changed() {
+                    false
+                } else {
+                    match dir.get_aggregated_state() {
+                        Some(x) => x
+                            .union
+                            .intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2),
+                        None => true,
+                    }
+                }
+            },
+            &|_, file| {
+                file.state
+                    .intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2)
+            },
+        )
     }
 }
 
