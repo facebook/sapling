@@ -127,12 +127,13 @@ def stripcmd(ui, repo, *revs, **opts):
     cl = repo.changelog
     revs = list(revs) + opts.get("rev")
     revs = set(scmutil.revrange(repo, revs))
+    nodes = set(cl.tonodes(revs))
 
     with repo.wlock():
         bookmarks = set(opts.get("bookmark"))
         if bookmarks:
-            revs.update(bookmarksmod.reachablerevs(repo, bookmarks))
-            if not revs:
+            nodes.update(cl.tonodes(bookmarksmod.reachablerevs(repo, bookmarks)))
+            if not nodes:
                 # No revs are reachable exclusively from these bookmarks, just
                 # delete the bookmarks.
                 with repo.lock(), repo.transaction("strip-bookmarks") as tr:
@@ -140,22 +141,19 @@ def stripcmd(ui, repo, *revs, **opts):
                 for bookmark in sorted(bookmarks):
                     ui.write(_("bookmark '%s' deleted\n") % bookmark)
 
-        if not revs:
+        if not nodes:
             raise error.Abort(_("empty revision set"))
 
-        descendants = set(cl.descendants(revs))
-        strippedrevs = revs.union(descendants)
-        roots = revs.difference(descendants)
+        strippednodes = cl.dag.descendants(nodes)
+        rootnodes = set(cl.dag.roots(strippednodes))
 
         update = False
         # if one of the wdir parent is stripped we'll need
         # to update away to an earlier revision
         for p in repo.dirstate.parents():
-            if p != nullid and cl.rev(p) in strippedrevs:
+            if p != nullid and p in strippednodes:
                 update = True
                 break
-
-        rootnodes = set(cl.node(r) for r in roots)
 
         revs = sorted(rootnodes)
         if update and opts.get("keep"):

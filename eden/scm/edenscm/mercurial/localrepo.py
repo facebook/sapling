@@ -2165,11 +2165,16 @@ class localrepository(object):
             # dirstate is invalidated separately in invalidatedirstate()
             if k == "dirstate":
                 continue
-            if k == "changelog" and self.currenttransaction():
-                # The changelog object may store unwritten revisions. We don't
-                # want to lose them.
-                # TODO: Solve the problem instead of working around it.
-                continue
+            if k == "changelog":
+                if self.currenttransaction():
+                    # The changelog object may store unwritten revisions. We don't
+                    # want to lose them.
+                    # TODO: Solve the problem instead of working around it.
+                    continue
+                else:
+                    # Use dedicated function to properly invalidate changelog.
+                    self.invalidatechangelog()
+                    continue
 
             if k == "manifestlog" and "manifestlog" in self.__dict__:
                 # The manifestlog may have uncommitted additions, let's just

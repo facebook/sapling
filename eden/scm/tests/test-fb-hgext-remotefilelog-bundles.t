@@ -34,8 +34,6 @@ Unbundling a full bundle
 
   $ hg -R ../master bundle -r 66ee28d0328c:: --base "66ee28d0328c^" ../fullbundle.hg
   2 changesets found
-  $ hg debugstrip -r 66ee28d0328c
-  pulling '66ee28d0328c' from 'ssh://user@dummy/master'
   $ hg unbundle ../fullbundle.hg
   adding changesets
   adding manifests
