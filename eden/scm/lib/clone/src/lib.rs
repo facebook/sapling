@@ -64,8 +64,6 @@ pub fn init_working_copy(
     let source_mf = TreeManifest::ephemeral(tree_store.clone());
     let target_mf = TreeManifest::durable(tree_store.clone(), tree_id.clone());
 
-    let mut matcher: Box<dyn pathmatcher::Matcher> = Box::new(pathmatcher::AlwaysMatcher::new());
-
     if !sparse_profiles.is_empty() {
         let mut sparse_contents: Vec<u8> = Vec::new();
         for profile in sparse_profiles {
@@ -74,14 +72,6 @@ pub fn init_working_copy(
         atomic_write(&repo.dot_hg_path().join("sparse"), |f| {
             f.write_all(&sparse_contents)
         })?;
-        matcher = Box::new(workingcopy::sparse::sparse_matcher(
-            repo.config(),
-            &sparse_contents,
-            ".hg/sparse".to_string(),
-            target_mf.clone(),
-            file_store.clone(),
-            repo.dot_hg_path(),
-        )?);
     }
 
     let ts_dir = repo.dot_hg_path().join("treestate");
@@ -96,10 +86,9 @@ pub fn init_working_copy(
         repo.path(),
         &source_mf,
         &target_mf,
-        &file_store,
+        file_store.clone(),
         &mut ts,
         target,
-        &matcher,
     )?;
 
     Ok(())

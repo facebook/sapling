@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -17,29 +16,18 @@ use configmodel::ConfigExt;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;
+pub use sparse::Root;
 use storemodel::futures::StreamExt;
 use storemodel::ReadFileContents;
 use types::Key;
 use types::RepoPathBuf;
 
-static CONFIG_OVERRIDE_CACHE: &str = "sparseprofileconfigs";
-
 pub fn sparse_matcher(
-    config: impl Config,
-    root_profile: impl AsRef<[u8]>,
-    root_profile_source: String,
+    prof: sparse::Root,
     manifest: impl Manifest + Send + Sync + 'static,
     store: impl ReadFileContents<Error = anyhow::Error> + Send + Sync,
-    dot_hg_path: &Path,
+    overrides: HashMap<String, String>,
 ) -> anyhow::Result<sparse::Matcher> {
-    let prof = sparse::Root::from_bytes(root_profile, root_profile_source)?;
-    let overrides = config_overrides(config);
-
-    util::file::atomic_write(&dot_hg_path.join(CONFIG_OVERRIDE_CACHE), |f| {
-        serde_json::to_writer(f, &overrides)?;
-        Ok(())
-    })?;
-
     let manifest = Arc::new(manifest);
 
     let matcher = try_block_unless_interrupted(prof.matcher(|path| async {
@@ -92,7 +80,7 @@ pub fn sparse_matcher(
     Ok(matcher)
 }
 
-fn config_overrides(config: impl Config) -> HashMap<String, String> {
+pub fn config_overrides(config: impl Config) -> HashMap<String, String> {
     let mut overrides: HashMap<String, String> = HashMap::new();
     for key in config.keys("sparseprofile") {
         let parts: Vec<&str> = key.splitn(3, '.').collect();
@@ -131,7 +119,6 @@ mod tests {
 
     use futures::stream;
     use futures::stream::BoxStream;
-    use tempfile::tempdir;
     use types::HgId;
     use types::Parents;
     use types::RepoPath;
@@ -209,15 +196,11 @@ inc
 exc",
         );
 
-        let td = tempdir().unwrap();
-
         let matcher = sparse_matcher(
-            &config,
-            "%include tools/sparse/base",
-            "root".to_string(),
+            sparse::Root::from_bytes(b"%include tools/sparse/base", "root".to_string()).unwrap(),
             commit.clone(),
             commit.clone(),
-            td.path(),
+            config_overrides(&config),
         )
         .unwrap();
 
@@ -239,17 +222,6 @@ exc",
                 r#"root -> tools/sparse/base (hgrc.dynamic "exclude.blah.tools/sparse/base")"#
                     .to_string()
             )
-        );
-
-        // Make sure we wrote out the overrides cache file.
-        assert_eq!(
-            serde_json::from_slice::<serde_json::Value>(
-                &std::fs::read(td.path().join(CONFIG_OVERRIDE_CACHE)).unwrap()
-            )
-            .unwrap(),
-            serde_json::json!({
-                "tools/sparse/base": "\n# source = hgrc.dynamic \"exclude.blah.tools/sparse/base\"\n[exclude]\ninc/exc\n# source =\n",
-            })
         );
     }
 
