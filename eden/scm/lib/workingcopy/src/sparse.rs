@@ -32,7 +32,7 @@ pub fn sparse_matcher(
     store: impl ReadFileContents<Error = anyhow::Error> + Send + Sync,
     dot_hg_path: &Path,
 ) -> anyhow::Result<sparse::Matcher> {
-    let prof = sparse::Profile::from_bytes(root_profile, root_profile_source)?;
+    let prof = sparse::Root::from_bytes(root_profile, root_profile_source)?;
     let overrides = config_overrides(config);
 
     util::file::atomic_write(&dot_hg_path.join(CONFIG_OVERRIDE_CACHE), |f| {

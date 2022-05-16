@@ -18,8 +18,6 @@ use mononoke_types::{fsnode::FsnodeEntry, MPath};
 use pathmatcher::{DirectoryMatch, Matcher};
 use types::RepoPath;
 
-use sparse::Profile;
-
 use std::sync::Arc;
 
 pub(crate) async fn fetch(path: String, changeset: &ChangesetContext) -> Result<Option<Vec<u8>>> {
@@ -46,8 +44,8 @@ pub async fn get_profile_size(
         .await
         .context(format!("While fetching {path}"))?
         .ok_or_else(|| anyhow!("Content is empty"))?;
-    let profile = Profile::from_bytes(content, path.to_string())
-        .context(format!("while constructing Profile for source {path}"))?;
+    let profile = sparse::Root::from_bytes(content, path.to_string())
+        .context(format!("while constructing sparse::Root for source {path}"))?;
     let matcher = profile
         .matcher(|path| fetch(path, changeset))
         .await

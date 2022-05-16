@@ -17,7 +17,6 @@ use maplit::btreemap;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, MPath};
 use pathmatcher::Matcher;
-use sparse::Profile;
 use tests_utils::{store_files, CreateCommitContext};
 use types::RepoPath;
 
@@ -88,7 +87,7 @@ async fn sparse_profile_parsing(fb: FacebookInit) -> Result<()> {
 
     let path = "sparse/include".to_string();
     let content = fetch(path.clone(), &changeset).await?.unwrap();
-    let profile = Profile::from_bytes(content, path)?;
+    let profile = sparse::Root::from_bytes(content, path)?;
     let matcher = profile.matcher(|path| fetch(path, &changeset)).await?;
 
     assert!(!matcher.matches_file(RepoPath::from_str("1")?)?);
