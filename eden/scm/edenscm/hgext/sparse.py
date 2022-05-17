@@ -2178,8 +2178,11 @@ def debugsparseexplainmatch(ui, repo, *args, **opts):
         if not explanation:
             ui.write(_("{}: excluded by default".format(f)))
         else:
-            verb = "excluded" if explanation[0] == "!" else "included"
-            ui.write(_("{}: {} by rule {}\n".format(f, verb, explanation)))
+            if "\n" in explanation:
+                ui.write(_("%s:\n  %s\n") % (f, explanation.replace("\n", "\n  ")))
+            else:
+                verb = "excluded" if explanation[0] == "!" else "included"
+                ui.write(_("%s: %s by rule %s\n") % (f, verb, explanation))
 
 
 def _contains_files(load_matcher, profile, files):
