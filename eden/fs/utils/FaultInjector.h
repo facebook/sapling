@@ -8,10 +8,11 @@
 #pragma once
 
 #include <boost/regex.hpp>
-#include <boost/variant.hpp>
 #include <folly/experimental/StringKeyedUnorderedMap.h>
 #include <folly/futures/Future.h>
+#include <chrono>
 #include <optional>
+#include <variant>
 
 namespace facebook::eden {
 
@@ -166,7 +167,7 @@ class FaultInjector {
     std::optional<folly::exception_wrapper> error;
   };
 
-  using FaultBehavior = boost::variant<
+  using FaultBehavior = std::variant<
       folly::Unit, // no fault
       Block, // block until explicitly unblocked at a later point
       Delay, // delay for a specified amount of time

@@ -38,7 +38,7 @@ SemiFuture<Unit> FaultInjector::checkAsyncImpl(
     StringPiece keyClass,
     StringPiece keyValue) {
   auto behavior = findFault(keyClass, keyValue);
-  return boost::apply_visitor(
+  return std::visit(
       folly::overload(
           [&](const Unit&) { return folly::makeSemiFuture(); },
           [&](const FaultInjector::Block&) {
@@ -64,7 +64,7 @@ SemiFuture<Unit> FaultInjector::checkAsyncImpl(
 
 void FaultInjector::checkImpl(StringPiece keyClass, StringPiece keyValue) {
   auto behavior = findFault(keyClass, keyValue);
-  boost::apply_visitor(
+  std::visit(
       folly::overload(
           [](const Unit&) {},
           [&](const FaultInjector::Block&) {
