@@ -49,7 +49,7 @@ pub enum EdenApiError {
 pub enum ConfigError {
     #[error("Missing required config item: {0}")]
     Missing(String),
-    #[error("Invalid config item: {0}")]
+    #[error("Invalid config item: '{0}' ({1})")]
     Invalid(String, #[source] anyhow::Error),
 }
 
