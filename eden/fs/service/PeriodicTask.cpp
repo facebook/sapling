@@ -20,8 +20,7 @@ namespace {
 constexpr auto kSlowTaskLimit = 50ms;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 PeriodicTask::PeriodicTask(EdenServer* server, folly::StringPiece name)
     : server_{server}, name_{name.str()}, interval_{0} {}
@@ -99,5 +98,4 @@ void PeriodicTask::reschedule() {
   server_->getMainEventBase()->timer().scheduleTimeout(this, interval_);
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

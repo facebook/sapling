@@ -25,8 +25,7 @@
 #include <sys/vfs.h>
 #endif
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace overlay {
 class OverlayDir;
@@ -284,5 +283,4 @@ class InodePath {
   std::array<char, kMaxPathLength> path_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

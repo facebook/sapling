@@ -35,8 +35,7 @@ using std::unique_ptr;
 using std::chrono::microseconds;
 using std::chrono::seconds;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class OverlayChecker::RepairState {
  public:
@@ -1093,7 +1092,6 @@ void OverlayChecker::addError(unique_ptr<Error> error) {
   errors_.push_back(std::move(error));
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

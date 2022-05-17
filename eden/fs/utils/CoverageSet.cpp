@@ -8,8 +8,7 @@
 #include "eden/fs/utils/CoverageSet.h"
 #include <folly/logging/xlog.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 void CoverageSet::clear() {
   set_.clear();
@@ -99,5 +98,4 @@ size_t CoverageSet::getIntervalCount() const noexcept {
   return set_.size();
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

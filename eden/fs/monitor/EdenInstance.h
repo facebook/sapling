@@ -28,8 +28,7 @@ class Future;
 struct Unit;
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class EdenMonitor;
 class LogFile;
@@ -138,5 +137,4 @@ class SpawnedEdenInstance : public EdenInstance,
   std::array<std::byte, kLogBufferSize> logBuffer_{};
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

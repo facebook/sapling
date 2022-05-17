@@ -11,8 +11,7 @@
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * TreePrefetchLease is a small helper class to track the total number of
@@ -90,5 +89,4 @@ class TreePrefetchLease {
   std::unique_ptr<ObjectFetchContext> context_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -23,8 +23,7 @@ using folly::Unit;
 using std::runtime_error;
 using std::string;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 #ifndef _WIN32
 
@@ -170,5 +169,4 @@ folly::Future<folly::Unit> FakePrivHelper::setUseEdenFs(bool /* useEdenFs */) {
 }
 #endif // !_WIN32
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

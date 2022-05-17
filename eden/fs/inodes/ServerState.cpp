@@ -24,8 +24,7 @@ DEFINE_bool(
     "Block mount attempts via the fault injection framework.  "
     "Requires --enable_fault_injection.");
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /** Throttle Ignore change checks, max of 1 per kUserIgnoreMinPollSeconds */
 constexpr std::chrono::seconds kUserIgnoreMinPollSeconds{5};
@@ -120,5 +119,4 @@ std::unique_ptr<TopLevelIgnores> ServerState::getTopLevelIgnores() {
       std::move(userGitIgnore), std::move(systemGitIgnore));
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

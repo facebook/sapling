@@ -157,12 +157,10 @@ ChronoUnitPerfectHash::in_word_set(StringPiece str) {
 
 } // unnamed namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 const ChronoUnit* FOLLY_NULLABLE lookupChronoUnitInfo(StringPiece unitName) {
   return ChronoUnitPerfectHash::in_word_set(unitName);
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

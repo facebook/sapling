@@ -27,8 +27,7 @@ using std::make_unique;
 using std::shared_ptr;
 using std::unique_ptr;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 
@@ -434,5 +433,4 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createRemovedScmEntry(
   return make_unique<RemovedScmDiffEntry>(context, std::move(path), scmHash);
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

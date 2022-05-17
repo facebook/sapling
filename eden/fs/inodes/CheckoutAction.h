@@ -19,8 +19,7 @@ namespace folly {
 class exception_wrapper;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Blob;
 class CheckoutContext;
@@ -194,5 +193,4 @@ class CheckoutAction {
    */
   folly::Promise<InvalidationRequired> promise_;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

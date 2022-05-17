@@ -10,8 +10,7 @@
 #include <folly/portability/GTest.h>
 #include "eden/fs/inodes/TreeInode.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 #ifndef _WIN32
 struct ConditionalUnloader {
@@ -37,5 +36,4 @@ using InodeUnloaderTypes =
 using InodeUnloaderTypes = ::testing::Types<UnconditionalUnloader>;
 #endif
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

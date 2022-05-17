@@ -7,8 +7,7 @@
 
 #include "RocksException.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 RocksException::RocksException(
     const rocksdb::Status& status,
@@ -28,5 +27,4 @@ const rocksdb::Status& RocksException::getStatus() const {
 const std::string& RocksException::getMsg() const {
   return msg_;
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

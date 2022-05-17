@@ -9,8 +9,7 @@
 
 #include "eden/fs/telemetry/StructuredLogger.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class NullStructuredLogger final : public StructuredLogger {
  public:
@@ -20,5 +19,4 @@ class NullStructuredLogger final : public StructuredLogger {
   void logDynamicEvent(DynamicEvent) override {}
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

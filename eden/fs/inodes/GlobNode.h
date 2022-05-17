@@ -15,8 +15,7 @@
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /** Represents the compiled state of a tree-walking glob operation.
  * We split the glob into path components and build a tree of name
@@ -204,5 +203,4 @@ inline std::ostream& operator<<(
   return stream;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

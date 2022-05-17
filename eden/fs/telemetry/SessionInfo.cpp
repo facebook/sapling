@@ -40,8 +40,7 @@ namespace {
 constexpr size_t kHostNameMax = 256;
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 std::string getOperatingSystemName() {
 #if defined(_WIN32)
@@ -99,5 +98,4 @@ std::optional<uint64_t> getSandcastleInstanceId() {
   }
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

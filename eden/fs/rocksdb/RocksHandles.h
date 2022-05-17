@@ -12,8 +12,7 @@
 #include <memory>
 #include <string>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 enum class RocksDBOpenMode {
   ReadOnly,
@@ -60,5 +59,4 @@ struct RocksHandles {
 
   void close();
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -22,8 +22,7 @@
 #include <folly/Range.h>
 #include <folly/experimental/TestUtil.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 folly::test::TemporaryFile makeTempFile(
     folly::StringPiece prefix,
@@ -46,5 +45,4 @@ inline folly::test::TemporaryDirectory makeTempDir(
         folly::test::TemporaryDirectory::Scope::DELETE_ON_DESTRUCTION) {
   return makeTempDir("eden_test", scope);
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

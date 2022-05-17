@@ -13,8 +13,7 @@
 
 #include "eden/fs/utils/test/ScopedEnvVar.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 #ifndef _WIN32
 TEST(UserInfo, initFromSudo) {
@@ -134,5 +133,4 @@ TEST(UserInfoTest, testHomeDirectory) {
 }
 #endif
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

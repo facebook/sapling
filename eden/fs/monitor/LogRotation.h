@@ -13,8 +13,7 @@
 
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Clock;
 
@@ -113,5 +112,4 @@ class TimestampLogRotation : public LogRotationStrategy {
   size_t nextSuffix_{0};
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

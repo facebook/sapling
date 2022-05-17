@@ -17,8 +17,7 @@ using folly::EventBase;
 using folly::Promise;
 using std::make_unique;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 IoFuture::IoFuture(folly::EventBase* eventBase, int socket)
     : EventHandler{eventBase, folly::NetworkSocket::fromFd(socket)},
@@ -86,5 +85,4 @@ folly::Future<int> waitForIO(
   });
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

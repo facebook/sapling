@@ -10,8 +10,7 @@
 #include <folly/logging/xlog.h>
 #include <array>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Maintains a circular buffer of `Size` `Bucket`s, each of which can accumulate
@@ -119,5 +118,4 @@ class BucketedLog {
   uint64_t windowStart_ = 0;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

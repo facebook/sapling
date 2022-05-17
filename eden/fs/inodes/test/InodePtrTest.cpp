@@ -19,8 +19,7 @@
 
 using namespace facebook::eden;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 /*
  * InodePtrTestHelper is declared as a friend by InodeBase.
  *
@@ -34,8 +33,7 @@ class InodePtrTestHelper {
     return inode->ptrRefcount_.load(std::memory_order_acquire);
   }
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #define EXPECT_REFCOUNT(expected, inodePtr) \
   EXPECT_EQ(expected, InodePtrTestHelper::getRefcount(inodePtr))

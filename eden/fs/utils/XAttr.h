@@ -10,8 +10,7 @@
 #include <folly/String.h>
 #include <sys/xattr.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 constexpr int kENOATTR =
 #ifndef ENOATTR
@@ -34,5 +33,4 @@ std::string getxattr(folly::StringPiece path, folly::StringPiece name);
 // This is primarily to facilitate our integration tests.
 std::vector<std::string> listxattr(folly::StringPiece path);
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

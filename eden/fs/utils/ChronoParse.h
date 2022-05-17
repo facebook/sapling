@@ -13,8 +13,7 @@
 #include <folly/Portability.h>
 #include <folly/Range.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 enum class ChronoParseError {
   UnknownUnit,
@@ -57,5 +56,4 @@ stringToDuration(folly::StringPiece src);
  */
 std::string durationToString(std::chrono::nanoseconds duration);
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

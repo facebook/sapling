@@ -20,8 +20,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 DECLARE_int32(startupLoggerFd);
 
@@ -277,5 +276,4 @@ class FileStartupLogger : public StartupLogger {
   folly::File logFile_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

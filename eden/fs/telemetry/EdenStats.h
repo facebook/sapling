@@ -14,8 +14,7 @@
 
 #include "eden/fs/eden-config.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class ChannelThreadStats;
 class ObjectStoreThreadStats;
@@ -252,5 +251,4 @@ class JournalThreadStats : public EdenThreadStatsBase {
   Stat filesAccumulated{createStat("journal.files_accumulated")};
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

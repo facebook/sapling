@@ -67,8 +67,7 @@ void findEdenDir(EdenConfig& config) {
 
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 PathComponentPiece getDefaultLogFileName() {
   return "edenfs.log"_pc;
@@ -148,5 +147,4 @@ std::unique_ptr<EdenConfig> getEdenConfig(UserInfo& identity) {
   return edenConfig;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

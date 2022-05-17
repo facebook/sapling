@@ -28,8 +28,7 @@
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 using apache::thrift::CompactSerializer;
 using folly::ByteRange;
@@ -674,7 +673,6 @@ std::array<char, InodePath::kMaxPathLength>& InodePath::rawData() noexcept {
   return path_;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

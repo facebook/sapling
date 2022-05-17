@@ -22,8 +22,7 @@
 using folly::exception_wrapper;
 using folly::Future;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 CheckoutAction::CheckoutAction(
     CheckoutContext* ctx,
@@ -396,5 +395,4 @@ Future<bool> CheckoutAction::hasConflict() {
     return false;
   }
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

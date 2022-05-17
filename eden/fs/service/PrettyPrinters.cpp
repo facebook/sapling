@@ -38,8 +38,7 @@ void appendThriftEnum(
 }
 } // unnamed namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 std::ostream& operator<<(std::ostream& os, ConflictType conflictType) {
   return outputThriftEnum(os, conflictType, "ConflictType");
@@ -64,5 +63,4 @@ void toAppend(MountState mountState, std::string* result) {
   appendThriftEnum(mountState, result, "MountState");
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

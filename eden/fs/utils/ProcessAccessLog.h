@@ -14,8 +14,7 @@
 #include "eden/fs/utils/BucketedLog.h"
 #include "eden/fs/utils/EnumValue.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class ProcessNameCache;
 struct ThreadLocalBucket;
@@ -106,5 +105,4 @@ class ProcessAccessLog {
   friend struct ThreadLocalBucket;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

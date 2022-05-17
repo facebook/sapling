@@ -26,8 +26,7 @@ namespace folly {
 class exception_wrapper;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class EdenMount;
 class FileInode;
@@ -735,5 +734,4 @@ class InodeMapLock {
   friend class InodeMap;
   folly::Synchronized<InodeMap::Members>::LockedPtr data_;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

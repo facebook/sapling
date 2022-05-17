@@ -9,8 +9,7 @@
 
 #include <stdexcept>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class EdenMountError : public std::runtime_error {
  public:
@@ -18,5 +17,4 @@ class EdenMountError : public std::runtime_error {
   explicit EdenMountError(const char* what) : std::runtime_error{what} {}
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

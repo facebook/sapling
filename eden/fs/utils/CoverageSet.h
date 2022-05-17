@@ -10,8 +10,7 @@
 #include <cstddef>
 #include <set>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Tracks contiguous coverage of intervals. Intervals are added dynamically.
@@ -63,5 +62,4 @@ class CoverageSet {
   std::set<Interval> set_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

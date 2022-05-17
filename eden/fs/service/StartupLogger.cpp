@@ -38,8 +38,7 @@ using folly::StringPiece;
 using std::string;
 using namespace std::chrono_literals;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 DEFINE_string(
     startupLogPath,
@@ -451,5 +450,4 @@ void writeMessageToFile(folly::File& file, folly::StringPiece message) {
 
 } // namespace
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

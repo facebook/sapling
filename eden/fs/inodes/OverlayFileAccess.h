@@ -17,8 +17,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/BufVec.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Blob;
 class FileInode;
@@ -167,5 +166,4 @@ class OverlayFileAccess {
   folly::Synchronized<State> state_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

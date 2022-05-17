@@ -8,8 +8,7 @@
 #pragma once
 #include "eden/fs/utils/EdenError.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 #define NOT_IMPLEMENTED()                               \
   do {                                                  \
@@ -21,5 +20,4 @@ namespace eden {
         __LINE__);                                      \
   } while (true)
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

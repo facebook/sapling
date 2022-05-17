@@ -17,8 +17,7 @@
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/PathMap.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace detail {
 
@@ -184,5 +183,4 @@ auto applyToInodeOrTreeOrEntry(
   return results;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

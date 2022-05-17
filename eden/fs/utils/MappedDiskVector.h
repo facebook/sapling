@@ -18,8 +18,7 @@
 #include <folly/Range.h>
 #include <folly/logging/xlog.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace detail {
 
@@ -594,5 +593,4 @@ struct Migrator<T, First, Rest...> {
 
 } // namespace detail
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

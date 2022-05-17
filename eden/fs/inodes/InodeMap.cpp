@@ -32,8 +32,7 @@ using folly::throwSystemErrorExplicit;
 using folly::Unit;
 using std::optional;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 InodeMap::UnloadedInode::UnloadedInode(
     InodeNumber parentNum,
@@ -1213,5 +1212,4 @@ std::vector<InodeNumber> InodeMap::getReferencedInodes() const {
 
   return inodes;
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -18,8 +18,7 @@ template <typename T>
 class Future;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Hash20;
 class BlobMetadata;
@@ -333,5 +332,4 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   const std::vector<std::string> originalCommandLine_;
   EdenServer* const server_;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

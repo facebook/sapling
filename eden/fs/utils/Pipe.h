@@ -8,8 +8,7 @@
 #pragma once
 #include "eden/fs/utils/FileDescriptor.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 struct Pipe {
   FileDescriptor read;
@@ -25,5 +24,4 @@ struct SocketPair {
   explicit SocketPair(bool nonBlocking = false);
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

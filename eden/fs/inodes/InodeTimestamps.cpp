@@ -12,8 +12,7 @@
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/utils/Clock.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 /**
@@ -155,5 +154,4 @@ void InodeTimestamps::applyToStat(struct stat& st) const {
 }
 #endif
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

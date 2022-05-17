@@ -13,8 +13,7 @@
 
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class EdenServer;
 
@@ -41,5 +40,4 @@ class TestServer {
   std::unique_ptr<EdenServer> server_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

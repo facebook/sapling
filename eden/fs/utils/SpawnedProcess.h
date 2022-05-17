@@ -21,8 +21,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/Pipe.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 // Represents the status of a process; whether it is running
 // or if it has terminated, what its exit code is.
@@ -348,5 +347,4 @@ class SpawnedProcess {
   folly::Future<std::string> readPipe(int fd);
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

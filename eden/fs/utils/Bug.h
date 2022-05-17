@@ -52,8 +52,7 @@ namespace folly {
 class exception_wrapper;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * A helper class returned by the EDEN_BUG() macro.
@@ -157,5 +156,4 @@ class EdenBugDisabler {
   EdenBugDisabler(const EdenBugDisabler&) = delete;
   EdenBugDisabler operator=(const EdenBugDisabler&) = delete;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -9,8 +9,7 @@
 
 #include "eden/fs/notifications/Notifier.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class ReloadableConfig;
 
@@ -37,5 +36,4 @@ class CommandNotifier : public Notifier {
   void signalCheckout(size_t /*numActive*/) override {}
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

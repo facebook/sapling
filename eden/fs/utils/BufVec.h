@@ -8,8 +8,7 @@
 #pragma once
 #include <folly/io/IOBuf.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Represents data that may come from a buffer or a file descriptor.
@@ -23,5 +22,4 @@ namespace eden {
  */
 using BufVec = std::unique_ptr<folly::IOBuf>;
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

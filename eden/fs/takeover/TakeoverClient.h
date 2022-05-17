@@ -10,8 +10,7 @@
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Request to take over mount points from an existing edenfs process.
@@ -26,5 +25,4 @@ TakeoverData takeoverMounts(
     const std::set<int32_t>& supportedTakeoverVersions =
         kSupportedTakeoverVersions);
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

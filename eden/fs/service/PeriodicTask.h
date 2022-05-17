@@ -13,8 +13,7 @@
 #include <folly/Range.h>
 #include <folly/io/async/HHWheelTimer.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class EdenServer;
 
@@ -109,5 +108,4 @@ class PeriodicTask : private folly::HHWheelTimer::Callback {
   bool running_{false};
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

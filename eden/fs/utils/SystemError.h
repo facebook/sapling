@@ -9,8 +9,7 @@
 
 #include <system_error>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Return true if this exception contains an errno value in ex.code().value()
@@ -31,5 +30,4 @@ inline bool isEnoent(const std::system_error& ex) {
   return isErrnoError(ex) && ex.code().value() == ENOENT;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

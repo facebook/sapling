@@ -39,8 +39,7 @@ DEFINE_int32(
     5,
     "Timeout for receiving ready ping from new process in seconds");
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * ConnHandler handles a single connection received on the TakeoverServer
@@ -336,7 +335,6 @@ void TakeoverServer::connectionAccepted(
 void TakeoverServer::acceptError(folly::exception_wrapper ex) noexcept {
   XLOG(ERR) << "accept() error on takeover socket: " << exceptionStr(ex);
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

@@ -18,8 +18,7 @@ using rocksdb::DB;
 using rocksdb::Options;
 using rocksdb::Status;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 RocksHandles::~RocksHandles() {
   close();
@@ -68,5 +67,4 @@ RocksHandles::RocksHandles(
     columns.emplace_back(h);
   }
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

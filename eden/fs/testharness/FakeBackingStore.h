@@ -18,8 +18,7 @@
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/testharness/StoredObject.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class FakeTreeBuilder;
 
@@ -212,5 +211,4 @@ struct FakeBackingStore::TreeEntryData {
 
   Tree::value_type entry;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

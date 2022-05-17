@@ -27,8 +27,7 @@ using apache::thrift::CompactSerializer;
 using folly::IOBuf;
 using std::string;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 
@@ -613,7 +612,6 @@ TakeoverData TakeoverData::deserializeThriftMounts(
   return data;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

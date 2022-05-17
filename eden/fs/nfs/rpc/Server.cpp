@@ -28,8 +28,7 @@ using folly::Future;
 using folly::IOBuf;
 using folly::SocketAddress;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 RpcTcpHandler::Reader::Reader(RpcTcpHandler* handler)
     : handler_(handler), guard_(handler_) {}
@@ -705,7 +704,6 @@ folly::SocketAddress RpcServer::getAddr() const {
   return serverSocket_->getAddress();
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

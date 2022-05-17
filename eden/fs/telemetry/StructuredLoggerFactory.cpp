@@ -15,8 +15,7 @@
 #include "eden/fs/telemetry/SubprocessScribeLogger.h"
 #endif
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 std::unique_ptr<StructuredLogger> makeDefaultStructuredLogger(
     const EdenConfig& config,
@@ -45,5 +44,4 @@ std::unique_ptr<StructuredLogger> makeDefaultStructuredLogger(
 #endif
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

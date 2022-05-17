@@ -19,8 +19,7 @@
 
 #include "InodeBase.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 template <typename InodeType>
 InodePtrImpl<InodeType>::InodePtrImpl(
@@ -67,5 +66,4 @@ void InodePtrImpl<InodeType>::resetNoDecRef() {
   XCHECK_NE(value_, nullptr);
   value_ = nullptr;
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

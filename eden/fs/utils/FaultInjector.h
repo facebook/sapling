@@ -13,8 +13,7 @@
 #include <folly/futures/Future.h>
 #include <optional>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * A helper class for injecting artificial faults into the normal program flow.
@@ -229,5 +228,4 @@ class FaultInjector {
   folly::Synchronized<State> state_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

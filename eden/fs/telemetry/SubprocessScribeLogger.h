@@ -12,8 +12,7 @@
 #include "eden/fs/telemetry/ScribeLogger.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * SubprocessScribeLogger manages an external unix process and asynchronously
@@ -73,5 +72,4 @@ class SubprocessScribeLogger : public ScribeLogger {
   std::condition_variable allMessagesWritten_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

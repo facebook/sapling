@@ -9,8 +9,7 @@
 
 #include "eden/fs/store/IObjectStore.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class LoggingFetchContext : public ObjectFetchContext {
  public:
@@ -42,5 +41,4 @@ class LoggingFetchContext : public ObjectFetchContext {
   std::vector<Request> requests;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

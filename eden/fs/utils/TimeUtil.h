@@ -10,8 +10,7 @@
 #include <chrono>
 #include <string>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Get a human-readable string for a time duration.
@@ -40,5 +39,4 @@ inline bool operator==(const timespec& a, const timespec& b) {
 inline bool operator!=(const timespec& a, const timespec& b) {
   return !(b == a);
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

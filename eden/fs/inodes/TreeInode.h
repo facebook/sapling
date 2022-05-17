@@ -16,8 +16,7 @@
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeOrTreeOrEntry.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class CheckoutAction;
 class CheckoutContext;
@@ -759,5 +758,4 @@ std::optional<std::vector<std::string>> findEntryDifferences(
     const DirContents& dir,
     const Tree& tree);
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -27,8 +27,7 @@ namespace folly {
 class File;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Blob;
 class ObjectFetchContext;
@@ -480,5 +479,4 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   // So it can call inodePtrFromThis() for better error messages.
   friend class ::facebook::eden::OverlayFileAccess;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

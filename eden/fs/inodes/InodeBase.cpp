@@ -21,8 +21,7 @@
 #include "eden/fs/inodes/InodeTable.h"
 #endif
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 InodeBase::InodeBase(EdenMount* mount)
     : ino_{kRootNodeId},
@@ -376,5 +375,4 @@ void InodeBase::updateJournal() {
     getMount()->getJournal().recordChanged(std::move(path.value()));
   }
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -42,8 +42,7 @@ using folly::StringPiece;
 using std::string;
 using std::vector;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /*********************************************************************
  * FileInode::LockedState
@@ -1172,5 +1171,4 @@ void FileInode::logAccess(ObjectFetchContext& fetchContext) {
       getMount()->getWeakMount()});
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

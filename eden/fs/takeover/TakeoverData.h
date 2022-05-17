@@ -25,8 +25,7 @@ class IOBuf;
 class exception_wrapper;
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 // Holds the versions supported by this build.
 // TODO(T104382350): The code is being migrated to use capabilities bits instead
@@ -408,5 +407,4 @@ class TakeoverData {
   static constexpr uint32_t kHeaderLength = sizeof(uint32_t);
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

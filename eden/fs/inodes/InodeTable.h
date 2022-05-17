@@ -14,8 +14,7 @@
 #include "eden/fs/utils/MappedDiskVector.h"
 #include "eden/fs/utils/StaticAssert.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace detail {
 template <typename Record>
@@ -339,5 +338,4 @@ static_assert(
 
 using InodeMetadataTable = InodeTable<InodeMetadata>;
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

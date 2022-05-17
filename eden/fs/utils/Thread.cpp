@@ -10,8 +10,7 @@
 #include "eden/fs/utils/Thread.h"
 #include <pthread.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 void disablePthreadCancellation() {
   int oldstate;
@@ -20,7 +19,6 @@ void disablePthreadCancellation() {
   pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &oldtype);
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

@@ -13,8 +13,7 @@
 
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * UserInfo contains information about the user running edenfs.
@@ -156,5 +155,4 @@ struct EffectiveUserScope {
   gid_t egid_;
 };
 #endif // !_WIN32
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

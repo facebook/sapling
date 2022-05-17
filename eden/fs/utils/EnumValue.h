@@ -9,8 +9,7 @@
 
 #include <folly/Utility.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * It's common in error messages to log the underlying value of an enumeration.
@@ -21,5 +20,4 @@ constexpr std::underlying_type_t<E> enumValue(E e) noexcept {
   return folly::to_underlying(e);
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

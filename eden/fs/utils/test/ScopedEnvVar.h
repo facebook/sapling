@@ -9,8 +9,7 @@
 #include <folly/Range.h>
 #include <optional>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * A helper class for manipulating an environment variable,
@@ -47,5 +46,4 @@ class ScopedEnvVar {
    */
   std::optional<std::string> origValue_;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

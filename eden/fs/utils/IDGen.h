@@ -9,8 +9,7 @@
 
 #include <stdint.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Very efficiently returns a new uint64_t unique to this process. Amortizes
@@ -24,5 +23,4 @@ namespace eden {
  */
 uint64_t generateUniqueID() noexcept;
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

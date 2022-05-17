@@ -17,13 +17,11 @@
 #include <iosfwd>
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 std::ostream& operator<<(std::ostream& os, ConflictType conflictType);
 std::ostream& operator<<(std::ostream& os, const CheckoutConflict& conflict);
 std::ostream& operator<<(std::ostream& os, ScmFileStatus scmFileStatus);
 std::ostream& operator<<(std::ostream& os, MountState mountState);
 
 void toAppend(MountState conflictType, std::string* result);
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

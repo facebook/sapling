@@ -12,8 +12,7 @@
 #include <time.h>
 #include <chrono>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /** Helper for accessing the `atime` field of a `struct stat` as a timespec.
  * Linux and macOS have different names for this field. */
@@ -100,5 +99,4 @@ inline std::chrono::system_clock::time_point stMtimepoint(
   return folly::to<std::chrono::system_clock::time_point>(stMtime(st));
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

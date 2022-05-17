@@ -61,8 +61,7 @@ using testing::HasSubstr;
 using testing::Not;
 using namespace folly::string_piece_literals;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 
@@ -578,8 +577,7 @@ bool fileExists(folly::fs::path path) {
   return folly::fs::exists(status) && folly::fs::is_regular_file(status);
 }
 } // namespace
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 int main(int argc, char** argv) {
   originalCommandLine = {argv, argv + argc};

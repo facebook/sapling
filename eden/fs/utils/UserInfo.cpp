@@ -32,8 +32,7 @@ using folly::checkUnixError;
 using folly::throwSystemError;
 using std::string;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 #ifndef _WIN32
 struct UserInfo::PasswdEntry {
@@ -332,5 +331,4 @@ void UserInfo::dropPrivileges() {
   // so there is nothing to do here.
 }
 #endif // _WIN32
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

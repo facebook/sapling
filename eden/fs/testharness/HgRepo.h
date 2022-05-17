@@ -15,8 +15,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Hash20;
 
@@ -164,5 +163,4 @@ class HgRepo {
  */
 bool testEnvironmentSupportsHg();
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

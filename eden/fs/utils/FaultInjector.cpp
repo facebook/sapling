@@ -15,8 +15,7 @@ using folly::SemiFuture;
 using folly::StringPiece;
 using folly::Unit;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 FaultInjector::Fault::Fault(StringPiece regex, FaultBehavior&& b, size_t count)
     : keyValueRegex(regex.begin(), regex.end()),
@@ -341,5 +340,4 @@ size_t FaultInjector::unblockAllImpl(
   return numUnblocked;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

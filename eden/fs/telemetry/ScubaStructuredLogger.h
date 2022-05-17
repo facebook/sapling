@@ -10,8 +10,7 @@
 #include <memory>
 #include "eden/fs/telemetry/StructuredLogger.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class EdenConfig;
 class ScribeLogger;
@@ -28,5 +27,4 @@ class ScubaStructuredLogger final : public StructuredLogger {
   std::shared_ptr<ScribeLogger> scribeLogger_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

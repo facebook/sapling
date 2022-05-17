@@ -12,8 +12,7 @@
 
 using folly::StringPiece;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 constexpr StringPiece kLockFileName{"lock"};
@@ -121,5 +120,4 @@ AbsolutePath EdenStateDir::getCheckoutStateDir(StringPiece checkoutID) const {
   return path_ + PathComponent("clients") + PathComponent(checkoutID);
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

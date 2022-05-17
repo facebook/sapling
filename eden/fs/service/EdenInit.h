@@ -28,8 +28,7 @@ DECLARE_bool(foreground);
 DECLARE_string(configPath);
 DECLARE_string(etcEdenDir);
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class EdenConfig;
 class UserInfo;
@@ -70,5 +69,4 @@ class ArgumentError : public std::exception {
   std::string message_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

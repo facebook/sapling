@@ -13,8 +13,7 @@
 
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 std::shared_ptr<folly::SSLContext> buildSSLContext(
     std::optional<AbsolutePath> clientCertificate) {
   auto sslContext = std::make_shared<folly::SSLContext>();
@@ -28,5 +27,4 @@ std::shared_ptr<folly::SSLContext> buildSSLContext(
 
   return sslContext;
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

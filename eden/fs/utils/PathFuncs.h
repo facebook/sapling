@@ -30,8 +30,7 @@
 #include <eden/common/utils/StringConv.h>
 #endif
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /** Given a path like "foo/bar/baz" returns "baz" */
 folly::StringPiece basename(folly::StringPiece path);
@@ -2007,8 +2006,7 @@ size_t estimateIndirectMemoryUsage(
     const detail::RelativePathBase<StringType>& path) {
   return estimateIndirectMemoryUsage(path.value());
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 namespace std {
 /* Allow std::hash to operate on these types */

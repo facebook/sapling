@@ -15,8 +15,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class FakeFuse;
 
@@ -114,5 +113,4 @@ class FakeFuseMountDelegate : public FakePrivHelper::MountDelegate {
 };
 #endif // !_WIN32
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

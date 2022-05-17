@@ -10,8 +10,7 @@
 #include <folly/Range.h>
 #include <folly/Utility.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace detail {
 /**
@@ -151,5 +150,4 @@ inline std::string ensureValidUtf8(const char (&str)[N]) {
   return ensureValidUtf8(std::string{str, N - 1});
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

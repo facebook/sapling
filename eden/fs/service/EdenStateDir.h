@@ -17,8 +17,7 @@ namespace folly {
 class File;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * EdenStateDir exists for managing access to the user's .eden directory.
@@ -113,5 +112,4 @@ class EdenStateDir {
   folly::File lockFile_;
   struct stat lockFileStat_ = {};
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

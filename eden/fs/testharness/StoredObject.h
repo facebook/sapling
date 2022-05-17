@@ -10,8 +10,7 @@
 #include <folly/futures/Future.h>
 #include <memory>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Blob;
 class ObjectId;
@@ -151,5 +150,4 @@ class StoredObject {
   const T object_;
   folly::Synchronized<Data> data_;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

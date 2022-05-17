@@ -17,8 +17,7 @@ namespace {
 constexpr bool kExplicitTimeField = true;
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 StructuredLogger::StructuredLogger(bool enabled, SessionInfo sessionInfo)
     : enabled_{enabled},
@@ -43,5 +42,4 @@ DynamicEvent StructuredLogger::populateDefaultFields(const char* type) {
   return event;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

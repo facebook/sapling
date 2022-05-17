@@ -32,8 +32,7 @@
 #include "eden/fs/inodes/OverlayFile.h"
 #endif // !_WIN32
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 constexpr uint64_t ioCountMask = 0x7FFFFFFFFFFFFFFFull;
@@ -643,5 +642,4 @@ void Overlay::renameChild(
 void Overlay::maintenance() {
   backingOverlay_->maintenance();
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

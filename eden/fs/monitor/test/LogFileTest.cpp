@@ -35,8 +35,7 @@ std::vector<std::string> listDir(const fs::path& path) {
 }
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 TEST(TimestampLogRotation, rotation) {
   auto tempdir = makeTempDir();
@@ -210,5 +209,4 @@ TEST(TimestampLogRotation, appendLogSuffix) {
       "foo.log-20200302.013456.123");
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -14,8 +14,7 @@ namespace folly {
 class ManualExecutor;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * An Executor that is guaranteed to never block, nor throw (except OOM), nor
@@ -55,5 +54,4 @@ class UnboundedQueueExecutor : public folly::Executor {
   std::shared_ptr<folly::Executor> executor_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -13,8 +13,7 @@
 
 struct stat;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Set of metadata to update during an InodeBase::setattr call.
@@ -73,5 +72,4 @@ struct InodeMetadata {
   // creation time
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -18,8 +18,7 @@
 using folly::make_exception_wrapper;
 using folly::Try;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 FileDescriptor::~FileDescriptor() {
   close();
@@ -607,5 +606,4 @@ FileDescriptor FileDescriptor::open(
 #endif
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

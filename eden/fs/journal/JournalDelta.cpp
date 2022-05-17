@@ -8,8 +8,7 @@
 #include "JournalDelta.h"
 #include <folly/logging/xlog.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 FileChangeJournalDelta::FileChangeJournalDelta(
     RelativePathPiece fileName,
@@ -169,6 +168,4 @@ FileChangeJournalDelta* JournalDeltaPtr::getAsFileChangeJournalDelta() {
       data_);
 }
 
-} // namespace eden
-
-} // namespace facebook
+} // namespace facebook::eden

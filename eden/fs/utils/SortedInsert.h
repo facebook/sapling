@@ -9,8 +9,7 @@
 
 #include <algorithm>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 // Generic function to insert an item in sorted order
 template <typename T, typename COMP, typename CONT>
@@ -24,5 +23,4 @@ inline typename CONT::iterator sorted_insert(CONT& vec, T&& val, COMP compare) {
   return vec.emplace(find, val);
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

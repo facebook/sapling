@@ -10,8 +10,7 @@
 #include <folly/Exception.h>
 #include <folly/portability/Stdlib.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 ScopedEnvVar::ScopedEnvVar(folly::StringPiece name) : name_(name.str()) {
   auto orig = getenv(name_->c_str());
   if (orig) {
@@ -60,5 +59,4 @@ void ScopedEnvVar::set(folly::StringPiece value) {
   folly::checkUnixError(
       rc, "failed to set environment variable ", name_.value());
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

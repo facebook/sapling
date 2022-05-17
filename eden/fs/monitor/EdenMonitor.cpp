@@ -51,8 +51,7 @@ DEFINE_int64(
     "The log pipe FD connected to an existing EdenFS child process "
     "(only valid with --restart)");
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class EdenMonitor::SignalHandler : public folly::AsyncSignalHandler {
  public:
@@ -274,5 +273,4 @@ void EdenMonitor::signalReceived(int sig) {
   XLOG(WARN) << "received unexpected signal " << sig;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

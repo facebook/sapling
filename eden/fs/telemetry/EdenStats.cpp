@@ -10,8 +10,7 @@
 #include <chrono>
 #include <memory>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 ChannelThreadStats& EdenStats::getChannelStatsForCurrentThread() {
   return *threadLocalChannelStats_.get();
@@ -65,5 +64,4 @@ void ChannelThreadStats::recordLatency(
   (this->*item).addValue(elapsed.count());
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

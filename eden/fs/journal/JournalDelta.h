@@ -14,8 +14,7 @@
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 struct PathChangeInfo {
   PathChangeInfo() : existedBefore{false}, existedAfter{false} {}
@@ -213,5 +212,4 @@ struct JournalDeltaRange {
   JournalDeltaRange& operator=(JournalDeltaRange&&) = default;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

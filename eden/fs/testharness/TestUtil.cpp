@@ -12,8 +12,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/ObjectId.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 ObjectId makeTestHash(folly::StringPiece value) {
   constexpr size_t ASCII_SIZE = 2 * Hash20::RAW_SIZE;
   if (value.size() > ASCII_SIZE) {
@@ -41,5 +40,4 @@ Hash20 makeTestHash20(folly::StringPiece value) {
       value.size());
   return Hash20{folly::StringPiece{folly::range(fullValue)}};
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

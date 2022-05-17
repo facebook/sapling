@@ -43,8 +43,7 @@ const boost::filesystem::path& getTempDir() {
 }
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 TemporaryFile makeTempFile(StringPiece prefix, TemporaryFile::Scope scope) {
   return TemporaryFile(prefix, getTempDir(), scope);
@@ -56,5 +55,4 @@ TemporaryDirectory makeTempDir(
   return TemporaryDirectory(prefix, getTempDir(), scope);
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

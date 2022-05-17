@@ -284,8 +284,7 @@ size_t getNumberPendingFuseRequests(const EdenMount* mount) {
 
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class EdenServer::ThriftServerEventHandler
     : public apache::thrift::server::TServerEventHandler,
@@ -2167,5 +2166,4 @@ void EdenServer::checkLockValidity() {
   stop();
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

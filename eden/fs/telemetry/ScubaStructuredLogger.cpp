@@ -12,8 +12,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/telemetry/SubprocessScribeLogger.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 
@@ -55,5 +54,4 @@ void ScubaStructuredLogger::logDynamicEvent(DynamicEvent event) {
   scribeLogger_->log(folly::toJson(document));
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

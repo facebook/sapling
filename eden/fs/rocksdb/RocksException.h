@@ -10,8 +10,7 @@
 #include <folly/String.h>
 #include <rocksdb/db.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class RocksException : public std::exception {
  public:
@@ -39,5 +38,4 @@ class RocksException : public std::exception {
   std::string msg_;
   std::string fullMsg_;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

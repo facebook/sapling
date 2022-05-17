@@ -11,8 +11,7 @@
 #include <folly/Exception.h>
 #include <folly/File.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 std::string getxattr(folly::StringPiece path, folly::StringPiece name) {
   folly::File file(path, O_RDONLY);
@@ -142,7 +141,6 @@ std::vector<std::string> listxattr(folly::StringPiece path) {
   }
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

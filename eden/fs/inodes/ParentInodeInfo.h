@@ -11,8 +11,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * ParentInodeInfo contains information about an InodeBase's parent.
@@ -95,5 +94,4 @@ class ParentInodeInfo {
   bool isUnlinked_;
   folly::Synchronized<TreeInodeState>::LockedPtr parentContents_;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

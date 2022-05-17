@@ -25,8 +25,7 @@
 #include "eden/fs/utils/Bug.h"
 #include "folly/FileUtil.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /*
  * OverlayFileAccess should be careful not to perform overlay IO operations
@@ -311,7 +310,6 @@ OverlayFileAccess::EntryPtr OverlayFileAccess::getEntryForInode(
   return entry;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

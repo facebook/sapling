@@ -18,8 +18,7 @@ class Future;
 struct Unit;
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class DiffContext;
 class GitIgnoreStack;
@@ -125,5 +124,4 @@ class DeferredDiffEntry {
   DiffContext* const context_;
   RelativePath const path_;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

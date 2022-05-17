@@ -39,8 +39,7 @@ DEFINE_int64(
     "How frequently to poll for process liveness when monitoring an existing "
     "EdenFS daemon that we did not start");
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 EdenInstance::EdenInstance(EdenMonitor* monitor) : monitor_{monitor} {}
 
@@ -405,5 +404,4 @@ void SpawnedEdenInstance::checkLivenessImpl() {
   scheduleTimeout(3s);
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

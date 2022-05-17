@@ -11,8 +11,7 @@
 
 #include "eden/fs/utils/UnixSocket.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * A wrapper around UnixSocket that provides a Future-based API
@@ -167,5 +166,4 @@ class FutureUnixSocket : private UnixSocket::ReceiveCallback {
   ReceiveCallback* recvQueueTail_{nullptr};
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

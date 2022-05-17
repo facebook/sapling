@@ -9,8 +9,7 @@
 
 #include <folly/Range.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class ObjectId;
 class Hash20;
@@ -24,5 +23,4 @@ class Hash20;
 ObjectId makeTestHash(folly::StringPiece value);
 
 Hash20 makeTestHash20(folly::StringPiece value);
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

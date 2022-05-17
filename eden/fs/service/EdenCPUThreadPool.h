@@ -9,8 +9,7 @@
 
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 // The Eden CPU thread pool is intended for miscellaneous background tasks.
 class EdenCPUThreadPool : public UnboundedQueueExecutor {
@@ -18,5 +17,4 @@ class EdenCPUThreadPool : public UnboundedQueueExecutor {
   explicit EdenCPUThreadPool();
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

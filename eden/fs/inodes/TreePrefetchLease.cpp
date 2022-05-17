@@ -9,8 +9,7 @@
 
 #include "eden/fs/inodes/EdenMount.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 void TreePrefetchLease::release() noexcept {
   if (inode_) {
@@ -18,5 +17,4 @@ void TreePrefetchLease::release() noexcept {
   }
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

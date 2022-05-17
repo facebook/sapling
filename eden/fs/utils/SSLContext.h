@@ -12,12 +12,10 @@
 
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 /**
  * Create a folly::SSLcontext with client certificate
  */
 std::shared_ptr<folly::SSLContext> buildSSLContext(
     std::optional<AbsolutePath> clientCertificate);
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

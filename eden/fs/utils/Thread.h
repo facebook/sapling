@@ -7,8 +7,7 @@
 
 #pragma once
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Disable pthread cancellation for the calling thread. This improves
@@ -18,5 +17,4 @@ namespace eden {
  */
 void disablePthreadCancellation();
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

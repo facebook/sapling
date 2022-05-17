@@ -11,8 +11,7 @@
 #include <folly/portability/IOVec.h>
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /** Windows doesn't have equivalent bits for all of the various
  * open(2) flags, so we abstract it out here */
@@ -228,5 +227,4 @@ class FileDescriptor {
       const;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

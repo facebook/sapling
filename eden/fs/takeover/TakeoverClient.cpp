@@ -29,8 +29,7 @@ DEFINE_int32(
     300,
     "Timeout for receiving takeover data from old process in seconds");
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 TakeoverData takeoverMounts(
     AbsolutePathPiece socketPath,
@@ -103,7 +102,6 @@ TakeoverData takeoverMounts(
 
   return TakeoverData::deserialize(message);
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

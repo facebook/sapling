@@ -13,8 +13,7 @@
 #include <system_error>
 #include "Clock.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 timespec UnixClock::getRealtime() const {
   timespec rv;
@@ -25,5 +24,4 @@ timespec UnixClock::getRealtime() const {
   return rv;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

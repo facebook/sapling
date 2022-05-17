@@ -15,8 +15,7 @@
 #include <folly/Synchronized.h>
 #include <folly/stop_watch.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Represents a request tracked in a RequestMetricsScope::RequestWatchList.
@@ -108,5 +107,4 @@ class RequestMetricsScope {
   LockedRequestWatchList* pendingRequestWatches_;
   RequestWatchList::iterator requestWatch_;
 }; // namespace eden
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -40,8 +40,7 @@ bool isWhitelisted(folly::StringPiece methodName) {
 
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 ThriftPermissionChecker::ThriftPermissionChecker(
     std::shared_ptr<ServerState> serverState)
@@ -110,5 +109,4 @@ void ThriftPermissionChecker::preRead(void* ctx, const char* fn_name) {
 #endif
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

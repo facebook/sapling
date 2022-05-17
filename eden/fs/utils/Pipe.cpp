@@ -16,8 +16,7 @@
 #endif
 #include <system_error>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 Pipe::Pipe(bool nonBlocking) {
 #ifdef _WIN32
@@ -99,5 +98,4 @@ SocketPair::SocketPair(bool nonBlocking) {
   }
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

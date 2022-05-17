@@ -10,8 +10,7 @@
 #include <folly/futures/Future.h>
 #include <folly/futures/SharedPromise.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 template <typename KEY, typename VAL, typename HASH = std::hash<KEY>>
 class LeaseCache {
@@ -75,5 +74,4 @@ class LeaseCache {
   }
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

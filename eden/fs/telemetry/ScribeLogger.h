@@ -10,8 +10,7 @@
 #include <folly/Range.h>
 #include <string>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * An interface to a scribe logger implementation.
@@ -32,5 +31,4 @@ class ScribeLogger {
   }
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

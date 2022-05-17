@@ -10,8 +10,7 @@
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/utils/FsChannelTypes.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 void InodeMetadata::updateFromDesired(
     const Clock& clock,
@@ -66,7 +65,6 @@ void InodeMetadata::applyToStat(struct stat& st) const {
   timestamps.applyToStat(st);
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

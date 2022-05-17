@@ -11,11 +11,9 @@
 
 DEFINE_int32(num_eden_threads, 12, "the number of eden CPU worker threads");
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 EdenCPUThreadPool::EdenCPUThreadPool()
     : UnboundedQueueExecutor(FLAGS_num_eden_threads, "EdenCPUThread") {}
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

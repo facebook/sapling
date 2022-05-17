@@ -21,8 +21,7 @@ namespace folly {
 class File;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class FsOverlay;
 
@@ -218,5 +217,4 @@ class OverlayChecker {
   std::unordered_map<InodeNumber, PathInfo> pathCache_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

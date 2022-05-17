@@ -15,8 +15,7 @@
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class PrjfsDirEntry {
  public:
@@ -105,5 +104,4 @@ class Enumerator {
    */
   std::vector<PrjfsDirEntry>::iterator iter_;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

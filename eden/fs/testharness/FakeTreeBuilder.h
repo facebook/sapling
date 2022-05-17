@@ -14,8 +14,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/PathMap.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Blob;
 class FakeBackingStore;
@@ -296,5 +295,4 @@ class FakeTreeBuilder::FileInfo {
   FileInfo(folly::StringPiece p, folly::StringPiece c, bool exec = false)
       : path(p), contents(c.str()), executable(exec) {}
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

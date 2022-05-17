@@ -7,8 +7,7 @@
 
 #include "Tracing.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 namespace detail {
 Tracer globalTracer;
 
@@ -36,5 +35,4 @@ std::vector<CompactTracePoint> Tracer::getAllTracepoints() {
   return std::move(*points);
 }
 } // namespace detail
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

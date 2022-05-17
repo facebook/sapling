@@ -141,8 +141,7 @@ ChronoParseError conversionCodeToParseError(ConversionCode code) {
 
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 StringPiece chronoParseErrorToString(ChronoParseError error) {
   switch (error) {
@@ -299,5 +298,4 @@ std::string durationToString(std::chrono::nanoseconds duration) {
   return result;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

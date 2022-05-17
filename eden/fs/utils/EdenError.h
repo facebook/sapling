@@ -14,8 +14,7 @@
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/utils/Utf8.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 /*
  * Helper functions for constructing thrift EdenError objects.
  */
@@ -77,5 +76,4 @@ EdenError newEdenError(const std::exception& ex);
  * Construct an EdenError from a folly::exception_wrapper.
  */
 EdenError newEdenError(const folly::exception_wrapper& ew);
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

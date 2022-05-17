@@ -14,8 +14,7 @@
 
 #include "eden/common/utils/ProcessNameCache.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 struct ThreadLocalBucket {
   explicit ThreadLocalBucket(ProcessAccessLog* processAccessLog)
@@ -241,5 +240,4 @@ std::unordered_map<pid_t, AccessCounts> ProcessAccessLog::getAccessCounts(
   return accessCountsByPid;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

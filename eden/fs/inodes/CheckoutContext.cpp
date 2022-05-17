@@ -18,8 +18,7 @@
 using folly::Future;
 using std::vector;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 CheckoutContext::CheckoutContext(
     EdenMount* mount,
@@ -156,5 +155,4 @@ void CheckoutContext::addError(
   *conflict.message_ref() = folly::exceptionStr(ew).toStdString();
   conflicts_.wlock()->push_back(std::move(conflict));
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

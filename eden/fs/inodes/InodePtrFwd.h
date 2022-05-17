@@ -11,8 +11,7 @@
  * This file contains forward declarations of InodePtr and related types
  */
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class FileInode;
 class InodeBase;
@@ -29,5 +28,4 @@ using DotEdenInodePtr = InodePtrImpl<DotEdenInode>;
 using FileInodePtr = InodePtrImpl<FileInode>;
 using TreeInodePtr = InodePtrImpl<TreeInode>;
 class InodePtr;
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -20,8 +20,7 @@
 
 #include "eden/fs/utils/IDGen.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 struct CompactTracePoint {
   // Holds nanoseconds since the epoch
@@ -261,5 +260,4 @@ class TraceBlock {
   uint64_t parentBlockId_{0};
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

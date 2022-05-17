@@ -14,8 +14,7 @@
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class TakeoverData;
 class TakeoverHandler;
@@ -66,5 +65,4 @@ class TakeoverServer : private folly::AsyncServerSocket::AcceptCallback {
   // not be ready for production yet
   const std::set<int32_t>& supportedVersions_;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

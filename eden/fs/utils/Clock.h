@@ -9,8 +9,7 @@
 
 #include <time.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Represents access to the system clock(s).
@@ -34,5 +33,4 @@ class UnixClock : public Clock {
   timespec getRealtime() const override;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

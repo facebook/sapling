@@ -12,8 +12,7 @@
 #include <folly/executors/task_queue/UnboundedBlockingQueue.h>
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 UnboundedQueueExecutor::UnboundedQueueExecutor(
     size_t threadCount,
@@ -28,5 +27,4 @@ UnboundedQueueExecutor::UnboundedQueueExecutor(
     std::shared_ptr<folly::ManualExecutor> executor)
     : executor_{std::move(executor)} {}
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

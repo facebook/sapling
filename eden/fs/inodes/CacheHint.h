@@ -7,8 +7,7 @@
 
 #pragma once
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * A hint to read or fetch APIs about whether they should internally cache or
@@ -28,5 +27,4 @@ enum class CacheHint {
   LikelyNeededAgain,
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

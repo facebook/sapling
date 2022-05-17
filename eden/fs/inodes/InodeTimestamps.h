@@ -14,8 +14,7 @@
 
 struct stat;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Clock;
 struct DesiredMetadata;
@@ -168,5 +167,4 @@ static_assert(noexcept(EdenTimestamp{uint64_t{}}), "");
 
 static_assert(noexcept(InodeTimestamps{}), "");
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

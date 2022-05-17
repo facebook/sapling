@@ -15,8 +15,7 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 
@@ -657,5 +656,4 @@ void GlobNode::debugDump(int currentDepth) const {
   }
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

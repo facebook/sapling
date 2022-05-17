@@ -28,8 +28,7 @@
 #include "eden/fs/inodes/fsoverlay/FsOverlay.h"
 #endif
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace overlay {
 class OverlayDir;
@@ -399,5 +398,4 @@ class IORequest {
   Overlay* const overlay_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

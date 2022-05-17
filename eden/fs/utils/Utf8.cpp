@@ -8,8 +8,7 @@
 #include "eden/fs/utils/Utf8.h"
 #include <folly/Unicode.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 std::string ensureValidUtf8(folly::ByteRange str) {
   std::string output;
@@ -26,5 +25,4 @@ std::string ensureValidUtf8(folly::ByteRange str) {
   return output;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

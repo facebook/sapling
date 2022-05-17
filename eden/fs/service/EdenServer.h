@@ -58,8 +58,7 @@ namespace folly {
 class EventBase;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class BackingStore;
 class HgQueuedBackingStore;
@@ -769,5 +768,4 @@ class EdenServer : private TakeoverHandler {
       "backing_store"};
   PeriodicFnTask<&EdenServer::manageOverlay> overlayTask_{this, "overlay"};
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

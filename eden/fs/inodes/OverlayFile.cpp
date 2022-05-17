@@ -13,8 +13,7 @@
 
 #include "eden/fs/inodes/Overlay.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 OverlayFile::OverlayFile(folly::File file, std::weak_ptr<Overlay> overlay)
     : file_{std::move(file)}, overlay_{overlay} {}
@@ -160,7 +159,6 @@ folly::Expected<std::string, int> OverlayFile::readFile() const {
   return folly::makeExpected<int>(std::move(out));
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

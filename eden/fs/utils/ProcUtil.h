@@ -13,8 +13,7 @@
 #include <vector>
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 constexpr folly::StringPiece kVmRSSKey{"VmRSS"};
 constexpr folly::StringPiece kKBytes{"kB"};
@@ -121,5 +120,4 @@ std::optional<size_t> calculatePrivateBytes(
 #endif
 
 } // namespace proc_util
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -28,8 +28,7 @@ using folly::StringPiece;
 using std::make_unique;
 using std::unique_ptr;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 FakeBackingStore::FakeBackingStore() = default;
 
@@ -397,5 +396,4 @@ void FakeBackingStore::discardOutstandingRequests() {
 size_t FakeBackingStore::getAccessCount(const ObjectId& hash) const {
   return folly::get_default(data_.rlock()->accessCounts, hash, 0);
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

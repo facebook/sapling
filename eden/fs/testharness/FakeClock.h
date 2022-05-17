@@ -11,8 +11,7 @@
 
 #include <folly/chrono/Conv.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class FakeClock : public Clock {
  public:
@@ -40,5 +39,4 @@ class FakeClock : public Clock {
   time_point currentTime_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

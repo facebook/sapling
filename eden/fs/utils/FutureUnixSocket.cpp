@@ -18,8 +18,7 @@ using folly::makeFuture;
 using folly::Promise;
 using folly::Unit;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class FutureUnixSocket::SendCallback : public UnixSocket::SendCallback {
  public:
@@ -271,5 +270,4 @@ void FutureUnixSocket::failReceiveQueue(
   }
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

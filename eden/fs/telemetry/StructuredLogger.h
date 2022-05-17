@@ -11,8 +11,7 @@
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/SessionInfo.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class StructuredLogger {
  public:
@@ -48,5 +47,4 @@ class StructuredLogger {
   SessionInfo sessionInfo_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

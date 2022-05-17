@@ -15,8 +15,7 @@ namespace {
 static std::atomic<int> edenBugDisabledCount{0};
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 EdenBug::EdenBug(const char* file, int lineNumber)
     : file_(file), lineNumber_(lineNumber), message_("!!BUG!! ") {}
 
@@ -62,5 +61,4 @@ EdenBugDisabler::EdenBugDisabler() {
 EdenBugDisabler::~EdenBugDisabler() {
   --edenBugDisabledCount;
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

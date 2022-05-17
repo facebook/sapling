@@ -12,8 +12,7 @@ template <typename T>
 class Future;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class TakeoverData;
 
@@ -42,5 +41,4 @@ class TakeoverHandler {
   virtual void closeStorage() = 0;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

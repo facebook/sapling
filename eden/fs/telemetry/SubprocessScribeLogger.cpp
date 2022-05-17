@@ -22,8 +22,7 @@ constexpr std::chrono::seconds kProcessExitTimeout{1};
 constexpr std::chrono::seconds kProcessTerminateTimeout{1};
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 SubprocessScribeLogger::SubprocessScribeLogger(
     const char* executable,
@@ -165,5 +164,4 @@ void SubprocessScribeLogger::writerThread() {
   }
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

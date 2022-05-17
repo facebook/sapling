@@ -18,8 +18,7 @@
 
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class LogRotationStrategy;
 
@@ -62,5 +61,4 @@ class LogFile {
   std::thread rotationThread_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

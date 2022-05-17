@@ -14,8 +14,7 @@
 
 #include "eden/fs/utils/FsChannelTypes.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * FakeFuse helps implement a fake FUSE device.
@@ -111,5 +110,4 @@ class FakeFuse {
   uint32_t requestID_{0};
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -9,8 +9,7 @@
 
 #include <folly/futures/Future.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Same semantics as folly::collect, but does not return until all futures are
@@ -89,5 +88,4 @@ collectSafe(Fs&&... fs) {
   return ctx->p.getFuture();
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

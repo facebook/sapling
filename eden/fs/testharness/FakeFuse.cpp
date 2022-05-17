@@ -20,8 +20,7 @@ using namespace std::chrono_literals;
 using folly::ByteRange;
 using folly::StringPiece;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 FakeFuse::FakeFuse() {}
 
@@ -165,7 +164,6 @@ uint32_t FakeFuse::sendLookup(uint64_t inode, StringPiece pathComponent) {
   return sendRequest(FUSE_LOOKUP, inode, folly::ByteRange(pathComponent));
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

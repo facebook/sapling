@@ -15,8 +15,7 @@
 #include <sys/types.h>
 #include <cstdint>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /** Represents the type of a filesystem entry.
  *
@@ -103,5 +102,4 @@ inline mode_t dtype_to_mode(dtype_t dt) {
 inline dtype_t mode_to_dtype(mode_t mode) {
   return static_cast<dtype_t>(IFTODT(mode));
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

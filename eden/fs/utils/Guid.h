@@ -12,8 +12,7 @@
 #include <fmt/format.h>
 #include "eden/common/utils/WinError.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Guid {
  public:
@@ -86,8 +85,7 @@ class Guid {
   GUID guid_{};
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 namespace std {
 template <>

@@ -18,8 +18,7 @@
 using std::make_unique;
 using std::string;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 FakeTreeBuilder::FakeTreeBuilder() {}
 
@@ -317,5 +316,4 @@ StoredBlob* FakeTreeBuilder::EntryInfo::finalizeBlob(
   }
   return storedBlob;
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -21,8 +21,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 class EdenMount;
 class Notifier;
 class ReloadableConfig;
@@ -543,5 +542,4 @@ class PrjfsChannel {
   PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

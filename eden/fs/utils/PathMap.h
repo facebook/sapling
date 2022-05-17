@@ -15,8 +15,7 @@
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /** An associative container that maps from one of our path types to an
  * arbitrary value type.
@@ -364,5 +363,4 @@ bool operator!=(const PathMap<V, K>& lhs, const PathMap<V, K>& rhs) {
   const folly::fbvector<std::pair<K, V>>& vector = lhs;
   return vector != rhs;
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

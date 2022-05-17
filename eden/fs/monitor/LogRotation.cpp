@@ -22,8 +22,7 @@
 using folly::StringPiece;
 namespace fs = boost::filesystem;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 LogRotationStrategy::~LogRotationStrategy() {}
 
@@ -201,5 +200,4 @@ void TimestampLogRotation::removeOldLogFiles() {
   }
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

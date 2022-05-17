@@ -40,8 +40,7 @@ extern char** environ;
 }
 #endif
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 ProcessStatus ProcessStatus::fromWaitStatus(int rawStatus) {
 #ifndef _WIN32
@@ -1185,5 +1184,4 @@ Initializer initializer;
 } // namespace
 #endif
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

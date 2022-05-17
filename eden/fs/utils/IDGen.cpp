@@ -39,8 +39,7 @@ static_assert(
     "kRangeSize must be a power of two");
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 uint64_t generateUniqueID() noexcept {
   uint64_t current = localCounter;
@@ -52,5 +51,4 @@ uint64_t generateUniqueID() noexcept {
   return current;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -11,8 +11,7 @@
 #include <optional>
 #include <string>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 struct SessionInfo {
   std::string username;
@@ -42,5 +41,4 @@ std::string getHostname();
 // opensource version.
 std::optional<uint64_t> getSandcastleInstanceId();
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

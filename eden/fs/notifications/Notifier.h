@@ -11,8 +11,7 @@
 #include <optional>
 #include "eden/fs/config/ReloadableConfig.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class ReloadableConfig;
 
@@ -58,5 +57,4 @@ class Notifier {
       lastShown_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

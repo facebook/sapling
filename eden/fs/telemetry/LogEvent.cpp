@@ -21,8 +21,7 @@ void validateUtf8(folly::StringPiece sp) {
 }
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 void DynamicEvent::addInt(std::string name, int64_t value) {
   auto [iter, inserted] = ints_.emplace(std::move(name), value);
@@ -52,5 +51,4 @@ void DynamicEvent::addDouble(std::string name, double value) {
   }
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

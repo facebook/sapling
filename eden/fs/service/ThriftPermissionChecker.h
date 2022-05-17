@@ -10,8 +10,7 @@
 #include <thrift/lib/cpp/TProcessorEventHandler.h>
 #include <stdexcept>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class ServerState;
 
@@ -39,5 +38,4 @@ class ThriftPermissionChecker : public apache::thrift::TProcessorEventHandler {
   std::shared_ptr<ServerState> serverState_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

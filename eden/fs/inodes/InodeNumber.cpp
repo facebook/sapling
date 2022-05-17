@@ -10,8 +10,7 @@
 #include <folly/Conv.h>
 #include <ostream>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 std::ostream& operator<<(std::ostream& os, InodeNumber ino) {
   return os << ino.getRawValue();
@@ -25,5 +24,4 @@ void toAppend(InodeNumber ino, folly::fbstring* result) {
   folly::toAppend(ino.getRawValue(), result);
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

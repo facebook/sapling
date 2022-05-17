@@ -68,8 +68,7 @@ using std::shared_ptr;
 using std::unique_ptr;
 using std::vector;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 static constexpr PathComponentPiece kIgnoreFilename{".gitignore"};
@@ -3824,5 +3823,4 @@ ImmediateFuture<std::string> TreeInode::getxattr(
 }
 #endif
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

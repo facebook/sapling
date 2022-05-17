@@ -15,8 +15,7 @@ namespace folly {
 class File;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Overlay;
 
@@ -47,5 +46,4 @@ class OverlayFile {
   folly::File file_;
   std::weak_ptr<Overlay> overlay_;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

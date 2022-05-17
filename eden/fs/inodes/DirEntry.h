@@ -15,8 +15,7 @@
 #include "eden/fs/utils/PathMap.h"
 #include "eden/fs/utils/StaticAssert.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Represents a directory entry.
@@ -244,5 +243,4 @@ struct DirContents : PathMap<DirEntry> {
       : PathMap(caseSensitive) {}
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

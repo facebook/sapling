@@ -14,8 +14,7 @@
 
 using std::string;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 ImmediateFuture<fuse_entry_out> TestDispatcher::lookup(
     uint64_t requestID,
@@ -64,7 +63,6 @@ TestDispatcher::PendingLookup TestDispatcher::waitForLookup(
     }
   }
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

@@ -23,8 +23,7 @@ class exception_wrapper;
 class SocketAddress;
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * A helper class for performing asynchronous I/O on a unix domain socket.
@@ -422,5 +421,4 @@ class UnixSocket : public folly::DelayedDestruction,
   SendQueueEntry* sendQueueTail_{nullptr};
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

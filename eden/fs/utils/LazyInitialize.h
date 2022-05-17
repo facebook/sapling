@@ -10,8 +10,7 @@
 #include <folly/Synchronized.h>
 #include <memory>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /// Returns the pointer stored in `ptr` when `cond` is true, and it will call
 /// `init` to create a new pointer and store it in `ptr` when `ptr` does not
@@ -57,5 +56,4 @@ std::shared_ptr<T> lazyInitialize(
   }
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

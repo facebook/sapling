@@ -20,8 +20,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UserInfo.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Clock;
 class EdenConfig;
@@ -205,5 +204,4 @@ class ServerState {
   std::shared_ptr<Notifier> notifier_;
   std::shared_ptr<FsEventLogger> fsEventLogger_;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

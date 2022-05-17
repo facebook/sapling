@@ -24,8 +24,7 @@ template <class>
 class Client;
 } // namespace apache::thrift
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class EdenConfig;
 class EdenInstance;
@@ -113,5 +112,4 @@ class EdenMonitor {
   std::unique_ptr<EdenInstance> gracefulRestartNewEdenfs_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

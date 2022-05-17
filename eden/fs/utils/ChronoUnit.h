@@ -12,8 +12,7 @@
 #include <folly/CppAttributes.h>
 #include <folly/Range.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * A structure representing information about a duration unit.
@@ -40,5 +39,4 @@ struct ChronoUnit {
 const ChronoUnit* FOLLY_NULLABLE
 lookupChronoUnitInfo(folly::StringPiece unitName);
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

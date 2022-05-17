@@ -13,8 +13,7 @@
 
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class DynamicEvent {
  public:
@@ -287,5 +286,4 @@ struct TooManyNfsClients {
   void populate(DynamicEvent& /*event*/) const {}
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

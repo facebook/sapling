@@ -9,8 +9,7 @@
 #include "eden/common/utils/WinError.h"
 #include "eden/fs/utils/SystemError.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 EdenError newEdenError(const std::system_error& ex) {
   if (isErrnoError(ex)) {
@@ -54,5 +53,4 @@ EdenError newEdenError(const folly::exception_wrapper& ew) {
   }
   return err;
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -28,8 +28,7 @@ class Future;
 struct Unit;
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class CheckoutConflict;
 class TreeInode;
@@ -141,5 +140,4 @@ class CheckoutContext {
   // Therefore access to the conflicts list must be synchronized.
   folly::Synchronized<std::vector<CheckoutConflict>> conflicts_;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

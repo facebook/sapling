@@ -13,8 +13,7 @@
 #include <folly/logging/xlog.h>
 #include <stdint.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Represents ino_t behind a slightly safer API.  In general, it is a bug if
@@ -115,8 +114,7 @@ constexpr InodeNumber operator""_ino(unsigned long long ino) {
 /// The inode number of the mount's root directory.
 constexpr InodeNumber kRootNodeId = 1_ino;
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 namespace std {
 template <>

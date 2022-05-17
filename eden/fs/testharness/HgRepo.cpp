@@ -25,8 +25,7 @@ using folly::StringPiece;
 using std::string;
 using std::vector;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 HgRepo::HgRepo(AbsolutePathPiece path, AbsolutePath hgCmd)
     : hgCmd_(hgCmd), path_(path) {
@@ -189,7 +188,6 @@ bool testEnvironmentSupportsHg() {
   return !kIsSanitizeThread;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

@@ -9,8 +9,7 @@
 
 #include <memory>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class EdenConfig;
 class StructuredLogger;
@@ -24,5 +23,4 @@ std::unique_ptr<StructuredLogger> makeDefaultStructuredLogger(
     const EdenConfig&,
     SessionInfo sessionInfo);
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

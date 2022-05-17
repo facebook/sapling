@@ -41,8 +41,7 @@
 
 using namespace folly::string_piece_literals;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 std::string debugDumpOverlayInodes(Overlay&, InodeNumber rootInode);
@@ -988,7 +987,6 @@ std::string debugDumpOverlayInodes(Overlay& overlay, InodeNumber rootInode) {
 
 } // namespace
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

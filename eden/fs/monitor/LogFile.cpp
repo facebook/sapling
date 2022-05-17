@@ -34,8 +34,7 @@ size_t getFileSize(
 }
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 LogFile::LogFile(
     const AbsolutePath& path,
@@ -167,5 +166,4 @@ void LogFile::runRotateThread() {
   }
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -10,8 +10,7 @@
 #include <folly/Format.h>
 #include <folly/logging/xlog.h>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 std::string durationStr(std::chrono::nanoseconds duration) {
   using namespace std::chrono_literals;
@@ -85,5 +84,4 @@ bool operator<=(const timespec& a, const timespec& b) {
     return a.tv_sec < b.tv_sec;
   }
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

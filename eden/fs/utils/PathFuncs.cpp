@@ -27,8 +27,7 @@
 using folly::Expected;
 using folly::StringPiece;
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 StringPiece dirname(StringPiece path) {
   auto dirSeparator = detail::rfindPathSeparator(path);
@@ -407,5 +406,4 @@ CompareResult comparePathComponent(
   }
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

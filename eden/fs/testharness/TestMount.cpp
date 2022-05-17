@@ -72,8 +72,7 @@ constexpr size_t kBlobCacheMaximumSize = 1000; // bytes
 constexpr size_t kBlobCacheMinimumEntries = 0;
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 bool TestMountFile::operator==(const TestMountFile& other) const {
   return path == other.path && contents == other.contents && rwx == other.rwx &&
@@ -702,5 +701,4 @@ std::string TestMount::loadFileContentsFromPath(std::string path) {
       .get(std::chrono::milliseconds(1));
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

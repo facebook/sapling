@@ -47,8 +47,7 @@ using std::vector;
 #define MSG_CMSG_CLOEXEC 0
 #endif
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 namespace {
 /**
@@ -1032,7 +1031,6 @@ int UnixSocket::getRawFd() const {
   return socket_.fd();
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

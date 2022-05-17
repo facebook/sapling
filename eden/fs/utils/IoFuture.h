@@ -17,8 +17,7 @@ namespace folly {
 class EventBase;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * Create a Future that will complete when a socket is ready to perform I/O.
@@ -72,5 +71,4 @@ class IoFuture : private folly::EventHandler, private folly::AsyncTimeout {
   folly::Promise<int> promise_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
