@@ -4014,10 +4014,8 @@ def debugthrowexception(ui, _repo):
         ),
         ("", "python", False, _("signal rust command dispatch to fall back to python")),
     ],
-    _("[OPTION]..."),
 )
 def debugscmstore(ui, repo, mode=None, path=None, python=False):
-    """test file and tree fetching using scmstore"""
     if mode not in ["file", "tree"]:
         raise error.Abort("mode must be one of 'file' and 'tree'")
     if path is None:

@@ -1514,110 +1514,9 @@ def cat(ui, repo, file1, *pats, **opts):
         ("", "git", False, _("use git protocol (EXPERIMENTAL)")),
     ]
     + remoteopts,
-    _("[OPTION]... SOURCE [DEST]"),
     norepo=True,
 )
 def clone(ui, source, dest=None, **opts):
-    """make a copy of an existing repository
-
-    Create a copy of an existing repository in a new directory.
-
-    If no destination directory name is specified, it defaults to the
-    basename of the source.
-
-    The location of the source is added to the new repository's
-    ``.hg/hgrc`` file, as the default to be used for future pulls.
-
-    Only local paths and ``ssh://`` URLs are supported as
-    destinations. For ``ssh://`` destinations, no working directory or
-    ``.hg/hgrc`` will be created on the remote side.
-
-    If the source repository has a bookmark called '@' set, that
-    revision will be checked out in the new repository by default.
-
-    To check out a particular version, use -u/--update, or
-    -U/--noupdate to create a clone with no working directory.
-
-    To pull only a subset of changesets, specify one or more revisions
-    identifiers with -r/--rev. The resulting clone will contain only the
-    specified changesets and their ancestors. These options (or 'clone src#rev
-    dest') imply --pull, even for local source repositories.
-
-    In normal clone mode, the remote normalizes repository data into a common
-    exchange format and the receiving end translates this data into its local
-    storage format. --stream activates a different clone mode that essentially
-    copies repository files from the remote with minimal data processing. This
-    significantly reduces the CPU cost of a clone both remotely and locally.
-    However, it often increases the transferred data size by 30-40%. This can
-    result in substantially faster clones where I/O throughput is plentiful,
-    especially for larger repositories. A side-effect of --stream clones is
-    that storage settings and requirements on the remote are applied locally:
-    a modern client may inherit legacy or inefficient storage used by the
-    remote or a legacy Mercurial client may not be able to clone from a
-    modern Mercurial remote.
-
-    .. container:: verbose
-
-      For efficiency, hardlinks are used for cloning whenever the
-      source and destination are on the same filesystem (note this
-      applies only to the repository data, not to the working
-      directory). Some filesystems, such as AFS, implement hardlinking
-      incorrectly, but do not report errors. In these cases, use the
-      --pull option to avoid hardlinking.
-
-      Mercurial will update the working directory to the first applicable
-      revision from this list:
-
-      a) null if -U or the source repository has no changesets
-      b) if -u . and the source repository is local, the first parent of
-         the source repository's working directory
-      c) the changeset specified with -u (if a branch name, this means the
-         latest head of that branch)
-      d) the changeset specified with -r
-      e) the tipmost head specified with -b
-      f) the tipmost head specified with the url#branch source syntax
-      g) the revision marked with the '@' bookmark, if present
-      h) the tipmost head of the default branch
-      i) tip
-
-      When cloning from servers that support it, Mercurial may fetch
-      pre-generated data from a server-advertised URL. When this is done,
-      hooks operating on incoming changesets and changegroups may fire twice,
-      once for the bundle fetched from the URL and another for any additional
-      data not fetched from this URL. In addition, if an error occurs, the
-      repository may be rolled back to a partial clone. This behavior may
-      change in future releases. See :hg:`help -e clonebundles` for more.
-
-      Examples:
-
-      - clone a remote repository to a new directory named hg/::
-
-          hg clone https://www.mercurial-scm.org/repo/hg/
-
-      - create a lightweight local clone::
-
-          hg clone project/ project-feature/
-
-      - clone from an absolute path on an ssh server (note double-slash)::
-
-          hg clone ssh://user@server//home/projects/alpha/
-
-      - do a streaming clone while checking out a specified version::
-
-          hg clone --stream http://server/repo -u 1.5
-
-      - create a repository without changesets after a particular revision::
-
-          hg clone -r 04e544 experimental/ good/
-
-      - clone (and track) a particular named branch::
-
-          hg clone https://www.mercurial-scm.org/repo/hg/#stable
-
-    See :hg:`help urls` for details on specifying URLs.
-
-    Returns 0 on success.
-    """
     if opts.get("noupdate") and opts.get("updaterev"):
         raise error.Abort(_("cannot specify both --noupdate and --updaterev"))
     if opts.get("git"):
@@ -5718,100 +5617,10 @@ def show(ui, repo, *args, **opts):
     ]
     + walkopts
     + formatteropts,
-    _("[OPTION]... [FILE]..."),
     inferrepo=True,
     cmdtype=readonly,
 )
 def status(ui, repo, *pats, **opts):
-    """list files with pending changes
-
-    Show status of files in the repository using the following status
-    indicators::
-
-      M = modified
-      A = added
-      R = removed
-      C = clean
-      ! = missing (deleted by a non-hg command, but still tracked)
-      ? = not tracked
-      I = ignored
-        = origin of the previous file (with --copies)
-
-    By default, shows files that have been modified, added, removed,
-    deleted, or that are unknown (corresponding to the options -mardu).
-    Files that are unmodified, ignored, or the source of a copy/move
-    operation are not listed.
-
-    To control the exact statuses that are shown, specify the relevant
-    flags (like -rd to show only files that are removed or deleted).
-    Additionally, specify -q/--quiet to hide both unknown and ignored
-    files.
-
-    To show the status of specific files, provide an explicit list of
-    files to match. To include or exclude files using regular expressions,
-    use -I or -X.
-
-    If --rev is specified, and only one revision is given, it is used as
-    the base revision. If two revisions are given, the differences between
-    them are shown. The --change option can also be used as a shortcut
-    to list the changed files of a revision from its first parent.
-
-    .. note::
-
-       :hg:`status` might appear to disagree with :hg:`diff` if permissions
-       have changed or a merge has occurred, because the standard diff
-       format does not report permission changes and :hg:`diff` only
-       reports changes relative to one merge parent.
-
-    .. container:: verbose
-
-      The -t/--terse option abbreviates the output by showing only the directory
-      name if all the files in it share the same status. The option takes an
-      argument indicating the statuses to abbreviate: 'm' for 'modified', 'a'
-      for 'added', 'r' for 'removed', 'd' for 'deleted', 'u' for 'unknown', 'i'
-      for 'ignored' and 'c' for clean.
-
-      It abbreviates only those statuses which are passed. Note that clean and
-      ignored files are not displayed with '--terse ic' unless the -c/--clean
-      and -i/--ignored options are also used.
-
-      The -v/--verbose option shows information when the repository is in an
-      unfinished merge, shelve, rebase state etc. You can have this behavior
-      turned on by default by enabling the ``commands.status.verbose`` option.
-
-      You can skip displaying some of these states by setting
-      ``commands.status.skipstates`` to one or more of: 'bisect', 'graft',
-      'histedit', 'merge', 'rebase', or 'unshelve'.
-
-      Examples:
-
-      - show changes in the working directory relative to a
-        changeset::
-
-          hg status --rev 9353
-
-      - show changes in the working directory relative to the
-        current directory (see :hg:`help patterns` for more information)::
-
-          hg status re:
-
-      - show all changes including copies in an existing changeset::
-
-          hg status --copies --change 9353
-
-      - get a NUL separated list of added files, suitable for xargs::
-
-          hg status -an0
-
-      - show more information about the repository status, abbreviating
-        added, removed, modified, deleted, and untracked paths::
-
-          hg status -v -t mardu
-
-    Returns 0 on success.
-
-    """
-
     revs = opts.get("rev")
     change = opts.get("change")
     terse = opts.get("terse")
@@ -6502,7 +6311,6 @@ def verify(ui, repo, **opts):
 
 @command("version|vers|versi|versio", [] + formatteropts, norepo=True, cmdtype=readonly)
 def version_(ui, **opts):
-    """output version and copyright information"""
     if ui.verbose:
         ui.pager("version")
     fm = ui.formatter("version", opts)
