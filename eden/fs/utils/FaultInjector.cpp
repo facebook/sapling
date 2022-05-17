@@ -320,7 +320,7 @@ std::vector<FaultInjector::BlockedCheck> FaultInjector::extractBlockedChecks(
 
 size_t FaultInjector::unblockAllImpl(
     std::optional<folly::exception_wrapper> error) {
-  folly::StringKeyedUnorderedMap<std::vector<BlockedCheck>> blockedChecks;
+  folly::F14NodeMap<std::string, std::vector<BlockedCheck>> blockedChecks;
   {
     auto state = state_.wlock();
     state->blockedChecks.swap(blockedChecks);

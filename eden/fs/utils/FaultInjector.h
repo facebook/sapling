@@ -8,7 +8,8 @@
 #pragma once
 
 #include <boost/regex.hpp>
-#include <folly/experimental/StringKeyedUnorderedMap.h>
+#include <folly/Synchronized.h>
+#include <folly/container/F14Map.h>
 #include <folly/futures/Future.h>
 #include <chrono>
 #include <optional>
@@ -193,9 +194,9 @@ class FaultInjector {
 
   struct State {
     // A map from key class -> Faults
-    folly::StringKeyedUnorderedMap<std::vector<Fault>> faults;
+    folly::F14NodeMap<std::string, std::vector<Fault>> faults;
     // A map from key class -> BlockedChecks
-    folly::StringKeyedUnorderedMap<std::vector<BlockedCheck>> blockedChecks;
+    folly::F14NodeMap<std::string, std::vector<BlockedCheck>> blockedChecks;
   };
 
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> checkAsyncImpl(
