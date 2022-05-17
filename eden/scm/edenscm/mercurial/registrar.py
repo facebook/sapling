@@ -212,6 +212,14 @@ class command(_funcregistrarbase):
         func.subcommands = {}
         func.subcommandcategories = []
         func.subonly = subonly
+
+        if name in self._table:
+            # If the command already was in the table it is because it was an existing Rust command.
+            # We should keep and show the documentation for the Rust command. Since some Rust commands still
+            # fall back into the Python command in some scenarios, we cannot entirely keep the Rust function
+            prevfunc, *helpargs = self._table[name]
+            func.__rusthelp__ = pycompat.getdoc(prevfunc), *helpargs
+
         if synopsis:
             self._table[name] = func, list(options), synopsis
         else:

@@ -833,6 +833,11 @@ def formattedhelp(ui, commands, name, keep=None, unknowncmd=False, full=True, **
 
     Either returns the rendered help text or raises an exception.
     """
+    for cmd in pycompat.iterkeys(commands.table):
+        rustdoc = getattr(commands.table[cmd][0], "__rusthelp__", None)
+        if rustdoc:
+            commands.table[cmd] = rustdoc
+
     if keep is None:
         keep = []
     else:
