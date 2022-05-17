@@ -78,12 +78,17 @@ class ListTest(unittest.TestCase):
             CheckoutConfig(
                 backing_repo=Path("/home/johndoe/eden-repos/mercurial"),
                 scm_type="hg",
+                guid="123",
                 mount_protocol="fuse",
+                case_sensitive=False,
+                require_utf8_path=True,
                 default_revision=DEFAULT_REVISION["hg"],
                 redirections={},
                 active_prefetch_profiles=[],
                 predictive_prefetch_profiles_active=False,
                 predictive_prefetch_num_dirs=0,
+                enable_tree_overlay=False,
+                use_write_back_cache=False,
             )
         )
 
@@ -96,12 +101,17 @@ class ListTest(unittest.TestCase):
             CheckoutConfig(
                 backing_repo=Path("/home/johndoe/eden-repos/git"),
                 scm_type="git",
+                guid="456",
                 mount_protocol="fuse",
+                case_sensitive=False,
+                require_utf8_path=True,
                 default_revision=DEFAULT_REVISION["git"],
                 redirections={},
                 active_prefetch_profiles=[],
                 predictive_prefetch_profiles_active=False,
                 predictive_prefetch_num_dirs=0,
+                enable_tree_overlay=False,
+                use_write_back_cache=False,
             )
         )
 
@@ -114,12 +124,17 @@ class ListTest(unittest.TestCase):
             CheckoutConfig(
                 backing_repo=Path("/home/johndoe/eden-repos/linux"),
                 scm_type="git",
+                guid="789",
                 mount_protocol="fuse",
+                case_sensitive=False,
+                require_utf8_path=True,
                 default_revision=DEFAULT_REVISION["git"],
                 redirections={},
                 active_prefetch_profiles=[],
                 predictive_prefetch_profiles_active=False,
                 predictive_prefetch_num_dirs=0,
+                enable_tree_overlay=False,
+                use_write_back_cache=False,
             )
         )
 
@@ -132,12 +147,17 @@ class ListTest(unittest.TestCase):
             CheckoutConfig(
                 backing_repo=Path("/home/johndoe/eden-repos/linux"),
                 scm_type="git",
+                guid="012",
                 mount_protocol="fuse",
+                case_sensitive=False,
+                require_utf8_path=True,
                 default_revision=DEFAULT_REVISION["git"],
                 redirections={},
                 active_prefetch_profiles=[],
                 predictive_prefetch_profiles_active=False,
                 predictive_prefetch_num_dirs=0,
+                enable_tree_overlay=False,
+                use_write_back_cache=False,
             )
         )
 
@@ -150,12 +170,17 @@ class ListTest(unittest.TestCase):
             CheckoutConfig(
                 backing_repo=Path("/home/johndoe/eden-repos/www"),
                 scm_type="hg",
+                guid="345",
                 mount_protocol="fuse",
+                case_sensitive=False,
+                require_utf8_path=True,
                 default_revision=DEFAULT_REVISION["hg"],
                 redirections={},
                 active_prefetch_profiles=[],
                 predictive_prefetch_profiles_active=False,
                 predictive_prefetch_num_dirs=0,
+                enable_tree_overlay=False,
+                use_write_back_cache=False,
             )
         )
 
@@ -383,7 +408,7 @@ class ListTest(unittest.TestCase):
             json_out.getvalue(),
         )
 
-    def test_list_mounts_no_backing_repos(self) -> None:
+    def test_list_mounts_with_backing_repos(self) -> None:
         self.maxDiff = None
 
         thrift_mounts = [
