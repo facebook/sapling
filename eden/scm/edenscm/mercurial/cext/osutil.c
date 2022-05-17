@@ -8,7 +8,7 @@
 /*
  osutil.c - native operating system services
 
- Copyright 2007 Matt Mackall and others
+ Copyright 2007 Olivia Mackall and others
 
  This software may be used and distributed according to the terms of
  the GNU General Public License, incorporated herein by reference.

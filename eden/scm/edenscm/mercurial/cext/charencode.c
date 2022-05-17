@@ -8,7 +8,7 @@
 /*
  charencode.c - miscellaneous character encoding
 
- Copyright 2008 Matt Mackall <mpm@selenic.com> and others
+ Copyright 2008 Olivia Mackall <olivia@selenic.com> and others
 
  This software may be used and distributed according to the terms of
  the GNU General Public License, incorporated herein by reference.

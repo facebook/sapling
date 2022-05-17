@@ -1,6 +1,6 @@
 ;; hg-test-mode.el - Major mode for editing Mercurial tests
 ;;
-;; Copyright 2014 Matt Mackall <mpm@selenic.com>
+;; Copyright 2014 Olivia Mackall <olivia@selenic.com>
 ;; "I have no idea what I'm doing"
 ;;
 ;; This software may be used and distributed according to the terms of the

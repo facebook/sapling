@@ -1,6 +1,6 @@
 # French translations for Mercurial
 # Traductions françaises de Mercurial
-# Copyright (C) 2009 Matt Mackall <mpm@selenic.com> and others
+# Copyright (C) 2009 Olivia Mackall <olivia@selenic.com> and others
 #
 # Quelques règles :
 # - dans l'aide d'une commande, la première ligne descriptive
@@ -9412,7 +9412,7 @@ msgstr ""
 
 msgid ""
 "\n"
-"Copyright (C) 2005-2010 Matt Mackall <mpm@selenic.com> and others\n"
+"Copyright (C) 2005-2010 Olivia Mackall <olivia@selenic.com> and others\n"
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""

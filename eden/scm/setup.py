@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# Copyright Matt Mackall <mpm@selenic.com> and others
+# Copyright Olivia Mackall <olivia@selenic.com> and others
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
@@ -1808,7 +1808,7 @@ if havefb and iswindows:
 setup(
     name="edenscm",
     version=setupversion,
-    author="Matt Mackall and many others",
+    author="Olivia Mackall and many others",
     author_email="mercurial@mercurial-scm.org",
     url="https://mercurial-scm.org/",
     download_url="https://mercurial-scm.org/release/",

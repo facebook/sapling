@@ -1,6 +1,6 @@
 # Swedish translation for Mercurial
 # Svensk översättning för Mercurial
-# Copyright (C) 2009-2012 Matt Mackall and others
+# Copyright (C) 2009-2012 Olivia Mackall and others
 #
 # Translation dictionary:
 #
@@ -12413,11 +12413,11 @@ msgid "(see http://mercurial.selenic.com for more information)"
 msgstr "(se http://mercurial.selenic.com för mer information)"
 
 msgid ""
-"Copyright (C) 2005-2012 Matt Mackall and others\n"
+"Copyright (C) 2005-2012 Olivia Mackall and others\n"
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
-"Copyright (C) 2005-2012 Matt Mackall och andra\n"
+"Copyright (C) 2005-2012 Olivia Mackall och andra\n"
 "Detta är fri mjukvara; se källkoden för kopieringsvillkor. Det ges INGEN\n"
 "garanti; inte ens för SÄLJBARHET eller ATT PASSA FÖR ETT VISST ÄNDAMÅL.\n"
 

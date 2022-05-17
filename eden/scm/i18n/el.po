@@ -1,7 +1,7 @@
 # Greek translations for Mercurial
 # Ελληνική μετάφραση των μηνυμάτων του Mercurial
 #
-# Copyright (C) 2009 Matt Mackall και άλλοι
+# Copyright (C) 2009 Olivia Mackall και άλλοι
 #
 msgid ""
 msgstr ""
@@ -7606,12 +7606,12 @@ msgstr "Mercurial Κατανεμημένο SCM (version %s)\n"
 
 msgid ""
 "\n"
-"Copyright (C) 2005-2010 Matt Mackall <mpm@selenic.com> and others\n"
+"Copyright (C) 2005-2010 Olivia Mackall <olivia@selenic.com> and others\n"
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
 "\n"
-"Πνευματικά δικαιώματα (C) 2005-2009 Matt Mackall <mpm@selenic.com> και άλλοι\n"
+"Πνευματικά δικαιώματα (C) 2005-2009 Olivia Mackall <olivia@selenic.com> και άλλοι\n"
 "Αυτό το πρόγραμμα είναι ελεύθερο λογισμικό· δείτε τον πηγαίο κώδικα για\n"
 "την άδεια χρήσης του. Δεν παρέχεται ΚΑΜΙΑ εγγύηση· ούτε καν για την\n"
 "ΕΜΠΟΡΕΥΣΙΜΟΤΗΤΑ ή την ΚΑΤΑΛΛΗΛΟΤΗΤΑ ΓΙΑ ΚΑΠΟΙΟ ΣΚΟΠΟ.\n"

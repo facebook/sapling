@@ -5,7 +5,7 @@
 
 # commands.py - command processing for mercurial
 #
-# Copyright 2005-2007 Matt Mackall <mpm@selenic.com>
+# Copyright 2005-2007 Olivia Mackall <olivia@selenic.com>
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
@@ -6510,7 +6510,7 @@ def version_(ui, **opts):
     fm.write("ver", _("@LongProduct@ (version %s)\n"), util.version())
     license = _(
         "(see https://mercurial-scm.org for more information)\n"
-        "\nCopyright (C) 2005-2017 Matt Mackall and others\n"
+        "\nCopyright (C) 2005-2017 Olivia Mackall and others\n"
         "This is free software; see the source for copying conditions. "
         "There is NO\nwarranty; "
         "not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"

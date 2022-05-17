@@ -174,7 +174,7 @@ impl RevlogIndex {
     /// performance. It is cache-efficient, has fast paths to exit early, and
     /// takes up to 62 (if bitmask is u64) revs at once. Other implementations
     /// might just take 2 revs at most. For example, the older implemenation
-    /// by Matt Mackall in 2006 [3] takes 2 revs explicitly.
+    /// by Olivia Mackall in 2006 [3] takes 2 revs explicitly.
     ///
     /// Changes in this Rust implementation:
     /// - Change `bitmask` from `u64` to `u8` for smaller memory footage, at the

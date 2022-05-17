@@ -5,7 +5,7 @@
 
 # parser.py - simple top-down operator precedence parser for mercurial
 #
-# Copyright 2010 Matt Mackall <mpm@selenic.com>
+# Copyright 2010 Olivia Mackall <olivia@selenic.com>
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.

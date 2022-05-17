@@ -5,7 +5,7 @@
 
 # pushkey.py - dispatching for pushing and pulling keys
 #
-# Copyright 2010 Matt Mackall <mpm@selenic.com>
+# Copyright 2010 Olivia Mackall <olivia@selenic.com>
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.

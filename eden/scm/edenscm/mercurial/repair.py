@@ -6,7 +6,7 @@
 # repair.py - functions for repository repair for mercurial
 #
 # Copyright 2005, 2006 Chris Mason <mason@suse.com>
-# Copyright 2007 Matt Mackall
+# Copyright 2007 Olivia Mackall
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.

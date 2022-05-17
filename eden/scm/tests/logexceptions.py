@@ -1,6 +1,6 @@
 # logexceptions.py - Write files containing info about Mercurial exceptions
 #
-# Copyright 2017 Matt Mackall <mpm@selenic.com>
+# Copyright 2017 Olivia Mackall <olivia@selenic.com>
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.

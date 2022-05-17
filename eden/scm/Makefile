@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# Copyright Matt Mackall <mpm@selenic.com> and others
+# Copyright Olivia Mackall <olivia@selenic.com> and others
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
@@ -154,7 +154,7 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 	echo $(PYFILES) | xargs \
 	  xgettext --package-name "Mercurial" \
 	  --msgid-bugs-address "<mercurial-devel@mercurial-scm.org>" \
-	  --copyright-holder "Matt Mackall <mpm@selenic.com> and others" \
+	  --copyright-holder "Olivia Mackall <olivia@selenic.com> and others" \
 	  --from-code ISO-8859-1 --join --sort-by-file --add-comments=i18n: \
 	  --keyword=_n:1,2 -d hg -p i18n -o hg.pot.tmp
 	$(PYTHON) i18n/posplit i18n/hg.pot.tmp

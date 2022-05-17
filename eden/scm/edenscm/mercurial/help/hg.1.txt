@@ -6,7 +6,7 @@
 Mercurial source code management system
 ---------------------------------------
 
-:Author:         Matt Mackall <mpm@selenic.com>
+:Author:         Olivia Mackall <olivia@selenic.com>
 :Organization:   Mercurial
 :Manual section: 1
 :Manual group:   Mercurial Manual
@@ -91,7 +91,7 @@ See Also
 
 Author
 """"""
-Written by Matt Mackall <mpm@selenic.com>
+Written by Olivia Mackall <olivia@selenic.com>
 
 Resources
 """""""""
@@ -103,7 +103,7 @@ Mailing list: https://www.mercurial-scm.org/mailman/listinfo/mercurial/
 
 Copying
 """""""
-Copyright (C) 2005-2017 Matt Mackall.
+Copyright (C) 2005-2017 Olivia Mackall.
 Free use of this software is granted under the terms of the GNU General
 Public License version 2 or any later version.
 

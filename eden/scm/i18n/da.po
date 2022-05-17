@@ -1,6 +1,6 @@
 # Danish translations for Mercurial
 # Danske oversættelser for Mercurial
-# Copyright (C) 2009, 2010 Matt Mackall and others
+# Copyright (C) 2009, 2010 Olivia Mackall and others
 #
 # Translation dictionary:
 #
@@ -11359,11 +11359,11 @@ msgid "(see http://mercurial.selenic.com for more information)"
 msgstr "(se http://mercurial.selenic.com for mere information)"
 
 msgid ""
-"Copyright (C) 2005-2011 Matt Mackall and others\n"
+"Copyright (C) 2005-2011 Olivia Mackall and others\n"
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
-"Copyright (C) 2005-2011 Matt Mackall og andre\n"
+"Copyright (C) 2005-2011 Olivia Mackall og andre\n"
 "Dette er frit programmel; se kildekoden for kopieringsbetingelser. Der\n"
 "gives INGEN GARANTI; ikke engang for SALGBARHED eller EGNETHED FOR\n"
 "NOGET BESTEMT FORMÅL.\n"

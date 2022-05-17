@@ -206,7 +206,7 @@ Here's a real example of a dirstate of a clone of the Mercurial repository itsel
 
 For files having state "n" in the dirstate, Mercurial compares the file modification time and the size in the dirstate with the modification time and the size of the file in the working directory. If both the modification time *and* the size are the same, Mercurial will assume it has not changed and will thus not include it in the next commit.
 
-Having size "-1" and date "unset" means that Mercurial assumes nothing about the contents of that file and will have to look into the file to determine whether it has changed or not. See also an explanation given by Matt Mackall in http://selenic.com/pipermail/mercurial/2008-August/020984.html
+Having size "-1" and date "unset" means that Mercurial assumes nothing about the contents of that file and will have to look into the file to determine whether it has changed or not. See also an explanation given by Olivia Mackall in http://selenic.com/pipermail/mercurial/2008-August/020984.html
 
 File format
 -----------
