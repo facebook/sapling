@@ -250,12 +250,21 @@ impl TreeMatcher {
         false
     }
 
+    /// Similar to matches, but return rule indexes matching the given path.
+    /// Includes both positive and negative rules.
     pub fn matching_rule_indexes(&self, path: impl AsRef<Path>) -> Vec<usize> {
         let mut idxs: Vec<usize> = self
             .glob_set
             .matches(path)
             .into_iter()
-            .map(|idx| self.rule_info[idx].orig_idx)
+            .filter_map(|idx: usize| {
+                let info = &self.rule_info[idx];
+                if info.flags.contains(RuleFlags::PARENT) {
+                    None
+                } else {
+                    Some(info.orig_idx)
+                }
+            })
             .collect();
         idxs.dedup();
         idxs
@@ -589,11 +598,13 @@ mod tests {
 
     #[test]
     fn test_matching_rule_indexes() {
-        let pats = ["foo", "bar/baz", "qux/**"];
+        let pats = ["foo", "bar/baz", "qux/**", "z/**/z"];
         let m = TreeMatcher::from_rules(pats.iter()).unwrap();
         assert_eq!(m.matching_rule_indexes("banana"), vec![]);
         assert_eq!(m.matching_rule_indexes("foo"), vec![0]);
         assert_eq!(m.matching_rule_indexes("bar/baz"), vec![1]);
         assert_eq!(m.matching_rule_indexes("qux/some/thing"), vec![2]);
+        assert_eq!(m.matching_rule_indexes("z/1/z"), vec![3]);
+        assert_eq!(m.matching_rule_indexes("z/1"), vec![]);
     }
 }
