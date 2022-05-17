@@ -106,9 +106,11 @@ pub fn run(
     );
 
     let reponame = match config.get_opt::<String>("remotefilelog", "reponame")? {
-        // This gets the reponame from the --configfile config.
-        Some(c) => c,
-        None => match configparser::hg::repo_name_from_url(&clone_opts.source) {
+        // This gets the reponame from the --configfile config. Ingore
+        // bogus "no-repo" value that dynamicconfig sets when there is
+        // no repo name.
+        Some(c) if c != "no-repo" => c,
+        Some(_) | None => match configparser::hg::repo_name_from_url(&clone_opts.source) {
             Some(name) => {
                 config.set(
                     "remotefilelog",
