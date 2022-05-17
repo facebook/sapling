@@ -72,7 +72,7 @@ test sparse
   incfile.txt
 
   $ hg debugsparseexplainmatch inc/exc/incfile.txt
-  inc/exc/incfile.txt: included by rule inc/exc/incfile.txt/** (main.sparse)
+  inc/exc/incfile.txt: included by rule inc/exc/incfile.txt/** ($TESTTMP/myrepo/.hg/sparse -> main.sparse)
 
 
   $ hg debugsparseprofilev2 main.sparse

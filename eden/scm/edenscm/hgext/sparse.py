@@ -1251,6 +1251,11 @@ def getsparsepatterns(repo, rev, rawconfig=None, debugversion=None):
                         else:
                             includes.add((value, origin))
                 elif version == "2":
+                    for i, origin in enumerate(profile.ruleorigins):
+                        profile.ruleorigins[i] = "{} -> {}".format(
+                            rawconfig.path, origin
+                        )
+
                     # Do nothing. A higher layer will turn profile.rules
                     # into a matcher and compose it with the other
                     # profiles.
@@ -1281,7 +1286,7 @@ def getsparsepatterns(repo, rev, rawconfig=None, debugversion=None):
         ruleorigins.append("sparse.py")
 
     return SparseConfig(
-        "<aggregated from %s>".format(rawconfig.path),
+        "<aggregated from {}>".format(rawconfig.path),
         rules,
         profiles,
         rawconfig.metadata,
