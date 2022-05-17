@@ -52,7 +52,7 @@ futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimenta
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 movers = { version = "0.1.0", path = "../movers" }
-pretty_assertions = "0.6"
+pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 revset = { version = "0.1.0", path = "../../revset" }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }

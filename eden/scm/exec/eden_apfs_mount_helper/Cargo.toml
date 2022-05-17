@@ -15,7 +15,7 @@ sha2 = "0.8"
 structopt = "0.3.23"
 
 [dev-dependencies]
-pretty_assertions = "0.6"
+pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 
 [features]
 default = ["json-plist"]

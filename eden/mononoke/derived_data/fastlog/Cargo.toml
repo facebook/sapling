@@ -50,7 +50,7 @@ fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 mercurial_derived_data = { version = "0.1.0", path = "../mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
-pretty_assertions = "0.6"
+pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 rand = { version = "0.8", features = ["small_rng"] }
 rand_xorshift = "0.3"
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
