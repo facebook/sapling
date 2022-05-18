@@ -34,7 +34,7 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DebugTopOpts, io: &IO, repo: Repo) -> Result<u8> {
+pub fn run(opts: DebugTopOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
     let mut stdout = io.output();
     let mut stderr = io.error();
     let running_in_tty = stdout.is_tty();

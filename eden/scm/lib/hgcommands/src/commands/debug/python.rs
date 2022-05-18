@@ -17,7 +17,7 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DebugPythonOpts, io: &IO, _config: ConfigSet) -> Result<u8> {
+pub fn run(opts: DebugPythonOpts, io: &IO, _config: &mut ConfigSet) -> Result<u8> {
     let mut args = opts.args;
     args.insert(0, "hgpython".to_string());
     let mut interp = crate::HgPython::new(&args);

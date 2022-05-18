@@ -29,7 +29,7 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DebugDumpConfigOpts, io: &IO, config: ConfigSet) -> Result<u8> {
+pub fn run(opts: DebugDumpConfigOpts, io: &IO, config: &mut ConfigSet) -> Result<u8> {
     #[cfg(feature = "fb")]
     {
         let reponame = opts.reponame;

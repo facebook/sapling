@@ -27,7 +27,7 @@ define_flags! {
     }
 }
 
-pub fn run(opts: GraphOpts, io: &IO, repo: Repo) -> Result<u8> {
+pub fn run(opts: GraphOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
     let group = match opts.group.as_ref() {
         "master" => dag::Group::MASTER,
         "non_master" => dag::Group::NON_MASTER,

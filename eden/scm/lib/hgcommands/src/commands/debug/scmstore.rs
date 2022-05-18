@@ -40,7 +40,7 @@ enum FetchMode {
     Tree,
 }
 
-pub fn run(opts: DebugScmStoreOpts, io: &IO, repo: Repo) -> Result<u8> {
+pub fn run(opts: DebugScmStoreOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
     if opts.python {
         return Err(errors::FallbackToPython.into());
     }

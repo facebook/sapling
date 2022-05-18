@@ -44,7 +44,7 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DebugRacyOutputOpts, io: &IO, _config: ConfigSet) -> Result<u8> {
+pub fn run(opts: DebugRacyOutputOpts, io: &IO, _config: &mut ConfigSet) -> Result<u8> {
     add_time_series(opts.time_series as _);
     add_progress_bar_threads(
         opts.progress_bars as _,

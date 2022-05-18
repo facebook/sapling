@@ -20,7 +20,7 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DebugDynamicConfigOpts, _io: &IO, repo: Repo) -> Result<u8> {
+pub fn run(opts: DebugDynamicConfigOpts, _io: &IO, repo: &mut Repo) -> Result<u8> {
     #[cfg(feature = "fb")]
     {
         let username = repo

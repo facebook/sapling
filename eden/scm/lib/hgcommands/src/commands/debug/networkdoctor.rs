@@ -19,7 +19,7 @@ define_flags! {
     }
 }
 
-pub fn run(_opts: DebugNetworkDoctorOps, io: &IO, mut repo: OptionalRepo) -> Result<u8> {
+pub fn run(_opts: DebugNetworkDoctorOps, io: &IO, repo: &mut OptionalRepo) -> Result<u8> {
     // Set a default repo so we can build valid edenapi URLs outside a repo.
     if let OptionalRepo::None(ref mut config) = repo {
         config.set(

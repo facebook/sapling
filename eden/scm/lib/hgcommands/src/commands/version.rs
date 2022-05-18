@@ -10,7 +10,7 @@ use super::NoOpts;
 use super::Result;
 use super::IO;
 
-pub fn run(_opts: NoOpts, io: &IO, _config: ConfigSet) -> Result<u8> {
+pub fn run(_opts: NoOpts, io: &IO, _config: &mut ConfigSet) -> Result<u8> {
     io.write(format!("EdenSCM {}\n", ::version::VERSION))?;
     Ok(0)
 }

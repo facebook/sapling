@@ -31,7 +31,7 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DumpTraceOpts, io: &IO, _repo: Repo) -> Result<u8> {
+pub fn run(opts: DumpTraceOpts, io: &IO, _repo: &mut Repo) -> Result<u8> {
     let entries = {
         let blackbox = blackbox::SINGLETON.lock();
         let session_ids = if opts.session_id != 0 {

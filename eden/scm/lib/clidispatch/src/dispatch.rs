@@ -223,7 +223,7 @@ impl Dispatcher {
     }
 
     /// Run a command. Return exit code if the command completes.
-    pub fn run_command(self, command_table: &CommandTable, io: &IO) -> Result<u8> {
+    pub fn run_command(mut self, command_table: &CommandTable, io: &IO) -> Result<u8> {
         let args = &self.args;
         let early_result = &self.early_result;
         let config = self.optional_repo.config();
@@ -313,8 +313,8 @@ impl Dispatcher {
         match handler {
             CommandFunc::Repo(f) => {
                 match self.optional_repo {
-                    OptionalRepo::Some(repo) => f(parsed, io, repo),
-                    OptionalRepo::None(_config) => {
+                    OptionalRepo::Some(ref mut repo) => f(parsed, io, repo),
+                    OptionalRepo::None(_) => {
                         // FIXME: Try to "infer repo" here.
                         Err(errors::RepoRequired(
                             env::current_dir()
@@ -326,9 +326,15 @@ impl Dispatcher {
                     }
                 }
             }
-            CommandFunc::OptionalRepo(f) => f(parsed, io, self.optional_repo),
-            CommandFunc::NoRepo(f) => f(parsed, io, self.no_repo_config()?),
-            CommandFunc::NoRepoGlobalOpts(f) => f(parsed, global_opts, io, self.no_repo_config()?),
+            CommandFunc::OptionalRepo(f) => f(parsed, io, &mut self.optional_repo),
+            CommandFunc::NoRepo(f) => {
+                let mut config = self.no_repo_config()?;
+                f(parsed, io, &mut config)
+            }
+            CommandFunc::NoRepoGlobalOpts(f) => {
+                let mut config = self.no_repo_config()?;
+                f(parsed, global_opts, io, &mut config)
+            }
         }
     }
 }

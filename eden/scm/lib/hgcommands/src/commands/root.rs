@@ -17,7 +17,7 @@ define_flags! {
     }
 }
 
-pub fn run(opts: RootOpts, io: &IO, repo: Repo) -> Result<u8> {
+pub fn run(opts: RootOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
     let path = if opts.shared {
         repo.shared_path()
     } else {

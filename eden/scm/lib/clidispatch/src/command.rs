@@ -20,10 +20,10 @@ use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
 
 pub enum CommandFunc {
-    NoRepo(Box<dyn Fn(ParseOutput, &IO, ConfigSet) -> Result<u8>>),
-    NoRepoGlobalOpts(Box<dyn Fn(ParseOutput, HgGlobalOpts, &IO, ConfigSet) -> Result<u8>>),
-    OptionalRepo(Box<dyn Fn(ParseOutput, &IO, OptionalRepo) -> Result<u8>>),
-    Repo(Box<dyn Fn(ParseOutput, &IO, Repo) -> Result<u8>>),
+    NoRepo(Box<dyn Fn(ParseOutput, &IO, &mut ConfigSet) -> Result<u8>>),
+    NoRepoGlobalOpts(Box<dyn Fn(ParseOutput, HgGlobalOpts, &IO, &mut ConfigSet) -> Result<u8>>),
+    OptionalRepo(Box<dyn Fn(ParseOutput, &IO, &mut OptionalRepo) -> Result<u8>>),
+    Repo(Box<dyn Fn(ParseOutput, &IO, &mut Repo) -> Result<u8>>),
 }
 
 pub struct CommandDefinition {
@@ -121,12 +121,13 @@ pub trait Register<FN, T> {
 impl<S, FN> Register<FN, (S,)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(S, &IO, ConfigSet) -> Result<u8> + 'static,
+    FN: Fn(S, &IO, &mut ConfigSet) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str, synopsis: Option<&str>) {
         self.insert_aliases(name);
-        let func =
-            move |opts: ParseOutput, io: &IO, config: ConfigSet| f(opts.try_into()?, io, config);
+        let func = move |opts: ParseOutput, io: &IO, config: &mut ConfigSet| {
+            f(opts.try_into()?, io, config)
+        };
         let func = CommandFunc::NoRepo(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func, synopsis);
         self.commands.insert(name.to_string(), def);
@@ -137,12 +138,13 @@ where
 impl<S, FN> Register<FN, ((), S)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(S, &IO, OptionalRepo) -> Result<u8> + 'static,
+    FN: Fn(S, &IO, &mut OptionalRepo) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str, synopsis: Option<&str>) {
         self.insert_aliases(name);
-        let func =
-            move |opts: ParseOutput, io: &IO, repo: OptionalRepo| f(opts.try_into()?, io, repo);
+        let func = move |opts: ParseOutput, io: &IO, repo: &mut OptionalRepo| {
+            f(opts.try_into()?, io, repo)
+        };
         let func = CommandFunc::OptionalRepo(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func, synopsis);
         self.commands.insert(name.to_string(), def);
@@ -153,11 +155,11 @@ where
 impl<S, FN> Register<FN, ((), (), S)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(S, &IO, Repo) -> Result<u8> + 'static,
+    FN: Fn(S, &IO, &mut Repo) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str, synopsis: Option<&str>) {
         self.insert_aliases(name);
-        let func = move |opts: ParseOutput, io: &IO, repo: Repo| f(opts.try_into()?, io, repo);
+        let func = move |opts: ParseOutput, io: &IO, repo: &mut Repo| f(opts.try_into()?, io, repo);
         let func = CommandFunc::Repo(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func, synopsis);
         self.commands.insert(name.to_string(), def);
@@ -168,12 +170,12 @@ where
 impl<S, FN> Register<FN, ((), (), (), S)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(S, HgGlobalOpts, &IO, ConfigSet) -> Result<u8> + 'static,
+    FN: Fn(S, HgGlobalOpts, &IO, &mut ConfigSet) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str, synopsis: Option<&str>) {
         self.insert_aliases(name);
         let func =
-            move |opts: ParseOutput, global_opts: HgGlobalOpts, io: &IO, config: ConfigSet| {
+            move |opts: ParseOutput, global_opts: HgGlobalOpts, io: &IO, config: &mut ConfigSet| {
                 f(opts.try_into()?, global_opts, io, config)
             };
         let func = CommandFunc::NoRepoGlobalOpts(Box::new(func));

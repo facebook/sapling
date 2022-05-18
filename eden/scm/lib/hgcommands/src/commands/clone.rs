@@ -73,7 +73,7 @@ pub fn run(
     mut clone_opts: CloneOpts,
     global_opts: HgGlobalOpts,
     io: &IO,
-    mut config: ConfigSet,
+    config: &mut ConfigSet,
 ) -> Result<u8> {
     let force_rust = config.get_or_default("clone", "force-rust")?;
     let use_rust = force_rust || config.get_or_default("clone", "use-rust")?;
@@ -127,7 +127,7 @@ pub fn run(
 
     // Rust clone only supports segmented changelog clone
     // TODO: add binding for python streaming revlog download
-    let edenapi = Builder::from_config(&config)?
+    let edenapi = Builder::from_config(config)?
         .correlator(Some(edenapi::DEFAULT_CORRELATOR.as_str()))
         .build()?;
     let capabilities: Vec<String> =
@@ -151,7 +151,7 @@ pub fn run(
             if configparser::hg::is_plain(Some("default_clone_dir")) {
                 return Err(errors::Abort("DEST was not specified".into()).into());
             } else {
-                clone::get_default_directory(&config)?.join(&reponame)
+                clone::get_default_directory(config)?.join(&reponame)
             }
         }
     };
@@ -195,7 +195,7 @@ fn clone_metadata(
     io: &IO,
     clone_opts: &CloneOpts,
     global_opts: HgGlobalOpts,
-    config: ConfigSet,
+    config: &mut ConfigSet,
     destination: &Path,
     reponame: &str,
 ) -> Result<(Repo, Option<HgId>)> {

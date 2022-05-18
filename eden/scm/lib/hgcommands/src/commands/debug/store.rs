@@ -39,7 +39,7 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DebugstoreOpts, io: &IO, repo: Repo) -> Result<u8> {
+pub fn run(opts: DebugstoreOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
     let path = RepoPathBuf::from_string(opts.path)?;
     let hgid = HgId::from_str(&opts.hgid)?;
     let config = repo.config();

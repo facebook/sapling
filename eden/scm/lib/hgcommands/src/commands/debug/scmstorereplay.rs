@@ -23,7 +23,7 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DebugScmStoreReplayOpts, io: &IO, repo: Repo) -> Result<u8> {
+pub fn run(opts: DebugScmStoreReplayOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
     // TODO: Take into account log timings to yield a more faithful
     // reproduction of fetch activity, particularly concurrent fetches.
 

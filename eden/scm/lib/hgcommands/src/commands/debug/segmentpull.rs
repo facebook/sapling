@@ -32,7 +32,7 @@ define_flags! {
     }
 }
 
-pub fn run(opts: StatusOpts, io: &IO, repo: Repo) -> Result<u8> {
+pub fn run(opts: StatusOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
     let repopath = repo.path();
     let config = repo.config();
 

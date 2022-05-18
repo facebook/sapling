@@ -29,7 +29,7 @@ enum Format {
     Json,
 }
 
-pub fn run(opts: DebugRunlogOpts, io: &IO, repo: Repo) -> Result<u8> {
+pub fn run(opts: DebugRunlogOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
     let mut stdout = io.output();
     let mut stderr = io.error();
 
