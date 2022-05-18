@@ -175,23 +175,23 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
                     false
                 };
 
-                if !should_fallback {
-                    errors::print_error(&err, io, &args[1..]);
-                    return 255;
-                }
+                if should_fallback {
+                    // Change the current dir back to the original so it is not surprising to the Python
+                    // code.
+                    let _ = env::set_current_dir(cwd);
 
-                // Change the current dir back to the original so it is not surprising to the Python
-                // code.
-                let _ = env::set_current_dir(cwd);
-
-                let mut interp = HgPython::new(&args);
-                if let Some(opts) = global_opts {
-                    if opts.trace {
-                        // Error is not fatal.
-                        let _ = interp.setup_tracing("*".into());
+                    let mut interp = HgPython::new(&args);
+                    if let Some(opts) = global_opts {
+                        if opts.trace {
+                            // Error is not fatal.
+                            let _ = interp.setup_tracing("*".into());
+                        }
                     }
+                    interp.run_hg(args, io)
+                } else {
+                    errors::print_error(&err, io, &args[1..]);
+                    255
                 }
-                interp.run_hg(args, io)
             }
         };
         span.record("exit_code", &exit_code);
