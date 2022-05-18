@@ -134,70 +134,6 @@ def filtercmd(ui, cmd, kw, doc):
     return False
 
 
-def topicmatch(ui, commands, kw):
-    """Return help topics matching kw.
-
-    Returns {'section': [(name, summary), ...], ...} where section is
-    one of topics, commands, extensions, or extensioncommands.
-    """
-    kw = encoding.lower(kw)
-
-    def lowercontains(container):
-        return kw in encoding.lower(container)  # translated in helptable
-
-    results = {"topics": [], "commands": [], "extensions": [], "extensioncommands": []}
-    for names, header, doc in helptable:
-        # Old extensions may use a str as doc.
-        if (
-            sum(map(lowercontains, names))
-            or lowercontains(header)
-            or (callable(doc) and lowercontains(doc(ui)))
-        ):
-            results["topics"].append((names[0], header))
-    for cmd, entry in pycompat.iteritems(commands.table):
-        if len(entry) == 3:
-            summary = entry[2]
-        else:
-            summary = ""
-        # translate docs *before* searching there
-        docs = _(pycompat.getdoc(entry[0])) or ""
-        if kw in cmd or lowercontains(summary) or lowercontains(docs):
-            doclines = docs.splitlines()
-            if doclines:
-                summary = doclines[0]
-            cmdname = cmd.partition("|")[0].lstrip("^")
-            if filtercmd(ui, cmdname, kw, docs):
-                continue
-            results["commands"].append((cmdname, summary))
-    for name, docs in itertools.chain(
-        pycompat.iteritems(extensions.enabled(False)),
-        pycompat.iteritems(extensions.disabled()),
-    ):
-        if not docs:
-            continue
-        name = name.rpartition(".")[-1]
-        if lowercontains(name) or lowercontains(docs):
-            # extension docs are already translated
-            results["extensions"].append((name, docs.splitlines()[0]))
-        try:
-            mod = extensions.load(ui, name, "")
-        except ImportError:
-            # debug message would be printed in extensions.load()
-            continue
-        for cmd, entry in pycompat.iteritems(getattr(mod, "cmdtable", {})):
-            if kw in cmd or (len(entry) > 2 and lowercontains(entry[2])):
-                cmdname = cmd.partition("|")[0].lstrip("^")
-                cmddoc = pycompat.getdoc(entry[0])
-                if cmddoc:
-                    cmddoc = gettext(cmddoc).splitlines()[0]
-                else:
-                    cmddoc = _("(no help text available)")
-                if filtercmd(ui, cmdname, kw, cmddoc):
-                    continue
-                results["extensioncommands"].append((cmdname, cmddoc))
-    return results
-
-
 def loaddoc(topic, subdir=None):
     """Return a delayed loader for help/topic.txt."""
 
@@ -405,8 +341,14 @@ class _helpdispatch(object):
         self.full = full
         self.opts = opts
 
+        self.commandshelptable = util.sortdict()
+        for cmd, entry in pycompat.iteritems(self.commands.table):
+            self.commandshelptable[cmd] = (
+                getattr(entry[0], "__rusthelp__", None) or entry
+            )
+
         self.commandindex = {}
-        for name, cmd in pycompat.iteritems(commands.table):
+        for name, cmd in pycompat.iteritems(self.commandshelptable):
             for n in name.lstrip("^").split("|"):
                 self.commandindex[n] = cmd
 
@@ -438,7 +380,7 @@ class _helpdispatch(object):
         try:
             # Try to expand 'name' as an alias
             resolvedargs = cliparser.expandargs(
-                ui._rcfg._rcfg, list(self.commands.table), name.split(), False
+                ui._rcfg._rcfg, list(self.commandshelptable), name.split(), False
             )[0]
             if name == "debug":
                 raise cliparser.AmbiguousCommand()
@@ -459,7 +401,7 @@ class _helpdispatch(object):
 
         try:
             cmd, args, aliases, entry, _level = cmdutil.findsubcmd(
-                name.split(), self.commands.table, partial=True
+                name.split(), self.commandshelptable, partial=True
             )
         except error.AmbiguousCommand as inst:
             # py3k fix: except vars can't be used outside the scope of the
@@ -614,7 +556,7 @@ class _helpdispatch(object):
     def helplist(self, name, select=None, **opts):
         h = {}
         cmds = {}
-        for c, e in pycompat.iteritems(self.commands.table):
+        for c, e in pycompat.iteritems(self.commandshelptable):
             if select and not select(c):
                 continue
             f = c.lstrip("^").partition("|")[0]
@@ -715,7 +657,7 @@ class _helpdispatch(object):
             indicateomitted(rst, omitted)
 
         try:
-            cmdutil.findcmd(name, self.commands.table)
+            cmdutil.findcmd(name, self.commandshelptable)
             rst.append(
                 _("\nuse 'hg help -c %s' to see help for the %s command\n")
                 % (name, name)
@@ -782,19 +724,86 @@ class _helpdispatch(object):
         )
         return rst
 
+    def topicmatch(self, kw):
+        """Return help topics matching kw.
+
+        Returns {'section': [(name, summary), ...], ...} where section is
+        one of topics, commands, extensions, or extensioncommands.
+        """
+        kw = encoding.lower(kw)
+
+        def lowercontains(container):
+            return kw in encoding.lower(container)  # translated in helptable
+
+        results = {
+            "topics": [],
+            "commands": [],
+            "extensions": [],
+            "extensioncommands": [],
+        }
+        for names, header, doc in helptable:
+            # Old extensions may use a str as doc.
+            if (
+                sum(map(lowercontains, names))
+                or lowercontains(header)
+                or (callable(doc) and lowercontains(doc(self.ui)))
+            ):
+                results["topics"].append((names[0], header))
+        for cmd, entry in pycompat.iteritems(self.commandshelptable):
+            if len(entry) == 3:
+                summary = entry[2]
+            else:
+                summary = ""
+            # translate docs *before* searching there
+            docs = _(pycompat.getdoc(entry[0])) or ""
+            if kw in cmd or lowercontains(summary) or lowercontains(docs):
+                doclines = docs.splitlines()
+                if doclines:
+                    summary = doclines[0]
+                cmdname = cmd.partition("|")[0].lstrip("^")
+                if filtercmd(self.ui, cmdname, kw, docs):
+                    continue
+                results["commands"].append((cmdname, summary))
+        for name, docs in itertools.chain(
+            pycompat.iteritems(extensions.enabled(False)),
+            pycompat.iteritems(extensions.disabled()),
+        ):
+            if not docs:
+                continue
+            name = name.rpartition(".")[-1]
+            if lowercontains(name) or lowercontains(docs):
+                # extension docs are already translated
+                results["extensions"].append((name, docs.splitlines()[0]))
+            try:
+                mod = extensions.load(self.ui, name, "")
+            except ImportError:
+                # debug message would be printed in extensions.load()
+                continue
+            for cmd, entry in pycompat.iteritems(getattr(mod, "cmdtable", {})):
+                if kw in cmd or (len(entry) > 2 and lowercontains(entry[2])):
+                    cmdname = cmd.partition("|")[0].lstrip("^")
+                    cmddoc = pycompat.getdoc(entry[0])
+                    if cmddoc:
+                        cmddoc = gettext(cmddoc).splitlines()[0]
+                    else:
+                        cmddoc = _("(no help text available)")
+                    if filtercmd(self.ui, cmdname, kw, cmddoc):
+                        continue
+                    results["extensioncommands"].append((cmdname, cmddoc))
+        return results
+
 
 def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None, **opts):
     """
     Generate the help for 'name' as unformatted restructured text. If
     'name' is None, describe the commands available.
     """
-
     dispatch = _helpdispatch(ui, commands, unknowncmd, full, subtopic, **opts)
 
     rst = []
     kw = opts.get("keyword")
     if kw or name is None and any(opts[o] for o in opts):
-        matches = topicmatch(ui, commands, name or "")
+        matches = dispatch.topicmatch(name or "")
         helpareas = []
         if opts.get("extension"):
             helpareas += [("extensions", _("Extensions"))]
@@ -833,11 +842,6 @@ def formattedhelp(ui, commands, name, keep=None, unknowncmd=False, full=True, **
 
     Either returns the rendered help text or raises an exception.
     """
-    for cmd in pycompat.iterkeys(commands.table):
-        rustdoc = getattr(commands.table[cmd][0], "__rusthelp__", None)
-        if rustdoc:
-            commands.table[cmd] = rustdoc
-
     if keep is None:
         keep = []
     else:
