@@ -41,3 +41,23 @@ Set up fake cert paths so we don't hit "missing certs" error.
   
   [1]
 
+
+Works for native rust commands as well.
+  $ hg clone fb://banana --config clone.force-rust=1 --config edenapi.url=https://test_fail/foo --config doctor.external-host-check-url=https://test_succeed
+  abort: command failed due to network error
+  
+  Please check your VPN connection (internet okay, but can't reach corp).
+  
+  Details:
+  
+  NoCorp(TCP(Custom { kind: Other, error: "test" }))
+  
+  Original error:
+  
+  Network Error: [6] Couldn't resolve host name (Could not resolve host: test_fail)
+  
+  Caused by:
+      [6] Couldn't resolve host name (Could not resolve host: test_fail)
+  
+  [255]
+
