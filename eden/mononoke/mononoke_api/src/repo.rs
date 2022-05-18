@@ -1308,6 +1308,14 @@ impl RepoContext {
         FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::Sha256(hash))).await
     }
 
+    /// Get a File by content git-sha-1.  Returns `None` if the file doesn't exist.
+    pub async fn file_by_content_gitsha1(
+        &self,
+        hash: GitSha1,
+    ) -> Result<Option<FileContext>, MononokeError> {
+        FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::GitSha1(hash))).await
+    }
+
     fn get_target_repo_and_lca_hint(
         &self,
     ) -> (Target<BlobRepo>, Target<Arc<dyn LeastCommonAncestorsHint>>) {

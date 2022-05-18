@@ -24,7 +24,7 @@ use mononoke_api::{
     FileType, MononokePath,
 };
 use mononoke_api_hg::RepoContextHgExt;
-use mononoke_types::hash::{Sha1, Sha256};
+use mononoke_types::hash::{GitSha1, Sha1, Sha256};
 use source_control as thrift;
 
 use crate::commit_id::{map_commit_identities, map_commit_identity, CommitIdExt};
@@ -277,6 +277,21 @@ impl SourceControlServiceImpl {
                                     let sha = Sha256::from_request(&sha)?;
                                     let file = repo
                                         .file_by_content_sha256(sha)
+                                        .await?
+                                        .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
+                                    CreateChange::Tracked(
+                                        CreateChangeFile::Existing {
+                                            file_id: file.id().await?,
+                                            file_type,
+                                            maybe_size: None,
+                                        },
+                                        copy_info,
+                                    )
+                                }
+                                thrift::RepoCreateCommitParamsFileContent::content_gitsha1(sha) => {
+                                    let sha = GitSha1::from_request(&sha)?;
+                                    let file = repo
+                                        .file_by_content_gitsha1(sha)
                                         .await?
                                         .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
                                     CreateChange::Tracked(

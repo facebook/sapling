@@ -629,6 +629,10 @@ union RepoCreateCommitParamsFileContent {
 
   /// Create the file using a pre-existing file specified by content SHA-256.
   4: binary content_sha256;
+
+  /// Create the file using a pre-existing file specified by content Git SHA-1
+  /// This is the hash you get from `git hash-object -t blob ${OBJECT}`
+  5: binary content_gitsha1;
 }
 
 struct RepoCreateCommitParamsFileCopyInfo {

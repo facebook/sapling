@@ -232,6 +232,7 @@ impl_from_request_binary_id!(TreeId, "tree id");
 impl_from_request_binary_id!(FileId, "file id");
 impl_from_request_binary_id!(Sha1, "sha-1");
 impl_from_request_binary_id!(Sha256, "sha-256");
+impl_from_request_binary_id!(GitSha1, "git-sha-1");
 
 impl FromRequest<thrift::RepoCreateCommitParamsFileType> for FileType {
     fn from_request(
