@@ -122,6 +122,13 @@ impl OptionalRepo {
             OptionalRepo::None(ref config) => config,
         }
     }
+
+    pub fn take_config(self) -> ConfigSet {
+        match self {
+            OptionalRepo::Some(repo) => repo.config,
+            OptionalRepo::None(config) => config,
+        }
+    }
 }
 
 impl Repo {

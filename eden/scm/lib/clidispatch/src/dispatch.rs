@@ -208,11 +208,16 @@ impl Dispatcher {
     }
 
     /// Return config without a repo's influence even if we are in a repo.
-    pub fn no_repo_config(self) -> Result<ConfigSet> {
+    pub fn no_repo_config(self) -> Result<ConfigSet, (Error, ConfigSet)> {
         if let OptionalRepo::None(config) = self.optional_repo {
             return Ok(config);
         }
 
+        self.load_repoless_config()
+            .map_err(|e| (e, self.optional_repo.take_config()))
+    }
+
+    fn load_repoless_config(&self) -> Result<ConfigSet> {
         let mut config = configparser::hg::load::<String, String>(None, None)?;
         override_config(
             &mut config,
@@ -222,8 +227,11 @@ impl Dispatcher {
         Ok(config)
     }
 
-    /// Run a command. Return exit code if the command completes.
-    pub fn run_command(mut self, command_table: &CommandTable, io: &IO) -> Result<u8> {
+    fn prepare_command<'a>(
+        &self,
+        command_table: &'a CommandTable,
+        io: &IO,
+    ) -> Result<(&'a CommandDefinition, ParseOutput)> {
         let args = &self.args;
         let early_result = &self.early_result;
         let config = self.optional_repo.config();
@@ -295,10 +303,8 @@ impl Dispatcher {
         new_args.push(command_name.clone());
         new_args.extend_from_slice(&expanded[command_arg_len..]);
 
-        let full_args = new_args;
-
         let def = command_table.get(&command_name).unwrap();
-        let parsed = parse(&def, &full_args)?;
+        let parsed = parse(def, &new_args)?;
 
         let global_opts: HgGlobalOpts = parsed.clone().try_into()?;
         last_chance_to_abort(&global_opts)?;
@@ -309,10 +315,23 @@ impl Dispatcher {
             io.start_pager(self.optional_repo.config())?;
         }
 
-        let handler = def.func();
-        match handler {
+        Ok((def, parsed))
+    }
+
+    /// Run a command. Return exit code if the command completes.
+    pub fn run_command(
+        mut self,
+        command_table: &CommandTable,
+        io: &IO,
+    ) -> Result<u8, (ConfigSet, Error)> {
+        let (handler, parsed) = match self.prepare_command(command_table, io) {
+            Ok((name, args)) => (name, args),
+            Err(e) => return Err((self.optional_repo.take_config(), e)),
+        };
+
+        match handler.func() {
             CommandFunc::Repo(f) => {
-                match self.optional_repo {
+                let res = match self.optional_repo {
                     OptionalRepo::Some(ref mut repo) => f(parsed, io, repo),
                     OptionalRepo::None(_) => {
                         // FIXME: Try to "infer repo" here.
@@ -324,16 +343,24 @@ impl Dispatcher {
                         )
                         .into())
                     }
-                }
+                };
+                res.map_err(|e| (self.optional_repo.take_config(), e))
             }
-            CommandFunc::OptionalRepo(f) => f(parsed, io, &mut self.optional_repo),
+            CommandFunc::OptionalRepo(f) => f(parsed, io, &mut self.optional_repo)
+                .map_err(|e| (self.optional_repo.take_config(), e)),
             CommandFunc::NoRepo(f) => {
-                let mut config = self.no_repo_config()?;
-                f(parsed, io, &mut config)
+                let mut config = match self.no_repo_config() {
+                    Ok(config) => config,
+                    Err((e, config)) => return Err((config, e)),
+                };
+                f(parsed, io, &mut config).map_err(|e| (config, e))
             }
             CommandFunc::NoRepoGlobalOpts(f) => {
-                let mut config = self.no_repo_config()?;
-                f(parsed, global_opts, io, &mut config)
+                let mut config = match self.no_repo_config() {
+                    Ok(config) => config,
+                    Err((e, config)) => return Err((config, e)),
+                };
+                f(parsed, io, &mut config).map_err(|e| (config, e))
             }
         }
     }
