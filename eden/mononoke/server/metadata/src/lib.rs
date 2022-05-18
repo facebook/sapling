@@ -35,7 +35,7 @@ impl Metadata {
         is_trusted_client: bool,
         identities: MononokeIdentitySet,
         client_debug: bool,
-        client_ip: IpAddr,
+        client_ip: Option<IpAddr>,
     ) -> Self {
         let session_id: SessionId = match session_id {
             Some(id) => SessionId::from_string(id.to_owned()),
@@ -48,12 +48,14 @@ impl Metadata {
             Some(client_hostname.to_string())
         }
         // 2) If it's not there we're trying to look it up via reverse dns with timeout of 1s.
-        else {
+        else if let Some(client_ip) = client_ip {
             timeout(Duration::from_secs(1), Metadata::reverse_lookup(client_ip))
                 .await
                 .map_err(Error::from)
                 .flatten()
                 .ok()
+        } else {
+            None
         };
 
         Self {
@@ -61,7 +63,7 @@ impl Metadata {
             is_trusted_client,
             identities,
             client_debug,
-            client_ip: Some(client_ip),
+            client_ip,
             client_hostname,
             revproxy_region: None,
             raw_encoded_cats: None,

@@ -310,7 +310,7 @@ where
             conn.is_trusted,
             (*conn.identities).clone(),
             client_debug,
-            conn.pending.addr.ip(),
+            Some(conn.pending.addr.ip()),
         )
         .await
     };

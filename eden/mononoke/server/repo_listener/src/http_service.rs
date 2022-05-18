@@ -8,6 +8,7 @@
 use anyhow::{anyhow, Context, Error, Result};
 #[cfg(fbcode_build)]
 use clientinfo::{ClientInfo, CLIENT_INFO_HEADER};
+use fbinit::FacebookInit;
 use futures::future::{BoxFuture, FutureExt};
 use gotham_ext::socket_data::TlsSocketData;
 use http::{HeaderMap, HeaderValue, Method, Request, Response, Uri};
@@ -200,10 +201,14 @@ where
             .header(http::header::UPGRADE, "websocket")
             .header(HEADER_WEBSOCKET_ACCEPT, websocket_key);
 
-        let metadata = try_convert_headers_to_metadata(self.conn.is_trusted, &req.headers())
-            .await
-            .context("Invalid metadata")
-            .map_err(HttpError::BadRequest)?;
+        let metadata = h2m::try_convert_headers_to_metadata(
+            self.conn.pending.acceptor.fb.clone(),
+            self.conn.is_trusted,
+            req.headers(),
+        )
+        .await
+        .context("Invalid metadata")
+        .map_err(HttpError::BadRequest)?;
 
         let zstd_level: i32 = tunables::tunables()
             .get_zstd_compression_level()
@@ -453,11 +458,24 @@ fn calculate_websocket_accept(headers: &HeaderMap<HeaderValue>) -> String {
     base64::encode(&hash)
 }
 
+#[cfg(not(fbcode_build))]
+mod h2m {
+    use super::*;
+
+    pub async fn try_convert_headers_to_metadata(
+        _fb: FacebookInit,
+        _is_trusted: bool,
+        _headers: &HeaderMap<HeaderValue>,
+    ) -> Result<Option<Metadata>> {
+        Ok(None)
+    }
+}
+
 #[cfg(fbcode_build)]
-async fn try_convert_headers_to_metadata(
-    is_trusted: bool,
-    headers: &HeaderMap<HeaderValue>,
-) -> Result<Option<Metadata>> {
+mod h2m {
+    use super::*;
+
+    use cats::try_get_cats_idents;
     use percent_encoding::percent_decode;
     use permission_checker::MononokeIdentity;
     use session_id::generate_session_id;
@@ -467,38 +485,10 @@ async fn try_convert_headers_to_metadata(
     const HEADER_CLIENT_IP: &str = "tfb-orig-client-ip";
     const HEADER_FORWARDED_CATS: &str = "x-forwarded-cats";
 
-    if !is_trusted {
-        return Ok(None);
-    }
-
-    if let (Some(encoded_identities), Some(client_address)) = (
-        headers.get(HEADER_ENCODED_CLIENT_IDENTITY),
-        headers.get(HEADER_CLIENT_IP),
-    ) {
-        let json_identities = percent_decode(encoded_identities.as_ref())
-            .decode_utf8()
-            .context("Invalid encoded identities")?;
-        let identities = MononokeIdentity::try_from_json_encoded(&json_identities)
-            .context("Invalid identities")?;
-        let ip_addr = client_address
-            .to_str()?
-            .parse::<IpAddr>()
-            .context("Invalid IP Address")?;
-
-        // In the case of HTTP proxied/trusted requests we only have the
-        // guarantee that we can trust the forwarded credentials. Beyond
-        // this point we can't trust anything else, ACL checks have not
-        // been performed, so set 'is_trusted' to 'false' here to enforce
-        // further checks.
-        let mut metadata = Metadata::new(
-            Some(&generate_session_id().to_string()),
-            false,
-            identities,
-            headers.contains_key(HEADER_CLIENT_DEBUG),
-            ip_addr,
-        )
-        .await;
-
+    fn metadata_populate_trusted(
+        metadata: &mut Metadata,
+        headers: &HeaderMap<HeaderValue>,
+    ) -> Result<()> {
         if let Some(cats) = headers.get(HEADER_FORWARDED_CATS) {
             metadata
                 .add_raw_encoded_cats(cats.to_str().context("Invalid encoded cats")?.to_string());
@@ -521,16 +511,85 @@ async fn try_convert_headers_to_metadata(
             metadata.add_client_info(client_info);
         }
 
-        Ok(Some(metadata))
-    } else {
-        Ok(None)
+        Ok(())
     }
-}
 
-#[cfg(not(fbcode_build))]
-async fn try_convert_headers_to_metadata(
-    _is_trusted: bool,
-    _headers: &HeaderMap<HeaderValue>,
-) -> Result<Option<Metadata>> {
-    Ok(None)
+    pub async fn try_convert_headers_to_metadata(
+        fb: FacebookInit,
+        is_trusted: bool,
+        headers: &HeaderMap<HeaderValue>,
+    ) -> Result<Option<Metadata>> {
+        // CATs are verifiable - we know that only the signer could have
+        // generated them. We extract the signer's identity. The connecting
+        // party doesn't have to be trusted.
+        if let Some(identities) = try_get_cats_idents(fb, headers)? {
+            // If connecting party is trusted it might be proxygen and it might
+            // send a legit client ip. Try to get it.
+            let ip_addr = match headers.get(HEADER_CLIENT_IP) {
+                Some(client_address) if is_trusted => Some(
+                    client_address
+                        .to_str()?
+                        .parse::<IpAddr>()
+                        .context("Invalid IP Address")?,
+                ),
+                _ => None,
+            };
+
+            let mut metadata = Metadata::new(
+                Some(&generate_session_id().to_string()),
+                false,
+                identities,
+                headers.contains_key(HEADER_CLIENT_DEBUG),
+                ip_addr,
+            )
+            .await;
+
+            // if it turns out the client is trusted, we might include some
+            // additional info.
+            if is_trusted {
+                metadata_populate_trusted(&mut metadata, headers)?;
+            }
+
+            return Ok(Some(metadata));
+        }
+
+        if !is_trusted {
+            return Ok(None);
+        }
+
+        if let (Some(encoded_identities), Some(client_address)) = (
+            headers.get(HEADER_ENCODED_CLIENT_IDENTITY),
+            headers.get(HEADER_CLIENT_IP),
+        ) {
+            let json_identities = percent_decode(encoded_identities.as_ref())
+                .decode_utf8()
+                .context("Invalid encoded identities")?;
+            let identities = MononokeIdentity::try_from_json_encoded(&json_identities)
+                .context("Invalid identities")?;
+            let ip_addr = client_address
+                .to_str()?
+                .parse::<IpAddr>()
+                .context("Invalid IP Address")?;
+
+            // In the case of HTTP proxied/trusted requests we only have the
+            // guarantee that we can trust the forwarded credentials. Beyond
+            // this point we can't trust anything else, ACL checks have not
+            // been performed, so set 'is_trusted' to 'false' here to enforce
+            // further checks.
+            let mut metadata = Metadata::new(
+                Some(&generate_session_id().to_string()),
+                false,
+                identities,
+                headers.contains_key(HEADER_CLIENT_DEBUG),
+                Some(ip_addr),
+            )
+            .await;
+
+            metadata_populate_trusted(&mut metadata, headers)?;
+
+            Ok(Some(metadata))
+        } else {
+            Ok(None)
+        }
+    }
 }

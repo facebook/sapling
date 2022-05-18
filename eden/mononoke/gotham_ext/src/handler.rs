@@ -271,7 +271,7 @@ mod test {
         }
     }
 
-    // PanicMiddleware is used to check that interceptign a request interrupts the call chain.
+    // PanicMiddleware is used to check that intercepting a request interrupts the call chain.
 
     struct PanicMiddleware;
 

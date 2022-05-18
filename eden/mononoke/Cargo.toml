@@ -217,6 +217,7 @@ members = [
   "bulkops",
   "bulkops/bench",
   "cache_warmup",
+  "cats",
   "changesets",
   "changesets/changesets_creation",
   "changesets/changesets_impl",

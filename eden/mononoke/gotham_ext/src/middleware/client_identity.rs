@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use crate::state_ext::StateExt;
 use anyhow::{bail, Error};
+use cats::try_get_cats_idents;
 use fbinit::FacebookInit;
 use futures::{future, Future, FutureExt};
 use gotham::state::{client_addr, FromState, State};
 use gotham_derive::StateData;
 use hyper::header::HeaderMap;
-use hyper::{Body, Response};
+use hyper::{Body, Response, StatusCode};
 use lazy_static::lazy_static;
 use percent_encoding::percent_decode;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet, MononokeIdentitySetExt};
@@ -26,7 +28,6 @@ use crate::socket_data::TlsCertificateIdentities;
 const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 const CLIENT_IP: &str = "tfb-orig-client-ip";
 const CLIENT_CORRELATOR: &str = "x-client-correlator";
-const HEADER_CRYPTO_AUTH_TOKENS: &str = "x-auth-cats";
 
 lazy_static! {
     static ref PROXYGEN_ORIGIN_IDENTITY: MononokeIdentity =
@@ -120,57 +121,6 @@ impl ClientIdentityMiddleware {
             TlsCertificateIdentities::Authenticated(idents) => Some(idents),
         }
     }
-
-    #[cfg(not(fbcode_build))]
-    fn try_get_cats_idents(
-        &self,
-        _headers: &HeaderMap,
-    ) -> Result<Option<MononokeIdentitySet>, Error> {
-        Ok(None)
-    }
-
-    #[cfg(fbcode_build)]
-    fn try_get_cats_idents(
-        &self,
-        headers: &HeaderMap,
-    ) -> Result<Option<MononokeIdentitySet>, Error> {
-        let cats = match headers.get(HEADER_CRYPTO_AUTH_TOKENS) {
-            Some(cats) => cats,
-            None => return Ok(None),
-        };
-
-        let s_cats = cats.to_str()?;
-        let cat_list = cryptocat::deserialize_crypto_auth_tokens(s_cats)?;
-        let svc_scm_ident = cryptocat::Identity {
-            id_type: "SERVICE_IDENTITY".to_string(),
-            id_data: "scm_service_identity".to_string(),
-            ..Default::default()
-        };
-
-        cat_list
-            .tokens
-            .into_iter()
-            .try_fold(MononokeIdentitySet::new(), |mut idents_acc, token| {
-                let tdata = cryptocat::deserialize_crypto_auth_token_data(
-                    &token.serializedCryptoAuthTokenData[..],
-                )?;
-                let m_ident = MononokeIdentity::new(
-                    tdata.signerIdentity.id_type,
-                    tdata.signerIdentity.id_data,
-                )?;
-                idents_acc.insert(m_ident);
-                let res =
-                    cryptocat::verify_crypto_auth_token(self.fb, token, &svc_scm_ident, None)?;
-                if res.code != cryptocat::CATVerificationCode::SUCCESS {
-                    bail!(
-                        "verification of CATs not successful. status code: {:?}",
-                        res.code
-                    );
-                }
-                Ok(idents_acc)
-            })
-            .map(Option::Some)
-    }
 }
 
 fn request_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
@@ -205,16 +155,26 @@ impl Middleware for ClientIdentityMiddleware {
             client_identity.client_correlator = request_client_correlator_from_headers(&headers);
 
             client_identity.identities = {
-                // Ideally, the logging would be in an `inspect_err` closure, but that's experimental
-                // and then we'd use `unwrap_or_default()` to get `None` into maybe_idents.
-                let maybe_idents = self.try_get_cats_idents(headers).unwrap_or_else(|e| {
-                    error!(
-                        self.logger,
-                        "Error extracting CATs identities: {}. Falling back to other auth methods",
-                        &e
-                    );
-                    None
-                });
+                let maybe_idents = match try_get_cats_idents(self.fb, headers) {
+                    Err(e) => {
+                        let msg = format!("Error extracting CATs identities: {}.", &e,);
+                        error!(self.logger, "{}", &msg,);
+                        let response = Response::builder()
+                            .status(StatusCode::UNAUTHORIZED)
+                            .body(
+                                format!(
+                                    "{{\"message:\"{}\", \"request_id\":\"{}\"}}",
+                                    msg,
+                                    state.short_request_id()
+                                )
+                                .into(),
+                            )
+                            .expect("Couldn't build http response");
+
+                        return Some(response);
+                    }
+                    Ok(maybe_cats) => maybe_cats,
+                };
                 maybe_idents.or_else(|| {
                     cert_idents.and_then(|x| self.extract_client_identities(x, headers))
                 })
