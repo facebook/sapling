@@ -16,6 +16,7 @@ use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
 use fixtures::TestRepoFixture;
 use fixtures::{Linear, ManyFilesDirs};
+use futures::try_join;
 use std::str::FromStr;
 
 use crate::{
@@ -297,6 +298,324 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
     // Since the superfluous changes were dropped, the two commits
     // have the same bonsai hash.
     assert_eq!(cs1.id(), cs2.id());
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_create_merge_commit(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let mononoke = Mononoke::new_test(
+        ctx.clone(),
+        vec![("test".to_string(), Linear::getrepo(fb).await)],
+    )
+    .await?;
+    let repo = mononoke
+        .repo(ctx.clone(), "test")
+        .await?
+        .expect("repo exists")
+        .draft()
+        .await?;
+
+    async fn create_changeset(
+        repo: &RepoDraftContext,
+        changes: BTreeMap<MononokePath, CreateChange>,
+        parents: Vec<ChangesetId>,
+    ) -> Result<ChangesetContext, MononokeError> {
+        let author = String::from("Test Author <test@example.com>");
+        let author_date = FixedOffset::east(0).ymd(2000, 2, 1).and_hms(12, 0, 0);
+        let committer = None;
+        let committer_date = None;
+        let message = String::from("Test Created Commit");
+        let extra = BTreeMap::new();
+        let bubble = None;
+        repo.create_changeset(
+            parents,
+            author.clone(),
+            author_date,
+            committer.clone(),
+            committer_date,
+            message.clone(),
+            extra.clone(),
+            changes.clone(),
+            bubble,
+        )
+        .await
+    }
+
+    let initial_hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
+    let initial_parents = vec![ChangesetId::from_str(initial_hash)?];
+    let mut p1_changes: BTreeMap<MononokePath, CreateChange> = BTreeMap::new();
+    p1_changes.insert(
+        MononokePath::try_from("TEST_CREATE_p1")?,
+        CreateChange::Tracked(
+            CreateChangeFile::New {
+                bytes: Bytes::from("TEST CREATE\n"),
+                file_type: FileType::Regular,
+            },
+            None,
+        ),
+    );
+    let mut p2_changes: BTreeMap<MononokePath, CreateChange> = BTreeMap::new();
+    p2_changes.insert(
+        MononokePath::try_from("TEST_CREATE_p2")?,
+        CreateChange::Tracked(
+            CreateChangeFile::New {
+                bytes: Bytes::from("TEST CREATE\n"),
+                file_type: FileType::Regular,
+            },
+            None,
+        ),
+    );
+
+    let (p1, p2) = try_join!(
+        create_changeset(&repo, p1_changes, initial_parents.clone(),),
+        create_changeset(&repo, p2_changes, initial_parents)
+    )?;
+
+    let mut merge_changes: BTreeMap<MononokePath, CreateChange> = BTreeMap::new();
+    merge_changes.insert(
+        MononokePath::try_from("TEST_MERGE")?,
+        CreateChange::Tracked(
+            CreateChangeFile::New {
+                bytes: Bytes::from("TEST CREATE\n"),
+                file_type: FileType::Regular,
+            },
+            None,
+        ),
+    );
+    create_changeset(&repo, merge_changes, vec![p1.id(), p2.id()]).await?;
+
+    let mut merge_changes: BTreeMap<MononokePath, CreateChange> = BTreeMap::new();
+    merge_changes.insert(
+        MononokePath::try_from("TEST_CREATE_p1")?,
+        CreateChange::Tracked(
+            CreateChangeFile::New {
+                bytes: Bytes::from("TEST MERGE OVERRIDE\n"),
+                file_type: FileType::Regular,
+            },
+            None,
+        ),
+    );
+    create_changeset(&repo, merge_changes, vec![p1.id(), p2.id()]).await?;
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_merge_commit_parent_file_conflict(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let mononoke = Mononoke::new_test(
+        ctx.clone(),
+        vec![("test".to_string(), Linear::getrepo(fb).await)],
+    )
+    .await?;
+    let repo = mononoke
+        .repo(ctx.clone(), "test")
+        .await?
+        .expect("repo exists")
+        .draft()
+        .await?;
+
+    async fn create_changeset(
+        repo: &RepoDraftContext,
+        changes: BTreeMap<MononokePath, CreateChange>,
+        parents: Vec<ChangesetId>,
+    ) -> Result<ChangesetContext, MononokeError> {
+        let author = String::from("Test Author <test@example.com>");
+        let author_date = FixedOffset::east(0).ymd(2000, 2, 1).and_hms(12, 0, 0);
+        let committer = None;
+        let committer_date = None;
+        let message = String::from("Test Created Commit");
+        let extra = BTreeMap::new();
+        let bubble = None;
+        repo.create_changeset(
+            parents,
+            author.clone(),
+            author_date,
+            committer.clone(),
+            committer_date,
+            message.clone(),
+            extra.clone(),
+            changes.clone(),
+            bubble,
+        )
+        .await
+    }
+
+    let initial_hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
+    let initial_parents = vec![ChangesetId::from_str(initial_hash)?];
+    let mut p1_changes: BTreeMap<MononokePath, CreateChange> = BTreeMap::new();
+    p1_changes.insert(
+        MononokePath::try_from("TEST_FILE")?,
+        CreateChange::Tracked(
+            CreateChangeFile::New {
+                bytes: Bytes::from("TEST CREATE_p1\n"),
+                file_type: FileType::Regular,
+            },
+            None,
+        ),
+    );
+    let mut p2_changes: BTreeMap<MononokePath, CreateChange> = BTreeMap::new();
+    p2_changes.insert(
+        MononokePath::try_from("TEST_CREATE")?,
+        CreateChange::Tracked(
+            CreateChangeFile::New {
+                bytes: Bytes::from("TEST CREATE_p2\n"),
+                file_type: FileType::Regular,
+            },
+            None,
+        ),
+    );
+
+    let mut p3_changes: BTreeMap<MononokePath, CreateChange> = BTreeMap::new();
+    p3_changes.insert(
+        MononokePath::try_from("TEST_FILE")?,
+        CreateChange::Tracked(
+            CreateChangeFile::New {
+                bytes: Bytes::from("TEST CREATE_p3\n"),
+                file_type: FileType::Regular,
+            },
+            None,
+        ),
+    );
+
+    let (p1, p2, p3) = try_join!(
+        create_changeset(&repo, p1_changes, initial_parents.clone()),
+        create_changeset(&repo, p2_changes, initial_parents.clone()),
+        create_changeset(&repo, p3_changes, initial_parents.clone())
+    )?;
+
+    // p1 and p2 do not conflict
+    create_changeset(&repo, BTreeMap::new(), vec![p1.id(), p2.id()]).await?;
+
+    // p1 and p3 do conflict
+    assert!(
+        create_changeset(&repo, BTreeMap::new(), vec![p1.id(), p3.id()])
+            .await
+            .is_err()
+    );
+
+    // Can't hide it by making p3 third parent, or by moving p1 to second parent and p3 as third
+    assert!(
+        create_changeset(&repo, BTreeMap::new(), vec![p1.id(), p2.id(), p3.id()])
+            .await
+            .is_err()
+    );
+    assert!(
+        create_changeset(&repo, BTreeMap::new(), vec![p2.id(), p1.id(), p3.id()])
+            .await
+            .is_err()
+    );
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_merge_commit_parent_tree_file_conflict(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let mononoke = Mononoke::new_test(
+        ctx.clone(),
+        vec![("test".to_string(), Linear::getrepo(fb).await)],
+    )
+    .await?;
+    let repo = mononoke
+        .repo(ctx.clone(), "test")
+        .await?
+        .expect("repo exists")
+        .draft()
+        .await?;
+
+    async fn create_changeset(
+        repo: &RepoDraftContext,
+        changes: BTreeMap<MononokePath, CreateChange>,
+        parents: Vec<ChangesetId>,
+    ) -> Result<ChangesetContext, MononokeError> {
+        let author = String::from("Test Author <test@example.com>");
+        let author_date = FixedOffset::east(0).ymd(2000, 2, 1).and_hms(12, 0, 0);
+        let committer = None;
+        let committer_date = None;
+        let message = String::from("Test Created Commit");
+        let extra = BTreeMap::new();
+        let bubble = None;
+        repo.create_changeset(
+            parents,
+            author.clone(),
+            author_date,
+            committer.clone(),
+            committer_date,
+            message.clone(),
+            extra.clone(),
+            changes.clone(),
+            bubble,
+        )
+        .await
+    }
+
+    let initial_hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
+    let initial_parents = vec![ChangesetId::from_str(initial_hash)?];
+    let mut p1_changes: BTreeMap<MononokePath, CreateChange> = BTreeMap::new();
+    p1_changes.insert(
+        MononokePath::try_from("TEST_FILE/REALLY_A_DIR")?,
+        CreateChange::Tracked(
+            CreateChangeFile::New {
+                bytes: Bytes::from("TEST CREATE_p1\n"),
+                file_type: FileType::Regular,
+            },
+            None,
+        ),
+    );
+    let mut p2_changes: BTreeMap<MononokePath, CreateChange> = BTreeMap::new();
+    p2_changes.insert(
+        MononokePath::try_from("TEST_CREATE")?,
+        CreateChange::Tracked(
+            CreateChangeFile::New {
+                bytes: Bytes::from("TEST CREATE_p2\n"),
+                file_type: FileType::Regular,
+            },
+            None,
+        ),
+    );
+
+    let mut p3_changes: BTreeMap<MononokePath, CreateChange> = BTreeMap::new();
+    p3_changes.insert(
+        MononokePath::try_from("TEST_FILE")?,
+        CreateChange::Tracked(
+            CreateChangeFile::New {
+                bytes: Bytes::from("TEST CREATE_p3\n"),
+                file_type: FileType::Regular,
+            },
+            None,
+        ),
+    );
+
+    let (p1, p2, p3) = try_join!(
+        create_changeset(&repo, p1_changes, initial_parents.clone()),
+        create_changeset(&repo, p2_changes, initial_parents.clone()),
+        create_changeset(&repo, p3_changes, initial_parents.clone())
+    )?;
+
+    // p1 and p2 do not conflict
+    create_changeset(&repo, BTreeMap::new(), vec![p1.id(), p2.id()]).await?;
+
+    // p1 and p3 do conflict
+    assert!(
+        create_changeset(&repo, BTreeMap::new(), vec![p1.id(), p3.id()])
+            .await
+            .is_err()
+    );
+
+    // Can't hide it by making p3 third parent, or by moving p1 to second parent and p3 as third
+    assert!(
+        create_changeset(&repo, BTreeMap::new(), vec![p1.id(), p2.id(), p3.id()])
+            .await
+            .is_err()
+    );
+    assert!(
+        create_changeset(&repo, BTreeMap::new(), vec![p2.id(), p1.id(), p3.id()])
+            .await
+            .is_err()
+    );
 
     Ok(())
 }

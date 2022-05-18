@@ -215,12 +215,9 @@ impl SourceControlServiceImpl {
             .try_collect()
             .await?;
 
-        let valid_parent_count =
-            parents.len() == 1 || (parents.len() == 0 && repo.allow_no_parent_writes());
-
-        if !valid_parent_count {
+        if parents.is_empty() && !repo.allow_no_parent_writes() {
             return Err(errors::invalid_request(
-                "repo_create_commit can only create commits with a single parent",
+                "this repo does not permit commits without a parent",
             )
             .into());
         }

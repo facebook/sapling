@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
+use blobstore::Loadable;
 use bytes::Bytes;
 use changesets::ChangesetsRef;
 use chrono::{DateTime, FixedOffset};
@@ -14,15 +15,14 @@ use context::CoreContext;
 use ephemeral_blobstore::Bubble;
 use filestore::{FetchKey, FilestoreConfig, StoreRequest};
 use futures::{
-    future::try_join3,
     stream::{self, FuturesOrdered, FuturesUnordered, Stream, TryStreamExt},
-    StreamExt,
+    try_join, StreamExt,
 };
 use futures_stats::TimedFutureExt;
 use manifest::PathTree;
 use mononoke_types::{
-    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime as MononokeDateTime, FileChange,
-    MPath,
+    fsnode::FsnodeEntry, BonsaiChangeset, BonsaiChangesetMut, ChangesetId,
+    DateTime as MononokeDateTime, FileChange, MPath, MPathElement,
 };
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
@@ -117,6 +117,16 @@ enum CreateChangeType {
 impl Default for CreateChangeType {
     fn default() -> Self {
         CreateChangeType::None
+    }
+}
+
+impl CreateChangeType {
+    fn is_modification(&self) -> bool {
+        match self {
+            Self::None => false,
+            Self::Change => true,
+            Self::Deletion => true,
+        }
     }
 }
 
@@ -280,6 +290,104 @@ async fn verify_prefix_files_deleted(
         .await
 }
 
+async fn check_addless_union_conflicts(
+    ctx: &CoreContext,
+    repo_blobstore: RepoBlobstore,
+    changesets: &[ChangesetContext],
+    fix_paths: &PathTree<CreateChangeType>,
+) -> Result<(), MononokeError> {
+    if changesets.len() < 2 {
+        return Ok(());
+    }
+
+    let root_fsnodes: Vec<_> = {
+        let futs: FuturesUnordered<_> = changesets
+            .iter()
+            .map(|cs_ctx| cs_ctx.root_fsnode_id())
+            .collect();
+        futs.map_ok(|root| root.into_fsnode_id())
+            .try_collect()
+            .await?
+    };
+
+    let store = &repo_blobstore;
+
+    let conflict_paths = bounded_traversal::bounded_traversal_stream(
+        256,
+        Some((root_fsnodes, MononokePath::new(None))),
+        move |(fsnodes_to_check, current_path)| {
+            Box::pin(async move {
+                let mut leaf_content: BTreeMap<MPathElement, HashSet<_>> = BTreeMap::new();
+                let mut trees: BTreeMap<MPathElement, BTreeSet<_>> = BTreeMap::new();
+
+                for fsnode in fsnodes_to_check {
+                    let fsnode = fsnode.load(ctx, store).await?;
+                    for (path_element, entry) in fsnode.list() {
+                        match entry {
+                            FsnodeEntry::Directory(directory) => trees
+                                .entry(path_element.clone())
+                                .or_default()
+                                .insert(*directory.id()),
+                            FsnodeEntry::File(file) => leaf_content
+                                .entry(path_element.clone())
+                                .or_default()
+                                .insert(*file),
+                        };
+                    }
+                }
+
+                // Conflict rules only apply to leaves. A path in `fix_paths` means no conflict
+                //
+                // Two rules:
+                // 1. If there are multiple choices for content, then there's a conflict
+                // 2. If there's a tree and a leaf for this path, then there's a conflict
+                let conflicts: Vec<_> = leaf_content
+                    .into_iter()
+                    .filter_map(|(path_element, contents)| {
+                        let path = current_path.append(&path_element);
+                        let fix_exists = fix_paths
+                            .get(path.as_mpath())
+                            .map_or(false, CreateChangeType::is_modification);
+                        let conflict_exists =
+                            contents.len() > 1 || trees.contains_key(&path_element);
+                        if !fix_exists && conflict_exists {
+                            Some(path)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                // Recurse into trees that might reveal more conflicts.
+                // If we already have new content for a path, then we don't recurse into it
+                let recurse: Vec<_> = trees
+                    .into_iter()
+                    .filter_map(|(path_element, fsnodes)| {
+                        let path = current_path.append(&path_element);
+                        let fix_exists = fix_paths
+                            .get(path.as_mpath())
+                            .map_or(false, CreateChangeType::is_modification);
+
+                        if !fix_exists && fsnodes.len() > 1 {
+                            Some((fsnodes.into_iter().collect(), path))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                anyhow::Ok((conflicts, recurse))
+            })
+        },
+    )
+    .try_concat()
+    .await?;
+
+    if conflict_paths.is_empty() {
+        Ok(())
+    } else {
+        Err(MononokeError::MergeConflicts { conflict_paths })
+    }
+}
+
 impl RepoDraftContext {
     async fn save_changeset(
         &self,
@@ -322,9 +430,6 @@ impl RepoDraftContext {
     ///     otherwise be ignored.
     ///   - Any merge conflicts introduced by merging the parent changesets
     ///     must be resolved by a corresponding change in the set of changes.
-    ///
-    /// Currenly only a single parent is supported, and root changesets (changesets
-    /// with no parents) cannot be created.
     pub async fn create_changeset(
         &self,
         parents: Vec<ChangesetId>,
@@ -340,12 +445,6 @@ impl RepoDraftContext {
         bubble: Option<&Bubble>,
     ) -> Result<ChangesetContext, MononokeError> {
         self.check_method_permitted("create_changeset")?;
-        // Merge rules are not validated yet, so only a single parent is supported.
-        if parents.len() > 1 {
-            return Err(MononokeError::InvalidRequest(String::from(
-                "Merge changesets cannot be created",
-            )));
-        }
         let allowed_no_parents = self
             .config()
             .source_control_service
@@ -439,6 +538,28 @@ impl RepoDraftContext {
             result
         };
 
+        // Check for merge conflicts
+        let merge_conflicts_fut = async {
+            let (stats, result) = check_addless_union_conflicts(
+                self.ctx(),
+                match &bubble {
+                    Some(bubble) => {
+                        bubble.wrap_repo_blobstore(self.blob_repo().blobstore().clone())
+                    }
+                    None => self.blob_repo().blobstore().clone(),
+                },
+                parent_ctxs.as_slice(),
+                &path_changes,
+            )
+            .timed()
+            .await;
+
+            let mut scuba = self.ctx().scuba().clone();
+            scuba.add_future_stats(&stats);
+            scuba.log_with_msg("Verify all merge conflicts are resolved", None);
+            result
+        };
+
         // Convert change paths into the form needed for the bonsai changeset.
         let changes: Vec<(MPath, CreateChange)> = changes
             .into_iter()
@@ -498,12 +619,12 @@ impl RepoDraftContext {
             result
         };
 
-        let ((), (), file_changes) = try_join3(
+        let ((), (), (), file_changes) = try_join!(
             fut_verify_deleted_files_existed,
             fut_verify_prefix_files_deleted,
+            merge_conflicts_fut,
             file_changes_fut,
-        )
-        .await?;
+        )?;
 
         let author_date = MononokeDateTime::new(author_date);
         let committer_date = committer_date.map(MononokeDateTime::new);

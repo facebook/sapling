@@ -8,12 +8,15 @@
 use blobstore::LoadableError;
 use bookmarks_movement::{describe_hook_rejections, BookmarkMovementError, HookRejection};
 use derived_data::DeriveError;
+use itertools::Itertools;
 use megarepo_error::MegarepoError;
 use std::backtrace::Backtrace;
 use std::convert::Infallible;
 use std::error::Error as StdError;
 use std::fmt;
 use std::sync::Arc;
+
+use crate::path::MononokePath;
 
 use anyhow::Error;
 use thiserror::Error;
@@ -47,6 +50,8 @@ impl StdError for InternalError {
 pub enum MononokeError {
     #[error("invalid request: {0}")]
     InvalidRequest(String),
+    #[error("unresolved path conflicts in merge:\n {}", .conflict_paths.iter().join("\n"))]
+    MergeConflicts { conflict_paths: Vec<MononokePath> },
     #[error("permission denied: {mode} access to repo {reponame} not permitted for {identities}")]
     PermissionDenied {
         mode: String,

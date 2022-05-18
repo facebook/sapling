@@ -688,6 +688,16 @@ struct RepoCreateCommitParams {
   2: list<CommitId> parents;
 
   /// A mapping from path to the change that is made at that path.
+  ///
+  /// Merge commits require changes to resolve all conflicts in the merge.
+  /// When building a merge commit, the following rules apply:
+  /// 1. All files that are present in at least one parent are in the pre-changes merge
+  /// 2. Paths which differ between the parents they are present in are conflicted
+  ///    and need a change to resolve the conflict
+  /// 3. Where a path is a file in some parents, and a tree in others, resolving
+  ///    the conflict with a "deleted" merely removes the file, leaving the trees
+  ///    as part of the pre-changes merge. Resolving it with a "changed" recursively
+  ///    deletes the trees.
   3: map<string, RepoCreateCommitParamsChange> changes;
 
   /// Commit identity schemes to return.
@@ -1604,6 +1614,7 @@ enum RequestErrorKind {
   PERMISSION_DENIED = 8,
   NOT_AVAILABLE = 9,
   NOT_IMPLEMENTED = 10,
+  MERGE_CONFLICTS = 11,
 }
 
 exception RequestError {

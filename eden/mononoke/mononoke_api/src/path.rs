@@ -7,7 +7,7 @@
 
 use std::fmt;
 
-use mononoke_types::MPath;
+use mononoke_types::{MPath, MPathElement};
 
 use crate::errors::MononokeError;
 
@@ -50,6 +50,10 @@ impl MononokePath {
     /// Whether self is prefix of other or the other way arround.
     pub fn is_related_to(&self, other: &Self) -> bool {
         is_related_to(self.as_mpath(), other.as_mpath())
+    }
+
+    pub fn append(&self, element: &MPathElement) -> Self {
+        Self(Some(MPath::join_opt_element(self.0.as_ref(), element)))
     }
 }
 

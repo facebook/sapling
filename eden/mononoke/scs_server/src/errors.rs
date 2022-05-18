@@ -125,6 +125,11 @@ impl From<MononokeError> for ServiceError {
                 reason,
                 ..Default::default()
             }),
+            error @ MononokeError::MergeConflicts { .. } => Self::Request(thrift::RequestError {
+                kind: thrift::RequestErrorKind::MERGE_CONFLICTS,
+                reason: error.to_string(),
+                ..Default::default()
+            }),
             error @ MononokeError::PermissionDenied { .. } => Self::Request(thrift::RequestError {
                 kind: thrift::RequestErrorKind::PERMISSION_DENIED,
                 reason: error.to_string(),

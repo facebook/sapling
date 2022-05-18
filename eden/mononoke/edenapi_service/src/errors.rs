@@ -98,6 +98,7 @@ impl MononokeErrorExt for MononokeError {
             NotAvailable { .. } => HttpError::e503,
             HookFailure(_) => HttpError::e400,
             InternalError(_) => HttpError::e500,
+            MergeConflicts { .. } => HttpError::e400,
         })(Error::from(self).context(context))
     }
 }
