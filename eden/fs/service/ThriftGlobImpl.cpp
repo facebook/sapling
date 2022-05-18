@@ -28,7 +28,6 @@ ThriftGlobImpl::ThriftGlobImpl(const GlobParams& params)
       prefetchFiles_{*params.prefetchFiles_ref()},
       suppressFileList_{*params.suppressFileList_ref()},
       wantDtype_{*params.wantDtype_ref()},
-      background_{*params.background_ref()},
       listOnlyFiles_{*params.listOnlyFiles_ref()},
       rootHashes_{*params.revisions_ref()},
       searchRootUser_{*params.searchRoot_ref()} {}
@@ -231,23 +230,16 @@ folly::Future<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
             // keep globRoot and originRootIds alive until the end
           });
 
-  if (!background_) {
-    return prefetchFuture;
-  } else {
-    folly::futures::detachOn(
-        serverState->getThreadPool().get(), std::move(prefetchFuture).semi());
-    return folly::makeFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>());
-  }
+  return prefetchFuture;
 }
 
 std::string ThriftGlobImpl::logString() {
   return fmt::format(
-      "ThriftGlobImpl {{ includeDotFiles={}, prefetchFiles={}, suppressFileList={}, wantDtype={}, background={}, listOnlyFiles={}, rootHashes={}, searchRootUser={} }}",
+      "ThriftGlobImpl {{ includeDotFiles={}, prefetchFiles={}, suppressFileList={}, wantDtype={}, listOnlyFiles={}, rootHashes={}, searchRootUser={} }}",
       includeDotfiles_,
       prefetchFiles_,
       suppressFileList_,
       wantDtype_,
-      background_,
       listOnlyFiles_,
       fmt::join(rootHashes_, ", "),
       searchRootUser_);

@@ -5,6 +5,7 @@
 # GNU General Public License version 2.
 
 import logging
+import time
 from typing import List, Optional, Tuple
 
 from facebook.eden.ttypes import EdenError, EdenErrorType, GlobParams
@@ -288,6 +289,17 @@ class GlobTest(testcase.EdenRepoTest):
             list_only_files=True,
         )
 
+    def test_glob_background(self) -> None:
+        # Make sure that we don't have weird use after free in background globs
+        self.assert_glob(
+            ["**/*"],
+            [],
+            background=True,
+            prefetching=True,
+        )
+        # The glob above returns immediately, we need to wait so it completes.
+        time.sleep(1)
+
     def assert_glob(
         self,
         globs: List[str],
@@ -299,6 +311,7 @@ class GlobTest(testcase.EdenRepoTest):
         expected_commits: Optional[List[bytes]] = None,
         search_root: Optional[bytes] = None,
         list_only_files: bool = False,
+        background: bool = False,
     ) -> None:
         params = GlobParams(
             mountPoint=self.mount_path_bytes,
@@ -308,6 +321,7 @@ class GlobTest(testcase.EdenRepoTest):
             revisions=commits,
             searchRoot=search_root,
             listOnlyFiles=list_only_files,
+            background=background,
         )
         result = self.client.globFiles(params)
         self.assertEqual(expected_matches, sorted(result.matchingFiles), msg=msg)

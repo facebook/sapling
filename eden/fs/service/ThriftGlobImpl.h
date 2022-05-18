@@ -39,7 +39,6 @@ class ThriftGlobImpl {
   bool prefetchFiles_{false};
   bool suppressFileList_{false};
   bool wantDtype_{false};
-  bool background_{false};
   bool listOnlyFiles_{false};
   std::vector<std::string> rootHashes_;
   folly::StringPiece searchRootUser_;

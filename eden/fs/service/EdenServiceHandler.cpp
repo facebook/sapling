@@ -1797,6 +1797,21 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeRecursively(
       .semi();
 }
 
+namespace {
+folly::Future<std::unique_ptr<Glob>> detachIfBackgrounded(
+    folly::Future<std::unique_ptr<Glob>> globFuture,
+    const std::shared_ptr<ServerState>& serverState,
+    bool background) {
+  if (!background) {
+    return globFuture;
+  } else {
+    folly::futures::detachOn(
+        serverState->getThreadPool().get(), std::move(globFuture).semi());
+    return folly::makeFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>());
+  }
+}
+} // namespace
+
 folly::Future<std::unique_ptr<Glob>>
 EdenServiceHandler::future_predictiveGlobFiles(
     std::unique_ptr<GlobParams> params) {
@@ -1862,22 +1877,26 @@ EdenServiceHandler::future_predictiveGlobFiles(
   }
 
   auto& fetchContext = helper->getPrefetchFetchContext();
+  bool background = *params->background();
 
-  return spServiceEndpoint_
-      ->getTopUsedDirs(
-          user, repo, numResults, os, startTime, endTime, sandcastleAlias)
-      .thenValue([globber = std::move(globber),
-                  edenMount = std::move(edenMount),
-                  serverState,
-                  &fetchContext](std::vector<std::string>&& globs) mutable {
-        return globber.glob(edenMount, serverState, globs, fetchContext);
-      })
-      .thenError([](folly::exception_wrapper&& ew) {
-        XLOG(ERR) << "Error fetching predictive file globs: "
-                  << folly::exceptionStr(ew);
-        return makeFuture<std::unique_ptr<Glob>>(std::move(ew));
-      })
-      .ensure([params = std::move(params), helper = std::move(helper)]() {});
+  auto future =
+      spServiceEndpoint_
+          ->getTopUsedDirs(
+              user, repo, numResults, os, startTime, endTime, sandcastleAlias)
+          .thenValue([globber = std::move(globber),
+                      edenMount = std::move(edenMount),
+                      serverState,
+                      &fetchContext](std::vector<std::string>&& globs) mutable {
+            return globber.glob(edenMount, serverState, globs, fetchContext);
+          })
+          .thenError([](folly::exception_wrapper&& ew) {
+            XLOG(ERR) << "Error fetching predictive file globs: "
+                      << folly::exceptionStr(ew);
+            return makeFuture<std::unique_ptr<Glob>>(std::move(ew));
+          })
+          .ensure(
+              [params = std::move(params), helper = std::move(helper)]() {});
+  return detachIfBackgrounded(std::move(future), serverState, background);
 #else // !EDEN_HAVE_USAGE_SERVICE
   (void)params;
   NOT_IMPLEMENTED();
@@ -1895,13 +1914,16 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
       toLogArg(*params->globs_ref()),
       globber.logString());
   auto& context = helper->getPrefetchFetchContext();
-  return globber
-      .glob(
-          server_->getMount(AbsolutePathPiece{*params->mountPoint_ref()}),
-          server_->getServerState(),
-          *params->globs_ref(),
-          context)
-      .ensure([helper = std::move(helper)] {});
+  auto globFut =
+      globber
+          .glob(
+              server_->getMount(AbsolutePathPiece{*params->mountPoint_ref()}),
+              server_->getServerState(),
+              *params->globs_ref(),
+              context)
+          .ensure([helper = std::move(helper)] {});
+  return detachIfBackgrounded(
+      std::move(globFut), server_->getServerState(), *params->background());
 }
 
 folly::Future<Unit> EdenServiceHandler::future_chown(
