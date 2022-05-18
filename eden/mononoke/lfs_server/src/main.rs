@@ -58,6 +58,7 @@ mod batch;
 mod config;
 mod download;
 mod errors;
+mod git_upload;
 mod lfs_server_context;
 mod middleware;
 mod popularity;
@@ -84,6 +85,7 @@ const ARG_TEST_FRIENDLY_LOGGING: &str = "test-friendly-logging";
 const ARG_TLS_SESSION_DATA_LOG_FILE: &str = "tls-session-data-log-file";
 const ARG_MAX_UPLOAD_SIZE: &str = "max-upload-size";
 const ARG_DISABLE_ACL_CHECKER: &str = "disable-acl-checker";
+const ARG_GIT_BLOB_UPLOAD_ALLOWED: &str = "git-blob-upload-allowed";
 
 const SERVICE_NAME: &str = "mononoke_lfs_server";
 
@@ -232,6 +234,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .takes_value(false)
                 .required(false)
                 .help("Whether to disable ACL checks (only use this locally!)"),
+        )
+        .arg(
+            Arg::with_name(ARG_GIT_BLOB_UPLOAD_ALLOWED)
+                .long(ARG_GIT_BLOB_UPLOAD_ALLOWED)
+                .takes_value(false)
+                .required(false)
+                .help("Whether to enable Mononoke-specific small git blob uploads")
         );
 
     let matches = app.get_matches(fb)?;
@@ -243,6 +252,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let listen_host = matches.value_of(ARG_LISTEN_HOST).unwrap().to_string();
     let listen_port = matches.value_of(ARG_LISTEN_PORT).unwrap();
     let bound_addr_path = matches.value_of(ARG_BOUND_ADDR_FILE).map(|v| v.to_string());
+
+    let git_blob_upload_allowed = matches.is_present(ARG_GIT_BLOB_UPLOAD_ALLOWED);
 
     let addr = format!("{}:{}", listen_host, listen_port);
 
@@ -396,7 +407,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 config_handle.clone(),
             )?;
 
-            let router = build_router(fb, ctx);
+            let router = build_router(fb, ctx, git_blob_upload_allowed);
 
             let capture_session_data = tls_session_data_log.is_some();
 

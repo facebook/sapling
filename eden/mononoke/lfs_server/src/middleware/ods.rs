@@ -27,6 +27,7 @@ define_stats! {
     repo_success: dynamic_timeseries("{}.success", (repo_and_method: String); Rate, Sum),
     repo_failure_4xx: dynamic_timeseries("{}.failure_4xx", (repo_and_method: String); Rate, Sum),
     repo_failure_5xx: dynamic_timeseries("{}.failure_5xx", (repo_and_method: String); Rate, Sum),
+    git_upload_blob_duration: dynamic_histogram("{}.git_upload_blob_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     upload_duration: dynamic_histogram("{}.upload_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     download_duration: dynamic_histogram("{}.download_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     download_sha256_duration: dynamic_histogram("{}.download_sha256_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
@@ -71,6 +72,8 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 LfsMethod::Batch => {
                     STATS::batch_duration.add_value(duration.as_millis_unchecked() as i64, (repo,))
                 }
+                LfsMethod::GitBlob => STATS::git_upload_blob_duration
+                    .add_value(duration.as_millis_unchecked() as i64, (repo,)),
             }
         }
 

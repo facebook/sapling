@@ -24,6 +24,7 @@ use std::pin::Pin;
 
 use crate::batch;
 use crate::download;
+use crate::git_upload;
 use crate::lfs_server_context::LfsServerContext;
 use crate::upload;
 
@@ -64,6 +65,14 @@ fn upload_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
     .boxed()
 }
 
+fn git_upload_blob_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
+    async move {
+        let res = git_upload::git_upload_blob(&mut state).await;
+        build_response(res, state, &LfsErrorFormatter)
+    }
+    .boxed()
+}
+
 fn health_handler(state: State) -> (State, &'static str) {
     let lfs_ctx = LfsServerContext::borrow_from(&state);
     let res = if lfs_ctx.will_exit() {
@@ -85,7 +94,11 @@ fn config_handler(state: State) -> (State, Response<Body>) {
     (state, res)
 }
 
-pub fn build_router(fb: FacebookInit, lfs_ctx: LfsServerContext) -> Router {
+pub fn build_router(
+    fb: FacebookInit,
+    lfs_ctx: LfsServerContext,
+    allow_git_blob_upload: bool,
+) -> Router {
     let pipeline = new_pipeline()
         .add(ThrottleMiddleware::new(fb, lfs_ctx.get_config_handle()))
         .add(StateMiddleware::new(lfs_ctx))
@@ -113,6 +126,13 @@ pub fn build_router(fb: FacebookInit, lfs_ctx: LfsServerContext) -> Router {
             .put("/:repository/upload/:oid/:size")
             .with_path_extractor::<upload::UploadParams>()
             .to(upload_handler);
+
+        if allow_git_blob_upload {
+            route
+                .put("/git_blob_upload/:repository/:oid/:size")
+                .with_path_extractor::<git_upload::GitBlobParams>()
+                .to(git_upload_blob_handler);
+        }
 
         route.get("/health_check").to(health_handler);
         route.get("/config").to(config_handler);

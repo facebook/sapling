@@ -25,6 +25,9 @@ pub enum LfsMethod {
     Download,
     DownloadSha256,
     Batch,
+    // Methods below this are for pushing git objects, not for LFS
+    // They do not correspond to any LFS protocol
+    GitBlob,
 }
 
 impl fmt::Display for LfsMethod {
@@ -34,6 +37,7 @@ impl fmt::Display for LfsMethod {
             Self::Download => "download",
             Self::DownloadSha256 => "download_sha256",
             Self::Batch => "batch",
+            Self::GitBlob => "git_blob_upload",
         };
         write!(f, "{}", name)
     }
