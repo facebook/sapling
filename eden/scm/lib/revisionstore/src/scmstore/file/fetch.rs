@@ -21,6 +21,7 @@ use futures::StreamExt;
 use progress_model::AggregatingProgressBar;
 use tracing::debug;
 use tracing::field;
+use types::errors::NetworkError;
 use types::Key;
 use types::Sha256;
 
@@ -574,7 +575,8 @@ impl FetchState {
             Err(err) => {
                 let err = ClonableError::new(err.into());
                 for key in fetching_keys.into_iter() {
-                    self.errors.keyed_error(key, err.clone().into());
+                    self.errors
+                        .keyed_error(key, NetworkError::wrap(err.clone()));
                 }
                 return;
             }
@@ -621,7 +623,7 @@ impl FetchState {
                     // EdenApiError
                     Err(err) => {
                         if unknown_error.is_none() {
-                            unknown_error.replace(ClonableError::new(err.into()));
+                            unknown_error.replace(ClonableError::new(NetworkError::wrap(err)));
                         }
                         continue;
                     }
@@ -647,6 +649,7 @@ impl FetchState {
                     self.found_attributes(key, file, Some(StoreType::Shared));
                 }
                 Err(err) => {
+                    let err = NetworkError::wrap(err);
                     errors += 1;
                     if error.is_none() {
                         error.replace(format!("{}: {}", key, err));
@@ -781,6 +784,7 @@ impl FetchState {
                 Ok(())
             },
             |sha256, error| {
+                let error = NetworkError::wrap(error);
                 if let Some(keys) = key_map.get(&sha256) {
                     let error = ClonableError::new(error);
                     for (key, _) in keys.iter() {

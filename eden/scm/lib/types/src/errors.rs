@@ -22,7 +22,7 @@ impl KeyError {
 /// to mark errors that may imply a network problem.
 #[derive(Debug, Error)]
 #[error("Network Error: {0:?}")]
-pub struct NetworkError(#[source] Error);
+pub struct NetworkError(#[source] pub Error);
 
 impl NetworkError {
     pub fn wrap(err: impl Into<Error>) -> Error {

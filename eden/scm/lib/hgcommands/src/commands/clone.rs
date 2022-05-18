@@ -17,6 +17,7 @@ use cliparser::define_flags;
 use edenapi::Builder;
 use repo::constants::HG_PATH;
 use repo::repo::Repo;
+use types::errors::NetworkError;
 use types::HgId;
 
 use super::ConfigSet;
@@ -129,7 +130,8 @@ pub fn run(
     let edenapi = Builder::from_config(&config)?
         .correlator(Some(edenapi::DEFAULT_CORRELATOR.as_str()))
         .build()?;
-    let capabilities: Vec<String> = block_on(edenapi.capabilities())??;
+    let capabilities: Vec<String> =
+        block_on(edenapi.capabilities())?.map_err(NetworkError::wrap)?;
     if !capabilities
         .iter()
         .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY)

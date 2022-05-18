@@ -17,3 +17,4 @@ repolock = { path = "../../../../lib/repolock" }
 revisionstore = { path = "../../../../lib/revisionstore" }
 revlogindex = { path = "../../../../lib/revlogindex" }
 treestate = { path = "../../../../lib/treestate" }
+types = { path = "../../../../lib/types" }

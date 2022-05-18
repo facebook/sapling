@@ -187,6 +187,9 @@ fn register_error_handlers() {
                     cpython_ext::Str::from(format!("{}", e)),
                 ))
             }
+        } else if let Some(e) = e.downcast_ref::<types::errors::NetworkError>() {
+            // Python doesn't expect the NetworkError wrapper, so don't pass that along.
+            specific_error_handler(py, &e.0)
         } else if let Some(e) = e.downcast_ref::<cpython_ext::PyErr>() {
             Some(e.clone(py).into())
         } else {

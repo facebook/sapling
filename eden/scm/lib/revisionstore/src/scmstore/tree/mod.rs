@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
+use ::types::errors::NetworkError;
 use ::types::Key;
 use ::types::Node;
 use ::types::RepoPath;
@@ -287,7 +288,7 @@ impl TreeStore {
         };
         let process_func_errors = move || {
             if let Err(err) = process_func() {
-                let _ = found_tx2.send(Err(KeyFetchError::Other(err)));
+                let _ = found_tx2.send(Err(KeyFetchError::Other(NetworkError::wrap(err))));
             }
         };
 
