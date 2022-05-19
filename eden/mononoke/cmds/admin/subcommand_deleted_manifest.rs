@@ -18,13 +18,13 @@ use cmdlib::{
     helpers,
 };
 use context::CoreContext;
-use deleted_files_manifest::{DeletedManifestOps, RootDeletedManifestId};
+use deleted_files_manifest::{DeletedManifestOps, RootDeletedManifestV2Id};
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::{compat::Stream01CompatExt, future, StreamExt, TryStreamExt};
 use manifest::{get_implicit_deletes, PathOrPrefix};
 use mercurial_derived_data::DeriveHgChangeset;
-use mononoke_types::{ChangesetId, DeletedManifestId, MPath};
+use mononoke_types::{ChangesetId, DeletedManifestV2Id, MPath};
 use revset::AncestorsNodeStream;
 use slog::{debug, Logger};
 use std::{collections::BTreeSet, str::FromStr};
@@ -112,7 +112,7 @@ pub async fn subcommand_deleted_manifest<'a>(
             Ok(())
         }
         (COMMAND_FETCH, Some(matches)) => {
-            let mf_id = DeletedManifestId::from_str(
+            let mf_id = DeletedManifestV2Id::from_str(
                 matches
                     .value_of(ARG_ID)
                     .ok_or_else(|| format_err!("{} not set", ARG_ID))?,
@@ -134,10 +134,10 @@ async fn subcommand_manifest(
     cs_id: ChangesetId,
     prefix: Option<MPath>,
 ) -> Result<(), Error> {
-    let root_manifest = RootDeletedManifestId::derive(&ctx, &repo, cs_id).await?;
+    let root_manifest = RootDeletedManifestV2Id::derive(&ctx, &repo, cs_id).await?;
     debug!(
         ctx.logger(),
-        "ROOT Deleted Files Manifest {:?}", root_manifest,
+        "ROOT Deleted Files Manifest V2 {:?}", root_manifest,
     );
     let mut entries: Vec<_> = root_manifest
         .find_entries(&ctx, repo.blobstore(), Some(PathOrPrefix::Prefix(prefix)))
@@ -214,7 +214,7 @@ async fn verify_single_commit(
 ) -> Result<(), Error> {
     let file_changes = get_file_changes(ctx.clone(), repo.clone(), cs_id.clone());
     let deleted_manifest_paths = async move {
-        let root_manifest = RootDeletedManifestId::derive(&ctx, &repo, cs_id).await?;
+        let root_manifest = RootDeletedManifestV2Id::derive(&ctx, &repo, cs_id).await?;
         let entries: BTreeSet<_> = root_manifest
             .list_all_entries(&ctx, repo.blobstore())
             .try_filter_map(|(path_opt, ..)| async move { Ok(path_opt) })

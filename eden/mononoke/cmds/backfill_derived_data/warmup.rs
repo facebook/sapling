@@ -10,7 +10,7 @@ use blame::{fetch_content_for_blame, BlameRoot};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use context::CoreContext;
-use deleted_files_manifest::RootDeletedManifestId;
+use deleted_files_manifest::RootDeletedManifestV2Id;
 use derived_data::BonsaiDerived;
 use fastlog::RootFastlog;
 use fsnodes::{prefetch_content_metadata, RootFsnodeId};
@@ -31,7 +31,7 @@ const PREFETCH_CONTENT_TYPES: &[&str] = &[BlameRoot::DERIVABLE_NAME];
 const PREFETCH_CONTENT_METADATA_TYPES: &[&str] = &[RootFsnodeId::DERIVABLE_NAME];
 const PREFETCH_UNODE_TYPES: &[&str] = &[
     RootFastlog::DERIVABLE_NAME,
-    RootDeletedManifestId::DERIVABLE_NAME,
+    RootDeletedManifestV2Id::DERIVABLE_NAME,
 ];
 
 pub(crate) async fn warmup(

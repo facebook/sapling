@@ -17,7 +17,7 @@ use std::collections::BTreeSet;
 use anyhow::Result;
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use deleted_files_manifest::RootDeletedManifestId;
+use deleted_files_manifest::{RootDeletedManifestIdCommon, RootDeletedManifestV2Id};
 use derived_data::BonsaiDerived;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fbinit::FacebookInit;
@@ -143,10 +143,10 @@ async fn derive(ctx: &CoreContext, repo: &BlobRepo, data: &str, csid: ChangesetI
             .unwrap()
             .manifest_unode_id()
             .to_string(),
-        RootDeletedManifestId::NAME => RootDeletedManifestId::derive(&ctx, &repo, csid)
+        RootDeletedManifestV2Id::NAME => RootDeletedManifestV2Id::derive(ctx, repo, csid)
             .await
             .unwrap()
-            .deleted_manifest_id()
+            .id()
             .to_string(),
         RootFsnodeId::NAME => RootFsnodeId::derive(&ctx, &repo, csid)
             .await
