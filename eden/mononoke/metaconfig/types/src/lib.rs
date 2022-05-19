@@ -298,9 +298,6 @@ pub struct DerivedDataTypesConfig {
 
     /// What blame version should be used.
     pub blame_version: BlameVersion,
-
-    /// What deleted manifest version should be used.
-    pub deleted_manifest_version: DeletedManifestVersion,
 }
 
 /// What type of unode derived data to generate
@@ -330,21 +327,6 @@ pub enum BlameVersion {
 impl Default for BlameVersion {
     fn default() -> Self {
         BlameVersion::V1
-    }
-}
-
-/// What type of deleted manifest derived data to generate
-#[derive(Eq, Clone, Copy, Debug, PartialEq)]
-pub enum DeletedManifestVersion {
-    /// Deleted manifest v1
-    V1,
-    /// Deleted manifest v2
-    V2,
-}
-
-impl Default for DeletedManifestVersion {
-    fn default() -> Self {
-        Self::V1
     }
 }
 

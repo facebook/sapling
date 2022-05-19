@@ -30,7 +30,6 @@ use futures::stream::{Stream, TryStreamExt};
 use futures::try_join;
 use futures_lazy_shared::LazyShared;
 use manifest::{Entry, ManifestOps};
-use metaconfig_types::DeletedManifestVersion;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::{
     deleted_manifest_common::DeletedManifestCommon, ChangesetId, FileType, FileUnodeId, FsnodeId,
@@ -380,36 +379,15 @@ impl ChangesetPathHistoryContext {
             .get_or_init(|| {
                 cloned!(self.changeset, self.path);
                 async move {
-                    use DeletedManifestVersion::*;
                     let ctx = changeset.ctx();
                     let blobstore = changeset.repo().blob_repo().blobstore();
-                    Ok(
-                        match changeset
-                            .repo()
-                            .blob_repo()
-                            .get_active_derived_data_types_config()
-                            .deleted_manifest_version
-                        {
-                            V1 => {
-                                Self::linknode_from_id(
-                                    ctx,
-                                    blobstore,
-                                    changeset.root_deleted_manifest_id().await?,
-                                    path,
-                                )
-                                .await?
-                            }
-                            V2 => {
-                                Self::linknode_from_id(
-                                    ctx,
-                                    blobstore,
-                                    changeset.root_deleted_manifest_v2_id().await?,
-                                    path,
-                                )
-                                .await?
-                            }
-                        },
+                    Self::linknode_from_id(
+                        ctx,
+                        blobstore,
+                        changeset.root_deleted_manifest_v2_id().await?,
+                        path,
                     )
+                    .await
                 }
             })
             .await

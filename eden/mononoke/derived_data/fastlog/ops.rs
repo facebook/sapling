@@ -12,9 +12,7 @@ use blobstore::{Loadable, LoadableError};
 use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
 use cloned::cloned;
 use context::CoreContext;
-use deleted_files_manifest::{
-    DeletedManifestOps, PathState, RootDeletedManifestId, RootDeletedManifestV2Id,
-};
+use deleted_files_manifest::{DeletedManifestOps, PathState, RootDeletedManifestV2Id};
 use derived_data::{BonsaiDerived, DeriveError};
 use futures::{
     future,
@@ -24,7 +22,6 @@ use futures_stats::futures03::TimedFutureExt;
 use futures_util::{StreamExt, TryStreamExt};
 use itertools::Itertools;
 use manifest::{Entry, ManifestOps};
-use metaconfig_types::DeletedManifestVersion;
 use mononoke_types::{ChangesetId, FileUnodeId, Generation, MPath, ManifestUnodeId};
 use mutable_renames::MutableRenames;
 use stats::prelude::*;
@@ -246,14 +243,7 @@ async fn resolve_path_state(
     cs_id: ChangesetId,
     path: &Option<MPath>,
 ) -> Result<Option<PathState>, Error> {
-    use DeletedManifestVersion::*;
-    match repo
-        .get_active_derived_data_types_config()
-        .deleted_manifest_version
-    {
-        V1 => RootDeletedManifestId::resolve_path_state(ctx, repo, cs_id, path).await,
-        V2 => RootDeletedManifestV2Id::resolve_path_state(ctx, repo, cs_id, path).await,
-    }
+    RootDeletedManifestV2Id::resolve_path_state(ctx, repo, cs_id, path).await
 }
 
 /// Returns a full history of the given path starting from the given unode in BFS order.

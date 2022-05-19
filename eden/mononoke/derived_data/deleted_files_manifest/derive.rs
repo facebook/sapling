@@ -575,13 +575,6 @@ impl<Root: RootDeletedManifestIdCommon> RootDeletedManifestDeriver<Root> {
         bonsai: BonsaiChangeset,
         parents: Vec<Root>,
     ) -> Result<Root, Error> {
-        if derivation_ctx.config().deleted_manifest_version != Root::VERSION {
-            bail!(
-                "incorrect deleted manifest version: in config {:?}, got {:?}",
-                derivation_ctx.config().deleted_manifest_version,
-                Root::VERSION
-            )
-        }
         let bcs_id = bonsai.get_changeset_id();
         let changes = get_changes(ctx, derivation_ctx, bonsai).await?;
         let id = DeletedManifestDeriver::<Root::Manifest>::derive(
@@ -605,13 +598,6 @@ impl<Root: RootDeletedManifestIdCommon> RootDeletedManifestDeriver<Root> {
         bonsais: Vec<BonsaiChangeset>,
         gap_size: Option<usize>,
     ) -> Result<HashMap<ChangesetId, Root>, Error> {
-        if derivation_ctx.config().deleted_manifest_version != Root::VERSION {
-            bail!(
-                "incorrect deleted manifest version: in config {:?}, got {:?}",
-                derivation_ctx.config().deleted_manifest_version,
-                Root::VERSION
-            )
-        }
         if gap_size.is_some() {
             bail!("Gap size not supported in deleted manifest")
         }

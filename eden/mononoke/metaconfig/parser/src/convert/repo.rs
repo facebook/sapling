@@ -13,11 +13,11 @@ use anyhow::{anyhow, Context, Result};
 use bookmarks_types::BookmarkName;
 use metaconfig_types::{
     BlameVersion, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
-    ComparableRegex, DeletedManifestVersion, DerivedDataConfig, DerivedDataTypesConfig, HookBypass,
-    HookConfig, HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams,
-    LfsParams, PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs,
-    SegmentedChangelogConfig, SegmentedChangelogHeadConfig, ServiceWriteRestrictions,
-    SourceControlServiceMonitoring, SourceControlServiceParams, UnodeVersion,
+    ComparableRegex, DerivedDataConfig, DerivedDataTypesConfig, HookBypass, HookConfig,
+    HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams,
+    PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs, SegmentedChangelogConfig,
+    SegmentedChangelogHeadConfig, ServiceWriteRestrictions, SourceControlServiceMonitoring,
+    SourceControlServiceParams, UnodeVersion,
 };
 use mononoke_types::{ChangesetId, MPath, PrefixTrie};
 use regex::Regex;
@@ -349,12 +349,6 @@ impl Convert for RawDerivedDataTypesConfig {
             Some(2) => BlameVersion::V2,
             Some(version) => return Err(anyhow!("unknown blame version {}", version)),
         };
-        let deleted_manifest_version = match self.deleted_manifest_version {
-            None => DeletedManifestVersion::default(),
-            Some(1) => DeletedManifestVersion::V1,
-            Some(2) => DeletedManifestVersion::V2,
-            Some(version) => return Err(anyhow!("unknown deleted manifest version {}", version)),
-        };
         Ok(DerivedDataTypesConfig {
             types,
             mapping_key_prefixes,
@@ -362,7 +356,6 @@ impl Convert for RawDerivedDataTypesConfig {
             blame_filesize_limit,
             hg_set_committer_extra: self.hg_set_committer_extra.unwrap_or(false),
             blame_version,
-            deleted_manifest_version,
         })
     }
 }

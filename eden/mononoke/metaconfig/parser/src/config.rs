@@ -468,14 +468,14 @@ mod test {
         AclRegion, AclRegionConfig, AclRegionRule, BlameVersion, BlobConfig, BlobstoreId,
         BookmarkParams, BubbleDeletionMode, Bundle2ReplayParams, CacheWarmupParams,
         CommitSyncConfig, CommitSyncConfigVersion, DatabaseConfig,
-        DefaultSmallToLargeCommitSyncPathAction, DeletedManifestVersion, DerivedDataConfig,
-        DerivedDataTypesConfig, EphemeralBlobstoreConfig, FilestoreParams, HookBypass, HookConfig,
-        HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams,
-        LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PushParams,
-        PushrebaseFlags, PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig,
-        RepoClientKnobs, SegmentedChangelogConfig, SegmentedChangelogHeadConfig,
-        ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig,
-        SourceControlServiceMonitoring, SourceControlServiceParams, UnodeVersion,
+        DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, DerivedDataTypesConfig,
+        EphemeralBlobstoreConfig, FilestoreParams, HookBypass, HookConfig, HookManagerParams,
+        HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams, LocalDatabaseConfig,
+        MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PushParams, PushrebaseFlags,
+        PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, RepoClientKnobs,
+        SegmentedChangelogConfig, SegmentedChangelogHeadConfig, ShardableRemoteDatabaseConfig,
+        ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig, SourceControlServiceMonitoring,
+        SourceControlServiceParams, UnodeVersion,
     };
     use mononoke_types::MPath;
     use mononoke_types_mocks::changesetid::ONES_CSID;
@@ -740,7 +740,6 @@ mod test {
             [derived_data_config.available_configs.default]
             types = ["fsnodes", "unodes", "blame"]
             unode_version = 2
-            deleted_manifest_version = 2
             blame_filesize_limit = 101
 
             [[bookmarks]]
@@ -1115,7 +1114,6 @@ mod test {
                         blame_filesize_limit: Some(101),
                         hg_set_committer_extra: false,
                         blame_version: BlameVersion::V1,
-                        deleted_manifest_version: DeletedManifestVersion::V2,
                     },],
                     scuba_table: None,
                 },

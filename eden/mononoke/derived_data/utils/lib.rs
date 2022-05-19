@@ -16,7 +16,7 @@ use changeset_info::ChangesetInfo;
 use changesets::ChangesetsArc;
 use cloned::cloned;
 use context::CoreContext;
-use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestV2Id};
+use deleted_files_manifest::RootDeletedManifestV2Id;
 use derived_data::DerivedDataTypesConfig;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::{
@@ -37,7 +37,7 @@ use git_types::TreeHandle;
 use lazy_static::lazy_static;
 use lock_ext::LockExt;
 use mercurial_derived_data::MappedHgChangesetId;
-use metaconfig_types::{BlameVersion, DeletedManifestVersion};
+use metaconfig_types::BlameVersion;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -451,19 +451,11 @@ fn derived_data_utils_impl(
             config,
             enabled_config_name,
         ))),
-        // deleted manifest share the same name
-        RootDeletedManifestV2Id::NAME => match config.deleted_manifest_version {
-            DeletedManifestVersion::V1 => Ok(Arc::new(DerivedUtilsFromManager::<
-                RootDeletedManifestId,
-            >::new(
-                repo, config, enabled_config_name
-            ))),
-            DeletedManifestVersion::V2 => Ok(Arc::new(DerivedUtilsFromManager::<
-                RootDeletedManifestV2Id,
-            >::new(
-                repo, config, enabled_config_name
-            ))),
-        },
+        RootDeletedManifestV2Id::NAME => Ok(Arc::new(DerivedUtilsFromManager::<
+            RootDeletedManifestV2Id,
+        >::new(
+            repo, config, enabled_config_name
+        ))),
         FilenodesOnlyPublic::NAME => Ok(Arc::new(
             DerivedUtilsFromManager::<FilenodesOnlyPublic>::new(repo, config, enabled_config_name),
         )),

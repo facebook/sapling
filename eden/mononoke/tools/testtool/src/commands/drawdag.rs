@@ -45,7 +45,6 @@ use fastlog::RootFastlog;
 use fsnodes::RootFsnodeId;
 use futures::try_join;
 use mercurial_derived_data::MappedHgChangesetId;
-use metaconfig_types::DeletedManifestVersion;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
@@ -447,16 +446,7 @@ async fn derive_all(ctx: &CoreContext, repo: &BlobRepo, csids: &[ChangesetId]) -
         derive::<RootUnodeManifestId>(ctx, repo, csids).await?;
         try_join!(
             derive::<RootBlameV2>(ctx, repo, csids),
-            async move {
-                use DeletedManifestVersion::*;
-                match repo
-                    .get_active_derived_data_types_config()
-                    .deleted_manifest_version
-                {
-                    V1 => derive::<RootDeletedManifestId>(ctx, repo, csids).await,
-                    V2 => derive::<RootDeletedManifestV2Id>(ctx, repo, csids).await,
-                }
-            },
+            derive::<RootDeletedManifestV2Id>(ctx, repo, csids),
             derive::<RootFastlog>(ctx, repo, csids),
         )?;
         Ok::<_, Error>(())

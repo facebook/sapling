@@ -66,16 +66,7 @@ macro_rules! impl_deleted_manifest_tests {
 pub(crate) use impl_deleted_manifest_tests;
 
 fn build_repo<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) -> Result<BlobRepo, Error> {
-    Ok(test_repo_factory::TestRepoFactory::new(fb)?
-        .with_config_override(|c| {
-            c.derived_data_config
-                .available_configs
-                .values_mut()
-                .for_each(|c| {
-                    c.deleted_manifest_version = Root::VERSION;
-                });
-        })
-        .build()?)
+    Ok(test_repo_factory::TestRepoFactory::new(fb)?.build()?)
 }
 
 pub(crate) async fn linear_test<Root: RootDeletedManifestIdCommon>(fb: FacebookInit) {
