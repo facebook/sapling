@@ -685,7 +685,8 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
             ->getTreeEntryForRootId(
                 rootId, toEdenTreeEntryType(objectType), ctx->getFetchContext())
             .thenValue(
-                [name = path.basename()](std::shared_ptr<TreeEntry> treeEntry)
+                [name = PathComponent{path.basename()}](
+                    std::shared_ptr<TreeEntry> treeEntry)
                     -> std::shared_ptr<const Tree> {
                   // Make up a fake ObjectId for this tree.
                   // WARNING: This is dangerous -- this ObjectId cannot be used
