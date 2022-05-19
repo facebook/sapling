@@ -6,3 +6,4 @@
  */
 
 mod state;
+pub mod watchman;
