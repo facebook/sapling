@@ -6,7 +6,6 @@
  */
 
 use crate::state_ext::StateExt;
-use anyhow::{bail, Error};
 use cats::try_get_cats_idents;
 use fbinit::FacebookInit;
 use futures::{future, Future, FutureExt};
