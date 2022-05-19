@@ -12,9 +12,9 @@ use blobstore::BlobstoreBytes;
 use bytes::Bytes;
 
 use crate::typed_hash::{
-    ChangesetId, ContentChunkId, ContentId, ContentMetadataId, DeletedManifestId,
-    DeletedManifestV2Id, FastlogBatchId, FileUnodeId, FsnodeId, ManifestUnodeId, RawBundle2Id,
-    RedactionKeyListId, ShardedMapNodeId, SkeletonManifestId,
+    ChangesetId, ContentChunkId, ContentId, ContentMetadataId, DeletedManifestV2Id, FastlogBatchId,
+    FileUnodeId, FsnodeId, ManifestUnodeId, RawBundle2Id, RedactionKeyListId, ShardedMapNodeId,
+    SkeletonManifestId,
 };
 
 /// A serialized blob in memory.
@@ -49,7 +49,6 @@ pub type ContentChunkBlob = Blob<ContentChunkId>;
 pub type RawBundle2Blob = Blob<RawBundle2Id>;
 pub type FileUnodeBlob = Blob<FileUnodeId>;
 pub type ManifestUnodeBlob = Blob<ManifestUnodeId>;
-pub type DeletedManifestBlob = Blob<DeletedManifestId>;
 pub type DeletedManifestV2Blob = Blob<DeletedManifestV2Id>;
 pub type ShardedMapNodeBlob = Blob<ShardedMapNodeId>;
 pub type FsnodeBlob = Blob<FsnodeId>;

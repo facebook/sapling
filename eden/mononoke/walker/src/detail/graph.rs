@@ -14,7 +14,7 @@ use blobstore_factory::SqlTierInfo;
 use bookmarks::BookmarkName;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
-use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestV2Id};
+use deleted_files_manifest::RootDeletedManifestV2Id;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fastlog::{unode_entry_to_fastlog_batch_key, RootFastlog};
@@ -38,15 +38,14 @@ use mercurial_types::{
 };
 use mononoke_types::{
     blame::Blame,
-    deleted_files_manifest::DeletedManifest,
     deleted_manifest_v2::DeletedManifestV2,
     fastlog_batch::FastlogBatch,
     fsnode::Fsnode,
     skeleton_manifest::SkeletonManifest,
     unode::{FileUnode, ManifestUnode},
     BlameId, BlobstoreKey, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata,
-    DeletedManifestId, DeletedManifestV2Id, FastlogBatchId, FileUnodeId, FsnodeId, MPath,
-    MPathHash, ManifestUnodeId, MononokeId, RepoPath, SkeletonManifestId,
+    DeletedManifestV2Id, FastlogBatchId, FileUnodeId, FsnodeId, MPath, MPathHash, ManifestUnodeId,
+    MononokeId, RepoPath, SkeletonManifestId,
 };
 use newfilenodes::PathHash;
 use once_cell::sync::OnceCell;
@@ -332,8 +331,6 @@ create_graph!(
             Blame,
             ChangesetInfo,
             ChangesetInfoMapping,
-            DeletedManifest,
-            DeletedManifestMapping,
             DeletedManifestV2,
             DeletedManifestV2Mapping,
             FastlogBatch,
@@ -360,7 +357,6 @@ create_graph!(
             PhaseMapping,
             ChangesetInfo,
             ChangesetInfoMapping,
-            DeletedManifestMapping,
             DeletedManifestV2Mapping,
             FsnodeMapping,
             SkeletonManifestMapping,
@@ -436,12 +432,6 @@ create_graph!(
         ChangesetId,
         [ChangesetInfo]
     ),
-    (
-        DeletedManifest,
-        DeletedManifestId,
-        [DeletedManifestChild(DeletedManifest), LinkedChangeset(Changeset)]
-    ),
-    (DeletedManifestMapping, ChangesetId, [RootDeletedManifest(DeletedManifest)]),
     (
         DeletedManifestV2,
         DeletedManifestV2Id,
@@ -523,8 +513,6 @@ impl NodeType {
             NodeType::Blame => Some(BlameRoot::NAME),
             NodeType::ChangesetInfo => Some(ChangesetInfo::NAME),
             NodeType::ChangesetInfoMapping => Some(ChangesetInfo::NAME),
-            NodeType::DeletedManifest => Some(RootDeletedManifestId::NAME),
-            NodeType::DeletedManifestMapping => Some(RootDeletedManifestId::NAME),
             NodeType::DeletedManifestV2 => Some(RootDeletedManifestV2Id::NAME),
             NodeType::DeletedManifestV2Mapping => Some(RootDeletedManifestV2Id::NAME),
             NodeType::FastlogBatch => Some(RootFastlog::NAME),
@@ -566,8 +554,6 @@ impl NodeType {
             NodeType::Blame => false,
             NodeType::ChangesetInfo => false,
             NodeType::ChangesetInfoMapping => false,
-            NodeType::DeletedManifest => true,
-            NodeType::DeletedManifestMapping => false,
             NodeType::DeletedManifestV2 => true,
             NodeType::DeletedManifestV2Mapping => false,
             NodeType::FastlogBatch => true,
@@ -824,8 +810,6 @@ pub enum NodeData {
     Blame(Option<Blame>),
     ChangesetInfo(Option<ChangesetInfo>),
     ChangesetInfoMapping(Option<ChangesetId>),
-    DeletedManifest(Option<DeletedManifest>),
-    DeletedManifestMapping(Option<DeletedManifestId>),
     DeletedManifestV2(Option<DeletedManifestV2>),
     DeletedManifestV2Mapping(Option<DeletedManifestV2Id>),
     FastlogBatch(Option<FastlogBatch>),
@@ -897,8 +881,6 @@ impl Node {
             Node::Blame(_) => None,
             Node::ChangesetInfo(_) => None,
             Node::ChangesetInfoMapping(_) => None,
-            Node::DeletedManifest(_) => None,
-            Node::DeletedManifestMapping(_) => None,
             Node::DeletedManifestV2(_) => None,
             Node::DeletedManifestV2Mapping(_) => None,
             Node::FastlogBatch(_) => None,
@@ -939,8 +921,6 @@ impl Node {
             Node::Blame(k) => k.blobstore_key(),
             Node::ChangesetInfo(k) => k.blobstore_key(),
             Node::ChangesetInfoMapping(k) => k.blobstore_key(),
-            Node::DeletedManifest(k) => k.blobstore_key(),
-            Node::DeletedManifestMapping(k) => k.blobstore_key(),
             Node::DeletedManifestV2(k) => k.blobstore_key(),
             Node::DeletedManifestV2Mapping(k) => k.blobstore_key(),
             Node::FastlogBatch(k) => k.blobstore_key(),
@@ -981,8 +961,6 @@ impl Node {
             Node::Blame(_) => None,
             Node::ChangesetInfo(_) => None,
             Node::ChangesetInfoMapping(_) => None,
-            Node::DeletedManifest(_) => None,
-            Node::DeletedManifestMapping(_) => None,
             Node::DeletedManifestV2(_) => None,
             Node::DeletedManifestV2Mapping(_) => None,
             Node::FastlogBatch(_) => None,
@@ -1024,8 +1002,6 @@ impl Node {
             Node::Blame(k) => Some(k.sampling_fingerprint()),
             Node::ChangesetInfo(k) => Some(k.sampling_fingerprint()),
             Node::ChangesetInfoMapping(k) => Some(k.sampling_fingerprint()),
-            Node::DeletedManifest(k) => Some(k.sampling_fingerprint()),
-            Node::DeletedManifestMapping(k) => Some(k.sampling_fingerprint()),
             Node::DeletedManifestV2(k) => Some(k.sampling_fingerprint()),
             Node::DeletedManifestV2Mapping(k) => Some(k.sampling_fingerprint()),
             Node::FastlogBatch(k) => Some(k.sampling_fingerprint()),

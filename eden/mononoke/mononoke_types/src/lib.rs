@@ -16,7 +16,6 @@ pub mod bonsai_changeset;
 pub mod content_chunk;
 pub mod content_metadata;
 pub mod datetime;
-pub mod deleted_files_manifest;
 pub mod deleted_manifest_common;
 pub mod deleted_manifest_v2;
 pub mod errors;
@@ -59,8 +58,8 @@ pub use repo::{RepositoryId, REPO_PREFIX_REGEX};
 pub use svnrev::Svnrev;
 pub use typed_hash::{
     BlobstoreKey, ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, ContentChunkId,
-    ContentId, ContentMetadataId, DeletedManifestId, DeletedManifestV2Id, FastlogBatchId,
-    FileUnodeId, FsnodeId, ManifestUnodeId, MononokeId, RawBundle2Id, SkeletonManifestId,
+    ContentId, ContentMetadataId, DeletedManifestV2Id, FastlogBatchId, FileUnodeId, FsnodeId,
+    ManifestUnodeId, MononokeId, RawBundle2Id, SkeletonManifestId,
 };
 
 mod macros;

@@ -105,8 +105,8 @@ derived changeset_info, chunked, deep
 
 derived deleted_manifest, chunked, deep.  No deferred as there is no parent lookup in the walk
   $ mononoke_walker -L sizing -L chunking scrub -q -p DeletedManifestV2Mapping  --chunk-size=2 -I deep -i derived_deleted_manifest 2>&1 | strip_glog
-  Walking edge types [DeletedManifestToDeletedManifestChild, DeletedManifestV2MappingToRootDeletedManifestV2, DeletedManifestV2ToDeletedManifestV2Child]
-  Walking node types [DeletedManifest, DeletedManifestV2, DeletedManifestV2Mapping]
+  Walking edge types [DeletedManifestV2MappingToRootDeletedManifestV2, DeletedManifestV2ToDeletedManifestV2Child]
+  Walking node types [DeletedManifestV2, DeletedManifestV2Mapping]
   Seen,Loaded: 3,3
   * Type:Walked,Checks,Children* DeletedManifestV2:1,* DeletedManifestV2Mapping:2,* (glob)
   Deferred: 0

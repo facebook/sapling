@@ -30,9 +30,7 @@ use bounded_traversal::limited_by_key_shardable;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
-use deleted_files_manifest::{
-    RootDeletedManifestId, RootDeletedManifestIdCommon, RootDeletedManifestV2Id,
-};
+use deleted_files_manifest::{RootDeletedManifestIdCommon, RootDeletedManifestV2Id};
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
@@ -51,8 +49,8 @@ use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId, Repo
 use mononoke_types::{
     blame::BlameMaybeRejected, deleted_manifest_common::DeletedManifestCommon, fsnode::FsnodeEntry,
     skeleton_manifest::SkeletonManifestEntry, unode::UnodeEntry, BlameId, ChangesetId, ContentId,
-    DeletedManifestId, DeletedManifestV2Id, FastlogBatchId, FileUnodeId, FsnodeId, MPath,
-    ManifestUnodeId, SkeletonManifestId,
+    DeletedManifestV2Id, FastlogBatchId, FileUnodeId, FsnodeId, MPath, ManifestUnodeId,
+    SkeletonManifestId,
 };
 use phases::{Phase, Phases, PhasesRef};
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -575,12 +573,6 @@ async fn bonsai_changeset_step<V: VisitOne>(
         &mut edges,
         EdgeType::ChangesetToSkeletonManifestMapping,
         || Node::SkeletonManifestMapping(*bcs_id),
-    );
-    // Deleted manifest mapping is 1:1 but from their expands less than unodes
-    checker.add_edge(
-        &mut edges,
-        EdgeType::ChangesetToDeletedManifestMapping,
-        || Node::DeletedManifestMapping(*bcs_id),
     );
     checker.add_edge(
         &mut edges,
@@ -1476,89 +1468,6 @@ async fn unode_manifest_step<V: VisitOne>(
     ))
 }
 
-async fn deleted_manifest_step<V: VisitOne>(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    checker: &Checker<V>,
-    id: &DeletedManifestId,
-    path: Option<&WrappedPath>,
-) -> Result<StepOutput, StepError> {
-    let deleted_manifest = id.load(ctx, repo.blobstore()).await?;
-    let linked_cs_id = *deleted_manifest.linknode();
-
-    let mut edges = vec![];
-
-    if let Some(linked_cs_id) = linked_cs_id {
-        if !checker.in_chunk(&linked_cs_id) {
-            return Ok(StepOutput::Deferred(linked_cs_id));
-        }
-        checker.add_edge(
-            &mut edges,
-            EdgeType::DeletedManifestToLinkedChangeset,
-            || {
-                Node::Changeset(ChangesetKey {
-                    inner: linked_cs_id,
-                    filenode_known_derived: false, /* dfm does not imply hg is fully derived */
-                })
-            },
-        );
-    }
-
-    for (child_path, deleted_manifest_id) in deleted_manifest.clone().into_subentries() {
-        checker.add_edge_with_path(
-            &mut edges,
-            EdgeType::DeletedManifestToDeletedManifestChild,
-            || Node::DeletedManifest(deleted_manifest_id),
-            || {
-                path.map(|p| {
-                    WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(&child_path)))
-                })
-            },
-        );
-    }
-
-    Ok(StepOutput::Done(
-        checker.step_data(NodeType::DeletedManifest, || {
-            NodeData::DeletedManifest(Some(deleted_manifest))
-        }),
-        edges,
-    ))
-}
-
-async fn deleted_manifest_mapping_step<V: VisitOne>(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    checker: &Checker<V>,
-    bcs_id: ChangesetId,
-    enable_derive: bool,
-) -> Result<StepOutput, StepError> {
-    let root_manifest_id =
-        maybe_derived::<RootDeletedManifestId>(ctx, repo, bcs_id, enable_derive).await?;
-
-    if let Some(root_manifest_id) = root_manifest_id {
-        let mut edges = vec![];
-        checker.add_edge_with_path(
-            &mut edges,
-            EdgeType::DeletedManifestMappingToRootDeletedManifest,
-            || Node::DeletedManifest(*root_manifest_id.deleted_manifest_id()),
-            || Some(WrappedPath::Root),
-        );
-        Ok(StepOutput::Done(
-            checker.step_data(NodeType::DeletedManifestMapping, || {
-                NodeData::DeletedManifestMapping(Some(*root_manifest_id.deleted_manifest_id()))
-            }),
-            edges,
-        ))
-    } else {
-        Ok(StepOutput::Done(
-            checker.step_data(NodeType::DeletedManifestMapping, || {
-                NodeData::DeletedManifestMapping(None)
-            }),
-            vec![],
-        ))
-    }
-}
-
 async fn deleted_manifest_v2_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -2130,12 +2039,6 @@ where
         }
         Node::ChangesetInfoMapping(bcs_id) => {
             bonsai_changeset_info_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
-        }
-        Node::DeletedManifest(id) => {
-            deleted_manifest_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await
-        }
-        Node::DeletedManifestMapping(bcs_id) => {
-            deleted_manifest_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
         Node::DeletedManifestV2(id) => {
             deleted_manifest_v2_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await

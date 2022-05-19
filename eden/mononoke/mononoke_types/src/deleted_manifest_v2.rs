@@ -21,6 +21,74 @@ use crate::thrift;
 use crate::typed_hash::{BlobstoreKey, ChangesetId, DeletedManifestV2Context, DeletedManifestV2Id};
 use crate::MPathElement;
 
+/// Deleted Files Manifest is a data structure that tracks deleted files and commits where they
+/// were deleted. This manifest was designed in addition to Unodes to make following file history
+/// across deletions possible.
+///
+/// Both directories and files are represented by the same data structure, which consists of:
+/// * optional<linknode>: if set, a changeset where this path was deleted
+/// * subentries: a map from base name to the deleted files manifest for this path
+/// Even though the manifest tracks only deleted paths, it will still have entries for the
+/// existing directories where files were deleted. Optional field `linknode` indicates whether the
+/// path still exists (not set) or it was deleted.
+///
+/// Q&A
+///
+/// Why the manifest has same data structure for files and directories?
+///
+/// Deleted files manifest doesn't differ files from directories, because any file path can be
+/// reincarnated after the deletion as a directory and vice versa. The manifest doesn't need
+/// to know whether the path is a directory or a file, the only important information is "if the
+/// path was deleted, which changeset did it?"
+///
+/// Why we don't keep a path_hash even though it provides uniqueness of entries?
+///
+/// The deleted manifest entry doesn't have a path_hash, that means the entries are identical
+/// for different files deleted in the same commit. This is fine as soon as we don't care about the
+/// the uniqueness, but about the fact that the files were deleted. So directory entry will have
+/// links to the same entry for different deleted files.
+/// However, if one of such files is recreated as a directory, we anyway create a new entry for it:
+/// manifest entries are immutable.
+///
+/// How we derive deleted files manifest?
+///
+/// Assuming we have a computed deleted files manifests for all the current commits, for a new
+/// changeset:
+/// 1. For each deleted file create a new manifest entry with a linknode to the changeset, where
+/// file was deleted.
+/// 2. For each recreated file remove this file from the manifest.
+/// 3. Remove directory manifest if it still exists and don’t have deleted children anymore.
+/// 4. Create new manifest nodes recursively.
+/// 5. Finalize the conversion by recording the mapping from changeset id to the root deleted
+/// files manifest hash.
+///
+/// Where does point a linknode for a file that was markes as deleted in a merge commit?
+///
+/// Linknode will point to the merge commit itself, if the file deletion was made in some of the
+/// parents and was accepted in merge commit.
+///
+/// How do we perform tracking file history across deletions?
+///
+/// Assume we have a commit graph, where:
+/// * - file was deleted
+/// o - file exists
+///
+///   o A
+///   |
+///   * B
+///  / \
+/// *   * C
+/// |   |
+/// : D o E
+/// |   |
+/// o F :
+///
+/// 1. Check deleted files manifest from node B: the file was deleted with linknode to B.
+/// 2. Need to consider all ancestors of B:
+///    * check unodes for the parents: if the file exists,
+///        traverse the history
+///    * if not, check the deleted manifest whether the file
+///        existed and was deleted
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct DeletedManifestV2 {
     linknode: Option<ChangesetId>,

@@ -26,8 +26,8 @@ use futures::future::TryFutureExt;
 use itertools::Itertools;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{
-    ChangesetId, ContentId, DeletedManifestId, DeletedManifestV2Id, FastlogBatchId, FileUnodeId,
-    FsnodeId, ManifestUnodeId, SkeletonManifestId,
+    ChangesetId, ContentId, DeletedManifestV2Id, FastlogBatchId, FileUnodeId, FsnodeId,
+    ManifestUnodeId, SkeletonManifestId,
 };
 use phases::{Phase, Phases};
 use slog::{info, Logger};
@@ -202,8 +202,6 @@ pub struct WalkState {
     visited_blame: StateMap<InternedId<FileUnodeId>>,
     visited_changeset_info: StateMap<InternedId<ChangesetId>>,
     visited_changeset_info_mapping: StateMap<InternedId<ChangesetId>>,
-    visited_deleted_manifest: StateMap<DeletedManifestId>,
-    visited_deleted_manifest_mapping: StateMap<InternedId<ChangesetId>>,
     visited_deleted_manifest_v2: StateMap<DeletedManifestV2Id>,
     visited_deleted_manifest_v2_mapping: StateMap<InternedId<ChangesetId>>,
     visited_fastlog_batch: StateMap<FastlogBatchId>,
@@ -265,8 +263,6 @@ impl WalkState {
             visited_blame: StateMap::with_hasher(fac.clone()),
             visited_changeset_info: StateMap::with_hasher(fac.clone()),
             visited_changeset_info_mapping: StateMap::with_hasher(fac.clone()),
-            visited_deleted_manifest: StateMap::with_hasher(fac.clone()),
-            visited_deleted_manifest_mapping: StateMap::with_hasher(fac.clone()),
             visited_deleted_manifest_v2: StateMap::with_hasher(fac.clone()),
             visited_deleted_manifest_v2_mapping: StateMap::with_hasher(fac.clone()),
             visited_fastlog_batch: StateMap::with_hasher(fac.clone()),
@@ -347,12 +343,6 @@ impl WalkState {
             (Node::ChangesetInfoMapping(bcs_id), Some(_)) => {
                 self.record(
                     &self.visited_changeset_info_mapping,
-                    &self.bcs_ids.interned(bcs_id),
-                );
-            }
-            (Node::DeletedManifestMapping(bcs_id), Some(_)) => {
-                self.record(
-                    &self.visited_deleted_manifest_mapping,
                     &self.bcs_ids.interned(bcs_id),
                 );
             }
@@ -469,8 +459,6 @@ impl WalkState {
             NodeType::Blame => self.visited_blame.clear(),
             NodeType::ChangesetInfo => self.visited_changeset_info.clear(),
             NodeType::ChangesetInfoMapping => self.visited_changeset_info_mapping.clear(),
-            NodeType::DeletedManifest => self.visited_deleted_manifest.clear(),
-            NodeType::DeletedManifestMapping => self.visited_deleted_manifest_mapping.clear(),
             NodeType::DeletedManifestV2 => self.visited_deleted_manifest_v2.clear(),
             NodeType::DeletedManifestV2Mapping => self.visited_deleted_manifest_v2_mapping.clear(),
             NodeType::FastlogBatch => self.visited_fastlog_batch.clear(),
@@ -594,15 +582,6 @@ impl WalkState {
             (Node::ChangesetInfoMapping(bcs_id), _) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_changeset_info_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
-                } else {
-                    true
-                }
-            }
-            (Node::DeletedManifest(_), true) => true,
-            (Node::DeletedManifest(id), false) => self.record(&self.visited_deleted_manifest, &id),
-            (Node::DeletedManifestMapping(bcs_id), _) => {
-                if let Some(id) = self.bcs_ids.get(bcs_id) {
-                    !self.visited_deleted_manifest_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
                 } else {
                     true
                 }

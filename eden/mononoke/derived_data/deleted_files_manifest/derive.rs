@@ -730,49 +730,15 @@ mod test {
     use maplit::btreemap;
     use memblob::Memblob;
     use mononoke_types::{
-        deleted_files_manifest::DeletedManifest, deleted_manifest_v2::DeletedManifestV2,
-        hash::Blake2, DeletedManifestId, DeletedManifestV2Id,
+        deleted_manifest_v2::DeletedManifestV2, hash::Blake2, DeletedManifestV2Id,
     };
     use pretty_assertions::assert_eq;
 
     use PathChange::*;
-
-    type Id = (DeletedManifestId, DeletedManifestV2Id);
+    type Id = DeletedManifestV2Id;
 
     fn csid(x: u8) -> ChangesetId {
         ChangesetId::new(Blake2::from_byte_array([x; 32]))
-    }
-
-    async fn entries<Manifest: DeletedManifestCommon>(
-        mf: Manifest,
-        ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
-    ) -> Result<BTreeMap<MPathElement, Manifest::Id>> {
-        mf.into_subentries(ctx, blobstore).try_collect().await
-    }
-
-    #[async_recursion::async_recursion]
-    async fn assert_equal(
-        ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
-        v1_id: DeletedManifestId,
-        v2_id: DeletedManifestV2Id,
-    ) -> Result<()> {
-        let (v1, v2) = futures::try_join!(v1_id.load(ctx, blobstore), v2_id.load(ctx, blobstore))?;
-        assert_eq!(v1.linknode().as_ref(), v2.linknode());
-        assert_eq!(v1.is_deleted(), v2.is_deleted());
-        let (v1_entries, mut v2_entries) =
-            futures::try_join!(entries(v1, ctx, blobstore), entries(v2, ctx, blobstore))?;
-        assert_eq!(
-            v1_entries.keys().collect::<Vec<_>>(),
-            v2_entries.keys().collect::<Vec<_>>()
-        );
-        for (name, v1_id) in v1_entries {
-            let v2_id = v2_entries.remove(&name).unwrap();
-            assert_equal(ctx, blobstore, v1_id, v2_id).await?;
-        }
-        assert!(v2_entries.is_empty());
-        Ok(())
     }
 
     async fn assert_derive_stack(
@@ -781,10 +747,6 @@ mod test {
         parent: Option<Id>,
         changes_by_cs: BTreeMap<ChangesetId, BTreeMap<&str, PathChange>>,
     ) -> Result<Id> {
-        let (parent_v1, parent_v2) = match parent {
-            None => (None, None),
-            Some((v1, v2)) => (Some(v1), Some(v2)),
-        };
         let all_changes: Vec<(ChangesetId, Vec<(MPath, PathChange)>)> = changes_by_cs
             .iter()
             .map(|(k, changes)| {
@@ -795,23 +757,17 @@ mod test {
                 Ok((*k, changes))
             })
             .collect::<Result<_>>()?;
-        let v1_stack = DeletedManifestDeriver::<DeletedManifest>::derive_simple_stack(
+        let stack = DeletedManifestDeriver::<DeletedManifestV2>::derive_simple_stack(
             ctx,
             blobstore,
-            parent_v1,
+            parent,
             all_changes.clone(),
-        );
-        let v2_stack = DeletedManifestDeriver::<DeletedManifestV2>::derive_simple_stack(
-            ctx,
-            blobstore,
-            parent_v2,
-            all_changes.clone(),
-        );
-        let (v1_stack, v2_stack) = futures::try_join!(v1_stack, v2_stack)?;
-        let mut parent = parent_v1;
-        let mut v1_single = Vec::with_capacity(changes_by_cs.len());
+        )
+        .await?;
+        let mut parent = parent;
+        let mut single = Vec::with_capacity(changes_by_cs.len());
         for (csid, changes) in all_changes {
-            let node = DeletedManifestDeriver::<DeletedManifest>::derive(
+            let node = DeletedManifestDeriver::<DeletedManifestV2>::derive(
                 ctx,
                 blobstore,
                 csid,
@@ -819,24 +775,12 @@ mod test {
                 PathTree::from_iter(changes.into_iter().map(|(k, v)| (k, Some(v)))),
             )
             .await?;
-            v1_single.push(node);
+            single.push(node);
             parent = Some(node);
         }
-        assert_eq!(v1_stack, v1_single);
-        assert_eq!(v2_stack.len(), v1_single.len());
-        let last_v1 = v1_stack.last().unwrap().clone();
-        let last_v2 = v2_stack.last().unwrap().clone();
-        stream::iter(
-            v1_stack
-                .into_iter()
-                .zip(v2_stack.into_iter())
-                .map(anyhow::Ok),
-        )
-        .try_for_each_concurrent(100, |(v1_id, v2_id)| {
-            assert_equal(ctx, blobstore, v1_id, v2_id)
-        })
-        .await?;
-        Ok((last_v1, last_v2))
+        assert_eq!(stack, single);
+        let last = stack.last().unwrap().clone();
+        Ok(last)
     }
 
     #[fbinit::test]
@@ -917,7 +861,7 @@ mod test {
         let id = derive(None, changes.clone()).await?;
         // DM format shouldn't change easily, let's store it in a test.
         assert_eq!(
-            id.1.blobstore_key(),
+            id.blobstore_key(),
             "deletedmanifest2.blake2.e95435b8be02a31dcc28465f7e9ba5d9eddd67be782f0c900b00b214d39f0395"
         );
         // Let's also try it in two batches and see if it works the same.

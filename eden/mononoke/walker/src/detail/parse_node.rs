@@ -311,23 +311,6 @@ mod tests {
                     .get_type()
                 );
             }
-            NodeType::DeletedManifest => {
-                assert_eq!(
-                    node_type,
-                    &parse_node(&format!("DeletedManifest{}{}", NODE_SEP, SAMPLE_BLAKE2))?
-                        .get_type()
-                );
-            }
-            NodeType::DeletedManifestMapping => {
-                assert_eq!(
-                    node_type,
-                    &parse_node(&format!(
-                        "DeletedManifestMapping{}{}",
-                        NODE_SEP, SAMPLE_BLAKE2
-                    ))?
-                    .get_type()
-                );
-            }
             NodeType::DeletedManifestV2 => {
                 assert_eq!(
                     node_type,

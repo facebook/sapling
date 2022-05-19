@@ -25,7 +25,6 @@ use crate::{
     bonsai_changeset::BonsaiChangeset,
     content_chunk::ContentChunk,
     content_metadata::ContentMetadata,
-    deleted_files_manifest::DeletedManifest,
     deleted_manifest_v2::DeletedManifestV2,
     fastlog_batch::FastlogBatch,
     file_contents::FileContents,
@@ -106,10 +105,6 @@ pub struct FileUnodeId(Blake2);
 /// An identifier for a manifest unode
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct ManifestUnodeId(Blake2);
-
-/// An identifier for a deleted files manifest
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-pub struct DeletedManifestId(Blake2);
 
 /// An identifier for a deleted files manifest v2
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
@@ -501,14 +496,6 @@ impl_typed_hash! {
 }
 
 impl_typed_hash! {
-    hash_type => DeletedManifestId,
-    thrift_hash_type => thrift::DeletedManifestId,
-    value_type => DeletedManifest,
-    context_type => DeletedManifestContext,
-    context_key => "deletedmanifest",
-}
-
-impl_typed_hash! {
     hash_type => DeletedManifestV2Id,
     thrift_hash_type => thrift::DeletedManifestV2Id,
     value_type => DeletedManifestV2,
@@ -678,9 +665,6 @@ mod test {
         let id = ManifestUnodeId::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("manifestunode.blake2.{}", id));
 
-        let id = DeletedManifestId::from_byte_array([1; 32]);
-        assert_eq!(id.blobstore_key(), format!("deletedmanifest.blake2.{}", id));
-
         let id = DeletedManifestV2Id::from_byte_array([1; 32]);
         assert_eq!(
             id.blobstore_key(),
@@ -745,11 +729,6 @@ mod test {
         assert_eq!(id, deserialized);
 
         let id = ManifestUnodeId::from_byte_array([1; 32]);
-        let serialized = serde_json::to_string(&id).unwrap();
-        let deserialized = serde_json::from_str(&serialized).unwrap();
-        assert_eq!(id, deserialized);
-
-        let id = DeletedManifestId::from_byte_array([1; 32]);
         let serialized = serde_json::to_string(&id).unwrap();
         let deserialized = serde_json::from_str(&serialized).unwrap();
         assert_eq!(id, deserialized);

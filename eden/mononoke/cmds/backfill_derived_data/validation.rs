@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, bail, Context, Error};
+use anyhow::{anyhow, Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::{Blobstore, StoreLoadable};
@@ -15,26 +15,22 @@ use cacheblob::MemWritesBlobstore;
 use clap_old::ArgMatches;
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
-use deleted_files_manifest::{
-    RootDeletedManifestId, RootDeletedManifestIdCommon, RootDeletedManifestV2Id,
-};
 use derived_data::BonsaiDerived;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_utils::{derived_data_utils, DerivedUtils, DERIVED_DATA_DEPS};
 use fsnodes::RootFsnodeId;
 use futures::{
     future::{try_join, try_join_all},
-    stream, FutureExt, StreamExt, TryStreamExt,
+    stream, StreamExt, TryStreamExt,
 };
 use manifest::{
     find_intersection_of_diffs, find_intersection_of_diffs_and_parents, Entry, Manifest,
 };
 use mercurial_derived_data::MappedHgChangesetId;
-use mononoke_types::{deleted_manifest_common::DeletedManifestCommon, BlobstoreKey, ChangesetId};
+use mononoke_types::{BlobstoreKey, ChangesetId};
 use readonlyblob::ReadOnlyBlobstore;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::{info, warn};
-use std::collections::HashSet;
 use std::sync::{Arc, Once};
 use unodes::RootUnodeManifestId;
 
@@ -169,8 +165,6 @@ async fn validate_generated_data<'a>(
         validate_unodes(ctx, real_repo, cs_id, &mem_blob).await?;
     } else if real_derived_utils.name() == MappedHgChangesetId::NAME {
         validate_hgchangesets(ctx, real_repo, cs_id, &mem_blob).await?;
-    } else if real_derived_utils.name() == RootDeletedManifestV2Id::NAME {
-        validate_deleted_manifest_v2(ctx, real_repo, cs_id, &mem_blob).await?;
     } else {
         warn_once.call_once(||
             warn!(
@@ -332,103 +326,6 @@ async fn validate_hgchangesets<'a>(
         check_exists(ctx, mem_blob, key).await?;
     }
 
-    Ok(())
-}
-
-/// Validates that the DMv2 has exactly the same structure as the corresponding DMv1.
-/// Only considers newly created nodes.
-async fn validate_deleted_manifest_v2<'a>(
-    ctx: &'a CoreContext,
-    real_repo: &'a BlobRepo,
-    cs_id: ChangesetId,
-    mem_blob: &'a Arc<dyn Blobstore>,
-) -> Result<(), Error> {
-    let blobstore = real_repo.blobstore();
-
-    let (derived_v2, parents_v2) =
-        find_cs_and_parents_derived_data::<RootDeletedManifestV2Id>(ctx, real_repo, cs_id).await?;
-    let (derived_v1, _parents_v1) =
-        find_cs_and_parents_derived_data::<RootDeletedManifestId>(ctx, real_repo, cs_id).await?;
-
-    if parents_v2 == [derived_v2] {
-        // DMv2 didn't change at all
-        return Ok(());
-    }
-
-    bounded_traversal::bounded_traversal(
-        100,
-        (
-            *derived_v2.id(),
-            *derived_v1.id(),
-            parents_v2
-                .into_iter()
-                .map(|root| *root.id())
-                .collect::<HashSet<_>>(),
-        ),
-        |(dm_v2, dm_v1, parents_v2)| {
-            async move {
-                check_exists(ctx, mem_blob, dm_v2.blobstore_key()).await?;
-                let (dm_v1, dm_v2, parents_v2) = futures::try_join!(
-                    dm_v1.load(ctx, blobstore),
-                    dm_v2.load(ctx, blobstore),
-                    try_join_all(parents_v2.iter().map(|id| id.load(ctx, blobstore)))
-                )?;
-                if *dm_v1.linknode() != dm_v2.linknode().cloned() {
-                    bail!("V1 and V2 have different linknode")
-                }
-                let v1_entries = dm_v1.into_subentries().collect::<Vec<_>>();
-                let v2_entries = dm_v2
-                    .into_subentries(ctx, blobstore)
-                    .try_collect::<Vec<_>>()
-                    .await?;
-                if v1_entries.len() != v2_entries.len() {
-                    bail!("V1 and V2 maps have different size")
-                }
-                if !v1_entries
-                    .iter()
-                    .zip(v2_entries.iter())
-                    .all(|((v1_k, _), (v2_k, _))| v1_k == v2_k)
-                {
-                    bail!("V1 and V2 with different keys")
-                }
-                let parents_v2 = &parents_v2;
-                let children: Vec<_> = stream::iter(
-                    v1_entries
-                        .into_iter()
-                        .zip(v2_entries.into_iter())
-                        .map(|((path, v1_id), (_, v2_id))| async move {
-                            let parents_v2: HashSet<_> = stream::iter(
-                                parents_v2
-                                    .iter()
-                                    .map(|p| p.lookup(ctx, blobstore, &path))
-                                    // prevent compiler bug
-                                    .collect::<Vec<_>>(),
-                            )
-                            .buffer_unordered(10)
-                            .try_filter_map(|x| async move { anyhow::Ok(x) })
-                            .try_collect()
-                            .await?;
-                            if parents_v2.len() == 1 && *parents_v2.iter().next().unwrap() == v2_id
-                            {
-                                Ok(None)
-                            } else {
-                                Ok(Some((v2_id, v1_id, parents_v2)))
-                            }
-                        })
-                        // prevent compiler bug
-                        .collect::<Vec<_>>(),
-                )
-                .buffer_unordered(100)
-                .try_filter_map(|x| async move { anyhow::Ok(x) })
-                .try_collect()
-                .await?;
-                Ok(((), children))
-            }
-            .boxed()
-        },
-        |_, _| async move { anyhow::Ok(()) }.boxed(),
-    )
-    .await?;
     Ok(())
 }
 
