@@ -5,9 +5,4 @@
  * GNU General Public License version 2.
  */
 
-pub mod edenfs;
-pub mod filesystem;
-pub mod sparse;
-pub mod status;
-pub mod walker;
-pub mod watchman;
+mod state;
