@@ -902,7 +902,7 @@ mod test {
         [[fbsource.allow_rules.regions]]
         roots = ["1111111111111111111111111111111111111111111111111111111111111111"]
         heads = []
-        path_prefixes = ["test/prefix"]
+        path_prefixes = ["test/prefix", ""]
         "#;
 
         let paths = btreemap! {
@@ -1145,7 +1145,7 @@ mod test {
                         regions: vec![AclRegion {
                             roots: vec![ONES_CSID],
                             heads: vec![],
-                            path_prefixes: vec![MPath::new("test/prefix").unwrap()],
+                            path_prefixes: vec![Some(MPath::new("test/prefix").unwrap()), None],
                         }],
                         hipster_acl: "acl_test".to_string(),
                     }],

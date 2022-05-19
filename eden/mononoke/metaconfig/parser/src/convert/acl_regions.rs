@@ -32,7 +32,7 @@ impl Convert for RawAclRegion {
             path_prefixes: self
                 .path_prefixes
                 .into_iter()
-                .map(|b| MPath::try_from(&*b))
+                .map(|b| MPath::new_opt(&*b))
                 .collect::<Result<Vec<_>>>()?,
         })
     }

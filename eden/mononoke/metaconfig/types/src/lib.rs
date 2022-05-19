@@ -1629,7 +1629,7 @@ pub struct AclRegion {
 
     /// List of path prefixes that apply to this region.  Prefixes are in terms of
     /// path elements, so the prefix a/b applies to a/b/c but not a/bb.
-    pub path_prefixes: Vec<MPath>,
+    pub path_prefixes: Vec<Option<MPath>>,
 }
 
 /// ACL region rule consisting of multiple regions and path prefixes
