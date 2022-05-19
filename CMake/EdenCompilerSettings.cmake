@@ -5,5 +5,5 @@
 
 if (NOT WIN32)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-completeness")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -latomic")
+  link_libraries(atomic)
 endif()
