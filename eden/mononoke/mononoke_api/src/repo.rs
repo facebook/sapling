@@ -12,6 +12,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use acl_regions::build_disabled_acl_regions;
 use anyhow::{format_err, Error};
 use blobrepo::{AsBlobRepo, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
@@ -338,6 +339,7 @@ impl Repo {
                     .unwrap_or_else(|| Arc::new(TestLiveCommitSyncConfig::new_empty())),
                 Arc::new(InProcessLease::new()),
             )),
+            acl_regions: build_disabled_acl_regions(),
         };
 
         let config = RepoConfig {

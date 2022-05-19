@@ -14,6 +14,7 @@ use std::hash::Hash;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 
+use acl_regions::{build_acl_regions, ArcAclRegions};
 use anyhow::{Context, Result};
 use async_once_cell::AsyncOnceCell;
 use blobstore::{Blobstore, BlobstoreEnumerableWithUnlink};
@@ -1035,6 +1036,19 @@ impl RepoFactory {
                 .context(RepoFactoryError::MutableCounters)?
                 .build(repo_identity.id()),
         ))
+    }
+
+    pub fn acl_regions(
+        &self,
+        repo_config: &ArcRepoConfig,
+        skiplist_index: &ArcSkiplistIndex,
+        changeset_fetcher: &ArcChangesetFetcher,
+    ) -> ArcAclRegions {
+        build_acl_regions(
+            repo_config.acl_region_config.as_ref(),
+            skiplist_index.clone(),
+            changeset_fetcher.clone(),
+        )
     }
 }
 

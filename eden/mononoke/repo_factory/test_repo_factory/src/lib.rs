@@ -10,6 +10,7 @@
 
 use std::sync::Arc;
 
+use acl_regions::{build_acl_regions, ArcAclRegions};
 use anyhow::Result;
 use blame::BlameRoot;
 use blobstore::Blobstore;
@@ -515,5 +516,19 @@ impl TestRepoFactory {
             SqlMutableCountersBuilder::from_sql_connections(self.metadata_db.clone().into())
                 .build(repo_identity.id()),
         ))
+    }
+
+    /// ACL regions
+    pub fn acl_regions(
+        &self,
+        repo_config: &ArcRepoConfig,
+        skiplist_index: &ArcSkiplistIndex,
+        changeset_fetcher: &ArcChangesetFetcher,
+    ) -> ArcAclRegions {
+        build_acl_regions(
+            repo_config.acl_region_config.as_ref(),
+            skiplist_index.clone(),
+            changeset_fetcher.clone(),
+        )
     }
 }

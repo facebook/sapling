@@ -157,7 +157,7 @@ impl NodeFrontier {
 
 /// Trait for any method of supporting reachability queries
 #[async_trait]
-pub trait ReachabilityIndex {
+pub trait ReachabilityIndex: Send + Sync {
     /// Return a Future for whether the src node can reach the dst node
     async fn query_reachability(
         &self,

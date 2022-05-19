@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use acl_regions::AclRegions;
 use blobrepo::{AsBlobRepo, BlobRepo};
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
@@ -65,6 +66,9 @@ pub struct InnerRepo {
 
     #[facet]
     pub repo_cross_repo: RepoCrossRepo,
+
+    #[facet]
+    pub acl_regions: dyn AclRegions,
 }
 
 impl AsBlobRepo for InnerRepo {

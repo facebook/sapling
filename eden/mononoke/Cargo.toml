@@ -158,6 +158,7 @@ windows-sys = { git = "https://github.com/fanzeyi/windows-rs", rev = "8775afca5d
 [workspace]
 members = [
   ".",
+  "acl_regions",
   "admin",
   "aliasverify",
   "alpn",
