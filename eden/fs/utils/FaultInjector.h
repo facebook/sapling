@@ -8,6 +8,7 @@
 #pragma once
 
 #include <boost/regex.hpp>
+#include <folly/String.h>
 #include <folly/Synchronized.h>
 #include <folly/container/F14Map.h>
 #include <folly/futures/Future.h>
@@ -94,6 +95,35 @@ class FaultInjector {
       folly::StringPiece keyValue) {
     if (UNLIKELY(enabled_)) {
       return checkAsyncImpl(keyClass, keyValue);
+    }
+    return folly::makeSemiFuture();
+  }
+
+  /**
+   * Check a fault, using a dynamically constructed key.
+   *
+   * This helper method checks for a fault using multiple arguments to construct
+   * the key value.  The value arguments are converted to strings using
+   * folly::to<std::string>(), then joined together with ", " between each
+   * argument.  e.g., calling check("myFault", "foo", "bar") will use "foo, bar"
+   * as the key.
+   *
+   * This string construction is only done if fault injection is enabled,
+   * and so has no extra overhead if fault injection is disabled.
+   */
+  template <typename... Args>
+  void check(folly::StringPiece keyClass, Args&&... args) {
+    if (UNLIKELY(enabled_)) {
+      checkImpl(keyClass, constructKey(std::forward<Args>(args)...));
+    }
+  }
+  template <typename... Args>
+  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> checkAsync(
+      folly::StringPiece keyClass,
+      Args&&... args) {
+    if (UNLIKELY(enabled_)) {
+      return checkAsyncImpl(
+          keyClass, constructKey(std::forward<Args>(args)...));
     }
     return folly::makeSemiFuture();
   }
@@ -227,6 +257,11 @@ class FaultInjector {
     // A map from key class -> BlockedChecks
     folly::F14NodeMap<std::string, std::vector<BlockedCheck>> blockedChecks;
   };
+
+  template <typename... Args>
+  std::string constructKey(Args&&... args) {
+    return folly::join(", ", {folly::to<std::string>(args)...});
+  }
 
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> checkAsyncImpl(
       folly::StringPiece keyClass,

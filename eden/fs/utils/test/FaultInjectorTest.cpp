@@ -151,3 +151,18 @@ TEST(FaultInjector, noop) {
   fi.check("mount", "/a/b/c");
   EXPECT_THROW_RE(fi.check("mount", "/test/test"), std::runtime_error, "fail");
 }
+
+TEST(FaultInjector, joinedKey) {
+  FaultInjector fi(true);
+  fi.check("my_fault", "foo", "bar");
+  fi.checkAsync("my_fault", "foo", "bar").get();
+
+  fi.injectError("my_fault", "foo, bar", std::logic_error("1 + 1 = 3"));
+  EXPECT_THROW_RE(
+      fi.check("my_fault", "foo", "bar"), std::logic_error, R"(1 \+ 1 = 3)");
+  auto future = fi.checkAsync("my_fault", "foo", "bar");
+  EXPECT_THROW_RE(std::move(future).get(), std::logic_error, R"(1 \+ 1 = 3)");
+  fi.check("my_fault", "foo", "baz");
+  fi.checkAsync("my_fault", "foo", "baz").get();
+  fi.check("my_fault", "bar", "foo");
+}
