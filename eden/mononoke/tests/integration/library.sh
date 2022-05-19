@@ -1309,7 +1309,10 @@ function lfs_server {
         --tls-ticket-seeds "$TEST_CERTDIR/server.pem.seeds"
       )
       shift
-    elif [[ "$1" = "--always-wait-for-upstream" ]]; then
+    elif
+      [[ "$1" = "--always-wait-for-upstream" ]] ||
+      [[ "$1" = "--git-blob-upload-allowed" ]]
+    then
       opts=("${opts[@]}" "$1")
       shift
     elif

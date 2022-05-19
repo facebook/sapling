@@ -20,7 +20,7 @@
 
 # Start a LFS server for this repository (no upstream)
   $ lfs_log="$TESTTMP/lfs.log"
-  $ lfs_uri="$(lfs_server --tls --log "$lfs_log")/git_test/git_blob_upload/${BLOB_OID}/${BLOB_SIZE}"
+  $ lfs_uri="$(lfs_server --tls --log "$lfs_log"  --git-blob-upload-allowed)/git_blob_upload/git_test/${BLOB_OID}/${BLOB_SIZE}"
 
 # Confirm blobstore is empty
   $ sqlite3 "$TESTTMP/blobstore_git_test/blobs/shard_0.sqlite" "SELECT id, chunk_count FROM data ORDER BY id;"
