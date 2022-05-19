@@ -22,28 +22,72 @@ namespace facebook::eden {
  *
  * This allows external test code to inject delay or failures into specific
  * locations in the program.
+ *
+ * To use this class, add calls to FaultInjector::check() in your code anywhere
+ * that you would like to be able to inject faults during testing.  During
+ * normal production use these calls do nothing, and immediately return.
+ * However, during tests this allows faults to be injected, causing any call to
+ * FaultInjector::check() to potentially throw an exception, trigger a delay, or
+ * wait until it is explicitly unblocked.  This allows exercising error handling
+ * code that is otherwise difficult to trigger reliably.  This also allows
+ * forcing specific ordering of events, in order to ensure that you can test
+ * specific code paths.
  */
 class FaultInjector {
  public:
+  /**
+   * Create a new FaultInjector.
+   *
+   * If `enabled` is false, all fault injector checks become no-ops with minimal
+   * runtime overhead.  If `enabled` is true then fault injector checks are
+   * evaluated, allowing exceptions or delays to be injected into the code at
+   * any check.
+   *
+   * The normal expected use is for most programs to have a single FaultInjector
+   * object, with the `enabled` setting controlled via a command line flag or
+   * some other configuration read at program start-up.  During normal
+   * production use `enabled` is false, allowing all fault checks to be quickly
+   * skipped with minimal overhead.  During unit tests and integration tests the
+   * `enabled` flag can be turned on, allowing faults to be injected in the code
+   * during testing.
+   */
   explicit FaultInjector(bool enabled);
   ~FaultInjector();
 
   /**
    * Check for an injected fault with the specified key.
    *
-   * If fault injection is disabled or if no fault matching this key has been
-   * injected this returns a SemiFuture that is immediately ready.
+   * If fault injection is disabled or if there is no matching fault for this
+   * (keyClass, keyValue) tuple, then this function returns immediately without
+   * doing anything.
    *
-   * If a fault matching this key has been injected this may return a future
-   * that blocks until some later point, and/or that may fail with an
-   * artificially injected error.
+   * However, if fault injection is enabled and a fault has been injected
+   * matching the arguments this method may throw an exception or block for some
+   * amount of time before returning (or throwing).
    *
-   * The main reason for having keyClass and keyValue as 2 separate string
-   * parameters is that this often allows us to avoid having to perform string
-   * allocation when checking for faults.  For many faults the keyClass will be
-   * a fixed string literal, while the keyValue will be some runtime-specified
-   * string.  If we accepted only a single key parameter these two strings would
-   * need to be joined at runtime when checking for faults.
+   * Faults are identified by a (class, value) tuple.  In practice, the class
+   * name is usually a fixed string literal that identifies the type of fault or
+   * the location in the code where the fault is being checked.  The value
+   * string may contain some additional runtime-specified value to filter the
+   * fault to only trigger when this code path is hit with specific arguments.
+   */
+  void check(folly::StringPiece keyClass, folly::StringPiece keyValue) {
+    if (UNLIKELY(enabled_)) {
+      return checkImpl(keyClass, keyValue);
+    }
+  }
+
+  /**
+   * Check for an injected fault with the specified key.
+   *
+   * This is an async-aware implementation of check() that returns a SemiFuture.
+   * This can also be used in coroutine contexts, since SemiFuture objects can
+   * be co_await'ed.
+   *
+   * If fault injection is disabled or there is no matching fault, this method
+   * will return a SemiFuture that is immediately ready.  However, if there is a
+   * matching fault that would block execution this method immediately returns a
+   * SemiFuture that will not be ready until the fault is complete.
    */
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> checkAsync(
       folly::StringPiece keyClass,
@@ -52,21 +96,6 @@ class FaultInjector {
       return checkAsyncImpl(keyClass, keyValue);
     }
     return folly::makeSemiFuture();
-  }
-
-  /**
-   * Check for an injected fault with the specified key.
-   *
-   * This API always returns or throws an exception immediately, and therefore
-   * does not allow faults that block or delay execution.  However, because it
-   * does not use SemiFuture it is lower-overhead for situations where you
-   * simply want the ability to inject an exception in performance-sensitive
-   * code.
-   */
-  void check(folly::StringPiece keyClass, folly::StringPiece keyValue) {
-    if (UNLIKELY(enabled_)) {
-      return checkImpl(keyClass, keyValue);
-    }
   }
 
   /**
