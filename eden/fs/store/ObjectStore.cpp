@@ -40,7 +40,8 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
     shared_ptr<EdenStats> stats,
     std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
-    std::shared_ptr<const EdenConfig> edenConfig) {
+    std::shared_ptr<const EdenConfig> edenConfig,
+    CaseSensitivity caseSensitive) {
   return std::shared_ptr<ObjectStore>{new ObjectStore{
       std::move(localStore),
       std::move(backingStore),
@@ -48,7 +49,8 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
       std::move(stats),
       processNameCache,
       structuredLogger,
-      edenConfig}};
+      edenConfig,
+      caseSensitive}};
 }
 
 ObjectStore::ObjectStore(
@@ -58,7 +60,8 @@ ObjectStore::ObjectStore(
     shared_ptr<EdenStats> stats,
     std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
-    std::shared_ptr<const EdenConfig> edenConfig)
+    std::shared_ptr<const EdenConfig> edenConfig,
+    CaseSensitivity caseSensitive)
     : metadataCache_{folly::in_place, kCacheSize},
       treeCache_{std::move(treeCache)},
       localStore_{std::move(localStore)},
@@ -67,7 +70,8 @@ ObjectStore::ObjectStore(
       pidFetchCounts_{std::make_unique<PidFetchCounts>()},
       processNameCache_(processNameCache),
       structuredLogger_(structuredLogger),
-      edenConfig_(edenConfig) {}
+      edenConfig_(edenConfig),
+      caseSensitive_{caseSensitive} {}
 
 ObjectStore::~ObjectStore() {}
 
@@ -118,12 +122,40 @@ std::string ObjectStore::renderObjectId(const ObjectId& objectId) {
   return backingStore_->renderObjectId(objectId);
 }
 
+namespace {
+/**
+ * The passed in Tree may differ in case sensitivity from the ObjectStore's
+ * case sensitivity. In that case, the Tree is copied and its case sensitivity
+ * is switched.
+ *
+ * In practice, this conversion is extremely rare due to most mounts being
+ * created with the default case sensitivity.
+ *
+ * TODO(xavierd): Is this ugly? Yes, but this will allow incrementally
+ * converting the BackingStore+LocalStore+TreeCache to care about case
+ * sensitivity separately.
+ */
+std::shared_ptr<const Tree> changeCaseSensitivity(
+    std::shared_ptr<const Tree> tree,
+    CaseSensitivity caseSensitive) {
+  if (tree->getCaseSensitivity() == caseSensitive) {
+    return tree;
+  } else {
+    auto treeEntries =
+        Tree::container{tree->cbegin(), tree->cend()}; // Explicit copy.
+    return std::make_shared<const Tree>(
+        std::move(treeEntries), tree->getHash(), caseSensitive);
+  }
+}
+} // namespace
+
 ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getRootTree(
     const RootId& rootId,
     ObjectFetchContext& context) const {
   XLOG(DBG3) << "getRootTree(" << rootId << ")";
   return ImmediateFuture{backingStore_->getRootTree(rootId, context)}.thenValue(
-      [treeCache = treeCache_, rootId](std::shared_ptr<const Tree> tree) {
+      [treeCache = treeCache_, rootId, caseSensitive = caseSensitive_](
+          std::shared_ptr<const Tree> tree) {
         if (!tree) {
           throw std::domain_error(
               folly::to<string>("unable to import root ", rootId));
@@ -131,7 +163,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getRootTree(
 
         treeCache->insert(tree);
 
-        return tree;
+        return changeCaseSensitivity(std::move(tree), caseSensitive);
       });
 }
 
@@ -169,7 +201,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
 
     updateProcessFetch(fetchContext);
 
-    return maybeTree;
+    return changeCaseSensitivity(maybeTree, caseSensitive_);
   }
 
   deprioritizeWhenFetchHeavy(fetchContext);
@@ -189,7 +221,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
         self->treeCache_->insert(sharedTree);
         fetchContext.didFetch(ObjectFetchContext::Tree, id, result.origin);
         self->updateProcessFetch(fetchContext);
-        return sharedTree;
+        return changeCaseSensitivity(sharedTree, self->caseSensitive_);
       });
 }
 

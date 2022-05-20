@@ -82,7 +82,8 @@ class DiffTest : public ::testing::Test {
         std::make_shared<EdenStats>(),
         std::make_shared<ProcessNameCache>(),
         std::make_shared<NullStructuredLogger>(),
-        rawEdenConfig);
+        rawEdenConfig,
+        kPathMapDefaultCaseSensitive);
   }
 
   std::unique_ptr<DiffContext> makeDiffContext(

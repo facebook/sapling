@@ -229,7 +229,8 @@ void TestMount::createMount() {
       stats_,
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
-      edenConfig_);
+      edenConfig_,
+      config_->getCaseSensitive());
   auto journal = std::make_unique<Journal>(stats_);
   edenMount_ = EdenMount::create(
       std::move(config_),
@@ -314,7 +315,8 @@ void TestMount::remount() {
       stats_,
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
-      edenConfig_);
+      edenConfig_,
+      config->getCaseSensitive());
 
   auto journal = std::make_unique<Journal>(stats_);
 
@@ -351,7 +353,8 @@ void TestMount::remountGracefully() {
       stats_,
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
-      edenConfig_);
+      edenConfig_,
+      config->getCaseSensitive());
 
   auto journal = std::make_unique<Journal>(stats_);
 

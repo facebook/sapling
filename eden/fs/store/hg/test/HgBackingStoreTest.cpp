@@ -70,7 +70,8 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
         stats,
         std::make_shared<ProcessNameCache>(),
         std::make_shared<NullStructuredLogger>(),
-        rawEdenConfig);
+        rawEdenConfig,
+        kPathMapDefaultCaseSensitive);
   }
 
   std::shared_ptr<MemoryLocalStore> localStore{

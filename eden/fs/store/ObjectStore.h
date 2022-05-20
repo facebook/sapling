@@ -78,7 +78,8 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<EdenStats> stats,
       std::shared_ptr<ProcessNameCache> processNameCache,
       std::shared_ptr<StructuredLogger> structuredLogger,
-      std::shared_ptr<const EdenConfig> edenConfig);
+      std::shared_ptr<const EdenConfig> edenConfig,
+      CaseSensitivity caseSensitive);
   ~ObjectStore() override;
 
   /**
@@ -243,7 +244,8 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<EdenStats> stats,
       std::shared_ptr<ProcessNameCache> processNameCache,
       std::shared_ptr<StructuredLogger> structuredLogger,
-      std::shared_ptr<const EdenConfig> edenConfig);
+      std::shared_ptr<const EdenConfig> edenConfig,
+      CaseSensitivity caseSensitive);
   // Forbidden copy constructor and assignment operator
   ObjectStore(ObjectStore const&) = delete;
   ObjectStore& operator=(ObjectStore const&) = delete;
@@ -307,6 +309,10 @@ class ObjectStore : public IObjectStore,
   std::shared_ptr<ProcessNameCache> processNameCache_;
   std::shared_ptr<StructuredLogger> structuredLogger_;
   std::shared_ptr<const EdenConfig> edenConfig_;
+
+  // Is this ObjectStore case sensitive? This only matters for methods returning
+  // Tree.
+  CaseSensitivity caseSensitive_;
 };
 
 } // namespace facebook::eden

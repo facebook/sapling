@@ -12,6 +12,7 @@
 #include <vector>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/utils/CaseSensitivity.h"
 
 namespace facebook::eden {
 
@@ -23,8 +24,24 @@ class Tree {
   using container = std::vector<value_type>;
   using const_iterator = container::const_iterator;
 
-  explicit Tree(container&& entries, const ObjectId& hash)
-      : hash_(hash), entries_(std::move(entries)) {}
+  /**
+   * Construct a Tree.
+   *
+   * Temporarily takes a CaseSensitivity argument default initialized. In the
+   * future, once all the callers are updated to pass the correct
+   * CaseSensitivity, the default value will be removed.
+   *
+   * In the case where kPathMapDefaultCaseSensitive is not the same as the
+   * mount case sensitivity, the caller is responsible for constructing a new
+   * Tree with the case sensitivity flipped.
+   */
+  explicit Tree(
+      container&& entries,
+      const ObjectId& hash,
+      CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive)
+      : hash_(hash),
+        entries_(std::move(entries)),
+        caseSensitive_{caseSensitive} {}
 
   const ObjectId& getHash() const {
     return hash_;
@@ -62,6 +79,13 @@ class Tree {
   }
 
   /**
+   * Returns the case sensitivity of this tree.
+   */
+  CaseSensitivity getCaseSensitivity() const {
+    return caseSensitive_;
+  }
+
+  /**
    * Serialize tree using custom format.
    */
   folly::IOBuf serialize() const;
@@ -72,8 +96,8 @@ class Tree {
    *
    * First byte is used to identify serialization format.
    * Git tree starts with 'tree', so we can use any bytes other then 't' as a
-   * version identifier. Currently only V1_VERSION is supported, along with git
-   * tree format.
+   * version identifier. Currently only V1_VERSION is supported, along with
+   * git tree format.
    */
   static std::unique_ptr<Tree> tryDeserialize(
       ObjectId hash,
@@ -84,6 +108,7 @@ class Tree {
 
   ObjectId hash_;
   container entries_;
+  CaseSensitivity caseSensitive_;
 
   static constexpr uint32_t V1_VERSION = 1u;
 };

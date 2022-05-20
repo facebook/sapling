@@ -44,19 +44,19 @@ Tree::const_iterator Tree::find(PathComponentPiece name) const {
         return entry.first < piece;
       });
   if (UNLIKELY(iter == cend() || iter->first != name)) {
-#ifdef _WIN32
-    // On a case insensitive mount, we need to do a case insensitive lookup
-    // for the file and directory names. For performance, we will do a case
-    // sensitive search first which should cover most of the cases and if not
-    // found then do a case sensitive search.
-    const auto& fileName = name.stringPiece();
-    for (iter = cbegin(); iter != cend(); ++iter) {
-      if (iter->first.stringPiece().equals(
-              fileName, folly::AsciiCaseInsensitive())) {
-        return iter;
+    if (caseSensitive_ == CaseSensitivity::Insensitive) {
+      // On a case insensitive mount, we need to do a case insensitive lookup
+      // for the file and directory names. For performance, we will do a case
+      // sensitive search first which should cover most of the cases and if not
+      // found then do a case sensitive search.
+      const auto& fileName = name.stringPiece();
+      for (iter = cbegin(); iter != cend(); ++iter) {
+        if (iter->first.stringPiece().equals(
+                fileName, folly::AsciiCaseInsensitive())) {
+          return iter;
+        }
       }
     }
-#endif
     return cend();
   }
   return iter;

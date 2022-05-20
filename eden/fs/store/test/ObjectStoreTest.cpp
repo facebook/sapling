@@ -50,7 +50,8 @@ struct ObjectStoreTest : ::testing::Test {
         stats,
         std::make_shared<ProcessNameCache>(),
         std::make_shared<NullStructuredLogger>(),
-        EdenConfig::createTestEdenConfig());
+        EdenConfig::createTestEdenConfig(),
+        kPathMapDefaultCaseSensitive);
 
     readyBlobId = putReadyBlob("readyblob");
     readyTreeId = putReadyTree();
@@ -167,7 +168,8 @@ TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
       stats,
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
-      EdenConfig::createTestEdenConfig());
+      EdenConfig::createTestEdenConfig(),
+      kPathMapDefaultCaseSensitive);
 
   size_t expectedSize = data.size();
   size_t size = objectStore->getBlobSize(id, context).get();
