@@ -998,6 +998,10 @@ struct CommitPathBlameParams {
   ///
   /// If not specified, defaults to {INCLUDE_CONTENT}.
   4: optional set<BlameFormatOption> format_options;
+
+  /// Use mutable copy information to identify ancestry, instead of
+  /// using commit parents to identify ancestry
+  5: optional bool follow_mutable_file_history;
 }
 
 /// Parameters for the `commit_path_history` method.

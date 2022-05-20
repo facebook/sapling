@@ -870,7 +870,8 @@ impl RepoContext {
         Ok(self.repo.ephemeral_store().open_bubble(bubble_id).await?)
     }
 
-    async fn changesets(
+    // pub(crate) for testing
+    pub(crate) async fn changesets(
         &self,
         bubble_id: Option<BubbleId>,
     ) -> Result<Arc<dyn Changesets>, MononokeError> {

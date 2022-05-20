@@ -43,8 +43,8 @@ use memblob::Memblob;
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_mutation::{ArcHgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
-    ArcRepoConfig, DerivedDataConfig, DerivedDataTypesConfig, RepoConfig, SegmentedChangelogConfig,
-    SegmentedChangelogHeadConfig, UnodeVersion,
+    ArcRepoConfig, BlameVersion, DerivedDataConfig, DerivedDataTypesConfig, RepoConfig,
+    SegmentedChangelogConfig, SegmentedChangelogHeadConfig, UnodeVersion,
 };
 use mononoke_types::RepositoryId;
 use mutable_counters::{ArcMutableCounters, SqlMutableCountersBuilder};
@@ -112,6 +112,7 @@ pub fn default_test_repo_config() -> RepoConfig {
             RootSkeletonManifestId::NAME.to_string(),
         },
         unode_version: UnodeVersion::V2,
+        blame_version: BlameVersion::V2,
         ..Default::default()
     };
     RepoConfig {

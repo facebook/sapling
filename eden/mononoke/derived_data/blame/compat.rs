@@ -16,6 +16,7 @@ use mononoke_types::blame_v2::{
 };
 use mononoke_types::{ChangesetId, MPath};
 
+#[derive(Clone)]
 pub enum CompatBlame {
     V1(BlameMaybeRejected),
     V2(BlameV2),
