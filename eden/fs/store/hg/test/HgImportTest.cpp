@@ -68,7 +68,7 @@ TEST_F(HgImportTest, importTest) {
   StringPiece barData = "this is a test file\n";
   RelativePathPiece filePath{"foo/bar.txt"};
   repo_.writeFile(filePath, barData);
-  repo_.hg("add");
+  repo_.hg("add", "foo");
   auto commit1 = repo_.commit("Initial commit");
 
   // Import the root tree

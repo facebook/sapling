@@ -50,7 +50,7 @@ struct TestRepo {
     repo.writeFile("foo/bar.txt", "bar\n");
     repo.mkdir("src");
     repo.writeFile("src/hello.txt", "world\n");
-    repo.hg("add");
+    repo.hg("add", "foo", "src");
     commit1 = repo.commit("Initial commit");
     manifest1 = repo.getManifestForCommit(commit1);
   }
