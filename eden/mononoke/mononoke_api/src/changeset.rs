@@ -13,6 +13,7 @@ use anyhow::anyhow;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
+use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use changesets::ChangesetsRef;
 use chrono::{DateTime, FixedOffset};
@@ -1316,6 +1317,7 @@ impl ChangesetContext {
     pub async fn run_hooks(
         &self,
         bookmark: impl AsRef<str>,
+        pushvars: Option<&HashMap<String, Bytes>>,
     ) -> Result<Vec<HookOutcome>, MononokeError> {
         Ok(self
             .repo()
@@ -1324,7 +1326,7 @@ impl ChangesetContext {
                 self.ctx(),
                 vec![self.bonsai_changeset().await?].iter(),
                 &BookmarkName::new(bookmark.as_ref())?,
-                None,
+                pushvars,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )

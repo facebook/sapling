@@ -976,6 +976,8 @@ struct CommitListDescendantBookmarksParams {
 struct CommitRunHooksParams {
   /// Run the same hooks as when landing to bookmark
   1: string bookmark;
+  /// Pushvars used on the push.
+  2: optional map<string, binary> pushvars;
 }
 
 struct CommitPathExistsParams {}

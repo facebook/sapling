@@ -8,6 +8,7 @@
 use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
 
+use bytes::Bytes;
 use context::CoreContext;
 use futures::stream::{self, FuturesOrdered, StreamExt, TryStreamExt};
 use futures::{future, try_join};
@@ -838,7 +839,12 @@ impl SourceControlServiceImpl {
         params: thrift::CommitRunHooksParams,
     ) -> Result<thrift::CommitRunHooksResponse, errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
-        let outcomes = changeset.run_hooks(params.bookmark).await?;
+        let pushvars: Option<HashMap<String, Bytes>> = params
+            .pushvars
+            .map(|p| p.into_iter().map(|(k, v)| (k, Bytes::from(v))).collect());
+        let outcomes = changeset
+            .run_hooks(params.bookmark, pushvars.as_ref())
+            .await?;
         Ok(thrift::CommitRunHooksResponse {
             outcomes: outcomes
                 .into_iter()
