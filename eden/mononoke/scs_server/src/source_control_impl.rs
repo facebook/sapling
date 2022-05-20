@@ -605,6 +605,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitListDescendantBookmarksParams,
         ) -> Result<thrift::CommitListDescendantBookmarksResponse, service::CommitListDescendantBookmarksExn>;
 
+        async fn commit_run_hooks(
+            commit: thrift::CommitSpecifier,
+            params: thrift::CommitRunHooksParams,
+        ) -> Result<thrift::CommitRunHooksResponse, service::CommitRunHooksExn>;
+
         async fn commit_lookup_xrepo(
             commit: thrift::CommitSpecifier,
             params: thrift::CommitLookupXRepoParams,

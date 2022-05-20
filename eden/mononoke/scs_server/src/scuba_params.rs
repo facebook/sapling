@@ -252,6 +252,12 @@ impl AddScubaParams for thrift::CommitListDescendantBookmarksParams {
     }
 }
 
+impl AddScubaParams for thrift::CommitRunHooksParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("bookmark_name", self.bookmark.as_str());
+    }
+}
+
 impl AddScubaParams for thrift::CommitLookupXRepoParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("other_repo", self.other_repo.name.as_str());

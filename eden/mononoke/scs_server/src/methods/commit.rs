@@ -830,6 +830,15 @@ impl SourceControlServiceImpl {
         })
     }
 
+    pub(crate) async fn commit_run_hooks(
+        &self,
+        _ctx: CoreContext,
+        _commit: thrift::CommitSpecifier,
+        _params: thrift::CommitRunHooksParams,
+    ) -> Result<thrift::CommitRunHooksResponse, errors::ServiceError> {
+        Err(errors::internal_error("unimplemented").into())
+    }
+
     /// Do a cross-repo lookup to see if a commit exists under a different hash in another repo
     pub(crate) async fn commit_lookup_xrepo(
         &self,

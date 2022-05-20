@@ -60,6 +60,8 @@ impl AddScubaResponse for thrift::CommitHistoryResponse {}
 
 impl AddScubaResponse for thrift::CommitListDescendantBookmarksResponse {}
 
+impl AddScubaResponse for thrift::CommitRunHooksResponse {}
+
 impl AddScubaResponse for thrift::CommitPathBlameResponse {}
 
 impl AddScubaResponse for thrift::CommitPathHistoryResponse {}

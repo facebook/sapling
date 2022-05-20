@@ -973,6 +973,11 @@ struct CommitListDescendantBookmarksParams {
   5: set<CommitIdentityScheme> identity_schemes;
 }
 
+struct CommitRunHooksParams {
+  /// Run the same hooks as when landing to bookmark
+  1: string bookmark;
+}
+
 struct CommitPathExistsParams {}
 
 struct CommitPathInfoParams {}
@@ -1396,6 +1401,8 @@ struct CommitListDescendantBookmarksResponse {
   2: optional string continue_after;
 }
 
+struct CommitRunHooksResponse {}
+
 struct CommitPathExistsResponse {
   /// Whether anything exists at this path.
   1: bool exists;
@@ -1803,6 +1810,14 @@ service SourceControlService extends fb303_core.BaseService {
     1: CommitSpecifier commit,
     2: CommitListDescendantBookmarksParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
+  /// Run hooks for a commit without landing it. Useful for getting early signal.
+  /// It is NOT guaranteed that a push will succeed if all hooks pass,
+  /// as things other than hooks can fail - e.g. rebase failures.
+  CommitRunHooksResponse commit_run_hooks(
+    1: CommitSpecifier commit,
+    2: CommitRunHooksParams params,
+  ) throws (1: RequestError request_error, 2: InternalError interal_error);
 
   /// CommitPath methods
   /// ==============
