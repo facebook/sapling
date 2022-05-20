@@ -173,7 +173,6 @@ class FakeBackingStore final : public BackingStore {
 
   static Tree::container buildTreeEntries(
       const std::initializer_list<TreeEntryData>& entryArgs);
-  static void sortTreeEntries(Tree::container& entries);
   static ObjectId computeTreeHash(const Tree::container& sortedEntries);
   StoredTree* putTreeImpl(ObjectId hash, Tree::container&& sortedEntries);
   std::pair<StoredTree*, bool> maybePutTreeImpl(

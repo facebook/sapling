@@ -227,13 +227,11 @@ StoredTree* FakeBackingStore::putTree(
 }
 
 StoredTree* FakeBackingStore::putTree(Tree::container entries) {
-  sortTreeEntries(entries);
   auto hash = computeTreeHash(entries);
   return putTreeImpl(hash, std::move(entries));
 }
 
 StoredTree* FakeBackingStore::putTree(ObjectId hash, Tree::container entries) {
-  sortTreeEntries(entries);
   return putTreeImpl(hash, std::move(entries));
 }
 
@@ -244,27 +242,18 @@ std::pair<StoredTree*, bool> FakeBackingStore::maybePutTree(
 
 std::pair<StoredTree*, bool> FakeBackingStore::maybePutTree(
     Tree::container entries) {
-  sortTreeEntries(entries);
   auto hash = computeTreeHash(entries);
   return maybePutTreeImpl(hash, std::move(entries));
 }
 
 Tree::container FakeBackingStore::buildTreeEntries(
     const std::initializer_list<TreeEntryData>& entryArgs) {
-  Tree::container entries;
+  Tree::container entries{kPathMapDefaultCaseSensitive};
   for (const auto& arg : entryArgs) {
-    entries.push_back(arg.entry);
+    entries.insert(arg.entry);
   }
 
-  sortTreeEntries(entries);
   return entries;
-}
-
-void FakeBackingStore::sortTreeEntries(Tree::container& entries) {
-  auto cmpEntry = [](const Tree::value_type& a, const Tree::value_type& b) {
-    return a.first < b.first;
-  };
-  std::sort(entries.begin(), entries.end(), cmpEntry);
 }
 
 ObjectId FakeBackingStore::computeTreeHash(

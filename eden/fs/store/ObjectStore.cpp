@@ -141,10 +141,10 @@ std::shared_ptr<const Tree> changeCaseSensitivity(
   if (tree->getCaseSensitivity() == caseSensitive) {
     return tree;
   } else {
-    auto treeEntries =
-        Tree::container{tree->cbegin(), tree->cend()}; // Explicit copy.
+    auto treeEntries = Tree::container{
+        tree->cbegin(), tree->cend(), caseSensitive}; // Explicit copy.
     return std::make_shared<const Tree>(
-        std::move(treeEntries), tree->getHash(), caseSensitive);
+        std::move(treeEntries), tree->getHash());
   }
 }
 } // namespace

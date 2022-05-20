@@ -257,7 +257,8 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
   // This isn't actually present in the mercurial data store; it has to be
   // handled specially in the code.
   if (path.empty() && manifestNode == kZeroHash) {
-    auto tree = make_unique<Tree>(Tree::container{}, edenTreeID);
+    auto tree = make_unique<Tree>(
+        Tree::container{kPathMapDefaultCaseSensitive}, edenTreeID);
     return makeFuture(std::move(tree));
   }
 
@@ -463,7 +464,7 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
     RelativePathPiece path,
     LocalStore::WriteBatch* writeBatch) {
   auto manifest = Manifest(std::move(content));
-  Tree::container entries;
+  Tree::container entries{kPathMapDefaultCaseSensitive};
   auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
 
   for (auto& entry : manifest) {
@@ -478,8 +479,7 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
         (hgObjectIdFormat != HgObjectIdFormat::ProxyHash) ? nullptr
                                                           : writeBatch);
 
-    auto treeEntry = TreeEntry{proxyHash, entry.type};
-    entries.emplace_back(std::move(entry.name), std::move(treeEntry));
+    entries.emplace(entry.name, proxyHash, entry.type);
   }
 
   writeBatch->flush();

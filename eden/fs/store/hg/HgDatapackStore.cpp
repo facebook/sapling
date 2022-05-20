@@ -74,13 +74,13 @@ std::unique_ptr<Tree> fromRawTree(
     RelativePathPiece path,
     HgObjectIdFormat hgObjectIdFormat,
     LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch) {
-  Tree::container entries;
+  Tree::container entries{kPathMapDefaultCaseSensitive};
 
   for (uintptr_t i = 0; i < tree->length; i++) {
     try {
       auto entry = fromRawTreeEntry(
           tree->entries[i], path, hgObjectIdFormat, writeBatch);
-      entries.push_back(std::move(entry));
+      entries.emplace(entry.first, std::move(entry.second));
     } catch (const PathComponentContainsDirectorySeparator& ex) {
       XLOG(WARN) << "Ignoring directory entry: " << ex.what();
     }

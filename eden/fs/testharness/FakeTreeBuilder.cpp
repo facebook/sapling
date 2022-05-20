@@ -283,7 +283,7 @@ StoredTree* FakeTreeBuilder::EntryInfo::finalizeTree(
     bool setReady) const {
   XCHECK(type == TreeEntryType::TREE);
 
-  Tree::container treeEntries;
+  Tree::container treeEntries{kPathMapDefaultCaseSensitive};
   for (const auto& e : *entries) {
     const auto& entryInfo = e.second;
     ObjectId hash;
@@ -294,7 +294,7 @@ StoredTree* FakeTreeBuilder::EntryInfo::finalizeTree(
       auto* storedBlob = entryInfo.finalizeBlob(builder, setReady);
       hash = storedBlob->get().getHash();
     }
-    treeEntries.emplace_back(e.first, TreeEntry{hash, entryInfo.type});
+    treeEntries.emplace(e.first, hash, entryInfo.type);
   }
 
   auto* storedTree = builder->store_->maybePutTree(treeEntries).first;

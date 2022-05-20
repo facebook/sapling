@@ -685,15 +685,15 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
             ->getTreeEntryForRootId(
                 rootId, toEdenTreeEntryType(objectType), ctx->getFetchContext())
             .thenValue(
-                [name = PathComponent{path.basename()}](
-                    std::shared_ptr<TreeEntry> treeEntry)
-                    -> std::shared_ptr<const Tree> {
+                [name = PathComponent{path.basename()},
+                 caseSensitive = getCheckoutConfig()->getCaseSensitive()](
+                    std::shared_ptr<TreeEntry> treeEntry) {
                   // Make up a fake ObjectId for this tree.
                   // WARNING: This is dangerous -- this ObjectId cannot be used
                   // to look up this synthesized tree from the BackingStore.
                   ObjectId fakeObjectId{};
-                  Tree::container treeEntries;
-                  treeEntries.emplace_back(name, *treeEntry);
+                  Tree::container treeEntries{caseSensitive};
+                  treeEntries.emplace(name, std::move(*treeEntry));
                   return std::make_shared<const Tree>(
                       std::move(treeEntries), fakeObjectId);
                 });

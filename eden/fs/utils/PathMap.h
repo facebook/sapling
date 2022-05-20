@@ -136,6 +136,7 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
 
   // inherit these methods from the underlying vector.
   using Vector::begin;
+  using Vector::capacity;
   using Vector::cbegin;
   using Vector::cend;
   using Vector::clear;
@@ -147,6 +148,7 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   using Vector::max_size;
   using Vector::rbegin;
   using Vector::rend;
+  using Vector::reserve;
   using Vector::size;
 
   // Swap contents with another map.
@@ -334,6 +336,10 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   size_type count(Piece key) const {
     auto iter = find(key);
     return iter != end();
+  }
+
+  CaseSensitivity getCaseSensitivity() const {
+    return caseSensitive_;
   }
 
   /// Equality operator.

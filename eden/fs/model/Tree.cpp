@@ -35,33 +35,6 @@ size_t Tree::getSizeBytes() const {
   return internal_size + indirect_size;
 }
 
-Tree::const_iterator Tree::find(PathComponentPiece name) const {
-  auto iter = std::lower_bound(
-      cbegin(),
-      cend(),
-      name,
-      [](const Tree::value_type& entry, PathComponentPiece piece) {
-        return entry.first < piece;
-      });
-  if (UNLIKELY(iter == cend() || iter->first != name)) {
-    if (caseSensitive_ == CaseSensitivity::Insensitive) {
-      // On a case insensitive mount, we need to do a case insensitive lookup
-      // for the file and directory names. For performance, we will do a case
-      // sensitive search first which should cover most of the cases and if not
-      // found then do a case sensitive search.
-      const auto& fileName = name.stringPiece();
-      for (iter = cbegin(); iter != cend(); ++iter) {
-        if (iter->first.stringPiece().equals(
-                fileName, folly::AsciiCaseInsensitive())) {
-          return iter;
-        }
-      }
-    }
-    return cend();
-  }
-  return iter;
-}
-
 IOBuf Tree::serialize() const {
   size_t serialized_size = sizeof(uint32_t) + sizeof(uint32_t);
   for (auto& entry : entries_) {
@@ -103,14 +76,14 @@ std::unique_ptr<Tree> Tree::tryDeserialize(
   memcpy(&num_entries, data.data(), sizeof(uint32_t));
   data.advance(sizeof(uint32_t));
 
-  Tree::container entries;
+  Tree::container entries{kPathMapDefaultCaseSensitive};
   entries.reserve(num_entries);
   for (size_t i = 0; i < num_entries; i++) {
     auto entry = TreeEntry::deserialize(data);
     if (!entry) {
       return nullptr;
     }
-    entries.push_back(std::move(*entry));
+    entries.emplace(entry->first, std::move(entry->second));
   }
 
   if (data.size() != 0u) {

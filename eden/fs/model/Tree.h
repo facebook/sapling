@@ -8,20 +8,19 @@
 #pragma once
 
 #include <folly/io/IOBuf.h>
-#include <algorithm>
-#include <vector>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/utils/CaseSensitivity.h"
+#include "eden/fs/utils/PathMap.h"
 
 namespace facebook::eden {
 
 class Tree {
  public:
-  using key_type = PathComponent;
-  using mapped_type = TreeEntry;
-  using value_type = std::pair<key_type, mapped_type>;
-  using container = std::vector<value_type>;
+  using container = PathMap<TreeEntry>;
+  using key_type = container::key_type;
+  using mapped_type = container::mapped_type;
+  using value_type = container::value_type;
   using const_iterator = container::const_iterator;
 
   /**
@@ -35,13 +34,8 @@ class Tree {
    * mount case sensitivity, the caller is responsible for constructing a new
    * Tree with the case sensitivity flipped.
    */
-  explicit Tree(
-      container&& entries,
-      const ObjectId& hash,
-      CaseSensitivity caseSensitive = kPathMapDefaultCaseSensitive)
-      : hash_(hash),
-        entries_(std::move(entries)),
-        caseSensitive_{caseSensitive} {}
+  explicit Tree(container entries, ObjectId hash)
+      : hash_{std::move(hash)}, entries_{std::move(entries)} {}
 
   const ObjectId& getHash() const {
     return hash_;
@@ -56,7 +50,9 @@ class Tree {
   /**
    * Find an entry in this Tree whose name match the passed in path.
    */
-  const_iterator find(PathComponentPiece name) const;
+  const_iterator find(PathComponentPiece name) const {
+    return entries_.find(name);
+  }
 
   const_iterator cbegin() const {
     return entries_.cbegin();
@@ -82,7 +78,7 @@ class Tree {
    * Returns the case sensitivity of this tree.
    */
   CaseSensitivity getCaseSensitivity() const {
-    return caseSensitive_;
+    return entries_.getCaseSensitivity();
   }
 
   /**
@@ -108,7 +104,6 @@ class Tree {
 
   ObjectId hash_;
   container entries_;
-  CaseSensitivity caseSensitive_;
 
   static constexpr uint32_t V1_VERSION = 1u;
 };

@@ -26,14 +26,10 @@ TEST_P(LocalStoreTest, testReadAndWriteTree) {
   StringPiece childContents("blah\n");
   auto childSha1 = Hash20::sha1(folly::ByteRange{childContents});
   auto size = childContents.size();
-  auto entry1Name = PathComponent{StringPiece{"entry1"}};
-  auto entry1 =
-      TreeEntry{childHash1, TreeEntryType::REGULAR_FILE, size, childSha1};
-  auto entry2Name = PathComponent{StringPiece{"entry2"}};
-  auto entry2 = TreeEntry{childHash2, TreeEntryType::REGULAR_FILE};
-  Tree::container entries;
-  entries.push_back({entry1Name, entry1});
-  entries.push_back({entry2Name, entry2});
+  Tree::container entries{kPathMapDefaultCaseSensitive};
+  entries.emplace(
+      "entry1"_pc, childHash1, TreeEntryType::REGULAR_FILE, size, childSha1);
+  entries.emplace("entry2"_pc, childHash2, TreeEntryType::REGULAR_FILE);
   auto tree = Tree{std::move(entries), hash};
 
   auto serialized = tree.serialize();

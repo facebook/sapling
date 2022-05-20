@@ -2489,7 +2489,7 @@ Future<Unit> TreeInode::computeDiff(
     //
     // This code relies on the fact that the source control entries and our
     // inode entries are both sorted in the same order.
-    Tree::container emptyEntries;
+    Tree::container emptyEntries{context->getCaseSensitive()};
     auto scEnd = tree ? tree->cend() : emptyEntries.cend();
     auto scIter = tree ? tree->cbegin() : emptyEntries.cbegin();
     auto& inodeEntries = contents->entries;
@@ -2744,7 +2744,8 @@ void TreeInode::computeCheckoutActions(
   // Note that we completely ignore entries in our current contents_ that don't
   // appear in either fromTree or toTree.  These are untracked in both the old
   // and new trees.
-  Tree::container emptyEntries;
+  Tree::container emptyEntries{
+      getMount()->getCheckoutConfig()->getCaseSensitive()};
   auto oldIter = fromTree ? fromTree->cbegin() : emptyEntries.cbegin();
   auto oldEnd = fromTree ? fromTree->cend() : emptyEntries.cend();
   auto newIter = toTree ? toTree->cbegin() : emptyEntries.cbegin();

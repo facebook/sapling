@@ -49,25 +49,30 @@ const auto entry2 = TreeEntry{hash2, TreeEntryType::REGULAR_FILE};
 const auto entry3 = TreeEntry{hash3, TreeEntryType::REGULAR_FILE};
 const auto entry4 = TreeEntry{hash4, TreeEntryType::REGULAR_FILE};
 
-const auto tree0 =
-    std::make_shared<const Tree>(Tree::container{{entry0Name, entry0}}, hash5);
+const auto tree0 = std::make_shared<const Tree>(
+    Tree::container{{{entry0Name, entry0}}, kPathMapDefaultCaseSensitive},
+    hash5);
 
-const auto tree1 =
-    std::make_shared<const Tree>(Tree::container{{entry1Name, entry1}}, hash6);
+const auto tree1 = std::make_shared<const Tree>(
+    Tree::container{{{entry1Name, entry1}}, kPathMapDefaultCaseSensitive},
+    hash6);
 
-const auto tree2 =
-    std::make_shared<const Tree>(Tree::container{{entry2Name, entry2}}, hash7);
+const auto tree2 = std::make_shared<const Tree>(
+    Tree::container{{{entry2Name, entry2}}, kPathMapDefaultCaseSensitive},
+    hash7);
 
-const auto tree3 =
-    std::make_shared<const Tree>(Tree::container{{entry3Name, entry3}}, hash8);
+const auto tree3 = std::make_shared<const Tree>(
+    Tree::container{{{entry3Name, entry3}}, kPathMapDefaultCaseSensitive},
+    hash8);
 
 const auto tree4 = std::make_shared<const Tree>(
     Tree::container{
-        {entry0Name, entry0},
-        {entry1Name, entry1},
-        {entry2Name, entry2},
-        {entry3Name, entry3},
-        {entry4Name, entry4}},
+        {{entry0Name, entry0},
+         {entry1Name, entry1},
+         {entry2Name, entry2},
+         {entry3Name, entry3},
+         {entry4Name, entry4}},
+        kPathMapDefaultCaseSensitive},
     hash9);
 
 const auto entrySize = sizeof(entry0);
