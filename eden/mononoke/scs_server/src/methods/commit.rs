@@ -11,6 +11,7 @@ use std::sync::Arc;
 use context::CoreContext;
 use futures::stream::{self, FuturesOrdered, StreamExt, TryStreamExt};
 use futures::{future, try_join};
+use hooks::{HookExecution, HookOutcome};
 use itertools::{Either, Itertools};
 use maplit::btreeset;
 use mononoke_api::{
@@ -832,11 +833,39 @@ impl SourceControlServiceImpl {
 
     pub(crate) async fn commit_run_hooks(
         &self,
-        _ctx: CoreContext,
-        _commit: thrift::CommitSpecifier,
-        _params: thrift::CommitRunHooksParams,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitRunHooksParams,
     ) -> Result<thrift::CommitRunHooksResponse, errors::ServiceError> {
-        Err(errors::internal_error("unimplemented").into())
+        let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        let outcomes = changeset.run_hooks(params.bookmark).await?;
+        Ok(thrift::CommitRunHooksResponse {
+            outcomes: outcomes
+                .into_iter()
+                .map(|outcome| {
+                    let (name, execution) = match outcome {
+                        HookOutcome::FileHook(id, exec) => (id.hook_name, exec),
+                        HookOutcome::ChangesetHook(id, exec) => (id.hook_name, exec),
+                    };
+                    let thrift_outcome = match execution {
+                        HookExecution::Accepted => {
+                            thrift::HookOutcome::accepted(thrift::HookOutcomeAccepted {
+                                ..Default::default()
+                            })
+                        }
+                        HookExecution::Rejected(rej) => {
+                            thrift::HookOutcome::rejected(thrift::HookOutcomeRejected {
+                                description: rej.description.to_string(),
+                                long_description: rej.long_description,
+                                ..Default::default()
+                            })
+                        }
+                    };
+                    (name, thrift_outcome)
+                })
+                .collect(),
+            ..Default::default()
+        })
     }
 
     /// Do a cross-repo lookup to see if a commit exists under a different hash in another repo

@@ -1401,7 +1401,23 @@ struct CommitListDescendantBookmarksResponse {
   2: optional string continue_after;
 }
 
-struct CommitRunHooksResponse {}
+struct HookOutcomeAccepted {}
+
+struct HookOutcomeRejected {
+  /// A short description for summarizing this failure with similar failures
+  1: string description;
+  /// A full explanation of what went wrong, suitable for presenting to the user (should include guidance for fixing this failure, where possible)
+  2: string long_description;
+}
+
+union HookOutcome {
+  1: HookOutcomeAccepted accepted;
+  2: HookOutcomeRejected rejected;
+}
+
+struct CommitRunHooksResponse {
+  1: map<string, HookOutcome> outcomes;
+}
 
 struct CommitPathExistsResponse {
   /// Whether anything exists at this path.

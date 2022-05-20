@@ -12,6 +12,7 @@ use std::future::Future;
 use anyhow::anyhow;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
+use bookmarks::BookmarkName;
 use changeset_info::ChangesetInfo;
 use changesets::ChangesetsRef;
 use chrono::{DateTime, FixedOffset};
@@ -26,6 +27,7 @@ use fsnodes::RootFsnodeId;
 use futures::future::{self, try_join, try_join_all};
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use futures_lazy_shared::LazyShared;
+use hooks::{CrossRepoPushSource, HookOutcome, PushAuthoredBy};
 use manifest::{
     Diff as ManifestDiff, Entry as ManifestEntry, ManifestOps, ManifestOrderedOps, PathOrPrefix,
 };
@@ -1309,5 +1311,23 @@ impl ChangesetContext {
                 ChangesetPathDiffContext::Added(ChangesetPathContentContext::new(self.clone(), mp))
             })
             .collect());
+    }
+
+    pub async fn run_hooks(
+        &self,
+        bookmark: impl AsRef<str>,
+    ) -> Result<Vec<HookOutcome>, MononokeError> {
+        Ok(self
+            .repo()
+            .hook_manager()
+            .run_hooks_for_bookmark(
+                self.ctx(),
+                vec![self.bonsai_changeset().await?].iter(),
+                &BookmarkName::new(bookmark.as_ref())?,
+                None,
+                CrossRepoPushSource::NativeToThisRepo,
+                PushAuthoredBy::User,
+            )
+            .await?)
     }
 }
