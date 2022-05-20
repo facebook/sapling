@@ -73,6 +73,7 @@ commands! {
     mod ls;
     mod move_bookmark if ENV_WRITES_ENABLED;
     mod repos;
+    mod run_hooks;
     mod blame;
     mod xrepo_lookup;
     mod lookup_pushrebase_history;
