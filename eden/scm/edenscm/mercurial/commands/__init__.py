@@ -2706,7 +2706,11 @@ def grep(ui, repo, pattern, *pats, **opts):
             # Sort so our choice of revision is deterministic
             corpusrev = sorted(corpusrevs)[0]
         else:
-            corpusrev, timestamp = revisionline.split(":", 1)
+            # biggrep doesn't have a consistent format
+            if ":" in revisionline:
+                corpusrev, timestamp = revisionline.split(":", 1)
+            else:
+                corpusrev = revisionline
 
         lines = lines[1:]
 
