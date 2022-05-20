@@ -9,7 +9,7 @@ use crate::blame::BlameRejected;
 use crate::path::MPath;
 use crate::thrift;
 use crate::typed_hash::{BlobstoreKey, ChangesetId, FileUnodeId, MononokeId};
-use anyhow::{anyhow, Error, Result};
+use anyhow::{anyhow, bail, Context, Error, Result};
 use async_trait::async_trait;
 use bit_set::BitSet;
 use blobstore::{Blobstore, BlobstoreBytes, Loadable, LoadableError};
@@ -190,6 +190,37 @@ impl BlameV2 {
             BlameV2::Blame(blame_data) => blame_data.annotate(content),
             BlameV2::Rejected(rejected) => Err(rejected.clone().into()),
         }
+    }
+
+    pub fn apply_mutable_change(
+        &mut self,
+        original_ancestor: &Self,
+        mutated_ancestor: &Self,
+    ) -> Result<()> {
+        match (self, original_ancestor, mutated_ancestor) {
+            (BlameV2::Rejected(_), _, _) => {
+                // No blame, so pass on unchanged
+            }
+            (_, BlameV2::Rejected(_), BlameV2::Rejected(_)) => {
+                // Both old and new blame are rejected, so nothing to fix
+            }
+            (_, BlameV2::Rejected(reason), _) | (_, _, BlameV2::Rejected(reason)) => {
+                // Blame rejection happens based on the file at this point
+                // As rejection cannot be due to the *parents*, this is an impossible case.
+                bail!(
+                    "Ancestor blame is inconsistently rejected ({:?} for the reject, but other form is not rejected) - this should not be possible.",
+                    reason
+                );
+            }
+            (
+                BlameV2::Blame(self_blame),
+                BlameV2::Blame(original_blame),
+                BlameV2::Blame(mutated_blame),
+            ) => {
+                self_blame.apply_mutable_change(original_blame, mutated_blame)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -686,6 +717,202 @@ impl BlameData {
 
         Ok(result)
     }
+
+    fn apply_mutable_change(&mut self, original_blame: &Self, mutated_blame: &Self) -> Result<()> {
+        // Sort order of changesets is not guaranteed to be the same, which rules out Iterator::eq
+        let my_csids: HashSet<_> = self.csids.values().collect();
+
+        if original_blame
+            .csids
+            .values()
+            .any(|csid| my_csids.contains(&csid))
+        {
+            // Track seen hashes - we can assume that we'll see about as many as
+            // are in the immutable blame
+            let mut seen_hashes = HashSet::with_capacity(my_csids.capacity());
+            // Paths is mutant paths, followed by any missing paths from self
+            // As self currently covers original, this will be a superset of paths in the commit
+            let new_paths = {
+                let mut new_paths = mutated_blame.paths.clone();
+                new_paths.extend(
+                    self.paths
+                        .iter()
+                        .filter(|path| !mutated_blame.paths.contains(path))
+                        .cloned(),
+                );
+                new_paths
+            };
+
+            // Reblame line-by-line in terms of changeset hashes only.
+            let new_lines: Vec<_> = {
+                let mut mutation_lookup: HashMap<_, _> = BlameLines::new(original_blame)
+                    .map(|line| (line.changeset_id, line.path, line.origin_offset))
+                    .zip(BlameLines::new(mutated_blame))
+                    .collect();
+                BlameLines::new(self)
+                    .map(|line| {
+                        let key = (line.changeset_id, line.path, line.origin_offset);
+                        let out = mutation_lookup.remove(&key).unwrap_or(line);
+                        seen_hashes.insert(*out.changeset_id);
+                        out
+                    })
+                    .collect()
+            };
+
+            let (new_csids, new_max_csid_index) = {
+                // Copy the list from the mutant blame - that's our deep history
+                let mut new_csids = mutated_blame.csids.clone();
+                let mut new_max_csid_index = mutated_blame.max_csid_index as usize;
+                // Add anything that hasn't disappered from our original history
+                // This will be merge cases, where we've kept the old index, but have
+                // blamed to a commit *after* the mutation point
+                let mut known_so_far: HashSet<_> = new_csids.values().copied().collect();
+                for original_csid in original_blame.csids.values() {
+                    if seen_hashes.contains(original_csid) {
+                        if known_so_far.insert(*original_csid) {
+                            new_max_csid_index += 1;
+                            new_csids.insert(new_max_csid_index, *original_csid);
+                        }
+                    }
+                }
+                let original_csids: HashSet<_> = original_blame.csids.values().collect();
+                // And add in all the csids from the current blame that weren't in the pre-mutation point
+                // blame - these are all csids we'd have if we did a real blame from scratch
+                for csid in self
+                    .csids
+                    .values()
+                    .filter(|csid| !original_csids.contains(csid))
+                {
+                    if known_so_far.insert(*csid) {
+                        new_max_csid_index += 1;
+                        new_csids.insert(new_max_csid_index, *csid);
+                    }
+                }
+                (
+                    new_csids,
+                    new_max_csid_index
+                        .try_into()
+                        .context("More than 2**32 changesets in this blame!")?,
+                )
+            };
+
+            // Create a reverse map from new_csids
+            let csid_to_index: HashMap<_, u32> = new_csids
+                .iter()
+                .map(|(index, csid)| (csid, index as u32))
+                .collect();
+            // And one for paths
+            let path_to_index: HashMap<_, u32> = new_paths
+                .iter()
+                .enumerate()
+                .map(|(index, path)| (path, index as u32))
+                .collect();
+
+            let line_follows_range = |line: &BlameLine<'_>, range: &BlameRangeIndexes| -> bool {
+                let range_path_index: usize = range.path_index as usize;
+                let maybe_range_path: Option<&MPath> = new_paths.get(range_path_index);
+                Some(line.changeset_id) == new_csids.get(range.csid_index as usize)
+                    && Some(line.path) == maybe_range_path
+                    && line.offset == range.offset + range.length
+                    && line.origin_offset == range.origin_offset + range.length
+                    && line.parent.zip(range.parent.as_ref()).map_or(
+                        true,
+                        |(line_parent, range_parent)| {
+                            let maybe_range_path =
+                                range_parent.renamed_from_path_index.and_then(|index| {
+                                    let index: usize = index as usize;
+                                    new_paths.get(index)
+                                });
+                            line_parent.parent_index == range_parent.parent_index
+                                && line_parent.offset == range_parent.offset
+                                && line_parent.length == range_parent.length
+                                && line_parent.renamed_from_path == maybe_range_path
+                        },
+                    )
+            };
+            // Now can go over new_lines, building blame ranges
+            let new_ranges = {
+                let (mut new_ranges, last_range) = new_lines.into_iter().enumerate().try_fold(
+                    (Vec::new(), None),
+                    |(mut out, range), (offset, line)| {
+                        if let Some(mut range) = range {
+                            if line_follows_range(&line, &range) {
+                                range.length += 1;
+                                return Ok((out, Some(range)));
+                            } else {
+                                out.push(range);
+                            }
+                        }
+
+                        let csid_index =
+                            *csid_to_index.get(line.changeset_id).with_context(|| {
+                                format!(
+                                    "Unknown changeset {} - should not be possible",
+                                    line.changeset_id
+                                )
+                            })?;
+                        let path_index = *path_to_index.get(line.path).with_context(|| {
+                            format!("Unknown path {} - should not be possible", line.path)
+                        })?;
+                        let offset = offset as u32;
+                        let parent = line
+                            .parent
+                            .map(
+                                |BlameLineParent {
+                                     parent_index,
+                                     offset,
+                                     length,
+                                     renamed_from_path,
+                                 }| {
+                                    let renamed_from_path_index = renamed_from_path
+                                        .map(|renamed_from_path| {
+                                            path_to_index.get(renamed_from_path).with_context(
+                                                || {
+                                                    format!(
+                                                        "Unknown path {} - should not be possible",
+                                                        renamed_from_path
+                                                    )
+                                                },
+                                            )
+                                        })
+                                        .transpose()?
+                                        .copied();
+                                    anyhow::Ok(BlameParentIndexes {
+                                        parent_index,
+                                        offset,
+                                        length,
+                                        renamed_from_path_index,
+                                    })
+                                },
+                            )
+                            .transpose()?;
+
+                        let range = BlameRangeIndexes {
+                            offset,
+                            length: 1,
+                            csid_index,
+                            path_index,
+                            origin_offset: line.origin_offset,
+                            parent,
+                        };
+                        anyhow::Ok((out, Some(range)))
+                    },
+                )?;
+                if let Some(last_range) = last_range {
+                    new_ranges.push(last_range);
+                }
+                new_ranges
+            };
+            // Then rewrite our object
+            self.ranges = new_ranges;
+            self.csids = new_csids;
+            self.max_csid_index = new_max_csid_index;
+            self.paths = new_paths;
+            self.compact()
+        }
+
+        Ok(())
+    }
 }
 
 /// Blame range with range information stored as indexes into the associated
@@ -820,6 +1047,7 @@ impl BlameRangesCollector {
 }
 
 /// Blame range produced by iteration.
+#[derive(PartialEq)]
 pub struct BlameRange<'a> {
     pub offset: u32,
     pub length: u32,
@@ -1025,6 +1253,7 @@ mod test {
     const FOURS_CSID: ChangesetId = ChangesetId::new(Blake2::from_byte_array([0x44; 32]));
     const FIVES_CSID: ChangesetId = ChangesetId::new(Blake2::from_byte_array([0x55; 32]));
     const SIXES_CSID: ChangesetId = ChangesetId::new(Blake2::from_byte_array([0x66; 32]));
+    const SEVENS_CSID: ChangesetId = ChangesetId::new(Blake2::from_byte_array([0x77; 32]));
 
     macro_rules! vec_map {
         () => {
@@ -2217,6 +2446,319 @@ mod test {
                 paths: vec![path1.clone(), path2.clone(), path3.clone()],
             })
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_mutated_blame_simple() -> Result<()> {
+        // 4
+        // |
+        // 3
+        // |\
+        // 2 1
+        // Original blame is at 2, mutated to 1.
+        let path = MPath::new("path")?;
+        let c1 = "Mutant\nText\nHere\n";
+        let c2 = "Plain\nText\n";
+        let c3 = "Rich\nText\n";
+        let c4 = "Rich\nTea\nText\n";
+
+        let b1 = BlameV2::new(ONES_CSID, path.clone(), c1, vec![])?;
+        let b2 = BlameV2::new(TWOS_CSID, path.clone(), c2, vec![])?;
+        let b3_orig = BlameV2::new(
+            THREES_CSID,
+            path.clone(),
+            c3,
+            vec![BlameParent::new(0, path.clone(), c2, b2.clone())],
+        )?;
+        let b3_mutant = BlameV2::new(
+            THREES_CSID,
+            path.clone(),
+            c3,
+            vec![BlameParent::new(0, path.clone(), c1, b1.clone())],
+        )?;
+        let b4_orig = BlameV2::new(
+            FOURS_CSID,
+            path.clone(),
+            c4,
+            vec![BlameParent::new(0, path.clone(), c3, b3_orig.clone())],
+        )?;
+        let b4_mutant = BlameV2::new(
+            FOURS_CSID,
+            path.clone(),
+            c4,
+            vec![BlameParent::new(0, path.clone(), c3, b3_mutant.clone())],
+        )?;
+
+        let mut b4_fixed = b4_orig.clone();
+        b4_fixed.apply_mutable_change(&b3_orig, &b3_mutant)?;
+
+        assert_eq!(b4_fixed, b4_mutant);
+
+        Ok(())
+    }
+
+    // No change test
+    #[test]
+    fn test_mutated_blame_mutant_ignored() -> Result<()> {
+        // 4
+        // |
+        // 3
+        // |\
+        // 2 1
+        // Original blame is at 2, mutated to 1.
+        let path = MPath::new("path")?;
+        let c1 = "Mutant\nText\nHere\n";
+        let c2 = "Plain\nText\n";
+        let c3 = "Completely\nNew\n";
+        let c4 = "And\nDifferent\n";
+
+        let b1 = BlameV2::new(ONES_CSID, path.clone(), c1, vec![])?;
+        let b2 = BlameV2::new(TWOS_CSID, path.clone(), c2, vec![])?;
+        let b3_orig = BlameV2::new(
+            THREES_CSID,
+            path.clone(),
+            c3,
+            vec![BlameParent::new(0, path.clone(), c2, b2.clone())],
+        )?;
+        let b3_mutant = BlameV2::new(
+            THREES_CSID,
+            path.clone(),
+            c3,
+            vec![BlameParent::new(0, path.clone(), c1, b1.clone())],
+        )?;
+        let b4_orig = BlameV2::new(
+            FOURS_CSID,
+            path.clone(),
+            c4,
+            vec![BlameParent::new(0, path.clone(), c3, b3_orig.clone())],
+        )?;
+        let b4_mutant = BlameV2::new(
+            FOURS_CSID,
+            path.clone(),
+            c4,
+            vec![BlameParent::new(0, path.clone(), c3, b3_mutant.clone())],
+        )?;
+
+        let mut b4_fixed = b4_orig.clone();
+        b4_fixed.apply_mutable_change(&b3_orig, &b3_mutant)?;
+
+        // Blame for 3 differs, because it changes everything and has very different
+        // parents
+        assert_ne!(b3_orig, b3_mutant);
+        // But 4 is also a rewrite of everything, and is trivial as a result - it
+        // goes no further back than 3
+        assert_eq!(b4_fixed, b4_mutant);
+        assert_eq!(b4_orig, b4_mutant);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_mutated_blame_rename() -> Result<()> {
+        // 4
+        // |
+        // 3
+        // |\
+        // 2 1
+        // Original blame is at 2, mutated to 1.
+        // Mutable blame changed the name going 3 to 1
+        let path1 = MPath::new("path1")?;
+        let path2 = MPath::new("path2")?;
+        let c1 = "Mutant\nText\nHere\n";
+        let c2 = "Plain\nText\n";
+        let c3 = "Rich\nText\n";
+        let c4 = "Rich\nTea\nText\n";
+
+        let b1 = BlameV2::new(ONES_CSID, path2.clone(), c1, vec![])?;
+        let b2 = BlameV2::new(TWOS_CSID, path1.clone(), c2, vec![])?;
+        let b3_orig = BlameV2::new(
+            THREES_CSID,
+            path1.clone(),
+            c3,
+            vec![BlameParent::new(0, path1.clone(), c2, b2.clone())],
+        )?;
+        let b3_mutant = BlameV2::new(
+            THREES_CSID,
+            path1.clone(),
+            c3,
+            vec![BlameParent::new(0, path2.clone(), c1, b1.clone())],
+        )?;
+        let b4_orig = BlameV2::new(
+            FOURS_CSID,
+            path1.clone(),
+            c4,
+            vec![BlameParent::new(0, path1.clone(), c3, b3_orig.clone())],
+        )?;
+        let b4_mutant = BlameV2::new(
+            FOURS_CSID,
+            path1.clone(),
+            c4,
+            vec![BlameParent::new(0, path1.clone(), c3, b3_mutant.clone())],
+        )?;
+
+        let mut b4_fixed = b4_orig.clone();
+        b4_fixed.apply_mutable_change(&b3_orig, &b3_mutant)?;
+
+        assert_eq!(b4_fixed, b4_mutant);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_mutated_blame_long_path() -> Result<()> {
+        // 6
+        // |
+        // 5
+        // |
+        // 4
+        // |
+        // 3
+        // |\
+        // 2 1
+        // Original blame is at 2, mutated to 1.
+        let path = MPath::new("path")?;
+        let c1 = "Mutant\nText\nHere\n";
+        let c2 = "Plain\nText\n";
+        let c3 = "Rich\nText\n";
+        let c4 = "Rich\nTea\nText\n";
+        let c5 = "Rich\nTea\nText\nHere\n";
+        let c6 = "Digestive and\nRich\nTea\nHere\n";
+
+        let b1 = BlameV2::new(ONES_CSID, path.clone(), c1, vec![])?;
+        let b2 = BlameV2::new(TWOS_CSID, path.clone(), c2, vec![])?;
+        let b3_orig = BlameV2::new(
+            THREES_CSID,
+            path.clone(),
+            c3,
+            vec![BlameParent::new(0, path.clone(), c2, b2.clone())],
+        )?;
+        let b4 = BlameV2::new(
+            FOURS_CSID,
+            path.clone(),
+            c4,
+            vec![BlameParent::new(0, path.clone(), c3, b3_orig.clone())],
+        )?;
+        let b5 = BlameV2::new(
+            FIVES_CSID,
+            path.clone(),
+            c5,
+            vec![BlameParent::new(0, path.clone(), c4, b4.clone())],
+        )?;
+        let b6_orig = BlameV2::new(
+            SIXES_CSID,
+            path.clone(),
+            c6,
+            vec![BlameParent::new(0, path.clone(), c5, b5.clone())],
+        )?;
+
+        let b3_mutant = BlameV2::new(
+            THREES_CSID,
+            path.clone(),
+            c3,
+            vec![BlameParent::new(0, path.clone(), c1, b1.clone())],
+        )?;
+        let b4_mutant = BlameV2::new(
+            FOURS_CSID,
+            path.clone(),
+            c4,
+            vec![BlameParent::new(0, path.clone(), c3, b3_mutant.clone())],
+        )?;
+        let b5_mutant = BlameV2::new(
+            FIVES_CSID,
+            path.clone(),
+            c5,
+            vec![BlameParent::new(0, path.clone(), c4, b4_mutant.clone())],
+        )?;
+        let b6_mutant = BlameV2::new(
+            SIXES_CSID,
+            path.clone(),
+            c6,
+            vec![BlameParent::new(0, path.clone(), c5, b5_mutant.clone())],
+        )?;
+
+        let mut b6_fixed = b6_orig.clone();
+        b6_fixed.apply_mutable_change(&b3_orig, &b3_mutant)?;
+
+        assert_eq!(b6_fixed, b6_mutant);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_mutated_blame_shared_ancestor() -> Result<()> {
+        // 7
+        // |
+        // 6
+        // |\
+        // 4 5
+        // |\|\
+        // 1 2 3
+        // Original blame is at 4, mutated to 5.
+        // Tricksyness is because 4 is a merge of 1 and 2, while 5 is a merge of 2 and 3
+        let path = MPath::new("path")?;
+        let c1 = "Plain\n";
+        let c2 = "Text\n";
+        let c3 = "Rich\n";
+        let c4 = "Plain\nText\n";
+        let c5 = "Rich\nText\n";
+        let c6 = "Rich\nor\nPlain\nText\n";
+        let c7 = "Rich\nor\nPlain\nText\n";
+
+        let b1 = BlameV2::new(ONES_CSID, path.clone(), c1, vec![])?;
+        let b2 = BlameV2::new(TWOS_CSID, path.clone(), c2, vec![])?;
+        let b3 = BlameV2::new(THREES_CSID, path.clone(), c3, vec![])?;
+        let b4 = BlameV2::new(
+            FOURS_CSID,
+            path.clone(),
+            c4,
+            vec![
+                BlameParent::new(0, path.clone(), c1, b1.clone()),
+                BlameParent::new(1, path.clone(), c2, b2.clone()),
+            ],
+        )?;
+        let b5 = BlameV2::new(
+            FIVES_CSID,
+            path.clone(),
+            c5,
+            vec![
+                BlameParent::new(0, path.clone(), c2, b2.clone()),
+                BlameParent::new(1, path.clone(), c3, b3.clone()),
+            ],
+        )?;
+        let b6_orig = BlameV2::new(
+            SIXES_CSID,
+            path.clone(),
+            c6,
+            vec![BlameParent::new(0, path.clone(), c4, b4.clone())],
+        )?;
+        let b6_mutant = BlameV2::new(
+            SIXES_CSID,
+            path.clone(),
+            c6,
+            vec![BlameParent::new(0, path.clone(), c5, b5.clone())],
+        )?;
+        let b7_orig = BlameV2::new(
+            SEVENS_CSID,
+            path.clone(),
+            c7,
+            vec![BlameParent::new(0, path.clone(), c6, b6_orig.clone())],
+        )?;
+        let b7_mutant = BlameV2::new(
+            SEVENS_CSID,
+            path.clone(),
+            c7,
+            vec![BlameParent::new(0, path.clone(), c6, b6_mutant.clone())],
+        )?;
+
+        let mut b7_fixed = b7_orig.clone();
+        b7_fixed.apply_mutable_change(&b6_orig, &b6_mutant)?;
+
+        // The mutant blame is slightly different, because it omits a changeset hole
+        // you would have if you followed the mutant blame down its hole.
+        // So just do a semantic check
+        assert!(b7_fixed.ranges()?.eq(b7_mutant.ranges()?));
+
         Ok(())
     }
 }
