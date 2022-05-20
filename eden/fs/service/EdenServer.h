@@ -640,7 +640,8 @@ class EdenServer : private TakeoverHandler {
   std::shared_ptr<TreeCache> treeCache_;
   std::shared_ptr<ReloadableConfig> config_;
 
-  folly::Synchronized<MountMap> mountPoints_{kPathMapDefaultCaseSensitive};
+  folly::Synchronized<MountMap> mountPoints_{
+      MountMap{kPathMapDefaultCaseSensitive}};
 
 #ifndef _WIN32
   /**

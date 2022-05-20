@@ -2509,7 +2509,7 @@ Future<Unit> TreeInode::computeDiff(
         processRemoved(*scIter);
         ++scIter;
       } else {
-        auto compare = comparePathComponent(
+        auto compare = comparePathPiece(
             scIter->first, inodeIter->first, context->getCaseSensitive());
 
         if (compare == CompareResult::BEFORE) {
@@ -2779,7 +2779,7 @@ void TreeInode::computeCheckoutActions(
           wasDirectoryListModified);
       ++oldIter;
     } else {
-      auto compare = comparePathComponent(
+      auto compare = comparePathPiece(
           oldIter->first,
           newIter->first,
           getMount()->getCheckoutConfig()->getCaseSensitive());

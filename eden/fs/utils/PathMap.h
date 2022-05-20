@@ -40,14 +40,17 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
 
   // Comparator that knows how compare Stored and Piece in the vector.
   struct Compare {
+    explicit Compare(CaseSensitivity caseSensitive)
+        : caseSensitive_{caseSensitive} {}
+
     // Compare two values that are convertible to the Piece type.
     template <typename A, typename B>
     typename std::enable_if<
         std::is_convertible<A, Piece>::value &&
             std::is_convertible<B, Piece>::value,
         bool>::type
-    operator()(const A& a, const B& rhs) const {
-      return Piece(a) < Piece(rhs);
+    operator()(const A& a, const B& b) const {
+      return isPathPieceLess(Piece(a), Piece(b), caseSensitive_);
     }
 
     // Compare a Piece-convertible value against the stored Pair.
@@ -57,7 +60,7 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
             std::is_convertible<B, Piece>::value,
         bool>::type
     operator()(const A& a, const std::pair<B, C>& rhs) const {
-      return Piece(a) < Piece(rhs.first);
+      return isPathPieceLess(Piece(a), Piece(rhs.first), caseSensitive_);
     }
 
     // Compare the stored Pair against a Piece-convertible value.
@@ -66,15 +69,15 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
         std::is_convertible<A, Piece>::value &&
             std::is_convertible<B, Piece>::value,
         bool>::type
-    operator()(const std::pair<B, C>& lhs, const A& a) const {
-      return Piece(lhs.first) < Piece(a);
+    operator()(const std::pair<A, C>& lhs, const B& b) const {
+      return isPathPieceLess(Piece(lhs.first), Piece(b), caseSensitive_);
     }
+
+    CaseSensitivity caseSensitive_{kPathMapDefaultCaseSensitive};
   };
 
-  // Hold an instance of the comparator.  It doesn't actually
-  // occupy any space.
+  // Hold an instance of the comparator.
   Compare compare_;
-  CaseSensitivity caseSensitive_{kPathMapDefaultCaseSensitive};
 
  public:
   // Various type aliases to satisfy container concepts.
@@ -95,7 +98,7 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   using const_reverse_iterator = typename Vector::const_reverse_iterator;
 
   // Construct empty.
-  PathMap(CaseSensitivity caseSensitive) : caseSensitive_(caseSensitive) {}
+  explicit PathMap(CaseSensitivity caseSensitive) : compare_(caseSensitive) {}
 
   // Populate from an initializer_list.
   PathMap(std::initializer_list<value_type> init, CaseSensitivity caseSensitive)
@@ -107,7 +110,7 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
       InputIterator first,
       InputIterator last,
       CaseSensitivity caseSensitive)
-      : caseSensitive_(caseSensitive) {
+      : compare_(caseSensitive) {
     // The std::distance call is O(1) if the iterators are random-access, but
     // O(n) otherwise.  We're fine with the O(n) on the basis that if n is large
     // enough to matter, the cost of iterating will be dwarfed by the cost
@@ -119,8 +122,7 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   }
 
   // Inherit the underlying vector copy/assignment.
-  PathMap(const PathMap& other)
-      : Vector(other), caseSensitive_(other.caseSensitive_) {}
+  PathMap(const PathMap& other) : Vector(other), compare_(other.compare_) {}
   PathMap& operator=(const PathMap& other) {
     PathMap(other).swap(*this);
     return *this;
@@ -128,7 +130,7 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
 
   // inherit Move construction.
   PathMap(PathMap&& other) noexcept
-      : Vector(std::move(other)), caseSensitive_(other.caseSensitive_) {}
+      : Vector(std::move(other)), compare_(other.compare_) {}
   PathMap& operator=(PathMap&& other) {
     other.swap(*this);
     return *this;
@@ -154,10 +156,16 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   // Swap contents with another map.
   void swap(PathMap& other) noexcept {
     Vector::swap(other);
-    std::swap(caseSensitive_, other.caseSensitive_);
+    std::swap(compare_, other.compare_);
   }
 
-  // lower_bound performs the binary search for locating keys.
+  /**
+   * lower_bound performs the binary search for locating keys.
+   *
+   * TODO(xavierd): a potential optimization for case sensitive PathMap would
+   * be to first perform a case insensitive search, and then fallback to the
+   * case sensitive search.
+   */
   iterator lower_bound(Piece key) {
     return std::lower_bound(begin(), end(), key, compare_);
   }
@@ -175,17 +183,6 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
       // Found it
       return iter;
     }
-    if (caseSensitive_ == CaseSensitivity::Insensitive) {
-      // When !caseSensitive_, for performance, we will do a case sensitive
-      // search first which should cover most of the cases and if not found then
-      // do a case insensitive search.
-      for (iter = begin(); iter != end(); ++iter) {
-        if (key.stringPiece().equals(
-                iter->first.stringPiece(), folly::AsciiCaseInsensitive())) {
-          return iter;
-        }
-      }
-    }
     return end();
   }
 
@@ -197,14 +194,6 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
     if (iter != end() && !compare_(key, iter->first)) {
       // Found it
       return iter;
-    }
-    if (caseSensitive_ == CaseSensitivity::Insensitive) {
-      for (iter = begin(); iter != end(); ++iter) {
-        if (key.stringPiece().equals(
-                iter->first.stringPiece(), folly::AsciiCaseInsensitive())) {
-          return iter;
-        }
-      }
     }
     return end();
   }
@@ -219,16 +208,6 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
     if (iter != end() && !compare_(val.first, iter->first)) {
       // Found it; leave it alone
       return std::make_pair(iter, false);
-    }
-
-    if (caseSensitive_ == CaseSensitivity::Insensitive) {
-      for (auto insens = begin(); insens != end(); ++insens) {
-        if (val.first.stringPiece().equals(
-                insens->first.stringPiece(), folly::AsciiCaseInsensitive())) {
-          // Found it; leave it alone
-          return std::make_pair(insens, false);
-        }
-      }
     }
 
     // Otherwise, iter is the insertion point
@@ -250,16 +229,6 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
       return std::make_pair(iter, false);
     }
 
-    if (caseSensitive_ == CaseSensitivity::Insensitive) {
-      for (auto insens = begin(); insens != end(); ++insens) {
-        if (key.stringPiece().equals(
-                insens->first.stringPiece(), folly::AsciiCaseInsensitive())) {
-          // Found it; leave it alone
-          return std::make_pair(insens, false);
-        }
-      }
-    }
-
     // Otherwise, iter is the insertion point
     iter = Vector::emplace(
         iter, std::make_pair(Key(key), Value(std::forward<Args>(args)...)));
@@ -274,17 +243,6 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
     if (iter != end() && !compare_(key, iter->first)) {
       // Found it
       return iter->second;
-    }
-
-    if (caseSensitive_ == CaseSensitivity::Insensitive) {
-      // Case insensitive lookup
-      for (auto insens = begin(); insens != end(); ++insens) {
-        if (key.stringPiece().equals(
-                insens->first.stringPiece(), folly::AsciiCaseInsensitive())) {
-          // Found it
-          return insens->second;
-        }
-      }
     }
 
     // Not yet present, make a new one at the insertion point
@@ -339,7 +297,7 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   }
 
   CaseSensitivity getCaseSensitivity() const {
-    return caseSensitive_;
+    return compare_.caseSensitive_;
   }
 
   /// Equality operator.

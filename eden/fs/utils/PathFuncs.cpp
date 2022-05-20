@@ -384,26 +384,4 @@ AbsolutePath executablePath() {
 #endif
 }
 
-CompareResult comparePathComponent(
-    PathComponentPiece left,
-    PathComponentPiece right,
-    CaseSensitivity caseSensitivity) {
-  if (caseSensitivity == CaseSensitivity::Insensitive) {
-    if (left.stringPiece().equals(
-            right.stringPiece(), folly::AsciiCaseInsensitive())) {
-      return CompareResult::EQUAL;
-    }
-  } else {
-    if (left == right) {
-      return CompareResult::EQUAL;
-    }
-  }
-
-  if (left < right) {
-    return CompareResult::BEFORE;
-  } else {
-    return CompareResult::AFTER;
-  }
-}
-
 } // namespace facebook::eden

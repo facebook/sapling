@@ -193,6 +193,27 @@ using RelativePathPiece = detail::RelativePathBase<folly::StringPiece>;
 using AbsolutePath = detail::AbsolutePathBase<std::string>;
 using AbsolutePathPiece = detail::AbsolutePathBase<folly::StringPiece>;
 
+enum class CompareResult {
+  EQUAL,
+  BEFORE,
+  AFTER,
+};
+
+struct AsciiLessThanCaseInsensitive {
+  static char toLower(char c) {
+    if (c >= 'A' && c <= 'Z') {
+      c += 'a' - 'A';
+    }
+    return c;
+  }
+
+  bool operator()(char lhs, char rhs) const {
+    lhs = toLower(lhs);
+    rhs = toLower(rhs);
+    return lhs < rhs;
+  }
+};
+
 namespace detail {
 
 // Helper for equality testing, borrowed from
@@ -236,16 +257,60 @@ struct PathOperators {
   }
 
   friend bool operator<(const Piece& a, const Piece& b) {
+    return isPathPieceLess(a, b, CaseSensitivity::Sensitive);
+  }
+
+  /**
+   * Test if the left piece is lexicographically before the right piece. This
+   * respects the passed in CaseSensitivity.
+   */
+  friend bool isPathPieceLess(
+      const Piece& left,
+      const Piece& right,
+      CaseSensitivity caseSensitive) {
     if constexpr (IsComposed && folly::kIsWindows) {
-      auto aComponents = a.components();
-      auto bComponents = b.components();
+      struct LessComponentComparator {
+        bool operator()(
+            const typename Piece::component_iterator::value_type& left,
+            const typename Piece::component_iterator::value_type& right) {
+          auto leftStringPiece = left.stringPiece();
+          auto rightStringPiece = right.stringPiece();
+          if (caseSensitive == CaseSensitivity::Sensitive) {
+            return leftStringPiece < rightStringPiece;
+          } else {
+            return std::lexicographical_compare(
+                leftStringPiece.begin(),
+                leftStringPiece.end(),
+                rightStringPiece.begin(),
+                rightStringPiece.end(),
+                AsciiLessThanCaseInsensitive{});
+          }
+        }
+
+        CaseSensitivity caseSensitive;
+      };
+
+      auto leftComponents = left.components();
+      auto rightComponents = right.components();
       return std::lexicographical_compare(
-          aComponents.begin(),
-          aComponents.end(),
-          bComponents.begin(),
-          bComponents.end());
+          leftComponents.begin(),
+          leftComponents.end(),
+          rightComponents.begin(),
+          rightComponents.end(),
+          LessComponentComparator{caseSensitive});
     } else {
-      return a.stringPiece() < b.stringPiece();
+      auto leftStringPiece = left.stringPiece();
+      auto rightStringPiece = right.stringPiece();
+      if (caseSensitive == CaseSensitivity::Sensitive) {
+        return leftStringPiece < rightStringPiece;
+      } else {
+        return std::lexicographical_compare(
+            leftStringPiece.begin(),
+            leftStringPiece.end(),
+            rightStringPiece.begin(),
+            rightStringPiece.end(),
+            AsciiLessThanCaseInsensitive{});
+      }
     }
   }
 
@@ -263,16 +328,59 @@ struct PathOperators {
   }
 
   friend bool operator==(const Piece& a, const Piece& b) {
+    return isPathPieceEqual(a, b, CaseSensitivity::Sensitive);
+  }
+
+  /**
+   * Test if both pieces are equal. This respects the passed in CaseSensitivity.
+   */
+  friend bool isPathPieceEqual(
+      const Piece& left,
+      const Piece& right,
+      CaseSensitivity caseSensitive) {
     if constexpr (IsComposed && folly::kIsWindows) {
-      auto aComponents = a.components();
-      auto bComponents = b.components();
+      struct EqualComponentComparator {
+        bool operator()(
+            const typename Piece::component_iterator::value_type& left,
+            const typename Piece::component_iterator::value_type& right) {
+          auto leftStringPiece = left.stringPiece();
+          auto rightStringPiece = right.stringPiece();
+          if (caseSensitive == CaseSensitivity::Sensitive) {
+            return leftStringPiece == rightStringPiece;
+          } else {
+            return std::equal(
+                leftStringPiece.begin(),
+                leftStringPiece.end(),
+                rightStringPiece.begin(),
+                rightStringPiece.end(),
+                folly::AsciiCaseInsensitive{});
+          }
+        }
+
+        CaseSensitivity caseSensitive;
+      };
+
+      auto leftComponents = left.components();
+      auto rightComponents = right.components();
       return std::equal(
-          aComponents.begin(),
-          aComponents.end(),
-          bComponents.begin(),
-          bComponents.end());
+          leftComponents.begin(),
+          leftComponents.end(),
+          rightComponents.begin(),
+          rightComponents.end(),
+          EqualComponentComparator{caseSensitive});
     } else {
-      return a.stringPiece() == b.stringPiece();
+      auto leftStringPiece = left.stringPiece();
+      auto rightStringPiece = right.stringPiece();
+      if (caseSensitive == CaseSensitivity::Sensitive) {
+        return leftStringPiece == rightStringPiece;
+      } else {
+        return std::equal(
+            leftStringPiece.begin(),
+            leftStringPiece.end(),
+            rightStringPiece.begin(),
+            rightStringPiece.end(),
+            folly::AsciiCaseInsensitive{});
+      }
     }
   }
 
@@ -298,6 +406,28 @@ struct PathOperators {
       bool>::type
   operator!=(const A& a, const B& rhs) {
     return folly::StringPiece(a) != folly::StringPiece(rhs);
+  }
+
+  /**
+   * Compare the 2 passed in path based on the case sensitivity.
+   *
+   * Returns:
+   *  - CompareResult::EQUAL if both are equal according to the case sensitivity
+   *  - CompareResult::BEFORE if left is lexicographically before right
+   *  - CompareResult::AFTER if left is lexicographically after right
+   *
+   */
+  friend CompareResult comparePathPiece(
+      const Piece& left,
+      const Piece& right,
+      CaseSensitivity caseSensitive) {
+    if (isPathPieceEqual(left, right, caseSensitive)) {
+      return CompareResult::EQUAL;
+    } else if (isPathPieceLess(left, right, caseSensitive)) {
+      return CompareResult::BEFORE;
+    } else {
+      return CompareResult::AFTER;
+    }
   }
 };
 
@@ -1954,26 +2084,6 @@ bool removeFileWithAbsolutePath(AbsolutePathPiece path);
 void renameWithAbsolutePath(
     AbsolutePathPiece srcPath,
     AbsolutePathPiece destPath);
-
-enum class CompareResult {
-  EQUAL,
-  BEFORE,
-  AFTER,
-};
-
-/**
- * Compare the 2 passed in path based on the case sensitivity.
- *
- * Returns:
- *  - CompareResult::EQUAL if both are equal according to the case sensitivity
- *  - CompareResult::BEFORE if left is lexicographically before right
- *  - CompareResult::AFTER if left is lexicographically after right
- *
- */
-CompareResult comparePathComponent(
-    PathComponentPiece left,
-    PathComponentPiece right,
-    CaseSensitivity caseSensitivity);
 
 /**
  * Convenient literals for constructing path types.

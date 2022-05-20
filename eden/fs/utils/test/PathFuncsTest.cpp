@@ -22,13 +22,12 @@
 #include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/utils/FileUtils.h"
 
-using facebook::eden::basename;
-using facebook::eden::dirname;
+namespace facebook::eden {
+
 using folly::checkUnixError;
 using folly::StringPiece;
 using std::string;
 using std::vector;
-using namespace facebook::eden;
 using testing::ElementsAre;
 
 TEST(PathFuncs, Sanity) {
@@ -1007,6 +1006,30 @@ TEST(PathFuncs, comparison) {
   EXPECT_LT(PathComponent{"XYZ"}, PathComponent{"abc"});
 }
 
+TEST(PathFuncs, comparisonInsensitive) {
+  auto result =
+      comparePathPiece("foo"_pc, "FOO"_pc, CaseSensitivity::Insensitive);
+  EXPECT_EQ(result, CompareResult::EQUAL);
+
+  result = comparePathPiece("foo"_pc, "bar"_pc, CaseSensitivity::Insensitive);
+  EXPECT_EQ(result, CompareResult::AFTER);
+
+  result = comparePathPiece("foo"_pc, "BAR"_pc, CaseSensitivity::Insensitive);
+  EXPECT_EQ(result, CompareResult::AFTER);
+
+  result = comparePathPiece(
+      "foo/bar"_relpath, "FOO/bar"_relpath, CaseSensitivity::Insensitive);
+  EXPECT_EQ(result, CompareResult::EQUAL);
+
+  result = comparePathPiece(
+      "foo/foo"_relpath, "foo/bar"_relpath, CaseSensitivity::Insensitive);
+  EXPECT_EQ(result, CompareResult::AFTER);
+
+  result = comparePathPiece(
+      "foo/foo"_relpath, "foo/BAR"_relpath, CaseSensitivity::Insensitive);
+  EXPECT_EQ(result, CompareResult::AFTER);
+}
+
 TEST(PathFuncs, localDirCreateRemove) {
   folly::test::TemporaryDirectory dir = makeTempDir();
   string pathStr{dir.path().string()};
@@ -1145,3 +1168,5 @@ TEST(PathFuncs, HashEquality) {
     EXPECT_EQ(absHasher(abs1), absHasher(winAbs));
   }
 }
+
+} // namespace facebook::eden

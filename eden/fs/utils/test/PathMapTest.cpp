@@ -83,6 +83,27 @@ TEST(PathMap, caseInSensitive) {
   EXPECT_EQ(map.begin()->first, "FOO"_pc);
 }
 
+TEST(PathMap, caseInSensitiveOrdering) {
+  PathMap<bool> map1(CaseSensitivity::Insensitive);
+  map1.insert(std::make_pair(PathComponent("e"), true));
+  map1.insert(std::make_pair(PathComponent("g"), true));
+  map1.insert(std::make_pair(PathComponent("f"), true));
+
+  PathMap<bool> map2(CaseSensitivity::Insensitive);
+  map2.insert(std::make_pair(PathComponent("e"), true));
+  map2.insert(std::make_pair(PathComponent("g"), true));
+  map2.insert(std::make_pair(PathComponent("F"), true));
+
+  EXPECT_EQ(map1.size(), map2.size());
+
+  for (auto it1 = map1.cbegin(), it2 = map2.cbegin(); it1 != map1.cend();
+       ++it1, ++it2) {
+    EXPECT_STRCASEEQ(
+        it1->first.stringPiece().str().c_str(),
+        it2->first.stringPiece().str().c_str());
+  }
+}
+
 TEST(PathMap, caseInSensitiveCopyMove) {
   PathMap<bool> map(CaseSensitivity::Insensitive);
   map.insert(std::make_pair(PathComponent("foo"), true));
