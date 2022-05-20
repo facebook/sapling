@@ -298,10 +298,6 @@ def _findnexttarget(
     if not n and not bookmark and not top:
         raise error.Abort(_("no stop condition specified"))
 
-    # Precompute child relationships to avoid expensive ctx.children() calls.
-    if not rebase:
-        childrenof = common.getchildrelationships(repo, [node])
-
     # If we're moving towards a rev, get the chain of revs up to that rev.
     line = set()
     if towards:
@@ -329,9 +325,7 @@ def _findnexttarget(
         # This means we can't rely on precomputed child relationships.
         if rebase:
             common.restackonce(ui, repo, repo[node].rev(), childrenonly=True)
-            children = set(c.node() for c in repo[node].children())
-        else:
-            children = childrenof[node]
+        children = set(c.node() for c in repo[node].children())
 
         # Remove children not along the specified line.
         children = (children & line) or children
