@@ -14,6 +14,7 @@ use context::{CoreContext, PerfCounterType};
 use fbinit::FacebookInit;
 use futures::try_join;
 use manifest::Entry;
+use maplit::hashset;
 use mononoke_types::{
     hash::Blake2, path_bytes_from_mpath, ChangesetId, FileUnodeId, MPath, ManifestUnodeId,
     RepositoryId,
@@ -26,7 +27,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 mod caching;
-use crate::caching::{CacheHandlers, RenameKey};
+use crate::caching::{CacheHandlers, GetCsIdsKey, RenameKey};
 #[cfg(test)]
 mod tests;
 
@@ -249,8 +250,7 @@ impl MutableRenames {
         match &self.cache_handlers {
             None => self.has_rename_uncached(ctx, dst_cs_id).await,
             Some(cache_handlers) => {
-                let mut keys = HashSet::new();
-                keys.insert(dst_cs_id);
+                let keys = hashset![dst_cs_id];
 
                 let cache = cache_handlers.has_rename(self, ctx);
 
@@ -309,9 +309,8 @@ impl MutableRenames {
         match &self.cache_handlers {
             None => self.get_rename_uncached(ctx, dst_cs_id, dst_path).await,
             Some(cache_handlers) => {
-                let mut keys = HashSet::new();
                 let key = RenameKey::new(dst_cs_id, dst_path);
-                keys.insert(key.clone());
+                let keys = hashset![key.clone()];
 
                 let cache = cache_handlers.get_rename(self, ctx);
 
@@ -323,6 +322,42 @@ impl MutableRenames {
                     .flatten()
                     .transpose()?;
                 Ok(res)
+            }
+        }
+    }
+
+    pub async fn get_cs_ids_with_rename_uncached(
+        &self,
+        ctx: &CoreContext,
+        dst_path: Option<MPath>,
+    ) -> Result<HashSet<ChangesetId>, Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+
+        let dst_path_bytes = path_bytes_from_mpath(dst_path.as_ref());
+        let dst_path_hash = PathHashBytes::new(&dst_path_bytes);
+        let rows = FindRenames::query(&self.store.read_connection, &self.repo_id, &dst_path_hash.0)
+            .await?;
+        Ok(rows.into_iter().map(|r| r.0).collect())
+    }
+
+    pub async fn get_cs_ids_with_rename(
+        &self,
+        ctx: &CoreContext,
+        dst_path: Option<MPath>,
+    ) -> Result<HashSet<ChangesetId>, Error> {
+        match &self.cache_handlers {
+            None => self.get_cs_ids_with_rename_uncached(ctx, dst_path).await,
+            Some(cache_handlers) => {
+                let key = GetCsIdsKey::new(dst_path);
+                let keys = hashset![key.clone()];
+
+                let cache = cache_handlers.get_cs_ids_with_rename(self, ctx);
+
+                caching_ext::get_or_fill(cache, keys).await.map(|mut r| {
+                    let res = r.remove(&key);
+                    res.map_or(HashSet::new(), |r| r.into())
+                })
             }
         }
     }
@@ -386,6 +421,17 @@ queries! {
             mutable_renames.repo_id = {repo_id}
            AND mutable_renames.dst_cs_id = {dst_cs_id}
         LIMIT 1
+        "
+    }
+
+    read FindRenames(repo_id: RepositoryId, dst_path_hash: Vec<u8>) -> (ChangesetId) {
+        "
+        SELECT
+            mutable_renames.dst_cs_id
+        FROM mutable_renames
+        WHERE
+            mutable_renames.repo_id = {repo_id}
+            AND mutable_renames.dst_path_hash = {dst_path_hash}
         "
     }
 }

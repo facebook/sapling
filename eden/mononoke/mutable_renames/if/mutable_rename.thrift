@@ -27,3 +27,7 @@ struct MutableRenameEntry {
 struct CachedMutableRenameEntry {
   1: optional MutableRenameEntry entry;
 } (rust.exhaustive)
+
+struct ChangesetIdSet {
+  1: required list<mononoke_types_thrift.ChangesetId> cs_ids;
+} (rust.exhaustive)

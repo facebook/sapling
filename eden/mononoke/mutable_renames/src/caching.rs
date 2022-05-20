@@ -36,6 +36,8 @@ pub struct CacheHandlers {
     presence_keygen: KeyGen,
     rename_cachelib: CachelibHandler<CachedMutableRenameEntry>,
     rename_keygen: KeyGen,
+    get_cs_ids_cachelib: CachelibHandler<ChangesetIdSet>,
+    get_cs_ids_keygen: KeyGen,
 }
 
 impl CacheHandlers {
@@ -47,14 +49,22 @@ impl CacheHandlers {
             .try_into()
             .context("While converting from i64 to u32 sitever")?;
         let presence_keygen = KeyGen::new("scm.mononoke.mutable_renames.present", CODEVER, sitever);
-        let rename_cachelib = pool.into();
+        let rename_cachelib = pool.clone().into();
         let rename_keygen = KeyGen::new("scm.mononoke.mutable_renames.rename", CODEVER, sitever);
+        let get_cs_ids_cachelib = pool.into();
+        let get_cs_ids_keygen = KeyGen::new(
+            "scm.mononoke.mutable_renames.cs_ids_for_path",
+            CODEVER,
+            sitever,
+        );
         Ok(Self {
             memcache,
             presence_cachelib,
             presence_keygen,
             rename_cachelib,
             rename_keygen,
+            get_cs_ids_cachelib,
+            get_cs_ids_keygen,
         })
     }
 
@@ -64,12 +74,17 @@ impl CacheHandlers {
         let rename_cachelib = CachelibHandler::create_mock();
         let presence_keygen = KeyGen::new("scm.mononoke.mutable_renames.present", CODEVER, 0);
         let rename_keygen = KeyGen::new("scm.mononoke.mutable_renames.rename", CODEVER, 0);
+        let get_cs_ids_cachelib = CachelibHandler::create_mock();
+        let get_cs_ids_keygen =
+            KeyGen::new("scm.mononoke.mutable_renames.cs_ids_for_path", CODEVER, 0);
         Self {
             memcache,
             presence_cachelib,
             presence_keygen,
             rename_cachelib,
             rename_keygen,
+            get_cs_ids_cachelib,
+            get_cs_ids_keygen,
         }
     }
 
@@ -99,6 +114,23 @@ impl CacheHandlers {
         let keygen = &self.rename_keygen;
         let cachelib = &self.rename_cachelib;
         CachedGetMutableRename {
+            owner,
+            cachelib,
+            memcache,
+            keygen,
+            ctx,
+        }
+    }
+
+    pub fn get_cs_ids_with_rename<'a>(
+        &'a self,
+        owner: &'a MutableRenames,
+        ctx: &'a CoreContext,
+    ) -> CachedGetCsIdsWithRename<'a> {
+        let memcache = &self.memcache;
+        let keygen = &self.get_cs_ids_keygen;
+        let cachelib = &self.get_cs_ids_cachelib;
+        CachedGetCsIdsWithRename {
             owner,
             cachelib,
             memcache,
@@ -414,6 +446,127 @@ impl<'a> KeyedEntityStore<RenameKey, CachedMutableRenameEntry> for CachedGetMuta
                     .map(CacheableMutableRenameEntry::from),
             );
             res.insert(key, rename_entry);
+        }
+        Ok(res)
+    }
+}
+
+#[derive(Abomonation, Clone)]
+pub struct ChangesetIdSet {
+    // You can't easily Abomonate HashSet, but you can Vec. Store as Vec, construct from HashSet only
+    set: Vec<ChangesetId>,
+}
+
+impl ChangesetIdSet {
+    pub fn new(ids: HashSet<ChangesetId>) -> Self {
+        let set = ids.into_iter().collect();
+        Self { set }
+    }
+}
+
+impl From<ChangesetIdSet> for HashSet<ChangesetId> {
+    fn from(set: ChangesetIdSet) -> Self {
+        set.set.into_iter().collect()
+    }
+}
+
+impl MemcacheEntity for ChangesetIdSet {
+    fn serialize(&self) -> Bytes {
+        let thrift_self = thrift::ChangesetIdSet {
+            cs_ids: self.set.iter().map(|c| c.into_thrift()).collect(),
+        };
+        compact_protocol::serialize(&thrift_self)
+    }
+
+    fn deserialize(bytes: Bytes) -> Result<Self, ()> {
+        let thrift::ChangesetIdSet { cs_ids } =
+            compact_protocol::deserialize(bytes).map_err(|_| ())?;
+        Ok(Self {
+            set: cs_ids
+                .into_iter()
+                .map(ChangesetId::from_thrift)
+                .collect::<Result<Vec<_>, Error>>()
+                .map_err(|_| ())?,
+        })
+    }
+}
+
+pub struct CachedGetCsIdsWithRename<'a> {
+    owner: &'a MutableRenames,
+    cachelib: &'a CachelibHandler<ChangesetIdSet>,
+    memcache: &'a MemcacheHandler,
+    keygen: &'a KeyGen,
+    ctx: &'a CoreContext,
+}
+
+impl<'a> EntityStore<ChangesetIdSet> for CachedGetCsIdsWithRename<'a> {
+    fn cachelib(&self) -> &CachelibHandler<ChangesetIdSet> {
+        self.cachelib
+    }
+
+    fn keygen(&self) -> &KeyGen {
+        self.keygen
+    }
+
+    fn memcache(&self) -> &MemcacheHandler {
+        self.memcache
+    }
+
+    fn cache_determinator(&self, _v: &ChangesetIdSet) -> CacheDisposition {
+        CacheDisposition::Cache(CacheTtl::Ttl(Duration::from_secs(4 * 60 * 60)))
+    }
+
+    caching_ext::impl_singleton_stats!("mutable_renames.get_cs_ids_with_rename");
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct GetCsIdsKey {
+    dst_path: Option<MPath>,
+    dst_path_hash: PathHashBytes,
+}
+
+impl GetCsIdsKey {
+    pub fn new(dst_path: Option<MPath>) -> Self {
+        let dst_path_bytes = path_bytes_from_mpath(dst_path.as_ref());
+        let dst_path_hash = PathHashBytes::new(&dst_path_bytes);
+
+        Self {
+            dst_path,
+            dst_path_hash,
+        }
+    }
+}
+
+#[async_trait]
+impl<'a> KeyedEntityStore<GetCsIdsKey, ChangesetIdSet> for CachedGetCsIdsWithRename<'a> {
+    fn get_cache_key(&self, key: &GetCsIdsKey) -> String {
+        match &key.dst_path {
+            None => format!(
+                "mutable_renames.csids_with_renames_at_root.repo{}",
+                self.owner.repo_id
+            ),
+            Some(_) => format!(
+                "mutable_renames.csids_with_renames_at_path.repo{}.{}",
+                self.owner.repo_id, key.dst_path_hash
+            ),
+        }
+    }
+
+    async fn get_from_db(
+        &self,
+        keys: HashSet<GetCsIdsKey>,
+    ) -> Result<HashMap<GetCsIdsKey, ChangesetIdSet>, Error> {
+        let mut res = HashMap::new();
+        // Right now, the only caller always asks for a single entry from the cache, so
+        // this function is either not called, or called once.
+        // If we build a batch interface, we should make this use it for batched fills
+        for key in keys {
+            let cs_ids = ChangesetIdSet::new(
+                self.owner
+                    .get_cs_ids_with_rename_uncached(self.ctx, key.dst_path.clone())
+                    .await?,
+            );
+            res.insert(key, cs_ids);
         }
         Ok(res)
     }
