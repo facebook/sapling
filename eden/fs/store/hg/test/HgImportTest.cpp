@@ -59,6 +59,10 @@ class HgImportTest : public ::testing::Test {
   EXPECT_EQ((blob)->getContents().clone()->moveToFbString(), (data))
 
 TEST_F(HgImportTest, importTest) {
+  if (!testEnvironmentSupportsHg()) {
+    GTEST_SKIP();
+  }
+
   // Set up the initial commit
   repo_.mkdir("foo");
   StringPiece barData = "this is a test file\n";
@@ -94,6 +98,10 @@ TEST_F(HgImportTest, importTest) {
 // HgImportTest).
 #ifndef _WIN32
 TEST_F(HgImportTest, importerHelperExitsCleanly) {
+  if (!testEnvironmentSupportsHg()) {
+    GTEST_SKIP();
+  }
+
   HgImporter importer(repo_.path(), stats_);
   auto status = importer.debugStopHelperProcess();
   EXPECT_EQ(status.str(), "exited with status 0");
