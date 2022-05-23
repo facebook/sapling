@@ -168,6 +168,18 @@ class MultiLineMatcher:
         >>> m.match('a\nb\nc')
         False
 
+    "..." matches multiple lines:
+
+        >>> m = MultiLineMatcher('a\n...\ne\n')
+        >>> m.match('a\nb\nc\nd\ne\n')
+        True
+        >>> m.normalize('a\nb\nc\nd\ne\nf\n')[0]
+        'a\n...\ne\nf\n'
+        >>> m.match('a\ne\n')
+        True
+        >>> m.normalize('a\ne\n')[0]
+        'a\n...\ne\n'
+
     """
 
     def __init__(
@@ -217,6 +229,10 @@ class MultiLineMatcher:
                 glines += alines[i1:i2]
                 matched = False
             elif tag == "replace" or tag == "insert":
+                # "..." matches multiple lines (similar to stdlib doctest)
+                if blines[j1:j2] == ["..."]:
+                    glines.append(blines[j1])
+                    continue
                 # naively trying to match with glob patterns
                 # (this for loop is empty for tag == "insert")
                 j = j1
