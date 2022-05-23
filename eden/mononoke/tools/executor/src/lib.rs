@@ -23,6 +23,7 @@ pub use oss::*;
 // BP: Background Process, e.g. Walker.
 // BPE: BackgroundProcessExecutor e.g. Executor wrapper over walker for
 // sharded execution.
+// BPM: BackgroundProcessManager e.g. ShardManager.
 
 /// Trait outlining the method responsible for performing the initial bootstrapping
 /// of the BP with the context of the incoming repo. Implementer of this trait should
