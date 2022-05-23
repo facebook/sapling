@@ -25,6 +25,10 @@
 //! * Mark a file as deleted.
 //!     # delete: COMMIT path/to/file
 //!
+//! * Forget file that was about to be added (useful for getting rid of files
+//!   that are added by default):
+//!     # forget: COMMIT path/to/file
+//!
 //! Paths can be surrounded by quotes if they contain special characters.
 
 use std::collections::BTreeMap;
@@ -96,6 +100,9 @@ enum ChangeAction {
     Delete {
         path: Vec<u8>,
     },
+    Forget {
+        path: Vec<u8>,
+    },
     Extra {
         key: String,
         value: Vec<u8>,
@@ -139,6 +146,14 @@ impl Action {
                     Ok(Action::Change {
                         name,
                         change: ChangeAction::Delete { path },
+                    })
+                }
+                ("forget", [name, path]) => {
+                    let name = name.to_string()?;
+                    let path = path.to_bytes();
+                    Ok(Action::Change {
+                        name,
+                        change: ChangeAction::Forget { path },
                     })
                 }
                 ("extra", [name, key, value]) => {
@@ -398,6 +413,7 @@ fn apply_changes<'a>(
         match change {
             ChangeAction::Modify { path, content, .. } => c = c.add_file(path.as_slice(), content),
             ChangeAction::Delete { path, .. } => c = c.delete_file(path.as_slice()),
+            ChangeAction::Forget { path, .. } => c = c.forget_file(path.as_slice()),
             ChangeAction::Extra { key, value, .. } => c = c.add_extra(key, value),
             ChangeAction::Copy {
                 path,

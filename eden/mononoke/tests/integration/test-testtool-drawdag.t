@@ -30,6 +30,7 @@ The tool will print the commit hash of each commit.
   > # modify: A path/to/file "add additional content"
   > # modify: A a_file old_content
   > # delete: Z path/to/file
+  > # forget: Z Z
   > # copy: B b_file new_content A a_file
   > # bookmark: M main
   > # bookmark: Z zzzz
@@ -59,17 +60,11 @@ The tool will print the commit hash of each commit.
   W=0d50131ffe46b4052ed85d6bc352b93e7e4ef9d5a69b3aeb6af9016f257a7a71
   X=b8eecc665a3fa0a2db4269503b8662b588cdaa0a951a5280fbefa8e1b3adb1ca
   Y=0496bee16414ecd92d98379f536e2306252990c72001f64fe01a6229a3a2c136
-  Z=61cdc752084d23113c190b2475704247d76b191238a1c16a4ce900ffdc041074
+  Z=996698aaf45736eedc0b2496616255ab81f822b831a01723df7a018fc98ea3ad
 
   $ mononoke_newadmin fetch -R repo -i $Z -p Z
-  File-Type: regular
-  Size: 1
-  Content-Id: 4507d50745bd3c6c688c62bb0dcf9d157cc852bc03557b855370387835faa509
-  Sha1: 909f99a779adb66a76fc53ab56c7dd1caf35d0fd
-  Sha256: bbeebd879e1dff6918546dc0c179fdde505f2a21591c9a9c96e36b054ec5af83
-  Git-Sha1: 0f137124110a2cc080e70794f98f7c8e5fd87e75
-  
-  Z
+  Error: Path does not exist: Z
+  [1]
   $ mononoke_newadmin fetch -R repo -i $Z -p Y
   File-Type: regular
   Size: 1
