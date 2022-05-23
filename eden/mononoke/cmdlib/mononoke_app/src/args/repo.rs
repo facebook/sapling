@@ -48,7 +48,6 @@ impl RepoArgs {
 #[derive(Args, Debug)]
 #[clap(group(
     ArgGroup::new("multirepos")
-        .required(true)
         .multiple(true)
         .conflicts_with("repo")
         .args(&["repo-id", "repo-name"]),
@@ -56,11 +55,11 @@ impl RepoArgs {
 pub struct MultiRepoArgs {
     /// Numeric repository ID
     #[clap(long)]
-    repo_id: Vec<i32>,
+    pub repo_id: Vec<i32>,
 
     /// Repository name
     #[clap(short = 'R', long)]
-    repo_name: Vec<String>,
+    pub repo_name: Vec<String>,
 }
 
 impl MultiRepoArgs {

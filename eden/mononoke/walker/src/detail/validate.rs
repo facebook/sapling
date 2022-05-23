@@ -46,6 +46,8 @@ use phases::{Phase, Phases};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, warn, Logger};
 use stats::prelude::*;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use std::{
     collections::{HashMap, HashSet},
     fmt,
@@ -936,6 +938,7 @@ async fn run_one(
         sub_params.tail_params,
         stateful_visitor,
         make_sink,
+        Arc::new(AtomicBool::new(false)), //TODO: Update with valid flag post BPE use.
     )
     .await
 }

@@ -19,6 +19,7 @@ pub const VALIDATE: &str = "validate";
 pub const CORPUS: &str = "corpus";
 
 // Per repo things we don't pass into the walk
+#[derive(Clone)]
 pub struct RepoSubcommandParams {
     pub progress_state: ProgressStateMutex<ProgressStateCountByType<StepStats, ProgressSummary>>,
     pub tail_params: TailParams,
@@ -35,6 +36,7 @@ pub struct JobWalkParams {
     pub repo_count: usize,
 }
 
+#[derive(Clone)]
 pub struct JobParams {
     pub walk_params: JobWalkParams,
     pub per_repo: Vec<(RepoSubcommandParams, RepoWalkParams)>,

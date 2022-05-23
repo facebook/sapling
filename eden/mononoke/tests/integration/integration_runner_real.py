@@ -37,6 +37,14 @@ DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
     "test-cat-auth.t",
     "test-hook-verify-integrity.t",
     "test-bypass-readonly-acl.t",
+    # Components linked with SM library invoke some network calls to loopback
+    # address for configerator and ODS even without being part of actual execution
+    # Whitelisting the below tests until RCA is completed for SM integration so
+    # that integration tests do not time-out due to failed network call retries.
+    # TODO(rajshar): Investigate root cause for network calls from SM Client.
+    "test-new-walker-checkpoint.t",
+    "test-new-walker-count-objects.t",
+    "test-new-walker-count-public-chunked.t",
 }
 
 

@@ -16,7 +16,7 @@ mod setup;
 
 use anyhow::Error;
 use blobstore_factory::{BlobstoreArgDefaults, ReadOnlyStorage};
-use clap::Parser;
+use clap::{ArgGroup, Parser};
 use cmdlib::args::CachelibSettings;
 use cmdlib_scrubbing::ScrubAppExtension;
 use fbinit::FacebookInit;
@@ -27,9 +27,22 @@ use multiplexedblob::ScrubWriteMostly;
 use std::num::NonZeroU32;
 
 #[derive(Parser)]
+#[clap(group(
+    ArgGroup::new("walkerargs")
+        .required(true)
+        .multiple(true)
+        .args(&["repo-id", "repo-name", "sharded-service-name"]),
+))]
 struct WalkerArgs {
+    /// List of Repo IDs or Repo Names used when sharded-service-name
+    /// is absent.
     #[clap(flatten)]
     pub repos: MultiRepoArgs,
+
+    /// The name of ShardManager service to be used when the walker
+    /// functionality is desired to be executed in a sharded setting.
+    #[clap(long, conflicts_with = "multirepos")]
+    pub sharded_service_name: Option<String>,
 }
 
 #[fbinit::main]

@@ -42,6 +42,7 @@ use mononoke_types::datetime::DateTime;
 use samplingblob::ComponentSamplingHandler;
 use slog::info;
 use stats::prelude::*;
+use std::sync::atomic::AtomicBool;
 use std::{
     collections::{HashMap, HashSet},
     fmt,
@@ -433,6 +434,7 @@ pub async fn scrub_objects(
     fb: FacebookInit,
     job_params: JobParams,
     command: ScrubCommand,
+    cancellation_requested: Arc<AtomicBool>,
 ) -> Result<(), Error> {
     let JobParams {
         walk_params,
@@ -445,7 +447,14 @@ pub async fn scrub_objects(
 
         command.apply_repo(&repo_params);
 
-        let walk = run_one(fb, walk_params, sub_params, repo_params, command);
+        let walk = run_one(
+            fb,
+            walk_params,
+            sub_params,
+            repo_params,
+            command,
+            Arc::clone(&cancellation_requested),
+        );
         all_walks.push(walk);
     }
     try_join_all(all_walks).await.map(|_| ())
@@ -457,6 +466,7 @@ async fn run_one(
     sub_params: RepoSubcommandParams,
     repo_params: RepoWalkParams,
     command: ScrubCommand,
+    cancellation_requested: Arc<AtomicBool>,
 ) -> Result<(), Error> {
     let sizing_progress_state =
         ProgressStateMutex::new(ProgressStateCountByType::<ScrubStats, ScrubStats>::new(
@@ -536,6 +546,7 @@ async fn run_one(
             sub_params.tail_params,
             walk_state,
             make_sink,
+            cancellation_requested,
         )
         .await
     } else {
@@ -547,6 +558,7 @@ async fn run_one(
             sub_params.tail_params,
             walk_state,
             make_sink,
+            cancellation_requested,
         )
         .await
     }

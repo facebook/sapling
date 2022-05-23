@@ -36,6 +36,7 @@ use mononoke_types::datetime::DateTime;
 use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 use regex::Regex;
 use samplingblob::SamplingHandler;
+use std::sync::atomic::AtomicBool;
 use std::{
     collections::{HashMap, HashSet},
     io::Write,
@@ -447,6 +448,7 @@ async fn run_one(
         sub_params.tail_params,
         walk_state,
         make_sink,
+        Arc::new(AtomicBool::new(false)), //TODO: Add valid flag post BPE implementation.
     )
     .await
 }

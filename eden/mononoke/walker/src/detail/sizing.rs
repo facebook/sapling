@@ -36,6 +36,7 @@ use maplit::hashset;
 use mononoke_types::BlobstoreBytes;
 use samplingblob::SamplingHandler;
 use slog::info;
+use std::sync::atomic::AtomicBool;
 use std::{
     cmp::min,
     collections::{HashMap, HashSet},
@@ -388,6 +389,7 @@ async fn run_one(
         sub_params.tail_params,
         walk_state,
         make_sink,
+        Arc::new(AtomicBool::new(false)),
     )
     .await
 }
