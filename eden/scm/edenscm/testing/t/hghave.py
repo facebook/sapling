@@ -668,11 +668,13 @@ def has_serve():
 
 @check("test-repo", "running tests from repository")
 def has_test_repo():
-    # This used to check for the existence of a .hg folder to ensure a repo (so
-    # it can run `hg files`). Internally, we'll always have a repo, and
-    # externally we'll likely use git to publish so we'll need another solution
-    # there anyways.
-    return True
+    # test-check-*.t tests. They are confusing as the "hg"
+    # might have to be the system hg, not the one for testing.
+    # Drop support for them to avoid supporting running tests
+    # using system hg.
+    # Those tests might want to be written as separate linters
+    # instead.
+    return False
 
 
 @check("tic", "terminfo compiler and curses module")
