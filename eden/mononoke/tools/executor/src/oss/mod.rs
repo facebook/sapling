@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::RepoShardedJob;
+use crate::{RepoShardedProcess, RepoShardedProcessExecutor};
 use anyhow::Result;
 use fbinit::FacebookInit;
 use slog::Logger;
@@ -20,7 +20,7 @@ impl BackgroundProcessExecutor {
         _service_name: &'static str,
         _service_scope: &'static str,
         _timeout_secs: u64,
-        _bp_handle: Arc<dyn RepoShardedJob>,
+        _bp_handle: Arc<dyn RepoShardedProcess>,
     ) -> Result<Self> {
         unimplemented!("BackgroundProcessExecutor is supported only for fbcode build")
     }
