@@ -26,17 +26,30 @@ def logevent(ui, event, *msg, **opts):
             ui.write("%s%s" % (event, keywords))
 
 
+class uilogmixin:
+    def log(self, event, *msg, **opts):
+        logevent(self, event, *msg, **opts)
+        return super(uilogmixin, self).log(event, *msg, **opts)
+
+
+loguis = []
+
+
+def reposetup(ui, repo):
+    if uilogmixin not in ui.__class__.mro():
+
+        class extralogui(uilogmixin, ui.__class__):
+            pass
+
+        ui.__class__ = extralogui
+        loguis.append(ui)
+
+
 def uisetup(ui):
-    class extralogui(ui.__class__):
-        def log(self, event, *msg, **opts):
-            logevent(self, event, *msg, **opts)
-            return super(extralogui, self).log(event, *msg, **opts)
-
-    ui.__class__ = extralogui
-
     # Wrap util.log as an inner function so that we can use the ui object.
     def utillog(orig, event, *msg, **opts):
-        logevent(ui, event, *msg, **opts)
+        for ui in loguis:
+            logevent(ui, event, *msg, **opts)
         return orig(event, *msg, **opts)
 
     extensions.wrapfunction(util, "log", utillog)
