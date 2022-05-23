@@ -176,6 +176,7 @@ fn parse_with_repo_definition(
         segmented_changelog_config,
         repo_client_knobs,
         phabricator_callsign,
+        walker_config,
         ..
     } = named_repo_config;
 
@@ -204,6 +205,8 @@ fn parse_with_repo_definition(
         &named_storage_config
             .ok_or_else(|| anyhow!("missing storage_config from configuration"))?,
     )?;
+
+    let walker_config = walker_config.convert()?;
 
     let cache_warmup = cache_warmup.convert()?;
 
@@ -324,6 +327,7 @@ fn parse_with_repo_definition(
         phabricator_callsign,
         backup_repo_config,
         acl_region_config,
+        walker_config,
     })
 }
 
@@ -475,7 +479,7 @@ mod test {
         PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, RepoClientKnobs,
         SegmentedChangelogConfig, SegmentedChangelogHeadConfig, ShardableRemoteDatabaseConfig,
         ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig, SourceControlServiceMonitoring,
-        SourceControlServiceParams, UnodeVersion,
+        SourceControlServiceParams, UnodeVersion, WalkerConfig,
     };
     use mononoke_types::MPath;
     use mononoke_types_mocks::changesetid::ONES_CSID;
@@ -816,6 +820,10 @@ mod test {
 
             [backup_config]
             verification_enabled = false
+            
+            [walker_config]
+            scrub_enabled = true
+            validate_enabled = true       
         "#;
         let fbsource_repo_def = r#"
             repo_id=0
@@ -1150,6 +1158,11 @@ mod test {
                         hipster_acl: "acl_test".to_string(),
                     }],
                 }),
+                walker_config: Some(WalkerConfig {
+                    scrub_enabled: true,
+                    validate_enabled: true,
+                    params: None,
+                }),
             },
         );
 
@@ -1220,6 +1233,7 @@ mod test {
                 phabricator_callsign: Some("WWW".to_string()),
                 backup_repo_config: None,
                 acl_region_config: None,
+                walker_config: None,
             },
         );
         assert_eq!(

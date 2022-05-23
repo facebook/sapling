@@ -209,6 +209,8 @@ pub struct RepoConfig {
     pub backup_repo_config: Option<BackupRepoConfig>,
     /// ACL region configuration
     pub acl_region_config: Option<AclRegionConfig>,
+    /// Walker configuration
+    pub walker_config: Option<WalkerConfig>,
 }
 
 /// Backup repo configuration
@@ -1651,4 +1653,62 @@ pub struct AclRegionRule {
 pub struct AclRegionConfig {
     /// List of rules that grant access to regions of the repo.
     pub allow_rules: Vec<AclRegionRule>,
+}
+
+/// Walker parameters that are specific to type of job and repo.
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct WalkerJobParams {
+    /// Controls max concurrency for MySQL and other dependencies
+    pub scheduled_max_concurrency: Option<i64>,
+    /// Controls the max blobstore read QPS for a given repo
+    pub qps_limit: Option<i64>,
+    /// The type of nodes to be excluded during walk
+    pub exclude_node_type: Option<String>,
+    /// Whether to allow remaining deferred edges after chunks complete.
+    pub allow_remaining_deferred: bool,
+    /// Control whether walker continues in the face of error for specified
+    /// node types
+    pub error_as_node_data_type: Option<String>,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Deserialize)]
+/// The type of walker jobs deployed in production
+pub enum WalkerJobType {
+    /// Invalid value
+    Unknown,
+    /// Validate Job
+    ValidateAll,
+    /// ScrubAllChunked Job
+    ScrubAllChunked,
+    /// ScrubHgAllChunked Job
+    ScrubHgAllChunked,
+    /// ScrubHgFileContent Job
+    ScrubHgFileContent,
+    /// ScrubHgFileNode Job
+    ScrubHgFileNode,
+    /// ScrubUnodeAllChunked Job
+    ScrubUnodeAllChunked,
+    /// ScrubUnodeBlame Job
+    ScrubUnodeBlame,
+    /// ScrubDerivedNoContentMeta Job
+    ScrubDerivedNoContentMeta,
+    /// ScrubDerivedNoContentMetaChunked Job
+    ScrubDerivedNoContentMetaChunked,
+    /// ScrubUnodeFastlog Job
+    ScrubUnodeFastlog,
+    /// ScrubDerivedChunked Job
+    ScrubDerivedChunked,
+    /// ShallowHgScrub Job
+    ShallowHgScrub,
+}
+
+/// Configuration relevant to walker job.
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct WalkerConfig {
+    /// Determines if the walker should scrub blobs.
+    pub scrub_enabled: bool,
+    /// Determines if the walker should validate blobs.
+    pub validate_enabled: bool,
+    /// Parameters for different walker jobs.
+    pub params: Option<HashMap<WalkerJobType, WalkerJobParams>>,
 }
