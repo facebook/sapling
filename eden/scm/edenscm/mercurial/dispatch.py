@@ -103,7 +103,13 @@ class request(object):
         # Silence potential EPIPE or SIGPIPE errors when writing to stdout or
         # stderr.
         if util.safehasattr(signal, "SIGPIPE"):
-            util.signal(signal.SIGPIPE, signal.SIG_IGN)
+            try:
+                util.signal(signal.SIGPIPE, signal.SIG_IGN)
+            except ValueError:
+                # This can happen if the command runs as a library from a
+                # non-main thread.
+                if not util.istest():
+                    raise
 
         class ignoreerrorui(self.ui.__class__):
             def _write(self, *args, **kwargs):

@@ -4903,7 +4903,8 @@ _sighandlers = {}
 def signal(signum, handler):
     """Set the handler for signal signalnum to the function handler.
 
-    Unlike the stdlib signal.signal, this can work from non-main thread.
+    Unlike the stdlib signal.signal, this can work from non-main thread
+    if _handlersregistered is set.
     """
     if _handlersregistered:
         oldhandler = _sighandlers.get(signum)
