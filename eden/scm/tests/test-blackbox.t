@@ -24,10 +24,14 @@ alias expansion is logged
   $ rm -rf ./.hg/blackbox*
   $ hg confuse
   $ hg blackbox
-  [command] ["hg", "confuse"] started by uid 0 as pid 0 with nice 0
+  [command] [*, "confuse"] started by uid 0 as pid 0 with nice 0 (glob)
   [process_tree] (this process)
+  [command] [*, "confuse"] started by uid 0 as pid 0 with nice 0 (glob) (?)
+  [process_tree] (this process) (?)
   [legacy][command_info]
   [legacy][env_vars]
+  [legacy][command_info] (?)
+  [legacy][env_vars] (?)
   [legacy][command] confuse
   [legacy][dirstate_info]
   [legacy][jobid]
@@ -39,7 +43,7 @@ alias expansion is logged
   [legacy][command_info]
   [commmand_finish] exited 0 in 0 ms, max RSS: 0 bytes
   [tracing] (binary data of * bytes) (glob)
-  [command] ["hg", "blackbox"] started by uid 0 as pid 0 with nice 0
+  [command] [*, "blackbox"] started by uid 0 as pid 0 with nice 0 (glob)
   [process_tree] (this process)
   [legacy][command_info]
   [legacy][env_vars]
@@ -51,10 +55,14 @@ recursive aliases work correctly
   $ rm -rf ./.hg/blackbox*
   $ hg so-confusing
   $ hg blackbox
-  [command] ["hg", "so-confusing"] started by uid 0 as pid 0 with nice 0
+  [command] [*, "so-confusing"] started by uid 0 as pid 0 with nice 0 (glob)
   [process_tree] (this process)
+  [command] [*, "so-confusing"] started by uid 0 as pid 0 with nice 0 (glob) (?)
+  [process_tree] (this process) (?)
   [legacy][command_info]
   [legacy][env_vars]
+  [legacy][command_info] (?)
+  [legacy][env_vars] (?)
   [legacy][command] so-confusing
   [legacy][dirstate_info]
   [legacy][jobid]
@@ -66,7 +74,7 @@ recursive aliases work correctly
   [legacy][command_info]
   [commmand_finish] exited 0 in 0 ms, max RSS: 0 bytes
   [tracing] (binary data of * bytes) (glob)
-  [command] ["hg", "blackbox"] started by uid 0 as pid 0 with nice 0
+  [command] [*, "blackbox"] started by uid 0 as pid 0 with nice 0 (glob)
   [process_tree] (this process)
   [legacy][command_info]
   [legacy][env_vars]
@@ -181,8 +189,10 @@ Test EDENSCM_BLACKBOX_TAGS
   $TESTTMP/repo1
   $ hg blackbox -p '{"tags": "_"}'
   [tags] foo, bar
+  [tags] foo, bar (?)
   $ hg blackbox -p '{"tags": {"names": ["contain", "bar"]}}'
   [tags] foo, bar
+  [tags] foo, bar (?)
 
 blackbox should not fail with "TypeError: not enough arguments for format string"
 
