@@ -286,7 +286,7 @@ def rundoctest(testid: TestId, mismatchcb: Callable[[Mismatch], None]):
 def runttest(testid: TestId, exts: List[str], mismatchcb: Callable[[Mismatch], None]):
     path = Path(testid.path)
     testdir = path.parent
-
+    exts = exts[:]
     try:
         tcode = path.read_bytes().decode()
     except FileNotFoundError as e:
@@ -295,6 +295,9 @@ def runttest(testid: TestId, exts: List[str], mismatchcb: Callable[[Mismatch], N
     exeneeded = set()
 
     def hasfeaturetracked(feature):
+        if feature in {"ext.parallel"}:
+            exts.append("edenscm.testing.ext.parallel")
+            return True
         result = hasfeature(feature)
         if result and feature in hghave.exes:
             exeneeded.add(feature)
