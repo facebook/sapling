@@ -368,9 +368,10 @@ impl LfsIndexedLogBlobsStore {
         // Filter errors. It's possible that one entry is corrupted, or for whatever reason can't
         // be deserialized, whenever this blob/entry is refetched, the corrupted entry will still be
         // present alonside a valid one. We shouldn't fail because of it, so filter the errors.
-        let mut chunks = chunks_iter
-            .filter(|res| res.is_ok())
-            .collect::<Result<Vec<LfsIndexedLogBlobsEntry>>>()?;
+        let mut chunks: Vec<(usize, LfsIndexedLogBlobsEntry)> = chunks_iter
+            .filter_map(|res: Result<_, Error>| res.ok())
+            .enumerate()
+            .collect();
         drop(store);
 
         if chunks.is_empty() {
@@ -378,15 +379,17 @@ impl LfsIndexedLogBlobsStore {
         }
 
         // Make sure that the ranges are sorted in increasing order.
-        chunks.sort_unstable_by(|a, b| a.range.start.cmp(&b.range.start));
+        chunks.sort_unstable_by(|(a_idx, a), (b_idx, b)| {
+            a.range.start.cmp(&b.range.start).then(a_idx.cmp(b_idx))
+        });
 
         // unwrap safety: chunks isn't empty.
-        let size = chunks.last().unwrap().range.end;
+        let size = chunks.last().unwrap().1.range.end;
 
         let mut res = Vec::with_capacity(size);
 
         let mut next_start = 0;
-        for entry in chunks.into_iter() {
+        for (_, entry) in chunks.into_iter() {
             // A chunk is missing.
             if entry.range.start > next_start {
                 return Ok(None);
@@ -2214,6 +2217,45 @@ mod tests {
         store.flush()?;
 
         assert_eq!(store.get(&bad_hash, data.len() as u64)?, None);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_prefer_newer_chunks() -> Result<()> {
+        let dir = TempDir::new()?;
+        let config = make_lfs_config(&dir, "test_invalid_hash");
+
+        let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
+
+        let data = Bytes::from_static(b"data");
+        let hash = ContentHash::sha256(&data).unwrap_sha256();
+
+        // Insert some poisoned chunks under the same hash.
+        store
+            .inner
+            .write()
+            .append(serialize(&LfsIndexedLogBlobsEntry {
+                sha256: hash.clone(),
+                range: (0..2),
+                data: Bytes::from_static(b"oo"),
+            })?)?;
+        store
+            .inner
+            .write()
+            .append(serialize(&LfsIndexedLogBlobsEntry {
+                sha256: hash.clone(),
+                range: (2..4),
+                data: Bytes::from_static(b"ps"),
+            })?)?;
+
+        // Insert the new, correct data.
+        store.add(&hash, data.clone())?;
+
+        store.flush()?;
+
+        // Make sure we get the new data.
+        assert_eq!(store.get(&hash, data.len() as u64)?, Some(data));
 
         Ok(())
     }
