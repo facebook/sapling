@@ -21,7 +21,7 @@ You can also customize details about commits with special comments.
 
 The tool will print the commit hash of each commit.
 
-  $ mononoke_testtool drawdag -R repo <<'EOF'
+  $ testtool_drawdag -R repo --derive-all <<'EOF'
   >             I-J-K   P-Q-R     U-V-W
   >            /     \       \   /
   > A-B-C-D---H---L-M-N--O----S-T-X-Y-Z
@@ -61,10 +61,29 @@ The tool will print the commit hash of each commit.
   Y=0496bee16414ecd92d98379f536e2306252990c72001f64fe01a6229a3a2c136
   Z=61cdc752084d23113c190b2475704247d76b191238a1c16a4ce900ffdc041074
 
+  $ mononoke_newadmin fetch -R repo -i $Z -p Z
+  File-Type: regular
+  Size: 1
+  Content-Id: 4507d50745bd3c6c688c62bb0dcf9d157cc852bc03557b855370387835faa509
+  Sha1: 909f99a779adb66a76fc53ab56c7dd1caf35d0fd
+  Sha256: bbeebd879e1dff6918546dc0c179fdde505f2a21591c9a9c96e36b054ec5af83
+  Git-Sha1: 0f137124110a2cc080e70794f98f7c8e5fd87e75
+  
+  Z
+  $ mononoke_newadmin fetch -R repo -i $Z -p Y
+  File-Type: regular
+  Size: 1
+  Content-Id: 35ccfd1831564764439349755068b3400612b615d0c85e4d73af0cee786c963e
+  Sha1: 23eb4d3f4155395a74e9d534f97ff4c1908f5aac
+  Sha256: 18f5384d58bcb1bba0bcd9e6a6781d1a6ac2cc280c330ecbab6cb7931b721552
+  Git-Sha1: 24de910c13bb1e60fc5ec37a1058d356b1f2fa4d
+  
+  Y
+
 The graph can be extended with more commits.  The node names don't
 need to match the previous graph (although it's probably a good idea).
 
-  $ mononoke_testtool drawdag -R repo <<'EOF'
+  $ testtool_drawdag -R repo <<'EOF'
   >        XX    # modify: XX path/to/file "more additional content"
   >       /  \   # bookmark: XX xxxx
   >     D1    W2
