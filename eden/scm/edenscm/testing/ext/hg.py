@@ -33,6 +33,8 @@ def testsetup(t: TestTmp):
     testfile = t.getenv("TESTFILE")
     testdir = t.getenv("TESTDIR")
     featurespy = os.path.join(testdir, "features.py")
+
+    inprocesshg = True
     if os.path.exists(featurespy):
         with open(featurespy, "r") as f:
             globalenv = {}
@@ -41,6 +43,7 @@ def testsetup(t: TestTmp):
             if setup:
                 testname = os.path.basename(testfile)
                 setup(testname, str(hgrcpath))
+                inprocesshg = globalenv.get("inprocesshg", inprocesshg)
 
     # the 'f' utility in $TESTDIR/f
     fpath = os.path.join(testdir, "f")
@@ -119,7 +122,7 @@ def testsetup(t: TestTmp):
 
     # change the 'hg' shell command to run inline without spawning
     # (about 2x faster than chg)
-    if run is not None:
+    if run is not None and inprocesshg:
         t.command(hg)
 
 
