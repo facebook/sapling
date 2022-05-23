@@ -510,6 +510,14 @@ def _innerwalk(self, match, event, span):
                 filter(lambda x: _isutf8(self._ui, x["name"]), result["files"])
             )
 
+            self._ui.metrics.gauge("watchmanfilecount", len(files))
+            # Ideally we'd just track a bool for fresh_instance or not, but there
+            # could be multiple queries during a command, so let's use a counter.
+            self._ui.metrics.gauge(
+                "watchmanfreshinstances",
+                1 if result["is_fresh_instance"] else 0,
+            )
+
             if result["is_fresh_instance"]:
                 if not self._ui.plain() and self._ui.configbool(
                     "fsmonitor", "warn-fresh-instance"

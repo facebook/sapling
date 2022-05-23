@@ -161,7 +161,7 @@ Test ui.metrics.gauge API
     metrics_type=metrics
 
 Metrics can be printed if devel.print-metrics is set:
-  $ hg log -r null -T '.\n' --config extensions.gauge=$TESTTMP/a.py --config devel.print-metrics=1
+  $ hg log -r null -T '.\n' --config extensions.gauge=$TESTTMP/a.py --config devel.print-metrics=1 --config devel.skip-metrics=watchman
   .
   atexit handler executed
   { metrics : { bar : 2,  foo : { a : 1,  b : 5}}}
@@ -173,6 +173,7 @@ Metrics is logged to blackbox:
   .
   atexit handler executed
   $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"metrics"}}'
+  [legacy][metrics] {'metrics': {'watchmanfilecount': 3, 'watchmanfreshinstances': 0}} (?)
   [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
   [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
   [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}

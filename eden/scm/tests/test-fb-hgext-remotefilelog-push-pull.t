@@ -2,7 +2,7 @@
   $ setconfig experimental.allowfilepeer=True
 
   $ . "$TESTDIR/library.sh"
-  $ setconfig devel.print-metrics=1 devel.skip-metrics=scmstore
+  $ setconfig devel.print-metrics=1 devel.skip-metrics=scmstore,watchman
   $ setconfig scmstore.enableshim=True scmstore.contentstorefallback=True
 
   $ hginit master
