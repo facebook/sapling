@@ -17,12 +17,21 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_ext::middleware::Middleware;
 use http::HeaderMap;
+use lazy_static::lazy_static;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{trace, warn};
 use std::collections::HashSet;
 use tunables::tunables;
 
 static MAX_BODY_LEN: usize = 16 * 1024; // 16 KB
+
+lazy_static! {
+    static ref FILTERED_HEADERS: HashSet<&'static str> = {
+        let mut m = HashSet::new();
+        m.insert("x-auth-cats");
+        m
+    };
+}
 
 #[derive(Debug, StateData, Clone, PartialEq)]
 enum LogAction {
@@ -58,7 +67,10 @@ impl RequestDumper {
         );
 
         let mut headers_hs = HashSet::new();
-        for (k, v) in headers {
+        for (k, v) in headers
+            .iter()
+            .filter(|(k, _v)| !FILTERED_HEADERS.contains(k.as_str()))
+        {
             headers_hs.insert(format!("{}: {}", k.as_str(), v.to_str()?));
         }
         self.logger.add("headers", headers_hs);

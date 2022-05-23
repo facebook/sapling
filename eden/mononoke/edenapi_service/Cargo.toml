@@ -25,6 +25,7 @@ gotham_derive = "0.6.0"
 gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
 http = "0.2"
 hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
+lazy_static = "1.0"
 manifest = { version = "0.1.0", path = "../manifest" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metadata = { version = "0.1.0", path = "../server/metadata" }
