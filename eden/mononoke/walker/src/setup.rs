@@ -12,7 +12,9 @@ use blobstore_factory::ScrubHandler;
 use cloned::cloned;
 use cmdlib::args::ResolvedRepo;
 use fbinit::FacebookInit;
-use metaconfig_types::{MetadataDatabaseConfig, Redaction, RepoConfig};
+use metaconfig_types::{
+    MetadataDatabaseConfig, Redaction, RepoConfig, WalkerJobParams, WalkerJobType,
+};
 use mononoke_app::{args::MultiRepoArgs, MononokeApp};
 use mononoke_types::repo::RepositoryId;
 use newfilenodes::NewFilenodesBuilder;
@@ -25,7 +27,7 @@ use std::collections::{HashMap, HashSet};
 use std::num::NonZeroU64;
 use std::sync::Arc;
 
-use crate::args::{TailArgs, WalkerCommonArgs, WalkerGraphParams};
+use crate::args::{NodeTypeArg, TailArgs, WalkerCommonArgs, WalkerGraphParams};
 use crate::commands::{JobParams, JobWalkParams, RepoSubcommandParams};
 use crate::detail::{
     blobstore::{replace_blobconfig, StatsScrubHandler},
@@ -36,6 +38,8 @@ use crate::detail::{
     validate::{REPO, WALK_TYPE},
     walk::{OutgoingEdge, RepoWalkParams},
 };
+
+use crate::WalkerArgs;
 
 pub async fn setup_common<'a>(
     walk_stats_key: &'static str,
@@ -48,6 +52,7 @@ pub async fn setup_common<'a>(
     let logger = app.logger();
 
     let mut scuba_builder = app.environment().scuba_sample_builder.clone();
+    let walker_type = app.args::<WalkerArgs>()?.walker_type;
     scuba_builder.add(WALK_TYPE, walk_stats_key);
 
     let WalkerGraphParams {
@@ -107,7 +112,7 @@ pub async fn setup_common<'a>(
     let mysql_options = app.mysql_options();
 
     let walk_roots = common_args.walk_roots.parse_args()?;
-    let parsed_tail_params = parse_tail_params(
+    let mut parsed_tail_params = parse_tail_params(
         app.fb,
         &common_args.tailing,
         mysql_options,
@@ -116,10 +121,11 @@ pub async fn setup_common<'a>(
     )?;
 
     let mut per_repo = Vec::new();
+    let mut error_as_data_node_types_for_all_repos = error_as_data_node_types;
     for (repo, repo_conf) in repos {
         let metadatadb_config = &repo_conf.storage_config.metadata;
         let tail_params = parsed_tail_params
-            .get(metadatadb_config)
+            .get_mut(metadatadb_config)
             .ok_or_else(|| format_err!("No tail params for {}", repo))?;
 
         // repo factory reuses sql factory if one was already initiated for the config
@@ -128,6 +134,49 @@ pub async fn setup_common<'a>(
             filenodes: sql_factory.tier_info_shardable::<NewFilenodesBuilder>()?,
             active_keys_per_shard: mysql_options.per_key_limit(),
         };
+
+        let walker_config_params = walker_type
+            .as_ref()
+            .and_then(|job_type| walker_config_params(&repo_conf, job_type));
+        // Concurrency is primarily provided by config and then by
+        // CLI in case config value is absent.
+        let scheduled_max_concurrency = walker_config_params
+            .and_then(|p| p.scheduled_max_concurrency.map(|i| i as usize))
+            .unwrap_or(common_args.scheduled_max);
+        // Exclude nodes that might be provided as part of walker config.
+        let included_nodes = walker_config_params
+            .and_then(|p| p.exclude_node_type.as_ref())
+            .map(|s| s.parse::<NodeTypeArg>())
+            .transpose()?
+            .map(|n| HashSet::<NodeType>::from_iter(n.0.iter().cloned()))
+            .map_or_else(
+                || include_node_types.clone(),
+                |excluded_nodes| {
+                    include_node_types
+                        .difference(&excluded_nodes)
+                        .copied()
+                        .collect()
+                },
+            );
+        // Allow Remaining Deferred = True if either the CLI or the walker
+        // config say so.
+        if let Some(ref mut c) = tail_params.chunking {
+            c.allow_remaining_deferred |=
+                walker_config_params.map_or(false, |p| p.allow_remaining_deferred);
+        }
+        // NOTE: error_as_data_node_types is an argument that can be specified for
+        // individual repos but the walker just assumes one univeral value for it even
+        // when executing for multiple repos. For sharded execution, having per-repo and
+        // all-repo value for error_as_data_node_types will behave the same since the entire
+        // setup is done once-per-repo in sharded setting. In CLI, this behavior is enforced
+        // by requiring all repos executing together to have the same value for this field.
+        error_as_data_node_types_for_all_repos = walker_config_params
+            .and_then(|p| p.error_as_node_data_type.as_ref())
+            .map(|s| s.parse::<NodeTypeArg>())
+            .transpose()?
+            .map_or(error_as_data_node_types_for_all_repos, |n| {
+                HashSet::<NodeType>::from_iter(n.0.iter().cloned())
+            });
 
         let resolved_repo = ResolvedRepo {
             id: repo_conf.repoid,
@@ -145,13 +194,13 @@ pub async fn setup_common<'a>(
             &repo_factory,
             scuba_builder.clone(),
             sql_shard_info,
-            common_args.scheduled_max,
+            scheduled_max_concurrency,
             repo_count,
             &resolved_repo,
             walk_roots.clone(),
             tail_params.clone(),
             include_edge_types.clone(),
-            include_node_types.clone(),
+            included_nodes,
             hash_validation_node_types.clone(),
             progress_options,
         )
@@ -163,12 +212,28 @@ pub async fn setup_common<'a>(
         walk_params: JobWalkParams {
             enable_derive: common_args.enable_derive,
             quiet: common_args.quiet,
-            error_as_data_node_types,
+            error_as_data_node_types: error_as_data_node_types_for_all_repos,
             error_as_data_edge_types,
             repo_count,
         },
         per_repo,
     })
+}
+
+/// Fetch the configuration parameters specific to a particular variant
+/// of the walker job.
+pub fn walker_config_params<'a>(
+    repo_config: &'a RepoConfig,
+    job_type: &'a WalkerJobType,
+) -> Option<&'a WalkerJobParams> {
+    if let Some(config) = repo_config.walker_config.as_ref() {
+        if let Some(params) = config.params.as_ref() {
+            return params
+                .iter()
+                .find_map(|(k, v)| if *k == *job_type { Some(v) } else { None });
+        }
+    }
+    None
 }
 
 // Override the blobstore config so we can do things like run on one side of a multiplex

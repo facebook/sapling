@@ -16,6 +16,7 @@ pub mod validate;
 pub mod walk_params;
 pub mod walk_root;
 
+pub use graph_arg_types::NodeTypeArg;
 pub use hash_validation::HashValidationArgs;
 pub use progress::ProgressArgs;
 pub use sampling::SamplingArgs;

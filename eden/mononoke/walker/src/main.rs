@@ -20,6 +20,7 @@ use clap::{ArgGroup, Parser};
 use cmdlib::args::CachelibSettings;
 use cmdlib_scrubbing::ScrubAppExtension;
 use fbinit::FacebookInit;
+use metaconfig_types::WalkerJobType;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::fb303::{Fb303AppExtension, ReadyFlagService};
 use mononoke_app::{MononokeApp, MononokeAppBuilder};
@@ -31,7 +32,7 @@ use std::num::NonZeroU32;
     ArgGroup::new("walkerargs")
         .required(true)
         .multiple(true)
-        .args(&["repo-id", "repo-name", "sharded-service-name"]),
+        .args(&["repo-id", "repo-name", "sharded-service-name", "walker-type"]),
 ))]
 struct WalkerArgs {
     /// List of Repo IDs or Repo Names used when sharded-service-name
@@ -41,8 +42,13 @@ struct WalkerArgs {
 
     /// The name of ShardManager service to be used when the walker
     /// functionality is desired to be executed in a sharded setting.
-    #[clap(long, conflicts_with = "multirepos")]
+    #[clap(long, conflicts_with = "multirepos", requires = "walker-type")]
     pub sharded_service_name: Option<String>,
+
+    /// The type of the walker job that needs to run for the current
+    /// repo.
+    #[clap(arg_enum, long)]
+    pub walker_type: Option<WalkerJobType>,
 }
 
 #[fbinit::main]
