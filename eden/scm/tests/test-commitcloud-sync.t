@@ -349,7 +349,7 @@ Sync the amended commit to the other client
 Test recovery from broken state (example: invalid json)
   $ cd client1
   $ echo '}}}' >> .hg/store/commitcloudstate.usertestdefault.b6eca
-  $ hg cloud sync 2>&1
+  $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   abort: commitcloud: invalid workspace data: 'failed to parse commitcloudstate.usertestdefault.b6eca'
   (please run 'hg cloud recover')
