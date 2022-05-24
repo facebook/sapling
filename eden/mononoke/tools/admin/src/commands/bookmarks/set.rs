@@ -57,7 +57,7 @@ pub async fn set(ctx: &CoreContext, repo: &Repo, set_args: BookmarksSetArgs) -> 
     let kind = if set_args.scratch {
         BookmarkKind::Scratch
     } else {
-        BookmarkKind::Public
+        BookmarkKind::Publishing
     };
     let target = parse_commit_id(ctx, repo, &set_args.commit_id).await?;
     let old_value = if set_args.create_only {
@@ -107,7 +107,7 @@ pub async fn set(ctx: &CoreContext, repo: &Repo, set_args: BookmarksSetArgs) -> 
     let mut transaction = repo.bookmarks().create_transaction(ctx.clone());
 
     match (old_value, kind) {
-        (Some(old_value), BookmarkKind::Public) => {
+        (Some(old_value), BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing) => {
             transaction.update(
                 &set_args.name,
                 target,
@@ -116,7 +116,7 @@ pub async fn set(ctx: &CoreContext, repo: &Repo, set_args: BookmarksSetArgs) -> 
                 None,
             )?;
         }
-        (None, BookmarkKind::Public) => {
+        (None, BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing) => {
             transaction.create(
                 &set_args.name,
                 target,

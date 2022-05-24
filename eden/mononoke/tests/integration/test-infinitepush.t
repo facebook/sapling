@@ -218,19 +218,19 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:     While doing a push
   remote: 
   remote:   Root cause:
-  remote:     Invalid public bookmark: scratch/124 (only scratch bookmarks may match pattern ^scratch/.+$)
+  remote:     Invalid publishing bookmark: scratch/124 (only scratch bookmarks may match pattern ^scratch/.+$)
   remote: 
   remote:   Caused by:
   remote:     Failed to create bookmark
   remote:   Caused by:
-  remote:     Invalid public bookmark: scratch/124 (only scratch bookmarks may match pattern ^scratch/.+$)
+  remote:     Invalid publishing bookmark: scratch/124 (only scratch bookmarks may match pattern ^scratch/.+$)
   remote: 
   remote:   Debug context:
   remote:     Error {
   remote:         context: "While doing a push",
   remote:         source: Error {
   remote:             context: "Failed to create bookmark",
-  remote:             source: InvalidPublicBookmark {
+  remote:             source: InvalidPublishingBookmark {
   remote:                 bookmark: BookmarkName {
   remote:                     bookmark: "scratch/124",
   remote:                 },

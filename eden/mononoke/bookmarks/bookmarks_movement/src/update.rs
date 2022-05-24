@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use bookmarks::{BookmarkUpdateReason, BundleReplay};
-use bookmarks_types::BookmarkName;
+use bookmarks_types::{BookmarkKind, BookmarkName};
 use bytes::Bytes;
 use context::CoreContext;
 use hooks::{CrossRepoPushSource, HookManager};
@@ -26,7 +26,7 @@ use crate::affected_changesets::{
 };
 use crate::repo_lock::check_repo_lock;
 use crate::restrictions::{
-    check_bookmark_sync_config, BookmarkKind, BookmarkKindRestrictions, BookmarkMoveAuthorization,
+    check_bookmark_sync_config, BookmarkKindRestrictions, BookmarkMoveAuthorization,
 };
 use crate::{BookmarkMovementError, Repo};
 
@@ -138,7 +138,7 @@ impl<'op> UpdateBookmarkOp<'op> {
     }
 
     pub fn only_if_public(mut self) -> Self {
-        self.kind_restrictions = BookmarkKindRestrictions::OnlyPublic;
+        self.kind_restrictions = BookmarkKindRestrictions::OnlyPublishing;
         self
     }
 
@@ -249,7 +249,7 @@ impl<'op> UpdateBookmarkOp<'op> {
 
                 vec![]
             }
-            BookmarkKind::Public => {
+            BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing => {
                 crate::restrictions::check_restriction_ensure_ancestor_of(
                     ctx,
                     repo,

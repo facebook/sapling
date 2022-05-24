@@ -51,7 +51,7 @@ pub async fn delete(
     let kind = if delete_args.scratch {
         BookmarkKind::Scratch
     } else {
-        BookmarkKind::Public
+        BookmarkKind::Publishing
     };
     let old_value = if let Some(old_commit_id) = &delete_args.old_commit_id {
         parse_commit_id(ctx, repo, old_commit_id).await?
@@ -70,7 +70,7 @@ pub async fn delete(
     };
 
     println!(
-        "Delete {} bookmark {} at {}",
+        "Deleting {} bookmark {} at {}",
         kind.to_string(),
         delete_args.name,
         old_value,
@@ -92,7 +92,7 @@ pub async fn delete(
     let mut transaction = repo.bookmarks().create_transaction(ctx.clone());
 
     match kind {
-        BookmarkKind::Public => {
+        BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing => {
             transaction.delete(
                 &delete_args.name,
                 old_value,

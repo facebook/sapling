@@ -12,7 +12,7 @@ use anyhow::{anyhow, Context, Error, Result};
 use blobrepo::scribe::{log_commits_to_scribe_raw, ScribeCommitInfo};
 use blobstore::Loadable;
 use bookmarks::BookmarkUpdateReason;
-use bookmarks_types::BookmarkName;
+use bookmarks_types::{BookmarkKind, BookmarkName};
 use bytes::Bytes;
 use context::CoreContext;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
@@ -30,7 +30,7 @@ use skeleton_manifest::RootSkeletonManifestId;
 use tunables::tunables;
 
 use crate::hook_running::run_hooks;
-use crate::restrictions::{BookmarkKind, BookmarkMoveAuthorization};
+use crate::restrictions::BookmarkMoveAuthorization;
 use crate::BookmarkMovementError;
 use crate::Repo;
 
@@ -310,7 +310,9 @@ impl AffectedChangesets {
         additional_changesets: AdditionalChangesets,
         pushrebase_params: &PushrebaseParams,
     ) -> Result<(), BookmarkMovementError> {
-        if kind == BookmarkKind::Public && !pushrebase_params.allow_change_xrepo_mapping_extra {
+        if (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
+            && !pushrebase_params.allow_change_xrepo_mapping_extra
+        {
             self.load_additional_changesets(
                 ctx,
                 repo,
@@ -357,7 +359,9 @@ impl AffectedChangesets {
         kind: BookmarkKind,
         additional_changesets: AdditionalChangesets,
     ) -> Result<(), BookmarkMovementError> {
-        if kind == BookmarkKind::Public && pushrebase_params.flags.casefolding_check {
+        if (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
+            && pushrebase_params.flags.casefolding_check
+        {
             self.load_additional_changesets(
                 ctx,
                 repo,
@@ -439,7 +443,7 @@ impl AffectedChangesets {
         let run_because_pushrebase = reason == BookmarkUpdateReason::Pushrebase
             && tunables().get_enable_hooks_on_service_pushrebase();
         if (auth == &BookmarkMoveAuthorization::User || run_because_pushrebase)
-            && kind == BookmarkKind::Public
+            && (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
         {
             if reason == BookmarkUpdateReason::Push && tunables().get_disable_hooks_on_plain_push()
             {
@@ -603,7 +607,9 @@ pub(crate) async fn log_bonsai_commits_to_scribe(
 ) {
     let commit_scribe_category = match kind {
         BookmarkKind::Scratch => &infinitepush_params.commit_scribe_category,
-        BookmarkKind::Public => &pushrebase_params.commit_scribe_category,
+        BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing => {
+            &pushrebase_params.commit_scribe_category
+        }
     };
 
     log_commits_to_scribe_raw(

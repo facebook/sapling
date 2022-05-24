@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use bookmarks_types::BookmarkName;
+use bookmarks_types::{BookmarkKind, BookmarkName};
 use context::CoreContext;
 use futures::{stream, StreamExt, TryStreamExt};
 use hooks::PushAuthoredBy;
@@ -16,7 +16,6 @@ use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_identity::RepoIdentityRef;
-use strum_macros::ToString;
 
 use crate::{BookmarkMovementError, Repo};
 
@@ -83,18 +82,11 @@ impl From<&BookmarkMoveAuthorization<'_>> for PushAuthoredBy {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, ToString)]
-#[strum(serialize_all = "kebab_case")]
-pub enum BookmarkKind {
-    Scratch,
-    Public,
-}
-
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum BookmarkKindRestrictions {
     AnyKind,
     OnlyScratch,
-    OnlyPublic,
+    OnlyPublishing,
 }
 
 impl BookmarkKindRestrictions {
@@ -113,14 +105,14 @@ impl BookmarkKindRestrictions {
                     pattern: namespace.as_str().to_string(),
                 })
             }
-            (Self::OnlyPublic, Some(namespace)) if namespace.matches_bookmark(name) => {
-                Err(BookmarkMovementError::InvalidPublicBookmark {
+            (Self::OnlyPublishing, Some(namespace)) if namespace.matches_bookmark(name) => {
+                Err(BookmarkMovementError::InvalidPublishingBookmark {
                     bookmark: name.clone(),
                     pattern: namespace.as_str().to_string(),
                 })
             }
             (_, Some(namespace)) if namespace.matches_bookmark(name) => Ok(BookmarkKind::Scratch),
-            (_, _) => Ok(BookmarkKind::Public),
+            (_, _) => Ok(BookmarkKind::Publishing),
         }
     }
 }
@@ -206,13 +198,13 @@ pub fn check_bookmark_sync_config(
     kind: BookmarkKind,
 ) -> Result<(), BookmarkMovementError> {
     match kind {
-        BookmarkKind::Public => {
+        BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing => {
             if repo
                 .repo_cross_repo()
                 .live_commit_sync_config()
                 .push_redirector_enabled_for_public(repo.repo_identity().id())
             {
-                return Err(BookmarkMovementError::PushRedirectorEnabledForPublic {
+                return Err(BookmarkMovementError::PushRedirectorEnabledForPublishing {
                     bookmark: bookmark.clone(),
                 });
             }

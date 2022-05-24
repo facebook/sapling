@@ -80,7 +80,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
     }
 
     pub fn only_if_public(mut self) -> Self {
-        self.kind_restrictions = BookmarkKindRestrictions::OnlyPublic;
+        self.kind_restrictions = BookmarkKindRestrictions::OnlyPublishing;
         self
     }
 

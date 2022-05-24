@@ -151,19 +151,19 @@ Invalid push, with pushrebase disabled
   remote:     While doing a push
   remote: 
   remote:   Root cause:
-  remote:     Invalid public bookmark: infinitepush2/123 (only scratch bookmarks may match pattern ^(infinitepush1|infinitepush2)/.+$)
+  remote:     Invalid publishing bookmark: infinitepush2/123 (only scratch bookmarks may match pattern ^(infinitepush1|infinitepush2)/.+$)
   remote: 
   remote:   Caused by:
   remote:     Failed to create bookmark
   remote:   Caused by:
-  remote:     Invalid public bookmark: infinitepush2/123 (only scratch bookmarks may match pattern ^(infinitepush1|infinitepush2)/.+$)
+  remote:     Invalid publishing bookmark: infinitepush2/123 (only scratch bookmarks may match pattern ^(infinitepush1|infinitepush2)/.+$)
   remote: 
   remote:   Debug context:
   remote:     Error {
   remote:         context: "While doing a push",
   remote:         source: Error {
   remote:             context: "Failed to create bookmark",
-  remote:             source: InvalidPublicBookmark {
+  remote:             source: InvalidPublishingBookmark {
   remote:                 bookmark: BookmarkName {
   remote:                     bookmark: "infinitepush2/123",
   remote:                 },
@@ -184,19 +184,19 @@ Invalid push, with pushrebase enabled
   remote:     While doing a bookmark-only pushrebase
   remote: 
   remote:   Root cause:
-  remote:     Invalid public bookmark: infinitepush2/456 (only scratch bookmarks may match pattern ^(infinitepush1|infinitepush2)/.+$)
+  remote:     Invalid publishing bookmark: infinitepush2/456 (only scratch bookmarks may match pattern ^(infinitepush1|infinitepush2)/.+$)
   remote: 
   remote:   Caused by:
   remote:     Failed to create bookmark
   remote:   Caused by:
-  remote:     Invalid public bookmark: infinitepush2/456 (only scratch bookmarks may match pattern ^(infinitepush1|infinitepush2)/.+$)
+  remote:     Invalid publishing bookmark: infinitepush2/456 (only scratch bookmarks may match pattern ^(infinitepush1|infinitepush2)/.+$)
   remote: 
   remote:   Debug context:
   remote:     Error {
   remote:         context: "While doing a bookmark-only pushrebase",
   remote:         source: Error {
   remote:             context: "Failed to create bookmark",
-  remote:             source: InvalidPublicBookmark {
+  remote:             source: InvalidPublishingBookmark {
   remote:                 bookmark: BookmarkName {
   remote:                     bookmark: "infinitepush2/456",
   remote:                 },

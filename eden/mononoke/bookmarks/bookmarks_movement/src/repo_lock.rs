@@ -11,6 +11,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
+use bookmarks_types::BookmarkKind;
 use bytes::Bytes;
 use context::CoreContext;
 use metaconfig_types::RepoReadOnly;
@@ -24,7 +25,6 @@ use repo_read_write_status::RepoReadWriteFetcher;
 use sql::Transaction;
 use tunables::tunables;
 
-use crate::restrictions::BookmarkKind;
 use crate::BookmarkMovementError;
 
 async fn should_check_repo_lock(
@@ -35,7 +35,7 @@ async fn should_check_repo_lock(
 ) -> Result<bool> {
     match kind {
         BookmarkKind::Scratch => Ok(false),
-        BookmarkKind::Public => {
+        BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing => {
             if let Some(pushvars) = pushvars {
                 let bypass_allowed = repo_perm_checker
                     .check_if_read_only_bypass_allowed(idents)
