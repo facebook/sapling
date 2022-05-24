@@ -405,8 +405,7 @@ async fn run_and_check_if_lfs(
     filenode_id: &HgFileNodeId,
     lfs_params: LfsParams,
 ) -> Result<bool, Error> {
-    let mut repo = Repo::new_test(ctx.clone(), repo.clone()).await?;
-    repo.config_mut().lfs = lfs_params;
+    let repo = Repo::new_test_lfs(ctx.clone(), repo.clone(), lfs_params).await?;
 
     let blob_repo = repo.blob_repo().clone();
     let mononoke_repo = MononokeRepo::new_from_parts(

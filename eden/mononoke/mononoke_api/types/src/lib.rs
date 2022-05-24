@@ -15,6 +15,7 @@ use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use ephemeral_blobstore::RepoEphemeralStore;
 use mercurial_mutation::HgMutationStore;
+use metaconfig_types::RepoConfig;
 use mutable_counters::MutableCounters;
 use mutable_renames::MutableRenames;
 use phases::Phases;
@@ -51,6 +52,9 @@ pub struct InnerRepo {
         dyn RepoPermissionChecker,
     )]
     pub blob_repo: BlobRepo,
+
+    #[facet]
+    pub repo_config: RepoConfig,
 
     #[facet]
     pub skiplist_index: SkiplistIndex,
