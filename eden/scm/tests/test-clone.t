@@ -479,7 +479,7 @@ Inaccessible destination
 #endif
 
 
-#if fifo
+#if mkfifo fifo
 
 Source of wrong type
 
