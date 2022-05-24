@@ -13,6 +13,7 @@
 from __future__ import absolute_import
 
 import errno
+import io
 import msvcrt
 import os
 import re
@@ -296,8 +297,12 @@ def setbinary(fd):
     # When run without console, pipes may expose invalid
     # fileno(), usually set to -1.
     fno = getattr(fd, "fileno", None)
-    if fno is not None and fno() >= 0:
-        msvcrt.setmode(fno(), os.O_BINARY)
+    try:
+        if fno is not None and fno() >= 0:
+            msvcrt.setmode(fno(), os.O_BINARY)
+    except io.UnsupportedOperation:
+        # fno() might raise this exception
+        pass
 
 
 def pconvert(path):
