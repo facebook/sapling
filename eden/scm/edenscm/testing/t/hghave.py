@@ -154,6 +154,12 @@ def matchoutput(cmd, regexp, ignorestatus=False):
     return (ignorestatus or not ret) and r.search(s)
 
 
+def tempdir():
+    # Prefer TESTTMP for detecting fs capabilities on the same mount
+    testtmp = os.getenv("TESTTMP")
+    return testtmp or tempfile.gettempdir()
+
+
 @check("baz", "GNU Arch baz client", exe=True)
 def has_baz():
     return matchoutput("baz --version 2>&1", rb"baz Bazaar version")
@@ -254,7 +260,7 @@ def has_mtn():
 @check("eol-in-paths", "end-of-lines in paths")
 def has_eol_in_paths():
     try:
-        fd, path = tempfile.mkstemp(dir=".", prefix=tempprefix, suffix="\n\r")
+        fd, path = tempfile.mkstemp(dir=tempdir(), prefix=tempprefix, suffix="\n\r")
         os.close(fd)
         os.remove(path)
         return True
@@ -266,7 +272,7 @@ def has_eol_in_paths():
 def has_executablebit():
     try:
         EXECFLAGS = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
-        fh, fn = tempfile.mkstemp(dir=".", prefix=tempprefix)
+        fh, fn = tempfile.mkstemp(dir=tempdir(), prefix=tempprefix)
         try:
             os.close(fh)
             m = os.stat(fn).st_mode & 0o777
@@ -284,7 +290,7 @@ def has_executablebit():
 @check("icasefs", "case insensitive file system")
 def has_icasefs():
     # Stolen from edenscm.mercurial.util
-    fd, path = tempfile.mkstemp(dir=".", prefix=tempprefix)
+    fd, path = tempfile.mkstemp(dir=tempdir(), prefix=tempprefix)
     os.close(fd)
     try:
         s1 = os.stat(path)
@@ -305,7 +311,7 @@ def has_icasefs():
 def has_fifo():
     if getattr(os, "mkfifo", None) is None:
         return False
-    name = tempfile.mktemp(dir=".", prefix=tempprefix)
+    name = tempfile.mktemp(dir=tempdir(), prefix=tempprefix)
     try:
         os.mkfifo(name)
         os.unlink(name)
@@ -453,7 +459,7 @@ def has_jq():
 def has_symlink():
     if os.name == "nt" or getattr(os, "symlink", None) is None:
         return False
-    name = tempfile.mktemp(dir=".", prefix=tempprefix)
+    name = tempfile.mktemp(dir=tempdir(), prefix=tempprefix)
     try:
         os.symlink(".", name)
         os.unlink(name)
@@ -466,9 +472,9 @@ def has_symlink():
 def has_hardlink():
     from edenscm.mercurial import util
 
-    fh, fn = tempfile.mkstemp(dir=".", prefix=tempprefix)
+    fh, fn = tempfile.mkstemp(dir=tempdir(), prefix=tempprefix)
     os.close(fh)
-    name = tempfile.mktemp(dir=".", prefix=tempprefix)
+    name = tempfile.mktemp(dir=tempdir(), prefix=tempprefix)
     try:
         util.oslink(fn, name)
         os.unlink(name)
@@ -482,7 +488,7 @@ def has_hardlink():
 @check("rmcwd", "can remove current working directory")
 def has_rmcwd():
     ocwd = os.getcwd()
-    temp = tempfile.mkdtemp(dir=".", prefix=tempprefix)
+    temp = tempfile.mkdtemp(dir=tempdir(), prefix=tempprefix)
     try:
         os.chdir(temp)
         # On Linux, 'rmdir .' isn't allowed, but the other names are okay.
@@ -522,7 +528,7 @@ def has_gpg21():
 
 @check("unix-permissions", "unix-style permissions")
 def has_unix_permissions():
-    d = tempfile.mkdtemp(dir=".", prefix=tempprefix)
+    d = tempfile.mkdtemp(dir=tempdir(), prefix=tempprefix)
     try:
         fname = os.path.join(d, "foo")
         for umask in (0o77, 0o07, 0o22):
