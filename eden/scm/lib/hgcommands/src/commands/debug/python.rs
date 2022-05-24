@@ -9,6 +9,7 @@ use super::define_flags;
 use super::ConfigSet;
 use super::Result;
 use super::IO;
+use clidispatch::errors;
 
 define_flags! {
     pub struct DebugPythonOpts {
@@ -17,11 +18,9 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DebugPythonOpts, io: &IO, _config: &mut ConfigSet) -> Result<u8> {
-    let mut args = opts.args;
-    args.insert(0, "hgpython".to_string());
-    let mut interp = crate::HgPython::new(&args);
-    Ok(interp.run_python(&args, io))
+pub fn run(_opts: DebugPythonOpts, _io: &IO, _config: &mut ConfigSet) -> Result<u8> {
+    let e = errors::Abort("wrong debugpython code path used".into());
+    Err(e.into())
 }
 
 pub fn name() -> &'static str {

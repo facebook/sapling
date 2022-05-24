@@ -66,6 +66,20 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     {
         return HgPython::new(&args).run_hg(args, io);
     }
+    // Skip initialization for debugpython. Make it closer to vanilla Python.
+    if args.get(1).map(|s| s.as_str()) == Some("debugpython") {
+        // naive command-line parsing: strip "--".
+        let rest_args = if args.get(2).map(|s| s.as_str()) == Some("--") {
+            &args[3..]
+        } else {
+            &args[2..]
+        };
+        let args: Vec<String> = std::iter::once("hgpython".to_string())
+            .chain(rest_args.iter().cloned())
+            .collect();
+        let mut hgpython = HgPython::new(&args);
+        return hgpython.run_python(&args, io) as i32;
+    }
 
     // Extra initialization based on global flags.
     let global_opts = dispatch::parse_global_opts(&args[1..]).ok();
