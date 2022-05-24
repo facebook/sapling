@@ -67,5 +67,5 @@ Pull from the new server:
   $ hg pull
   pulling from test:e2
   failed to get fast pull data (9bc730a19041f9ec7cb33c626e811aa233efb18c cannot be found), using fallback path
-  error.RustError: 9bc730a19041f9ec7cb33c626e811aa233efb18c cannot be found
+  error.HttpError: 9bc730a19041f9ec7cb33c626e811aa233efb18c cannot be found
   [255]
