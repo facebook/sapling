@@ -266,7 +266,6 @@ def _preimportmodules():
         "clienttelemetry",
         "commitcloud",
         "conflictinfo",
-        "convert",
         "copytrace",
         "crdump",
         "debugcommitmessage",

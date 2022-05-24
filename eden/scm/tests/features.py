@@ -99,8 +99,6 @@ segmentedchangelogcompatiblelist = """
     test-configparser-t.py
     test-conflict.t
     test-contrib-check-code.t
-    test-convert-authormap-t.py
-    test-convert.t
     test-copytrace-manual-t.py
     test-crdump-commitcloud.t
     test-ctrl-c.t
@@ -166,7 +164,6 @@ segmentedchangelogcompatiblelist = """
     test-extensions-afterloaded.t
     test-extensions-default.t
     test-extensions-wrapfunction.py
-    test-fb-convert-repo.py
     test-fb-hgext-absorb-filefixupstate.py
     test-fb-hgext-arcconfig-t.py
     test-fb-hgext-catnotate.t
@@ -585,11 +582,6 @@ ignorerevnumincompatiblelist = """
     test-confused-revert-t.py
     test-context-metadata.t
     test-contrib-perf.t
-    test-convert-datesort-t.py
-    test-convert-filemap.t
-    test-convert-hg-sink.t
-    test-convert-hg-startrev.t
-    test-convert-splicemap.t
     test-debugbuilddag-t.py
     test-debugcheckcasecollisions-t.py
     test-debugindexdot-t.py
@@ -705,7 +697,6 @@ ignorerevnumincompatiblelist = """
     test-casecollision-merge.t
     test-casefolding.t
     test-commitcloud-backup-sql2.t
-    test-convert-p4-filetypes.t
 """
 
 inprocesshgincompatiblelist = """

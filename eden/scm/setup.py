@@ -1328,8 +1328,6 @@ packages = [
     "edenscm.hgext.absorb",
     "edenscm.hgext.amend",
     "edenscm.hgext.commitcloud",
-    "edenscm.hgext.convert",
-    "edenscm.hgext.convert.repo",
     "edenscm.hgext.extlib",
     "edenscm.hgext.extlib.phabricator",
     "edenscm.hgext.extlib.pywatchman",

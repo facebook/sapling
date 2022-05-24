@@ -88,10 +88,6 @@ testmod("edenscm.mercurial.url")
 testmod("edenscm.mercurial.util")
 testmod("edenscm.mercurial.util", testtarget="platform")
 testmod("edenscm.hgext.commitcloud.sync")
-testmod("edenscm.hgext.convert.convcmd")
-testmod("edenscm.hgext.convert.filemap")
-testmod("edenscm.hgext.convert.subversion")
-testmod("edenscm.hgext.convert.p4")
 
 if sys.platform == "linux":
     testmod("edenscm.testing.sh")

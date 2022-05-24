@@ -63,8 +63,6 @@ from edenscm.mercurial.bookmarks import (
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, short
 
-from .convert import hg as converthg
-
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -339,28 +337,6 @@ def exactivate(orig, repo, mark):
     return res
 
 
-def exconvertbookmarks(orig, source):
-    """Make hg convert map remote bookmarks in the source to normal bookmarks in
-    the target.
-
-    This is useful for instance if you need to convert a repo from server A to
-    server B. You clone the repo from A (now you have remote bookmarks), convert
-    to a local version of B, and push those bookmarks to server B.
-    """
-    bookmarks = orig(source)
-
-    repo = source.repo
-    n = "remotebookmarks"
-    if n in repo.names:
-        ns = repo.names[n]
-        for name in ns.listnames(repo):
-            nodes = ns.nodes(repo, name)
-            if nodes:
-                bookmarks.setdefault(name, hex(nodes[0]))
-
-    return bookmarks
-
-
 def updatecmd(orig, ui, repo, node=None, rev=None, **kwargs):
     if rev and node:
         raise error.Abort(_("please specify just one revision"))
@@ -516,10 +492,6 @@ def extsetup(ui):
     extensions.wrapfunction(hg, "clonepreclose", exclone)
     extensions.wrapfunction(hg, "updaterepo", exupdate)
     extensions.wrapfunction(localrepo.localrepository, "commit", excommit)
-
-    extensions.wrapfunction(
-        converthg.mercurial_source, "getbookmarks", exconvertbookmarks
-    )
 
     if util.safehasattr(discovery, "_nowarnheads"):
         extensions.wrapfunction(discovery, "_nowarnheads", exnowarnheads)
