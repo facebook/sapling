@@ -10,7 +10,7 @@ import os
 import subprocess
 import sys
 from contextlib import contextmanager
-from typing import BinaryIO, Dict
+from typing import BinaryIO, Dict, Optional
 
 from ..sh import Env
 from ..sh.stdlib import wrap
@@ -76,7 +76,7 @@ def updateosenv(environ: Dict[str, str]):
             os.environ[name] = newvalue
 
 
-def wrapexe(exepath: str):
+def wrapexe(exepath: str, env_override: Optional[Dict[str, str]] = None):
     """wrap an external executable in a function useful for sheval"""
 
     def run(
@@ -85,18 +85,22 @@ def wrapexe(exepath: str):
         stderr: BinaryIO,
         env: Env,
         exepath: str = exepath,
+        env_override=env_override,
     ) -> int:
         if stderr is stdout:
             pstderr = subprocess.STDOUT
         else:
             pstderr = subprocess.PIPE
         args = [exepath] + env.args[1:]
+        procenv = env.getexportedenv()
+        if env_override:
+            procenv.update(env_override)
         p = subprocess.Popen(
             args,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=pstderr,
-            env=env.getexportedenv(),
+            env=procenv,
             cwd=env.fs.cwd(),
         )
         # assumes the program always consumes the full stdin for simplicity
