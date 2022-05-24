@@ -100,7 +100,7 @@ Test for `hg diff --since-last-submit`
   remote: pushing 1 commit:
   remote:     162e0a8b5732  Differential Revision: https://phabricator.fb.com/
 
-  $ cat > $TESTTMP/mockduit << EOF
+  $ cat > $TESTTMP/mockduit << 'EOF'
   > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "diff_status_name": "Needs Review",
