@@ -81,6 +81,7 @@ prepare repo with small and big file to cover both code paths in emitrevlogdata
   > delayer=$TESTTMP/changing/delayer.py
   > EOF
 
+#if bash
 clone while modifying the repo between stating file with write lock and
 actually serving file content
 
@@ -92,3 +93,4 @@ actually serving file content
   $ wait
   $ hg -R clone id
   000000000000
+#endif
