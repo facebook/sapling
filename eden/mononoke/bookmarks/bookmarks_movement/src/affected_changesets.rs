@@ -440,10 +440,8 @@ impl AffectedChangesets {
         additional_changesets: AdditionalChangesets,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<(), BookmarkMovementError> {
-        let run_because_pushrebase = reason == BookmarkUpdateReason::Pushrebase
-            && tunables().get_enable_hooks_on_service_pushrebase();
-        if (auth == &BookmarkMoveAuthorization::User || run_because_pushrebase)
-            && (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
+        if (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
+            && auth.should_run_hooks(reason)
         {
             if reason == BookmarkUpdateReason::Push && tunables().get_disable_hooks_on_plain_push()
             {

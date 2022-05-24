@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use bookmarks_types::{BookmarkKind, BookmarkName};
+use bookmarks::{BookmarkKind, BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
 use futures::{stream, StreamExt, TryStreamExt};
 use hooks::PushAuthoredBy;
@@ -16,6 +16,7 @@ use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_identity::RepoIdentityRef;
+use tunables::tunables;
 
 use crate::{BookmarkMovementError, Repo};
 
@@ -70,6 +71,16 @@ impl<'params> BookmarkMoveAuthorization<'params> {
             }
         }
         Ok(())
+    }
+
+    pub(crate) fn should_run_hooks(&self, reason: BookmarkUpdateReason) -> bool {
+        match self {
+            BookmarkMoveAuthorization::User => true,
+            BookmarkMoveAuthorization::Service(..) => {
+                reason == BookmarkUpdateReason::Pushrebase
+                    && tunables().get_enable_hooks_on_service_pushrebase()
+            }
+        }
     }
 }
 
