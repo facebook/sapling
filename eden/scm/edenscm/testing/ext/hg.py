@@ -63,6 +63,14 @@ def testsetup(t: TestTmp):
             else:
                 return 0
 
+    # extra pattern substitutions in $TESTDIR/common-pattern.py
+    fpath = os.path.join(testdir, "common-pattern.py")
+    if os.path.exists(fpath):
+        t.substitutions += _execpython(fpath).get("substitutions") or []
+    t.substitutions += [
+        (r"\bHG_TXNID=TXN:[a-f0-9]{40}\b", r"HG_TXNID=TXN:$ID$"),
+    ]
+
     environ = {
         "CHGDISABLE": "0",
         "COLUMNS": "80",
