@@ -1,4 +1,5 @@
 #chg-compatible
+#require bash
 
 Initialize scm prompt compatibility layer
   $ . $TESTDIR/../contrib/scm-prompt.sh

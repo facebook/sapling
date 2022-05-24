@@ -1,4 +1,5 @@
 #chg-compatible
+#require bash
 
 To run this test against other shells, use the shell argument, eg:
 run-tests.py --shell=zsh test-scm-prompt*
