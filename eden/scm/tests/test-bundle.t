@@ -124,14 +124,21 @@ Pull ../full.hg into empty (with hook)
 
   $ cat >> .hg/hgrc <<EOF
   > [hooks]
-  > changegroup = sh -c "printenv.py changegroup"
+  > changegroup = sh -c "env | grep '^HG_' | sort"
   > EOF
 
   $ hg unbundle ../full.hg
   adding changesets
   adding manifests
   adding file changes
-  changegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_NODE_LAST=aa35859c02ea8bd48da5da68cd2740ac71afcbaf HG_SOURCE=unbundle HG_TXNID=TXN:$ID$ HG_URL=bundle:../full.hg
+  HG_BUNDLE2=1
+  HG_HOOKNAME=changegroup
+  HG_HOOKTYPE=changegroup
+  HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735
+  HG_NODE_LAST=aa35859c02ea8bd48da5da68cd2740ac71afcbaf
+  HG_SOURCE=unbundle
+  HG_TXNID=TXN:$ID$
+  HG_URL=bundle:../full.hg
 
 Rollback empty
 
@@ -144,7 +151,14 @@ Pull full.hg into empty again (using -R; with hook)
   adding changesets
   adding manifests
   adding file changes
-  changegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_NODE_LAST=aa35859c02ea8bd48da5da68cd2740ac71afcbaf HG_SOURCE=unbundle HG_TXNID=TXN:$ID$ HG_URL=bundle:full.hg
+  HG_BUNDLE2=1
+  HG_HOOKNAME=changegroup
+  HG_HOOKTYPE=changegroup
+  HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735
+  HG_NODE_LAST=aa35859c02ea8bd48da5da68cd2740ac71afcbaf
+  HG_SOURCE=unbundle
+  HG_TXNID=TXN:$ID$
+  HG_URL=bundle:full.hg
 
 Unbundle incremental bundles into fresh empty in one go
 
