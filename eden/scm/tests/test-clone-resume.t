@@ -7,7 +7,7 @@
 Create a repo that touches a few files
   $ newremoterepo client1
   $ mkdir dir1 dir2
-  $ for i in {0..5000} ; do touch dir1/$i ; done
+  $ for i in `seq 0 5000` ; do touch dir1/$i ; done
   $ touch dir2/x
   $ hg commit -Aqm 'initial commit' 2>/dev/null
   $ hg push --to master --create -q
