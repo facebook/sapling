@@ -92,7 +92,8 @@
   devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:* (buggylocking) (glob)
   $ hg buggylocking --traceback 2>&1 | egrep '(devel-warn|buggylocking)'
   devel-warn: "wlock" acquired after "lock" at:
-   $TESTTMP/buggylocking.py:* in buggylocking (glob)
+   * (glob) (?)
+   * (glob) (?)
 #endif
   $ hg properlocking
   $ hg nowaitlocking
@@ -121,7 +122,8 @@ Stripping from a transaction
 
   $ hg oldanddeprecated --traceback 2>&1 | egrep '(buggylocking|devel-warn)'
   devel-warn: foorbar is deprecated, go shopping
-   $TESTTMP/buggylocking.py:* in oldanddeprecated (glob)
+   * (glob)
+   * (glob) (?)
 
 #if no-chg normal-layout no-fsmonitor
   $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"develwarn"}}' | grep develwarn
@@ -150,12 +152,15 @@ Test programming error failure:
   Traceback (most recent call last):
   *ProgrammingError: something went wrong (glob)
 
+#if bash no-chg
 Old style deprecation warning
 
   $ hg nouiwarning
   $TESTTMP/buggylocking.py:*: DeprecationWarning: this is a test (glob)
   (compatibility will be dropped after Mercurial-13.37, update your code.)
     util.nouideprecwarn('this is a test', '13.37')
+
+#endif
 
 (disabled outside of test run)
 

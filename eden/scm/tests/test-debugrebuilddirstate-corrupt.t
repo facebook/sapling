@@ -10,6 +10,7 @@ Setup
 
 Deliberately corrupt the dirstate.
 
-  $ dd if=/dev/zero bs=4096 count=1 of=.hg/dirstate 2> /dev/null
+  >>> with open('.hg/dirstate', 'wb') as f: f.write(b"\0" * 4096) and None
+
   $ hg debugrebuilddirstate
   warning: failed to inspect working copy parent

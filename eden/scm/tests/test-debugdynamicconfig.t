@@ -97,12 +97,12 @@ Verify mtime is updated even if no change is made
   $ hg debugsh -c "import stat, os; ui.write('%s\n' % os.stat(os.path.join('.hg', 'hgrc.dynamic'))[stat.ST_MTIME])" > $TESTTMP/mtime1
   $ hg status --config configs.generationtime=60 # No regen, because high time limit
   $ hg debugsh -c "import stat, os; ui.write('%s\n' % os.stat(os.path.join('.hg', 'hgrc.dynamic'))[stat.ST_MTIME])" > $TESTTMP/mtime2
-  $ diff -q $TESTTMP/mtime1 $TESTTMP/mtime2 >/dev/null 2>/dev/null
+  $ [ "$(cat $TESTTMP/mtime1)" = "$(cat $TESTTMP/mtime2)" ]
 
   $ sleep 1
   $ hg status --config configs.generationtime=1 # Regen, because low time limit
   $ hg debugsh -c "import stat, os; ui.write('%s\n' % os.stat(os.path.join('.hg', 'hgrc.dynamic'))[stat.ST_MTIME])" > $TESTTMP/mtime3
-  $ diff -q $TESTTMP/mtime2 $TESTTMP/mtime3 >/dev/null 2>/dev/null
+  $ [ "$(cat $TESTTMP/mtime3)" = "$(cat $TESTTMP/mtime2)" ]
   [1]
 
 Validate dynamic config

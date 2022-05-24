@@ -15,7 +15,6 @@ Try to import an empty patch
 
 No dirstate backups are left behind
 
-  $ ls .hg/dirstate* | sort
+  $ echo .hg/dirstate*
   .hg/dirstate
-  .hg/dirstate.tree.* (glob) (?)
 

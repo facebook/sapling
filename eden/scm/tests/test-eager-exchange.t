@@ -128,7 +128,8 @@ Pull:
   
 Trigger file and tree downloading:
 
-  $ hg cat -r $B B A
+  $ hg cat -r $B B A >out 2>err
+  $ cat err out
   DEBUG eagerepo::api: trees d8dc55ad2b89cdc0f1ee969e5d79bd1eaddb5b43
   TRACE eagerepo::api:  found: d8dc55ad2b89cdc0f1ee969e5d79bd1eaddb5b43, 170 bytes
   DEBUG eagerepo::api: files 005d992c5dcf32993668f7cede29d296c494a5d9

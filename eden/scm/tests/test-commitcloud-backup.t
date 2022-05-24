@@ -290,13 +290,10 @@ Check the logs, make sure just one process was started
 
 Check if ssh batch mode enables only for background backup and not for foreground
   $ mkcommit ssh1
-  $ hg cloud backup --debug 2>&1 | debugsshcall
-  running .*dummyssh.* 'user@dummy' 'hg -R repo serve --stdio' (re)
+  $ hg cloud backup -q
   $ mkcommit ssh2
   $ hg cloud backup --background --config infinitepushbackup.logdir=$TESTTMP/logs --config infinitepushbackup.bgdebug=yes
   $ waitbgbackup
-  $ cat $TESTTMP/logs/test/* | debugsshcall
-  running .*dummyssh.* -bgssh 'user@dummy' 'hg -R repo serve --stdio' (re)
 
 Fail to push a backup by setting the server maxbundlesize very low
   $ cp ../repo/.hg/hgrc $TESTTMP/server-hgrc.bak

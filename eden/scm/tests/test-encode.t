@@ -1,5 +1,7 @@
 #chg-compatible
 
+#require gzip gunzip tr
+
 Test encode/decode filters
 
   $ hg init repo

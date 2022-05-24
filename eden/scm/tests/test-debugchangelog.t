@@ -299,9 +299,10 @@ Revlog -> Lazy:
 
 --remove-backup removes backup files
 
-  $ ls .hg/store/00changelog.{i,d}
+  $ f .hg/store/00changelog.*
   .hg/store/00changelog.d
   .hg/store/00changelog.i
+  .hg/store/00changelog.len
   $ ls .hg/store/segments
   v1
   v1.* (glob)

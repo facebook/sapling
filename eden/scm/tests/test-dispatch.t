@@ -90,7 +90,7 @@ However, we can't prevent it from loading extensions and configs:
 
   $ hg log -b '--config=ui.traceback=yes' 2>&1 | grep '^Traceback'
   Traceback (most recent call last):
-  $ hg log -b '--config=profiling.enabled=yes' 2>&1 | grep -i sample
+  $ hg log -b '--config=profiling.enabled=yes' 2>&1 | grep '[Ss]ample'
   Sample count: .*|No samples recorded\. (re)
 
 Early options can't be specified in [aliases] and [defaults] because they are
@@ -151,7 +151,7 @@ No repo:
 
 #endif
 
-#if rmcwd
+#if rmcwd bash
 
 Current directory removed:
 

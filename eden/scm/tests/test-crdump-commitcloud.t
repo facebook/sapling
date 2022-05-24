@@ -26,9 +26,7 @@ commit_cloud should be false when commitcloud is broken
 
 debugcrdump should upload the commit and commit_cloud should be true when
 commitcloud is working
-  $ hg debugcrdump -r . | grep commit_cloud
-  remote: pushing 1 commit:
-  remote:     9092f1db7931  added a
+  $ hg debugcrdump -r . 2>/dev/null | grep commit_cloud
               "commit_cloud": true,
 
 debugcrdump should not attempt to access the network if the commit was

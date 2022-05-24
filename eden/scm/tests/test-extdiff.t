@@ -1,4 +1,7 @@
 #chg-compatible
+
+#require diff echo
+
   $ enable extdiff
 
   $ hg init a
@@ -241,17 +244,20 @@ Prepare custom diff/edit tool:
 will change to /tmp/extdiff.TMP and populate directories a.TMP and a
 and start tool
 
-#if windows
+#if windows bash
   $ cat > 'diff tool.bat' << EOF
   > @$PYTHON "`pwd`/diff tool.py"
   > EOF
   $ hg extdiff -p "`pwd`/diff tool.bat"
   [1]
-#else
+#endif
+
+#if no-windows bash
   $ hg extdiff -p "`pwd`/diff tool.py"
   [1]
 #endif
 
+#if bash
 Diff in working directory, after:
 
   $ hg diff --git
@@ -271,6 +277,7 @@ Diff in working directory, after:
   -b
   +changed
   +edited
+#endif
 
 Test extdiff with --option:
 
@@ -325,15 +332,18 @@ Fallback to merge-tools.tool.executable|regkey
 Windows can't run *.sh directly, so create a shim executable that can be.
 Without something executable, the next hg command will try to run `tl` instead
 of $tool (and fail).
-#if windows
+#if windows bash
   $ cat > dir/tool.bat <<EOF
   > @sh -c "`pwd`/dir/tool.sh %1 %2"
   > EOF
   $ tool=`pwd`/dir/tool.bat
-#else
+#endif
+
+#if no-windows bash
   $ tool=`pwd`/dir/tool.sh
 #endif
 
+#if bash
   $ cat a
   changed
   edited
@@ -352,8 +362,9 @@ of $tool (and fail).
   [1]
   $ cat a
   a
+#endif
 
-#if execbit
+#if execbit bash
   $ [ -x a ]
 
   $ cat > 'dir/tool.sh' << 'EOF'
@@ -400,6 +411,7 @@ Test symlinks handling (issue1909)
 
 #endif
 
+#if bash
 Test handling of non-ASCII paths in generated docstrings (issue5301)
 
   >>> _ = open("u", "wb").write(b"\xa5\xa5")
@@ -411,3 +423,4 @@ Test handling of non-ASCII paths in generated docstrings (issue5301)
   [255]
 
   $ HGPLAIN=1 hg --config hgext.extdiff= --config extdiff.cmd.td=hi help td > /dev/null
+#endif
