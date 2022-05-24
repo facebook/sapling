@@ -269,10 +269,11 @@ else:
 
 
 def Popen4(cmd, wd, timeout, env=None):
+    shell = not isinstance(cmd, list)
     with processlock:
         p = subprocess.Popen(
             cmd,
-            shell=True,
+            shell=shell,
             bufsize=-1,
             cwd=wd,
             env=env,
@@ -374,6 +375,17 @@ def parsettestcases(path):
         if ex.errno != errno.ENOENT:
             raise
     return cases
+
+
+def compatiblewithdebugruntest(path):
+    """check whether a .t test is compatible with debugruntest"""
+    try:
+        with open(path, "r", encoding="utf8") as f:
+            return "#debugruntest-compatible" in f.read(1024)
+    except IOError as ex:
+        if ex.errno != errno.ENOENT:
+            raise
+    return False
 
 
 def getparser():
@@ -2326,6 +2338,36 @@ class TTest(Test):
         return TTest.ESCAPESUB(TTest._escapef, s)
 
 
+class DebugRunTestTest(Test):
+    """test compatible with debugruntest runner"""
+
+    @property
+    def refpath(self):
+        return os.path.join(self._testdir, self.basename)
+
+    def _run(self, env):
+        cmdargs = [
+            self._hgcommand,
+            "debugpython",
+            "--",
+            "-m",
+            "edenscm.testing.single",
+            self.path,
+            "-o",
+            self.errpath,
+        ]
+        vlog("# Running", shlex.join(cmdargs))
+        exitcode, out = self._runcommand(cmdargs, env)
+
+        if exitcode == 1 and os.path.exists(self.errpath):
+            with open(self.errpath, "rb") as f:
+                out = f.readlines()
+        if exitcode == 0:
+            out = self._refout
+
+        return exitcode, out
+
+
 firstlock = RLock()
 firsterror = False
 
@@ -3614,6 +3656,9 @@ class TestRunner(object):
             ):
                 continue
             if t.endswith(".t"):
+                if compatiblewithdebugruntest(t):
+                    tests.append({"path": t, "runner": "debugruntest"})
+                    continue
                 # .t file may contain multiple test cases
                 cases = sorted(parsettestcases(t))
                 if cases:
@@ -3628,9 +3673,12 @@ class TestRunner(object):
         def _reloadtest(test, i):
             # convert a test back to its description dict
             desc = {"path": test.path}
-            case = getattr(test, "_case", None)
-            if case:
-                desc["case"] = case
+            if isinstance(test, DebugRunTestTest):
+                desc["runner"] = "debugruntest"
+            else:
+                case = getattr(test, "_case", None)
+                if case:
+                    desc["case"] = case
             return self._gettest(desc, i)
 
         failed = False
@@ -3753,13 +3801,16 @@ class TestRunner(object):
         map to a known type.
         """
         path = testdesc["path"]
-        lctest = path.lower()
-        testcls = Test
+        if testdesc.get("runner") == "debugruntest":
+            testcls = DebugRunTestTest
+        else:
+            lctest = path.lower()
+            testcls = Test
 
-        for ext, cls in self.TESTTYPES:
-            if lctest.endswith(ext):
-                testcls = cls
-                break
+            for ext, cls in self.TESTTYPES:
+                if lctest.endswith(ext):
+                    testcls = cls
+                    break
 
         refpath = os.path.join(self._testdir, path)
         tmpdir = os.path.join(self._hgtmp, "child%d" % count)

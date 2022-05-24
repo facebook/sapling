@@ -1,4 +1,5 @@
 #chg-compatible
+#debugruntest-compatible
 
   $ cat >> foo.py << EOF
   > from edenscm.mercurial import registrar
