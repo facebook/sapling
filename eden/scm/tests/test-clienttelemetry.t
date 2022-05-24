@@ -33,8 +33,8 @@ set up the local repo
   $ hg pull -q --config infinitepush.wantsunhydratedcommits=True
 
 check telemetry
-  >>> import json
-  >>> with open("$TESTTMP/sampling.txt") as f:
+  >>> import json, os
+  >>> with open(os.path.join(os.getenv("TESTTMP"), "sampling.txt")) as f:
   ...     data = f.read()
   >>> for record in data.strip("\0").split("\0"):
   ...     parsedrecord = json.loads(record)
