@@ -10,6 +10,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
 
@@ -52,26 +53,28 @@ folly::SemiFuture<BackingStore::GetTreeRes>
 LocalStoreCachedBackingStore::getTree(
     const ObjectId& id,
     ObjectFetchContext& context) {
-  return localStore_->getTree(id).thenValue(
-      [id = id,
-       &context,
-       localStore = localStore_,
-       backingStore = backingStore_](std::unique_ptr<Tree> tree) mutable {
-        if (tree) {
-          return folly::makeSemiFuture(BackingStore::GetTreeRes{
-              std::move(tree), ObjectFetchContext::FromDiskCache});
-        }
+  return localStore_->getTree(id)
+      .thenValue(
+          [id = id,
+           &context,
+           localStore = localStore_,
+           backingStore = backingStore_](std::unique_ptr<Tree> tree) mutable {
+            if (tree) {
+              return folly::makeSemiFuture(BackingStore::GetTreeRes{
+                  std::move(tree), ObjectFetchContext::FromDiskCache});
+            }
 
-        return backingStore->getTree(id, context)
-            .deferValue([localStore = std::move(localStore)](
-                            BackingStore::GetTreeRes result) {
-              if (result.tree) {
-                localStore->putTree(*result.tree);
-              }
+            return backingStore->getTree(id, context)
+                .deferValue([localStore = std::move(localStore)](
+                                BackingStore::GetTreeRes result) {
+                  if (result.tree) {
+                    localStore->putTree(*result.tree);
+                  }
 
-              return result;
-            });
-      });
+                  return result;
+                });
+          })
+      .semi();
 }
 
 std::unique_ptr<BlobMetadata>
@@ -85,12 +88,12 @@ folly::SemiFuture<BackingStore::GetBlobRes>
 LocalStoreCachedBackingStore::getBlob(
     const ObjectId& id,
     ObjectFetchContext& context) {
-  return localStore_->getBlob(id).thenValue(
-      [id = id,
-       &context,
-       localStore = localStore_,
-       backingStore = backingStore_,
-       stats = stats_](std::unique_ptr<Blob> blob) mutable {
+  return localStore_->getBlob(id)
+      .thenValue([id = id,
+                  &context,
+                  localStore = localStore_,
+                  backingStore = backingStore_,
+                  stats = stats_](std::unique_ptr<Blob> blob) mutable {
         if (blob) {
           stats->getObjectStoreStatsForCurrentThread()
               .getBlobFromLocalStore.addValue(1);
@@ -109,7 +112,8 @@ LocalStoreCachedBackingStore::getBlob(
               }
               return result;
             });
-      });
+      })
+      .semi();
 }
 
 folly::SemiFuture<folly::Unit> LocalStoreCachedBackingStore::prefetchBlobs(

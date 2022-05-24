@@ -399,9 +399,9 @@ StoreResult RocksDbLocalStore::get(KeySpace keySpace, ByteRange key) const {
   return StoreResult(std::move(value));
 }
 
-FOLLY_NODISCARD folly::Future<StoreResult> RocksDbLocalStore::getFuture(
-    KeySpace keySpace,
-    folly::ByteRange key) const {
+FOLLY_NODISCARD ImmediateFuture<StoreResult>
+RocksDbLocalStore::getImmediateFuture(KeySpace keySpace, folly::ByteRange key)
+    const {
   // We're really just passing key through to the get() method, but we need to
   // make a copy of it on the way through.  It will usually be an eden::Hash
   // but can potentially be an arbitrary length so we can't just use Hash as
@@ -418,7 +418,8 @@ FOLLY_NODISCARD folly::Future<StoreResult> RocksDbLocalStore::getFuture(
             folly::ByteRange(
                 reinterpret_cast<const unsigned char*>(key.data()),
                 key.size()));
-      });
+      })
+      .semi();
 }
 
 FOLLY_NODISCARD folly::Future<std::vector<StoreResult>>

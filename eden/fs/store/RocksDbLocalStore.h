@@ -39,7 +39,7 @@ class RocksDbLocalStore : public LocalStore {
   void clearKeySpace(KeySpace keySpace) override;
   void compactKeySpace(KeySpace keySpace) override;
   StoreResult get(KeySpace keySpace, folly::ByteRange key) const override;
-  FOLLY_NODISCARD folly::Future<StoreResult> getFuture(
+  FOLLY_NODISCARD ImmediateFuture<StoreResult> getImmediateFuture(
       KeySpace keySpace,
       folly::ByteRange key) const override;
   FOLLY_NODISCARD folly::Future<std::vector<StoreResult>> getBatch(

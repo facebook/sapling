@@ -311,6 +311,8 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
 
   // Check local store
   return localStore_->getBlobMetadata(id)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([self, id, &context](std::optional<BlobMetadata>&& metadata) {
         if (metadata) {
           self->stats_->getObjectStoreStatsForCurrentThread()

@@ -71,10 +71,10 @@ StoreResult LocalStore::get(KeySpace keySpace, const ObjectId& id) const {
 // This is the fallback implementation for stores that don't have any
 // internal support for asynchronous fetches.  This just performs the
 // fetch and wraps it in a future
-folly::Future<StoreResult> LocalStore::getFuture(
+ImmediateFuture<StoreResult> LocalStore::getImmediateFuture(
     KeySpace keySpace,
     folly::ByteRange key) const {
-  return folly::makeFutureWith(
+  return makeImmediateFutureWith(
       [keySpace, key, this] { return get(keySpace, key); });
 }
 
@@ -90,9 +90,9 @@ folly::Future<std::vector<StoreResult>> LocalStore::getBatch(
   });
 }
 
-folly::Future<std::unique_ptr<Tree>> LocalStore::getTree(
+ImmediateFuture<std::unique_ptr<Tree>> LocalStore::getTree(
     const ObjectId& id) const {
-  return getFuture(KeySpace::TreeFamily, id.getBytes())
+  return getImmediateFuture(KeySpace::TreeFamily, id.getBytes())
       .thenValue([id](StoreResult&& data) {
         if (!data.isValid()) {
           return std::unique_ptr<Tree>(nullptr);
@@ -105,13 +105,13 @@ folly::Future<std::unique_ptr<Tree>> LocalStore::getTree(
       });
 }
 
-folly::Future<std::unique_ptr<Blob>> LocalStore::getBlob(
+ImmediateFuture<std::unique_ptr<Blob>> LocalStore::getBlob(
     const ObjectId& id) const {
   if (!enableBlobCaching) {
     return std::unique_ptr<Blob>(nullptr);
   }
 
-  return getFuture(KeySpace::BlobFamily, id.getBytes())
+  return getImmediateFuture(KeySpace::BlobFamily, id.getBytes())
       .thenValue([id](StoreResult&& data) {
         if (!data.isValid()) {
           return std::unique_ptr<Blob>(nullptr);
@@ -121,9 +121,9 @@ folly::Future<std::unique_ptr<Blob>> LocalStore::getBlob(
       });
 }
 
-folly::Future<optional<BlobMetadata>> LocalStore::getBlobMetadata(
+ImmediateFuture<optional<BlobMetadata>> LocalStore::getBlobMetadata(
     const ObjectId& id) const {
-  return getFuture(KeySpace::BlobMetaDataFamily, id.getBytes())
+  return getImmediateFuture(KeySpace::BlobMetaDataFamily, id.getBytes())
       .thenValue([id](StoreResult&& data) -> optional<BlobMetadata> {
         if (!data.isValid()) {
           return std::nullopt;
