@@ -78,6 +78,7 @@ members = [
   "lib/metalog",
   "lib/metrics",
   "lib/metrics/render",
+  "lib/migration",
   "lib/mincode",
   "lib/minibench",
   "lib/minibytes",
