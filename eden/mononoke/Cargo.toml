@@ -344,6 +344,7 @@ members = [
   "phases",
   "phases/sqlphases",
   "pushrebase",
+  "pushrebase/client",
   "pushrebase/pushrebase_hook",
   "pushrebase_mutation_mapping",
   "quiet_stream",

@@ -22,6 +22,8 @@ use mercurial_mutation::HgMutationStoreRef;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use pushrebase::PushrebaseError;
+use pushrebase_client::{LocalPushrebaseClient, PushrebaseClient};
+
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_identity::RepoIdentityRef;
 use repo_read_write_status::RepoReadWriteFetcher;
@@ -521,23 +523,20 @@ async fn normal_pushrebase<'a>(
     cross_repo_push_source: CrossRepoPushSource,
     readonly_fetcher: &RepoReadWriteFetcher,
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
-    match bookmarks_movement::PushrebaseOntoBookmarkOp::new(bookmark, changesets)
-        .only_if_public()
-        .with_pushvars(maybe_pushvars)
-        .with_hg_replay_data(maybe_hg_replay_data.as_ref())
-        .with_push_source(cross_repo_push_source)
-        .run(
-            ctx,
-            repo,
-            lca_hint,
-            infinitepush_params,
-            pushrebase_params,
-            bookmark_attrs,
-            hook_manager,
-            readonly_fetcher,
-        )
-        .await
-    {
+    let client = LocalPushrebaseClient {
+        ctx,
+        repo,
+        pushrebase_params,
+        lca_hint,
+        maybe_pushvars,
+        maybe_hg_replay_data,
+        bookmark_attrs,
+        infinitepush_params,
+        hook_manager,
+        cross_repo_push_source,
+        readonly_fetcher,
+    };
+    match client.pushrebase(bookmark, changesets).await {
         Ok(outcome) => Ok((outcome.head, outcome.rebased_changesets)),
         Err(err) => match err {
             BookmarkMovementError::PushrebaseError(PushrebaseError::Conflicts(conflicts)) => {

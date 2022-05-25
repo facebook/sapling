@@ -67,7 +67,9 @@ pub trait Repo = AsBlobRepo
     + RepoBlobstoreRef
     + RepoCrossRepoRef
     + RepoIdentityRef
-    + RepoPermissionCheckerRef;
+    + RepoPermissionCheckerRef
+    + Send
+    + Sync;
 
 /// An error encountered during an attempt to move a bookmark.
 #[derive(Debug, Error)]
