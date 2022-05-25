@@ -320,7 +320,6 @@ class TestTmp:
             ext = ""
             if os.name == "nt":
                 ext = ".exe"
-            # pyre-fixme[16]: `Optional` has no attribute `split`.
             paths = self._origpathenv.split(os.pathsep)
             paths += os.defpath.split(os.pathsep)
             for path in paths:
