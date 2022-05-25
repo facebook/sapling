@@ -8,7 +8,7 @@ import os
 import sys
 from unittest import SkipTest
 
-from .t.runner import TestId, TestNotFoundError, runtest, fixmismatches
+from .t.runner import fixmismatches, runtest, TestId, TestNotFoundError
 
 DESCRIPTION = """single .t test runner for run-tests.py integration
 
