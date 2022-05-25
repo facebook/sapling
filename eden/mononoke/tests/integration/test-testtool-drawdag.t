@@ -93,3 +93,22 @@ need to match the previous graph (although it's probably a good idea).
   W1=48288d4775d3e44b2c7a97643638c6c6ce162efb8fef108080ac86a9001ff605
   W2=28354dd9e37c4b5aadd24f3e8eb4699f9a01b6e4b48554f3808fb432da0fafc4
   XX=f6509cec643ab922cf4dbd0583f8c8683701259daf535b4e80da448c1810d6d4
+
+Test HG hashes:
+  $ testtool_drawdag -R repo --print-hg-hashes <<'EOF'
+  > AA-BB-CC
+  > # modify: AA file "content"
+  > EOF
+  AA=73a53b07af3d15928010e8d72630750e98875c4a
+  BB=d005ae50b8698478630ac396568f337d3c24063c
+  CC=2cdf9bb5479e17e147a64e3f443011873bf7347a
+
+  $ mononoke_newadmin fetch -R repo --hg-id $AA -p file
+  File-Type: regular
+  Size: 7
+  Content-Id: 95b845f64a4cb04cf60a55e9715210fcea6e187813221ab49e766b1478dbaa13
+  Sha1: 040f06fd774092478d450774f5ba30c5da78acc8
+  Sha256: ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73
+  Git-Sha1: 6b584e8ece562ebffc15d38808cd6b98fc3d97ea
+  
+  content

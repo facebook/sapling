@@ -31,7 +31,8 @@
 //!
 //! Paths can be surrounded by quotes if they contain special characters.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
+use std::fmt::Display;
 use std::io::Write;
 
 use anyhow::{anyhow, Context, Error, Result};
@@ -73,6 +74,10 @@ pub struct CommandArgs {
     /// Derive all derived data types for all commits
     #[clap(long)]
     derive_all: bool,
+
+    /// Print hashes in HG format instead of bonsai
+    #[clap(long)]
+    print_hg_hashes: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -283,6 +288,13 @@ impl ActionArg {
     }
 }
 
+fn print_name_hash_pairs(pairs: impl IntoIterator<Item = (String, impl Display)>) -> Result<()> {
+    for (name, id) in pairs.into_iter() {
+        writeln!(std::io::stdout(), "{}={}", name, id)?;
+    }
+    Ok(())
+}
+
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_context();
 
@@ -350,10 +362,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     )
     .await?;
 
-    for (name, id) in commits.iter() {
-        writeln!(std::io::stdout(), "{}={}", name, id)?;
-    }
-
     if !bookmarks.is_empty() {
         let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         for (bookmark, name) in bookmarks {
@@ -382,7 +390,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         txn.commit().await?;
     }
 
-    if args.derive_all {
+    let any_derivation_needed = args.derive_all | args.print_hg_hashes;
+    if any_derivation_needed {
         let dag = dag
             .into_iter()
             .map(|(k, v)| (k, v.into_iter().collect()))
@@ -398,7 +407,33 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        derive_all(&ctx, &repo, &csids).await?;
+        if args.derive_all {
+            derive_all(&ctx, &repo, &csids).await?;
+        } else {
+            derive::<MappedHgChangesetId>(&ctx, &repo, &csids).await?;
+        }
+    }
+
+    if args.print_hg_hashes {
+        let mapping: HashMap<_, _> = repo
+            .bonsai_hg_mapping()
+            .get(&ctx, commits.values().copied().collect::<Vec<_>>().into())
+            .await?
+            .into_iter()
+            .map(|entry| (entry.bcs_id, entry.hg_cs_id))
+            .collect();
+        let commits = commits
+            .into_iter()
+            .map(|(name, id)| {
+                mapping
+                    .get(&id)
+                    .ok_or_else(|| anyhow!("Couldn't translate {}={} to hg", name, id))
+                    .map(|hg_id| (name, hg_id))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        print_name_hash_pairs(commits)?;
+    } else {
+        print_name_hash_pairs(commits)?;
     }
 
     Ok(())
