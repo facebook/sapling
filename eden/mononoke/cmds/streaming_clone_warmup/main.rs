@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::{anyhow, Error};
 use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};

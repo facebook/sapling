@@ -7,8 +7,6 @@
 
 //! Tests for the synced commits mapping.
 
-#![deny(warnings)]
-
 use anyhow::{anyhow, Error};
 use ascii::AsciiString;
 use assert_matches::assert_matches;

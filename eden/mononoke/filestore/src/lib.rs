@@ -6,7 +6,6 @@
  */
 
 #![feature(never_type)]
-#![deny(warnings)]
 #![type_length_limit = "2000000"]
 
 use anyhow::Error;

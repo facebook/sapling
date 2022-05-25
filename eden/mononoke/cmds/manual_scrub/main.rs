@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::{Context, Error, Result};
 use async_compression::{tokio::write::ZstdEncoder, Level};
 use clap_old::Arg;

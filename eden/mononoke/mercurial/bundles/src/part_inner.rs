@@ -6,7 +6,6 @@
  */
 
 //! Type definitions for inner streams.
-#![deny(warnings)]
 
 use std::collections::{HashMap, HashSet};
 use std::io::BufRead;

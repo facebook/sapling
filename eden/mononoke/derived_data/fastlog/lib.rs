@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 /// This library is used to efficiently store file and directory history.
 /// For each unode we store a FastlogBatch - thrift structure that stores latest commits and their
 /// parents that modified this file or directory. Commits are stored in BFS order.

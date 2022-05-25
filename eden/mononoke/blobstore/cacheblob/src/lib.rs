@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 mod cachelib_cache;
 pub use crate::cachelib_cache::{
     new_cachelib_blobstore, new_cachelib_blobstore_no_lease, CachelibBlobstoreOptions,

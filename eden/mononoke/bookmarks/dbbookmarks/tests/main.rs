@@ -7,8 +7,6 @@
 
 //! Tests for the Bookmarks store.
 
-#![deny(warnings)]
-
 use anyhow::{Error, Result};
 use bookmarks::{
     Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, BookmarkUpdateLog,

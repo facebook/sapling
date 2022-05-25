@@ -6,7 +6,6 @@
  */
 
 #![feature(auto_traits)]
-#![deny(warnings)]
 
 /// Mononoke Cross Repo validator job
 ///

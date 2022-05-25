@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 pub mod changesetid;
 pub mod contentid;
 pub mod datetime;

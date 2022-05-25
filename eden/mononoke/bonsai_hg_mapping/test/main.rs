@@ -7,8 +7,6 @@
 
 //! Tests for the Changesets store.
 
-#![deny(warnings)]
-
 use anyhow::Error;
 use async_trait::async_trait;
 

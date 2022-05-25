@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use std::{sync::Arc, time::Duration};
 
 use anyhow::{anyhow, Context, Error};

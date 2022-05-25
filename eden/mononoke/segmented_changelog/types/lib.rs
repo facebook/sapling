@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 //! Segmented Changelog Types
 
 use std::collections::HashMap;

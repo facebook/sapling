@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 pub mod derive_hg_changeset;
 pub mod derive_hg_manifest;
 mod mapping;

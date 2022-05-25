@@ -7,7 +7,6 @@
 
 #![recursion_limit = "256"]
 #![feature(never_type)]
-#![deny(warnings)]
 
 use anyhow::{anyhow, bail, Context, Error};
 use cached_config::ConfigHandle;

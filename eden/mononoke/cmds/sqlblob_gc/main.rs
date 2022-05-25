@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::Result;
 use clap::Parser;
 use cmdlib_logging::ScribeLoggingArgs;

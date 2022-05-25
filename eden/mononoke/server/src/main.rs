@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 #![feature(never_type)]
 
 use anyhow::{Context, Result};

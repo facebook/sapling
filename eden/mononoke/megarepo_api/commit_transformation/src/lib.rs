@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::{anyhow, bail, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Loadable;

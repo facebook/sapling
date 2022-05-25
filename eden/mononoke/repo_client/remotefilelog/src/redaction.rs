@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 use anyhow::Error;
 use bytes::Bytes;
 use futures_old::{Async, Future, Poll};

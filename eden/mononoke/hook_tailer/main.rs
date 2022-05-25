@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 mod tailer;
 
 use anyhow::{bail, format_err, Error, Result};

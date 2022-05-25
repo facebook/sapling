@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 #![type_length_limit = "1817182"]
 
 use anyhow::{anyhow, Result};

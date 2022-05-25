@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 /// Backsyncer
 ///
 /// Library to sync commits from source repo to target repo by following bookmark update log

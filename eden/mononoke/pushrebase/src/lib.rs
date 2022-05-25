@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 /// Mononoke pushrebase implementation. The main goal of pushrebase is to decrease push contention.
 /// Commits that client pushed are rebased on top of `onto_bookmark` on the server
 ///

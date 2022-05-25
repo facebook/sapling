@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 mod bonsai_generation;
 mod create_changeset;
 pub mod repo_commit;

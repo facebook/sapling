@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use crate::run_post_resolve_action;
 use crate::{
     UnbundleBookmarkOnlyPushRebaseResponse, UnbundleInfinitePushResponse,

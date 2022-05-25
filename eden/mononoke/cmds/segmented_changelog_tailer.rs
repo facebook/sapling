@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use std::time::Duration;
 
 use anyhow::{format_err, Context, Error};

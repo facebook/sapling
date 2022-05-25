@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use std::collections::HashSet;
 use std::fs::create_dir_all;
 use std::ops::RangeBounds;

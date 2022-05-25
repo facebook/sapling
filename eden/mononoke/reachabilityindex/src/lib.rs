@@ -6,7 +6,6 @@
  */
 
 #![feature(backtrace)]
-#![deny(warnings)]
 
 pub mod errors;
 pub use crate::errors::ErrorKind;

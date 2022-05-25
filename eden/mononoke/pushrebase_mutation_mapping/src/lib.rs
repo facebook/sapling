@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 mod save_mapping_pushrebase_hook;
 mod sql_queries;
 #[cfg(test)]

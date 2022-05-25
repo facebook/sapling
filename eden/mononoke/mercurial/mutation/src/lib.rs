@@ -12,8 +12,6 @@
 //!
 //! See <https://fburl.com/m2y3nr5c> for more details.
 
-#![deny(warnings)]
-
 use std::collections::HashSet;
 
 use anyhow::Result;

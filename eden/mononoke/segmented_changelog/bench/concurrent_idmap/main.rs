@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use criterion::Criterion;
 use tokio::runtime::Runtime;
 

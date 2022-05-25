@@ -7,8 +7,6 @@
 
 //! Tests for the hg mutation store.
 
-#![deny(warnings)]
-
 mod basic;
 mod cycles;
 mod util;

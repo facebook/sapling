@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 mod blobrepo;
 mod errors;
 mod memory;

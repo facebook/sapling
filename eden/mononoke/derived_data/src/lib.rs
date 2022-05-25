@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 //! # Derived Data
 //!
 //! This crate defines the traits that are used to implement data derivation

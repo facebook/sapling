@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 #![feature(async_closure)]
 
 //! State for a single source control Repo

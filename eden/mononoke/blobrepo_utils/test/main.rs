@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use fixtures::*;
 
 // An extra level of nesting is required to avoid clashes between crate and module names.

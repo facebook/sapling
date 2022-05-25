@@ -6,7 +6,6 @@
  */
 
 #![feature(backtrace)]
-#![deny(warnings)]
 
 pub use anyhow::anyhow;
 use blobstore::LoadableError;

@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 #![feature(async_closure)]
 
 use add_branching_sync_target::AddBranchingSyncTarget;

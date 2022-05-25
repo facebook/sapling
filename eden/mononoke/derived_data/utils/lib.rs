@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::{anyhow, format_err, Error};
 use async_trait::async_trait;
 use blame::{BlameRoot, RootBlameV2};

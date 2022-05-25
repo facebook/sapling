@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 #![feature(never_type)]
 
 mod cachelib_utils;

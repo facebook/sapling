@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 #![cfg_attr(test, type_length_limit = "2097152")]
 // Used to avoid too much copy-and-paste in hook_running.
 // Tracking issue https://github.com/rust-lang/rust/issues/41517 suggests it's reasonably safe to usse

@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::{anyhow, bail, Result};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;

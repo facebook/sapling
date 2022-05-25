@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use acl_regions::{AclRegions, AclRegionsRef, AssociatedRulesResult};
 use anyhow::Result;
 use bonsai_hg_mapping::BonsaiHgMapping;

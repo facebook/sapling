@@ -6,7 +6,6 @@
  */
 
 #![feature(trait_alias)]
-#![deny(warnings)]
 
 use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;

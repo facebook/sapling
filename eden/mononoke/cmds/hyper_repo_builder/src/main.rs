@@ -19,8 +19,6 @@
 //! 1) Non-forward bookmark moves are not supported
 //! 2) Syncing merges is not supported
 
-#![deny(warnings)]
-
 use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;

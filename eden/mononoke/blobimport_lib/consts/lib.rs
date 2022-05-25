@@ -5,6 +5,4 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 pub const HIGHEST_IMPORTED_GEN_NUM: &str = "highest-imported-gen-num";

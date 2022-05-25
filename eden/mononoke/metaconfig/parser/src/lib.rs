@@ -8,7 +8,6 @@
 //! Loading and parsing of Mononoke configuration.
 
 #![deny(missing_docs)]
-#![deny(warnings)]
 
 pub mod config;
 mod convert;

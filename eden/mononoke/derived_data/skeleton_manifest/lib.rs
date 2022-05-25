@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use mononoke_types::SkeletonManifestId;
 use thiserror::Error;
 

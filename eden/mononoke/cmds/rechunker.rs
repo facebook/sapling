@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::{Loadable, PutBehaviour};

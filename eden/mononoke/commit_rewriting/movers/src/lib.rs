@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::{Context, Error, Result};
 use mercurial_types::{MPath, MPathElement};
 use metaconfig_types::{

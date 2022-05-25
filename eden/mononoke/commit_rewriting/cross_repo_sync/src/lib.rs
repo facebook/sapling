@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 #![feature(trait_alias)]
 
 use anyhow::{bail, format_err, Context, Error};

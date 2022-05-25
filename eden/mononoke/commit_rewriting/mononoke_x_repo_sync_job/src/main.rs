@@ -6,7 +6,6 @@
  */
 
 #![feature(auto_traits)]
-#![deny(warnings)]
 
 use crate::sync::SyncResult;
 /// Mononoke Cross Repo sync job

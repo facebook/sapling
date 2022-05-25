@@ -8,7 +8,6 @@
 //! Scaffolding for service-level integration and monitoring.
 //!
 
-#![deny(warnings)]
 #![feature(never_type)]
 
 use std::thread::{self, JoinHandle};

@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::{format_err, Error};
 use blobstore::Storable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;

@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::ops::RangeBounds;

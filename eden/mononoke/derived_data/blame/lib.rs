@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 #![type_length_limit = "1441792"]
 
 mod batch_v2;

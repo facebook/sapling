@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::{anyhow, Error};
 use blobstore::PutBehaviour;
 use blobstore::{Blobstore, Storable};

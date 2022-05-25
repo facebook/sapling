@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 mod counted_blobstore;
 mod disabled;
 mod errors;

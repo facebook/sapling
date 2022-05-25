@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use crate::errors::ErrorKind;
 use anyhow::{anyhow, Error, Result};
 use blobrepo::BlobRepo;

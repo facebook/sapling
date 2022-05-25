@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use cached_config::{ConfigStore, ModificationTime, TestSource};
 use context::CoreContext;
 use fbinit::FacebookInit;

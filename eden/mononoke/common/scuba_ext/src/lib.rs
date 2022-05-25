@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use fbinit::FacebookInit;
 use futures_stats::{FutureStats, StreamStats};
 use metadata::Metadata;

@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 use crate::RedactionConfigBlobstore;
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;

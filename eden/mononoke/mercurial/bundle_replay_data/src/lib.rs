@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 //! Encapsulation of data required to replay Mercurial bundles in the bookmark
 //! update log.
 

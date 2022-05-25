@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use blobrepo::AsBlobRepo;
 use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;

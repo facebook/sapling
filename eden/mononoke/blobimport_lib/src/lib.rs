@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 mod bookmark;
 mod changeset;
 mod concurrency;

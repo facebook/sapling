@@ -13,8 +13,6 @@
 //! It's similar to manual_scrub tool, with the exception that manual_scrub preserves the repoid
 //! prefix for the blob, while this tool either strips it or ignores it.
 
-#![deny(warnings)]
-
 use anyhow::{anyhow, Context, Error};
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, PutBehaviour};

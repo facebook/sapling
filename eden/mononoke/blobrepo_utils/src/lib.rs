@@ -7,8 +7,6 @@
 
 //! Code for operations on blobrepos that are useful but not essential.
 
-#![deny(warnings)]
-
 mod bonsai;
 mod changeset;
 mod errors;

@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use ::sql::Transaction;
 use anyhow::Result;
 use ascii::AsciiStr;

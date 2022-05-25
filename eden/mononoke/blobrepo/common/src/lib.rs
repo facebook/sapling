@@ -5,7 +5,5 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 pub mod changed_files;
 pub mod file_history;

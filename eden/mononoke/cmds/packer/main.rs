@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::{bail, Context, Result};
 use blobstore_factory::make_packblob;
 use borrowed::borrowed;

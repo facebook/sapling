@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 //! Segmented Changelog
 //!
 //! This represents an implementation for the core commit graph that we have

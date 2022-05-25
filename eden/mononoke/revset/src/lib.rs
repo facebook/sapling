@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::Error;
 use futures_ext::BoxStream;
 use mononoke_types::ChangesetId;

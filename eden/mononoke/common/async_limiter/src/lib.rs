@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 mod async_limiter_;
 mod errors;
 mod rate_limit_stream;

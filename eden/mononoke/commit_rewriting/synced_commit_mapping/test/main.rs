@@ -7,8 +7,6 @@
 
 //! Tests for the synced commits mapping.
 
-#![deny(warnings)]
-
 use fbinit::FacebookInit;
 
 use anyhow::Error;

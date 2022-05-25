@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 mod mem_writes_changesets;
 
 use anyhow::Error;

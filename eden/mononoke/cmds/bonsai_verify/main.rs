@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 mod config;
 
 use anyhow::{format_err, Error, Result};

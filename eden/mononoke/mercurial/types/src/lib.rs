@@ -43,7 +43,6 @@
 //! Delta and bdiff are used in revlogs and on the wireprotocol to represent inter-file
 //! differences. These are for interfacing at the edges, but are not used within Mononoke's core
 //! structures at all.
-#![deny(warnings)]
 
 pub mod bdiff;
 pub mod blob;

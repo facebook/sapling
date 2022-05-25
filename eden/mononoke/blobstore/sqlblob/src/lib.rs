@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 
 mod delay;

@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::{format_err, Context, Error};
 use async_trait::async_trait;
 use auto_impl::auto_impl;

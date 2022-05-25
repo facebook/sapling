@@ -7,8 +7,6 @@
 
 //! Base types used throughout Mononoke.
 
-#![deny(warnings)]
-
 pub mod blame;
 pub mod blame_v2;
 pub mod blob;

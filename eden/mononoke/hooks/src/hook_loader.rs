@@ -7,8 +7,6 @@
 
 //! This sub module contains functions to load hooks for the server
 
-#![deny(warnings)]
-
 use crate::errors::*;
 use crate::{ChangesetHook, FileHook, HookManager};
 use anyhow::Error;

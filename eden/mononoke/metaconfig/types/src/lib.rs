@@ -9,7 +9,6 @@
 //! deserialized from TOML files from metaconfig repo
 
 #![deny(missing_docs)]
-#![deny(warnings)]
 
 use anyhow::{anyhow, Error, Result};
 use std::{

@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 #![feature(associated_type_defaults)]
 #![feature(try_blocks)]
 

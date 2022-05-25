@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::{bail, format_err, Error};
 use backsyncer::{
     backsync_latest, format_counter, open_backsyncer_dbs, BacksyncLimit, TargetRepoDbs,

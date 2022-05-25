@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 #![feature(process_exitcode_placeholder)]
 
 use anyhow::{bail, format_err, Context, Error, Result};

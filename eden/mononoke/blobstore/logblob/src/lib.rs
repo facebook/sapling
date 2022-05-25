@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use std::num::NonZeroU64;
 
 use anyhow::Result;

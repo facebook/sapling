@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::{format_err, Error};
 use ascii::{AsciiChar, AsciiString};
 use quickcheck::{Arbitrary, Gen};

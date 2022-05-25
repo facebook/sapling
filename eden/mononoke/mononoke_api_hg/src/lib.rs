@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 pub use mercurial_types::{HgFileNodeId, HgManifestId, HgParents};
 
 pub mod data;

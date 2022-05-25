@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::Error;
 use context::CoreContext;
 use fbinit::FacebookInit;

@@ -11,8 +11,6 @@
 //! SSH and HTTP. This module defines enums representing requests and responses for those
 //! protocols, and a Tokio Service framework for them via a trait.
 
-#![deny(warnings)]
-
 use bytes_old::Bytes;
 use mercurial_types::{HgChangesetId, HgManifestId};
 use mononoke_types::MPath;

@@ -11,7 +11,6 @@
 //!
 //! The counter values themselves are stored in a table in the metadata
 //! database.
-#![deny(warnings)]
 
 use anyhow::Result;
 use async_trait::async_trait;

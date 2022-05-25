@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use std::sync::Arc;
 
 use anyhow::{Error, Result};

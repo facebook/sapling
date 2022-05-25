@@ -7,8 +7,6 @@
 
 //! Scaffolding that's generally useful to build CLI tools on top of Mononoke.
 
-#![deny(warnings)]
-
 use anyhow::{bail, Error};
 use blobrepo::BlobRepo;
 use cacheblob::LeaseOps;

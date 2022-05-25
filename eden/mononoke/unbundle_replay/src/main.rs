@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 mod hg_recording;
 mod hooks;
 mod replay_spec;

@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
 use anyhow::Result;
 use check_git_wc::check_git_wc;
 use clap_old::Arg;

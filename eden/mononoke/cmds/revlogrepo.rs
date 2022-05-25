@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use clap_old::{App, SubCommand};
 use mercurial_revlog::{revlog::Revlog, RevlogChangeset};
 use mercurial_types::HgNodeHash;

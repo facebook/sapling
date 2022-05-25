@@ -7,8 +7,6 @@
 
 //! Tests for the Changesets store.
 
-#![deny(warnings)]
-
 use anyhow::Error;
 use blobstore_sync_queue::{
     BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey, SqlBlobstoreSyncQueue,

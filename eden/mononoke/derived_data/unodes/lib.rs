@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 use anyhow::{anyhow, Error, Result};
 use cloned::cloned;
 use context::CoreContext;

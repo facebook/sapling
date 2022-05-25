@@ -6,7 +6,6 @@
  */
 
 #![type_length_limit = "15000000"]
-#![deny(warnings)]
 #![feature(map_first_last)]
 
 use anyhow::{anyhow, format_err, Context, Error, Result};

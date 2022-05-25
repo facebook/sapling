@@ -8,8 +8,6 @@
 //! This benchmark generates linear stack with specified parameters, and then
 //! measures how log it takes to convert it from Bonsai to Hg.
 
-#![deny(warnings)]
-
 use anyhow::{anyhow, Error, Result};
 use blobrepo::BlobRepo;
 use clap::Arg;

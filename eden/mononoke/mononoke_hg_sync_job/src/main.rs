@@ -7,7 +7,6 @@
 
 #![feature(auto_traits)]
 #![feature(async_closure)]
-#![deny(warnings)]
 
 /// Mononoke -> hg sync job
 ///

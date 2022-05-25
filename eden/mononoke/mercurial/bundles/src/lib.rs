@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 pub mod bundle2;
 pub mod bundle2_encode;
 pub mod capabilities;
