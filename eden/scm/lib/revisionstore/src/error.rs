@@ -30,8 +30,9 @@ pub struct FetchError {
 }
 
 #[derive(Clone, Debug, Error)]
-#[error(transparent)]
+#[error("{error}")]
 pub struct ClonableError {
+    #[source]
     pub error: Arc<Error>,
 }
 
@@ -94,4 +95,15 @@ pub enum TransferError {
 
     #[error(transparent)]
     InvalidResponse(Error),
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_clonable_source() {
+        let clonable: anyhow::Error = ClonableError::new(EmptyMutablePack {}.into()).into();
+        assert!(clonable.chain().any(|e| e.is::<EmptyMutablePack>()))
+    }
 }
