@@ -56,9 +56,22 @@ class InodeOrTreeOrEntry {
 
   dtype_t getDtype() const;
 
-  bool isDirectory() const {
-    return getDtype() == dtype_t::Dir;
-  }
+  bool isDirectory() const;
+
+  /**
+   * Discover the contained data type.
+   *
+   * These functions should not be used outside of unit tests.
+   * InodeOrTreeOrEntry should "transparently" look like a file or directory to
+   * most users.
+   */
+  enum class ContainedType {
+    Inode,
+    DirEntry, // aka UnmaterializedUnloadedBlobDirEntry
+    Tree,
+    TreeEntry,
+  };
+  ContainedType testGetContainedType() const;
 
   /**
    * Get the InodeOrTreeOrEntry object for a child of this directory.

@@ -10,6 +10,7 @@ add_executable(
     GlobNodeTest.cpp
     InodeBaseTest.cpp
     InodeOrTreeOrEntryLoaderTest.cpp
+    InodeOrTreeOrEntryTest.cpp
     InodeMapTest.cpp
     InodePtrTest.cpp
     InodeTimestampsTest.cpp

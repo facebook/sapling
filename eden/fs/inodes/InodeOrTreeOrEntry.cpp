@@ -50,6 +50,32 @@ dtype_t InodeOrTreeOrEntry::getDtype() const {
       variant_);
 }
 
+bool InodeOrTreeOrEntry::isDirectory() const {
+  return getDtype() == dtype_t::Dir;
+}
+
+InodeOrTreeOrEntry::ContainedType InodeOrTreeOrEntry::testGetContainedType()
+    const {
+  return std::visit(
+      [](auto&& arg) {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, InodePtr>) {
+          return ContainedType::Inode;
+        } else if constexpr (std::is_same_v<
+                                 T,
+                                 UnmaterializedUnloadedBlobDirEntry>) {
+          return ContainedType::DirEntry;
+        } else if constexpr (std::is_same_v<T, TreePtr>) {
+          return ContainedType::Tree;
+        } else if constexpr (std::is_same_v<T, TreeEntry>) {
+          return ContainedType::TreeEntry;
+        } else {
+          static_assert(always_false_v<T>, "non-exhaustive visitor!");
+        }
+      },
+      variant_);
+}
+
 ImmediateFuture<Hash20> InodeOrTreeOrEntry::getSHA1(
     RelativePathPiece path,
     ObjectStore* objectStore,
@@ -143,6 +169,25 @@ ImmediateFuture<BlobMetadata> InodeOrTreeOrEntry::getBlobMetadata(
 // Returns a subset of `struct stat` required by
 // EdenServiceHandler::semifuture_getFileInformation()
 ImmediateFuture<struct stat> InodeOrTreeOrEntry::stat(
+    // TODO: can lastCheckoutTime be fetched from some global edenMount()?
+    //
+    // InodeOrTreeOrEntry is used to traverse the tree. However, the global
+    // renameLock is NOT held during these traversals, so we're not protected
+    // from nodes/trees being moved around during the traversal.
+    //
+    // It's inconvenient to pass the lastCheckoutTime in from the caller, but we
+    // got to this particular location in the mount by starting at a particular
+    // root node with that checkout time. Because we don't hold the rename lock,
+    // it's not clear if the current global edenMount object's lastCheckoutTime
+    // is any more or less correct than the passed in lastCheckoutTime. It's
+    // _probably_ safer to use the older one, as that represents what the state
+    // of the repository WAS when the traversal started. If we queried the
+    // global eden mount here for the lastCheckoutTime, we may get a time in the
+    // future when one of our parents changed, and we may be mis-reporting the
+    // state of the tree.
+    //
+    // In short: there's a potential race condition here that may cause
+    // mis-reporting.
     const struct timespec& lastCheckoutTime,
     ObjectStore* objectStore,
     ObjectFetchContext& fetchContext) const {

@@ -134,11 +134,8 @@ TestMount::TestMount(FakeTreeBuilder& rootBuilder, bool startReady)
 
 TestMount::TestMount(FakeTreeBuilder&& rootBuilder)
     : TestMount(rootBuilder, /*startReady=*/true) {
-  edenConfig_ = EdenConfig::createTestEdenConfig();
-  // Create treeCache
-  auto edenConfig = std::make_shared<ReloadableConfig>(
-      edenConfig_, ConfigReloadBehavior::NoReload);
-  treeCache_ = TreeCache::create(edenConfig);
+  XCHECK_NE(edenConfig_, nullptr);
+  XCHECK_NE(treeCache_, nullptr);
 }
 
 TestMount::TestMount(
@@ -646,6 +643,19 @@ FileInodePtr TestMount::getFileInode(RelativePathPiece path) const {
 
 FileInodePtr TestMount::getFileInode(folly::StringPiece path) const {
   return getFileInode(RelativePathPiece{path});
+}
+
+InodeOrTreeOrEntry TestMount::getInodeOrTreeOrEntry(
+    RelativePathPiece path) const {
+  return edenMount_
+      ->getInodeOrTreeOrEntry(
+          RelativePathPiece{path}, ObjectFetchContext::getNullContext())
+      .get();
+}
+
+InodeOrTreeOrEntry TestMount::getInodeOrTreeOrEntry(
+    folly::StringPiece path) const {
+  return getInodeOrTreeOrEntry(RelativePathPiece{path});
 }
 
 void TestMount::loadAllInodes() {
