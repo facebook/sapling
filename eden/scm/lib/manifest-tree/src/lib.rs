@@ -297,7 +297,7 @@ impl Manifest for TreeManifest {
 
                         let cell = OnceCell::new();
                         // TODO: remove clone
-                        cell.set(Ok(links.clone())).unwrap();
+                        cell.set(links.clone()).unwrap();
 
                         let durable_entry = DurableEntry { hgid, links: cell };
                         Link::new(Durable(Arc::new(durable_entry)))
@@ -391,11 +391,7 @@ impl fmt::Debug for TreeManifest {
                     write!(f, "(Durable, {})\n", entry.hgid)?;
                     match entry.links.get() {
                         None => Ok(()),
-                        Some(Err(fallible)) => {
-                            write_indent(f, indent)?;
-                            write!(f, "failed to load: {:?}", fallible)
-                        }
-                        Some(Ok(children)) => write_children(f, children, indent),
+                        Some(children) => write_children(f, children, indent),
                     }
                 }
             }
@@ -543,7 +539,7 @@ impl TreeManifest {
 
                 let cell = OnceCell::new();
                 // TODO: remove clone
-                cell.set(Ok(links.clone())).unwrap();
+                cell.set(links.clone()).unwrap();
 
                 let durable_entry = DurableEntry { hgid, links: cell };
                 let inner = Arc::new(durable_entry);

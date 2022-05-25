@@ -12,7 +12,6 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
 use manifest::File;
@@ -79,18 +78,11 @@ pub enum LinkData {
 pub use self::LinkData::*;
 
 // TODO: Use Vec instead of BTreeMap
-/// The inner structure of a durable link. Of note is that failures are cached "forever".
-// The interesting question about this structure is what do we do when we have a failure when
-// reading from storage?
-// We can cache the failure or we don't cache it. Caching it is mostly fine if we had an error
-// reading from local storage or when deserializing. It is not the best option if our storage
-// is remote and we hit a network blip. On the other hand we would not want to always retry when
-// there is a failure on remote storage, we'd want to have a least an exponential backoff on
-// retries. Long story short is that caching the failure is a reasonable place to start from.
+/// The inner structure of a durable link.
 #[derive(Debug)]
 pub struct DurableEntry {
     pub hgid: HgId,
-    pub links: OnceCell<Result<BTreeMap<PathComponentBuf, Link>>>,
+    pub links: OnceCell<BTreeMap<PathComponentBuf, Link>>,
 }
 
 impl Link {
@@ -206,9 +198,7 @@ impl DurableEntry {
         store: &InnerStore,
         path: &RepoPath,
     ) -> Result<&BTreeMap<PathComponentBuf, Link>> {
-        // TODO: be smarter around how failures are handled when reading from the store
-        // Currently this loses the stacktrace
-        let result = self.links.get_or_init(|| {
+        self.links.get_or_try_init(|| {
             let entry = store
                 .get_entry(path, self.hgid)
                 .with_context(|| format!("failed fetching from store ({}, {})", path, self.hgid))?;
@@ -229,8 +219,7 @@ impl DurableEntry {
                 links.insert(element.component, link);
             }
             Ok(links)
-        });
-        result.as_ref().map_err(|e| format_err!("{:?}", e))
+        })
     }
 }
 
@@ -245,7 +234,7 @@ impl PartialEq for DurableEntry {
         }
         match (self.links.get(), other.links.get()) {
             (None, None) => true,
-            (Some(Ok(a)), Some(Ok(b))) => a == b,
+            (Some(a), Some(b)) => a == b,
             _ => false,
         }
     }
