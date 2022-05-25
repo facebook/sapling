@@ -160,7 +160,7 @@ pub enum KeyFetchError {
 impl std::error::Error for KeyFetchError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::Other(err) => err.source(),
+            Self::Other(err) => Some(err.as_ref()),
             Self::KeyedError { errors, .. } => errors.iter().next().map(|e| e.as_ref()),
         }
     }
@@ -282,6 +282,7 @@ impl<T> FetchResults<T> {
 
 #[cfg(test)]
 mod tests {
+    use ::types::errors::NetworkError;
     use anyhow::anyhow;
 
     use super::*;
@@ -293,7 +294,11 @@ mod tests {
             let outer_err = inner_err.context("context");
 
             let err: &dyn std::error::Error = &KeyFetchError::Other(outer_err);
-            assert_eq!(format!("{}", err.source().unwrap()), "inner");
+            assert_eq!(format!("{}", err.source().unwrap()), "context");
+            assert_eq!(
+                format!("{}", err.source().unwrap().source().unwrap()),
+                "inner"
+            );
         }
 
         {
@@ -310,6 +315,12 @@ mod tests {
                 errors: vec![anyhow!("one"), anyhow!("two")],
             };
             assert_eq!(format!("{}", err.source().unwrap()), "one");
+        }
+
+        {
+            let err: anyhow::Error =
+                KeyFetchError::Other(NetworkError::wrap(anyhow!("foo"))).into();
+            assert!(types::errors::is_network_error(&err));
         }
     }
 }
