@@ -15,6 +15,7 @@ use clidispatch::errors;
 use clidispatch::global_flags::HgGlobalOpts;
 use cliparser::define_flags;
 use edenapi::Builder;
+use migration::feature::deprecate;
 use repo::constants::HG_PATH;
 use repo::repo::Repo;
 use types::errors::NetworkError;
@@ -36,7 +37,7 @@ define_flags! {
         #[short('u')]
         updaterev: String,
 
-        /// include the specified changeset
+        /// include the specified changeset (DEPRECATED)
         #[short('r')]
         rev: String,
 
@@ -75,6 +76,10 @@ pub fn run(
     io: &IO,
     config: &mut ConfigSet,
 ) -> Result<u8> {
+    if !clone_opts.rev.is_empty() {
+        deprecate(config, "rev-option", "the --rev-option has been deprecated")?;
+    }
+
     let force_rust = config.get_or_default("clone", "force-rust")?;
     let use_rust = force_rust || config.get_or_default("clone", "use-rust")?;
     if !use_rust {
