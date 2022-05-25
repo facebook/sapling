@@ -187,7 +187,7 @@ const SM_SERVICE_SCOPE: &str = "global";
 /// Adjust the value based on the time taken to perform
 /// cleanup of a BP execution instance over a repo. Max is
 /// 180 seconds. Ideally, should be under 60 seconds.
-const SM_CLEANUP_TIMEOUT_SECS: u64 = 30;
+const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 /// Constant representing seconds in a minute.
 const SECS_IN_MINUTE: u64 = 60;
 
@@ -224,6 +224,7 @@ async fn run_sharded(app: MononokeApp, sharded_service_name: String) -> Result<(
     // For sharded execution, we need to first create the executor.
     let mut executor = BackgroundProcessExecutor::new(
         process.app.fb,
+        process.app.runtime().clone(),
         &logger,
         SM_SERVICE_NAME.get_or_init(|| sharded_service_name),
         SM_SERVICE_SCOPE,

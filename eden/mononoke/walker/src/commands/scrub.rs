@@ -213,6 +213,7 @@ pub async fn run_sharded(
     static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
     let mut executor = BackgroundProcessExecutor::new(
         scrub_process.app.fb,
+        scrub_process.app.runtime().clone(),
         &logger,
         SM_SERVICE_NAME.get_or_init(|| service_name),
         SM_SERVICE_SCOPE,
