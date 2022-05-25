@@ -21,7 +21,7 @@ impl KeyError {
 /// NeworkError is a wrapper/tagging error meant for libraries to use
 /// to mark errors that may imply a network problem.
 #[derive(Debug, Error)]
-#[error("Network Error: {0:?}")]
+#[error("Network Error")]
 pub struct NetworkError(#[source] pub Error);
 
 impl NetworkError {

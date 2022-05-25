@@ -30,14 +30,14 @@ pub fn clone(
     commits: &mut Box<dyn DagCommits + Send + 'static>,
     bookmarks: Vec<String>,
 ) -> Result<BTreeMap<String, HgId>> {
-    let bookmarks = block_on(edenapi.bookmarks(bookmarks))??;
+    let bookmarks = block_on(edenapi.bookmarks(bookmarks))?.map_err(|e| e.tag_network())?;
     let bookmarks = bookmarks
         .into_iter()
         .filter_map(|bm| bm.hgid.map(|id| (bm.bookmark, id)))
         .collect::<BTreeMap<String, HgId>>();
 
     let heads = bookmarks.values().cloned().collect();
-    let clone_data = block_on(edenapi.pull_lazy(vec![], heads))??;
+    let clone_data = block_on(edenapi.pull_lazy(vec![], heads))?.map_err(|e| e.tag_network())?;
     let idmap: BTreeMap<_, _> = clone_data
         .idmap
         .into_iter()

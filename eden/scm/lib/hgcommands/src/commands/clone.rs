@@ -18,7 +18,6 @@ use edenapi::Builder;
 use migration::feature::deprecate;
 use repo::constants::HG_PATH;
 use repo::repo::Repo;
-use types::errors::NetworkError;
 use types::HgId;
 
 use super::ConfigSet;
@@ -136,7 +135,7 @@ pub fn run(
         .correlator(Some(edenapi::DEFAULT_CORRELATOR.as_str()))
         .build()?;
     let capabilities: Vec<String> =
-        block_on(edenapi.capabilities())?.map_err(NetworkError::wrap)?;
+        block_on(edenapi.capabilities())?.map_err(|e| e.tag_network())?;
     if !capabilities
         .iter()
         .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY)

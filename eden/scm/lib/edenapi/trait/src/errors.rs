@@ -13,6 +13,7 @@ use http_client::HttpClientError;
 use http_client::TlsError;
 use http_client::TlsErrorKind;
 use thiserror::Error;
+use types::errors::NetworkError;
 
 #[derive(Debug, Error)]
 pub enum EdenApiError {
@@ -81,6 +82,30 @@ impl EdenApiError {
                 }
             }
             _ => false,
+        }
+    }
+
+    // Report whether this error may be a network error. Err on the side of saying "yes".
+    pub fn maybe_network_error(&self) -> bool {
+        use EdenApiError::*;
+
+        match self {
+            Http(_) | HttpError { .. } | ServerError(_) | NoResponse | Other(_) => true,
+
+            RequestSerializationFailed(_)
+            | ParseResponse(_)
+            | BadConfig(_)
+            | InvalidUrl(_)
+            | WireToApiConversionFailed(_)
+            | NotSupported => false,
+        }
+    }
+
+    pub fn tag_network(self) -> anyhow::Error {
+        if self.maybe_network_error() {
+            NetworkError::wrap(self)
+        } else {
+            self.into()
         }
     }
 }

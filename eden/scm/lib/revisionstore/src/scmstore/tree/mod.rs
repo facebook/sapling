@@ -10,7 +10,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use ::types::errors::NetworkError;
 use ::types::Key;
 use ::types::Node;
 use ::types::RepoPath;
@@ -191,7 +190,9 @@ impl TreeStore {
                     } else {
                         None
                     };
-                    let response = edenapi.trees_blocking(pending, attributes)?;
+                    let response = edenapi
+                        .trees_blocking(pending, attributes)
+                        .map_err(|e| e.tag_network())?;
                     for entry in response.entries {
                         let entry = entry?;
                         let key = entry.key.clone();
@@ -288,7 +289,7 @@ impl TreeStore {
         };
         let process_func_errors = move || {
             if let Err(err) = process_func() {
-                let _ = found_tx2.send(Err(KeyFetchError::Other(NetworkError::wrap(err))));
+                let _ = found_tx2.send(Err(KeyFetchError::Other(err)));
             }
         };
 

@@ -570,13 +570,13 @@ impl FetchState {
             })
             .collect();
 
-        let response = match block_on(store.files_attrs(pending_attrs)) {
+        let response = match block_on(store.files_attrs(pending_attrs)).map_err(|e| e.tag_network())
+        {
             Ok(r) => r,
             Err(err) => {
-                let err = ClonableError::new(err.into());
+                let err = ClonableError::new(err);
                 for key in fetching_keys.into_iter() {
-                    self.errors
-                        .keyed_error(key, NetworkError::wrap(err.clone()));
+                    self.errors.keyed_error(key, err.clone().into());
                 }
                 return;
             }
@@ -617,13 +617,11 @@ impl FetchState {
         for res in stream_to_iter(entries) {
             // TODO(meyer): This outer EdenApi error with no key sucks
             let (key, res) = match res {
-                Ok(result) => match result {
-                    // (Key, Result<(StoreFile, Option<LfsPointersEntry), anyhow::Error)>
+                Ok(result) => match result.map_err(|e| e.tag_network()) {
                     Ok(result) => result,
-                    // EdenApiError
                     Err(err) => {
                         if unknown_error.is_none() {
-                            unknown_error.replace(ClonableError::new(NetworkError::wrap(err)));
+                            unknown_error.replace(ClonableError::new(err));
                         }
                         continue;
                     }
@@ -649,12 +647,11 @@ impl FetchState {
                     self.found_attributes(key, file, Some(StoreType::Shared));
                 }
                 Err(err) => {
-                    let err = NetworkError::wrap(err);
                     errors += 1;
                     if error.is_none() {
                         error.replace(format!("{}: {}", key, err));
                     }
-                    self.errors.keyed_error(key, err)
+                    self.errors.keyed_error(key, NetworkError::wrap(err))
                 }
             }
         }
@@ -784,9 +781,8 @@ impl FetchState {
                 Ok(())
             },
             |sha256, error| {
-                let error = NetworkError::wrap(error);
                 if let Some(keys) = key_map.get(&sha256) {
-                    let error = ClonableError::new(error);
+                    let error = ClonableError::new(NetworkError::wrap(error));
                     for (key, _) in keys.iter() {
                         keyed_errors.push(((*key).clone(), error.clone().into()));
                     }
