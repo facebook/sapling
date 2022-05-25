@@ -19,7 +19,7 @@ use fbinit::FacebookInit;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::MononokeApp;
 use once_cell::sync::OnceCell;
-use slog::{info, trace, Logger};
+use slog::{info, Logger};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -69,10 +69,9 @@ impl WalkerScrubProcess {
 #[async_trait]
 impl RepoShardedProcess for WalkerScrubProcess {
     async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        trace!(
+        info!(
             self.app.logger(),
-            "Setting up walker scrub for repo {}",
-            repo_name
+            "Setting up walker scrub for repo {}", repo_name
         );
         let repos = MultiRepoArgs {
             repo_name: vec![repo_name.to_string()],
@@ -83,10 +82,9 @@ impl RepoShardedProcess for WalkerScrubProcess {
             .with_context(|| {
                 format!("Failure in setting up walker scrub for repo {}", &repo_name)
             })?;
-        trace!(
+        info!(
             self.app.logger(),
-            "Completed walker scrub setup for repo {}",
-            repo_name
+            "Completed walker scrub setup for repo {}", repo_name
         );
         Ok(Arc::new(WalkerScrubProcessExecutor::new(
             self.app.fb,
@@ -131,10 +129,9 @@ impl WalkerScrubProcessExecutor {
 #[async_trait]
 impl RepoShardedProcessExecutor for WalkerScrubProcessExecutor {
     async fn execute(&self) -> anyhow::Result<()> {
-        trace!(
+        info!(
             self.logger,
-            "Initiating walker scrub execution for repo {}",
-            &self.repo_name,
+            "Initiating walker scrub execution for repo {}", &self.repo_name,
         );
         scrub_objects(
             self.fb,

@@ -13,7 +13,7 @@ use fbinit::FacebookInit;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::MononokeApp;
 use once_cell::sync::OnceCell;
-use slog::{info, trace, Logger};
+use slog::{info, Logger};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -57,10 +57,9 @@ impl WalkerCorpusProcess {
 #[async_trait]
 impl RepoShardedProcess for WalkerCorpusProcess {
     async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        trace!(
+        info!(
             self.app.logger(),
-            "Setting up walker corpus for repo {}",
-            repo_name
+            "Setting up walker corpus for repo {}", repo_name
         );
         let repos = MultiRepoArgs {
             repo_name: vec![repo_name.to_string()],
@@ -74,10 +73,9 @@ impl RepoShardedProcess for WalkerCorpusProcess {
                     &repo_name
                 )
             })?;
-        trace!(
+        info!(
             self.app.logger(),
-            "Completed walker corpus setup for repo {}",
-            repo_name
+            "Completed walker corpus setup for repo {}", repo_name
         );
         Ok(Arc::new(WalkerCorpusProcessExecutor::new(
             self.app.fb,
@@ -122,10 +120,9 @@ impl WalkerCorpusProcessExecutor {
 #[async_trait]
 impl RepoShardedProcessExecutor for WalkerCorpusProcessExecutor {
     async fn execute(&self) -> anyhow::Result<()> {
-        trace!(
+        info!(
             self.logger,
-            "Initiating walker corpus execution for repo {}",
-            &self.repo_name,
+            "Initiating walker corpus execution for repo {}", &self.repo_name,
         );
         corpus(
             self.fb,

@@ -15,7 +15,7 @@ use fbinit::FacebookInit;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::MononokeApp;
 use once_cell::sync::OnceCell;
-use slog::{info, trace, Logger};
+use slog::{info, Logger};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -52,10 +52,9 @@ impl WalkerValidateProcess {
 #[async_trait]
 impl RepoShardedProcess for WalkerValidateProcess {
     async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        trace!(
+        info!(
             self.app.logger(),
-            "Setting up walker validate for repo {}",
-            repo_name
+            "Setting up walker validate for repo {}", repo_name
         );
         let repos = MultiRepoArgs {
             repo_name: vec![repo_name.to_string()],
@@ -69,10 +68,9 @@ impl RepoShardedProcess for WalkerValidateProcess {
                     &repo_name
                 )
             })?;
-        trace!(
+        info!(
             self.app.logger(),
-            "Completed walker validate setup for repo {}",
-            repo_name
+            "Completed walker validate setup for repo {}", repo_name
         );
         Ok(Arc::new(WalkerValidateProcessExecutor::new(
             self.app.fb,
@@ -117,10 +115,9 @@ impl WalkerValidateProcessExecutor {
 #[async_trait]
 impl RepoShardedProcessExecutor for WalkerValidateProcessExecutor {
     async fn execute(&self) -> anyhow::Result<()> {
-        trace!(
+        info!(
             self.logger,
-            "Initiating walker validate execution for repo {}",
-            &self.repo_name,
+            "Initiating walker validate execution for repo {}", &self.repo_name,
         );
         validate(
             self.fb,

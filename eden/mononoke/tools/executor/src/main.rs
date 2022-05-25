@@ -12,7 +12,7 @@ use executor_lib::{BackgroundProcessExecutor, RepoShardedProcess, RepoShardedPro
 use fbinit::FacebookInit;
 use mononoke_app::{MononokeApp, MononokeAppBuilder};
 use once_cell::sync::OnceCell;
-use slog::{trace, Logger};
+use slog::{info, Logger};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::time;
@@ -105,18 +105,15 @@ async fn do_busy_work(
     repo_name: String,
     terminate_execution: Arc<AtomicBool>,
 ) -> Result<()> {
-    trace!(
+    info!(
         logger,
-        "Beginning execution of test process for repo {}",
-        repo_name,
+        "Beginning execution of test process for repo {}", repo_name,
     );
     let mut iteration = 1;
     loop {
-        trace!(
+        info!(
             logger,
-            "Executing iteration {} of test process for repo {}",
-            iteration,
-            repo_name,
+            "Executing iteration {} of test process for repo {}", iteration, repo_name,
         );
         // Equivalent to heavy work being done by the process for a repo.
         time::sleep(time::Duration::from_secs(SECS_IN_MINUTE)).await;
@@ -126,7 +123,7 @@ async fn do_busy_work(
             // Termination requested. Time to perform clean-up activities
             // before we give up the repo. E.g. pushing out write from memory
             // to actual storage, flushing logs, releasing locks, etc.
-            trace!(
+            info!(
                 logger,
                 "Finishing execution of test process for repo {} after {} iterations",
                 repo_name,
