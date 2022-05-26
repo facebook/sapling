@@ -61,6 +61,9 @@ define_flags! {
         /// files to exclude in a sparse profile
         exclude: String,
 
+        /// use EdenFs (EXPERIMENTAL)
+        eden: bool,
+
         #[arg]
         source: String,
 
@@ -93,6 +96,7 @@ pub fn run(
         || clone_opts.git
         || !clone_opts.include.is_empty()
         || !clone_opts.exclude.is_empty()
+        || clone_opts.eden
     {
         if force_rust {
             return Err(
