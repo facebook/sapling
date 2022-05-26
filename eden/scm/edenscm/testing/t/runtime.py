@@ -255,7 +255,6 @@ class TestTmp:
         """
         self._atexit = []
         self._updateglobalstate = updateglobalstate
-        self._origpathenv = os.getenv("PATH") or os.defpath
         self._setup(tmpprefix)
 
     def atexit(self, func):
@@ -320,7 +319,8 @@ class TestTmp:
             ext = ""
             if os.name == "nt":
                 ext = ".exe"
-            paths = self._origpathenv.split(os.pathsep)
+            # pyre-fixme[16]: `Optional` has no attribute `split`.
+            paths = os.getenv("PATH").split(os.pathsep)
             paths += os.defpath.split(os.pathsep)
             for path in paths:
                 if path.startswith(str(self.path / "bin")):
@@ -333,32 +333,14 @@ class TestTmp:
         else:
             fullpath = os.path.realpath(fullpath)
         # add a function for sheval
-        self.shenv.cmdtable[name] = shext.wrapexe(
-            fullpath, env_override={"PATH": self._origpathenv}
-        )
+        self.shenv.cmdtable[name] = shext.wrapexe(fullpath)
         # write a shim in $TESTTMP/bin for os.system
         self.path.joinpath("bin").mkdir(exist_ok=True)
         if os.name == "nt":
-            script = "\n".join(
-                [
-                    "@echo off",
-                    f"set PATH={self._origpathenv}",
-                    f"{fullpath} %*",
-                    "exit /B %errorlevel%",
-                ]
-            )
-            destpath = self.path / "bin" / f"{name}.bat"
+            bat = f"@echo off\n{fullpath} %*\nexit /B %errorlevel%"
+            (self.path / "bin" / f"{name}.bat").write_text(bat)
         else:
-            script = "\n".join(
-                [
-                    "#!/bin/sh",
-                    f"export PATH={repr(self._origpathenv)}",
-                    f'exec {fullpath} "$@"',
-                ]
-            )
-            destpath = self.path / "bin" / name
-        destpath.write_text(script)
-        destpath.chmod(0o555)
+            (self.path / "bin" / name).symlink_to(fullpath)
 
     def updatedglobalstate(self):
         """context manager that updates global states (pwd, environ, ...)"""
