@@ -845,8 +845,8 @@ struct CommitCompareParams {
   /// If present, perform the compare in path order with these parameters.
   6: optional CommitCompareOrderedParams ordered_params;
   /// Whether to find parents via the commit ancestry, or via mutable copy
-  /// information.
-  7: bool follow_mutable_file_history;
+  /// information. If not supplied, a default will be chosen for you
+  7: optional bool follow_mutable_file_history;
 }
 
 struct CommitFileDiffsParamsPathPair {

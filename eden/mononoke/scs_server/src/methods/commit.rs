@@ -150,7 +150,7 @@ async fn add_mutable_renames(
     base_changeset: &mut ChangesetContext,
     params: &thrift::CommitCompareParams,
 ) -> Result<(), errors::ServiceError> {
-    if params.follow_mutable_file_history {
+    if params.follow_mutable_file_history.unwrap_or(false) {
         if let Some(paths) = &params.paths {
             let paths: Vec<_> = paths
                 .iter()
@@ -436,7 +436,7 @@ impl SourceControlServiceImpl {
         let commit_parents = base_changeset.parents().await?;
         let mut other_changeset_id = commit_parents.get(0).copied();
 
-        if params.follow_mutable_file_history {
+        if params.follow_mutable_file_history.unwrap_or(false) {
             let mutable_parents = base_changeset.mutable_parents();
 
             // If there are multiple choices to make, then bail - the user needs to be
