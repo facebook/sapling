@@ -280,14 +280,14 @@ segmentedchangelogcompatiblelist = """
     test-mergedriver2.t
     test-metalog-migration-t.py
     test-minirst.py
-    test-mkdir-broken-symlink-t.py
+    test-mkdir-broken-symlink.t
     test-mmap-unlink.t
     test-mutation-fromobsmarkers.t
     test-mutation-loops.t
     test-mutation-phases.t
     test-namespaces.t
     test-narrow-heads-migration.t
-    test-nested-repo-t.py
+    test-nested-repo.t
     test-origbackup-conflict.t
     test-patch-offset.t
     test-pathconflicts-update.t
@@ -503,7 +503,7 @@ segmentedchangelogcompatiblelist = """
     test-pathconflicts-merge.t
     test-pending.t
     test-perftweaks-remotenames.t
-    test-pushvars-t.py
+    test-pushvars.t
     test-rebase-bookmarks.t
     test-rebase-collapse.t
     test-rebase-conflicts.t
@@ -643,17 +643,17 @@ ignorerevnumincompatiblelist = """
     test-issue660.t
     test-locate.t
     test-log.t
-    test-manifest-merging-t.py
-    test-manifest-t.py
+    test-manifest-merging.t
+    test-manifest.t
     test-merge10-t.py
     test-merge1.t
-    test-merge4-t.py
-    test-merge5-t.py
-    test-merge9-t.py
-    test-merge-ancestor-mergestate-t.py
+    test-merge4.t
+    test-merge5.t
+    test-merge9.t
+    test-merge-ancestor-mergestate.t
     test-merge-commit.t
-    test-merge-revert2-t.py
-    test-merge-revert-t.py
+    test-merge-revert2.t
+    test-merge-revert.t
     test-merge-tools.t
     test-mv-cp-st-diff.t
     test-pager.t
@@ -662,7 +662,7 @@ ignorerevnumincompatiblelist = """
     test-perftweaks-remotenames.t
     test-pull-pull-corruption.t
     test-pull-r.t
-    test-pull-update-t.py
+    test-pull-update.t
     test-push.t
     test-rebase-issue-noparam-single-rev-t.py
     test-rebase-parameters.t
@@ -759,6 +759,8 @@ inprocesshgincompatiblelist = """
     test-url-rev.t
     test-doctor.t
     test-extdiff.t
+
+    test-pull-update.t
 """
 
 inprocesshg = True
