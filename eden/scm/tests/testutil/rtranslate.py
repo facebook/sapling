@@ -29,10 +29,16 @@ def translatepath(path, hgmv=True):
         code = f.read()
     body = "#debugruntest-compatible\n" + translatebody(code)
     newpath = path.replace("-t.py", ".t")
-    with open(newpath, "w") as f:
-        f.write(body)
+    with open(newpath, "wb") as f:
+        f.write(body.encode(errors="replace"))
     if hgmv:
         os.system("hg mv --after %s %s" % (path, newpath))
+    # update features.py
+    with open("features.py", "r") as f:
+        features = f.read()
+        features = features.replace(os.path.basename(path), os.path.basename(newpath))
+    with open("features.py", "w") as f:
+        f.write(features)
 
 
 patcache = {}
@@ -298,7 +304,10 @@ def main(argv):
     for path in argv:
         if path.endswith("-t.py"):
             print("Translating %s" % path)
-            translatepath(path)
+            try:
+                translatepath(path)
+            except Exception:
+                traceback.print_exc()
 
 
 if __name__ == "__main__":

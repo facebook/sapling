@@ -54,7 +54,7 @@ segmentedchangelogcompatiblelist = """
     test-basic.t
     test-batching.py
     test-bdiff.py
-    test-bindag-t.py
+    test-bindag.t
     test-bisect3.t
     test-bookmarks-current.t
     test-bookmarks-loading-order.t
@@ -74,7 +74,7 @@ segmentedchangelogcompatiblelist = """
     test-checkoutidentifier-commitinfo.t
     test-checkoutidentifier-dirstateinfo.t
     test-clienttelemetry.t
-    test-command-template2-t.py
+    test-command-template2.t
     test-commit-amend.t
     test-commit-interactive-curses.t
     test-commit-reuse.t
@@ -87,11 +87,11 @@ segmentedchangelogcompatiblelist = """
     test-commitcloud-backup-remotenames.t
     test-commitcloud-backup-share.t
     test-commitcloud-checkoutlocations-update.t
-    test-commitcloud-list-workspaces-t.py
+    test-commitcloud-list-workspaces.t
     test-commitcloud-smartlog-version.t
     test-commitcloud-smartlog.t
     test-commitcloud-sync-rb-enabling.t
-    test-commitcloud-sync-workspacenames-t.py
+    test-commitcloud-sync-workspacenames.t
     test-committer.t
     test-completion.t
     test-config-configfile.t
@@ -99,10 +99,10 @@ segmentedchangelogcompatiblelist = """
     test-configparser-t.py
     test-conflict.t
     test-contrib-check-code.t
-    test-copytrace-manual-t.py
+    test-copytrace-manual.t
     test-crdump-commitcloud.t
     test-ctrl-c.t
-    test-custom-filters-t.py
+    test-custom-filters.t
     test-debugbundle-rebase.t
     test-debugbundle.t
     test-debugcauserusterror.t
@@ -566,19 +566,19 @@ ignorerevnumincompatiblelist = """
     test-amend-rebase.t
     test-amend-restack.t
     test-annotate.t
-    test-backwards-remove-t.py
-    test-bisect-t.py
+    test-backwards-remove.t
+    test-bisect.t
     test-bookmarks.t
-    test-bookmark-strip-t.py
+    test-bookmark-strip.t
     test-bundle-r.t
     test-bundle.t
     test-bundle-vs-outgoing.t
     test-clone-r.t
-    test-command-template-t.py
+    test-command-template.t
     test-commitcloud-hide.t
     test-commitcloud-switch-workspace.t
     test-commit-interactive.t
-    test-confused-revert-t.py
+    test-confused-revert.t
     test-context-metadata.t
     test-contrib-perf.t
     test-debugbuilddag-t.py
