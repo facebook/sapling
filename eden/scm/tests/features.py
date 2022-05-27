@@ -361,7 +361,7 @@ segmentedchangelogcompatiblelist = """
     test-template-filestat.t
     test-tools.t
     test-treemanifest-amend.t
-    test-treemanifest-diff-t.py
+    test-treemanifest-diff.t
     test-treestate-needcheck.t
     test-treestate-repack.t
     test-treestate-upgrade-t.py
@@ -371,11 +371,11 @@ segmentedchangelogcompatiblelist = """
     test-ui-verbosity.py
     test-uncommit.t
     test-undo-narrow-heads.t
-    test-unicode-inputs-t.py
+    test-unicode-inputs.t
     test-unified-test.t
-    test-update-inactive-t.py
+    test-update-inactive.t
     test-update-issue1456.t
-    test-update-merge-state-t.py
+    test-update-merge-state.t
     test-update-reverse.t
     test-update-symlink-to-plain.t
     test-url.py
@@ -546,7 +546,7 @@ segmentedchangelogcompatiblelist = """
     test-symlink-placeholder.t
     test-symlinks.t
     test-unrelated-pull.t
-    test-update-dest-t.py
+    test-update-dest.t
     test-update-names.t
     test-up-local-change.t
     test-url-rev.t
@@ -687,7 +687,7 @@ ignorerevnumincompatiblelist = """
     test-ssh-clone-r.t
     test-status-rev.t
     test-template-revf64.t
-    test-update-empty-t.py
+    test-update-empty.t
     test-url-rev.t
     test-visibility-reset.t
     test-hgsql-sqlrefill.t
