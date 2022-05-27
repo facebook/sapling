@@ -249,9 +249,9 @@ segmentedchangelogcompatiblelist = """
     test-include-fail.t
     test-infinitepush-push-to-other.t
     test-install.t
-    test-issue1089-t.py
+    test-issue1089.t
     test-issue1877.t
-    test-issue2137-t.py
+    test-issue2137.t
     test-issue4074.t
     test-known.t
     test-lfs-journal-t.py
@@ -636,11 +636,11 @@ ignorerevnumincompatiblelist = """
     test-histedit-no-change.t
     test-import-bypass.t
     test-import-merge.t
-    test-import-t.py
-    test-import-unknown-t.py
-    test-issue1438-t.py
-    test-issue612-t.py
-    test-issue660-t.py
+    test-import.t
+    test-import-unknown.t
+    test-issue1438.t
+    test-issue612.t
+    test-issue660.t
     test-locate-t.py
     test-log-t.py
     test-manifest-merging-t.py
