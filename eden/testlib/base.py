@@ -41,7 +41,7 @@ servicetype = local
 servicelocation = {new_dir()}
 
 [mutation]
-date = "0 0"
+date = 0 0
 
 [remotefilelog]
 cachepath = {new_dir()}
