@@ -1753,15 +1753,6 @@ class PythonTest(Test):
     def refpath(self):
         return os.path.join(self._testdir, "%s.out" % self.basename)
 
-    def readrefout(self):
-        if self._isdotttest():
-            # No reference output.
-            # This prevents a textual diff between the test script output and
-            # the "reference output".
-            return []
-        else:
-            return super(PythonTest, self).readrefout()
-
     def _processoutput(self, output):
         if os.path.exists(self.refpath):
             with open(self.refpath, "rb") as f:
@@ -1807,9 +1798,6 @@ class PythonTest(Test):
             else:
                 debugargs = " -m ipdb "
         cmd = '%s debugpython -- %s "%s"' % (self._hgcommand, debugargs, self.path)
-        if self._options.interactive and self._isdotttest():
-            # --fix is picked up by testutil.autofix, which will autofix the test.
-            cmd += " --fix"
         vlog("# Running", cmd)
         normalizenewlines = os.name == "nt"
         with open(self.path, "r", encoding="utf8") as f:
@@ -1827,18 +1815,6 @@ class PythonTest(Test):
             raise KeyboardInterrupt()
 
         return result[0], self._processoutput(result[1])
-
-    def _isdotttest(self):
-        """Returns true if the test is using testutil.dott"""
-        if self.basename.endswith("-t.py"):
-            return True
-        else:
-            try:
-                with open(self.name) as f:
-                    content = f.read()
-                return " testutil.dott" in content or "sh %" in content
-            except Exception:
-                return False
 
 
 bchr = chr
