@@ -18,4 +18,4 @@ def backgroundfsync(ui, repo, hooktype, **kwargs):
     """
     if not repo:
         return
-    util.spawndetached(util.gethgcmd() + ["debugfsync"], cwd=repo.svfs.join(""))
+    util.spawndetached(util.hgcmd() + ["debugfsync"], cwd=repo.svfs.join(""))

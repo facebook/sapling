@@ -533,10 +533,6 @@ def syncdir(dirpath):
     # Do nothing.
 
 
-def gethgcmd(argv=sys.argv):
-    return [sys.executable] + argv[:1]
-
-
 def groupmembers(name):
     # Don't support groups on Windows for now
     raise KeyError

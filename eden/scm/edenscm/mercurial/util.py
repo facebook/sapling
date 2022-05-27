@@ -145,7 +145,6 @@ explainexit = platform.explainexit
 fdopen = platform.fdopen
 findexe = platform.findexe
 getfstype = platform.getfstype
-gethgcmd = platform.gethgcmd
 getmaxrss = platform.getmaxrss
 getpid = os.getpid
 groupmembers = platform.groupmembers
@@ -2780,13 +2779,7 @@ def hgcmd():
     path = encoding.environ.get("HGEXECUTABLEPATH")
     if path:
         return [path]
-    if mainfrozen():
-        if getattr(sys, "frozen", None) == "macosx_app":
-            # Env variable set by py2app
-            return [encoding.environ["EXECUTABLEPATH"]]
-        else:
-            return [pycompat.sysexecutable]
-    return gethgcmd()
+    return [pycompat.sysexecutable]
 
 
 def rundetached(args, condfn):

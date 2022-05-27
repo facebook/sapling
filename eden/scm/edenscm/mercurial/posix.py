@@ -887,10 +887,6 @@ def groupmembers(name):
     return list(grp.getgrnam(name).gr_mem)
 
 
-def gethgcmd(argv=sys.argv):
-    return argv[:1]
-
-
 def makedir(path: str, notindexed: bool) -> None:
     try:
         os.mkdir(path)
