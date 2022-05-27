@@ -254,13 +254,13 @@ segmentedchangelogcompatiblelist = """
     test-issue2137.t
     test-issue4074.t
     test-known.t
-    test-lfs-journal-t.py
+    test-lfs-journal.t
     test-lfs-localstore.t
     test-lfs-pointer.py
     test-linelog-edits.py
     test-linerange.py
     test-lock.py
-    test-log-dir-t.py
+    test-log-dir.t
     test-log-exthook.t
     test-log-simplify-grandparents.t
     test-lrucachedict.py
@@ -482,7 +482,7 @@ segmentedchangelogcompatiblelist = """
     test-issue522.t
     test-issue586.t
     test-issue672.t
-    test-journal-share-t.py
+    test-journal-share.t
     test-journal.t
     test-lfs-checksum.t
     test-lock-badness.t
@@ -641,8 +641,8 @@ ignorerevnumincompatiblelist = """
     test-issue1438.t
     test-issue612.t
     test-issue660.t
-    test-locate-t.py
-    test-log-t.py
+    test-locate.t
+    test-log.t
     test-manifest-merging-t.py
     test-manifest-t.py
     test-merge10-t.py
