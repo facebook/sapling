@@ -19,13 +19,13 @@ narrowheadsincompatiblelist = """
 """
 
 segmentedchangelogcompatiblelist = """
-    test-abort-checkin-t.py
+    test-abort-checkin.t
     test-absorb-edit-lines.t
-    test-absorb-phase-t.py
+    test-absorb-phase.t
     test-absorb-remotefilelog-segments.t
     test-absorb-strip.t
     test-add.t
-    test-adding-invalid-utf8-t.py
+    test-adding-invalid-utf8.t
     test-addremove-similar.t
     test-alias-circular.t
     test-alias.t
@@ -38,7 +38,7 @@ segmentedchangelogcompatiblelist = """
     test-amend-restack-multidest.t
     test-amend-restack-obsolete.t
     test-amend-split.t
-    test-amend-template-t.py
+    test-amend-template.t
     test-amend-to.t
     test-amend-userestack.t
     test-amend.t
@@ -389,7 +389,7 @@ segmentedchangelogcompatiblelist = """
     test-xdg.t
     test-zstdelta.py
 
-    test-addremove-t.py
+    test-addremove.t
     test-amend-nextrebase.t
     test-audit-path.t
     test-backout.t
@@ -562,11 +562,10 @@ segmentedchangelogcompatiblelist = """
 
 ignorerevnumincompatiblelist = """
     test-alias.t
-    test-amend-hide-t.py
-    test-amend-rebase-t.py
-    test-amend-restack-t.py
+    test-amend-hide.t
+    test-amend-rebase.t
+    test-amend-restack.t
     test-annotate.t
-    test-automv-t.py
     test-backwards-remove-t.py
     test-bisect-t.py
     test-bookmarks.t
