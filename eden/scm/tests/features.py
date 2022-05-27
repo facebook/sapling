@@ -227,7 +227,7 @@ segmentedchangelogcompatiblelist = """
     test-fileset-generated.t
     test-getbundle.t
     test-git.t
-    test-gitignore-t.py
+    test-gitignore.t
     test-globalrevs-svnrev.t
     test-help.t
     test-hg-parseurl.py
@@ -628,9 +628,9 @@ ignorerevnumincompatiblelist = """
     test-fb-hgext-whereami.t
     test-fileset.t
     test-git-export.t
-    test-glog-topological-t.py
-    test-glog-t.py
-    test-graft-t.py
+    test-glog-topological.t
+    test-glog.t
+    test-graft.t
     test-histedit-commute.t
     test-histedit-edit.t
     test-histedit-no-change.t
