@@ -3,25 +3,28 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from testutil.dott import feature, sh, testtmp  # noqa: F401
-
-
-feature.require(["no-windows"])
-
 
 def test_nested_lock():
+    import os, tempfile
+
     from edenscm.mercurial import hg, ui as uimod
 
-    ui = uimod.ui.load()
-    repo1 = hg.repository(ui, testtmp.TESTTMP, create=True)
-    repo2 = hg.repository(ui, testtmp.TESTTMP)
-    # repo2.lock() should detect deadlock.
-    try:
-        with repo1.lock(), repo2.lock(wait=False):
-            pass
-    except Exception as ex:
-        msg = str(ex)
-        assert "deadlock" in msg
+    if os.name == "nt":
+        return
+
+    with tempfile.TemporaryDirectory() as t:
+        os.chdir(t)
+        ui = uimod.ui.load()
+        repo1 = hg.repository(ui, t, create=True)
+        repo2 = hg.repository(ui, t)
+        # repo2.lock() should detect deadlock.
+        try:
+            with repo1.lock(), repo2.lock(wait=False):
+                pass
+        except Exception as ex:
+            msg = str(ex)
+            assert "deadlock" in msg
 
 
-test_nested_lock()
+if __name__ == "__main__":
+    test_nested_lock()
