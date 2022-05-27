@@ -108,13 +108,13 @@ segmentedchangelogcompatiblelist = """
     test-debugcauserusterror.t
     test-debugcheckcasecollisions-treemanifest.t
     test-debugcommands.t
-    test-debugdifftree-t.py
+    test-debugdifftree.t
     test-debugdirs.py
     test-debugdynamicconfig.t
-    test-debugexistingcasecollisions-t.py
+    test-debugexistingcasecollisions.t
     test-debugextensions.t
     test-debugignore.t
-    test-debugmetalog-t.py
+    test-debugmetalog.t
     test-debugrebuilddirstate-corrupt.t
     test-debugshell-args.t
     test-debugsmallcommitmetadata.t
@@ -122,29 +122,29 @@ segmentedchangelogcompatiblelist = """
     test-demandimport.py
     test-deprecate.t
     test-devel-warnings.t
-    test-diff-antipatience-t.py
+    test-diff-antipatience.t
     test-diff-binary.t
     test-diff-color.t
     test-diff-copy-depth.t
     test-diff-hashbinary.t
     test-diff-ignore-whitespace.t
     test-diff-indent-heuristic.t
-    test-diff-subdir-t.py
+    test-diff-subdir.t
     test-diff-unified.t
     test-diff-upgrade.t
     test-diffstat.t
     test-dirstate-backup.t
-    test-dirstate-completion-t.py
+    test-dirstate-completion.t
     test-dirstate-nonnormalset.t
     test-dirstate-rebuild.t
-    test-dirstate-symlink-t.py
+    test-dirstate-symlink.t
     test-dirstate.t
-    test-disable-bad-features-t.py
+    test-disable-bad-features.t
     test-disablesymlinks.t
-    test-dispatch-debug-prefix-t.py
+    test-dispatch-debug-prefix.t
     test-dispatch.t
     test-doctest.py
-    test-dott-quote-t.py
+    test-dott-quote.t
     test-dott-translate.py
     test-duplicateoptions.py
     test-dynamicconfig-unicode.t
@@ -581,16 +581,16 @@ ignorerevnumincompatiblelist = """
     test-confused-revert.t
     test-context-metadata.t
     test-contrib-perf.t
-    test-debugbuilddag-t.py
-    test-debugcheckcasecollisions-t.py
+    test-debugbuilddag.t
+    test-debugcheckcasecollisions.t
     test-debugindexdot-t.py
-    test-debugmetalog-t.py
-    test-debugrename-t.py
+    test-debugmetalog.t
+    test-debugrename.t
     test-debugstrip.t
     test-diff-change.t
-    test-diffdir-t.py
-    test-diff-issue2761-t.py
-    test-diff-only-files-in-revs-t.py
+    test-diffdir.t
+    test-diff-issue2761.t
+    test-diff-only-files-in-revs.t
     test-dirstate-race.t
     test-empty-group-t.py
     test-eol-clone.t
