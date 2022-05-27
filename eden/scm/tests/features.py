@@ -96,7 +96,7 @@ segmentedchangelogcompatiblelist = """
     test-completion.t
     test-config-configfile.t
     test-config.t
-    test-configparser-t.py
+    test-configparser.py
     test-conflict.t
     test-contrib-check-code.t
     test-copytrace-manual.t
