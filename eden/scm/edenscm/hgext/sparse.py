@@ -1516,7 +1516,7 @@ def _warnfullcheckout(repo):
             _(
                 "warning: full checkouts will soon be disabled in "
                 "this repository. Use EdenFS or hg sparse to get a "
-                "smaller repository."
+                "smaller repository.\n"
             )
         )
 

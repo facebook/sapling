@@ -331,32 +331,32 @@ segmentedchangelogcompatiblelist = """
     test-rustthreading.py
     test-seq.t
     test-serve.t
-    test-share-requirements-t.py
-    test-share-unshare-t.py
+    test-share-requirements.t
+    test-share-unshare.t
     test-show.t
     test-simplekeyvaluefile.py
     test-simplemerge.py
     test-smartlog-collapse-obsolete.t
     test-sortdictfilter.t
     test-sparse-casecollision.t
-    test-sparse-clear-t.py
+    test-sparse-clear.t
     test-sparse-diff.t
-    test-sparse-extensions-t.py
-    test-sparse-fetch-t.py
+    test-sparse-extensions.t
+    test-sparse-fetch.t
     test-sparse-ignore.t
     test-sparse-import.t
-    test-sparse-issues-t.py
+    test-sparse-issues.t
     test-sparse-merges.t
-    test-sparse-notsparse-t.py
+    test-sparse-notsparse.t
     test-sparse-profiles.t
     test-sparse-rebase.t
     test-sparse-unsafe-sparse-profile.t
-    test-sparse-warn-t.py
+    test-sparse-warn.t
     test-sshserver.py
     test-status-color.t
     test-status-inprocess.py
     test-status-mlog.t
-    test-status-terse-t.py
+    test-status-terse.t
     test-subcommands.t
     test-template-filestat.t
     test-tools.t
@@ -681,9 +681,9 @@ ignorerevnumincompatiblelist = """
     test-revnum-deprecate.t
     test-revset2.t
     test-revset.t
-    test-shelve-t.py
+    test-shelve.t
     test-sparse.t
-    test-sparse-verbose-json-t.py
+    test-sparse-verbose-json.t
     test-ssh-clone-r.t
     test-status-rev.t
     test-template-revf64.t
