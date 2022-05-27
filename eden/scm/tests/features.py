@@ -158,20 +158,20 @@ segmentedchangelogcompatiblelist = """
     test-encoding-textwrap.t
     test-eolfilename.t
     test-execute-bit.t
-    test-exitcodemask-t.py
+    test-exitcodemask.t
     test-extension-hgext-prefix.t
     test-extension-inline.t
     test-extensions-afterloaded.t
     test-extensions-default.t
     test-extensions-wrapfunction.py
     test-fb-hgext-absorb-filefixupstate.py
-    test-fb-hgext-arcconfig-t.py
+    test-fb-hgext-arcconfig.t
     test-fb-hgext-catnotate.t
-    test-fb-hgext-checkmessagehook-t.py
+    test-fb-hgext-checkmessagehook.t
     test-fb-hgext-copytrace-amend.t
-    test-fb-hgext-copytrace-mergedriver-t.py
-    test-fb-hgext-debugcommitmessage-t.py
-    test-fb-hgext-diff-since-last-submit-t.py
+    test-fb-hgext-copytrace-mergedriver.t
+    test-fb-hgext-debugcommitmessage.t
+    test-fb-hgext-diff-since-last-submit.t
     test-fb-hgext-errorredirect.t
     test-fb-hgext-extorder.t
     test-fb-hgext-extutil.py
@@ -193,8 +193,8 @@ segmentedchangelogcompatiblelist = """
     test-fb-hgext-phabdiff.t
     test-fb-hgext-phabstatus.t
     test-fb-hgext-rage.t
-    test-fb-hgext-remotefilelog-bundleloop-t.py
-    test-fb-hgext-remotefilelog-commit-repack-t.py
+    test-fb-hgext-remotefilelog-bundleloop.t
+    test-fb-hgext-remotefilelog-commit-repack.t
     test-fb-hgext-remotefilelog-datapack.py
     test-fb-hgext-remotefilelog-histpack.py
     test-fb-hgext-remotefilelog-localdatarepack-full.t
@@ -210,17 +210,17 @@ segmentedchangelogcompatiblelist = """
     test-fb-hgext-smartlog-smallcommitmetadata.t
     test-fb-hgext-smartlog.t
     test-fb-hgext-sshaskpass.py
-    test-fb-hgext-syncstatus-t.py
+    test-fb-hgext-syncstatus.t
     test-fb-hgext-template-stat.t
     test-fb-hgext-treemanifest-bad-tree.t
     test-fb-hgext-treemanifest-convertflat.t
     test-fb-hgext-treemanifest-sendtrees.t
     test-fb-hgext-treemanifest-sparse-prefetch.t
-    test-fb-hgext-treemanifest-sparse-t.py
-    test-fb-hgext-tweakdefaults-bookmarks-t.py
+    test-fb-hgext-treemanifest-sparse.t
+    test-fb-hgext-tweakdefaults-bookmarks.t
     test-fb-hgext-tweakdefaults-grep.t
     test-fb-hgext-tweakdefaults-opawarecommands.t
-    test-fb-hgext-tweakdefaults-ordering-t.py
+    test-fb-hgext-tweakdefaults-ordering.t
     test-fb-hgext-tweakdefaults-revsets.t
     test-filecache.py
     test-filelog.py
@@ -427,7 +427,7 @@ segmentedchangelogcompatiblelist = """
     test-fb-hgext-copytrace.t
     test-fb-hgext-crdump.t
     test-fb-hgext-debugdetectissues.t
-    test-fb-hgext-dirsync-amend-t.py
+    test-fb-hgext-dirsync-amend.t
     test-fb-hgext-dirsync.t
     test-fb-hgext-git-getmeta.t
     test-fb-hgext-merge-conflictinfo.t
@@ -448,10 +448,10 @@ segmentedchangelogcompatiblelist = """
     test-fb-hgext-remotefilelog-ruststores-rotatelog-size.t
     test-fb-hgext-remotefilelog-treemanifest-corrupt.t
     test-fb-hgext-remotefilelog-worker.t
-    test-fb-hgext-reset-remotenames-t.py
+    test-fb-hgext-reset-remotenames.t
     test-fb-hgext-treemanifest-blame.t
     test-fb-hgext-treemanifest-comparetrees.t
-    test-fb-hgext-treemanifest-disabled-t.py
+    test-fb-hgext-treemanifest-disabled.t
     test-fb-hgext-treemanifest-infinitepush.t
     test-fb-hgext-treemanifest-peertopeer.t
     test-fb-hgext-treemanifest-pushrebase.t
@@ -596,36 +596,36 @@ ignorerevnumincompatiblelist = """
     test-eol-clone.t
     test-eol-hook.t
     test-eol-update.t
-    test-export-t.py
+    test-export.t
     test-extdata.t
-    test-fb-hgext-copytrace-errormsg-t.py
+    test-fb-hgext-copytrace-errormsg.t
     test-fb-hgext-drop.t
     test-fb-hgext-fastannotate-corrupt.t
     test-fb-hgext-fastannotate-perfhack.t
     test-fb-hgext-fastannotate-protocol.t
-    test-fb-hgext-fastannotate-renames-t.py
+    test-fb-hgext-fastannotate-renames.t
     test-fb-hgext-fastannotate.t
     test-fb-hgext-fastlog.t
     test-fb-hgext-fbhistedit-rebase-interactive.t
     test-fb-hgext-morestatus.t
-    test-fb-hgext-phrevset-t.py
+    test-fb-hgext-phrevset.t
     test-fb-hgext-pushrebase-remotenames.t
     test-fb-hgext-remotefilelog-prefetch.t
     test-fb-hgext-remotefilelog-sparse.t
-    test-fb-hgext-remotefilelog-wireproto-t.py
-    test-fb-hgext-reset-remotenames-t.py
-    test-fb-hgext-reset-t.py
-    test-fb-hgext-smartlog-inhibit-t.py
-    test-fb-hgext-smartlog-remotenames-t.py
+    test-fb-hgext-remotefilelog-wireproto.t
+    test-fb-hgext-reset-remotenames.t
+    test-fb-hgext-reset.t
+    test-fb-hgext-smartlog-inhibit.t
+    test-fb-hgext-smartlog-remotenames.t
     test-fb-hgext-treemanifest-noflat.t
     test-fb-hgext-treemanifest-prefetch.t
     test-fb-hgext-treemanifest.t
-    test-fb-hgext-tweakdefaults-ordering-t.py
-    test-fb-hgext-tweakdefaults-pullrebaseremotenames-t.py
+    test-fb-hgext-tweakdefaults-ordering.t
+    test-fb-hgext-tweakdefaults-pullrebaseremotenames.t
     test-fb-hgext-tweakdefaults-remotenames.t
     test-fb-hgext-tweakdefaults.t
-    test-fb-hgext-tweakdefaults-update-t.py
-    test-fb-hgext-whereami-t.py
+    test-fb-hgext-tweakdefaults-update.t
+    test-fb-hgext-whereami.t
     test-fileset.t
     test-git-export.t
     test-glog-topological-t.py
