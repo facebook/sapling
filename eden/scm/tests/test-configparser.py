@@ -34,19 +34,19 @@ def normalizeSources(cfg, section, name):
 
 
 FIXTURES = {
-    "a.rc": br"""[a]
+    "a.rc": rb"""[a]
 x=1
 y=2
 %include b.rc
 """,
-    "b.rc": br"""%include b.rc
+    "b.rc": rb"""%include b.rc
 [b]
 z = 3
 [a]
 %unset y
 %include broken.rc
 """,
-    "broken.rc": br"%not-implemented",
+    "broken.rc": rb"%not-implemented",
 }
 
 
