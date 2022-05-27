@@ -15,7 +15,7 @@ narrowheadsincompatiblelist = """
     test-bookmarks.t
     test-revset2.t
 
-    test-revset-t.py
+    test-revset.t
 """
 
 segmentedchangelogcompatiblelist = """
@@ -316,18 +316,18 @@ segmentedchangelogcompatiblelist = """
     test-remotenames-paths.t
     test-remove.t
     test-repo-leak.t
-    test-requires-t.py
-    test-restack-old-stack-t.py
+    test-requires.t
+    test-restack-old-stack.t
     test-revert-flags.t
     test-revert-interactive.t
     test-revert-status.t
     test-revlog-packentry.t
     test-revlog-raw.py
     test-revset-dirstate-parents.t
-    test-root-t.py
+    test-root.t
     test-run-tests.py
     test-rust-rmcwd.t
-    test-rust-subcommands-t.py
+    test-rust-subcommands.t
     test-rustthreading.py
     test-seq.t
     test-serve.t
@@ -511,7 +511,7 @@ segmentedchangelogcompatiblelist = """
     test-rebase-detach.t
     test-rebase-flags.t
     test-rebase-inmemory-mergedriver.t
-    test-rebase-inmemory-nochanges-t.py
+    test-rebase-inmemory-nochanges.t
     test-rebase-inmemory-noconflict.t
     test-rebase-inmemory.t
     test-rebase-interruptions.t
@@ -523,7 +523,7 @@ segmentedchangelogcompatiblelist = """
     test-remotenames-convert-t.py
     test-remotenames-fastheaddiscovery-hidden-commits.t
     test-remotenames-journal.t
-    test-remotenames-namespaces-t.py
+    test-remotenames-namespaces.t
     test-remotenames-on-and-off-t.py
     test-remotenames-pull-rebase.t
     test-remotenames-push.t
@@ -531,7 +531,7 @@ segmentedchangelogcompatiblelist = """
     test-remotenames-pushto.t
     test-remotenames-selective-pull-accessed-bookmarks.t
     test-remotenames-selective-pull.t
-    test-remotenames-strip-t.py
+    test-remotenames-strip.t
     test-remotenames-transition.t
     test-rename-after-merge.t
     test-rename-dir-merge.t
@@ -556,7 +556,7 @@ segmentedchangelogcompatiblelist = """
 
     test-rebase-abort.t
     test-rebase-brute-force.t
-    test-rebase-check-restore-t.py
+    test-rebase-check-restore.t
     test-rebase-emptycommit.t
 """
 
@@ -664,23 +664,23 @@ ignorerevnumincompatiblelist = """
     test-pull-r.t
     test-pull-update.t
     test-push.t
-    test-rebase-issue-noparam-single-rev-t.py
+    test-rebase-issue-noparam-single-rev.t
     test-rebase-parameters.t
-    test-rebase-pull-t.py
+    test-rebase-pull.t
     test-rebase-scenario-global.t
-    test-remotenames-bookmarks-t.py
+    test-remotenames-bookmarks.t
     test-remotenames-pull-rebase.t
     test-remotenames-push.t
-    test-remotenames-shared-repo-t.py
-    test-remotenames-strip-t.py
+    test-remotenames-shared-repo.t
+    test-remotenames-strip.t
     test-remotenames-tracking.t
     test-remotenames-update.t
     test-rename-merge2.t
-    test-revert-t.py
-    test-revert-unknown-t.py
-    test-revnum-deprecate-t.py
+    test-revert.t
+    test-revert-unknown.t
+    test-revnum-deprecate.t
     test-revset2.t
-    test-revset-t.py
+    test-revset.t
     test-shelve-t.py
     test-sparse.t
     test-sparse-verbose-json-t.py
@@ -761,6 +761,7 @@ inprocesshgincompatiblelist = """
     test-extdiff.t
 
     test-pull-update.t
+    test-rebase-pull.t
 """
 
 inprocesshg = True

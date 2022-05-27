@@ -98,7 +98,7 @@ def main(target, maxchangesets, depth=None):
         elif os.path.exists(filename):
             os.remove(filename)
 
-    return "\n".join(output)
+    return "\n".join(output) or None
 
 
 if __name__ == "__main__":
@@ -111,4 +111,4 @@ if __name__ == "__main__":
         depth = None
     output = main(target, maxchangesets, depth)
     if output:
-        print(output)
+        print(output or "")
