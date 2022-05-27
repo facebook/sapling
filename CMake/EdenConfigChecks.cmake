@@ -93,22 +93,6 @@ set_target_properties(snappy::snappy PROPERTIES
   INTERFACE_INCLUDE_DIRECTORIES "${SNAPPY_INCLUDES}"
 )
 
-# Same as above for LZ4.
-
-find_package(LZ4 MODULE REQUIRED)
-get_target_property(LZ4_LIBS_RELWITHDEBINFO Snappy::snappy IMPORTED_LOCATION_RELWITHDEBINFO)
-get_target_property(LZ4_LIBS_RELEASE Snappy::snappy IMPORTED_LOCATION_RELEASE)
-get_target_property(LZ4_LIBS_DEBUG Snappy::snappy IMPORTED_LOCATION_DEBUG)
-get_target_property(LZ4_INCLUDES Snappy::snappy INTERFACE_INCLUDE_DIRECTORIES)
-add_library(lz4::lz4 UNKNOWN IMPORTED)
-set_target_properties(lz4::lz4 PROPERTIES
-  IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-  IMPORTED_LOCATION_RELWITHDEBINFO "${LZ4_LIBS_RELWITHDEBINFO}"
-  IMPORTED_LOCATION_RELEASE "${LZ4_LIBS_RELEASE}"
-  IMPORTED_LOCATION_DEBUG "${LZ4_LIBS_DEBUG}"
-  INTERFACE_INCLUDE_DIRECTORIES "${LZ4_INCLUDES}"
-)
-
 # TODO: It shouldn't be too hard to turn RocksDB and sqlite3 into optional
 # dependencies, since we have alternate LocalStore implementations.
 find_package(RocksDB CONFIG REQUIRED)
