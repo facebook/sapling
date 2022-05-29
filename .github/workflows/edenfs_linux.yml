@@ -93,8 +93,12 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests bison
     - name: Fetch libsodium
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests libsodium
+    - name: Fetch xz
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests xz
     - name: Fetch folly
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests folly
+    - name: Fetch edencommon
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests edencommon
     - name: Fetch fizz
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests fizz
     - name: Fetch wangle
@@ -173,8 +177,12 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests bison
     - name: Build libsodium
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests libsodium
+    - name: Build xz
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests xz
     - name: Build folly
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests folly
+    - name: Build edencommon
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests edencommon
     - name: Build fizz
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests fizz
     - name: Build wangle
