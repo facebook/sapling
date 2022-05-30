@@ -724,6 +724,10 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::MegarepoAddConfigParams,
         ) -> Result<thrift::MegarepoAddConfigResponse, service::MegarepoAddSyncTargetConfigExn>;
 
+        async fn megarepo_read_target_config(
+            params: thrift::MegarepoReadConfigParams,
+        ) -> Result<thrift::MegarepoReadConfigResponse, service::MegarepoReadTargetConfigExn>;
+
         async fn megarepo_add_sync_target(
             params: thrift::MegarepoAddTargetParams,
         ) -> Result<thrift::MegarepoAddTargetToken, service::MegarepoAddSyncTargetExn>;

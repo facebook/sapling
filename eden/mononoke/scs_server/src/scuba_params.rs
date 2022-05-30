@@ -473,3 +473,9 @@ impl AddScubaParams for thrift::MegarepoAddConfigParams {
         report_megarepo_target(&self.new_config.target, scuba, Reported::Param);
     }
 }
+
+impl AddScubaParams for thrift::MegarepoReadConfigParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        report_megarepo_target(&self.target, scuba, Reported::Param);
+    }
+}

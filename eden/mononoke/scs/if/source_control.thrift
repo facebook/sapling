@@ -1186,6 +1186,12 @@ struct MegarepoAddConfigParams {
   1: megarepo_configs.SyncTargetConfig new_config;
 }
 
+/// Params for the megarepo_read_target_config method
+struct MegarepoReadConfigParams {
+  1: megarepo_configs.Target target;
+  2: CommitId commit;
+}
+
 /// Params for megarepo_add_sync_target method
 struct MegarepoAddTargetParams {
   /// Initial config to be used on the new target
@@ -1549,6 +1555,10 @@ struct RepoListHgManifestResponse {
 }
 
 struct MegarepoAddConfigResponse {}
+
+struct MegarepoReadConfigResponse {
+  1: megarepo_configs.SyncTargetConfig config;
+}
 
 struct MegarepoAddTargetResponse {
   /// A new position of the target bookmark
@@ -1947,6 +1957,11 @@ service SourceControlService extends fb303_core.BaseService {
   /// Add a new unused config version to the library of versions
   MegarepoAddConfigResponse megarepo_add_sync_target_config(
     1: MegarepoAddConfigParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
+  /// Add a new unused config version to the library of versions
+  MegarepoReadConfigResponse megarepo_read_target_config(
+    1: MegarepoReadConfigParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
 
   /// Add a new target to the list of known targets and set its

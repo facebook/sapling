@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::from_request::FromRequest;
 use anyhow::{anyhow, Result};
 use async_requests::tokens::{
     MegarepoAddBranchingTargetToken, MegarepoAddTargetToken, MegarepoChangeTargetConfigToken,
@@ -13,6 +14,7 @@ use async_requests::tokens::{
 use async_requests::types::{ThriftParams, Token};
 use context::CoreContext;
 use megarepo_config::SyncTargetConfig;
+use mononoke_api::ChangesetSpecifier;
 use mononoke_types::RepositoryId;
 use slog::warn;
 use source_control as thrift;
@@ -116,6 +118,37 @@ impl SourceControlServiceImpl {
         }
 
         Ok(thrift::MegarepoAddConfigResponse {
+            ..Default::default()
+        })
+    }
+
+    pub(crate) async fn megarepo_read_target_config(
+        &self,
+        ctx: CoreContext,
+        params: thrift::MegarepoReadConfigParams,
+    ) -> Result<thrift::MegarepoReadConfigResponse, errors::ServiceError> {
+        let repo = self
+            .megarepo_api
+            .target_repo(&ctx, &params.target)
+            .await
+            .map_err(|err| {
+                errors::invalid_request(anyhow!(
+                    "can't open target repo {}: {}",
+                    params.target.repo_id,
+                    err
+                ))
+            })?;
+        let changeset = repo
+            .changeset(ChangesetSpecifier::from_request(&params.commit)?)
+            .await?
+            .ok_or_else(|| errors::invalid_request(anyhow!("commit not found")))?;
+        let (_commit_remapping_state, target_config) = self
+            .megarepo_api
+            .get_target_sync_config(&ctx, &params.target, &changeset.id())
+            .await?;
+
+        Ok(thrift::MegarepoReadConfigResponse {
+            config: target_config,
             ..Default::default()
         })
     }

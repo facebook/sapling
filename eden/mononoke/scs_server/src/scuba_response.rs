@@ -103,6 +103,8 @@ impl AddScubaResponse for thrift::MegarepoAddBranchingTargetResult {}
 
 impl AddScubaResponse for thrift::MegarepoAddConfigResponse {}
 
+impl AddScubaResponse for thrift::MegarepoReadConfigResponse {}
+
 // Helper fn to report PollResponse types
 fn report_maybe_result<R: AddScubaResponse>(
     maybe_result: &Option<R>,

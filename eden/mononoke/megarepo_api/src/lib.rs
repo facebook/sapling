@@ -9,7 +9,7 @@
 
 use add_branching_sync_target::AddBranchingSyncTarget;
 use add_sync_target::AddSyncTarget;
-use anyhow::{bail, Error};
+use anyhow::{anyhow, bail, Error};
 use async_once_cell::AsyncOnceCell;
 use async_requests::AsyncMethodRequestQueue;
 use blobstore::Blobstore;
@@ -22,10 +22,11 @@ use megarepo_config::{
     SyncConfigVersion, SyncTargetConfig, Target, TestMononokeMegarepoConfigs,
 };
 use megarepo_error::MegarepoError;
+use megarepo_mapping::CommitRemappingState;
 use megarepo_mapping::{MegarepoMapping, SourceName};
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::ArcRepoConfig;
-use mononoke_api::Mononoke;
+use mononoke_api::{Mononoke, RepoContext};
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_renames::MutableRenames;
 use parking_lot::Mutex;
@@ -152,6 +153,24 @@ impl MegarepoApi {
         self.megarepo_configs.as_ref()
     }
 
+    /// Get megarepo config and remapping state for given commit in target
+    pub async fn get_target_sync_config(
+        &self,
+        ctx: &CoreContext,
+        target: &Target,
+        cs_id: &ChangesetId,
+    ) -> Result<(CommitRemappingState, SyncTargetConfig), MegarepoError> {
+        let target_repo = self.target_repo(ctx, target).await?;
+        common::find_target_sync_config(
+            ctx,
+            target_repo.blob_repo(),
+            *cs_id,
+            target,
+            &self.megarepo_configs,
+        )
+        .await
+    }
+
     /// Get mononoke object
     pub fn mononoke(&self) -> Arc<Mononoke> {
         self.mononoke.clone()
@@ -163,7 +182,7 @@ impl MegarepoApi {
         ctx: &CoreContext,
         target: &Target,
     ) -> Result<Arc<MutableRenames>, MegarepoError> {
-        let (repo_config, repo_identity) = self.target_repo(ctx, target).await?;
+        let (repo_config, repo_identity) = self.target_repo_config_and_id(ctx, target).await?;
         let mutable_renames = self
             .mutable_renames_cache
             .get_or_try_init(&repo_identity.clone(), || async move {
@@ -180,7 +199,7 @@ impl MegarepoApi {
         ctx: &CoreContext,
         target: &Target,
     ) -> Result<AsyncMethodRequestQueue, MegarepoError> {
-        let (repo_config, repo_identity) = self.target_repo(ctx, target).await?;
+        let (repo_config, repo_identity) = self.target_repo_config_and_id(ctx, target).await?;
         self.async_method_request_queue_for_repo(ctx, &repo_identity, &repo_config)
             .await
     }
@@ -261,7 +280,7 @@ impl MegarepoApi {
     }
 
     /// Get Mononoke repo config and identity by a target
-    async fn target_repo(
+    async fn target_repo_config_and_id(
         &self,
         ctx: &CoreContext,
         target: &Target,
@@ -282,6 +301,22 @@ impl MegarepoApi {
         let cfg = self.repo_factory.repo_config(cfg);
         let repo_identity = self.repo_factory.repo_identity(name, &cfg);
         Ok((cfg, repo_identity))
+    }
+
+    /// Get Mononoke repo context by terget
+    pub async fn target_repo(
+        &self,
+        ctx: &CoreContext,
+        target: &Target,
+    ) -> Result<RepoContext, Error> {
+        let repo_id: i32 = TryFrom::<i64>::try_from(target.repo_id)?;
+        let repo_id = RepositoryId::new(repo_id);
+        let repo = self
+            .mononoke
+            .repo_by_id(ctx.clone(), repo_id)
+            .await?
+            .ok_or_else(|| MegarepoError::request(anyhow!("repo not found {}", repo_id)))?;
+        Ok(repo)
     }
 
     /// Build a blobstore to be embedded into `AsyncMethodRequestQueue`
@@ -315,7 +350,7 @@ impl MegarepoApi {
         ctx: &CoreContext,
         target: &Target,
     ) -> Result<Arc<MegarepoMapping>, Error> {
-        let (repo_config, repo_identity) = self.target_repo(ctx, target).await?;
+        let (repo_config, repo_identity) = self.target_repo_config_and_id(ctx, target).await?;
 
         let megarepo_mapping = self
             .megarepo_mapping_cache
