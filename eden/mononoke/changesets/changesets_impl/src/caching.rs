@@ -10,8 +10,8 @@ use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
 use caching_ext::{
-    get_or_fill, CacheDisposition, CacheTtl, CachelibHandler, EntityStore, KeyedEntityStore,
-    MemcacheEntity, MemcacheHandler,
+    get_or_fill, get_or_fill_chunked, CacheDisposition, CacheTtl, CachelibHandler, EntityStore,
+    KeyedEntityStore, MemcacheEntity, MemcacheHandler,
 };
 use changeset_entry_thrift as thrift;
 use changesets::{ChangesetEntry, ChangesetInsert, Changesets, SortOrder};
@@ -145,7 +145,7 @@ impl Changesets for CachingChangesets {
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>, Error> {
         let ctx = (&ctx, self);
-        let res = get_or_fill(ctx, cs_ids.into_iter().collect())
+        let res = get_or_fill_chunked(ctx, cs_ids.into_iter().collect(), 1000, 2)
             .await?
             .into_iter()
             .map(|(_, val)| val.0)
