@@ -6,9 +6,7 @@
  */
 
 use anyhow::Result;
-use cloned::cloned;
 use context::CoreContext;
-use futures::{stream, StreamExt, TryStreamExt};
 use itertools::Itertools;
 use mononoke_api::sparse_profile::{get_all_profiles, get_profile_size};
 use mononoke_types::MPath;
@@ -16,9 +14,6 @@ use source_control as thrift;
 
 use crate::errors;
 use crate::source_control_impl::SourceControlServiceImpl;
-
-use std::collections::BTreeMap;
-
 pub(crate) trait SparseProfilesExt {
     fn to_string(&self) -> String;
 }
@@ -47,42 +42,33 @@ impl SourceControlServiceImpl {
         let profiles = match params.profiles {
             thrift::SparseProfiles::all_profiles(_) => get_all_profiles(&changeset)
                 .await
-                .map_err(errors::internal_error)?
-                .left_stream(),
-            thrift::SparseProfiles::profiles(profiles) => {
-                stream::iter(profiles.into_iter().filter_map(|path| {
+                .map_err(errors::internal_error)?,
+            thrift::SparseProfiles::profiles(profiles) => profiles
+                .into_iter()
+                .filter_map(|path| {
                     let path: &str = &path;
                     MPath::try_from(path).ok()
-                }))
-                .right_stream()
-            }
+                })
+                .collect(),
             thrift::SparseProfiles::UnknownField(_) => {
                 return Err(errors::ServiceError::Request(errors::not_available(
                     "Not implemented".to_string(),
                 )));
             }
         };
-        let sizes: BTreeMap<_, _> = profiles
-            .filter_map(|path| {
-                cloned!(ctx, changeset);
-                async move {
-                    get_profile_size(&ctx, &changeset, &path)
-                        .await
-                        .transpose()
-                        .map(|size| async move {
-                            Ok::<_, errors::ServiceError>((
-                                path.to_string(),
-                                thrift::SparseProfileSize {
-                                    size: size? as i64,
-                                    ..Default::default()
-                                },
-                            ))
-                        })
-                }
+        let sizes_hashmap = get_profile_size(&ctx, &changeset, profiles).await?;
+        let sizes = sizes_hashmap
+            .into_iter()
+            .map(|(source, size)| {
+                (
+                    source,
+                    thrift::SparseProfileSize {
+                        size: size as i64,
+                        ..Default::default()
+                    },
+                )
             })
-            .buffer_unordered(100)
-            .try_collect()
-            .await?;
+            .collect();
         Ok(thrift::CommitSparseProfileSizeResponse {
             profiles_size: thrift::SparseProfileSizes {
                 sizes,
