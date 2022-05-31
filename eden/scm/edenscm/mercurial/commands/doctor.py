@@ -14,6 +14,7 @@ from bindings import (
     metalog,
     mutationstore,
     nodemap,
+    repo as rsrepo,
     revisionstore,
     tracing,
     treestate as rawtreestate,
@@ -620,6 +621,7 @@ class ChangelogRepo(object):
         self.ui = ui
         self.svfs = svfs
         self.storerequirements = scmutil.readrequires(svfs)
+        self._rsrepo = rsrepo.repo(root, self.ui._rcfg._rcfg)
 
     @property
     def edenapi(self):
