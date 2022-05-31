@@ -26,7 +26,7 @@
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
   * 1 tree(s) are valid! (glob)
-  * Hg: 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e: HgManifestId(HgNodeHash(Sha1(*))) (glob)
+  * Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(*))) (glob)
   * Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(d4229e9850e9244c3a986a62590ffada646e7200593bc26e4cc8c9aa10730a26))) (glob)
 
 # Add second commit to git repository
@@ -56,8 +56,8 @@
   * GitRepo:*repo-git commit 1 of 2 - Oid:* => Bid:* (glob)
   * GitRepo:*repo-git commit 2 of 2 - Oid:* => Bid:* (glob)
   * 2 tree(s) are valid! (glob)
-  * Hg: 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e: HgManifestId(HgNodeHash(Sha1(*))) (glob)
-  * Hg: e8615d6f149b876be0a2f30a1c5bf0c42bf8e136: HgManifestId(HgNodeHash(Sha1(*))) (glob)
+  * Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(*))) (glob)
+  * Hg: Sha1(e8615d6f149b876be0a2f30a1c5bf0c42bf8e136): HgManifestId(HgNodeHash(Sha1(*))) (glob)
   * Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(*))) (glob)
 
 # Set master (gitimport does not do this yet)
@@ -76,4 +76,3 @@
   this is file1
   $ cat "file2"
   this is file2
-

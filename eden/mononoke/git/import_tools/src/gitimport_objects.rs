@@ -6,15 +6,17 @@
  */
 
 use crate::gitlfs::GitImportLfs;
-use anyhow::{format_err, Error};
+use crate::{git2_oid_to_git_hash_objectid, git_hash_oid_to_git2_oid};
+
+use anyhow::{bail, format_err, Error};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::LoadableError;
-use bytes::Bytes;
 use context::CoreContext;
-use git2::{ObjectType, Oid, Repository, Revwalk, Time};
+use git2::{ObjectType, Repository, Revwalk};
+use git_hash::ObjectId;
+use git_object::{tree, Commit, CommitRef, Tree, TreeRef};
 use git_pool::GitPool;
-use git_types::mode;
 use manifest::{Entry, Manifest, StoreLoadable};
 use mononoke_types::{hash, typed_hash::ChangesetId, DateTime, FileType, MPathElement};
 use slog::debug;
@@ -22,10 +24,10 @@ use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct GitTree(pub Oid);
+pub struct GitTree(pub ObjectId);
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct GitLeaf(pub Oid);
+pub struct GitLeaf(pub ObjectId);
 
 pub struct GitManifest(HashMap<MPathElement, Entry<GitTree, (FileType, GitLeaf)>>);
 
@@ -42,64 +44,60 @@ impl Manifest for GitManifest {
     }
 }
 
-async fn load_git_tree(oid: Oid, pool: &GitPool) -> Result<GitManifest, Error> {
-    pool.with(move |repo| {
-        let tree = repo.find_tree(oid)?;
-
-        let elements = tree
-            .iter()
-            .map(|entry| {
-                let filemode = entry.filemode();
-                let name = MPathElement::new(entry.name_bytes().into())?;
-
-                let r = match entry.kind() {
-                    Some(ObjectType::Blob) => {
-                        let ft = convert_git_filemode(filemode)?;
-
-                        Some((name, Entry::Leaf((ft, GitLeaf(entry.id())))))
-                    }
-                    Some(ObjectType::Tree) => Some((name, Entry::Tree(GitTree(entry.id())))),
-
-                    // git-sub-modules are represented as ObjectType::Commit inside the tree.
-                    // For now we do not support git-sub-modules but we still need to import
-                    // repositories that has sub-modules in them (just not synchronized), so
-                    // ignoring any sub-module for now.
-                    Some(ObjectType::Commit) => None,
-
-                    k => {
-                        return Err(format_err!(
-                            "Invalid kind: {:?} id:{} name:{} parent:{}",
-                            k,
-                            entry.id(),
-                            name,
-                            oid
-                        )
-                        .context("load_git_tree"));
-                    }
-                };
-
-                Ok(r)
-            })
-            .filter(|entry| if let Ok(None) = entry { false } else { true })
-            .map(|entry| match entry {
-                Ok(Some(v)) => Ok(v),
-                Err(v) => Err(v),
-                _ => Err(format_err!("Should have been filtered out")),
-            })
-            .collect::<Result<HashMap<_, _>, Error>>()?;
-
-        Result::<_, Error>::Ok(GitManifest(elements))
-    })
-    .await
+pub(crate) fn read_tree(repo: &Repository, id: ObjectId) -> Result<Tree, Error> {
+    let odb = repo.odb()?;
+    let odb_object = odb.read(git_hash_oid_to_git2_oid(&id))?;
+    if odb_object.kind() != ObjectType::Tree {
+        bail!("{} is not a tree", id);
+    }
+    let tree_ref = TreeRef::from_bytes(odb_object.data())?;
+    Ok(tree_ref.into())
 }
 
-pub fn convert_git_filemode(git_filemode: i32) -> Result<FileType, Error> {
-    match git_filemode {
-        mode::GIT_FILEMODE_BLOB => Ok(FileType::Regular),
-        mode::GIT_FILEMODE_BLOB_EXECUTABLE => Ok(FileType::Executable),
-        mode::GIT_FILEMODE_LINK => Ok(FileType::Symlink),
-        _ => Err(format_err!("Invalid filemode: {:?}", git_filemode)),
-    }
+async fn load_git_tree(oid: ObjectId, pool: &GitPool) -> Result<GitManifest, Error> {
+    pool.with(move |repo| {
+        let tree = read_tree(repo, oid)?;
+
+        let elements = tree
+            .entries
+            .into_iter()
+            .filter_map(
+                |tree::Entry {
+                     mode,
+                     filename,
+                     oid,
+                 }| {
+                    let name = match MPathElement::new(filename.into()) {
+                        Ok(name) => name,
+                        Err(e) => return Some(Err(e)),
+                    };
+
+                    let r = match mode {
+                        tree::EntryMode::Blob => {
+                            Some((name, Entry::Leaf((FileType::Regular, GitLeaf(oid)))))
+                        }
+                        tree::EntryMode::BlobExecutable => {
+                            Some((name, Entry::Leaf((FileType::Executable, GitLeaf(oid)))))
+                        }
+                        tree::EntryMode::Link => {
+                            Some((name, Entry::Leaf((FileType::Symlink, GitLeaf(oid)))))
+                        }
+                        tree::EntryMode::Tree => Some((name, Entry::Tree(GitTree(oid)))),
+
+                        // git-sub-modules are represented as ObjectType::Commit inside the tree.
+                        // For now we do not support git-sub-modules but we still need to import
+                        // repositories that has sub-modules in them (just not synchronized), so
+                        // ignoring any sub-module for now.
+                        tree::EntryMode::Commit => None,
+                    };
+                    anyhow::Ok(r).transpose()
+                },
+            )
+            .collect::<Result<_, Error>>()?;
+
+        anyhow::Ok(GitManifest(elements))
+    })
+    .await
 }
 
 #[async_trait]
@@ -144,8 +142,8 @@ impl Default for GitimportPreferences {
     }
 }
 
-pub fn oid_to_sha1(oid: &Oid) -> Result<hash::GitSha1, Error> {
-    hash::GitSha1::from_bytes(Bytes::copy_from_slice(oid.as_bytes()))
+pub fn oid_to_sha1(oid: &git_hash::oid) -> Result<hash::GitSha1, Error> {
+    hash::GitSha1::from_bytes(oid.as_bytes())
 }
 
 pub trait GitimportTarget {
@@ -153,7 +151,7 @@ pub trait GitimportTarget {
 
     /// Roots are the Oid -> ChangesetId mappings that already are
     /// imported into Mononoke.
-    fn get_roots(&self) -> Result<HashMap<Oid, ChangesetId>, Error>;
+    fn get_roots(&self) -> Result<HashMap<ObjectId, ChangesetId>, Error>;
 
     fn get_nb_commits(&self, repo: &Repository) -> Result<usize, Error> {
         let mut walk = repo.revwalk()?;
@@ -175,27 +173,27 @@ impl GitimportTarget for FullRepoImport {
         Ok(())
     }
 
-    fn get_roots(&self) -> Result<HashMap<Oid, ChangesetId>, Error> {
+    fn get_roots(&self) -> Result<HashMap<ObjectId, ChangesetId>, Error> {
         Ok(HashMap::new())
     }
 }
 
 pub struct GitRangeImport {
-    pub from: Oid,
+    pub from: ObjectId,
     pub from_csid: ChangesetId,
-    pub to: Oid,
+    pub to: ObjectId,
 }
 
 impl GitRangeImport {
     pub async fn new(
-        from: Oid,
-        to: Oid,
+        from: ObjectId,
+        to: ObjectId,
         ctx: &CoreContext,
         repo: &BlobRepo,
     ) -> Result<GitRangeImport, Error> {
         let from_csid = repo
             .bonsai_git_mapping()
-            .get_bonsai_from_git_sha1(&ctx, hash::GitSha1::from_bytes(from)?)
+            .get_bonsai_from_git_sha1(ctx, hash::GitSha1::from_bytes(from.as_bytes())?)
             .await?
             .ok_or_else(|| {
                 format_err!(
@@ -213,12 +211,12 @@ impl GitRangeImport {
 
 impl GitimportTarget for GitRangeImport {
     fn populate_walk(&self, _: &Repository, walk: &mut Revwalk) -> Result<(), Error> {
-        walk.hide(self.from)?;
-        walk.push(self.to)?;
+        walk.hide(git_hash_oid_to_git2_oid(&self.from))?;
+        walk.push(git_hash_oid_to_git2_oid(&self.to))?;
         Ok(())
     }
 
-    fn get_roots(&self) -> Result<HashMap<Oid, ChangesetId>, Error> {
+    fn get_roots(&self) -> Result<HashMap<ObjectId, ChangesetId>, Error> {
         let mut roots = HashMap::new();
         roots.insert(self.from, self.from_csid);
         Ok(roots)
@@ -229,14 +227,14 @@ impl GitimportTarget for GitRangeImport {
 /// represent specified commit with all its history.
 /// It will check what is already present and only import the minimum set required.
 pub struct ImportMissingForCommit {
-    commit: Oid,
+    commit: ObjectId,
     commits_to_add: usize,
-    roots: HashMap<Oid, ChangesetId>,
+    roots: HashMap<ObjectId, ChangesetId>,
 }
 
 impl ImportMissingForCommit {
     pub async fn new(
-        commit: Oid,
+        commit: ObjectId,
         ctx: &CoreContext,
         repo: &BlobRepo,
         gitrepo: &Repository,
@@ -245,25 +243,31 @@ impl ImportMissingForCommit {
 
         // Starting from the specified commit. We need to get the boundaries of what already is imported into Mononoke.
         // We do this by doing a bfs search from the specified commit.
-        let mut existing = HashMap::<Oid, ChangesetId>::new();
-        let mut visisted = HashSet::new();
+        let mut existing = HashMap::<ObjectId, ChangesetId>::new();
+        let mut visited = HashSet::new();
         let mut q = Vec::new();
         q.push(commit);
         while !q.is_empty() {
             let id = q.pop().unwrap();
-            if !visisted.contains(&id) {
-                visisted.insert(id);
+            if !visited.contains(&id) {
+                visited.insert(id);
                 if let Some(changeset) =
                     ImportMissingForCommit::commit_in_mononoke(ctx, repo, &id).await?
                 {
                     existing.insert(id, changeset);
                 } else {
-                    q.extend(gitrepo.find_commit(id)?.parent_ids());
+                    let id = git_hash_oid_to_git2_oid(&id);
+                    q.extend(
+                        gitrepo
+                            .find_commit(id)?
+                            .parent_ids()
+                            .map(|oid| git2_oid_to_git_hash_objectid(&oid)),
+                    );
                 }
             }
         }
 
-        let commits_to_add = visisted.len() - existing.len();
+        let commits_to_add = visited.len() - existing.len();
 
         let tb = Instant::now();
         debug!(
@@ -282,7 +286,7 @@ impl ImportMissingForCommit {
     async fn commit_in_mononoke(
         ctx: &CoreContext,
         repo: &BlobRepo,
-        commit_id: &Oid,
+        commit_id: &git_hash::oid,
     ) -> Result<Option<ChangesetId>, Error> {
         let changeset = repo
             .bonsai_git_mapping()
@@ -302,12 +306,14 @@ impl ImportMissingForCommit {
 
 impl GitimportTarget for ImportMissingForCommit {
     fn populate_walk(&self, _: &Repository, walk: &mut Revwalk) -> Result<(), Error> {
-        walk.push(self.commit)?;
-        self.roots.keys().try_for_each(|v| walk.hide(*v))?;
+        walk.push(git_hash_oid_to_git2_oid(&self.commit))?;
+        self.roots
+            .keys()
+            .try_for_each(|v| walk.hide(git_hash_oid_to_git2_oid(v)))?;
         Ok(())
     }
 
-    fn get_roots(&self) -> Result<HashMap<Oid, ChangesetId>, Error> {
+    fn get_roots(&self) -> Result<HashMap<ObjectId, ChangesetId>, Error> {
         Ok(self.roots.clone())
     }
 
@@ -317,8 +323,8 @@ impl GitimportTarget for ImportMissingForCommit {
 }
 
 pub struct CommitMetadata {
-    pub oid: Oid,
-    pub parents: Vec<Oid>,
+    pub oid: ObjectId,
+    pub parents: Vec<ObjectId>,
     pub message: String,
     pub author: String,
     pub author_date: DateTime,
@@ -332,36 +338,61 @@ pub struct ExtractedCommit {
     pub parent_trees: HashSet<GitTree>,
 }
 
+pub(crate) fn read_commit(repo: &Repository, oid: &git_hash::oid) -> Result<Commit, Error> {
+    let odb = repo.odb()?;
+    let odb_object = odb.read(git_hash_oid_to_git2_oid(oid))?;
+    if odb_object.kind() != ObjectType::Commit {
+        bail!("{} is not a commit", oid);
+    }
+    let commit_ref = CommitRef::from_bytes(odb_object.data())?;
+    Ok(commit_ref.into())
+}
+
+fn format_signature(sig: git_actor::SignatureRef) -> String {
+    format!("{} <{}>", sig.name, sig.email)
+}
+
 impl ExtractedCommit {
-    pub async fn new(oid: Oid, pool: &GitPool) -> Result<Self, Error> {
+    pub async fn new(oid: ObjectId, pool: &GitPool) -> Result<Self, Error> {
         pool.with(move |repo| {
-            let commit = repo.find_commit(oid)?;
+            let Commit {
+                tree,
+                parents,
+                author,
+                committer,
+                encoding,
+                message,
+                ..
+            } = read_commit(repo, &oid)?;
 
-            let tree = GitTree(commit.tree()?.id());
+            let tree = GitTree(tree);
 
-            let parent_trees = commit
-                .parents()
-                .map(|p| {
-                    let tree = p.tree()?;
-                    Ok(GitTree(tree.id()))
-                })
-                .collect::<Result<_, Error>>()?;
+            let parent_trees = {
+                let mut trees = HashSet::new();
+                for parent in &parents {
+                    let commit = read_commit(repo, parent)?;
+                    trees.insert(GitTree(commit.tree));
+                }
+                trees
+            };
 
-            let author = format!("{}", commit.author());
-            let committer = format!("{}", commit.committer());
+            let author_date = convert_time_to_datetime(&author.time)?;
+            let committer_date = convert_time_to_datetime(&committer.time)?;
 
-            let message = commit.message().unwrap_or_default().to_owned();
+            if encoding.map_or(false, |bs| bs.to_ascii_lowercase() != b"utf-8") {
+                bail!("Do not know how to handle non-UTF8")
+            }
 
-            let parents = commit.parents().map(|p| p.id()).collect();
+            let author = format_signature(author.to_ref());
+            let committer = format_signature(committer.to_ref());
 
-            let time = commit.author().when();
-            let author_date = convert_time_to_datetime(&time)?;
-            let time = commit.committer().when();
-            let committer_date = convert_time_to_datetime(&time)?;
+            let message = String::from_utf8(message.to_vec())?;
+
+            let parents = parents.into_vec();
 
             Result::<_, Error>::Ok(ExtractedCommit {
                 metadata: CommitMetadata {
-                    oid: commit.id(),
+                    oid,
                     parents,
                     message,
                     author,
@@ -377,6 +408,9 @@ impl ExtractedCommit {
     }
 }
 
-pub fn convert_time_to_datetime(time: &Time) -> Result<DateTime, Error> {
-    DateTime::from_timestamp(time.seconds(), -1 * time.offset_minutes() * 60)
+pub fn convert_time_to_datetime(time: &git_actor::Time) -> Result<DateTime, Error> {
+    DateTime::from_timestamp(
+        time.seconds_since_unix_epoch.into(),
+        -time.offset_in_seconds,
+    )
 }

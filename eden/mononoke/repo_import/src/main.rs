@@ -28,7 +28,7 @@ use futures::{
     stream::{self, StreamExt, TryStreamExt},
 };
 use git2::Repository;
-use import_tools::{FullRepoImport, GitimportPreferences};
+use import_tools::{git2_oid_to_git_hash_objectid, FullRepoImport, GitimportPreferences};
 use itertools::Itertools;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use manifest::ManifestOps;
@@ -1064,9 +1064,11 @@ async fn repo_import(
         info!(ctx.logger(), "Added commits to Mononoke");
 
         let git_repo = Repository::open(path)?;
-        let git_merge_oid = git_repo
-            .revparse_single(&recovery_fields.git_merge_rev_id)?
-            .id();
+        let git_merge_oid = git2_oid_to_git_hash_objectid(
+            &git_repo
+                .revparse_single(&recovery_fields.git_merge_rev_id)?
+                .id(),
+        );
 
         let git_merge_bcs_id = match import_map.get(&git_merge_oid) {
             Some((a, _)) => a.clone(),

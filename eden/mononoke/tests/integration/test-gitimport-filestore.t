@@ -28,7 +28,7 @@
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
   * 1 tree(s) are valid! (glob)
-  * Hg: 0ecc922af7b11d796a715f3c093673914b060164: HgManifestId(HgNodeHash(Sha1(4f16e4ceeccf36b18e4a72e183c16a9bea650e1d))) (glob)
+  * Hg: Sha1(0ecc922af7b11d796a715f3c093673914b060164): HgManifestId(HgNodeHash(Sha1(4f16e4ceeccf36b18e4a72e183c16a9bea650e1d))) (glob)
   * Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(306010a179d752b69fa2dd068a3fab8077043c217d3fb7370f705a50acbef48c))) (glob)
 
   $ mononoke_newadmin filestore -R repo is-chunked -i 48ef00ac63821b09154b55f1b380d253f936afb076a873e1bcc1d137c8b5bab2

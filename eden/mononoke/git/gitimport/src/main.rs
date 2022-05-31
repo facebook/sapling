@@ -21,10 +21,10 @@ use cmdlib::{
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
-use git2::{Oid, Repository};
+use git2::Repository;
 use import_tools::{
-    import_tree_as_single_bonsai_changeset, FullRepoImport, GitRangeImport, GitimportPreferences,
-    GitimportTarget, ImportMissingForCommit,
+    git2_oid_to_git_hash_objectid, import_tree_as_single_bonsai_changeset, FullRepoImport,
+    GitRangeImport, GitimportPreferences, GitimportTarget, ImportMissingForCommit,
 };
 use linked_hash_map::LinkedHashMap;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
@@ -195,14 +195,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 }
             };
 
-            let gitimport_result: LinkedHashMap<Oid, (ChangesetId, BonsaiChangeset)> =
+            let gitimport_result: LinkedHashMap<_, (ChangesetId, BonsaiChangeset)> =
                 import_tools::gitimport(&ctx, &repo, &path, &*target, prefs).await?;
 
             if !matches.is_present(ARG_SUPPRESS_REF_MAPPING) {
                 for reference in git_repo.references()? {
                     let reference = reference?;
-                    let commit = reference.peel_to_commit()?;
-                    let bcs_id = gitimport_result.get(&commit.id()).map(|e| e.0);
+                    let commit = git2_oid_to_git_hash_objectid(&reference.peel_to_commit()?.id());
+                    let bcs_id = gitimport_result.get(&commit).map(|e| e.0);
                     info!(ctx.logger(), "Ref: {:?}: {:?}", reference.name(), bcs_id);
                 }
             }

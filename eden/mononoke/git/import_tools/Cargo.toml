@@ -20,6 +20,9 @@ derived_data = { version = "0.1.0", path = "../../derived_data" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+git-actor = "0.10"
+git-hash = "0.9"
+git-object = "0.19"
 git-pool = { version = "0.1.0", path = "../git-pool" }
 git2 = "0.13"
 git_types = { version = "0.1.0", path = "../git_types" }

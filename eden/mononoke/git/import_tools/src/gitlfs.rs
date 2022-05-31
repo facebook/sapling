@@ -11,7 +11,7 @@ use context::CoreContext;
 use core::future::Future;
 use filestore::StoreRequest;
 use futures::{stream, Stream, StreamExt, TryStreamExt};
-use git2::Oid;
+use git_hash::ObjectId;
 use http::Uri;
 use hyper::{body, client::connect::HttpConnector, Client, StatusCode};
 use hyper_openssl::HttpsConnector;
@@ -64,14 +64,14 @@ pub struct LfsMetaData {
     /// end up storing the metadata instead of the content (if the content cannot
     /// be found on the LFS server for example).
     pub gitblob: Vec<u8>,
-    pub gitid: Oid,
+    pub gitid: ObjectId,
 }
 
 /// Layout of the metafiles:
 /// | version https://git-lfs.github.com/spec/v1
 /// | oid sha256:73e2200459562bb068f08e33210ed106014b877f878932b2147991e17a7c089b
 /// | size 8423391
-fn parse_lfs_metafile(gitblob: &[u8], gitid: &Oid) -> Option<LfsMetaData> {
+fn parse_lfs_metafile(gitblob: &[u8], gitid: ObjectId) -> Option<LfsMetaData> {
     if gitblob.len() > MAX_METADATA_LENGTH {
         return None;
     }
@@ -96,7 +96,7 @@ fn parse_lfs_metafile(gitblob: &[u8], gitid: &Oid) -> Option<LfsMetaData> {
         sha256,
         size,
         gitblob: gitblob.to_vec(),
-        gitid: *gitid,
+        gitid,
     })
 }
 
@@ -124,7 +124,7 @@ impl GitImportLfs {
         })
     }
 
-    pub fn is_lfs_file(&self, gitblob: &[u8], gitid: &Oid) -> Option<LfsMetaData> {
+    pub fn is_lfs_file(&self, gitblob: &[u8], gitid: ObjectId) -> Option<LfsMetaData> {
         if self.inner.is_some() {
             parse_lfs_metafile(gitblob, gitid)
         } else {

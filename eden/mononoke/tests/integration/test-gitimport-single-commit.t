@@ -35,7 +35,6 @@
   $ cd "$TESTTMP"
   $ gitimport "$GIT_REPO"  --bonsai-git-mapping import-tree-as-single-bonsai-changeset 69d481cfc9a21ef59b516c3de04cd742d059d345
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * found 3 file paths (glob)
   * imported as 4e4aec4571f5f1cafabf6e968c11ee99f3a5deab1292b23f6faddbbf1e19422e (glob)
 
 # Set master (gitimport does not do this yet)

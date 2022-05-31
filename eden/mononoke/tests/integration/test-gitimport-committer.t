@@ -59,8 +59,8 @@
   * GitRepo:$TESTTMP/repo-git commit 1 of 2 - Oid:8ce3eae4 => Bid:631c03b2 (glob)
   * GitRepo:$TESTTMP/repo-git commit 2 of 2 - Oid:69a26531 => Bid:5539313b (glob)
   * 2 tree(s) are valid! (glob)
-  * Hg: 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e: HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839))) (glob)
-  * Hg: 69a265312a2c29cdf5667ff401d895a66e6ac02a: HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839))) (glob)
+  * Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839))) (glob)
+  * Hg: Sha1(69a265312a2c29cdf5667ff401d895a66e6ac02a): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839))) (glob)
   * Ref: Some("refs/heads/another_committer"): Some(ChangesetId(Blake2(5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e))) (glob)
   * Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(631c03b250b34b3f9ee3b6acfb597123ec8340adaa91e3ba84ef0f4c54c6641a))) (glob)
 
@@ -98,4 +98,3 @@
   branch=default (no-eol)
   $ hg log -r another_committer -T '{extras}'
   branch=defaultcommitter=second_committer <second_committer@fb.com> 1000000000 0 (no-eol)
-

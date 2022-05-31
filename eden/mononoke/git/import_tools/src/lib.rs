@@ -11,12 +11,13 @@ mod gitimport_objects;
 mod gitlfs;
 
 pub use crate::gitimport_objects::{
-    convert_git_filemode, convert_time_to_datetime, oid_to_sha1, CommitMetadata, ExtractedCommit,
-    FullRepoImport, GitLeaf, GitManifest, GitRangeImport, GitTree, GitimportPreferences,
-    GitimportTarget, ImportMissingForCommit,
+    convert_time_to_datetime, oid_to_sha1, CommitMetadata, ExtractedCommit, FullRepoImport,
+    GitLeaf, GitManifest, GitRangeImport, GitTree, GitimportPreferences, GitimportTarget,
+    ImportMissingForCommit,
 };
 pub use crate::gitlfs::{GitImportLfs, LfsMetaData};
-use anyhow::{format_err, Context, Error};
+
+use anyhow::{bail, format_err, Context, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Blobstore;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
@@ -27,7 +28,8 @@ use derived_data::BonsaiDerived;
 use filestore::{self, FilestoreConfig, StoreRequest};
 use futures::{future, stream, Stream, StreamExt, TryStreamExt};
 use futures_stats::TimedTryFutureExt;
-use git2::{ObjectType, Oid, Repository, Sort, TreeWalkMode, TreeWalkResult};
+use git2::{ObjectType, Oid, Repository, Sort};
+use git_hash::ObjectId;
 pub use git_pool::GitPool;
 use git_types::TreeHandle;
 use linked_hash_map::LinkedHashMap;
@@ -40,15 +42,23 @@ use mononoke_types::{
 use slog::{debug, info};
 use sorted_vector_map::SortedVectorMap;
 use std::cell::RefCell;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use tokio::task;
 
 const HGGIT_COMMIT_ID_EXTRA: &str = "convert_revision";
 
+pub fn git2_oid_to_git_hash_objectid(oid: &Oid) -> git_hash::ObjectId {
+    oid.as_bytes().into()
+}
+
+pub fn git_hash_oid_to_git2_oid(oid: &git_hash::oid) -> Oid {
+    Oid::from_bytes(oid.as_bytes()).expect("Just converting OID types should not fail")
+}
+
 fn git_store_request(
     ctx: &CoreContext,
-    git_id: Oid,
+    git_id: ObjectId,
     git_bytes: Bytes,
 ) -> Result<(StoreRequest, impl Stream<Item = Result<Bytes, Error>>), Error> {
     let size = git_bytes.len().try_into()?;
@@ -69,22 +79,27 @@ async fn do_upload<B: Blobstore + Clone + 'static>(
     blobstore: &B,
     filestore_config: FilestoreConfig,
     pool: GitPool,
-    oid: Oid,
+    oid: ObjectId,
     path: &MPath,
     lfs: &GitImportLfs,
 ) -> Result<ContentMetadata, Error> {
     let (git_id, git_bytes) = pool
         .with({
             move |repo| {
-                let blob = repo.find_blob(oid)?;
-                let bytes = Bytes::copy_from_slice(blob.content());
-                let id = blob.id();
-                Result::<_, Error>::Ok((id, bytes))
+                let bytes = {
+                    let odb = repo.odb()?;
+                    let odb_object = odb.read(git_hash_oid_to_git2_oid(&oid))?;
+                    if odb_object.kind() != ObjectType::Blob {
+                        bail!("{} is not a blob", oid);
+                    }
+                    Bytes::copy_from_slice(odb_object.data())
+                };
+                Result::<_, Error>::Ok((oid, bytes))
             }
         })
         .await?;
 
-    if let Some(lfs_meta) = lfs.is_lfs_file(&git_bytes, &git_id) {
+    if let Some(lfs_meta) = lfs.is_lfs_file(&git_bytes, git_id.clone()) {
         cloned!(ctx, lfs, blobstore, filestore_config, path);
         Ok(lfs
             .with(
@@ -160,12 +175,12 @@ pub trait GitimportAccumulator: Sized {
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
-    fn insert(&mut self, oid: Oid, cs_id: ChangesetId, bonsai: &BonsaiChangeset);
-    fn get(&self, oid: &Oid) -> Option<ChangesetId>;
+    fn insert(&mut self, oid: ObjectId, cs_id: ChangesetId, bonsai: &BonsaiChangeset);
+    fn get(&self, oid: &git_hash::oid) -> Option<ChangesetId>;
 }
 
 struct BufferingGitimportAccumulator {
-    inner: LinkedHashMap<Oid, (ChangesetId, BonsaiChangeset)>,
+    inner: LinkedHashMap<ObjectId, (ChangesetId, BonsaiChangeset)>,
 }
 
 impl GitimportAccumulator for BufferingGitimportAccumulator {
@@ -179,11 +194,11 @@ impl GitimportAccumulator for BufferingGitimportAccumulator {
         self.inner.len()
     }
 
-    fn insert(&mut self, oid: Oid, cs_id: ChangesetId, bonsai: &BonsaiChangeset) {
+    fn insert(&mut self, oid: ObjectId, cs_id: ChangesetId, bonsai: &BonsaiChangeset) {
         self.inner.insert(oid, (cs_id, bonsai.clone()));
     }
 
-    fn get(&self, oid: &Oid) -> Option<ChangesetId> {
+    fn get(&self, oid: &git_hash::oid) -> Option<ChangesetId> {
         self.inner.get(oid).map(|p| p.0)
     }
 }
@@ -225,7 +240,8 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
     // Kick off a stream that consumes the walk and prepared commits. Then, produce the Bonsais.
     stream::iter(walk)
         .map(|oid| async {
-            let oid = oid.with_context(|| "While walking commits")?;
+            let oid =
+                git2_oid_to_git_hash_objectid(&(oid.with_context(|| "While walking commits")?));
             task::spawn({
                 cloned!(ctx, repo, pool, prefs.lfs);
                 async move {
@@ -260,7 +276,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
                 .iter()
                 .map(|p| {
                     roots
-                        .get(&p)
+                        .get(p)
                         .copied()
                         .or_else(|| acc.borrow().get(p))
                         .ok_or_else(|| format_err!("Commit was not imported: {}", p))
@@ -333,7 +349,7 @@ pub async fn gitimport(
     path: &Path,
     target: &dyn GitimportTarget,
     prefs: GitimportPreferences,
-) -> Result<LinkedHashMap<Oid, (ChangesetId, BonsaiChangeset)>, Error> {
+) -> Result<LinkedHashMap<ObjectId, (ChangesetId, BonsaiChangeset)>, Error> {
     let import_map =
         gitimport_acc::<BufferingGitimportAccumulator>(ctx, repo, path, target, &prefs)
             .await?
@@ -343,18 +359,16 @@ pub async fn gitimport(
         let git_repo = Repository::open(&path)?;
 
         for (id, (bcs_id, _bcs)) in import_map.iter() {
-            let commit = git_repo.find_commit(*id)?;
-            let tree_id = commit.tree()?.id();
+            let commit = gitimport_objects::read_commit(&git_repo, id)?;
+            let tree_id = hash::GitSha1::from_bytes(commit.tree.as_bytes())?;
 
             let derived_tree = TreeHandle::derive(&ctx, &repo, *bcs_id).await?;
 
-            let derived_tree_id = Oid::from_bytes(derived_tree.oid().as_ref())?;
-
-            if tree_id != derived_tree_id {
+            if tree_id != derived_tree.oid().sha1() {
                 let e = format_err!(
                     "Invalid tree was derived for {:?}: {:?} (expected {:?})",
-                    commit.id(),
-                    derived_tree_id,
+                    id,
+                    derived_tree.oid(),
                     tree_id
                 );
                 return Err(e);
@@ -471,103 +485,24 @@ pub async fn import_tree_as_single_bonsai_changeset(
     ctx: &CoreContext,
     repo: &BlobRepo,
     path: &Path,
-    git_cs_id: Oid,
+    git_cs_id: ObjectId,
     prefs: GitimportPreferences,
 ) -> Result<BonsaiChangeset, Error> {
-    let pool = &GitPool::new(path.to_path_buf())?;
+    let pool = GitPool::new(path.to_path_buf())?;
 
-    let ExtractedCommit { tree, metadata, .. } = ExtractedCommit::new(git_cs_id, pool)
+    let ExtractedCommit { tree, metadata, .. } = ExtractedCommit::new(git_cs_id, &pool)
         .await
         .with_context(|| format!("While extracting {}", git_cs_id))?;
 
-    let file_paths = pool
-        .with({
-            let ctx = ctx.clone();
-            move |repo| {
-                // Order doesn't matter here
-                let mut file_paths = BTreeMap::new();
-
-                let root_tree = repo.find_tree(tree.0)?;
-                // walk() method doesn't allow returning errors, so use this variable
-                // to remember the error we ran into
-                let mut error = None;
-                root_tree.walk(TreeWalkMode::PreOrder, |root, entry| {
-                    let name_obj = try {
-                        let name = entry.name().ok_or_else(|| {
-                            format_err!("{} has an entry with non-utf8 path", root)
-                        })?;
-
-                        let object = entry.to_object(repo).with_context(|| {
-                            format!(
-                                "failed to convert tree entry {} in {} to object",
-                                name, root
-                            )
-                        })?;
-                        (name, object)
-                    };
-                    let (name, object) = match name_obj {
-                        Ok((name, obj)) => (name, obj),
-                        Err(err) => {
-                            error = Some(err);
-                            return TreeWalkResult::Abort;
-                        }
-                    };
-
-                    if let Some(ObjectType::Blob) = object.kind() {
-                        let mode = entry.filemode();
-                        file_paths.insert(root.to_owned() + name, (object.id(), mode));
-                    }
-
-                    TreeWalkResult::Ok
-                })?;
-
-                if let Some(err) = error {
-                    return Err(err);
-                }
-
-                info!(ctx.logger(), "found {} file paths", file_paths.len());
-                Result::<_, Error>::Ok(file_paths)
-            }
-        })
-        .await?;
-
-    let mut uploading = 0;
-    let file_changes = stream::iter(file_paths.into_iter())
-        .map(Ok)
-        .map_ok({
-            let lfs = prefs.lfs.clone();
-            move |(path, (oid, mode))| {
-                uploading += 1;
-                if uploading % 1000 == 0 {
-                    info!(ctx.logger(), "started uploading {} entries", uploading);
-                }
-                cloned!(lfs);
-                async move {
-                    let path = MPath::new(path)?;
-                    let content_metadata = do_upload(
-                        &ctx,
-                        repo.blobstore(),
-                        repo.filestore_config(),
-                        pool.clone(),
-                        oid,
-                        &path,
-                        &lfs,
-                    )
-                    .await?;
-                    let file_type = convert_git_filemode(mode)?;
-                    let file_change = FileChange::tracked(
-                        content_metadata.content_id,
-                        file_type,
-                        content_metadata.total_size,
-                        None,
-                    );
-                    Result::<_, Error>::Ok((path, file_change))
-                }
-            }
-        })
-        .try_buffer_unordered(100)
-        .try_collect::<SortedVectorMap<_, _>>()
-        .await?;
+    let file_changes = find_file_changes(
+        ctx,
+        repo.blobstore(),
+        &repo.filestore_config(),
+        pool.clone(),
+        bonsai_diff(ctx.clone(), pool, tree, HashSet::new()),
+        &prefs.lfs,
+    )
+    .await?;
 
     let bcs = import_bonsai_changeset(
         ctx,
