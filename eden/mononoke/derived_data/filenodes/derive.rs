@@ -18,8 +18,8 @@ use itertools::{Either, Itertools};
 use manifest::{find_intersection_of_diffs_and_parents, Entry};
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::{
-    blobs::File, fetch_manifest_envelope, HgChangesetId, HgFileEnvelope, HgFileNodeId,
-    HgManifestEnvelope,
+    blobs::File, fetch_manifest_envelope, nodehash::NULL_HASH, HgChangesetId, HgFileEnvelope,
+    HgFileNodeId, HgManifestEnvelope,
 };
 use mononoke_types::{BonsaiChangeset, ChangesetId, MPath, RepoPath};
 
@@ -117,6 +117,11 @@ pub async fn generate_all_filenodes(
         .await?
         .hg_changeset_id();
     let root_mf = hg_id.load(ctx, &blobstore).await?.manifestid();
+    // In case of non-existant manifest (that's created by hg if the first commit in the repo
+    // is empty) it's fine to return the empty list of filenodes.
+    if root_mf.clone().into_nodehash() == NULL_HASH {
+        return Ok(vec![]);
+    }
     // Bonsai might have > 2 parents, while mercurial supports at most 2.
     // That's fine for us - we just won't generate filenodes for paths that came from
     // stepparents. That means that linknode for these filenodes will point to a stepparent
