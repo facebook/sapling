@@ -143,6 +143,9 @@ class testrustlock(unittest.TestCase):
                 released += 1
 
             with lock.rustlock(self.vfs, "foo"):
+                # Rust lock takes Python lock as well.
+                self.assertLegacyLock("foo", True)
+
                 with self.assertRaises(error.LockHeld):
                     lock.trylock(
                         self.ui,
@@ -153,11 +156,13 @@ class testrustlock(unittest.TestCase):
                         releasefn=release,
                     )
 
-                # Rust still locked
+                # Rust still locked.
                 self.assertLocked("foo")
 
-                # Make sure we released python lock and didn't call any callbacks.
-                self.assertLegacyLock("foo", False)
+                # Rust lock still has legacy lock.
+                self.assertLegacyLock("foo", True)
+
+                # Make sure we didn't call any callbacks.
                 self.assertEqual(acquired, 0)
                 self.assertEqual(released, 0)
 
@@ -166,9 +171,10 @@ class testrustlock(unittest.TestCase):
         with self.ui.configoverride({("devel", "lockmode"): "rust_only"}):
             with lock.lock(self.vfs, "foo", ui=self.ui):
                 self.assertLocked("foo")
-                self.assertLegacyLock("foo", False)
+                self.assertLegacyLock("foo", True)
 
             self.assertNotLocked("foo")
+            self.assertLegacyLock("foo", False)
 
     def assertLegacyLock(self, name, exists):
         self.assertEqual(self.vfs.lexists(name), exists)

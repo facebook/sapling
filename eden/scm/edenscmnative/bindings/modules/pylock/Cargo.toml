@@ -6,5 +6,4 @@ edition = "2018"
 [dependencies]
 cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.7", default-features = false }
-fs2 = "0.4"
 repolock = { path = "../../../../lib/repolock" }

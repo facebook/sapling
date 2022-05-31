@@ -8,13 +8,11 @@
 #![allow(non_camel_case_types)]
 
 use std::cell::Cell;
-use std::fs::File;
 
 use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
-use fs2::FileExt;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "lock"].join(".");
@@ -24,7 +22,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 py_class!(class pathlock |py| {
-    data lock: Cell<Option<File>>;
+    data lock: Cell<Option<repolock::LockHandle>>;
 
     @classmethod def trylock(_cls, dir: PyPathBuf, name: String, contents: String) -> PyResult<pathlock> {
         Self::create_instance(
@@ -36,7 +34,7 @@ py_class!(class pathlock |py| {
     }
 
     def unlock(&self) -> PyResult<PyNone> {
-        if let Some(f) = self.lock(py).replace(None) {
+        if let Some(mut f) = self.lock(py).replace(None) {
             f.unlock().map_pyerr(py)?;
             Ok(PyNone)
         } else {

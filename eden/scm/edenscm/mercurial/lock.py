@@ -16,7 +16,6 @@ import contextlib
 import copy
 import errno
 import os
-import random
 import socket
 import sys
 import time
@@ -364,12 +363,7 @@ class pythonlock(object):
                 errno.EAGAIN, self.vfs.join(self.f), self.desc, emptylockinfo
             )
 
-        lockrust = self.andrust
-        # Randomly acquire rust lock in tests to get some more coverage.
-        if util.istest() and random.choice((True, False)):
-            lockrust = True
-
-        if lockrust:
+        if self.andrust:
             try:
                 self._rustlock = rustlock(
                     self.vfs,
