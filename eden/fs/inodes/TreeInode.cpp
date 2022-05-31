@@ -3776,23 +3776,20 @@ folly::Future<struct stat> TreeInode::setattr(
   struct stat result(getMount()->initStatData());
   result.st_ino = getNodeId().get();
 
-  // ideally we would like to take the lock once for this function call,
-  // but we can not hold the lock while we materialize, so we have to take the
-  // lock two separate times.
+  // Ideally, we would like to take the lock once for this function
+  // call, but we cannot hold the lock while we materialize, so we
+  // have to take the lock twice.
   {
     auto contents = contents_.wlock();
     auto existing = getMetadataLocked(contents->entries);
 
     if (existing.shouldShortCircuitMetadataUpdate(desired)) {
-      // atime is fuzzy at best, but might as well update here, so that we
-      // remember that the kernel accessed the file here.
-      updateAtimeLocked(contents->entries);
       existing.applyToStat(result);
       XLOG(DBG7) << "Skipping materialization because setattr is a noop";
       return result;
     }
   }
-  // The attributes actually changed we need to mark this directory as
+  // The attributes actually changed so we need to mark this directory as
   // modified.
   materialize();
 
