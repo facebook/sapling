@@ -195,8 +195,14 @@ fn register_error_handlers() {
                 ))
             }
         } else if let Some(e) = e.downcast_ref::<types::errors::NetworkError>() {
-            // Python doesn't expect the NetworkError wrapper, so don't pass that along.
-            specific_error_handler(py, &e.0)
+            // If we don't handle inner error specifically, default to
+            // HttpError which will trigger the network doctor.
+            specific_error_handler(py, &e.0).or_else(|| {
+                Some(PyErr::new::<HttpError, _>(
+                    py,
+                    cpython_ext::Str::from(e.0.to_string()),
+                ))
+            })
         } else if let Some(e) = e.downcast_ref::<cpython_ext::PyErr>() {
             Some(e.clone(py).into())
         } else {
