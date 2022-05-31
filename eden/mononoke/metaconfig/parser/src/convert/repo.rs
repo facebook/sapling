@@ -13,19 +13,21 @@ use anyhow::{anyhow, Context, Result};
 use bookmarks_types::BookmarkName;
 use metaconfig_types::{
     BlameVersion, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
-    ComparableRegex, DerivedDataConfig, DerivedDataTypesConfig, HookBypass, HookConfig,
-    HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams,
-    PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs, SegmentedChangelogConfig,
-    SegmentedChangelogHeadConfig, ServiceWriteRestrictions, SourceControlServiceMonitoring,
-    SourceControlServiceParams, UnodeVersion, WalkerConfig, WalkerJobParams, WalkerJobType,
+    ComparableRegex, CrossRepoCommitValidation, DerivedDataConfig, DerivedDataTypesConfig,
+    HookBypass, HookConfig, HookManagerParams, HookParams, InfinitepushNamespace,
+    InfinitepushParams, LfsParams, PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs,
+    SegmentedChangelogConfig, SegmentedChangelogHeadConfig, ServiceWriteRestrictions,
+    SourceControlServiceMonitoring, SourceControlServiceParams, UnodeVersion, WalkerConfig,
+    WalkerJobParams, WalkerJobType,
 };
 use mononoke_types::{ChangesetId, MPath, PrefixTrie};
 use regex::Regex;
 use repos::{
-    RawBookmarkConfig, RawBundle2ReplayParams, RawCacheWarmupConfig, RawDerivedDataConfig,
-    RawDerivedDataTypesConfig, RawHookConfig, RawHookManagerParams, RawInfinitepushParams,
-    RawLfsParams, RawPushParams, RawPushrebaseParams, RawRepoClientKnobs,
-    RawSegmentedChangelogConfig, RawSegmentedChangelogHeadConfig, RawServiceWriteRestrictions,
+    RawBookmarkConfig, RawBundle2ReplayParams, RawCacheWarmupConfig,
+    RawCrossRepoCommitValidationConfig, RawDerivedDataConfig, RawDerivedDataTypesConfig,
+    RawHookConfig, RawHookManagerParams, RawInfinitepushParams, RawLfsParams, RawPushParams,
+    RawPushrebaseParams, RawRepoClientKnobs, RawSegmentedChangelogConfig,
+    RawSegmentedChangelogHeadConfig, RawServiceWriteRestrictions,
     RawSourceControlServiceMonitoring, RawSourceControlServiceParams, RawWalkerConfig,
     RawWalkerJobParams, RawWalkerJobType,
 };
@@ -526,5 +528,18 @@ impl Convert for RawWalkerConfig {
                 })
                 .transpose()?,
         })
+    }
+}
+
+impl Convert for RawCrossRepoCommitValidationConfig {
+    type Output = CrossRepoCommitValidation;
+
+    fn convert(self) -> Result<Self::Output> {
+        let skip_bookmarks = self
+            .skip_bookmarks
+            .into_iter()
+            .map(BookmarkName::new)
+            .collect::<Result<_, _>>()?;
+        Ok(CrossRepoCommitValidation { skip_bookmarks })
     }
 }

@@ -177,6 +177,7 @@ fn parse_with_repo_definition(
         repo_client_knobs,
         phabricator_callsign,
         walker_config,
+        cross_repo_commit_validation_config,
         ..
     } = named_repo_config;
 
@@ -290,6 +291,8 @@ fn parse_with_repo_definition(
         .transpose()?
         .convert()?;
 
+    let cross_repo_commit_validation_config = cross_repo_commit_validation_config.convert()?;
+
     Ok(RepoConfig {
         enabled,
         storage_config,
@@ -328,6 +331,7 @@ fn parse_with_repo_definition(
         backup_repo_config,
         acl_region_config,
         walker_config,
+        cross_repo_commit_validation_config,
     })
 }
 
@@ -471,7 +475,7 @@ mod test {
     use metaconfig_types::{
         AclRegion, AclRegionConfig, AclRegionRule, BlameVersion, BlobConfig, BlobstoreId,
         BookmarkParams, BubbleDeletionMode, Bundle2ReplayParams, CacheWarmupParams,
-        CommitSyncConfig, CommitSyncConfigVersion, DatabaseConfig,
+        CommitSyncConfig, CommitSyncConfigVersion, CrossRepoCommitValidation, DatabaseConfig,
         DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, DerivedDataTypesConfig,
         EphemeralBlobstoreConfig, FilestoreParams, HookBypass, HookConfig, HookManagerParams,
         HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams, LocalDatabaseConfig,
@@ -823,7 +827,10 @@ mod test {
             
             [walker_config]
             scrub_enabled = true
-            validate_enabled = true       
+            validate_enabled = true
+            
+            [cross_repo_commit_validation_config]
+            skip_bookmarks = ["weirdy"]
         "#;
         let fbsource_repo_def = r#"
             repo_id=0
@@ -1163,6 +1170,9 @@ mod test {
                     validate_enabled: true,
                     params: None,
                 }),
+                cross_repo_commit_validation_config: Some(CrossRepoCommitValidation {
+                    skip_bookmarks: [BookmarkName::new("weirdy").unwrap()].into(),
+                }),
             },
         );
 
@@ -1234,6 +1244,7 @@ mod test {
                 backup_repo_config: None,
                 acl_region_config: None,
                 walker_config: None,
+                cross_repo_commit_validation_config: None,
             },
         );
         assert_eq!(

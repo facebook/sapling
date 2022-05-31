@@ -210,6 +210,8 @@ pub struct RepoConfig {
     pub acl_region_config: Option<AclRegionConfig>,
     /// Walker configuration
     pub walker_config: Option<WalkerConfig>,
+    /// Cross-repo commit validation config
+    pub cross_repo_commit_validation_config: Option<CrossRepoCommitValidation>,
 }
 
 /// Backup repo configuration
@@ -1731,4 +1733,13 @@ pub struct WalkerConfig {
     pub validate_enabled: bool,
     /// Parameters for different walker jobs.
     pub params: Option<HashMap<WalkerJobType, WalkerJobParams>>,
+}
+
+/// Configuration relevant to cross-repo commit validation
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct CrossRepoCommitValidation {
+    /// A set of bookmarks whose changelog entries are deemed to be valid
+    /// Commits that are only found via the changelog for this named bookmark
+    /// are skipped for validation (e.g. import bookmarks can be skipped)
+    pub skip_bookmarks: HashSet<BookmarkName>,
 }

@@ -13,7 +13,7 @@
 /// produced correct results
 use anyhow::{format_err, Context, Error, Result};
 use blobrepo::BlobRepo;
-use bookmarks::{BookmarkUpdateLogEntry, Freshness};
+use bookmarks::{BookmarkName, BookmarkUpdateLogEntry, Freshness};
 use cmdlib::{
     args::{self, MononokeClapApp, MononokeMatches},
     helpers::block_execute,
@@ -26,6 +26,7 @@ use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use mononoke_api_types::InnerRepo;
 use mutable_counters::MutableCountersRef;
 use scuba_ext::MononokeScubaSampleBuilder;
+use std::collections::HashSet;
 
 mod cli;
 mod reporting;
@@ -80,6 +81,7 @@ fn validate_stream<'a>(
 async fn run_in_tailing_mode(
     ctx: &CoreContext,
     blobrepo: BlobRepo,
+    skip_bookmarks: HashSet<BookmarkName>,
     validation_helpers: ValidationHelpers,
     start_id: u64,
     scuba_sample: MononokeScubaSampleBuilder,
@@ -88,6 +90,7 @@ async fn run_in_tailing_mode(
     let stream_of_entries = tail_entries(
         ctx.clone(),
         start_id,
+        skip_bookmarks,
         blobrepo.get_repoid(),
         blobrepo.bookmark_update_log().clone(),
         scuba_sample,
@@ -160,6 +163,10 @@ async fn run<'a>(
     let mysql_options = matches.mysql_options();
     let readonly_storage = matches.readonly_storage();
     let scuba_sample = matches.scuba_sample_builder();
+    let skip_bookmarks = repo_config
+        .cross_repo_commit_validation_config
+        .as_ref()
+        .map_or_else(HashSet::new, |conf| conf.skip_bookmarks.clone());
     let validation_helpers = get_validation_helpers(
         fb,
         ctx.clone(),
@@ -185,7 +192,15 @@ async fn run<'a>(
                 .await
                 .context("While fetching the start_id")?;
 
-            run_in_tailing_mode(&ctx, blobrepo, validation_helpers, start_id, scuba_sample).await
+            run_in_tailing_mode(
+                &ctx,
+                blobrepo,
+                skip_bookmarks,
+                validation_helpers,
+                start_id,
+                scuba_sample,
+            )
+            .await
         }
         (_, _) => Err(format_err!("Incorrect command line arguments provided")),
     }

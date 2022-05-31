@@ -6,7 +6,7 @@
  */
 
 use anyhow::{Context, Error};
-use bookmarks::{BookmarkUpdateLog, BookmarkUpdateLogEntry, Freshness};
+use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateLogEntry, Freshness};
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
@@ -17,13 +17,14 @@ use futures::{
 use mononoke_types::RepositoryId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
 use crate::reporting::log_noop_iteration_to_scuba;
 
 const SLEEP_SECS: u64 = 10;
-const SIGNLE_DB_QUERY_ENTRIES_LIMIT: u64 = 10;
+const SINGLE_DB_QUERY_ENTRIES_LIMIT: u64 = 10;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct QueueSize(pub usize);
@@ -85,25 +86,24 @@ where
 pub(crate) fn tail_entries(
     ctx: CoreContext,
     start_id: u64,
+    skip_bookmarks: HashSet<BookmarkName>,
     repo_id: RepositoryId,
     bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
     scuba_sample: MononokeScubaSampleBuilder,
 ) -> impl stream::Stream<Item = Result<(BookmarkUpdateLogEntry, QueueSize), Error>> {
     unfold_forever((0, start_id), move |(iteration, current_id)| {
-        cloned!(ctx, bookmark_update_log, scuba_sample);
+        cloned!(ctx, bookmark_update_log, skip_bookmarks, scuba_sample);
         async move {
-            let entries: Vec<Result<_, Error>> = bookmark_update_log
+            let entries: Vec<_> = bookmark_update_log
                 .read_next_bookmark_log_entries(
                     ctx.clone(),
                     current_id,
-                    SIGNLE_DB_QUERY_ENTRIES_LIMIT,
+                    SINGLE_DB_QUERY_ENTRIES_LIMIT,
                     Freshness::MaybeStale,
                 )
-                .collect()
-                .await;
-
-            let entries: Result<Vec<_>, Error> = entries.into_iter().collect();
-            let entries: Vec<_> = entries.context("While querying bookmarks_update_log")?;
+                .try_collect()
+                .await
+                .context("While querying bookmarks_update_log")?;
 
             let queue_size =
                 query_queue_size(ctx.clone(), bookmark_update_log.clone(), current_id).await?;
@@ -114,6 +114,11 @@ pub(crate) fn tail_entries(
                         ctx.logger(),
                         "tail_entries generating, iteration {}", iteration
                     );
+                    let entries = entries
+                        .into_iter()
+                        .filter({ |entry| skip_bookmarks.contains(&entry.bookmark_name) })
+                        .collect();
+
                     let entries_with_queue_size: std::iter::Map<_, _> =
                         add_queue_sizes(entries, queue_size as usize).map(Ok);
 
