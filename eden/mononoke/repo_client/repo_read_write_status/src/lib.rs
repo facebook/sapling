@@ -87,7 +87,7 @@ pub struct SqlRepoReadWriteStatus {
 impl SqlConstruct for SqlRepoReadWriteStatus {
     const LABEL: &'static str = "repo-lock";
 
-    const CREATION_QUERY: &'static str = include_str!("../../schemas/sqlite-repo-lock.sql");
+    const CREATION_QUERY: &'static str = include_str!("../../schemas/sqlite-hg-repo-lock.sql");
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
         Self {

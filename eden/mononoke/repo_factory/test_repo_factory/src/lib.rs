@@ -60,6 +60,7 @@ use repo_blobstore::{ArcRepoBlobstore, RepoBlobstore};
 use repo_cross_repo::{ArcRepoCrossRepo, RepoCrossRepo};
 use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
+use repo_lock::SqlRepoLock;
 use repo_permission_checker::{AlwaysAllowMockRepoPermissionChecker, ArcRepoPermissionChecker};
 use requests_table::SqlLongRunningRequestsQueue;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -177,6 +178,7 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlMutableRenamesStore::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
         metadata_con.execute_batch(SegmentedChangelogSqlConnections::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlRepoLock::CREATION_QUERY)?;
         let metadata_db =
             SqlConnectionsWithSchema::new_single(Connection::with_sqlite(metadata_con));
 
