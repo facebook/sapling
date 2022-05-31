@@ -46,7 +46,7 @@ struct WalkerArgs {
 
     /// The type of the walker job that needs to run for the current
     /// repo.
-    #[clap(arg_enum, long)]
+    #[clap(arg_enum, long, conflicts_with = "multirepos")]
     pub walker_type: Option<WalkerJobType>,
 }
 

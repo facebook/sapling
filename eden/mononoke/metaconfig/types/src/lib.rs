@@ -1701,6 +1701,27 @@ pub enum WalkerJobType {
     ShallowHgScrub,
 }
 
+impl fmt::Display for WalkerJobType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let str_val = match &self {
+            Self::Unknown => "unknown",
+            Self::ScrubAllChunked => "scrub-all-chunked",
+            Self::ScrubDerivedChunked => "scrub-derived-chunked",
+            Self::ScrubDerivedNoContentMeta => "scrub-derived-no-content-meta",
+            Self::ScrubDerivedNoContentMetaChunked => "scrub-derived-no-content-meta-chunked",
+            Self::ScrubHgAllChunked => "scrub-hg-all-chunked",
+            Self::ScrubHgFileContent => "scrub-hg-file-content",
+            Self::ScrubHgFileNode => "scrub-hg-file-node",
+            Self::ScrubUnodeAllChunked => "scrub-unode-all-chunked",
+            Self::ScrubUnodeBlame => "scrub-unode-blame",
+            Self::ScrubUnodeFastlog => "scrub-unode-fastlog",
+            Self::ShallowHgScrub => "shallow-hg-scrub",
+            Self::ValidateAll => "validate-all",
+        };
+        write!(f, "{}", str_val)
+    }
+}
+
 /// Configuration relevant to walker job.
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct WalkerConfig {

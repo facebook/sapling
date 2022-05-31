@@ -40,6 +40,7 @@ use crate::detail::{
 };
 
 use crate::WalkerArgs;
+const CHECKPOINT_PREFIX: &str = "mononoke_sharded_walker";
 
 pub async fn setup_common<'a>(
     walk_stats_key: &'static str,
@@ -158,11 +159,20 @@ pub async fn setup_common<'a>(
                         .collect()
                 },
             );
-        // Allow Remaining Deferred = True if either the CLI or the walker
-        // config say so.
-        if let Some(ref mut c) = tail_params.chunking {
-            c.allow_remaining_deferred |=
+
+        if let Some(ref mut chunking) = tail_params.chunking {
+            // Allow Remaining Deferred = True if either the CLI or the walker
+            // config say so.
+            chunking.allow_remaining_deferred |=
                 walker_config_params.map_or(false, |p| p.allow_remaining_deferred);
+            // If the type of walker is specified, the checkpoint name should be
+            // a combination of checkpoint_prefix + walker_type + repo_name.
+            if let Some(walker_type) = walker_type {
+                if let Some(ref mut checkpoints) = chunking.checkpoints {
+                    checkpoints.checkpoint_name =
+                        format!("{}_{}_{}", CHECKPOINT_PREFIX, walker_type, repo);
+                }
+            }
         }
         // NOTE: error_as_data_node_types is an argument that can be specified for
         // individual repos but the walker just assumes one univeral value for it even

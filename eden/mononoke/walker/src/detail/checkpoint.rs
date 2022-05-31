@@ -91,7 +91,7 @@ impl Checkpoint {
 
 #[derive(Clone)]
 pub struct CheckpointsByName {
-    checkpoint_name: String,
+    pub checkpoint_name: String,
     sql_checkpoints: Arc<SqlCheckpoints>,
     pub sample_rate: u64,
 }
