@@ -350,6 +350,20 @@ pub(crate) fn get_commit_id(matches: &ArgMatches<'_>) -> Result<CommitId, Error>
     Ok(commit_ids.into_iter().next().expect("commit id expected"))
 }
 
+/// Gets a single bookmark name specified by the user
+pub(crate) fn get_bookmark_name(matches: &ArgMatches<'_>) -> Result<String, Error> {
+    let commit_ids = get_commit_ids(matches)?;
+    if commit_ids.len() != 1 {
+        bail!("expected 1 bookmark name (got multiple commits ids)",)
+    }
+    let commit_id = commit_ids.into_iter().next().expect("commit id expected");
+    let bookmark_name = match commit_id {
+        CommitId::Bookmark(bookmark_name) => bookmark_name,
+        _ => bail!("expected bookmark name (got {})", commit_id,),
+    };
+    Ok(bookmark_name)
+}
+
 /// Try to resolve a bookmark name to a commit ID.
 async fn try_resolve_bookmark(
     conn: &Connection,

@@ -10,34 +10,43 @@
 use std::collections::HashSet;
 use std::io::Write;
 
-use anyhow::{bail, Error};
-use clap::{App, AppSettings, ArgMatches, SubCommand};
+use anyhow::{anyhow, bail, Error};
+use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use futures::stream;
 use futures_util::stream::StreamExt;
 use serde_derive::Serialize;
 use source_control::types as thrift;
 
 use crate::args::commit_id::{
-    add_commit_id_args, add_scheme_args, get_commit_id, get_request_schemes, get_schemes,
-    resolve_commit_id,
+    add_commit_id_args, add_scheme_args, get_bookmark_name, get_commit_id, get_request_schemes,
+    get_schemes, resolve_commit_id,
 };
 use crate::args::path::{add_optional_multiple_path_args, get_paths};
 use crate::args::repo::{add_repo_args, get_repo_specifier};
 use crate::connection::Connection;
+use crate::lib::bookmark::{render_bookmark_info, BookmarkInfo};
 use crate::lib::commit::{render_commit_info, CommitInfo};
 use crate::render::{Render, RenderStream};
 use crate::util::{byte_count_iec, plural};
 
 pub(super) const NAME: &str = "info";
+pub(super) const ARG_BOOKMARK_INFO: &str = "BOOKMARK_INFO";
 
 pub(super) fn make_subcommand<'a, 'b>() -> App<'a, 'b> {
     let cmd = SubCommand::with_name(NAME)
-        .about("Fetch info about a commit, directory or file")
+        .about("Fetch info about a commit, directory, file or bookmark")
         .setting(AppSettings::ColoredHelp);
     let cmd = add_repo_args(cmd);
     let cmd = add_scheme_args(cmd);
     let cmd = add_commit_id_args(cmd);
     let cmd = add_optional_multiple_path_args(cmd);
+    let cmd = cmd.arg(
+        Arg::with_name(ARG_BOOKMARK_INFO)
+            .long("bookmark-info")
+            .takes_value(false)
+            .help("Display info about bookmark itself rather than the commit it points to")
+            .required(false),
+    );
     cmd
 }
 
@@ -54,6 +63,22 @@ impl Render for CommitInfoOutput {
 
     fn render_json(&self, _matches: &ArgMatches, w: &mut dyn Write) -> Result<(), Error> {
         Ok(serde_json::to_writer(w, &self.commit)?)
+    }
+}
+
+struct BookmarkInfoOutput {
+    bookmark_info: BookmarkInfo,
+    requested: String,
+    schemes: HashSet<String>,
+}
+
+impl Render for BookmarkInfoOutput {
+    fn render(&self, _matches: &ArgMatches, w: &mut dyn Write) -> Result<(), Error> {
+        render_bookmark_info(&self.bookmark_info, &self.requested, &self.schemes, w)
+    }
+
+    fn render_json(&self, _matches: &ArgMatches, w: &mut dyn Write) -> Result<(), Error> {
+        Ok(serde_json::to_writer(w, &self.bookmark_info)?)
     }
 }
 
@@ -150,6 +175,31 @@ async fn commit_info(
     let output = Box::new(CommitInfoOutput {
         commit: commit_info,
         requested: commit_id.to_string(),
+        schemes: get_schemes(matches),
+    });
+    Ok(stream::once(async move { Ok(output as Box<dyn Render>) }).boxed())
+}
+
+async fn bookmark_info(
+    matches: &ArgMatches<'_>,
+    connection: Connection,
+    repo: thrift::RepoSpecifier,
+) -> Result<RenderStream, Error> {
+    let bookmark_name = get_bookmark_name(matches)?;
+    let params = thrift::RepoBookmarkInfoParams {
+        bookmark_name: bookmark_name.clone(),
+        identity_schemes: get_request_schemes(matches),
+        ..Default::default()
+    };
+    let response = connection.repo_bookmark_info(&repo, &params).await?;
+    let info = response
+        .info
+        .ok_or_else(|| anyhow!("Bookmark doesn't exit"))?;
+
+    let info = BookmarkInfo::try_from(&info)?;
+    let output = Box::new(BookmarkInfoOutput {
+        bookmark_info: info,
+        requested: bookmark_name,
         schemes: get_schemes(matches),
     });
     Ok(stream::once(async move { Ok(output as Box<dyn Render>) }).boxed())
@@ -293,6 +343,12 @@ pub(super) async fn run(
                 multiple_path_info(matches, connection, repo, path_vecs).await
             }
         }
-        None => commit_info(matches, connection, repo).await,
+        None => {
+            if matches.is_present(ARG_BOOKMARK_INFO) {
+                bookmark_info(matches, connection, repo).await
+            } else {
+                commit_info(matches, connection, repo).await
+            }
+        }
     }
 }
