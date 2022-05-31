@@ -10,7 +10,6 @@ import unittest
 import edenscm.mercurial.error as error
 import edenscm.mercurial.registrar as registrar
 import silenttestrunner
-from testutil.autofix import eq
 
 command = registrar.command(dict())
 
@@ -23,16 +22,17 @@ def thisisnotacommand(_ui, **opts):
 
 command._table["commandstring"] = "Rust commands are actually registered as strings"
 
-# Redifining commands should not be an issue as long as they do not have any documentation
-@command("notacommand")
-def thisalreadyexisted(_ui, **opts):
-    return "foobar"
-
-
-eq(thisalreadyexisted(None), "foobar")
-
 
 class TestRegistrar(unittest.TestCase):
+    def testnohelptext(self):
+        # Redifining commands should not be an issue as long as they
+        # do not have any documentation
+        @command("notacommand")
+        def thisalreadyexisted(_ui, **opts):
+            return "foobar"
+
+        self.assertEqual(thisalreadyexisted(None), "foobar")
+
     def testhelptextchangefailure(self):
         "Assert that we cannot change the help text"
         with self.assertRaises(error.ProgrammingError) as err:
@@ -42,7 +42,9 @@ class TestRegistrar(unittest.TestCase):
                 "this is the help text for not a command"
                 pass
 
-        eq(str(err.exception), 'duplicate help message for name: "notacommand"')
+        self.assertEqual(
+            str(err.exception), 'duplicate help message for name: "notacommand"'
+        )
 
     def testsynopsischangefailure(self):
         "Assert that we cannot change the synopsis"
@@ -52,7 +54,9 @@ class TestRegistrar(unittest.TestCase):
             def helpredefiner2():
                 pass
 
-        eq(str(err.exception), 'duplicate help message for name: "commandstring"')
+        self.assertEqual(
+            str(err.exception), 'duplicate help message for name: "commandstring"'
+        )
 
 
 if __name__ == "__main__":
