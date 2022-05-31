@@ -192,6 +192,19 @@ struct CommitInfo {
   7: map<string, binary> extra;
 }
 
+struct BookmarkInfo {
+  /// "Warm" bookmark value. That's the value of the bookmark that would be
+  /// provided on any other query (like repo_resolve_bookmark).  For the warm
+  /// value all the data like history or blame data is precomputed.
+  1: map<CommitIdentityScheme, CommitId> warm_ids;
+  /// "Real" bookmark value. This is the actual value of a bookmark. Maybe be
+  /// slightly stale (as the read is coming from local mysql replica).
+  2: map<CommitIdentityScheme, CommitId> fresh_ids;
+  /// The timestamp of the last update. This is the update time when the "fresh"
+  /// value provided was set.
+  3: i64 last_update_timestamp_ns;
+}
+
 enum EntryType {
   /// Unknown type
   UNKNOWN = 0,
@@ -570,6 +583,17 @@ struct RepoResolveCommitPrefixParams {
 
   /// Commit identity schemes to return.
   3: set<CommitIdentityScheme> identity_schemes;
+}
+
+struct RepoBookmarkInfoParams {
+  /// The bookmark name to look up.
+  1: string bookmark_name;
+
+  /// Commit identity schemes to return.
+  /// Note: ask for bonsai hash only for lowest latency.  The hg hash (and
+  /// possibly others) are generated after the bookmark is moved and you might
+  /// need to wait for them.
+  2: set<CommitIdentityScheme> identity_schemes;
 }
 
 const i64 REPO_LIST_BOOKMARKS_MAX_LIMIT = 10000;
@@ -1309,6 +1333,11 @@ struct RepoResolveCommitPrefixResponse {
   2: optional map<CommitIdentityScheme, CommitId> ids;
 }
 
+struct RepoBookmarkInfoResponse {
+  /// Bookmark info, null if doesn't exist.
+  1: optional BookmarkInfo info;
+}
+
 struct RepoListBookmarksResponse {
   /// A map from bookmark name to the bookmarked commit's IDs in the
   /// requested schemes (if available).
@@ -1698,7 +1727,9 @@ service SourceControlService extends fb303_core.BaseService {
   /// Repository methods
   /// ==================
 
-  /// Resolve a bookmark.
+  /// Resolve a bookmark
+  /// The return value may be slightly stale, the served value is only updated
+  /// once all the data for new commits is generated and cache warm.
   RepoResolveBookmarkResponse repo_resolve_bookmark(
     1: RepoSpecifier repo,
     2: RepoResolveBookmarkParams params,
@@ -1708,6 +1739,13 @@ service SourceControlService extends fb303_core.BaseService {
   RepoResolveCommitPrefixResponse repo_resolve_commit_prefix(
     1: RepoSpecifier repo,
     2: RepoResolveCommitPrefixParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
+  /// Comprehensive information about bookmark (use repo_resolve_bookmark for
+  /// simply resolving bookmark value).
+  RepoBookmarkInfoResponse repo_bookmark_info(
+    1: RepoSpecifier repo,
+    2: RepoBookmarkInfoParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
 
   /// List all bookmarks in the repo.
