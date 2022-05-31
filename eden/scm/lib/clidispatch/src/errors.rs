@@ -7,6 +7,7 @@
 
 use std::borrow::Cow;
 
+use configparser::config::ConfigSet;
 use thiserror::Error;
 use thrift_types::edenfs as eden;
 
@@ -67,6 +68,31 @@ pub fn print_error(err: &anyhow::Error, io: &crate::io::IO, _args: &[String]) {
         let _ = io.flush();
     } else {
         let _ = io.write_err(format!("abort: {}\n", err));
+    }
+}
+
+/// Optionally transform an error into something more friendly to the user.
+pub fn triage_error(config: &ConfigSet, cmd_err: anyhow::Error) -> anyhow::Error {
+    if types::errors::is_network_error(&cmd_err)
+        && config
+            .get_or_default("experimental", "network-doctor")
+            .unwrap_or(false)
+    {
+        match network_doctor::Doctor::new().diagnose(config) {
+            Ok(()) => cmd_err,
+            Err(diagnosis) =>
+            // TODO: colorize diagnosis, vary output by verbose/quiet
+            {
+                anyhow::anyhow!(
+                    "command failed due to network error\n\n{}\n\nDetails:\n\n{:?}\n\nOriginal error:\n\n{:?}\n",
+                    diagnosis.treatment(config),
+                    diagnosis,
+                    cmd_err
+                )
+            }
+        }
+    } else {
+        cmd_err
     }
 }
 

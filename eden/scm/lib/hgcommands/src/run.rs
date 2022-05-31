@@ -172,7 +172,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
 
                 dispatcher
                     .run_command(&table, io)
-                    .map_err(|(config, err)| triage_error(&config, err))
+                    .map_err(|(config, err)| errors::triage_error(&config, err))
             })
         } {
             Ok(ret) => ret as i32,
@@ -235,30 +235,6 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     }
 
     exit_code
-}
-
-fn triage_error(config: &ConfigSet, cmd_err: anyhow::Error) -> anyhow::Error {
-    if types::errors::is_network_error(&cmd_err)
-        && config
-            .get_or_default("experimental", "network-doctor")
-            .unwrap_or(false)
-    {
-        match network_doctor::Doctor::new().diagnose(config) {
-            Ok(()) => cmd_err,
-            Err(diagnosis) =>
-            // TODO: colorize diagnosis, vary output by verbose/quiet
-            {
-                anyhow::anyhow!(
-                    "command failed due to network error\n\n{}\n\nDetails:\n\n{:?}\n\nOriginal error:\n\n{:?}\n",
-                    diagnosis.treatment(config),
-                    diagnosis,
-                    cmd_err
-                )
-            }
-        }
-    } else {
-        cmd_err
-    }
 }
 
 /// Similar to `std::env::current_dir`. But does some extra things:

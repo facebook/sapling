@@ -174,20 +174,32 @@ impl Dispatcher {
         let cwd = util::path::absolute(cwd)?;
 
         // Load repo and configuration.
-        let mut optional_repo =
-            OptionalRepo::from_repository_path_and_cwd(&global_opts.repository, &cwd)?;
-        override_config(
-            optional_repo.config_mut(),
-            &global_opts.configfile,
-            &global_opts.config,
-        )?;
+        match OptionalRepo::from_repository_path_and_cwd(&global_opts.repository, &cwd) {
+            Ok(mut optional_repo) => {
+                override_config(
+                    optional_repo.config_mut(),
+                    &global_opts.configfile,
+                    &global_opts.config,
+                )?;
 
-        Ok(Self {
-            args,
-            early_result,
-            global_opts,
-            optional_repo,
-        })
+                Ok(Self {
+                    args,
+                    early_result,
+                    global_opts,
+                    optional_repo,
+                })
+            }
+            Err(err) => {
+                // If we failed to load the repo, make one last ditch effort to load a repo-less config.
+                // This might allow us to run the network doctor even if this repo's dynamic config is not loadable.
+                if let Ok(mut config) = configparser::hg::load::<String, String>(None, None) {
+                    override_config(&mut config, &global_opts.configfile, &global_opts.config)?;
+                    Err(errors::triage_error(&config, err))
+                } else {
+                    Err(err)
+                }
+            }
+        }
     }
 
     /// Get a reference to the parsed config.
