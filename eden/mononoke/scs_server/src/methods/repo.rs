@@ -130,6 +130,27 @@ impl SourceControlServiceImpl {
         }
     }
 
+    /// Comprehensive bookmark info.
+    ///
+    /// Returns value of the bookmark (both fresh and warm) and the timestamp of
+    /// last update.
+    pub(crate) async fn repo_bookmark_info(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoBookmarkInfoParams,
+    ) -> Result<thrift::RepoBookmarkInfoResponse, errors::ServiceError> {
+        let repo = self.repo(ctx, &repo).await?;
+        let info = repo.bookmark_info(params.bookmark_name).await?;
+        Ok(thrift::RepoBookmarkInfoResponse {
+            info: match info {
+                Some(info) => Some(info.into_response_with(&params.identity_schemes).await?),
+                None => None,
+            },
+            ..Default::default()
+        })
+    }
+
     /// List bookmarks.
     pub(crate) async fn repo_list_bookmarks(
         &self,

@@ -695,6 +695,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::RepoCreateCommitParams,
         ) -> Result<thrift::RepoCreateCommitResponse, service::RepoCreateCommitExn>;
 
+        async fn repo_bookmark_info(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoBookmarkInfoParams,
+        ) -> Result<thrift::RepoBookmarkInfoResponse, service::RepoBookmarkInfoExn>;
+
         async fn repo_stack_info(
             repo: thrift::RepoSpecifier,
             params: thrift::RepoStackInfoParams,

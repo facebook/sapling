@@ -42,6 +42,8 @@ impl AddScubaResponse for thrift::RepoResolveBookmarkResponse {}
 
 impl AddScubaResponse for thrift::RepoResolveCommitPrefixResponse {}
 
+impl AddScubaResponse for thrift::RepoBookmarkInfoResponse {}
+
 impl AddScubaResponse for thrift::RepoStackInfoResponse {}
 
 impl AddScubaResponse for thrift::CommitCompareResponse {}
