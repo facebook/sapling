@@ -13,13 +13,13 @@ use std::{
 };
 
 use acl_regions::build_disabled_acl_regions;
-use anyhow::{format_err, Error};
+use anyhow::{anyhow, format_err, Error};
 use blobrepo::{AsBlobRepo, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
 pub use bookmarks::Freshness as BookmarkFreshness;
-use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix};
+use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness};
 use cacheblob::{InProcessLease, LeaseOps};
 use changeset_info::ChangesetInfo;
 use changesets::{Changesets, ChangesetsArc, ChangesetsRef};
@@ -49,7 +49,7 @@ use metaconfig_types::{
 use mononoke_api_types::InnerRepo;
 use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
-    Generation, RepositoryId, Svnrev,
+    Generation, RepositoryId, Svnrev, Timestamp,
 };
 use mutable_renames::{MutableRenames, SqlMutableRenamesStore};
 use permission_checker::{ArcPermissionChecker, PermissionCheckerBuilder};
@@ -754,6 +754,12 @@ pub struct Stack {
     pub leftover_heads: Vec<ChangesetId>,
 }
 
+pub struct BookmarkInfo {
+    pub warm_changeset: ChangesetContext,
+    pub fresh_changeset: ChangesetContext,
+    pub last_update_timestamp: Timestamp,
+}
+
 /// A context object representing a query to a particular repo.
 impl RepoContext {
     pub async fn new(ctx: CoreContext, repo: Arc<Repo>) -> Result<Self, MononokeError> {
@@ -1127,6 +1133,61 @@ impl RepoContext {
             .map(|entry| (entry.cs_id, entry.parents))
             .collect();
         Ok(parents)
+    }
+
+    /// Return comprehensive bookmark info including last update time
+    /// Currently works only for public bookmarks.
+    pub async fn bookmark_info(
+        &self,
+        bookmark: impl AsRef<str>,
+    ) -> Result<Option<BookmarkInfo>, MononokeError> {
+        // a non ascii bookmark name is an invalid request
+        let bookmark = BookmarkName::new(bookmark.as_ref())
+            .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?;
+
+        let (maybe_warm_cs_id, maybe_log_entry) = try_join!(
+            self.warm_bookmarks_cache().get(&self.ctx, &bookmark),
+            async {
+                let mut entries_stream = self
+                    .repo
+                    .blob_repo()
+                    .bookmark_update_log()
+                    .list_bookmark_log_entries(
+                        self.ctx.clone(),
+                        bookmark.clone(),
+                        1,
+                        None,
+                        Freshness::MaybeStale,
+                    );
+                entries_stream.next().await.transpose()
+            }
+        )?;
+
+        let maybe_warm_changeset =
+            maybe_warm_cs_id.map(|cs_id| ChangesetContext::new(self.clone(), cs_id));
+
+        let (_id, maybe_fresh_cs_id, _reason, timestamp) = maybe_log_entry
+            .ok_or_else(|| anyhow!("Bookmark update log has no entries for queried bookmark!"))?;
+
+        let fresh_cs_id = match maybe_fresh_cs_id {
+            Some(cs_id) => cs_id,
+            None => {
+                return Ok(None);
+            }
+        };
+        let fresh_changeset = ChangesetContext::new(self.clone(), fresh_cs_id);
+
+        let last_update_timestamp = timestamp;
+
+        // If the bookmark wasn't found in the warm bookmarks cache return
+        // the fresh value for simplicity.
+        let warm_changeset = maybe_warm_changeset.unwrap_or_else(|| fresh_changeset.clone());
+
+        Ok(Some(BookmarkInfo {
+            warm_changeset,
+            fresh_changeset,
+            last_update_timestamp,
+        }))
     }
 
     /// Get a list of bookmarks.

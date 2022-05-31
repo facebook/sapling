@@ -56,7 +56,7 @@ pub use crate::file::{
     headerless_unified_diff, FileContext, FileId, FileMetadata, FileType, HeaderlessUnifiedDiff,
 };
 pub use crate::path::MononokePath;
-pub use crate::repo::{BookmarkFreshness, Repo, RepoContext};
+pub use crate::repo::{BookmarkFreshness, BookmarkInfo, Repo, RepoContext};
 pub use crate::repo_draft::create_changeset::{CreateChange, CreateChangeFile, CreateCopyInfo};
 pub use crate::repo_draft::RepoDraftContext;
 pub use crate::repo_write::land_stack::PushrebaseOutcome;
