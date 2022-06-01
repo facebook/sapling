@@ -622,6 +622,10 @@ void Overlay::removeChild(
   }
 }
 
+void Overlay::removeChildren(InodeNumber parent, const DirContents& content) {
+  saveOverlayDir(parent, content);
+}
+
 void Overlay::renameChild(
     InodeNumber src,
     InodeNumber dst,

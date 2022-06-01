@@ -15,6 +15,7 @@
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeOrTreeOrEntry.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
 
@@ -222,6 +223,37 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponentPiece name,
       InvalidationRequired invalidate,
       ObjectFetchContext& context);
+
+  /**
+   * Internal method intended for removeRecursively to use. This method does not
+   * flush invalidation so the caller won't see the up-to-date content after
+   * return. Call EdenMount::flushInvalidations to ensure any changes to the
+   * inode will be visible after it returns.
+   */
+  ImmediateFuture<folly::Unit> removeRecursivelyNoFlushInvalidation(
+      PathComponentPiece name,
+      InvalidationRequired invalidate,
+      ObjectFetchContext& context);
+
+  /**
+   * Attempts to remove and unlink children of this inode. Under concurrent
+   * modification, it is not guaranteed that TreeInode is empty after this
+   * function returns.
+   */
+  void removeAllChildrenRecursively(
+      InvalidationRequired invalidate,
+      ObjectFetchContext& context,
+      const RenameLock& renameLock);
+
+  /**
+   * For unloaded nodes, the removal should be simpler: remove the node
+   * from entries and update the overlay.
+   * If the return value is valid, the entry was not removed, and the child's
+   * loaded inode was returned.
+   */
+  InodePtr tryRemoveUnloadedChild(
+      PathComponentPiece name,
+      InvalidationRequired invalidate);
 
   /**
    * Create a filesystem node.
