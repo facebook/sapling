@@ -4120,7 +4120,8 @@ def ensureenv():
     newenv = os.environ.copy()
     newenv.update(env)
     # Pick the right Python interpreter
-    p = subprocess.Popen([PYTHON] + sys.argv, env=newenv)
+    python = env.get("PYTHON_SYS_EXECUTABLE", PYTHON)
+    p = subprocess.Popen([python] + sys.argv, env=newenv)
     sys.exit(p.wait())
 
 
