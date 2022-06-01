@@ -2152,6 +2152,10 @@ class localrepository(object):
                     pass
             delattr(self, "dirstate")
 
+    def flushandinvalidate(self, clearfilecache=False):
+        self.commitpending()
+        self.invalidate(clearfilecache=clearfilecache)
+
     def invalidate(self, clearfilecache=False):
         """Invalidates both store and non-store parts other than dirstate
 
@@ -2315,7 +2319,7 @@ class localrepository(object):
             "lock",
             wait,
             releasefn,
-            self.invalidate,
+            self.flushandinvalidate,
             _("repository %s") % self.origroot,
         )
         self._lockref = weakref.ref(l)
