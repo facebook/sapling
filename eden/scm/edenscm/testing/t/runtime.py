@@ -367,7 +367,7 @@ class TestTmp:
 
     def _setup(self, tmpprefix):
         tmp = tempfile.mkdtemp(prefix=tmpprefix or "ttesttmp")
-        path = Path(tmp)
+        path = Path(os.path.realpath(tmp))
 
         fs = OSFS()
         fs.chdir(path)
