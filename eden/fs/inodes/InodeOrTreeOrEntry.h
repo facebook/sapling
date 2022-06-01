@@ -15,6 +15,7 @@
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/UnmaterializedUnloadedBlobDirEntry.h"
 #include "eden/fs/model/BlobMetadata.h"
+#include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/utils/ImmediateFuture.h"
@@ -73,6 +74,10 @@ class InodeOrTreeOrEntry {
   };
   ContainedType testGetContainedType() const;
 
+  ImmediateFuture<TreeEntryType> getTreeEntryType(
+      RelativePathPiece path,
+      ObjectFetchContext& fetchContext) const;
+
   /**
    * Get the InodeOrTreeOrEntry object for a child of this directory.
    *
@@ -91,7 +96,17 @@ class InodeOrTreeOrEntry {
       ObjectStore* objectStore,
       ObjectFetchContext& fetchContext) const;
 
-  ImmediateFuture<BlobMetadata> getBlobMetadata(
+  /**
+   * Get all the available attributes for a file entry in this tree. Available
+   * attributes are currently:
+   * - sha1
+   * - size
+   * - source control type
+   *
+   * Note that we return error values for sha1s and sizes of directories and
+   * symlinks.
+   */
+  ImmediateFuture<EntryAttributes> getEntryAttributes(
       RelativePathPiece path,
       ObjectStore* objectStore,
       ObjectFetchContext& fetchContext) const;

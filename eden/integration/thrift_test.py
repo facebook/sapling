@@ -9,6 +9,7 @@ import hashlib
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import List, Pattern, TypeVar, Union
 
@@ -192,26 +193,36 @@ class ThriftTest(testcase.EdenRepoTest):
             return client.getAttributesFromFiles(thrift_params)
 
     # Change this if more attributes are added
-    ALL_ATTRIBUTES = FileAttributes.FILE_SIZE | FileAttributes.SHA1_HASH
+    ALL_ATTRIBUTES = (
+        FileAttributes.FILE_SIZE
+        | FileAttributes.SHA1_HASH
+        | FileAttributes.SOURCE_CONTROL_TYPE
+    )
 
     def get_all_attributes(self, files: List[bytes]) -> GetAttributesFromFilesResult:
         return self.get_attributes(files, self.ALL_ATTRIBUTES)
 
     def test_get_attributes(self) -> None:
         # expected results for file named "hello"
-        expected_hello_sha1, expected_hello_size = self.get_expected_file_attributes(
-            "hello"
-        )
+        (
+            expected_hello_sha1,
+            expected_hello_size,
+            expected_hello_type,
+        ) = self.get_expected_file_attributes("hello")
         expected_hello_data = FileAttributeData(
-            expected_hello_sha1, expected_hello_size
+            expected_hello_sha1, expected_hello_size, expected_hello_type
         )
         expected_hello_result = FileAttributeDataOrError(expected_hello_data)
 
         # expected results for file "adir/file"
-        expected_adir_sha1, expected_adir_size = self.get_expected_file_attributes(
-            "adir/file"
+        (
+            expected_adir_sha1,
+            expected_adir_size,
+            expected_adir_type,
+        ) = self.get_expected_file_attributes("adir/file")
+        expected_adir_data = FileAttributeData(
+            expected_adir_sha1, expected_adir_size, expected_adir_type
         )
-        expected_adir_data = FileAttributeData(expected_adir_sha1, expected_adir_size)
         expected_adir_result = FileAttributeDataOrError(expected_adir_data)
 
         # list of expected_results
@@ -230,7 +241,7 @@ class ThriftTest(testcase.EdenRepoTest):
     def test_get_size_only(self) -> None:
         # expected size result for file
         expected_hello_size = self.get_expected_file_attributes("hello")[1]
-        expected_hello_data = FileAttributeData(None, expected_hello_size)
+        expected_hello_data = FileAttributeData(None, expected_hello_size, None)
         expected_hello_result = FileAttributeDataOrError(expected_hello_data)
 
         # create result object for "hello"
@@ -246,6 +257,25 @@ class ThriftTest(testcase.EdenRepoTest):
         self.assertEqual(1, len(results.res))
         self.assertEqual(expected_result, results)
 
+    def test_get_type_only(self) -> None:
+        # expected size result for file
+        expected_hello_type = self.get_expected_file_attributes("hello")[2]
+        expected_hello_data = FileAttributeData(None, None, expected_hello_type)
+        expected_hello_result = FileAttributeDataOrError(expected_hello_data)
+
+        # create result object for "hello"
+        result_list = [
+            expected_hello_result,
+        ]
+        expected_result = GetAttributesFromFilesResult(result_list)
+
+        # get actual result
+        results = self.get_attributes([b"hello"], FileAttributes.SOURCE_CONTROL_TYPE)
+
+        # ensure expected and actual results match
+        self.assertEqual(1, len(results.res))
+        self.assertEqual(expected_result, results)
+
     def test_get_attributes_throws_for_non_existent_file(self) -> None:
         results = self.get_all_attributes([b"i_do_not_exist"])
         self.assertEqual(1, len(results.res))
@@ -253,11 +283,10 @@ class ThriftTest(testcase.EdenRepoTest):
             results, "i_do_not_exist: No such file or directory", 0
         )
 
-    """
     def test_get_sha1_only(self) -> None:
         # expected sha1 result for file
         expected_hello_sha1 = self.get_expected_file_attributes("hello")[0]
-        expected_hello_data = FileAttributeData(expected_hello_sha1, None)
+        expected_hello_data = FileAttributeData(expected_hello_sha1, None, None)
         expected_hello_result = FileAttributeDataOrError(expected_hello_data)
 
         # create result object for "hello"
@@ -287,18 +316,28 @@ class ThriftTest(testcase.EdenRepoTest):
         self.assertEqual(1, len(results.res))
         self.assert_attribute_error(results, "path cannot be the empty string", 0)
 
-    def test_get_attributes_throws_for_directory(self) -> None:
+    def test_get_attributes_directory(self) -> None:
         results = self.get_all_attributes([b"adir"])
         self.assertEqual(1, len(results.res))
         self.assert_attribute_error(results, "adir: Is a directory", 0)
 
-    def test_get_attributes_throws_for_symlink(self) -> None:
-        # Fails because caller should resolve the symlink themselves.
+    def test_get_attributes_symlink(self) -> None:
         results = self.get_all_attributes([b"slink"])
         self.assertEqual(1, len(results.res))
-        self.assert_attribute_error(
-            results, "slink: file is a symlink: Invalid argument", 0
-        )
+        if sys.platform != "win32":
+            self.assert_attribute_error(
+                results, "slink: file is a symlink: Invalid argument", 0
+            )
+        else:  # one windows symlinks don't report as symlinks but rather regular files.
+            (
+                expected_sha1,
+                expected_size,
+                expected_type,
+            ) = self.get_expected_file_attributes("slink")
+            expected_data = FileAttributeData(
+                expected_sha1, expected_size, expected_type
+            )
+            expected_result = FileAttributeDataOrError(expected_data)
 
     def test_get_attributes_no_files(self) -> None:
         results = self.get_all_attributes([])
@@ -319,7 +358,6 @@ class ThriftTest(testcase.EdenRepoTest):
         # ensure expected and actual results match
         self.assertEqual(1, len(results.res))
         self.assertEqual(expected_result, results)
-    """
 
     def assert_attribute_error(
         self,

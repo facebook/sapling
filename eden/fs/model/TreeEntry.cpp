@@ -14,6 +14,7 @@
 #include <folly/Range.h>
 #include <folly/logging/xlog.h>
 
+#include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -21,6 +22,19 @@ namespace facebook::eden {
 
 using namespace folly;
 using namespace folly::io;
+
+EntryAttributes::EntryAttributes(
+    folly::Try<Hash20> contentsHash,
+    folly::Try<uint64_t> fileLength,
+    folly::Try<TreeEntryType> fileType)
+    : sha1(std::move(contentsHash)),
+      size(std::move(fileLength)),
+      type(std::move(fileType)) {}
+
+EntryAttributes::EntryAttributes(
+    BlobMetadata blobMetadata,
+    TreeEntryType fileType)
+    : sha1(blobMetadata.sha1), size(blobMetadata.size), type(fileType) {}
 
 mode_t modeFromTreeEntryType(TreeEntryType ft) {
   switch (ft) {

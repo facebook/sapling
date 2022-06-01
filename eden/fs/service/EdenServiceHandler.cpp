@@ -627,12 +627,12 @@ ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPath(
       });
 }
 
-ImmediateFuture<BlobMetadata> EdenServiceHandler::getBlobMetadataForPath(
+ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
     AbsolutePathPiece mountPoint,
     StringPiece path,
     ObjectFetchContext& fetchContext) {
   if (path.empty()) {
-    return ImmediateFuture<BlobMetadata>(newEdenError(
+    return ImmediateFuture<EntryAttributes>(newEdenError(
         EINVAL,
         EdenErrorType::ARGUMENT_ERROR,
         "path cannot be the empty string"));
@@ -646,11 +646,11 @@ ImmediateFuture<BlobMetadata> EdenServiceHandler::getBlobMetadataForPath(
     return edenMount->getInodeOrTreeOrEntry(relativePath, fetchContext)
         .thenValue([relativePath, objectStore, &fetchContext](
                        const InodeOrTreeOrEntry& inodeOrTree) {
-          return inodeOrTree.getBlobMetadata(
+          return inodeOrTree.getEntryAttributes(
               relativePath, objectStore, fetchContext);
         });
   } catch (const std::exception& e) {
-    return ImmediateFuture<BlobMetadata>(
+    return ImmediateFuture<EntryAttributes>(
         newEdenError(EINVAL, EdenErrorType::ARGUMENT_ERROR, e.what()));
   }
 }
@@ -1662,6 +1662,23 @@ EdenServiceHandler::semifuture_getFileInformation(
 #define ATTR_BITMASK(req, attr) \
   ((req) & static_cast<uint64_t>((FileAttributes::attr)))
 
+namespace {
+SourceControlType entryTypeToThriftType(TreeEntryType type) {
+  switch (type) {
+    case TreeEntryType::TREE:
+      return SourceControlType::TREE;
+    case TreeEntryType::REGULAR_FILE:
+      return SourceControlType::REGULAR_FILE;
+    case TreeEntryType::EXECUTABLE_FILE:
+      return SourceControlType::EXECUTABLE_FILE;
+    case TreeEntryType::SYMLINK:
+      return SourceControlType::SYMLINK;
+    default:
+      throw std::system_error(EINVAL, std::generic_category());
+  }
+}
+} // namespace
+
 folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResult>>
 EdenServiceHandler::semifuture_getAttributesFromFiles(
     std::unique_ptr<GetAttributesFromFilesParams> params) {
@@ -1684,16 +1701,16 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
                              &fetchContext,
                              mountPath = mountPath.copy(),
                              reqBitmask](auto&&) mutable {
-                   vector<ImmediateFuture<BlobMetadata>> futures;
+                   vector<ImmediateFuture<EntryAttributes>> futures;
                    for (const auto& p : paths) {
                      futures.emplace_back(
-                         getBlobMetadataForPath(mountPath, p, fetchContext));
+                         getEntryAttributesForPath(mountPath, p, fetchContext));
                    }
 
                    // Collect all futures into a single tuple
                    return facebook::eden::collectAll(std::move(futures))
                        .thenValue([paths = std::move(paths), reqBitmask](
-                                      std::vector<folly::Try<BlobMetadata>>&&
+                                      std::vector<folly::Try<EntryAttributes>>&&
                                           allRes) {
                          auto res =
                              std::make_unique<GetAttributesFromFilesResult>();
@@ -1701,27 +1718,54 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
                              ATTR_BITMASK(reqBitmask, FILE_SIZE);
                          auto sha1Requested =
                              ATTR_BITMASK(reqBitmask, SHA1_HASH);
-                         for (const auto& tryMetadata : allRes) {
+                         auto typeRequested =
+                             ATTR_BITMASK(reqBitmask, SOURCE_CONTROL_TYPE);
+
+                         size_t index = 0;
+                         for (const auto& tryAttributes : allRes) {
                            FileAttributeDataOrError file_res;
                            // check for exceptions. if found, return EdenError
                            // early
-                           if (tryMetadata.hasException()) {
+                           if (tryAttributes.hasException()) {
                              file_res.error_ref() =
-                                 newEdenError(tryMetadata.exception());
+                                 newEdenError(tryAttributes.exception());
                            } else { /* No exceptions, fill in data */
                              FileAttributeData file_data;
-                             const auto& metadata = tryMetadata.value();
-                             // Only fill in requested fields
-                             if (sha1Requested) {
-                               file_data.sha1_ref() =
-                                   thriftHash20(metadata.sha1);
+                             const auto& attributes = tryAttributes.value();
+
+                             // clients rely on these top level exceptions to
+                             // detect symlinks and directories.
+                             // TODO(kmancini): When Buck2 migrates to our
+                             // explicit type information, we can get shape up
+                             // this API better.
+                             if (attributes.sha1.hasException()) {
+                               file_res.error_ref() =
+                                   newEdenError(attributes.sha1.exception());
+                             } else if (attributes.size.hasException()) {
+                               file_res.error_ref() =
+                                   newEdenError(attributes.size.exception());
+                             } else if (attributes.type.hasException()) {
+                               file_res.error_ref() =
+                                   newEdenError(attributes.type.exception());
+                             } else {
+                               // Only fill in requested fields
+                               if (sha1Requested) {
+                                 file_data.sha1_ref() =
+                                     thriftHash20(attributes.sha1.value());
+                               }
+                               if (sizeRequested) {
+                                 file_data.fileSize_ref() =
+                                     attributes.size.value();
+                               }
+                               if (typeRequested) {
+                                 file_data.type_ref() = entryTypeToThriftType(
+                                     attributes.type.value());
+                               }
+                               file_res.data_ref() = file_data;
                              }
-                             if (sizeRequested) {
-                               file_data.fileSize_ref() = metadata.size;
-                             }
-                             file_res.data_ref() = file_data;
                            }
                            res->res_ref()->emplace_back(file_res);
+                           ++index;
                          }
                          return res;
                        });

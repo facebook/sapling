@@ -62,11 +62,13 @@ enum Flags {
 struct TestFileInfo {
   TestFileInfo(
       dtype_t dtype_,
+      TreeEntryType treeEntryType_,
       ContainedType ctype_,
       mode_t mode_,
       std::string path_,
       int flags_)
       : dtype(dtype_),
+        treeEntryType(treeEntryType_),
         containedType(ctype_),
         mode(mode_),
         path(std::move(path_)),
@@ -94,6 +96,10 @@ struct TestFileInfo {
   }
   bool isSymlink() const {
     return dtype == dtype_t::Symlink;
+  }
+
+  TreeEntryType getTreeEntryType() const {
+    return treeEntryType;
   }
 
   std::string getLogPath() const {
@@ -126,6 +132,7 @@ struct TestFileInfo {
   }
 
   dtype_t dtype{dtype_t::Unknown};
+  TreeEntryType treeEntryType;
   ContainedType containedType;
   mode_t mode;
   RelativePath path;
@@ -145,37 +152,66 @@ struct TestFileInfo {
 // FileInode/TreeInode
 #define DEFAULT_MODE_DIR (0)
 #define DEFAULT_MODE_REG (0)
+#define DEFAULT_MODE_EXE (0)
 #else
 #define DEFAULT_MODE_DIR                                                 \
   (S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | \
    S_IXOTH)
 #define DEFAULT_MODE_REG (S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+#define DEFAULT_MODE_EXE                                                 \
+  (S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | \
+   S_IXOTH)
 #endif
 class TestFileDatabase {
  public:
-#define ENTRY(dtype_, ctype_, path, flags)                                   \
-  std::make_shared<const TestFileInfo>(                                      \
-      dtype_t::dtype_,                                                       \
-      ContainedType::ctype_,                                                 \
-      dtype_t::dtype_ == dtype_t::Dir ? DEFAULT_MODE_DIR : DEFAULT_MODE_REG, \
-      path,                                                                  \
+#define ENTRY(dtype_, etype_, ctype_, path, flags)                 \
+  std::make_shared<const TestFileInfo>(                            \
+      dtype_t::dtype_,                                             \
+      TreeEntryType::etype_,                                       \
+      ContainedType::ctype_,                                       \
+      (TreeEntryType::etype_ == TreeEntryType::TREE                \
+           ? DEFAULT_MODE_DIR                                      \
+           : (TreeEntryType::etype_ == TreeEntryType::REGULAR_FILE \
+                  ? DEFAULT_MODE_REG                               \
+                  : DEFAULT_MODE_EXE)),                            \
+      path,                                                        \
       flags)
 #define ENTRIES                                                              \
-  ENTRY(Dir, Inode, "", FLAG_M | FLAG_L),                                    \
-      ENTRY(Regular, DirEntry, "root_fileA", 0),                             \
-      ENTRY(Regular, DirEntry, "root_fileB", 0),                             \
-      ENTRY(Dir, Tree, "root_dirA", 0),                                      \
-      ENTRY(Regular, TreeEntry, "root_dirA/child1_fileA1", 0),               \
-      ENTRY(Regular, TreeEntry, "root_dirA/child1_fileA2", 0),               \
-      ENTRY(Dir, Tree, "root_dirB", 0),                                      \
-      ENTRY(Regular, TreeEntry, "root_dirB/child1_fileB1", 0),               \
-      ENTRY(Regular, TreeEntry, "root_dirB/child1_fileB2", 0),               \
-      ENTRY(Dir, Tree, "root_dirB/child1_dirB1", 0),                         \
-      ENTRY(Regular, TreeEntry, "root_dirB/child1_dirB1/child2_fileBB1", 0), \
-      ENTRY(Regular, TreeEntry, "root_dirB/child1_dirB1/child2_fileBB2", 0), \
-      ENTRY(Dir, Tree, "root_dirB/child1_dirB2", 0),                         \
-      ENTRY(Regular, TreeEntry, "root_dirB/child1_dirB2/child2_fileBB3", 0), \
-      ENTRY(Regular, TreeEntry, "root_dirB/child1_dirB2/child2_fileBB4", 0)
+  ENTRY(Dir, TREE, Inode, "", FLAG_M | FLAG_L),                              \
+      ENTRY(Regular, REGULAR_FILE, DirEntry, "root_fileA", 0),               \
+      ENTRY(Regular, REGULAR_FILE, DirEntry, "root_fileB", 0),               \
+      ENTRY(Dir, TREE, Tree, "root_dirA", 0),                                \
+      ENTRY(Regular, REGULAR_FILE, TreeEntry, "root_dirA/child1_fileA1", 0), \
+      ENTRY(Regular, REGULAR_FILE, TreeEntry, "root_dirA/child1_fileA2", 0), \
+      ENTRY(Dir, TREE, Tree, "root_dirB", 0),                                \
+      ENTRY(Regular, REGULAR_FILE, TreeEntry, "root_dirB/child1_fileB1", 0), \
+      ENTRY(Regular, REGULAR_FILE, TreeEntry, "root_dirB/child1_fileB2", 0), \
+      ENTRY(Dir, TREE, Tree, "root_dirB/child1_dirB1", 0),                   \
+      ENTRY(                                                                 \
+          Regular,                                                           \
+          REGULAR_FILE,                                                      \
+          TreeEntry,                                                         \
+          "root_dirB/child1_dirB1/child2_fileBB1",                           \
+          0),                                                                \
+      ENTRY(                                                                 \
+          Regular,                                                           \
+          REGULAR_FILE,                                                      \
+          TreeEntry,                                                         \
+          "root_dirB/child1_dirB1/child2_fileBB2",                           \
+          0),                                                                \
+      ENTRY(Dir, TREE, Tree, "root_dirB/child1_dirB2", 0),                   \
+      ENTRY(                                                                 \
+          Regular,                                                           \
+          REGULAR_FILE,                                                      \
+          TreeEntry,                                                         \
+          "root_dirB/child1_dirB2/child2_fileBB3",                           \
+          0),                                                                \
+      ENTRY(                                                                 \
+          Regular,                                                           \
+          REGULAR_FILE,                                                      \
+          TreeEntry,                                                         \
+          "root_dirB/child1_dirB2/child2_fileBB4",                           \
+          0)
 
   TestFileDatabase() : initialInfos_({ENTRIES}) {
     for (auto& info : initialInfos_) {
@@ -470,13 +506,15 @@ void verifyTreeState(
       if ((verify_flags & VERIFY_BLOB_METADATA) &&
           inodeOr.getDtype() == dtype_t::Regular) {
         auto metadata = inodeOr
-                            .getBlobMetadata(
+                            .getEntryAttributes(
                                 expected.path,
                                 mount.getEdenMount()->getObjectStore(),
                                 ObjectFetchContext::getNullContext())
                             .get();
-        EXPECT_EQ(metadata.sha1, expected.getSHA1()) << dbgMsg;
-        EXPECT_EQ(metadata.size, expected.getContents().size()) << dbgMsg;
+        EXPECT_EQ(metadata.sha1.value(), expected.getSHA1()) << dbgMsg;
+        EXPECT_EQ(metadata.size.value(), expected.getContents().size())
+            << dbgMsg;
+        EXPECT_EQ(metadata.type.value(), expected.getTreeEntryType()) << dbgMsg;
       }
 
       if ((verify_flags & VERIFY_STAT)) {
@@ -581,7 +619,7 @@ TEST(InodeOrTreeOrEntryTest, fileOpsOnCorrectObjectsOnly) {
     }
 
     auto metadataTry = inodeOr
-                           .getBlobMetadata(
+                           .getEntryAttributes(
                                info.path,
                                mount.getEdenMount()->getObjectStore(),
                                ObjectFetchContext::getNullContext())
@@ -591,20 +629,29 @@ TEST(InodeOrTreeOrEntryTest, fileOpsOnCorrectObjectsOnly) {
           << " on path " << info.getLogPath();
       if (metadataTry.hasValue()) {
         auto& metadata = metadataTry.value();
-        EXPECT_EQ(metadata.sha1, info.getSHA1())
+        EXPECT_EQ(metadata.sha1.value(), info.getSHA1())
             << " on path " << info.getLogPath();
-        EXPECT_EQ(metadata.size, info.getContents().size())
+        EXPECT_EQ(metadata.size.value(), info.getContents().size())
+            << " on path " << info.getLogPath();
+        EXPECT_EQ(metadata.type.value(), info.getTreeEntryType())
             << " on path " << info.getLogPath();
       }
     } else {
-      EXPECT_EQ(true, metadataTry.hasException())
+      EXPECT_EQ(true, metadataTry.hasValue())
           << " on path " << info.getLogPath();
+      if (metadataTry.hasValue()) {
+        auto& metadata = metadataTry.value();
+        EXPECT_TRUE(metadata.sha1.hasException());
+        EXPECT_TRUE(metadata.size.hasException());
+        EXPECT_EQ(metadata.type.value(), info.getTreeEntryType())
+            << " on path " << info.getLogPath();
+      }
     }
+    VERIFY_TREE(VERIFY_INITIAL);
   }
-  VERIFY_TREE(VERIFY_INITIAL);
 }
 
-TEST(InodeOrTreeOrEntryTest, getBlobMetadataDoesNotChangeState) {
+TEST(InodeOrTreeOrEntryTest, getEntryAttributesDoesNotChangeState) {
   TestFileDatabase files;
   auto mount = TestMount{MakeTestTreeBuilder(files)};
 

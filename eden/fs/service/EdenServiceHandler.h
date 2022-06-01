@@ -26,6 +26,7 @@ class EdenMount;
 class EdenServer;
 class TreeInode;
 class ObjectFetchContext;
+class EntryAttributes;
 #ifdef EDEN_HAVE_USAGE_SERVICE
 class EdenFSSmartPlatformServiceEndpoint;
 #endif
@@ -89,7 +90,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::vector<std::string>> paths,
       std::unique_ptr<SyncBehavior> sync) override;
 
-  ImmediateFuture<BlobMetadata> getBlobMetadataForPath(
+  ImmediateFuture<EntryAttributes> getEntryAttributesForPath(
       AbsolutePathPiece mountPoint,
       folly::StringPiece path,
       ObjectFetchContext& fetchContext);

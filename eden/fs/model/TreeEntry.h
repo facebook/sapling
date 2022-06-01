@@ -13,12 +13,14 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 #include <folly/String.h>
+#include <folly/Try.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <iosfwd>
 #include <optional>
 
 namespace facebook::eden {
+class BlobMetadata;
 
 /**
  * Represents the allowed types of entries in version control trees.
@@ -30,6 +32,20 @@ enum class TreeEntryType : uint8_t {
   REGULAR_FILE,
   EXECUTABLE_FILE,
   SYMLINK,
+};
+
+class EntryAttributes {
+ public:
+  EntryAttributes(
+      folly::Try<Hash20> contentsHash,
+      folly::Try<uint64_t> fileLength,
+      folly::Try<TreeEntryType> fileType);
+
+  EntryAttributes(BlobMetadata blobMetadata, TreeEntryType fileType);
+
+  folly::Try<Hash20> sha1;
+  folly::Try<uint64_t> size;
+  folly::Try<TreeEntryType> type;
 };
 
 /**
