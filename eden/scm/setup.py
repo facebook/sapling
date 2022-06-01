@@ -941,6 +941,10 @@ class buildembedded(Command):
             # copy .pyd's from ./build/lib.win-amd64/, not from ./
             parentdir = pjoin(scriptdir, "build", distutils_dir_name("lib"))
         copy_to(pjoin(parentdir, "edenscmnative"), pjoin(dirforexts, "edenscmnative"))
+        # copy the conch_parser extension, not living in the edenscmnative directory
+        for pattern in ["*.pyd", "*.so"]:
+            for path in glob.glob(pjoin(scriptdir, pattern)):
+                copy_to(path, dirforexts)
 
     def _zip_pyc_files(self, zipname):
         """Modify a zip archive to include edenscm .pyc files"""
