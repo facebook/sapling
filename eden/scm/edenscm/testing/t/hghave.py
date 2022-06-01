@@ -722,6 +722,11 @@ def has_osxpackaging():
         return False
 
 
+@check("security", "OS X security helper", exe=True)
+def has_security():
+    return matchoutput("security", rb"security commands are", ignorestatus=1)
+
+
 @check("linuxormacos", "Linux or MacOS")
 def has_linuxormacos():
     # This isn't a perfect test for MacOS. But it is sufficient for our needs.
