@@ -522,7 +522,8 @@ fn mount_scratch_space_on(input_mount_point: &str) -> Result<()> {
         // See [`crate::facebook::write_apfs_issue_marker`] for detail
         #[cfg(feature = "fb")]
         if let Some(code) = output.status.code() {
-            if code == 16896 {
+            // This is the error code we get when we failed to mount the APFS subvolumes.
+            if code == 66 {
                 crate::facebook::write_apfs_issue_marker();
             }
         }
