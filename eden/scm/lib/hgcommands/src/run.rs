@@ -185,8 +185,11 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
                     // there is no fallback path (ex. all commands are in Rust, and the
                     // Rust implementation might just call into Python cmdutil utilities).
                     err.is::<errors::UnknownCommand>();
+                let failed_fallback = err.is::<errors::FailedFallbackToPython>();
 
-                if should_fallback {
+                if failed_fallback {
+                    197
+                } else if should_fallback {
                     // Change the current dir back to the original so it is not surprising to the Python
                     // code.
                     let _ = env::set_current_dir(cwd);

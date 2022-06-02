@@ -29,6 +29,10 @@ pub struct UnknownCommand(pub String);
 pub struct FallbackToPython;
 
 #[derive(Debug, Error)]
+#[error("")]
+pub struct FailedFallbackToPython;
+
+#[derive(Debug, Error)]
 #[error(
     "'{0}' is not inside a repository, but this command requires a repository!\n(use 'cd' to go to a directory inside a repository and try again)"
 )]
@@ -91,6 +95,12 @@ pub fn triage_error(config: &ConfigSet, cmd_err: anyhow::Error) -> anyhow::Error
                 )
             }
         }
+    } else if cmd_err.is::<FallbackToPython>()
+        && config
+            .get_or_default("migration", "force-rust")
+            .unwrap_or(false)
+    {
+        anyhow::Error::new(FailedFallbackToPython)
     } else {
         cmd_err
     }

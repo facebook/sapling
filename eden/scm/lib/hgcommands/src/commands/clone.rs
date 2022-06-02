@@ -98,12 +98,6 @@ pub fn run(
         || !clone_opts.exclude.is_empty()
         || clone_opts.eden
     {
-        if force_rust {
-            return Err(
-                errors::Abort("clone.force-rust=True but falling back to Python!".into()).into(),
-            );
-        }
-
         return Err(errors::FallbackToPython.into());
     }
 
@@ -144,12 +138,6 @@ pub fn run(
         .iter()
         .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY)
     {
-        if force_rust {
-            return Err(
-                errors::Abort("clone.force-rust=True but falling back to Python!".into()).into(),
-            );
-        }
-
         return Err(errors::FallbackToPython.into());
     }
 
