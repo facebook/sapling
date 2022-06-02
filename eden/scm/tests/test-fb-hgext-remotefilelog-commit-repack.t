@@ -25,6 +25,7 @@
 
   $ echo x > x
   $ hg commit -Am x
+  (running background incremental repack)
   adding x
   (running background incremental repack)
   (running background incremental repack)
