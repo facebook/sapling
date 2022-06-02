@@ -943,7 +943,7 @@ class buildembedded(Command):
         copy_to(pjoin(parentdir, "edenscmnative"), pjoin(dirforexts, "edenscmnative"))
         # copy the conch_parser extension, not living in the edenscmnative directory
         for pattern in ["*.pyd", "*.so"]:
-            for path in glob.glob(pjoin(scriptdir, pattern)):
+            for path in glob.glob(pjoin(parentdir, pattern)):
                 copy_to(path, dirforexts)
 
     def _zip_pyc_files(self, zipname):
