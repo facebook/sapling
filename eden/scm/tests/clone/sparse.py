@@ -16,7 +16,7 @@ class TestSparseClone(BaseTest):
         super().setUp()
         self.config.enable("sparse")
         self.config.add("remotenames", "selectivepulldefault", "master")
-        self.config.add("clone", "force-rust", "True")
+        self.config.add("commands", "force-rust", "True")
 
     @hgtest
     def test_simple(self, repo: Repo, wc: WorkingCopy) -> None:
@@ -96,7 +96,7 @@ class TestSparseClone(BaseTest):
 
     @hgtest
     def test_clone_within_repo(self, repo: Repo, wc: WorkingCopy) -> None:
-        repo.config.add("clone", "force-rust", "\0oops")
+        repo.config.add("commands", "force-rust", "\0oops")
 
         other_repo = self.server.clone(1)
         other_wc = WorkingCopy(other_repo, new_dir())

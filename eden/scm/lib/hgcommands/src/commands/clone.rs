@@ -82,7 +82,7 @@ pub fn run(
         deprecate(config, "rev-option", "the --rev-option has been deprecated")?;
     }
 
-    let force_rust = config.get_or_default("clone", "force-rust")?;
+    let force_rust = config.get_or_default("commands", "force-rust")?;
     let use_rust = force_rust || config.get_or_default("clone", "use-rust")?;
     if !use_rust {
         return Err(errors::FallbackToPython.into());

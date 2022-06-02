@@ -14,7 +14,7 @@ from eden.testlib.workingcopy import WorkingCopy
 class TestBasicClone(BaseTest):
     def setUp(self) -> None:
         super().setUp()
-        self.config.add("clone", "force-rust", "True")
+        self.config.add("commands", "force-rust", "True")
 
     @hgtest
     def test_repo_specific_config(self, repo: Repo, _: WorkingCopy) -> None:
