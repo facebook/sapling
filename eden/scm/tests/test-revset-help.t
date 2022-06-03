@@ -25,4 +25,4 @@
 This command should have empty output:
 
   $ newrepo
-  $ hg --config extensions.checkdoc=$TESTTMP/checkdoc.py checkdoc
+  $ hg --config extensions.checkdoc="$TESTTMP/checkdoc.py" checkdoc
