@@ -52,12 +52,15 @@ z = 3
 
 class ConfigParserTests(unittest.TestCase):
     def run(self, result):
+        oldpwd = os.getcwd()
         with tempfile.TemporaryDirectory() as t:
             os.chdir(t)
             for name, content in FIXTURES.items():
                 with open(name, "wb") as f:
                     f.write(content)
             super().run(result)
+            # Needed on Windows to delete the temp dir.
+            os.chdir(oldpwd)
 
     def testReadConfig(self):
         cfg = createConfig()
