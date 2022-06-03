@@ -25,7 +25,7 @@ uniqueheap = { version = "0.1.0", path = "../common/uniqueheap" }
 
 [dev-dependencies]
 ascii = "1.0"
-async-trait = "0.1.52"
+async-trait = "0.1.56"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

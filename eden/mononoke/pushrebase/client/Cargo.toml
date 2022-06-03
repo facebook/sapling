@@ -11,7 +11,7 @@ license = "GPLv2+"
 path = "lib.rs"
 
 [dependencies]
-async-trait = "0.1.52"
+async-trait = "0.1.56"
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../../bookmarks/bookmarks_movement" }
 bookmarks_types = { version = "0.1.0", path = "../../bookmarks/bookmarks_types" }

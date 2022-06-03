@@ -13,7 +13,7 @@ path = "../cmds/admin/main.rs"
 
 [dependencies]
 anyhow = "1.0.56"
-async-trait = "0.1.52"
+async-trait = "0.1.56"
 async_requests = { version = "0.1.0", path = "../megarepo_api/async_requests" }
 backsyncer = { version = "0.1.0", path = "../commit_rewriting/backsyncer" }
 blame = { version = "0.1.0", path = "../derived_data/blame" }

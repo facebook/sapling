@@ -16,7 +16,7 @@ path = "benchmark.rs"
 
 [dependencies]
 anyhow = "1.0.56"
-async-trait = "0.1.52"
+async-trait = "0.1.56"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }

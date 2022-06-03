@@ -11,7 +11,7 @@ license = "GPLv2+"
 acl_regions = { version = "0.1.0", path = "../acl_regions" }
 anyhow = "1.0.56"
 async-recursion = "0.3.2"
-async-trait = "0.1.52"
+async-trait = "0.1.56"
 blame = { version = "0.1.0", path = "../derived_data/blame" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }

@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.56"
-async-trait = "0.1.52"
+async-trait = "0.1.56"
 auto_impl = "0.4"
 changesets = { version = "0.1.0", path = "../../changesets" }
 context = { version = "0.1.0", path = "../../server/context" }

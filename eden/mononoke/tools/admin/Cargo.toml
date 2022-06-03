@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.56"
-async-trait = "0.1.52"
+async-trait = "0.1.56"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
