@@ -57,10 +57,10 @@ High-Level Design
 The following documents describe the design of relatively high-level aspects of
 EdenFS's behavior:
 
-* [Process Overview](Process_State.md)
-* [Source Control Data Model](Data_Model.md)
-* [Inodes](Inodes.md)
-* [Glossary](Glossary.md)
+* [Process Overview](./Process_State.md)
+* [Source Control Data Model](./Data_Model.md)
+* [Inodes](./Inodes.md)
+* [Glossary](./Glossary.md)
 
 
 Design Specifics
@@ -69,13 +69,13 @@ Design Specifics
 The following documents cover specific features and implementation details in
 more depth:
 
-* [Configuration](Config.md)
-* [Caching](Caching.md)
-* [Globbing](Globbing.md)
-* [Inode Lifetime Management](InodeLifetime.md)
-* [Inode Locking](InodeLocks.md)
-* [Inode Storage](InodeStorage.md)
-* [Path Handling](Paths.md)
-* [Rename Handling](Rename.md)
-* [Redirections](Redirections.md)
-* [Threading](Threading.md)
+* [Configuration](./Config.md)
+* [Caching](./Caching.md)
+* [Globbing](./Globbing.md)
+* [Inode Lifetime Management](./InodeLifetime.md)
+* [Inode Locking](./InodeLocks.md)
+* [Inode Storage](./InodeStorage.md)
+* [Path Handling](./Paths.md)
+* [Rename Handling](./Rename.md)
+* [Redirections](./Redirections.md)
+* [Threading](./Threading.md)
