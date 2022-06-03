@@ -425,8 +425,28 @@ class TestTmp:
             "HOME": str(path),
             "PATH": str(path / "bin"),
             "TESTTMP": str(path),
-            "USERPROFILE": str(path),
         }
+        if os.name == "nt":
+            # Required by some application logic.
+            environ.update(
+                {
+                    "APPDATA": str(path),
+                    "USERPROFILE": str(path),
+                }
+            )
+            # SYSTEMROOT is required on Windows for Python to initialize.
+            # See https://stackoverflow.com/a/64706392
+            for name in ["SYSTEMROOT"]:
+                value = os.getenv(name)
+                if value:
+                    environ[name] = value
+            # Part of PATH containing pythonXX.dll is needed to find Python
+            # runtime.
+            version = sys.version_info
+            pythonxx = f"python{version.major}{version.minor}.dll"
+            for path in sys.path:
+                if os.path.exists(os.path.join(path, pythonxx)):
+                    environ["PATH"] += f"{os.pathsep}{path}"
         return environ
 
     def _applysubstitutions(self, out: str) -> str:
