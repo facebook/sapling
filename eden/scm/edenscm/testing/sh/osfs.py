@@ -16,9 +16,9 @@ class OSFS(ShellFS):
     """filesystem by the current OS"""
 
     def open(self, path: str, mode: str) -> BinaryIO:
-        path = self._absjoin(path)
         if path == "/dev/null":
             return NullIO()
+        path = self._absjoin(path)
         if "b" not in mode:
             mode += "b"
         # pyre-fixme[7]: Expected `BinaryIO` but got `IO[typing.Any]`.
