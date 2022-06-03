@@ -617,6 +617,15 @@ class EdenConfig : private ConfigSettingManager {
       std::vector<std::string>{},
       this};
 
+  /**
+   * Controls whether EdenFS makes use of ActivityBuffers to store past
+   * events in memory.
+   */
+  ConfigSetting<bool> enableActivityBuffer{
+      "telemetry:enable-activitybuffer",
+      false,
+      this};
+
   // [experimental]
 
   /**
