@@ -132,3 +132,24 @@ class TraceFsCommand(Subcmd):
                 f"--writes={'true' if args.writes else 'false'}",
             ]
         )
+
+
+@trace_cmd("inode", "Monitor Inode Changes.")
+class TraceInodeCommand(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "checkout", default=None, nargs="?", help="Path to the checkout"
+        )
+        parser.add_argument(
+            "--retroactive",
+            action="store_true",
+            default=False,
+            help="Provide stored inode events (from a buffer) across past changes",
+        )
+
+    async def run(self, args: argparse.Namespace) -> int:
+        if not args.retroactive:
+            print("`eden trace inode` is only currently supported in retroactive mode")
+        else:
+            print("\U0001F6A7 under construction \U0001F6A7")
+        return 0
