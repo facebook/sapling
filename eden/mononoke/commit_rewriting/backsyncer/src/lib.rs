@@ -27,7 +27,7 @@ use blobrepo::BlobRepo;
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
 use bookmarks::{
     ArcBookmarkUpdateLog, ArcBookmarks, BookmarkTransactionError, BookmarkUpdateLogEntry,
-    BookmarkUpdateReason, BundleReplay, Freshness,
+    BookmarkUpdateReason, Freshness,
 };
 use cloned::cloned;
 use context::CoreContext;
@@ -257,7 +257,6 @@ where
     debug!(ctx.logger(), "bookmark was renamed into {:?}", bookmark);
     let from_cs_id = log_entry.from_changeset_id;
     let to_cs_id = log_entry.to_changeset_id;
-    let bundle_replay_data = log_entry.bundle_replay_data;
 
     let get_commit_sync_outcome = |maybe_cs_id: Option<ChangesetId>| {
         cloned!(ctx);
@@ -336,9 +335,7 @@ where
                 "syncing bookmark {} to {:?}", bookmark, to_cs_id
             );
 
-            let bundle_replay = bundle_replay_data
-                .as_ref()
-                .map(|data| data as &dyn BundleReplay);
+            let bundle_replay = None;
             match (from_cs_id, to_cs_id) {
                 (Some(from), Some(to)) => {
                     debug!(

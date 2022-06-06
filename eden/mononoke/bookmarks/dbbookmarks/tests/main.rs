@@ -10,7 +10,7 @@
 use anyhow::{Error, Result};
 use bookmarks::{
     Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, BookmarkUpdateLog,
-    BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, Freshness, RawBundleReplayData,
+    BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, Freshness,
 };
 use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
@@ -97,7 +97,6 @@ async fn test_simple_unconditional_set_get(fb: FacebookInit) {
             from_changeset_id: None,
             reason: BookmarkUpdateReason::TestMove,
             timestamp: Timestamp::now(),
-            bundle_replay_data: None,
         }],
     );
 }
@@ -185,7 +184,6 @@ async fn test_simple_create(fb: FacebookInit) {
             from_changeset_id: None,
             reason: BookmarkUpdateReason::TestMove,
             timestamp: Timestamp::now(),
-            bundle_replay_data: None,
         }],
     );
 }
@@ -361,7 +359,6 @@ async fn test_simple_update_bookmark(fb: FacebookInit) {
             from_changeset_id: Some(ONES_CSID),
             reason: BookmarkUpdateReason::TestMove,
             timestamp: Timestamp::now(),
-            bundle_replay_data: None,
         }],
     );
 }
@@ -517,7 +514,6 @@ async fn test_force_delete(fb: FacebookInit) {
             from_changeset_id: None,
             reason: BookmarkUpdateReason::TestMove,
             timestamp: Timestamp::now(),
-            bundle_replay_data: None,
         }],
     );
 }
@@ -563,7 +559,6 @@ async fn test_delete(fb: FacebookInit) {
             from_changeset_id: Some(ONES_CSID),
             reason: BookmarkUpdateReason::TestMove,
             timestamp: Timestamp::now(),
-            bundle_replay_data: None,
         }],
     );
 }
@@ -898,33 +893,6 @@ async fn test_log_correct_order(fb: FacebookInit) {
         .map(|entry| entry.to_changeset_id.unwrap())
         .collect();
     assert_eq!(cs_ids, vec![FIVES_CSID]);
-}
-
-#[fbinit::test]
-async fn test_log_bundle_replay_data(fb: FacebookInit) {
-    let ctx = CoreContext::test_mock(fb);
-    let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
-        .unwrap()
-        .with_repo_id(REPO_ZERO);
-    let name_1 = create_bookmark_name("book");
-    let expected = RawBundleReplayData {
-        bundle_handle: "handle".to_string(),
-        commit_timestamps_json: "json_data".to_string(),
-    };
-
-    let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.force_set(
-        &name_1,
-        ONES_CSID,
-        BookmarkUpdateReason::TestMove,
-        Some(&expected),
-    )
-    .unwrap();
-    assert!(txn.commit().await.is_ok());
-
-    let log_entry = fetch_single(fb, &bookmarks, 0).await;
-    let actual = log_entry.bundle_replay_data.unwrap();
-    assert_eq!(actual, expected);
 }
 
 #[fbinit::test]

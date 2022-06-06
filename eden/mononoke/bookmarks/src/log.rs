@@ -37,8 +37,6 @@ pub struct BookmarkUpdateLogEntry {
     pub reason: BookmarkUpdateReason,
     /// When update happened
     pub timestamp: Timestamp,
-    /// Raw bundle replay data
-    pub bundle_replay_data: Option<RawBundleReplayData>,
 }
 
 #[facet::facet]

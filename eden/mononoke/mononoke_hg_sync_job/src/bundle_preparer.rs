@@ -879,7 +879,6 @@ mod test {
             to_changeset_id,
             reason: BookmarkUpdateReason::TestMove,
             timestamp: Timestamp::now(),
-            bundle_replay_data: None,
         }
     }
 }
