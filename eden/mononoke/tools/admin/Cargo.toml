@@ -39,11 +39,9 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 itertools = "0.10.3"
 manifest = { version = "0.1.0", path = "../../manifest" }
-mercurial_bundle_replay_data = { version = "0.1.0", path = "../../mercurial/bundle_replay_data" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
-mononoke_hg_sync_job_helper_lib = { version = "0.1.0", path = "../../mononoke_hg_sync_job" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../../mutable_renames" }

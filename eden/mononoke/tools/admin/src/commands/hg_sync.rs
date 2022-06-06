@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-mod fetch_bundle;
 mod inspect;
 mod last_processed;
 mod remains;
@@ -26,7 +25,6 @@ use mutable_counters::MutableCounters;
 use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
 
-use fetch_bundle::HgSyncFetchBundleArgs;
 use inspect::HgSyncInspectArgs;
 use last_processed::HgSyncLastProcessedArgs;
 use remains::HgSyncRemainsArgs;
@@ -87,8 +85,6 @@ pub enum HgSyncSubcommand {
     Show(HgSyncShowArgs),
     /// Verify that all remaining bundles are of consistent types
     Verify(HgSyncVerifyArgs),
-    /// Fetch a bundle by log entry id
-    FetchBundle(HgSyncFetchBundleArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -111,9 +107,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         HgSyncSubcommand::Show(show_args) => show::show(&ctx, &repo, show_args).await?,
         HgSyncSubcommand::Verify(verify_args) => verify::verify(&ctx, &repo, verify_args).await?,
-        HgSyncSubcommand::FetchBundle(fetch_bundle_args) => {
-            fetch_bundle::fetch_bundle(&ctx, &repo, fetch_bundle_args).await?
-        }
     }
 
     Ok(())
