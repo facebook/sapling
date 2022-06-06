@@ -25,7 +25,7 @@ def _convertfromobsolete(repo):
         return list(repo.nodes("heads((not public()) - hidden())"))
 
 
-def starttracking(repo):
+def starttracking(repo) -> None:
     """start tracking visibility information through visible mutable heads"""
     if "visibleheads" not in repo.storerequirements:
         with repo.lock():
@@ -34,7 +34,7 @@ def starttracking(repo):
             repo._writestorerequirements()
 
 
-def stoptracking(repo):
+def stoptracking(repo) -> None:
     """stop tracking visibility information and revert to using obsmarkers"""
     with repo.lock(), repo.transaction("disable-visibility"):
         if "visibleheads" in repo.storerequirements:
@@ -254,7 +254,7 @@ class bundlevisibleheads(visibleheads):
         self.heads = newheads
 
 
-def setvisibleheads(repo, newheads):
+def setvisibleheads(repo, newheads) -> None:
     """set the visible heads
 
     Updates the set of visible mutable heads to be exactly those specified.
@@ -264,7 +264,7 @@ def setvisibleheads(repo, newheads):
             repo.changelog._visibleheads.setvisibleheads(repo, newheads, tr)
 
 
-def add(repo, newnodes):
+def add(repo, newnodes) -> None:
     """add nodes to the visible set
 
     Adds the given nodes to the set of visible nodes.  This includes any
@@ -275,7 +275,7 @@ def add(repo, newnodes):
             repo.changelog._visibleheads.add(repo, newnodes, tr)
 
 
-def remove(repo, oldnodes):
+def remove(repo, oldnodes) -> None:
     """remove nodes from the visible set
 
     Removes the given nodes from the set of visible nodes.  If any of the nodes
@@ -305,7 +305,7 @@ def remove(repo, oldnodes):
             repo.changelog._visibleheads.remove(repo, oldnodes, tr)
 
 
-def phaseadjust(repo, tr, newdraft=None, newpublic=None):
+def phaseadjust(repo, tr, newdraft=None, newpublic=None) -> None:
     """adjust the phase of visible nodes
 
     Visibility tracking only cares about non public commits.  If a commit
@@ -342,7 +342,7 @@ def enabled(repo):
     return tracking(repo) and repo.ui.configbool("visibility", "enabled")
 
 
-def automigrate(repo):
+def automigrate(repo) -> None:
     desired = repo.ui.configbool("visibility", "enabled")
     actual = tracking(repo)
     if desired and not actual:
