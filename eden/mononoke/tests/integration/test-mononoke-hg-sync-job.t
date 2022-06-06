@@ -135,26 +135,6 @@ Enable replay verification hooks
   summary:     a => bar
   
   $ cd $TESTTMP
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
-  $ mononoke_hg_sync_with_retry repo-hg-2 1 2>&1 | grep 'replay failed'
-  replay failed: error:pushkey
-  replay failed: error:pushkey
-  replay failed: error:pushkey
-      replay failed: error:pushkey
-Oops, we allowed a wrong bookmark to be unbundlereplayed onto
-  $ cat >> $TESTTMP/repo-hg-2/.hg/hgrc << CONFIG
-  > [facebook]
-  > hooks.unbundlereplaybooks=master_bookmark,blabla
-  > CONFIG
-
-Now bookmark is not blocked
-  $ mononoke_hg_sync repo-hg-2 1 2>&1 | grep 'replay failed'
-  replay failed: error:pushkey
-      replay failed: error:pushkey
-
-Set the correct timestamp back
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":0}' where bookmark_update_log_id = 2"
-
   $ cd repo-hg-2
   $ hg log -r master_bookmark
   commit:      add0c792bfce
@@ -276,15 +256,11 @@ Test hook bypass using REPLAY_BYPASS file
   $ touch repo-hg-2/.hg/REPLAY_BYPASS
 
 Test failing to sync, but already having the correct bookmark location
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "update bundle_replay_data set commit_hashes_json = '{\"add0c792bfce89610d277fd5b1e32f5287994d1d\":10000000000}' where bookmark_update_log_id = 2"
   $ mononoke_hg_sync_with_retry repo-hg-2 1 2>&1 | grep 'successful sync'
   * successful sync of entries [2] (glob)
 
 Test further sync
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":10000000000}' where bookmark_update_log_id = 2"
   $ mononoke_hg_sync_with_retry repo-hg-2 1 2>&1 | grep -E '(sync failed|successful sync)'
-  * sync failed. Invalidating process (glob)
-  * sync failed, let's check if the bookmark is where we want it to be anyway (glob)
   * successful sync of entries [2] (glob)
 
 Test bookmark deletion sync

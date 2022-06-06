@@ -7,32 +7,29 @@
 
 use crate::bundle_generator::{BookmarkChange, FilenodeVerifier};
 use crate::errors::{
-    ErrorKind::{BookmarkMismatchInBundleCombining, ReplayDataMissing, UnexpectedBookmarkMove},
+    ErrorKind::{BookmarkMismatchInBundleCombining, UnexpectedBookmarkMove},
     PipelineError,
 };
 use crate::{bind_sync_err, BookmarkOverlay, CombinedBookmarkUpdateLogEntry, CommitsInBundle};
 use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
-use bookmarks::{BookmarkName, BookmarkUpdateLogEntry, BookmarkUpdateReason, RawBundleReplayData};
+use bookmarks::{BookmarkName, BookmarkUpdateLogEntry, BookmarkUpdateReason};
 use changeset_fetcher::ArcChangesetFetcher;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
-    future::{self, try_join, try_join_all, BoxFuture, FutureExt, TryFutureExt},
+    future::{try_join, try_join_all, BoxFuture, FutureExt, TryFutureExt},
     Future,
 };
 use futures_watchdog::WatchdogExt;
 use getbundle_response::SessionLfsParams;
 use itertools::Itertools;
-use mercurial_bundle_replay_data::BundleReplayData;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::LfsParams;
 use mononoke_api_types::InnerRepo;
-use mononoke_hg_sync_job_helper_lib::{
-    save_bundle_to_temp_file, save_bytes_to_temp_file, write_to_named_temp_file,
-};
+use mononoke_hg_sync_job_helper_lib::{save_bytes_to_temp_file, write_to_named_temp_file};
 use mononoke_types::{datetime::Timestamp, ChangesetId};
 use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
@@ -53,52 +50,27 @@ pub struct BundlePreparer {
     repo: BlobRepo,
     base_retry_delay_ms: u64,
     retry_num: usize,
-    ty: BundleType,
+    bundle_info: BundleInfo,
     push_vars: Option<HashMap<String, bytes::Bytes>>,
 }
 
 #[derive(Clone)]
-enum PrepareType {
-    Generate {
-        lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-        lfs_params: SessionLfsParams,
-        filenode_verifier: FilenodeVerifier,
-    },
-    UseExisting {
-        bundle_replay_data: RawBundleReplayData,
-    },
+struct PrepareInfo {
+    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    lfs_params: SessionLfsParams,
+    filenode_verifier: FilenodeVerifier,
 }
 
 #[derive(Clone)]
-enum BundleType {
-    // Use a bundle that was saved on Mononoke during the push
-    UseExisting,
-    // Generate a new bundle
-    GenerateNew {
-        lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-        lfs_params: LfsParams,
-        filenode_verifier: FilenodeVerifier,
-        bookmark_regex_force_lfs: Option<Regex>,
-        use_hg_server_bookmark_value_if_mismatch: bool,
-    },
+struct BundleInfo {
+    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    lfs_params: LfsParams,
+    filenode_verifier: FilenodeVerifier,
+    bookmark_regex_force_lfs: Option<Regex>,
+    use_hg_server_bookmark_value_if_mismatch: bool,
 }
 
 impl BundlePreparer {
-    pub async fn new_use_existing(
-        repo: BlobRepo,
-        base_retry_delay_ms: u64,
-        retry_num: usize,
-        push_vars: Option<HashMap<String, bytes::Bytes>>,
-    ) -> Result<BundlePreparer, Error> {
-        Ok(BundlePreparer {
-            repo,
-            base_retry_delay_ms,
-            retry_num,
-            ty: BundleType::UseExisting,
-            push_vars,
-        })
-    }
-
     pub async fn new_generate_bundles(
         repo: InnerRepo,
         base_retry_delay_ms: u64,
@@ -114,7 +86,7 @@ impl BundlePreparer {
             repo: repo.blob_repo,
             base_retry_delay_ms,
             retry_num,
-            ty: BundleType::GenerateNew {
+            bundle_info: BundleInfo {
                 lca_hint,
                 lfs_params,
                 filenode_verifier,
@@ -142,17 +114,13 @@ impl BundlePreparer {
             };
         }
 
-        match &self.ty {
-            BundleType::GenerateNew { lca_hint, .. } => {
-                split_in_batches(ctx, lca_hint, &self.repo.get_changeset_fetcher(), entries).await
-            }
-            // We don't support combining bundles in UseExisting mode,
-            // so just create batches with a single entry
-            BundleType::UseExisting => Ok(entries
-                .into_iter()
-                .map(BookmarkLogEntryBatch::new)
-                .collect()),
-        }
+        split_in_batches(
+            ctx,
+            &self.bundle_info.lca_hint,
+            &self.repo.get_changeset_fetcher(),
+            entries,
+        )
+        .await
     }
 
     pub fn prepare_bundles<'a>(
@@ -164,69 +132,35 @@ impl BundlePreparer {
         let mut futs = vec![];
         let push_vars = self.push_vars.clone();
 
-        match &self.ty {
-            BundleType::GenerateNew {
-                lca_hint,
-                lfs_params,
-                filenode_verifier,
-                bookmark_regex_force_lfs,
-                use_hg_server_bookmark_value_if_mismatch,
-            } => {
-                for batch in batches {
-                    let prepare_type = PrepareType::Generate {
-                        lca_hint: lca_hint.clone(),
-                        lfs_params: get_session_lfs_params(
-                            &ctx,
-                            &batch.bookmark_name,
-                            lfs_params.clone(),
-                            &bookmark_regex_force_lfs,
-                        ),
-                        filenode_verifier: filenode_verifier.clone(),
-                    };
+        let BundleInfo {
+            lca_hint,
+            lfs_params,
+            filenode_verifier,
+            bookmark_regex_force_lfs,
+            use_hg_server_bookmark_value_if_mismatch,
+        } = &self.bundle_info;
+        for batch in batches {
+            let prepare_type = PrepareInfo {
+                lca_hint: lca_hint.clone(),
+                lfs_params: get_session_lfs_params(
+                    ctx,
+                    &batch.bookmark_name,
+                    lfs_params.clone(),
+                    bookmark_regex_force_lfs,
+                ),
+                filenode_verifier: filenode_verifier.clone(),
+            };
 
-                    let entries = batch.entries.clone();
-                    let f = self.prepare_single_bundle(
-                        ctx.clone(),
-                        batch,
-                        overlay,
-                        prepare_type,
-                        *use_hg_server_bookmark_value_if_mismatch,
-                        push_vars.clone(),
-                    );
-                    futs.push((f, entries));
-                }
-            }
-            BundleType::UseExisting => {
-                // We don't do any batching with UseExisting mode
-                for batch in batches {
-                    for log_entry in batch.entries {
-                        let prepare_type = match &log_entry.bundle_replay_data {
-                            Some(bundle_replay_data) => PrepareType::UseExisting {
-                                bundle_replay_data: bundle_replay_data.clone(),
-                            },
-                            None => {
-                                let err: Error = ReplayDataMissing { id: log_entry.id }.into();
-                                return future::ready(Err(bind_sync_err(&[log_entry], err)))
-                                    .boxed();
-                            }
-                        };
-
-                        let batch = BookmarkLogEntryBatch::new(log_entry);
-                        let entries = batch.entries.clone();
-                        let f = self.prepare_single_bundle(
-                            ctx.clone(),
-                            batch,
-                            overlay,
-                            prepare_type,
-                            // use-hg-server-bookmark-value-if-mismatch is never enabled
-                            // in UseExisting mode
-                            false, /* use-hg-server-bookmark-value-if-mismatch */
-                            push_vars.clone(),
-                        );
-                        futs.push((f, entries));
-                    }
-                }
-            }
+            let entries = batch.entries.clone();
+            let f = self.prepare_single_bundle(
+                ctx.clone(),
+                batch,
+                overlay,
+                prepare_type,
+                *use_hg_server_bookmark_value_if_mismatch,
+                push_vars.clone(),
+            );
+            futs.push((f, entries));
         }
 
         let futs = futs
@@ -252,7 +186,7 @@ impl BundlePreparer {
         ctx: CoreContext,
         mut batch: BookmarkLogEntryBatch,
         overlay: &mut crate::BookmarkOverlay,
-        prepare_type: PrepareType,
+        prepare_info: PrepareInfo,
         use_hg_server_bookmark_value_if_mismatch: bool,
         push_vars: Option<HashMap<String, bytes::Bytes>>,
     ) -> BoxFuture<'static, Result<CombinedBookmarkUpdateLogEntry, Error>> {
@@ -313,7 +247,7 @@ impl BundlePreparer {
                         Self::try_prepare_bundle_timestamps_file(
                             &ctx,
                             &repo,
-                            prepare_type.clone(),
+                            prepare_info.clone(),
                             &book_values,
                             &bookmark_change,
                             &batch.bookmark_name,
@@ -359,69 +293,46 @@ impl BundlePreparer {
     async fn try_prepare_bundle_timestamps_file<'a>(
         ctx: &'a CoreContext,
         repo: &'a BlobRepo,
-        prepare_type: PrepareType,
+        prepare_info: PrepareInfo,
         hg_server_heads: &'a [ChangesetId],
         bookmark_change: &'a BookmarkChange,
         bookmark_name: &'a BookmarkName,
         push_vars: Option<HashMap<String, bytes::Bytes>>,
     ) -> Result<(NamedTempFile, NamedTempFile, CommitsInBundle), Error> {
-        let blobstore = repo.get_blobstore();
+        let PrepareInfo {
+            lca_hint,
+            lfs_params,
+            filenode_verifier,
+        } = prepare_info;
+        let (bytes, timestamps) = crate::bundle_generator::create_bundle(
+            ctx.clone(),
+            repo.clone(),
+            lca_hint.clone(),
+            bookmark_name.clone(),
+            bookmark_change.clone(),
+            hg_server_heads.to_vec(),
+            lfs_params,
+            filenode_verifier.clone(),
+            push_vars,
+        )
+        .compat()
+        .await?;
 
-        match prepare_type {
-            PrepareType::Generate {
-                lca_hint,
-                lfs_params,
-                filenode_verifier,
-            } => {
-                let (bytes, timestamps) = crate::bundle_generator::create_bundle(
-                    ctx.clone(),
-                    repo.clone(),
-                    lca_hint.clone(),
-                    bookmark_name.clone(),
-                    bookmark_change.clone(),
-                    hg_server_heads.to_vec(),
-                    lfs_params,
-                    filenode_verifier.clone(),
-                    push_vars,
-                )
-                .compat()
-                .await?;
-
-                let mut bcs_ids = vec![];
-                for (hg_cs_id, (bcs_id, _)) in &timestamps {
-                    bcs_ids.push((*hg_cs_id, *bcs_id));
-                }
-
-                let timestamps = timestamps
-                    .into_iter()
-                    .map(|(hg_cs_id, (_, timestamp))| (hg_cs_id, timestamp))
-                    .collect();
-                let (bundle, timestamps) = try_join(
-                    save_bytes_to_temp_file(&bytes),
-                    save_timestamps_to_file(&timestamps),
-                )
-                .await?;
-                Ok((bundle, timestamps, CommitsInBundle::Commits(bcs_ids)))
-            }
-            PrepareType::UseExisting { bundle_replay_data } => {
-                match BundleReplayData::try_from(bundle_replay_data) {
-                    Ok(bundle_replay_data) => {
-                        let (bundle, timestamps) = try_join(
-                            save_bundle_to_temp_file(
-                                &ctx,
-                                &blobstore,
-                                bundle_replay_data.bundle2_id,
-                            ),
-                            save_timestamps_to_file(&bundle_replay_data.timestamps),
-                        )
-                        .await?;
-
-                        Ok((bundle, timestamps, CommitsInBundle::Unknown))
-                    }
-                    Err(e) => Err(e),
-                }
-            }
+        let mut bcs_ids = vec![];
+        for (hg_cs_id, (bcs_id, _)) in &timestamps {
+            bcs_ids.push((*hg_cs_id, *bcs_id));
         }
+
+        let timestamps = timestamps
+            .into_iter()
+            .map(|(hg_cs_id, (_, timestamp))| (hg_cs_id, timestamp))
+            .collect();
+        let (bundle, timestamps) = try_join(
+            save_bytes_to_temp_file(&bytes),
+            save_timestamps_to_file(&timestamps),
+        )
+        .await?;
+        Ok((bundle, timestamps, CommitsInBundle::Commits(bcs_ids)))
     }
 }
 

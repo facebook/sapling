@@ -48,7 +48,6 @@ hyper-openssl = "0.9"
 itertools = "0.10.3"
 lfs_protocol = { version = "0.1.0", path = "../lfs_protocol" }
 maplit = "1.0"
-mercurial_bundle_replay_data = { version = "0.1.0", path = "../mercurial/bundle_replay_data" }
 mercurial_bundles = { version = "0.1.0", path = "../mercurial/bundles" }
 mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
 mercurial_revlog = { version = "0.1.0", path = "../mercurial/revlog" }

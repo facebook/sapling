@@ -203,17 +203,10 @@ parent
 
   $ cd $TESTTMP
   $ mononoke_hg_sync repo-hg 4 &> /dev/null
-Sync first "diamond" push
-Mononoke filenode generation in merges is different to Mercurial's, so a replay failure is expected because the filenodes differ.
-See `derive_hg_changeset.rs` function `store_file_changes` for the difference
-  $ mononoke_hg_sync repo-hg 5 2>&1 | grep ReplayVerification
-  remote: [ReplayVerification] Expected: ('master_bookmark', 'e09d568b9a5530903dcc9e4a2a60b1912141379c'). Actual: ('master_bookmark', 'aca179fa10740cb530e81a2d0ada525c2026ca2c')
-
-  $ mononoke_hg_sync repo-hg 6 &> /dev/null
-  [1]
-Sync second "diamond" push
-  $ mononoke_hg_sync repo-hg 7 2>&1 | grep ReplayVerification
-  [1]
+Sync merges
+  $ mononoke_hg_sync repo-hg 5 &>/dev/null
+  $ mononoke_hg_sync repo-hg 6 &>/dev/null
+  $ mononoke_hg_sync repo-hg 7 &>/dev/null
   $ cd $TESTTMP/repo-hg
   $ hg log -r tip -T '{node}\n'
-  b5281d1ea881ef04dd8cbef4353abb0971338536
+  c019126b122e679401c27e13131609aa50d3e806

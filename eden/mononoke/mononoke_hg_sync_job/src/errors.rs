@@ -11,8 +11,6 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[error("replay data is missing for id {id}")]
-    ReplayDataMissing { id: i64 },
     #[error("unexpected bookmark move: {0}")]
     UnexpectedBookmarkMove(String),
     #[error("sync failed for ids {ids:?}")]

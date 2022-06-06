@@ -667,7 +667,6 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     let base_retry_delay_ms = args::get_u64_opt(matches, "base-retry-delay-ms").unwrap_or(1000);
     let retry_num = args::get_usize(matches, "retry-num", DEFAULT_RETRY_NUM);
 
-    let generate_bundles = matches.is_present(GENERATE_BUNDLES);
     let bookmark_regex_force_lfs = matches
         .value_of(ARG_BOOKMARK_REGEX_FORCE_GENERATE_LFS)
         .map(Regex::new)
@@ -719,56 +718,40 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         cloned!(hg_repo_path);
 
         let (repo, preparer): (BlobRepo, BoxFuture<Result<Arc<BundlePreparer>, Error>>) = {
-            if generate_bundles {
-                let repo: InnerRepo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
-                let filenode_verifier = match verify_lfs_blob_presence {
-                    Some(uri) => {
-                        let uri = uri.parse::<Uri>()?;
-                        let verifier =
-                            LfsVerifier::new(uri, Arc::new(repo.blob_repo.get_blobstore()))?;
-                        FilenodeVerifier::LfsVerifier(verifier)
+            let repo: InnerRepo = args::open_repo(ctx.fb, ctx.logger(), matches).await?;
+            let filenode_verifier = match verify_lfs_blob_presence {
+                Some(uri) => {
+                    let uri = uri.parse::<Uri>()?;
+                    let verifier = LfsVerifier::new(uri, Arc::new(repo.blob_repo.get_blobstore()))?;
+                    FilenodeVerifier::LfsVerifier(verifier)
+                }
+                None => match maybe_darkstorm_backup_repo {
+                    Some(ref backup_repo) => {
+                        let verifier = DarkstormVerifier::new(
+                            Arc::new(repo.blob_repo.get_blobstore()),
+                            Arc::new(backup_repo.get_blobstore()),
+                            backup_repo.filestore_config(),
+                        );
+                        FilenodeVerifier::DarkstormVerifier(verifier)
                     }
-                    None => match maybe_darkstorm_backup_repo {
-                        Some(ref backup_repo) => {
-                            let verifier = DarkstormVerifier::new(
-                                Arc::new(repo.blob_repo.get_blobstore()),
-                                Arc::new(backup_repo.get_blobstore()),
-                                backup_repo.filestore_config(),
-                            );
-                            FilenodeVerifier::DarkstormVerifier(verifier)
-                        }
-                        None => FilenodeVerifier::NoopVerifier,
-                    },
-                };
-                (
-                    repo.blob_repo.clone(),
-                    BundlePreparer::new_generate_bundles(
-                        repo,
-                        base_retry_delay_ms,
-                        retry_num,
-                        lfs_params,
-                        filenode_verifier,
-                        bookmark_regex_force_lfs,
-                        use_hg_server_bookmark_value_if_mismatch,
-                        push_vars,
-                    )
-                    .map_ok(Arc::new)
-                    .boxed(),
+                    None => FilenodeVerifier::NoopVerifier,
+                },
+            };
+            (
+                repo.blob_repo.clone(),
+                BundlePreparer::new_generate_bundles(
+                    repo,
+                    base_retry_delay_ms,
+                    retry_num,
+                    lfs_params,
+                    filenode_verifier,
+                    bookmark_regex_force_lfs,
+                    use_hg_server_bookmark_value_if_mismatch,
+                    push_vars,
                 )
-            } else {
-                let repo: BlobRepo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
-                (
-                    repo.clone(),
-                    BundlePreparer::new_use_existing(
-                        repo,
-                        base_retry_delay_ms,
-                        retry_num,
-                        push_vars,
-                    )
-                    .map_ok(Arc::new)
-                    .boxed(),
-                )
-            }
+                .map_ok(Arc::new)
+                .boxed(),
+            )
         };
 
         let overlay = {
@@ -804,27 +787,15 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         let globalrev_syncer = {
             cloned!(repo);
             async move {
-                let globalrev_syncer = match globalrevs_publishing_bookmark {
-                    Some(_) => {
-                        if !generate_bundles {
-                            return Err(format_err!(
-                                "Syncing globalrevs ({}) requires generating bundles ({})",
-                                HGSQL_GLOBALREVS_DB_ADDR,
-                                GENERATE_BUNDLES
-                            ));
+                match globalrevs_publishing_bookmark {
+                    Some(_) => match maybe_darkstorm_backup_repo {
+                        Some(darkstorm_backup_repo) => {
+                            Ok(GlobalrevSyncer::darkstorm(&repo, darkstorm_backup_repo))
                         }
-
-                        match maybe_darkstorm_backup_repo {
-                            Some(darkstorm_backup_repo) => {
-                                Ok(GlobalrevSyncer::darkstorm(&repo, &darkstorm_backup_repo))
-                            }
-                            None => Ok(GlobalrevSyncer::Noop),
-                        }
-                    }
+                        None => Ok(GlobalrevSyncer::Noop),
+                    },
                     None => Ok(GlobalrevSyncer::Noop),
-                };
-
-                globalrev_syncer
+                }
             }
         };
 
@@ -1188,18 +1159,18 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .help("unused"),
         )
         .arg(
+            // TODO(yancouto): Remove once it's not used anymore
             Arg::with_name(GENERATE_BUNDLES)
                 .long(GENERATE_BUNDLES)
                 .takes_value(false)
                 .required(false)
-                .help("Generate new bundles instead of using bundles that were saved on Mononoke during push"),
+                .hidden(true),
         )
         .arg(
             Arg::with_name(ARG_BOOKMARK_REGEX_FORCE_GENERATE_LFS)
                 .long(ARG_BOOKMARK_REGEX_FORCE_GENERATE_LFS)
                 .takes_value(true)
                 .required(false)
-                .requires(GENERATE_BUNDLES)
                 .help("force generation of lfs bundles for bookmarks that match regex"),
         )
         .arg(
@@ -1214,7 +1185,6 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .long(ARG_USE_HG_SERVER_BOOKMARK_VALUE_IF_MISMATCH)
                 .takes_value(false)
                 .required(false)
-                .requires(GENERATE_BUNDLES)
                 .help("Every bundle generated by hg sync job tells hg server \
                 'move bookmark BM from commit A to commit B' where commit A is the previous \
                 value of the bookmark BM and commit B is the new value of the bookmark. \
