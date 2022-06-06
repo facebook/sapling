@@ -398,7 +398,6 @@ members = [
   "tools/testtool",
   "tunables",
   "tunables/tunables-derive",
-  "unbundle_replay",
   "upload_globalrevs",
   "walker",
 ]

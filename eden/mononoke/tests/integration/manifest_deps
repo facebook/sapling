@@ -36,7 +36,6 @@ MONONOKE_BINS = {
     "MONONOKE_STREAMING_CLONE": "new_streaming_clone",
     "MONONOKE_SERVER": "mononoke",
     "MONONOKE_SQLBLOB_GC": "sqlblob_gc",
-    "MONONOKE_UNBUNDLE_REPLAY": "unbundle_replay",
     "MONONOKE_WALKER": "walker",
     "MONONOKE_X_REPO_SYNC": "mononoke_x_repo_sync_job",
 }

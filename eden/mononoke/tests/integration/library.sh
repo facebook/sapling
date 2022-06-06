@@ -1893,14 +1893,6 @@ function microwave_builder() {
     "$@"
 }
 
-function unbundle_replay() {
-  "$MONONOKE_UNBUNDLE_REPLAY" \
-    "${COMMON_ARGS[@]}" \
-    --repo-id "$REPOID" \
-    --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    "$@"
-}
-
 function backfill_derived_data() {
   "$MONONOKE_BACKFILL_DERIVED_DATA" \
     --debug \
