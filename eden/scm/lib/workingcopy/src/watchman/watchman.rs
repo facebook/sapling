@@ -6,12 +6,13 @@
  */
 
 use std::io::BufReader;
-use std::io::BufWriter;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Result;
+use parking_lot::Mutex;
+use treestate::treestate::TreeState;
 use types::RepoPath;
-use vfs::UpdateFlag;
 use vfs::VFS;
 use watchman_client::prelude::*;
 
@@ -19,6 +20,7 @@ use crate::filesystem::PendingChangeResult;
 
 use super::state::StatusQuery;
 use super::state::WatchmanState;
+use super::treestate::WatchmanTreeState;
 
 pub struct Watchman {
     vfs: VFS,
@@ -33,6 +35,7 @@ impl Watchman {
 
     pub async fn pending_changes(
         &self,
+        treestate: Arc<Mutex<TreeState>>,
     ) -> Result<impl Iterator<Item = Result<PendingChangeResult>>> {
         let state_file = RepoPath::from_str("fsmonitor.state")?;
 
@@ -56,10 +59,9 @@ impl Watchman {
             .await?;
         state.merge(result);
 
-        let mut output = vec![];
-        let writer = BufWriter::new(&mut output);
-        state.persist(writer);
-        self.vfs.write(state_file, &output, UpdateFlag::Regular)?;
+        state.persist(WatchmanTreeState {
+            treestate: treestate.lock(),
+        })?;
 
         Ok(state.pending_changes())
     }

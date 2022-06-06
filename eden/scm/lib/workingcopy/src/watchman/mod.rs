@@ -6,4 +6,5 @@
  */
 
 mod state;
+mod treestate;
 pub mod watchman;
