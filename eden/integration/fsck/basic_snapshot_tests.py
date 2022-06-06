@@ -622,22 +622,3 @@ class Basic20210712Test(SnapshotTestBase):
 
     # TODO: replace untracked dir with file
     # TODO: replace untracked file with dir
-
-
-class Basic20190313Test(SnapshotTestBase):
-    def get_snapshot_path(self) -> Path:
-        return snapshot_mod.get_snapshots_root() / "basic-20190313.tar.xz"
-
-    def test_corrupt_rocks_db(self) -> None:
-        # Remove the RocksDB manifest.  This will cause RocksDB to fail to open
-        # the DB.  Confirm that edenfs automatically invokes RocksDB's repair routines
-        # to repair and then successfully open the DB.
-        rocksdb_manifest = (
-            self.snapshot.eden_state_dir / "storage" / "rocks-db" / "MANIFEST-000004"
-        )
-        rocksdb_manifest.unlink()
-
-        # We don't actually need to run fsck in this case.
-        # edenfs will automatically repair the DB on startup.
-        expected_files = self.snapshot.get_expected_files()
-        self._verify_contents(expected_files)
