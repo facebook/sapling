@@ -42,7 +42,7 @@ enum FetchMode {
 
 pub fn run(opts: DebugScmStoreOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
     if opts.python {
-        return Err(errors::FallbackToPython.into());
+        return Err(errors::FallbackToPython(name()).into());
     }
 
     let mode = match opts.mode.as_ref() {

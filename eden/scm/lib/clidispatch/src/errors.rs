@@ -25,8 +25,8 @@ pub struct UnknownCommand(pub String);
 ///
 /// Ideally this does not exist.
 #[derive(Debug, Error)]
-#[error("")]
-pub struct FallbackToPython;
+#[error("{0}")]
+pub struct FallbackToPython(pub &'static str);
 
 #[derive(Debug, Error)]
 #[error("")]
@@ -95,13 +95,15 @@ pub fn triage_error(config: &ConfigSet, cmd_err: anyhow::Error) -> anyhow::Error
                 )
             }
         }
-    } else if cmd_err.is::<FallbackToPython>()
-        && config
-            .get_or_default("migration", "force-rust")
-            .unwrap_or(false)
-    {
-        anyhow::Error::new(FailedFallbackToPython)
     } else {
+        if let Some(FallbackToPython(command_name)) = cmd_err.downcast_ref::<FallbackToPython>() {
+            if config
+                .get_or_default::<Vec<String>>("commands", "force-rust")
+                .map_or(false, |config| config.contains(&command_name.to_string()))
+            {
+                return anyhow::Error::new(FailedFallbackToPython);
+            }
+        }
         cmd_err
     }
 }

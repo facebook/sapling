@@ -17,7 +17,7 @@ class TestResumeClone(BaseTest):
         super().setUp()
 
         self.config.add("remotenames", "selectivepulldefault", "master")
-        self.config.add("commands", "force-rust", "True")
+        self.config.add("commands", "force-rust", "clone")
         self.config.add("experimental", "nativecheckout", "True")
 
     @hgtest

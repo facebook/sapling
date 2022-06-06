@@ -134,16 +134,16 @@ async fn maybe_status_fastpath_internal(
     io: &IO,
     list_ignored: bool,
 ) -> Result<(status::Status, HashMap<RepoPathBuf, RepoPathBuf>)> {
-    let eden_root = get_eden_root(repo_root).map_err(|_| FallbackToPython)?;
+    let eden_root = get_eden_root(repo_root).map_err(|_| FallbackToPython("status"))?;
 
     let transport = get_socket_transport(repo_root)
         .await
-        .map_err(|_| FallbackToPython)?;
+        .map_err(|_| FallbackToPython("status"))?;
     let client = <dyn EdenService>::new(BinaryProtocol, transport);
 
     let transport = get_socket_transport(repo_root)
         .await
-        .map_err(|_| FallbackToPython)?;
+        .map_err(|_| FallbackToPython("status"))?;
     let fb303_client = <dyn BaseService>::new(BinaryProtocol, transport);
 
     // TODO(mbolin): Run read_hg_dirstate() and core.run() in parallel.
@@ -155,7 +155,7 @@ async fn maybe_status_fastpath_internal(
     // and call out to it here rather than maintain a parallel implementation in the wrapper.
     let hg_dir = repo_root.join(".hg");
     if needs_morestatus_extension(&hg_dir, &dirstate_data.p2) {
-        return Err(FallbackToPython.into());
+        return Err(FallbackToPython("status").into());
     }
 
     let use_color = io.output().can_color();

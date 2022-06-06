@@ -82,10 +82,12 @@ pub fn run(
         deprecate(config, "rev-option", "the --rev-option has been deprecated")?;
     }
 
-    let force_rust = config.get_or_default("commands", "force-rust")?;
+    let force_rust = config
+        .get_or_default::<Vec<String>>("commands", "force-rust")?
+        .contains(&name().to_owned());
     let use_rust = force_rust || config.get_or_default("clone", "use-rust")?;
     if !use_rust {
-        return Err(errors::FallbackToPython.into());
+        return Err(errors::FallbackToPython(name()).into());
     }
 
     if !clone_opts.updaterev.is_empty()
@@ -98,7 +100,7 @@ pub fn run(
         || !clone_opts.exclude.is_empty()
         || clone_opts.eden
     {
-        return Err(errors::FallbackToPython.into());
+        return Err(errors::FallbackToPython(name()).into());
     }
 
     config.set(
@@ -138,7 +140,7 @@ pub fn run(
         .iter()
         .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY)
     {
-        return Err(errors::FallbackToPython.into());
+        return Err(errors::FallbackToPython(name()).into());
     }
 
     let destination = match clone_opts.args.pop() {

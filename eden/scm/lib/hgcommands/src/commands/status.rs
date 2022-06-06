@@ -101,7 +101,7 @@ pub fn run(opts: StatusOpts, io: &IO, repo: &mut Repo) -> Result<u8> {
         || !opts.formatter_opts.template.is_empty()
         || !args_check
     {
-        return Err(errors::FallbackToPython.into());
+        return Err(errors::FallbackToPython(name()).into());
     }
 
     let StatusOpts {

@@ -64,7 +64,7 @@ fn last_chance_to_abort(opts: &HgGlobalOpts) -> Result<()> {
     }
 
     if opts.help {
-        return Err(errors::FallbackToPython.into());
+        return Err(errors::FallbackToPython("help").into());
     }
 
     Ok(())
