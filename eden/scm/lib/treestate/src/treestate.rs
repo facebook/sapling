@@ -162,6 +162,23 @@ impl TreeState {
             .visit_advanced(&self.store, visitor, visit_dir, visit_file)
     }
 
+    pub fn visit_by_state(&mut self, state_required_any: StateFlags) -> Result<Vec<Vec<u8>>> {
+        let mut result = Vec::new();
+        self.visit(
+            &mut |path_components, _| {
+                result.push(path_components.concat());
+                Ok(VisitorResult::NotChanged)
+            },
+            &|_, dir| match dir.get_aggregated_state() {
+                None => true,
+                Some(aggregated_state) => aggregated_state.union.intersects(state_required_any),
+            },
+            &|_, file| file.state.intersects(state_required_any),
+        )?;
+
+        Ok(result)
+    }
+
     pub fn get_filtered_key<F>(
         &mut self,
         name: KeyRef,
@@ -393,23 +410,6 @@ mod tests {
         assert!(!state.has_dir(b"rust/radixbuf/.git2/objects/").unwrap());
     }
 
-    fn visit_all(tree: &mut TreeState, state_required_any: StateFlags) -> Vec<Vec<u8>> {
-        let mut result = Vec::new();
-        tree.visit(
-            &mut |ref path_components, _| {
-                result.push(path_components.concat());
-                Ok(VisitorResult::NotChanged)
-            },
-            &|_, dir| match dir.get_aggregated_state() {
-                None => true,
-                Some(aggregated_state) => aggregated_state.union.intersects(state_required_any),
-            },
-            &|_, file| file.state.intersects(state_required_any),
-        )
-        .expect("visit");
-        result
-    }
-
     #[test]
     fn test_visit_query_by_flags() {
         let dir = TempDir::new("treestate").expect("tempdir");
@@ -423,10 +423,10 @@ mod tests {
         file.state = StateFlags::COPIED | StateFlags::EXIST_P2;
         state.insert(b"a/c/3", &file).expect("insert");
 
-        let files = visit_all(&mut state, StateFlags::IGNORED);
+        let files = state.visit_by_state(StateFlags::IGNORED).unwrap();
         assert_eq!(files, vec![b"a/b/1", b"a/b/2"]);
 
-        let files = visit_all(&mut state, StateFlags::EXIST_P2);
+        let files = state.visit_by_state(StateFlags::EXIST_P2).unwrap();
         assert_eq!(files, vec![b"a/b/2", b"a/c/3"]);
     }
 
@@ -486,7 +486,7 @@ mod tests {
                         &|_, _| true,
                     )
                     .expect("visit");
-                let files = visit_all(&mut state, bit);
+                let files = state.visit_by_state(bit).unwrap();
                 assert_eq!(files, expected);
             }
         }

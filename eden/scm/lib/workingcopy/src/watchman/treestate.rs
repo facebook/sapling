@@ -24,6 +24,12 @@ pub trait WatchmanTreeStateWrite {
     fn set_clock(&mut self, clock: Clock) -> Result<()>;
 }
 
+pub trait WatchmanTreeStateRead {
+    fn list_needs_check(&mut self) -> Result<Vec<Result<RepoPathBuf>>>;
+
+    fn get_clock(&self) -> Result<Option<Clock>>;
+}
+
 pub struct WatchmanTreeState<'a> {
     pub treestate: MutexGuard<'a, TreeState>,
 }
@@ -81,5 +87,27 @@ impl WatchmanTreeStateWrite for WatchmanTreeState<'_> {
         self.treestate.set_metadata(&metadata_buf);
 
         Ok(())
+    }
+}
+
+impl WatchmanTreeStateRead for WatchmanTreeState<'_> {
+    fn list_needs_check(&mut self) -> Result<Vec<Result<RepoPathBuf>>> {
+        self.treestate
+            .visit_by_state(StateFlags::NEED_CHECK)
+            .map(|paths| {
+                paths
+                    .into_iter()
+                    .map(|path| RepoPathBuf::from_utf8(path).map_err(|e| anyhow!(e)))
+                    .collect()
+            })
+    }
+
+    fn get_clock(&self) -> Result<Option<Clock>> {
+        let mut metadata_buf = self.treestate.get_metadata();
+        let metadata = Metadata::deserialize(&mut metadata_buf)?;
+        Ok(metadata
+            .0
+            .get(&"clock".to_string())
+            .map(|clock| Clock::Spec(ClockSpec::StringClock(clock.clone()))))
     }
 }

@@ -11,6 +11,7 @@ use watchman_client::prelude::*;
 
 use crate::filesystem::PendingChangeResult;
 
+use super::treestate::WatchmanTreeStateRead;
 use super::treestate::WatchmanTreeStateWrite;
 
 query_result_type! {
@@ -23,7 +24,7 @@ query_result_type! {
 pub struct WatchmanState {}
 
 impl WatchmanState {
-    pub fn new(_state_reader: impl std::io::Read) -> Self {
+    pub fn new(mut _treestate: impl WatchmanTreeStateRead) -> Self {
         WatchmanState {}
     }
 

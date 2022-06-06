@@ -5,14 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::io::BufReader;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
 use parking_lot::Mutex;
 use treestate::treestate::TreeState;
-use types::RepoPath;
 use vfs::VFS;
 use watchman_client::prelude::*;
 
@@ -37,16 +35,14 @@ impl Watchman {
         &self,
         treestate: Arc<Mutex<TreeState>>,
     ) -> Result<impl Iterator<Item = Result<PendingChangeResult>>> {
-        let state_file = RepoPath::from_str("fsmonitor.state")?;
-
         let client = Connector::new().connect().await?;
         let resolved = client
             .resolve_root(CanonicalPath::canonicalize(self.vfs.root())?)
             .await?;
 
-        let input = self.vfs.read(state_file)?.into_vec();
-        let reader = BufReader::new(&*input);
-        let mut state = WatchmanState::new(reader);
+        let mut state = WatchmanState::new(WatchmanTreeState {
+            treestate: treestate.lock(),
+        });
 
         let result = client
             .query::<StatusQuery>(
