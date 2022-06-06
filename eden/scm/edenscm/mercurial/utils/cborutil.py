@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import struct
 import sys
+from typing import Sized
 
 
 # Very short very of RFC 7049...
@@ -49,11 +50,15 @@ SUBTYPE_INDEFINITE = 31
 SEMANTIC_TAG_FINITE_SET = 258
 
 # Indefinite types begin with their major type ORd with information value 31.
-BEGIN_INDEFINITE_BYTESTRING = struct.pack(
+BEGIN_INDEFINITE_BYTESTRING: bytes = struct.pack(
     r">B", MAJOR_TYPE_BYTESTRING << 5 | SUBTYPE_INDEFINITE
 )
-BEGIN_INDEFINITE_ARRAY = struct.pack(r">B", MAJOR_TYPE_ARRAY << 5 | SUBTYPE_INDEFINITE)
-BEGIN_INDEFINITE_MAP = struct.pack(r">B", MAJOR_TYPE_MAP << 5 | SUBTYPE_INDEFINITE)
+BEGIN_INDEFINITE_ARRAY: bytes = struct.pack(
+    r">B", MAJOR_TYPE_ARRAY << 5 | SUBTYPE_INDEFINITE
+)
+BEGIN_INDEFINITE_MAP: bytes = struct.pack(
+    r">B", MAJOR_TYPE_MAP << 5 | SUBTYPE_INDEFINITE
+)
 
 ENCODED_LENGTH_1 = struct.Struct(r">B")
 ENCODED_LENGTH_2 = struct.Struct(r">BB")
@@ -66,7 +71,7 @@ BREAK = b"\xff"
 BREAK_INT = 255
 
 
-def encodelength(majortype, length):
+def encodelength(majortype, length: int) -> bytes:
     """Obtain a value encoding the major type and its length."""
     if length < 24:
         return ENCODED_LENGTH_1.pack(majortype << 5 | length)
@@ -80,7 +85,7 @@ def encodelength(majortype, length):
         return ENCODED_LENGTH_5.pack(majortype << 5 | 27, length)
 
 
-def streamencodebytestring(v):
+def streamencodebytestring(v: Sized):
     yield encodelength(MAJOR_TYPE_BYTESTRING, len(v))
     yield v
 
@@ -100,7 +105,7 @@ def streamencodebytestringfromiter(it):
     yield BREAK
 
 
-def streamencodeindefinitebytestring(source, chunksize=65536):
+def streamencodeindefinitebytestring(source: Sized, chunksize: int = 65536):
     """Given a large source buffer, emit as an indefinite length bytestring.
 
     This is a generator of chunks constituting the encoded CBOR data.
@@ -111,6 +116,7 @@ def streamencodeindefinitebytestring(source, chunksize=65536):
     l = len(source)
 
     while True:
+        # pyre-fixme[16]: `Sized` has no attribute `__getitem__`.
         chunk = source[i : i + chunksize]
         i += len(chunk)
 
@@ -133,11 +139,12 @@ def streamencodeint(v):
         yield encodelength(MAJOR_TYPE_NEGINT, abs(v) - 1)
 
 
-def streamencodearray(l):
+def streamencodearray(l: Sized):
     """Encode a known size iterable to an array."""
 
     yield encodelength(MAJOR_TYPE_ARRAY, len(l))
 
+    # pyre-fixme[16]: `Sized` has no attribute `__iter__`.
     for i in l:
         for chunk in streamencode(i):
             yield chunk
@@ -168,13 +175,14 @@ def streamencodeset(s):
         yield chunk
 
 
-def streamencodemap(d):
+def streamencodemap(d: Sized):
     """Encode dictionary to a generator.
 
     Does not supporting indefinite length dictionaries.
     """
     yield encodelength(MAJOR_TYPE_MAP, len(d))
 
+    # pyre-fixme[16]: `Sized` has no attribute `items`.
     for key, value in sorted(d.items(), key=lambda x: _mixedtypesortkey(x[0])):
         for chunk in streamencode(key):
             yield chunk
@@ -271,7 +279,7 @@ SPECIAL_START_SET = 4
 SPECIAL_INDEFINITE_BREAK = 5
 
 
-def decodeitem(b, offset=0):
+def decodeitem(b: Sized, offset: int = 0):
     """Decode a new CBOR value from a buffer at offset.
 
     This function attempts to decode up to one complete CBOR value
@@ -336,6 +344,7 @@ def decodeitem(b, offset=0):
         if size is not None:
             # And the data is available in the buffer.
             if offset + readcount + size <= len(b):
+                # pyre-fixme[16]: `Sized` has no attribute `__getitem__`.
                 value = b[offset + readcount : offset + readcount + size]
                 return True, value, readcount + size + 1, SPECIAL_NONE
 
@@ -419,7 +428,7 @@ def decodeitem(b, offset=0):
         assert False
 
 
-def decodeuint(subtype, b, offset=0, allowindefinite=False):
+def decodeuint(subtype, b: Sized, offset: int = 0, allowindefinite: bool = False):
     """Decode an unsigned integer.
 
     ``subtype`` is the lower 5 bits from the initial byte CBOR item
@@ -463,6 +472,8 @@ def decodeuint(subtype, b, offset=0, allowindefinite=False):
         raise CBORDecodeError("bounds condition checking violation")
 
     if len(b) - offset >= s.size:
+        # pyre-fixme[6]: For 1st param expected `Union[array[typing.Any], bytearray,
+        #  bytes, _CData, memoryview, mmap]` but got `Sized`.
         return True, s.unpack_from(b, offset)[0], s.size
     else:
         return False, None, len(b) - offset - s.size
@@ -983,7 +994,7 @@ class bufferingdecoder(object):
         return self._decoder.getavailable()
 
 
-def decodeall(b):
+def decodeall(b: Sized):
     """Decode all CBOR items present in an iterable of bytes.
 
     In addition to regular decode errors, raises CBORDecodeError if the
