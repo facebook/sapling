@@ -39,6 +39,7 @@ import os
 import random
 import socket
 import tempfile
+from typing import Optional, Sized
 
 from edenscm.mercurial import (
     context,
@@ -64,7 +65,7 @@ UNCACHEABLE_NODES = [None, nullid, wdirid]  # repo[None].node() returns this
 mcroutersocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 
-def extsetup(ui):
+def extsetup(ui) -> None:
     extensions.wrapfunction(copies, "pathcopies", pathcopiesui(ui))
     extensions.wrapfunction(context.basectx, "_buildstatus", buildstatusui(ui))
 
@@ -78,7 +79,7 @@ def gethostport(ui):
     return (host, port)
 
 
-def mcget(key, ui):
+def mcget(key: bytes, ui):
     """
     Use local mcrouter to get a key from memcache
     """
@@ -123,7 +124,7 @@ def mcget(key, ui):
     return value
 
 
-def mcset(key, value, ui):
+def mcset(key, value: bytes, ui) -> bool:
     """
     Use local mcrouter to set a key to memcache
     """
@@ -286,7 +287,7 @@ class stringserializer(object):
         return pycompat.decodeutf8(string)
 
 
-def localpath(key, ui):
+def localpath(key, ui) -> str:
     tempdir = ui.config("simplecache", "cachedir")
     if not tempdir:
         tempdir = os.path.join(
@@ -295,7 +296,7 @@ def localpath(key, ui):
     return os.path.join(tempdir, key)
 
 
-def localget(key, ui):
+def localget(key: str, ui) -> Optional[bytes]:
     if type(key) != str:
         raise ValueError("Key must be a string")
     try:
@@ -306,7 +307,7 @@ def localget(key, ui):
         return None
 
 
-def localset(key, value, ui):
+def localset(key: str, value: bytes, ui) -> None:
     if type(key) != str:
         raise ValueError("Key must be a string")
     if type(value) != bytes:
@@ -336,7 +337,7 @@ def localset(key, value, ui):
 cachefuncs = {"local": (localget, localset), "memcache": (mcget, mcset)}
 
 
-def _adjust_key(key, ui):
+def _adjust_key(key, ui) -> str:
     version = ui.config("simplecache", "version", default="2")
     key = "%s:v%s" % (key, version)
     if pycompat.iswindows:
@@ -358,7 +359,7 @@ def memoize(func, key, serializer, ui):
     return value
 
 
-def cacheget(key, serializer, ui, default=None, _adjusted=False):
+def cacheget(key, serializer, ui, default=None, _adjusted: bool = False):
     if not _adjusted:
         key = _adjust_key(key, ui)
     cachelist = ui.configlist("simplecache", "caches", ["local"])
@@ -377,7 +378,7 @@ def cacheget(key, serializer, ui, default=None, _adjusted=False):
     return default
 
 
-def cacheset(key, value, serializer, ui, _adjusted=False):
+def cacheset(key, value, serializer, ui, _adjusted: bool = False) -> None:
     if not _adjusted:
         key = _adjust_key(key, ui)
     cachelist = ui.configlist("simplecache", "caches", ["local"])
@@ -403,17 +404,18 @@ def addchecksum(key, value):
     return checksum(key, value) + value
 
 
-def verifychecksum(key, value):
+def verifychecksum(key, value: Sized):
     if len(value) < 40:
         raise ValueError("simplecache value too short to contain a checksum")
 
+    # pyre-fixme[16]: `Sized` has no attribute `__getitem__`.
     sha, payload = value[:40], value[40:]
     if checksum(key, payload) != sha:
         raise ValueError("invalid hash from simplecache for key '%s'" % key)
     return payload
 
 
-def _debug(ui, msg):
+def _debug(ui, msg) -> None:
     config = ui.configbool("simplecache", "showdebug", None)
     if config is None:
         config = not util.istest()
