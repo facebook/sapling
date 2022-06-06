@@ -207,7 +207,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
         Ok(None)
     }
 
-    /// List all Deleted Files Manifest paths recursively that were deleted and match specified paths
+    /// List all Deleted Manifest paths recursively that were deleted and match specified paths
     /// and/or prefixes.
     ///
     fn find_entries<'a>(
@@ -332,7 +332,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
         }
     }
 
-    /// List all Deleted files manifest entries recursively, that represent deleted paths.
+    /// List all Deleted manifest entries recursively, that represent deleted paths.
     ///
     fn list_all_entries<'a>(
         &self,

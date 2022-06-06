@@ -22,7 +22,7 @@ use bookmarks_types::{Bookmark, BookmarkKind, BookmarkPagination, BookmarkPrefix
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::{CoreContext, SessionClass};
-use deleted_files_manifest::RootDeletedManifestV2Id;
+use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fastlog::RootFastlog;

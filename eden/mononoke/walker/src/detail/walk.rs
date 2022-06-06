@@ -30,7 +30,7 @@ use bounded_traversal::limited_by_key_shardable;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
-use deleted_files_manifest::{RootDeletedManifestIdCommon, RootDeletedManifestV2Id};
+use deleted_manifest::{RootDeletedManifestIdCommon, RootDeletedManifestV2Id};
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;

@@ -126,14 +126,14 @@ count-objects, deep walk across blame
   Seen,Loaded: 16,16
   * Type:Walked,Checks,Children Blame:3,* Bookmark:1,* Changeset:3,* UnodeFile:3,* UnodeManifest:3,* UnodeMapping:3,* (glob)
 
-count-objects, shallow walk across deleted files manifest
+count-objects, shallow walk across deleted manifest
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I shallow -i bonsai -i derived_deleted_manifest -X ChangesetToFileContent 2>&1 | strip_glog
   Walking edge types [BookmarkToChangeset, ChangesetToDeletedManifestV2Mapping, DeletedManifestV2MappingToRootDeletedManifestV2, DeletedManifestV2ToDeletedManifestV2Child]
   Walking node types [Bookmark, Changeset, DeletedManifestV2, DeletedManifestV2Mapping]
   Seen,Loaded: 4,4
   * Type:Walked,Checks,Children * DeletedManifestV2:1,* DeletedManifestV2Mapping:1,* (glob)
 
-count-objects, deep walk across deleted files manifest
+count-objects, deep walk across deleted manifest
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I deep -i bonsai -i derived_deleted_manifest 2>&1 | strip_glog
   Walking edge types [BookmarkToChangeset, ChangesetToBonsaiParent, ChangesetToDeletedManifestV2Mapping, DeletedManifestV2MappingToRootDeletedManifestV2, DeletedManifestV2ToDeletedManifestV2Child, DeletedManifestV2ToLinkedChangeset]
   Walking node types [Bookmark, Changeset, DeletedManifestV2, DeletedManifestV2Mapping]

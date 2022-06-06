@@ -12,7 +12,7 @@ use blobstore::{Loadable, LoadableError};
 use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
 use cloned::cloned;
 use context::CoreContext;
-use deleted_files_manifest::{DeletedManifestOps, PathState, RootDeletedManifestV2Id};
+use deleted_manifest::{DeletedManifestOps, PathState, RootDeletedManifestV2Id};
 use derived_data::{BonsaiDerived, DeriveError};
 use futures::{
     future,

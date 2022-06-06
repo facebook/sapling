@@ -19,9 +19,7 @@ use changesets::ChangesetsRef;
 use chrono::{DateTime, FixedOffset};
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use deleted_files_manifest::{
-    DeletedManifestOps, RootDeletedManifestIdCommon, RootDeletedManifestV2Id,
-};
+use deleted_manifest::{DeletedManifestOps, RootDeletedManifestIdCommon, RootDeletedManifestV2Id};
 use derived_data::BonsaiDerived;
 use derived_data_manager::BonsaiDerivable;
 use fsnodes::RootFsnodeId;

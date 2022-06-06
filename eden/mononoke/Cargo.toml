@@ -271,7 +271,7 @@ members = [
   "derived_data/blame",
   "derived_data/changeset_info",
   "derived_data/changeset_info/if",
-  "derived_data/deleted_files_manifest",
+  "derived_data/deleted_manifest",
   "derived_data/derived_generation",
   "derived_data/fastlog",
   "derived_data/filenodes",

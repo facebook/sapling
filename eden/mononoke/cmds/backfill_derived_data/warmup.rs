@@ -10,7 +10,7 @@ use blame::{fetch_content_for_blame, BlameRoot};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use context::CoreContext;
-use deleted_files_manifest::RootDeletedManifestV2Id;
+use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data::BonsaiDerived;
 use fastlog::RootFastlog;
 use fsnodes::{prefetch_content_metadata, RootFsnodeId};

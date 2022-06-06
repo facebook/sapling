@@ -74,7 +74,7 @@ pub(crate) async fn linear_test<Root: RootDeletedManifestIdCommon>(fb: FacebookI
     let repo: BlobRepo = build_repo::<Root>(fb).unwrap();
     let ctx = CoreContext::test_mock(fb);
 
-    // create parent deleted files manifest
+    // create parent deleted manifest
     let (bcs_id_1, mf_id_1) = {
         let file_changes = btreemap! {
             "file.txt" => Some("1\n"),
@@ -549,7 +549,7 @@ pub(crate) async fn test_find_entries<Root: RootDeletedManifestIdCommon>(fb: Fac
     let repo: BlobRepo = build_repo::<Root>(fb).unwrap();
     let ctx = CoreContext::test_mock(fb);
 
-    // create parent deleted files manifest
+    // create parent deleted manifest
     let (bcs_id_1, mf_id_1) = {
         let file_changes = btreemap! {
             "file.txt" => Some("1\n"),
@@ -663,7 +663,7 @@ pub(crate) async fn test_list_all_entries<Root: RootDeletedManifestIdCommon>(fb:
     let repo: BlobRepo = build_repo::<Root>(fb).unwrap();
     let ctx = CoreContext::test_mock(fb);
 
-    // create parent deleted files manifest
+    // create parent deleted manifest
     let (bcs_id_1, mf_id_1) = {
         let file_changes = btreemap! {
             "file.txt" => Some("1\n"),

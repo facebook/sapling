@@ -19,7 +19,7 @@ bookmarks_types = { version = "0.1.0", path = "../bookmarks_types" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
-deleted_files_manifest = { version = "0.1.0", path = "../../derived_data/deleted_files_manifest" }
+deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manifest" }
 derived_data_filenodes = { version = "0.1.0", path = "../../derived_data/filenodes" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -18,7 +18,7 @@ use cmdlib::{
     helpers,
 };
 use context::CoreContext;
-use deleted_files_manifest::{DeletedManifestOps, RootDeletedManifestV2Id};
+use deleted_manifest::{DeletedManifestOps, RootDeletedManifestV2Id};
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::{compat::Stream01CompatExt, future, StreamExt, TryStreamExt};
@@ -50,10 +50,10 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .default_value("");
 
     SubCommand::with_name(DELETED_MANIFEST)
-        .about("derive, inspect and verify deleted files manifest")
+        .about("derive, inspect and verify deleted manifest")
         .subcommand(
             SubCommand::with_name(COMMAND_MANIFEST)
-                .about("recursively list all deleted files manifest entries under the given path")
+                .about("recursively list all deleted manifest entries under the given path")
                 .arg(csid_arg.clone())
                 .arg(path_arg.clone()),
         )
@@ -135,10 +135,7 @@ async fn subcommand_manifest(
     prefix: Option<MPath>,
 ) -> Result<(), Error> {
     let root_manifest = RootDeletedManifestV2Id::derive(&ctx, &repo, cs_id).await?;
-    debug!(
-        ctx.logger(),
-        "ROOT Deleted Files Manifest V2 {:?}", root_manifest,
-    );
+    debug!(ctx.logger(), "ROOT Deleted Manifest V2 {:?}", root_manifest,);
     let mut entries: Vec<_> = root_manifest
         .find_entries(&ctx, repo.blobstore(), Some(PathOrPrefix::Prefix(prefix)))
         .try_collect()

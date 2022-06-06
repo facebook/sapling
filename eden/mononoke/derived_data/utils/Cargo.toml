@@ -21,7 +21,7 @@ changeset_info = { version = "0.1.0", path = "../changeset_info" }
 changesets = { version = "0.1.0", path = "../../changesets" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
-deleted_files_manifest = { version = "0.1.0", path = "../deleted_files_manifest" }
+deleted_manifest = { version = "0.1.0", path = "../deleted_manifest" }
 derived_data = { version = "0.1.0", path = ".." }
 derived_data_filenodes = { version = "0.1.0", path = "../filenodes" }
 derived_data_manager = { version = "0.1.0", path = "../manager" }

@@ -19,7 +19,7 @@ use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
-use deleted_files_manifest::{DeletedManifestOps, RootDeletedManifestIdCommon};
+use deleted_manifest::{DeletedManifestOps, RootDeletedManifestIdCommon};
 use derived_data::BonsaiDerived;
 use fastlog::{
     list_file_history, CsAndPath, FastlogError, FollowMutableFileHistory, HistoryAcrossDeletions,

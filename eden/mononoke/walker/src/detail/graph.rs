@@ -14,7 +14,7 @@ use blobstore_factory::SqlTierInfo;
 use bookmarks::BookmarkName;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
-use deleted_files_manifest::RootDeletedManifestV2Id;
+use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fastlog::{unode_entry_to_fastlog_batch_key, RootFastlog};

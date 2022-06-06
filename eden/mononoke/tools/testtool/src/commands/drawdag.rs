@@ -42,7 +42,7 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use changeset_info::ChangesetInfo;
 use clap::Parser;
 use context::CoreContext;
-use deleted_files_manifest::RootDeletedManifestV2Id;
+use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BatchDeriveOptions;
 use derived_data_manager::BonsaiDerivable;

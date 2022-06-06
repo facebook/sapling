@@ -32,7 +32,7 @@ cmdlib = { version = "0.1.0", path = "../cmdlib" }
 cmdlib_scrubbing = { version = "0.1.0", path = "../cmdlib/scrubbing" }
 context = { version = "0.1.0", path = "../server/context" }
 dashmap = { version = "4.0.2", features = ["rayon", "serde"] }
-deleted_files_manifest = { version = "0.1.0", path = "../derived_data/deleted_files_manifest" }
+deleted_manifest = { version = "0.1.0", path = "../derived_data/deleted_manifest" }
 derive_more = "0.99.3"
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }

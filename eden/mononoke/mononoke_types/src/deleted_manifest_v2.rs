@@ -21,13 +21,13 @@ use crate::thrift;
 use crate::typed_hash::{BlobstoreKey, ChangesetId, DeletedManifestV2Context, DeletedManifestV2Id};
 use crate::MPathElement;
 
-/// Deleted Files Manifest is a data structure that tracks deleted files and commits where they
+/// Deleted Manifest is a data structure that tracks deleted files and commits where they
 /// were deleted. This manifest was designed in addition to Unodes to make following file history
 /// across deletions possible.
 ///
 /// Both directories and files are represented by the same data structure, which consists of:
 /// * optional<linknode>: if set, a changeset where this path was deleted
-/// * subentries: a map from base name to the deleted files manifest for this path
+/// * subentries: a map from base name to the deleted manifest for this path
 /// Even though the manifest tracks only deleted paths, it will still have entries for the
 /// existing directories where files were deleted. Optional field `linknode` indicates whether the
 /// path still exists (not set) or it was deleted.
@@ -36,7 +36,7 @@ use crate::MPathElement;
 ///
 /// Why the manifest has same data structure for files and directories?
 ///
-/// Deleted files manifest doesn't differ files from directories, because any file path can be
+/// Deleted manifest doesn't differ files from directories, because any file path can be
 /// reincarnated after the deletion as a directory and vice versa. The manifest doesn't need
 /// to know whether the path is a directory or a file, the only important information is "if the
 /// path was deleted, which changeset did it?"
@@ -50,9 +50,9 @@ use crate::MPathElement;
 /// However, if one of such files is recreated as a directory, we anyway create a new entry for it:
 /// manifest entries are immutable.
 ///
-/// How we derive deleted files manifest?
+/// How we derive deleted manifest?
 ///
-/// Assuming we have a computed deleted files manifests for all the current commits, for a new
+/// Assuming we have a computed deleted manifests for all the current commits, for a new
 /// changeset:
 /// 1. For each deleted file create a new manifest entry with a linknode to the changeset, where
 /// file was deleted.
@@ -83,7 +83,7 @@ use crate::MPathElement;
 /// |   |
 /// o F :
 ///
-/// 1. Check deleted files manifest from node B: the file was deleted with linknode to B.
+/// 1. Check deleted manifest from node B: the file was deleted with linknode to B.
 /// 2. Need to consider all ancestors of B:
 ///    * check unodes for the parents: if the file exists,
 ///        traverse the history

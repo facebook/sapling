@@ -31,11 +31,11 @@ use unodes::RootUnodeManifestId;
 
 use crate::mapping::RootDeletedManifestIdCommon;
 
-/// Derives deleted files manifest for bonsai changeset `cs_id` given parent deleted files
+/// Derives deleted manifest for bonsai changeset `cs_id` given parent deleted files
 /// manifests and the changes associated with the changeset. Parent deleted manifests should be
 /// constructed for each parent of the given changeset.
 ///
-/// Deleted files manifest is a recursive data structure that starts with a root manifest and
+/// Deleted manifest is a recursive data structure that starts with a root manifest and
 /// points to the other manifests. Each node may represent either deleted directoty or deleted file.
 /// Both directory's and file's manifest can have subentries, if a file has subentries it means
 /// that this path was a directory earlier, then was deleted and reincarnated as a file.
@@ -49,7 +49,7 @@ use crate::mapping::RootDeletedManifestIdCommon;
 /// recursively starting from the root of parent manifest.
 ///
 /// 1. If no files were deleted or created on the current path or any subpaths
-///    - if there was corresponding deleted files manifest, reuse it;
+///    - if there was corresponding deleted manifest, reuse it;
 ///    - otherwise, there is no need to create a new node.
 /// 2. If no change ends on the current path BUT there are creations/deletions on the subpaths,
 ///    recurse to the parent subentries and the current subpaths' changes
@@ -162,7 +162,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
                                 match entry {
                                     (None, _) => {
                                         return Err(anyhow!(concat!(
-                                            "Failed to create deleted files manifest: ",
+                                            "Failed to create deleted manifest: ",
                                             "subentry must have a path"
                                         )));
                                     }
@@ -713,12 +713,12 @@ impl<Root: RootDeletedManifestIdCommon> RootDeletedManifestDeriver<Root> {
         changeset_id: ChangesetId,
     ) -> Result<Option<Root>, Error> {
         let key = Root::format_key(derivation_ctx, changeset_id);
-        Ok(derivation_ctx
+        derivation_ctx
             .blobstore()
             .get(ctx, &key)
             .await?
             .map(TryInto::try_into)
-            .transpose()?)
+            .transpose()
     }
 }
 

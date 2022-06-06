@@ -106,7 +106,7 @@ pub struct FileUnodeId(Blake2);
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct ManifestUnodeId(Blake2);
 
-/// An identifier for a deleted files manifest v2
+/// An identifier for a deleted manifest v2
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct DeletedManifestV2Id(Blake2);
 
