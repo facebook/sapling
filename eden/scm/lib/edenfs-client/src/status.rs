@@ -99,7 +99,7 @@ async fn maybe_status_fastpath_internal(
     io: &IO,
     list_ignored: bool,
 ) -> Result<(status::Status, HashMap<RepoPathBuf, RepoPathBuf>)> {
-    Err(FallbackToPython.into())
+    Err(FallbackToPython("status").into())
 }
 
 pub fn get_status(repo_root: &Path) -> Result<GetScmStatusResult> {
@@ -110,7 +110,7 @@ pub fn get_status(repo_root: &Path) -> Result<GetScmStatusResult> {
 
 #[cfg(windows)]
 async fn get_status_internal(_repo_root: &Path) -> Result<GetScmStatusResult> {
-    Err(FallbackToPython.into())
+    Err(FallbackToPython("status").into())
 }
 
 #[cfg(unix)]
