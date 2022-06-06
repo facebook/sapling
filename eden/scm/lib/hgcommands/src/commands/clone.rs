@@ -55,10 +55,10 @@ define_flags! {
         /// enable a sparse profile
         enable_profile: Vec<String>,
 
-        /// files to include in a sparse profile
+        /// files to include in a sparse profile (DEPRECATED)
         include: String,
 
-        /// files to exclude in a sparse profile
+        /// files to exclude in a sparse profile (DEPRECATED)
         exclude: String,
 
         /// use EdenFs (EXPERIMENTAL)
@@ -78,8 +78,27 @@ pub fn run(
     io: &IO,
     config: &mut ConfigSet,
 ) -> Result<u8> {
-    if !clone_opts.rev.is_empty() {
-        deprecate(config, "rev-option", "the --rev-option has been deprecated")?;
+    let deprecated_options = [
+        ("--rev", "rev-option", clone_opts.rev.is_empty()),
+        (
+            "--include",
+            "clone-include-option",
+            clone_opts.include.is_empty(),
+        ),
+        (
+            "--exclude",
+            "clone-exclude-option",
+            clone_opts.exclude.is_empty(),
+        ),
+    ];
+    for (option_name, option_config, option_is_empty) in deprecated_options {
+        if !option_is_empty {
+            deprecate(
+                config,
+                option_config,
+                format!("the {} option has been deprecated", option_name),
+            )?;
+        }
     }
 
     let force_rust = config
@@ -96,8 +115,6 @@ pub fn run(
         || clone_opts.stream
         || !clone_opts.shallow
         || clone_opts.git
-        || !clone_opts.include.is_empty()
-        || !clone_opts.exclude.is_empty()
         || clone_opts.eden
     {
         return Err(errors::FallbackToPython(name()).into());

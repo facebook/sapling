@@ -13,10 +13,10 @@ use crate::errors::DeprecatedFeature;
 pub fn deprecate(
     config: &dyn Config,
     name: &str,
-    error_str: &str,
+    error_str: String,
 ) -> Result<(), DeprecatedFeature> {
     if config.get_or("deprecate", name, || false).unwrap_or(false) {
-        Err(DeprecatedFeature(error_str.to_string()))
+        Err(DeprecatedFeature(error_str))
     } else {
         Ok(())
     }
