@@ -2080,7 +2080,7 @@ void EdenServiceHandler::debugGetScmTree(
     unique_ptr<string> mountPoint,
     unique_ptr<string> idStr,
     bool localStoreOnly) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, logHash(*idStr));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   auto id = edenMount->getObjectStore()->parseObjectId(*idStr);
@@ -2096,7 +2096,10 @@ void EdenServiceHandler::debugGetScmTree(
 
   if (!tree) {
     throw newEdenError(
-        ENOENT, EdenErrorType::POSIX_ERROR, "no tree found for id ", id);
+        ENOENT,
+        EdenErrorType::POSIX_ERROR,
+        "no tree found for id ",
+        edenMount->getObjectStore()->renderObjectId(id));
   }
 
   for (const auto& entry : *tree) {
@@ -2115,7 +2118,7 @@ void EdenServiceHandler::debugGetScmBlob(
     unique_ptr<string> mountPoint,
     unique_ptr<string> idStr,
     bool localStoreOnly) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, logHash(*idStr));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   auto id = edenMount->getObjectStore()->parseObjectId(*idStr);
@@ -2131,7 +2134,10 @@ void EdenServiceHandler::debugGetScmBlob(
 
   if (!blob) {
     throw newEdenError(
-        ENOENT, EdenErrorType::POSIX_ERROR, "no blob found for id ", id);
+        ENOENT,
+        EdenErrorType::POSIX_ERROR,
+        "no blob found for id ",
+        edenMount->getObjectStore()->renderObjectId(id));
   }
   auto dataBuf = blob->getContents().cloneCoalescedAsValue();
   data.assign(reinterpret_cast<const char*>(dataBuf.data()), dataBuf.length());
@@ -2142,7 +2148,7 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
     unique_ptr<string> mountPoint,
     unique_ptr<string> idStr,
     bool localStoreOnly) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, logHash(*idStr));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   auto id = edenMount->getObjectStore()->parseObjectId(*idStr);
