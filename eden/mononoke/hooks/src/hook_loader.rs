@@ -27,13 +27,13 @@ enum LoadedRustHook {
 pub async fn load_hooks(
     fb: FacebookInit,
     hook_manager: &mut HookManager,
-    config: RepoConfig,
+    config: &RepoConfig,
     disabled_hooks: &HashSet<String>,
 ) -> Result<(), Error> {
     let mut hooks_not_disabled = disabled_hooks.clone();
 
     let mut hook_set = HashSet::new();
-    for hook in config.hooks {
+    for hook in config.hooks.clone() {
         use LoadedRustHook::*;
 
         if disabled_hooks.contains(&hook.name) {
@@ -75,7 +75,7 @@ pub async fn load_hooks(
         return Err(ErrorKind::NoSuchHookToDisable(hooks_not_disabled).into());
     }
 
-    for bookmark_hook in config.bookmarks {
+    for bookmark_hook in config.bookmarks.clone() {
         let bookmark = bookmark_hook.bookmark;
         let hooks: Vec<_> = bookmark_hook
             .hooks

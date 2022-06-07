@@ -19,7 +19,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 pub async fn make_hook_manager(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    config: RepoConfig,
+    config: &RepoConfig,
     name: &str,
     disabled_hooks: &HashSet<String>,
 ) -> Result<HookManager> {

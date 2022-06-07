@@ -197,7 +197,7 @@ impl Repo {
             let name = name.as_str();
             async move {
                 let hook_manager =
-                    make_hook_manager(ctx, blob_repo, config, name, &disabled_hooks).await?;
+                    make_hook_manager(ctx, blob_repo, &config, name, &disabled_hooks).await?;
                 Ok::<_, Error>(Arc::new(hook_manager))
             }
         };
@@ -393,14 +393,7 @@ impl Repo {
         let warm_bookmarks_cache = warm_bookmarks_cache_builder.build().await?;
 
         let hook_manager = Arc::new(
-            make_hook_manager(
-                &ctx,
-                &inner.blob_repo,
-                config.clone(),
-                "test",
-                &HashSet::new(),
-            )
-            .await?,
+            make_hook_manager(&ctx, &inner.blob_repo, &config, "test", &HashSet::new()).await?,
         );
 
         let readonly_fetcher =
