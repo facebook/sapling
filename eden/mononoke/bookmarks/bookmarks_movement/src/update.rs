@@ -84,6 +84,7 @@ impl BookmarkUpdatePolicy {
     }
 }
 
+#[must_use = "UpdateBookmarkOp must be run to have an effect"]
 pub struct UpdateBookmarkOp<'op> {
     bookmark: &'op BookmarkName,
     targets: BookmarkUpdateTargets,
@@ -98,7 +99,6 @@ pub struct UpdateBookmarkOp<'op> {
     log_new_public_commits_to_scribe: bool,
 }
 
-#[must_use = "UpdateBookmarkOp must be run to have an effect"]
 impl<'op> UpdateBookmarkOp<'op> {
     pub fn new(
         bookmark: &'op BookmarkName,

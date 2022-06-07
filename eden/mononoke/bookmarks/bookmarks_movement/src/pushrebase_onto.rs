@@ -36,6 +36,7 @@ use crate::restrictions::{
 };
 use crate::{BookmarkMovementError, Repo};
 
+#[must_use = "PushrebaseOntoBookmarkOp must be run to have an effect"]
 pub struct PushrebaseOntoBookmarkOp<'op> {
     bookmark: &'op BookmarkName,
     affected_changesets: AffectedChangesets,
@@ -46,7 +47,6 @@ pub struct PushrebaseOntoBookmarkOp<'op> {
     hg_replay: Option<&'op pushrebase::HgReplayData>,
 }
 
-#[must_use = "PushrebaseOntoBookmarkOp must be run to have an effect"]
 impl<'op> PushrebaseOntoBookmarkOp<'op> {
     pub fn new(
         bookmark: &'op BookmarkName,

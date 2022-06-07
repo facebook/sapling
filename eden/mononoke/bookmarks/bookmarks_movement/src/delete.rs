@@ -21,6 +21,7 @@ use crate::restrictions::{
 };
 use crate::{BookmarkMovementError, Repo};
 
+#[must_use = "DeleteBookmarkOp must be run to have an effect"]
 pub struct DeleteBookmarkOp<'op> {
     bookmark: &'op BookmarkName,
     old_target: ChangesetId,
@@ -31,7 +32,6 @@ pub struct DeleteBookmarkOp<'op> {
     bundle_replay: Option<&'op dyn BundleReplay>,
 }
 
-#[must_use = "DeleteBookmarkOp must be run to have an effect"]
 impl<'op> DeleteBookmarkOp<'op> {
     pub fn new(
         bookmark: &'op BookmarkName,

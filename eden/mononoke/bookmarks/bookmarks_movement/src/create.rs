@@ -30,6 +30,7 @@ use crate::restrictions::{
 use crate::BookmarkMovementError;
 use crate::Repo;
 
+#[must_use = "CreateBookmarkOp must be run to have an effect"]
 pub struct CreateBookmarkOp<'op> {
     bookmark: &'op BookmarkName,
     target: ChangesetId,
@@ -43,7 +44,6 @@ pub struct CreateBookmarkOp<'op> {
     log_new_public_commits_to_scribe: bool,
 }
 
-#[must_use = "CreateBookmarkOp must be run to have an effect"]
 impl<'op> CreateBookmarkOp<'op> {
     pub fn new(
         bookmark: &'op BookmarkName,
