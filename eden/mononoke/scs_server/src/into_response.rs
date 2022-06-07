@@ -298,6 +298,11 @@ impl AsyncIntoResponseWith<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::Co
     }
 }
 
+fn to_i64(val: usize) -> Result<i64, errors::ServiceError> {
+    val.try_into()
+        .map_err(|_| errors::internal_error("usize too big for i64").into())
+}
+
 #[async_trait]
 impl AsyncIntoResponseWith<thrift::PushrebaseOutcome> for PushrebaseOutcome {
     /// The additional data is the repo context, the set of commit identity
@@ -360,6 +365,8 @@ impl AsyncIntoResponseWith<thrift::PushrebaseOutcome> for PushrebaseOutcome {
         Ok(thrift::PushrebaseOutcome {
             head,
             rebased_commits,
+            pushrebase_distance: to_i64(self.pushrebase_distance.0)?,
+            retry_num: to_i64(self.retry_num.0)?,
             ..Default::default()
         })
     }

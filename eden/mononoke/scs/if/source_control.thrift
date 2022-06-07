@@ -532,6 +532,12 @@ struct PushrebaseOutcome {
   /// commits.  The identity schemes for the old ID is specified by the
   /// old_identity_schemes field in the request.
   2: list<PushrebaseRebasedCommit> rebased_commits;
+
+  /// How far away was the commit rebased.
+  3: i64 pushrebase_distance;
+
+  /// How many retries it took to do the rebase successfully, due to race conditions.
+  4: i64 retry_num;
 }
 
 typedef string SparseProfileName

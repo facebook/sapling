@@ -66,11 +66,18 @@ struct PushrebaseOutcomeOutput {
     bookmark: String,
     head: BTreeMap<String, String>,
     rebased_commits: Vec<PushrebaseRebasedCommit>,
+    retries: i64,
+    distance: i64,
 }
 
 impl Render for PushrebaseOutcomeOutput {
     fn render(&self, matches: &ArgMatches, w: &mut dyn Write) -> Result<(), Error> {
         let schemes = get_schemes(matches);
+        write!(
+            w,
+            "In {} retries across distance {}\n",
+            self.retries, self.distance
+        )?;
         write!(w, "{} updated to", self.bookmark)?;
         render_commit_id(
             Some(("", "    ")),
@@ -120,10 +127,12 @@ pub(super) async fn run(matches: &ArgMatches<'_>, connection: Connection) -> Res
         pushvars,
         ..Default::default()
     };
-    let response = connection.repo_land_stack(&repo, &params).await?;
-    let head = map_commit_ids(response.pushrebase_outcome.head.values());
-    let mut rebased_commits = response
-        .pushrebase_outcome
+    let outcome = connection
+        .repo_land_stack(&repo, &params)
+        .await?
+        .pushrebase_outcome;
+    let head = map_commit_ids(outcome.head.values());
+    let mut rebased_commits = outcome
         .rebased_commits
         .into_iter()
         .map(|rebase| {
@@ -146,6 +155,8 @@ pub(super) async fn run(matches: &ArgMatches<'_>, connection: Connection) -> Res
         bookmark,
         head,
         rebased_commits,
+        distance: outcome.pushrebase_distance,
+        retries: outcome.retry_num,
     });
     Ok(stream::once(async move { Ok(output as Box<dyn Render>) }).boxed())
 }
