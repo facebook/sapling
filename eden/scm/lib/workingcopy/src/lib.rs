@@ -6,6 +6,7 @@
  */
 
 pub mod edenfs;
+mod filechangedetector;
 pub mod filesystem;
 pub mod sparse;
 pub mod status;
