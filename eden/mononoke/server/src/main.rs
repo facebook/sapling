@@ -15,7 +15,7 @@ use fbinit::FacebookInit;
 use futures::channel::oneshot;
 use futures_watchdog::WatchdogExt;
 use mononoke_api::{Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData};
-use mononoke_app::args::{HooksArgs, McrouterAppExtension, ShutdownTimeoutArgs};
+use mononoke_app::args::{HooksAppExtension, McrouterAppExtension, ShutdownTimeoutArgs};
 use mononoke_app::fb303::{Fb303AppExtension, ReadyFlagService};
 use mononoke_app::MononokeAppBuilder;
 use openssl::ssl::AlpnError;
@@ -29,8 +29,6 @@ use std::sync::{
 /// Mononoke Server
 #[derive(Parser)]
 struct MononokeServerArgs {
-    #[clap(flatten)]
-    hooks_args: HooksArgs,
     #[clap(flatten)]
     shutdown_timeout_args: ShutdownTimeoutArgs,
     #[clap(flatten)]
@@ -67,6 +65,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .with_default_scuba_dataset("mononoke_test_perf")
         .with_app_extension(McrouterAppExtension {})
         .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(HooksAppExtension {})
         .build::<MononokeServerArgs>()?;
     let args: MononokeServerArgs = app.args()?;
 
@@ -103,9 +102,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let service = ReadyFlagService::new();
     let (terminate_sender, terminate_receiver) = oneshot::channel::<()>();
 
-    let disabled_hooks = args
-        .hooks_args
-        .process_disabled_with_repo_prefix(root_log)?;
     let scribe = args.scribe_logging_args.get_scribe(fb)?;
     let host_port = args.listening_host_port;
 
@@ -126,7 +122,6 @@ fn main(fb: FacebookInit) -> Result<()> {
         async move {
             let api_env = MononokeApiEnvironment {
                 repo_factory,
-                disabled_hooks,
                 warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
                 warm_bookmarks_cache_enabled: true,
                 warm_bookmarks_cache_scuba_sample_builder: warm_bookmarks_cache_scuba,

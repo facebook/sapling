@@ -22,7 +22,7 @@ pub use self::tunables::TunablesArgs;
 pub use crate::fb303::Fb303Args;
 pub use changeset::ChangesetArgs;
 pub use config::{ConfigArgs, ConfigMode};
-pub use hooks::HooksArgs;
+pub use hooks::HooksAppExtension;
 pub use mcrouter::{McrouterAppExtension, McrouterArgs};
 pub use mysql::MysqlArgs;
 pub use repo::{MultiRepoArgs, RepoArg, RepoArgs};

@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use crate::AppExtension;
 use anyhow::{format_err, Result};
 use clap::Args;
-use slog::{warn, Logger};
+use environment::MononokeEnvironment;
+use slog::warn;
 use std::collections::{HashMap, HashSet};
 
 /// Command line arguments for tweaking hooks
@@ -18,13 +20,14 @@ pub struct HooksArgs {
     disabled_hooks: Vec<String>,
 }
 
-impl HooksArgs {
-    pub fn process_disabled_with_repo_prefix(
-        &self,
-        logger: &Logger,
-    ) -> Result<HashMap<String, HashSet<String>>> {
+pub struct HooksAppExtension;
+
+impl AppExtension for HooksAppExtension {
+    type Args = HooksArgs;
+
+    fn environment_hook(&self, args: &Self::Args, env: &mut MononokeEnvironment) -> Result<()> {
         let mut res = HashMap::new();
-        for repohook in &self.disabled_hooks {
+        for repohook in &args.disabled_hooks {
             let repohook: Vec<_> = repohook.splitn(2, ':').collect();
             let repo = repohook.get(0);
             let hook = repohook.get(1);
@@ -38,20 +41,13 @@ impl HooksArgs {
                 .or_insert_with(HashSet::new)
                 .insert(hook.to_string());
         }
+
         if !res.is_empty() {
-            warn!(logger, "The following Hooks were disabled: {:?}", res);
-        }
-        Ok(res)
-    }
-
-    pub fn process_disabled_no_repo_prefix(&self, logger: &Logger) -> HashSet<String> {
-        if !self.disabled_hooks.is_empty() {
-            warn!(
-                logger,
-                "The following Hooks were disabled: {:?}", self.disabled_hooks
-            );
+            warn!(env.logger, "The following Hooks were disabled: {:?}", res);
         }
 
-        self.disabled_hooks.iter().cloned().collect()
+        env.disabled_hooks = res;
+
+        Ok(())
     }
 }

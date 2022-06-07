@@ -8,7 +8,7 @@
 #![feature(backtrace)]
 #![feature(bool_to_option)]
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -248,7 +248,6 @@ impl Mononoke {
 
 pub struct MononokeApiEnvironment {
     pub repo_factory: RepoFactory,
-    pub disabled_hooks: HashMap<String, HashSet<String>>,
     pub warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData,
     pub warm_bookmarks_cache_enabled: bool,
     pub warm_bookmarks_cache_scuba_sample_builder: MononokeScubaSampleBuilder,

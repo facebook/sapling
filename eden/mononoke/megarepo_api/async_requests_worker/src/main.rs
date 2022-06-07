@@ -40,7 +40,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_all_repos()
         .with_shutdown_timeout_args()
         .with_scuba_logging_args()
-        .with_disabled_hooks_args()
         .with_scribe_args()
         .with_fb303_args()
         .build()
@@ -76,7 +75,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let repo_factory = RepoFactory::new(matches.environment().clone(), &repo_configs.common);
     let env = MononokeApiEnvironment {
         repo_factory: repo_factory.clone(),
-        disabled_hooks: Default::default(),
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::None,
         warm_bookmarks_cache_enabled: true,
         warm_bookmarks_cache_scuba_sample_builder: MononokeScubaSampleBuilder::with_discard(),

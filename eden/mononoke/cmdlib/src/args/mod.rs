@@ -12,7 +12,7 @@ mod matches;
 pub use self::cache::CachelibSettings;
 
 use std::borrow::Borrow;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::future::Future;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -687,36 +687,6 @@ pub fn get_bool_opt<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str) -> Opt
         val.parse::<bool>()
             .unwrap_or_else(|_| panic!("{} must be bool", key))
     })
-}
-
-pub fn parse_disabled_hooks_with_repo_prefix<'a>(
-    matches: &'a MononokeMatches<'a>,
-    logger: &Logger,
-) -> Result<HashMap<String, HashSet<String>>, Error> {
-    let disabled_hooks = matches
-        .values_of("disabled-hooks")
-        .map(|m| m.collect())
-        .unwrap_or(vec![]);
-
-    let mut res = HashMap::new();
-    for repohook in disabled_hooks {
-        let repohook: Vec<_> = repohook.splitn(2, ":").collect();
-        let repo = repohook.get(0);
-        let hook = repohook.get(1);
-
-        let (repo, hook) =
-            repo.and_then(|repo| hook.map(|hook| (repo, hook)))
-                .ok_or(format_err!(
-                    "invalid format of disabled hook, should be 'REPONAME:HOOKNAME'"
-                ))?;
-        res.entry(repo.to_string())
-            .or_insert(HashSet::new())
-            .insert(hook.to_string());
-    }
-    if !res.is_empty() {
-        warn!(logger, "The following Hooks were disabled: {:?}", res);
-    }
-    Ok(res)
 }
 
 pub fn parse_disabled_hooks_no_repo_prefix<'a>(

@@ -7,7 +7,7 @@
 
 use slog::Record;
 use std::borrow::Borrow;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::num::{NonZeroU32, NonZeroUsize};
 use std::path::PathBuf;
@@ -157,6 +157,7 @@ impl<'a> MononokeMatches<'a> {
                 rendezvous_options,
                 megarepo_configs_options,
                 remote_derivation_options,
+                disabled_hooks: HashMap::new(),
             }),
             app_data,
         })

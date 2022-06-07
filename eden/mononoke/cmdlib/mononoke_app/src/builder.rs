@@ -314,6 +314,7 @@ impl MononokeAppBuilder {
             rendezvous_options,
             megarepo_configs_options,
             remote_derivation_options,
+            disabled_hooks: HashMap::new(),
         })
     }
 }

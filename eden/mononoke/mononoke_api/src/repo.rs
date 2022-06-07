@@ -158,7 +158,13 @@ impl Repo {
             config.skiplist_index_blobstore_key = None;
         }
         let logger = env.repo_factory.env.logger.new(o!("repo" => name.clone()));
-        let disabled_hooks = env.disabled_hooks.get(&name).cloned().unwrap_or_default();
+        let disabled_hooks = env
+            .repo_factory
+            .env
+            .disabled_hooks
+            .get(&name)
+            .cloned()
+            .unwrap_or_default();
 
         let inner: InnerRepo = env
             .repo_factory

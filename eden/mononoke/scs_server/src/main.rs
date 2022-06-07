@@ -25,7 +25,7 @@ use fbinit::FacebookInit;
 use futures::future::FutureExt;
 use megarepo_api::MegarepoApi;
 use mononoke_api::{CoreContext, Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData};
-use mononoke_app::args::{HooksArgs, ShutdownTimeoutArgs};
+use mononoke_app::args::{HooksAppExtension, ShutdownTimeoutArgs};
 use mononoke_app::MononokeAppBuilder;
 use panichandler::Fate;
 use slog::info;
@@ -57,8 +57,6 @@ const SERVICE_NAME: &str = "mononoke_scs_server";
 #[derive(Parser)]
 struct ScsServerArgs {
     #[clap(flatten)]
-    hooks_args: HooksArgs,
-    #[clap(flatten)]
     shutdown_timeout_args: ShutdownTimeoutArgs,
     #[clap(flatten)]
     scribe_logging_args: ScribeLoggingArgs,
@@ -77,7 +75,9 @@ struct ScsServerArgs {
 fn main(fb: FacebookInit) -> Result<(), Error> {
     panichandler::set_panichandler(Fate::Abort);
 
-    let app = MononokeAppBuilder::new(fb).build::<ScsServerArgs>()?;
+    let app = MononokeAppBuilder::new(fb)
+        .with_app_extension(HooksAppExtension {})
+        .build::<ScsServerArgs>()?;
 
     let args: ScsServerArgs = app.args()?;
 
@@ -85,27 +85,25 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let runtime = app.runtime();
 
     let exec = runtime.clone();
+    let env = app.environment();
 
-    let scuba_builder = app.environment().scuba_sample_builder.clone();
-    let warm_bookmarks_cache_scuba_sample_builder = app
-        .environment()
-        .warm_bookmarks_cache_scuba_sample_builder
-        .clone();
+    let scuba_builder = env.scuba_sample_builder.clone();
+    let warm_bookmarks_cache_scuba_sample_builder =
+        env.warm_bookmarks_cache_scuba_sample_builder.clone();
 
     let repo_factory = app.repo_factory();
 
-    let env = MononokeApiEnvironment {
+    let api_env = MononokeApiEnvironment {
         repo_factory: repo_factory.clone(),
-        disabled_hooks: args.hooks_args.process_disabled_with_repo_prefix(&logger)?,
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::AllKinds,
         warm_bookmarks_cache_enabled: true,
         warm_bookmarks_cache_scuba_sample_builder,
         skiplist_enabled: true,
     };
 
-    let mononoke = Arc::new(runtime.block_on(Mononoke::new(&env, app.repo_configs().clone()))?);
+    let mononoke = Arc::new(runtime.block_on(Mononoke::new(&api_env, app.repo_configs().clone()))?);
     let megarepo_api = Arc::new(runtime.block_on(MegarepoApi::new(
-        app.environment(),
+        env,
         app.repo_configs().clone(),
         repo_factory,
         mononoke.clone(),

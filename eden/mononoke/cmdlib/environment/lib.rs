@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::{HashMap, HashSet};
+
 use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
 use cached_config::ConfigStore;
 use derived_data_remote::RemoteDerivationOptions;
@@ -46,4 +48,5 @@ pub struct MononokeEnvironment {
     pub rendezvous_options: RendezVousOptions,
     pub megarepo_configs_options: MononokeMegarepoConfigsOptions,
     pub remote_derivation_options: RemoteDerivationOptions,
+    pub disabled_hooks: HashMap<String, HashSet<String>>,
 }

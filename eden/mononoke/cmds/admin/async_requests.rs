@@ -113,7 +113,6 @@ pub async fn subcommand_async_requests<'a>(
     let repo_factory = RepoFactory::new(matches.environment().clone(), &repo_configs.common);
     let env = MononokeApiEnvironment {
         repo_factory: repo_factory.clone(),
-        disabled_hooks: Default::default(),
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::None,
         skiplist_enabled: false,
         warm_bookmarks_cache_enabled: false,
