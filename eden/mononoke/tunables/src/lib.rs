@@ -266,6 +266,9 @@ pub struct MononokeTunables {
 
     // Control whether the BYPASS_READONLY pushvar is restricted by an ACL
     enforce_bypass_readonly_acl: AtomicBool,
+
+    // Percentage of wireproto unbundle pushrebase requests redirected to SCS
+    pushrebase_redirect_to_scs_pct: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

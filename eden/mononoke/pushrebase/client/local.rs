@@ -38,6 +38,7 @@ pub struct LocalPushrebaseClient<'a, R: Repo> {
 impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
     async fn pushrebase(
         &self,
+        _repo: String,
         bookmark: &BookmarkName,
         changesets: HashSet<BonsaiChangeset>,
     ) -> Result<PushrebaseOutcome, BookmarkMovementError> {

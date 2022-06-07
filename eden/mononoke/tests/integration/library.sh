@@ -107,6 +107,10 @@ function mononoke_address {
   fi
 }
 
+function scs_address {
+  echo -n "$(mononoke_host):$SCS_PORT"
+}
+
 # return random value from [1, max_value]
 function random_int() {
   max_value=$1
@@ -1216,24 +1220,29 @@ function s_client {
         -ign_eof "$@"
 }
 
-function start_and_wait_for_scs_server {
-  export SCS_PORT
-  local SCS_SERVER_ADDR_FILE
-  SCS_SERVER_ADDR_FILE="$TESTTMP/scs_server_addr.txt"
-  rm -f "$SCS_SERVER_ADDR_FILE"
+function scs {
+  rm -f "$TESTTMP/scs_server_addr.txt"
   GLOG_minloglevel=5 "$SCS_SERVER" "$@" \
     --host "$LOCALIP" \
     --port 0 \
     --log-level DEBUG \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --bound-address-file "$SCS_SERVER_ADDR_FILE" \
+    --bound-address-file "$TESTTMP/scs_server_addr.txt" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/scs_server.out" 2>&1 &
   export SCS_SERVER_PID=$!
   echo "$SCS_SERVER_PID" >> "$DAEMON_PIDS"
+}
 
+function wait_for_scs {
+  export SCS_PORT
   wait_for_server "SCS server" SCS_PORT "$TESTTMP/scs_server.out" \
-    "${MONONOKE_SCS_START_TIMEOUT:-"$MONONOKE_SCS_DEFAULT_START_TIMEOUT"}" "$SCS_SERVER_ADDR_FILE" \
+    "${MONONOKE_SCS_START_TIMEOUT:-"$MONONOKE_SCS_DEFAULT_START_TIMEOUT"}" "$TESTTMP/scs_server_addr.txt" \
     scsc repos
+}
+
+function start_and_wait_for_scs_server {
+  scs "$@"
+  wait_for_scs
 }
 
 function megarepo_async_worker {
