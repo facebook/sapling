@@ -7,40 +7,43 @@
 
 use anyhow::{format_err, Context as _};
 use async_trait::async_trait;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::{ArcBookmarks, BookmarkName, BookmarksArc};
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
 use futures::{future, stream::TryStreamExt};
 use futures_util::future::TryFutureExt;
 use manifest::{Diff, Entry, ManifestOps};
-use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::{FileType, HgFileNodeId, HgManifestId};
 use mononoke_types::{ChangesetId, ContentId, MPath, ManifestUnodeId};
+use repo_blobstore::{ArcRepoBlobstore, RepoBlobstore, RepoBlobstoreArc};
+use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData, RepoDerivedDataArc};
 use std::collections::HashMap;
 use unodes::RootUnodeManifestId;
 
 use crate::{ErrorKind, FileChange, FileContentManager, PathContent};
 
-pub struct BlobRepoFileContentManager {
-    pub repo: BlobRepo,
+pub struct RepoFileContentManager {
+    repo_blobstore: ArcRepoBlobstore,
+    bookmarks: ArcBookmarks,
+    repo_derived_data: ArcRepoDerivedData,
 }
 
 #[async_trait]
-impl FileContentManager for BlobRepoFileContentManager {
+impl FileContentManager for RepoFileContentManager {
     async fn get_file_size<'a>(
         &'a self,
         ctx: &'a CoreContext,
         id: ContentId,
     ) -> Result<u64, ErrorKind> {
-        let store = self.repo.blobstore();
-        Ok(filestore::get_metadata(store, ctx, &id.into())
-            .await?
-            .ok_or(ErrorKind::ContentIdNotFound(id))?
-            .total_size)
+        Ok(
+            filestore::get_metadata(&self.repo_blobstore, ctx, &id.into())
+                .await?
+                .ok_or(ErrorKind::ContentIdNotFound(id))?
+                .total_size,
+        )
     }
 
     async fn get_file_text<'a>(
@@ -48,8 +51,7 @@ impl FileContentManager for BlobRepoFileContentManager {
         ctx: &'a CoreContext,
         id: ContentId,
     ) -> Result<Option<Bytes>, ErrorKind> {
-        let store = self.repo.blobstore();
-        filestore::fetch_concat_opt(store, ctx, &id.into())
+        filestore::fetch_concat_opt(&self.repo_blobstore, ctx, &id.into())
             .await?
             .ok_or(ErrorKind::ContentIdNotFound(id))
             .map(Option::Some)
@@ -62,18 +64,24 @@ impl FileContentManager for BlobRepoFileContentManager {
         paths: Vec<MPath>,
     ) -> Result<HashMap<MPath, PathContent>, ErrorKind> {
         let changeset_id = self
-            .repo
-            .get_bonsai_bookmark(ctx.clone(), &bookmark)
+            .bookmarks
+            .get(ctx.clone(), &bookmark)
             .await
             .with_context(|| format!("Error fetching bookmark: {}", bookmark))?
             .ok_or_else(|| format_err!("Bookmark {} does not exist", bookmark))?;
 
-        let master_mf = derive_hg_manifest(ctx, &self.repo, changeset_id).await?;
+        let master_mf = derive_hg_manifest(
+            ctx,
+            &self.repo_derived_data,
+            &self.repo_blobstore,
+            changeset_id,
+        )
+        .await?;
         master_mf
-            .find_entries(ctx.clone(), self.repo.get_blobstore(), paths)
+            .find_entries(ctx.clone(), self.repo_blobstore.clone(), paths)
             .map_ok(|(mb_path, entry)| async move {
                 if let Some(path) = mb_path {
-                    let content = resolve_content_id(ctx, &self.repo, entry).await?;
+                    let content = resolve_content_id(ctx, &self.repo_blobstore, entry).await?;
                     Ok(Some((path, content)))
                 } else {
                     Ok(None)
@@ -92,17 +100,27 @@ impl FileContentManager for BlobRepoFileContentManager {
         new_cs_id: ChangesetId,
         old_cs_id: ChangesetId,
     ) -> Result<Vec<(MPath, FileChange)>, ErrorKind> {
-        let new_mf_fut = derive_hg_manifest(ctx, &self.repo, new_cs_id);
-        let old_mf_fut = derive_hg_manifest(ctx, &self.repo, old_cs_id);
+        let new_mf_fut = derive_hg_manifest(
+            ctx,
+            &self.repo_derived_data,
+            &self.repo_blobstore,
+            new_cs_id,
+        );
+        let old_mf_fut = derive_hg_manifest(
+            ctx,
+            &self.repo_derived_data,
+            &self.repo_blobstore,
+            old_cs_id,
+        );
         let (new_mf, old_mf) = future::try_join(new_mf_fut, old_mf_fut).await?;
 
         old_mf
-            .diff(ctx.clone(), self.repo.get_blobstore(), new_mf)
+            .diff(ctx.clone(), self.repo_blobstore.clone(), new_mf)
             .map_err(ErrorKind::from)
             .map_ok(move |diff| async move {
                 match diff {
                     Diff::Added(Some(path), entry) => {
-                        match resolve_content_id(&ctx, &self.repo, entry).await? {
+                        match resolve_content_id(ctx, &self.repo_blobstore, entry).await? {
                             PathContent::File(content) => {
                                 Ok(Some((path, FileChange::Added(content))))
                             }
@@ -110,8 +128,8 @@ impl FileContentManager for BlobRepoFileContentManager {
                         }
                     }
                     Diff::Changed(Some(path), old_entry, entry) => {
-                        let old_content = resolve_content_id(&ctx, &self.repo, old_entry);
-                        let content = resolve_content_id(&ctx, &self.repo, entry);
+                        let old_content = resolve_content_id(ctx, &self.repo_blobstore, old_entry);
+                        let content = resolve_content_id(ctx, &self.repo_blobstore, entry);
 
                         match future::try_join(old_content, content).await? {
                             (PathContent::File(old_content_id), PathContent::File(content_id)) => {
@@ -146,19 +164,19 @@ impl FileContentManager for BlobRepoFileContentManager {
         paths: Vec<MPath>,
     ) -> Result<HashMap<MPath, ChangesetInfo>, ErrorKind> {
         let changeset_id = self
-            .repo
-            .get_bonsai_bookmark(ctx.clone(), &bookmark)
+            .bookmarks
+            .get(ctx.clone(), &bookmark)
             .await
             .with_context(|| format!("Error fetching bookmark: {}", bookmark))?
             .ok_or_else(|| format_err!("Bookmark {} does not exist", bookmark))?;
 
-        let master_mf = derive_unode_manifest(ctx, &self.repo, changeset_id).await?;
+        let master_mf = derive_unode_manifest(ctx, &self.repo_derived_data, changeset_id).await?;
         master_mf
-            .find_entries(ctx.clone(), self.repo.get_blobstore(), paths)
+            .find_entries(ctx.clone(), self.repo_blobstore.clone(), paths)
             .map_ok(|(mb_path, entry)| async move {
                 if let Some(path) = mb_path {
                     let unode = entry
-                        .load(ctx, &self.repo.get_blobstore())
+                        .load(ctx, &self.repo_blobstore)
                         .await
                         .with_context(|| format!("Error loading unode entry: {:?}", entry))?;
                     let linknode = match unode {
@@ -166,11 +184,14 @@ impl FileContentManager for BlobRepoFileContentManager {
                         Entry::Tree(tree) => tree.linknode().clone(),
                     };
 
-                    let cs_info = ChangesetInfo::derive(ctx, &self.repo, linknode)
+                    let cs_info = self
+                        .repo_derived_data
+                        .derive::<ChangesetInfo>(ctx, linknode)
                         .await
                         .with_context(|| {
                             format!("Error deriving changeset info for bonsai: {}", linknode)
                         })?;
+
                     Ok(Some((path, cs_info)))
                 } else {
                     Ok(None)
@@ -184,23 +205,35 @@ impl FileContentManager for BlobRepoFileContentManager {
     }
 }
 
-impl BlobRepoFileContentManager {
-    pub fn new(repo: BlobRepo) -> BlobRepoFileContentManager {
-        BlobRepoFileContentManager { repo }
+impl RepoFileContentManager {
+    pub fn new(
+        container: impl RepoBlobstoreArc + BookmarksArc + RepoDerivedDataArc,
+    ) -> RepoFileContentManager {
+        let repo_blobstore = container.repo_blobstore_arc();
+        let bookmarks = container.bookmarks_arc();
+        let repo_derived_data = container.repo_derived_data_arc();
+
+        RepoFileContentManager {
+            repo_blobstore,
+            bookmarks,
+            repo_derived_data,
+        }
     }
 }
 
 async fn derive_hg_manifest(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo_derived_data: &RepoDerivedData,
+    blobstore: &RepoBlobstore,
     changeset_id: ChangesetId,
 ) -> Result<HgManifestId, ErrorKind> {
-    let hg_changeset_id = repo
-        .derive_hg_changeset(ctx, changeset_id)
+    let hg_changeset_id = repo_derived_data
+        .derive::<MappedHgChangesetId>(ctx, changeset_id)
         .await
+        .map(|id| id.hg_changeset_id())
         .with_context(|| format!("Error deriving hg changeset for bonsai: {}", changeset_id))?;
     let hg_mf_id = hg_changeset_id
-        .load(&ctx, &repo.get_blobstore())
+        .load(ctx, blobstore)
         .map_ok(|hg_changeset| hg_changeset.manifestid())
         .await
         .with_context(|| format!("Error loading hg changeset: {}", hg_changeset_id))?;
@@ -210,10 +243,11 @@ async fn derive_hg_manifest(
 
 async fn derive_unode_manifest(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo_derived_data: &RepoDerivedData,
     changeset_id: ChangesetId,
 ) -> Result<ManifestUnodeId, ErrorKind> {
-    let unode_mf = RootUnodeManifestId::derive(ctx, repo, changeset_id.clone())
+    let unode_mf = repo_derived_data
+        .derive::<RootUnodeManifestId>(ctx, changeset_id.clone())
         .await
         .with_context(|| format!("Error deriving unode manifest for bonsai: {}", changeset_id))?
         .manifest_unode_id()
@@ -223,7 +257,7 @@ async fn derive_unode_manifest(
 
 async fn resolve_content_id(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    blobstore: &RepoBlobstore,
     entry: Entry<HgManifestId, (FileType, HgFileNodeId)>,
 ) -> Result<PathContent, ErrorKind> {
     match entry {
@@ -232,7 +266,7 @@ async fn resolve_content_id(
             Ok(PathContent::Directory)
         }
         Entry::Leaf((_type, file_node_id)) => file_node_id
-            .load(ctx, &repo.get_blobstore())
+            .load(ctx, blobstore)
             .map_ok(|file_env| PathContent::File(file_env.content_id()))
             .await
             .with_context(|| format!("Error loading filenode: {}", file_node_id))

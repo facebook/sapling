@@ -5,14 +5,14 @@
  * GNU General Public License version 2.
  */
 
-mod blobrepo;
 mod errors;
 mod memory;
+mod repo;
 mod store;
 mod text_only;
 
-pub use crate::blobrepo::BlobRepoFileContentManager;
 pub use crate::memory::{InMemoryFileContentManager, InMemoryFileText};
+pub use crate::repo::RepoFileContentManager;
 pub use crate::text_only::TextOnlyFileContentManager;
 pub use store::{FileChange, FileContentManager, PathContent};
 
@@ -22,6 +22,6 @@ pub fn blobrepo_text_only_fetcher(
     blobrepo: ::blobrepo::BlobRepo,
     max_file_size: u64,
 ) -> Box<dyn FileContentManager> {
-    let store = BlobRepoFileContentManager::new(blobrepo);
+    let store = RepoFileContentManager::new(blobrepo);
     Box::new(TextOnlyFileContentManager::new(store, max_file_size))
 }

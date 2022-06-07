@@ -226,7 +226,7 @@ mod test {
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
-    use hooks_content_stores::BlobRepoFileContentManager;
+    use hooks_content_stores::RepoFileContentManager;
     use maplit::hashmap;
     use std::collections::HashMap;
     use tests_utils::CreateCommitContext;
@@ -246,7 +246,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, repo.blobstore()).await?;
 
-        let content_manager = BlobRepoFileContentManager::new(repo.clone());
+        let content_manager = RepoFileContentManager::new(repo.clone());
         let hook = build_hook(hashmap! {
             "commitsizelimit".to_string() => 3,
             "changed_files_limit".to_string() => 3,
@@ -331,7 +331,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, repo.blobstore()).await?;
 
-        let content_manager = BlobRepoFileContentManager::new(repo.clone());
+        let content_manager = RepoFileContentManager::new(repo.clone());
         let hook = build_hook(hashmap! {
             "commitsizelimit".to_string() => 100,
             "changed_files_limit".to_string() => 2,
@@ -386,7 +386,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, repo.blobstore()).await?;
 
-        let content_manager = BlobRepoFileContentManager::new(repo.clone());
+        let content_manager = RepoFileContentManager::new(repo.clone());
         let hook = build_hook_with_limits(
             hashmap! {
                 "commitsizelimit".to_string() => 1,
@@ -430,7 +430,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, repo.blobstore()).await?;
 
-        let content_manager = BlobRepoFileContentManager::new(repo.clone());
+        let content_manager = RepoFileContentManager::new(repo.clone());
 
         let hook = build_hook_with_limits(
             hashmap! {

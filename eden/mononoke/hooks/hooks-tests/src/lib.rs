@@ -20,8 +20,8 @@ use hooks::{
     HookExecution, HookManager, HookRejectionInfo, PushAuthoredBy,
 };
 use hooks_content_stores::{
-    BlobRepoFileContentManager, FileChange as FileDiff, FileContentManager,
-    InMemoryFileContentManager, PathContent,
+    FileChange as FileDiff, FileContentManager, InMemoryFileContentManager, PathContent,
+    RepoFileContentManager,
 };
 use maplit::{btreemap, hashmap, hashset};
 use metaconfig_types::{BookmarkParams, HookConfig, HookManagerParams, HookParams, RepoConfig};
@@ -1405,7 +1405,7 @@ fn default_changeset() -> BonsaiChangeset {
 async fn hook_manager_blobrepo(fb: FacebookInit, repo: BlobRepo) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
 
-    let content_manager = BlobRepoFileContentManager::new(repo);
+    let content_manager = RepoFileContentManager::new(repo);
     HookManager::new(
         ctx.fb,
         Box::new(content_manager),
