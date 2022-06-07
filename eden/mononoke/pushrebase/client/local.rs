@@ -25,7 +25,6 @@ pub struct LocalPushrebaseClient<'a, R: Repo> {
     pub repo: &'a R,
     pub pushrebase_params: &'a PushrebaseParams,
     pub lca_hint: &'a Arc<dyn LeastCommonAncestorsHint>,
-    pub maybe_pushvars: Option<&'a HashMap<String, Bytes>>,
     pub maybe_hg_replay_data: &'a Option<pushrebase::HgReplayData>,
     pub bookmark_attrs: &'a BookmarkAttrs,
     pub infinitepush_params: &'a InfinitepushParams,
@@ -41,10 +40,11 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
         _repo: String,
         bookmark: &BookmarkName,
         changesets: HashSet<BonsaiChangeset>,
+        pushvars: Option<&HashMap<String, Bytes>>,
     ) -> Result<PushrebaseOutcome, BookmarkMovementError> {
         PushrebaseOntoBookmarkOp::new(bookmark, changesets)
             .only_if_public()
-            .with_pushvars(self.maybe_pushvars)
+            .with_pushvars(pushvars)
             .with_hg_replay_data(self.maybe_hg_replay_data.as_ref())
             .with_push_source(self.cross_repo_push_source)
             .run(

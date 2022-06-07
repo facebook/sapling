@@ -11,9 +11,10 @@ mod local;
 
 use bookmarks_movement::BookmarkMovementError;
 use bookmarks_types::BookmarkName;
+use bytes::Bytes;
 use mononoke_types::BonsaiChangeset;
 use pushrebase::PushrebaseOutcome;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 #[cfg(fbcode_build)]
 pub use facebook::scs::SCSPushrebaseClient;
@@ -30,5 +31,6 @@ pub trait PushrebaseClient {
         bookmark: &BookmarkName,
         // Must be a stack
         changesets: HashSet<BonsaiChangeset>,
+        pushvars: Option<&HashMap<String, Bytes>>,
     ) -> Result<PushrebaseOutcome, BookmarkMovementError>;
 }

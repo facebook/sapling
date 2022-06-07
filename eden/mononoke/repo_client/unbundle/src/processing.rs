@@ -542,7 +542,7 @@ async fn normal_pushrebase<'a>(
             } else {
                 SCSPushrebaseClient::new(ctx.fb)?
             }
-            .pushrebase(repo_name, bookmark, changesets)
+            .pushrebase(repo_name, bookmark, changesets, maybe_pushvars)
             .await
         }
         #[cfg(not(fbcode_build))]
@@ -553,7 +553,6 @@ async fn normal_pushrebase<'a>(
             repo,
             pushrebase_params,
             lca_hint,
-            maybe_pushvars,
             maybe_hg_replay_data,
             bookmark_attrs,
             infinitepush_params,
@@ -561,7 +560,7 @@ async fn normal_pushrebase<'a>(
             cross_repo_push_source,
             readonly_fetcher,
         }
-        .pushrebase(repo_name, bookmark, changesets)
+        .pushrebase(repo_name, bookmark, changesets, maybe_pushvars)
         .await
     };
     match result {
