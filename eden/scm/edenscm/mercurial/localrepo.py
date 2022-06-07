@@ -924,6 +924,7 @@ class localrepository(object):
                 )
             yield bin(hgids[0])
 
+    @util.timefunction("pull", 0, "ui")
     def pull(
         self, source="default", bookmarknames=(), headnodes=(), headnames=(), quiet=True
     ):

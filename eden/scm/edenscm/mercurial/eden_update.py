@@ -29,6 +29,7 @@ _repoclass = localrepo.localrepository
 
 # This function is called by mercurial.merge.update() in the fast path
 # to ask the eden daemon to perform the update operation.
+@util.timefunction("edenupdate", 0, "ui")
 def update(
     repo,
     node,

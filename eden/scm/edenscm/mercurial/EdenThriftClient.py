@@ -19,7 +19,7 @@ import time
 import toml
 from thrift.Thrift import TApplicationException
 
-from . import demandimport, error, node, pycompat
+from . import demandimport, error, node, pycompat, util
 from .i18n import _
 
 
@@ -71,6 +71,7 @@ class EdenThriftClient(object):
     def __init__(self, repo):
         self._repo = repo
         self._root = repo.root
+        self._ui = repo.ui
         if pycompat.iswindows:
             tomlconfig = toml.load(os.path.join(self._root, ".eden", "config"))
             self._eden_root = tomlconfig["Config"]["root"]
@@ -107,6 +108,7 @@ class EdenThriftClient(object):
         with self._get_client() as client:
             client.resetParentCommits(self._eden_root, parents, params)
 
+    @util.timefunction("edenclientstatus", 0, "_ui")
     def getStatus(self, parent, list_ignored):  # noqa: C901
 
         # If we are in a pending transaction the parent commit we are querying against
@@ -134,6 +136,7 @@ class EdenThriftClient(object):
 
             return edenstatus
 
+    @util.timefunction("edenclientcheckout", 0, "_ui")
     def checkout(self, node, checkout_mode, need_flush=True, manifest=None):
         if need_flush:
             self._flushPendingTransactions()

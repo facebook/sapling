@@ -1406,6 +1406,7 @@ def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
 
 
 @perftrace.tracefunc("Calculate Updates")
+@util.timefunction("calculateupdates", 0, "ui")
 def calculateupdates(
     repo,
     wctx,
@@ -2713,6 +2714,7 @@ def getsparsematchers(repo, fp1, fp2, matcher=None):
         return matcher, None
 
 
+@util.timefunction("makenativecheckoutplan", 0, "ui")
 def makenativecheckoutplan(repo, p1, p2, matcher=None, updateprogresspath=None):
     (matcher, sparsematchers) = getsparsematchers(repo, p1.node(), p2.node(), matcher)
 
@@ -2730,6 +2732,7 @@ def makenativecheckoutplan(repo, p1, p2, matcher=None, updateprogresspath=None):
     )
 
 
+@util.timefunction("donativecheckout", 0, "ui")
 def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerecrawls):
     repo.ui.debug("Using native checkout\n")
     repo.ui.log(
@@ -2837,6 +2840,7 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
     return stats
 
 
+@util.timefunction("calculateupdatesnative", 0, "ui")
 def calculateupdatesnative(repo, p1, p2, pa):
     if not repo.ui.configbool("experimental", "nativerebase"):
         return None
