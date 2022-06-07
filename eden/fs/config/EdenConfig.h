@@ -649,17 +649,6 @@ class EdenConfig : private ConfigSettingManager {
       folly::kIsApple,
       this};
 
-  /**
-   * Controls whether EdenFS initializes the Windows InodeMap by querying the
-   * filesystem, or the Overlay.
-   *
-   * By setting this to true, EdenFS will query the Overlay.
-   */
-  ConfigSetting<bool> enableFastInodeMapInitialization{
-      "experimental:enable-fast-inodemap-initialization",
-      false,
-      this};
-
   // [treecache]
 
   /**

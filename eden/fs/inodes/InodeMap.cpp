@@ -212,46 +212,10 @@ void InodeMap::initializeFromTakeover(
              << " inodes registered";
 }
 
-namespace {
-#ifdef _WIN32
-/**
- * Test if a file is present in the working copy.
- *
- * This needs to be called before the working copy is fully initialized to
- * avoid the risk of recursively calling into EdenFS. Thus this will only true
- * if the file is a placeholder/full file.
- *
- * See eden/fs/inodes/treeoverlay/TreeOverlayWindowsFsck.h for a description of
- * placeholder/full file.
- */
-bool isFileInWorkingCopy(AbsolutePathPiece path) {
-  PRJ_FILE_STATE state;
-  auto widePath = path.wide();
-  auto result = PrjGetOnDiskFileState(widePath.c_str(), &state);
-  return !FAILED(result);
-}
-#else
-/**
- * Test if a file is present in the backing overlay.
- *
- * On Linux and macOS, the working copy doesn't exist prior to mounting it, thus
- * this always returns false.
- */
-bool isFileInWorkingCopy(AbsolutePathPiece /*path*/) {
-  EDEN_BUG()
-      << "Linux and macOS do not have a persistent working copy across mounts";
-}
-#endif
-} // namespace
-
 void InodeMap::initializeFromOverlay(TreeInodePtr root, Overlay& overlay) {
   XCHECK(mount_->isWorkingCopyPersistent());
 
-  bool fastInitialization =
-      config_->getEdenConfig()->enableFastInodeMapInitialization.getValue();
-
-  XLOG(DBG2) << "Initializing InodeMap for " << mount_->getPath()
-             << ", fast=" << fastInitialization;
+  XLOG(DBG2) << "Initializing InodeMap for " << mount_->getPath();
 
   auto data = data_.wlock();
   initializeRoot(data, std::move(root));
@@ -268,26 +232,16 @@ void InodeMap::initializeFromOverlay(TreeInodePtr root, Overlay& overlay) {
       auto entryPath = path + name;
       auto ino = dirent.getInodeNumber();
 
-      if (fastInitialization) {
-        if (dirent.isDirectory()) {
-          // Do a quick check in the overlay to check if EdenFS has an overlay
-          // entry for this Inode. The assumption is that files on disk must
-          // have a corresponding Overlay entry. Note that since Overlay
-          // entries are also created for files that aren't on disk, this will
-          // load inodes with no corresponding on-disk files.
-          if (!overlay.hasOverlayData(ino)) {
-            continue;
-          }
-          pending.emplace_back(std::move(entryPath), ino);
-        }
-      } else {
-        if (!isFileInWorkingCopy(entryPath)) {
+      if (dirent.isDirectory()) {
+        // Do a quick check in the overlay to check if EdenFS has an overlay
+        // entry for this Inode. The assumption is that files on disk must
+        // have a corresponding Overlay entry. Note that since Overlay
+        // entries are also created for files that aren't on disk, this will
+        // load inodes with no corresponding on-disk files.
+        if (!overlay.hasOverlayData(ino)) {
           continue;
         }
-
-        if (dirent.isDirectory()) {
-          pending.emplace_back(std::move(entryPath), ino);
-        }
+        pending.emplace_back(std::move(entryPath), ino);
       }
 
       initializeUnloadedInode(
