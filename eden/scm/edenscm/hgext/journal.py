@@ -16,7 +16,7 @@ import collections
 import errno
 import os
 import weakref
-from typing import NamedTuple, Tuple
+from typing import Dict, NamedTuple, Tuple
 
 from edenscm.mercurial import (
     bookmarks,
@@ -52,10 +52,10 @@ bookmarktype = "bookmark"
 wdirparenttype = "wdirparent"
 # In a shared repository, what shared feature name is used
 # to indicate this namespace is shared with the source?
-sharednamespaces = {bookmarktype: hg.sharedbookmarks}
+sharednamespaces: Dict[str, str] = {bookmarktype: hg.sharedbookmarks}
 
 # Journal recording, register hooks and storage object
-def extsetup(ui):
+def extsetup(ui) -> None:
     extensions.wrapfunction(dispatch, "runcommand", runcommand)
     extensions.wrapfunction(bookmarks.bmstore, "_write", recordbookmarks)
     extensions.wrapfilecache(localrepo.localrepository, "dirstate", wrapdirstate)
@@ -63,7 +63,7 @@ def extsetup(ui):
     extensions.wrapfunction(hg, "copystore", unsharejournal)
 
 
-def reposetup(ui, repo):
+def reposetup(ui, repo) -> None:
     if repo.local():
         repo.journal = journalstorage(repo)
         repo._wlockfreeprefix.add("namejournal")
@@ -82,7 +82,7 @@ def runcommand(orig, lui, repo, cmd, fullargs, *args):
     return orig(lui, repo, cmd, fullargs, *args)
 
 
-def _setupdirstate(repo, dirstate):
+def _setupdirstate(repo, dirstate) -> None:
     dirstate.journalstorage = repo.journal
     dirstate.addparentchangecallback("journal", recorddirstateparents)
 
@@ -96,7 +96,7 @@ def wrapdirstate(orig, repo):
     return dirstate
 
 
-def recorddirstateparents(dirstate, old, new):
+def recorddirstateparents(dirstate, old, new) -> None:
     """Records all dirstate parent changes in the journal."""
     old = list(old)
     new = list(new)
@@ -149,7 +149,7 @@ def _mergeentriesiter(*iterables, **kwargs):
             del iterable_map[key]
 
 
-def wrappostshare(orig, sourcerepo, destrepo, **kwargs):
+def wrappostshare(orig, sourcerepo, destrepo, **kwargs) -> None:
     """Mark this shared working copy as sharing journal information"""
     with destrepo.wlock():
         orig(sourcerepo, destrepo, **kwargs)
@@ -510,7 +510,7 @@ _ignoreopts = ("no-merges", "graph")
     + [opt for opt in cmdutil.logopts if opt[1] not in _ignoreopts],
     "[OPTION]... [BOOKMARKNAME]",
 )
-def journal(ui, repo, *args, **opts):
+def journal(ui, repo, *args, **opts) -> None:
     """show history of the checked out commit or a bookmark
 
     Show the history of all the commits that were once the current commit. In
