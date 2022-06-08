@@ -293,11 +293,6 @@ ImmediateFuture<TreeInodePtr> createDirInode(
       });
 }
 
-enum class InodeType : bool {
-  Tree,
-  File,
-};
-
 enum class OnDiskState {
   MaterializedFile,
   MaterializedDirectory,

@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/executors/SequencedExecutor.h>
+#include "eden/fs/inodes/InodeUtils.h"
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
