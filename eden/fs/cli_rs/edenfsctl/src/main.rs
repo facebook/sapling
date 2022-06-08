@@ -13,10 +13,9 @@ use fbinit::FacebookInit;
 use tracing_subscriber::filter::EnvFilter;
 
 #[cfg(fbcode_build)]
-use crate::facebook::EdenFsSample;
+use edenfs_telemetry::EdenFsSample;
 
-#[cfg(fbcode_build)]
-mod facebook;
+const EDENFSCTL_SCUBA_DATASET: &str = "edenfs_cli_usage";
 
 fn python_fallback() -> Result<Command> {
     if let Ok(args) = std::env::var("EDENFSCTL_REAL") {
@@ -108,7 +107,7 @@ fn wrapper_main() -> Result<i32> {
 #[fbinit::main]
 fn main(_fb: FacebookInit) -> Result<()> {
     #[cfg(fbcode_build)]
-    let mut sample = EdenFsSample::build(_fb);
+    let mut sample = EdenFsSample::build(_fb, EDENFSCTL_SCUBA_DATASET);
 
     let code = match wrapper_main() {
         Ok(code) => Ok(code),
