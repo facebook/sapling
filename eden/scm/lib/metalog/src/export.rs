@@ -9,8 +9,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Write;
 use std::path::Path;
-
-use git2::Repository;
+use std::process::Command;
+use std::process::Stdio;
 
 use crate::metalog::load_root;
 use crate::metalog::Id20;
@@ -21,13 +21,12 @@ use crate::Result;
 impl MetaLog {
     /// Export metalog to a git repo for investigation.
     pub fn export_git(&self, repo_path: &Path) -> Result<()> {
-        let repo = Repository::init(repo_path)?;
-        let root_ids = Self::list_roots(&self.path)?;
+        let mut payload = FastImportPayload::new("metalog <metalog@example.com>");
 
-        let mut blob_id_map = HashMap::new(); // Metalog Blob SHA1 -> Git Blob SHA1
-        let mut commit_id_map = HashMap::new(); // Metalog Root SHA1 -> Git Commit
+        let root_ids = Self::list_roots(&self.path)?;
+        let mut blob_id_map = HashMap::new(); // Metalog Blob SHA1 -> BlobId
+        let mut commit_id_map = HashMap::new(); // Metalog Root SHA1 -> CommitId
         let listed: HashSet<_> = root_ids.iter().copied().collect();
-        let mut count = 0;
 
         // Figure out the "parents" relationship.
         let parents: HashMap<Id20, Vec<Id20>> = {
@@ -98,33 +97,28 @@ impl MetaLog {
                 if blob_id_map.contains_key(value_id) {
                     continue;
                 }
-                let mut writer = repo.blob_writer(None)?;
                 let value = self
                     .blobs
                     .read()
                     .get(*value_id)?
                     .ok_or_else(|| self.error(format!("cannot read {:?}", value_id)))?;
-                writer.write_all(&value)?;
-
-                let git_blob_id = writer.commit()?;
+                let git_blob_id = payload.blob(&value);
                 blob_id_map.insert(*value_id, git_blob_id);
             }
 
-            // Add tree.
-            let mut tree = repo.treebuilder(None)?;
-            for (key, SerId20(value_id)) in root.map.iter() {
-                let git_blob_id = blob_id_map.get(value_id).unwrap();
-                tree.insert(key, *git_blob_id, 0o100644)?;
-            }
-            let tree_id = tree.write()?;
+            // Prepare files.
+            let path_blob_ids: Vec<(String, BlobId)> = root
+                .map
+                .iter()
+                .map(|(path, SerId20(value_id))| (path.to_string(), blob_id_map[value_id]))
+                .collect();
 
             // Add commit.
-            let time = git2::Time::new(root.timestamp as _, 0);
-            let sig = git2::Signature::new("metalog", "metalog@example.com", &time)?;
-            let git_parents = root_parents
+            let git_parents: Vec<CommitId> = root_parents
                 .iter()
                 .filter_map(|p| commit_id_map.get(p))
-                .collect::<Vec<_>>();
+                .cloned()
+                .collect();
             let detach_message = if listed.contains(&root_id) {
                 ""
             } else {
@@ -136,26 +130,120 @@ impl MetaLog {
                 root_id.to_hex(),
                 detach_message
             );
-            let tree = repo.find_tree(tree_id)?;
-            let commit_oid = repo.commit(None, &sig, &sig, &message, &tree, &git_parents)?;
-            let commit = repo.find_commit(commit_oid)?;
-            commit_id_map.insert(root_id, commit);
-            count += 1;
-            if count % 100 == 0 {
-                eprintln!("count: {}", count);
-            }
+            let commit_id = payload.commit(&message, root.timestamp, &git_parents, &path_blob_ids);
+            commit_id_map.insert(root_id, commit_id);
         }
 
-        // Make 'master' point to the last commit.
-        if let Some(main_commit) = commit_id_map.get(&self.orig_root_id) {
-            repo.reference(
-                "refs/heads/master",
-                main_commit.id(),
-                true, /* force */
-                "move master",
-            )?;
+        // Run 'git init' if the directory does not exist.
+        if !repo_path.is_dir() {
+            Command::new("git")
+                .args(["-c", "init.defaultBranch=main", "init", "-q"])
+                .arg(repo_path)
+                .status()?;
         }
+
+        // Run 'git fast-import'.
+        let payload: Vec<u8> = payload.into_vec();
+        let mut import_process = Command::new("git")
+            .args(["fast-import", "--quiet"])
+            .current_dir(repo_path)
+            .stdin(Stdio::piped())
+            .spawn()?;
+        let mut stdin = import_process.stdin.take().unwrap();
+        stdin.write_all(&payload)?;
+        drop(stdin);
+
+        import_process.wait()?;
 
         Ok(())
+    }
+}
+
+/// Payload for git-fast-import.
+struct FastImportPayload {
+    author: &'static str,
+    id_count: usize,
+    payload: Vec<u8>,
+}
+
+#[derive(Copy, Clone, Debug)]
+struct BlobId(usize);
+
+#[derive(Copy, Clone, Debug)]
+struct CommitId(usize);
+
+impl FastImportPayload {
+    pub fn new(author: &'static str) -> Self {
+        Self {
+            author,
+            id_count: 0,
+            payload: Vec::new(),
+        }
+    }
+
+    pub fn into_vec(self) -> Vec<u8> {
+        self.payload
+    }
+
+    pub fn blob(&mut self, data: &[u8]) -> BlobId {
+        let id = self.next_id();
+        let payload = &mut self.payload;
+        payload.extend_from_slice(b"blob\n");
+        payload.extend_from_slice(format!("mark :{}\n", id).as_bytes());
+        payload.extend_from_slice(format!("data {}\n", data.len()).as_bytes());
+        payload.extend_from_slice(data);
+        payload.push(b'\n');
+        BlobId(id)
+    }
+
+    pub fn commit(
+        &mut self,
+        message: &str,
+        timestamp: u64,
+        parents: &[CommitId],
+        path_blob_ids: &[(String, BlobId)],
+    ) -> CommitId {
+        let commit_id = self.next_id();
+        let parents_lines = parents
+            .iter()
+            .enumerate()
+            .map(|(i, parent_id)| {
+                let prefix = if i == 0 { "from" } else { "merge" };
+                format!("{} :{}\n", prefix, parent_id.0)
+            })
+            .collect::<Vec<_>>()
+            .concat();
+        let files_lines = path_blob_ids
+            .iter()
+            .map(|(path, blob_id)| format!("M 100644 :{} {}\n", blob_id.0, path))
+            .collect::<Vec<_>>()
+            .concat();
+        let when = format!("{} +0000", timestamp);
+        let commit_payload = format!(
+            concat!(
+                "commit refs/heads/main\n",
+                "mark :{commit_id}\n",
+                "committer {author} {when}\n",
+                "data {message_len}\n{message}\n",
+                "{parents_lines}",
+                "deleteall\n",
+                "{files_lines}",
+                "\n",
+            ),
+            commit_id = commit_id,
+            author = self.author,
+            when = when,
+            message_len = message.len(),
+            message = &message,
+            parents_lines = parents_lines,
+            files_lines = files_lines,
+        );
+        self.payload.extend_from_slice(commit_payload.as_bytes());
+        CommitId(commit_id)
+    }
+
+    fn next_id(&mut self) -> usize {
+        self.id_count += 1;
+        self.id_count
     }
 }

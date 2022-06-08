@@ -1,4 +1,5 @@
 #chg-compatible
+#require git
 
   $ configure modern
   $ setconfig metalog.track-config=0
@@ -7,12 +8,11 @@
 
   $ hg debugexportmetalog exported
   metalog exported to git repo at exported
-  use 'git checkout master' to get a working copy
+  use 'git checkout main' to get a working copy
   examples:
     git log -p remotenames     # why remotenames get changed
     git annotate visibleheads  # why a head is added
 
-#if git
   $ cd exported
   $ git log -p -- visibleheads
   commit ca606bce3d0b617f7faeaefddc49cb515563099c
@@ -44,4 +44,3 @@
   diff --git a/visibleheads b/visibleheads
   new file mode 100644
   index 0000000..e69de29
-#endif

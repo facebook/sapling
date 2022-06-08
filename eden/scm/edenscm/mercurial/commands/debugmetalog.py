@@ -159,7 +159,7 @@ def debugexportmetalog(ui, repo, path):
     ui.status(
         _(
             "metalog exported to git repo at %s\n"
-            "use 'git checkout master' to get a working copy\n"
+            "use 'git checkout main' to get a working copy\n"
             "examples:\n"
             "  git log -p remotenames     # why remotenames get changed\n"
             "  git annotate visibleheads  # why a head is added\n"
