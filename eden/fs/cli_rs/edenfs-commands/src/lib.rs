@@ -23,6 +23,7 @@ mod gc;
 mod list;
 mod minitop;
 mod pid;
+mod prefetch_profile;
 mod status;
 mod top;
 mod uptime;
@@ -87,6 +88,8 @@ pub enum TopLevelSubcommand {
     Minitop(crate::minitop::MinitopCmd),
     Du(crate::du::DiskUsageCmd),
     List(crate::list::ListCmd),
+    #[clap(subcommand)]
+    PrefetchProfile(crate::prefetch_profile::PrefetchCmd),
 }
 
 #[async_trait]
@@ -104,6 +107,7 @@ impl Subcommand for TopLevelSubcommand {
             Minitop(cmd) => cmd,
             Du(cmd) => cmd,
             List(cmd) => cmd,
+            PrefetchProfile(cmd) => cmd,
         };
         sc.run(instance).await
     }
