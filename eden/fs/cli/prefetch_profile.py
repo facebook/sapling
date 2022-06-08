@@ -779,6 +779,7 @@ class PrefetchProfileCmd(Subcmd):
         "Create, manage, and use Prefetch Profiles. This command is "
         " primarily for use in automation."
     )
+    ALIASES = ["pp"]
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         self.add_subcommands(parser, prefetch_profile_cmd.commands)

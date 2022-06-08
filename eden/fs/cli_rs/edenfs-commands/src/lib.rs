@@ -88,7 +88,7 @@ pub enum TopLevelSubcommand {
     Minitop(crate::minitop::MinitopCmd),
     Du(crate::du::DiskUsageCmd),
     List(crate::list::ListCmd),
-    #[clap(subcommand)]
+    #[clap(subcommand, alias = "pp")]
     PrefetchProfile(crate::prefetch_profile::PrefetchCmd),
 }
 
