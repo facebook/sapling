@@ -193,11 +193,6 @@ pub struct MononokeTunables {
 
     // Disable derivation via direved data service.
     derived_data_disable_remote_derivation: AtomicBool,
-    // Set preferred region for derivation remotely
-    // Sets TargetLocality in SR client making
-    // the requests from the client goes to that region
-    // if there are available hosts.
-    derived_data_service_target_region: TunableString,
 
     // Disable the parallel derivation for DM and default to serial
     deleted_manifest_disable_new_parallel_derivation: AtomicBool,
@@ -269,6 +264,12 @@ pub struct MononokeTunables {
 
     // Percentage of wireproto unbundle pushrebase requests redirected to SCS
     pushrebase_redirect_to_scs_pct: AtomicI64,
+
+    // Which region writes should be done to, in order to minimise latency.
+    // This should align with underlying storage (SQL/Manifold) write regions.
+    // Notice writes still work from any region, and this field is not necessarily
+    // enforced.
+    preferred_write_region: TunableString,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
