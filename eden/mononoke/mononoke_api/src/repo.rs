@@ -343,7 +343,7 @@ impl Repo {
             ..Default::default()
         };
 
-        let content_store = RepoFileContentManager::new(blob_repo.clone());
+        let content_store = RepoFileContentManager::new(&blob_repo);
         let name = blob_repo.name().clone();
 
         let inner = InnerRepo {

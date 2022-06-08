@@ -1365,7 +1365,7 @@ async fn setup_hook_manager(
 ) -> HookManager {
     let mut hook_manager = match content_manager_type {
         ContentFetcherType::InMemory => hook_manager_inmem(fb).await,
-        ContentFetcherType::Blob(repo) => hook_manager_blobrepo(fb, repo).await,
+        ContentFetcherType::Blob(repo) => hook_manager_blobrepo(fb, &repo).await,
     };
     for (bookmark_name, hook_names) in bookmarks {
         hook_manager
@@ -1402,10 +1402,10 @@ fn default_changeset() -> BonsaiChangeset {
     }.freeze().expect("Created changeset")
 }
 
-async fn hook_manager_blobrepo(fb: FacebookInit, repo: BlobRepo) -> HookManager {
+async fn hook_manager_blobrepo(fb: FacebookInit, repo: &BlobRepo) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
 
-    let content_manager = RepoFileContentManager::new(repo);
+    let content_manager = RepoFileContentManager::new(&repo);
     HookManager::new(
         ctx.fb,
         Box::new(content_manager),
@@ -1421,7 +1421,7 @@ async fn hook_manager_blobrepo(fb: FacebookInit, repo: BlobRepo) -> HookManager 
 }
 
 async fn hook_manager_many_files_dirs_blobrepo(fb: FacebookInit) -> HookManager {
-    hook_manager_blobrepo(fb, fixtures::ManyFilesDirs::getrepo(fb).await).await
+    hook_manager_blobrepo(fb, &fixtures::ManyFilesDirs::getrepo(fb).await).await
 }
 
 fn to_mpath(string: &str) -> MPath {

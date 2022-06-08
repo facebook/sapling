@@ -207,7 +207,7 @@ impl FileContentManager for RepoFileContentManager {
 
 impl RepoFileContentManager {
     pub fn new(
-        container: impl RepoBlobstoreArc + BookmarksArc + RepoDerivedDataArc,
+        container: &(impl RepoBlobstoreArc + BookmarksArc + RepoDerivedDataArc),
     ) -> RepoFileContentManager {
         let repo_blobstore = container.repo_blobstore_arc();
         let bookmarks = container.bookmarks_arc();

@@ -22,6 +22,6 @@ pub fn blobrepo_text_only_fetcher(
     blobrepo: ::blobrepo::BlobRepo,
     max_file_size: u64,
 ) -> Box<dyn FileContentManager> {
-    let store = RepoFileContentManager::new(blobrepo);
+    let store = RepoFileContentManager::new(&blobrepo);
     Box::new(TextOnlyFileContentManager::new(store, max_file_size))
 }
