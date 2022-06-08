@@ -10,14 +10,16 @@
 use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use clap::Parser;
+use std::env;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use std::str;
 use util::path::expand_path;
 
+use edenfs_client::checkout::CheckoutConfig;
 use edenfs_client::EdenFsInstance;
-use edenfs_error::{Result, ResultExt};
+use edenfs_error::{EdenFsError, Result, ResultExt};
 
 use crate::{ExitCode, Subcommand};
 
@@ -34,6 +36,11 @@ pub enum PrefetchCmd {
     },
     #[clap(about = "Start recording fetched file paths.")]
     Record,
+    #[clap(about = "List all of the currenly activated prefetch profiles for a checkout.")]
+    List {
+        #[clap(long, parse(from_str = expand_path), help = "The checkout for which you want to see all the profiles")]
+        checkout: Option<PathBuf>,
+    },
 }
 
 impl PrefetchCmd {
@@ -69,6 +76,27 @@ impl PrefetchCmd {
         client.startRecordingBackingStoreFetch().await.from_err()?;
         Ok(0)
     }
+
+    async fn list(&self, instance: EdenFsInstance, checkout: &Option<PathBuf>) -> Result<ExitCode> {
+        let checkout_path = match checkout {
+            Some(p) => p.clone(),
+            None => env::current_dir().context("Unable to retrieve current working dir")?,
+        };
+        let client_name = instance.client_name(&checkout_path)?;
+        let config_dir = instance.config_directory(&client_name);
+        let checkout_config = CheckoutConfig::parse_config(config_dir);
+        match checkout_config {
+            Ok(checkout_config) => {
+                println!("NAME");
+                checkout_config.print_prefetch_profiles();
+                Ok(0)
+            }
+            Err(_) => Err(EdenFsError::Other(anyhow!(
+                "Could not print prefetch profile data for {}",
+                client_name
+            ))),
+        }
+    }
 }
 
 #[async_trait]
@@ -77,6 +105,7 @@ impl Subcommand for PrefetchCmd {
         match self {
             Self::Finish { output_path } => self.finish(instance, output_path).await,
             Self::Record {} => self.record(instance).await,
+            Self::List { checkout } => self.list(instance, checkout).await,
         }
     }
 }

@@ -123,7 +123,7 @@ fn default_require_utf8_path() -> bool {
 #[derive(Deserialize, Debug)]
 struct PrefetchProfiles {
     #[serde(deserialize_with = "deserialize_active", default)]
-    active: Vec<String>,
+    pub active: Vec<String>,
 }
 
 fn deserialize_active<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
@@ -157,7 +157,7 @@ struct PredictivePrefetch {
 }
 
 #[derive(Deserialize, Debug)]
-struct CheckoutConfig {
+pub struct CheckoutConfig {
     repository: Repository,
 
     #[serde(deserialize_with = "deserialize_redirections", default)]
@@ -172,11 +172,19 @@ struct CheckoutConfig {
 impl CheckoutConfig {
     /// Reads checkout config information from config.toml and
     /// returns an Err if it is not properly formatted or does not exist.
-    fn parse_config(state_dir: PathBuf) -> Result<CheckoutConfig> {
+    pub fn parse_config(state_dir: PathBuf) -> Result<CheckoutConfig> {
         let config_path = state_dir.join(MOUNT_CONFIG);
         let content = String::from_utf8(std::fs::read(config_path).from_err()?).from_err()?;
         let config: CheckoutConfig = toml::from_str(&content).from_err()?;
         Ok(config)
+    }
+
+    pub fn print_prefetch_profiles(&self) {
+        if let Some(profiles) = &self.profiles {
+            for s in profiles.active.iter() {
+                println!("{}", s);
+            }
+        }
     }
 }
 
@@ -365,10 +373,6 @@ impl fmt::Display for EdenFsCheckout {
     }
 }
 
-fn config_directory(instance: &EdenFsInstance, client_name: &String) -> PathBuf {
-    instance.clients_dir().join(client_name.clone())
-}
-
 /// Return information about all checkouts defined in EdenFS's configuration files
 /// and all information about mounted checkouts from the eden daemon
 pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, EdenFsCheckout>> {
@@ -377,8 +381,8 @@ pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, E
     for (mount_path, client_name) in instance.get_configured_mounts_map()? {
         configs.push((
             mount_path,
-            config_directory(instance, &client_name),
-            CheckoutConfig::parse_config(config_directory(instance, &client_name))?,
+            instance.config_directory(&client_name),
+            CheckoutConfig::parse_config(instance.config_directory(&client_name))?,
         ));
     }
 
@@ -485,7 +489,7 @@ pub fn find_checkout(instance: &EdenFsInstance, path: &Path) -> Result<EdenFsChe
             .find(|&(checkout_path, _)| path.starts_with(checkout_path))
         {
             let (checkout_path, checkout_name) = item;
-            let checkout_state_dir = config_directory(instance, checkout_name);
+            let checkout_state_dir = instance.config_directory(checkout_name);
             Ok(EdenFsCheckout::from_config(
                 PathBuf::from(checkout_path),
                 checkout_state_dir.clone(),
@@ -501,7 +505,7 @@ pub fn find_checkout(instance: &EdenFsInstance, path: &Path) -> Result<EdenFsChe
         let all_checkouts = instance.get_configured_mounts_map()?;
         let checkout_path = checkout_root.unwrap();
         if let Some(checkout_name) = all_checkouts.get(&checkout_path) {
-            let checkout_state_dir = config_directory(instance, checkout_name);
+            let checkout_state_dir = instance.config_directory(checkout_name);
             Ok(EdenFsCheckout::from_config(
                 checkout_path,
                 checkout_state_dir.clone(),

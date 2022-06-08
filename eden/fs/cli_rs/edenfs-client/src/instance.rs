@@ -9,7 +9,7 @@
 //! [`EdenFsClient`]).
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use anyhow::{anyhow, Context};
@@ -182,6 +182,29 @@ impl EdenFsInstance {
 
     pub fn storage_dir(&self) -> PathBuf {
         self.config_dir.join("storage")
+    }
+
+    pub fn client_name(&self, path: &Path) -> Result<String> {
+        // Resolve symlinks and get absolute path
+        let path = path.canonicalize().from_err()?;
+        // Find `checkout_path` that `path` is a sub path of
+        let all_checkouts = self.get_configured_mounts_map()?;
+        if let Some(item) = all_checkouts
+            .iter()
+            .find(|&(checkout_path, _)| path.starts_with(checkout_path))
+        {
+            let (_, checkout_name) = item;
+            Ok(checkout_name.clone())
+        } else {
+            Err(EdenFsError::Other(anyhow!(
+                "Checkout path {} is not handled by EdenFS",
+                path.display()
+            )))
+        }
+    }
+
+    pub fn config_directory(&self, client_name: &str) -> PathBuf {
+        self.clients_dir().join(client_name)
     }
 }
 
