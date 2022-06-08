@@ -270,6 +270,11 @@ pub struct MononokeTunables {
     // Notice writes still work from any region, and this field is not necessarily
     // enforced.
     preferred_write_region: TunableString,
+
+    // The replication_status call is problematic for SQL so we're experimenting
+    // with removing it, but this tunable can be used as a quick killswitch to
+    // enable them again.
+    enable_sql_lag_monitoring: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
