@@ -684,7 +684,7 @@ Let them both run together
   $ rm $TESTTMP/lockdelay
 
 Wait for them to complete and then do another cloud sync
-  $ sleep 1
+  $ wait
   $ hg debugwaitbackup
   $ hg cloud sync -q
   $ grep rebasing $TESTTMP/racerebase.out
