@@ -222,19 +222,18 @@ impl ChangesetHook for LimitCommitsize {
 mod test {
     use super::*;
     use anyhow::Error;
-    use blobrepo::BlobRepo;
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
     use hooks_content_stores::RepoFileContentManager;
     use maplit::hashmap;
     use std::collections::HashMap;
-    use tests_utils::CreateCommitContext;
+    use tests_utils::{CreateCommitContext, TestRepo};
 
     #[fbinit::test]
     async fn test_limitcommitsize(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
         borrowed!(ctx, repo);
 
         let cs_id = CreateCommitContext::new_root(ctx, repo)
@@ -244,7 +243,7 @@ mod test {
             .commit()
             .await?;
 
-        let bcs = cs_id.load(ctx, repo.blobstore()).await?;
+        let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
         let content_manager = RepoFileContentManager::new(&repo);
         let hook = build_hook(hashmap! {
@@ -314,7 +313,7 @@ mod test {
     #[fbinit::test]
     async fn test_limitcommitsize_removed_files(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
         borrowed!(ctx, repo);
 
         let parent_cs_id = CreateCommitContext::new_root(ctx, repo)
@@ -329,7 +328,7 @@ mod test {
             .commit()
             .await?;
 
-        let bcs = cs_id.load(ctx, repo.blobstore()).await?;
+        let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
         let content_manager = RepoFileContentManager::new(&repo);
         let hook = build_hook(hashmap! {
@@ -374,7 +373,7 @@ mod test {
     #[fbinit::test]
     async fn test_limitcommitsize_override(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
         borrowed!(ctx, repo);
 
         let cs_id = CreateCommitContext::new_root(ctx, repo)
@@ -384,7 +383,7 @@ mod test {
             .commit()
             .await?;
 
-        let bcs = cs_id.load(ctx, repo.blobstore()).await?;
+        let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
         let content_manager = RepoFileContentManager::new(&repo);
         let hook = build_hook_with_limits(
@@ -418,7 +417,7 @@ mod test {
     #[fbinit::test]
     async fn test_limitcommitsize_override_hits_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: TestRepo = test_repo_factory::build_empty(fb)?;
         borrowed!(ctx, repo);
 
         let cs_id = CreateCommitContext::new_root(ctx, repo)
@@ -428,7 +427,7 @@ mod test {
             .commit()
             .await?;
 
-        let bcs = cs_id.load(ctx, repo.blobstore()).await?;
+        let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
         let content_manager = RepoFileContentManager::new(&repo);
 
