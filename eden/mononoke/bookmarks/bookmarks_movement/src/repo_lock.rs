@@ -37,17 +37,17 @@ async fn should_check_repo_lock(
         BookmarkKind::Scratch => Ok(false),
         BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing => {
             if let Some(pushvars) = pushvars {
-                let bypass_allowed = repo_perm_checker
-                    .check_if_read_only_bypass_allowed(idents)
-                    .await?;
-
-                let enforce_acl_check = tunables().get_enforce_bypass_readonly_acl();
-
-                if !bypass_allowed && enforce_acl_check {
-                    return Ok(true);
-                }
-
                 if let Some(value) = pushvars.get("BYPASS_READONLY") {
+                    let bypass_allowed = repo_perm_checker
+                        .check_if_read_only_bypass_allowed(idents)
+                        .await?;
+
+                    let enforce_acl_check = tunables().get_enforce_bypass_readonly_acl();
+
+                    if !bypass_allowed && enforce_acl_check {
+                        return Ok(true);
+                    }
+
                     if value.to_ascii_lowercase() == b"true" {
                         return Ok(false);
                     }
