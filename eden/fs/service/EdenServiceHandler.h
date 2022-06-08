@@ -35,6 +35,13 @@ class ImmediateFuture;
 
 extern const char* const kServiceName;
 
+struct OutstandingThriftRequest {
+  uint64_t requestId;
+
+  // Safe to use StringPiece because method names are string literals.
+  folly::StringPiece method;
+};
+
 /*
  * Handler for the EdenService thrift interface
  */
@@ -208,6 +215,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::vector<PrjfsCall>& outstandingCalls,
       std::unique_ptr<std::string> mountPoint) override;
 
+  void debugOutstandingThriftRequests(
+      std::vector<ThriftRequestMetadata>& outstandingCalls) override;
+
   void debugStartRecordingActivity(
       ActivityRecorderResult& result,
       std::unique_ptr<std::string> mountPoint,
@@ -325,6 +335,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       folly::StringPiece path,
       ObjectFetchContext& fetchContext) noexcept;
 
+  folly::Synchronized<std::unordered_map<uint64_t, OutstandingThriftRequest>>
+      outstandingThriftRequests_;
 #ifdef EDEN_HAVE_USAGE_SERVICE
   // an endpoint for the edenfs/edenfs_service smartservice used for predictive
   // prefetch profiles

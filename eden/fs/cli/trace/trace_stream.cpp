@@ -400,6 +400,39 @@ int trace_fs(
   return 0;
 }
 
+std::string formatThriftRequestMetadata(const ThriftRequestMetadata& request) {
+  return fmt::format("{}: {}", request.get_requestId(), request.get_method());
+}
+
+int trace_thrift(
+    folly::ScopedEventBaseThread& evbThread,
+    apache::thrift::RocketClientChannel::Ptr channel) {
+  StreamingEdenServiceAsyncClient client{std::move(channel)};
+
+  auto future = client.semifuture_debugOutstandingThriftRequests().via(
+      evbThread.getEventBase());
+
+  std::move(future)
+      .thenValue(
+          // Move the client into the callback so that it will be destroyed on
+          // an EventBase thread.
+          [c = std::move(client)](
+              std::vector<ThriftRequestMetadata> outstandingRequests) {
+            if (outstandingRequests.empty()) {
+              return;
+            }
+            std::string_view header = "Outstanding Thrift requests"sv;
+            fmt::print("{}\n{}\n", header, std::string(header.size(), '-'));
+            for (const auto& request : outstandingRequests) {
+              fmt::print("+ {}\n", formatThriftRequestMetadata(request));
+            }
+            fmt::print("{}\n", std::string(header.size(), '-'));
+          })
+      .get();
+
+  return 0;
+}
+
 AbsolutePath getSocketPath(AbsolutePathPiece mountRoot) {
   if constexpr (folly::kIsWindows) {
     auto configPath = mountRoot + ".eden"_pc + "config"_pc;
@@ -439,6 +472,8 @@ int main(int argc, char** argv) {
   } else if (FLAGS_trace == "fs") {
     return trace_fs(
         evbThread, mountRoot, std::move(channel), FLAGS_reads, FLAGS_writes);
+  } else if (FLAGS_trace == "thrift") {
+    return trace_thrift(evbThread, std::move(channel));
   } else if (FLAGS_trace.empty()) {
     fmt::print(stderr, "Must specify trace mode\n");
     return 1;

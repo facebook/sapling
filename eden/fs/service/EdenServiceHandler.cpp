@@ -232,21 +232,34 @@ class ThriftLogHelper {
 
   template <typename... Args>
   ThriftLogHelper(
+      folly::Synchronized<
+          std::unordered_map<uint64_t, OutstandingThriftRequest>>&
+          outstandingThriftRequests,
       const folly::Logger& logger,
       folly::LogLevel level,
       folly::StringPiece itcFunctionName,
       folly::StringPiece itcFileName,
       uint32_t itcLineNumber,
       std::optional<pid_t> pid)
-      : itcFunctionName_(itcFunctionName),
+      : outstandingThriftRequests_(outstandingThriftRequests),
+        requestId_(generateUniqueID()),
+        itcFunctionName_(itcFunctionName),
         itcFileName_(itcFileName),
         itcLineNumber_(itcLineNumber),
         level_(level),
         itcLogger_(logger),
         fetchContext_{pid, itcFunctionName},
-        prefetchFetchContext_{pid, itcFunctionName} {}
+        prefetchFetchContext_{pid, itcFunctionName} {
+    outstandingThriftRequests_.wlock()->emplace(
+        requestId_,
+        OutstandingThriftRequest{
+            requestId_,
+            itcFunctionName_,
+        });
+  }
 
   ~ThriftLogHelper() {
+    outstandingThriftRequests_.wlock()->erase(requestId_);
     // Logging completion time for the request
     // The line number points to where the object was originally created
     TLOG(itcLogger_, level_, itcFileName_, itcLineNumber_) << fmt::format(
@@ -269,6 +282,9 @@ class ThriftLogHelper {
   }
 
  private:
+  folly::Synchronized<std::unordered_map<uint64_t, OutstandingThriftRequest>>&
+      outstandingThriftRequests_;
+  uint64_t requestId_;
   folly::StringPiece itcFunctionName_;
   folly::StringPiece itcFileName_;
   uint32_t itcLineNumber_;
@@ -328,6 +344,7 @@ facebook::eden::InodePtr inodeFromUserPath(
     TLOG(logger, folly::LogLevel::level, fileName, lineNumber)        \
         << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")"; \
     return std::make_unique<ThriftLogHelper>(                         \
+        this->outstandingThriftRequests_,                             \
         logger,                                                       \
         folly::LogLevel::level,                                       \
         functionName,                                                 \
@@ -351,6 +368,7 @@ facebook::eden::InodePtr inodeFromUserPath(
     TLOG(logger, folly::LogLevel::level, fileName, lineNumber)        \
         << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")"; \
     return std::make_unique<ThriftLogHelper>(                         \
+        this->outstandingThriftRequests_,                             \
         logger,                                                       \
         folly::LogLevel::level,                                       \
         functionName,                                                 \
@@ -933,6 +951,14 @@ PrjfsCall populatePrjfsCall(const PrjfsTraceEvent& event) {
   return populatePrjfsCall(event.getCallType(), event.getData());
 }
 #endif
+
+ThriftRequestMetadata populateThriftRequestMetadata(
+    OutstandingThriftRequest request) {
+  ThriftRequestMetadata thriftRequestMetadata;
+  thriftRequestMetadata.requestId() = request.requestId;
+  thriftRequestMetadata.method() = request.method;
+  return thriftRequestMetadata;
+}
 
 apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
     std::unique_ptr<std::string> mountPoint,
@@ -2405,6 +2431,16 @@ void EdenServiceHandler::debugOutstandingPrjfsCalls(
 #else
   NOT_IMPLEMENTED();
 #endif // _WIN32
+}
+
+void EdenServiceHandler::debugOutstandingThriftRequests(
+    FOLLY_MAYBE_UNUSED std::vector<ThriftRequestMetadata>&
+        outstandingRequests) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
+
+  for (const auto& item : *outstandingThriftRequests_.rlock()) {
+    outstandingRequests.push_back(populateThriftRequestMetadata(item.second));
+  }
 }
 
 void EdenServiceHandler::debugStartRecordingActivity(
