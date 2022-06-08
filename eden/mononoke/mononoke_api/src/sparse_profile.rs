@@ -7,13 +7,18 @@
 
 use crate::errors::MononokeError;
 use crate::ChangesetContext;
+use crate::ChangesetDiffItem;
 use crate::ChangesetFileOrdering;
+use crate::ChangesetPathContentContext;
+use crate::ChangesetPathDiffContext;
 use crate::MononokePath;
+use crate::PathEntry;
 use anyhow::{anyhow, Context, Result};
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{stream, FutureExt, StreamExt, TryStreamExt};
+use maplit::btreeset;
 use mononoke_types::{fsnode::FsnodeEntry, MPath};
 use pathmatcher::{DirectoryMatch, Matcher};
 use types::RepoPath;
@@ -32,27 +37,24 @@ pub(crate) async fn fetch(path: String, changeset: &ChangesetContext) -> Result<
     file_ctx
         .content_concat()
         .await
-        .context(format!("Couldn't fetch content of {path}"))
+        .with_context(|| format!("Couldn't fetch content of {path}"))
         .map(|b| Some(b.to_vec()))
 }
 
-pub async fn get_profile_size(
-    ctx: &CoreContext,
+async fn create_matchers(
     changeset: &ChangesetContext,
     paths: Vec<MPath>,
-) -> Result<HashMap<String, u64>, MononokeError> {
-    let matchers: HashMap<_, _> = stream::iter(paths)
+) -> Result<HashMap<String, Arc<dyn Matcher + Send + Sync>>> {
+    stream::iter(paths)
         .map(|path| async move {
-            let content = fetch(path.to_string(), changeset)
-                .await
-                .context(format!("While fetching {path}"))?
-                .ok_or_else(|| anyhow!("Content is empty"))?;
-            let profile = sparse::Root::from_bytes(content, path.to_string())
-                .context(format!("while constructing Profile for source {path}"))?;
+            let content = format!("%include {path}");
+            let dummy_source = "repo_root".to_string();
+            let profile = sparse::Root::from_bytes(content.as_bytes(), dummy_source)
+                .with_context(|| format!("while constructing Profile for source {path}"))?;
             let matcher = profile
                 .matcher(|path| fetch(path, changeset))
                 .await
-                .context(format!("While constructing matcher for source {path}"))?;
+                .with_context(|| format!("While constructing matcher for source {path}"))?;
             anyhow::Ok((
                 path.to_string(),
                 Arc::new(matcher) as Arc<dyn Matcher + Send + Sync>,
@@ -60,7 +62,15 @@ pub async fn get_profile_size(
         })
         .buffer_unordered(100)
         .try_collect()
-        .await?;
+        .await
+}
+
+pub async fn get_profile_size(
+    ctx: &CoreContext,
+    changeset: &ChangesetContext,
+    paths: Vec<MPath>,
+) -> Result<HashMap<String, u64>, MononokeError> {
+    let matchers = create_matchers(changeset, paths).await?;
     calculate_size(ctx, changeset, matchers).await
 }
 
@@ -162,4 +172,142 @@ pub async fn get_all_profiles(changeset: &ChangesetContext) -> Result<Vec<MPath>
         })
         .collect()
         .await)
+}
+
+async fn get_entry_size(content: &ChangesetPathContentContext) -> Result<i64, MononokeError> {
+    let path = content.path();
+    match content.entry().await? {
+        PathEntry::File(file, _) => i64::try_from(file.metadata().await?.total_size)
+            .with_context(|| format!("Size of the file {} can't be converted to i64", path))
+            .map_err(MononokeError::from),
+        PathEntry::Tree(_) => Err(MononokeError::from(anyhow!(
+            "Got Tree entry for the diff, while requested Files only. Path {}",
+            path
+        ))),
+        PathEntry::NotPresent => Ok(0),
+    }
+}
+
+async fn get_bonsai_size_change(
+    current: &ChangesetContext,
+    other: &ChangesetContext,
+) -> Result<Vec<BonsaiSizeChange>> {
+    let diff_items = btreeset! { ChangesetDiffItem::FILES };
+    let diff = current
+        .diff_unordered(other, true, None, diff_items)
+        .await?;
+    stream::iter(diff)
+        .map(|diff| async move {
+            match diff {
+                ChangesetPathDiffContext::Added(content) => Ok(BonsaiSizeChange::Trivial {
+                    path: content.path().clone(),
+                    size_change: get_entry_size(&content).await?,
+                }),
+                ChangesetPathDiffContext::Removed(content) => Ok(BonsaiSizeChange::Trivial {
+                    path: content.path().clone(),
+                    size_change: -get_entry_size(&content).await?,
+                }),
+                ChangesetPathDiffContext::Changed(new, old) => {
+                    let size_change = get_entry_size(&new).await? - get_entry_size(&old).await?;
+                    Ok(BonsaiSizeChange::Trivial {
+                        path: new.path().clone(),
+                        size_change,
+                    })
+                }
+                ChangesetPathDiffContext::Copied(to, _from) => {
+                    let copied_size = get_entry_size(&to).await?;
+                    Ok(BonsaiSizeChange::Copied {
+                        to: to.path().clone(),
+                        copied_size,
+                    })
+                }
+                ChangesetPathDiffContext::Moved(to, from) => {
+                    let moved_size = get_entry_size(&to).await?;
+                    Ok(BonsaiSizeChange::Moved {
+                        from: from.path().clone(),
+                        to: to.path().clone(),
+                        moved_size,
+                    })
+                }
+            }
+        })
+        .buffered(100)
+        .try_collect()
+        .await
+}
+
+fn match_path(matcher: &dyn Matcher, path: &MononokePath) -> Result<bool> {
+    // None here means repo root which is empty RepoPath
+    let maybe_path_vec = path.as_mpath().map(|path| path.to_vec());
+    let path_vec = maybe_path_vec.unwrap_or_default();
+    matcher.matches_file(RepoPath::from_utf8(&path_vec)?)
+}
+
+pub async fn get_profile_delta_size(
+    ctx: &CoreContext,
+    current: &ChangesetContext,
+    other: &ChangesetContext,
+    paths: Vec<MPath>,
+) -> Result<HashMap<String, i64>, MononokeError> {
+    let matchers = create_matchers(current, paths).await?;
+    calculate_delta_size(ctx, current, other, matchers).await
+}
+
+pub async fn calculate_delta_size<'a>(
+    _ctx: &'a CoreContext,
+    current: &'a ChangesetContext,
+    other: &'a ChangesetContext,
+    matchers: HashMap<String, Arc<dyn Matcher + Send + Sync>>,
+) -> Result<HashMap<String, i64>, MononokeError> {
+    let deltas = get_bonsai_size_change(current, other).await?;
+    deltas.iter().try_fold(HashMap::new(), |mut sizes, entry| {
+        match entry {
+            BonsaiSizeChange::Trivial { path, size_change } => {
+                for (source, matcher) in &matchers {
+                    if match_path(&matcher, path)? {
+                        *sizes.entry(source.to_string()).or_insert(0) += size_change;
+                    }
+                }
+            }
+            BonsaiSizeChange::Copied { to, copied_size } => {
+                for (source, matcher) in &matchers {
+                    if match_path(&matcher, to)? {
+                        *sizes.entry(source.to_string()).or_insert(0) += copied_size;
+                    }
+                }
+            }
+            BonsaiSizeChange::Moved {
+                from,
+                to,
+                moved_size,
+            } => {
+                for (source, matcher) in &matchers {
+                    if match_path(&matcher, to)? {
+                        *sizes.entry(source.to_string()).or_insert(0) += moved_size;
+                    }
+                    if match_path(&matcher, from)? {
+                        *sizes.entry(source.to_string()).or_insert(0) -= moved_size;
+                    }
+                }
+            }
+        }
+        Ok(sizes.into_iter().filter(|(_, size)| *size != 0).collect())
+    })
+}
+
+#[derive(Debug)]
+enum BonsaiSizeChange {
+    Trivial {
+        path: MononokePath,
+        size_change: i64,
+    },
+    Copied {
+        to: MononokePath,
+        copied_size: i64,
+    },
+    Moved {
+        from: MononokePath,
+        to: MononokePath,
+        moved_size: i64,
+    },
 }
