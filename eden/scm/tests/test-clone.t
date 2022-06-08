@@ -1,5 +1,6 @@
 #chg-compatible
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig clone.use-rust=1
 
   $ disable treemanifest
   $ configure dummyssh

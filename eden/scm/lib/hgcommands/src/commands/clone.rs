@@ -109,6 +109,11 @@ pub fn run(
         return Err(errors::FallbackToPython(name()).into());
     }
 
+    let supported_url = match url::Url::parse(&clone_opts.source) {
+        Err(_) => false,
+        Ok(url) => url.scheme() != "file" && url.scheme() != "ssh",
+    };
+
     if !clone_opts.updaterev.is_empty()
         || !clone_opts.rev.is_empty()
         || clone_opts.pull
@@ -116,6 +121,7 @@ pub fn run(
         || !clone_opts.shallow
         || clone_opts.git
         || clone_opts.eden
+        || !supported_url
     {
         return Err(errors::FallbackToPython(name()).into());
     }
