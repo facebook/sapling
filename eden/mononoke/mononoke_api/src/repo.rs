@@ -38,6 +38,7 @@ use futures::{try_join, Future, FutureExt};
 use futures_watchdog::WatchdogExt;
 use hook_manager_factory::make_hook_manager;
 use hooks::HookManager;
+use hooks_content_stores::RepoFileContentManager;
 use itertools::Itertools;
 use live_commit_sync_config::{LiveCommitSyncConfig, TestLiveCommitSyncConfig};
 use mercurial_derived_data::MappedHgChangesetId;
@@ -107,7 +108,6 @@ pub struct Repo {
     pub(crate) warm_bookmarks_cache: Arc<dyn BookmarksCache>,
     pub(crate) repo_permission_checker: ArcPermissionChecker,
     pub(crate) service_permission_checker: ArcPermissionChecker,
-    pub(crate) hook_manager: Arc<HookManager>,
     pub(crate) readonly_fetcher: RepoReadWriteFetcher,
 }
 
@@ -158,13 +158,6 @@ impl Repo {
             config.skiplist_index_blobstore_key = None;
         }
         let logger = env.repo_factory.env.logger.new(o!("repo" => name.clone()));
-        let disabled_hooks = env
-            .repo_factory
-            .env
-            .disabled_hooks
-            .get(&name)
-            .cloned()
-            .unwrap_or_default();
 
         let inner: InnerRepo = env
             .repo_factory
@@ -188,17 +181,6 @@ impl Repo {
                 None => PermissionCheckerBuilder::always_allow(),
             };
             Ok::<_, Error>(ArcPermissionChecker::from(checker))
-        };
-
-        let hook_manager = {
-            let blob_repo = &inner.blob_repo;
-            let config = config.clone();
-            let name = name.as_str();
-            async move {
-                let hook_manager =
-                    make_hook_manager(fb, blob_repo, &config, name, &disabled_hooks).await?;
-                Ok::<_, Error>(Arc::new(hook_manager))
-            }
         };
 
         let warm_bookmarks_cache = if env.warm_bookmarks_cache_enabled {
@@ -244,16 +226,14 @@ impl Repo {
             Ok(None)
         }?;
 
-        let (
-            repo_permission_checker,
-            service_permission_checker,
-            warm_bookmarks_cache,
-            hook_manager,
-        ): (_, _, Arc<dyn BookmarksCache>, _) = try_join!(
+        let (repo_permission_checker, service_permission_checker, warm_bookmarks_cache): (
+            _,
+            _,
+            Arc<dyn BookmarksCache>,
+        ) = try_join!(
             repo_permission_checker.watched(&logger),
             service_permission_checker.watched(&logger),
             warm_bookmarks_cache.watched(&logger),
-            hook_manager.watched(&logger),
         )?;
 
         let readonly_fetcher = RepoReadWriteFetcher::new(
@@ -268,7 +248,6 @@ impl Repo {
             warm_bookmarks_cache,
             repo_permission_checker,
             service_permission_checker,
-            hook_manager,
             readonly_fetcher,
         })
     }
@@ -286,7 +265,6 @@ impl Repo {
             warm_bookmarks_cache: self.warm_bookmarks_cache.clone(),
             repo_permission_checker: self.repo_permission_checker.clone(),
             service_permission_checker: self.service_permission_checker.clone(),
-            hook_manager: self.hook_manager.clone(),
             readonly_fetcher: self.readonly_fetcher.clone(),
         }
     }
@@ -365,6 +343,9 @@ impl Repo {
             ..Default::default()
         };
 
+        let content_store = RepoFileContentManager::new(blob_repo.clone());
+        let name = blob_repo.name().clone();
+
         let inner = InnerRepo {
             blob_repo,
             repo_config: Arc::new(config.clone()),
@@ -382,6 +363,16 @@ impl Repo {
                 Arc::new(InProcessLease::new()),
             )),
             acl_regions: build_disabled_acl_regions(),
+            hook_manager: Arc::new(
+                make_hook_manager(
+                    ctx.fb,
+                    content_store,
+                    &config,
+                    name.clone(),
+                    &HashSet::new(),
+                )
+                .await?,
+            ),
         };
 
         let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(ctx.clone(), &inner);
@@ -391,15 +382,11 @@ impl Repo {
         warm_bookmarks_cache_builder.wait_until_warmed();
         let warm_bookmarks_cache = warm_bookmarks_cache_builder.build().await?;
 
-        let hook_manager = Arc::new(
-            make_hook_manager(ctx.fb, &inner.blob_repo, &config, "test", &HashSet::new()).await?,
-        );
-
         let readonly_fetcher =
             RepoReadWriteFetcher::new(None, config.readonly.clone(), config.hgsql_name.clone());
 
         Ok(Self {
-            name: String::from("test"),
+            name,
             inner,
             warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
             repo_permission_checker: ArcPermissionChecker::from(
@@ -408,7 +395,6 @@ impl Repo {
             service_permission_checker: ArcPermissionChecker::from(
                 PermissionCheckerBuilder::always_allow(),
             ),
-            hook_manager,
             readonly_fetcher,
         })
     }
@@ -469,7 +455,7 @@ impl Repo {
 
     /// The hook manager for the referenced repository.
     pub fn hook_manager(&self) -> &Arc<HookManager> {
-        &self.hook_manager
+        &self.inner.hook_manager
     }
 
     /// The Read/Write or Read-Only status fetcher.

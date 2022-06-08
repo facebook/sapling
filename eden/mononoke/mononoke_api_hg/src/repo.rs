@@ -866,7 +866,7 @@ mod tests {
         let repo_ctx = RepoContext::new(ctx, Arc::new(repo)).await?;
 
         let hg = repo_ctx.hg();
-        assert_eq!(hg.repo().name(), "test");
+        assert_eq!(hg.repo().name(), "repo");
 
         Ok(())
     }

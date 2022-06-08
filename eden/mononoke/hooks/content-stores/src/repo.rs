@@ -219,6 +219,18 @@ impl RepoFileContentManager {
             repo_derived_data,
         }
     }
+
+    pub fn from_parts(
+        bookmarks: ArcBookmarks,
+        repo_blobstore: ArcRepoBlobstore,
+        repo_derived_data: ArcRepoDerivedData,
+    ) -> Self {
+        RepoFileContentManager {
+            repo_blobstore,
+            bookmarks,
+            repo_derived_data,
+        }
+    }
 }
 
 async fn derive_hg_manifest(

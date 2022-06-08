@@ -48,6 +48,7 @@ use std::str;
 /// Manages hooks and allows them to be installed and uninstalled given a name
 /// Knows how to run hooks
 
+#[facet::facet]
 pub struct HookManager {
     repo_name: String,
     hooks: HashMap<String, Hook>,
@@ -109,6 +110,22 @@ impl HookManager {
             all_hooks_bypassed: hook_manager_params.all_hooks_bypassed,
             scuba_bypassed_commits,
         })
+    }
+
+    // Create a very simple HookManager, for use inside of the TestRepoFactory.
+    pub fn new_test(repo_name: String, content_manager: Box<dyn FileContentManager>) -> Self {
+        Self {
+            repo_name,
+            hooks: HashMap::new(),
+            bookmark_hooks: HashMap::new(),
+            regex_hooks: Vec::new(),
+            content_manager,
+            reviewers_membership: MembershipCheckerBuilder::never_member().into(),
+            admin_membership: MembershipCheckerBuilder::never_member().into(),
+            scuba: MononokeScubaSampleBuilder::with_discard(),
+            all_hooks_bypassed: false,
+            scuba_bypassed_commits: MononokeScubaSampleBuilder::with_discard(),
+        }
     }
 
     pub fn register_changeset_hook(

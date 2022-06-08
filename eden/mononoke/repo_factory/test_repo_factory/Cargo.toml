@@ -35,6 +35,8 @@ filenodes = { version = "0.1.0", path = "../../filenodes" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
+hooks = { version = "0.1.0", path = "../../hooks" }
+hooks_content_stores = { version = "0.1.0", path = "../../hooks/content-stores" }
 live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
 maplit = "1.0"
 megarepo_mapping = { version = "0.1.0", path = "../../megarepo_api/mapping" }

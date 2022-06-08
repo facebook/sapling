@@ -53,6 +53,9 @@ use fbinit::FacebookInit;
 use filenodes::ArcFilenodes;
 use filestore::{ArcFilestoreConfig, FilestoreConfig};
 use futures_watchdog::WatchdogExt;
+use hook_manager_factory::make_hook_manager;
+use hooks::ArcHookManager;
+use hooks_content_stores::RepoFileContentManager;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use mercurial_mutation::{ArcHgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
@@ -514,6 +517,9 @@ pub enum RepoFactoryError {
 
     #[error("Error opening mutable counters")]
     MutableCounters,
+
+    #[error("Error creating hook manager")]
+    HookManager,
 }
 
 #[facet::factory(name: String, config: RepoConfig)]
@@ -1049,6 +1055,41 @@ impl RepoFactory {
             skiplist_index.clone(),
             changeset_fetcher.clone(),
         )
+    }
+
+    pub async fn hook_manager(
+        &self,
+        repo_config: &ArcRepoConfig,
+        repo_identity: &ArcRepoIdentity,
+        repo_derived_data: &ArcRepoDerivedData,
+        bookmarks: &ArcBookmarks,
+        repo_blobstore: &ArcRepoBlobstore,
+    ) -> Result<ArcHookManager> {
+        let content_store = RepoFileContentManager::from_parts(
+            bookmarks.clone(),
+            repo_blobstore.clone(),
+            repo_derived_data.clone(),
+        );
+
+        let disabled_hooks = self
+            .env
+            .disabled_hooks
+            .get(repo_identity.name())
+            .cloned()
+            .unwrap_or_default();
+
+        let hook_manager = make_hook_manager(
+            self.env.fb,
+            content_store,
+            repo_config,
+            repo_identity.name().to_string(),
+            &disabled_hooks,
+        )
+        .watched(&self.env.logger)
+        .await
+        .context(RepoFactoryError::HookManager)?;
+
+        Ok(Arc::new(hook_manager))
     }
 }
 

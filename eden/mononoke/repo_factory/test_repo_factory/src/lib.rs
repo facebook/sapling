@@ -36,6 +36,8 @@ use filenodes::ArcFilenodes;
 use filestore::{ArcFilestoreConfig, FilestoreConfig};
 use fsnodes::RootFsnodeId;
 use git_types::TreeHandle;
+use hooks::{ArcHookManager, HookManager};
+use hooks_content_stores::RepoFileContentManager;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
 use maplit::{hashmap, hashset};
 use megarepo_mapping::MegarepoMapping;
@@ -533,5 +535,25 @@ impl TestRepoFactory {
             skiplist_index.clone(),
             changeset_fetcher.clone(),
         )
+    }
+
+    /// Hook manager
+    pub fn hook_manager(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_derived_data: &ArcRepoDerivedData,
+        bookmarks: &ArcBookmarks,
+        repo_blobstore: &ArcRepoBlobstore,
+    ) -> ArcHookManager {
+        let content_store = RepoFileContentManager::from_parts(
+            bookmarks.clone(),
+            repo_blobstore.clone(),
+            repo_derived_data.clone(),
+        );
+
+        Arc::new(HookManager::new_test(
+            repo_identity.name().to_string(),
+            Box::new(content_store),
+        ))
     }
 }
