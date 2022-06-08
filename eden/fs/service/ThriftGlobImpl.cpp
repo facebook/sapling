@@ -32,7 +32,7 @@ ThriftGlobImpl::ThriftGlobImpl(const GlobParams& params)
       rootHashes_{*params.revisions_ref()},
       searchRootUser_{*params.searchRoot_ref()} {}
 
-folly::Future<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
+ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     std::shared_ptr<EdenMount> edenMount,
     std::shared_ptr<ServerState> serverState,
     std::vector<std::string> globs,
@@ -65,7 +65,7 @@ folly::Future<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
 
   // Globs will be evaluated against the specified commits or the current commit
   // if none are specified. The results will be collected here.
-  std::vector<folly::Future<folly::Unit>> globFutures{};
+  std::vector<ImmediateFuture<folly::Unit>> globFutures{};
   auto globResults = std::make_shared<GlobNode::ResultList>();
 
   RelativePath searchRoot;
@@ -85,8 +85,6 @@ folly::Future<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
       globFutures.emplace_back(
           edenMount->getObjectStore()
               ->getRootTree(originRootId, fetchContext)
-              .semi()
-              .via(&folly::QueuedImmediateExecutor::instance())
               .thenValue([edenMount, globRoot, &fetchContext, searchRoot](
                              std::shared_ptr<const Tree>&& rootTree) {
                 return resolveTree(
@@ -102,16 +100,14 @@ folly::Future<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                    fileBlobsToPrefetch,
                    globResults,
                    &originRootId](std::shared_ptr<const Tree>&& tree) mutable {
-                    return globRoot
-                        ->evaluate(
-                            edenMount->getObjectStore(),
-                            fetchContext,
-                            RelativePathPiece(),
-                            std::move(tree),
-                            fileBlobsToPrefetch.get(),
-                            *globResults,
-                            originRootId)
-                        .semi();
+                    return globRoot->evaluate(
+                        edenMount->getObjectStore(),
+                        fetchContext,
+                        RelativePathPiece(),
+                        std::move(tree),
+                        fileBlobsToPrefetch.get(),
+                        *globResults,
+                        originRootId);
                   }));
     }
   } else {
@@ -133,13 +129,11 @@ folly::Future<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                   fileBlobsToPrefetch.get(),
                   *globResults,
                   originRootId);
-            })
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance()));
+            }));
   }
 
   auto prefetchFuture =
-      folly::collectAllUnsafe(std::move(globFutures))
+      collectAll(std::move(globFutures))
           .thenValue([fileBlobsToPrefetch,
                       globResults = std::move(globResults),
                       suppressFileList = suppressFileList_](
@@ -218,13 +212,11 @@ folly::Future<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                 futures.emplace_back(store->prefetchBlobs(range, fetchContext));
               }
 
-              return collectAllSafe(std::move(futures))
+              return collectAll(std::move(futures))
                   .thenValue([glob = std::move(out), fileBlobsToPrefetch](
-                                 auto&&) mutable { return std::move(glob); })
-                  .semi()
-                  .via(&folly::QueuedImmediateExecutor::instance());
+                                 auto&&) mutable { return std::move(glob); });
             }
-            return folly::makeFuture(std::move(out));
+            return ImmediateFuture{std::move(out)};
           })
           .ensure([globRoot, originRootIds = std::move(originRootIds)]() {
             // keep globRoot and originRootIds alive until the end

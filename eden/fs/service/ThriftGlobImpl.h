@@ -12,7 +12,7 @@
 #include <vector>
 
 #include <folly/Range.h>
-#include <folly/futures/Future.h>
+#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
 
@@ -26,7 +26,7 @@ class ThriftGlobImpl {
  public:
   explicit ThriftGlobImpl(const GlobParams& params);
 
-  folly::Future<std::unique_ptr<Glob>> glob(
+  ImmediateFuture<std::unique_ptr<Glob>> glob(
       std::shared_ptr<EdenMount> edenMount,
       std::shared_ptr<ServerState> serverState,
       std::vector<std::string> globs,

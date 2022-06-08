@@ -1868,8 +1868,8 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeRecursively(
 }
 
 namespace {
-folly::Future<std::unique_ptr<Glob>> detachIfBackgrounded(
-    folly::Future<std::unique_ptr<Glob>> globFuture,
+ImmediateFuture<std::unique_ptr<Glob>> detachIfBackgrounded(
+    ImmediateFuture<std::unique_ptr<Glob>> globFuture,
     const std::shared_ptr<ServerState>& serverState,
     bool background) {
   if (!background) {
@@ -1877,13 +1877,13 @@ folly::Future<std::unique_ptr<Glob>> detachIfBackgrounded(
   } else {
     folly::futures::detachOn(
         serverState->getThreadPool().get(), std::move(globFuture).semi());
-    return folly::makeFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>());
+    return ImmediateFuture<std::unique_ptr<Glob>>(std::make_unique<Glob>());
   }
 }
 } // namespace
 
-folly::Future<std::unique_ptr<Glob>>
-EdenServiceHandler::future_predictiveGlobFiles(
+folly::SemiFuture<std::unique_ptr<Glob>>
+EdenServiceHandler::semifuture_predictiveGlobFiles(
     std::unique_ptr<GlobParams> params) {
 #ifdef EDEN_HAVE_USAGE_SERVICE
   ThriftGlobImpl globber{*params};
@@ -1950,31 +1950,41 @@ EdenServiceHandler::future_predictiveGlobFiles(
   bool background = *params->background();
 
   auto future =
-      spServiceEndpoint_
-          ->getTopUsedDirs(
-              user, repo, numResults, os, startTime, endTime, sandcastleAlias)
+      ImmediateFuture{spServiceEndpoint_
+                          ->getTopUsedDirs(
+                              user,
+                              repo,
+                              numResults,
+                              os,
+                              startTime,
+                              endTime,
+                              sandcastleAlias)
+                          .semi()}
           .thenValue([globber = std::move(globber),
                       edenMount = std::move(edenMount),
                       serverState,
                       &fetchContext](std::vector<std::string>&& globs) mutable {
             return globber.glob(edenMount, serverState, globs, fetchContext);
           })
-          .thenError([](folly::exception_wrapper&& ew) {
-            XLOG(ERR) << "Error fetching predictive file globs: "
-                      << folly::exceptionStr(ew);
-            return makeFuture<std::unique_ptr<Glob>>(std::move(ew));
-          })
-          .ensure(
-              [params = std::move(params), helper = std::move(helper)]() {});
-  return detachIfBackgrounded(std::move(future), serverState, background);
+          .thenTry([params = std::move(params), helper = std::move(helper)](
+                       folly::Try<std::unique_ptr<Glob>> tryGlob) {
+            if (tryGlob.hasException()) {
+              auto& ew = tryGlob.exception();
+              XLOG(ERR) << "Error fetching predictive file globs: "
+                        << folly::exceptionStr(ew);
+            }
+            return tryGlob;
+          });
+  return detachIfBackgrounded(std::move(future), serverState, background)
+      .semi();
 #else // !EDEN_HAVE_USAGE_SERVICE
   (void)params;
   NOT_IMPLEMENTED();
 #endif // !EDEN_HAVE_USAGE_SERVICE
 }
 
-folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
-    std::unique_ptr<GlobParams> params) {
+folly::SemiFuture<std::unique_ptr<Glob>>
+EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
   ThriftGlobImpl globber{*params};
   auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID(
       DBG3,
@@ -1993,7 +2003,10 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
               context)
           .ensure([helper = std::move(helper)] {});
   return detachIfBackgrounded(
-      std::move(globFut), server_->getServerState(), *params->background());
+             std::move(globFut),
+             server_->getServerState(),
+             *params->background())
+      .semi();
 }
 
 folly::Future<Unit> EdenServiceHandler::future_chown(

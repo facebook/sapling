@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include <folly/futures/Future.h>
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
@@ -17,7 +17,7 @@ class ObjectFetchContext;
 class ObjectStore;
 class Tree;
 
-folly::Future<std::shared_ptr<const Tree>> resolveTree(
+ImmediateFuture<std::shared_ptr<const Tree>> resolveTree(
     ObjectStore& objectStore,
     ObjectFetchContext& fetchContext,
     std::shared_ptr<const Tree> root,

@@ -21,7 +21,7 @@ struct ResolveTreeContext {
   std::vector<PathComponent> components;
 };
 
-folly::Future<std::shared_ptr<const Tree>> resolveTree(
+ImmediateFuture<std::shared_ptr<const Tree>> resolveTree(
     std::shared_ptr<ResolveTreeContext> ctx,
     ObjectStore& objectStore,
     ObjectFetchContext& fetchContext,
@@ -49,8 +49,6 @@ folly::Future<std::shared_ptr<const Tree>> resolveTree(
   }
 
   return objectStore.getTree(child->second.getHash(), fetchContext)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([ctx = std::move(ctx), &objectStore, &fetchContext, index](
                      std::shared_ptr<const Tree>&& tree) mutable {
         return resolveTree(
@@ -60,7 +58,7 @@ folly::Future<std::shared_ptr<const Tree>> resolveTree(
 
 } // namespace
 
-folly::Future<std::shared_ptr<const Tree>> resolveTree(
+ImmediateFuture<std::shared_ptr<const Tree>> resolveTree(
     ObjectStore& objectStore,
     ObjectFetchContext& fetchContext,
     std::shared_ptr<const Tree> root,
