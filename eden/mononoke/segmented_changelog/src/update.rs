@@ -169,7 +169,7 @@ mod tests {
         let second = BookmarkName::new("second")?;
         set_bookmark(
             fb,
-            blobrepo.clone(),
+            &blobrepo,
             "04decbb0d1a65789728250ddea2fe8d00248e01c",
             second,
         )
@@ -177,7 +177,7 @@ mod tests {
         let third = BookmarkName::new("third")?;
         set_bookmark(
             fb,
-            blobrepo.clone(),
+            &blobrepo,
             "c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12",
             third,
         )

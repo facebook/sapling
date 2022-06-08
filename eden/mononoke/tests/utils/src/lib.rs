@@ -7,13 +7,13 @@
 
 use anyhow::{format_err, Error};
 use blobstore::Storable;
-use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::{BookmarkName, BookmarkUpdateReason, BookmarksRef};
+use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingRef};
+use bookmarks::{BookmarkName, BookmarkUpdateReason, Bookmarks, BookmarksRef};
 use bytes::{Bytes, BytesMut};
-use changesets::ChangesetsRef;
+use changesets::{Changesets, ChangesetsRef};
 use changesets_creation::save_changesets;
 use context::CoreContext;
-use filestore::{self, FetchKey, FilestoreConfigRef, StoreRequest};
+use filestore::{self, FetchKey, FilestoreConfig, FilestoreConfigRef, StoreRequest};
 use fsnodes::RootFsnodeId;
 use futures::{
     future,
@@ -26,8 +26,8 @@ use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
     MPath,
 };
-use repo_blobstore::{RepoBlobstoreArc, RepoBlobstoreRef};
-use repo_derived_data::RepoDerivedDataRef;
+use repo_blobstore::{RepoBlobstore, RepoBlobstoreArc, RepoBlobstoreRef};
+use repo_derived_data::{RepoDerivedData, RepoDerivedDataRef};
 use std::{
     collections::{BTreeMap, HashMap},
     str::FromStr,
@@ -42,7 +42,31 @@ pub trait Repo = BonsaiHgMappingRef
     + ChangesetsRef
     + FilestoreConfigRef
     + RepoBlobstoreArc
-    + RepoDerivedDataRef;
+    + RepoDerivedDataRef
+    + Send
+    + Sync;
+
+#[facet::container]
+#[derive(Clone)]
+pub struct TestRepo {
+    #[facet]
+    pub repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    pub changesets: dyn Changesets,
+
+    #[facet]
+    pub bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    pub bookmarks: dyn Bookmarks,
+
+    #[facet]
+    pub filestore_config: FilestoreConfig,
+
+    #[facet]
+    pub repo_derived_data: RepoDerivedData,
+}
 
 pub async fn list_working_copy_utf8(
     ctx: &CoreContext,

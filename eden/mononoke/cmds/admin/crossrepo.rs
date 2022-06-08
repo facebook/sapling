@@ -1435,7 +1435,7 @@ mod test {
 
         // Move bookmark to another changeset
         let another_hash = "607314ef579bd2407752361ba1b0c1729d08b281";
-        set_bookmark(fb, small_repo.clone(), another_hash, master.clone()).await;
+        set_bookmark(fb, &small_repo, another_hash, master.clone()).await;
         let another_bcs_id =
             helpers::csid_resolve(&ctx, small_repo, another_hash.to_string()).await?;
 
@@ -1456,7 +1456,7 @@ mod test {
 
         // Create another bookmark
         let another_book = BookmarkName::new("newbook")?;
-        set_bookmark(fb, small_repo.clone(), another_hash, another_book.clone()).await;
+        set_bookmark(fb, &small_repo, another_hash, another_book.clone()).await;
 
         let actual_diff = find_bookmark_diff(ctx.clone(), &commit_syncer).await?;
 

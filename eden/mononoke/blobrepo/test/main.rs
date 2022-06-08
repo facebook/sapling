@@ -865,7 +865,7 @@ async fn test_hg_commit_generation_diamond(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo = fixtures::Linear::getrepo(fb).await;
 
-    let last_bcs_id = fixtures::save_diamond_commits(ctx.clone(), repo.clone(), vec![])
+    let last_bcs_id = fixtures::save_diamond_commits(&ctx, &repo, vec![])
         .await
         .unwrap();
 

@@ -1524,7 +1524,7 @@ mod tests {
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let factory = TestRepoFactory::new(fb)?;
-            let repo = factory.build()?;
+            let repo: BlobRepo = factory.build()?;
             Linear::initrepo(fb, &repo).await;
             // Bottom commit of the repo
             let parents = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"];

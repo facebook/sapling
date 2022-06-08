@@ -600,7 +600,7 @@ async fn test_changeset_id_to_location_multiple_heads(fb: FacebookInit) -> Resul
 
     set_bookmark(
         fb,
-        blobrepo.clone(),
+        &blobrepo,
         "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5",
         BOOKMARK_NAME.clone(),
     )
@@ -928,7 +928,7 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
 
     let start_hg_id = "607314ef579bd2407752361ba1b0c1729d08b281";
     let start_cs = resolve_cs_id(&ctx, &blobrepo, start_hg_id).await?;
-    set_bookmark(fb, blobrepo.clone(), start_hg_id, bookmark_name.clone()).await;
+    set_bookmark(fb, &blobrepo, start_hg_id, bookmark_name.clone()).await;
 
     tokio::time::pause(); // TODO: pause only works with the `current_thread` Runtime.
 
@@ -954,7 +954,7 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
 
     let new_hg_id = "79a13814c5ce7330173ec04d279bf95ab3f652fb";
     let new_cs = resolve_cs_id(&ctx, &blobrepo, new_hg_id).await?;
-    set_bookmark(fb, blobrepo.clone(), new_hg_id, bookmark_name.clone()).await;
+    set_bookmark(fb, &blobrepo, new_hg_id, bookmark_name.clone()).await;
 
     tokio::time::advance(Duration::from_secs(5)).await;
     // second tick is ready to be scheduled

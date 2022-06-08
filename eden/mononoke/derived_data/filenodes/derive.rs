@@ -594,7 +594,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         let filenodes_cs_id = Arc::new(Mutex::new(None));
         let mut factory = TestRepoFactory::new(fb)?;
-        let repo = factory
+        let repo: BlobRepo = factory
             .with_filenodes_override({
                 cloned!(filenodes_cs_id);
                 move |inner| {
