@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.56"
-git2 = "0.13"
 hex = "0.4.3"
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
 lazy_static = "1.0"
