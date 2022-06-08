@@ -45,8 +45,16 @@ class InodeOrTreeOrEntry {
   explicit InodeOrTreeOrEntry(detail::TreePtr&& value, mode_t mode)
       : variant_(std::move(value)), treeMode_(mode) {}
 
-  explicit InodeOrTreeOrEntry(const TreeEntry& value) : variant_(value) {}
-  explicit InodeOrTreeOrEntry(TreeEntry&& value) : variant_(std::move(value)) {}
+  explicit InodeOrTreeOrEntry(const TreeEntry& value) : variant_(value) {
+    XCHECK(!value.isTree())
+        << "TreeEntries which represent a tree should be resolved to a tree "
+        << "before being constructed into InodeOrTreeOrEntry";
+  }
+  explicit InodeOrTreeOrEntry(TreeEntry&& value) : variant_(std::move(value)) {
+    XCHECK(!value.isTree())
+        << "TreeEntries which represent a tree should be resolved to a tree "
+        << "before being constructed into InodeOrTreeOrEntry";
+  }
 
   /**
    * Returns the contained InodePtr.
