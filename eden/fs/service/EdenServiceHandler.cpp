@@ -1510,7 +1510,7 @@ void EdenServiceHandler::getFilesChangedSince(
 void EdenServiceHandler::setJournalMemoryLimit(
     std::unique_ptr<PathString> mountPoint,
     int64_t limit) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint);
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   if (limit < 0) {
@@ -1524,14 +1524,14 @@ void EdenServiceHandler::setJournalMemoryLimit(
 
 int64_t EdenServiceHandler::getJournalMemoryLimit(
     std::unique_ptr<PathString> mountPoint) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint);
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   return static_cast<int64_t>(edenMount->getJournal().getMemoryLimit());
 }
 
 void EdenServiceHandler::flushJournal(std::unique_ptr<PathString> mountPoint) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint);
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   edenMount->getJournal().flush();
@@ -1540,7 +1540,7 @@ void EdenServiceHandler::flushJournal(std::unique_ptr<PathString> mountPoint) {
 void EdenServiceHandler::debugGetRawJournal(
     DebugGetRawJournalResponse& out,
     std::unique_ptr<DebugGetRawJournalParams> params) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *params->mountPoint_ref());
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *params->mountPoint_ref());
   auto mountPath = AbsolutePathPiece{*params->mountPoint_ref()};
   auto edenMount = server_->getMount(mountPath);
   auto mountGeneration = static_cast<ssize_t>(edenMount->getMountGeneration());
