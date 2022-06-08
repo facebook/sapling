@@ -203,7 +203,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
 
             // If the file is not a normal file or a symlink (ex: it could be a directory or a
             // weird file like a fifo file), consider it deleted.
-            if !file_type.is_file() || file_type.is_symlink() {
+            if !file_type.is_file() && !file_type.is_symlink() {
                 results.push(Ok(PendingChangeResult::File(ChangeType::Deleted(path))));
                 continue;
             }
