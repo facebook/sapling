@@ -20,7 +20,7 @@ use futures_stats::{FutureStats, TimedFutureExt};
 use hooks::{
     hook_loader::load_hooks, CrossRepoPushSource, HookManager, HookOutcome, PushAuthoredBy,
 };
-use hooks_content_stores::blobrepo_text_only_fetcher;
+use hooks_content_stores::repo_text_only_fetcher;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
@@ -65,7 +65,7 @@ impl Tailer {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<Tailer> {
-        let content_fetcher = blobrepo_text_only_fetcher(repo.clone(), config.hook_max_file_size);
+        let content_fetcher = repo_text_only_fetcher(&repo, config.hook_max_file_size);
 
         let mut hook_manager = HookManager::new(
             ctx.fb,
