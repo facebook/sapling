@@ -7,7 +7,6 @@
 
 #![feature(backtrace)]
 
-pub use anyhow::anyhow;
 use blobstore::LoadableError;
 use source_control as scs_thrift;
 use std::backtrace::Backtrace;
@@ -15,15 +14,19 @@ use std::backtrace::BacktraceStatus;
 use std::convert::Infallible;
 use std::error::Error as StdError;
 use std::fmt;
-pub use std::sync::Arc;
+use std::sync::Arc;
 
 use anyhow::Error;
 use thiserror::Error;
 
+pub mod macro_reexport {
+    pub use anyhow::anyhow;
+}
+
 macro_rules! cloneable_error {
     ($name: ident) => {
         #[derive(Clone, Debug)]
-        pub struct $name(pub Arc<Error>);
+        pub struct $name(pub ::std::sync::Arc<Error>);
 
         impl fmt::Display for $name {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -33,7 +36,7 @@ macro_rules! cloneable_error {
 
         impl From<Error> for $name {
             fn from(error: Error) -> Self {
-                Self(Arc::new(error))
+                Self(::std::sync::Arc::new(error))
             }
         }
 
@@ -98,20 +101,20 @@ impl From<LoadableError> for MegarepoError {
 #[macro_export]
 macro_rules! bail_request {
     ($msg:literal $(,)?) => {
-        return Err($crate::MegarepoError::RequestError($crate::RequestError($crate::Arc::new($crate::anyhow!($msg)))))
+        return Err($crate::MegarepoError::RequestError($crate::RequestError(::std::sync::Arc::new($crate::macro_reexport::anyhow!($msg)))))
     };
     ($fmt:expr, $($arg:tt)*) => {
-        return Err($crate::MegarepoError::RequestError($crate::RequestError($crate::Arc::new($crate::anyhow!($fmt, $($arg)*)))))
+        return Err($crate::MegarepoError::RequestError($crate::RequestError(::std::sync::Arc::new($crate::macro_reexport::anyhow!($fmt, $($arg)*)))))
     };
 }
 
 #[macro_export]
 macro_rules! bail_internal {
     ($msg:literal $(,)?) => {
-        return Err($crate::MegarepoError::InternalError($crate::InternalError($crate::Arc::new($crate::anyhow!($msg)))))
+        return Err($crate::MegarepoError::InternalError($crate::InternalError(::std::sync::Arc::new($crate::macro_reexport::anyhow!($msg)))))
     };
     ($fmt:expr, $($arg:tt)*) => {
-        return Err($crate::MegarepoError::InternalError($crate::InternalError($crate::Arc::new($crate::anyhow!($fmt, $($arg)*)))))
+        return Err($crate::MegarepoError::InternalError($crate::InternalError(::std::sync::Arc::new($crate::macro_reexport::anyhow!($fmt, $($arg)*)))))
     };
 }
 
