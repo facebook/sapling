@@ -27,6 +27,10 @@ DEFINE_string(trace, "", "Trace mode");
 DEFINE_bool(writes, false, "Limit trace to write operations");
 DEFINE_bool(reads, false, "Limit trace to write operations");
 DEFINE_bool(verbose, false, "Show import priority and cause");
+DEFINE_bool(
+    retroactive,
+    false,
+    "Provide stored inode events (from a buffer) across past changes");
 
 namespace {
 constexpr auto kTimeout = std::chrono::seconds{1};
@@ -433,6 +437,20 @@ int trace_thrift(
   return 0;
 }
 
+int trace_inode(
+    folly::ScopedEventBaseThread& /* evbThread */,
+    const AbsolutePath& /* mountRoot */,
+    apache::thrift::RocketClientChannel::Ptr /* channel */,
+    bool retroactive) {
+  if (!retroactive) {
+    fmt::print(
+        "`eden trace inode` is only currently supported in retroactive mode\n");
+  } else {
+    fmt::print("\U0001F6A7 under construction \U0001F6A7\n");
+  }
+  return 0;
+}
+
 AbsolutePath getSocketPath(AbsolutePathPiece mountRoot) {
   if constexpr (folly::kIsWindows) {
     auto configPath = mountRoot + ".eden"_pc + "config"_pc;
@@ -455,6 +473,17 @@ int main(int argc, char** argv) {
 
   AbsolutePath mountRoot{FLAGS_mountRoot};
   AbsolutePath socketPath = getSocketPath(mountRoot);
+
+  // We check if FLAGS_trace is inode here unlike with hg, fs, and thrift below
+  // and if FLAGS_RETROACTIVE is set in order to simplify the code. This is
+  // because once channel is created we would have to destroy it on the same
+  // event base which we temporarily avoid.
+  if (FLAGS_trace == "inode") {
+    return trace_inode(evbThread, mountRoot, nullptr, FLAGS_retroactive);
+  } else if (FLAGS_retroactive) {
+    fmt::print("Only eden trace inode currently supports retroactive mode\n");
+    return 0;
+  }
 
   auto channel = folly::via(
                      evbThread.getEventBase(),
