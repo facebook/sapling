@@ -13,6 +13,7 @@ crate-type = ["lib", "staticlib"]
 anyhow = "1.0.56"
 bytes = { version = "1.1", features = ["serde"] }
 configparser = { version = "0.1.0", path = "../configparser" }
+eagerepo = { version = "0.1.0", path = "../eagerepo" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 env_logger = "0.7"
 libc = "0.2.121"
