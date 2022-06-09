@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#![feature(process_exitcode_placeholder)]
 #![feature(async_closure)]
 
 mod args;

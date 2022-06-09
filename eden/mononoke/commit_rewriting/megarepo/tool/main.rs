@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(process_exitcode_placeholder)]
+
 use anyhow::{bail, format_err, Context, Error, Result};
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;

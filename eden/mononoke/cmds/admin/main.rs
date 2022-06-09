@@ -6,6 +6,7 @@
  */
 
 #![type_length_limit = "8000000"]
+#![feature(process_exitcode_placeholder)]
 #![feature(btree_drain_filter)]
 
 use blobstore::PutBehaviour;
