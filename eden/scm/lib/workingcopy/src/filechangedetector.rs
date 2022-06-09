@@ -282,9 +282,13 @@ impl FileChangeDetectorTrait for FileChangeDetector {
                         Err(e) => return Some(Err(e)),
                     };
                     let actual = match vfs.read(&key.path) {
-                        // TODO: Handle the case that the file is missing
                         Ok(x) => x,
-                        Err(e) => return Some(Err(e)),
+                        Err(e) => match e.downcast_ref::<std::io::Error>() {
+                            Some(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                                return Some(Ok(ChangeType::Deleted(key.path)));
+                            }
+                            _ => return Some(Err(e)),
+                        },
                     };
                     if expected == actual {
                         None
