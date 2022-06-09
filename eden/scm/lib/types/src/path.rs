@@ -85,6 +85,10 @@ pub const SEPARATOR: char = '/';
 pub enum ParseError {
     ValidationError(String, ValidationError),
     InvalidUtf8(Vec<u8>, Utf8Error),
+    // Prefer InvalidUtf8 if the actual UTF8 encoding is invalid. Use InvalidUnicode
+    // if the string (e.g. OsString) cannot be interpreted as a valid sequence
+    // of unicode codepoints. Accepts a lossy string conversion as its argument.
+    InvalidUnicode(String),
 }
 
 impl fmt::Display for ParseError {
@@ -99,6 +103,9 @@ impl fmt::Display for ParseError {
                 String::from_utf8_lossy(bytes),
                 utf8_error
             ),
+            ParseError::InvalidUnicode(lossy_string) => {
+                write!(f, "Failed to parse 'unicode' string {:?}", lossy_string)
+            }
         }
     }
 }
@@ -415,6 +422,18 @@ impl TryFrom<String> for RepoPathBuf {
 
     fn try_from(s: String) -> Result<Self, Self::Error> {
         RepoPathBuf::from_string(s)
+    }
+}
+
+impl TryFrom<PathBuf> for RepoPathBuf {
+    type Error = ParseError;
+
+    fn try_from(p: PathBuf) -> Result<Self, Self::Error> {
+        RepoPathBuf::from_string(
+            p.into_os_string().into_string().map_err(|os_str| {
+                ParseError::InvalidUnicode(os_str.to_string_lossy().to_string())
+            })?,
+        )
     }
 }
 
