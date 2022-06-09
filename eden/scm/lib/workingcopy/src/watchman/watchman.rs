@@ -56,12 +56,12 @@ impl Watchman {
             store,
         );
 
-        let mut state = WatchmanState::new(
+        let state = WatchmanState::new(
             WatchmanTreeState {
                 treestate: treestate.lock(),
             },
             file_change_detector,
-        );
+        )?;
 
         let result = client
             .query::<StatusQuery>(
@@ -72,12 +72,12 @@ impl Watchman {
                 },
             )
             .await?;
-        state.merge(result);
 
-        state.persist(WatchmanTreeState {
+        let treestate = WatchmanTreeState {
             treestate: treestate.lock(),
-        })?;
+        };
 
-        Ok(state.into_pending_changes())
+        let pending_changes = state.merge(result, treestate);
+        pending_changes.map(|result| result.into_iter())
     }
 }

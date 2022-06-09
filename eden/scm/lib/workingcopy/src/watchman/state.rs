@@ -5,11 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+
+use anyhow::anyhow;
+use anyhow::Error;
 use anyhow::Result;
 use serde::Deserialize;
+use types::RepoPathBuf;
 use watchman_client::prelude::*;
 
 use crate::filechangedetector::FileChangeDetectorTrait;
+use crate::filechangedetector::FileChangeResult;
 use crate::filesystem::PendingChangeResult;
 
 use super::treestate::WatchmanTreeStateRead;
@@ -22,28 +28,79 @@ query_result_type! {
     }
 }
 
-pub struct WatchmanState {}
+pub struct WatchmanState {
+    needs_check: HashSet<RepoPathBuf>,
+    file_change_detector: Box<dyn FileChangeDetectorTrait>,
+    clock: Option<Clock>,
+    errors: Vec<Error>,
+}
 
 impl WatchmanState {
     pub fn new(
-        mut _treestate: impl WatchmanTreeStateRead,
-        mut _file_change_detector: impl FileChangeDetectorTrait,
-    ) -> Self {
-        WatchmanState {}
+        mut treestate: impl WatchmanTreeStateRead,
+        file_change_detector: impl FileChangeDetectorTrait + 'static,
+    ) -> Result<Self> {
+        let (needs_check, errors): (Vec<_>, Vec<_>) = treestate
+            .list_needs_check()?
+            .into_iter()
+            .partition(Result::is_ok);
+
+        let needs_check = needs_check
+            .into_iter()
+            .map(Result::unwrap)
+            .collect::<HashSet<_>>();
+        let errors = errors.into_iter().map(Result::unwrap_err).collect();
+
+        Ok(WatchmanState {
+            needs_check,
+            file_change_detector: Box::new(file_change_detector),
+            clock: treestate.get_clock()?,
+            errors,
+        })
     }
 
     pub fn get_clock(&self) -> Option<Clock> {
-        None
+        self.clock.clone()
     }
 
-    pub fn merge(&mut self, _result: QueryResult<StatusQuery>) {}
+    pub fn merge(
+        mut self,
+        result: QueryResult<StatusQuery>,
+        mut _treestate: impl WatchmanTreeStateWrite,
+    ) -> Result<Vec<Result<PendingChangeResult>>> {
+        self.clock = Some(result.clock);
 
-    pub fn persist(&self, mut _treestate: impl WatchmanTreeStateWrite) -> Result<()> {
-        todo!();
-    }
+        let (new_check, new_errors): (Vec<_>, Vec<_>) = result
+            .files
+            .unwrap_or(vec![])
+            .into_iter()
+            .map(|query| RepoPathBuf::try_from(query.name.into_inner()))
+            .partition(Result::is_ok);
 
-    pub fn into_pending_changes(self) -> impl Iterator<Item = Result<PendingChangeResult>> {
-        vec![].into_iter()
+        self.needs_check
+            .extend(new_check.into_iter().map(Result::unwrap));
+        self.errors
+            .extend(new_errors.into_iter().map(|e| anyhow!(e.unwrap_err())));
+
+        let mut pending_changes = self
+            .needs_check
+            .into_iter()
+            .filter_map(|path| match self.file_change_detector.has_changed(&path) {
+                Ok(FileChangeResult::Yes(change)) => Some(Ok(PendingChangeResult::File(change))),
+                Err(e) => Some(Err(e)),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+
+        pending_changes.extend(
+            self.file_change_detector
+                .resolve_maybes()
+                .map(|result| result.map(PendingChangeResult::File)),
+        );
+
+        pending_changes.extend(self.errors.into_iter().map(Err));
+
+        Ok(pending_changes)
     }
 }
 
@@ -63,6 +120,7 @@ mod tests {
     use crate::watchman::state::StatusQuery;
     use crate::watchman::state::WatchmanState;
     use crate::watchman::treestate::WatchmanTreeStateRead;
+    use crate::watchman::treestate::WatchmanTreeStateWrite;
 
     #[derive(Clone)]
     enum Event {
@@ -95,6 +153,20 @@ mod tests {
 
         fn get_clock(&self) -> Result<Option<Clock>> {
             Ok(None)
+        }
+    }
+
+    impl WatchmanTreeStateWrite for WatchmanStateTestTreeState {
+        fn mark_needs_check(&mut self, _path: &RepoPathBuf) -> Result<()> {
+            todo!();
+        }
+
+        fn clear_needs_check(&mut self, _path: &RepoPathBuf) -> Result<()> {
+            todo!();
+        }
+
+        fn set_clock(&mut self, _clock: Clock) -> Result<()> {
+            todo!();
         }
     }
 
@@ -226,9 +298,8 @@ mod tests {
         }
     }
 
-    #[ignore = "Merge not implemented yet"]
     #[test]
-    fn merge_test() {
+    fn pending_changes_test() {
         // The idea of this test is to test every possible combination of
         // initial states (i.e. persisted watchman state) and valid events
         // (i.e. watchman updates) to ensure merge handles as possible
@@ -251,13 +322,13 @@ mod tests {
         ];
 
         let test = WatchmanStateTest::new(events);
-        let mut state = WatchmanState::new(test.treestate(), test.file_change_detector());
+        let state = WatchmanState::new(test.treestate(), test.file_change_detector()).unwrap();
 
-        state.merge(test.query_result());
+        let pending_changes = state.merge(test.query_result(), test.treestate()).unwrap();
 
         assert_eq!(
             to_string(test.expected_pending_changes()),
-            to_string(state.into_pending_changes()),
+            to_string(pending_changes.into_iter()),
         );
     }
 
