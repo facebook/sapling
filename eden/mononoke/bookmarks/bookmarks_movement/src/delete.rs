@@ -29,6 +29,7 @@ pub struct DeleteBookmarkOp<'op> {
     auth: BookmarkMoveAuthorization<'op>,
     kind_restrictions: BookmarkKindRestrictions,
     pushvars: Option<&'op HashMap<String, Bytes>>,
+    // TODO(yancouto): delete
     bundle_replay: Option<&'op dyn BundleReplay>,
 }
 
@@ -124,12 +125,7 @@ impl<'op> DeleteBookmarkOp<'op> {
                 txn.delete_scratch(self.bookmark, self.old_target)?;
             }
             BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing => {
-                txn.delete(
-                    self.bookmark,
-                    self.old_target,
-                    self.reason,
-                    self.bundle_replay,
-                )?;
+                txn.delete(self.bookmark, self.old_target, self.reason)?;
             }
         }
 

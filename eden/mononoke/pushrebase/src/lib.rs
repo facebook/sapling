@@ -50,7 +50,7 @@ use anyhow::{format_err, Error, Result};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplay};
+use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
@@ -1217,23 +1217,12 @@ async fn try_move_bookmark(
     bookmark: &BookmarkName,
     old_value: Option<ChangesetId>,
     new_value: ChangesetId,
-    maybe_hg_replay_data: Option<&HgReplayData>,
+    // TODO(yancouto): Delete
+    _maybe_hg_replay_data: Option<&HgReplayData>,
     rebased_changesets: RebasedChangesets,
     hooks: Vec<Box<dyn PushrebaseTransactionHook>>,
 ) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let mut txn = repo.update_bookmark_transaction(ctx);
-
-    let bundle_replay_data = match maybe_hg_replay_data {
-        Some(hg_replay_data) => Some(
-            hg_replay_data
-                .to_bundle_replay_data(Some(&rebased_changesets))
-                .await?,
-        ),
-        None => None,
-    };
-    let bundle_replay = bundle_replay_data
-        .as_ref()
-        .map(|data| data as &dyn BundleReplay);
 
     match old_value {
         Some(old_value) => {
@@ -1242,16 +1231,10 @@ async fn try_move_bookmark(
                 new_value,
                 old_value,
                 BookmarkUpdateReason::Pushrebase,
-                bundle_replay,
             )?;
         }
         None => {
-            txn.create(
-                &bookmark,
-                new_value,
-                BookmarkUpdateReason::Pushrebase,
-                bundle_replay,
-            )?;
+            txn.create(bookmark, new_value, BookmarkUpdateReason::Pushrebase)?;
         }
     }
 
@@ -1374,7 +1357,7 @@ mod tests {
             .ok_or(Error::msg(format_err!("Head not found: {:?}", cs_id)))?;
 
         let mut txn = repo.update_bookmark_transaction(ctx);
-        txn.force_set(&book, head, BookmarkUpdateReason::TestMove, None)?;
+        txn.force_set(book, head, BookmarkUpdateReason::TestMove)?;
         txn.commit().await?;
         Ok(())
     }

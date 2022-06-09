@@ -267,7 +267,6 @@ mod tests {
             new_target,
             old_target,
             BookmarkUpdateReason::TestMove,
-            None,
         )?;
         let ok = txn
             .commit_with_hook(upload_mapping_entries_bookmark_txn_hook(
@@ -321,7 +320,7 @@ mod tests {
         let y_bcs = y.load(ctx, repo.repo_blobstore()).await?;
 
         let mut txn = repo.bookmarks().create_transaction(ctx.clone());
-        txn.create(&bookmark, z, BookmarkUpdateReason::TestMove, None)?;
+        txn.create(&bookmark, z, BookmarkUpdateReason::TestMove)?;
         let ok = txn.commit().await?;
         assert!(ok);
 

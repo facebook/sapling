@@ -1885,11 +1885,10 @@ async fn move_bookmark(
                 bcs_id,
                 prev_bcs_id,
                 BookmarkUpdateReason::TestMove,
-                None,
             )?;
         }
         None => {
-            txn.create(bookmark, bcs_id, BookmarkUpdateReason::TestMove, None)?;
+            txn.create(bookmark, bcs_id, BookmarkUpdateReason::TestMove)?;
         }
     }
 

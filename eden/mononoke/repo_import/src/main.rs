@@ -402,7 +402,6 @@ async fn move_bookmark(
             &bookmark,
             old_csid.clone(),
             BookmarkUpdateReason::ManualMove,
-            None,
         )?;
         if !transaction.commit().await? {
             return Err(format_err!("Logical failure while creating {:?}", bookmark));
@@ -434,7 +433,6 @@ async fn move_bookmark(
             curr_csid.clone(),
             old_csid.clone(),
             BookmarkUpdateReason::ManualMove,
-            None,
         )?;
 
         if !transaction.commit().await? {
@@ -1248,7 +1246,6 @@ async fn repo_import(
         pushrebased_cs_id.clone(),
         old_csid.clone(),
         BookmarkUpdateReason::ManualMove,
-        None,
     )?;
 
     if !transaction.commit().await? {

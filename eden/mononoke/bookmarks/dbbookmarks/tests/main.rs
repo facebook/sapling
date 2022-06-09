@@ -62,13 +62,8 @@ async fn test_simple_unconditional_set_get(fb: FacebookInit) {
     let name_incorrect = create_bookmark_name("book2");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.force_set(
-        &name_correct,
-        ONES_CSID,
-        BookmarkUpdateReason::TestMove,
-        None,
-    )
-    .unwrap();
+    txn.force_set(&name_correct, ONES_CSID, BookmarkUpdateReason::TestMove)
+        .unwrap();
     assert!(txn.commit().await.unwrap());
 
     assert_eq!(
@@ -111,9 +106,9 @@ async fn test_multi_unconditional_set_get(fb: FacebookInit) {
     let name_2 = create_bookmark_name("book2");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
-    txn.force_set(&name_2, TWOS_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&name_2, TWOS_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
 
@@ -137,12 +132,12 @@ async fn test_unconditional_set_same_bookmark(fb: FacebookInit) {
     let name_1 = create_bookmark_name("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
 
@@ -161,7 +156,7 @@ async fn test_simple_create(fb: FacebookInit) {
     let name_1 = create_bookmark_name("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
 
@@ -197,12 +192,12 @@ async fn test_create_already_existing(fb: FacebookInit) {
     let name_1 = create_bookmark_name("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(!txn.commit().await.unwrap());
 }
@@ -216,23 +211,23 @@ async fn test_create_change_same_bookmark(fb: FacebookInit) {
     let name_1 = create_bookmark_name("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(
-        txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+        txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
             .is_err()
     );
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(
-        txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+        txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
             .is_err()
     );
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(
         txn.update(
@@ -240,7 +235,6 @@ async fn test_create_change_same_bookmark(fb: FacebookInit) {
             TWOS_CSID,
             ONES_CSID,
             BookmarkUpdateReason::TestMove,
-            None,
         )
         .is_err()
     );
@@ -251,11 +245,10 @@ async fn test_create_change_same_bookmark(fb: FacebookInit) {
         TWOS_CSID,
         ONES_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     assert!(
-        txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+        txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
             .is_err()
     );
 
@@ -265,16 +258,15 @@ async fn test_create_change_same_bookmark(fb: FacebookInit) {
         TWOS_CSID,
         ONES_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     assert!(
-        txn.force_delete(&name_1, BookmarkUpdateReason::TestMove, None)
+        txn.force_delete(&name_1, BookmarkUpdateReason::TestMove)
             .is_err()
     );
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.force_delete(&name_1, BookmarkUpdateReason::TestMove, None)
+    txn.force_delete(&name_1, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(
         txn.update(
@@ -282,13 +274,12 @@ async fn test_create_change_same_bookmark(fb: FacebookInit) {
             TWOS_CSID,
             ONES_CSID,
             BookmarkUpdateReason::TestMove,
-            None
         )
         .is_err()
     );
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(
         txn.update(
@@ -296,7 +287,6 @@ async fn test_create_change_same_bookmark(fb: FacebookInit) {
             TWOS_CSID,
             ONES_CSID,
             BookmarkUpdateReason::TestMove,
-            None,
         )
         .is_err()
     );
@@ -307,11 +297,10 @@ async fn test_create_change_same_bookmark(fb: FacebookInit) {
         TWOS_CSID,
         ONES_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     assert!(
-        txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+        txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
             .is_err()
     );
 }
@@ -325,7 +314,7 @@ async fn test_simple_update_bookmark(fb: FacebookInit) {
     let name_1 = create_bookmark_name("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
 
@@ -335,7 +324,6 @@ async fn test_simple_update_bookmark(fb: FacebookInit) {
         TWOS_CSID,
         ONES_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     assert!(txn.commit().await.unwrap());
@@ -372,7 +360,7 @@ async fn test_noop_update(fb: FacebookInit) {
     let name_1 = create_bookmark_name("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
 
@@ -382,7 +370,6 @@ async fn test_noop_update(fb: FacebookInit) {
         ONES_CSID,
         ONES_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     assert!(txn.commit().await.unwrap());
@@ -438,7 +425,6 @@ async fn test_update_non_existent_bookmark(fb: FacebookInit) {
         TWOS_CSID,
         ONES_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     assert_eq!(txn.commit().await.unwrap(), false);
@@ -453,7 +439,7 @@ async fn test_update_existing_bookmark_with_incorrect_commit(fb: FacebookInit) {
     let name_1 = create_bookmark_name("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
 
@@ -463,7 +449,6 @@ async fn test_update_existing_bookmark_with_incorrect_commit(fb: FacebookInit) {
         ONES_CSID,
         TWOS_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     assert_eq!(txn.commit().await.unwrap(), false);
@@ -478,14 +463,14 @@ async fn test_force_delete(fb: FacebookInit) {
     let name_1 = create_bookmark_name("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.force_delete(&name_1, BookmarkUpdateReason::TestMove, None)
+    txn.force_delete(&name_1, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
 
     assert_eq!(bookmarks.get_raw(ctx.clone(), &name_1).await.unwrap(), None);
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
     assert_eq!(
@@ -494,7 +479,7 @@ async fn test_force_delete(fb: FacebookInit) {
     );
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.force_delete(&name_1, BookmarkUpdateReason::TestMove, None)
+    txn.force_delete(&name_1, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
 
@@ -527,12 +512,12 @@ async fn test_delete(fb: FacebookInit) {
     let name_1 = create_bookmark_name("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert_eq!(txn.commit().await.unwrap(), false);
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
     assert_eq!(
@@ -541,7 +526,7 @@ async fn test_delete(fb: FacebookInit) {
     );
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
 
@@ -572,7 +557,7 @@ async fn test_delete_incorrect_hash(fb: FacebookInit) {
     let name_1 = create_bookmark_name("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
     assert_eq!(
@@ -581,7 +566,7 @@ async fn test_delete_incorrect_hash(fb: FacebookInit) {
     );
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.delete(&name_1, TWOS_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.delete(&name_1, TWOS_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert_eq!(txn.commit().await.unwrap(), false);
 }
@@ -596,9 +581,9 @@ async fn test_list_by_prefix(fb: FacebookInit) {
     let name_2 = create_bookmark_name("book2");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
-    txn.create(&name_2, TWOS_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create(&name_2, TWOS_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
 
@@ -673,7 +658,7 @@ async fn test_create_different_repos(fb: FacebookInit) {
     let name_1 = create_bookmark_name("book");
 
     let mut txn = bookmarks_0.create_transaction(ctx.clone());
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.is_ok());
 
@@ -684,14 +669,13 @@ async fn test_create_different_repos(fb: FacebookInit) {
         TWOS_CSID,
         ONES_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     assert_eq!(txn.commit().await.unwrap(), false);
 
     // Creating value should succeed
     let mut txn = bookmarks_1.create_transaction(ctx.clone());
-    txn.create(&name_1, TWOS_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create(&name_1, TWOS_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.is_ok());
 
@@ -706,7 +690,7 @@ async fn test_create_different_repos(fb: FacebookInit) {
 
     // Force deleting should delete only from one repo
     let mut txn = bookmarks_1.create_transaction(ctx.clone());
-    txn.force_delete(&name_1, BookmarkUpdateReason::TestMove, None)
+    txn.force_delete(&name_1, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.is_ok());
     assert_eq!(
@@ -716,7 +700,7 @@ async fn test_create_different_repos(fb: FacebookInit) {
 
     // delete should fail for another repo
     let mut txn = bookmarks_1.create_transaction(ctx.clone());
-    txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert_eq!(txn.commit().await.unwrap(), false);
 }
@@ -747,7 +731,7 @@ async fn test_log_correct_order(fb: FacebookInit) {
     let name_2 = create_bookmark_name("book2");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.is_ok());
 
@@ -757,7 +741,6 @@ async fn test_log_correct_order(fb: FacebookInit) {
         TWOS_CSID,
         ONES_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     txn.commit().await.unwrap();
@@ -768,7 +751,6 @@ async fn test_log_correct_order(fb: FacebookInit) {
         THREES_CSID,
         TWOS_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     txn.commit().await.unwrap();
@@ -779,13 +761,12 @@ async fn test_log_correct_order(fb: FacebookInit) {
         FOURS_CSID,
         THREES_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     txn.commit().await.unwrap();
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.force_set(&name_2, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&name_2, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.is_ok());
 
@@ -795,7 +776,6 @@ async fn test_log_correct_order(fb: FacebookInit) {
         FIVES_CSID,
         FOURS_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     txn.commit().await.unwrap();
@@ -806,7 +786,6 @@ async fn test_log_correct_order(fb: FacebookInit) {
         SIXES_CSID,
         FIVES_CSID,
         BookmarkUpdateReason::Pushrebase,
-        None,
     )
     .unwrap();
     txn.commit().await.unwrap();
@@ -905,12 +884,12 @@ async fn test_read_log_entry_many_repos(fb: FacebookInit) {
     let name_1 = create_bookmark_name("book");
 
     let mut txn = bookmarks_0.create_transaction(ctx.clone());
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.is_ok());
 
     let mut txn = bookmarks_1.create_transaction(ctx.clone());
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.is_ok());
 
@@ -994,7 +973,7 @@ async fn test_list_bookmark_log_entries(fb: FacebookInit) {
     let name_1 = create_bookmark_name("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.is_ok());
 
@@ -1004,7 +983,6 @@ async fn test_list_bookmark_log_entries(fb: FacebookInit) {
         TWOS_CSID,
         ONES_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     txn.commit().await.unwrap();
@@ -1015,7 +993,6 @@ async fn test_list_bookmark_log_entries(fb: FacebookInit) {
         THREES_CSID,
         TWOS_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     txn.commit().await.unwrap();
@@ -1026,7 +1003,6 @@ async fn test_list_bookmark_log_entries(fb: FacebookInit) {
         FOURS_CSID,
         THREES_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     txn.commit().await.unwrap();
@@ -1037,7 +1013,6 @@ async fn test_list_bookmark_log_entries(fb: FacebookInit) {
         FIVES_CSID,
         FOURS_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     txn.commit().await.unwrap();
@@ -1110,7 +1085,7 @@ async fn test_get_largest_log_id(fb: FacebookInit) {
         None
     );
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
 
     assert!(txn.commit().await.is_ok());
@@ -1128,7 +1103,6 @@ async fn test_get_largest_log_id(fb: FacebookInit) {
         TWOS_CSID,
         ONES_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     txn.commit().await.unwrap();
@@ -1147,7 +1121,6 @@ async fn test_get_largest_log_id(fb: FacebookInit) {
         THREES_CSID,
         TWOS_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     txn.commit().await.unwrap();
@@ -1158,7 +1131,6 @@ async fn test_get_largest_log_id(fb: FacebookInit) {
         FOURS_CSID,
         THREES_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     txn.commit().await.unwrap();
@@ -1181,7 +1153,7 @@ async fn test_creating_publishing_bookmarks(fb: FacebookInit) {
     let name_1 = create_bookmark_name("book");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create_publishing(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create_publishing(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
     assert_eq!(
@@ -1208,7 +1180,6 @@ async fn test_creating_publishing_bookmarks(fb: FacebookInit) {
         TWOS_CSID,
         ONES_CSID,
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     assert!(txn.commit().await.unwrap());
@@ -1243,11 +1214,11 @@ async fn test_pagination_ordering(fb: FacebookInit) {
     let name_3 = create_bookmark_name("book3");
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create_publishing(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create_publishing(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
-    txn.create_publishing(&name_2, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create_publishing(&name_2, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
-    txn.create_publishing(&name_3, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+    txn.create_publishing(&name_3, ONES_CSID, BookmarkUpdateReason::TestMove)
         .unwrap();
     assert!(txn.commit().await.unwrap());
 
@@ -1316,22 +1287,22 @@ async fn bookmark_subscription_initialization(fb: FacebookInit) -> Result<()> {
     // Create some history we won't care about.
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create_publishing(&book1, ONES_CSID, BookmarkUpdateReason::TestMove, None)?;
+    txn.create_publishing(&book1, ONES_CSID, BookmarkUpdateReason::TestMove)?;
     assert!(txn.commit().await?);
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.force_delete(&book1, BookmarkUpdateReason::TestMove, None)?;
+    txn.force_delete(&book1, BookmarkUpdateReason::TestMove)?;
     assert!(txn.commit().await?);
 
     // Create some bookmarks now that we're going to keep.
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create_publishing(&book1, ONES_CSID, BookmarkUpdateReason::TestMove, None)?;
-    txn.create_publishing(&book2, TWOS_CSID, BookmarkUpdateReason::TestMove, None)?;
+    txn.create_publishing(&book1, ONES_CSID, BookmarkUpdateReason::TestMove)?;
+    txn.create_publishing(&book2, TWOS_CSID, BookmarkUpdateReason::TestMove)?;
     assert!(txn.commit().await?);
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create_publishing(&book3, THREES_CSID, BookmarkUpdateReason::TestMove, None)?;
+    txn.create_publishing(&book3, THREES_CSID, BookmarkUpdateReason::TestMove)?;
     assert!(txn.commit().await?);
 
     let mut sub = bookmarks
@@ -1364,7 +1335,7 @@ async fn bookmark_subscription_updates(fb: FacebookInit) -> Result<()> {
     assert_eq!(*sub.bookmarks(), hashmap! {});
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.create_publishing(&book, ONES_CSID, BookmarkUpdateReason::TestMove, None)?;
+    txn.create_publishing(&book, ONES_CSID, BookmarkUpdateReason::TestMove)?;
     assert!(txn.commit().await?);
 
     sub.refresh(&ctx).await?;
@@ -1374,13 +1345,7 @@ async fn bookmark_subscription_updates(fb: FacebookInit) -> Result<()> {
     );
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.update(
-        &book,
-        TWOS_CSID,
-        ONES_CSID,
-        BookmarkUpdateReason::TestMove,
-        None,
-    )?;
+    txn.update(&book, TWOS_CSID, ONES_CSID, BookmarkUpdateReason::TestMove)?;
     assert!(txn.commit().await?);
 
     sub.refresh(&ctx).await?;
@@ -1390,7 +1355,7 @@ async fn bookmark_subscription_updates(fb: FacebookInit) -> Result<()> {
     );
 
     let mut txn = bookmarks.create_transaction(ctx.clone());
-    txn.force_delete(&book, BookmarkUpdateReason::TestMove, None)?;
+    txn.force_delete(&book, BookmarkUpdateReason::TestMove)?;
     assert!(txn.commit().await?);
 
     sub.refresh(&ctx).await?;
@@ -1474,7 +1439,6 @@ fn bookmark_subscription_quickcheck(fb: FacebookInit) {
                                             cs_id,
                                             current_cs_id,
                                             BookmarkUpdateReason::TestMove,
-                                            None,
                                         )?;
                                     }
                                     None => {
@@ -1482,7 +1446,6 @@ fn bookmark_subscription_quickcheck(fb: FacebookInit) {
                                             &book,
                                             cs_id,
                                             BookmarkUpdateReason::TestMove,
-                                            None,
                                         )?;
                                     }
                                 }
@@ -1490,7 +1453,7 @@ fn bookmark_subscription_quickcheck(fb: FacebookInit) {
                                 *current_cs_id = Some(cs_id);
                             }
                             BookmarkOp::ForceSet(cs_id) => {
-                                txn.force_set(&book, cs_id, BookmarkUpdateReason::TestMove, None)?;
+                                txn.force_set(book, cs_id, BookmarkUpdateReason::TestMove)?;
                                 *current_cs_id = Some(cs_id);
                             }
                             BookmarkOp::Delete => {
@@ -1500,15 +1463,10 @@ fn bookmark_subscription_quickcheck(fb: FacebookInit) {
                                             &book,
                                             current_cs_id,
                                             BookmarkUpdateReason::TestMove,
-                                            None,
                                         )?;
                                     }
                                     None => {
-                                        txn.force_delete(
-                                            &book,
-                                            BookmarkUpdateReason::TestMove,
-                                            None,
-                                        )?;
+                                        txn.force_delete(book, BookmarkUpdateReason::TestMove)?;
                                     }
                                 }
 

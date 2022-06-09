@@ -144,7 +144,7 @@ pub fn upload_bookmarks(
                     let bookmark_name = bookmark_name_transformer(bookmark_name);
                     if mononoke_bookmarks.get(&bookmark_name) != Some(&value) {
                         count += 1;
-                        try_boxfuture!(transaction.force_set(&bookmark_name, value, BookmarkUpdateReason::Blobimport, None))
+                        try_boxfuture!(transaction.force_set(&bookmark_name, value, BookmarkUpdateReason::Blobimport))
                     }
                 }
 

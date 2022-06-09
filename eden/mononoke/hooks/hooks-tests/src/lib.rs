@@ -980,7 +980,6 @@ async fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) -> Result<(
         &BookmarkName::new("master")?,
         bcs_id,
         BookmarkUpdateReason::TestMove,
-        None,
     )?;
     txn.commit().await?;
 
@@ -1170,7 +1169,6 @@ async fn test_file_hooks_with_blob_store(fb: FacebookInit) {
             &BookmarkName::new("master").unwrap(),
             bcs_id,
             BookmarkUpdateReason::TestMove,
-            None,
         )
         .unwrap();
         txn.commit().await.unwrap();

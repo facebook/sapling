@@ -102,7 +102,6 @@ where
         &bookmark_name,
         target_bcs.get_changeset_id(),
         BookmarkUpdateReason::TestMove,
-        None,
     )
     .unwrap();
     txn.commit().await.unwrap();

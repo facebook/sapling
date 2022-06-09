@@ -204,7 +204,6 @@ mod tests {
             &importing_bookmark,
             bcs_ids.first().unwrap().clone(),
             BookmarkUpdateReason::ManualMove,
-            None,
         )?;
         txn.commit().await.unwrap();
         move_bookmark(
@@ -273,7 +272,7 @@ mod tests {
         );
 
         let mut txn = repo.bookmarks().create_transaction(ctx.clone());
-        txn.create(&bookmark, MON_CSID, BookmarkUpdateReason::TestMove, None)?;
+        txn.create(&bookmark, MON_CSID, BookmarkUpdateReason::TestMove)?;
         txn.commit().await.unwrap();
         assert!(
             check_dependent_systems(&ctx, &repo, &checker_flags, HG_CSID, sleep_time, &call_sign,)
@@ -294,7 +293,6 @@ mod tests {
             TWOS_CSID,
             MON_CSID,
             BookmarkUpdateReason::TestMove,
-            None,
         )?;
         txn.commit().await.unwrap();
 

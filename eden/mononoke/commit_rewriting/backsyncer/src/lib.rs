@@ -335,44 +335,27 @@ where
                 "syncing bookmark {} to {:?}", bookmark, to_cs_id
             );
 
-            let bundle_replay = None;
             match (from_cs_id, to_cs_id) {
                 (Some(from), Some(to)) => {
                     debug!(
                         ctx.logger(),
                         "updating bookmark {:?} from {:?} to {:?}", bookmark, from, to
                     );
-                    bookmark_txn.update(
-                        &bookmark,
-                        to,
-                        from,
-                        BookmarkUpdateReason::Backsyncer,
-                        bundle_replay,
-                    )?;
+                    bookmark_txn.update(&bookmark, to, from, BookmarkUpdateReason::Backsyncer)?;
                 }
                 (Some(from), None) => {
                     debug!(
                         ctx.logger(),
                         "deleting bookmark {:?} with original position {:?}", bookmark, from
                     );
-                    bookmark_txn.delete(
-                        &bookmark,
-                        from,
-                        BookmarkUpdateReason::Backsyncer,
-                        bundle_replay,
-                    )?;
+                    bookmark_txn.delete(&bookmark, from, BookmarkUpdateReason::Backsyncer)?;
                 }
                 (None, Some(to)) => {
                     debug!(
                         ctx.logger(),
                         "creating bookmark {:?} to point to {:?}", bookmark, to
                     );
-                    bookmark_txn.create(
-                        &bookmark,
-                        to,
-                        BookmarkUpdateReason::Backsyncer,
-                        bundle_replay,
-                    )?;
+                    bookmark_txn.create(&bookmark, to, BookmarkUpdateReason::Backsyncer)?;
                 }
                 (None, None) => {
                     bail!("unexpected bookmark move");

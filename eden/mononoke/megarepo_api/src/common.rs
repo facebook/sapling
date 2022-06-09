@@ -887,7 +887,7 @@ pub trait MegarepoOp {
         let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         let bookmark = BookmarkName::new(bookmark).map_err(MegarepoError::request)?;
 
-        txn.create(&bookmark, cs_id, BookmarkUpdateReason::XRepoSync, None)?;
+        txn.create(&bookmark, cs_id, BookmarkUpdateReason::XRepoSync)?;
 
         let success = txn.commit().await.map_err(MegarepoError::internal)?;
         if !success {
@@ -912,7 +912,6 @@ pub trait MegarepoOp {
             to_cs_id,
             from_cs_id,
             BookmarkUpdateReason::XRepoSync,
-            None,
         )?;
 
         let success = txn.commit().await.map_err(MegarepoError::internal)?;
@@ -937,10 +936,10 @@ pub trait MegarepoOp {
 
         match maybe_book_value {
             Some(old) => {
-                txn.update(&bookmark, cs_id, old, BookmarkUpdateReason::XRepoSync, None)?;
+                txn.update(&bookmark, cs_id, old, BookmarkUpdateReason::XRepoSync)?;
             }
             None => {
-                txn.create(&bookmark, cs_id, BookmarkUpdateReason::XRepoSync, None)?;
+                txn.create(&bookmark, cs_id, BookmarkUpdateReason::XRepoSync)?;
             }
         }
 

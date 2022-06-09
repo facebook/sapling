@@ -22,7 +22,7 @@ use shared_error::anyhow::{IntoSharedError, SharedError};
 use stats::prelude::*;
 use tunables::tunables;
 
-use crate::log::{BookmarkUpdateReason, BundleReplay};
+use crate::log::BookmarkUpdateReason;
 use crate::subscription::BookmarksSubscription;
 use crate::transaction::{BookmarkTransaction, BookmarkTransactionHook};
 use crate::Bookmarks;
@@ -336,11 +336,9 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         new_cs: ChangesetId,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
-        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<()> {
         self.dirty = true;
-        self.transaction
-            .update(bookmark, new_cs, old_cs, reason, bundle_replay)
+        self.transaction.update(bookmark, new_cs, old_cs, reason)
     }
 
     fn create(
@@ -348,11 +346,9 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         bookmark: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
-        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<()> {
         self.dirty = true;
-        self.transaction
-            .create(bookmark, new_cs, reason, bundle_replay)
+        self.transaction.create(bookmark, new_cs, reason)
     }
 
     fn force_set(
@@ -360,11 +356,9 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         bookmark: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
-        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<()> {
         self.dirty = true;
-        self.transaction
-            .force_set(bookmark, new_cs, reason, bundle_replay)
+        self.transaction.force_set(bookmark, new_cs, reason)
     }
 
     fn delete(
@@ -372,22 +366,18 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         bookmark: &BookmarkName,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
-        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<()> {
         self.dirty = true;
-        self.transaction
-            .delete(bookmark, old_cs, reason, bundle_replay)
+        self.transaction.delete(bookmark, old_cs, reason)
     }
 
     fn force_delete(
         &mut self,
         bookmark: &BookmarkName,
         reason: BookmarkUpdateReason,
-        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<()> {
         self.dirty = true;
-        self.transaction
-            .force_delete(bookmark, reason, bundle_replay)
+        self.transaction.force_delete(bookmark, reason)
     }
 
     fn update_scratch(
@@ -415,11 +405,9 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         bookmark: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
-        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<()> {
         self.dirty = true;
-        self.transaction
-            .create_publishing(bookmark, new_cs, reason, bundle_replay)
+        self.transaction.create_publishing(bookmark, new_cs, reason)
     }
 
     fn commit(self: Box<Self>) -> BoxFuture<'static, Result<bool>> {
@@ -521,7 +509,6 @@ mod tests {
             .force_delete(
                 &BookmarkName::new("".to_string()).unwrap(),
                 BookmarkUpdateReason::TestMove,
-                None,
             )
             .unwrap();
 
@@ -589,7 +576,6 @@ mod tests {
             _new_cs: ChangesetId,
             _old_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
-            _bundle_replay: Option<&dyn BundleReplay>,
         ) -> Result<()> {
             Ok(())
         }
@@ -599,7 +585,6 @@ mod tests {
             _bookmark: &BookmarkName,
             _new_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
-            _bundle_replay: Option<&dyn BundleReplay>,
         ) -> Result<()> {
             Ok(())
         }
@@ -609,7 +594,6 @@ mod tests {
             _bookmark: &BookmarkName,
             _new_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
-            _bundle_replay: Option<&dyn BundleReplay>,
         ) -> Result<()> {
             Ok(())
         }
@@ -619,7 +603,6 @@ mod tests {
             _bookmark: &BookmarkName,
             _old_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
-            _bundle_replay: Option<&dyn BundleReplay>,
         ) -> Result<()> {
             Ok(())
         }
@@ -628,7 +611,6 @@ mod tests {
             &mut self,
             _bookmark: &BookmarkName,
             _reason: BookmarkUpdateReason,
-            _bundle_replay: Option<&dyn BundleReplay>,
         ) -> Result<()> {
             Ok(())
         }
@@ -655,7 +637,6 @@ mod tests {
             _bookmark: &BookmarkName,
             _new_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
-            _bundle_replay: Option<&dyn BundleReplay>,
         ) -> Result<()> {
             Ok(())
         }

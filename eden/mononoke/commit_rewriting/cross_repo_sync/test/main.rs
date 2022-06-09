@@ -67,7 +67,7 @@ fn mpath(p: &str) -> MPath {
 async fn move_bookmark(ctx: &CoreContext, repo: &BlobRepo, bookmark: &str, cs_id: ChangesetId) {
     let bookmark = BookmarkName::new(bookmark).unwrap();
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
-    txn.force_set(&bookmark, cs_id, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&bookmark, cs_id, BookmarkUpdateReason::TestMove)
         .unwrap();
     txn.commit().await.unwrap();
 }
@@ -138,7 +138,7 @@ async fn create_initial_commit_with_contents<'a>(
         .unwrap();
 
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
-    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove)
         .unwrap();
     txn.commit().await.unwrap();
     bcs_id
@@ -172,7 +172,7 @@ async fn create_empty_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
         .unwrap();
 
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
-    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove)
         .unwrap();
     txn.commit().await.unwrap();
     bcs_id
@@ -506,7 +506,7 @@ async fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
         .unwrap();
 
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
-    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove)
         .unwrap();
     txn.commit().await.unwrap();
     bcs_id
@@ -680,7 +680,7 @@ async fn megarepo_copy_file(
         .unwrap();
 
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
-    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove)
         .unwrap();
     txn.commit().await.unwrap();
     bcs_id
@@ -930,7 +930,7 @@ async fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId 
         .unwrap();
 
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
-    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove, None)
+    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove)
         .unwrap();
     txn.commit().await.unwrap();
 

@@ -36,7 +36,6 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
         &BookmarkName::new("trunk")?,
         changesets["E"],
         BookmarkUpdateReason::TestMove,
-        None,
     )?;
     txn.create_scratch(&BookmarkName::new("scratch/branch")?, changesets["G"])?;
     txn.create_scratch(&BookmarkName::new("scratch/branchpoint")?, changesets["B"])?;

@@ -859,7 +859,6 @@ async fn move_bookmark(
         new_value,
         prev_value,
         BookmarkUpdateReason::ManualMove,
-        None,
     )?;
 
     let res = book_txn.commit().await?;
@@ -1112,7 +1111,7 @@ async fn update_large_repo_bookmarks(
                     ))?;
 
                     info!(ctx.logger(), "setting {} {}", large_bookmark, large_cs_id);
-                    book_txn.force_set(&large_bookmark, large_cs_id, reason, None)?;
+                    book_txn.force_set(&large_bookmark, large_cs_id, reason)?;
                 } else {
                     warn!(
                         ctx.logger(),
@@ -1133,7 +1132,7 @@ async fn update_large_repo_bookmarks(
                 ))?;
                 let reason = BookmarkUpdateReason::XRepoSync;
                 info!(ctx.logger(), "deleting {}", large_bookmark);
-                book_txn.force_delete(&large_bookmark, reason, None)?;
+                book_txn.force_delete(&large_bookmark, reason)?;
             }
             NoSyncOutcome { target_bookmark } => {
                 warn!(

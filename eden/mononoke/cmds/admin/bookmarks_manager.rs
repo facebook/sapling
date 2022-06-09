@@ -358,7 +358,6 @@ async fn handle_set(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
                 new_bcs.get_changeset_id(),
                 old_bcs_id,
                 BookmarkUpdateReason::ManualMove,
-                None,
             )?;
         }
         None => {
@@ -366,7 +365,6 @@ async fn handle_set(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
                 &bookmark,
                 new_bcs.get_changeset_id(),
                 BookmarkUpdateReason::ManualMove,
-                None,
             )?;
         }
     }
@@ -389,7 +387,7 @@ async fn handle_delete(
     match maybe_bcs_id {
         Some(bcs_id) => {
             let mut transaction = repo.update_bookmark_transaction(ctx);
-            transaction.delete(&bookmark, bcs_id, BookmarkUpdateReason::ManualMove, None)?;
+            transaction.delete(&bookmark, bcs_id, BookmarkUpdateReason::ManualMove)?;
             transaction.commit().await?;
             Ok(())
         }

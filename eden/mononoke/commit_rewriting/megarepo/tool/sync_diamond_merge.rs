@@ -190,7 +190,6 @@ pub async fn do_sync_diamond_merge(
         &onto_bookmark,
         new_merge_cs_id,
         BookmarkUpdateReason::ManualMove,
-        None,
     )?;
     book_txn.commit().await?;
 

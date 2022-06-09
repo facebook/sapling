@@ -593,12 +593,7 @@ async fn delete_bookmark(
     let mut book_txn = repo.update_bookmark_transaction(ctx.clone());
     let maybe_bookmark_val = repo.get_bonsai_bookmark(ctx.clone(), bookmark).await?;
     if let Some(bookmark_value) = maybe_bookmark_val {
-        book_txn.delete(
-            &bookmark,
-            bookmark_value,
-            BookmarkUpdateReason::XRepoSync,
-            None,
-        )?;
+        book_txn.delete(bookmark, bookmark_value, BookmarkUpdateReason::XRepoSync)?;
         let res = book_txn.commit().await?;
 
         if res {
@@ -631,11 +626,10 @@ async fn move_or_create_bookmark(
                 cs_id,
                 old_bookmark_val,
                 BookmarkUpdateReason::XRepoSync,
-                None,
             )?;
         }
         None => {
-            book_txn.create(&bookmark, cs_id, BookmarkUpdateReason::XRepoSync, None)?;
+            book_txn.create(bookmark, cs_id, BookmarkUpdateReason::XRepoSync)?;
         }
     }
     let res = book_txn.commit().await?;

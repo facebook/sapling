@@ -113,16 +113,10 @@ pub async fn set(ctx: &CoreContext, repo: &Repo, set_args: BookmarksSetArgs) -> 
                 target,
                 old_value,
                 BookmarkUpdateReason::ManualMove,
-                None,
             )?;
         }
         (None, BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing) => {
-            transaction.create(
-                &set_args.name,
-                target,
-                BookmarkUpdateReason::ManualMove,
-                None,
-            )?;
+            transaction.create(&set_args.name, target, BookmarkUpdateReason::ManualMove)?;
         }
         (Some(old_value), BookmarkKind::Scratch) => {
             transaction.update_scratch(&set_args.name, target, old_value)?;

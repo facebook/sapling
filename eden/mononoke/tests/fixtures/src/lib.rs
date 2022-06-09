@@ -144,13 +144,8 @@ pub async fn set_bookmark(
         .await
         .unwrap();
     let mut txn = blobrepo.bookmarks().create_transaction(ctx.clone());
-    txn.force_set(
-        &bookmark,
-        bcs_id.unwrap(),
-        BookmarkUpdateReason::TestMove,
-        None,
-    )
-    .unwrap();
+    txn.force_set(&bookmark, bcs_id.unwrap(), BookmarkUpdateReason::TestMove)
+        .unwrap();
     txn.commit().await.unwrap();
 }
 
@@ -1655,7 +1650,6 @@ impl TestRepoFixture for ManyDiamonds {
             &BookmarkName::new("master").unwrap(),
             last_bcs_id,
             BookmarkUpdateReason::TestMove,
-            None,
         )
         .unwrap();
         txn.commit().await.unwrap();

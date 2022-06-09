@@ -382,9 +382,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                     *target,
                     old_value,
                     BookmarkUpdateReason::TestMove,
-                    None,
                 ),
-                None => txn.create(&bookmark, *target, BookmarkUpdateReason::TestMove, None),
+                None => txn.create(&bookmark, *target, BookmarkUpdateReason::TestMove),
             }?;
         }
         txn.commit().await?;

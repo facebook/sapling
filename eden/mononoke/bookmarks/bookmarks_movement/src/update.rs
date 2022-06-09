@@ -95,6 +95,7 @@ pub struct UpdateBookmarkOp<'op> {
     cross_repo_push_source: CrossRepoPushSource,
     affected_changesets: AffectedChangesets,
     pushvars: Option<&'op HashMap<String, Bytes>>,
+    // TODO(yancouto): delete
     bundle_replay: Option<&'op dyn BundleReplay>,
     log_new_public_commits_to_scribe: bool,
 }
@@ -300,7 +301,6 @@ impl<'op> UpdateBookmarkOp<'op> {
                     self.targets.new,
                     self.targets.old,
                     self.reason,
-                    self.bundle_replay,
                 )?;
                 to_log
             }

@@ -97,7 +97,6 @@ pub async fn delete(
                 &delete_args.name,
                 old_value,
                 BookmarkUpdateReason::ManualMove,
-                None,
             )?;
         }
         BookmarkKind::Scratch => {

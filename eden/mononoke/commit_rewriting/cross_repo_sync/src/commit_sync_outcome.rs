@@ -974,7 +974,7 @@ mod tests {
         book: &BookmarkName,
     ) -> Result<(), Error> {
         let mut txn = blob_repo.update_bookmark_transaction(ctx.clone());
-        txn.force_set(&book, bcs_id, BookmarkUpdateReason::TestMove, None)
+        txn.force_set(book, bcs_id, BookmarkUpdateReason::TestMove)
             .unwrap();
         txn.commit().await?;
         Ok(())

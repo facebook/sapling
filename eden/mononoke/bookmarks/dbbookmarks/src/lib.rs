@@ -77,12 +77,7 @@ mod test {
 
         // Using 'create' to replace a scratch bookmark should fail.
         let mut txn = store.create_transaction(ctx.clone());
-        txn.create(
-            &scratch_name,
-            ONES_CSID,
-            BookmarkUpdateReason::TestMove,
-            None,
-        )?;
+        txn.create(&scratch_name, ONES_CSID, BookmarkUpdateReason::TestMove)?;
         assert!(!txn.commit().await?);
 
         // Using 'update_scratch' to update a publishing bookmark should fail.
@@ -102,7 +97,6 @@ mod test {
             TWOS_CSID,
             ONES_CSID,
             BookmarkUpdateReason::TestMove,
-            None,
         )?;
         assert!(txn.commit().await?);
 
@@ -113,7 +107,6 @@ mod test {
             TWOS_CSID,
             ONES_CSID,
             BookmarkUpdateReason::TestMove,
-            None,
         )?;
         assert!(txn.commit().await?);
 
@@ -124,7 +117,6 @@ mod test {
             TWOS_CSID,
             ONES_CSID,
             BookmarkUpdateReason::TestMove,
-            None,
         )?;
         assert!(!txn.commit().await?);
 

@@ -106,16 +106,10 @@ pub async fn add_source_repo(
                 cs_id,
                 parent,
                 BookmarkUpdateReason::ManualMove,
-                None,
             )?;
         }
         None => {
-            txn.create(
-                hyper_repo_bookmark,
-                cs_id,
-                BookmarkUpdateReason::ManualMove,
-                None,
-            )?;
+            txn.create(hyper_repo_bookmark, cs_id, BookmarkUpdateReason::ManualMove)?;
         }
     };
     let success = txn.commit().await?;

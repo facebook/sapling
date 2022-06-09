@@ -433,7 +433,7 @@ impl<R: Repo> UpdateBookmarkContext<R> {
 
         let cs_id = resolve_cs_id(&self.ctx, &self.repo, cs_ident).await?;
         let mut book_txn = self.repo.bookmarks().create_transaction(self.ctx);
-        book_txn.force_set(&bookmark, cs_id, BookmarkUpdateReason::TestMove, None)?;
+        book_txn.force_set(&bookmark, cs_id, BookmarkUpdateReason::TestMove)?;
         book_txn.commit().await?;
         Ok(bookmark)
     }
@@ -450,7 +450,7 @@ impl<R: Repo> UpdateBookmarkContext<R> {
 
         let cs_id = resolve_cs_id(&self.ctx, &self.repo, cs_ident).await?;
         let mut book_txn = self.repo.bookmarks().create_transaction(self.ctx);
-        book_txn.create_publishing(&bookmark, cs_id, BookmarkUpdateReason::TestMove, None)?;
+        book_txn.create_publishing(&bookmark, cs_id, BookmarkUpdateReason::TestMove)?;
         book_txn.commit().await?;
         Ok(bookmark)
     }
@@ -467,7 +467,7 @@ impl<R: Repo> UpdateBookmarkContext<R> {
 
         let cs_id = resolve_cs_id(&self.ctx, &self.repo, cs_ident).await?;
         let mut book_txn = self.repo.bookmarks().create_transaction(self.ctx);
-        book_txn.create(&bookmark, cs_id, BookmarkUpdateReason::TestMove, None)?;
+        book_txn.create(&bookmark, cs_id, BookmarkUpdateReason::TestMove)?;
         book_txn.commit().await?;
         Ok(bookmark)
     }
@@ -497,7 +497,7 @@ impl<R: Repo> UpdateBookmarkContext<R> {
         };
 
         let mut book_txn = self.repo.bookmarks().create_transaction(self.ctx);
-        book_txn.force_delete(&bookmark, BookmarkUpdateReason::TestMove, None)?;
+        book_txn.force_delete(&bookmark, BookmarkUpdateReason::TestMove)?;
         book_txn.commit().await?;
         Ok(())
     }

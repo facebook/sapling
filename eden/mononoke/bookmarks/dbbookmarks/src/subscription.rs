@@ -286,7 +286,7 @@ mod test {
                 .await?;
 
         let mut txn = bookmarks.create_transaction(ctx.clone());
-        txn.force_delete(&book, BookmarkUpdateReason::TestMove, None)?;
+        txn.force_delete(&book, BookmarkUpdateReason::TestMove)?;
         txn.commit().await?;
 
         tunables::with_tunables_async(protect_master, sub1.refresh(&ctx)).await?;

@@ -102,7 +102,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             reason,
             to,
         } => {
-            txn.create(&bookmark, to, reason, None)?;
+            txn.create(&bookmark, to, reason)?;
         }
         BookmarkOperation::Update {
             bookmark,
@@ -110,7 +110,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             from: Some(from),
             to,
         } => {
-            txn.update(&bookmark, to, from, reason, None)?;
+            txn.update(&bookmark, to, from, reason)?;
         }
         BookmarkOperation::Update {
             bookmark,
@@ -118,21 +118,21 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             from: None,
             to,
         } => {
-            txn.force_set(&bookmark, to, reason, None)?;
+            txn.force_set(&bookmark, to, reason)?;
         }
         BookmarkOperation::Delete {
             bookmark,
             reason,
             from: Some(from),
         } => {
-            txn.delete(&bookmark, from, reason, None)?;
+            txn.delete(&bookmark, from, reason)?;
         }
         BookmarkOperation::Delete {
             bookmark,
             reason,
             from: None,
         } => {
-            txn.force_delete(&bookmark, reason, None)?;
+            txn.force_delete(&bookmark, reason)?;
         }
     }
 

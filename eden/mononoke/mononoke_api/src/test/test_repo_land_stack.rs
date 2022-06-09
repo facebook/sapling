@@ -38,7 +38,6 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
         &BookmarkName::new("trunk")?,
         changesets["C"],
         BookmarkUpdateReason::TestMove,
-        None,
     )?;
     txn.commit().await?;
 

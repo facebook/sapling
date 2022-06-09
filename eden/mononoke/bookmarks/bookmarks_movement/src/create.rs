@@ -40,6 +40,7 @@ pub struct CreateBookmarkOp<'op> {
     cross_repo_push_source: CrossRepoPushSource,
     affected_changesets: AffectedChangesets,
     pushvars: Option<&'op HashMap<String, Bytes>>,
+    // TODO(yancouto): delete
     bundle_replay: Option<&'op dyn BundleReplay>,
     log_new_public_commits_to_scribe: bool,
 }
@@ -224,7 +225,7 @@ impl<'op> CreateBookmarkOp<'op> {
                     .add("bookmark", self.bookmark.to_string())
                     .log_with_msg("Creating public bookmark", None);
 
-                txn.create(self.bookmark, self.target, self.reason, self.bundle_replay)?;
+                txn.create(self.bookmark, self.target, self.reason)?;
                 to_log
             }
         };

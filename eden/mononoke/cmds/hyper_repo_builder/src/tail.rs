@@ -262,7 +262,6 @@ async fn sync_commits(
         latest_commit,
         hyper_repo_tip_cs_id,
         BookmarkUpdateReason::ManualMove,
-        None,
     )?;
     let success = txn.commit().await?;
     if !success {
