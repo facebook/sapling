@@ -138,6 +138,20 @@ overrides = {{}}
                 extra_args=["--eden_logview"],
                 storage_engine="memory",
             )
+
+            # Write out edenfs config file.
+            self.eden.system_rc_path().write_text(
+                """
+[experimental]
+enable-nfs-server = true
+use-edenapi = true
+
+[hg]
+import-batch-size = "32"
+import-batch-size-tree = "128"
+"""
+            )
+
             self.eden.start()
             self.eden.clone(str(repo.root), str(path), allow_empty=True)
 
