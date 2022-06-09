@@ -65,7 +65,6 @@ impl PhysicalFileSystem {
             store,
         );
         let pending_changes = PendingChanges {
-            vfs: self.vfs.clone(),
             walker,
             matcher,
             treestate,
@@ -81,7 +80,6 @@ impl PhysicalFileSystem {
 }
 
 pub struct PendingChanges<M: Matcher + Clone + Send + Sync + 'static> {
-    vfs: VFS,
     walker: Walker<M>,
     matcher: M,
     treestate: Arc<Mutex<TreeState>>,
@@ -129,13 +127,16 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                 Some(Ok(WalkEntry::File(file, metadata))) => {
                     let file = normalize(file);
                     self.seen.insert(file.to_owned());
-                    let changed = match self.file_change_detector.has_changed(&file, &metadata) {
+                    let changed = match self
+                        .file_change_detector
+                        .has_changed_with_fresh_metadata(&file, metadata)
+                    {
                         Ok(result) => result,
                         Err(e) => return Some(Err(e)),
                     };
 
-                    if let FileChangeResult::Yes = changed {
-                        return Some(Ok(PendingChangeResult::File(ChangeType::Changed(file))));
+                    if let FileChangeResult::Yes(change_type) = changed {
+                        return Some(Ok(PendingChangeResult::File(change_type)));
                     }
                 }
                 Some(Ok(WalkEntry::Directory(dir))) => {
@@ -186,32 +187,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                 }
             }
 
-            // If it's behind a symlink consider it deleted.
-            let metadata = self.vfs.metadata(&path);
-
-            // TODO: audit the path for symlinks and weirdness
-            // If it's missing or not readable, consider it deleted.
-            let metadata = match metadata {
-                Ok(metadata) => metadata,
-                Err(_) => {
-                    results.push(Ok(PendingChangeResult::File(ChangeType::Deleted(path))));
-                    continue;
-                }
-            };
-
-            let file_type = metadata.file_type();
-
-            // If the file is not a normal file or a symlink (ex: it could be a directory or a
-            // weird file like a fifo file), consider it deleted.
-            if !file_type.is_file() && !file_type.is_symlink() {
-                results.push(Ok(PendingChangeResult::File(ChangeType::Deleted(path))));
-                continue;
-            }
-
-            // In an ideal world we wouldn't see any paths that exist on disk that weren't found by
-            // the walk phase, but there can be ignored files that the walk ignores but that are in
-            // the dirstate. So we compare them here to see if they changed.
-            let changed = match self.file_change_detector.has_changed(&path, &metadata) {
+            let changed = match self.file_change_detector.has_changed(&path) {
                 Ok(result) => result,
                 Err(e) => {
                     results.push(Err(e));
@@ -219,8 +195,12 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                 }
             };
 
-            if let FileChangeResult::Yes = changed {
-                results.push(Ok(PendingChangeResult::File(ChangeType::Changed(path))));
+            if let FileChangeResult::Yes(change_type) = changed {
+                // We expect the change type to be deleted here because in an ideal world we
+                // wouldn't see any paths that exist on disk that weren't found by the walk phase,
+                // but there can be ignored files that the walk ignores but that are in the
+                // dirstate. So we compare them here to see if they changed.
+                results.push(Ok(PendingChangeResult::File(change_type)));
             }
         }
         results
@@ -253,9 +233,10 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
     fn next_lookup(&mut self) -> Option<Result<PendingChangeResult>> {
         self.lookup_iter
             .get_or_insert_with(|| {
-                let iter = self.file_change_detector.resolve_maybes().map(|result| {
-                    result.map(|path| PendingChangeResult::File(ChangeType::Changed(path)))
-                });
+                let iter = self
+                    .file_change_detector
+                    .resolve_maybes()
+                    .map(|result| result.map(PendingChangeResult::File));
                 Box::new(iter)
             })
             .next()

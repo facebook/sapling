@@ -18,15 +18,16 @@ use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::ExactMatcher;
 use storemodel::ReadFileContents;
+use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::Key;
-use types::RepoPath;
 use types::RepoPathBuf;
 use vfs::is_executable;
 use vfs::is_symlink;
 use vfs::VFS;
 
+use crate::filesystem::ChangeType;
 use crate::walker::WalkError;
 
 type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
@@ -65,15 +66,15 @@ impl TryFrom<i32> for HgModifiedTime {
 }
 
 pub enum FileChangeResult {
-    Yes,
+    Yes(ChangeType),
     No,
     Maybe,
 }
 
 pub trait FileChangeDetectorTrait {
-    fn has_changed(&mut self, path: &RepoPath, metadata: &Metadata) -> Result<FileChangeResult>;
+    fn has_changed(&mut self, path: &RepoPathBuf) -> Result<FileChangeResult>;
 
-    fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<RepoPathBuf>> + Send>;
+    fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<ChangeType>> + Send>;
 }
 
 pub struct FileChangeDetector {
@@ -105,22 +106,46 @@ impl FileChangeDetector {
     }
 }
 
-impl FileChangeDetectorTrait for FileChangeDetector {
-    fn has_changed(&mut self, path: &RepoPath, metadata: &Metadata) -> Result<FileChangeResult> {
-        let mut treestate = self.treestate.lock();
-        let state = treestate.get(path)?;
+impl FileChangeDetector {
+    pub fn has_changed_with_fresh_metadata(
+        &mut self,
+        path: &RepoPathBuf,
+        metadata: Metadata,
+    ) -> Result<FileChangeResult> {
+        let file_type = metadata.file_type();
+        let is_valid_file = file_type.is_file() || file_type.is_symlink();
 
-        let state = match state {
-            Some(state) => state,
+        let state = match (self.get_treestate(path)?, is_valid_file) {
+            // File exists and is in the tree state: it might have changed.
+            (Some(state), true) => state,
+
+            // If the file is not valid (e.g. a directory or a weird file like
+            // a fifo file) but exists in P1 (as a valid file at some previous
+            // time) then we consider it now deleted.
+            (Some(state), false) if state.state.intersects(StateFlags::EXIST_P1) => {
+                return Ok(Self::deleted(path));
+            }
+
+            // File exists in treestate but not P1 (e.g. as needing check by
+            // watchman). This means it must have changed from a valid file
+            // to an invalid file and so we want to mark it as not changed
+            // so we can skip over it.
+            (Some(_), false) => return Ok(FileChangeResult::No),
+
             // File exists but is not in the treestate (untracked)
-            None => return Ok(FileChangeResult::Yes),
+            (None, true) => return Ok(Self::changed(path)),
+
+            // File doesn't exist on treestate and isn't a valid file. The only
+            // reason we get here is if it was a valid file during the crawl
+            // but no longer is. Mark it as not changed so we can skip over it.
+            (None, false) => return Ok(FileChangeResult::No),
         };
 
         // If it's not in P1, (i.e. it's added or untracked) it's considered changed.
         let flags = state.state;
         let in_parent = flags.intersects(StateFlags::EXIST_P1); // TODO: Also check against P2?
         if !in_parent {
-            return Ok(FileChangeResult::Yes);
+            return Ok(Self::changed(path));
         }
 
         // If working copy file size or flags are different from what is in treestate, it has changed.
@@ -135,13 +160,13 @@ impl FileChangeDetectorTrait for FileChangeDetector {
         let valid_size = state.size >= 0;
         if valid_size {
             let size_different = metadata.len() != state.size.try_into().unwrap_or(std::u64::MAX);
-            let exec_different =
-                self.vfs.supports_executables() && is_executable(metadata) != state.is_executable();
+            let exec_different = self.vfs.supports_executables()
+                && is_executable(&metadata) != state.is_executable();
             let symlink_different =
-                self.vfs.supports_symlinks() && is_symlink(metadata) != state.is_symlink();
+                self.vfs.supports_symlinks() && is_symlink(&metadata) != state.is_symlink();
 
             if size_different || exec_different || symlink_different {
-                return Ok(FileChangeResult::Yes);
+                return Ok(Self::changed(path));
             }
         }
 
@@ -174,8 +199,55 @@ impl FileChangeDetectorTrait for FileChangeDetector {
         Ok(FileChangeResult::No)
     }
 
-    fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<RepoPathBuf>> + Send> {
-        let mut results = Vec::<Result<RepoPathBuf>>::new();
+    fn get_treestate(&mut self, path: &RepoPathBuf) -> Result<Option<FileStateV2>> {
+        let mut treestate = self.treestate.lock();
+        treestate
+            .get(path)
+            .map(|option| option.map(|state| state.clone()))
+    }
+
+    fn changed(path: &RepoPathBuf) -> FileChangeResult {
+        FileChangeResult::Yes(ChangeType::Changed(path.clone()))
+    }
+
+    fn deleted(path: &RepoPathBuf) -> FileChangeResult {
+        FileChangeResult::Yes(ChangeType::Deleted(path.clone()))
+    }
+}
+
+impl FileChangeDetectorTrait for FileChangeDetector {
+    fn has_changed(&mut self, path: &RepoPathBuf) -> Result<FileChangeResult> {
+        let metadata = match self.vfs.metadata(path) {
+            Ok(metadata) => Some(metadata),
+            Err(e) => match e.downcast_ref::<std::io::Error>() {
+                Some(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+                _ => return Err(e),
+            },
+        };
+
+        let state = self.get_treestate(path)?;
+        let metadata = match (metadata, state) {
+            // File was untracked during crawl but no longer exists.
+            (None, None) => return Ok(FileChangeResult::No),
+
+            // File was not found but exists in P1: mark as deleted.
+            (None, Some(state)) if state.state.intersects(StateFlags::EXIST_P1) => {
+                return Ok(Self::deleted(path));
+            }
+
+            // File doesn't exist, isn't in P1 but exists in treestate.
+            // This can happen when watchman is tracking that this file needs
+            // checking for example.
+            (None, Some(_)) => return Ok(FileChangeResult::No),
+
+            (Some(m), _) => m,
+        };
+
+        self.has_changed_with_fresh_metadata(path, metadata)
+    }
+
+    fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<ChangeType>> + Send> {
+        let mut results = Vec::<Result<ChangeType>>::new();
 
         // First, get the keys for the paths from the current manifest.
         let matcher = ExactMatcher::new(self.lookups.iter());
@@ -210,13 +282,14 @@ impl FileChangeDetectorTrait for FileChangeDetector {
                         Err(e) => return Some(Err(e)),
                     };
                     let actual = match vfs.read(&key.path) {
+                        // TODO: Handle the case that the file is missing
                         Ok(x) => x,
                         Err(e) => return Some(Err(e)),
                     };
                     if expected == actual {
                         None
                     } else {
-                        Some(Ok(key.path))
+                        Some(Ok(ChangeType::Changed(key.path)))
                     }
                 })
                 .collect::<Vec<_>>()
@@ -225,7 +298,6 @@ impl FileChangeDetectorTrait for FileChangeDetector {
         results.extend(comparisons);
         Box::new(results.into_iter())
     }
-
     // TODO: after finishing these comparisons, update the cached mtimes of files so we
     // don't have to do a comparison again next time.
 }
