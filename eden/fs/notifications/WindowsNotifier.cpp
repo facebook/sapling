@@ -14,6 +14,7 @@
 #include <strsafe.h> // @manual
 #include <wchar.h>
 #include <windowsx.h> // @manual
+#include <cstdlib>
 #include <thread>
 
 #include <fmt/chrono.h>
@@ -46,6 +47,7 @@ enum MenuCommand : UINT {
   IDM_ACTION_DOCTOR,
   IDM_ACTION_LIST,
   IDM_ACTION_RAGE,
+  IDM_ACTION_SHOW_LOGS,
   IDM_DEBUG_GEN_NOTIFICATION,
   IDM_DEBUG_NET_NOTIFICATION,
   IDM_DEBUG_SIGNAL_END,
@@ -376,6 +378,18 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
             return 0;
           }
 
+          case IDM_ACTION_SHOW_LOGS: {
+            auto homeDir = getenv("USERPROFILE");
+            // Highlight the log file in explorer so that users can view the
+            // logs with whatever text editor they want. I considered opening
+            // the file automatically in PowerShell, but that doesn't provide a
+            // great user experience.
+            auto explorerArgs =
+                fmt::format("/select,{}\\.eden\\logs\\edenfs.log", homeDir);
+            executeShellCommand("explorer.exe", explorerArgs);
+            return 0;
+          }
+
           case IDM_ACTION_CLEAN: {
             executeShellCommand("edenfsctl", "--press-to-continue du --clean");
             return 0;
@@ -652,6 +666,11 @@ void WindowsNotifier::appendActionsMenu(HMENU hMenu) {
       MF_BYPOSITION | MF_STRING,
       IDM_ACTION_CLEAN,
       L"Clean EdenFS Disk (du --clean)");
+  appendMenuEntry(
+      actionMenu.get(),
+      MF_BYPOSITION | MF_STRING,
+      IDM_ACTION_SHOW_LOGS,
+      L"Show EdenFS Logs");
 
   // append actions menu to top-level menu
   appendMenuEntry(
