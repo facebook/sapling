@@ -14,7 +14,6 @@ use bookmarks::{BookmarkUpdateLog, Bookmarks};
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use ephemeral_blobstore::RepoEphemeralStore;
-use hooks::HookManager;
 use mercurial_mutation::HgMutationStore;
 use metaconfig_types::RepoConfig;
 use mutable_counters::MutableCounters;
@@ -74,9 +73,6 @@ pub struct InnerRepo {
 
     #[facet]
     pub acl_regions: dyn AclRegions,
-
-    #[facet]
-    pub hook_manager: HookManager,
 }
 
 impl AsBlobRepo for InnerRepo {
