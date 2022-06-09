@@ -79,6 +79,16 @@ def cure_what_ails_you(
     ).cure_what_ails_you()
 
 
+class UnexpectedPrivHelperProblem(Problem):
+    def __init__(self, ex: Exception) -> None:
+        super().__init__(f"Unexpected error while checking PrivHelper: {ex}")
+
+
+class UnexpectedMountProblem(Problem):
+    def __init__(self, mount: Path, ex: Exception) -> None:
+        super().__init__(f"unexpected error while checking {mount}: {ex}")
+
+
 class EdenDoctorChecker:
     """EdenDoctorChecker is a base class for EdenDoctor, and only supports
     running checks, without reporting or fixing problems.
@@ -221,9 +231,7 @@ class EdenDoctorChecker:
             # This check is only reached after we've determined that the EdenFS
             # daemon is healthy, so any error thrown while calling into Thrift
             # would be unexpected.
-            self.tracker.add_problem(
-                Problem(f"Unexpected error while checking PrivHelper: {ex}")
-            )
+            self.tracker.add_problem(UnexpectedPrivHelperProblem(ex))
 
     def run_normal_checks(self) -> None:
         check_edenfs_version(self.tracker, self.instance)
@@ -268,9 +276,7 @@ class EdenDoctorChecker:
                     checked_backing_repos,
                 )
             except Exception as ex:
-                self.tracker.add_problem(
-                    Problem(f"unexpected error while checking {path}: {ex}")
-                )
+                self.tracker.add_problem(UnexpectedMountProblem(path, ex))
 
 
 class EdenDoctor(EdenDoctorChecker):

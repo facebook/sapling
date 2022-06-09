@@ -70,6 +70,11 @@ class IncorrectWatchmanWatch(FixableProblem):
             )
 
 
+class MissingOrDuplicatedSubscription(Problem):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
 def check_watchman_subscriptions(
     tracker: ProblemTracker, path: str, info: WatchmanCheckInfo
 ) -> None:
@@ -200,7 +205,7 @@ def check_nuclide_subscriptions(
             '"Nuclide Remote Projects: Kill And Restart" from the\n'
             "command palette in Atom.\n"
         )
-        tracker.add_problem(Problem(output.getvalue()))
+        tracker.add_problem(MissingOrDuplicatedSubscription(output.getvalue()))
 
 
 def _get_watch_roots_for_watchman() -> Set[str]:
