@@ -140,6 +140,7 @@ overrides = {{}}
             )
 
             # Write out edenfs config file.
+            # pyre-fixme[29]: `Path` is not a function.
             self.eden.system_rc_path().write_text(
                 """
 [experimental]
