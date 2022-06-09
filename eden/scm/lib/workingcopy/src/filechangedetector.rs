@@ -30,7 +30,7 @@ use vfs::VFS;
 use crate::filesystem::ChangeType;
 use crate::walker::WalkError;
 
-type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
+pub type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 
 /// Represents a file modification time in Mercurial, in seconds since the unix epoch.
 #[derive(PartialEq)]

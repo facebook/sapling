@@ -9,11 +9,16 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
+use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
+use parking_lot::RwLock;
 use treestate::treestate::TreeState;
 use vfs::VFS;
 use watchman_client::prelude::*;
 
+use crate::filechangedetector::ArcReadFileContents;
+use crate::filechangedetector::FileChangeDetector;
+use crate::filechangedetector::HgModifiedTime;
 use crate::filesystem::PendingChangeResult;
 
 use super::state::StatusQuery;
@@ -34,15 +39,29 @@ impl Watchman {
     pub async fn pending_changes(
         &self,
         treestate: Arc<Mutex<TreeState>>,
+        last_write: HgModifiedTime,
+        manifest: Arc<RwLock<TreeManifest>>,
+        store: ArcReadFileContents,
     ) -> Result<impl Iterator<Item = Result<PendingChangeResult>>> {
         let client = Connector::new().connect().await?;
         let resolved = client
             .resolve_root(CanonicalPath::canonicalize(self.vfs.root())?)
             .await?;
 
-        let mut state = WatchmanState::new(WatchmanTreeState {
-            treestate: treestate.lock(),
-        });
+        let file_change_detector = FileChangeDetector::new(
+            treestate.clone(),
+            self.vfs.clone(),
+            last_write,
+            manifest,
+            store,
+        );
+
+        let mut state = WatchmanState::new(
+            WatchmanTreeState {
+                treestate: treestate.lock(),
+            },
+            file_change_detector,
+        );
 
         let result = client
             .query::<StatusQuery>(
@@ -59,6 +78,6 @@ impl Watchman {
             treestate: treestate.lock(),
         })?;
 
-        Ok(state.pending_changes())
+        Ok(state.into_pending_changes())
     }
 }

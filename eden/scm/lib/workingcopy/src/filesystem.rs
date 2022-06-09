@@ -14,6 +14,7 @@ use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::Matcher;
+use serde::Serialize;
 use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
@@ -110,11 +111,13 @@ impl PendingChangesStage {
     }
 }
 
+#[derive(Serialize)]
 pub enum ChangeType {
     Changed(RepoPathBuf),
     Deleted(RepoPathBuf),
 }
 
+#[derive(Serialize)]
 pub enum PendingChangeResult {
     File(ChangeType),
     SeenDirectory(RepoPathBuf),
