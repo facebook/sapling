@@ -6,7 +6,6 @@
  */
 
 //! Command-line client for the Source Control Service.
-#![feature(process_exitcode_placeholder)]
 
 use std::env;
 use std::process::ExitCode;
