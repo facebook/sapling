@@ -24,6 +24,7 @@ use strum::VariantNames;
 pub const CONFIG_PATH: &str = "mononoke-config-path";
 pub const REPO_ID: &str = "repo-id";
 pub const REPO_NAME: &str = "repo-name";
+pub const SHARDED_SERVICE_NAME: &str = "sharded-service-name";
 pub const SOURCE_REPO_GROUP: &str = "source-repo";
 pub const SOURCE_REPO_ID: &str = "source-repo-id";
 pub const SOURCE_REPO_NAME: &str = "source-repo-name";
@@ -155,7 +156,9 @@ const DEFAULT_ARG_TYPES: &[ArgType] = &[
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RepoRequirement {
+    // The command will execute for exactly one repo at a time.
     ExactlyOne,
+    // The command requires atleast one repo.
     AtLeastOne,
 }
 
@@ -167,6 +170,10 @@ pub struct MononokeAppBuilder {
     /// Whether to hide advanced Manifold configuration from help. Note that the arguments will
     /// still be available, just not displayed in help.
     hide_advanced_args: bool,
+
+    /// Flag determinig if the command supports getting repos dynamically at runtime in
+    /// addition to repos being provided through CLI before execution.
+    dynamic_repos: bool,
 
     /// Whether to require the user select a repo if the option is present.
     repo_required: Option<RepoRequirement>,
@@ -302,6 +309,7 @@ impl MononokeAppBuilder {
             scrub_action_on_missing_write_mostly_default: None,
             scrub_queue_peek_bound_secs_default: None,
             slog_filter_fn: None,
+            dynamic_repos: false,
         }
     }
 
@@ -364,6 +372,13 @@ impl MononokeAppBuilder {
     /// This command has arguments for fb303
     pub fn with_fb303_args(mut self) -> Self {
         self.arg_types.insert(ArgType::Fb303);
+        self
+    }
+
+    /// This command can get repos through CLI OR
+    /// at runtime dynamically through sharded execution.
+    pub fn with_dynamic_repos(mut self) -> Self {
+        self.dynamic_repos = true;
         self
     }
 
@@ -514,8 +529,19 @@ impl MononokeAppBuilder {
                 .help("Name of repository")
                 .conflicts_with_all(repo_conflicts);
 
+            let mut sharded_service_name_arg = Arg::with_name(SHARDED_SERVICE_NAME)
+                .long(SHARDED_SERVICE_NAME)
+                .value_name("NAME")
+                .multiple(false)
+                .help("The name of SM service to be used when the command needs to be executed in a sharded setting");
+
+            let group_args = if self.dynamic_repos {
+                vec![REPO_ID, REPO_NAME, SHARDED_SERVICE_NAME]
+            } else {
+                vec![REPO_ID, REPO_NAME]
+            };
             let mut repo_group = ArgGroup::with_name("repo")
-                .args(&[REPO_ID, REPO_NAME])
+                .args(&group_args)
                 .required(self.repo_required.is_some());
 
             if self.repo_required == Some(RepoRequirement::AtLeastOne) {
@@ -523,8 +549,14 @@ impl MononokeAppBuilder {
                 repo_name_arg = repo_name_arg.multiple(true).number_of_values(1);
                 repo_group = repo_group.multiple(true)
             }
-
-            app = app.arg(repo_id_arg).arg(repo_name_arg).group(repo_group);
+            app = if self.dynamic_repos {
+                app.arg(sharded_service_name_arg)
+                    .arg(repo_id_arg)
+                    .arg(repo_name_arg)
+                    .group(repo_group)
+            } else {
+                app.arg(repo_id_arg).arg(repo_name_arg).group(repo_group)
+            };
 
             if self.arg_types.contains(&ArgType::SourceRepo)
                 || self.arg_types.contains(&ArgType::SourceAndTargetRepos)
