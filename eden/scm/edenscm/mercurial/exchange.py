@@ -1436,7 +1436,7 @@ def pull(
         force,
         bookmarks=bookmarks,
         streamclonerequested=streamclonerequested,
-        **opargs
+        **opargs,
     )
 
     peerlocal = pullop.remote.local()
@@ -1989,7 +1989,7 @@ def _getbundlechangegrouppart(
     b2caps=None,
     heads=None,
     common=None,
-    **kwargs
+    **kwargs,
 ):
     """add a changegroup part to the requested bundle"""
     cgstream = None

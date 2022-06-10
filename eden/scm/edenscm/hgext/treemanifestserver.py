@@ -2136,7 +2136,7 @@ def _registerbundle2parts():
         b2caps=None,
         heads=None,
         common=None,
-        **kwargs
+        **kwargs,
     ):
         """add parts containing trees being pulled"""
         if (

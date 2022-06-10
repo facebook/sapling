@@ -146,7 +146,7 @@ def split(ui, repo, *revs, **opts):
                         False,
                         recordfilter,
                         *pats,
-                        **opts
+                        **opts,
                     )
                 # TODO: Does no seem like the best way to do this
                 # We should make dorecord return the newly created commit

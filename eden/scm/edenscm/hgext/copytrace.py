@@ -136,7 +136,7 @@ def _filemerge(
     fca,
     labels=None,
     *args,
-    **kwargs
+    **kwargs,
 ):
 
     if premerge:

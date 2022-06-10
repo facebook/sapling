@@ -168,7 +168,7 @@ def trylock(ui, vfs, lockname, timeout, warntimeout=None, *args, **kwargs):
         ui=ui,
         warnattemptidx=warningidx,
         debugattemptidx=debugidx,
-        **kwargs
+        **kwargs,
     )
 
     if l.delay:

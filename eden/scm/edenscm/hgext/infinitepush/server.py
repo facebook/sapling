@@ -630,7 +630,7 @@ def logservicecall(logger, service, **kwargs):
             service,
             eventtype="success",
             elapsedms=(time.time() - start) * 1000,
-            **kwargs
+            **kwargs,
         )
     except Exception as e:
         logger(
@@ -638,7 +638,7 @@ def logservicecall(logger, service, **kwargs):
             eventtype="failure",
             elapsedms=(time.time() - start) * 1000,
             errormsg=str(e),
-            **kwargs
+            **kwargs,
         )
         raise
 

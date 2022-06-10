@@ -468,7 +468,7 @@ def changesetentry(web, req, tmpl, ctx):
         diffsummary=lambda **x: diffsummary(diffstatsgen),
         diffstat=diffstats,
         archives=web.archivelist(ctx.hex()),
-        **commonentry(web.repo, ctx)
+        **commonentry(web.repo, ctx),
     )
 
 

@@ -261,6 +261,6 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
             ssl_wrap_socket=sslutil.wrapsocket,
             ssl_validator=sslutil.validatesocket,
             ui=self.ui,
-            **kwargs
+            **kwargs,
         )
         return con

@@ -162,7 +162,7 @@ def _filerevision(web, req, tmpl, fctx):
         rename=webutil.renamelink(fctx),
         permissions=fctx.manifest().flags(f),
         ishead=int(ishead),
-        **webutil.commonentry(web.repo, fctx)
+        **webutil.commonentry(web.repo, fctx),
     )
 
 
@@ -302,7 +302,7 @@ def _search(web, req, tmpl):
                 parity=next(parity),
                 changelogtag=showtags,
                 files=files,
-                **webutil.commonentry(web.repo, ctx)
+                **webutil.commonentry(web.repo, ctx),
             )
 
             if count >= revcount:
@@ -609,7 +609,7 @@ def manifest(web, req, tmpl):
         fentries=filelist,
         dentries=dirlist,
         archives=web.archivelist(hex(node)),
-        **webutil.commonentry(web.repo, ctx)
+        **webutil.commonentry(web.repo, ctx),
     )
 
 
@@ -740,7 +740,7 @@ def summary(web, req, tmpl):
                 tmpl(
                     "shortlogentry",
                     parity=next(parity),
-                    **webutil.commonentry(web.repo, ctx)
+                    **webutil.commonentry(web.repo, ctx),
                 )
             )
 
@@ -815,7 +815,7 @@ def filediff(web, req, tmpl):
         symrev=webutil.symrevorshortnode(req, ctx),
         rename=rename,
         diff=diffs,
-        **webutil.commonentry(web.repo, ctx)
+        **webutil.commonentry(web.repo, ctx),
     )
 
 
@@ -894,7 +894,7 @@ def comparison(web, req, tmpl):
         rightrev=rightrev,
         rightnode=hex(rightnode),
         comparison=comparison,
-        **webutil.commonentry(web.repo, ctx)
+        **webutil.commonentry(web.repo, ctx),
     )
 
 
@@ -989,7 +989,7 @@ def annotate(web, req, tmpl):
         permissions=fctx.manifest().flags(f),
         ishead=int(ishead),
         diffopts=diffopts,
-        **webutil.commonentry(web.repo, fctx)
+        **webutil.commonentry(web.repo, fctx),
     )
 
 
@@ -1100,7 +1100,7 @@ def filelog(web, req, tmpl):
                     file=path,
                     diff=diffs,
                     linerange=webutil.formatlinerange(*lr),
-                    **webutil.commonentry(repo, c)
+                    **webutil.commonentry(repo, c),
                 )
             )
             if i == revcount:
@@ -1120,7 +1120,7 @@ def filelog(web, req, tmpl):
                     file=f,
                     diff=diffs,
                     rename=webutil.renamelink(iterfctx),
-                    **webutil.commonentry(repo, iterfctx)
+                    **webutil.commonentry(repo, iterfctx),
                 )
             )
         entries.reverse()
@@ -1142,7 +1142,7 @@ def filelog(web, req, tmpl):
         revcount=revcount,
         morevars=morevars,
         lessvars=lessvars,
-        **webutil.commonentry(web.repo, fctx)
+        **webutil.commonentry(web.repo, fctx),
     )
 
 

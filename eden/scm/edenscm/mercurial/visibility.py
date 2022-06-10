@@ -100,7 +100,7 @@ class visibleheads(object):
             len(heads),
             ", ".join(node.short(h) for h in reversed(heads[-self.LOGHEADLIMIT :])),
             ", ..." if len(heads) > self.LOGHEADLIMIT else "",
-            **opts
+            **opts,
         )
 
     def _logchange(self, oldheads, newheads):

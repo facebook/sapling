@@ -510,7 +510,7 @@ def _docreatecmd(ui, repo, pats, opts):
                     False,
                     cmdutil.recordfilter,
                     *pats,
-                    **opts
+                    **opts,
                 )
             if not node:
                 _nothingtoshelvemessaging(ui, repo, pats, opts)
@@ -728,7 +728,7 @@ def mergefiles(ui, repo, wctx, shelvectx):
             shelvectx,
             repo.dirstate.parents(),
             *pathtofiles(repo, files),
-            **{"no_backup": True}
+            **{"no_backup": True},
         )
         ui.popbuffer()
 
@@ -885,7 +885,7 @@ def _rebaserestoredcommit(
                 "keep": False,
                 "tool": opts.get("tool", ""),
                 "extrafn": extrafn,
-            }
+            },
         )
     except error.InterventionRequired:
         tr.close()

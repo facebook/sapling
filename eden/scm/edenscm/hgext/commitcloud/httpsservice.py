@@ -328,7 +328,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             newbookmarkcount=len(newbookmarks),
             oldremotebookmarkcount=len(oldremotebookmarks),
             newremotebookmarkcount=len(newremotebookmarks),
-            **logopts
+            **logopts,
         )
 
         # remove duplicates, must preserve order in the newheads list

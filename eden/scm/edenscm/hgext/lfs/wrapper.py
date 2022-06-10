@@ -114,7 +114,7 @@ def filelogaddrevision(
     cachedelta=None,
     node=None,
     flags=revlog.REVIDX_DEFAULT_FLAGS,
-    **kwds
+    **kwds,
 ):
     threshold = self.opener.options["lfsthreshold"]
     textlen = len(text)
@@ -136,7 +136,7 @@ def filelogaddrevision(
         cachedelta=cachedelta,
         node=node,
         flags=flags,
-        **kwds
+        **kwds,
     )
 
 

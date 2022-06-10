@@ -145,7 +145,7 @@ def expushop(
     bookmarks=(),
     pushvars=None,
     forcedmissing=None,
-    **kwargs
+    **kwargs,
 ):
     orig(
         pushop,

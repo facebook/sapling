@@ -445,7 +445,7 @@ class HTTPConnection(object):
         proxy_headers=None,
         ssl_wrap_socket=None,
         unix_socket_path=None,
-        **ssl_opts
+        **ssl_opts,
     ):
         """Create a new HTTPConnection.
 

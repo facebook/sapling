@@ -495,7 +495,7 @@ class hgwebdir(object):
             pathdef=hgweb_mod.makebreadcrumb("/" + subdir, self.prefix),
             sortcolumn=sortcolumn,
             descending=descending,
-            **dict(sort)
+            **dict(sort),
         )
 
     def templater(self, req, nonce):

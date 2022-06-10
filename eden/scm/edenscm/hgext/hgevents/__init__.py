@@ -118,7 +118,7 @@ def wrapupdate(
     labels=None,
     matcher=None,
     wc=None,
-    **kwargs
+    **kwargs,
 ):
     if wc and wc.isinmemory():
         # If the working context isn't on disk, there's no need to invoke
@@ -133,7 +133,7 @@ def wrapupdate(
             labels,
             matcher,
             wc=wc,
-            **kwargs
+            **kwargs,
         )
     distance = 0
     partial = True
@@ -161,7 +161,7 @@ def wrapupdate(
             mergeancestor,
             labels,
             matcher,
-            **kwargs
+            **kwargs,
         )
 
 

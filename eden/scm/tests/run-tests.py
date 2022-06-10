@@ -2679,7 +2679,7 @@ class TestSuite(unittest.TestSuite):
         loadtest=None,
         showchannels=False,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """Create a new instance that can run tests with a configuration.
 
@@ -3813,7 +3813,7 @@ class TestRunner(object):
             useipv6=useipv6,
             watchman=self._watchman,
             options=self.options,
-            **kwds
+            **kwds,
         )
         t.should_reload = True
         return t
