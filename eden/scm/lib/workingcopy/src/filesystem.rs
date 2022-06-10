@@ -26,6 +26,7 @@ use crate::filechangedetector::FileChangeDetector;
 use crate::filechangedetector::FileChangeDetectorTrait;
 use crate::filechangedetector::FileChangeResult;
 use crate::filechangedetector::HgModifiedTime;
+use crate::filechangedetector::ResolvedFileChangeResult;
 use crate::walker::WalkEntry;
 use crate::walker::Walker;
 
@@ -239,7 +240,13 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                 let iter = self
                     .file_change_detector
                     .resolve_maybes()
-                    .map(|result| result.map(PendingChangeResult::File));
+                    .filter_map(|result| match result {
+                        Ok(ResolvedFileChangeResult::Yes(change_type)) => {
+                            Some(Ok(PendingChangeResult::File(change_type)))
+                        }
+                        Ok(ResolvedFileChangeResult::No(_)) => None,
+                        Err(e) => Some(Err(e)),
+                    });
                 Box::new(iter)
             })
             .next()

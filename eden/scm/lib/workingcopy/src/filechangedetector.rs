@@ -71,10 +71,15 @@ pub enum FileChangeResult {
     Maybe,
 }
 
+pub enum ResolvedFileChangeResult {
+    Yes(ChangeType),
+    No(RepoPathBuf),
+}
+
 pub trait FileChangeDetectorTrait {
     fn has_changed(&mut self, path: &RepoPathBuf) -> Result<FileChangeResult>;
 
-    fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<ChangeType>> + Send>;
+    fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<ResolvedFileChangeResult>> + Send>;
 }
 
 pub struct FileChangeDetector {
@@ -246,8 +251,8 @@ impl FileChangeDetectorTrait for FileChangeDetector {
         self.has_changed_with_fresh_metadata(path, metadata)
     }
 
-    fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<ChangeType>> + Send> {
-        let mut results = Vec::<Result<ChangeType>>::new();
+    fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<ResolvedFileChangeResult>> + Send> {
+        let mut results = Vec::<Result<ResolvedFileChangeResult>>::new();
 
         // First, get the keys for the paths from the current manifest.
         let matcher = ExactMatcher::new(self.lookups.iter());
@@ -276,24 +281,26 @@ impl FileChangeDetectorTrait for FileChangeDetector {
             self.store
                 .read_file_contents(keys)
                 .await
-                .filter_map(|result| async {
+                .map(|result| {
                     let (expected, key) = match result {
                         Ok(x) => x,
-                        Err(e) => return Some(Err(e)),
+                        Err(e) => return Err(e),
                     };
                     let actual = match vfs.read(&key.path) {
                         Ok(x) => x,
                         Err(e) => match e.downcast_ref::<std::io::Error>() {
                             Some(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                                return Some(Ok(ChangeType::Deleted(key.path)));
+                                return Ok(ResolvedFileChangeResult::Yes(ChangeType::Deleted(
+                                    key.path,
+                                )));
                             }
-                            _ => return Some(Err(e)),
+                            _ => return Err(e),
                         },
                     };
                     if expected == actual {
-                        None
+                        Ok(ResolvedFileChangeResult::No(key.path))
                     } else {
-                        Some(Ok(ChangeType::Changed(key.path)))
+                        Ok(ResolvedFileChangeResult::Yes(ChangeType::Changed(key.path)))
                     }
                 })
                 .collect::<Vec<_>>()

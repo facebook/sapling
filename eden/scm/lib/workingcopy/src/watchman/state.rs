@@ -16,6 +16,8 @@ use watchman_client::prelude::*;
 
 use crate::filechangedetector::FileChangeDetectorTrait;
 use crate::filechangedetector::FileChangeResult;
+use crate::filechangedetector::ResolvedFileChangeResult;
+use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
 
 use super::treestate::WatchmanTreeStateRead;
@@ -106,15 +108,26 @@ impl WatchmanState {
                 _ => None,
             })
             .collect::<Vec<_>>();
-
-        pending_changes.extend(
-            self.file_change_detector
-                // TODO: Resolve maybes needs to return unchanged files so that
-                // we can also clear those from treestate.
-                .resolve_maybes()
-                .map(|result| result.map(PendingChangeResult::File)),
-        );
         pending_changes.extend(errors.into_iter().map(Err));
+
+        for result in self.file_change_detector.resolve_maybes() {
+            match result {
+                Ok(ResolvedFileChangeResult::Yes(change)) => {
+                    match change {
+                        ChangeType::Changed(ref path) | ChangeType::Deleted(ref path) => {
+                            needs_mark.push(path.clone())
+                        }
+                    };
+                    pending_changes.push(Ok(PendingChangeResult::File(change)));
+                }
+                Ok(ResolvedFileChangeResult::No(path)) => {
+                    if self.treestate_needs_check.contains(&path) {
+                        needs_clear.push(path);
+                    }
+                }
+                Err(e) => pending_changes.push(Err(e)),
+            }
+        }
 
         for path in needs_clear {
             if let Err(e) = treestate.clear_needs_check(&path) {
@@ -146,6 +159,7 @@ mod tests {
 
     use crate::filechangedetector::FileChangeDetectorTrait;
     use crate::filechangedetector::FileChangeResult;
+    use crate::filechangedetector::ResolvedFileChangeResult;
     use crate::filesystem::ChangeType;
     use crate::filesystem::PendingChangeResult;
     use crate::watchman::state::StatusQuery;
@@ -219,7 +233,9 @@ mod tests {
             Ok(FileChangeResult::No)
         }
 
-        fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<ChangeType>> + Send> {
+        fn resolve_maybes(
+            &self,
+        ) -> Box<dyn Iterator<Item = Result<ResolvedFileChangeResult>> + Send> {
             Box::new(vec![].into_iter())
         }
     }
