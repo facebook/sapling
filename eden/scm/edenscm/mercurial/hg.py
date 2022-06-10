@@ -784,7 +784,7 @@ def clone(
             destpeer.close()
         if cleandir is not None:
             shutil.rmtree(cleandir, True)
-    return srcpeer, destpeer
+    return destpeer
 
 
 def _writehgrc(repo, abspath, configfiles):

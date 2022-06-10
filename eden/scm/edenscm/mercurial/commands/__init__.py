@@ -46,6 +46,7 @@ from .. import (
     help,
     hg,
     hintutil,
+    hook,
     lock as lockmod,
     match as matchmod,
     merge as mergemod,
@@ -1542,7 +1543,7 @@ def clone(ui, source, dest=None, **opts):
             shallow=opts.get("shallow"),
         )
 
-    return r is None
+    return r
 
 
 @command(

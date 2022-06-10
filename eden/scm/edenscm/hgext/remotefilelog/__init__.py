@@ -332,7 +332,7 @@ def cloneshallow(orig, ui, source, *args, **opts):
 
             wrapfunction(localrepo.localrepository, "stream_in", stream_in_shallow)
 
-    orig(ui, source, *args, **opts)
+    return orig(ui, source, *args, **opts)
 
 
 def debugdatashallow(orig, *args, **kwds):

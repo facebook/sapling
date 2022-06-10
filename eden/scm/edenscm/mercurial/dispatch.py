@@ -962,6 +962,12 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
         hintutil.loadhintconfig(lui)
         ui.log("jobid", jobid=encoding.environ.get("HG_JOB_ID", "unknown"))
         ret = _runcommand(ui, options, cmd, d)
+
+        # Special case clone return value so we have access to the new repo.
+        if cmd == "clone":
+            repo = ret
+            ret = 0 if repo else 1
+
         # run post-hook, passing command result
         hook.hook(
             lui,
