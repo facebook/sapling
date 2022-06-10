@@ -554,7 +554,7 @@ Test amending past other changes to the file
   $ hg amend --to "desc('base')"
   patching file baz
   Hunk #1 succeeded at 2 with fuzz 1 (offset 0 lines).
-# BUG: "add begin_X" should not overwrite the added baz_end_X
+  merging baz
   $ hg log -r '::. & (desc("base") + desc("add begin_X"))' -T '{desc}\n' -p
   base
   diff --git a/baz b/baz
@@ -576,8 +576,7 @@ Test amending past other changes to the file
   +baz_begin_X
    
    
-  -baz_end_X
-  +baz_end
+   baz_end_X
   
 
 

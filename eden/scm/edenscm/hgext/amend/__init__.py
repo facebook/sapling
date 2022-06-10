@@ -531,7 +531,7 @@ def amendtocommit(ui, repo, commitspec, pats=None, opts=None):
             raise error.Abort(_("cannot amend public changesets"))
 
         # Generate patch from wctx and apply to dest commit.
-        mergedctx = mirrorwithmetadata(dest, "amend")
+        mergedctx = mirrorwithmetadata(dest, dest.p1(), "amend")
         wctx = repo[None]
         matcher = scmutil.match(wctx, pats, opts) if pats or opts else None
 
@@ -594,7 +594,7 @@ def inmemorymerge(ui, repo, src, dest, base):
     except error.InMemoryMergeConflictsError as ex:
         raise error.Abort(_("amend would conflict in %s") % ", ".join(ex.paths))
 
-    mergedctx = mirrorwithmetadata(src, "rebase")
+    mergedctx = mirrorwithmetadata(src, dest, "rebase")
 
     for path in manifestbuilder.removed():
         mergedctx[path] = None
@@ -609,12 +609,14 @@ def inmemorymerge(ui, repo, src, dest, base):
     return mergedctx
 
 
-def mirrorwithmetadata(ctx, op):
+def mirrorwithmetadata(ctx, pctx, op):
     extra = ctx.extra().copy()
     extra[op + "_source"] = ctx.hex()
     mutinfo = mutation.record(ctx.repo(), extra, [ctx.node()], op)
     loginfo = {"predecessors": ctx.hex(), "mutation": op}
-    return context.memctx.mirror(ctx, mutinfo=mutinfo, loginfo=loginfo, extra=extra)
+    return context.memctx.mirror(
+        ctx, parents=[pctx], mutinfo=mutinfo, loginfo=loginfo, extra=extra
+    )
 
 
 def wraprebase(orig, ui, repo, *pats, **opts):
