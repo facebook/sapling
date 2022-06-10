@@ -29,10 +29,10 @@ query_result_type! {
 }
 
 pub struct WatchmanState {
-    needs_check: HashSet<RepoPathBuf>,
+    treestate_needs_check: HashSet<RepoPathBuf>,
     file_change_detector: Box<dyn FileChangeDetectorTrait>,
     clock: Option<Clock>,
-    errors: Vec<Error>,
+    treestate_errors: Vec<Error>,
 }
 
 impl WatchmanState {
@@ -52,10 +52,10 @@ impl WatchmanState {
         let errors = errors.into_iter().map(Result::unwrap_err).collect();
 
         Ok(WatchmanState {
-            needs_check,
+            treestate_needs_check: needs_check,
             file_change_detector: Box::new(file_change_detector),
             clock: treestate.get_clock()?,
-            errors,
+            treestate_errors: errors,
         })
     }
 
@@ -66,27 +66,42 @@ impl WatchmanState {
     pub fn merge(
         mut self,
         result: QueryResult<StatusQuery>,
-        mut _treestate: impl WatchmanTreeStateWrite,
+        mut treestate: impl WatchmanTreeStateWrite,
     ) -> Result<Vec<Result<PendingChangeResult>>> {
-        self.clock = Some(result.clock);
-
-        let (new_check, new_errors): (Vec<_>, Vec<_>) = result
+        let (needs_check, errors): (Vec<_>, Vec<_>) = result
             .files
-            .unwrap_or(vec![])
+            .unwrap_or_default()
             .into_iter()
             .map(|query| RepoPathBuf::try_from(query.name.into_inner()))
             .partition(Result::is_ok);
 
-        self.needs_check
-            .extend(new_check.into_iter().map(Result::unwrap));
-        self.errors
-            .extend(new_errors.into_iter().map(|e| anyhow!(e.unwrap_err())));
+        let mut needs_check = needs_check
+            .into_iter()
+            .map(Result::unwrap)
+            .collect::<HashSet<_>>();
+        needs_check.extend(self.treestate_needs_check.iter().cloned());
 
-        let mut pending_changes = self
-            .needs_check
+        let mut errors = errors
+            .into_iter()
+            .map(|e| anyhow!(e.unwrap_err()))
+            .collect::<Vec<_>>();
+        errors.extend(self.treestate_errors.into_iter());
+
+        let mut needs_clear: Vec<RepoPathBuf> = vec![];
+        let mut needs_mark: Vec<RepoPathBuf> = vec![];
+        let mut pending_changes = needs_check
             .into_iter()
             .filter_map(|path| match self.file_change_detector.has_changed(&path) {
-                Ok(FileChangeResult::Yes(change)) => Some(Ok(PendingChangeResult::File(change))),
+                Ok(FileChangeResult::Yes(change)) => {
+                    needs_mark.push(path);
+                    Some(Ok(PendingChangeResult::File(change)))
+                }
+                Ok(FileChangeResult::No) => {
+                    if self.treestate_needs_check.contains(&path) {
+                        needs_clear.push(path);
+                    }
+                    None
+                }
                 Err(e) => Some(Err(e)),
                 _ => None,
             })
@@ -94,11 +109,27 @@ impl WatchmanState {
 
         pending_changes.extend(
             self.file_change_detector
+                // TODO: Resolve maybes needs to return unchanged files so that
+                // we can also clear those from treestate.
                 .resolve_maybes()
                 .map(|result| result.map(PendingChangeResult::File)),
         );
+        pending_changes.extend(errors.into_iter().map(Err));
 
-        pending_changes.extend(self.errors.into_iter().map(Err));
+        for path in needs_clear {
+            if let Err(e) = treestate.clear_needs_check(&path) {
+                // We can still build a valid result if we fail to clear the
+                // needs check flag. Propagate the error to the caller but allow
+                // the merge to continue.
+                pending_changes.push(Err(e));
+            }
+        }
+
+        for path in needs_mark {
+            treestate.mark_needs_check(&path)?;
+        }
+
+        treestate.set_clock(result.clock)?;
 
         Ok(pending_changes)
     }
@@ -158,15 +189,15 @@ mod tests {
 
     impl WatchmanTreeStateWrite for WatchmanStateTestTreeState {
         fn mark_needs_check(&mut self, _path: &RepoPathBuf) -> Result<()> {
-            todo!();
+            Ok(())
         }
 
         fn clear_needs_check(&mut self, _path: &RepoPathBuf) -> Result<()> {
-            todo!();
+            Ok(())
         }
 
         fn set_clock(&mut self, _clock: Clock) -> Result<()> {
-            todo!();
+            Ok(())
         }
     }
 
