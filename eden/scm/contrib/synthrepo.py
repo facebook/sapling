@@ -406,7 +406,7 @@ def synthesize(ui, repo, descpath, **opts):
         message = "synthesized wide repo with %d files" % (len(files),)
         mc = context.memctx(
             repo,
-            [pctx.node(), nullid],
+            [pctx],
             message,
             pycompat.iterkeys(files),
             filectxfn,
@@ -451,7 +451,7 @@ def synthesize(ui, repo, descpath, **opts):
         else:
             r2, p2 = nullrev, nullid
 
-        pl = [p1, p2]
+        pl = [repo[p1], repo[p2]]
         pctx = repo[r1]
         mf = pctx.manifest()
         mfk = mf.keys()

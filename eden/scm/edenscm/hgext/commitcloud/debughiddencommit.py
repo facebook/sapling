@@ -59,7 +59,7 @@ def debughiddencommit(ui, repo, *pats, **opts):
 
         node = memctx(
             repo,
-            [wctx.p1().node(), nullid],
+            [wctx.p1()],
             "Ephemeral commit",
             sorted(files),
             getfilectx,

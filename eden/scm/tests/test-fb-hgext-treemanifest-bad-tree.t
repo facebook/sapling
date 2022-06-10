@@ -26,7 +26,7 @@ Create an empty commit with a misconstructed memctx in the same transaction as a
   >     with repo.wlock(), repo.lock(), repo.transaction('tr'):
   >         p1 = context.memctx(
   >             repo,  # repository
-  >             (repo['.'].node(), None),  # parents
+  >             (repo['.'],),  # parents
   >             "valid commit",  # commit message
   >             ["a"],  # files affected by this change
   >             getfile,  # fn - see above
@@ -35,7 +35,7 @@ Create an empty commit with a misconstructed memctx in the same transaction as a
   > 
   >         context.memctx(
   >             repo,  # repository
-  >             (repo[p1].node(), None),  # parents
+  >             (repo[p1],),  # parents
   >             "empty commit",  # commit message
   >             ["fake"],  # files affected by this change
   >             getfile,  # fn - see above

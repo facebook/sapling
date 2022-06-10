@@ -277,13 +277,15 @@ def _mctxstatus(ctx, matcher=None):
     mutpred = mutpredhex and bin(mutpredhex)
     predctx = mutpred and mutpred in repo and repo[mutpred] or None
 
-    if predctx and (predctx.p1() == ctx.p1() or ctx.p1().node() in _nodemirrored):
-        # "Amend" or stack amend case. Compare with with pred, not p1
-        status = _status(predctx, ctx)
-    else:
-        # Other cases. Compare with mctx.p1.
-        # _status is a fast path.
-        status = mctx._status
+    # By default, consider all changes in this commit as needing syncing.
+    status = mctx._status
+
+    # But, if there was an amend/absorb predecessor commit, remove any changes
+    # that are not different from the predecessor (i.e. things not changed in
+    # the amend/absorb) and add any removes that happened since the predecessor.
+    if predctx:
+        if predctx.p1() == ctx.p1() or ctx.p1().node() in _nodemirrored:
+            status = _adjuststatus(status, predctx, ctx)
 
     return mctx, status
 
@@ -416,19 +418,18 @@ def _mirrorpath(srcdir, dstdir, src):
         return None
 
 
-def _status(ctx1, ctx2):
-    """Similar to ctx1.status(ctx2) but remove false positive modifies.
+def _adjuststatus(status, ctx1, ctx2):
+    """Adjusts the status result to remove item that don't differ between ctx1
+    and ctx2
 
-    The false positive might happen if a file in a "commitablectx" changes
-    back to match its p1 content. Context like `memctx` currently does not
-    read file content in its `status` calculation.
-
-    This might belong to ctx.status(). However, the performance penalty might
-    be undesirable.
+    `status` is the memctx status for a reparented mirror of ctx2. `ctx1` is the
+    predecessor to `ctx2`. So this function adjusts status to remove items that
+    didn't change between the predecessor and the successor, and adds items that
+    existed in the predecessor but not the successor.
     """
-    status = ctx1.status(ctx2)
     newmodified = []
     newadded = []
+    newremoved = list(status.removed)
     for oldpaths, newpaths in [
         (status.modified, newmodified),
         (status.added, newadded),
@@ -441,7 +442,12 @@ def _status(ctx1, ctx2):
                 if f1.flags() == f2.flags() and not f1.cmp(f2):
                     continue
             newpaths.append(path)
-    return scmutil.status(newmodified, newadded, status.removed, [], [], [], [])
+
+    for oldpath in ctx1.files():
+        if oldpath not in status.removed and oldpath not in ctx2:
+            newremoved.append(oldpath)
+
+    return scmutil.status(newmodified, newadded, newremoved, [], [], [], [])
 
 
 def _commitctx(orig, self, ctx, *args, **kwargs):

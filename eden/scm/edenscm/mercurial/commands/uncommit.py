@@ -144,7 +144,7 @@ def commitfilteredctx(repo, ctx, match, allowempty):
 
     new = context.memctx(
         repo,
-        parents=[base.node(), nullid],
+        parents=[base],
         text=ctx.description(),
         files=files,
         filectxfn=filectxfn,

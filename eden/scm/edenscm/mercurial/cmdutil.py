@@ -1650,7 +1650,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                     editor = getcommiteditor(editform="import.bypass")
                 memctx = context.memctx(
                     repo,
-                    (p1.node(), p2.node()),
+                    (p1, p2),
                     message,
                     files=files,
                     filectxfn=store,
@@ -3696,7 +3696,7 @@ def amend(ui, repo, old, extra, pats, opts):
 
         new = context.memctx(
             repo,
-            parents=[base.node(), old.p2().node()],
+            parents=[base, old.p2()],
             text=message,
             files=files,
             filectxfn=filectxfn,

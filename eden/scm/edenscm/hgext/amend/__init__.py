@@ -560,7 +560,7 @@ def amendtocommit(ui, repo, commitspec, pats=None, opts=None):
         # parent as we go.
         for i, memctx in enumerate(memctxs):
             if i > 0:
-                memctx = context.memctx.mirror(memctx, parentnodes=(parentnode, nullid))
+                memctx = context.memctx.mirror(memctx, parents=[repo[parentnode]])
             parentnode = memctx.commit()
             mapping[mappednodes[i]] = (parentnode,)
 

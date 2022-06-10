@@ -708,7 +708,7 @@ class rebaseruntime(object):
 
             memctx = context.memctx(
                 repo,
-                parents=(p1, p2),
+                parents=(repo[p1], repo[p2]),
                 text=commitmsg,
                 files=sorted(removed + modified),
                 filectxfn=getfilectx,
@@ -1531,7 +1531,7 @@ def concludememorynode(
 
         memctx = wctx.tomemctx(
             commitmsg,
-            parents=(p1, p2),
+            parents=(repo[p1], repo[p2]),
             date=date,
             extra=extra,
             user=ctx.user(),

@@ -219,7 +219,7 @@ def overlaycontext(
     memworkingcopy overrides file contents.
     """
     mctx = context.memctx.mirror(
-        ctx, parentnodes=parents, extra=extra, loginfo=loginfo, mutinfo=mutinfo
+        ctx, parents=parents, extra=extra, loginfo=loginfo, mutinfo=mutinfo
     )
     for path, data in memworkingcopy.items():
         fctx = context.overlayfilectx(ctx[path], datafunc=lambda data=data: data)
@@ -814,7 +814,7 @@ class fixupstate(object):
         the commit is a clone from ctx, with a (optionally) different p1, and
         different file contents replaced by memworkingcopy.
         """
-        parents = p1 and (p1, node.nullid)
+        parents = p1 and [self.repo[p1]]
         extra = ctx.extra()
         mutinfo = mutation.record(self.repo, extra, [ctx.node()], "absorb")
         loginfo = {"checkoutidentifier": self.checkoutidentifier}

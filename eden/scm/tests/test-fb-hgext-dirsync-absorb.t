@@ -77,10 +77,10 @@ Absorb triggers mirroring
   2 changesets affected
   * B (glob)
   * A (glob)
-  mirrored changes in 'dir1/C' to 'dir2/C'
-  mirrored changes in 'dir1/D' to 'dir2/D'
-  mirrored changes in 'dir2/A' to 'dir1/A'
-  mirrored changes in 'dir1/B' to 'dir2/B'
+  mirrored adding 'dir1/C' to 'dir2/C'
+  mirrored adding 'dir1/D' to 'dir2/D'
+  mirrored adding 'dir2/A' to 'dir1/A'
+  mirrored adding 'dir1/B' to 'dir2/B'
   mirrored changes in 'dir1/C' to 'dir2/C'
   mirrored changes in 'dir1/D' to 'dir2/D'
   mirrored changes in 'dir2/A' to 'dir1/A'
@@ -205,7 +205,7 @@ Only changes the 1st commit:
   1 changeset affected
   * A (glob)
   apply changes (yn)?  y
-  mirrored changes in 'dir1/A' to 'dir2/A'
+  mirrored adding 'dir1/A' to 'dir2/A'
   mirrored changes in 'dir1/A' to 'dir2/A'
   DEBUG edenscm::hgext::dirsync: rewrite mirrored dir2/A
   1 of 1 chunk applied
@@ -278,7 +278,7 @@ There is no "rewrite mirrored dir2/A" message:
   >     y   : 3
   > EOF
   $ LOG='edenscm::hgext::dirsync=debug' HGEDITOR='cat editortext >' hg absorb --edit-lines -a dir1/A
-  mirrored changes in 'dir1/A' to 'dir2/A'
+  mirrored adding 'dir1/A' to 'dir2/A'
   1 of 1 chunk applied
 
 and status is clean

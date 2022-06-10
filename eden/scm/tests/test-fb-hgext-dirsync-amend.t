@@ -69,7 +69,7 @@
   $ echo b >> dir1/b
   $ hg commit --amend -I dir1/a
   amending changeset * (glob)
-  mirrored changes in 'dir1/a' to 'dir2/subdir/a'
+  mirrored adding 'dir1/a' to 'dir2/subdir/a'
   committing files:
   dir1/a
   dir1/b
@@ -110,7 +110,7 @@
   $ echo a >> dir1/a
   $ hg commit --amend dir1/b
   amending changeset * (glob)
-  mirrored changes in 'dir1/b' to 'dir2/subdir/b'
+  mirrored adding 'dir1/b' to 'dir2/subdir/b'
   committing files:
   dir1/a
   dir1/b
@@ -155,7 +155,7 @@
   $ echo b >> dir1/b
   $ hg commit --amend -X dir1/a
   amending changeset * (glob)
-  mirrored changes in 'dir1/b' to 'dir2/subdir/b'
+  mirrored adding 'dir1/b' to 'dir2/subdir/b'
   committing files:
   dir1/a
   dir1/b

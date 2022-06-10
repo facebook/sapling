@@ -531,6 +531,54 @@ Test rebasing across multiple changes to multiple files.
      +baz
   
 
+Test amending past other changes to the file
+  $ newrepo
+  $ echo baz_begin > baz
+  $ echo >> baz
+  $ echo >> baz
+  $ echo baz_end >> baz
+  $ hg ci -m "base" -Aq
+  $ echo >> foo
+  $ hg ci -Aqm "intermediate"
+  $ echo baz_begin_X > baz
+  $ echo >> baz
+  $ echo >> baz
+  $ echo baz_end >> baz
+  $ hg ci -m "add begin_X" -Aq
+  $ echo >> foo
+  $ hg ci -Aqm "intermediate"
+  $ echo baz_begin_X > baz
+  $ echo >> baz
+  $ echo >> baz
+  $ echo baz_end_X >> baz
+  $ hg amend --to "desc('base')"
+  patching file baz
+  Hunk #1 succeeded at 2 with fuzz 1 (offset 0 lines).
+# BUG: "add begin_X" should not overwrite the added baz_end_X
+  $ hg log -r '::. & (desc("base") + desc("add begin_X"))' -T '{desc}\n' -p
+  base
+  diff --git a/baz b/baz
+  new file mode 100644
+  --- /dev/null
+  +++ b/baz
+  @@ -0,0 +1,4 @@
+  +baz_begin
+  +
+  +
+  +baz_end_X
+  
+  add begin_X
+  diff --git a/baz b/baz
+  --- a/baz
+  +++ b/baz
+  @@ -1,4 +1,4 @@
+  -baz_begin
+  +baz_begin_X
+   
+   
+  -baz_end_X
+  +baz_end
+  
 
 
 Test various error cases.

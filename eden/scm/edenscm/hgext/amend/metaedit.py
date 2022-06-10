@@ -287,7 +287,7 @@ def metaedit(ui, repo, templ, *revs, **opts):
                         replacemap.get(c.p2().node(), c.p2().node()),
                     ]
                     newid, created = common.metarewrite(
-                        repo, c, bases, commitopts=_commitopts
+                        repo, c, [repo[b] for b in bases], commitopts=_commitopts
                     )
                     if created:
                         replacemap[c.node()] = newid
@@ -328,7 +328,7 @@ def metaedit(ui, repo, templ, *revs, **opts):
                     root,
                     allctx,
                     head,
-                    [root.p1().node(), root.p2().node()],
+                    [root.p1(), root.p2()],
                     commitopts=commitopts,
                     mutop="metaedit",
                 )

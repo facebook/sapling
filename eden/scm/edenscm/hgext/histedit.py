@@ -703,7 +703,7 @@ def collapse(repo, first, commitopts, skipprompt=False):
     extra = commitopts.get("extra")
     mutinfo = commitopts.get("mutinfo")
 
-    parents = (first.p1().node(), first.p2().node())
+    parents = (first.p1(), first.p2())
     editor = None
     if not skipprompt:
         editor = cmdutil.getcommiteditor(edit=True, editform="histedit.fold")

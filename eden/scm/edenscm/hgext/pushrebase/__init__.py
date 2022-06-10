@@ -1145,7 +1145,7 @@ def _graft(op, rev, mapping, lastdestnode, getcommitdate):
 
     return _commit(
         repo,
-        [newp1, newp2],
+        [repo[newp1], repo[newp2]],
         rev.description(),
         files,
         getfilectx,

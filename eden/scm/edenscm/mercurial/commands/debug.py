@@ -349,11 +349,11 @@ def debugbuilddag(
                         return None
 
                     if len(ps) == 0 or ps[0] < 0:
-                        pars = [None, None]
+                        pars = []
                     elif len(ps) == 1:
-                        pars = [nodeids[ps[0]], None]
+                        pars = [repo[nodeids[ps[0]]]]
                     else:
-                        pars = [nodeids[p] for p in ps]
+                        pars = [repo[nodeids[p]] for p in ps]
                     cx = context.memctx(
                         repo,
                         pars,

@@ -276,7 +276,7 @@ class pushrequest(object):
 
         return context.memctx(
             repo,
-            [ctx.node(), nullid],
+            [ctx],
             commit.desc,
             sorted(commit.filechanges),
             getfilectx,

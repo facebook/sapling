@@ -148,7 +148,7 @@ def fold(ui, repo, *revs, **opts):
                 root,
                 allctx,
                 head,
-                [root.p1().node(), root.p2().node()],
+                [root.p1(), root.p2()],
                 commitopts=commitopts,
                 mutop="fold",
             )

@@ -36,7 +36,7 @@ def filectxfn(repo, memctx, path):
 
 
 ctx = context.memctx(
-    repo, ["tip", None], encoding.tolocal("Gr\xc3\xbcezi!"), ["foo"], filectxfn
+    repo, [repo["tip"]], encoding.tolocal("Gr\xc3\xbcezi!"), ["foo"], filectxfn
 )
 ctx.commit()
 
@@ -54,7 +54,7 @@ def getfilectx(repo, memctx, f):
 ctxa = repo.changectx(0)
 ctxb = context.memctx(
     repo,
-    [ctxa.node(), None],
+    [ctxa],
     "test diff",
     ["foo"],
     getfilectx,
@@ -212,7 +212,7 @@ def copyctx(newrepo, ctx):
             return None
         return context.overlayfilectx(ctx[path])
 
-    return context.memctx(newrepo, [p1, None], desc, files, getfctx)
+    return context.memctx(newrepo, [newrepo[p1]], desc, files, getfctx)
 
 
 for rev in repo:

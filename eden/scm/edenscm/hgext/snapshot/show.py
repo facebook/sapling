@@ -26,7 +26,7 @@ def _snapshot2ctx(repo, snapshot):
     if parent not in repo:
         repo.pull(headnodes=(parent,))
 
-    parents = (parent, nullid)
+    parents = [repo[parent]]
     path2filechange = {f[0]: f[1] for f in snapshot["file_changes"]}
 
     def token2cacheable(token):
