@@ -2176,7 +2176,7 @@ def debugsparseexplainmatch(ui, repo, *args, **opts):
     for f in files:
         explanation = matcher.explain(f)
         if not explanation:
-            ui.write(_("{}: excluded by default".format(f)))
+            ui.write(_("{}: excluded by default\n".format(f)))
         else:
             if "\n" in explanation:
                 ui.write(_("%s:\n  %s\n") % (f, explanation.replace("\n", "\n  ")))
