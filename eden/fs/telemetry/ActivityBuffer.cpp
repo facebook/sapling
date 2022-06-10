@@ -9,12 +9,18 @@
 
 namespace facebook::eden {
 
-ActivityBuffer::ActivityBuffer(uint32_t /* maxEvents */) {}
+ActivityBuffer::ActivityBuffer(uint32_t maxEvents) : maxEvents_(maxEvents) {}
 
-void ActivityBuffer::addEvent(InodeMaterializeEvent /* event */) {}
+void ActivityBuffer::addEvent(InodeMaterializeEvent event) {
+  auto events = events_.wlock();
+  events->push_back(std::move(event));
+  if (events->size() > maxEvents_) {
+    events->pop_front();
+  }
+}
 
-std::list<InodeMaterializeEvent> ActivityBuffer::getAllEvents() {
-  return events_;
+std::deque<InodeMaterializeEvent> ActivityBuffer::getAllEvents() {
+  return *events_.rlock();
 }
 
 } // namespace facebook::eden

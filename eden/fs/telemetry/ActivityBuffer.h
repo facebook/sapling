@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/Synchronized.h>
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodeUtils.h"
 
@@ -53,14 +54,14 @@ class ActivityBuffer {
   void addEvent(InodeMaterializeEvent event);
 
   /**
-   * Returns an std::list containing all InodeMaterializeEvents stored in the
+   * Returns an std::deque containing all InodeMaterializeEvents stored in the
    * ActivityBuffer.
    */
-  std::list<InodeMaterializeEvent> getAllEvents();
+  std::deque<InodeMaterializeEvent> getAllEvents();
 
  private:
-  // uint32_t maxEvents_;
-  std::list<InodeMaterializeEvent> events_;
+  uint32_t maxEvents_;
+  folly::Synchronized<std::deque<InodeMaterializeEvent>> events_;
 };
 
 } // namespace facebook::eden

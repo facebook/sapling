@@ -31,8 +31,8 @@ TEST(ActivityBufferTest, buffer_zero_capacity) {
   buff.addEvent(event);
 
   // Setting the ActivityBuffer max size to 0 means that events never get stored
-  // EXPECT_TRUE(buff.getAllEvents().empty());
-  // EXPECT_FALSE(buffer_contains_event_with_ino(buff, InodeNumber(1)));
+  EXPECT_TRUE(buff.getAllEvents().empty());
+  EXPECT_FALSE(buffer_contains_event_with_ino(buff, InodeNumber(1)));
 }
 
 TEST(ActivityBufferTest, add_events) {
@@ -44,14 +44,14 @@ TEST(ActivityBufferTest, add_events) {
         time, InodeNumber(i), InodeType::File, std::chrono::microseconds(1000)};
     buff.addEvent(event);
 
-    // EXPECT_EQ(buff.getAllEvents().size(), i);
-    // EXPECT_TRUE(buffer_contains_event_with_ino(buff, event.ino));
+    EXPECT_EQ(buff.getAllEvents().size(), i);
+    EXPECT_TRUE(buffer_contains_event_with_ino(buff, event.ino));
   }
 
   // Check in this case all events are still stored and nothing was evicted yet
-  // for (uint64_t i = 1; i <= kMaxBufLength; i++) {
-  //   EXPECT_TRUE(buffer_contains_event_with_ino(buff, InodeNumber(i)));
-  // }
+  for (uint64_t i = 1; i <= kMaxBufLength; i++) {
+    EXPECT_TRUE(buffer_contains_event_with_ino(buff, InodeNumber(i)));
+  }
 }
 
 TEST(ActivityBufferTest, add_exceed_capacity) {
@@ -66,9 +66,9 @@ TEST(ActivityBufferTest, add_exceed_capacity) {
 
   // Check that the buffer remained at its max size of kMaxBufLength and that
   // the oldest event (which had InodeNumber(1)) has been removed as expected
-  // EXPECT_EQ(buff.getAllEvents().size(), kMaxBufLength);
-  // EXPECT_FALSE(buffer_contains_event_with_ino(buff, InodeNumber(1)));
-  // for (uint64_t i = 2; i <= kMaxBufLength + 1; i++) {
-  //   EXPECT_TRUE(buffer_contains_event_with_ino(buff, InodeNumber(i)));
-  // }
+  EXPECT_EQ(buff.getAllEvents().size(), kMaxBufLength);
+  EXPECT_FALSE(buffer_contains_event_with_ino(buff, InodeNumber(1)));
+  for (uint64_t i = 2; i <= kMaxBufLength + 1; i++) {
+    EXPECT_TRUE(buffer_contains_event_with_ino(buff, InodeNumber(i)));
+  }
 }
