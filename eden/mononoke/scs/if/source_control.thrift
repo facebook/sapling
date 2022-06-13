@@ -2024,7 +2024,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: MegarepoAddConfigParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
 
-  /// Add a new unused config version to the library of versions
+  /// Read the target config for a particular commit
   MegarepoReadConfigResponse megarepo_read_target_config(
     1: MegarepoReadConfigParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
