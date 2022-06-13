@@ -21,7 +21,7 @@
   >         interpreter = os.path.basename(content.split(b"\n")[0].split()[-1])
   >     else:
   >         interpreter = None
-  >     if ispy and isexec and interpreter not in {b"python", b"python2", b"python3"}:
+  >     if ispy and isexec and interpreter not in {b"python", b"python2", b"python3", b"debugpython"}:
   >         print("%s is a Python script but does not have Python interpreter specified" % path)
   >     elif issh and isexec and interpreter not in {b"sh", b"bash", b"zsh", b"fish"}:
   >         print("%s is a Shell script but does not have Shell interpreter specified" % path)
