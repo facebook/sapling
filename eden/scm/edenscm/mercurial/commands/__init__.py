@@ -3341,7 +3341,7 @@ def identify(
     branch=None,
     tags=None,
     bookmarks=None,
-    **opts
+    **opts,
 ):
     """identify the working directory or specified revision
 
@@ -6140,7 +6140,7 @@ def update(
     merge=None,
     tool=None,
     inactive=None,
-    **opts
+    **opts,
 ):
     """check out a specific commit
 

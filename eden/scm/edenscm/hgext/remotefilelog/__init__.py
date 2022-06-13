@@ -675,7 +675,7 @@ def onetimeclientsetup(ui):
         copy,
         getfilectx,
         *args,
-        **kwargs
+        **kwargs,
     ):
         if shallowrepo.requirement in repo.requirements:
             prefetch = []
@@ -704,7 +704,7 @@ def onetimeclientsetup(ui):
             copy,
             getfilectx,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     wrapfunction(patch, "trydiff", trydiff)
