@@ -16,11 +16,31 @@ use permission_checker::{
     BoxPermissionChecker, MononokeIdentity, MononokeIdentitySet, PermissionCheckerBuilder,
 };
 
+/// Repository permissions checks
+///
+/// Perform checks against the various access control lists associated with
+/// the repository.
 #[facet::facet]
 #[async_trait]
 #[auto_impl(&, Arc, Box)]
 pub trait RepoPermissionChecker: Send + Sync + 'static {
+    /// Check whether the given identities are permitted to **read** the
+    /// repository.
     async fn check_if_read_access_allowed(&self, identities: &MononokeIdentitySet) -> Result<bool>;
+
+    /// Check whether the given identities are permitted to make **draft**
+    /// changes to the repository.  This means creating commit cloud commits
+    /// and modifying scratch bookmarks.
+    async fn check_if_draft_access_allowed(&self, identities: &MononokeIdentitySet)
+    -> Result<bool>;
+
+    /// Check whether the given identities are permitted to make **public**
+    /// changes to the repository.  This means modifying public bookmarks.
+    async fn check_if_write_access_allowed(&self, identities: &MononokeIdentitySet)
+    -> Result<bool>;
+
+    /// Check whether the given identities are permitted to **bypass the
+    /// read-only state** of the repository.
     async fn check_if_read_only_bypass_allowed(
         &self,
         identities: &MononokeIdentitySet,
@@ -80,6 +100,28 @@ impl RepoPermissionChecker for ProdRepoPermissionChecker {
             .await?)
     }
 
+    async fn check_if_draft_access_allowed(
+        &self,
+        identities: &MononokeIdentitySet,
+    ) -> Result<bool> {
+        // TODO(T105334556): This should require draft permission
+        // For now, we allow all readers draft access.
+        Ok(self
+            .repo_permchecker
+            .check_set(identities, &["read"])
+            .await?)
+    }
+
+    async fn check_if_write_access_allowed(
+        &self,
+        identities: &MononokeIdentitySet,
+    ) -> Result<bool> {
+        Ok(self
+            .repo_permchecker
+            .check_set(identities, &["write"])
+            .await?)
+    }
+
     async fn check_if_read_only_bypass_allowed(
         &self,
         identities: &MononokeIdentitySet,
@@ -102,6 +144,20 @@ impl AlwaysAllowMockRepoPermissionChecker {
 #[async_trait]
 impl RepoPermissionChecker for AlwaysAllowMockRepoPermissionChecker {
     async fn check_if_read_access_allowed(
+        &self,
+        _identities: &MononokeIdentitySet,
+    ) -> Result<bool> {
+        Ok(true)
+    }
+
+    async fn check_if_draft_access_allowed(
+        &self,
+        _identities: &MononokeIdentitySet,
+    ) -> Result<bool> {
+        Ok(true)
+    }
+
+    async fn check_if_write_access_allowed(
         &self,
         _identities: &MononokeIdentitySet,
     ) -> Result<bool> {
