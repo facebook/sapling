@@ -45,21 +45,33 @@ pub trait RepoPermissionChecker: Send + Sync + 'static {
         &self,
         identities: &MononokeIdentitySet,
     ) -> Result<bool>;
+
+    /// Check whether the given identities are permitted to **act as a
+    /// service** to make modifications to the repository.  This means
+    /// making any modification to the repository that the named service
+    /// is permitted to make.
+    async fn check_if_service_writes_allowed(
+        &self,
+        identities: &MononokeIdentitySet,
+        service_name: &str,
+    ) -> Result<bool>;
 }
 
 pub struct ProdRepoPermissionChecker {
     repo_permchecker: BoxPermissionChecker,
+    service_permchecker: BoxPermissionChecker,
 }
 
 impl ProdRepoPermissionChecker {
     pub async fn new(
         fb: FacebookInit,
         logger: &Logger,
-        hipster_acl: &Option<String>,
+        repo_hipster_acl: Option<&str>,
+        service_hipster_acl: Option<&str>,
         reponame: &str,
         security_config: &[AllowlistEntry],
     ) -> Result<Self> {
-        let repo_permchecker = if let Some(acl_name) = hipster_acl {
+        let repo_permchecker = if let Some(acl_name) = repo_hipster_acl {
             PermissionCheckerBuilder::acl_for_repo(fb, acl_name)
                 .await
                 .with_context(|| format!("Failed to create PermissionChecker for {}", acl_name))?
@@ -86,8 +98,20 @@ impl ProdRepoPermissionChecker {
             );
             PermissionCheckerBuilder::allowlist_checker(allowlisted_identities.clone())
         };
+        let service_permchecker = if let Some(acl_name) = service_hipster_acl {
+            PermissionCheckerBuilder::acl_for_tier(fb, acl_name)
+                .await
+                .with_context(|| format!("Failed to create PermissionChecker for {}", acl_name))?
+        } else {
+            // If no service tier is set we allow anyone to act as a service
+            // (this happens in integration tests).
+            PermissionCheckerBuilder::always_allow()
+        };
 
-        Ok(Self { repo_permchecker })
+        Ok(Self {
+            repo_permchecker,
+            service_permchecker,
+        })
     }
 }
 
@@ -131,6 +155,17 @@ impl RepoPermissionChecker for ProdRepoPermissionChecker {
             .check_set(identities, &["bypass_readonly"])
             .await?)
     }
+
+    async fn check_if_service_writes_allowed(
+        &self,
+        identities: &MononokeIdentitySet,
+        service_name: &str,
+    ) -> Result<bool> {
+        Ok(self
+            .service_permchecker
+            .check_set(identities, &[service_name])
+            .await?)
+    }
 }
 
 pub struct AlwaysAllowMockRepoPermissionChecker {}
@@ -167,6 +202,14 @@ impl RepoPermissionChecker for AlwaysAllowMockRepoPermissionChecker {
     async fn check_if_read_only_bypass_allowed(
         &self,
         _identities: &MononokeIdentitySet,
+    ) -> Result<bool> {
+        Ok(true)
+    }
+
+    async fn check_if_service_writes_allowed(
+        &self,
+        _identities: &MononokeIdentitySet,
+        _service_name: &str,
     ) -> Result<bool> {
         Ok(true)
     }

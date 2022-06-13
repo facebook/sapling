@@ -728,7 +728,11 @@ impl RepoFactory {
         let permission_checker = ProdRepoPermissionChecker::new(
             self.env.fb,
             &self.env.logger,
-            &repo_config.hipster_acl,
+            repo_config.hipster_acl.as_deref(),
+            repo_config
+                .source_control_service
+                .service_write_hipster_acl
+                .as_deref(),
             repo_name,
             &self.security_config,
         )
