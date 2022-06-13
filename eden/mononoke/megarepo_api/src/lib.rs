@@ -315,7 +315,9 @@ impl MegarepoApi {
             .mononoke
             .repo_by_id(ctx.clone(), repo_id)
             .await?
-            .ok_or_else(|| MegarepoError::request(anyhow!("repo not found {}", repo_id)))?;
+            .ok_or_else(|| MegarepoError::request(anyhow!("repo not found {}", repo_id)))?
+            .build()
+            .await?;
         Ok(repo)
     }
 

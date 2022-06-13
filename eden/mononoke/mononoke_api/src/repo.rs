@@ -130,6 +130,49 @@ impl fmt::Debug for RepoContext {
     }
 }
 
+pub struct RepoContextBuilder {
+    ctx: CoreContext,
+    repo: Arc<Repo>,
+    bubble_id: Option<BubbleId>,
+    bypass_acl_check: bool,
+}
+
+impl RepoContextBuilder {
+    pub(crate) fn new(ctx: CoreContext, repo: Arc<Repo>) -> Self {
+        RepoContextBuilder {
+            ctx,
+            repo,
+            bubble_id: None,
+            bypass_acl_check: false,
+        }
+    }
+
+    pub async fn with_bubble<F, R>(mut self, bubble_fetcher: F) -> Result<Self, MononokeError>
+    where
+        F: FnOnce(RepoEphemeralStore) -> R,
+        R: Future<Output = anyhow::Result<Option<BubbleId>>>,
+    {
+        self.bubble_id = bubble_fetcher(self.repo.ephemeral_store().as_ref().clone()).await?;
+        Ok(self)
+    }
+
+    pub fn bypass_acl_check(mut self) -> Self {
+        self.bypass_acl_check = true;
+        self
+    }
+
+    pub async fn build(self) -> Result<RepoContext, MononokeError> {
+        if self.bypass_acl_check {
+            if self.bubble_id.is_some() {
+                return Err(format_err!("bypass acl check and bubble id not supported").into());
+            }
+            RepoContext::new_bypass_acl_check(self.ctx, self.repo).await
+        } else {
+            RepoContext::new(self.ctx, self.repo, self.bubble_id).await
+        }
+    }
+}
+
 pub async fn open_synced_commit_mapping(
     fb: FacebookInit,
     config: RepoConfig,
@@ -764,29 +807,23 @@ pub struct BookmarkInfo {
 
 /// A context object representing a query to a particular repo.
 impl RepoContext {
-    pub async fn new(ctx: CoreContext, repo: Arc<Repo>) -> Result<Self, MononokeError> {
-        Self::new_with_bubble(ctx, repo, |_| async { Ok(None) }).await
-    }
-
-    pub async fn new_with_bubble<F, R>(
+    pub async fn new(
         ctx: CoreContext,
         repo: Arc<Repo>,
-        bubble_fetcher: F,
-    ) -> Result<Self, MononokeError>
-    where
-        F: FnOnce(RepoEphemeralStore) -> R,
-        R: Future<Output = anyhow::Result<Option<BubbleId>>>,
-    {
+        bubble_id: Option<BubbleId>,
+    ) -> Result<Self, MononokeError> {
         // Check the user is permitted to access this repo.
         repo.check_permissions(&ctx, "read").await?;
-        let repo =
-            if let Some(bubble_id) = bubble_fetcher((**repo.ephemeral_store()).clone()).await? {
-                let bubble = repo.ephemeral_store().open_bubble(bubble_id).await?;
-                Arc::new(repo.with_bubble(bubble))
-            } else {
-                repo.clone()
-            };
-        Ok(Self { repo, ctx })
+
+        // Open the bubble if necessary.
+        let repo = if let Some(bubble_id) = bubble_id {
+            let bubble = repo.ephemeral_store().open_bubble(bubble_id).await?;
+            Arc::new(repo.with_bubble(bubble))
+        } else {
+            repo
+        };
+
+        Ok(Self { ctx, repo })
     }
 
     /// Initializes the repo without the ACL check.
@@ -798,6 +835,10 @@ impl RepoContext {
         repo: Arc<Repo>,
     ) -> Result<Self, MononokeError> {
         Ok(Self { repo, ctx })
+    }
+
+    pub async fn new_test(ctx: CoreContext, repo: Arc<Repo>) -> Result<Self, MononokeError> {
+        RepoContext::new(ctx, repo, None).await
     }
 
     /// The context for this query.

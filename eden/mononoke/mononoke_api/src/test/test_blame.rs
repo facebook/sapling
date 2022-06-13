@@ -122,7 +122,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static s
     );
 
     let repo = Repo::new_test(ctx.clone(), blob_repo).await?;
-    let repo_ctx = RepoContext::new(ctx.clone(), Arc::new(repo)).await?;
+    let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo)).await?;
     Ok((repo_ctx, changesets))
 }
 

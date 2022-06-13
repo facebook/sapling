@@ -73,7 +73,9 @@ impl RepoChangesetsPushrebaseHistory {
             .mononoke
             .repo(self.ctx.clone(), repo_name)
             .await?
-            .ok_or(errors::repo_not_found(repo_name.clone()))?;
+            .ok_or_else(|| errors::repo_not_found(repo_name.clone()))?
+            .build()
+            .await?;
         Ok(repo)
     }
 

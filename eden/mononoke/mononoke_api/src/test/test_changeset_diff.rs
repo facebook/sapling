@@ -43,7 +43,9 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
     let repo = mononoke
         .repo(ctx.clone(), "test")
         .await?
-        .expect("repo exists");
+        .expect("repo exists")
+        .build()
+        .await?;
     let commit_with_move_ctx = repo
         .changeset(commit_with_move)
         .await?
@@ -91,7 +93,9 @@ async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
     let repo = mononoke
         .repo(ctx.clone(), "test")
         .await?
-        .expect("repo exists");
+        .expect("repo exists")
+        .build()
+        .await?;
     let commit_with_copies_ctx = repo
         .changeset(commit_with_copies)
         .await?
@@ -146,7 +150,9 @@ async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
     let repo = mononoke
         .repo(ctx.clone(), "test")
         .await?
-        .expect("repo exists");
+        .expect("repo exists")
+        .build()
+        .await?;
     let commit_with_moves_ctx = repo
         .changeset(commit_with_moves)
         .await?
@@ -205,7 +211,12 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
         vec![("test".to_string(), ManyFilesDirs::getrepo(fb).await)],
     )
     .await?;
-    let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
+    let repo = mononoke
+        .repo(ctx, "test")
+        .await?
+        .expect("repo exists")
+        .build()
+        .await?;
 
     // Case one: dirs added
     let cs_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?;
@@ -317,7 +328,9 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
     let repo = mononoke
         .repo(ctx.clone(), "test")
         .await?
-        .expect("repo exists");
+        .expect("repo exists")
+        .build()
+        .await?;
     let commit_ctx = repo
         .changeset(commit)
         .await?
@@ -520,7 +533,9 @@ async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
     let repo = mononoke
         .repo(ctx.clone(), "test")
         .await?
-        .expect("repo exists");
+        .expect("repo exists")
+        .build()
+        .await?;
     let commit_ctx = repo
         .changeset(commit)
         .await?

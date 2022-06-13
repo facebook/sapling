@@ -220,7 +220,7 @@ mod tests {
         //   e2ac7cbe1f85e0d8b416005e905aa2189434ce6c 644   dir1
         //   0eb86721b74ed44cf176ee48b5e95f0192dc2824 644   dir2/file_1_in_dir2
 
-        let repo_ctx = RepoContext::new(ctx, repo).await?;
+        let repo_ctx = RepoContext::new_test(ctx, repo).await?;
         let hg = repo_ctx.hg();
 
         // Test HgFileContext::new.
@@ -259,7 +259,7 @@ mod tests {
         //   e2ac7cbe1f85e0d8b416005e905aa2189434ce6c 644   dir1
         //   0eb86721b74ed44cf176ee48b5e95f0192dc2824 644   dir2/file_1_in_dir2
 
-        let repo_ctx = RepoContext::new(ctx, repo).await?;
+        let repo_ctx = RepoContext::new_test(ctx, repo).await?;
         let hg = repo_ctx.hg();
 
         // Test HgFileContext::new.

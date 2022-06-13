@@ -213,11 +213,10 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: &thrift::RepoSpecifier,
     ) -> Result<RepoContext, errors::ServiceError> {
-        self.repo_with_bubble(ctx, repo, |_| async { Ok(None) })
-            .await
+        self.repo_impl(ctx, repo, |_| async { Ok(None) }).await
     }
 
-    async fn repo_with_bubble<F, R>(
+    async fn repo_impl<F, R>(
         &self,
         ctx: CoreContext,
         repo: &thrift::RepoSpecifier,
@@ -229,9 +228,13 @@ impl SourceControlServiceImpl {
     {
         let repo = self
             .mononoke
-            .repo_with_bubble(ctx, &repo.name, bubble_fetcher)
+            .repo(ctx, &repo.name)
             .await?
-            .ok_or_else(|| errors::repo_not_found(repo.description()))?;
+            .ok_or_else(|| errors::repo_not_found(repo.description()))?
+            .with_bubble(bubble_fetcher)
+            .await?
+            .build()
+            .await?;
         Ok(repo)
     }
 
@@ -251,7 +254,7 @@ impl SourceControlServiceImpl {
     ) -> Result<(RepoContext, ChangesetContext), errors::ServiceError> {
         let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
         let repo = self
-            .repo_with_bubble(
+            .repo_impl(
                 ctx,
                 &commit.repo,
                 self.bubble_fetcher_for_changeset(changeset_specifier.clone()),
@@ -283,7 +286,7 @@ impl SourceControlServiceImpl {
             )))?
         }
         let repo = self
-            .repo_with_bubble(
+            .repo_impl(
                 ctx,
                 &commit.repo,
                 self.bubble_fetcher_for_changeset(changeset_specifier.clone()),

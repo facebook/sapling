@@ -60,7 +60,9 @@ impl SourceControlServiceImpl {
             .repo_by_id(ctx.clone(), target_repo_id)
             .await
             .map_err(errors::invalid_request)?
-            .ok_or_else(|| errors::invalid_request(anyhow!("repo not found {}", target_repo_id)))?;
+            .ok_or_else(|| errors::invalid_request(anyhow!("repo not found {}", target_repo_id)))?
+            .build()
+            .await?;
         // Check that we are allowed to write to the target repo
         target_repo.write().await?;
         Ok(())

@@ -96,7 +96,9 @@ async fn sparse_profile_parsing(fb: FacebookInit) -> Result<()> {
     let repo = mononoke
         .repo(ctx.clone(), "test")
         .await?
-        .expect("repo exists");
+        .expect("repo exists")
+        .build()
+        .await?;
     let hg_cs_id = "d261bc7900818dea7c86935b3fb17a33b2e3a6b4".parse::<HgChangesetId>()?;
 
     let a = init_sparse_profile(&ctx, &repo, hg_cs_id).await?;
@@ -127,7 +129,9 @@ async fn sparse_profile_size(fb: FacebookInit) -> Result<()> {
     let repo = mononoke
         .repo(ctx.clone(), "test")
         .await?
-        .expect("repo exists");
+        .expect("repo exists")
+        .build()
+        .await?;
     let hg_cs_id = "d261bc7900818dea7c86935b3fb17a33b2e3a6b4".parse::<HgChangesetId>()?;
 
     let a = init_sparse_profile(&ctx, &repo, hg_cs_id).await?;
@@ -198,7 +202,9 @@ async fn multiple_sparse_profile_sizes(fb: FacebookInit) -> Result<()> {
     let repo = mononoke
         .repo(ctx.clone(), "test")
         .await?
-        .expect("repo exists");
+        .expect("repo exists")
+        .build()
+        .await?;
     let hg_cs_id = "d261bc7900818dea7c86935b3fb17a33b2e3a6b4".parse::<HgChangesetId>()?;
 
     let a = init_sparse_profile(&ctx, &repo, hg_cs_id).await?;
@@ -229,7 +235,9 @@ async fn sparse_profile_delta(fb: FacebookInit) -> Result<()> {
     let repo = mononoke
         .repo(ctx.clone(), "test")
         .await?
-        .expect("repo exists");
+        .expect("repo exists")
+        .build()
+        .await?;
     let hg_cs_id = "d261bc7900818dea7c86935b3fb17a33b2e3a6b4".parse::<HgChangesetId>()?;
 
     let a = init_sparse_profile(&ctx, &repo, hg_cs_id).await?;
@@ -374,7 +382,9 @@ async fn sparse_profile_config_change(fb: FacebookInit) -> Result<()> {
     let repo = mononoke
         .repo(ctx.clone(), "test")
         .await?
-        .expect("repo exists");
+        .expect("repo exists")
+        .build()
+        .await?;
     let hg_cs_id = "d261bc7900818dea7c86935b3fb17a33b2e3a6b4".parse::<HgChangesetId>()?;
 
     let a = init_sparse_profile(&ctx, &repo, hg_cs_id).await?;

@@ -14,16 +14,15 @@ use std::time::Instant;
 
 use anyhow::{anyhow, Context, Error};
 pub use bookmarks::BookmarkName;
-use ephemeral_blobstore::BubbleId;
-use ephemeral_blobstore::RepoEphemeralStore;
-use futures::{stream, Future, StreamExt};
+use futures::{stream, StreamExt};
 use futures_watchdog::WatchdogExt;
+use metaconfig_parser::RepoConfigs;
 use mononoke_types::RepositoryId;
 use repo_factory::RepoFactory;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info, o};
 
-use metaconfig_parser::RepoConfigs;
+use crate::repo::RepoContextBuilder;
 
 pub mod changeset;
 pub mod changeset_path;
@@ -142,82 +141,37 @@ impl Mononoke {
         })
     }
 
-    /// Start a request on a repository.
+    /// Start a request on a repository by name.
+    // Method is async and fallible as in the future this may involve
+    // instantiating the repo lazily.
     pub async fn repo(
         &self,
         ctx: CoreContext,
         name: impl AsRef<str>,
-    ) -> Result<Option<RepoContext>, MononokeError> {
-        self.repo_with_bubble(ctx, name, |_| async { Ok(None) })
-            .await
-    }
-
-    pub async fn repo_with_bubble<F, R>(
-        &self,
-        ctx: CoreContext,
-        name: impl AsRef<str>,
-        bubble_fetcher: F,
-    ) -> Result<Option<RepoContext>, MononokeError>
-    where
-        F: FnOnce(RepoEphemeralStore) -> R,
-        R: Future<Output = anyhow::Result<Option<BubbleId>>>,
-    {
+    ) -> Result<Option<RepoContextBuilder>, MononokeError> {
         match self.repos.get(name.as_ref()) {
             None => Ok(None),
-            Some(repo) => Ok(Some(
-                RepoContext::new_with_bubble(ctx, repo.clone(), bubble_fetcher).await?,
-            )),
+            Some(repo) => Ok(Some(RepoContextBuilder::new(ctx, repo.clone()))),
         }
     }
 
+    /// Start a request on a repository by id.
+    // Method is async and fallible as in the future this may involve
+    // instantiating the repo lazily.
     pub async fn repo_by_id(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
-    ) -> Result<Option<RepoContext>, MononokeError> {
+    ) -> Result<Option<RepoContextBuilder>, MononokeError> {
         match self.repos_by_ids.get(&repo_id) {
             None => Ok(None),
-            Some(repo) => Ok(Some(RepoContext::new(ctx, repo.clone()).await?)),
+            Some(repo) => Ok(Some(RepoContextBuilder::new(ctx, repo.clone()))),
         }
     }
 
     /// Get all known repository ids
     pub fn known_repo_ids(&self) -> Vec<RepositoryId> {
         self.repos.iter().map(|repo| repo.1.repoid()).collect()
-    }
-
-    /// Start a request on a repository bypassing the ACL check.
-    ///
-    /// Should be only used for internal usecases where we don't have external user with
-    /// identity.
-    pub async fn repo_bypass_acl_check(
-        &self,
-        ctx: CoreContext,
-        name: impl AsRef<str>,
-    ) -> Result<Option<RepoContext>, MononokeError> {
-        match self.repos.get(name.as_ref()) {
-            None => Ok(None),
-            Some(repo) => Ok(Some(
-                RepoContext::new_bypass_acl_check(ctx, repo.clone()).await?,
-            )),
-        }
-    }
-
-    /// Start a request on a repository bypassing the ACL check.
-    ///
-    /// Should be only used for internal usecases where we don't have external user with
-    /// identity.
-    pub async fn repo_by_id_bypass_acl_check(
-        &self,
-        ctx: CoreContext,
-        repo_id: RepositoryId,
-    ) -> Result<Option<RepoContext>, MononokeError> {
-        match self.repos_by_ids.get(&repo_id) {
-            None => Ok(None),
-            Some(repo) => Ok(Some(
-                RepoContext::new_bypass_acl_check(ctx, repo.clone()).await?,
-            )),
-        }
     }
 
     /// Returns an `Iterator` over all repo names.

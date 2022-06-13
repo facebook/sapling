@@ -45,6 +45,8 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
         .repo(ctx.clone(), "test")
         .await?
         .expect("repo exists")
+        .build()
+        .await?
         .draft()
         .await?;
     let expected_hash = "68c9120f387cf1c3b7e4c2e30cdbd5b953f27a732cfe9f42f335f0091ece3c6c";
@@ -182,6 +184,8 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
         .repo(ctx, "test")
         .await?
         .expect("repo exists")
+        .build()
+        .await?
         .draft()
         .await?;
 
@@ -314,6 +318,8 @@ async fn test_create_merge_commit(fb: FacebookInit) -> Result<(), Error> {
         .repo(ctx.clone(), "test")
         .await?
         .expect("repo exists")
+        .build()
+        .await?
         .draft()
         .await?;
 
@@ -414,6 +420,8 @@ async fn test_merge_commit_parent_file_conflict(fb: FacebookInit) -> Result<(), 
         .repo(ctx.clone(), "test")
         .await?
         .expect("repo exists")
+        .build()
+        .await?
         .draft()
         .await?;
 
@@ -523,6 +531,8 @@ async fn test_merge_commit_parent_tree_file_conflict(fb: FacebookInit) -> Result
         .repo(ctx.clone(), "test")
         .await?
         .expect("repo exists")
+        .build()
+        .await?
         .draft()
         .await?;
 

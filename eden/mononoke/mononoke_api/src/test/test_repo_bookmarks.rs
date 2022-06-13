@@ -42,7 +42,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
     txn.commit().await?;
 
     let repo = Repo::new_test(ctx.clone(), blob_repo).await?;
-    let repo_ctx = RepoContext::new(ctx.clone(), Arc::new(repo)).await?;
+    let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo)).await?;
     Ok((repo_ctx, changesets))
 }
 
@@ -50,7 +50,6 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
 async fn resolve_bookmark(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
-    let repo = repo.write().await?;
 
     // Test that normal bookmarks are visible both in and through the cache.
     assert_eq!(
@@ -106,7 +105,6 @@ async fn resolve_bookmark(fb: FacebookInit) -> Result<()> {
 async fn list_bookmarks(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
-    let repo = repo.write().await?;
 
     assert_eq!(
         repo.list_bookmarks(false, None, None, None)

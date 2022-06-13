@@ -863,7 +863,7 @@ mod tests {
 
         let blob_repo: BlobRepo = test_repo_factory::build_empty(fb)?;
         let repo = Repo::new_test(ctx.clone(), blob_repo).await?;
-        let repo_ctx = RepoContext::new(ctx, Arc::new(repo)).await?;
+        let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
 
         let hg = repo_ctx.hg();
         assert_eq!(hg.repo().name(), "repo");
@@ -893,7 +893,7 @@ mod tests {
         let root_mfid_2 = root_manifest_id(ctx.clone(), &blob_repo, commit_2).await?;
 
         let repo = Repo::new_test(ctx.clone(), blob_repo).await?;
-        let repo_ctx = RepoContext::new(ctx, Arc::new(repo)).await?;
+        let repo_ctx = RepoContext::new_test(ctx, Arc::new(repo)).await?;
         let hg = repo_ctx.hg();
 
         let trees = hg

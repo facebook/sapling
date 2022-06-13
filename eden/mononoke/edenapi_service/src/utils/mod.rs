@@ -46,9 +46,12 @@ pub async fn get_repo(
         .repo(rctx.ctx.clone(), name)
         .await
         .map_err(|e| e.into_http_error(ErrorKind::RepoLoadFailed(name.to_string())))?
-        .map(|repo| repo.hg())
         .with_context(|| ErrorKind::RepoDoesNotExist(name.to_string()))
-        .map_err(HttpError::e404)
+        .map_err(HttpError::e404)?
+        .build()
+        .await
+        .map(|repo| repo.hg())
+        .map_err(|e| e.into_http_error(ErrorKind::RepoLoadFailed(name.to_string())))
 }
 
 pub async fn get_request_body(state: &mut State) -> Result<Bytes, HttpError> {
