@@ -12,6 +12,7 @@ path = "lib.rs"
 
 [dependencies]
 anyhow = "1.0.56"
+arc-swap = "1.5"
 async-trait = "0.1.56"
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../../bookmarks/bookmarks_movement" }

@@ -42,15 +42,21 @@ struct MononokeServerArgs {
     /// If provided the thrift server will start on this port
     #[clap(long, short = 'p')]
     thrift_port: Option<String>,
-    /// Path to a file with certificate
+    /// Path to a file with server certificate
     #[clap(long)]
     cert: String,
-    /// Path to a file with private keyport
+    /// Path to a file with server private key
     #[clap(long)]
     private_key: String,
     /// Path to a file with CA certificate
     #[clap(long)]
     ca_pem: String,
+    /// Path to a file with SCS client certificate
+    #[clap(long)]
+    scs_client_cert: Option<String>,
+    /// Path to a file with SCS client private key
+    #[clap(long, requires = "scs-client-cert")]
+    scs_client_private_key: Option<String>,
     /// Path to a file with encryption keys for SSL tickets
     #[clap(long)]
     ssl_ticket_seeds: Option<String>,
@@ -74,6 +80,12 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let cslb_config = args.cslb_config.clone();
     info!(root_log, "Starting up");
+
+    #[cfg(fbcode_build)]
+    if let (Some(cert_path), Some(key_path)) = (&args.scs_client_cert, &args.scs_client_private_key)
+    {
+        pushrebase_client::override_certificate_paths(cert_path, key_path, &args.ca_pem);
+    }
 
     let configs = app.repo_configs().clone();
 

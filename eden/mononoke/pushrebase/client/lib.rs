@@ -17,7 +17,7 @@ use pushrebase::PushrebaseOutcome;
 use std::collections::{HashMap, HashSet};
 
 #[cfg(fbcode_build)]
-pub use facebook::scs::SCSPushrebaseClient;
+pub use facebook::scs::{override_certificate_paths, SCSPushrebaseClient};
 pub use local::LocalPushrebaseClient;
 
 #[async_trait::async_trait]

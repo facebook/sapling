@@ -20,6 +20,7 @@ futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 openssl = "0.10.35"
+pushrebase_client = { version = "0.1.0", path = "../pushrebase/client" }
 repo_listener = { version = "0.1.0", path = "repo_listener" }
 secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
