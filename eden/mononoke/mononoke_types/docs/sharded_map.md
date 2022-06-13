@@ -63,7 +63,7 @@ Logic:
 * (Case 1) If the node is a terminal node, then just do the lookup directly on the inlined map.
 * If the node is an intermediate node, there are a few sub-cases:
     * If `prefix` is a prefix of `key`:
-        * If `len(key)`` > len(prefix)`, consider `b = key[len(prefix)]`, that is, the byte right after the prefix
+        * If `len(key) > len(prefix)`, consider `b = key[len(prefix)]`, that is, the byte right after the prefix
             * (Case 2) If `children` has key `b`, do a recursive `lookup(&key[len(prefix)+1..])` call on the associated submap, first loading it from blobstore if it was not inlined, and removing `prefix` and `b` from `key`.
             * (Case 3) If `children` does not have the key `b`, then `key` is not present in the map, return `None`.
         * (Case 4) Else then `key = prefix`, then the node for this key is the current intermediate node, so return value.
