@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 import errno
 import subprocess
+from typing import Iterable, Optional
 
 from .. import cmdutil, error
 from ..i18n import _
@@ -16,7 +17,7 @@ from .cmdtable import command
 
 
 @command("fs", [], subonly=True, norepo=True)
-def fs(ui, **opts):
+def fs(ui, **opts) -> None:
     """control the edenfs daemon"""
 
 
@@ -30,7 +31,7 @@ subcmd = fs.subcommand(
 )
 
 
-def _calledenfsctl(ui, command, args=None, opts=None):
+def _calledenfsctl(ui, command, args: Optional[Iterable[str]] = None, opts=None) -> int:
     cmd = ["edenfsctl"] + command.split()
     if opts:
         commandopts = cmdutil.findsubcmd(command.split(), table)[3][1]
@@ -188,7 +189,7 @@ def start(ui, **opts):
 
 
 @subcmd("stats", subonly=True, norepo=True)
-def stats(ui, **opts):
+def stats(ui, **opts) -> None:
     """print statistics for the edenfs daemon"""
 
 
