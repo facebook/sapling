@@ -160,3 +160,8 @@ Test that multiple profiles do not clobber each others includes
     !a*.sparse/** ($TESTTMP/repo1/.hg/sparse -> s1.sparse) (overridden by rules above)
     !*b.sparse/** ($TESTTMP/repo1/.hg/sparse -> s4.sparse) (overridden by rules above)
 
+
+  $ newrepo
+  $ hg debugsparseexplainmatch something
+  abort: --sparse-profile is required
+  [255]

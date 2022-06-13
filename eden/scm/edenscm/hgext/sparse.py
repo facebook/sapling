@@ -2158,6 +2158,8 @@ def debugsparseexplainmatch(ui, repo, *args, **opts):
     if "eden" in repo.requirements:
         _wraprepo(ui, repo)
 
+    repo.ui.setconfig("sparse", "warnfullcheckout", None)
+
     ctx = repo["."]
 
     config = None
@@ -2165,6 +2167,11 @@ def debugsparseexplainmatch(ui, repo, *args, **opts):
     if profile:
         raw = "%%include %s" % profile
         config = readsparseconfig(repo, raw=raw, filename=profile)
+    elif not repo.localvfs.exists("sparse"):
+        # If there is no implicit sparse config (e.g. non-sparse or
+        # EdenFS working copies), the user must specify a sparse
+        # profile.
+        raise error.Abort(_("--sparse-profile is required"))
 
     m = scmutil.match(ctx, pats=args, opts=opts, default="path")
     files = m.files()
