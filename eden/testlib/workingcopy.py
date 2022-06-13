@@ -10,8 +10,6 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Generator, IO, List, Optional, TYPE_CHECKING, Union
 
-from eden.integration.lib import edenclient
-
 from .commit import Commit
 from .file import File
 from .hg import hg
@@ -20,6 +18,8 @@ from .types import PathLike
 from .util import new_dir, new_file, override_environ, test_globals
 
 if TYPE_CHECKING:
+    from eden.integration.lib import edenclient
+
     from .repo import Repo
 
 
@@ -132,6 +132,9 @@ overrides = {{}}
                 "HG_REAL_BIN": str(hg.EXEC),
             }
         )
+
+        from eden.integration.lib import edenclient
+
         with override_environ(overrides):
             self.eden = edenclient.EdenFS(
                 base_dir=new_dir(),

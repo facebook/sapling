@@ -12,8 +12,6 @@ import time
 from pathlib import Path
 from typing import Dict, Tuple
 
-import requests
-
 from .hg import hg
 from .repo import Repo
 from .util import new_dir
@@ -189,6 +187,8 @@ def _wait(
         raise Exception(
             "timed out waiting for Mononoke server %s" % (time.time() - start)
         )
+
+    import requests
 
     response = requests.get(
         f"https://localhost:{port}/health_check", cert=(cert, key), verify=ca_cert

@@ -12,8 +12,6 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from typing import Any, Dict, List
 
-import bindings
-
 from .util import override_environ, test_globals, trace
 
 hg_bin = Path(os.environ["HGTEST_HG"])
@@ -138,6 +136,8 @@ class CliCmd:
                 fout = io.BytesIO()
                 ferr = io.BytesIO()
                 fin = io.BytesIO(stdin or b"")
+                import bindings
+
                 returncode = bindings.commands.run(args, fin, fout, ferr)
                 return subprocess.CompletedProcess(
                     args,
