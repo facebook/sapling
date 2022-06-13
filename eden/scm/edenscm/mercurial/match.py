@@ -98,6 +98,9 @@ def _kindpatsalwaysmatch(kindpats):
     """ "Checks whether the kindspats match everything, as e.g.
     'relpath:.' does.
     """
+    if not kindpats:
+        return False
+
     for kind, pat, source in kindpats:
         # TODO: update me?
         if pat != "" or kind not in ["relpath", "glob"]:
@@ -262,6 +265,11 @@ def _donormalize(patterns, default, root, cwd, auditor, warn):
                 files = [f for f in files if f]
             except EnvironmentError:
                 raise error.Abort(_("unable to read file list (%s)") % pat)
+
+            if not files:
+                if warn:
+                    warn(_("empty %s %s matches nothing") % (kind, pat))
+
             for k, p, source in _donormalize(files, default, root, cwd, auditor, warn):
                 kindpats.append((k, p, pat))
             continue
