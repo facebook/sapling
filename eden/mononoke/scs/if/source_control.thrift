@@ -552,12 +552,33 @@ union SparseProfiles {
   2: AllSparseProfiles all_profiles;
 }
 
+struct SparseProfileAdded {
+  // positive size of added profile
+  1: i64 size;
+}
+
+struct SparseProfileRemoved {
+  // positive size of removed profile
+  1: i64 previous_size;
+}
+
+struct SparseProfileSizeChanged {
+  // signed change in size
+  1: i64 size_change;
+}
+
+union SparseProfileChangeElement {
+  1: SparseProfileAdded added;
+  2: SparseProfileRemoved removed;
+  3: SparseProfileSizeChanged changed;
+}
+
 struct SparseProfileSize {
   1: i64 size;
 }
 
 struct SparseProfileChange {
-  1: i64 size_change;
+  1: SparseProfileChangeElement change;
 }
 
 struct SparseProfileSizes {

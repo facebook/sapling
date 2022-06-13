@@ -8,7 +8,9 @@
 use anyhow::Result;
 use context::CoreContext;
 use itertools::Itertools;
-use mononoke_api::sparse_profile::{get_all_profiles, get_profile_delta_size, get_profile_size};
+use mononoke_api::sparse_profile::{
+    get_all_profiles, get_profile_delta_size, get_profile_size, ProfileSizeChange,
+};
 use mononoke_api::ChangesetContext;
 use mononoke_types::MPath;
 use source_control as thrift;
@@ -77,11 +79,11 @@ impl SourceControlServiceImpl {
         let sizes_hashmap = get_profile_delta_size(&ctx, &changeset, &other, profiles).await;
         let sizes = sizes_hashmap?
             .into_iter()
-            .map(|(source, size)| {
+            .map(|(source, change)| {
                 (
                     source,
                     thrift::SparseProfileChange {
-                        size_change: size as i64,
+                        change: convert(change),
                         ..Default::default()
                     },
                 )
@@ -115,5 +117,28 @@ async fn get_profiles(
         thrift::SparseProfiles::UnknownField(_) => Err(errors::ServiceError::Request(
             errors::not_available("Not implemented".to_string()),
         )),
+    }
+}
+
+fn convert(change: ProfileSizeChange) -> thrift::SparseProfileChangeElement {
+    match change {
+        ProfileSizeChange::Added(size) => {
+            thrift::SparseProfileChangeElement::added(thrift::SparseProfileAdded {
+                size: size as i64,
+                ..Default::default()
+            })
+        }
+        ProfileSizeChange::Removed(size) => {
+            thrift::SparseProfileChangeElement::removed(thrift::SparseProfileRemoved {
+                previous_size: size as i64,
+                ..Default::default()
+            })
+        }
+        ProfileSizeChange::Changed(size) => {
+            thrift::SparseProfileChangeElement::changed(thrift::SparseProfileSizeChanged {
+                size_change: size,
+                ..Default::default()
+            })
+        }
     }
 }
