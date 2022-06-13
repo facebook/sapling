@@ -529,7 +529,7 @@ impl MononokeAppBuilder {
                 .help("Name of repository")
                 .conflicts_with_all(repo_conflicts);
 
-            let mut sharded_service_name_arg = Arg::with_name(SHARDED_SERVICE_NAME)
+            let sharded_service_name_arg = Arg::with_name(SHARDED_SERVICE_NAME)
                 .long(SHARDED_SERVICE_NAME)
                 .value_name("NAME")
                 .multiple(false)
