@@ -16,7 +16,10 @@ use filestore::{self, StoreRequest};
 use futures::stream::{self, Stream};
 use futures_stats::TimedTryFutureExt;
 use git_hash::ObjectId;
-use import_tools::{CommitMetadata, GitImportLfs, GitUploader, HGGIT_COMMIT_ID_EXTRA};
+use import_tools::{
+    CommitMetadata, GitImportLfs, GitUploader, HGGIT_COMMIT_ID_EXTRA, HGGIT_MARKER_EXTRA,
+    HGGIT_MARKER_VALUE,
+};
 use mononoke_types::{
     hash, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, FileType, MPath,
 };
@@ -175,6 +178,7 @@ fn generate_bonsai_changeset(
         HGGIT_COMMIT_ID_EXTRA.to_string(),
         oid.to_string().into_bytes(),
     );
+    extra.insert(HGGIT_MARKER_EXTRA.to_string(), HGGIT_MARKER_VALUE.to_vec());
 
     // TODO: Should we have further extras?
     BonsaiChangesetMut {

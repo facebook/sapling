@@ -30,11 +30,11 @@
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
   * Hg: *: HgManifestId(HgNodeHash(Sha1(*))) (glob)
-  * Ref: *: Some(ChangesetId(Blake2(7ac4b588aaef2dc03b31b7c477301e7f6ff71343964a5eeef2e37631ad025c93))) (glob)
+  * Ref: *: Some(ChangesetId(Blake2(0b82d99309fc23ae5ae39c8eb93aaee9178a746f6cd882afddc183e0d3217195))) (glob)
 
 # Set test bookmark
 
-  $ quiet mononoke_admin bookmarks set "$BOOKMARK" 7ac4b588aaef2dc03b31b7c477301e7f6ff71343964a5eeef2e37631ad025c93
+  $ quiet mononoke_admin bookmarks set "$BOOKMARK" 0b82d99309fc23ae5ae39c8eb93aaee9178a746f6cd882afddc183e0d3217195
 
 # Start Mononoke
 

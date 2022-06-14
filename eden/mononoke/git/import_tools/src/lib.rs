@@ -38,6 +38,8 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::task;
 
+pub const HGGIT_MARKER_EXTRA: &str = "hg-git-rename-source";
+pub const HGGIT_MARKER_VALUE: &[u8] = b"git";
 pub const HGGIT_COMMIT_ID_EXTRA: &str = "convert_revision";
 
 // TODO: Try to produce copy-info?

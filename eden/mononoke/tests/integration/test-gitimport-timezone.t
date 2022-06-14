@@ -33,10 +33,10 @@
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
   * Hg: Sha1(200c0e8395a7222c38cf9c3efdf734d2507fda90): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839))) (glob)
-  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(ee3310625bd7cb997c3ec93467dd7f7155f4fda161d1d9d3c7c37c9e312f1dda))) (glob)
+  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(d37ab14503b5323dd32b54f6b1da45c3e8add4dce31d6d28da89b9f3f27550b3))) (glob)
 
 # Set master (gitimport does not do this yet)
-  $ mononoke_admin bookmarks set master ee3310625bd7cb997c3ec93467dd7f7155f4fda161d1d9d3c7c37c9e312f1dda
+  $ mononoke_admin bookmarks set master d37ab14503b5323dd32b54f6b1da45c3e8add4dce31d6d28da89b9f3f27550b3
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Current position of BookmarkName { bookmark: "master" } is None (glob)
@@ -50,7 +50,7 @@
   $ cat "file1"
   this is file1
   $ hg log -r master
-  commit:      e621d7453878
+  commit:      89e61a7d29d5
   bookmark:    master
   bookmark:    default/master
   hoistedname: master

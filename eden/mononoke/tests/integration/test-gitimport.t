@@ -26,7 +26,7 @@
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
   * Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(*))) (glob)
-  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(d4229e9850e9244c3a986a62590ffada646e7200593bc26e4cc8c9aa10730a26))) (glob)
+  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044))) (glob)
 
 # Add second commit to git repository
   $ cd "$GIT_REPO"
@@ -42,7 +42,7 @@
   $ gitimport "$GIT_REPO" missing-for-commit e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
-  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(ce091f856ca3744387df7ce23a9d24a3fece7eedc68488ff00f0aed5107a1e6b))) (glob)
+  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c))) (glob)
 
 # Test missing-for-commit flag (agains fully imported repo history)
   $ gitimport "$GIT_REPO" --suppress-ref-mapping missing-for-commit e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
@@ -59,7 +59,7 @@
   * Ref: "refs/heads/master": Some(ChangesetId(Blake2(*))) (glob)
 
 # Set master (gitimport does not do this yet)
-  $ mononoke_admin bookmarks set master ce091f856ca3744387df7ce23a9d24a3fece7eedc68488ff00f0aed5107a1e6b
+  $ mononoke_admin bookmarks set master da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Current position of BookmarkName { bookmark: "master" } is None (glob)
@@ -74,3 +74,12 @@
   this is file1
   $ cat "file2"
   this is file2
+
+# Check that we can see the git hash from extras
+  $ hg log --config extensions.gitrevset= --template 'hg={node}: git={gitnode}\nextras=(\n{extras % "  {extra}\n"})\n' -r master
+  hg=e7f52161c6127445391295b677f87aded035450a: git=e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
+  extras=(
+    branch=default
+    convert_revision=e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
+    hg-git-rename-source=git
+  )
