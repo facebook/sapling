@@ -5,17 +5,27 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::{format_err, Result};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
+use cloned::cloned;
 use context::CoreContext;
+use futures::{
+    channel::{mpsc, oneshot},
+    future::{self, BoxFuture, FutureExt, Shared, TryFutureExt},
+    stream::StreamExt,
+};
 use metaconfig_types::MultiplexId;
 use mononoke_types::Timestamp;
-use sql::Connection;
+use shared_error::anyhow::{IntoSharedError, SharedError};
+use sql::{Connection, WriteResult};
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
+use std::sync::Arc;
 
-use crate::OperationKey;
+use crate::{queries, OperationKey};
+
+const SQL_WAL_WRITE_BUFFER_SIZE: usize = 1000;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct BlobstoreWalEntry {
@@ -44,34 +54,148 @@ impl BlobstoreWalEntry {
             id: None,
         }
     }
+
+    fn into_sql_tuple(self) -> (String, MultiplexId, Timestamp, OperationKey, Option<u64>) {
+        let Self {
+            blobstore_key,
+            multiplex_id,
+            timestamp,
+            operation_key,
+            blob_size,
+            ..
+        } = self;
+        (
+            blobstore_key,
+            multiplex_id,
+            timestamp,
+            operation_key,
+            blob_size,
+        )
+    }
 }
+
+type EnqueueSender =
+    mpsc::UnboundedSender<(oneshot::Sender<Result<(), SharedError>>, BlobstoreWalEntry)>;
 
 #[derive(Clone)]
 pub struct SqlBlobstoreWal {
     #[allow(dead_code)]
     read_connection: Connection,
-    #[allow(dead_code)]
     read_master_connection: Connection,
-    #[allow(dead_code)]
     write_connection: Connection,
+    /// Sending entry over the channel allows it to be queued till
+    /// the worker is free and able to write new entries to Mysql.
+    enqueue_entry_sender: Arc<EnqueueSender>,
+    /// Worker allows to enqueue new entries while there is already
+    /// a write query to Mysql in-fight.
+    #[allow(dead_code)]
+    ensure_worker_scheduled: Shared<BoxFuture<'static, ()>>,
 }
 
-// TODO(aida): The trait is not complete yet, it's just an initial setup.
+impl SqlBlobstoreWal {
+    fn setup_worker(
+        write_connection: Connection,
+    ) -> (EnqueueSender, Shared<BoxFuture<'static, ()>>) {
+        // The mpsc channel needed as a way to enqueue new entries while there is an
+        // in-flight write query to Mysql.
+        // - queue_sender will be used to add new entries to the queue (channel),
+        // - receiver - to read a new batch of entries and write them to Mysql.
+        //
+        // To notify the clients back that the entry was successfully written to Mysql,
+        // a oneshot channel is used. When the enqueued entries are written, the clients
+        // receive result of the operation:
+        // error if something went wrong and nothing if it's ok.
+        let (queue_sender, receiver) =
+            mpsc::unbounded::<(oneshot::Sender<Result<(), SharedError>>, BlobstoreWalEntry)>();
+
+        let worker = async move {
+            let enqueued_writes = receiver.ready_chunks(SQL_WAL_WRITE_BUFFER_SIZE).for_each(
+                move |batch /* (Sender, BlobstoreWalEntry) */| {
+                    cloned!(write_connection);
+                    async move {
+                        let (senders, entries): (Vec<_>, Vec<_>) = batch.into_iter().unzip();
+
+                        let result = insert_entries(&write_connection, entries).await;
+                        let result = result
+                            .map_err(|err| err.context("Failed to insert to WAL").shared_error());
+                        // We dont't really need WriteResult data as we write in batches
+                        let result = result.map(|_write_result| ());
+
+                        // Update the clients
+                        senders.into_iter().for_each(|s| {
+                            match s.send(result.clone()) {
+                                Ok(_) => (),
+                                Err(_) => { /* ignore the error, because receiver might have gone */
+                                }
+                            };
+                        });
+                    }
+                },
+            );
+            tokio::spawn(enqueued_writes);
+        }
+        .boxed()
+        .shared();
+
+        (queue_sender, worker)
+    }
+}
+
 #[async_trait]
 #[auto_impl(Arc, Box)]
 pub trait BlobstoreWal: Send + Sync {
-    async fn log<'a>(&'a self, ctx: &'a CoreContext, entry: BlobstoreWalEntry)
-    -> Result<(), Error>;
+    async fn log<'a>(&'a self, ctx: &'a CoreContext, entry: BlobstoreWalEntry) -> Result<()> {
+        let _result = self.log_many(ctx, vec![entry]).await?;
+        Ok(())
+    }
+
+    async fn log_many<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        entry: Vec<BlobstoreWalEntry>,
+    ) -> Result<()>;
 }
 
 #[async_trait]
 impl BlobstoreWal for SqlBlobstoreWal {
-    async fn log<'a>(
+    async fn log_many<'a>(
         &'a self,
         _ctx: &'a CoreContext,
-        _entry: BlobstoreWalEntry,
-    ) -> Result<(), Error> {
-        unimplemented!();
+        entries: Vec<BlobstoreWalEntry>,
+    ) -> Result<()> {
+        self.ensure_worker_scheduled.clone().await;
+
+        let mut write_futs = Vec::with_capacity(entries.len());
+        entries.into_iter().try_for_each(|entry| {
+            let (sender, receiver) = oneshot::channel();
+            write_futs.push(receiver);
+
+            // Enqueue new entry
+            self.enqueue_entry_sender.unbounded_send((sender, entry))
+        })?;
+
+        let write_results = future::try_join_all(write_futs)
+            .map_err(|err| {
+                // If one of the futures fails to receive result from the sql wal,
+                // we cannot be sure that the entries were written Mysql WAL table.
+                format_err!(
+                    "Failed to receive results from the SqlBlobstoreWal: {:?}",
+                    err
+                )
+            })
+            .await?;
+
+        let errs: Vec<_> = write_results.into_iter().filter_map(|r| r.err()).collect();
+        if !errs.is_empty() {
+            // Actual errors that occurred while tryint to insert new entries to
+            // the Mysql table.
+            return Err(format_err!(
+                "Failed to write to the SqlBlobstoreWal: {:?}",
+                errs
+            ));
+        }
+
+        Ok(())
     }
 }
 
@@ -81,10 +205,37 @@ impl SqlConstruct for SqlBlobstoreWal {
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-blobstore-wal.sql");
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
+        let SqlConnections {
+            read_connection,
+            read_master_connection,
+            write_connection,
+        } = connections;
+
+        let (sender, ensure_worker_scheduled) =
+            SqlBlobstoreWal::setup_worker(write_connection.clone());
+
         Self {
-            read_connection: connections.read_connection,
-            read_master_connection: connections.read_master_connection,
-            write_connection: connections.write_connection,
+            read_connection,
+            read_master_connection,
+            write_connection,
+            enqueue_entry_sender: Arc::new(sender),
+            ensure_worker_scheduled,
         }
     }
+}
+
+async fn insert_entries(
+    write_connection: &Connection,
+    entries: Vec<BlobstoreWalEntry>,
+) -> Result<WriteResult> {
+    let entries: Vec<_> = entries
+        .into_iter()
+        .map(|entry| entry.into_sql_tuple())
+        .collect();
+    let entries_ref: Vec<_> = entries
+        .iter()
+        .map(|(a, b, c, d, e)| (a, b, c, d, e)) // &(a, b, ...) into (&a, &b, ...)
+        .collect();
+
+    queries::WalInsertEntry::query(write_connection, &entries_ref).await
 }
