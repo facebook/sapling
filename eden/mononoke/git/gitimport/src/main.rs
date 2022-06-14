@@ -40,10 +40,7 @@ const SUBCOMMAND_IMPORT_TREE_AS_SINGLE_BONSAI_CHANGESET: &str =
     "import-tree-as-single-bonsai-changeset";
 
 const ARG_GIT_REPOSITORY_PATH: &str = "git-repository-path";
-const ARG_DERIVE_TREES: &str = "derive-trees";
 const ARG_DERIVE_HG: &str = "derive-hg";
-const ARG_HGGIT_COMPATIBILITY: &str = "hggit-compatibility";
-const ARG_BONSAI_GIT_MAPPING: &str = "bonsai-git-mapping";
 const ARG_SUPPRESS_REF_MAPPING: &str = "suppress-ref-mapping";
 const ARG_GIT_COMMAND_PATH: &str = "git-command-path";
 
@@ -59,28 +56,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_fb303_args()
         .build()
         .arg(
-            Arg::with_name(ARG_DERIVE_TREES)
-                .long(ARG_DERIVE_TREES)
-                .required(false)
-                .takes_value(false),
-        )
-        .arg(
             Arg::with_name(ARG_DERIVE_HG)
                 .long(ARG_DERIVE_HG)
-                .required(false)
-                .takes_value(false),
-        )
-        .arg(
-            Arg::with_name(ARG_HGGIT_COMPATIBILITY)
-                .long(ARG_HGGIT_COMPATIBILITY)
-                .help("Set commit extras for hggit compatibility")
-                .required(false)
-                .takes_value(false),
-        )
-        .arg(
-            Arg::with_name(ARG_BONSAI_GIT_MAPPING)
-                .long(ARG_BONSAI_GIT_MAPPING)
-                .help("For each created commit also create a bonsai<->git commit mapping.")
                 .required(false)
                 .takes_value(false),
         )
@@ -131,21 +108,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     // if we are readonly, then we'll set up some overrides to still be able to do meaningful
     // things below.
     let dry_run = matches.readonly_storage().0;
-
-    if matches.is_present(ARG_DERIVE_TREES) {
-        prefs.derive_trees = true;
-    }
+    prefs.dry_run = dry_run;
 
     if matches.is_present(ARG_DERIVE_HG) {
         prefs.derive_hg = true;
-    }
-
-    if matches.is_present(ARG_HGGIT_COMPATIBILITY) {
-        prefs.hggit_compatibility = true;
-    }
-
-    if matches.is_present(ARG_BONSAI_GIT_MAPPING) {
-        prefs.bonsai_git_mapping = true;
     }
 
     if let Some(path) = matches.value_of(ARG_GIT_COMMAND_PATH) {

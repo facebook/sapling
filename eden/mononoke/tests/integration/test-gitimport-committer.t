@@ -54,22 +54,21 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" --derive-trees --derive-hg --bonsai-git-mapping full-repo
+  $ gitimport "$GIT_REPO" --derive-hg full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * GitRepo:$TESTTMP/repo-git commit 1 of 2 - Oid:8ce3eae4 => Bid:631c03b2 (glob)
-  * GitRepo:$TESTTMP/repo-git commit 2 of 2 - Oid:69a26531 => Bid:5539313b (glob)
-  * 2 tree(s) are valid! (glob)
+  * GitRepo:$TESTTMP/repo-git commit 1 of 2 - Oid:8ce3eae4 => Bid:d4229e98 (glob)
+  * GitRepo:$TESTTMP/repo-git commit 2 of 2 - Oid:69a26531 => Bid:6f60c3c6 (glob)
   * Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839))) (glob)
   * Hg: Sha1(69a265312a2c29cdf5667ff401d895a66e6ac02a): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839))) (glob)
-  * Ref: "refs/heads/another_committer": Some(ChangesetId(Blake2(5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e))) (glob)
-  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(631c03b250b34b3f9ee3b6acfb597123ec8340adaa91e3ba84ef0f4c54c6641a))) (glob)
+  * Ref: "refs/heads/another_committer": Some(ChangesetId(Blake2(6f60c3c647ab1eab6ce671f3a20e7a9d42aa424dffa927bfc69cd17ff0d56dd1))) (glob)
+  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(d4229e9850e9244c3a986a62590ffada646e7200593bc26e4cc8c9aa10730a26))) (glob)
 
 # Set master (gitimport does not do this yet)
-  $ mononoke_admin bookmarks set another_committer 5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e
+  $ mononoke_admin bookmarks set another_committer 6f60c3c647ab1eab6ce671f3a20e7a9d42aa424dffa927bfc69cd17ff0d56dd1
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e)) (glob)
+  * changeset resolved as: ChangesetId(Blake2(6f60c3c647ab1eab6ce671f3a20e7a9d42aa424dffa927bfc69cd17ff0d56dd1)) (glob)
   * Current position of BookmarkName { bookmark: "another_committer" } is None (glob)
-  $ mononoke_admin bookmarks set master 631c03b250b34b3f9ee3b6acfb597123ec8340adaa91e3ba84ef0f4c54c6641a
+  $ mononoke_admin bookmarks set master d4229e9850e9244c3a986a62590ffada646e7200593bc26e4cc8c9aa10730a26
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Current position of BookmarkName { bookmark: "master" } is None (glob)
@@ -83,7 +82,7 @@
   $ cat "file1"
   this is file1
   $ hg log -r master
-  commit:      70361aa80b8d
+  commit:      413b8ad13c8f
   bookmark:    master
   bookmark:    default/master
   hoistedname: master
@@ -95,6 +94,6 @@
 
 # No committer extra here, because committer is the same as author
   $ hg log -r master -T '{extras}'
-  branch=default (no-eol)
+  branch=defaultconvert_revision=8ce3eae44760b500bf3f2c3922a95dcd3c908e9e (no-eol)
   $ hg log -r another_committer -T '{extras}'
-  branch=defaultcommitter=second_committer <second_committer@fb.com> 1000000000 0 (no-eol)
+  branch=defaultcommitter=second_committer <second_committer@fb.com> 1000000000 0convert_revision=69a265312a2c29cdf5667ff401d895a66e6ac02a (no-eol)

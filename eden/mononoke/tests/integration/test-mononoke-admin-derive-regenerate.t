@@ -54,32 +54,31 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" --derive-trees --derive-hg --bonsai-git-mapping full-repo
+  $ gitimport "$GIT_REPO" --derive-hg full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * GitRepo:$TESTTMP/repo-git commit 1 of 2 - Oid:8ce3eae4 => Bid:631c03b2 (glob)
-  * GitRepo:$TESTTMP/repo-git commit 2 of 2 - Oid:69a26531 => Bid:5539313b (glob)
-  * 2 tree(s) are valid! (glob)
+  * GitRepo:$TESTTMP/repo-git commit 1 of 2 - Oid:8ce3eae4 => Bid:d4229e98 (glob)
+  * GitRepo:$TESTTMP/repo-git commit 2 of 2 - Oid:69a26531 => Bid:6f60c3c6 (glob)
   * Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839))) (glob)
   * Hg: Sha1(69a265312a2c29cdf5667ff401d895a66e6ac02a): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839))) (glob)
-  * Ref: "refs/heads/another_committer": Some(ChangesetId(Blake2(5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e))) (glob)
-  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(631c03b250b34b3f9ee3b6acfb597123ec8340adaa91e3ba84ef0f4c54c6641a))) (glob)
+  * Ref: "refs/heads/another_committer": Some(ChangesetId(Blake2(6f60c3c647ab1eab6ce671f3a20e7a9d42aa424dffa927bfc69cd17ff0d56dd1))) (glob)
+  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(d4229e9850e9244c3a986a62590ffada646e7200593bc26e4cc8c9aa10730a26))) (glob)
 
 # Check hg hash before overwriting
-  $ mononoke_admin convert --from bonsai --to hg 5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e
+  $ mononoke_admin convert --from bonsai --to hg 6f60c3c647ab1eab6ce671f3a20e7a9d42aa424dffa927bfc69cd17ff0d56dd1
   * using repo "repo" repoid RepositoryId(0) (glob)
-  70361aa80b8d681cc78fcccba6d5671df7ee4d23
+  b7e825fd5693ac646d85a5c61fa1fae30b980abe
 
 # Now rederive HG_SET_COMMITTER_EXTRA=true. This changes hg hash, so let's run it with --rederive and make sure
 # hg hash was overwritten.
   $ HG_SET_COMMITTER_EXTRA=true ENABLED_DERIVED_DATA='["git_trees", "filenodes", "hgchangesets"]' setup_common_config
-  $ mononoke_admin derived-data derive hgchangesets --changeset 5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e --rederive
+  $ mononoke_admin derived-data derive hgchangesets --changeset 6f60c3c647ab1eab6ce671f3a20e7a9d42aa424dffa927bfc69cd17ff0d56dd1 --rederive
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e)) (glob)
+  * changeset resolved as: ChangesetId(Blake2(6f60c3c647ab1eab6ce671f3a20e7a9d42aa424dffa927bfc69cd17ff0d56dd1)) (glob)
   * about to rederive 1 commits (glob)
-  * deriving 5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e (glob)
-  * derived 5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e in *, Ok("MappedHgChangesetId(HgChangesetId(HgNodeHash(Sha1(c87b24576a61fd421922284be86769baa165ef43))))") (glob)
+  * deriving 6f60c3c647ab1eab6ce671f3a20e7a9d42aa424dffa927bfc69cd17ff0d56dd1 (glob)
+  * derived 6f60c3c647ab1eab6ce671f3a20e7a9d42aa424dffa927bfc69cd17ff0d56dd1 in *, Ok("MappedHgChangesetId(HgChangesetId(HgNodeHash(Sha1(ccb82015a1dc22d5b13a1b83855bbe39659692f3))))") (glob)
 
 # Check hg hash after overwriting
-  $ mononoke_admin convert --from bonsai --to hg 5539313bc3c3888d3856a808458c9766fe2f901cc2da0e848cc05ce513e6c84e
+  $ mononoke_admin convert --from bonsai --to hg 6f60c3c647ab1eab6ce671f3a20e7a9d42aa424dffa927bfc69cd17ff0d56dd1
   * using repo "repo" repoid RepositoryId(0) (glob)
-  c87b24576a61fd421922284be86769baa165ef43
+  ccb82015a1dc22d5b13a1b83855bbe39659692f3

@@ -22,10 +22,9 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" --derive-trees --derive-hg --hggit-compatibility --bonsai-git-mapping full-repo
+  $ gitimport "$GIT_REPO" --derive-hg full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
-  * 1 tree(s) are valid! (glob)
   * Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(*))) (glob)
   * Ref: "refs/heads/master": Some(ChangesetId(Blake2(d4229e9850e9244c3a986a62590ffada646e7200593bc26e4cc8c9aa10730a26))) (glob)
 
@@ -40,28 +39,27 @@
 
 # Test missing-for-commit flag (against partially imported repo history)
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" --bonsai-git-mapping missing-for-commit e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
+  $ gitimport "$GIT_REPO" missing-for-commit e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
-  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(4b33fb0ff41a199456fc270c2eceb5f73eec97432c1fd4a4e56b15c48c4fc6dd))) (glob)
+  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(ce091f856ca3744387df7ce23a9d24a3fece7eedc68488ff00f0aed5107a1e6b))) (glob)
 
 # Test missing-for-commit flag (agains fully imported repo history)
-  $ gitimport "$GIT_REPO" --suppress-ref-mapping --bonsai-git-mapping missing-for-commit e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
+  $ gitimport "$GIT_REPO" --suppress-ref-mapping missing-for-commit e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
   * using repo "repo" repoid RepositoryId(0) (glob)
   * Nothing to import for repo *repo-git. (glob)
 
 # Also check that a readonly import works
-  $ gitimport "$GIT_REPO" --with-readonly-storage=true --derive-trees --derive-hg --hggit-compatibility full-repo
+  $ gitimport "$GIT_REPO" --with-readonly-storage=true --derive-hg full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 2 - Oid:* => Bid:* (glob)
   * GitRepo:*repo-git commit 2 of 2 - Oid:* => Bid:* (glob)
-  * 2 tree(s) are valid! (glob)
   * Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(*))) (glob)
   * Hg: Sha1(e8615d6f149b876be0a2f30a1c5bf0c42bf8e136): HgManifestId(HgNodeHash(Sha1(*))) (glob)
   * Ref: "refs/heads/master": Some(ChangesetId(Blake2(*))) (glob)
 
 # Set master (gitimport does not do this yet)
-  $ mononoke_admin bookmarks set master 4b33fb0ff41a199456fc270c2eceb5f73eec97432c1fd4a4e56b15c48c4fc6dd
+  $ mononoke_admin bookmarks set master ce091f856ca3744387df7ce23a9d24a3fece7eedc68488ff00f0aed5107a1e6b
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Current position of BookmarkName { bookmark: "master" } is None (glob)

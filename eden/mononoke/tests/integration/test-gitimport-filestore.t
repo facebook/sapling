@@ -24,10 +24,9 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" --derive-trees --derive-hg --hggit-compatibility --bonsai-git-mapping full-repo
+  $ gitimport "$GIT_REPO" --derive-hg full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
-  * 1 tree(s) are valid! (glob)
   * Hg: Sha1(0ecc922af7b11d796a715f3c093673914b060164): HgManifestId(HgNodeHash(Sha1(4f16e4ceeccf36b18e4a72e183c16a9bea650e1d))) (glob)
   * Ref: "refs/heads/master": Some(ChangesetId(Blake2(306010a179d752b69fa2dd068a3fab8077043c217d3fb7370f705a50acbef48c))) (glob)
 

@@ -25,13 +25,11 @@ use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
 use filestore::{self, FilestoreConfig, StoreRequest};
 use futures::{future, stream, Stream, StreamExt, TryStreamExt};
 use futures_stats::TimedTryFutureExt;
 use git_hash::ObjectId;
 use git_object::Object;
-use git_types::TreeHandle;
 use linked_hash_map::LinkedHashMap;
 use manifest::{bonsai_diff, BonsaiDiffFileChange, StoreLoadable};
 use mercurial_derived_data::{get_manifest_from_bonsai, DeriveHgChangeset};
@@ -207,6 +205,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
         };
         String::from(name_path.to_string_lossy())
     };
+    let dry_run = prefs.dry_run;
 
     let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
     let roots = target.get_roots();
@@ -266,7 +265,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
                 })
                 .collect::<Result<Vec<_>, _>>()
                 .with_context(|| format_err!("While looking for parents of {}", oid))?;
-            let bcs = generate_bonsai_changeset(metadata, parents, file_changes, &prefs)?;
+            let bcs = generate_bonsai_changeset(metadata, parents, file_changes)?;
             let bcs_id = bcs.get_changeset_id();
             acc.borrow_mut().insert(oid, bcs_id, &bcs);
 
@@ -288,7 +287,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
         .map(|v| v.into_iter().collect::<Result<Vec<_>, Error>>())
         .try_for_each(|v| async {
             task::spawn({
-                cloned!(ctx, repo, prefs);
+                cloned!(ctx, repo);
                 async move {
                     let oid_to_bcsid = v
                         .iter()
@@ -310,11 +309,12 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
                         stats.completion_time
                     );
 
-                    if prefs.bonsai_git_mapping {
+                    if !dry_run {
                         repo.bonsai_git_mapping()
                             .bulk_add(&ctx, &oid_to_bcsid)
                             .await?;
                     }
+
                     Result::<_, Error>::Ok(())
                 }
             })
@@ -336,29 +336,6 @@ pub async fn gitimport(
         gitimport_acc::<BufferingGitimportAccumulator>(ctx, repo, path, target, &prefs)
             .await?
             .inner;
-
-    if prefs.derive_trees {
-        let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
-
-        for (id, (bcs_id, _bcs)) in import_map.iter() {
-            let commit = gitimport_objects::read_commit(&reader, id).await?;
-            let tree_id = hash::GitSha1::from_bytes(commit.tree.as_bytes())?;
-
-            let derived_tree = TreeHandle::derive(&ctx, &repo, *bcs_id).await?;
-
-            if tree_id != derived_tree.oid().sha1() {
-                let e = format_err!(
-                    "Invalid tree was derived for {:?}: {:?} (expected {:?})",
-                    id,
-                    derived_tree.oid(),
-                    tree_id
-                );
-                return Err(e);
-            }
-        }
-
-        info!(ctx.logger(), "{} tree(s) are valid!", import_map.len());
-    }
 
     if prefs.derive_hg {
         let mut hg_manifests: HashMap<ChangesetId, HgManifestId> = HashMap::new();
@@ -449,7 +426,6 @@ fn generate_bonsai_changeset(
     metadata: CommitMetadata,
     parents: Vec<ChangesetId>,
     file_changes: SortedVectorMap<MPath, FileChange>,
-    prefs: &GitimportPreferences,
 ) -> Result<BonsaiChangeset, Error> {
     let CommitMetadata {
         oid,
@@ -462,12 +438,10 @@ fn generate_bonsai_changeset(
     } = metadata;
 
     let mut extra = SortedVectorMap::new();
-    if prefs.hggit_compatibility {
-        extra.insert(
-            HGGIT_COMMIT_ID_EXTRA.to_string(),
-            oid.to_string().into_bytes(),
-        );
-    }
+    extra.insert(
+        HGGIT_COMMIT_ID_EXTRA.to_string(),
+        oid.to_string().into_bytes(),
+    );
 
     // TODO: Should we have further extras?
     BonsaiChangesetMut {
@@ -490,22 +464,19 @@ async fn import_bonsai_changeset(
     metadata: CommitMetadata,
     parents: Vec<ChangesetId>,
     file_changes: SortedVectorMap<MPath, FileChange>,
-    prefs: &GitimportPreferences,
 ) -> Result<BonsaiChangeset, Error> {
     let oid = metadata.oid;
-    let bcs = generate_bonsai_changeset(metadata, parents, file_changes, prefs)?;
+    let bcs = generate_bonsai_changeset(metadata, parents, file_changes)?;
     let bcs_id = bcs.get_changeset_id();
 
     save_bonsai_changesets(vec![bcs.clone()], ctx.clone(), repo).await?;
 
-    if prefs.bonsai_git_mapping {
-        repo.bonsai_git_mapping()
-            .bulk_add(
-                &ctx,
-                &[BonsaiGitMappingEntry::new(oid_to_sha1(&oid)?, bcs_id)],
-            )
-            .await?;
-    }
+    repo.bonsai_git_mapping()
+        .bulk_add(
+            ctx,
+            &[BonsaiGitMappingEntry::new(oid_to_sha1(&oid)?, bcs_id)],
+        )
+        .await?;
 
     Ok(bcs)
 }
@@ -539,7 +510,6 @@ pub async fn import_tree_as_single_bonsai_changeset(
         metadata,
         vec![], // no parents
         file_changes,
-        prefs,
     )
     .await?;
 
