@@ -12,7 +12,6 @@ doctest = false
 proc-macro = true
 
 [dependencies]
-proc-macro-crate = "1.1.0"
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "1.0.96", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }

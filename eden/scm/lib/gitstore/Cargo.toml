@@ -18,6 +18,3 @@ git2 = "0.13"
 minibytes = { version = "0.1.0", path = "../minibytes" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 types = { version = "0.1.0", path = "../types" }
-
-[dev-dependencies]
-minibench = { version = "0.1.0", path = "../minibench" }
