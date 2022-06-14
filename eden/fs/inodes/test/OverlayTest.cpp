@@ -9,6 +9,7 @@
 
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/fsoverlay/FsOverlay.h"
+#include "eden/fs/inodes/test/OverlayTestUtil.h"
 
 #include <folly/Exception.h>
 #include <folly/Expected.h>
@@ -21,8 +22,6 @@
 #include <folly/synchronization/test/Barrier.h>
 #include <folly/test/TestUtils.h>
 #include <algorithm>
-#include <iomanip>
-#include <sstream>
 
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -36,16 +35,11 @@
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
-#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 
 using namespace folly::string_piece_literals;
 
 namespace facebook::eden {
-
-namespace {
-std::string debugDumpOverlayInodes(Overlay&, InodeNumber rootInode);
-} // namespace
 
 constexpr Overlay::OverlayType kOverlayType = Overlay::OverlayType::Legacy;
 
@@ -941,51 +935,6 @@ TEST_F(DebugDumpOverlayInodesTest, directories_are_dumped_depth_first) {
       "  Entries (0 total):\n",
       debugDumpOverlayInodes(*overlay, rootIno));
 }
-
-namespace {
-void debugDumpOverlayInodes(
-    Overlay& overlay,
-    InodeNumber rootInode,
-    AbsolutePathPiece path,
-    std::ostringstream& out) {
-  out << path << "\n";
-  out << "  Inode number: " << rootInode << "\n";
-
-  auto dir = overlay.loadOverlayDir(rootInode);
-  out << "  Entries (" << dir.size() << " total):\n";
-
-  auto dtypeToString = [](dtype_t dtype) noexcept -> const char* {
-    switch (dtype) {
-      case dtype_t::Dir:
-        return "d";
-      case dtype_t::Regular:
-        return "f";
-      default:
-        return "?";
-    }
-  };
-
-  for (const auto& [entryPath, entry] : dir) {
-    auto permissions = entry.getInitialMode() & ~S_IFMT;
-    out << "  " << std::dec << std::setw(11) << entry.getInodeNumber() << " "
-        << dtypeToString(entry.getDtype()) << " " << std::oct << std::setw(4)
-        << permissions << " " << entryPath << "\n";
-  }
-  for (const auto& [entryPath, entry] : dir) {
-    if (entry.getDtype() == dtype_t::Dir) {
-      debugDumpOverlayInodes(
-          overlay, entry.getInodeNumber(), path + entryPath, out);
-    }
-  }
-}
-
-std::string debugDumpOverlayInodes(Overlay& overlay, InodeNumber rootInode) {
-  std::ostringstream out;
-  debugDumpOverlayInodes(overlay, rootInode, AbsolutePathPiece{}, out);
-  return out.str();
-}
-
-} // namespace
 
 } // namespace facebook::eden
 
