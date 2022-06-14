@@ -10,7 +10,7 @@ mod mem_writes_changesets;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable};
 use bonsai_hg_mapping::{ArcBonsaiHgMapping, MemWritesBonsaiHgMapping};
 use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
 use changesets::ArcChangesets;
@@ -21,10 +21,13 @@ use cmdlib::{
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures::future;
 use import_tools::{import_tree_as_single_bonsai_changeset, GitimportPreferences, GitimportTarget};
 use linked_hash_map::LinkedHashMap;
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use mercurial_derived_data::{get_manifest_from_bonsai, DeriveHgChangeset};
+use mononoke_types::ChangesetId;
 use slog::info;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -48,6 +51,48 @@ const ARG_GIT_FROM: &str = "git-from";
 const ARG_GIT_TO: &str = "git-to";
 
 const ARG_GIT_COMMIT: &str = "git-commit";
+
+async fn derive_hg(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    import_map: impl Iterator<Item = (&git_hash::ObjectId, &ChangesetId)>,
+) -> Result<(), Error> {
+    let mut hg_manifests = HashMap::new();
+
+    for (id, bcs_id) in import_map {
+        let bcs = bcs_id.load(ctx, repo.blobstore()).await?;
+        let parent_manifests = future::try_join_all(bcs.parents().map({
+            let hg_manifests = &hg_manifests;
+            move |p| async move {
+                let manifest = if let Some(manifest) = hg_manifests.get(&p) {
+                    *manifest
+                } else {
+                    repo.derive_hg_changeset(ctx, p)
+                        .await?
+                        .load(ctx, repo.blobstore())
+                        .await?
+                        .manifestid()
+                };
+                Result::<_, Error>::Ok(manifest)
+            }
+        }))
+        .await?;
+
+        let manifest = get_manifest_from_bonsai(
+            ctx.clone(),
+            repo.get_blobstore().boxed(),
+            bcs.clone(),
+            parent_manifests,
+        )
+        .await?;
+
+        hg_manifests.insert(*bcs_id, manifest);
+
+        info!(ctx.logger(), "Hg: {:?}: {:?}", id, manifest);
+    }
+
+    Ok(())
+}
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
@@ -110,9 +155,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let dry_run = matches.readonly_storage().0;
     prefs.dry_run = dry_run;
 
-    if matches.is_present(ARG_DERIVE_HG) {
-        prefs.derive_hg = true;
-    }
+    let derive_hg_data = matches.is_present(ARG_DERIVE_HG);
 
     if let Some(path) = matches.value_of(ARG_GIT_COMMAND_PATH) {
         prefs.git_command_path = PathBuf::from(path);
@@ -143,16 +186,18 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 repo
             };
 
+            let uploader = import_direct::DirectUploader::new(repo.clone());
+
             let target = match matches.subcommand() {
                 (SUBCOMMAND_FULL_REPO, Some(..)) => GitimportTarget::full(),
                 (SUBCOMMAND_GIT_RANGE, Some(range_matches)) => {
                     let from = range_matches.value_of(ARG_GIT_FROM).unwrap().parse()?;
                     let to = range_matches.value_of(ARG_GIT_TO).unwrap().parse()?;
-                    GitimportTarget::range(from, to, &ctx, &repo).await?
+                    import_direct::range(from, to, &ctx, &repo).await?
                 }
                 (SUBCOMMAND_MISSING_FOR_COMMIT, Some(matches)) => {
                     let commit = matches.value_of(ARG_GIT_COMMIT).unwrap().parse()?;
-                    GitimportTarget::missing_for_commit(
+                    import_direct::missing_for_commit(
                         commit,
                         &ctx,
                         &repo,
@@ -163,10 +208,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 }
                 (SUBCOMMAND_IMPORT_TREE_AS_SINGLE_BONSAI_CHANGESET, Some(matches)) => {
                     let commit = matches.value_of(ARG_GIT_COMMIT).unwrap().parse()?;
-                    let bcs =
-                        import_tree_as_single_bonsai_changeset(&ctx, &repo, path, commit, &prefs)
-                            .await?;
-                    info!(ctx.logger(), "imported as {}", bcs.get_changeset_id());
+                    let bcs_id = import_tree_as_single_bonsai_changeset(
+                        &ctx, path, uploader, commit, &prefs,
+                    )
+                    .await?;
+                    info!(ctx.logger(), "imported as {}", bcs_id);
+                    if derive_hg_data {
+                        derive_hg(&ctx, &repo, [(&commit, &bcs_id)].into_iter()).await?;
+                    }
                     return Ok(());
                 }
                 _ => {
@@ -174,13 +223,16 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 }
             };
 
-            let gitimport_result: LinkedHashMap<_, (ChangesetId, BonsaiChangeset)> =
-                import_tools::gitimport(&ctx, &repo, path, &target, &prefs).await?;
+            let gitimport_result: LinkedHashMap<_, _> =
+                import_tools::gitimport(&ctx, path, uploader, &target, &prefs).await?;
+            if derive_hg_data {
+                derive_hg(&ctx, &repo, gitimport_result.iter()).await?;
+            }
 
             if !matches.is_present(ARG_SUPPRESS_REF_MAPPING) {
                 let refs = import_tools::read_git_refs(path, &prefs).await?;
                 for (name, commit) in refs {
-                    let bcs_id = gitimport_result.get(&commit).map(|e| e.0);
+                    let bcs_id = gitimport_result.get(&commit);
                     info!(
                         ctx.logger(),
                         "Ref: {:?}: {:?}",

@@ -294,6 +294,7 @@ members = [
   "git/git_types",
   "git/git_types/if",
   "git/gitimport",
+  "git/import_direct",
   "git/import_tools",
   "gotham_ext",
   "hgproto",

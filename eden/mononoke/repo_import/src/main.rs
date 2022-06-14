@@ -1057,8 +1057,8 @@ async fn repo_import(
         let prefs = GitimportPreferences::default();
         let target = GitimportTarget::full();
         info!(ctx.logger(), "Started importing git commits to Mononoke");
-        let import_map =
-            import_tools::gitimport(&ctx, repo.as_blob_repo(), path, &target, &prefs).await?;
+        let uploader = import_direct::DirectUploader::new(repo.as_blob_repo().clone());
+        let import_map = import_tools::gitimport(&ctx, path, uploader, &target, &prefs).await?;
         info!(ctx.logger(), "Added commits to Mononoke");
 
         let git_merge_oid = {
@@ -1084,20 +1084,11 @@ async fn repo_import(
         };
 
         let git_merge_bcs_id = match import_map.get(&git_merge_oid) {
-            Some((a, _)) => a.clone(),
+            Some(a) => a.clone(),
             None => return Err(format_err!("Git commit doesn't exist")),
         };
 
-        let bonsai_values: Vec<(ChangesetId, BonsaiChangeset)> =
-            import_map.values().cloned().collect();
-        let gitimport_bcs: Vec<BonsaiChangeset> =
-            bonsai_values.iter().map(|(_, bcs)| bcs.clone()).collect();
-        let gitimport_bcs_ids: Vec<ChangesetId> =
-            bonsai_values.iter().map(|(id, _)| id.clone()).collect();
-
-        info!(ctx.logger(), "Saving gitimported bonsai changesets");
-        save_bonsai_changesets(gitimport_bcs.clone(), ctx.clone(), &repo).await?;
-        info!(ctx.logger(), "Saved gitimported bonsai changesets");
+        let gitimport_bcs_ids: Vec<ChangesetId> = import_map.values().cloned().collect();
 
         recovery_fields.git_merge_bcs_id = Some(git_merge_bcs_id);
         recovery_fields.import_stage = ImportStage::RewritePaths;

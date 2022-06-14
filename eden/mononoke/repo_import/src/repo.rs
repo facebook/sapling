@@ -12,6 +12,7 @@ use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::{BookmarkUpdateLog, Bookmarks};
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
+use filestore::FilestoreConfig;
 use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
 use phases::Phases;
@@ -25,6 +26,7 @@ use repo_identity::{RepoIdentity, RepoIdentityRef};
 #[derive(Clone)]
 pub struct Repo {
     #[delegate(
+        FilestoreConfig,
         RepoBlobstore,
         RepoDerivedData,
         RepoIdentity,

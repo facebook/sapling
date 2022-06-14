@@ -10,19 +10,18 @@ use crate::gitlfs::GitImportLfs;
 
 use anyhow::{bail, format_err, Context, Error};
 use async_trait::async_trait;
-use blobrepo::BlobRepo;
 use blobstore::LoadableError;
+use bytes::Bytes;
 use context::CoreContext;
 use futures::stream::{Stream, TryStreamExt};
 use git_hash::ObjectId;
 use git_object::{tree, Commit, Tree};
 use manifest::{Entry, Manifest, StoreLoadable};
-use mononoke_types::{hash, typed_hash::ChangesetId, DateTime, FileType, MPathElement};
-use slog::debug;
+use mononoke_types::{hash, ChangesetId, DateTime, FileType, MPath, MPathElement};
+use sorted_vector_map::SortedVectorMap;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::time::Instant;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
 use tokio_stream::wrappers::LinesStream;
@@ -115,7 +114,6 @@ impl StoreLoadable<GitRepoReader> for GitTree {
 
 #[derive(Clone, Debug)]
 pub struct GitimportPreferences {
-    pub derive_hg: bool,
     pub dry_run: bool,
     /// Only for logging purpuses,
     /// useful when several repos are imported simultainously.
@@ -129,7 +127,6 @@ impl Default for GitimportPreferences {
     fn default() -> Self {
         GitimportPreferences {
             dry_run: false,
-            derive_hg: false,
             gitrepo_name: None,
             concurrency: 20,
             lfs: GitImportLfs::default(),
@@ -144,7 +141,7 @@ pub fn oid_to_sha1(oid: &git_hash::oid) -> Result<hash::GitSha1, Error> {
 
 /// Determines which commits to import
 pub struct GitimportTarget {
-    // If empty, we'll grab all commits
+    // If both are empty, we'll grab all commits
     wanted: Vec<ObjectId>,
     known: HashMap<ObjectId, ChangesetId>,
 }
@@ -158,69 +155,13 @@ impl GitimportTarget {
         }
     }
 
-    /// Import starting at from (known to be in Mononoke) and ending with to
-    pub async fn range(
-        from: ObjectId,
-        to: ObjectId,
-        ctx: &CoreContext,
-        repo: &BlobRepo,
+    pub fn new(
+        wanted: Vec<ObjectId>,
+        known: HashMap<ObjectId, ChangesetId>,
     ) -> Result<Self, Error> {
-        let from_csid = repo
-            .bonsai_git_mapping()
-            .get_bonsai_from_git_sha1(ctx, oid_to_sha1(&from)?)
-            .await?
-            .ok_or_else(|| {
-                format_err!(
-                    "Cannot start import from root {}: commit does not exist in Blobrepo",
-                    from
-                )
-            })?;
-        let wanted = vec![to];
-        let known = [(from, from_csid)].into();
-        Ok(Self { wanted, known })
-    }
-
-    /// Import commit and all its history that's not yet been imported
-    /// Makes a pass over the repo on construction to find missing history
-    pub async fn missing_for_commit(
-        commit: ObjectId,
-        ctx: &CoreContext,
-        repo: &BlobRepo,
-        git_command_path: &Path,
-        repo_path: &Path,
-    ) -> Result<Self, Error> {
-        let reader = GitRepoReader::new(git_command_path, repo_path).await?;
-        let ta = Instant::now();
-
-        // Starting from the specified commit. We need to get the boundaries of what already is imported into Mononoke.
-        // We do this by doing a bfs search from the specified commit.
-        let mut known = HashMap::<ObjectId, ChangesetId>::new();
-        let mut visited = HashSet::new();
-        let mut q = Vec::new();
-        q.push(commit);
-        while let Some(id) = q.pop() {
-            if !visited.contains(&id) {
-                visited.insert(id);
-                if let Some(changeset) = commit_in_mononoke(ctx, repo, &id).await? {
-                    known.insert(id, changeset);
-                } else {
-                    let object = reader.get_object(&id).await?;
-                    let commit = object
-                        .try_into_commit()
-                        .map_err(|_| format_err!("oid {} is not a commit", id))?;
-                    q.extend(commit.parents);
-                }
-            }
+        if wanted.is_empty() {
+            bail!("Nothing to import");
         }
-
-        let tb = Instant::now();
-        debug!(
-            ctx.logger(),
-            "Time to find missing commits {:?}",
-            tb.duration_since(ta)
-        );
-
-        let wanted = vec![commit];
         Ok(Self { wanted, known })
     }
 
@@ -306,26 +247,6 @@ impl GitimportTarget {
         }
         command
     }
-}
-
-async fn commit_in_mononoke(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    commit_id: &git_hash::oid,
-) -> Result<Option<ChangesetId>, Error> {
-    let changeset = repo
-        .bonsai_git_mapping()
-        .get_bonsai_from_git_sha1(ctx, oid_to_sha1(commit_id)?)
-        .await?;
-    if let Some(existing_changeset) = changeset {
-        debug!(
-            ctx.logger(),
-            "Commit found in Mononoke Oid:{} -> ChangesetId:{}",
-            oid_to_sha1(commit_id)?.to_brief(),
-            existing_changeset.to_brief()
-        );
-    }
-    Ok(changeset)
 }
 
 pub struct CommitMetadata {
@@ -416,4 +337,53 @@ pub fn convert_time_to_datetime(time: &git_actor::Time) -> Result<DateTime, Erro
         time.seconds_since_unix_epoch.into(),
         -time.offset_in_seconds,
     )
+}
+
+#[async_trait]
+pub trait GitUploader: Clone + Send + Sync + 'static {
+    /// The type of a file change to be uploaded
+    type Change: Clone + Send + Sync + 'static;
+
+    /// The type of a changeset returned by generate_changeset
+    type IntermediateChangeset: Send + Sync;
+
+    /// Returns a change representing a deletion
+    fn deleted() -> Self::Change;
+
+    /// Upload a single file to the repo
+    async fn upload_file(
+        &self,
+        ctx: &CoreContext,
+        lfs: &GitImportLfs,
+        path: &MPath,
+        ty: FileType,
+        oid: ObjectId,
+        git_bytes: Bytes,
+    ) -> Result<Self::Change, Error>;
+
+    /// Generate a single Bonsai changeset ID
+    /// This should delay saving the changeset if possible
+    /// but may save it if required.
+    ///
+    /// You are guaranteed that all parents of the given changeset
+    /// have been generated by this point.
+    async fn generate_changeset(
+        &self,
+        ctx: &CoreContext,
+        bonsai_parents: Vec<ChangesetId>,
+        metadata: CommitMetadata,
+        changes: SortedVectorMap<MPath, Self::Change>,
+        dry_run: bool,
+    ) -> Result<(Self::IntermediateChangeset, ChangesetId), Error>;
+
+    /// Save a block of generated changesets. The supplied block is
+    /// toposorted so that parents are all present before children
+    /// If you did not save the changeset in generate_changeset,
+    /// you must do so here.
+    async fn save_changesets_bulk(
+        &self,
+        ctx: &CoreContext,
+        dry_run: bool,
+        changesets: Vec<(Self::IntermediateChangeset, hash::GitSha1)>,
+    ) -> Result<(), Error>;
 }

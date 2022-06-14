@@ -139,8 +139,6 @@
   * GitRepo:$TESTTMP/repo-git commit 4 of 5 - Oid:13aef6ec => Bid:8a8c80cc (glob)
   * GitRepo:$TESTTMP/repo-git commit 5 of 5 - Oid:6783febd => Bid:3a696e75 (glob)
   * Added commits to Mononoke (glob)
-  * Saving gitimported bonsai changesets (glob)
-  * Saved gitimported bonsai changesets (glob)
   * Commit 1/5: Remapped ChangesetId(Blake2(ca4f2507b01bd09828c1c223693bf068f3dafc4ac5cdc9f075d4deb4cbae0a27)) => ChangesetId(Blake2(a3050c4a2947243ca6ad1de574a42bc66bf0bb5fd5a6196f486aa9c8f8a3fa63)) (glob)
   * Commit 2/5: Remapped ChangesetId(Blake2(1ea796eecfc63927036609b8d932d7fa0531d69347032539ef5ae16d6bb700bb)) => ChangesetId(Blake2(f368b430b2d6274f8735369dd5a377ef266c8e64772d3007ba4fd753a949daee)) (glob)
   * Commit 3/5: Remapped ChangesetId(Blake2(6cfe7a3ff0e43160d780c429ed7aa5b825c956c0076998f5442d520a97bbd904)) => ChangesetId(Blake2(6efb2b7334fc122a014fc488379e8f8698c08edc91302bc278efd3221a84a3bb)) (glob)
