@@ -72,6 +72,27 @@ impl BlobstoreWalEntry {
             blob_size,
         )
     }
+
+    fn from_row(
+        row: (
+            String,
+            MultiplexId,
+            Timestamp,
+            OperationKey,
+            u64,
+            Option<u64>,
+        ),
+    ) -> Self {
+        let (blobstore_key, multiplex_id, timestamp, operation_key, id, blob_size) = row;
+        Self {
+            blobstore_key,
+            multiplex_id,
+            timestamp,
+            operation_key,
+            id: Some(id),
+            blob_size,
+        }
+    }
 }
 
 type EnqueueSender =
@@ -154,6 +175,14 @@ pub trait BlobstoreWal: Send + Sync {
         ctx: &'a CoreContext,
         entry: Vec<BlobstoreWalEntry>,
     ) -> Result<()>;
+
+    async fn read<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        multiplex_id: &MultiplexId,
+        older_than: &Timestamp,
+        limit: usize,
+    ) -> Result<Vec<BlobstoreWalEntry>>;
 }
 
 #[async_trait]
@@ -196,6 +225,25 @@ impl BlobstoreWal for SqlBlobstoreWal {
         }
 
         Ok(())
+    }
+
+    async fn read<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        multiplex_id: &MultiplexId,
+        older_than: &Timestamp,
+        limit: usize,
+    ) -> Result<Vec<BlobstoreWalEntry>> {
+        let rows = queries::WalReadEntries::query(
+            &self.read_master_connection,
+            multiplex_id,
+            older_than,
+            &limit,
+        )
+        .await?;
+
+        let entries = rows.into_iter().map(BlobstoreWalEntry::from_row).collect();
+        Ok(entries)
     }
 }
 

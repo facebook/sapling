@@ -5,9 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! Tests for the Changesets store.
-
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use blobstore_sync_queue::{
     BlobstoreSyncQueue, BlobstoreSyncQueueEntry, BlobstoreWal, BlobstoreWalEntry, OperationKey,
     SqlBlobstoreSyncQueue, SqlBlobstoreWal,
@@ -126,15 +124,78 @@ async fn test_write_ahead_log(fb: FacebookInit) -> Result<(), Error> {
     let op2 = OperationKey(Uuid::from_fields(0, 0, 3, &node_id)?); // for key1
     let op3 = OperationKey(Uuid::from_fields(0, 0, 4, &node_id)?); // for second put of key1
 
-    let entry0 = BlobstoreWalEntry::new(key0.clone(), mp, t0, op0, None);
+    let entry0 = BlobstoreWalEntry::new(key0.clone(), mp, t0, op0.clone(), None);
     let entry1 = BlobstoreWalEntry::new(key0, mp, t1, op1, None);
     let entry2 = BlobstoreWalEntry::new(key1.clone(), mp, t1, op2, None);
     let entry3 = BlobstoreWalEntry::new(key1, mp, t2, op3, None);
 
     // add
-    assert!(wal.log(&ctx, entry0).await.is_ok());
-    assert!(wal.log_many(&ctx, vec![entry1, entry2]).await.is_ok());
-    assert!(wal.log(&ctx, entry3).await.is_ok());
+    assert!(wal.log(&ctx, entry0.clone()).await.is_ok());
+    assert!(
+        wal.log_many(&ctx, vec![entry1, entry2.clone()])
+            .await
+            .is_ok()
+    );
+    assert!(wal.log(&ctx, entry3.clone()).await.is_ok());
+
+    // read different ranges of entries
+    let validate = |entry: &BlobstoreWalEntry, expected: &BlobstoreWalEntry| {
+        assert_eq!(entry.blobstore_key, expected.blobstore_key);
+        assert_eq!(entry.multiplex_id, expected.multiplex_id);
+        assert_eq!(entry.timestamp, expected.timestamp);
+        assert_eq!(entry.operation_key, expected.operation_key);
+        assert_eq!(entry.blob_size, expected.blob_size);
+    };
+
+    let some_entries = wal
+        .read(&ctx, &mp, &t0, 1)
+        .await
+        .expect("DateTime range iteration failed");
+    assert_eq!(some_entries.len(), 1);
+    validate(
+        some_entries
+            .get(0)
+            .ok_or_else(|| format_err!("must have entry"))?,
+        &entry0,
+    );
+
+    let mut some_entries = wal
+        .read(&ctx, &mp, &t1, 5)
+        .await
+        .expect("DateTime range iteration failed");
+    assert_eq!(some_entries.len(), 3);
+    some_entries.sort_by(|a, b| {
+        if a.timestamp == b.timestamp {
+            a.blobstore_key.cmp(&b.blobstore_key)
+        } else {
+            a.timestamp.cmp(&b.timestamp)
+        }
+    });
+    validate(
+        some_entries
+            .get(2)
+            .ok_or_else(|| format_err!("must have entry"))?,
+        &entry2,
+    );
+
+    let mut some_entries = wal
+        .read(&ctx, &mp, &t2, 7)
+        .await
+        .expect("DateTime range iteration failed");
+    assert_eq!(some_entries.len(), 4);
+    some_entries.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+    validate(
+        some_entries
+            .get(3)
+            .ok_or_else(|| format_err!("must have entry"))?,
+        &entry3,
+    );
+
+    let some_entries = wal
+        .read(&ctx, &mp, &t2, 0)
+        .await
+        .expect("DateTime range iteration failed");
+    assert!(some_entries.is_empty());
 
     Ok(())
 }
