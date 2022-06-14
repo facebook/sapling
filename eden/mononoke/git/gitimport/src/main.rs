@@ -21,15 +21,11 @@ use cmdlib::{
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
-use git2::Repository;
-use import_tools::{
-    git2_oid_to_git_hash_objectid, import_tree_as_single_bonsai_changeset, FullRepoImport,
-    GitRangeImport, GitimportPreferences, GitimportTarget, ImportMissingForCommit,
-};
+use import_tools::{import_tree_as_single_bonsai_changeset, GitimportPreferences, GitimportTarget};
 use linked_hash_map::LinkedHashMap;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use slog::info;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::mem_writes_changesets::MemWritesChangesets;
@@ -49,6 +45,7 @@ const ARG_DERIVE_HG: &str = "derive-hg";
 const ARG_HGGIT_COMPATIBILITY: &str = "hggit-compatibility";
 const ARG_BONSAI_GIT_MAPPING: &str = "bonsai-git-mapping";
 const ARG_SUPPRESS_REF_MAPPING: &str = "suppress-ref-mapping";
+const ARG_GIT_COMMAND_PATH: &str = "git-command-path";
 
 const ARG_GIT_FROM: &str = "git-from";
 const ARG_GIT_TO: &str = "git-to";
@@ -93,6 +90,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .help("This is used to suppress the printing of the potentially really long git Reference -> BonzaiID mapping.")
                 .required(false)
                 .takes_value(false),
+        )
+        .arg(
+            Arg::with_name(ARG_GIT_COMMAND_PATH)
+                .long(ARG_GIT_COMMAND_PATH)
+                .help("Set the path to the git binary - preset to git.real")
+                .required(false)
+                .takes_value(true),
         )
         .arg(Arg::with_name(ARG_GIT_REPOSITORY_PATH).help("Path to a git repository to import"))
         .subcommand(SubCommand::with_name(SUBCOMMAND_FULL_REPO))
@@ -144,6 +148,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         prefs.bonsai_git_mapping = true;
     }
 
+    if let Some(path) = matches.value_of(ARG_GIT_COMMAND_PATH) {
+        prefs.git_command_path = PathBuf::from(path);
+    }
+
     let path = Path::new(matches.value_of(ARG_GIT_REPOSITORY_PATH).unwrap());
 
     let logger = matches.logger();
@@ -169,23 +177,28 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 repo
             };
 
-            let git_repo = Repository::open(&path)?;
-
-            let target: Box<dyn GitimportTarget> = match matches.subcommand() {
-                (SUBCOMMAND_FULL_REPO, Some(..)) => Box::new(FullRepoImport {}),
+            let target = match matches.subcommand() {
+                (SUBCOMMAND_FULL_REPO, Some(..)) => GitimportTarget::full(),
                 (SUBCOMMAND_GIT_RANGE, Some(range_matches)) => {
                     let from = range_matches.value_of(ARG_GIT_FROM).unwrap().parse()?;
                     let to = range_matches.value_of(ARG_GIT_TO).unwrap().parse()?;
-                    Box::new(GitRangeImport::new(from, to, &ctx, &repo).await?)
+                    GitimportTarget::range(from, to, &ctx, &repo).await?
                 }
                 (SUBCOMMAND_MISSING_FOR_COMMIT, Some(matches)) => {
                     let commit = matches.value_of(ARG_GIT_COMMIT).unwrap().parse()?;
-                    Box::new(ImportMissingForCommit::new(commit, &ctx, &repo, &git_repo).await?)
+                    GitimportTarget::missing_for_commit(
+                        commit,
+                        &ctx,
+                        &repo,
+                        &prefs.git_command_path,
+                        path,
+                    )
+                    .await?
                 }
                 (SUBCOMMAND_IMPORT_TREE_AS_SINGLE_BONSAI_CHANGESET, Some(matches)) => {
                     let commit = matches.value_of(ARG_GIT_COMMIT).unwrap().parse()?;
                     let bcs =
-                        import_tree_as_single_bonsai_changeset(&ctx, &repo, path, commit, prefs)
+                        import_tree_as_single_bonsai_changeset(&ctx, &repo, path, commit, &prefs)
                             .await?;
                     info!(ctx.logger(), "imported as {}", bcs.get_changeset_id());
                     return Ok(());
@@ -196,14 +209,18 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             };
 
             let gitimport_result: LinkedHashMap<_, (ChangesetId, BonsaiChangeset)> =
-                import_tools::gitimport(&ctx, &repo, &path, &*target, prefs).await?;
+                import_tools::gitimport(&ctx, &repo, path, &target, &prefs).await?;
 
             if !matches.is_present(ARG_SUPPRESS_REF_MAPPING) {
-                for reference in git_repo.references()? {
-                    let reference = reference?;
-                    let commit = git2_oid_to_git_hash_objectid(&reference.peel_to_commit()?.id());
+                let refs = import_tools::read_git_refs(path, &prefs).await?;
+                for (name, commit) in refs {
                     let bcs_id = gitimport_result.get(&commit).map(|e| e.0);
-                    info!(ctx.logger(), "Ref: {:?}: {:?}", reference.name(), bcs_id);
+                    info!(
+                        ctx.logger(),
+                        "Ref: {:?}: {:?}",
+                        String::from_utf8_lossy(&name),
+                        bcs_id
+                    );
                 }
             }
 

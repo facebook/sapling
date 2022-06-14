@@ -23,8 +23,6 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 git-actor = "0.10"
 git-hash = "0.9"
 git-object = "0.19"
-git-pool = { version = "0.1.0", path = "../git-pool" }
-git2 = "0.13"
 git_types = { version = "0.1.0", path = "../git_types" }
 http = "0.2"
 hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
@@ -38,3 +36,4 @@ rand = { version = "0.8", features = ["small_rng"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "signal", "sync", "time"] }

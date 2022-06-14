@@ -34,7 +34,7 @@
   * GitRepo:*repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
   * 1 tree(s) are valid! (glob)
   * Hg: Sha1(200c0e8395a7222c38cf9c3efdf734d2507fda90): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839))) (glob)
-  * Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(ee3310625bd7cb997c3ec93467dd7f7155f4fda161d1d9d3c7c37c9e312f1dda))) (glob)
+  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(ee3310625bd7cb997c3ec93467dd7f7155f4fda161d1d9d3c7c37c9e312f1dda))) (glob)
 
 # Set master (gitimport does not do this yet)
   $ mononoke_admin bookmarks set master ee3310625bd7cb997c3ec93467dd7f7155f4fda161d1d9d3c7c37c9e312f1dda

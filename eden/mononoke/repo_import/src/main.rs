@@ -27,8 +27,7 @@ use futures::{
     future::{self, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
-use git2::Repository;
-use import_tools::{git2_oid_to_git_hash_objectid, FullRepoImport, GitimportPreferences};
+use import_tools::{GitimportPreferences, GitimportTarget};
 use itertools::Itertools;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use manifest::ManifestOps;
@@ -52,12 +51,13 @@ use slog::info;
 use sql_ext::facebook::MysqlOptions;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 use tokio::{
     fs,
-    io::{AsyncReadExt, AsyncWriteExt},
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     process, time,
 };
 use topo_sort::sort_topological;
@@ -1055,18 +1055,33 @@ async fn repo_import(
     // Importing process starts here
     if recovery_fields.import_stage == ImportStage::GitImport {
         let prefs = GitimportPreferences::default();
-        let target = FullRepoImport {};
+        let target = GitimportTarget::full();
         info!(ctx.logger(), "Started importing git commits to Mononoke");
         let import_map =
-            import_tools::gitimport(&ctx, repo.as_blob_repo(), path, &target, prefs).await?;
+            import_tools::gitimport(&ctx, repo.as_blob_repo(), path, &target, &prefs).await?;
         info!(ctx.logger(), "Added commits to Mononoke");
 
-        let git_repo = Repository::open(path)?;
-        let git_merge_oid = git2_oid_to_git_hash_objectid(
-            &git_repo
-                .revparse_single(&recovery_fields.git_merge_rev_id)?
-                .id(),
-        );
+        let git_merge_oid = {
+            let mut child = process::Command::new(&prefs.git_command_path)
+                .current_dir(path)
+                .env_clear()
+                .kill_on_drop(false)
+                .stdin(Stdio::null())
+                .stdout(Stdio::piped())
+                .arg("rev-parse")
+                .arg("--verify")
+                .arg("--end-of-options")
+                .arg(format!("{}^{{commit}}", recovery_fields.git_merge_rev_id))
+                .spawn()?;
+            let stdout = BufReader::new(child.stdout.take().context("stdout not set up")?);
+            let mut lines = stdout.lines();
+            if let Some(line) = lines.next_line().await? {
+                git_hash::ObjectId::from_hex(line.as_bytes())
+                    .context("Parsing git rev-parse output")?
+            } else {
+                bail!("No lines returned by git rev-parse");
+            }
+        };
 
         let git_merge_bcs_id = match import_map.get(&git_merge_oid) {
             Some((a, _)) => a.clone(),

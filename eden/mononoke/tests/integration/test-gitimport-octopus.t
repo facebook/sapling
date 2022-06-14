@@ -54,10 +54,10 @@
   * GitRepo:*repo-git commit 4 of 5 - Oid:* => Bid:* (glob)
   * GitRepo:*repo-git commit 5 of 5 - Oid:* => Bid:* (glob)
   * 5 tree(s) are valid! (glob)
-  * Ref: Some("refs/heads/branch1"): Some(ChangesetId(Blake2(*))) (glob)
-  * Ref: Some("refs/heads/branch2"): Some(ChangesetId(Blake2(*))) (glob)
-  * Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(138f3627a8b764746a787d755cee5fb7134f631b63da40e97e515075f0a83dd1))) (glob)
-  * Ref: Some("refs/heads/root"): Some(ChangesetId(Blake2(*))) (glob)
+  * Ref: "refs/heads/branch1": Some(ChangesetId(Blake2(*))) (glob)
+  * Ref: "refs/heads/branch2": Some(ChangesetId(Blake2(*))) (glob)
+  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(138f3627a8b764746a787d755cee5fb7134f631b63da40e97e515075f0a83dd1))) (glob)
+  * Ref: "refs/heads/root": Some(ChangesetId(Blake2(*))) (glob)
 
 # Set master (gitimport does not do this yet)
   $ mononoke_admin bookmarks set master 138f3627a8b764746a787d755cee5fb7134f631b63da40e97e515075f0a83dd1
