@@ -6,8 +6,10 @@
  */
 
 mod sync_queue;
+mod write_ahead_log;
 
 pub use sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, SqlBlobstoreSyncQueue};
+pub use write_ahead_log::{BlobstoreWal, BlobstoreWalEntry, SqlBlobstoreWal};
 
 use sql::mysql;
 use sql::mysql_async::{
