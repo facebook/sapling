@@ -2212,6 +2212,8 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
     bool isIgnored) {
   return getMount()
       ->loadFileContents(context->getFetchContext(), gitignoreInode)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenError([](const folly::exception_wrapper& ex) {
         XLOG(WARN) << "error reading ignore file: " << folly::exceptionStr(ex);
         return std::string{};

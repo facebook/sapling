@@ -577,7 +577,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    *
    * The fetchContext object must remain valid until the future is completed.
    */
-  folly::Future<std::string> loadFileContentsFromPath(
+  ImmediateFuture<std::string> loadFileContentsFromPath(
       ObjectFetchContext& fetchContext,
       RelativePathPiece path,
       CacheHint cacheHint = CacheHint::LikelyNeededAgain) const;
@@ -591,7 +591,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * TODO: add maxSize parameter to cause the command to fail if the file is
    * over a certain size.
    */
-  folly::Future<std::string> loadFileContents(
+  ImmediateFuture<std::string> loadFileContents(
       ObjectFetchContext& fetchContext,
       InodePtr fileInodePtr,
       CacheHint cacheHint = CacheHint::LikelyNeededAgain) const;
@@ -610,7 +610,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * 6) a symlink points to a non-existing entity => error (ENOENT)
    * NOTE: a loop in the chain is handled by max depth length logic.
    */
-  folly::Future<InodePtr> resolveSymlink(
+  ImmediateFuture<InodePtr> resolveSymlink(
       ObjectFetchContext& fetchContext,
       InodePtr pInode,
       CacheHint cacheHint = CacheHint::LikelyNeededAgain) const;
@@ -929,7 +929,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   /**
    * Recursive method used for resolveSymlink() implementation
    */
-  folly::Future<InodePtr> resolveSymlinkImpl(
+  ImmediateFuture<InodePtr> resolveSymlinkImpl(
       ObjectFetchContext& fetchContext,
       InodePtr pInode,
       RelativePath&& path,

@@ -1214,19 +1214,17 @@ ImmediateFuture<InodeOrTreeOrEntry> EdenMount::getInodeOrTreeOrEntry(
       [p = std::move(processor)]() mutable { p.reset(); });
 }
 
-folly::Future<std::string> EdenMount::loadFileContentsFromPath(
+ImmediateFuture<std::string> EdenMount::loadFileContentsFromPath(
     ObjectFetchContext& fetchContext,
     RelativePathPiece path,
     CacheHint cacheHint) const {
   return getInodeSlow(path, fetchContext)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([this, &fetchContext, cacheHint](InodePtr fileInodePtr) {
         return loadFileContents(fetchContext, fileInodePtr, cacheHint);
       });
 }
 
-folly::Future<std::string> EdenMount::loadFileContents(
+ImmediateFuture<std::string> EdenMount::loadFileContents(
     ObjectFetchContext& fetchContext,
     InodePtr fileInodePtr,
     CacheHint cacheHint) const {
@@ -1234,15 +1232,14 @@ folly::Future<std::string> EdenMount::loadFileContents(
   if (!fileInode) {
     XLOG(WARNING) << "loadFile() invoked with a non-file inode: "
                   << fileInodePtr->getLogPath();
-    return makeFuture<std::string>(InodeError(EISDIR, fileInodePtr));
+    return makeImmediateFuture<std::string>(InodeError(EISDIR, fileInodePtr));
   }
 
 #ifndef _WIN32
   if (dtype_t::Symlink == fileInodePtr->getType()) {
     return resolveSymlink(fetchContext, fileInodePtr, cacheHint)
         .thenValue(
-            [this, &fetchContext, cacheHint](
-                InodePtr pResolved) mutable -> folly::Future<std::string> {
+            [this, &fetchContext, cacheHint](InodePtr pResolved) mutable {
               // Note: infinite recursion is not a concern because
               // resolveSymlink() can not return a symlink
               return loadFileContents(fetchContext, pResolved, cacheHint);
@@ -1250,38 +1247,36 @@ folly::Future<std::string> EdenMount::loadFileContents(
   }
 #endif
 
-  return fileInode->readAll(fetchContext, cacheHint)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  return fileInode->readAll(fetchContext, cacheHint);
 }
 
 #ifndef _WIN32
-folly::Future<InodePtr> EdenMount::resolveSymlink(
+ImmediateFuture<InodePtr> EdenMount::resolveSymlink(
     ObjectFetchContext& fetchContext,
     InodePtr pInode,
     CacheHint cacheHint) const {
   auto pathOptional = pInode->getPath();
   if (!pathOptional) {
-    return makeFuture<InodePtr>(InodeError(ENOENT, pInode));
+    return makeImmediateFuture<InodePtr>(InodeError(ENOENT, pInode));
   }
   XLOG(DBG7) << "pathOptional.value() = " << pathOptional.value();
   return resolveSymlinkImpl(
       fetchContext, pInode, std::move(pathOptional.value()), 0, cacheHint);
 }
 
-folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
+ImmediateFuture<InodePtr> EdenMount::resolveSymlinkImpl(
     ObjectFetchContext& fetchContext,
     InodePtr pInode,
     RelativePath&& path,
     size_t depth,
     CacheHint cacheHint) const {
   if (++depth > kMaxSymlinkChainDepth) { // max chain length exceeded
-    return makeFuture<InodePtr>(InodeError(ELOOP, pInode));
+    return makeImmediateFuture<InodePtr>(InodeError(ELOOP, pInode));
   }
 
   // if pInode is not a symlink => it's already "resolved", so just return it
   if (dtype_t::Symlink != pInode->getType()) {
-    return makeFuture(pInode);
+    return ImmediateFuture{pInode};
   }
 
   const auto fileInode = pInode.asFileOrNull();
@@ -1291,8 +1286,6 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
   }
 
   return fileInode->readlink(fetchContext, cacheHint)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([this,
                   &fetchContext,
                   pInode,
@@ -1302,7 +1295,7 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
         // normalized path to symlink target
         auto joinedExpected = joinAndNormalize(path.dirname(), pointsTo);
         if (joinedExpected.hasError()) {
-          return makeFuture<InodePtr>(
+          return makeImmediateFuture<InodePtr>(
               InodeError(joinedExpected.error(), pInode));
         }
         XLOG(DBG7) << "joinedExpected.value() = " << joinedExpected.value();
@@ -1311,11 +1304,8 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
         // be executed before LHS, thus moving value of joinedExpected (in
         // RHS) before using it in LHS
         auto f = getInodeSlow(
-                     joinedExpected.value(),
-                     fetchContext)
-                     .semi()
-                     .via(&folly::QueuedImmediateExecutor::
-                              instance()); // get inode for symlink target
+            joinedExpected.value(),
+            fetchContext); // get inode for symlink target
         return std::move(f).thenValue([this,
                                        &fetchContext,
                                        joinedPath =
@@ -1625,7 +1615,9 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
                           ObjectFetchContext& fetchContext,
                           RelativePathPiece path) {
     return loadFileContentsFromPath(
-        fetchContext, path, CacheHint::LikelyNeededAgain);
+               fetchContext, path, CacheHint::LikelyNeededAgain)
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance());
   };
   return make_unique<DiffContext>(
       callback,
