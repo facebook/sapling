@@ -57,6 +57,15 @@ pub struct ResolvedRepo {
     pub config: RepoConfig,
 }
 
+pub fn resolve_repo_by_name<'a>(
+    config_store: &ConfigStore,
+    matches: &'a MononokeMatches<'a>,
+    repo_name: &str,
+) -> Result<ResolvedRepo> {
+    let configs = load_repo_configs(config_store, matches)?;
+    resolve_repo_given_name(repo_name, &configs)
+}
+
 pub fn resolve_repo<'a>(
     config_store: &ConfigStore,
     matches: &'a MononokeMatches<'a>,
@@ -294,6 +303,19 @@ where
 }
 
 #[inline]
+pub fn open_repo_by_name<'a, R: 'a>(
+    fb: FacebookInit,
+    logger: &'a Logger,
+    matches: &'a MononokeMatches<'a>,
+    repo_name: String,
+) -> impl Future<Output = Result<R, Error>> + 'a
+where
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
+    open_repo_by_name_internal(fb, logger, matches, false, None, None, repo_name)
+}
+
+#[inline]
 pub fn open_repo_with_factory<'a, R: 'a>(
     fb: FacebookInit,
     logger: &'a Logger,
@@ -318,6 +340,29 @@ where
     R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
 {
     open_repo_internal(fb, logger, matches, false, Some(Redaction::Disabled), None)
+}
+
+/// Open the repo corresponding to the provided repo-name.
+/// Make sure that the opened repo has redaction disabled
+#[inline]
+pub fn open_repo_by_name_unredacted<'a, R: 'a>(
+    fb: FacebookInit,
+    logger: &'a Logger,
+    matches: &'a MononokeMatches<'a>,
+    repo_name: String,
+) -> impl Future<Output = Result<R, Error>> + 'a
+where
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
+    open_repo_by_name_internal(
+        fb,
+        logger,
+        matches,
+        false,
+        Some(Redaction::Disabled),
+        None,
+        repo_name,
+    )
 }
 
 pub fn get_repo_factory<'a>(matches: &'a MononokeMatches<'a>) -> Result<RepoFactory, Error> {
@@ -511,6 +556,34 @@ where
     open_repo_internal_with_repo_id(
         logger,
         RepoIdentifier::Id(repo_id),
+        matches,
+        create,
+        redaction_override,
+        repo_factory,
+    )
+    .await
+}
+
+async fn open_repo_by_name_internal<R>(
+    _: FacebookInit,
+    logger: &Logger,
+    matches: &MononokeMatches<'_>,
+    create: bool,
+    redaction_override: Option<Redaction>,
+    maybe_repo_factory: Option<RepoFactory>,
+    repo_name: String,
+) -> Result<R, Error>
+where
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
+    let repo_factory = match maybe_repo_factory {
+        Some(repo_factory) => repo_factory,
+        None => get_repo_factory(matches)?,
+    };
+
+    open_repo_internal_with_repo_id(
+        logger,
+        RepoIdentifier::Name(repo_name),
         matches,
         create,
         redaction_override,

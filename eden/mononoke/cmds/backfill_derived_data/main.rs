@@ -9,6 +9,7 @@
 #![feature(map_first_last)]
 
 use anyhow::{anyhow, format_err, Context, Error, Result};
+use async_trait::async_trait;
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
@@ -31,15 +32,17 @@ use derived_data_utils::{
     create_derive_graph_scuba_sample, derived_data_utils, derived_data_utils_for_config,
     DerivedUtils, ThinOut, DEFAULT_BACKFILLING_CONFIG_NAME, POSSIBLE_DERIVED_TYPES,
 };
+use executor_lib::{BackgroundProcessExecutor, RepoShardedProcess, RepoShardedProcessExecutor};
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::{
-    future::{self, try_join, try_join_all, FutureExt},
+    future::{self, try_join, FutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
 use futures_stats::{TimedFutureExt, TimedTryFutureExt};
 use mononoke_api_types::InnerRepo;
 use mononoke_types::{BonsaiChangeset, ChangesetId, DateTime};
+use once_cell::sync::OnceCell;
 use repo_factory::RepoFactoryBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
@@ -49,7 +52,10 @@ use std::{
     collections::{BTreeSet, HashSet},
     fs,
     path::Path,
-    sync::Arc,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
     time::{Duration, Instant},
 };
 use time_ext::DurationExt;
@@ -124,6 +130,7 @@ async fn open_repo_maybe_unredacted<RepoType>(
     logger: &Logger,
     matches: &MononokeMatches<'_>,
     data_types: &[impl AsRef<str>],
+    repo_name: String,
 ) -> Result<RepoType>
 where
     RepoType: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
@@ -134,323 +141,468 @@ where
     }
 
     if unredacted {
-        args::open_repo_unredacted(fb, logger, matches).await
+        args::open_repo_by_name_unredacted(fb, logger, matches, repo_name).await
     } else {
-        args::open_repo(fb, logger, matches).await
+        args::open_repo_by_name(fb, logger, matches, repo_name).await
+    }
+}
+
+const SM_SERVICE_SCOPE: &str = "global";
+const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
+
+/// Struct representing the Derived Data BP.
+pub struct DerivedDataProcess {
+    matches: Arc<MononokeMatches<'static>>,
+    fb: FacebookInit,
+}
+
+impl DerivedDataProcess {
+    fn new(fb: FacebookInit) -> Result<Self> {
+        let app = args::MononokeAppBuilder::new("Utility to work with bonsai derived data")
+            .with_advanced_args_hidden()
+            .with_fb303_args()
+            .with_repo_required(RepoRequirement::AtLeastOne)
+            .with_dynamic_repos()
+            .with_scuba_logging_args()
+            .build()
+            .about("Utility to work with bonsai derived data")
+            .subcommand(
+                SubCommand::with_name(SUBCOMMAND_BACKFILL)
+                    .about("backfill derived data for public commits")
+                    .arg(
+                        Arg::with_name(ARG_DERIVED_DATA_TYPE)
+                            .required(true)
+                            .index(1)
+                            .possible_values(POSSIBLE_DERIVED_TYPES)
+                            .help("derived data type for which backfill will be run"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_SKIP)
+                            .long(ARG_SKIP)
+                            .takes_value(true)
+                            .help("skip this number of changesets"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_LIMIT)
+                            .long(ARG_LIMIT)
+                            .takes_value(true)
+                            .help("backfill at most this number of changesets"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_REGENERATE)
+                            .long(ARG_REGENERATE)
+                            .help("regenerate derivations even if mapping contains changeset"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_PREFETCHED_COMMITS_PATH)
+                            .long(ARG_PREFETCHED_COMMITS_PATH)
+                            .takes_value(true)
+                            .required(false)
+                            .help("a file with a list of bonsai changesets to backfill"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_BATCH_SIZE)
+                            .long(ARG_BATCH_SIZE)
+                            .default_value(DEFAULT_BATCH_SIZE_STR)
+                            .help("number of changesets in each derivation batch"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_PARALLEL)
+                            .long(ARG_PARALLEL)
+                            .help("derive commits within a batch in parallel"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_GAP_SIZE)
+                            .long(ARG_GAP_SIZE)
+                            .takes_value(true)
+                            .help("size of gap to leave in derived data types that support gaps"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_BACKFILL_CONFIG_NAME)
+                            .long(ARG_BACKFILL_CONFIG_NAME)
+                            .help("sets the name for backfilling derived data types config")
+                            .takes_value(true),
+                    ),
+            )
+            .subcommand(
+                SubCommand::with_name(SUBCOMMAND_TAIL)
+                    .about("tail public commits and fill derived data")
+                    .arg(
+                        Arg::with_name(ARG_DERIVED_DATA_TYPE)
+                            .required(false)
+                            .multiple(true)
+                            .index(1)
+                            .possible_values(POSSIBLE_DERIVED_TYPES)
+                            // TODO(stash): T66492899 remove unused value
+                            .help("Unused, will be deleted soon"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_USE_SHARED_LEASES)
+                            .long(ARG_USE_SHARED_LEASES)
+                            .takes_value(false)
+                            .required(false)
+                            .help(concat!(
+                                "By default the derived data tailer doesn't compete with ",
+                                "other mononoke services for a derived data lease, so ",
+                                "it will derive the data even if another mononoke service ",
+                                "(e.g. mononoke_server, scs_server, ...) are already ",
+                                "deriving it.\n\n",
+                                "This flag disables this behaviour, meaning this command ",
+                                "will compete for the derived data lease with other ",
+                                "mononoke services and start deriving only if the lease ",
+                                "is obtained.",
+                            )),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_STOP_ON_IDLE)
+                            .long(ARG_STOP_ON_IDLE)
+                            .help("Stop tailing or backfilling when there is nothing left"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_BATCHED)
+                            .long(ARG_BATCHED)
+                            .takes_value(false)
+                            .required(false)
+                            .help("Use batched deriver instead of calling `::derive` periodically"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_BATCH_SIZE)
+                            .long(ARG_BATCH_SIZE)
+                            .default_value(DEFAULT_BATCH_SIZE_STR)
+                            .help("number of changesets in each derivation batch"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_PARALLEL)
+                            .long(ARG_PARALLEL)
+                            .help("derive commits within a batch in parallel"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_BACKFILL)
+                            .long(ARG_BACKFILL)
+                            .help("also backfill derived data types configured for backfilling"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_SLICED)
+                            .long(ARG_SLICED)
+                            .help("pre-slice repository using the skiplist index when backfilling"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_SLICE_SIZE)
+                            .long(ARG_SLICE_SIZE)
+                            .default_value(DEFAULT_SLICE_SIZE_STR)
+                            .help("number of generations to include in each generation slice"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_GAP_SIZE)
+                            .long(ARG_GAP_SIZE)
+                            .takes_value(true)
+                            .help("size of gap to leave in derived data types that support gaps"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_BACKFILL_CONFIG_NAME)
+                            .long(ARG_BACKFILL_CONFIG_NAME)
+                            .help("sets the name for backfilling derived data types config")
+                            .takes_value(true),
+                    ),
+            )
+            .subcommand(
+                SubCommand::with_name(SUBCOMMAND_SINGLE)
+                    .about("backfill single changeset (mainly for performance testing purposes)")
+                    .arg(
+                        Arg::with_name(ARG_ALL_TYPES)
+                            .long(ARG_ALL_TYPES)
+                            .required(false)
+                            .takes_value(false)
+                            .help("derive all derived data types enabled for this repo"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_CHANGESET)
+                            .required(true)
+                            .index(1)
+                            .help("changeset by {hg|bonsai} hash or bookmark"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_DERIVED_DATA_TYPE)
+                            .required(false)
+                            .index(2)
+                            .multiple(true)
+                            .conflicts_with(ARG_ALL_TYPES)
+                            .possible_values(POSSIBLE_DERIVED_TYPES)
+                            .help("derived data type for which backfill will be run"),
+                    ),
+            )
+            .subcommand(
+                SubCommand::with_name(SUBCOMMAND_BACKFILL_ALL)
+                    .about("backfill all/many derived data types at once")
+                    .arg(
+                        Arg::with_name(ARG_DERIVED_DATA_TYPE)
+                            .conflicts_with(ARG_ALL_TYPES)
+                            .possible_values(POSSIBLE_DERIVED_TYPES)
+                            .required(false)
+                            .takes_value(true)
+                            .multiple(true)
+                            .help(concat!(
+                                "derived data type for which backfill will be run, ",
+                                "all enabled and backfilling types if not specified",
+                            )),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_ALL_TYPES)
+                            .long(ARG_ALL_TYPES)
+                            .required(false)
+                            .takes_value(false)
+                            .help("derive all derived data types enabled for this repo"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_BATCH_SIZE)
+                            .long(ARG_BATCH_SIZE)
+                            .default_value(DEFAULT_BATCH_SIZE_STR)
+                            .help("number of changesets in each derivation batch"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_PARALLEL)
+                            .long(ARG_PARALLEL)
+                            .help("derive commits within a batch in parallel"),
+                    )
+                    .arg(Arg::with_name(ARG_SLICED).long(ARG_SLICED).help(
+                        "pre-slice repository into generation slices using the skiplist index",
+                    ))
+                    .arg(
+                        Arg::with_name(ARG_SLICE_SIZE)
+                            .long(ARG_SLICE_SIZE)
+                            .default_value(DEFAULT_SLICE_SIZE_STR)
+                            .help("number of generations to include in each generation slice"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_GAP_SIZE)
+                            .long(ARG_GAP_SIZE)
+                            .takes_value(true)
+                            .help("size of gap to leave in derived data types that support gaps"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_BACKFILL_CONFIG_NAME)
+                            .long(ARG_BACKFILL_CONFIG_NAME)
+                            .help("sets the name for backfilling derived data types config")
+                            .takes_value(true),
+                    ),
+            )
+            .subcommand(
+                regenerate::DeriveOptions::add_opts(
+                    commit_discovery::CommitDiscoveryOptions::add_opts(
+                        SubCommand::with_name(SUBCOMMAND_BENCHMARK)
+                            .about("benchmark derivation of a list of commits")
+                            .long_about(
+                                "note that this command WILL DERIVE data and save it to storage",
+                            ),
+                    ),
+                )
+                .arg(
+                    Arg::with_name(ARG_DERIVED_DATA_TYPE)
+                        .required(true)
+                        .index(1)
+                        .multiple(true)
+                        .conflicts_with(ARG_ALL_TYPES)
+                        .possible_values(POSSIBLE_DERIVED_TYPES)
+                        .help("derived data type for which backfill will be run"),
+                )
+                .arg(
+                    Arg::with_name(ARG_ALL_TYPES)
+                        .long(ARG_ALL_TYPES)
+                        .required(false)
+                        .takes_value(false)
+                        .help("derive all derived data types enabled for this repo"),
+                )
+                .arg(
+                    Arg::with_name(ARG_JSON)
+                        .long(ARG_JSON)
+                        .required(false)
+                        .takes_value(false)
+                        .help("Print result in json format"),
+                ),
+            )
+            .subcommand(
+                regenerate::DeriveOptions::add_opts(
+                    commit_discovery::CommitDiscoveryOptions::add_opts(
+                        SubCommand::with_name(SUBCOMMAND_VALIDATE)
+                            .about(
+                                "rederive the commits and make sure they are saved to the storage",
+                            )
+                            .long_about("this command won't write anything new to the storage"),
+                    ),
+                )
+                .arg(
+                    Arg::with_name(ARG_DERIVED_DATA_TYPE)
+                        .required(true)
+                        .index(1)
+                        .multiple(true)
+                        .conflicts_with(ARG_ALL_TYPES)
+                        .possible_values(POSSIBLE_DERIVED_TYPES)
+                        .help("derived data type for which backfill will be run"),
+                )
+                .arg(
+                    Arg::with_name(ARG_VALIDATE_CHUNK_SIZE)
+                        .long(ARG_VALIDATE_CHUNK_SIZE)
+                        .default_value(DEFAULT_VALIDATE_CHUNK_SIZE)
+                        .help("how many commits to validate at once."),
+                )
+                .arg(
+                    Arg::with_name(ARG_JSON)
+                        .long(ARG_JSON)
+                        .required(false)
+                        .takes_value(false)
+                        .help("Print result in json format"),
+                ),
+            );
+        let matches = Arc::new(app.get_matches(fb)?);
+        Ok(Self { matches, fb })
+    }
+}
+
+#[async_trait]
+impl RepoShardedProcess for DerivedDataProcess {
+    async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+        info!(
+            self.matches.logger(),
+            "Setting up derived data command for repo {}", repo_name
+        );
+        let executor = DerivedDataProcessExecutor::new(
+            self.fb,
+            Arc::clone(&self.matches),
+            repo_name.to_string(),
+        );
+        info!(
+            self.matches.logger(),
+            "Completed derived data command setup for repo {}", repo_name
+        );
+        Ok(Arc::new(executor))
+    }
+}
+
+/// Struct representing the execution of the Derived Data
+/// BP over the context of a provided repo.
+pub struct DerivedDataProcessExecutor {
+    fb: FacebookInit,
+    logger: Logger,
+    matches: Arc<MononokeMatches<'static>>,
+    ctx: CoreContext,
+    cancellation_requested: Arc<AtomicBool>,
+    repo_name: String,
+}
+
+impl DerivedDataProcessExecutor {
+    fn new(fb: FacebookInit, matches: Arc<MononokeMatches<'static>>, repo_name: String) -> Self {
+        let logger = matches.logger().clone();
+        let mut scuba_sample_builder = matches.scuba_sample_builder();
+        scuba_sample_builder.add("reponame", repo_name.to_string());
+        let ctx = create_ctx(fb, &logger, scuba_sample_builder, &matches);
+        Self {
+            fb,
+            matches,
+            ctx,
+            repo_name,
+            logger,
+            cancellation_requested: Arc::new(AtomicBool::new(false)),
+        }
+    }
+}
+
+#[async_trait]
+impl RepoShardedProcessExecutor for DerivedDataProcessExecutor {
+    async fn execute(&self) -> anyhow::Result<()> {
+        info!(
+            self.logger,
+            "Initiating derived data command execution for repo {}", &self.repo_name,
+        );
+        run_subcmd(
+            self.fb,
+            &self.ctx,
+            &self.logger,
+            &self.matches,
+            self.repo_name.clone(),
+            Arc::clone(&self.cancellation_requested),
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Error during derived data command execution for repo {}",
+                &self.repo_name
+            )
+        })?;
+        info!(
+            self.logger,
+            "Finished derived data command execution for repo {}", &self.repo_name,
+        );
+        Ok(())
+    }
+
+    async fn stop(&self) -> anyhow::Result<()> {
+        info!(
+            self.logger,
+            "Terminating derived data command execution for repo {}", &self.repo_name,
+        );
+        self.cancellation_requested.store(true, Ordering::Relaxed);
+        Ok(())
     }
 }
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let app = args::MononokeAppBuilder::new("Utility to work with bonsai derived data")
-        .with_advanced_args_hidden()
-        .with_fb303_args()
-        .with_repo_required(RepoRequirement::AtLeastOne)
-        .with_scuba_logging_args()
-        .build()
-        .about("Utility to work with bonsai derived data")
-        .subcommand(
-            SubCommand::with_name(SUBCOMMAND_BACKFILL)
-                .about("backfill derived data for public commits")
-                .arg(
-                    Arg::with_name(ARG_DERIVED_DATA_TYPE)
-                        .required(true)
-                        .index(1)
-                        .possible_values(POSSIBLE_DERIVED_TYPES)
-                        .help("derived data type for which backfill will be run"),
-                )
-                .arg(
-                    Arg::with_name(ARG_SKIP)
-                        .long(ARG_SKIP)
-                        .takes_value(true)
-                        .help("skip this number of changesets"),
-                )
-                .arg(
-                    Arg::with_name(ARG_LIMIT)
-                        .long(ARG_LIMIT)
-                        .takes_value(true)
-                        .help("backfill at most this number of changesets"),
-                )
-                .arg(
-                    Arg::with_name(ARG_REGENERATE)
-                        .long(ARG_REGENERATE)
-                        .help("regenerate derivations even if mapping contains changeset"),
-                )
-                .arg(
-                    Arg::with_name(ARG_PREFETCHED_COMMITS_PATH)
-                        .long(ARG_PREFETCHED_COMMITS_PATH)
-                        .takes_value(true)
-                        .required(false)
-                        .help("a file with a list of bonsai changesets to backfill"),
-                )
-                .arg(
-                    Arg::with_name(ARG_BATCH_SIZE)
-                        .long(ARG_BATCH_SIZE)
-                        .default_value(DEFAULT_BATCH_SIZE_STR)
-                        .help("number of changesets in each derivation batch"),
-                )
-                .arg(
-                    Arg::with_name(ARG_PARALLEL)
-                        .long(ARG_PARALLEL)
-                        .help("derive commits within a batch in parallel"),
-                )
-                .arg(
-                    Arg::with_name(ARG_GAP_SIZE)
-                        .long(ARG_GAP_SIZE)
-                        .takes_value(true)
-                        .help("size of gap to leave in derived data types that support gaps"),
-                )
-                .arg(
-                    Arg::with_name(ARG_BACKFILL_CONFIG_NAME)
-                        .long(ARG_BACKFILL_CONFIG_NAME)
-                        .help("sets the name for backfilling derived data types config")
-                        .takes_value(true),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name(SUBCOMMAND_TAIL)
-                .about("tail public commits and fill derived data")
-                .arg(
-                    Arg::with_name(ARG_DERIVED_DATA_TYPE)
-                        .required(false)
-                        .multiple(true)
-                        .index(1)
-                        .possible_values(POSSIBLE_DERIVED_TYPES)
-                        // TODO(stash): T66492899 remove unused value
-                        .help("Unused, will be deleted soon"),
-                )
-                .arg(
-                    Arg::with_name(ARG_USE_SHARED_LEASES)
-                        .long(ARG_USE_SHARED_LEASES)
-                        .takes_value(false)
-                        .required(false)
-                        .help(concat!(
-                            "By default the derived data tailer doesn't compete with ",
-                            "other mononoke services for a derived data lease, so ",
-                            "it will derive the data even if another mononoke service ",
-                            "(e.g. mononoke_server, scs_server, ...) are already ",
-                            "deriving it.\n\n",
-                            "This flag disables this behaviour, meaning this command ",
-                            "will compete for the derived data lease with other ",
-                            "mononoke services and start deriving only if the lease ",
-                            "is obtained.",
-                        )),
-                )
-                .arg(
-                    Arg::with_name(ARG_STOP_ON_IDLE)
-                        .long(ARG_STOP_ON_IDLE)
-                        .help("Stop tailing or backfilling when there is nothing left"),
-                )
-                .arg(
-                    Arg::with_name(ARG_BATCHED)
-                        .long(ARG_BATCHED)
-                        .takes_value(false)
-                        .required(false)
-                        .help("Use batched deriver instead of calling `::derive` periodically"),
-                )
-                .arg(
-                    Arg::with_name(ARG_BATCH_SIZE)
-                        .long(ARG_BATCH_SIZE)
-                        .default_value(DEFAULT_BATCH_SIZE_STR)
-                        .help("number of changesets in each derivation batch"),
-                )
-                .arg(
-                    Arg::with_name(ARG_PARALLEL)
-                        .long(ARG_PARALLEL)
-                        .help("derive commits within a batch in parallel"),
-                )
-                .arg(
-                    Arg::with_name(ARG_BACKFILL)
-                        .long(ARG_BACKFILL)
-                        .help("also backfill derived data types configured for backfilling"),
-                )
-                .arg(
-                    Arg::with_name(ARG_SLICED)
-                        .long(ARG_SLICED)
-                        .help("pre-slice repository using the skiplist index when backfilling"),
-                )
-                .arg(
-                    Arg::with_name(ARG_SLICE_SIZE)
-                        .long(ARG_SLICE_SIZE)
-                        .default_value(DEFAULT_SLICE_SIZE_STR)
-                        .help("number of generations to include in each generation slice"),
-                )
-                .arg(
-                    Arg::with_name(ARG_GAP_SIZE)
-                        .long(ARG_GAP_SIZE)
-                        .takes_value(true)
-                        .help("size of gap to leave in derived data types that support gaps"),
-                )
-                .arg(
-                    Arg::with_name(ARG_BACKFILL_CONFIG_NAME)
-                        .long(ARG_BACKFILL_CONFIG_NAME)
-                        .help("sets the name for backfilling derived data types config")
-                        .takes_value(true),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name(SUBCOMMAND_SINGLE)
-                .about("backfill single changeset (mainly for performance testing purposes)")
-                .arg(
-                    Arg::with_name(ARG_ALL_TYPES)
-                        .long(ARG_ALL_TYPES)
-                        .required(false)
-                        .takes_value(false)
-                        .help("derive all derived data types enabled for this repo"),
-                )
-                .arg(
-                    Arg::with_name(ARG_CHANGESET)
-                        .required(true)
-                        .index(1)
-                        .help("changeset by {hg|bonsai} hash or bookmark"),
-                )
-                .arg(
-                    Arg::with_name(ARG_DERIVED_DATA_TYPE)
-                        .required(false)
-                        .index(2)
-                        .multiple(true)
-                        .conflicts_with(ARG_ALL_TYPES)
-                        .possible_values(POSSIBLE_DERIVED_TYPES)
-                        .help("derived data type for which backfill will be run"),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name(SUBCOMMAND_BACKFILL_ALL)
-                .about("backfill all/many derived data types at once")
-                .arg(
-                    Arg::with_name(ARG_DERIVED_DATA_TYPE)
-                        .conflicts_with(ARG_ALL_TYPES)
-                        .possible_values(POSSIBLE_DERIVED_TYPES)
-                        .required(false)
-                        .takes_value(true)
-                        .multiple(true)
-                        .help(concat!(
-                            "derived data type for which backfill will be run, ",
-                            "all enabled and backfilling types if not specified",
-                        )),
-                )
-                .arg(
-                    Arg::with_name(ARG_ALL_TYPES)
-                        .long(ARG_ALL_TYPES)
-                        .required(false)
-                        .takes_value(false)
-                        .help("derive all derived data types enabled for this repo"),
-                )
-                .arg(
-                    Arg::with_name(ARG_BATCH_SIZE)
-                        .long(ARG_BATCH_SIZE)
-                        .default_value(DEFAULT_BATCH_SIZE_STR)
-                        .help("number of changesets in each derivation batch"),
-                )
-                .arg(
-                    Arg::with_name(ARG_PARALLEL)
-                        .long(ARG_PARALLEL)
-                        .help("derive commits within a batch in parallel"),
-                )
-                .arg(
-                    Arg::with_name(ARG_SLICED).long(ARG_SLICED).help(
-                        "pre-slice repository into generation slices using the skiplist index",
-                    ),
-                )
-                .arg(
-                    Arg::with_name(ARG_SLICE_SIZE)
-                        .long(ARG_SLICE_SIZE)
-                        .default_value(DEFAULT_SLICE_SIZE_STR)
-                        .help("number of generations to include in each generation slice"),
-                )
-                .arg(
-                    Arg::with_name(ARG_GAP_SIZE)
-                        .long(ARG_GAP_SIZE)
-                        .takes_value(true)
-                        .help("size of gap to leave in derived data types that support gaps"),
-                )
-                .arg(
-                    Arg::with_name(ARG_BACKFILL_CONFIG_NAME)
-                        .long(ARG_BACKFILL_CONFIG_NAME)
-                        .help("sets the name for backfilling derived data types config")
-                        .takes_value(true),
-                ),
-        )
-        .subcommand(
-            regenerate::DeriveOptions::add_opts(
-                commit_discovery::CommitDiscoveryOptions::add_opts(
-                    SubCommand::with_name(SUBCOMMAND_BENCHMARK)
-                        .about("benchmark derivation of a list of commits")
-                        .long_about(
-                            "note that this command WILL DERIVE data and save it to storage",
-                        ),
-                ),
+    let process = DerivedDataProcess::new(fb)?;
+    match process.matches.value_of("sharded-service-name") {
+        Some(service_name) => {
+            // The service name needs to be 'static to satisfy SM contract
+            static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
+            let logger = process.matches.logger().clone();
+            let matches = Arc::clone(&process.matches);
+            let mut executor = BackgroundProcessExecutor::new(
+                process.fb,
+                process.matches.runtime().clone(),
+                &logger,
+                SM_SERVICE_NAME.get_or_init(|| service_name.to_string()),
+                SM_SERVICE_SCOPE,
+                SM_CLEANUP_TIMEOUT_SECS,
+                Arc::new(process),
+            )?;
+            helpers::block_execute(
+                executor.block_and_execute(&logger),
+                fb,
+                &std::env::var("TW_JOB_NAME")
+                    .unwrap_or_else(|_| "backfill_derived_data".to_string()),
+                matches.logger(),
+                &matches,
+                cmdlib::monitoring::AliveService,
             )
-            .arg(
-                Arg::with_name(ARG_DERIVED_DATA_TYPE)
-                    .required(true)
-                    .index(1)
-                    .multiple(true)
-                    .conflicts_with(ARG_ALL_TYPES)
-                    .possible_values(POSSIBLE_DERIVED_TYPES)
-                    .help("derived data type for which backfill will be run"),
+        }
+        None => {
+            let process = Arc::new(process);
+            let all_repo_derivation = stream::iter(
+                args::resolve_repos(process.matches.config_store(), &process.matches)?
+                    .into_iter()
+                    .map(|repo| {
+                        let process = Arc::clone(&process);
+                        async move {
+                            let executor = process.setup(&repo.name).await?;
+                            executor.execute().await
+                        }
+                    }),
             )
-            .arg(
-                Arg::with_name(ARG_ALL_TYPES)
-                    .long(ARG_ALL_TYPES)
-                    .required(false)
-                    .takes_value(false)
-                    .help("derive all derived data types enabled for this repo"),
-            )
-            .arg(
-                Arg::with_name(ARG_JSON)
-                    .long(ARG_JSON)
-                    .required(false)
-                    .takes_value(false)
-                    .help("Print result in json format"),
-            ),
-        )
-        .subcommand(
-            regenerate::DeriveOptions::add_opts(
-                commit_discovery::CommitDiscoveryOptions::add_opts(
-                    SubCommand::with_name(SUBCOMMAND_VALIDATE)
-                        .about("rederive the commits and make sure they are saved to the storage")
-                        .long_about("this command won't write anything new to the storage"),
-                ),
-            )
-            .arg(
-                Arg::with_name(ARG_DERIVED_DATA_TYPE)
-                    .required(true)
-                    .index(1)
-                    .multiple(true)
-                    .conflicts_with(ARG_ALL_TYPES)
-                    .possible_values(POSSIBLE_DERIVED_TYPES)
-                    .help("derived data type for which backfill will be run"),
-            )
-            .arg(
-                Arg::with_name(ARG_VALIDATE_CHUNK_SIZE)
-                    .long(ARG_VALIDATE_CHUNK_SIZE)
-                    .default_value(DEFAULT_VALIDATE_CHUNK_SIZE)
-                    .help("how many commits to validate at once."),
-            )
-            .arg(
-                Arg::with_name(ARG_JSON)
-                    .long(ARG_JSON)
-                    .required(false)
-                    .takes_value(false)
-                    .help("Print result in json format"),
-            ),
-        );
-    let matches = app.get_matches(fb)?;
-    let logger = matches.logger();
-    let reponame = args::get_repo_name(matches.config_store(), &matches)?;
-    let mut scuba_sample_builder = matches.scuba_sample_builder();
-    scuba_sample_builder.add("reponame", reponame);
-    let ctx = create_ctx(fb, logger, scuba_sample_builder, &matches);
+            // Each item is a repo. Don't need to derive data for more than 10 repos
+            // at a time when executing in non-sharded setting.
+            .buffer_unordered(10)
+            .try_collect::<Vec<_>>();
 
-    helpers::block_execute(
-        run_subcmd(fb, ctx, &logger, &matches),
-        fb,
-        &std::env::var("TW_JOB_NAME").unwrap_or("backfill_derived_data".to_string()),
-        &logger,
-        &matches,
-        cmdlib::monitoring::AliveService,
-    )
+            helpers::block_execute(
+                all_repo_derivation,
+                fb,
+                &std::env::var("TW_JOB_NAME")
+                    .unwrap_or_else(|_| "backfill_derived_data".to_string()),
+                process.matches.logger(),
+                &process.matches,
+                cmdlib::monitoring::AliveService,
+            )?;
+            Ok(())
+        }
+    }
 }
 
 fn create_ctx<'a>(
@@ -474,13 +626,16 @@ fn create_ctx<'a>(
 
 async fn run_subcmd<'a>(
     fb: FacebookInit,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     logger: &Logger,
     matches: &'a MononokeMatches<'a>,
+    repo_name: String,
+    cancellation_requested: Arc<AtomicBool>,
 ) -> Result<()> {
     match matches.subcommand() {
         (SUBCOMMAND_BACKFILL_ALL, Some(sub_m)) => {
-            let repo: InnerRepo = args::open_repo_unredacted(fb, logger, matches).await?;
+            let repo: InnerRepo =
+                args::open_repo_by_name_unredacted(fb, logger, matches, repo_name).await?;
 
             let backfill_config_name = sub_m
                 .value_of(ARG_BACKFILL_CONFIG_NAME)
@@ -522,7 +677,7 @@ async fn run_subcmd<'a>(
                 .transpose()?;
 
             subcommand_backfill_all(
-                &ctx,
+                ctx,
                 &repo,
                 derived_data_types,
                 slice_size,
@@ -560,7 +715,8 @@ async fn run_subcmd<'a>(
                 .transpose()?;
 
             let repo: InnerRepo =
-                open_repo_maybe_unredacted(fb, &logger, &matches, &[&derived_data_type]).await?;
+                open_repo_maybe_unredacted(fb, logger, matches, &[&derived_data_type], repo_name)
+                    .await?;
 
             info!(
                 ctx.logger(),
@@ -591,7 +747,7 @@ async fn run_subcmd<'a>(
                 .unwrap_or_else(|| DEFAULT_BACKFILLING_CONFIG_NAME);
 
             subcommand_backfill(
-                &ctx,
+                ctx,
                 &repo,
                 derived_data_type.as_str(),
                 regenerate,
@@ -639,37 +795,34 @@ async fn run_subcmd<'a>(
                 .value_of(ARG_BACKFILL_CONFIG_NAME)
                 .unwrap_or_else(|| DEFAULT_BACKFILLING_CONFIG_NAME);
 
-            let repos = args::resolve_repos(&config_store, &matches)?;
+            let resolved_repo = args::resolve_repo_by_name(config_store, matches, &repo_name)?;
 
-            let mut tailers = Vec::new();
-            for resolved_repo in repos {
-                let (repo, skiplist) = if backfill {
-                    let inner: InnerRepo =
-                        args::open_repo_by_id(fb, &logger, &matches, resolved_repo.id).await?;
-                    (inner.blob_repo.clone(), Some(inner.skiplist_index))
-                } else {
-                    (
-                        args::open_repo_by_id(fb, &logger, &matches, resolved_repo.id).await?,
-                        None,
-                    )
-                };
+            let (blob_repo, skiplist) = if backfill {
+                let inner: InnerRepo =
+                    args::open_repo_by_id(fb, logger, matches, resolved_repo.id).await?;
+                (inner.blob_repo.clone(), Some(inner.skiplist_index))
+            } else {
+                (
+                    args::open_repo_by_id(fb, logger, matches, resolved_repo.id).await?,
+                    None,
+                )
+            };
 
-                let future = subcommand_tail(
-                    &ctx,
-                    repo,
-                    skiplist,
-                    use_shared_leases,
-                    stop_on_idle,
-                    batch_size,
-                    parallel,
-                    gap_size,
-                    backfill,
-                    slice_size,
-                    backfill_config_name,
-                );
-                tailers.push(future);
-            }
-            try_join_all(tailers).await.map(|_| ())
+            subcommand_tail(
+                ctx,
+                blob_repo,
+                skiplist,
+                use_shared_leases,
+                stop_on_idle,
+                batch_size,
+                parallel,
+                gap_size,
+                backfill,
+                slice_size,
+                backfill_config_name,
+                cancellation_requested,
+            )
+            .await
         }
         (SUBCOMMAND_SINGLE, Some(sub_m)) => {
             let hash_or_bookmark = sub_m
@@ -677,21 +830,21 @@ async fn run_subcmd<'a>(
                 .ok_or_else(|| format_err!("missing required argument: {}", ARG_CHANGESET))?
                 .to_string();
             let (repo, types) =
-                parse_repo_and_derived_data_types(fb, logger, matches, sub_m).await?;
-            let csid = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
-            subcommand_single(&ctx, &repo, csid, types).await
+                parse_repo_and_derived_data_types(fb, logger, matches, sub_m, repo_name).await?;
+            let csid = helpers::csid_resolve(ctx, repo.clone(), hash_or_bookmark).await?;
+            subcommand_single(ctx, &repo, csid, types).await
         }
         (SUBCOMMAND_BENCHMARK, Some(sub_m)) => {
             let (repo, types) =
-                parse_repo_and_derived_data_types(fb, logger, matches, sub_m).await?;
-            let csids = CommitDiscoveryOptions::from_matches(&ctx, &repo, sub_m)
+                parse_repo_and_derived_data_types(fb, logger, matches, sub_m, repo_name).await?;
+            let csids = CommitDiscoveryOptions::from_matches(ctx, &repo, sub_m)
                 .await?
                 .get_commits();
 
             let opts = regenerate::DeriveOptions::from_matches(sub_m)?;
 
             let stats =
-                regenerate::regenerate_derived_data(&ctx, &repo, csids, types, &opts).await?;
+                regenerate::regenerate_derived_data(ctx, &repo, csids, types, &opts).await?;
 
             println!("Building derive graph took {:?}", stats.build_derive_graph);
             println!("Derivation took {:?}", stats.derivation);
@@ -699,7 +852,7 @@ async fn run_subcmd<'a>(
             Ok(())
         }
         (SUBCOMMAND_VALIDATE, Some(sub_m)) => {
-            crate::validation::validate(&ctx, matches, sub_m).await
+            crate::validation::validate(ctx, matches, sub_m, repo_name).await
         }
         (name, _) => Err(format_err!("unhandled subcommand: {}", name)),
     }
@@ -710,6 +863,7 @@ async fn parse_repo_and_derived_data_types(
     logger: &Logger,
     matches: &MononokeMatches<'_>,
     sub_m: &ArgMatches<'_>,
+    repo_name: String,
 ) -> Result<(BlobRepo, Vec<String>)> {
     let all = sub_m.is_present(ARG_ALL_TYPES);
     let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE);
@@ -730,7 +884,8 @@ async fn parse_repo_and_derived_data_types(
                 .map(|s| s.to_string())
                 .collect::<Vec<_>>();
             let repo: BlobRepo =
-                open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_types).await?;
+                open_repo_maybe_unredacted(fb, logger, matches, &derived_data_types, repo_name)
+                    .await?;
             (repo, derived_data_types)
         }
         (true, Some(_)) => {
@@ -960,6 +1115,7 @@ async fn subcommand_tail(
     mut backfill: bool,
     slice_size: Option<u64>,
     config_name: &str,
+    cancellation_requested: Arc<AtomicBool>,
 ) -> Result<()> {
     if backfill && batch_size == None {
         return Err(anyhow!("tail --backfill requires --batched"));
@@ -1036,6 +1192,11 @@ async fn subcommand_tail(
         );
     }
 
+    // Before beginning, check if cancellation has been requested.
+    if cancellation_requested.load(Ordering::Relaxed) {
+        info!(ctx.logger(), "tail stopping due to cancellation request");
+        return Ok(());
+    }
     if let Some(batch_size) = batch_size {
         info!(ctx.logger(), "using batched deriver");
 
@@ -1075,6 +1236,12 @@ async fn subcommand_tail(
                     .await?;
                     let _ = sender.send(heads.clone());
                     derived_heads = heads;
+                    // Before initiating next iteration, check if cancellation
+                    // has been requested
+                    if cancellation_requested.load(Ordering::Relaxed) {
+                        info!(ctx.logger(), "tail stopping due to cancellation request");
+                        return Ok(());
+                    }
                 }
             })
             .await?
@@ -1117,6 +1284,12 @@ async fn subcommand_tail(
         info!(ctx.logger(), "using simple deriver");
         loop {
             tail_one_iteration(ctx, &repo, &tail_derivers, &mut bookmarks_subscription).await?;
+            // Before initiating next iteration, check if cancellation
+            // has been requested
+            if cancellation_requested.load(Ordering::Relaxed) {
+                info!(ctx.logger(), "tail stopping due to cancellation request");
+                return Ok(());
+            }
         }
     }
     Ok(())
@@ -1253,12 +1426,12 @@ async fn find_oldest_underived(
     ctx: &CoreContext,
     repo: &BlobRepo,
     derive: &dyn DerivedUtils,
-    csids: &[ChangesetId],
+    csids: Vec<ChangesetId>,
 ) -> Result<Option<BonsaiChangeset>> {
     let underived_ancestors = stream::iter(csids)
         .map(|csid| {
             Ok(async move {
-                let underived = derive.find_underived(ctx, repo, *csid).await?;
+                let underived = derive.find_underived(ctx, repo, csid).await?;
                 let underived = sort_topological(&underived)
                     .ok_or_else(|| anyhow!("commit graph has cycles!"))?;
                 // The first element is the first underived ancestor in
@@ -1305,7 +1478,7 @@ async fn tail_one_iteration(
                     let pending = derive.pending(ctx.clone(), (*repo).clone(), heads).await?;
 
                     let oldest_underived =
-                        find_oldest_underived(&ctx, &repo, derive.as_ref(), &pending).await?;
+                        find_oldest_underived(ctx, repo, derive.as_ref(), pending.clone()).await?;
                     let now = DateTime::now();
                     let oldest_underived_age = oldest_underived.map_or(0, |oldest_underived| {
                         now.timestamp_secs() - oldest_underived.author_date().timestamp_secs()

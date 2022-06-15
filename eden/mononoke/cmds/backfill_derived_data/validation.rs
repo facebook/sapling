@@ -42,13 +42,15 @@ pub async fn validate(
     ctx: &CoreContext,
     matches: &MononokeMatches<'_>,
     sub_m: &ArgMatches<'_>,
+    repo_name: String,
 ) -> Result<(), Error> {
     if !matches.environment().readonly_storage.0 {
         return Err(anyhow!(
             "validate subcommand should be run only on readonly storage!"
         ));
     }
-    let repo: BlobRepo = args::open_repo_unredacted(ctx.fb, ctx.logger(), matches).await?;
+    let repo: BlobRepo =
+        args::open_repo_by_name_unredacted(ctx.fb, ctx.logger(), matches, repo_name).await?;
     let csids = CommitDiscoveryOptions::from_matches(&ctx, &repo, sub_m)
         .await?
         .get_commits();

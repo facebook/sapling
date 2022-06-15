@@ -42,9 +42,12 @@ DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
     # Whitelisting the below tests until RCA is completed for SM integration so
     # that integration tests do not time-out due to failed network call retries.
     # TODO(rajshar): Investigate root cause for network calls from SM Client.
+    # Post: https://fb.workplace.com/groups/sm.users/permalink/2490367831097595/
     "test-new-walker-checkpoint.t",
     "test-new-walker-count-objects.t",
     "test-new-walker-count-public-chunked.t",
+    "test-mirror-hg-commits-basic.t",
+    "test-backfill-derived-data.t",
 }
 
 
