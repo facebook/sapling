@@ -299,10 +299,12 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    *
    * The blob parameter is used when recursing.
    *
-   * Returns a Future with the result of fn(state_.wlock(), blob)
+   * Returns an ImmediateFuture with the result of fn(state_.wlock(), blob)
    */
-  template <typename ReturnType, typename Fn>
-  ReturnType runWhileDataLoaded(
+  template <typename Fn>
+  ImmediateFuture<
+      std::invoke_result_t<Fn, LockedState&&, std::shared_ptr<const Blob>>>
+  runWhileDataLoaded(
       LockedState state,
       BlobCache::Interest interest,
       ObjectFetchContext& fetchContext,
@@ -315,11 +317,10 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    *
    * fn(state) will be invoked when state->tag is MATERIALIZED_IN_OVERLAY.
    *
-   * Returns a Future with the result of fn(state_.wlock())
+   * Returns an ImmediateFuture with the result of fn(state_.wlock())
    */
   template <typename Fn>
-  typename folly::futures::detail::callableResult<LockedState, Fn>::Return
-  runWhileMaterialized(
+  ImmediateFuture<std::invoke_result_t<Fn, LockedState&&>> runWhileMaterialized(
       LockedState state,
       std::shared_ptr<const Blob> blob,
       Fn&& fn,
@@ -336,7 +337,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * Returns the result of fn(state_.wlock())
    */
   template <typename Fn>
-  typename std::result_of<Fn(LockedState&&)>::type truncateAndRun(
+  typename std::invoke_result_t<Fn, LockedState&&> truncateAndRun(
       LockedState state,
       Fn&& fn);
 
@@ -351,7 +352,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * runWhileMaterialized().  Most other callers should use
    * runWhileDataLoaded() or runWhileMaterialized() instead.
    */
-  FOLLY_NODISCARD folly::Future<std::shared_ptr<const Blob>> startLoadingData(
+  FOLLY_NODISCARD ImmediateFuture<std::shared_ptr<const Blob>> startLoadingData(
       LockedState state,
       BlobCache::Interest interest,
       ObjectFetchContext& fetchContext);

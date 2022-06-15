@@ -168,14 +168,18 @@ void FileInode::LockedState::setMaterialized() {
  * These definitions need to appear before any functions that use them.
  ********************************************************************/
 
-template <typename ReturnType, typename Fn>
-ReturnType FileInode::runWhileDataLoaded(
+template <typename Fn>
+ImmediateFuture<std::invoke_result_t<
+    Fn,
+    FileInode::LockedState&&,
+    std::shared_ptr<const Blob>>>
+FileInode::runWhileDataLoaded(
     LockedState state,
     BlobCache::Interest interest,
     ObjectFetchContext& fetchContext,
     std::shared_ptr<const Blob> blob,
     Fn&& fn) {
-  auto future = Future<std::shared_ptr<const Blob>>::makeEmpty();
+  ImmediateFuture<std::shared_ptr<const Blob>> future;
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
       if (!blob) {
@@ -185,7 +189,7 @@ ReturnType FileInode::runWhileDataLoaded(
       if (blob) {
         logAccess(fetchContext);
         // The blob was still in cache, so we can run the function immediately.
-        return folly::makeFutureWith([&] {
+        return makeImmediateFutureWith([&] {
           return std::forward<Fn>(fn)(std::move(state), std::move(blob));
         });
       } else {
@@ -194,12 +198,12 @@ ReturnType FileInode::runWhileDataLoaded(
       break;
     case State::BLOB_LOADING:
       // If we're already loading, latch on to the in-progress load
-      future = state->blobLoadingPromise->getFuture();
+      future = state->blobLoadingPromise->getSemiFuture();
       state.unlock();
       break;
     case State::MATERIALIZED_IN_OVERLAY:
       logAccess(fetchContext);
-      return folly::makeFutureWith(
+      return makeImmediateFutureWith(
           [&] { return std::forward<Fn>(fn)(std::move(state), nullptr); });
   }
 
@@ -216,7 +220,7 @@ ReturnType FileInode::runWhileDataLoaded(
             stateLock->tag == State::BLOB_NOT_LOADING ||
             stateLock->tag == State::MATERIALIZED_IN_OVERLAY)
             << "unexpected FileInode state after loading: " << stateLock->tag;
-        return self->runWhileDataLoaded<ReturnType>(
+        return self->runWhileDataLoaded(
             std::move(stateLock),
             interest,
             fetchContext,
@@ -227,14 +231,13 @@ ReturnType FileInode::runWhileDataLoaded(
 
 #ifndef _WIN32
 template <typename Fn>
-typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
-    Return
-    FileInode::runWhileMaterialized(
-        LockedState state,
-        std::shared_ptr<const Blob> blob,
-        Fn&& fn,
-        ObjectFetchContext& fetchContext) {
-  auto future = Future<std::shared_ptr<const Blob>>::makeEmpty();
+ImmediateFuture<std::invoke_result_t<Fn, FileInode::LockedState&&>>
+FileInode::runWhileMaterialized(
+    LockedState state,
+    std::shared_ptr<const Blob> blob,
+    Fn&& fn,
+    ObjectFetchContext& fetchContext) {
+  ImmediateFuture<std::shared_ptr<const Blob>> future;
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
       if (!blob) {
@@ -263,7 +266,7 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
         // to pass to the caller to ensure that the state lock will be released
         // when they return, even if the caller's function accepts the state as
         // an rvalue-reference and does not release it themselves.
-        return folly::makeFutureWith([&] {
+        return makeImmediateFutureWith([&] {
           return std::forward<Fn>(fn)(LockedState{std::move(state)});
         });
       }
@@ -278,12 +281,12 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
       break;
     case State::BLOB_LOADING:
       // If we're already loading, latch on to the in-progress load
-      future = state->blobLoadingPromise->getFuture();
+      future = state->blobLoadingPromise->getSemiFuture();
       state.unlock();
       break;
     case State::MATERIALIZED_IN_OVERLAY:
       logAccess(fetchContext);
-      return folly::makeFutureWith(
+      return makeImmediateFutureWith(
           [&] { return std::forward<Fn>(fn)(LockedState{std::move(state)}); });
   }
 
@@ -306,7 +309,7 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
 }
 
 template <typename Fn>
-typename std::result_of<Fn(FileInode::LockedState&&)>::type
+typename std::invoke_result_t<Fn, FileInode::LockedState&&>
 FileInode::truncateAndRun(LockedState state, Fn&& fn) {
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
@@ -495,7 +498,9 @@ folly::Future<struct stat> FileInode::setattr(
     return truncateAndRun(std::move(state), setAttrs);
   } else {
     return runWhileMaterialized(
-        std::move(state), nullptr, setAttrs, fetchContext);
+               std::move(state), nullptr, setAttrs, fetchContext)
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance());
   }
 }
 
@@ -821,12 +826,16 @@ folly::Future<folly::Unit> FileInode::fallocate(
     uint64_t length,
     ObjectFetchContext& fetchContext) {
   return runWhileMaterialized(
-      LockedState{this},
-      nullptr,
-      [offset, length, self = inodePtrFromThis()](LockedState&& state) {
-        self->getOverlayFileAccess(state)->fallocate(*self, offset, length);
-      },
-      fetchContext);
+             LockedState{this},
+             nullptr,
+             [offset, length, self = inodePtrFromThis()](LockedState&& state) {
+               self->getOverlayFileAccess(state)->fallocate(
+                   *self, offset, length);
+               return folly::unit;
+             },
+             fetchContext)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 #endif
 
@@ -847,41 +856,45 @@ Future<string> FileInode::readAll(
       break;
   }
 
-  return runWhileDataLoaded<Future<string>>(
-      LockedState{this},
-      interest,
-      fetchContext,
-      nullptr,
-      [self = inodePtrFromThis()](
-          LockedState&& state, std::shared_ptr<const Blob> blob) -> string {
-        std::string result;
-        switch (state->tag) {
-          case State::MATERIALIZED_IN_OVERLAY: {
+  return runWhileDataLoaded(
+             LockedState{this},
+             interest,
+             fetchContext,
+             nullptr,
+             [self = inodePtrFromThis()](
+                 LockedState&& state,
+                 std::shared_ptr<const Blob> blob) -> string {
+               std::string result;
+               switch (state->tag) {
+                 case State::MATERIALIZED_IN_OVERLAY: {
 #ifdef _WIN32
-            result = readFile(self->getMaterializedFilePath()).value();
+                   result = readFile(self->getMaterializedFilePath()).value();
 #else
-            XDCHECK(!blob);
-            result = self->getOverlayFileAccess(state)->readAllContents(*self);
+                   XDCHECK(!blob);
+                   result = self->getOverlayFileAccess(state)->readAllContents(
+                       *self);
 #endif
-            break;
-          }
-          case State::BLOB_NOT_LOADING: {
-            const auto& contentsBuf = blob->getContents();
-            folly::io::Cursor cursor(&contentsBuf);
-            result =
-                cursor.readFixedString(contentsBuf.computeChainDataLength());
-            break;
-          }
-          default:
-            EDEN_BUG() << "neither materialized nor loaded during "
-                          "runWhileDataLoaded() call";
-        }
+                   break;
+                 }
+                 case State::BLOB_NOT_LOADING: {
+                   const auto& contentsBuf = blob->getContents();
+                   folly::io::Cursor cursor(&contentsBuf);
+                   result = cursor.readFixedString(
+                       contentsBuf.computeChainDataLength());
+                   break;
+                 }
+                 default:
+                   EDEN_BUG() << "neither materialized nor loaded during "
+                                 "runWhileDataLoaded() call";
+               }
 
-        // We want to update atime after the read operation.
-        self->updateAtimeLocked(*state);
+               // We want to update atime after the read operation.
+               self->updateAtimeLocked(*state);
 
-        return result;
-      });
+               return result;
+             })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 #ifdef _WIN32
@@ -899,59 +912,62 @@ void FileInode::materialize() {
 Future<std::tuple<BufVec, bool>>
 FileInode::read(size_t size, off_t off, ObjectFetchContext& context) {
   XDCHECK_GE(off, 0);
-  return runWhileDataLoaded<Future<std::tuple<BufVec, bool>>>(
-      LockedState{this},
-      BlobCache::Interest::WantHandle,
-      // This function is only called by FUSE.
-      context,
-      nullptr,
-      [size, off, self = inodePtrFromThis()](
-          LockedState&& state,
-          std::shared_ptr<const Blob> blob) -> std::tuple<BufVec, bool> {
-        SCOPE_SUCCESS {
-          self->updateAtimeLocked(*state);
-        };
+  return runWhileDataLoaded(
+             LockedState{this},
+             BlobCache::Interest::WantHandle,
+             // This function is only called by FUSE.
+             context,
+             nullptr,
+             [size, off, self = inodePtrFromThis()](
+                 LockedState&& state,
+                 std::shared_ptr<const Blob> blob) -> std::tuple<BufVec, bool> {
+               SCOPE_SUCCESS {
+                 self->updateAtimeLocked(*state);
+               };
 
-        // Materialized either before or during blob load.
-        if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
-          // TODO(xavierd): For materialized files, only return EOF when read
-          // returned no bytes. This will force some FS Channel (like NFS) to
-          // issue at least 2 read calls: one for reading the entire file, and
-          // the second one to get the EOF bit.
-          auto buf = self->getOverlayFileAccess(state)->read(*self, size, off);
-          auto eof = size != 0 && buf->empty();
-          return {std::move(buf), eof};
-        }
+               // Materialized either before or during blob load.
+               if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
+                 // TODO(xavierd): For materialized files, only return EOF when
+                 // read returned no bytes. This will force some FS Channel
+                 // (like NFS) to issue at least 2 read calls: one for reading
+                 // the entire file, and the second one to get the EOF bit.
+                 auto buf =
+                     self->getOverlayFileAccess(state)->read(*self, size, off);
+                 auto eof = size != 0 && buf->empty();
+                 return {std::move(buf), eof};
+               }
 
-        // runWhileDataLoaded() ensures that the state is either
-        // MATERIALIZED_IN_OVERLAY or BLOB_NOT_LOADING
-        XDCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
-        XDCHECK(blob) << "blob missing after load completed";
+               // runWhileDataLoaded() ensures that the state is either
+               // MATERIALIZED_IN_OVERLAY or BLOB_NOT_LOADING
+               XDCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
+               XDCHECK(blob) << "blob missing after load completed";
 
-        state->readByteRanges.add(off, off + size);
-        if (state->readByteRanges.covers(0, blob->getSize())) {
-          XLOG(DBG4) << "Inode " << self->getNodeId()
-                     << " dropping interest for blob " << blob->getHash()
-                     << " because it's been fully read.";
-          state->interestHandle.reset();
-          state->readByteRanges.clear();
-        }
+               state->readByteRanges.add(off, off + size);
+               if (state->readByteRanges.covers(0, blob->getSize())) {
+                 XLOG(DBG4) << "Inode " << self->getNodeId()
+                            << " dropping interest for blob " << blob->getHash()
+                            << " because it's been fully read.";
+                 state->interestHandle.reset();
+                 state->readByteRanges.clear();
+               }
 
-        auto buf = blob->getContents();
-        folly::io::Cursor cursor(&buf);
+               auto buf = blob->getContents();
+               folly::io::Cursor cursor(&buf);
 
-        if (!cursor.canAdvance(off)) {
-          // Seek beyond EOF.  Return an empty result.
-          return {BufVec{folly::IOBuf::wrapBuffer("", 0)}, true};
-        }
+               if (!cursor.canAdvance(off)) {
+                 // Seek beyond EOF.  Return an empty result.
+                 return {BufVec{folly::IOBuf::wrapBuffer("", 0)}, true};
+               }
 
-        cursor.skip(off);
+               cursor.skip(off);
 
-        std::unique_ptr<folly::IOBuf> result;
-        cursor.cloneAtMost(result, size);
+               std::unique_ptr<folly::IOBuf> result;
+               cursor.cloneAtMost(result, size);
 
-        return {BufVec{std::move(result)}, cursor.isAtEnd()};
-      });
+               return {BufVec{std::move(result)}, cursor.isAtEnd()};
+             })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 size_t FileInode::writeImpl(
@@ -975,14 +991,16 @@ size_t FileInode::writeImpl(
 folly::Future<size_t>
 FileInode::write(BufVec&& buf, off_t off, ObjectFetchContext& fetchContext) {
   return runWhileMaterialized(
-      LockedState{this},
-      nullptr,
-      [buf = std::move(buf), off, self = inodePtrFromThis()](
-          LockedState&& state) {
-        auto vec = buf->getIov();
-        return self->writeImpl(state, vec.data(), vec.size(), off);
-      },
-      fetchContext);
+             LockedState{this},
+             nullptr,
+             [buf = std::move(buf), off, self = inodePtrFromThis()](
+                 LockedState&& state) {
+               auto vec = buf->getIov();
+               return self->writeImpl(state, vec.data(), vec.size(), off);
+             },
+             fetchContext)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 folly::Future<size_t> FileInode::write(
@@ -1000,20 +1018,22 @@ folly::Future<size_t> FileInode::write(
   }
 
   return runWhileMaterialized(
-      std::move(state),
-      nullptr,
-      [data = data.str(), off, self = inodePtrFromThis()](
-          LockedState&& stateLock) {
-        struct iovec iov;
-        iov.iov_base = const_cast<char*>(data.data());
-        iov.iov_len = data.size();
-        return self->writeImpl(stateLock, &iov, 1, off);
-      },
-      fetchContext);
+             std::move(state),
+             nullptr,
+             [data = data.str(), off, self = inodePtrFromThis()](
+                 LockedState&& stateLock) {
+               struct iovec iov;
+               iov.iov_base = const_cast<char*>(data.data());
+               iov.iov_len = data.size();
+               return self->writeImpl(stateLock, &iov, 1, off);
+             },
+             fetchContext)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 #endif
 
-Future<std::shared_ptr<const Blob>> FileInode::startLoadingData(
+ImmediateFuture<std::shared_ptr<const Blob>> FileInode::startLoadingData(
     LockedState state,
     BlobCache::Interest interest,
     ObjectFetchContext& fetchContext) {
@@ -1029,7 +1049,7 @@ Future<std::shared_ptr<const Blob>> FileInode::startLoadingData(
 
   // Everything from here through blobFuture.then should be noexcept.
   state->blobLoadingPromise = std::move(blobLoadingPromise);
-  auto resultFuture = state->blobLoadingPromise->getFuture();
+  auto resultFuture = state->blobLoadingPromise->getSemiFuture();
   state->tag = State::BLOB_LOADING;
 
   // Unlock state_ while we wait on the blob data to load
