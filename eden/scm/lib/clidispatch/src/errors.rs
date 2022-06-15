@@ -71,7 +71,7 @@ pub fn print_error(err: &anyhow::Error, io: &crate::io::IO, _args: &[String]) {
         let _ = io.write_err(format!("abort: {}\n", e.message));
         let _ = io.flush();
     } else {
-        let _ = io.write_err(format!("abort: {}\n", err));
+        let _ = io.write_err(format!("abort: {:?}\n", err));
     }
 }
 
