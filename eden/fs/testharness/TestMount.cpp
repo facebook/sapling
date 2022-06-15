@@ -13,20 +13,22 @@
 #include <folly/experimental/TestUtil.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/GFlags.h>
 #include <folly/portability/GTest.h>
-#include <gflags/gflags.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/EdenDispatcherFactory.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/notifications/CommandNotifier.h"
+#include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/LocalStore.h"
@@ -190,9 +192,10 @@ void TestMount::initialize(const RootId& commitHash, ObjectId rootTreeHash) {
 void TestMount::initialize(
     const RootId& initialCommitHash,
     FakeTreeBuilder& rootBuilder,
-    bool startReady) {
+    bool startReady,
+    Overlay::OverlayType overlayType) {
   createMountWithoutInitializing(
-      initialCommitHash, rootBuilder, /*startReady=*/startReady);
+      initialCommitHash, rootBuilder, startReady, overlayType);
   initializeEdenMount();
 }
 
@@ -203,7 +206,8 @@ void TestMount::initializeEdenMount() {
 void TestMount::createMountWithoutInitializing(
     const RootId& initialCommitHash,
     FakeTreeBuilder& rootBuilder,
-    bool startReady) {
+    bool startReady,
+    Overlay::OverlayType overlayType) {
   // Finalize rootBuilder and get the root Tree
   rootBuilder.finalize(backingStore_, startReady);
   auto rootTree = rootBuilder.getRoot();
@@ -215,10 +219,10 @@ void TestMount::createMountWithoutInitializing(
   setInitialCommit(initialCommitHash, rootTree->get().getHash());
 
   // Create edenMount_
-  createMount();
+  createMount(overlayType);
 }
 
-void TestMount::createMount() {
+void TestMount::createMount(Overlay::OverlayType overlayType) {
   shared_ptr<ObjectStore> objectStore = ObjectStore::create(
       localStore_,
       backingStore_,
@@ -234,7 +238,8 @@ void TestMount::createMount() {
       std::move(objectStore),
       blobCache_,
       serverState_,
-      std::move(journal));
+      std::move(journal),
+      overlayType);
 #ifndef _WIN32
   dispatcher_ = EdenDispatcherFactory::makeFuseDispatcher(edenMount_.get());
 #endif
@@ -253,6 +258,12 @@ RootId TestMount::nextCommitHash() {
 
 void TestMount::initialize(FakeTreeBuilder& rootBuilder, bool startReady) {
   initialize(nextCommitHash(), rootBuilder, startReady);
+}
+
+void TestMount::initialize(
+    FakeTreeBuilder& rootBuilder,
+    Overlay::OverlayType overlayType) {
+  initialize(nextCommitHash(), rootBuilder, /* startReady */ true, overlayType);
 }
 
 void TestMount::createMountWithoutInitializing(

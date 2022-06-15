@@ -17,8 +17,8 @@
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/Logger.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/GFlags.h>
 #include <folly/system/ThreadName.h>
-#include <gflags/gflags.h>
 
 #include <eden/fs/config/MountProtocol.h>
 #include "eden/fs/config/EdenConfig.h"
@@ -192,14 +192,16 @@ std::shared_ptr<EdenMount> EdenMount::create(
     std::shared_ptr<ObjectStore> objectStore,
     std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState,
-    std::unique_ptr<Journal> journal) {
+    std::unique_ptr<Journal> journal,
+    std::optional<Overlay::OverlayType> overlayType) {
   return std::shared_ptr<EdenMount>{
       new EdenMount{
           std::move(config),
           std::move(objectStore),
           std::move(blobCache),
           std::move(serverState),
-          std::move(journal)},
+          std::move(journal),
+          std::move(overlayType)},
       EdenMountDeleter{}};
 }
 
@@ -208,7 +210,8 @@ EdenMount::EdenMount(
     std::shared_ptr<ObjectStore> objectStore,
     std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState,
-    std::unique_ptr<Journal> journal)
+    std::unique_ptr<Journal> journal,
+    std::optional<Overlay::OverlayType> overlayType)
     : checkoutConfig_{std::move(checkoutConfig)},
       serverState_{std::move(serverState)},
 #ifdef _WIN32
@@ -227,7 +230,7 @@ EdenMount::EdenMount(
       overlay_{Overlay::create(
           checkoutConfig_->getOverlayPath(),
           checkoutConfig_->getCaseSensitive(),
-          getOverlayType(),
+          getOverlayType(overlayType),
           serverState_->getStructuredLogger())},
 #ifndef _WIN32
       overlayFileAccess_{overlay_.get()},
@@ -241,7 +244,12 @@ EdenMount::EdenMount(
       clock_{serverState_->getClock()} {
 }
 
-Overlay::OverlayType EdenMount::getOverlayType() {
+Overlay::OverlayType EdenMount::getOverlayType(
+    std::optional<Overlay::OverlayType> overlayType) {
+  if (overlayType.has_value()) {
+    return overlayType.value();
+  }
+
   if (checkoutConfig_->getEnableTreeOverlay()) {
     if (getEdenConfig()->unsafeInMemoryOverlay.getValue()) {
       return Overlay::OverlayType::TreeInMemory;
