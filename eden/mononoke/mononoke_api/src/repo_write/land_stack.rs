@@ -15,6 +15,7 @@ use cloned::cloned;
 use futures::compat::Stream01CompatExt;
 use futures::future::{self, TryFutureExt};
 use futures::stream::TryStreamExt;
+use hooks::CrossRepoPushSource;
 use metaconfig_types::BookmarkAttrs;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -34,6 +35,7 @@ impl RepoWriteContext {
         head: ChangesetId,
         base: ChangesetId,
         pushvars: Option<&HashMap<String, Bytes>>,
+        push_source: CrossRepoPushSource,
     ) -> Result<PushrebaseOutcome, MononokeError> {
         let bookmark = bookmark.as_ref();
         self.check_method_permitted("land_stack")?;
@@ -90,7 +92,8 @@ impl RepoWriteContext {
 
         // Pushrebase these commits onto the bookmark.
         let mut op = bookmarks_movement::PushrebaseOntoBookmarkOp::new(&bookmark, changesets)
-            .with_pushvars(pushvars);
+            .with_pushvars(pushvars)
+            .with_push_source(push_source);
 
         if let WritePermissionsModel::ServiceIdentity(service_identity) = &self.permissions_model {
             op = op.for_service(service_identity, &self.config().source_control_service);

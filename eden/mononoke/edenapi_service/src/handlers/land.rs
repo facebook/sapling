@@ -12,6 +12,7 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use edenapi_types::{HgId, LandStackRequest, LandStackResponse};
 use futures::{stream, StreamExt};
+use hooks::CrossRepoPushSource;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_api_hg::HgRepoContext;
 
@@ -88,6 +89,7 @@ async fn land_stack(
             } else {
                 Some(&pushvars)
             },
+            CrossRepoPushSource::NativeToThisRepo,
         )
         .await?;
 

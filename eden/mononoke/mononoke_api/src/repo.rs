@@ -1603,6 +1603,15 @@ impl RepoContext {
         ))
     }
 
+    pub async fn check_service_permissions(
+        &self,
+        service_identity: String,
+    ) -> Result<(), MononokeError> {
+        self.repo
+            .check_service_permissions(&self.ctx, service_identity)
+            .await
+    }
+
     /// Get a draft context to make draft changes to this repository on behalf of a service.
     pub async fn service_draft(
         mut self,
@@ -1615,8 +1624,7 @@ impl RepoContext {
         }
 
         // Check the user is permitted to speak for the named service.
-        self.repo
-            .check_service_permissions(&self.ctx, service_identity.clone())
+        self.check_service_permissions(service_identity.clone())
             .await?;
 
         self.ctx = self.ctx.with_mutated_scuba(|mut scuba| {
@@ -1674,8 +1682,7 @@ impl RepoContext {
         }
 
         // Check the user is permitted to speak for the named service.
-        self.repo
-            .check_service_permissions(&self.ctx, service_identity.clone())
+        self.check_service_permissions(service_identity.clone())
             .await?;
 
         self.ctx = self.ctx.with_mutated_scuba(|mut scuba| {

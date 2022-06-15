@@ -815,6 +815,11 @@ struct RepoDeleteBookmarkParams {
   3: optional string service_identity;
 }
 
+enum CrossRepoPushSource {
+  NATIVE_TO_THIS_REPO = 0,
+  PUSH_REDIRECTED = 1,
+}
+
 struct RepoLandStackParams {
   /// The name of the bookmark to land to.
   1: string bookmark;
@@ -842,6 +847,11 @@ struct RepoLandStackParams {
 
   /// Service identity to use for the bookmark move.
   6: optional string service_identity;
+
+  // TODO: Move to its own land service
+  /// INTERNAL USE ONLY: Override push source.  Leave as the default
+  /// if this is not an internal source control service.
+  101: CrossRepoPushSource __internal_only_push_source = CrossRepoPushSource.NATIVE_TO_THIS_REPO;
 }
 
 struct CommitLookupParams {

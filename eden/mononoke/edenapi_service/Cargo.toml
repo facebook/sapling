@@ -23,6 +23,7 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 gotham = { version = "0.6.0", default-features = false }
 gotham_derive = "0.6.0"
 gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
+hooks = { version = "0.1.0", path = "../hooks" }
 http = "0.2"
 hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
 lazy_static = "1.0"

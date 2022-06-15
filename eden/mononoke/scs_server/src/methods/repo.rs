@@ -16,6 +16,7 @@ use context::CoreContext;
 use futures::future::try_join_all;
 use futures::stream::{FuturesOrdered, StreamExt, TryStreamExt};
 use futures::try_join;
+use hooks::CrossRepoPushSource;
 use manifest::{Entry, Manifest};
 use maplit::btreemap;
 use mononoke_api::{
@@ -613,9 +614,21 @@ impl SourceControlServiceImpl {
             .context("failed to resolve base commit")?
             .ok_or_else(|| errors::commit_not_found(base.to_string()))?;
         let pushvars = convert_pushvars(params.pushvars);
+        let push_source = CrossRepoPushSource::from_request(&params.__internal_only_push_source)?;
+        if push_source != CrossRepoPushSource::NativeToThisRepo {
+            // TODO: Once we move to a land service, this internal_only argument can be removed
+            repo.check_service_permissions("scm_service_identity".to_string())
+                .await?;
+        }
 
         let pushrebase_outcome = repo
-            .land_stack(&params.bookmark, head.id(), base.id(), pushvars.as_ref())
+            .land_stack(
+                &params.bookmark,
+                head.id(),
+                base.id(),
+                pushvars.as_ref(),
+                push_source,
+            )
             .await?
             .into_response_with(&(
                 repo.clone(),

@@ -14,6 +14,7 @@ use bytes::Bytes;
 use chrono::{DateTime, FixedOffset, TimeZone};
 use ephemeral_blobstore::BubbleId;
 use faster_hex::hex_string;
+use hooks::CrossRepoPushSource;
 use mononoke_api::specifiers::{GitSha1, Globalrev, Svnrev};
 use mononoke_api::{
     BookmarkName, CandidateSelectionHintArgs, ChangesetId, ChangesetIdPrefix,
@@ -40,6 +41,21 @@ impl FromRequest<str> for BookmarkName {
                 bookmark, e
             ))
         })
+    }
+}
+
+impl FromRequest<thrift::CrossRepoPushSource> for CrossRepoPushSource {
+    fn from_request(
+        push_source: &thrift::CrossRepoPushSource,
+    ) -> Result<Self, thrift::RequestError> {
+        match push_source {
+            &thrift::CrossRepoPushSource::NATIVE_TO_THIS_REPO => Ok(Self::NativeToThisRepo),
+            &thrift::CrossRepoPushSource::PUSH_REDIRECTED => Ok(Self::PushRedirected),
+            other => Err(errors::invalid_request(format!(
+                "Unknown CrossRepoPushSource: {}",
+                other
+            ))),
+        }
     }
 }
 

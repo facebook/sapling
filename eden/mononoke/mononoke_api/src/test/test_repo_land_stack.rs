@@ -14,6 +14,7 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
+use hooks::CrossRepoPushSource::NativeToThisRepo;
 use maplit::hashset;
 use mononoke_types::ChangesetId;
 use tests_utils::drawdag::create_from_dag;
@@ -54,7 +55,13 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
 
     // Land G - it should be rewritten even though its parent is C.
     let outcome = repo
-        .land_stack("trunk", changesets["G"], changesets["C"], None)
+        .land_stack(
+            "trunk",
+            changesets["G"],
+            changesets["C"],
+            None,
+            NativeToThisRepo,
+        )
         .await?;
     let trunk_g = repo
         .resolve_bookmark("trunk", BookmarkFreshness::MostRecent)
@@ -67,7 +74,13 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
 
     // Land D and E, both commits should get mapped
     let outcome = repo
-        .land_stack("trunk", changesets["E"], changesets["A"], None)
+        .land_stack(
+            "trunk",
+            changesets["E"],
+            changesets["A"],
+            None,
+            NativeToThisRepo,
+        )
         .await?;
     let trunk_e = repo
         .resolve_bookmark("trunk", BookmarkFreshness::MostRecent)
@@ -87,7 +100,13 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
 
     // Land F, its parent should be the landed version of E
     let outcome = repo
-        .land_stack("trunk", changesets["F"], changesets["B"], None)
+        .land_stack(
+            "trunk",
+            changesets["F"],
+            changesets["B"],
+            None,
+            NativeToThisRepo,
+        )
         .await?;
     let trunk_f = repo
         .resolve_bookmark("trunk", BookmarkFreshness::MostRecent)
