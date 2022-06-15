@@ -19,7 +19,7 @@ use metalog::MetaLog;
 use types::HgId;
 
 // TODO: move to a bookmarks crate
-fn convert_to_remote(bookmark: &str) -> String {
+pub fn convert_to_remote(bookmark: &str) -> String {
     return format!("remote/{}", bookmark);
 }
 

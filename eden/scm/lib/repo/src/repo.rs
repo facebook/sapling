@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
@@ -28,6 +29,7 @@ use revisionstore::EdenApiTreeStore;
 use revisionstore::MemcacheStore;
 use storemodel::ReadFileContents;
 use storemodel::TreeStore;
+use types::HgId;
 use util::path::absolute;
 
 use crate::commits::open_dag_commits;
@@ -291,6 +293,13 @@ impl Repo {
 
     pub fn invalidate_dag_commits(&mut self) {
         self.dag_commits = None;
+    }
+
+    pub fn remote_bookmarks(&mut self) -> Result<BTreeMap<String, HgId>> {
+        match self.metalog()?.read().get("remotenames")? {
+            Some(rn) => Ok(refencode::decode_remotenames(&rn)?),
+            None => Err(errors::RemotenamesMetalogKeyError.into()),
+        }
     }
 
     pub fn add_requirement(&self, requirement: &str) -> Result<()> {

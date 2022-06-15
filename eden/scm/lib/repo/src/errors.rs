@@ -17,6 +17,10 @@ pub struct RepoNotFound(pub String);
 #[error(".hg/sharedpath points to nonexistent directory {0}!")]
 pub struct InvalidSharedPath(pub String);
 
+#[derive(Debug, Error)]
+#[error("remotenames key is not initalized in metalog")]
+pub struct RemotenamesMetalogKeyError;
+
 #[derive(Error, Debug)]
 pub enum InitError {
     #[error("repository `{0}` already exists")]

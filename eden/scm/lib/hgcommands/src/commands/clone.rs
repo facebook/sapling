@@ -184,18 +184,11 @@ pub fn run(
             errors::Abort(".hg directory already exists at clone destination".into()).into(),
         );
     }
-
-    match clone_metadata(
-        io,
-        &clone_opts,
-        global_opts,
-        config,
-        &destination,
-        &reponame,
-    ) {
-        Ok((mut repo, target)) => {
-            if let Some(target) = target {
-                clone::init_working_copy(&mut repo, target, clone_opts.enable_profile.clone())?;
+    match clone_metadata(&clone_opts, &global_opts, config, &destination, &reponame) {
+        Ok(mut repo) => {
+            if let Some(target_rev) = get_update_target(io, &mut repo, &clone_opts, &global_opts)? {
+                let mut repo = repo;
+                clone::init_working_copy(&mut repo, target_rev, clone_opts.enable_profile.clone())?;
             }
         }
         Err(e) => {
@@ -208,18 +201,16 @@ pub fn run(
             return Err(e);
         }
     }
-
     Ok(0)
 }
 
 fn clone_metadata(
-    io: &IO,
     clone_opts: &CloneOpts,
-    global_opts: HgGlobalOpts,
+    global_opts: &HgGlobalOpts,
     config: &mut ConfigSet,
     destination: &Path,
     reponame: &str,
-) -> Result<(Repo, Option<HgId>)> {
+) -> Result<Repo> {
     tracing::trace!("performing rust clone");
     tracing::debug!(target: "rust_clone", rust_clone="true");
 
@@ -249,19 +240,11 @@ fn clone_metadata(
     let edenapi = repo.eden_api()?;
     let metalog = repo.metalog()?;
     let commits = repo.dag_commits()?;
-    let config = repo.config();
 
-    let bookmark_names: Vec<String> = match config.get_opt("remotenames", "selectivepulldefault")? {
-        Some(bms) => bms,
-        None => {
-            return Err(
-                errors::Abort("remotenames.selectivepulldefault config is not set".into()).into(),
-            );
-        }
-    };
+    let bookmark_names: Vec<String> = get_selective_bookmarks(&repo)?;
 
     tracing::trace!("fetching lazy commit data and bookmarks");
-    let bookmark_ids = exchange::clone(
+    exchange::clone(
         edenapi,
         &mut metalog.write(),
         &mut commits.write(),
@@ -271,22 +254,52 @@ fn clone_metadata(
     ::fail::fail_point!("run::clone", |_| {
         Err(errors::Abort("Injected clone failure".to_string().into()).into())
     });
+    Ok(repo)
+}
 
-    if !clone_opts.noupdate {
-        if let Some(default_bm) = bookmark_names.first() {
-            if let Some(target) = bookmark_ids.get(default_bm) {
-                return Ok((repo, Some(target.clone())));
-            } else if !global_opts.quiet {
+fn get_selective_bookmarks(repo: &Repo) -> Result<Vec<String>> {
+    match repo
+        .config()
+        .get_opt("remotenames", "selectivepulldefault")?
+    {
+        Some(bms) => Ok(bms),
+        None => {
+            Err(errors::Abort("remotenames.selectivepulldefault config is not set".into()).into())
+        }
+    }
+}
+
+fn get_update_target(
+    io: &IO,
+    repo: &mut Repo,
+    clone_opts: &CloneOpts,
+    global_opts: &HgGlobalOpts,
+) -> Result<Option<HgId>> {
+    if clone_opts.noupdate {
+        return Ok(None);
+    }
+    let selective_bookmarks = get_selective_bookmarks(repo)?;
+    let main_bookmark = selective_bookmarks
+        .first()
+        .ok_or_else(|| {
+            errors::Abort("remotenames.selectivepulldefault config list is empty".into())
+        })
+        .map(|bm| exchange::convert_to_remote(bm))?;
+    let remote_bookmarks = repo.remote_bookmarks()?;
+
+    match remote_bookmarks.get(&main_bookmark) {
+        Some(rev) => Ok(Some(rev.clone())),
+        None => {
+            if !global_opts.quiet {
                 write!(
                     io.error(),
                     "Server has no '{}' bookmark - skipping checkout.\n",
-                    default_bm
+                    main_bookmark
                 )?;
             }
+            Ok(None)
         }
     }
-
-    Ok((repo, None))
 }
 
 pub fn name() -> &'static str {
