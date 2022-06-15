@@ -39,7 +39,7 @@ ImmediateFuture<NfsDispatcher::SetattrRes> NfsDispatcherImpl::setattr(
       .thenValue(
           [desired = std::move(desired), &context](const InodePtr& inode) {
             // TODO(xavierd): Modify setattr to obtain pre stat of the file.
-            return inode->setattr(desired, context).semi();
+            return inode->setattr(desired, context);
           })
       .thenValue([](struct stat st) {
         return NfsDispatcher::SetattrRes{std::nullopt, st};
@@ -95,8 +95,7 @@ ImmediateFuture<NfsDispatcher::ReadRes> NfsDispatcherImpl::read(
                 [](std::tuple<std::unique_ptr<folly::IOBuf>, bool>&& res) {
                   auto [data, isEof] = std::move(res);
                   return ReadRes{std::move(data), isEof};
-                })
-            .semi();
+                });
       });
 }
 
@@ -113,8 +112,7 @@ ImmediateFuture<NfsDispatcher::WriteRes> NfsDispatcherImpl::write(
         return inode->write(std::move(data), offset, context)
             .thenValue([](size_t written) {
               return WriteRes{written, std::nullopt, std::nullopt};
-            })
-            .semi();
+            });
       });
 }
 
@@ -260,14 +258,12 @@ ImmediateFuture<NfsDispatcher::RenameRes> NfsDispatcherImpl::rename(
              toName = std::move(toName),
              toDirInode = std::move(toDirInode),
              &context](const TreeInodePtr& fromDirInode) {
-              return fromDirInode
-                  ->rename(
-                      fromName,
-                      toDirInode,
-                      toName,
-                      InvalidationRequired::No,
-                      context)
-                  .semi();
+              return fromDirInode->rename(
+                  fromName,
+                  toDirInode,
+                  toName,
+                  InvalidationRequired::No,
+                  context);
             });
       })
       .thenValue([](auto&&) {

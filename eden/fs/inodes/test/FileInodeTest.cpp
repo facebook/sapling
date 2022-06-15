@@ -431,8 +431,7 @@ TEST(FileInode, truncatingDuringLoad) {
   }
 
   // Verify, from the caller's perspective, the load is complete (but empty).
-  EXPECT_EQ(true, readAllFuture.isReady());
-  EXPECT_EQ("", readAllFuture.value());
+  EXPECT_EQ("", std::move(readAllFuture).get(0ms));
 
   // Now finish the ObjectStore load request to make sure the FileInode
   // handles the state correctly.
@@ -462,8 +461,7 @@ TEST(FileInode, readDuringLoad) {
   builder.setAllReady();
 
   // The read() operation should have completed now.
-  ASSERT_TRUE(dataFuture.isReady());
-  EXPECT_EQ(contents, std::move(dataFuture).get());
+  EXPECT_EQ(contents, std::move(dataFuture).get(0ms));
 }
 
 TEST(FileInode, writeDuringLoad) {
@@ -485,8 +483,7 @@ TEST(FileInode, writeDuringLoad) {
   builder.setAllReady();
 
   // The write() operation should have completed now.
-  ASSERT_TRUE(writeFuture.isReady());
-  EXPECT_EQ(newContents.size(), std::move(writeFuture).get());
+  EXPECT_EQ(newContents.size(), std::move(writeFuture).get(0ms));
 
   // We should be able to read back our modified data now.
   EXPECT_FILE_INODE(inode, "ConTENTS not ready.\n", 0644);
@@ -518,8 +515,7 @@ TEST(FileInode, truncateDuringLoad) {
   (void)inode->setattr(desired, ObjectFetchContext::getNullContext()).get(0ms);
 
   // The read should complete now too.
-  ASSERT_TRUE(dataFuture.isReady());
-  EXPECT_EQ("", std::move(dataFuture).get());
+  EXPECT_EQ("", std::move(dataFuture).get(0ms));
 
   // For good measure, test reading and writing some more.
   inode->write("foobar\n"_sp, 5, ObjectFetchContext::getNullContext()).get(0ms);

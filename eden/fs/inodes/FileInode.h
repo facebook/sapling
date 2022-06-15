@@ -7,7 +7,6 @@
 
 #pragma once
 #include <folly/Synchronized.h>
-#include <folly/futures/Future.h>
 #include <folly/futures/SharedPromise.h>
 #include <chrono>
 #include <optional>
@@ -162,12 +161,12 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       const InodeTimestamps& initialTimestamps);
 
 #ifndef _WIN32
-  folly::Future<struct stat> setattr(
+  ImmediateFuture<struct stat> setattr(
       const DesiredMetadata& desired,
       ObjectFetchContext& fetchContext) override;
 
   /// Throws InodeError EINVAL if inode is not a symbolic node.
-  folly::Future<std::string> readlink(
+  ImmediateFuture<std::string> readlink(
       ObjectFetchContext& fetchContext,
       CacheHint cacheHint = CacheHint::LikelyNeededAgain);
 
@@ -245,7 +244,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    *
    * Note that this API generally should only be used for fairly small files.
    */
-  FOLLY_NODISCARD folly::Future<std::string> readAll(
+  FOLLY_NODISCARD ImmediateFuture<std::string> readAll(
       ObjectFetchContext& fetchContext,
       CacheHint cacheHint = CacheHint::LikelyNeededAgain);
 
@@ -268,17 +267,17 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    *
    * May throw exceptions on error.
    */
-  folly::Future<std::tuple<BufVec, bool>>
+  ImmediateFuture<std::tuple<BufVec, bool>>
   read(size_t size, off_t off, ObjectFetchContext& context);
 
-  folly::Future<size_t>
+  ImmediateFuture<size_t>
   write(BufVec&& buf, off_t off, ObjectFetchContext& fetchContext);
-  folly::Future<size_t>
+  ImmediateFuture<size_t>
   write(folly::StringPiece data, off_t off, ObjectFetchContext& fetchContext);
 
   void fsync(bool datasync);
 
-  FOLLY_NODISCARD folly::Future<folly::Unit>
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit>
   fallocate(uint64_t offset, uint64_t length, ObjectFetchContext& fetchContext);
 
 #endif // !_WIN32

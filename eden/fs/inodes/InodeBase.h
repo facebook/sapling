@@ -142,7 +142,7 @@ class InodeBase {
 
 #ifndef _WIN32
   // See Dispatcher::setattr
-  virtual folly::Future<struct stat> setattr(
+  virtual ImmediateFuture<struct stat> setattr(
       const DesiredMetadata& desired,
       ObjectFetchContext& fetchContext) = 0;
 

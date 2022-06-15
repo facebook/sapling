@@ -3781,7 +3781,7 @@ void TreeInode::prefetch(ObjectFetchContext& context) {
       });
 }
 
-folly::Future<struct stat> TreeInode::setattr(
+ImmediateFuture<struct stat> TreeInode::setattr(
     const DesiredMetadata& desired,
     ObjectFetchContext& /*fetchContext*/) {
   struct stat result(getMount()->initStatData());

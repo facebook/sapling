@@ -1250,7 +1250,9 @@ folly::Future<std::string> EdenMount::loadFileContents(
   }
 #endif
 
-  return fileInode->readAll(fetchContext, cacheHint);
+  return fileInode->readAll(fetchContext, cacheHint)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 #ifndef _WIN32
@@ -1289,6 +1291,8 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
   }
 
   return fileInode->readlink(fetchContext, cacheHint)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([this,
                   &fetchContext,
                   pInode,

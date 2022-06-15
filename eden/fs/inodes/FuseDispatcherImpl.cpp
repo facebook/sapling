@@ -196,7 +196,7 @@ ImmediateFuture<FuseDispatcher::Attr> FuseDispatcherImpl::setattr(
           desired.mtime = now;
         }
 
-        return inode->setattr(desired, context).semi();
+        return inode->setattr(desired, context);
       })
       .thenValue([](struct stat&& stat) {
         return FuseDispatcher::Attr{std::move(stat)};
@@ -252,8 +252,7 @@ ImmediateFuture<BufVec> FuseDispatcherImpl::read(
         return inode->read(size, off, context)
             .thenValue([](std::tuple<BufVec, bool>&& readRes) {
               return std::get<BufVec>(std::move(readRes));
-            })
-            .semi();
+            });
       });
 }
 
@@ -264,7 +263,7 @@ ImmediateFuture<size_t> FuseDispatcherImpl::write(
     ObjectFetchContext& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
       [copy = data.str(), off, &context](FileInodePtr&& inode) {
-        return inode->write(copy, off, context).semi();
+        return inode->write(copy, off, context);
       });
 }
 
@@ -283,7 +282,7 @@ ImmediateFuture<folly::Unit> FuseDispatcherImpl::fallocate(
     ObjectFetchContext& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
       [offset, length, &context](FileInodePtr inode) {
-        return inode->fallocate(offset, length, context).semi();
+        return inode->fallocate(offset, length, context);
       });
 }
 
@@ -427,14 +426,8 @@ ImmediateFuture<folly::Unit> FuseDispatcherImpl::rename(
                   &context](const TreeInodePtr& parent) mutable {
         return std::move(npFuture).thenValue(
             [parent, name, newName, &context](const TreeInodePtr& newParent) {
-              return parent
-                  ->rename(
-                      name,
-                      newParent,
-                      newName,
-                      InvalidationRequired::No,
-                      context)
-                  .semi();
+              return parent->rename(
+                  name, newParent, newName, InvalidationRequired::No, context);
             });
       });
 }
