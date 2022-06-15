@@ -26,7 +26,7 @@ function validate_commit_sync() {
    once --entry-id "$entry_id" "$@"
 }
 
-function create_large_small_repo() {
+function large_small_config() {
   REPOTYPE="blob_files"
   ENABLE_PRESERVE_BUNDLE2=1 REPOID=0 REPONAME=large-mon setup_common_config "$REPOTYPE"
   ENABLE_PRESERVE_BUNDLE2=1 REPOID=1 REPONAME=small-mon setup_common_config "$REPOTYPE"
@@ -108,6 +108,9 @@ EOF
 
   fi
 
+}
+
+function large_small_setup() {
   echo "Setting up hg server repos"
 
   cd "$TESTTMP" || exit 1
@@ -157,6 +160,11 @@ EOF
   echo "Adding synced mapping entry"
   add_synced_commit_mapping_entry "$REPOIDSMALL" "$SMALL_MASTER_BONSAI" \
    "$REPOIDLARGE" "$LARGE_MASTER_BONSAI" "test_version"
+}
+
+function create_large_small_repo() {
+  large_small_config
+  large_small_setup
 }
 
 function update_mapping_version {
