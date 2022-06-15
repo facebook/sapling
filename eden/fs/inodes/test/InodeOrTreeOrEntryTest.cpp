@@ -8,9 +8,10 @@
 #include <folly/Exception.h>
 #include <folly/Random.h>
 #include <folly/executors/ManualExecutor.h>
+#include <folly/portability/GFlags.h>
+#include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gflags/gflags.h>
 #ifdef _WIN32
 #include "eden/fs/prjfs/Enumerator.h"
 #else
@@ -577,6 +578,57 @@ TEST(InodeOrTreeOrEntryTest, findDoesNotChangeState) {
     VERIFY_TREE(flags);
     auto inodeOr = mount.getInodeOrTreeOrEntry(info->path);
     EXPECT_INODE_OR(inodeOr, *info.get());
+  }
+  VERIFY_TREE(flags);
+}
+
+TEST(InodeOrTreeOrEntryTest, getChildren) {
+  TestFileDatabase files;
+  auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
+  auto mount = TestMount{MakeTestTreeBuilder(files)};
+  VERIFY_TREE(flags);
+
+  auto test_root_dir_a_children = [&mount]() {
+    auto inodeOr = mount.getInodeOrTreeOrEntry(RelativePathPiece{"root_dirA"});
+    EXPECT_TRUE(inodeOr.isDirectory());
+
+    auto children =
+        inodeOr.getAllEntryNames(RelativePathPiece{"root_dirA"}).get();
+    EXPECT_EQ(2, children.size());
+    EXPECT_THAT(children, testing::Contains("child1_fileA1"_pc));
+    EXPECT_THAT(children, testing::Contains("child1_fileA2"_pc));
+  };
+
+  test_root_dir_a_children();
+
+  // load inode
+  mount.getInode(RelativePathPiece{"root_dirA"});
+  test_root_dir_a_children();
+
+  // materialize inode
+  std::string path = "root_dirA/child1_fileA1";
+  std::string newContents = path + "~newContent";
+  mount.overwriteFile(folly::StringPiece{path}, newContents);
+  files.setContents(RelativePathPiece{path}, newContents);
+
+  test_root_dir_a_children();
+
+  VERIFY_TREE_DEFAULT();
+}
+
+TEST(InodeOrTreeOrEntryTest, getChildrenDoesNotChangeState) {
+  TestFileDatabase files;
+  auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
+  auto mount = TestMount{MakeTestTreeBuilder(files)};
+  VERIFY_TREE(flags);
+
+  for (auto info : files.getOriginalItems()) {
+    VERIFY_TREE(flags);
+    auto inodeOr = mount.getInodeOrTreeOrEntry(info->path);
+    EXPECT_INODE_OR(inodeOr, *info.get());
+    if (inodeOr.isDirectory()) {
+      inodeOr.getAllEntryNames(info->path);
+    }
   }
   VERIFY_TREE(flags);
 }

@@ -132,6 +132,9 @@ class InodeOrTreeOrEntry {
       ObjectStore* objectStore,
       ObjectFetchContext& fetchContext) const;
 
+  ImmediateFuture<std::vector<PathComponent>> getAllEntryNames(
+      RelativePathPiece path);
+
  private:
   /**
    * Helper function for getOrFindChild when the current node is a Tree.

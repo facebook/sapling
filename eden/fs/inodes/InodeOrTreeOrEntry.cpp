@@ -313,6 +313,37 @@ ImmediateFuture<struct stat> InodeOrTreeOrEntry::stat(
       variant_);
 }
 
+ImmediateFuture<std::vector<PathComponent>>
+InodeOrTreeOrEntry::getAllEntryNames(RelativePathPiece path) {
+  if (!isDirectory()) {
+    return makeImmediateFuture<std::vector<PathComponent>>(
+        PathError(ENOTDIR, path));
+  }
+  return std::visit(
+      [path](auto&& arg) -> ImmediateFuture<std::vector<PathComponent>> {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, InodePtr>) {
+          return arg.asTreePtr()->getAllEntryNames();
+        } else if constexpr (std::is_same_v<T, TreePtr>) {
+          std::vector<PathComponent> entries;
+          entries.reserve(arg->size());
+          for (auto& entry : *arg) {
+            entries.push_back(entry.first);
+          }
+          return entries;
+        } else if constexpr (
+            std::is_same_v<T, UnmaterializedUnloadedBlobDirEntry> ||
+            std::is_same_v<T, TreeEntry>) {
+          // These represent files in InodeOrTreeOrEntry, and can't be descended
+          return makeImmediateFuture<std::vector<PathComponent>>(
+              PathError(ENOTDIR, path, "variant is of unhandled type"));
+        } else {
+          static_assert(always_false_v<T>, "non-exhaustive visitor!");
+        }
+      },
+      variant_);
+}
+
 ImmediateFuture<InodeOrTreeOrEntry> InodeOrTreeOrEntry::getOrFindChild(
     PathComponentPiece childName,
     RelativePathPiece path,
