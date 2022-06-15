@@ -29,7 +29,6 @@ pub struct LocalPushrebaseClient<'a, R: Repo> {
     pub bookmark_attrs: &'a BookmarkAttrs,
     pub infinitepush_params: &'a InfinitepushParams,
     pub hook_manager: &'a HookManager,
-    pub cross_repo_push_source: CrossRepoPushSource,
     pub readonly_fetcher: &'a RepoReadWriteFetcher,
 }
 
@@ -41,12 +40,13 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
         bookmark: &BookmarkName,
         changesets: HashSet<BonsaiChangeset>,
         pushvars: Option<&HashMap<String, Bytes>>,
+        cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<PushrebaseOutcome, BookmarkMovementError> {
         PushrebaseOntoBookmarkOp::new(bookmark, changesets)
             .only_if_public()
             .with_pushvars(pushvars)
             .with_hg_replay_data(self.maybe_hg_replay_data.as_ref())
-            .with_push_source(self.cross_repo_push_source)
+            .with_push_source(cross_repo_push_source)
             .run(
                 self.ctx,
                 self.repo,

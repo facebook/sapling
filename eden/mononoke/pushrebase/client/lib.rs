@@ -12,6 +12,7 @@ mod local;
 use bookmarks_movement::BookmarkMovementError;
 use bookmarks_types::BookmarkName;
 use bytes::Bytes;
+use hooks::CrossRepoPushSource;
 use mononoke_types::BonsaiChangeset;
 use pushrebase::PushrebaseOutcome;
 use std::collections::{HashMap, HashSet};
@@ -32,5 +33,6 @@ pub trait PushrebaseClient {
         // Must be a stack
         changesets: HashSet<BonsaiChangeset>,
         pushvars: Option<&HashMap<String, Bytes>>,
+        cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<PushrebaseOutcome, BookmarkMovementError>;
 }
