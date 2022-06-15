@@ -334,6 +334,17 @@ ImmediateFuture<InodeOrTreeOrEntry> TreeInode::getOrFindChild(
       .ensure([b = std::move(block)]() mutable { b.close(); });
 }
 
+std::vector<PathComponent> TreeInode::getAllEntryNames() {
+  std::vector<PathComponent> entries;
+
+  auto contents = contents_.rlock();
+  entries.reserve(contents->entries.size());
+  for (auto& entry : contents->entries) {
+    entries.push_back(entry.first);
+  }
+  return entries;
+}
+
 ImmediateFuture<InodePtr> TreeInode::getOrLoadChild(
     PathComponentPiece name,
     ObjectFetchContext& context) {

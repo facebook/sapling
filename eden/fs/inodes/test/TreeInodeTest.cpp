@@ -10,9 +10,10 @@
 #include <folly/Exception.h>
 #include <folly/Random.h>
 #include <folly/executors/ManualExecutor.h>
+#include <folly/portability/GFlags.h>
+#include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
-#include <gflags/gflags.h>
 #ifdef _WIN32
 #include "eden/fs/prjfs/Enumerator.h"
 #else
@@ -504,6 +505,39 @@ TEST(TreeInode, setattr) {
       oldmetadata.timestamps.mtime.toTimespec()};
   somedir->setattr(newMetadata, ObjectFetchContext::getNullContext());
   EXPECT_TRUE(somedir->getContents().rlock()->isMaterialized());
+}
+
+TEST(TreeInode, getOrFindChildren) {
+  FakeTreeBuilder builder;
+  builder.setFile("somedir/foo.txt", "test\n");
+  TestMount mount{builder};
+  auto somedir = mount.getTreeInode("somedir"_relpath);
+
+  auto result = somedir->getAllEntryNames();
+
+  EXPECT_EQ(1, result.size());
+  EXPECT_THAT(result, testing::Contains("foo.txt"_pc));
+
+  somedir->mknod("newfile.txt"_pc, S_IFREG | 0740, 0, InvalidationRequired::No);
+
+  auto result2 = somedir->getAllEntryNames();
+
+  EXPECT_EQ(2, result2.size());
+  EXPECT_THAT(result2, testing::Contains("foo.txt"_pc));
+  EXPECT_THAT(result2, testing::Contains("newfile.txt"_pc));
+
+  somedir
+      ->unlink(
+          "foo.txt"_pc,
+          InvalidationRequired::No,
+          ObjectFetchContext::getNullContext())
+      .get();
+
+  auto result3 = somedir->getAllEntryNames();
+
+  EXPECT_EQ(1, result3.size());
+  EXPECT_THAT(result3, testing::Not(testing::Contains("foo.txt"_pc)));
+  EXPECT_THAT(result3, testing::Contains("newfile.txt"_pc));
 }
 
 #endif

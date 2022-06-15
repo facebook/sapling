@@ -139,6 +139,22 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       bool loadInodes);
 
   /**
+   * For now this method returns the names for all the children of this
+   * directory. And is eventually intended to return InodeOrTreeOrEntry
+   * for each of them, like getOrFindChild but for all the children of a
+   * directory.
+   *
+   * Note that this is separated out from the readdir logic below. There are
+   * a few reasons for this. First. this method will not return information
+   * about the . or .. entries in a directory. It only returns the contained
+   * files and directories. Second, this method does not take an offset. Only
+   * the entire directory can be listed. The readdir logic is complicated by
+   * these two requirements, so we choose to use a much simpler implementation
+   * here.
+   */
+  std::vector<PathComponent> getAllEntryNames();
+
+  /**
    * Get the inode object for a child of this directory.
    *
    * The Inode object will be loaded if it is not already loaded.
