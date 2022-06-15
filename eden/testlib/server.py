@@ -10,7 +10,7 @@ import os
 import subprocess
 import time
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, Optional, TextIO, Tuple
 
 from .hg import hg
 from .repo import Repo
@@ -61,11 +61,18 @@ class MononokeServer(Server):
     process: subprocess.Popen[bytes]
     repo_count: int
     url_prefix: str
+    stderr_file: Optional[TextIO] = None
 
-    # pyre-fixme[2]: Parameter must be annotated.
-    def __init__(self, repo_count=5) -> None:
+    def __init__(self, record_stderr_to_file: bool, repo_count: int = 5) -> None:
+        temp_dir = new_dir()
+
+        if record_stderr_to_file:
+            self.stderr_file = open(  # noqa: P201
+                os.path.join(temp_dir, "mononoke-log"), "w+"
+            )
+
         # pyre-fixme[23]: Unable to unpack 3 values, 2 were expected.
-        self.process, self.port = _start(repo_count)
+        self.process, self.port = _start(temp_dir, repo_count, self.stderr_file)
         self.repo_count = repo_count
 
         self.url_prefix = f"mononoke://localhost:{self.port}"
@@ -83,17 +90,21 @@ class MononokeServer(Server):
         self.process.kill()
         self.process.wait(timeout=5)
 
+        if self.stderr_file is not None:
+            stderr_file: TextIO = self.stderr_file
+            stderr_file.flush()
+            stderr_file.close()
 
-# pyre-fixme[2]: Parameter must be annotated.
-def _start(repo_count) -> Tuple[subprocess.Popen[bytes], str, str]:
+
+def _start(
+    temp_dir: Path, repo_count: int, stderr_file: Optional[TextIO]
+) -> Tuple[subprocess.Popen[bytes], str, str]:
     executable = os.environ["HGTEST_MONONOKE_SERVER"]
-    temp_dir = new_dir()
     cert_dir = os.environ["HGTEST_CERTDIR"]
     bind_addr = "[::1]:0"  # Localhost
     configerator_path = str(new_dir())
     tunables_path = "mononoke_tunables.json"
 
-    # pyre-fixme[53]: Captured variable `temp_dir` is not annotated.
     def tjoin(path: str) -> str:
         return os.path.join(temp_dir, path)
 
@@ -108,6 +119,12 @@ def _start(repo_count) -> Tuple[subprocess.Popen[bytes], str, str]:
     _setup_configerator(configerator_path)
     for i in range(repo_count):
         _setup_repo(config_path, i)
+
+    if stderr_file:
+        stderr = stderr_file
+        print(f"Recording Mononoke stderr log to {stderr_file.name}")
+    else:
+        stderr = subprocess.PIPE
 
     process = subprocess.Popen(
         [
@@ -142,7 +159,7 @@ def _start(repo_count) -> Tuple[subprocess.Popen[bytes], str, str]:
         ],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=stderr,
         close_fds=True,
     )
 

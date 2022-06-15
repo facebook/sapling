@@ -19,12 +19,14 @@ class GlobalTestState(threading.local):
     temp_mgr: TempFileManager
     test_tmp: Path
     env: Dict[str, str]
+    debug: bool
 
     def __init__(self) -> None:
         # These are needed to satisfy pyre, but should never be used.
         self.temp_mgr = TempFileManager()
         self.test_tmp = Path("")
         self.env = {}
+        self.debug = os.environ.get("HGTEST_DEBUG") is not None
 
     def setup(self) -> None:
         self.temp_mgr = TempFileManager()
@@ -38,7 +40,8 @@ class GlobalTestState(threading.local):
         }
 
     def cleanup(self) -> None:
-        self.temp_mgr.cleanup()
+        if not self.debug:
+            self.temp_mgr.cleanup()
 
 
 # Global state makes it easier to hand common objects around, like the temp

@@ -74,7 +74,7 @@ url=https://localhost:{self.server.port}/edenapi
 
     def new_server(self) -> Server:
         if os.environ.get("USE_MONONOKE", False):
-            return MononokeServer()
+            return MononokeServer(record_stderr_to_file=test_globals.debug)
         else:
             return LocalServer()
 
