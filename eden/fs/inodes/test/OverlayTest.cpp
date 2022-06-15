@@ -128,24 +128,6 @@ class OverlayTest : public ::testing::Test {
     mount_.initialize(builder);
   }
 
-  // Helper method to check if two timestamps are same or not.
-  static void expectTimeSpecsEqual(
-      const EdenTimestamp& at,
-      const EdenTimestamp& bt) {
-    auto a = at.toTimespec();
-    auto b = bt.toTimespec();
-    EXPECT_EQ(a.tv_sec, b.tv_sec);
-    EXPECT_EQ(a.tv_nsec, b.tv_nsec);
-  }
-
-  static void expectTimeStampsEqual(
-      const InodeTimestamps& a,
-      const InodeTimestamps& b) {
-    expectTimeSpecsEqual(a.atime, b.atime);
-    expectTimeSpecsEqual(a.mtime, b.mtime);
-    expectTimeSpecsEqual(a.ctime, b.ctime);
-  }
-
   TestMount mount_;
 };
 
@@ -195,7 +177,7 @@ TEST_F(OverlayTest, testTimeStampsInOverlayOnMountAndUnmount) {
     mount_.remount();
     auto inodeRemount = mount_.getFileInode("dir/a.txt");
     auto afterRemount = inodeRemount->getMetadata().timestamps;
-    expectTimeStampsEqual(beforeRemountFile, afterRemount);
+    EXPECT_EQ(beforeRemountFile, afterRemount);
   }
 
   {
@@ -208,7 +190,7 @@ TEST_F(OverlayTest, testTimeStampsInOverlayOnMountAndUnmount) {
     mount_.remount();
     auto inodeRemount = mount_.getTreeInode("dir");
     auto afterRemount = inodeRemount->getMetadata().timestamps;
-    expectTimeStampsEqual(beforeRemountDir, afterRemount);
+    EXPECT_EQ(beforeRemountDir, afterRemount);
   }
 }
 

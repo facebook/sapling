@@ -145,6 +145,11 @@ struct InodeTimestamps {
     ctime = ts;
   }
 
+  // Comparison operator for testing purposes
+  bool operator==(const InodeTimestamps& other) const noexcept {
+    return atime == other.atime && mtime == other.mtime && ctime == other.ctime;
+  }
+
 #ifndef _WIN32
   /**
    * Helper that assigns all three timestamps from the flags and parameters in
