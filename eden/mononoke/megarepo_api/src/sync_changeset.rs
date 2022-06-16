@@ -9,7 +9,7 @@ use crate::common::{
     find_source_config, find_target_bookmark_and_value, find_target_sync_config, MegarepoOp,
     SourceAndMovedChangesets,
 };
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Loadable;
@@ -44,6 +44,15 @@ impl<'a> MegarepoOp for SyncChangeset<'a> {
     fn mononoke(&self) -> &Arc<Mononoke> {
         &self.mononoke
     }
+}
+
+pub enum MergeMode {
+    Squashed {
+        commits_limit: u64,
+    },
+    ExtraMoveCommits {
+        side_parents_move_commits: Vec<SourceAndMovedChangesets>,
+    },
 }
 
 const MERGE_COMMIT_MOVES_CONCURRENCY: usize = 10;
@@ -121,18 +130,33 @@ impl<'a> SyncChangeset<'a> {
         .await?;
 
         // In case of merge commits we need to add move commits on top of the
-        // merged-in commits.
-        let side_parents_move_commits = self
-            .create_move_commits(
-                &ctx,
-                &target,
-                &source_cs,
-                &commit_remapping_state,
-                &source_repo,
-                &source_name,
-                &source_config,
-            )
-            .await?;
+        // merged-in commits or squash side-branch.
+        let merge_mode = match &source_config.merge_mode {
+            Some(megarepo_config::MergeMode::squashed(sq)) => MergeMode::Squashed {
+                commits_limit: sq
+                    .squash_limit
+                    .try_into()
+                    .context("couldn't convert squash commits limit")?,
+            },
+            None | Some(megarepo_config::MergeMode::with_move_commit(_)) => {
+                MergeMode::ExtraMoveCommits {
+                    side_parents_move_commits: self
+                        .create_move_commits(
+                            ctx,
+                            target,
+                            &source_cs,
+                            &commit_remapping_state,
+                            &source_repo,
+                            source_name,
+                            source_config,
+                        )
+                        .await?,
+                }
+            }
+            Some(megarepo_config::MergeMode::UnknownField(_)) => {
+                return Err(anyhow!("Unknown MergeMode").into());
+            }
+        };
 
         // Finally create a commit in the target and update the mapping.
         let source_cs_id = source_cs.get_changeset_id();
@@ -146,7 +170,7 @@ impl<'a> SyncChangeset<'a> {
             target_location,
             &target,
             commit_remapping_state,
-            &side_parents_move_commits,
+            merge_mode,
         )
         .await?;
 
@@ -343,7 +367,7 @@ async fn sync_changeset_to_target(
     target_cs_id: ChangesetId,
     target: &Target,
     mut state: CommitRemappingState,
-    side_parents_move_commits: &[SourceAndMovedChangesets],
+    merge_mode: MergeMode,
 ) -> Result<ChangesetId, MegarepoError> {
     let mover =
         create_source_to_target_multi_mover(mapping.clone()).map_err(MegarepoError::internal)?;
@@ -351,35 +375,44 @@ async fn sync_changeset_to_target(
     let source_cs_id = source_cs.get_changeset_id();
     // Create a new commit using a mover
     let source_cs_mut = source_cs.into_mut();
-    let mut remapped_parents = HashMap::new();
     let latest_synced_cs_id = find_latest_synced_cs_id(&state, source, target)?;
 
-    remapped_parents.insert(latest_synced_cs_id, target_cs_id);
-    for css in side_parents_move_commits.iter() {
-        remapped_parents.insert(css.source, css.moved.get_changeset_id());
-    }
+    let mut rewritten_commit = match merge_mode {
+        MergeMode::ExtraMoveCommits {
+            side_parents_move_commits,
+        } => {
+            let mut remapped_parents = HashMap::new();
 
-    let mut rewritten_commit = rewrite_commit(
-        &ctx,
-        source_cs_mut,
-        &remapped_parents,
-        mover,
-        source_repo.clone(),
-        // In case of octopus merges only first two parent get preserved during
-        // hg derivation. This ensures that mainline is within those two so is
-        // represented in the commit graph and the sync is a fast-forward move.
-        Some(target_cs_id),
-        CommitRewrittenToEmpty::Discard,
-    )
-    .await
-    .map_err(MegarepoError::internal)?
-    .ok_or_else(|| {
-        MegarepoError::internal(anyhow!(
-            "failed to rewrite commit {}, target: {:?}",
-            source_cs_id,
-            target
-        ))
-    })?;
+            remapped_parents.insert(latest_synced_cs_id, target_cs_id);
+            for css in side_parents_move_commits.iter() {
+                remapped_parents.insert(css.source, css.moved.get_changeset_id());
+            }
+            rewrite_commit(
+                ctx, // this is already a reference
+                source_cs_mut,
+                &remapped_parents,
+                mover,
+                source_repo.clone(), // this doesn't need to be clone
+                // In case of octopus merges only first two parent get preserved during
+                // hg derivation. This ensures that mainline is within those two so is
+                // represented in the commit graph and the sync is a fast-forward move.
+                Some(target_cs_id),
+                CommitRewrittenToEmpty::Discard,
+            )
+            .await
+            .map_err(MegarepoError::internal)?
+            .ok_or_else(|| {
+                MegarepoError::internal(anyhow!(
+                    "failed to rewrite commit {}, target: {:?}",
+                    source_cs_id,
+                    target
+                ))
+            })
+        }
+        MergeMode::Squashed { commits_limit: _ } => {
+            panic!("MergeMode::Squashed is not implemented");
+        }
+    }?;
 
     state.set_source_changeset(source.clone(), source_cs_id);
     state
