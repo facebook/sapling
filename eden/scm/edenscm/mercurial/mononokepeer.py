@@ -47,6 +47,7 @@ from .pycompat import decodeutf8, encodeutf8, iswindows
 
 
 if iswindows:
+    # pyre-fixme[21]: Could not find a module corresponding to import `eden.thrift.windows_thrift`.
     from eden.thrift.windows_thrift import WindowsSocketHandle
 
 # Netencoding special characters

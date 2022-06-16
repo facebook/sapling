@@ -59,6 +59,7 @@ from .. import pycompat
 from . import _readers
 
 if pycompat.iswindows:
+    # pyre-fixme[21]: Could not find a module corresponding to import `eden.thrift.windows_thrift`.
     from eden.thrift.windows_thrift import WindowsSocketHandle
 
 try:
