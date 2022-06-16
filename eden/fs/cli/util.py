@@ -610,7 +610,7 @@ def write_file_atomically(path: Path, contents: bytes) -> None:
         raise
 
 
-def format_cmd(cmd) -> str:
+def format_cmd(cmd: bytes) -> str:
     args = os.fsdecode(cmd)
 
     # remove trailing null which would cause the command to show up with an
@@ -620,12 +620,12 @@ def format_cmd(cmd) -> str:
     args = args.split("\x00")
 
     # Focus on just the basename as the paths can be quite long
-    cmd = args[0]
+    cmd_str: str = args[0]
     if os.path.isabs(cmd):
-        cmd = os.path.basename(cmd)
+        cmd_str = os.path.basename(cmd_str)
 
     # Show cmdline args too, if they exist
-    return " ".join(shlex.quote(p) for p in [cmd] + args[1:])
+    return " ".join(shlex.quote(p) for p in [cmd_str] + args[1:])
 
 
 def format_mount(mount) -> str:

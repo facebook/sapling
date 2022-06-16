@@ -16,7 +16,7 @@ import sys
 from typing import List, NamedTuple, Union
 
 
-log = logging.getLogger("eden.fs.cli.mtab")
+log: logging.Logger = logging.getLogger("eden.fs.cli.mtab")
 
 
 MountInfo = NamedTuple(
@@ -30,7 +30,7 @@ kMountStaleSecondsTimeout = 10
 
 # Note this function needs to be a global function, otherwise it will cause
 # errors to spawn a process with this function as the entry point.
-def lstat_process(path):
+def lstat_process(path: Union[bytes, str]) -> None:
     """
     Function to be the entry point of the multiproccessing process
     to stat path. stat might hang so we might kill this process.

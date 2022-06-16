@@ -20,7 +20,7 @@ from eden.fs.cli.doctor.problem import (
 )
 
 
-log = logging.getLogger("eden.fs.cli.doctor.checks.watchman")
+log: logging.Logger = logging.getLogger("eden.fs.cli.doctor.checks.watchman")
 
 
 WatchmanCheckInfo = collections.namedtuple(
