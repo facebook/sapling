@@ -668,7 +668,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
    */
   auto oldParent = getWorkingCopyParent();
   XLOG(DBG3) << "adding " << rootId << " to Eden mount " << this->getPath()
-             << " at path" << path << " on top of " << oldParent;
+             << " at path " << path << " on top of " << oldParent;
 
   auto ctx = std::make_shared<CheckoutContext>(
       this,

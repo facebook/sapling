@@ -1207,47 +1207,158 @@ ImmediateFuture<folly::Unit> TreeInode::rmdir(
       });
 }
 
+void TreeInode::removeAllChildrenRecursively(
+    InvalidationRequired invalidate,
+    ObjectFetchContext& context,
+    const RenameLock& renameLock) {
+  // TODO: Unconditional materialization is slightly conservative. If the
+  // BackingStore Tree is empty, then this function can return without
+  // materializing.
+  materialize(&renameLock);
+#ifndef _WIN32
+  if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
+    throw InodeError(EPERM, inodePtrFromThis());
+  }
+#endif
+
+  std::vector<TreeInodePtr> loadedTreeNodes;
+  // Step 1, collect children nodes who are tree and loaded
+  {
+    auto contents = contents_.rlock();
+    for (auto& entry : contents->entries) {
+      if (auto asTreePtr = entry.second.asTreePtrOrNull()) {
+        loadedTreeNodes.push_back(std::move(asTreePtr));
+      }
+    }
+  }
+
+  // Step 2, Clear contents in the child folders
+  for (auto& treeNode : loadedTreeNodes) {
+    treeNode->removeAllChildrenRecursively(invalidate, context, renameLock);
+  }
+
+  loadedTreeNodes.clear();
+
+  // Step 3, Now all child nodes are removable, unless one of the directories
+  // had a new entry added while the contents lock was not held.
+  auto contents = contents_.wlock();
+  auto it = contents->entries.begin();
+  while (it != contents->entries.end()) {
+    auto inodeNum = it->second.getInodeNumber();
+    bool isDir = it->second.isDirectory();
+    if (it->second.getInode()) {
+      // If a treeInode is not empty, i.e. files were added to the tree
+      // between step2 and step3, an exception will be thrown.
+
+      // TODO: There's a race here: checkPreRemove acquires the child's
+      // contents lock but then releases it after the check. Thus, there's a
+      // window where the child can gain an entry being unlinked, which breaks
+      // EdenFS's internal data model. This code should acquire the child's
+      // contents lock and hold it across the unlink operation.
+      //
+      // TODO: Have checkPreRemove take a DirContents& to ensure the contents
+      // lock is acquired by the parent, and encourage holding it across the
+      // unlink operation.
+      //
+      // Be careful, here we obtains TreeInode* instead of TreeIndePtr to avoid
+      // deference of TreeInodePtr, otherwise there could be a deadlock on
+      // getting the parent location info when deference.
+      if (TreeInode* asTreePtr = it->second.asTreeOrNull()) {
+        int checkResult = checkPreRemove(*asTreePtr);
+        if (checkResult != 0) {
+          throw InodeError(checkResult, InodePtr::newPtrLocked(asTreePtr));
+        }
+      }
+
+      auto inode = it->second.getInode();
+      inode->markUnlinked(this, it->first, renameLock);
+    }
+    // Erase from contents must happen right after markUnlink
+    it = contents->entries.erase(it);
+
+    if (isDir) {
+      getOverlay()->recursivelyRemoveOverlayData(inodeNum);
+    } else {
+      getOverlay()->removeOverlayData(inodeNum);
+    }
+  }
+
+  if (InvalidationRequired::Yes == invalidate) {
+    invalidateChannelDirCache(*contents).get();
+  }
+  updateMtimeAndCtimeLocked(contents->entries, getNow());
+  getOverlay()->removeChildren(getNodeId(), contents->entries);
+}
+
+InodePtr TreeInode::tryRemoveUnloadedChild(
+    PathComponentPiece name,
+    InvalidationRequired invalidate) {
+#ifndef _WIN32
+  if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
+    throw InodeError(EPERM, inodePtrFromThis());
+  }
+#endif
+  auto contents = contents_.wlock();
+
+  auto it = contents->entries.find(name);
+  if (it == contents->entries.end()) {
+    throw InodeError(ENOENT, inodePtrFromThis(), name);
+  }
+
+  auto inodeName = copyCanonicalInodeName(it);
+  auto inodeNumber = it->second.getInodeNumber();
+
+  if (auto node = it->second.getInodePtr()) {
+    // The child has a loaded! Fall back to the slow path.
+    return node;
+  }
+
+  contents->entries.erase(it);
+  if (InvalidationRequired::Yes == invalidate) {
+    invalidateChannelEntryCache(*contents, inodeName, inodeNumber)
+        .throwUnlessValue();
+    invalidateChannelDirCache(*contents).get();
+  }
+
+  updateMtimeAndCtimeLocked(contents->entries, getNow());
+  if (it->second.isDirectory()) {
+    getOverlay()->recursivelyRemoveOverlayData(inodeNumber);
+  } else {
+    getOverlay()->removeOverlayData(inodeNumber);
+  }
+  getOverlay()->removeChild(getNodeId(), name, contents->entries);
+  return nullptr;
+}
+
+ImmediateFuture<folly::Unit> TreeInode::removeRecursivelyNoFlushInvalidation(
+    PathComponentPiece name,
+    InvalidationRequired invalidate,
+    ObjectFetchContext& context) {
+  // Fast return if the node is unloaded and removed
+  auto child = tryRemoveUnloadedChild(name, invalidate);
+  if (!child) {
+    return folly::unit;
+  }
+
+  if (child.asFilePtrOrNull()) {
+    return inodePtrFromThis()->removeImpl<FileInodePtr>(
+        PathComponent{name}, std::move(child), invalidate, 1, context);
+  } else {
+    {
+      auto renameLock = inodePtrFromThis()->getMount()->acquireRenameLock();
+      child.asTreePtr()->removeAllChildrenRecursively(
+          invalidate, context, renameLock);
+    }
+    return inodePtrFromThis()->removeImpl<TreeInodePtr>(
+        PathComponent{name}, std::move(child), invalidate, 1, context);
+  }
+}
+
 ImmediateFuture<folly::Unit> TreeInode::removeRecursively(
     PathComponentPiece name,
     InvalidationRequired invalidate,
     ObjectFetchContext& context) {
-  return getOrLoadChild(name, context)
-      .thenValue([self = inodePtrFromThis(),
-                  name = name.copy(),
-                  invalidate,
-                  &context](InodePtr child) mutable {
-        auto asFileInode = child.asSubclassPtrOrNull<FileInodePtr>();
-        if (asFileInode) {
-          return self->removeImpl<FileInodePtr>(
-              std::move(name), std::move(child), invalidate, 1, context);
-        } else {
-          auto tree = child.asTreePtr();
-
-          std::vector<PathComponent> names;
-          {
-            auto contents = tree->contents_.rlock();
-            for (const auto& entry : contents->entries) {
-              names.emplace_back(entry.first);
-            }
-          }
-
-          std::vector<ImmediateFuture<folly::Unit>> childRemovalFutures;
-          childRemovalFutures.reserve(names.size());
-          for (const auto& name : names) {
-            childRemovalFutures.push_back(
-                tree->removeRecursively(name, invalidate, context));
-          }
-          return collectAllSafe(std::move(childRemovalFutures))
-              .thenValue([self,
-                          name = std::move(name),
-                          invalidate,
-                          child = std::move(child),
-                          &context](std::vector<folly::Unit>&&) mutable {
-                return self->removeImpl<TreeInodePtr>(
-                    std::move(name), std::move(child), invalidate, 1, context);
-              });
-        }
-      })
+  return this->removeRecursivelyNoFlushInvalidation(name, invalidate, context)
       .thenValue([self = inodePtrFromThis(), invalidate](folly::Unit&&) {
         if (invalidate == InvalidationRequired::Yes) {
           return self->getMount()->flushInvalidations();
@@ -1271,7 +1382,7 @@ ImmediateFuture<folly::Unit> TreeInode::removeImpl(
   }
 
   // Verify that we can remove the child before we materialize ourself
-  int checkResult = checkPreRemove(child);
+  int checkResult = checkPreRemove(*child);
   if (checkResult != 0) {
     return ImmediateFuture<Unit>{
         folly::Try<Unit>{InodeError{checkResult, child}}};
@@ -1398,7 +1509,7 @@ int TreeInode::tryRemoveChild(
     }
 
     // Verify that the child is still in a good state to remove
-    auto checkError = checkPreRemove(child);
+    auto checkError = checkPreRemove(*child);
     if (checkError != 0) {
       return checkError;
     }
@@ -1436,16 +1547,16 @@ int TreeInode::tryRemoveChild(
   return 0;
 }
 
-int TreeInode::checkPreRemove(const TreeInodePtr& child) {
+int TreeInode::checkPreRemove(const TreeInode& child) {
   // Lock the child contents, and make sure they are empty
-  auto childContents = child->contents_.rlock();
+  auto childContents = child.contents_.rlock();
   if (!childContents->entries.empty()) {
     return ENOTEMPTY;
   }
   return 0;
 }
 
-int TreeInode::checkPreRemove(const FileInodePtr& /* child */) {
+int TreeInode::checkPreRemove(const FileInode& /* child */) {
   // Nothing to do
   return 0;
 }

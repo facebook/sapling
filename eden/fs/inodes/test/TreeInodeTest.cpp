@@ -418,58 +418,20 @@ TEST(TreeInode, removeRecursivelyNotReady) {
   mount.initialize(builder, false);
 
   auto root = mount.getEdenMount()->getRootInode();
-  auto fut = root->removeRecursively(
-      "somedir"_pc,
-      InvalidationRequired::No,
-      ObjectFetchContext::getNullContext());
+  auto fut = root->getOrLoadChildTree(
+                     "somedir"_pc, ObjectFetchContext::getNullContext())
+                 .thenValue([root](TreeInodePtr&&) {
+                   return root->removeRecursively(
+                       "somedir"_pc,
+                       InvalidationRequired::No,
+                       ObjectFetchContext::getNullContext());
+                 });
   EXPECT_FALSE(fut.isReady());
 
   builder.setAllReady();
   std::move(fut).get(0ms);
 
   EXPECT_THROW_ERRNO(mount.getTreeInode("somedir"_relpath), ENOENT);
-}
-
-TEST(TreeInode, removeRecursivelyConcurrentAddition) {
-  FakeTreeBuilder builder;
-  builder.setFile("somedir/foo.txt", "foo\n");
-  builder.setFile("somedir/bar.txt", "bar\n");
-  builder.setFile("somedir/baz.txt", "baz\n");
-  builder.setFile("somedir/otherdir/foo.txt", "test\n");
-  TestMount mount;
-  mount.initialize(builder, false);
-
-  auto root = mount.getEdenMount()->getRootInode();
-  auto fut = root->removeRecursively(
-                     "somedir"_pc,
-                     InvalidationRequired::No,
-                     ObjectFetchContext::getNullContext())
-                 .semi()
-                 .via(&folly::QueuedImmediateExecutor::instance());
-  EXPECT_FALSE(fut.isReady());
-
-  builder.setReady("somedir");
-  builder.setReady("somedir/foo.txt");
-  builder.setReady("somedir/bar.txt");
-  builder.setReady("somedir/baz.txt");
-
-  EXPECT_THROW_ERRNO(mount.getFileInode("somedir/foo.txt"), ENOENT);
-  EXPECT_THROW_ERRNO(mount.getFileInode("somedir/bar.txt"), ENOENT);
-  EXPECT_THROW_ERRNO(mount.getFileInode("somedir/baz.txt"), ENOENT);
-
-  // At this point, removeRecursively is trying to remove somedir/otherdir.
-  // Let's create a new file in somedir to make the removal of somedir fail.
-  mount.addFile("somedir/newfile.txt", "new\n");
-
-  builder.setAllReady();
-
-  EXPECT_THROW_RE(
-      std::move(fut).get(0ms),
-      std::system_error,
-      "somedir: Directory not empty");
-
-  // Since somedir/newfile.txt hasn't been removed, somedir should still exist.
-  auto inode = mount.getTreeInode("somedir"_relpath);
 }
 
 #ifndef _WIN32

@@ -242,6 +242,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       InodeNumber parent,
       PathComponentPiece childName,
       const DirContents& content);
+  void removeChildren(InodeNumber parent, const DirContents& content);
 
   void renameChild(
       InodeNumber src,

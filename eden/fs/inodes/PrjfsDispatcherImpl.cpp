@@ -372,22 +372,20 @@ ImmediateFuture<folly::Unit> handleNotPresentFileNotification(
         return createDirInode(mount, dirname.copy(), context)
             .thenValue([basename = basename.copy(),
                         &context](const TreeInodePtr treeInode) {
-              return treeInode
-                  ->removeRecursively(
-                      basename, InvalidationRequired::No, context)
-                  .thenTry([](folly::Try<folly::Unit> try_) {
-                    if (auto* exc =
-                            try_.tryGetExceptionObject<std::system_error>()) {
-                      if (isEnoent(*exc)) {
-                        // ProjectedFS can sometimes send multiple deletion
-                        // notification for the same file, in which case a
-                        // previous deletion will have removed the file already.
-                        // We can safely ignore the error here.
-                        return folly::Try{folly::unit};
-                      }
-                    }
-                    return try_;
-                  });
+              return treeInode->removeRecursively(
+                  basename, InvalidationRequired::No, context);
+            })
+            .thenTry([](folly::Try<folly::Unit> try_) {
+              if (auto* exc = try_.tryGetExceptionObject<std::system_error>()) {
+                if (isEnoent(*exc)) {
+                  // ProjectedFS can sometimes send multiple deletion
+                  // notification for the same file, in which case a
+                  // previous deletion will have removed the file already.
+                  // We can safely ignore the error here.
+                  return folly::Try{folly::unit};
+                }
+              }
+              return try_;
             });
       })
       .ensure([path = std::move(path)] {});

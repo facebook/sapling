@@ -154,6 +154,12 @@ class DirEntry {
   TreeInodePtr asTreePtrOrNull() const;
 
   /**
+   * Similar to asTreePtrOrNull() except it returns TreeInode* to avoid
+   * dereferring TreeInodePtr that could potentially deadlock.
+   */
+  TreeInode* FOLLY_NULLABLE asTreeOrNull() const;
+
+  /**
    * Associates a loaded inode pointer with this entry. Does not take ownership.
    */
   void setInode(InodeBase* inode);

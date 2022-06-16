@@ -49,6 +49,15 @@ TreeInodePtr DirEntry::asTreePtrOrNull() const {
   return TreeInodePtr{};
 }
 
+TreeInode* FOLLY_NULLABLE DirEntry::asTreeOrNull() const {
+  if (hasInodePointer_) {
+    if (auto tree = dynamic_cast<TreeInode*>(inode_)) {
+      return tree;
+    }
+  }
+  return nullptr;
+}
+
 void DirEntry::setInode(InodeBase* inode) {
   XDCHECK(!hasInodePointer_);
   XDCHECK(inode);
