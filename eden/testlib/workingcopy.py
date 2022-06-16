@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, Generator, IO, List, Optional, TYPE_CHECKING, Union
 
 from .commit import Commit
+from .config import Config
 from .file import File
 from .hg import hg
 from .status import Status
@@ -133,19 +134,24 @@ overrides = {{}}
             }
         )
 
+        base_dir = new_dir()
+        config = Config(Path(test_globals.env["HGRCPATH"]))
+        config.add("edenfs", "basepath", str(base_dir))
+
         from eden.integration.lib import edenclient
 
         with override_environ(overrides):
+
             self.eden = edenclient.EdenFS(
-                base_dir=new_dir(),
+                base_dir=base_dir,
                 extra_args=["--eden_logview"],
                 storage_engine="memory",
             )
 
             # Write out edenfs config file.
-            # pyre-fixme[29]: `Path` is not a function.
-            self.eden.system_rc_path().write_text(
-                """
+            with open(self.eden.system_rc_path, mode="a+") as eden_rc:
+                eden_rc.write(
+                    """
 [experimental]
 enable-nfs-server = true
 use-edenapi = true
@@ -154,7 +160,7 @@ use-edenapi = true
 import-batch-size = "32"
 import-batch-size-tree = "128"
 """
-            )
+                )
 
             self.eden.start()
             self.eden.clone(str(repo.root), str(path), allow_empty=True)

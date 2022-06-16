@@ -120,7 +120,6 @@ pub fn run(
         || clone_opts.stream
         || !clone_opts.shallow
         || clone_opts.git
-        || clone_opts.eden
         || !supported_url
     {
         return Err(errors::FallbackToPython(name()).into());
@@ -177,39 +176,73 @@ pub fn run(
         }
     };
 
-    let dest_preexists = destination.exists();
     let dest_hg = destination.join(HG_PATH);
+
     if dest_hg.exists() {
         return Err(
             errors::Abort(".hg directory already exists at clone destination".into()).into(),
         );
     }
-    match clone_metadata(&clone_opts, &global_opts, config, &destination, &reponame) {
-        Ok(mut repo) => {
-            if let Some(target_rev) = get_update_target(io, &mut repo, &clone_opts, &global_opts)? {
-                let mut repo = repo;
-                clone::init_working_copy(&mut repo, target_rev, clone_opts.enable_profile.clone())?;
+
+    if clone_opts.eden {
+        let backing_dir = match clone::get_default_eden_backing_directory(config)? {
+            Some(dir) => dir.join(&reponame),
+            None => {
+                return Err(errors::Abort("eden-backing-repo option is not set".into()).into());
             }
+        };
+        let backing_path = backing_dir.join(&reponame);
+        let backing_hg = backing_path.join(".hg");
+
+        let mut backing_repo = if !backing_hg.exists() {
+            try_clone_metadata(&clone_opts, &global_opts, config, &reponame, &backing_path)?
+        } else {
+            let mut repo = Repo::load(&backing_path)?;
+            repo.config_mut().set_overrides(&global_opts.config)?;
+            repo
+        };
+        let target_rev = get_update_target(io, &mut backing_repo, &clone_opts, &global_opts)?;
+        clone::eden_clone(&backing_repo, &destination, target_rev)?;
+    } else {
+        let mut repo =
+            try_clone_metadata(&clone_opts, &global_opts, config, &reponame, &destination)?;
+        if let Some(target_rev) = get_update_target(io, &mut repo, &clone_opts, &global_opts)? {
+            let mut repo = repo;
+            clone::init_working_copy(&mut repo, target_rev, clone_opts.enable_profile.clone())?;
         }
+    }
+
+    Ok(0)
+}
+
+fn try_clone_metadata(
+    clone_opts: &CloneOpts,
+    global_opts: &HgGlobalOpts,
+    config: &mut ConfigSet,
+    reponame: &str,
+    destination: &Path,
+) -> Result<Repo> {
+    let dest_preexists = destination.exists();
+    match clone_metadata(clone_opts, global_opts, config, reponame, destination) {
         Err(e) => {
             let removal_dir = if dest_preexists {
                 destination.join(HG_PATH)
             } else {
-                destination
+                destination.to_path_buf()
             };
             fs::remove_dir_all(removal_dir)?;
-            return Err(e);
+            Err(e)
         }
+        Ok(repo) => Ok(repo),
     }
-    Ok(0)
 }
 
 fn clone_metadata(
     clone_opts: &CloneOpts,
     global_opts: &HgGlobalOpts,
     config: &mut ConfigSet,
-    destination: &Path,
     reponame: &str,
+    destination: &Path,
 ) -> Result<Repo> {
     tracing::trace!("performing rust clone");
     tracing::debug!(target: "rust_clone", rust_clone="true");
