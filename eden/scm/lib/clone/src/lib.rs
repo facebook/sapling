@@ -26,7 +26,7 @@ use util::path::create_shared_dir;
 use util::path::expand_path;
 use uuid::Uuid;
 
-pub fn get_default_directory(config: &dyn Config) -> Result<PathBuf> {
+pub fn get_default_destination_directory(config: &dyn Config) -> Result<PathBuf> {
     Ok(absolute(
         if let Some(default_dir) = config.get("clone", "default-destination-dir") {
             expand_path(default_dir)
@@ -34,6 +34,18 @@ pub fn get_default_directory(config: &dyn Config) -> Result<PathBuf> {
             env::current_dir()?
         },
     )?)
+}
+
+pub fn get_default_eden_backing_directory(config: &dyn Config) -> Result<Option<PathBuf>> {
+    let legacy_dir = config
+        .get("edenfs", "legacy-backing-repos-dir")
+        .map(expand_path);
+    if let Some(legacy_dir) = legacy_dir {
+        if legacy_dir.exists() {
+            return Ok(Some(legacy_dir));
+        }
+    }
+    Ok(config.get("edenfs", "backing-repos-dir").map(expand_path))
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -158,6 +170,7 @@ pub fn eden_clone(backing_repo: &Repo, working_copy: &Path, target: Option<HgId>
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
+    use std::fs;
 
     use tempfile::TempDir;
 
@@ -170,7 +183,7 @@ mod tests {
 
         // Test with non-set default destination directory
         assert_eq!(
-            get_default_directory(&config)?,
+            get_default_destination_directory(&config)?,
             env::current_dir()?.as_path()
         );
 
@@ -180,8 +193,33 @@ mod tests {
             "clone.default-destination-dir".to_string(),
             path.to_str().unwrap().to_string(),
         );
-        assert_eq!(get_default_directory(&config).unwrap(), path,);
+        assert_eq!(get_default_destination_directory(&config).unwrap(), path,);
 
+        Ok(())
+    }
+
+    #[test]
+    pub fn test_get_eden_backing_dir() -> Result<()> {
+        let tmpdir = TempDir::new()?;
+        let mut config: BTreeMap<String, String> = BTreeMap::new();
+        let legacy_dir = tmpdir.path().join("legacy-dir");
+        let new_dir = tmpdir.path().join("new-dir");
+        config.insert(
+            "edenfs.legacy-backing-repos-dir".to_string(),
+            legacy_dir.to_string_lossy().to_string(),
+        );
+        config.insert(
+            "edenfs.backing-repos-dir".to_string(),
+            new_dir.to_string_lossy().to_string(),
+        );
+        // if legacy directory does not exist, use new directory
+        assert_eq!(get_default_eden_backing_directory(&config)?, Some(new_dir),);
+        fs::create_dir(legacy_dir.clone())?;
+        // if legacy directory does exist, use legacy directory
+        assert_eq!(
+            get_default_eden_backing_directory(&config)?,
+            Some(legacy_dir),
+        );
         Ok(())
     }
 }

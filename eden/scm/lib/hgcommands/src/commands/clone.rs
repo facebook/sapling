@@ -172,7 +172,7 @@ pub fn run(
             if configparser::hg::is_plain(Some("default_clone_dir")) {
                 return Err(errors::Abort("DEST was not specified".into()).into());
             } else {
-                clone::get_default_directory(config)?.join(&reponame)
+                clone::get_default_destination_directory(config)?.join(&reponame)
             }
         }
     };
