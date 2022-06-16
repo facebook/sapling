@@ -3,6 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-unsafe
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
@@ -15,7 +17,6 @@ from thrift.protocol.THeaderProtocol import THeaderProtocol
 from thrift.Thrift import TApplicationException
 from thrift.transport.THeaderTransport import THeaderTransport
 from thrift.transport.TTransport import TTransportException
-
 
 if sys.platform == "win32":
     from eden.thrift.windows_thrift import WindowsSocketException, WinTSocket  # @manual

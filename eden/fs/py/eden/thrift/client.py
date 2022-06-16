@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-unsafe
+
 import os
 from typing import Optional
 
@@ -11,7 +13,6 @@ from eden.fs.service.streamingeden.clients import StreamingEdenService
 from thrift.py3 import get_client
 from thrift.py3.client import ClientType
 from thrift.py3.exceptions import TransportError, TransportErrorType
-
 
 SOCKET_PATH = "socket"
 

@@ -3,6 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-unsafe
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import binascii

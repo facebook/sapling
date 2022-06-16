@@ -34,6 +34,12 @@ from facebook.eden.ttypes import SHA1Result, TreeInodeDebugInfo, TreeInodeEntryD
 from fb303_core.ttypes import fb303_status
 
 
+# pyre-unsafe
+# Invalid decoration [56]: Pyre was not able to infer the type of argument `b"�eC!".__mul__(5)` to decorator factory `unittest.mock.patch`.
+# eden/fs/cli/doctor/test/doctor_test.py:728:14 Missing parameter annotation [2]: Parameter `mock_get_tip_commit_hash` has no type specified.
+# eden/fs/cli/doctor/test/doctor_test.py:770:5 Invalid decoration [56]: Pyre was not able to infer the type of argument `b"�eC!".__mul__(5)` to decorator factory `unittest.mock.patch`.
+
+
 class SnapshotFormatTest(DoctorTestBase):
     """
     EdenFS doctor can parse the SNAPSHOT file directly. Validate its parse

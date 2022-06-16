@@ -4,7 +4,11 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# Helper function to print the heading of a Stat Call.
+# pyre-unsafe
+
+"""
+Helper function to print the heading of a Stat Call.
+"""
 
 from typing import TextIO
 
