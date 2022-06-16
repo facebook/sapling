@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <eden/common/utils/WinError.h>
 #include <system_error>
 
 namespace facebook::eden {
@@ -27,7 +28,14 @@ inline bool isErrnoError(const std::system_error& ex) {
  * Return true if this exception is equivalent to an ENOENT error code.
  */
 inline bool isEnoent(const std::system_error& ex) {
-  return isErrnoError(ex) && ex.code().value() == ENOENT;
+  auto ret = isErrnoError(ex) && ex.code().value() == ENOENT;
+#ifdef _WIN32
+  ret = ret ||
+      (ex.code().category() == Win32ErrorCategory::get() &&
+       (ex.code().value() == ERROR_PATH_NOT_FOUND ||
+        ex.code().value() == ERROR_FILE_NOT_FOUND));
+#endif
+  return ret;
 }
 
 } // namespace facebook::eden
