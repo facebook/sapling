@@ -8,7 +8,9 @@
 use crate::PushrebaseClient;
 
 use bookmarks::BookmarkName;
-use bookmarks_movement::{BookmarkMovementError, PushrebaseOntoBookmarkOp, Repo};
+use bookmarks_movement::{
+    BookmarkKindRestrictions, BookmarkMovementError, PushrebaseOntoBookmarkOp, Repo,
+};
 use bytes::Bytes;
 use context::CoreContext;
 use hooks::{CrossRepoPushSource, HookManager};
@@ -41,12 +43,13 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
         changesets: HashSet<BonsaiChangeset>,
         pushvars: Option<&HashMap<String, Bytes>>,
         cross_repo_push_source: CrossRepoPushSource,
+        bookmark_restrictions: BookmarkKindRestrictions,
     ) -> Result<PushrebaseOutcome, BookmarkMovementError> {
         PushrebaseOntoBookmarkOp::new(bookmark, changesets)
-            .only_if_public()
             .with_pushvars(pushvars)
             .with_hg_replay_data(self.maybe_hg_replay_data.as_ref())
             .with_push_source(cross_repo_push_source)
+            .with_bookmark_restrictions(bookmark_restrictions)
             .run(
                 self.ctx,
                 self.repo,

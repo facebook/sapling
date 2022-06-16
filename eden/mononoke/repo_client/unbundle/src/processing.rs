@@ -13,7 +13,9 @@ use crate::{
 use anyhow::{anyhow, Context, Error, Result};
 use blobrepo::scribe::{log_commits_to_scribe_raw, ScribeCommitInfo};
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplay};
-use bookmarks_movement::{BookmarkMovementError, BookmarkUpdatePolicy, BookmarkUpdateTargets};
+use bookmarks_movement::{
+    BookmarkKindRestrictions, BookmarkMovementError, BookmarkUpdatePolicy, BookmarkUpdateTargets,
+};
 use bytes::Bytes;
 use context::CoreContext;
 use hooks::HookManager;
@@ -534,6 +536,7 @@ async fn normal_pushrebase<'a>(
     readonly_fetcher: &RepoReadWriteFetcher,
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
     let repo_name = repo.repo_identity().name().to_string();
+    let bookmark_restriction = BookmarkKindRestrictions::OnlyPublishing;
     let result = if should_use_scs() {
         #[cfg(fbcode_build)]
         {
@@ -548,6 +551,7 @@ async fn normal_pushrebase<'a>(
                 changesets,
                 maybe_pushvars,
                 cross_repo_push_source,
+                bookmark_restriction,
             )
             .await
         }
@@ -571,6 +575,7 @@ async fn normal_pushrebase<'a>(
             changesets,
             maybe_pushvars,
             cross_repo_push_source,
+            bookmark_restriction,
         )
         .await
     };

@@ -9,7 +9,7 @@
 mod facebook;
 mod local;
 
-use bookmarks_movement::BookmarkMovementError;
+use bookmarks_movement::{BookmarkKindRestrictions, BookmarkMovementError};
 use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use hooks::CrossRepoPushSource;
@@ -34,5 +34,6 @@ pub trait PushrebaseClient {
         changesets: HashSet<BonsaiChangeset>,
         pushvars: Option<&HashMap<String, Bytes>>,
         cross_repo_push_source: CrossRepoPushSource,
+        bookmark_restrictions: BookmarkKindRestrictions,
     ) -> Result<PushrebaseOutcome, BookmarkMovementError>;
 }
