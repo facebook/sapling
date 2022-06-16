@@ -9,6 +9,7 @@ use std::collections::HashMap;
 
 use anyhow::{Context, Error};
 use async_trait::async_trait;
+use bookmarks_movement::BookmarkKindRestrictions;
 use bytes::Bytes;
 use edenapi_types::{HgId, LandStackRequest, LandStackResponse};
 use futures::{stream, StreamExt};
@@ -90,6 +91,7 @@ async fn land_stack(
                 Some(&pushvars)
             },
             CrossRepoPushSource::NativeToThisRepo,
+            BookmarkKindRestrictions::AnyKind,
         )
         .await?;
 

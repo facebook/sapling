@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
+use bookmarks_movement::BookmarkKindRestrictions;
 use bytes::Bytes;
 use cloned::cloned;
 use futures::compat::Stream01CompatExt;
@@ -36,6 +37,7 @@ impl RepoWriteContext {
         base: ChangesetId,
         pushvars: Option<&HashMap<String, Bytes>>,
         push_source: CrossRepoPushSource,
+        bookmark_restrictions: BookmarkKindRestrictions,
     ) -> Result<PushrebaseOutcome, MononokeError> {
         let bookmark = bookmark.as_ref();
         self.check_method_permitted("land_stack")?;
@@ -93,7 +95,8 @@ impl RepoWriteContext {
         // Pushrebase these commits onto the bookmark.
         let mut op = bookmarks_movement::PushrebaseOntoBookmarkOp::new(&bookmark, changesets)
             .with_pushvars(pushvars)
-            .with_push_source(push_source);
+            .with_push_source(push_source)
+            .with_bookmark_restrictions(bookmark_restrictions);
 
         if let WritePermissionsModel::ServiceIdentity(service_identity) = &self.permissions_model {
             op = op.for_service(service_identity, &self.config().source_control_service);

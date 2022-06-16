@@ -94,7 +94,7 @@ impl From<&BookmarkMoveAuthorization<'_>> for PushAuthoredBy {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum BookmarkKindRestrictions {
+pub enum BookmarkKindRestrictions {
     AnyKind,
     OnlyScratch,
     OnlyPublishing,

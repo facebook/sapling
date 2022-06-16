@@ -44,7 +44,7 @@ pub use crate::create::CreateBookmarkOp;
 pub use crate::delete::DeleteBookmarkOp;
 pub use crate::hook_running::run_hooks;
 pub use crate::pushrebase_onto::{get_pushrebase_hooks, PushrebaseOntoBookmarkOp};
-pub use crate::restrictions::check_bookmark_sync_config;
+pub use crate::restrictions::{check_bookmark_sync_config, BookmarkKindRestrictions};
 pub use crate::update::{BookmarkUpdatePolicy, BookmarkUpdateTargets, UpdateBookmarkOp};
 
 /// Trait alias for bookmarks movement repositories.

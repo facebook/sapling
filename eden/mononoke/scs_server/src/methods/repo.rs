@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use std::convert::identity;
 
 use blobstore::Loadable;
+use bookmarks_movement::BookmarkKindRestrictions;
 use borrowed::borrowed;
 use bytes::Bytes;
 use chrono::{DateTime, FixedOffset, Local};
@@ -620,6 +621,8 @@ impl SourceControlServiceImpl {
             repo.check_service_permissions("scm_service_identity".to_string())
                 .await?;
         }
+        let bookmark_restrictions =
+            BookmarkKindRestrictions::from_request(&params.bookmark_restrictions)?;
 
         let pushrebase_outcome = repo
             .land_stack(
@@ -628,6 +631,7 @@ impl SourceControlServiceImpl {
                 base.id(),
                 pushvars.as_ref(),
                 push_source,
+                bookmark_restrictions,
             )
             .await?
             .into_response_with(&(

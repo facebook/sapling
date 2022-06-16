@@ -10,6 +10,7 @@ use std::fmt::{Debug, Display};
 use std::ops::RangeBounds;
 use std::str::FromStr;
 
+use bookmarks_movement::BookmarkKindRestrictions;
 use bytes::Bytes;
 use chrono::{DateTime, FixedOffset, TimeZone};
 use ephemeral_blobstore::BubbleId;
@@ -53,6 +54,22 @@ impl FromRequest<thrift::CrossRepoPushSource> for CrossRepoPushSource {
             &thrift::CrossRepoPushSource::PUSH_REDIRECTED => Ok(Self::PushRedirected),
             other => Err(errors::invalid_request(format!(
                 "Unknown CrossRepoPushSource: {}",
+                other
+            ))),
+        }
+    }
+}
+
+impl FromRequest<thrift::BookmarkKindRestrictions> for BookmarkKindRestrictions {
+    fn from_request(
+        push_source: &thrift::BookmarkKindRestrictions,
+    ) -> Result<Self, thrift::RequestError> {
+        match push_source {
+            &thrift::BookmarkKindRestrictions::ANY_KIND => Ok(Self::AnyKind),
+            &thrift::BookmarkKindRestrictions::ONLY_SCRATCH => Ok(Self::OnlyScratch),
+            &thrift::BookmarkKindRestrictions::ONLY_PUBLISHING => Ok(Self::OnlyPublishing),
+            other => Err(errors::invalid_request(format!(
+                "Unknown BookmarkKindRestrictions: {}",
                 other
             ))),
         }

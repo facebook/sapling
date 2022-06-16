@@ -41,7 +41,7 @@ pub struct PushrebaseOntoBookmarkOp<'op> {
     bookmark: &'op BookmarkName,
     affected_changesets: AffectedChangesets,
     auth: BookmarkMoveAuthorization<'op>,
-    kind_restrictions: BookmarkKindRestrictions,
+    bookmark_restrictions: BookmarkKindRestrictions,
     cross_repo_push_source: CrossRepoPushSource,
     pushvars: Option<&'op HashMap<String, Bytes>>,
     hg_replay: Option<&'op pushrebase::HgReplayData>,
@@ -56,7 +56,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             bookmark,
             affected_changesets: AffectedChangesets::with_source_changesets(changesets),
             auth: BookmarkMoveAuthorization::User,
-            kind_restrictions: BookmarkKindRestrictions::AnyKind,
+            bookmark_restrictions: BookmarkKindRestrictions::AnyKind,
             cross_repo_push_source: CrossRepoPushSource::NativeToThisRepo,
             pushvars: None,
             hg_replay: None,
@@ -75,12 +75,20 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
     }
 
     pub fn only_if_scratch(mut self) -> Self {
-        self.kind_restrictions = BookmarkKindRestrictions::OnlyScratch;
+        self.bookmark_restrictions = BookmarkKindRestrictions::OnlyScratch;
         self
     }
 
     pub fn only_if_public(mut self) -> Self {
-        self.kind_restrictions = BookmarkKindRestrictions::OnlyPublishing;
+        self.bookmark_restrictions = BookmarkKindRestrictions::OnlyPublishing;
+        self
+    }
+
+    pub fn with_bookmark_restrictions(
+        mut self,
+        bookmark_restrictions: BookmarkKindRestrictions,
+    ) -> Self {
+        self.bookmark_restrictions = bookmark_restrictions;
         self
     }
 
@@ -111,7 +119,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         repo_read_write_fetcher: &'op RepoReadWriteFetcher,
     ) -> Result<pushrebase::PushrebaseOutcome, BookmarkMovementError> {
         let kind = self
-            .kind_restrictions
+            .bookmark_restrictions
             .check_kind(infinitepush_params, self.bookmark)?;
 
         self.auth

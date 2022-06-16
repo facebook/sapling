@@ -11,6 +11,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
+use bookmarks_movement::BookmarkKindRestrictions::AnyKind;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
@@ -61,6 +62,7 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             changesets["C"],
             None,
             NativeToThisRepo,
+            AnyKind,
         )
         .await?;
     let trunk_g = repo
@@ -80,6 +82,7 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             changesets["A"],
             None,
             NativeToThisRepo,
+            AnyKind,
         )
         .await?;
     let trunk_e = repo
@@ -106,6 +109,7 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             changesets["B"],
             None,
             NativeToThisRepo,
+            AnyKind,
         )
         .await?;
     let trunk_f = repo

@@ -820,6 +820,12 @@ enum CrossRepoPushSource {
   PUSH_REDIRECTED = 1,
 }
 
+enum BookmarkKindRestrictions {
+  ANY_KIND = 0,
+  ONLY_SCRATCH = 1,
+  ONLY_PUBLISHING = 2,
+}
+
 struct RepoLandStackParams {
   /// The name of the bookmark to land to.
   1: string bookmark;
@@ -852,6 +858,9 @@ struct RepoLandStackParams {
   /// INTERNAL USE ONLY: Override push source.  Leave as the default
   /// if this is not an internal source control service.
   101: CrossRepoPushSource __internal_only_push_source = CrossRepoPushSource.NATIVE_TO_THIS_REPO;
+
+  /// What kind of bookmark can be pushed
+  9: BookmarkKindRestrictions bookmark_restrictions = BookmarkKindRestrictions.ANY_KIND;
 }
 
 struct CommitLookupParams {
