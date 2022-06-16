@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from .repo import Repo
 
 
+from .errors import MissingCommitError
 from .status import Status
 
 
@@ -32,16 +33,10 @@ class Commit:
         return super().__eq__(other)
 
     def ancestor(self, idx: int) -> Commit:
-        commit = self
-        # This could be more efficient, instead of execing hg for every step of
-        # the parent.
-        while idx > 0:
-            idx -= 1
-            parents = self.parents()
-            if len(parents) == 0:
-                raise ValueError("reached end of history when traversing parents")
-            commit = parents[0]
-        return commit
+        try:
+            return self.repo.commit(f"ancestors({self.hash}, {idx}, {idx})")
+        except MissingCommitError:
+            raise MissingCommitError(f"ancestor with depth {idx} does not exist")
 
     def status(self) -> Status:
         return Status(self.repo.hg.status(change=self.hash, template="json").stdout)

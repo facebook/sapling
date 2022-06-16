@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 
 from .base import BaseTest, hgtest
+from .errors import AmbiguousCommitError, MissingCommitError
 from .repo import Repo
 from .types import PathLike
 from .workingcopy import WorkingCopy
@@ -160,6 +161,46 @@ o  A
             ).stdout.rstrip(),
             "foo.bar=one\nfoo.baz=two",
         )
+
+    @hgtest
+    def test_ancestors(self, repo: Repo, wc: WorkingCopy) -> None:
+        repo.drawdag(
+            """
+E
+|
+D
+|
+C C
+| |
+A B
+"""
+        )
+        # The assert below was added for visual purposes
+        self.assertEqual(
+            repo.hg.smartlog(template="{desc}").stdout,
+            """o  E
+│
+o  D
+│
+o    C
+├─╮
+│ o  B
+│
+o  A
+
+""",
+        )
+        e = self.repo.commit("E")
+        self.assertEqual(e.ancestor(1), self.repo.commit("D"))
+        self.assertEqual(e.ancestor(2), self.repo.commit("C"))
+        with self.assertRaisesRegex(
+            AmbiguousCommitError, "^ambiguous identifier .* - matched 2 commits$"
+        ):
+            e.ancestor(3)
+        with self.assertRaises(
+            MissingCommitError, msg="ancestor with depth 9 does not exist"
+        ):
+            self.repo.commit("A").ancestor(9)
 
 
 if __name__ == "__main__":

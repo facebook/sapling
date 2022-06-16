@@ -12,6 +12,7 @@ from typing import Any, Dict, IO, List, Optional
 
 from .commit import Commit
 from .config import Config
+from .errors import AmbiguousCommitError, MissingCommitError
 from .generators import RepoGenerator
 from .hg import hg
 from .workingcopy import EdenWorkingCopy, WorkingCopy
@@ -54,12 +55,20 @@ class Repo:
     def __getitem__(self, hash: str) -> Commit:
         return self.commits(hash)[0]
 
-    def commits(self, commits: str) -> List[Commit]:
+    def commits(self, commits: str, allowempty: bool = False) -> List[Commit]:
         output = self.hg.log(rev=commits, template="{node}\n").stdout
-        lines = output.split("\n")
-        if len(lines) == 0:
-            raise ValueError("unknown commit %s" % commits)
-        return [Commit(self, hash) for hash in lines[:-1]]
+        lines = output.split("\n")[:-1]
+        if not allowempty and len(lines) == 0:
+            raise MissingCommitError("unknown commit %s" % commits)
+        return [Commit(self, hash) for hash in lines]
+
+    def commit(self, commit: str) -> Commit:
+        commitlist = self.commits(commit)
+        if len(commitlist) > 1:
+            raise AmbiguousCommitError(
+                f"ambiguous identifier {commit} - matched {len(commitlist)} commits"
+            )
+        return commitlist[0]
 
     def bookmarks(self) -> Dict[str, Commit]:
         output = json.loads(self.hg.bookmarks(template="json").stdout)
