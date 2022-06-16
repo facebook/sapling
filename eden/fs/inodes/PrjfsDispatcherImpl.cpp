@@ -421,6 +421,14 @@ ImmediateFuture<folly::Unit> recursivelyAddAllChildrens(
   auto absPath = mount.getPath() + path;
   auto direntNamesTry = getAllDirectoryEntryNames(absPath);
   if (direntNamesTry.hasException()) {
+    if (auto* exc = direntNamesTry.tryGetExceptionObject<std::system_error>()) {
+      // In the case where the directory has been removed from the disk, we
+      // should silently continue. A notification would have been sent to
+      // EdenFS and will notice the directory missing then.
+      if (isEnoent(*exc)) {
+        return folly::unit;
+      }
+    }
     return makeImmediateFuture<folly::Unit>(direntNamesTry.exception());
   }
   const auto& direntNames = direntNamesTry.value();
