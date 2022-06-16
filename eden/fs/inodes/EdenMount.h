@@ -34,6 +34,7 @@
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/takeover/TakeoverData.h"
+#include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/fs/telemetry/IActivityRecorder.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -714,6 +715,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
     return serverState_;
   }
 
+  std::optional<ActivityBuffer>& getActivityBuffer() {
+    return activityBuffer_;
+  }
+
   /**
    * Returns the last checkout time in the Eden mount.
    */
@@ -819,6 +824,12 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * mount.
    */
   struct InodeMetadata getInitialInodeMetadata(mode_t mode) const;
+
+  /**
+   * Return a newly initialized ActivityBuffer for the mount if using
+   * ActivityBuffers is enabled and return std::nullopt otherwise.
+   */
+  std::optional<ActivityBuffer> initActivityBuffer();
 
   /**
    * mount any configured bind mounts.
@@ -1233,6 +1244,16 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * The number of tree prefetches in progress for this mount point.
    */
   std::atomic<uint64_t> numPrefetchesInProgress_{0};
+
+  /**
+   * Fixed sized buffer containing recent events that have occured within
+   * EdenFS. Used in retroactive versions of the Eden tracing CLI. Note,
+   * currently events are limited to InodeMaterializeEvents though we plan to
+   * add more types of events later. Also the initialization of this buffer
+   * depends on serverState_ being intitialized to get eden config information,
+   * so activityBuffer_ is ordered after serverState_ in this header file
+   */
+  std::optional<ActivityBuffer> activityBuffer_;
 
 #ifdef _WIN32
   /**

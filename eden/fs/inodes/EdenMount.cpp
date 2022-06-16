@@ -241,6 +241,7 @@ EdenMount::EdenMount(
           kEdenStracePrefix.str() + checkoutConfig_->getMountPath().value()},
       lastCheckoutTime_{EdenTimestamp{serverState_->getClock()->getRealtime()}},
       owner_{Owner{getuid(), getgid()}},
+      activityBuffer_{initActivityBuffer()},
       clock_{serverState_->getClock()} {
 }
 
@@ -2247,6 +2248,13 @@ struct stat EdenMount::initStatData() const {
 #endif
 
   return st;
+}
+
+std::optional<ActivityBuffer> EdenMount::initActivityBuffer() {
+  return serverState_->getEdenConfig()->enableActivityBuffer.getValue()
+      ? std::make_optional<ActivityBuffer>(
+            serverState_->getEdenConfig()->ActivityBufferMaxEvents.getValue())
+      : std::nullopt;
 }
 
 namespace {
