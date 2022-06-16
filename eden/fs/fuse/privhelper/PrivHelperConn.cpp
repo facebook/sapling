@@ -20,7 +20,7 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
-#include <gflags/gflags.h>
+#include <folly/portability/GFlags.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>

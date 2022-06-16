@@ -6,7 +6,7 @@
  */
 
 #include <folly/init/Init.h>
-#include <gflags/gflags.h>
+#include <folly/portability/GFlags.h>
 #include <stdlib.h>
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/Overlay.h"

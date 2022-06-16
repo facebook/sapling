@@ -28,8 +28,8 @@
 #include <folly/io/async/AsyncSignalHandler.h>
 #include <folly/io/async/HHWheelTimer.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/GFlags.h>
 #include <folly/stop_watch.h>
-#include <gflags/gflags.h>
 #include <signal.h>
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
 #include <thrift/lib/cpp2/server/ThriftProcessor.h>

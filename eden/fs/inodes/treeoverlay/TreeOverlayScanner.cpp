@@ -10,7 +10,7 @@
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
-#include <gflags/gflags.h>
+#include <folly/portability/GFlags.h>
 
 #include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
 #include "eden/fs/utils/PathFuncs.h"

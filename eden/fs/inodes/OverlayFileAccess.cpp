@@ -12,7 +12,7 @@
 #include <folly/Expected.h>
 #include <folly/Range.h>
 #include <folly/logging/xlog.h>
-#include <gflags/gflags.h>
+#include <folly/portability/GFlags.h>
 #include <openssl/sha.h>
 
 #include "eden/fs/inodes/FileInode.h"

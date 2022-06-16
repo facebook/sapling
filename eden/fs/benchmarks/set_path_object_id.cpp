@@ -9,7 +9,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <folly/io/async/EventBaseThread.h>
-#include <gflags/gflags.h>
+#include <folly/portability/GFlags.h>
 #include <thrift/lib/cpp2/async/HeaderClientChannel.h>
 #include "eden/common/utils/benchharness/Bench.h"
 #include "eden/fs/service/gen-cpp2/EdenService.h"

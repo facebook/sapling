@@ -17,8 +17,8 @@
 #include <folly/Range.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/GFlags.h>
 #include <folly/system/ThreadName.h>
-#include <gflags/gflags.h>
 
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"

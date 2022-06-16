@@ -12,7 +12,7 @@
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
-#include <gflags/gflags.h>
+#include <folly/portability/GFlags.h>
 
 #include "eden/fs/inodes/fsoverlay/FsOverlay.h"
 #include "eden/fs/inodes/fsoverlay/OverlayChecker.h"

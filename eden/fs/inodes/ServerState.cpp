@@ -8,7 +8,7 @@
 #include "eden/fs/inodes/ServerState.h"
 
 #include <folly/logging/xlog.h>
-#include <gflags/gflags.h>
+#include <folly/portability/GFlags.h>
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"

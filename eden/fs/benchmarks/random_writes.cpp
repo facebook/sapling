@@ -9,7 +9,7 @@
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/logging/xlog.h>
-#include <gflags/gflags.h>
+#include <folly/portability/GFlags.h>
 #include <random>
 #include "eden/common/utils/benchharness/Bench.h"
 

@@ -7,7 +7,7 @@
 
 #include "eden/fs/service/EdenCPUThreadPool.h"
 
-#include <gflags/gflags.h>
+#include <folly/portability/GFlags.h>
 
 DEFINE_int32(num_eden_threads, 12, "the number of eden CPU worker threads");
 

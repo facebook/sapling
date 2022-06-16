@@ -18,10 +18,10 @@
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/GFlags.h>
 #include <folly/portability/Unistd.h>
 #include <folly/ssl/Init.h>
 #include <folly/stop_watch.h>
-#include <gflags/gflags.h>
 #include <thrift/lib/cpp2/Flags.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 

@@ -12,7 +12,7 @@
 #include <folly/io/async/EventBaseThread.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
-#include <gflags/gflags.h>
+#include <folly/portability/GFlags.h>
 #include <signal.h>
 #include <sysexits.h>
 #include "eden/common/utils/ProcessNameCache.h"
