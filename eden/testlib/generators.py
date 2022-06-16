@@ -20,7 +20,7 @@ class RepoGenerator:
         self._commits += 1
         return {
             "message": f"message{self._commits}",
-            "date": "1970-01-01",
+            "date": "1970-01-01 UTC",
         }
 
     def gen_file_name(self) -> str:
