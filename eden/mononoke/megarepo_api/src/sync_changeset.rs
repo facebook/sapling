@@ -16,7 +16,7 @@ use blobstore::Loadable;
 use changesets::ChangesetsRef;
 use commit_transformation::{
     create_directory_source_to_target_multi_mover, create_source_to_target_multi_mover,
-    rewrite_commit, upload_commits, CommitRewrittenToEmpty,
+    rewrite_as_squashed_commit, rewrite_commit, upload_commits, CommitRewrittenToEmpty,
 };
 use context::CoreContext;
 use futures::{stream, StreamExt, TryStreamExt};
@@ -410,7 +410,27 @@ async fn sync_changeset_to_target(
             })
         }
         MergeMode::Squashed { commits_limit: _ } => {
-            panic!("MergeMode::Squashed is not implemented");
+            println!(
+                "rewrite as squashed source_cs: {:#?}, target_cs {:?}",
+                source_cs_mut, target_cs_id
+            );
+            rewrite_as_squashed_commit(
+                ctx,
+                source_repo,
+                source_cs_id,
+                (latest_synced_cs_id, target_cs_id),
+                source_cs_mut,
+                mover,
+            )
+            .await
+            .map_err(MegarepoError::internal)?
+            .ok_or_else(|| {
+                MegarepoError::internal(anyhow!(
+                    "failed to rewrite as squashed commit {}, target: {:?}",
+                    source_cs_id,
+                    target
+                ))
+            })
         }
     }?;
 
@@ -906,6 +926,110 @@ mod test {
 
         assert_eq!(res1, res2);
 
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_sync_changeset_squash_commit(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let mut test = MegarepoTest::new(&ctx).await?;
+        let target: Target = test.target("target".to_string());
+
+        let source_name = SourceName::new("source_1");
+        let version = "version_1".to_string();
+        SyncTargetConfigBuilder::new(test.repo_id(), target.clone(), version.clone())
+            .source_builder(source_name.clone())
+            .set_prefix_bookmark_to_source_name()
+            .merge_mode(megarepo_config::MergeMode::squashed(
+                megarepo_config::Squashed { squash_limit: 3 },
+            ))
+            .build_source()?
+            .build(&mut test.configs_storage);
+
+        println!("Create initial source commit and bookmark");
+        let init_source_cs_id = CreateCommitContext::new_root(&ctx, &test.blobrepo)
+            .add_file("file", "content")
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &test.blobrepo, source_name.to_string())
+            .set_to(init_source_cs_id)
+            .await?;
+
+        let latest_target_cs_id = test
+            .prepare_initial_commit_in_target(&ctx, &version, &target)
+            .await?;
+
+        let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage);
+        let sync_changeset = SyncChangeset::new(
+            &configs_storage,
+            &test.mononoke,
+            &test.megarepo_mapping,
+            &test.mutable_renames,
+        );
+
+        let main_line = CreateCommitContext::new(&ctx, &test.blobrepo, vec![init_source_cs_id])
+            .add_file("file_in_mainline", "mainline1")
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &test.blobrepo, source_name.to_string())
+            .set_to(main_line)
+            .await?;
+        let main_line_target = sync_changeset
+            .sync(&ctx, main_line, &source_name, &target, latest_target_cs_id)
+            .await?;
+
+        let side_branch_1 = CreateCommitContext::new(&ctx, &test.blobrepo, vec![init_source_cs_id])
+            .add_file("file", "totallydifferentcontent")
+            .add_file("file_in_sidebranch_1", "sidebranch1")
+            .commit()
+            .await?;
+
+        let side_branch_2 = CreateCommitContext::new(&ctx, &test.blobrepo, vec![side_branch_1])
+            .add_file("file", "amended")
+            .add_file("file_in_sidebranch_2", "sidebranch2")
+            .commit()
+            .await?;
+
+        let merge = CreateCommitContext::new(&ctx, &test.blobrepo, vec![side_branch_2, main_line])
+            .add_file("file", "mergeresolution")
+            .commit()
+            .await?;
+        println!("Syncing merge");
+        bookmark(&ctx, &test.blobrepo, source_name.to_string())
+            .set_to(merge)
+            .await?;
+        let merge_target = sync_changeset
+            .sync(&ctx, merge, &source_name, &target, main_line_target)
+            .await?;
+
+        let _mcs = merge.load(&ctx, test.blobrepo.blobstore()).await?;
+
+        // Find source repo and changeset that we need to sync
+        let target_repo = sync_changeset.find_repo_by_id(&ctx, target.repo_id).await?;
+        let merge_cs = merge_target
+            .load(&ctx, target_repo.blob_repo().blobstore())
+            .await?;
+
+        let parents: Vec<_> = merge_cs.parents().collect();
+
+        let mut wc = list_working_copy_utf8(&ctx, &test.blobrepo, merge_target).await?;
+
+        // Remove file with commit remapping state because it's never present in source
+        wc.remove(&MPath::new(REMAPPING_STATE_FILE)?);
+
+        assert_eq!(parents.len(), 1);
+
+        assert_eq!(
+            wc,
+            hashmap! {
+                MPath::new("source_1/file")? => "mergeresolution".to_string(),
+                MPath::new("source_1/file_in_sidebranch_1")? => "sidebranch1".to_string(),
+                MPath::new("source_1/file_in_sidebranch_2")? => "sidebranch2".to_string(),
+                MPath::new("source_1/file_in_mainline")? => "mainline1".to_string(),
+            }
+        );
         Ok(())
     }
 }

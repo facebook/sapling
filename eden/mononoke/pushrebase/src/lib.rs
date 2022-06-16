@@ -682,7 +682,7 @@ async fn find_changed_files_between_manifests(
     Ok(paths)
 }
 
-async fn find_bonsai_diff(
+pub async fn find_bonsai_diff(
     ctx: &CoreContext,
     repo: &BlobRepo,
     ancestor: ChangesetId,

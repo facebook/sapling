@@ -12,7 +12,7 @@ use context::CoreContext;
 use maplit::btreemap;
 use megarepo_config::{
     MergeMode, MononokeMegarepoConfigs, SourceRevision, SyncConfigVersion, Target,
-    TestMononokeMegarepoConfigs, WithExtraMoveCommit,
+    TestMononokeMegarepoConfigs,
 };
 use megarepo_mapping::{
     CommitRemappingState, MegarepoMapping, Source, SourceMappingRules, SourceName, SyncTargetConfig,
@@ -175,6 +175,7 @@ pub struct SourceVersionBuilder {
     config_builder: SyncTargetConfigBuilder,
     linkfiles: BTreeMap<String, String>,
     copyfiles: BTreeMap<String, String>,
+    merge_mode: Option<MergeMode>,
 }
 
 impl SourceVersionBuilder {
@@ -195,6 +196,7 @@ impl SourceVersionBuilder {
             config_builder,
             linkfiles: BTreeMap::new(),
             copyfiles: BTreeMap::new(),
+            merge_mode: None,
         }
     }
 
@@ -229,6 +231,11 @@ impl SourceVersionBuilder {
     #[allow(dead_code)]
     pub fn copyfile<S1: ToString, S2: ToString>(mut self, src: S1, dst: S2) -> Self {
         self.copyfiles.insert(src.to_string(), dst.to_string());
+        self
+    }
+
+    pub fn merge_mode(mut self, mode: MergeMode) -> Self {
+        self.merge_mode = Some(mode);
         self
     }
 
@@ -270,9 +277,7 @@ impl SourceVersionBuilder {
                 linkfiles: self.linkfiles,
                 overrides,
             },
-            merge_mode: Some(MergeMode::with_move_commit(WithExtraMoveCommit {
-                ..Default::default()
-            })),
+            merge_mode: self.merge_mode,
         };
         self.config_builder.add_source(source);
         Ok(self.config_builder)

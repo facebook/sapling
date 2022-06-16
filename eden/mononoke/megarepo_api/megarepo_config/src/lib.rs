@@ -12,8 +12,8 @@ use async_trait::async_trait;
 use clap::Args;
 use context::CoreContext;
 pub use megarepo_configs::types::{
-    MergeMode, Source, SourceMappingRules, SourceRevision, SyncConfigVersion, SyncTargetConfig,
-    Target, WithExtraMoveCommit,
+    MergeMode, Source, SourceMappingRules, SourceRevision, Squashed, SyncConfigVersion,
+    SyncTargetConfig, Target, WithExtraMoveCommit,
 };
 use megarepo_error::MegarepoError;
 use std::path::{Path, PathBuf};

@@ -7,6 +7,7 @@
 
 use anyhow::{anyhow, bail, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
 use blobsync::copy_content;
 use borrowed::borrowed;
@@ -21,6 +22,7 @@ use mononoke_types::{
     mpath_element_iter, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, ContentId, FileChange,
     MPath, TrackedFileChange,
 };
+use pushrebase::find_bonsai_diff;
 use sorted_vector_map::SortedVectorMap;
 use std::{collections::HashMap, sync::Arc};
 use thiserror::Error;
@@ -247,6 +249,55 @@ pub async fn rewrite_commit<'a>(
         delete_file_changes,
         commit_rewritten_to_empty,
     )
+}
+
+pub async fn rewrite_as_squashed_commit<'a>(
+    ctx: &'a CoreContext,
+    source_repo: &'a BlobRepo,
+    source_cs_id: ChangesetId,
+    (source_parent_cs_id, target_parent_cs_id): (ChangesetId, ChangesetId),
+    mut cs: BonsaiChangesetMut,
+    mover: MultiMover,
+) -> Result<Option<BonsaiChangesetMut>, Error> {
+    if !cs.file_changes.is_empty() {
+        let diff_stream =
+            find_bonsai_diff(ctx, source_repo, source_parent_cs_id, source_cs_id).await?;
+
+        let diff_changes: Vec<_> = diff_stream
+            .map_ok(|diff_result| async move {
+                convert_diff_result_into_file_change_for_diamond_merge(
+                    ctx,
+                    source_repo,
+                    diff_result,
+                )
+                .await
+            })
+            .try_buffered(100)
+            .try_collect()
+            .await?;
+
+        let rewritten_changes = diff_changes
+            .into_iter()
+            .map(|(path, change)| {
+                let new_paths = mover(&path)?;
+                Ok(new_paths
+                    .into_iter()
+                    .map(|new_path| (new_path, change.clone()))
+                    .collect())
+            })
+            .collect::<Result<Vec<Vec<_>>, Error>>()?;
+
+        let rewritten_changes: SortedVectorMap<_, _> = rewritten_changes
+            .into_iter()
+            .flat_map(|changes| changes.into_iter())
+            .collect();
+
+        cs.file_changes = rewritten_changes;
+        // `validate_can_sync_changeset` already ensures
+        // that target_parent_cs_id is one of the existing parents
+        cs.parents = vec![target_parent_cs_id];
+    }
+    Ok(Some(cs))
 }
 
 pub async fn rewrite_stack_no_merges<'a>(
