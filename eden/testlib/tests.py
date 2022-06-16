@@ -202,6 +202,24 @@ o  A
         ):
             self.repo.commit("A").ancestor(9)
 
+    @hgtest
+    def test_parents(self, repo: Repo, wc: WorkingCopy) -> None:
+        repo.drawdag(
+            """
+C C
+| |
+A B
+"""
+        )
+        self.assertEqual(
+            set(self.repo.commit("C").parents()),
+            {repo.commit("B"), self.repo.commit("A")},
+        )
+        self.assertEqual(
+            self.repo.commit("A").parents(),
+            [],
+        )
+
 
 if __name__ == "__main__":
     import unittest

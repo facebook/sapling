@@ -32,6 +32,9 @@ class Commit:
             return self.hash == other.hash
         return super().__eq__(other)
 
+    def __hash__(self) -> int:
+        return hash(self.hash)
+
     def ancestor(self, idx: int) -> Commit:
         try:
             return self.repo.commit(f"ancestors({self.hash}, {idx}, {idx})")
@@ -42,6 +45,4 @@ class Commit:
         return Status(self.repo.hg.status(change=self.hash, template="json").stdout)
 
     def parents(self) -> List[Commit]:
-        raw = self.repo.hg.log(rev=f"parents({self.hash})", template="{node}\n").stdout
-        lines = raw.split("\n")
-        return [Commit(self.repo, hash) for hash in lines[:-1]]
+        return self.repo.commits(f"parents({self.hash})", allowempty=True)
