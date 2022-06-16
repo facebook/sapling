@@ -370,6 +370,10 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   friend class IORequest;
 };
 
+constexpr Overlay::OverlayType kDefaultOverlayType = folly::kIsWindows
+    ? Overlay::OverlayType::Tree
+    : Overlay::OverlayType::Legacy;
+
 /**
  * Used to reference count IO requests. In any place that there
  * is an overlay read or write, this struct should be constructed in order to

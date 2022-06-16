@@ -137,7 +137,7 @@ class TestMount {
       const RootId& initialCommitHash,
       FakeTreeBuilder& rootBuilder,
       bool startReady = true,
-      Overlay::OverlayType overlayType = Overlay::OverlayType::Legacy);
+      Overlay::OverlayType overlayType = kDefaultOverlayType);
   void initialize(FakeTreeBuilder& rootBuilder, bool startReady = true);
   void initialize(
       FakeTreeBuilder& rootBuilder,
@@ -152,7 +152,7 @@ class TestMount {
       const RootId& initialCommitHash,
       FakeTreeBuilder& rootBuilder,
       bool startReady,
-      Overlay::OverlayType overlayType = Overlay::OverlayType::Legacy);
+      Overlay::OverlayType overlayType = kDefaultOverlayType);
   void createMountWithoutInitializing(
       FakeTreeBuilder& rootBuilder,
       bool startReady = true);
@@ -352,8 +352,7 @@ class TestMount {
   }
 
  private:
-  void createMount(
-      Overlay::OverlayType overlayType = Overlay::OverlayType::Legacy);
+  void createMount(Overlay::OverlayType overlayType = kDefaultOverlayType);
   void initTestDirectory();
   void setInitialCommit(const RootId& commitHash);
   void setInitialCommit(const RootId& commitHash, ObjectId rootTreeHash);
