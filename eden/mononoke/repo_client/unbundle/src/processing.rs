@@ -27,6 +27,7 @@ use pushrebase::PushrebaseError;
 #[cfg(fbcode_build)]
 use pushrebase_client::SCSPushrebaseClient;
 use pushrebase_client::{LocalPushrebaseClient, PushrebaseClient};
+use scuba_ext::MononokeScubaSampleBuilder;
 
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_identity::RepoIdentityRef;
@@ -537,48 +538,75 @@ async fn normal_pushrebase<'a>(
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
     let repo_name = repo.repo_identity().name().to_string();
     let bookmark_restriction = BookmarkKindRestrictions::OnlyPublishing;
-    let result = if should_use_scs() {
-        #[cfg(fbcode_build)]
-        {
-            if let Ok(host_port) = std::env::var("SCS_SERVER_HOST_PORT") {
-                SCSPushrebaseClient::from_host_port(ctx.fb, host_port)?
-            } else {
-                SCSPushrebaseClient::new(ctx.fb)?
+    let maybe_fallback_scuba: Option<(MononokeScubaSampleBuilder, BookmarkMovementError)> =
+        if should_use_scs() {
+            #[cfg(fbcode_build)]
+            {
+                let result = if let Ok(host_port) = std::env::var("SCS_SERVER_HOST_PORT") {
+                    SCSPushrebaseClient::from_host_port(ctx.fb, host_port)?
+                } else {
+                    SCSPushrebaseClient::new(ctx.fb)?
+                }
+                .pushrebase(
+                    repo_name.clone(),
+                    bookmark,
+                    changesets.clone(),
+                    maybe_pushvars,
+                    cross_repo_push_source,
+                    bookmark_restriction,
+                )
+                .await;
+                match result {
+                    Ok(outcome) => return Ok((outcome.head, outcome.rebased_changesets)),
+                    Err(err) => {
+                        slog::warn!(
+                            ctx.logger(),
+                            "Failed to pushrebase remotely, falling back to local. Error: {}",
+                            err
+                        );
+                        let mut scuba = ctx.scuba().clone();
+                        scuba.add("bookmark_name", bookmark.as_str());
+                        scuba.add(
+                            "changeset_id",
+                            changesets
+                                .iter()
+                                .next()
+                                .map(|b| b.get_changeset_id().to_string()),
+                        );
+                        Some((scuba, err))
+                    }
+                }
             }
-            .pushrebase(
-                repo_name,
-                bookmark,
-                changesets,
-                maybe_pushvars,
-                cross_repo_push_source,
-                bookmark_restriction,
-            )
-            .await
+            #[cfg(not(fbcode_build))]
+            unreachable!()
+        } else {
+            None
+        };
+    let result = LocalPushrebaseClient {
+        ctx,
+        repo,
+        pushrebase_params,
+        lca_hint,
+        maybe_hg_replay_data,
+        bookmark_attrs,
+        infinitepush_params,
+        hook_manager,
+        readonly_fetcher,
+    }
+    .pushrebase(
+        repo_name,
+        bookmark,
+        changesets,
+        maybe_pushvars,
+        cross_repo_push_source,
+        bookmark_restriction,
+    )
+    .await;
+    if let Some((mut scuba, err)) = maybe_fallback_scuba {
+        if result.is_ok() {
+            scuba.log_with_msg("failed_remote_pushrebase", err.to_string());
         }
-        #[cfg(not(fbcode_build))]
-        unreachable!()
-    } else {
-        LocalPushrebaseClient {
-            ctx,
-            repo,
-            pushrebase_params,
-            lca_hint,
-            maybe_hg_replay_data,
-            bookmark_attrs,
-            infinitepush_params,
-            hook_manager,
-            readonly_fetcher,
-        }
-        .pushrebase(
-            repo_name,
-            bookmark,
-            changesets,
-            maybe_pushvars,
-            cross_repo_push_source,
-            bookmark_restriction,
-        )
-        .await
-    };
+    }
     match result {
         Ok(outcome) => Ok((outcome.head, outcome.rebased_changesets)),
         Err(err) => match err {
