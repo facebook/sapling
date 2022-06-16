@@ -17,8 +17,8 @@ use metaconfig_types::{
     HookBypass, HookConfig, HookManagerParams, HookParams, InfinitepushNamespace,
     InfinitepushParams, LfsParams, PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs,
     SegmentedChangelogConfig, SegmentedChangelogHeadConfig, ServiceWriteRestrictions,
-    SourceControlServiceMonitoring, SourceControlServiceParams, UnodeVersion, WalkerConfig,
-    WalkerJobParams, WalkerJobType,
+    SourceControlServiceMonitoring, SourceControlServiceParams, SparseProfilesConfig, UnodeVersion,
+    WalkerConfig, WalkerJobParams, WalkerJobType,
 };
 use mononoke_types::{ChangesetId, MPath, PrefixTrie};
 use regex::Regex;
@@ -28,8 +28,8 @@ use repos::{
     RawHookConfig, RawHookManagerParams, RawInfinitepushParams, RawLfsParams, RawPushParams,
     RawPushrebaseParams, RawRepoClientKnobs, RawSegmentedChangelogConfig,
     RawSegmentedChangelogHeadConfig, RawServiceWriteRestrictions,
-    RawSourceControlServiceMonitoring, RawSourceControlServiceParams, RawWalkerConfig,
-    RawWalkerJobParams, RawWalkerJobType,
+    RawSourceControlServiceMonitoring, RawSourceControlServiceParams, RawSparseProfilesConfig,
+    RawWalkerConfig, RawWalkerJobParams, RawWalkerJobType,
 };
 
 use crate::convert::Convert;
@@ -541,5 +541,17 @@ impl Convert for RawCrossRepoCommitValidationConfig {
             .map(BookmarkName::new)
             .collect::<Result<_, _>>()?;
         Ok(CrossRepoCommitValidation { skip_bookmarks })
+    }
+}
+
+impl Convert for RawSparseProfilesConfig {
+    type Output = SparseProfilesConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(SparseProfilesConfig {
+            sparse_profiles_location: self.sparse_profiles_location,
+            excluded_paths: self.excluded_paths.unwrap_or_default(),
+            monitored_profiles: self.monitored_profiles.unwrap_or_default(),
+        })
     }
 }

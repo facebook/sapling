@@ -178,6 +178,7 @@ fn parse_with_repo_definition(
         phabricator_callsign,
         walker_config,
         cross_repo_commit_validation_config,
+        sparse_profiles_config,
         ..
     } = named_repo_config;
 
@@ -293,6 +294,8 @@ fn parse_with_repo_definition(
 
     let cross_repo_commit_validation_config = cross_repo_commit_validation_config.convert()?;
 
+    let sparse_profiles_config = sparse_profiles_config.convert()?;
+
     Ok(RepoConfig {
         enabled,
         storage_config,
@@ -332,6 +335,7 @@ fn parse_with_repo_definition(
         acl_region_config,
         walker_config,
         cross_repo_commit_validation_config,
+        sparse_profiles_config,
     })
 }
 
@@ -483,7 +487,7 @@ mod test {
         PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, RepoClientKnobs,
         SegmentedChangelogConfig, SegmentedChangelogHeadConfig, ShardableRemoteDatabaseConfig,
         ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig, SourceControlServiceMonitoring,
-        SourceControlServiceParams, UnodeVersion, WalkerConfig,
+        SourceControlServiceParams, SparseProfilesConfig, UnodeVersion, WalkerConfig,
     };
     use mononoke_types::MPath;
     use mononoke_types_mocks::changesetid::ONES_CSID;
@@ -824,13 +828,16 @@ mod test {
 
             [backup_config]
             verification_enabled = false
-            
+
             [walker_config]
             scrub_enabled = true
             validate_enabled = true
-            
+
             [cross_repo_commit_validation_config]
             skip_bookmarks = ["weirdy"]
+
+            [sparse_profiles_config]
+            sparse_profiles_location = "sparse"
         "#;
         let fbsource_repo_def = r#"
             repo_id=0
@@ -1173,6 +1180,11 @@ mod test {
                 cross_repo_commit_validation_config: Some(CrossRepoCommitValidation {
                     skip_bookmarks: [BookmarkName::new("weirdy").unwrap()].into(),
                 }),
+                sparse_profiles_config: Some(SparseProfilesConfig {
+                    sparse_profiles_location: "sparse".to_string(),
+                    excluded_paths: vec![],
+                    monitored_profiles: vec![],
+                }),
             },
         );
 
@@ -1245,6 +1257,7 @@ mod test {
                 acl_region_config: None,
                 walker_config: None,
                 cross_repo_commit_validation_config: None,
+                sparse_profiles_config: None,
             },
         );
         assert_eq!(

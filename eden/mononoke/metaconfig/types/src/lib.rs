@@ -212,6 +212,8 @@ pub struct RepoConfig {
     pub walker_config: Option<WalkerConfig>,
     /// Cross-repo commit validation config
     pub cross_repo_commit_validation_config: Option<CrossRepoCommitValidation>,
+    /// Monitored spares profiles configuration.
+    pub sparse_profiles_config: Option<SparseProfilesConfig>,
 }
 
 /// Backup repo configuration
@@ -1742,4 +1744,17 @@ pub struct CrossRepoCommitValidation {
     /// Commits that are only found via the changelog for this named bookmark
     /// are skipped for validation (e.g. import bookmarks can be skipped)
     pub skip_bookmarks: HashSet<BookmarkName>,
+}
+
+/// Configuration for sparse profile monitoring
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct SparseProfilesConfig {
+    /// Location where sparse profiles are stored within the repo
+    pub sparse_profiles_location: String,
+    /// Excluded paths and files from monitoring
+    /// used as glob patterns for pathmatchers
+    pub excluded_paths: Vec<String>,
+    /// Exact list of monitored profiles
+    /// Takes precedence over excludes.
+    pub monitored_profiles: Vec<String>,
 }
