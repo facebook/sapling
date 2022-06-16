@@ -50,9 +50,11 @@ class GlobalTestState(threading.local):
 test_globals = GlobalTestState()
 
 
-def new_dir() -> Path:
-    temp = test_globals.temp_mgr
-    return temp.make_temp_dir()
+def new_dir(label: Optional[str] = None) -> Path:
+    temp_dir = test_globals.temp_mgr.make_temp_dir()
+    if label and test_globals.debug:
+        print(f"{label}: {temp_dir}")
+    return temp_dir
 
 
 def new_file() -> Path:

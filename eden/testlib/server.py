@@ -19,8 +19,9 @@ from .util import new_dir
 
 class Server:
     def _clone(self, repoid: int, url: str) -> Repo:
-        root = new_dir()
         repo_name = self.reponame(repoid)
+        root = new_dir(label=f"Repository {repo_name}")
+
         hg(root).clone(
             url, root, noupdate=True, config=f"remotefilelog.reponame={repo_name}"
         )
@@ -64,7 +65,7 @@ class MononokeServer(Server):
     stderr_file: Optional[TextIO] = None
 
     def __init__(self, record_stderr_to_file: bool, repo_count: int = 5) -> None:
-        temp_dir = new_dir()
+        temp_dir = new_dir(label="Server Dir")
 
         if record_stderr_to_file:
             self.stderr_file = open(  # noqa: P201
@@ -102,7 +103,7 @@ def _start(
     executable = os.environ["HGTEST_MONONOKE_SERVER"]
     cert_dir = os.environ["HGTEST_CERTDIR"]
     bind_addr = "[::1]:0"  # Localhost
-    configerator_path = str(new_dir())
+    configerator_path = str(new_dir(label="Configerator Path"))
     tunables_path = "mononoke_tunables.json"
 
     def tjoin(path: str) -> str:
@@ -223,7 +224,7 @@ def _setup_mononoke_configs(config_dir: str) -> None:
         with open(path, "w+") as f:
             f.write(content)
 
-    db_path = new_dir()
+    db_path = new_dir(label="Mononoke DB")
 
     repotype = "blob_sqlite"
     blobstorename = "blobstore"

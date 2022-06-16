@@ -90,7 +90,7 @@ def hgtest(func: Callable[[TBase, Repo, WorkingCopy], None]) -> Callable[[TBase]
     def wrapper(self: TBase) -> None:
         use_eden = os.environ.get("USE_EDEN", False)
         if use_eden:
-            wc = self.repo.new_working_copy(path=new_dir(), eden=True)
+            wc = self.repo.new_working_copy(path=new_dir(label="Eden Dir"), eden=True)
             self.addCleanup(wc.cleanup)
         else:
             wc = self.repo.new_working_copy()
