@@ -45,7 +45,9 @@ mod verification_tests {
     use super::*;
     use fbinit::FacebookInit;
     use maplit::btreemap;
-    use megarepo_configs::types::{Source, SourceMappingRules, SourceRevision, Target};
+    use megarepo_configs::types::{
+        MergeMode, Source, SourceMappingRules, SourceRevision, Target, WithExtraMoveCommit,
+    };
 
     fn s(v: &str) -> String {
         v.to_owned()
@@ -78,6 +80,9 @@ mod verification_tests {
                             ]
                         },
                     },
+                    merge_mode: Some(MergeMode::with_move_commit(WithExtraMoveCommit {
+                        ..Default::default()
+                    })),
                 },
                 Source {
                     name: s("name2"),
@@ -94,6 +99,7 @@ mod verification_tests {
                             s("multiplied2") => vec![s("multiplied2_1"), s("multiplied2_2")],
                         },
                     },
+                    merge_mode: None,
                 },
             ],
         }

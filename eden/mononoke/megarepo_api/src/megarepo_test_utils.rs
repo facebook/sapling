@@ -11,7 +11,8 @@ use commit_transformation::create_source_to_target_multi_mover;
 use context::CoreContext;
 use maplit::btreemap;
 use megarepo_config::{
-    MononokeMegarepoConfigs, SourceRevision, SyncConfigVersion, Target, TestMononokeMegarepoConfigs,
+    MergeMode, MononokeMegarepoConfigs, SourceRevision, SyncConfigVersion, Target,
+    TestMononokeMegarepoConfigs, WithExtraMoveCommit,
 };
 use megarepo_mapping::{
     CommitRemappingState, MegarepoMapping, Source, SourceMappingRules, SourceName, SyncTargetConfig,
@@ -269,6 +270,9 @@ impl SourceVersionBuilder {
                 linkfiles: self.linkfiles,
                 overrides,
             },
+            merge_mode: Some(MergeMode::with_move_commit(WithExtraMoveCommit {
+                ..Default::default()
+            })),
         };
         self.config_builder.add_source(source);
         Ok(self.config_builder)
