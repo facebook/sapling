@@ -53,18 +53,6 @@ struct ChildFutures {
 
 static constexpr PathComponentPiece kIgnoreFilename{".gitignore"};
 
-Future<Unit> diffAddedTree(
-    DiffContext* context,
-    RelativePathPiece entryPath,
-    const Tree& wdTree,
-    const GitIgnoreStack* ignore,
-    bool isIgnored);
-
-Future<Unit> diffRemovedTree(
-    DiffContext* context,
-    RelativePathPiece entryPath,
-    const Tree& scmTree);
-
 void processAddedSide(
     DiffContext* context,
     ChildFutures& childFutures,
@@ -101,8 +89,8 @@ Future<Unit> waitOnResults(DiffContext* context, ChildFutures&& childFutures);
 FOLLY_NODISCARD Future<Unit> computeTreeDiff(
     DiffContext* context,
     RelativePathPiece currentPath,
-    const Tree& scmTree,
-    const Tree& wdTree,
+    std::shared_ptr<const Tree> scmTree,
+    std::shared_ptr<const Tree> wdTree,
     std::unique_ptr<GitIgnoreStack> ignore,
     bool isIgnored) {
   // A list of Futures to wait on for our children's results.
@@ -110,53 +98,51 @@ FOLLY_NODISCARD Future<Unit> computeTreeDiff(
 
   // Walk through the entries in both trees.
   // This relies on the fact that the entry list in each tree is always sorted.
-  auto scmEntries = scmTree.cbegin();
-  auto wdEntries = wdTree.cbegin();
+  Tree::container emptyEntries{kPathMapDefaultCaseSensitive};
+  auto scmIter = scmTree ? scmTree->cbegin() : emptyEntries.cbegin();
+  auto scmEnd = scmTree ? scmTree->cend() : emptyEntries.cend();
+  auto wdIter = wdTree ? wdTree->cbegin() : emptyEntries.cend();
+  auto wdEnd = wdTree ? wdTree->cend() : emptyEntries.cend();
   while (true) {
-    if (scmEntries == scmTree.cend()) {
-      if (wdEntries == wdTree.cend()) {
+    if (scmIter == scmEnd) {
+      if (wdIter == wdEnd) {
         // All Done
         break;
       }
       // This entry is present in wdTree but not scmTree
       processAddedSide(
-          context,
-          childFutures,
-          currentPath,
-          *wdEntries,
-          ignore.get(),
-          isIgnored);
-      ++wdEntries;
-    } else if (wdEntries == wdTree.cend()) {
+          context, childFutures, currentPath, *wdIter, ignore.get(), isIgnored);
+      ++wdIter;
+    } else if (wdIter == wdEnd) {
       // This entry is present in scmTree but not wdTree
-      processRemovedSide(context, childFutures, currentPath, *scmEntries);
-      ++scmEntries;
+      processRemovedSide(context, childFutures, currentPath, *scmIter);
+      ++scmIter;
     } else {
       auto compare = comparePathPiece(
-          scmEntries->first, wdEntries->first, context->getCaseSensitive());
+          scmIter->first, wdIter->first, context->getCaseSensitive());
       if (compare == CompareResult::BEFORE) {
-        processRemovedSide(context, childFutures, currentPath, *scmEntries);
-        ++scmEntries;
+        processRemovedSide(context, childFutures, currentPath, *scmIter);
+        ++scmIter;
       } else if (compare == CompareResult::AFTER) {
         processAddedSide(
             context,
             childFutures,
             currentPath,
-            *wdEntries,
+            *wdIter,
             ignore.get(),
             isIgnored);
-        ++wdEntries;
+        ++wdIter;
       } else {
         processBothPresent(
             context,
             childFutures,
             currentPath,
-            *scmEntries,
-            *wdEntries,
+            *scmIter,
+            *wdIter,
             ignore.get(),
             isIgnored);
-        ++scmEntries;
-        ++wdEntries;
+        ++scmIter;
+        ++wdIter;
       }
     }
   }
@@ -171,8 +157,8 @@ FOLLY_NODISCARD Future<Unit> loadGitIgnoreThenDiffTrees(
     PathComponentPiece gitIgnoreName,
     DiffContext* context,
     RelativePathPiece currentPath,
-    const Tree& scmTree,
-    const Tree& wdTree,
+    std::shared_ptr<const Tree> scmTree,
+    std::shared_ptr<const Tree> wdTree,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
   // TODO: load file contents directly from context->store if gitIgnoreEntry is
@@ -191,15 +177,15 @@ FOLLY_NODISCARD Future<Unit> loadGitIgnoreThenDiffTrees(
           })
       .thenValue([context,
                   currentPath = currentPath.copy(),
-                  scmTree,
-                  wdTree,
+                  scmTree = std::move(scmTree),
+                  wdTree = std::move(wdTree),
                   parentIgnore,
                   isIgnored](std::string&& ignoreFileContents) mutable {
         return computeTreeDiff(
             context,
             currentPath,
-            scmTree,
-            wdTree,
+            std::move(scmTree),
+            std::move(wdTree),
             make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
             isIgnored);
       });
@@ -208,8 +194,8 @@ FOLLY_NODISCARD Future<Unit> loadGitIgnoreThenDiffTrees(
 FOLLY_NODISCARD Future<Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
-    const Tree& scmTree,
-    const Tree& wdTree,
+    std::shared_ptr<const Tree> scmTree,
+    std::shared_ptr<const Tree> wdTree,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
   if (context->isCancelled()) {
@@ -233,154 +219,36 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
     // Since the entire directory is ignored, we don't need to check ignore
     // status for any entries that aren't already tracked in source control.
     return computeTreeDiff(
-        context, currentPath, scmTree, wdTree, nullptr, isIgnored);
-  }
-
-  // If this directory has a .gitignore file, load it first.
-  const auto it = wdTree.find(kIgnoreFilename);
-  if (it != wdTree.cend() && !it->second.isTree()) {
-    return loadGitIgnoreThenDiffTrees(
-        it->first,
         context,
         currentPath,
-        scmTree,
-        wdTree,
-        parentIgnore,
+        std::move(scmTree),
+        std::move(wdTree),
+        nullptr,
         isIgnored);
+  }
+
+  if (wdTree) {
+    // If this directory has a .gitignore file, load it first.
+    const auto it = wdTree->find(kIgnoreFilename);
+    if (it != wdTree->cend() && !it->second.isTree()) {
+      return loadGitIgnoreThenDiffTrees(
+          it->first,
+          context,
+          currentPath,
+          std::move(scmTree),
+          std::move(wdTree),
+          parentIgnore,
+          isIgnored);
+    }
   }
 
   return computeTreeDiff(
       context,
       currentPath,
-      scmTree,
-      wdTree,
+      std::move(scmTree),
+      std::move(wdTree),
       make_unique<GitIgnoreStack>(parentIgnore), // empty with no rules
       isIgnored);
-}
-
-FOLLY_NODISCARD Future<Unit> processAddedChildren(
-    DiffContext* context,
-    RelativePathPiece currentPath,
-    const Tree& wdTree,
-    std::unique_ptr<GitIgnoreStack> ignore,
-    bool isIgnored) {
-  ChildFutures childFutures;
-  for (const auto& childEntry : wdTree) {
-    processAddedSide(
-        context,
-        childFutures,
-        currentPath,
-        childEntry,
-        ignore.get(),
-        isIgnored);
-  }
-
-  // Add an ensure() block that makes sure the ignore stack exists until all of
-  // our children results have finished processing
-  return waitOnResults(context, std::move(childFutures))
-      .ensure([ignore = std::move(ignore)] {});
-}
-
-FOLLY_NODISCARD Future<Unit> loadGitIgnoreThenProcessAddedChildren(
-    PathComponentPiece gitIgnoreName,
-    DiffContext* context,
-    RelativePathPiece currentPath,
-    const Tree& wdTree,
-    const GitIgnoreStack* parentIgnore,
-    bool isIgnored) {
-  auto loadFileContentsFromPath = context->getLoadFileContentsFromPath();
-  auto gitIgnorePath = currentPath + gitIgnoreName;
-  return loadFileContentsFromPath(context->getFetchContext(), gitIgnorePath)
-      .thenError(
-          [entryPath = gitIgnorePath](const folly::exception_wrapper& ex) {
-            XLOG(WARN) << "error loading gitignore at " << entryPath << ": "
-                       << folly::exceptionStr(ex);
-            return std::string{};
-          })
-      .thenValue([context,
-                  currentPath = currentPath.copy(),
-                  wdTree,
-                  parentIgnore,
-                  isIgnored](std::string&& ignoreFileContents) mutable {
-        return processAddedChildren(
-            context,
-            currentPath,
-            wdTree,
-            make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
-            isIgnored);
-      });
-}
-
-/**
- * Process a Tree that is present only on one side of the diff.
- */
-FOLLY_NODISCARD Future<Unit> diffAddedTree(
-    DiffContext* context,
-    RelativePathPiece currentPath,
-    const Tree& wdTree,
-    const GitIgnoreStack* parentIgnore,
-    bool isIgnored) {
-  if (context->isCancelled()) {
-    XLOG(DBG7) << "diff() on directory " << currentPath
-               << " cancelled due to client request no longer being active";
-    return makeFuture();
-  }
-  ChildFutures childFutures;
-
-  // If this directory is already ignored, we don't need to bother loading its
-  // .gitignore file.  Everything inside this directory must also be ignored,
-  // unless it is explicitly tracked in source control.
-  //
-  // Also, if we are not honoring gitignored files, then do not bother loading
-  // its .gitignore file
-  //
-  // Explicit include rules cannot be used to unignore files inside an ignored
-  // directory.
-  //
-  // We check context->getLoadFileContentsFromPath() here as a way to see if we
-  // are processing gitIgnore files or not, since this is only set from code
-  // that enters through eden/fs/inodes/DiffTree.cpp. Either way, it is
-  // impossible to load file contents without this set.
-  if (isIgnored || !context->getLoadFileContentsFromPath()) {
-    // We can pass in a null GitIgnoreStack pointer here.
-    // Since the entire directory is ignored, we don't need to check ignore
-    // status for any entries that aren't already tracked in source control.
-    return processAddedChildren(
-        context, currentPath, wdTree, nullptr, isIgnored);
-  }
-
-  // If this directory has a .gitignore file, load it first.
-  const auto it = wdTree.find(kIgnoreFilename);
-  if (it != wdTree.cend() && !it->second.isTree()) {
-    return loadGitIgnoreThenProcessAddedChildren(
-        it->first, context, currentPath, wdTree, parentIgnore, isIgnored);
-  }
-
-  return processAddedChildren(
-      context,
-      currentPath,
-      wdTree,
-      make_unique<GitIgnoreStack>(parentIgnore), // empty with no rules
-      isIgnored);
-}
-
-/**
- * Process a Tree that is present only on one side of the diff.
- */
-FOLLY_NODISCARD Future<Unit> diffRemovedTree(
-    DiffContext* context,
-    RelativePathPiece currentPath,
-    const Tree& scmTree) {
-  if (context->isCancelled()) {
-    XLOG(DBG7) << "diff() on directory " << currentPath
-               << " cancelled due to client request no longer being active";
-    return makeFuture();
-  }
-  ChildFutures childFutures;
-  for (const auto& childEntry : scmTree) {
-    processRemovedSide(context, childFutures, currentPath, childEntry);
-  }
-  return waitOnResults(context, std::move(childFutures));
 }
 
 /**
@@ -609,7 +477,7 @@ diffRoots(DiffContext* context, const RootId& root1, const RootId& root2) {
       .thenValue([context](std::tuple<
                            std::shared_ptr<const Tree>,
                            std::shared_ptr<const Tree>>&& tup) {
-        const auto& [tree1, tree2] = tup;
+        auto [tree1, tree2] = std::move(tup);
 
         // This happens in the case in which the CLI (during eden doctor) calls
         // getScmStatusBetweenRevisions() with the same hash in order to check
@@ -619,7 +487,12 @@ diffRoots(DiffContext* context, const RootId& root1, const RootId& root2) {
         }
 
         return diffTrees(
-            context, RelativePathPiece{}, *tree1, *tree2, nullptr, false);
+            context,
+            RelativePathPiece{},
+            std::move(tree1),
+            std::move(tree2),
+            nullptr,
+            false);
       });
 }
 
@@ -645,13 +518,18 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
                   ignore,
                   isIgnored](std::tuple<
                              std::shared_ptr<const Tree>,
-                             std::shared_ptr<const Tree>>&& tup) {
-        const auto& [scmTree, wdTree] = tup;
+                             std::shared_ptr<const Tree>> tup) {
+        auto [scmTree, wdTree] = std::move(tup);
         auto pathPiece = copiedCurrentPath.has_value()
             ? copiedCurrentPath->piece()
             : currentPath;
         return diffTrees(
-                   context, pathPiece, *scmTree, *wdTree, ignore, isIgnored)
+                   context,
+                   pathPiece,
+                   std::move(scmTree),
+                   std::move(wdTree),
+                   ignore,
+                   isIgnored)
             .semi();
       })
       .semi()
@@ -675,11 +553,17 @@ FOLLY_NODISCARD Future<Unit> diffAddedTree(
                   copiedCurrentPath = std::move(copiedCurrentPath),
                   currentPath,
                   ignore,
-                  isIgnored](std::shared_ptr<const Tree>&& wdTree) {
+                  isIgnored](std::shared_ptr<const Tree> wdTree) {
         auto pathPiece = copiedCurrentPath.has_value()
             ? copiedCurrentPath->piece()
             : currentPath;
-        return diffAddedTree(context, pathPiece, *wdTree, ignore, isIgnored)
+        return diffTrees(
+                   context,
+                   pathPiece,
+                   nullptr,
+                   std::move(wdTree),
+                   ignore,
+                   isIgnored)
             .semi();
       })
       .semi()
@@ -699,11 +583,13 @@ FOLLY_NODISCARD Future<Unit> diffRemovedTree(
   return std::move(scmFuture)
       .thenValue([context,
                   copiedCurrentPath = std::move(copiedCurrentPath),
-                  currentPath](std::shared_ptr<const Tree>&& tree) {
+                  currentPath](std::shared_ptr<const Tree> tree) {
         auto pathPiece = copiedCurrentPath.has_value()
             ? copiedCurrentPath->piece()
             : currentPath;
-        return diffRemovedTree(context, pathPiece, *tree).semi();
+        return diffTrees(
+                   context, pathPiece, std::move(tree), nullptr, nullptr, false)
+            .semi();
       })
       .semi()
       .via(&folly::QueuedImmediateExecutor::instance());
