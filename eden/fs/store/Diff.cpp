@@ -630,30 +630,28 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
     ObjectId wdHash,
     const GitIgnoreStack* ignore,
     bool isIgnored) {
-  auto scmTreeFuture =
-      context->store->getTree(scmHash, context->getFetchContext());
-  auto wdTreeFuture =
-      context->store->getTree(wdHash, context->getFetchContext());
-  // Optimization for the case when both tree objects are immediately ready.
-  // We can avoid copying the input path in this case.
-  if (scmTreeFuture.isReady() && wdTreeFuture.isReady()) {
-    return diffTrees(
-        context,
-        currentPath,
-        *(std::move(scmTreeFuture).get()),
-        *(std::move(wdTreeFuture).get()),
-        ignore,
-        isIgnored);
-  }
+  auto treesFuture = collectAllSafe(
+      context->store->getTree(scmHash, context->getFetchContext()),
+      context->store->getTree(wdHash, context->getFetchContext()));
 
-  return collectAllSafe(scmTreeFuture, wdTreeFuture)
-      .thenValue([context, currentPath = currentPath.copy(), ignore, isIgnored](
-                     std::tuple<
-                         std::shared_ptr<const Tree>,
-                         std::shared_ptr<const Tree>>&& tup) {
+  // Optimization for the case when the trees are immediately ready. We can
+  // avoid copying the input path in this case.
+  auto copiedCurrentPath =
+      !treesFuture.isReady() ? std::optional{currentPath.copy()} : std::nullopt;
+  return std::move(treesFuture)
+      .thenValue([context,
+                  copiedCurrentPath = std::move(copiedCurrentPath),
+                  currentPath,
+                  ignore,
+                  isIgnored](std::tuple<
+                             std::shared_ptr<const Tree>,
+                             std::shared_ptr<const Tree>>&& tup) {
         const auto& [scmTree, wdTree] = tup;
+        auto pathPiece = copiedCurrentPath.has_value()
+            ? copiedCurrentPath->piece()
+            : currentPath;
         return diffTrees(
-                   context, currentPath, *scmTree, *wdTree, ignore, isIgnored)
+                   context, pathPiece, *scmTree, *wdTree, ignore, isIgnored)
             .semi();
       })
       .semi()
@@ -666,41 +664,49 @@ FOLLY_NODISCARD Future<Unit> diffAddedTree(
     ObjectId wdHash,
     const GitIgnoreStack* ignore,
     bool isIgnored) {
-  auto wdFuture = context->store->getTree(wdHash, context->getFetchContext())
-                      .semi()
-                      .via(&folly::QueuedImmediateExecutor::instance());
-  // Optimization for the case when the tree object is immediately ready.
-  // We can avoid copying the input path in this case.
-  if (wdFuture.isReady()) {
-    return diffAddedTree(
-        context, currentPath, *std::move(wdFuture).get(), ignore, isIgnored);
-  }
+  auto wdFuture = context->store->getTree(wdHash, context->getFetchContext());
 
-  return std::move(wdFuture).thenValue(
-      [context, currentPath = currentPath.copy(), ignore, isIgnored](
-          std::shared_ptr<const Tree>&& wdTree) {
-        return diffAddedTree(context, currentPath, *wdTree, ignore, isIgnored);
-      });
+  // Optimization for the case when the tree object is immediately ready. We
+  // can avoid copying the input path in this case.
+  auto copiedCurrentPath =
+      !wdFuture.isReady() ? std::optional{currentPath.copy()} : std::nullopt;
+  return std::move(wdFuture)
+      .thenValue([context,
+                  copiedCurrentPath = std::move(copiedCurrentPath),
+                  currentPath,
+                  ignore,
+                  isIgnored](std::shared_ptr<const Tree>&& wdTree) {
+        auto pathPiece = copiedCurrentPath.has_value()
+            ? copiedCurrentPath->piece()
+            : currentPath;
+        return diffAddedTree(context, pathPiece, *wdTree, ignore, isIgnored)
+            .semi();
+      })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 FOLLY_NODISCARD Future<Unit> diffRemovedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
     ObjectId scmHash) {
-  auto scmFuture = context->store->getTree(scmHash, context->getFetchContext())
-                       .semi()
-                       .via(&folly::QueuedImmediateExecutor::instance());
-  // Optimization for the case when the tree object is immediately ready.
-  // We can avoid copying the input path in this case.
-  if (scmFuture.isReady()) {
-    return diffRemovedTree(context, currentPath, *(std::move(scmFuture).get()));
-  }
+  auto scmFuture = context->store->getTree(scmHash, context->getFetchContext());
 
-  return std::move(scmFuture).thenValue(
-      [context,
-       currentPath = currentPath.copy()](std::shared_ptr<const Tree>&& tree) {
-        return diffRemovedTree(context, currentPath, *tree);
-      });
+  // Optimization for the case when the tree object is immediately ready. We
+  // can avoid copying the input path in this case.
+  auto copiedCurrentPath =
+      !scmFuture.isReady() ? std::optional{currentPath.copy()} : std::nullopt;
+  return std::move(scmFuture)
+      .thenValue([context,
+                  copiedCurrentPath = std::move(copiedCurrentPath),
+                  currentPath](std::shared_ptr<const Tree>&& tree) {
+        auto pathPiece = copiedCurrentPath.has_value()
+            ? copiedCurrentPath->piece()
+            : currentPath;
+        return diffRemovedTree(context, pathPiece, *tree).semi();
+      })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 } // namespace facebook::eden
