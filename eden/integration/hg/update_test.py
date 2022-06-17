@@ -638,6 +638,39 @@ class UpdateTest(EdenHgTestCase):
         dir2listing = os.listdir(os.path.join(self.repo.path, "dir2"))
         self.assertEqual({"FILE1"}, set(dir2listing))
 
+    def test_change_casing_with_untracked(self) -> None:
+        self.repo.update(self.commit1)
+        self.repo.write_file("DIR2/FILE1", "one upper")
+        upper = self.repo.commit("Upper")
+
+        self.repo.remove_file("DIR2/FILE1")
+        self.repo.commit("Removed")
+
+        self.repo.write_file("dir2/file1", "one lower")
+        self.repo.commit("Lower")
+
+        self.repo.write_file("dir2/untracked", "untracked")
+
+        self.repo.update(upper)
+
+        # On Windows, due to the untracked file, the casing of the directory
+        # stays lower case, hence we do not expect "DIR2" to be present in the
+        # working copy.
+        dirname = "dir2" if sys.platform == "win32" else "DIR2"
+        self.assertIn(dirname, set(os.listdir(self.repo.path)))
+
+        if sys.platform == "win32":
+            self.assertEqual(
+                {"untracked", "FILE1"},
+                set(os.listdir(os.path.join(self.repo.path, "DIR2"))),
+            )
+            self.assertEqual(self.read_file("DIR2/untracked"), "untracked")
+
+        untrackedPath = (
+            "DIR2/untracked" if sys.platform == "win32" else "dir2/untracked"
+        )
+        self.assert_status({untrackedPath: "?"})
+
     def test_update_to_null_with_untracked_directory(self) -> None:
         self.mkdir("foo/subdir/bar")
         self.repo.update("null")

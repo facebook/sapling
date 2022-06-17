@@ -3266,8 +3266,11 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
   // exactly what we want.
   return treeInode->checkout(ctx, std::move(oldTree), nullptr)
       .thenValue(
-          [ctx, parentInode = inodePtrFromThis(), treeInode, newScmEntry](
-              auto&&) -> folly::Future<InvalidationRequired> {
+          [ctx,
+           newTree = std::move(newTree),
+           parentInode = inodePtrFromThis(),
+           treeInode,
+           newScmEntry](auto&&) mutable -> folly::Future<InvalidationRequired> {
             if (ctx->isDryRun()) {
               // If this is a dry run, simply report conflicts and don't update
               // or invalidate the inode.
@@ -3298,9 +3301,30 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
                         name,
                         treeInode->getNodeId())
                     .hasException()) {
-              ctx->addConflict(
-                  ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
-              return InvalidationRequired::No;
+              if (newTree) {
+                XCHECK_EQ(
+                    parentInode->getMount()
+                        ->getCheckoutConfig()
+                        ->getCaseSensitive(),
+                    CaseSensitivity::Insensitive);
+                XCHECK_NE(newScmEntry->first, name);
+                // Because invalidateChannelEntryCache can only fail on Windows
+                // and PrjFS, the mount must be case-insensitive. Moreover,
+                // newScmEntry->first and name are different, so the case of
+                // the directory changed. Unfortunately, we couldn't remove the
+                // directory from the disk, and thus we are unable to actually
+                // change the case. This can be due to the directory containing
+                // an untracked file for instance. We can however fallback to
+                // updating the directory itself to the newTree. This behavior
+                // is consistent with vanilla Mercurial.
+                return treeInode->checkout(ctx, nullptr, std::move(newTree))
+                    .thenValue(
+                        [](folly::Unit) { return InvalidationRequired::No; });
+              } else {
+                ctx->addConflict(
+                    ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
+                return InvalidationRequired::No;
+              }
             }
 
             if (parentInode->tryRemoveChild(
