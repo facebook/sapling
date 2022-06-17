@@ -367,8 +367,13 @@ impl SourceControlServiceImpl {
                 let now = Local::now();
                 Ok(now.with_timezone(now.offset()))
             })?;
-        let committer = None;
-        let committer_date = None;
+        let committer = params.info.committer;
+        let committer_date = params
+            .info
+            .committer_date
+            .as_ref()
+            .map(<DateTime<FixedOffset>>::from_request)
+            .transpose()?;
         let message = params.info.message;
         let extra = params.info.extra;
         let bubble = None;

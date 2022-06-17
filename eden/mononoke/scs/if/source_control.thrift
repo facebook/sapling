@@ -729,6 +729,12 @@ struct RepoCreateCommitParamsCommitInfo {
 
   /// Extra metadata about the commit.
   4: map<string, binary> extra;
+
+  /// The identity that committed this commit, as opposed to wrote it
+  5: optional string committer;
+
+  /// The date the commit was committed
+  6: optional DateTime committer_date;
 }
 
 struct RepoCreateCommitParams {
