@@ -12,6 +12,7 @@ use crate::permissions::WritePermissionsModel;
 use crate::repo::RepoContext;
 
 pub mod create_changeset;
+pub mod set_git_mapping;
 
 pub struct RepoDraftContext {
     /// Repo that is being written to.

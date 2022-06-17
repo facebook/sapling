@@ -386,6 +386,17 @@ impl SourceControlServiceImpl {
                 bubble,
             )
             .await?;
+
+        // If you ask for a git identity back, then we'll assume that you supplied one to us
+        // and set it. Later, when we can derive a git commit hash, this'll become more
+        // open, because we'll only do the check if you ask for a hash different to the
+        // one we would derive
+        if params
+            .identity_schemes
+            .contains(&thrift::CommitIdentityScheme::GIT)
+        {
+            repo.set_git_mapping_from_changeset(&changeset).await?;
+        }
         let ids = map_commit_identity(&changeset, &params.identity_schemes).await?;
         Ok(thrift::RepoCreateCommitResponse {
             ids,
