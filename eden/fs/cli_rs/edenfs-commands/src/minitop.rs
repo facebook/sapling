@@ -385,7 +385,7 @@ impl Cursor {
 
     fn new_line(&mut self, stdout: &mut Stdout) -> Result<()> {
         if self.row == self.terminal_rows {
-            queue!(stdout, terminal::ScrollUp(1), cursor::MoveToColumn(0)).from_err()
+            queue!(stdout, terminal::ScrollUp(1), cursor::MoveToColumn(1)).from_err()
         } else {
             self.row += 1;
             queue!(stdout, cursor::MoveToNextLine(1)).from_err()
