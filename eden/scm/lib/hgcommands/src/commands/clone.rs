@@ -64,6 +64,9 @@ define_flags! {
         /// use EdenFs (EXPERIMENTAL)
         eden: bool,
 
+        /// location of the backing repo to be used or created (EXPERIMENTAL)
+        eden_backing_repo: String,
+
         #[arg]
         source: String,
 
@@ -165,6 +168,12 @@ pub fn run(
         return Err(errors::FallbackToPython(name()).into());
     }
 
+    if !clone_opts.eden && !clone_opts.eden_backing_repo.is_empty() {
+        return Err(
+            errors::Abort("--eden option required for eden-backing-repo option".into()).into(),
+        );
+    }
+
     let destination = match clone_opts.args.pop() {
         Some(dest) => PathBuf::from(dest),
         None => {
@@ -185,13 +194,13 @@ pub fn run(
     }
 
     if clone_opts.eden {
-        let backing_dir = match clone::get_default_eden_backing_directory(config)? {
-            Some(dir) => dir.join(&reponame),
-            None => {
-                return Err(errors::Abort("eden-backing-repo option is not set".into()).into());
-            }
+        let backing_path = if !clone_opts.eden_backing_repo.is_empty() {
+            PathBuf::from(&clone_opts.eden_backing_repo)
+        } else if let Some(dir) = clone::get_default_eden_backing_directory(config)? {
+            dir.join(&reponame)
+        } else {
+            return Err(errors::Abort("eden-backing-repo option is not set".into()).into());
         };
-        let backing_path = backing_dir.join(&reponame);
         let backing_hg = backing_path.join(".hg");
 
         let mut backing_repo = if !backing_hg.exists() {
