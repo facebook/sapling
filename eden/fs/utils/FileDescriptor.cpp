@@ -11,7 +11,7 @@
 #include <folly/String.h>
 #include <folly/portability/SysUio.h>
 #ifndef _WIN32
-#include <unistd.h>
+#include <folly/portability/Unistd.h>
 #endif
 #include <system_error>
 

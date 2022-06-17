@@ -10,7 +10,7 @@
 #include <folly/String.h>
 #ifndef _WIN32
 #include <folly/portability/Sockets.h>
-#include <unistd.h>
+#include <folly/portability/Unistd.h>
 #else
 #include <event2/util.h> // @manual
 #endif

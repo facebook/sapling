@@ -15,8 +15,8 @@
 #include <folly/Portability.h>
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/Unistd.h>
 #include <sys/stat.h>
-#include <unistd.h>
 
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/FileUtils.h"

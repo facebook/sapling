@@ -25,13 +25,13 @@
 #include <folly/logging/LogConfigParser.h>
 #include <folly/logging/LoggerDB.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/Unistd.h>
 #include <folly/system/ThreadName.h>
 #include <signal.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/types.h>
-#include <unistd.h>
 #include <chrono>
 #include <set>
 #include "eden/fs/fuse/privhelper/NfsMountRpc.h"

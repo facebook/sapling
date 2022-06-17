@@ -7,8 +7,8 @@
 
 #pragma once
 
+#include <folly/portability/Unistd.h>
 #include <sys/mman.h>
-#include <unistd.h>
 #include <type_traits>
 
 #include <eden/fs/utils/Bug.h>

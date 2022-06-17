@@ -10,8 +10,8 @@
 #include <folly/Exception.h>
 
 #if defined(__linux__) || defined(__APPLE__)
+#include <folly/portability/Unistd.h>
 #include <sys/utsname.h>
-#include <unistd.h>
 #endif
 
 #if defined(_WIN32)

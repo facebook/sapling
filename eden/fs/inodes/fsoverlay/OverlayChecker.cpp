@@ -11,8 +11,8 @@
 
 #include <boost/filesystem.hpp>
 #include <fcntl.h>
+#include <folly/portability/Unistd.h>
 #include <time.h>
-#include <unistd.h>
 
 #include <folly/Conv.h>
 #include <folly/ExceptionWrapper.h>

@@ -17,7 +17,7 @@
 #ifdef _WIN32
 #include <folly/portability/Unistd.h>
 #else
-#include <unistd.h>
+#include <folly/portability/Unistd.h>
 #endif
 
 #ifdef __APPLE__

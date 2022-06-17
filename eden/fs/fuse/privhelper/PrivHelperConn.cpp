@@ -22,8 +22,8 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 #include <folly/portability/Sockets.h>
+#include <folly/portability/Unistd.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 #include "eden/fs/utils/SystemError.h"
 

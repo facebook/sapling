@@ -22,9 +22,9 @@
 #include <thread>
 
 #ifndef _WIN32
+#include <folly/portability/Unistd.h>
 #include <sys/poll.h>
 #include <sys/wait.h>
-#include <unistd.h>
 #else
 #include "eden/common/utils/StringConv.h"
 #endif

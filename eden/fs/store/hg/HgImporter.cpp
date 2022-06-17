@@ -23,7 +23,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 #ifndef _WIN32
-#include <unistd.h>
+#include <folly/portability/Unistd.h>
 #endif
 
 #include <mutex>

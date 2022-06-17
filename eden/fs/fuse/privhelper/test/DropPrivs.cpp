@@ -6,8 +6,8 @@
  */
 
 #include <err.h>
+#include <folly/portability/Unistd.h>
 #include <sysexits.h>
-#include <unistd.h>
 #include <array>
 
 #include <folly/init/Init.h>
