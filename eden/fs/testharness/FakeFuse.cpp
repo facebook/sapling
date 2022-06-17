@@ -13,7 +13,7 @@
 #include <folly/FileUtil.h>
 #include <folly/chrono/Conv.h>
 #include <folly/logging/xlog.h>
-#include <sys/socket.h>
+#include <folly/portability/Sockets.h>
 #include <sys/types.h>
 
 using namespace std::chrono_literals;

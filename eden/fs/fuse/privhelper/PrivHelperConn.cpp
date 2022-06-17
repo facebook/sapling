@@ -21,7 +21,7 @@
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
-#include <sys/socket.h>
+#include <folly/portability/Sockets.h>
 #include <sys/types.h>
 #include <unistd.h>
 
