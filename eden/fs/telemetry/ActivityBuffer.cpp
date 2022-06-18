@@ -6,12 +6,15 @@
  */
 
 #include "eden/fs/telemetry/ActivityBuffer.h"
+#include <folly/logging/xlog.h>
 
 namespace facebook::eden {
 
 ActivityBuffer::ActivityBuffer(uint32_t maxEvents) : maxEvents_(maxEvents) {}
 
 void ActivityBuffer::addEvent(InodeMaterializeEvent event) {
+  XLOG(DBG7) << fmt::format(
+      "\nAdding InodeMaterializeEvent to ActivityBuffer\n{}", event);
   auto events = events_.wlock();
   events->push_back(std::move(event));
   if (events->size() > maxEvents_) {
@@ -19,7 +22,7 @@ void ActivityBuffer::addEvent(InodeMaterializeEvent event) {
   }
 }
 
-std::deque<InodeMaterializeEvent> ActivityBuffer::getAllEvents() {
+std::deque<InodeMaterializeEvent> ActivityBuffer::getAllEvents() const {
   return *events_.rlock();
 }
 

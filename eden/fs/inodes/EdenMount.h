@@ -15,6 +15,7 @@
 #include <folly/futures/Promise.h>
 #include <folly/futures/SharedPromise.h>
 #include <folly/logging/Logger.h>
+#include <folly/stop_watch.h>
 #include <chrono>
 #include <memory>
 #include <mutex>
@@ -830,6 +831,15 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * ActivityBuffers is enabled and return std::nullopt otherwise.
    */
   std::optional<ActivityBuffer> initActivityBuffer();
+
+  /**
+   * Helper function to update ActivityBuffer in FileInode and TreeInode when a
+   * new InodeMaterializeEvent occurs.
+   */
+  void addInodeMaterializeEvent(
+      folly::stop_watch<std::chrono::microseconds> watch,
+      InodeType type,
+      InodeNumber ino);
 
   /**
    * mount any configured bind mounts.

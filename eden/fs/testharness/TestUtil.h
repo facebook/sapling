@@ -8,6 +8,8 @@
 #pragma once
 
 #include <folly/Range.h>
+#include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/telemetry/ActivityBuffer.h"
 
 namespace facebook::eden {
 
@@ -23,4 +25,10 @@ class Hash20;
 ObjectId makeTestHash(folly::StringPiece value);
 
 Hash20 makeTestHash20(folly::StringPiece value);
+
+/**
+ * Helper function for counting the number of events in an ActivityBuffer with a
+ * certain InodeNumber. Used in FileInode and TreeInode tests.
+ */
+int countEventsWithInode(ActivityBuffer& buff, InodeNumber ino);
 } // namespace facebook::eden

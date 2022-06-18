@@ -103,6 +103,9 @@ TestMount::TestMount()
           testDir_->path().string() + "edenfs.rc",
       });
 
+  // Default enableActivityBuffer to be set true in tests
+  edenConfig_->enableActivityBuffer.setValue(true, ConfigSource::Default, true);
+
   // Create treeCache
   auto edenConfig = std::make_shared<ReloadableConfig>(
       edenConfig_, ConfigReloadBehavior::NoReload);
@@ -128,6 +131,10 @@ TestMount::TestMount(FakeTreeBuilder& rootBuilder, bool startReady)
     : TestMount() {
   // Create treeCache
   edenConfig_ = EdenConfig::createTestEdenConfig();
+
+  // Default enableActivityBuffer to be set true in tests
+  edenConfig_->enableActivityBuffer.setValue(true, ConfigSource::Default, true);
+
   auto edenConfig = std::make_shared<ReloadableConfig>(
       edenConfig_, ConfigReloadBehavior::NoReload);
   treeCache_ = TreeCache::create(edenConfig);
@@ -146,6 +153,10 @@ TestMount::TestMount(
     bool startReady)
     : TestMount() {
   edenConfig_ = EdenConfig::createTestEdenConfig();
+
+  // Default enableActivityBuffer to be set true in tests
+  edenConfig_->enableActivityBuffer.setValue(true, ConfigSource::Default, true);
+
   // Create treeCache
   auto edenConfig = std::make_shared<ReloadableConfig>(
       edenConfig_, ConfigReloadBehavior::NoReload);

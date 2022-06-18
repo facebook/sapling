@@ -14,8 +14,12 @@
 namespace facebook::eden {
 
 /**
- * Represents an event of when an inode materialized and the duration it took
- * for the event to take place
+ * Represents an event of an inode materialization and the duration it took for
+ * the event to occur. An inode materialization refers to when a new version of
+ * an inode's contents are saved in the overlay while before they referred
+ * directly to a source control object. The duration we count for an inode
+ * materialization consists of any time spent preparing/collecting file data,
+ * writing the data to EdenFS's overlay, and materializing any parent inodes.
  */
 class InodeMaterializeEvent {
  public:
@@ -57,7 +61,7 @@ class ActivityBuffer {
    * Returns an std::deque containing all InodeMaterializeEvents stored in the
    * ActivityBuffer.
    */
-  std::deque<InodeMaterializeEvent> getAllEvents();
+  std::deque<InodeMaterializeEvent> getAllEvents() const;
 
  private:
   uint32_t maxEvents_;
@@ -65,3 +69,21 @@ class ActivityBuffer {
 };
 
 } // namespace facebook::eden
+
+namespace fmt {
+template <>
+struct formatter<facebook::eden::InodeMaterializeEvent>
+    : formatter<std::string> {
+  auto format(
+      const facebook::eden::InodeMaterializeEvent& event,
+      format_context& ctx) {
+    std::string eventInfo = fmt::format(
+        "Timestamp: {}\nInode Number: {}\nInode Type: {}\nDuration: {}",
+        event.timestamp.time_since_epoch().count(),
+        event.ino.getRawValue(),
+        (event.inodeType == facebook::eden::InodeType::Tree ? "Tree" : "File"),
+        event.duration.count());
+    return formatter<std::string>::format(eventInfo, ctx);
+  }
+};
+} // namespace fmt

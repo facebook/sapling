@@ -21,6 +21,7 @@
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
+#include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/StatTimes.h"
 
 using namespace facebook::eden;
@@ -392,6 +393,32 @@ TEST_F(FileInodeTest, truncatingMaterializesParent) {
 
   EXPECT_EQ(true, isInodeMaterialized(grandparent));
   EXPECT_EQ(true, isInodeMaterialized(parent));
+}
+
+TEST_F(FileInodeTest, addNewMaterializationsToActivityBuffer) {
+  auto& buff = mount_.getEdenMount()->getActivityBuffer();
+  EXPECT_TRUE(buff.has_value());
+
+  auto inode_a = mount_.getFileInode("dir/a.txt");
+  auto inode_b = mount_.getFileInode("dir/sub/b.txt");
+  auto inode_sub = mount_.getTreeInode("dir/sub");
+  auto inode_dir = mount_.getTreeInode("dir");
+
+  // Test writing to a file
+  inode_a->write("abcd", 0, ObjectFetchContext::getNullContext()).get();
+  EXPECT_EQ(1, countEventsWithInode(buff.value(), inode_a->getNodeId()));
+  EXPECT_EQ(1, countEventsWithInode(buff.value(), inode_dir->getNodeId()));
+
+  // Test truncating a file
+  DesiredMetadata desired;
+  desired.size = 0;
+  (void)inode_b->setattr(desired, ObjectFetchContext::getNullContext())
+      .get(0ms);
+  EXPECT_EQ(1, countEventsWithInode(buff.value(), inode_b->getNodeId()));
+  EXPECT_EQ(1, countEventsWithInode(buff.value(), inode_sub->getNodeId()));
+
+  // Ensure we do not count inode_dir as materialized a second time
+  EXPECT_EQ(1, countEventsWithInode(buff.value(), inode_dir->getNodeId()));
 }
 
 #ifdef __linux__

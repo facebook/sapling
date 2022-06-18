@@ -40,4 +40,11 @@ Hash20 makeTestHash20(folly::StringPiece value) {
       value.size());
   return Hash20{folly::StringPiece{folly::range(fullValue)}};
 }
+
+int countEventsWithInode(ActivityBuffer& buff, InodeNumber ino) {
+  auto events = buff.getAllEvents();
+  return std::count_if(events.begin(), events.end(), [&](auto event) {
+    return event.ino.getRawValue() == ino.getRawValue();
+  });
+}
 } // namespace facebook::eden

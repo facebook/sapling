@@ -11,6 +11,7 @@
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/xlog.h>
+#include <optional>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/ServerState.h"
@@ -234,7 +235,15 @@ FileInode::runWhileMaterialized(
     LockedState state,
     std::shared_ptr<const Blob> blob,
     Fn&& fn,
-    ObjectFetchContext& fetchContext) {
+    ObjectFetchContext& fetchContext,
+    std::optional<folly::stop_watch<std::chrono::microseconds>> watch) {
+  // If we don't have a watch and aren't materialized already, start timing the
+  // upcoming materialization. If we have a watch already, then we came from a
+  // recursive call waiting for and timing how long it takes to load the blob
+  if (!watch.has_value() && state->tag != State::MATERIALIZED_IN_OVERLAY) {
+    watch = folly::stop_watch<std::chrono::microseconds>();
+  }
+
   ImmediateFuture<std::shared_ptr<const Blob>> future;
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
@@ -258,6 +267,9 @@ FileInode::runWhileMaterialized(
         SCOPE_EXIT {
           XCHECK(state.isNull());
           materializeInParent();
+          // Add materialize event after parent finishes its materialization
+          getMount()->addInodeMaterializeEvent(
+              watch.value(), InodeType::File, getNodeId());
         };
         logAccess(fetchContext);
         // Note that we explicitly create a temporary LockedState object
@@ -289,8 +301,10 @@ FileInode::runWhileMaterialized(
   }
 
   return std::move(future).thenValue(
-      [self = inodePtrFromThis(), fn = std::forward<Fn>(fn), &fetchContext](
-          std::shared_ptr<const Blob> blob) mutable {
+      [self = inodePtrFromThis(),
+       fn = std::forward<Fn>(fn),
+       &fetchContext,
+       watch](std::shared_ptr<const Blob> blob) mutable {
         // Simply call runWhileMaterialized() again when we we are finished
         // loading the blob data.
         auto stateLock = LockedState{self};
@@ -302,7 +316,8 @@ FileInode::runWhileMaterialized(
             std::move(stateLock),
             std::move(blob),
             std::forward<Fn>(fn),
-            fetchContext);
+            fetchContext,
+            watch);
       });
 }
 
@@ -324,6 +339,8 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
       //   materialized in our parent TreeInode.
       // - If we successfully materialized the file and were in the
       //   BLOB_LOADING state, fulfill the blobLoadingPromise.
+      folly::stop_watch<std::chrono::microseconds> watch;
+
       std::unique_ptr<folly::SharedPromise<std::shared_ptr<const Blob>>>
           loadingPromise;
       SCOPE_EXIT {
@@ -347,6 +364,9 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
       SCOPE_EXIT {
         XCHECK(state.isNull());
         materializeInParent();
+        // Update ActivityBuffer after parent finishes its materialization
+        getMount()->addInodeMaterializeEvent(
+            watch, InodeType::File, getNodeId());
       };
 
       // Now invoke the input function.

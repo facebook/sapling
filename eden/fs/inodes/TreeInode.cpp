@@ -757,6 +757,10 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
 }
 
 void TreeInode::materialize(const RenameLock* renameLock) {
+  // Start timing how long the materialize event takes for when adding to
+  // the ActivityBuffer
+  folly::stop_watch<std::chrono::microseconds> watch;
+
   // If we don't have the rename lock yet, do a quick check first
   // to avoid acquiring it if we don't actually need to change anything.
   if (!renameLock) {
@@ -810,6 +814,9 @@ void TreeInode::materialize(const RenameLock* renameLock) {
     if (loc.parent && !loc.unlinked) {
       loc.parent->childMaterialized(*renameLock, loc.name);
     }
+
+    // Finished materializing so add event to ActivityBuffer
+    getMount()->addInodeMaterializeEvent(watch, InodeType::Tree, getNodeId());
   }
 }
 
@@ -819,6 +826,8 @@ void TreeInode::materialize(const RenameLock* renameLock) {
 void TreeInode::childMaterialized(
     const RenameLock& renameLock,
     PathComponentPiece childName) {
+  folly::stop_watch<std::chrono::microseconds> watch;
+  bool wasAlreadyMaterialized;
   {
     auto contents = contents_.wlock();
     auto iter = contents->entries.find(childName);
@@ -836,6 +845,7 @@ void TreeInode::childMaterialized(
     }
 
     childEntry.setMaterialized();
+    wasAlreadyMaterialized = contents->isMaterialized();
     contents->setMaterialized();
     saveOverlayDir(contents->entries);
   }
@@ -846,12 +856,19 @@ void TreeInode::childMaterialized(
   if (location.parent && !location.unlinked) {
     location.parent->childMaterialized(renameLock, location.name);
   }
+
+  // Add InodeMaterializeEvent to ActivityBuffer only if newly materialized
+  if (!wasAlreadyMaterialized) {
+    getMount()->addInodeMaterializeEvent(watch, InodeType::Tree, getNodeId());
+  }
 }
 
 void TreeInode::childDematerialized(
     const RenameLock& renameLock,
     PathComponentPiece childName,
     ObjectId childScmHash) {
+  folly::stop_watch<std::chrono::microseconds> watch;
+  bool wasAlreadyMaterialized;
   {
     auto contents = contents_.wlock();
     auto iter = contents->entries.find(childName);
@@ -879,6 +896,7 @@ void TreeInode::childDematerialized(
     // checkout finishes processing all of the children it will call
     // saveOverlayPostCheckout() on this directory, and here we will check to
     // see if we can dematerialize ourself.
+    wasAlreadyMaterialized = contents->isMaterialized();
     contents->setMaterialized();
     saveOverlayDir(contents->entries);
   }
@@ -889,6 +907,11 @@ void TreeInode::childDematerialized(
   auto location = getLocationInfo(renameLock);
   if (location.parent && !location.unlinked) {
     location.parent->childMaterialized(renameLock, location.name);
+  }
+
+  // Add InodeMaterializeEvent to ActivityBuffer only if newly materialized
+  if (!wasAlreadyMaterialized) {
+    getMount()->addInodeMaterializeEvent(watch, InodeType::Tree, getNodeId());
   }
 }
 
@@ -950,7 +973,8 @@ FileInodePtr TreeInode::createImpl(
     PathComponentPiece name,
     mode_t mode,
     FOLLY_MAYBE_UNUSED ByteRange fileContents,
-    InvalidationRequired invalidate) {
+    InvalidationRequired invalidate,
+    folly::stop_watch<std::chrono::microseconds> watch) {
 #ifndef _WIN32
   // This relies on the fact that the dotEdenInodeNumber field of EdenMount is
   // not defined until after EdenMount finishes configuring the .eden directory.
@@ -1028,6 +1052,10 @@ FileInodePtr TreeInode::createImpl(
 #endif
 
     getOverlay()->addChild(getNodeId(), *insertion.first, contents->entries);
+
+    // Once the overlay is fully updated, the inode is materialized so we can
+    // record this in the ActivityBuffer
+    getMount()->addInodeMaterializeEvent(watch, InodeType::File, childNumber);
   }
 
   if (InvalidationRequired::Yes == invalidate) {
@@ -1050,6 +1078,11 @@ FileInodePtr TreeInode::symlink(
     PathComponentPiece name,
     folly::StringPiece symlinkTarget,
     InvalidationRequired invalidate) {
+  // symlink creates a newly materialized file in createImpl. We count this as
+  // an InodeMaterializeEvent to add to the ActivityBuffer, which we begin
+  // timing here before the parent tree inode materializes
+  folly::stop_watch<std::chrono::microseconds> watch;
+
   validatePathComponentLength(name);
   materialize();
 
@@ -1058,7 +1091,12 @@ FileInodePtr TreeInode::symlink(
     auto contents = contents_.wlock();
     const mode_t mode = S_IFLNK | 0770;
     return createImpl(
-        std::move(contents), name, mode, ByteRange{symlinkTarget}, invalidate);
+        std::move(contents),
+        name,
+        mode,
+        ByteRange{symlinkTarget},
+        invalidate,
+        watch);
   }
 }
 #endif
@@ -1068,6 +1106,11 @@ FileInodePtr TreeInode::mknod(
     mode_t mode,
     dev_t dev,
     InvalidationRequired invalidate) {
+  // mknod creates a newly materialized file in createImpl. We count this as an
+  // InodeMaterializeEvent to add to the ActivityBuffer, which we begin timing
+  // here before the parent tree inode materializes
+  folly::stop_watch<std::chrono::microseconds> watch;
+
   validatePathComponentLength(name);
 
   // Compute the effective name of the node they want to create.
@@ -1093,7 +1136,8 @@ FileInodePtr TreeInode::mknod(
   {
     // Acquire our contents lock
     auto contents = contents_.wlock();
-    return createImpl(std::move(contents), name, mode, ByteRange{}, invalidate);
+    return createImpl(
+        std::move(contents), name, mode, ByteRange{}, invalidate, watch);
   }
 }
 
@@ -1101,6 +1145,10 @@ TreeInodePtr TreeInode::mkdir(
     PathComponentPiece name,
     mode_t mode,
     InvalidationRequired invalidate) {
+  // A new materialized subtree is created in mkdir. We count this as a new
+  // Materialize event to add to the ActivityBuffer which we begin timing.
+  folly::stop_watch<std::chrono::microseconds> watch;
+
 #ifndef _WIN32
   if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
     throw InodeError(EPERM, inodePtrFromThis(), name);
@@ -1172,6 +1220,10 @@ TreeInodePtr TreeInode::mkdir(
     updateMtimeAndCtimeLocked(contents->entries, now);
     getOverlay()->addChild(
         getNodeId(), *emplaceResult.first, contents->entries);
+
+    // Once the overlay is fully updated, the inode is materialized so we can
+    // record this in the ActivityBuffer
+    getMount()->addInodeMaterializeEvent(watch, InodeType::Tree, childNumber);
   }
 
   getMount()->getJournal().recordCreated(targetName);

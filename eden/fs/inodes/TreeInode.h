@@ -9,12 +9,14 @@
 #include <folly/File.h>
 #include <folly/Portability.h>
 #include <folly/Synchronized.h>
+#include <folly/stop_watch.h>
 #include <optional>
 #include "eden/fs/fuse/Invalidation.h"
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeOrTreeOrEntry.h"
+#include "eden/fs/inodes/InodeUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
@@ -603,7 +605,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponentPiece name,
       mode_t mode,
       folly::ByteRange fileContents,
-      InvalidationRequired invalidate);
+      InvalidationRequired invalidate,
+      folly::stop_watch<std::chrono::microseconds> watch);
 
   /**
    * removeImpl() is the actual implementation used for unlink() and rmdir().

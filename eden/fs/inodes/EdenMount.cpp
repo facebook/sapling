@@ -2257,6 +2257,18 @@ std::optional<ActivityBuffer> EdenMount::initActivityBuffer() {
       : std::nullopt;
 }
 
+void EdenMount::addInodeMaterializeEvent(
+    folly::stop_watch<std::chrono::microseconds> watch,
+    InodeType type,
+    InodeNumber ino) {
+  if (activityBuffer_.has_value()) {
+    std::chrono::steady_clock::time_point time =
+        std::chrono::steady_clock::now();
+    InodeMaterializeEvent event{time, ino, type, watch.elapsed()};
+    activityBuffer_.value().addEvent(event);
+  }
+}
+
 namespace {
 ImmediateFuture<TreeInodePtr> ensureDirectoryExistsHelper(
     TreeInodePtr parent,

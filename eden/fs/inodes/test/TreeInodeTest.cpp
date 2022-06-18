@@ -14,6 +14,7 @@
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <optional>
 #ifdef _WIN32
 #include "eden/fs/prjfs/Enumerator.h"
 #else
@@ -26,6 +27,7 @@
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
+#include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/FaultInjector.h"
 
@@ -467,6 +469,50 @@ TEST(TreeInode, setattr) {
       oldmetadata.timestamps.mtime.toTimespec()};
   somedir->setattr(newMetadata, ObjectFetchContext::getNullContext());
   EXPECT_TRUE(somedir->getContents().rlock()->isMaterialized());
+}
+
+TEST(TreeInode, addNewMaterializationsToActivityBuffer) {
+  FakeTreeBuilder builder;
+  builder.setFiles(
+      {{"somedir/sub/foo.txt", "test\n"}, {"dir2/bar.txt", "test 2\n"}});
+  TestMount mount{builder};
+
+  auto& buff = mount.getEdenMount()->getActivityBuffer();
+  EXPECT_TRUE(buff.has_value());
+
+  auto somedir = mount.getTreeInode("somedir"_relpath);
+  auto dir2 = mount.getTreeInode("dir2"_relpath);
+
+  // Test removing an inode
+  somedir->getOrLoadChildTree("sub"_pc, ObjectFetchContext::getNullContext())
+      .thenValue([somedir](TreeInodePtr&&) {
+        return somedir->removeRecursively(
+            "sub"_pc,
+            InvalidationRequired::No,
+            ObjectFetchContext::getNullContext());
+      })
+      .get(0ms);
+  EXPECT_EQ(1, countEventsWithInode(buff.value(), somedir->getNodeId()));
+
+  // Test creating a directory, a file (on both an unmaterialized/materialized
+  // parent), and a symlink
+  auto newdir =
+      somedir->mkdir("newdir"_pc, S_IFREG | 0740, InvalidationRequired::No);
+  EXPECT_EQ(1, countEventsWithInode(buff.value(), newdir->getNodeId()));
+  auto newfile = newdir->mknod(
+      "newfile.txt"_pc, S_IFREG | 0740, 0, InvalidationRequired::No);
+  auto newfile2 = dir2->mknod(
+      "newfile2.txt"_pc, S_IFREG | 0740, 0, InvalidationRequired::No);
+  auto symlink = newdir->symlink(
+      "symlink.txt"_pc, "newfile.txt", InvalidationRequired::No);
+  EXPECT_EQ(1, countEventsWithInode(buff.value(), newfile->getNodeId()));
+  EXPECT_EQ(1, countEventsWithInode(buff.value(), newfile2->getNodeId()));
+  EXPECT_EQ(1, countEventsWithInode(buff.value(), dir2->getNodeId()));
+  EXPECT_EQ(1, countEventsWithInode(buff.value(), symlink->getNodeId()));
+
+  // Ensure that directories did not get materialized a second time
+  EXPECT_EQ(1, countEventsWithInode(buff.value(), somedir->getNodeId()));
+  EXPECT_EQ(1, countEventsWithInode(buff.value(), newdir->getNodeId()));
 }
 
 TEST(TreeInode, getOrFindChildren) {

@@ -8,10 +8,12 @@
 #pragma once
 #include <folly/Synchronized.h>
 #include <folly/futures/SharedPromise.h>
+#include <folly/stop_watch.h>
 #include <chrono>
 #include <optional>
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodeBase.h"
+#include "eden/fs/inodes/InodeUtils.h"
 #include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BlobCache.h"
@@ -323,7 +325,9 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       LockedState state,
       std::shared_ptr<const Blob> blob,
       Fn&& fn,
-      ObjectFetchContext& fetchContext);
+      ObjectFetchContext& fetchContext,
+      std::optional<folly::stop_watch<std::chrono::microseconds>> watch =
+          std::nullopt);
 
   /**
    * Truncate the file and then call a function.
