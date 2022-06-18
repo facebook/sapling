@@ -32,6 +32,10 @@ JournalThreadStats& EdenStats::getJournalStatsForCurrentThread() {
   return *threadLocalJournalStats_.get();
 }
 
+ThriftThreadStats& EdenStats::getThriftStatsForCurrentThread() {
+  return *threadLocalThriftStats_.get();
+}
+
 void EdenStats::flush() {
   // This method is only really useful while testing to ensure that the service
   // data singleton instance has the latest stats. Since all our stats are now
@@ -59,6 +63,12 @@ EdenThreadStatsBase::Stat EdenThreadStatsBase::createStat(
 }
 
 void ChannelThreadStats::recordLatency(
+    StatPtr item,
+    std::chrono::microseconds elapsed) {
+  (this->*item).addValue(elapsed.count());
+}
+
+void ThriftThreadStats::recordLatency(
     StatPtr item,
     std::chrono::microseconds elapsed) {
   (this->*item).addValue(elapsed.count());

@@ -94,3 +94,10 @@ class EdenJournalTest(EdenHgTestCase):
         self.assertIn("foo", removed)
 
         self.assertNotEqual(before, to_py_struct(JournalPosition_py, result.toPosition))
+
+        counter_name = (
+            "thrift.StreamingEdenService.streamChangesSince.streaming_time_us.avg.60"
+        )
+        counters = self.get_counters()
+        self.assertIn(counter_name, counters)
+        self.assertGreater(counters[counter_name], 0)

@@ -21,6 +21,7 @@ class ObjectStoreThreadStats;
 class HgBackingStoreThreadStats;
 class HgImporterThreadStats;
 class JournalThreadStats;
+class ThriftThreadStats;
 
 class EdenStats {
  public:
@@ -61,6 +62,13 @@ class EdenStats {
 
   /**
    * This function can be called on any thread.
+   *
+   * The returned object can be used only on the current thread.
+   */
+  ThriftThreadStats& getThriftStatsForCurrentThread();
+
+  /**
+   * This function can be called on any thread.
    */
   void flush();
 
@@ -77,6 +85,8 @@ class EdenStats {
       threadLocalHgImporterStats_;
   folly::ThreadLocal<JournalThreadStats, ThreadLocalTag, void>
       threadLocalJournalStats_;
+  folly::ThreadLocal<ThriftThreadStats, ThreadLocalTag, void>
+      threadLocalThriftStats_;
 };
 
 std::shared_ptr<HgImporterThreadStats> getSharedHgImporterStatsForCurrentThread(
@@ -249,6 +259,15 @@ class JournalThreadStats : public EdenThreadStatsBase {
  public:
   Stat truncatedReads{createStat("journal.truncated_reads")};
   Stat filesAccumulated{createStat("journal.files_accumulated")};
+};
+
+class ThriftThreadStats : public EdenThreadStatsBase {
+ public:
+  Stat streamChangesSince{createStat(
+      "thrift.StreamingEdenService.streamChangesSince.streaming_time_us")};
+
+  using StatPtr = Stat ThriftThreadStats::*;
+  void recordLatency(StatPtr item, std::chrono::microseconds elapsed);
 };
 
 } // namespace facebook::eden

@@ -240,12 +240,16 @@ class ThriftLogHelper {
       folly::StringPiece itcFunctionName,
       folly::StringPiece itcFileName,
       uint32_t itcLineNumber,
+      std::shared_ptr<EdenStats> edenStats,
+      ThriftThreadStats::StatPtr statPtr,
       std::optional<pid_t> pid)
       : outstandingThriftRequests_(outstandingThriftRequests),
         requestId_(generateUniqueID()),
         itcFunctionName_(itcFunctionName),
         itcFileName_(itcFileName),
         itcLineNumber_(itcLineNumber),
+        edenStats_{std::move(edenStats)},
+        statPtr_{std::move(statPtr)},
         level_(level),
         itcLogger_(logger),
         fetchContext_{pid, itcFunctionName},
@@ -262,11 +266,13 @@ class ThriftLogHelper {
     outstandingThriftRequests_.wlock()->erase(requestId_);
     // Logging completion time for the request
     // The line number points to where the object was originally created
+    auto elapsed = itcTimer_.elapsed();
     TLOG(itcLogger_, level_, itcFileName_, itcLineNumber_) << fmt::format(
-        "{}() took {} {}",
-        itcFunctionName_,
-        itcTimer_.elapsed().count(),
-        EDEN_MICRO);
+        "{}() took {} {}", itcFunctionName_, elapsed.count(), EDEN_MICRO);
+    if (edenStats_) {
+      auto thriftStats = edenStats_->getThriftStatsForCurrentThread();
+      thriftStats.recordLatency(statPtr_, elapsed);
+    }
   }
 
   PrefetchFetchContext& getPrefetchFetchContext() {
@@ -288,6 +294,8 @@ class ThriftLogHelper {
   folly::StringPiece itcFunctionName_;
   folly::StringPiece itcFileName_;
   uint32_t itcLineNumber_;
+  std::shared_ptr<EdenStats> edenStats_;
+  ThriftThreadStats::StatPtr statPtr_;
   folly::LogLevel level_;
   folly::Logger itcLogger_;
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
@@ -350,6 +358,8 @@ facebook::eden::InodePtr inodeFromUserPath(
         functionName,                                                 \
         fileName,                                                     \
         lineNumber,                                                   \
+        nullptr,                                                      \
+        nullptr,                                                      \
         getAndRegisterClientPid());                                   \
   }(__func__, __FILE__, __LINE__))
 
@@ -374,8 +384,29 @@ facebook::eden::InodePtr inodeFromUserPath(
         functionName,                                                 \
         fileName,                                                     \
         lineNumber,                                                   \
+        nullptr,                                                      \
+        nullptr,                                                      \
         pid);                                                         \
   }(__FILE__, __LINE__))
+
+#define INSTRUMENT_THRIFT_CALL_WITH_STAT(level, stat, ...)            \
+  ([&](folly::StringPiece functionName,                               \
+       folly::StringPiece fileName,                                   \
+       uint32_t lineNumber) {                                         \
+    static folly::Logger logger("eden.thrift." + functionName.str()); \
+    TLOG(logger, folly::LogLevel::level, fileName, lineNumber)        \
+        << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")"; \
+    return std::make_unique<ThriftLogHelper>(                         \
+        this->outstandingThriftRequests_,                             \
+        logger,                                                       \
+        folly::LogLevel::level,                                       \
+        functionName,                                                 \
+        fileName,                                                     \
+        lineNumber,                                                   \
+        server_->getSharedStats(),                                    \
+        stat,                                                         \
+        getAndRegisterClientPid());                                   \
+  }(__func__, __FILE__, __LINE__))
 
 namespace facebook::eden {
 
@@ -1315,7 +1346,8 @@ class StreamingDiffCallback : public DiffCallback {
 apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
 EdenServiceHandler::streamChangesSince(
     std::unique_ptr<StreamChangesSinceParams> params) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *params->mountPoint_ref());
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_STAT(
+      DBG3, &ThriftThreadStats::streamChangesSince, *params->mountPoint_ref());
   auto mountPath = AbsolutePathPiece{*params->mountPoint_ref()};
   auto edenMount = server_->getMount(mountPath);
   const auto& fromPosition = *params->fromPosition_ref();
