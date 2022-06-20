@@ -175,7 +175,7 @@ TEST(FuseTest, destroyWithInitRace) {
         ex.what(),
         ::testing::ContainsRegex(
             "unable to transition mount .* to state RUNNING: "
-            "expected to be in state STARTING but actually in SHUT_DOWN"));
+            "expected to be in state STARTING but actually in SHUT_DOWN|DESTROYING"));
   }
 
   if (initFuseSuccessful) {
