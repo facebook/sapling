@@ -24,11 +24,6 @@ impl MononokeIdentity {
         let id_type = id_type.into();
         let id_data = id_data.into();
 
-        #[cfg(fbcode_build)]
-        {
-            crate::facebook::verify_identity_type(&id_type)?;
-        }
-
         Ok(Self { id_type, id_data })
     }
 
