@@ -140,6 +140,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   semifuture_getAttributesFromFiles(
       std::unique_ptr<GetAttributesFromFilesParams> params) override;
 
+  folly::SemiFuture<std::unique_ptr<ReaddirResult>> semifuture_readdir(
+      std::unique_ptr<ReaddirParams> params) override;
+
   folly::SemiFuture<std::unique_ptr<Glob>> semifuture_globFiles(
       std::unique_ptr<GlobParams> params) override;
 

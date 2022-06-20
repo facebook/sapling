@@ -1737,6 +1737,87 @@ SourceControlType entryTypeToThriftType(TreeEntryType type) {
 }
 } // namespace
 
+folly::SemiFuture<std::unique_ptr<ReaddirResult>>
+EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
+  auto mountPoint = params->get_mountPoint();
+  auto mountPath = AbsolutePathPiece{mountPoint};
+  auto paths = params->get_directoryPaths();
+  auto syncTimeout = getSyncTimeout(*params->sync());
+  // Get requested attributes for each path
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3, mountPoint, syncTimeout.count(), toLogArg(paths));
+  auto& fetchContext = helper->getFetchContext();
+
+  return wrapImmediateFuture(
+             std::move(helper),
+             waitForPendingNotifications(
+                 *server_->getMount(mountPath), syncTimeout)
+                 .thenValue([this,
+                             paths = std::move(paths),
+                             &fetchContext,
+                             mountPath = mountPath.copy()](auto&&) mutable {
+                   std::vector<ImmediateFuture<DirListAttributeDataOrError>>
+                       futures;
+                   futures.reserve(paths.size());
+                   auto edenMount = server_->getMount(mountPath);
+                   for (auto& path : paths) {
+                     auto inodeOr = edenMount->getInodeOrTreeOrEntry(
+                         RelativePathPiece{path}, fetchContext);
+                     futures.emplace_back(
+                         std::move(inodeOr)
+                             .thenValue([path = std::move(path)](
+                                            InodeOrTreeOrEntry tree) mutable {
+                               if (!tree.isDirectory()) {
+                                 return ImmediateFuture<
+                                     std::vector<PathComponent>>(newEdenError(
+                                     EINVAL,
+                                     EdenErrorType::ARGUMENT_ERROR,
+                                     fmt::format(
+                                         "{}: path must be a directory",
+                                         path)));
+                               }
+                               return tree.getAllEntryNames(
+                                   RelativePathPiece{path});
+                             })
+                             .thenTry([](folly::Try<std::vector<PathComponent>>
+                                             entries) {
+                               DirListAttributeDataOrError result{};
+                               if (entries.hasException()) {
+                                 result.error_ref() = newEdenError(
+                                     *entries.exception().get_exception());
+                                 return result;
+                               }
+                               std::map<std::string, FileAttributeDataOrErrorV2>
+                                   thriftEntryResult{};
+                               for (auto& entry : entries.value()) {
+                                 FileAttributeDataOrErrorV2 emptyData{};
+                                 emptyData.fileAttributeData_ref() =
+                                     FileAttributeDataV2{};
+                                 thriftEntryResult.emplace(
+                                     entry.stringPiece().str(),
+                                     std::move(emptyData));
+                               }
+
+                               result.dirListAttributeData_ref() =
+                                   std::move(thriftEntryResult);
+                               return result;
+                             })
+
+                     );
+                   }
+
+                   // Collect all futures into a single tuple
+                   return facebook::eden::collectAllSafe(std::move(futures))
+                       .thenValue([](std::vector<DirListAttributeDataOrError>&&
+                                         allRes) {
+                         auto res = std::make_unique<ReaddirResult>();
+                         res->dirLists() = std::move(allRes);
+                         return res;
+                       });
+                 }))
+      .semi();
+}
+
 folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResult>>
 EdenServiceHandler::semifuture_getAttributesFromFiles(
     std::unique_ptr<GetAttributesFromFilesParams> params) {

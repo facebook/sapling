@@ -14,11 +14,18 @@ from pathlib import Path
 from typing import List, Pattern, TypeVar, Union
 
 from facebook.eden.ttypes import (
+    DirListAttributeDataOrError,
+    EdenError,
+    EdenErrorType,
     FileAttributeData,
     FileAttributeDataOrError,
+    FileAttributeDataOrErrorV2,
+    FileAttributeDataV2,
     FileAttributes,
     GetAttributesFromFilesParams,
     GetAttributesFromFilesResult,
+    ReaddirParams,
+    ReaddirResult,
     ScmFileStatus,
     SHA1Result,
     SyncBehavior,
@@ -469,3 +476,113 @@ class ThriftTest(testcase.EdenRepoTest):
                 b"README": ScmFileStatus.REMOVED,
             },
         )
+
+    def test_readdir(self) -> None:
+        # each of these tests should arguably be their own test case,
+        # but integration tests are expensive, so we will do it all in one.
+
+        # non empty directories
+        with self.get_thrift_client_legacy() as client:
+            adir_result = DirListAttributeDataOrError(
+                dirListAttributeData={
+                    b"file": FileAttributeDataOrErrorV2(
+                        fileAttributeData=FileAttributeDataV2()
+                    )
+                }
+            )
+            bdir_result = DirListAttributeDataOrError(
+                dirListAttributeData={
+                    b"file": FileAttributeDataOrErrorV2(
+                        fileAttributeData=FileAttributeDataV2()
+                    )
+                }
+            )
+
+            expected = ReaddirResult([adir_result, bdir_result])
+            actual_result = client.readdir(
+                ReaddirParams(
+                    self.mount_path_bytes,
+                    [b"adir", b"bdir"],
+                    sync=SyncBehavior(),
+                )
+            )
+            self.assertEqual(
+                expected,
+                actual_result,
+            )
+
+            # empty directory
+            # can't prep this before hand, because the initial setup if for the
+            # backing repo, and we can not commit an empty directory, so it be added
+            # via the backing repo.
+            path = Path(self.mount) / "emptydir"
+            os.mkdir(path)
+
+            expected = ReaddirResult(
+                [DirListAttributeDataOrError(dirListAttributeData={})]
+            )
+            actual = client.readdir(
+                ReaddirParams(
+                    self.mount_path_bytes,
+                    [b"emptydir"],
+                    sync=SyncBehavior(),
+                )
+            )
+            self.assertEqual(expected, actual)
+
+            # non existent directory
+            expected = ReaddirResult(
+                [
+                    DirListAttributeDataOrError(
+                        error=EdenError(
+                            message="ddir: No such file or directory",
+                            errorCode=2,
+                            errorType=EdenErrorType.POSIX_ERROR,
+                        )
+                    )
+                ]
+            )
+            actual = client.readdir(
+                ReaddirParams(
+                    self.mount_path_bytes,
+                    [b"ddir"],
+                    sync=SyncBehavior(),
+                )
+            )
+            self.assertEqual(expected, actual)
+
+            # file
+            expected = ReaddirResult(
+                [
+                    DirListAttributeDataOrError(
+                        error=EdenError(
+                            message="hello: path must be a directory",
+                            errorCode=22,
+                            errorType=EdenErrorType.ARGUMENT_ERROR,
+                        )
+                    )
+                ]
+            )
+            actual = client.readdir(
+                ReaddirParams(
+                    self.mount_path_bytes,
+                    [b"hello"],
+                    sync=SyncBehavior(),
+                )
+            )
+            self.assertEqual(expected, actual)
+
+            # empty string
+            actual = client.readdir(
+                ReaddirParams(
+                    self.mount_path_bytes,
+                    [b""],
+                    sync=SyncBehavior(),
+                )
+            )
+            # access the data to ensure this does not throw and we have legit
+            # data in the response
+            actual.dirLists[0].get_dirListAttributeData()
+            self.assertIn(b"test_fetch1", actual.dirLists[0].get_dirListAttributeData())
+            self.assertIn(b"hello", actual.dirLists[0].get_dirListAttributeData())
+            self.assertIn(b"cdir", actual.dirLists[0].get_dirListAttributeData())
