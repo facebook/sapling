@@ -49,6 +49,18 @@ queries! {
         (source_name, target_repo_id, target_bookmark, source_bcs_id, target_bcs_id, sync_config_version)
         VALUES {values}"
     }
+
+    read GetReverseMappingEntry(
+        target_repo_id: i64,
+        target_bookmark: String,
+        source_bcs_id: ChangesetId,
+    ) -> (String, ChangesetId, SyncConfigVersion) {
+        "SELECT source_name, target_bcs_id, sync_config_version
+        FROM megarepo_changeset_mapping
+        WHERE target_repo_id = {target_repo_id}
+        AND target_bookmark = {target_bookmark}
+        AND source_bcs_id = {source_bcs_id}"
+    }
 }
 
 pub struct MegarepoMapping {
@@ -276,6 +288,68 @@ impl MegarepoMapping {
         }))
     }
 
+    // Reverse lookup of the previous query
+    // It is possible to have same source_cs_id mapped to the different targets
+    // but this method may return stale(not complete) set of mappings.
+    pub async fn get_reverse_mapping_entry(
+        &self,
+        ctx: &CoreContext,
+        target: &Target,
+        source_cs_id: ChangesetId,
+    ) -> Result<Vec<MegarepoMappingEntry>, Error> {
+        let entries = self
+            .get_reverse_mapping_entry_impl(
+                ctx,
+                target,
+                source_cs_id,
+                PerfCounterType::SqlReadsReplica,
+                &self.connections.read_connection,
+            )
+            .await?;
+
+        if !entries.is_empty() {
+            return Ok(entries);
+        }
+
+        self.get_reverse_mapping_entry_impl(
+            ctx,
+            target,
+            source_cs_id,
+            PerfCounterType::SqlReadsMaster,
+            &self.connections.read_master_connection,
+        )
+        .await
+    }
+
+    async fn get_reverse_mapping_entry_impl(
+        &self,
+        ctx: &CoreContext,
+        target: &Target,
+        source_cs_id: ChangesetId,
+        sql_perf_counter: PerfCounterType,
+        connection: &Connection,
+    ) -> Result<Vec<MegarepoMappingEntry>, Error> {
+        ctx.perf_counters().increment_counter(sql_perf_counter);
+        let rows = GetReverseMappingEntry::query(
+            connection,
+            &target.repo_id,
+            &target.bookmark,
+            &source_cs_id,
+        )
+        .await?;
+
+        Ok(rows
+            .into_iter()
+            .map(|x| MegarepoMappingEntry {
+                source_name: SourceName::new(x.0),
+                source_cs_id: source_cs_id.clone(),
+                sync_config_version: x.2,
+                target: target.clone(),
+                target_cs_id: x.1,
+            })
+            .collect())
+    }
+
     /// Add a mapping from a source commit to a target commit
     #[allow(clippy::ptr_arg)]
     pub async fn insert_source_target_cs_mapping(
@@ -343,7 +417,7 @@ mod test {
     use super::*;
     use fbinit::FacebookInit;
     use maplit::btreemap;
-    use mononoke_types_mocks::changesetid::{ONES_CSID, TWOS_CSID};
+    use mononoke_types_mocks::changesetid::{ONES_CSID, THREES_CSID, TWOS_CSID};
 
     #[fbinit::test]
     async fn test_simple_mapping(fb: FacebookInit) -> Result<(), Error> {
@@ -389,6 +463,50 @@ mod test {
             .await?;
 
         assert_eq!(res.unwrap().sync_config_version, version);
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_reverse_mapping(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let mapping = MegarepoMapping::with_sqlite_in_memory()?;
+
+        let target = Target {
+            repo_id: 0,
+            bookmark: "book".to_string(),
+            ..Default::default()
+        };
+
+        let source_csid = ONES_CSID;
+        let target_csid = TWOS_CSID;
+        let version = "version".to_string();
+
+        mapping
+            .insert_source_target_cs_mapping(
+                &ctx,
+                &SourceName::new("source_name"),
+                &target,
+                source_csid,
+                target_csid,
+                &version,
+            )
+            .await?;
+
+        let mut res = mapping
+            .get_reverse_mapping_entry(&ctx, &target, source_csid)
+            .await?;
+
+        assert_eq!(res.len(), 1);
+
+        assert_eq!(res.pop().unwrap().target_cs_id, target_csid);
+
+        // query non-existent source_cs
+        let res = mapping
+            .get_reverse_mapping_entry(&ctx, &target, THREES_CSID)
+            .await?;
+
+        assert_eq!(res.len(), 0);
 
         Ok(())
     }
