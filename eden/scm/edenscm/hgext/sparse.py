@@ -2165,6 +2165,9 @@ def debugsparseexplainmatch(ui, repo, *args, **opts):
     config = None
     profile = opts.get("sparse_profile")
     if profile:
+        if not repo.wvfs.isfile(profile):
+            raise error.Abort(_("no such profile %s") % (profile))
+
         raw = "%%include %s" % profile
         config = readsparseconfig(repo, raw=raw, filename=profile)
     elif not repo.localvfs.exists("sparse"):
