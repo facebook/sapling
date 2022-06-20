@@ -2251,10 +2251,11 @@ struct stat EdenMount::initStatData() const {
 }
 
 std::optional<ActivityBuffer> EdenMount::initActivityBuffer() {
-  return serverState_->getEdenConfig()->enableActivityBuffer.getValue()
-      ? std::make_optional<ActivityBuffer>(
-            serverState_->getEdenConfig()->ActivityBufferMaxEvents.getValue())
-      : std::nullopt;
+  if (serverState_->getEdenConfig()->enableActivityBuffer.getValue()) {
+    return std::make_optional<ActivityBuffer>(
+        serverState_->getEdenConfig()->ActivityBufferMaxEvents.getValue());
+  }
+  return std::nullopt;
 }
 
 void EdenMount::addInodeMaterializeEvent(
