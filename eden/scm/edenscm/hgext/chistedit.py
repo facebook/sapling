@@ -27,6 +27,7 @@ from __future__ import print_function
 
 import functools
 import os
+from typing import List, Optional
 
 from edenscm.mercurial import cmdutil, destutil, error, node, registrar, scmutil, util
 from edenscm.mercurial.i18n import _
@@ -142,7 +143,7 @@ class histeditrule(object):
 
 
 # ============ EVENTS ===============
-def movecursor(state, oldpos, newpos):
+def movecursor(state, oldpos, newpos) -> None:
     """Change the rule/changeset that the cursor is pointing to, regardless of
     current mode (you can switch between patches from the view patch window)."""
     state["pos"] = newpos
@@ -162,16 +163,16 @@ def movecursor(state, oldpos, newpos):
     state["modes"][MODE_PATCH]["line_offset"] = 0
 
 
-def changemode(state, mode):
+def changemode(state, mode) -> None:
     curmode, _ = state["mode"]
     state["mode"] = (mode, curmode)
 
 
-def makeselection(state, pos):
+def makeselection(state, pos) -> None:
     state["selected"] = pos
 
 
-def swap(state, oldpos, newpos):
+def swap(state, oldpos, newpos) -> None:
     """Swap two positions and calculate necessary conflicts in
     O(|newpos-oldpos|) time"""
 
@@ -194,14 +195,14 @@ def swap(state, oldpos, newpos):
         makeselection(state, newpos)
 
 
-def changeaction(state, pos, action):
+def changeaction(state, pos, action) -> None:
     """Change the action state on the given position to the new action"""
     rules = state["rules"]
     assert 0 <= pos < len(rules)
     rules[pos].action = action
 
 
-def cycleaction(state, pos, next=False):
+def cycleaction(state, pos, next: bool = False) -> None:
     """Changes the action state the next or the previous action from
     the action list"""
     rules = state["rules"]
@@ -218,7 +219,7 @@ def cycleaction(state, pos, next=False):
     changeaction(state, pos, KEY_LIST[index % len(KEY_LIST)])
 
 
-def changeview(state, delta, unit):
+def changeview(state, delta, unit) -> None:
     """Change the region of whatever is being viewed (a patch or the list of
     changesets). 'delta' is an amount (+/- 1) and 'unit' is 'page' or 'line'."""
     mode, _ = state["mode"]
@@ -234,7 +235,7 @@ def changeview(state, delta, unit):
     mode_state["line_offset"] = max(0, min(max_offset, newline))
 
 
-def event(state, ch):
+def event(state, ch: str) -> Optional[int]:
     """Change state based on the current character input
 
     This takes the current state and based on the current character input from
@@ -300,7 +301,7 @@ def event(state, ch):
         return E_LINEUP
 
 
-def makecommands(rules):
+def makecommands(rules) -> List[str]:
     """Returns a list of commands consumable by histedit --commands based on
     our list of rules"""
     commands = []
@@ -309,7 +310,7 @@ def makecommands(rules):
     return commands
 
 
-def addln(win, y, x, line, color=None):
+def addln(win, y, x, line: str, color=None) -> None:
     """Add a line to the given window left padding but 100% filled with
     whitespace characters, so that the color appears on the whole line"""
     maxy, maxx = win.getmaxyx()
