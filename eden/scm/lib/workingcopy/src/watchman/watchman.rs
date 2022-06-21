@@ -43,6 +43,12 @@ impl Watchman {
         manifest: Arc<RwLock<TreeManifest>>,
         store: ArcReadFileContents,
     ) -> Result<impl Iterator<Item = Result<PendingChangeResult>>> {
+        let state = WatchmanState::new(WatchmanTreeState {
+            treestate: treestate.lock(),
+        })?;
+
+        let result = async_runtime::block_on(self.query_result(&state))?;
+
         let file_change_detector = FileChangeDetector::new(
             treestate.clone(),
             self.vfs.clone(),
@@ -50,20 +56,13 @@ impl Watchman {
             manifest,
             store,
         );
-        let state = WatchmanState::new(
-            WatchmanTreeState {
-                treestate: treestate.lock(),
-            },
-            file_change_detector,
-        )?;
-        let result = async_runtime::block_on(self.query_result(&state))?;
+        let mut pending_changes = state.merge(result, file_change_detector)?;
 
-        let treestate = WatchmanTreeState {
+        pending_changes.persist(WatchmanTreeState {
             treestate: treestate.lock(),
-        };
+        })?;
 
-        let pending_changes = state.merge(result, treestate);
-        pending_changes.map(|result| result.into_iter())
+        Ok(pending_changes.into_iter())
     }
 
     async fn query_result(&self, state: &WatchmanState) -> Result<QueryResult<StatusQuery>> {

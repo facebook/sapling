@@ -32,16 +32,12 @@ query_result_type! {
 
 pub struct WatchmanState {
     treestate_needs_check: HashSet<RepoPathBuf>,
-    file_change_detector: Box<dyn FileChangeDetectorTrait>,
     clock: Option<Clock>,
     treestate_errors: Vec<Error>,
 }
 
 impl WatchmanState {
-    pub fn new(
-        mut treestate: impl WatchmanTreeStateRead,
-        file_change_detector: impl FileChangeDetectorTrait + 'static,
-    ) -> Result<Self> {
+    pub fn new(mut treestate: impl WatchmanTreeStateRead) -> Result<Self> {
         let (needs_check, errors): (Vec<_>, Vec<_>) = treestate
             .list_needs_check()?
             .into_iter()
@@ -55,7 +51,6 @@ impl WatchmanState {
 
         Ok(WatchmanState {
             treestate_needs_check: needs_check,
-            file_change_detector: Box::new(file_change_detector),
             clock: treestate.get_clock()?,
             treestate_errors: errors,
         })
@@ -66,10 +61,10 @@ impl WatchmanState {
     }
 
     pub fn merge(
-        mut self,
+        self,
         result: QueryResult<StatusQuery>,
-        mut treestate: impl WatchmanTreeStateWrite,
-    ) -> Result<Vec<Result<PendingChangeResult>>> {
+        mut file_change_detector: impl FileChangeDetectorTrait + 'static,
+    ) -> Result<WatchmanPendingChanges> {
         let (needs_check, errors): (Vec<_>, Vec<_>) = result
             .files
             .unwrap_or_default()
@@ -93,7 +88,7 @@ impl WatchmanState {
         let mut needs_mark: Vec<RepoPathBuf> = vec![];
         let mut pending_changes = needs_check
             .into_iter()
-            .filter_map(|path| match self.file_change_detector.has_changed(&path) {
+            .filter_map(|path| match file_change_detector.has_changed(&path) {
                 Ok(FileChangeResult::Yes(change)) => {
                     needs_mark.push(path);
                     Some(Ok(PendingChangeResult::File(change)))
@@ -110,7 +105,7 @@ impl WatchmanState {
             .collect::<Vec<_>>();
         pending_changes.extend(errors.into_iter().map(Err));
 
-        for result in self.file_change_detector.resolve_maybes() {
+        for result in file_change_detector.resolve_maybes() {
             match result {
                 Ok(ResolvedFileChangeResult::Yes(change)) => {
                     match change {
@@ -129,22 +124,48 @@ impl WatchmanState {
             }
         }
 
-        for path in needs_clear {
+        Ok(WatchmanPendingChanges {
+            pending_changes,
+            needs_clear,
+            needs_mark,
+            clock: result.clock,
+        })
+    }
+}
+
+pub struct WatchmanPendingChanges {
+    pending_changes: Vec<Result<PendingChangeResult>>,
+    needs_clear: Vec<RepoPathBuf>,
+    needs_mark: Vec<RepoPathBuf>,
+    clock: Clock,
+}
+
+impl WatchmanPendingChanges {
+    pub fn persist(&mut self, mut treestate: impl WatchmanTreeStateWrite) -> Result<()> {
+        for path in self.needs_clear.iter() {
             if let Err(e) = treestate.clear_needs_check(&path) {
                 // We can still build a valid result if we fail to clear the
                 // needs check flag. Propagate the error to the caller but allow
-                // the merge to continue.
-                pending_changes.push(Err(e));
+                // the persist to continue.
+                self.pending_changes.push(Err(e));
             }
         }
 
-        for path in needs_mark {
+        for path in self.needs_mark.iter() {
             treestate.mark_needs_check(&path)?;
         }
 
-        treestate.set_clock(result.clock)?;
+        treestate.set_clock(self.clock.clone())?;
+        Ok(())
+    }
+}
 
-        Ok(pending_changes)
+impl IntoIterator for WatchmanPendingChanges {
+    type Item = Result<PendingChangeResult>;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.pending_changes.into_iter()
     }
 }
 
@@ -369,9 +390,11 @@ mod tests {
         ];
 
         let test = WatchmanStateTest::new(events);
-        let state = WatchmanState::new(test.treestate(), test.file_change_detector()).unwrap();
+        let state = WatchmanState::new(test.treestate()).unwrap();
 
-        let pending_changes = state.merge(test.query_result(), test.treestate()).unwrap();
+        let pending_changes = state
+            .merge(test.query_result(), test.file_change_detector())
+            .unwrap();
 
         assert_eq!(
             to_string(test.expected_pending_changes()),
