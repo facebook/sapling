@@ -80,7 +80,7 @@ Make client repo
   $ cd "$TESTTMP"
 
 Two missing blobs that were uploaded
-  $ mononoke_hg_sync repo-hg 1 --generate-bundles --verify-lfs-blob-presence "${lfs_uri_other}/objects/batch" 2>&1 | grep missing
+  $ mononoke_hg_sync repo-hg 1 --verify-lfs-blob-presence "${lfs_uri_other}/objects/batch" 2>&1 | grep missing
   * missing * object, uploading (glob)
   * missing * object, uploading (glob)
 

@@ -84,7 +84,7 @@ Manually create a bonsai that would not normally be produced because it has unne
   * Current position of BookmarkName { bookmark: "master_bookmark" } is Some(ChangesetId(Blake2(d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da))) (glob)
 
 Sync to backup repo
-  $ mononoke_backup_sync backup sync-loop 0 --generate-bundles 2>&1 | grep 'should map' | head -n 1
+  $ mononoke_backup_sync backup sync-loop 0 2>&1 | grep 'should map' | head -n 1
 
 Check that bonsais are the same
   $ mononoke_admin bonsai-fetch master_bookmark --json 2> /dev/null | jq .

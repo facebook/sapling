@@ -66,7 +66,7 @@ Sync it to another client
   $ cd $TESTTMP
 
 Sync a pushrebase bookmark move
-  $ mononoke_hg_sync repo-hg 1 --generate-bundles 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo-hg 1 2>&1 | grep 'successful sync'
   * successful sync of entries [2] (glob)
 
 Move bookmark to another position, and make sure hg sync job fails because of
@@ -75,12 +75,12 @@ pushkey erro
   $ hg book master_bookmark -r "min(all())" -f
 
   $ cd $TESTTMP
-  $ mononoke_hg_sync repo-hg 2 --generate-bundles 2>&1 | grep 'error:pushkey'
+  $ mononoke_hg_sync repo-hg 2 2>&1 | grep 'error:pushkey'
   replay failed: error:pushkey
   * replay failed: error:pushkey (glob)
 
 Now make sure it replays correctly
-  $ mononoke_hg_sync repo-hg 2 --use-hg-server-bookmark-value-if-mismatch --generate-bundles 2>&1 | grep 'master_bookmark'
+  $ mononoke_hg_sync repo-hg 2 --use-hg-server-bookmark-value-if-mismatch 2>&1 | grep 'master_bookmark'
   * master_bookmark is expected to point to *, but it actually points to * on hg server. Forcing master_bookmark to point to * (glob)
   $ cd $TESTTMP/repo-hg
   $ hg log -r master_bookmark

@@ -92,16 +92,16 @@ Sync it to another client
   $ cd $TESTTMP
 
 Sync a pushrebase bookmark move
-  $ mononoke_hg_sync repo-hg 1 --generate-bundles 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo-hg 1 2>&1 | grep 'successful sync'
   * successful sync of entries [2] (glob)
 
-  $ mononoke_hg_sync repo-hg 2 --generate-bundles 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo-hg 2 2>&1 | grep 'successful sync'
   * successful sync of entries [3] (glob)
 
-  $ mononoke_hg_sync repo-hg 3 --generate-bundles 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo-hg 3 2>&1 | grep 'successful sync'
   * successful sync of entries [4] (glob)
 
-  $ mononoke_hg_sync repo-hg 4 --generate-bundles 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo-hg 4 2>&1 | grep 'successful sync'
   * successful sync of entries [5] (glob)
 
   $ mononoke_hg_sync_loop_regenerate repo-hg 5  2>&1 | grep 'successful sync'

@@ -369,7 +369,7 @@ function mononoke_hg_sync_loop_regenerate {
     --retry-num 1 \
     --repo-id 0 \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
-    ssh://user@dummy/"$repo" --generate-bundles sync-loop --start-id "$start_id" "$@"
+    ssh://user@dummy/"$repo" sync-loop --start-id "$start_id" "$@"
 }
 
 function mononoke_admin {

@@ -54,13 +54,13 @@ Push to Mononoke
 
 Sync it to another client should fail, because of readonly repo
   $ cd $TESTTMP
-  $ mononoke_backup_sync backup sync-once 2 --generate-bundles 2>&1 | grep 'Repo is locked' | sed -e 's/^[ ]*//' | sort --unique
+  $ mononoke_backup_sync backup sync-once 2 2>&1 | grep 'Repo is locked' | sed -e 's/^[ ]*//' | sort --unique
   * Repo is locked: Set by config option (glob)
 
 
 Sync it to another client with bypass-readonly should success
   $ cd $TESTTMP
-  $ mononoke_backup_sync backup sync-once 2 --generate-bundles --bypass-readonly 2>&1 | grep 'successful sync'
+  $ mononoke_backup_sync backup sync-once 2 --bypass-readonly 2>&1 | grep 'successful sync'
   * successful sync of entries [3] (glob)
 
 Check synced commit in backup repo

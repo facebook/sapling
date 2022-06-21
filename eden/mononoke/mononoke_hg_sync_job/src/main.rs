@@ -83,7 +83,6 @@ const ARG_DARKSTORM_BACKUP_REPO_GROUP: &str = "darkstorm-backup-repo";
 const ARG_DARKSTORM_BACKUP_REPO_ID: &str = "darkstorm-backup-repo-id";
 const ARG_DARKSTORM_BACKUP_REPO_NAME: &str = "darkstorm-backup-repo-name";
 const ARG_BYPASS_READONLY: &str = "bypass-readonly";
-const GENERATE_BUNDLES: &str = "generate-bundles";
 const MODE_SYNC_ONCE: &str = "sync-once";
 const MODE_SYNC_LOOP: &str = "sync-loop";
 const LATEST_REPLAYED_REQUEST_KEY: &str = "latest-replayed-request";
@@ -1157,14 +1156,6 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .takes_value(true)
                 .required(false)
                 .help("unused"),
-        )
-        .arg(
-            // TODO(yancouto): Remove once it's not used anymore
-            Arg::with_name(GENERATE_BUNDLES)
-                .long(GENERATE_BUNDLES)
-                .takes_value(false)
-                .required(false)
-                .hidden(true),
         )
         .arg(
             Arg::with_name(ARG_BOOKMARK_REGEX_FORCE_GENERATE_LFS)

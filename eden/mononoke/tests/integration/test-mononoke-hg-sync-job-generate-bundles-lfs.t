@@ -129,13 +129,13 @@ Sync it to another client
   $ cd "$TESTTMP"
 
 Sync a lfs pushrebase
-  $ mononoke_hg_sync repo-hg 1 --generate-bundles 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo-hg 1 2>&1 | grep 'successful sync'
   * successful sync of entries [2] (glob)
-  $ mononoke_hg_sync repo-hg 2 --generate-bundles 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo-hg 2 2>&1 | grep 'successful sync'
   * successful sync of entries [3] (glob)
-  $ mononoke_hg_sync repo-hg 3 --generate-bundles 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo-hg 3 2>&1 | grep 'successful sync'
   * successful sync of entries [4] (glob)
-  $ mononoke_hg_sync repo-hg 4 --generate-bundles 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo-hg 4 2>&1 | grep 'successful sync'
   * successful sync of entries [5] (glob)
   $ cd "$TESTTMP/repo-hg"
   $ hg debugfilerev lfs-largefile -v -r 2
@@ -200,7 +200,7 @@ Sync a pushrebase with lfs hg sync disabled in the config
   $ rm -rf mononoke-config
   $ LFS_THRESHOLD="20" LFS_BLOB_HG_SYNC_JOB=false setup_common_config blob_files
   $ cd "$TESTTMP"
-  $ mononoke_hg_sync repo-hg-2 1 --generate-bundles 2>&1 | grep 'successful sync'
+  $ mononoke_hg_sync repo-hg-2 1 2>&1 | grep 'successful sync'
   * successful sync of entries [2] (glob)
   $ cd "$TESTTMP/repo-hg-2"
   $ hg debugfilerev lfs-largefile -v -r master_bookmark
@@ -210,7 +210,7 @@ Sync a pushrebase with lfs hg sync disabled in the config
 
 Now override lfs sync config option via command line
   $ cd "$TESTTMP"
-  $ mononoke_hg_sync repo-hg-2 2 --generate-bundles --bookmark-regex-force-generate-lfs "master.+" 2>&1 | grep 'force generating lfs bundle'
+  $ mononoke_hg_sync repo-hg-2 2 --bookmark-regex-force-generate-lfs "master.+" 2>&1 | grep 'force generating lfs bundle'
   * force generating lfs bundle for master_bookmark (glob)
   $ cd "$TESTTMP/repo-hg-2"
   $ hg debugfilerev lfs-largefile -v -r master_bookmark
@@ -220,7 +220,7 @@ Now override lfs sync config option via command line
 
 Now change the regex, make sure non-lfs push was used
   $ cd "$TESTTMP"
-  $ mononoke_hg_sync repo-hg-2 3 --generate-bundles --bookmark-regex-force-generate-lfs "someotherregex" 2>&1 | grep 'force generating lfs bundle'
+  $ mononoke_hg_sync repo-hg-2 3 --bookmark-regex-force-generate-lfs "someotherregex" 2>&1 | grep 'force generating lfs bundle'
   [1]
   $ cd "$TESTTMP/repo-hg-2"
   $ hg debugfilerev lfs-renamed-largefile -v -r master_bookmark
