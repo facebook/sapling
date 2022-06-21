@@ -191,6 +191,8 @@ import sys
 import weakref
 from typing import Callable, Iterable, Optional, Tuple
 
+from bindings import workingcopy
+
 from edenscm.mercurial import (
     blackbox,
     context,
@@ -932,6 +934,17 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
             return bail("listing ignored files")
         if getattr(self._repo, "submodule", None):
             return bail("submodule")
+
+        if self.ui.configbool("workingcopy", "rustpendingchanges"):
+            fsmonitor = workingcopy.watchman(self.opener.join(""))
+            pending_changes = fsmonitor.pendingchanges(
+                self.dirstate._map._tree,
+                self.dirstate._lastnormaltime,
+                self.dirstate._repo[self.dirstate.p1()].manifest(),
+                self.dirstate._repo.fileslog.filescmstore,
+            )
+            return list(pending_changes)
+
         if not self._watchmanclient.available():
             return bail("client unavailable")
 

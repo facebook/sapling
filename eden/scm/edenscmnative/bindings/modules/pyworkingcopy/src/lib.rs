@@ -11,6 +11,7 @@ use std::cell::RefCell;
 use std::sync::Arc;
 
 use anyhow::Error;
+use anyhow::Result;
 use cpython::*;
 use cpython_ext::convert::ImplInto;
 use cpython_ext::error::ResultPyErrExt;
@@ -27,6 +28,7 @@ use workingcopy::filesystem::PendingChanges;
 use workingcopy::filesystem::PhysicalFileSystem;
 use workingcopy::walker::WalkError;
 use workingcopy::walker::Walker;
+use workingcopy::watchman::watchman::Watchman;
 
 type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 
@@ -36,6 +38,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<walker>(py)?;
     m.add_class::<pendingchanges>(py)?;
     m.add_class::<physicalfilesystem>(py)?;
+    m.add_class::<watchman>(py)?;
     m.add_class::<status>(py)?;
     Ok(m)
 }
@@ -70,6 +73,60 @@ py_class!(class physicalfilesystem |py| {
     }
 });
 
+py_class!(class watchman |py| {
+    data filesystem: RefCell<Watchman>;
+
+    def __new__(_cls, root: PyPathBuf) -> PyResult<watchman> {
+        watchman::create_instance(py, RefCell::new(Watchman::new(root.to_path_buf()).map_pyerr(py)?))
+    }
+
+    def pendingchanges(
+        &self,
+        pytreestate: treestate,
+        last_write: u32,
+        pymanifest: treemanifest,
+        pystore: ImplInto<ArcReadFileContents>,
+    ) -> PyResult<watchmanpendingchanges> {
+        let fs = self.filesystem(py);
+        let manifest = pymanifest.get_underlying(py);
+        let store = pystore.into();
+        let treestate = pytreestate.get_state(py);
+        let last_write = last_write.into();
+        let pending = Box::new(fs.borrow()
+            .pending_changes(treestate, last_write, manifest, store)
+            .map_pyerr(py)?);
+        watchmanpendingchanges::create_instance(py, RefCell::new(pending))
+    }
+});
+
+py_class!(class watchmanpendingchanges |py| {
+    data inner: RefCell<Box<dyn Iterator<Item = Result<PendingChangeResult>> + Sync + Send>>;
+
+    def __iter__(&self) -> PyResult<Self> {
+        Ok(self.clone_ref(py))
+    }
+
+    def __next__(&self) -> PyResult<Option<(PyPathBuf, bool)>> {
+        loop {
+            match self.inner(py).borrow_mut().next() {
+                Some(Ok(change)) => {
+                    if let PendingChangeResult::File(change_type) = change {
+                        return Ok(Some(match change_type {
+                            ChangeType::Changed(path) => (path.into(), true),
+                            ChangeType::Deleted(path) => (path.into(), false),
+                        }));
+                    }
+                },
+                Some(Err(_)) => {
+                    // TODO: Add error handling
+                    continue
+                },
+                None => return Ok(None),
+            };
+        }
+    }
+});
+
 py_class!(class pendingchanges |py| {
     data inner: RefCell<PendingChanges<Arc<dyn Matcher + Sync + Send>>>;
 
@@ -97,7 +154,6 @@ py_class!(class pendingchanges |py| {
         }
     }
 });
-
 py_class!(class walker |py| {
     data inner: RefCell<Walker<Arc<dyn Matcher + Sync + Send>>>;
     data _errors: RefCell<Vec<Error>>;
