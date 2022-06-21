@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use bookmarks::{BookmarkUpdateReason, BundleReplay};
+use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::{BookmarkKind, BookmarkName};
 use bytes::Bytes;
 use context::CoreContext;
@@ -29,8 +29,6 @@ pub struct DeleteBookmarkOp<'op> {
     auth: BookmarkMoveAuthorization<'op>,
     kind_restrictions: BookmarkKindRestrictions,
     pushvars: Option<&'op HashMap<String, Bytes>>,
-    // TODO(yancouto): delete
-    bundle_replay: Option<&'op dyn BundleReplay>,
 }
 
 impl<'op> DeleteBookmarkOp<'op> {
@@ -46,7 +44,6 @@ impl<'op> DeleteBookmarkOp<'op> {
             auth: BookmarkMoveAuthorization::User,
             kind_restrictions: BookmarkKindRestrictions::AnyKind,
             pushvars: None,
-            bundle_replay: None,
         }
     }
 
@@ -73,11 +70,6 @@ impl<'op> DeleteBookmarkOp<'op> {
 
     pub fn with_pushvars(mut self, pushvars: Option<&'op HashMap<String, Bytes>>) -> Self {
         self.pushvars = pushvars;
-        self
-    }
-
-    pub fn with_bundle_replay_data(mut self, bundle_replay: Option<&'op dyn BundleReplay>) -> Self {
-        self.bundle_replay = bundle_replay;
         self
     }
 

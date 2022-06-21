@@ -1128,7 +1128,6 @@ where
                     &pushrebase_flags,
                     &bookmark,
                     &rewritten_list,
-                    None,
                     &[CrossRepoSyncPushrebaseHook::new(
                         hash,
                         self.repos.clone(),

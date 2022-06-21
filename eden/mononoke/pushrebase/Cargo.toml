@@ -39,7 +39,6 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
-mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 rand = { version = "0.8", features = ["small_rng"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -33,7 +33,6 @@ lazy_static = "1.0"
 live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
-mercurial_bundle_replay_data = { version = "0.1.0", path = "../../mercurial/bundle_replay_data" }
 mercurial_bundles = { version = "0.1.0", path = "../../mercurial/bundles" }
 mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
 mercurial_mutation = { version = "0.1.0", path = "../../mercurial/mutation" }

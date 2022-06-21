@@ -84,7 +84,6 @@ pub async fn create_deletion_head_commits<'a>(
             pushrebase_flags,
             &head_bookmark,
             &hashset![bcs],
-            None,
             &[],
         )
         .await?;

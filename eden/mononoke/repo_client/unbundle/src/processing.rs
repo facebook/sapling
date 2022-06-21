@@ -12,14 +12,13 @@ use crate::{
 };
 use anyhow::{anyhow, Context, Error, Result};
 use blobrepo::scribe::{log_commits_to_scribe_raw, ScribeCommitInfo};
-use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplay};
+use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use bookmarks_movement::{
     BookmarkKindRestrictions, BookmarkMovementError, BookmarkUpdatePolicy, BookmarkUpdateTargets,
 };
 use bytes::Bytes;
 use context::CoreContext;
 use hooks::HookManager;
-use mercurial_bundle_replay_data::BundleReplayData;
 use mercurial_mutation::HgMutationStoreRef;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
@@ -172,7 +171,6 @@ async fn run_push(
         changegroup_id,
         mut bookmark_pushes,
         mutations,
-        maybe_raw_bundle2_id,
         maybe_pushvars,
         non_fast_forward_policy,
         uploaded_bonsais,
@@ -211,10 +209,6 @@ async fn run_push(
     let mut maybe_bookmark = None;
     if let Some(bookmark_push) = bookmark_pushes.pop() {
         bookmark_ids.push(bookmark_push.part_id);
-        let bundle_replay_data = maybe_raw_bundle2_id.map(BundleReplayData::new);
-        let bundle_replay_data = bundle_replay_data
-            .as_ref()
-            .map(|data| data as &dyn BundleReplay);
 
         plain_push_bookmark(
             ctx,
@@ -229,7 +223,6 @@ async fn run_push(
             non_fast_forward_policy,
             BookmarkUpdateReason::Push,
             maybe_pushvars.as_ref(),
-            bundle_replay_data,
             hook_rejection_remapper.as_ref(),
             cross_repo_push_source,
             readonly_fetcher,
@@ -271,7 +264,6 @@ async fn run_infinitepush(
         changegroup_id,
         maybe_bookmark_push,
         mutations,
-        maybe_raw_bundle2_id,
         uploaded_bonsais,
         uploaded_hg_changeset_ids,
     } = action;
@@ -285,11 +277,6 @@ async fn run_infinitepush(
 
     let bookmark = match maybe_bookmark_push {
         Some(bookmark_push) => {
-            let bundle_replay_data = maybe_raw_bundle2_id.map(BundleReplayData::new);
-            let bundle_replay_data = bundle_replay_data
-                .as_ref()
-                .map(|data| data as &dyn BundleReplay);
-
             infinitepush_scratch_bookmark(
                 ctx,
                 repo,
@@ -299,7 +286,6 @@ async fn run_infinitepush(
                 bookmark_attrs,
                 hook_manager,
                 &bookmark_push,
-                bundle_replay_data,
                 cross_repo_push_source,
                 readonly_fetcher,
             )
@@ -345,7 +331,6 @@ async fn run_pushrebase(
     let PostResolvePushRebase {
         bookmark_push_part_id,
         bookmark_spec,
-        maybe_hg_replay_data,
         maybe_pushvars,
         commonheads,
         uploaded_bonsais,
@@ -371,7 +356,6 @@ async fn run_pushrebase(
                 uploaded_bonsais,
                 &onto_bookmark,
                 maybe_pushvars.as_ref(),
-                &maybe_hg_replay_data,
                 bookmark_attrs,
                 infinitepush_params,
                 hook_manager,
@@ -419,7 +403,6 @@ async fn run_pushrebase(
                 uploaded_bonsais,
                 plain_push,
                 maybe_pushvars.as_ref(),
-                &maybe_hg_replay_data,
                 bookmark_attrs,
                 infinitepush_params,
                 hook_rejection_remapper.as_ref(),
@@ -472,17 +455,12 @@ async fn run_bookmark_only_pushrebase(
     );
     let PostResolveBookmarkOnlyPushRebase {
         bookmark_push,
-        maybe_raw_bundle2_id,
         maybe_pushvars,
         non_fast_forward_policy,
         hook_rejection_remapper,
     } = action;
 
     let part_id = bookmark_push.part_id;
-    let bundle_replay_data = maybe_raw_bundle2_id.map(BundleReplayData::new);
-    let bundle_replay_data = bundle_replay_data
-        .as_ref()
-        .map(|data| data as &dyn BundleReplay);
 
     // This is a bookmark-only push, so there are no new changesets.
     let new_changesets = HashMap::new();
@@ -500,7 +478,6 @@ async fn run_bookmark_only_pushrebase(
         non_fast_forward_policy,
         BookmarkUpdateReason::Pushrebase,
         maybe_pushvars.as_ref(),
-        bundle_replay_data,
         hook_rejection_remapper.as_ref(),
         cross_repo_push_source,
         readonly_fetcher,
@@ -528,7 +505,6 @@ async fn normal_pushrebase<'a>(
     changesets: HashSet<BonsaiChangeset>,
     bookmark: &'a BookmarkName,
     maybe_pushvars: Option<&'a HashMap<String, Bytes>>,
-    maybe_hg_replay_data: &'a Option<pushrebase::HgReplayData>,
     bookmark_attrs: &'a BookmarkAttrs,
     infinitepush_params: &'a InfinitepushParams,
     hook_manager: &'a HookManager,
@@ -587,7 +563,6 @@ async fn normal_pushrebase<'a>(
         repo,
         pushrebase_params,
         lca_hint,
-        maybe_hg_replay_data,
         bookmark_attrs,
         infinitepush_params,
         hook_manager,
@@ -631,7 +606,6 @@ async fn force_pushrebase(
     uploaded_bonsais: HashSet<BonsaiChangeset>,
     bookmark_push: PlainBookmarkPush<ChangesetId>,
     maybe_pushvars: Option<&HashMap<String, Bytes>>,
-    maybe_hg_replay_data: &Option<pushrebase::HgReplayData>,
     bookmark_attrs: &BookmarkAttrs,
     infinitepush_params: &InfinitepushParams,
     hook_rejection_remapper: &dyn HookRejectionRemapper,
@@ -648,15 +622,6 @@ async fn force_pushrebase(
         new_changesets.insert(cs_id, bcs);
     }
 
-    let bundle_replay_data = if let Some(hg_replay_data) = &maybe_hg_replay_data {
-        Some(hg_replay_data.to_bundle_replay_data(None).await?)
-    } else {
-        None
-    };
-    let bundle_replay_data = bundle_replay_data
-        .as_ref()
-        .map(|data| data as &dyn BundleReplay);
-
     plain_push_bookmark(
         ctx,
         repo,
@@ -670,7 +635,6 @@ async fn force_pushrebase(
         NonFastForwardPolicy::Allowed,
         BookmarkUpdateReason::Pushrebase,
         maybe_pushvars,
-        bundle_replay_data,
         hook_rejection_remapper,
         cross_repo_push_source,
         readonly_fetcher,
@@ -695,7 +659,6 @@ async fn plain_push_bookmark(
     non_fast_forward_policy: NonFastForwardPolicy,
     reason: BookmarkUpdateReason,
     maybe_pushvars: Option<&HashMap<String, Bytes>>,
-    bundle_replay_data: Option<&dyn BundleReplay>,
     hook_rejection_remapper: &dyn HookRejectionRemapper,
     cross_repo_push_source: CrossRepoPushSource,
     readonly_fetcher: &RepoReadWriteFetcher,
@@ -707,7 +670,6 @@ async fn plain_push_bookmark(
                     .only_if_public()
                     .with_new_changesets(new_changesets)
                     .with_pushvars(maybe_pushvars)
-                    .with_bundle_replay_data(bundle_replay_data)
                     .with_push_source(cross_repo_push_source)
                     .run(
                         ctx,
@@ -754,7 +716,6 @@ async fn plain_push_bookmark(
             .only_if_public()
             .with_new_changesets(new_changesets)
             .with_pushvars(maybe_pushvars)
-            .with_bundle_replay_data(bundle_replay_data)
             .with_push_source(cross_repo_push_source)
             .run(
                 ctx,
@@ -795,7 +756,6 @@ async fn plain_push_bookmark(
             bookmarks_movement::DeleteBookmarkOp::new(&bookmark_push.name, old_target, reason)
                 .only_if_public()
                 .with_pushvars(maybe_pushvars)
-                .with_bundle_replay_data(bundle_replay_data)
                 .run(
                     ctx,
                     repo,
@@ -821,7 +781,6 @@ async fn infinitepush_scratch_bookmark(
     bookmark_attrs: &BookmarkAttrs,
     hook_manager: &HookManager,
     bookmark_push: &InfiniteBookmarkPush<ChangesetId>,
-    bundle_replay_data: Option<&dyn BundleReplay>,
     cross_repo_push_source: CrossRepoPushSource,
     readonly_fetcher: &RepoReadWriteFetcher,
 ) -> Result<()> {
@@ -832,7 +791,6 @@ async fn infinitepush_scratch_bookmark(
             BookmarkUpdateReason::Push,
         )
         .only_if_scratch()
-        .with_bundle_replay_data(bundle_replay_data)
         .with_push_source(cross_repo_push_source)
         .run(
             ctx,
@@ -867,7 +825,6 @@ async fn infinitepush_scratch_bookmark(
             BookmarkUpdateReason::Push,
         )
         .only_if_scratch()
-        .with_bundle_replay_data(bundle_replay_data)
         .with_push_source(cross_repo_push_source)
         .run(
             ctx,

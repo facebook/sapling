@@ -92,7 +92,6 @@ pub async fn subcommand_pushrebase<'a>(
         &pushrebase_flags,
         &bookmark,
         &hashset![bcs],
-        None,
         &pushrebase_hooks,
     )
     .map_err(Error::from)

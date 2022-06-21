@@ -44,7 +44,6 @@ pub struct PushrebaseOntoBookmarkOp<'op> {
     bookmark_restrictions: BookmarkKindRestrictions,
     cross_repo_push_source: CrossRepoPushSource,
     pushvars: Option<&'op HashMap<String, Bytes>>,
-    hg_replay: Option<&'op pushrebase::HgReplayData>,
 }
 
 impl<'op> PushrebaseOntoBookmarkOp<'op> {
@@ -59,7 +58,6 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             bookmark_restrictions: BookmarkKindRestrictions::AnyKind,
             cross_repo_push_source: CrossRepoPushSource::NativeToThisRepo,
             pushvars: None,
-            hg_replay: None,
         }
     }
 
@@ -94,11 +92,6 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
 
     pub fn with_pushvars(mut self, pushvars: Option<&'op HashMap<String, Bytes>>) -> Self {
         self.pushvars = pushvars;
-        self
-    }
-
-    pub fn with_hg_replay_data(mut self, hg_replay: Option<&'op pushrebase::HgReplayData>) -> Self {
-        self.hg_replay = hg_replay;
         self
     }
 
@@ -206,7 +199,6 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             &flags,
             self.bookmark,
             self.affected_changesets.source_changesets(),
-            self.hg_replay,
             pushrebase_hooks.as_slice(),
         )
         .timed()

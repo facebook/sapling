@@ -63,7 +63,6 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         &Default::default(),
         &book,
         &hashset![cs2.clone()],
-        None,
         &hooks,
     )
     .await?
@@ -105,7 +104,6 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         &Default::default(),
         &book,
         &hashset![cs3.clone(), cs4.clone()],
-        None,
         &hooks,
     )
     .await?

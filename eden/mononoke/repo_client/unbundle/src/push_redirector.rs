@@ -273,7 +273,6 @@ impl PushRedirector {
             changegroup_id,
             bookmark_pushes,
             mutations: _,
-            maybe_raw_bundle2_id,
             maybe_pushvars,
             non_fast_forward_policy,
             uploaded_bonsais,
@@ -301,7 +300,6 @@ impl PushRedirector {
             changegroup_id,
             bookmark_pushes,
             mutations: Default::default(),
-            maybe_raw_bundle2_id,
             maybe_pushvars,
             non_fast_forward_policy,
             uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
@@ -327,7 +325,6 @@ impl PushRedirector {
         let PostResolvePushRebase {
             bookmark_push_part_id,
             bookmark_spec,
-            maybe_hg_replay_data,
             maybe_pushvars,
             commonheads,
             uploaded_bonsais,
@@ -349,47 +346,16 @@ impl PushRedirector {
             .convert_pushrebase_bookmark_spec(ctx, bookmark_spec)
             .await?;
 
-        let source_repo = self.small_to_large_commit_syncer.get_source_repo().clone();
-        // Pushrebase happens in the large repo, but we'd like to have hg replay data relative
-        // to the small repo. In order to do that we need to need to make sure we are using
-        // small hg changeset ids for the timestamps instead of large hg changeset ids.
-        // In order to do that let's convert large cs id to small cs id and create hg changeset
-        // for it.
-
         let large_to_small = uploaded_bonsais
             .iter()
             .map(|(small_cs_id, large_bcs)| (large_bcs.get_changeset_id(), *small_cs_id))
             .collect::<HashMap<_, _>>();
-
-        let maybe_hg_replay_data = maybe_hg_replay_data.map({
-            cloned!(ctx);
-            |mut hg_replay_data| {
-                hg_replay_data.override_convertor(Arc::new({
-                    cloned!(large_to_small);
-                    move |large_cs_id| {
-                        cloned!(ctx, source_repo, large_to_small);
-                        async move {
-                            let small_cs_id = large_to_small.get(&large_cs_id).ok_or_else(|| {
-                                format_err!("{} doesn't remap in small repo", large_cs_id)
-                            });
-                            match small_cs_id {
-                                Err(err) => Err(err),
-                                Ok(id) => source_repo.derive_hg_changeset(&ctx, *id).await,
-                            }
-                        }
-                        .boxed()
-                    }
-                }));
-                hg_replay_data
-            }
-        });
 
         let hook_rejection_remapper = self.make_hook_rejection_remapper(ctx, large_to_small);
 
         let action = PostResolvePushRebase {
             bookmark_push_part_id,
             bookmark_spec,
-            maybe_hg_replay_data,
             maybe_pushvars,
             commonheads,
             uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
@@ -411,7 +377,6 @@ impl PushRedirector {
             changegroup_id,
             maybe_bookmark_push,
             mutations: _,
-            maybe_raw_bundle2_id,
             uploaded_bonsais,
             uploaded_hg_changeset_ids: _,
         } = orig;
@@ -431,7 +396,6 @@ impl PushRedirector {
             changegroup_id,
             maybe_bookmark_push,
             mutations: Default::default(),
-            maybe_raw_bundle2_id,
             uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
             uploaded_hg_changeset_ids: Default::default(),
         })
@@ -446,7 +410,6 @@ impl PushRedirector {
     ) -> Result<PostResolveBookmarkOnlyPushRebase, Error> {
         let PostResolveBookmarkOnlyPushRebase {
             bookmark_push,
-            maybe_raw_bundle2_id,
             maybe_pushvars,
             non_fast_forward_policy,
             hook_rejection_remapper: _,
@@ -461,7 +424,6 @@ impl PushRedirector {
 
         Ok(PostResolveBookmarkOnlyPushRebase {
             bookmark_push,
-            maybe_raw_bundle2_id,
             maybe_pushvars,
             non_fast_forward_policy,
             hook_rejection_remapper,

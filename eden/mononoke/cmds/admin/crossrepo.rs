@@ -479,7 +479,6 @@ async fn change_mapping_via_extras<'a>(
         &pushrebase_flags,
         &large_bookmark,
         &hashset![bcs],
-        None,
         &pushrebase_hooks,
     )
     .map_err(Error::from)

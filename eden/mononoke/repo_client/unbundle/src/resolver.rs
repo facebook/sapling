@@ -30,7 +30,6 @@ use mercurial_revlog::changeset::RevlogChangeset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, RawBundle2, RawBundle2Id};
-use pushrebase::HgReplayData;
 use rate_limiting::RateLimitBody;
 use slog::{debug, trace};
 use std::collections::{HashMap, HashSet};
@@ -190,7 +189,6 @@ pub struct PostResolvePush {
     pub changegroup_id: Option<PartId>,
     pub bookmark_pushes: Vec<PlainBookmarkPush<ChangesetId>>,
     pub mutations: Vec<HgMutationEntry>,
-    pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
     pub maybe_pushvars: Option<HashMap<String, Bytes>>,
     pub non_fast_forward_policy: NonFastForwardPolicy,
     pub uploaded_bonsais: UploadedBonsais,
@@ -203,7 +201,6 @@ pub struct PostResolveInfinitePush {
     pub changegroup_id: Option<PartId>,
     pub maybe_bookmark_push: Option<InfiniteBookmarkPush<ChangesetId>>,
     pub mutations: Vec<HgMutationEntry>,
-    pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
     pub uploaded_bonsais: UploadedBonsais,
     pub uploaded_hg_changeset_ids: UploadedHgChangesetIds,
 }
@@ -213,7 +210,6 @@ pub struct PostResolveInfinitePush {
 pub struct PostResolvePushRebase {
     pub bookmark_push_part_id: Option<PartId>,
     pub bookmark_spec: PushrebaseBookmarkSpec<ChangesetId>,
-    pub maybe_hg_replay_data: Option<HgReplayData>,
     pub maybe_pushvars: Option<HashMap<String, Bytes>>,
     pub commonheads: CommonHeads,
     pub uploaded_bonsais: UploadedBonsais,
@@ -223,7 +219,6 @@ pub struct PostResolvePushRebase {
 /// Data, needed to perform post-resolve `BookmarkOnlyPushRebase` action
 pub struct PostResolveBookmarkOnlyPushRebase {
     pub bookmark_push: PlainBookmarkPush<ChangesetId>,
-    pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
     pub maybe_pushvars: Option<HashMap<String, Bytes>>,
     pub non_fast_forward_policy: NonFastForwardPolicy,
     pub hook_rejection_remapper: Arc<dyn HookRejectionRemapper>,
@@ -461,7 +456,7 @@ async fn resolve_push<'r>(
         .maybe_resolve_infinitepush_bookmarks(bundle2)
         .await
         .context("While resolving B2xInfinitepushBookmarks")?;
-    let maybe_raw_bundle2_id = resolver
+    let _maybe_raw_bundle2_id = resolver
         .ensure_stream_finished(bundle2, maybe_full_content)
         .await?;
 
@@ -477,7 +472,6 @@ async fn resolve_push<'r>(
             changegroup_id,
             maybe_bonsai_bookmark_push,
             mutations,
-            maybe_raw_bundle2_id,
             uploaded_bonsais,
             uploaded_hg_changeset_ids,
         )
@@ -490,7 +484,6 @@ async fn resolve_push<'r>(
             changegroup_id,
             maybe_bonsai_bookmark_push,
             mutations,
-            maybe_raw_bundle2_id,
             maybe_pushvars,
             non_fast_forward_policy,
             uploaded_bonsais,
@@ -505,7 +498,6 @@ fn get_post_resolve_infinitepush(
     changegroup_id: Option<PartId>,
     maybe_bonsai_bookmark_push: Option<AllBookmarkPushes<ChangesetId>>,
     mutations: Vec<HgMutationEntry>,
-    maybe_raw_bundle2_id: Option<RawBundle2Id>,
     uploaded_bonsais: UploadedBonsais,
     uploaded_hg_changeset_ids: UploadedHgChangesetIds,
 ) -> Result<PostResolveInfinitePush, Error> {
@@ -523,7 +515,6 @@ fn get_post_resolve_infinitepush(
         changegroup_id,
         maybe_bookmark_push,
         mutations,
-        maybe_raw_bundle2_id,
         uploaded_bonsais,
         uploaded_hg_changeset_ids,
     })
@@ -533,7 +524,6 @@ fn get_post_resolve_push(
     changegroup_id: Option<PartId>,
     maybe_bonsai_bookmark_push: Option<AllBookmarkPushes<ChangesetId>>,
     mutations: Vec<HgMutationEntry>,
-    maybe_raw_bundle2_id: Option<RawBundle2Id>,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     non_fast_forward_policy: NonFastForwardPolicy,
     uploaded_bonsais: UploadedBonsais,
@@ -554,7 +544,6 @@ fn get_post_resolve_push(
         changegroup_id,
         bookmark_pushes,
         mutations,
-        maybe_raw_bundle2_id,
         maybe_pushvars,
         non_fast_forward_policy,
         uploaded_bonsais,
@@ -670,22 +659,17 @@ async fn resolve_pushrebase<'r>(
         ),
     };
 
-    let maybe_raw_bundle2_id = resolver
+    let _maybe_raw_bundle2_id = resolver
         .ensure_stream_finished(bundle2, maybe_full_content)
         .await?;
     let bookmark_spec =
         hg_pushrebase_bookmark_spec_to_bonsai(ctx, &resolver.repo, bookmark_spec).await?;
-    let repo = resolver.repo.clone();
-    let maybe_hg_replay_data = maybe_raw_bundle2_id.map(|raw_bundle2_id| {
-        HgReplayData::new_with_simple_convertor(ctx.clone(), raw_bundle2_id, repo)
-    });
 
     let hook_rejection_remapper = make_hook_rejection_remapper(&ctx, resolver.repo.clone()).into();
 
     Ok(PostResolveAction::PushRebase(PostResolvePushRebase {
         bookmark_push_part_id,
         bookmark_spec,
-        maybe_hg_replay_data,
         maybe_pushvars,
         commonheads,
         uploaded_bonsais,
@@ -725,7 +709,7 @@ async fn resolve_bookmark_only_pushrebase<'r>(
     }
 
     let bookmark_push = bookmark_pushes.into_iter().next().unwrap();
-    let maybe_raw_bundle2_id = resolver
+    let _maybe_raw_bundle2_id = resolver
         .ensure_stream_finished(bundle2, maybe_full_content)
         .await?;
     let bookmark_push =
@@ -735,7 +719,6 @@ async fn resolve_bookmark_only_pushrebase<'r>(
     Ok(PostResolveAction::BookmarkOnlyPushRebase(
         PostResolveBookmarkOnlyPushRebase {
             bookmark_push,
-            maybe_raw_bundle2_id,
             maybe_pushvars,
             non_fast_forward_policy,
             hook_rejection_remapper,

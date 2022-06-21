@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use bookmarks::{BookmarkUpdateReason, BundleReplay};
+use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::{BookmarkKind, BookmarkName};
 use bytes::Bytes;
 use context::CoreContext;
@@ -40,8 +40,6 @@ pub struct CreateBookmarkOp<'op> {
     cross_repo_push_source: CrossRepoPushSource,
     affected_changesets: AffectedChangesets,
     pushvars: Option<&'op HashMap<String, Bytes>>,
-    // TODO(yancouto): delete
-    bundle_replay: Option<&'op dyn BundleReplay>,
     log_new_public_commits_to_scribe: bool,
 }
 
@@ -60,7 +58,6 @@ impl<'op> CreateBookmarkOp<'op> {
             cross_repo_push_source: CrossRepoPushSource::NativeToThisRepo,
             affected_changesets: AffectedChangesets::new(),
             pushvars: None,
-            bundle_replay: None,
             log_new_public_commits_to_scribe: false,
         }
     }
@@ -88,11 +85,6 @@ impl<'op> CreateBookmarkOp<'op> {
 
     pub fn with_pushvars(mut self, pushvars: Option<&'op HashMap<String, Bytes>>) -> Self {
         self.pushvars = pushvars;
-        self
-    }
-
-    pub fn with_bundle_replay_data(mut self, bundle_replay: Option<&'op dyn BundleReplay>) -> Self {
-        self.bundle_replay = bundle_replay;
         self
     }
 
