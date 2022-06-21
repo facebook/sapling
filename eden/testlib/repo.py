@@ -26,7 +26,6 @@ class Repo:
 
     def __init__(self, root: Path, url: str, name: str) -> None:
         self.root = root
-        self.gen = RepoGenerator()
         self.hg = hg(self.root)
         self.config = Config(self._join("hgrc"))
         self.url = url

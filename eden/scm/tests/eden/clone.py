@@ -56,7 +56,7 @@ class TestEdenClone(BaseTest):
 
         # test sharing backing repo
         eden_repo2 = Repo(eden_checkout_dir2, repo.url, repo.name)
-        eden_wc_1.file("newfile")
+        eden_wc_1.file()
         eden_wc_1.commit()
         self.assertEqual(
             set(eden_repo1.commits("all()")), set(eden_repo2.commits("all()"))

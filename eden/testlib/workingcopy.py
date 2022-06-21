@@ -50,7 +50,7 @@ class WorkingCopy:
         date: Optional[str] = None,
         addremove: bool = False,
     ) -> Commit:
-        default_data = self.repo.gen.gen_commit_data()
+        default_data = test_globals.repo_gen.gen_commit_data()
         files = files or []
         if message is None:
             message = default_data["message"]
@@ -77,7 +77,7 @@ class WorkingCopy:
         content: Optional[Union[bytes, str]] = None,
         add: bool = True,
     ) -> File:
-        default_path = self.repo.gen.gen_file_name()
+        default_path = test_globals.repo_gen.gen_file_name()
         if path is None:
             path = default_path
         if content is None:

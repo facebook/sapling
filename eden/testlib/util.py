@@ -14,9 +14,12 @@ from typing import Dict, Generator, Optional
 
 from eden.test_support.temporary_directory import TempFileManager
 
+from .generators import RepoGenerator
+
 
 class GlobalTestState(threading.local):
     temp_mgr: TempFileManager
+    repo_gen: RepoGenerator
     test_tmp: Path
     env: Dict[str, str]
     debug: bool
@@ -24,12 +27,14 @@ class GlobalTestState(threading.local):
     def __init__(self) -> None:
         # These are needed to satisfy pyre, but should never be used.
         self.temp_mgr = TempFileManager()
+        self.repo_gen = RepoGenerator()
         self.test_tmp = Path("")
         self.env = {}
         self.debug = os.environ.get("HGTEST_DEBUG") is not None
 
     def setup(self) -> None:
         self.temp_mgr = TempFileManager()
+        self.repo_gen = RepoGenerator()
         self.test_tmp = self.temp_mgr.make_temp_dir()
 
         hgrc_path = os.path.join(new_dir(), "global_hgrc")
