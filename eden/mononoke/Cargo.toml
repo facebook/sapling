@@ -317,7 +317,6 @@ members = [
   "megarepo_api/megarepo_config",
   "megarepo_api/megarepo_error",
   "megarepo_api/requests_table",
-  "mercurial/bundle_replay_data",
   "mercurial/bundles",
   "mercurial/mutation",
   "mercurial/revlog",

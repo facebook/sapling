@@ -13,14 +13,12 @@ blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_utils = { version = "0.1.0", path = "../blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
-mercurial_bundle_replay_data = { version = "0.1.0", path = "../mercurial/bundle_replay_data" }
 mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
@@ -35,6 +33,7 @@ tunables = { version = "0.1.0", path = "../tunables" }
 [dev-dependencies]
 async-trait = "0.1.56"
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }

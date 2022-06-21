@@ -51,24 +51,21 @@ use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
-use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use futures::{
     compat::Stream01CompatExt,
-    future::{self, try_join, try_join_all, BoxFuture},
+    future::{self, try_join, try_join_all},
     stream, FutureExt, StreamExt, TryFutureExt, TryStream, TryStreamExt,
 };
 use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use maplit::hashmap;
-use mercurial_bundle_replay_data::BundleReplayData;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, MPath};
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types::{
-    check_case_conflicts, BonsaiChangeset, ChangesetId, DateTime, FileChange, RawBundle2Id,
-    Timestamp,
+    check_case_conflicts, BonsaiChangeset, ChangesetId, DateTime, FileChange, Timestamp,
 };
 use revset::RangeNodeStream;
 use slog::info;
@@ -146,64 +143,6 @@ pub enum PushrebaseError {
     ForceFailPushrebase(ChangesetId),
     #[error(transparent)]
     Error(#[from] Error),
-}
-
-type CsIdConvertor =
-    Arc<dyn Fn(ChangesetId) -> BoxFuture<'static, Result<HgChangesetId>> + Send + Sync + 'static>;
-/// Struct that contains data for hg sync replay
-#[derive(Clone)]
-pub struct HgReplayData {
-    // Handle of the bundle2 id that was sent by the client and saved to the blobstore
-    bundle2_id: RawBundle2Id,
-    // Get hg changeset id from bonsai changeset id. Normally it should just do a simple lookup
-    // however it might return other hg changesets if push redirector is used
-    cs_id_convertor: CsIdConvertor,
-}
-
-impl HgReplayData {
-    pub fn new_with_simple_convertor(
-        ctx: CoreContext,
-        bundle2_id: RawBundle2Id,
-        repo: BlobRepo,
-    ) -> Self {
-        let cs_id_convertor: CsIdConvertor = Arc::new({
-            cloned!(ctx, repo);
-            move |cs_id| {
-                cloned!(ctx, repo);
-                async move { repo.derive_hg_changeset(&ctx, cs_id).await }.boxed()
-            }
-        });
-
-        Self {
-            bundle2_id,
-            cs_id_convertor,
-        }
-    }
-
-    pub fn override_convertor(&mut self, cs_id_convertor: CsIdConvertor) {
-        self.cs_id_convertor = cs_id_convertor;
-    }
-
-    pub async fn to_bundle_replay_data(
-        &self,
-        rebased_changesets: Option<&RebasedChangesets>,
-    ) -> Result<BundleReplayData> {
-        let bundle2_id = self.bundle2_id.clone();
-        if let Some(rebased_changesets) = rebased_changesets {
-            let timestamps = rebased_changesets.iter().map({
-                |(cs_id, (_, timestamp))| async move {
-                    let hg_cs_id = (self.cs_id_convertor)(*cs_id).await?;
-                    Ok::<_, Error>((hg_cs_id, *timestamp))
-                }
-            });
-            let timestamps = try_join_all(timestamps).await?.into_iter().collect();
-            Ok(BundleReplayData::new_with_timestamps(
-                bundle2_id, timestamps,
-            ))
-        } else {
-            Ok(BundleReplayData::new(bundle2_id))
-        }
-    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -1261,6 +1200,7 @@ mod tests {
     use async_trait::async_trait;
     use blobrepo_hg::BlobRepoHg;
     use bookmarks::BookmarkTransactionError;
+    use cloned::cloned;
     use fbinit::FacebookInit;
     use fixtures::TestRepoFixture;
     use fixtures::{Linear, ManyFilesDirs, MergeEven};
