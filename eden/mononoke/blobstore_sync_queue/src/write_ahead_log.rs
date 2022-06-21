@@ -103,6 +103,7 @@ pub struct SqlBlobstoreWal {
     #[allow(dead_code)]
     read_connection: Connection,
     read_master_connection: Connection,
+    #[allow(dead_code)]
     write_connection: Connection,
     /// Sending entry over the channel allows it to be queued till
     /// the worker is free and able to write new entries to Mysql.
