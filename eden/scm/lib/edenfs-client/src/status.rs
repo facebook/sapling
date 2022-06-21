@@ -31,7 +31,6 @@ use eden::GetScmStatusParams;
 use eden::GetScmStatusResult;
 use eden::ScmFileStatus;
 use eden::ScmStatus;
-#[cfg(unix)]
 use fbthrift_socket::SocketTransport;
 use sha2::Digest;
 use sha2::Sha256;
@@ -41,7 +40,6 @@ use thrift_types::edenfs::client::EdenService;
 use thrift_types::fb303_core::client::BaseService;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use thrift_types::fbthrift::ApplicationExceptionErrorCode;
-#[cfg(unix)]
 use tokio_uds_compat::UnixStream;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -84,7 +82,6 @@ fn get_eden_root(repo_root: &Path) -> Result<String> {
         .map_err(|_| anyhow!("Failed to get eden root"))
 }
 
-#[cfg(unix)]
 async fn get_socket_transport(repo_root: &Path) -> Result<SocketTransport<UnixStream>> {
     // Look up Eden's socket address.
     let sock_addr = repo_root.join(".eden").join("socket");
@@ -93,27 +90,12 @@ async fn get_socket_transport(repo_root: &Path) -> Result<SocketTransport<UnixSt
     Ok(SocketTransport::new(sock))
 }
 
-#[cfg(windows)]
-async fn maybe_status_fastpath_internal(
-    repo_root: &Path,
-    io: &IO,
-    list_ignored: bool,
-) -> Result<(status::Status, HashMap<RepoPathBuf, RepoPathBuf>)> {
-    Err(FallbackToPython("status").into())
-}
-
 pub fn get_status(repo_root: &Path) -> Result<GetScmStatusResult> {
     let rt = tokio::runtime::Runtime::new()?;
 
     rt.block_on(get_status_internal(repo_root))
 }
 
-#[cfg(windows)]
-async fn get_status_internal(_repo_root: &Path) -> Result<GetScmStatusResult> {
-    Err(FallbackToPython("status").into())
-}
-
-#[cfg(unix)]
 async fn get_status_internal(repo_root: &Path) -> Result<GetScmStatusResult> {
     let eden_root = get_eden_root(repo_root)?;
 
@@ -128,7 +110,6 @@ async fn get_status_internal(repo_root: &Path) -> Result<GetScmStatusResult> {
     get_status_helper(&client, &fb303_client, &eden_root, dirstate_data.p1, false).await
 }
 
-#[cfg(unix)]
 async fn maybe_status_fastpath_internal(
     repo_root: &Path,
     io: &IO,
