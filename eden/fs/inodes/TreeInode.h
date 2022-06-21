@@ -483,6 +483,12 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   void forceMetadataUpdate() override;
 
+#ifndef _WIN32
+  ImmediateFuture<folly::Unit> ensureMaterialized(
+      ObjectFetchContext& fetchContext,
+      bool followSymlink) override;
+#endif
+
  private:
   class TreeRenameLocks;
   class IncompleteInodeLoad;

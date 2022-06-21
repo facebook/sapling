@@ -406,6 +406,19 @@ class InodeBase {
    */
   virtual void forceMetadataUpdate() = 0;
 
+#ifndef _WIN32
+  /**
+   * Force materialize a file or a tree and rely on the overlay as the source of
+   * the files. If the inode is a symlink and followSymlink is true, its target
+   * will be materialized if possible. If the inode is a tree, every child in
+   * this node will be recursively materialized. This function should be careful
+   * to be used and should be used by RECAS backing store only
+   */
+  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> ensureMaterialized(
+      ObjectFetchContext& context,
+      bool followSymlink) = 0;
+#endif
+
  protected:
   /**
    * Returns current time from EdenMount's clock.

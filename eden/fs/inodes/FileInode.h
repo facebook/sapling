@@ -282,6 +282,10 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   FOLLY_NODISCARD ImmediateFuture<folly::Unit>
   fallocate(uint64_t offset, uint64_t length, ObjectFetchContext& fetchContext);
 
+  ImmediateFuture<folly::Unit> ensureMaterialized(
+      ObjectFetchContext& fetchContext,
+      bool followSymlink) override;
+
 #endif // !_WIN32
 
   ImmediateFuture<struct stat> stat(ObjectFetchContext& context) override;

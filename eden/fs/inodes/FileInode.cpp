@@ -28,6 +28,7 @@
 #include "eden/fs/utils/FileHash.h"
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/ImmediateFuture.h"
+#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #ifndef _WIN32
@@ -917,6 +918,59 @@ void FileInode::materialize() {
   updateJournal();
 }
 #else
+
+ImmediateFuture<folly::Unit> FileInode::ensureMaterialized(
+    ObjectFetchContext& fetchContext,
+    bool followSymlink) {
+  if (dtype_t::Symlink == getType()) {
+    if (!followSymlink) {
+      return folly::unit;
+    }
+
+    return ImmediateFuture{
+        readlink(fetchContext, CacheHint::LikelyNeededAgain).semi()}
+        .thenValue(
+            [this, followSymlink, &fetchContext](
+                auto target) -> ImmediateFuture<folly::Unit> {
+              auto filePath = getPath();
+              if (!filePath) {
+                XLOG(DBG4) << "Skip materialization of the symlink "
+                           << getLogPath() << ": file is unlinked";
+                return folly::unit;
+              }
+
+              // It is possible joinAndNormalize return expected errors, such as
+              // symlinking to an aboslute or a path out of current mount. Those
+              // are fine.
+              // joinAndNormalize may throw (i.e. non-UTF-8 path) which would
+              // bubble the exception to the caller.
+              auto targetPath =
+                  joinAndNormalize(filePath.value().dirname(), target);
+              if (targetPath.hasError()) {
+                XLOG(DBG4) << "Skip materialization of the symlink "
+                           << getLogPath() << ": " << targetPath.error();
+                return folly::unit;
+              }
+
+              XLOG(DBG4) << "Materialize symlink " << getLogPath()
+                         << ", whose target is" << targetPath.value();
+              return getMount()
+                  ->getInodeSlow(targetPath.value(), fetchContext)
+                  .thenValue([followSymlink, &fetchContext](InodePtr inode) {
+                    return inode->ensureMaterialized(
+                        fetchContext, followSymlink);
+                  });
+            });
+  }
+
+  XLOG(DBG4) << "ensureMaterialize " << getLogPath();
+  return runWhileMaterialized(
+             LockedState{this},
+             nullptr,
+             [](LockedState&&) { return folly::unit; },
+             fetchContext)
+      .semi();
+}
 
 ImmediateFuture<std::tuple<BufVec, bool>>
 FileInode::read(size_t size, off_t off, ObjectFetchContext& context) {

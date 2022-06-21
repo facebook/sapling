@@ -3791,6 +3791,33 @@ void TreeInode::forceMetadataUpdate() {
 }
 
 #ifndef _WIN32
+ImmediateFuture<folly::Unit> TreeInode::ensureMaterialized(
+    ObjectFetchContext& fetchContext,
+    bool followSymlink) {
+  std::vector<ImmediateFuture<folly::Unit>> childFutures;
+  std::vector<PathComponent> names;
+  {
+    auto contents = contents_.rlock();
+    names.reserve(contents->entries.size());
+    for (auto& entry : contents->entries) {
+      names.emplace_back(entry.first);
+    }
+  }
+
+  childFutures.reserve(names.size());
+  for (auto& name : names) {
+    childFutures.emplace_back(
+        getOrLoadChild(name, fetchContext)
+            .thenValue([&fetchContext, followSymlink](InodePtr inodePtr) {
+              return inodePtr->ensureMaterialized(fetchContext, followSymlink);
+            }));
+  }
+
+  return collectAll(std::move(childFutures)).unit();
+}
+#endif
+
+#ifndef _WIN32
 size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
   // Unloading children by criteria is a bit of an intricate operation. The
   // InodeMap and tree's contents lock must be held simultaneously when

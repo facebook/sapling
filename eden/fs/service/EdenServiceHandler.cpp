@@ -1995,6 +1995,80 @@ ImmediateFuture<std::unique_ptr<Glob>> detachIfBackgrounded(
 }
 } // namespace
 
+#ifndef _WIN32
+namespace {
+ImmediateFuture<folly::Unit> ensureMaterializedImpl(
+    const EdenMount& edenMount,
+    const std::vector<std::string>& repoPaths,
+    std::unique_ptr<ThriftLogHelper> helper,
+    bool followSymlink) {
+  std::vector<ImmediateFuture<folly::Unit>> futures;
+  futures.reserve(repoPaths.size());
+
+  auto& fetchContext = helper->getFetchContext();
+
+  for (auto& path : repoPaths) {
+    futures.emplace_back(
+        edenMount.getInodeSlow(RelativePath{path}, fetchContext)
+            .thenValue([&fetchContext, followSymlink](InodePtr inode) {
+              return inode->ensureMaterialized(fetchContext, followSymlink)
+                  .ensure([inode]() {});
+            }));
+  }
+
+  return wrapImmediateFuture(
+      std::move(helper), collectAll(std::move(futures)).unit());
+}
+} // namespace
+#endif
+
+folly::SemiFuture<folly::Unit>
+EdenServiceHandler::semifuture_ensureMaterialized(
+    std::unique_ptr<EnsureMaterializedParams> params) {
+#ifndef _WIN32
+  auto mountPoint = params->get_mountPoint();
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG4, mountPoint, folly::join(",", params->get_paths()));
+
+  auto syncTimeout = getSyncTimeout(*params->sync_ref());
+  auto edenMount = server_->getMount(AbsolutePathPiece{mountPoint});
+  // The background mode is not fully running on background, instead, it will
+  // start to load inodes in a blocking way, and then collect unready
+  // materialization process then throws to the background. This is most
+  // effecient way for the local execution of virtualized buck-out as avoid
+  // cache exchange by materializing smaller random reads, and not prevent
+  // execution starting by read large files on the background.
+  bool background = params->get_background();
+
+  auto waitForPendingNotificationsFuture =
+      waitForPendingNotifications(*edenMount, syncTimeout);
+  auto ensureMaterializedFuture =
+      std::move(waitForPendingNotificationsFuture)
+          .thenValue([params = std::move(params),
+                      edenMount = std::move(edenMount),
+                      helper = std::move(helper)](auto&&) mutable {
+            return ensureMaterializedImpl(
+                *edenMount,
+                params->get_paths(),
+                std::move(helper),
+                params->get_followSymlink());
+          })
+          .semi();
+
+  if (background) {
+    folly::futures::detachOn(
+        server_->getServerState()->getThreadPool().get(),
+        std::move(ensureMaterializedFuture));
+    return folly::unit;
+  } else {
+    return ensureMaterializedFuture;
+  }
+#else
+  (void)params;
+  NOT_IMPLEMENTED();
+#endif
+}
+
 folly::SemiFuture<std::unique_ptr<Glob>>
 EdenServiceHandler::semifuture_predictiveGlobFiles(
     std::unique_ptr<GlobParams> params) {

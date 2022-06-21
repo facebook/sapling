@@ -285,6 +285,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   folly::SemiFuture<folly::Unit> semifuture_removeRecursively(
       std::unique_ptr<RemoveRecursivelyParams> params) override;
 
+  folly::SemiFuture<folly::Unit> semifuture_ensureMaterialized(
+      std::unique_ptr<EnsureMaterializedParams> params) override;
+
   void reloadConfig() override;
 
   void getDaemonInfo(DaemonInfo& result) override;
