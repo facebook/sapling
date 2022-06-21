@@ -71,11 +71,17 @@ impl Watchman {
             .resolve_root(CanonicalPath::canonicalize(self.vfs.root())?)
             .await?;
 
+        let excludes = Expr::Any(vec![Expr::DirName(DirNameTerm {
+            path: PathBuf::from(".hg"),
+            depth: None,
+        })]);
+
         let result = client
             .query::<StatusQuery>(
                 &resolved,
                 QueryRequestCommon {
                     since: state.get_clock(),
+                    expression: Some(Expr::Not(Box::new(excludes))),
                     ..Default::default()
                 },
             )
