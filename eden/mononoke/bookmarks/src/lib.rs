@@ -28,7 +28,7 @@ pub use bookmarks_types::{
 pub use cache::CachedBookmarks;
 pub use log::{
     ArcBookmarkUpdateLog, BookmarkUpdateLog, BookmarkUpdateLogArc, BookmarkUpdateLogEntry,
-    BookmarkUpdateLogRef, BookmarkUpdateReason, BundleReplay, RawBundleReplayData,
+    BookmarkUpdateLogRef, BookmarkUpdateReason,
 };
 pub use subscription::BookmarksSubscription;
 pub use transaction::{BookmarkTransaction, BookmarkTransactionError, BookmarkTransactionHook};

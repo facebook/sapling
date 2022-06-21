@@ -9,10 +9,7 @@
 //! update log.
 
 use std::collections::HashMap;
-use std::str::FromStr;
 
-use anyhow::Result;
-use bookmarks::{BundleReplay, RawBundleReplayData};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{RawBundle2Id, Timestamp};
 
@@ -37,36 +34,5 @@ impl BundleReplayData {
             bundle2_id,
             timestamps,
         }
-    }
-}
-
-impl BundleReplay for BundleReplayData {
-    fn to_raw(&self) -> Result<RawBundleReplayData> {
-        Ok(RawBundleReplayData {
-            bundle_handle: self.bundle2_id.to_hex().to_string(),
-            commit_timestamps_json: serde_json::to_string(&self.timestamps)?,
-        })
-    }
-}
-
-impl TryFrom<&RawBundleReplayData> for BundleReplayData {
-    type Error = anyhow::Error;
-
-    fn try_from(raw: &RawBundleReplayData) -> Result<Self> {
-        let bundle2_id = RawBundle2Id::from_str(&raw.bundle_handle)?;
-        let timestamps = serde_json::from_str(&raw.commit_timestamps_json)?;
-
-        Ok(BundleReplayData {
-            bundle2_id,
-            timestamps,
-        })
-    }
-}
-
-impl TryFrom<RawBundleReplayData> for BundleReplayData {
-    type Error = anyhow::Error;
-
-    fn try_from(raw: RawBundleReplayData) -> Result<Self> {
-        BundleReplayData::try_from(&raw)
     }
 }
