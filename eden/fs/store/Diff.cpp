@@ -342,42 +342,28 @@ FOLLY_NODISCARD Future<Unit> computeTreeDiff(
       .ensure([ignore = std::move(ignore)] {});
 }
 
-FOLLY_NODISCARD Future<Unit> loadGitIgnoreThenDiffTrees(
-    PathComponentPiece gitIgnoreName,
+/**
+ * Load the content of the .gitignore file and return it.
+ */
+ImmediateFuture<std::string> loadGitIgnore(
     DiffContext* context,
-    RelativePathPiece currentPath,
-    std::shared_ptr<const Tree> scmTree,
-    std::shared_ptr<const Tree> wdTree,
-    const GitIgnoreStack* parentIgnore,
-    bool isIgnored) {
+    RelativePath gitIgnorePath) {
   // TODO: load file contents directly from context->store if gitIgnoreEntry is
   // a regular file
   auto loadFileContentsFromPath = context->getLoadFileContentsFromPath();
-  auto gitIgnorePath = currentPath + gitIgnoreName;
-  return loadFileContentsFromPath(context->getFetchContext(), gitIgnorePath)
-      .thenError(
-          [entryPath = gitIgnorePath](const folly::exception_wrapper& ex) {
-            // TODO: add an API to DiffCallback to report user errors like this
-            // (errors that do not indicate a problem with EdenFS itself) that
-            // can be returned to the caller in a thrift response
-            XLOG(WARN) << "error loading gitignore at " << entryPath << ": "
-                       << folly::exceptionStr(ex);
-            return std::string{};
-          })
-      .thenValue([context,
-                  currentPath = currentPath.copy(),
-                  scmTree = std::move(scmTree),
-                  wdTree = std::move(wdTree),
-                  parentIgnore,
-                  isIgnored](std::string&& ignoreFileContents) mutable {
-        return computeTreeDiff(
-            context,
-            currentPath,
-            std::move(scmTree),
-            std::move(wdTree),
-            make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
-            isIgnored);
-      });
+  auto loadFuture =
+      loadFileContentsFromPath(context->getFetchContext(), gitIgnorePath);
+  return std::move(loadFuture)
+      .thenError([entryPath = std::move(gitIgnorePath)](
+                     const folly::exception_wrapper& ex) {
+        // TODO: add an API to DiffCallback to report user errors like this
+        // (errors that do not indicate a problem with EdenFS itself) that
+        // can be returned to the caller in a thrift response
+        XLOG(WARN) << "error loading gitignore at " << entryPath << ": "
+                   << folly::exceptionStr(ex);
+        return std::string{};
+      })
+      .semi();
 }
 
 FOLLY_NODISCARD Future<Unit> diffTrees(
@@ -416,28 +402,36 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
         isIgnored);
   }
 
+  ImmediateFuture<std::string> gitIgnore{};
   if (wdTree) {
     // If this directory has a .gitignore file, load it first.
     const auto it = wdTree->find(kIgnoreFilename);
     if (it != wdTree->cend() && !it->second.isTree()) {
-      return loadGitIgnoreThenDiffTrees(
-          it->first,
-          context,
-          currentPath,
-          std::move(scmTree),
-          std::move(wdTree),
-          parentIgnore,
-          isIgnored);
+      gitIgnore = loadGitIgnore(context, currentPath + it->first);
     }
   }
 
-  return computeTreeDiff(
-      context,
-      currentPath,
-      std::move(scmTree),
-      std::move(wdTree),
-      make_unique<GitIgnoreStack>(parentIgnore), // empty with no rules
-      isIgnored);
+  return std::move(gitIgnore)
+      .thenValue([context,
+                  currentPath = currentPath.copy(),
+                  scmTree = std::move(scmTree),
+                  wdTree = std::move(wdTree),
+                  parentIgnore,
+                  isIgnored](std::string gitIgnore) mutable {
+        auto gitIgnoreStack = gitIgnore.empty()
+            ? std::make_unique<GitIgnoreStack>(parentIgnore)
+            : std::make_unique<GitIgnoreStack>(parentIgnore, gitIgnore);
+        return computeTreeDiff(
+                   context,
+                   currentPath,
+                   std::move(scmTree),
+                   std::move(wdTree),
+                   std::move(gitIgnoreStack),
+                   isIgnored)
+            .semi();
+      })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 FOLLY_NODISCARD Future<Unit> diffTrees(
