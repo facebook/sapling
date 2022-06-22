@@ -440,47 +440,14 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
       isIgnored);
 }
 
-} // namespace
-
-Future<Unit>
-diffRoots(DiffContext* context, const RootId& root1, const RootId& root2) {
-  auto future1 = context->store->getRootTree(root1, context->getFetchContext());
-  auto future2 = context->store->getRootTree(root2, context->getFetchContext());
-  return collectAllSafe(future1, future2)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenValue([context](std::tuple<
-                           std::shared_ptr<const Tree>,
-                           std::shared_ptr<const Tree>>&& tup) {
-        auto [tree1, tree2] = std::move(tup);
-
-        // This happens in the case in which the CLI (during eden doctor) calls
-        // getScmStatusBetweenRevisions() with the same hash in order to check
-        // if a commit hash is valid.
-        if (tree1->getHash() == tree2->getHash()) {
-          return makeFuture();
-        }
-
-        return diffTrees(
-            context,
-            RelativePathPiece{},
-            std::move(tree1),
-            std::move(tree2),
-            nullptr,
-            false);
-      });
-}
-
 FOLLY_NODISCARD Future<Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
-    ObjectId scmHash,
-    ObjectId wdHash,
+    ImmediateFuture<std::shared_ptr<const Tree>> scmFuture,
+    ImmediateFuture<std::shared_ptr<const Tree>> wdFuture,
     const GitIgnoreStack* ignore,
     bool isIgnored) {
-  auto treesFuture = collectAllSafe(
-      context->store->getTree(scmHash, context->getFetchContext()),
-      context->store->getTree(wdHash, context->getFetchContext()));
+  auto treesFuture = collectAllSafe(std::move(scmFuture), std::move(wdFuture));
 
   // Optimization for the case when the trees are immediately ready. We can
   // avoid copying the input path in this case.
@@ -495,6 +462,15 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
                              std::shared_ptr<const Tree>,
                              std::shared_ptr<const Tree>> tup) {
         auto [scmTree, wdTree] = std::move(tup);
+
+        // Shortcut in the case where we're trying to diff the same tree.  This
+        // happens in the case in which the CLI (during eden doctor) calls
+        // getScmStatusBetweenRevisions() with the same hash in order to check
+        // if a commit hash is valid.
+        if (scmTree && wdTree && scmTree->getHash() == wdTree->getHash()) {
+          return folly::makeSemiFuture();
+        }
+
         auto pathPiece = copiedCurrentPath.has_value()
             ? copiedCurrentPath->piece()
             : currentPath;
@@ -511,63 +487,63 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
       .via(&folly::QueuedImmediateExecutor::instance());
 }
 
+} // namespace
+
+Future<Unit>
+diffRoots(DiffContext* context, const RootId& root1, const RootId& root2) {
+  auto future1 = context->store->getRootTree(root1, context->getFetchContext());
+  auto future2 = context->store->getRootTree(root2, context->getFetchContext());
+  return diffTrees(
+      context,
+      RelativePathPiece{},
+      std::move(future1).semi(),
+      std::move(future2).semi(),
+      nullptr,
+      false);
+}
+
+FOLLY_NODISCARD Future<Unit> diffTrees(
+    DiffContext* context,
+    RelativePathPiece currentPath,
+    ObjectId scmHash,
+    ObjectId wdHash,
+    const GitIgnoreStack* ignore,
+    bool isIgnored) {
+  return diffTrees(
+      context,
+      currentPath,
+      context->store->getTree(scmHash, context->getFetchContext()),
+      context->store->getTree(wdHash, context->getFetchContext()),
+      ignore,
+      isIgnored);
+}
+
 FOLLY_NODISCARD Future<Unit> diffAddedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
     ObjectId wdHash,
     const GitIgnoreStack* ignore,
     bool isIgnored) {
-  auto wdFuture = context->store->getTree(wdHash, context->getFetchContext());
-
-  // Optimization for the case when the tree object is immediately ready. We
-  // can avoid copying the input path in this case.
-  auto copiedCurrentPath =
-      !wdFuture.isReady() ? std::optional{currentPath.copy()} : std::nullopt;
-  return std::move(wdFuture)
-      .thenValue([context,
-                  copiedCurrentPath = std::move(copiedCurrentPath),
-                  currentPath,
-                  ignore,
-                  isIgnored](std::shared_ptr<const Tree> wdTree) {
-        auto pathPiece = copiedCurrentPath.has_value()
-            ? copiedCurrentPath->piece()
-            : currentPath;
-        return diffTrees(
-                   context,
-                   pathPiece,
-                   nullptr,
-                   std::move(wdTree),
-                   ignore,
-                   isIgnored)
-            .semi();
-      })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  return diffTrees(
+      context,
+      currentPath,
+      std::shared_ptr<const Tree>{nullptr},
+      context->store->getTree(wdHash, context->getFetchContext()),
+      ignore,
+      isIgnored);
 }
 
 FOLLY_NODISCARD Future<Unit> diffRemovedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
     ObjectId scmHash) {
-  auto scmFuture = context->store->getTree(scmHash, context->getFetchContext());
-
-  // Optimization for the case when the tree object is immediately ready. We
-  // can avoid copying the input path in this case.
-  auto copiedCurrentPath =
-      !scmFuture.isReady() ? std::optional{currentPath.copy()} : std::nullopt;
-  return std::move(scmFuture)
-      .thenValue([context,
-                  copiedCurrentPath = std::move(copiedCurrentPath),
-                  currentPath](std::shared_ptr<const Tree> tree) {
-        auto pathPiece = copiedCurrentPath.has_value()
-            ? copiedCurrentPath->piece()
-            : currentPath;
-        return diffTrees(
-                   context, pathPiece, std::move(tree), nullptr, nullptr, false)
-            .semi();
-      })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  return diffTrees(
+      context,
+      currentPath,
+      context->store->getTree(scmHash, context->getFetchContext()),
+      std::shared_ptr<const Tree>{nullptr},
+      nullptr,
+      false);
 }
 
 } // namespace facebook::eden
