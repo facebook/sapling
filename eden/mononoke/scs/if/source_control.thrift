@@ -975,14 +975,11 @@ struct CommitFindFilesParams {
   /// basename is in basenames or a suffix of the entry's basename is in
   /// basename_suffixes. This means that if basename_suffixes is provided,
   /// returned entries basenames' may not be in this array.
-  /// NOTE: the basename_suffixes feature is not yet complete.
   3: optional list<string> basenames;
 
   /// Return entries that have these path prefixes.
   4: optional list<string> prefixes;
 
-  /// NOTE: This feature is not complete yet.
-  /// Facebook: TODO(rsehrlich): complete T124058271.
   /// Return entries where a suffix of the entry's basename is in this array, if
   /// this array is provided.
   /// For example, if basename_suffixes is ['foo'], the basenames 'bar.foo',
