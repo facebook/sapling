@@ -578,24 +578,29 @@ void EdenServiceHandler::resetParentCommits(
 }
 
 namespace {
-/**
- * Convert the passed in SyncBehavior to a chrono type.
- *
- * When the SyncBehavior is unset, this default to a timeout of 60 seconds.
- */
-std::chrono::seconds getSyncTimeout(const SyncBehavior& sync) {
-  auto seconds = sync.syncTimeoutSeconds_ref().value_or(60);
-  return std::chrono::seconds{seconds};
+int64_t getSyncTimeout(const SyncBehavior& sync) {
+  return sync.syncTimeoutSeconds().value_or(60);
 }
 
+/**
+ * Wait for all the pending notifications to be processed.
+ *
+ * When the SyncBehavior is unset, this default to a timeout of 60 seconds. A
+ * negative SyncBehavior mean to wait indefinitely.
+ */
 ImmediateFuture<folly::Unit> waitForPendingNotifications(
     const EdenMount& mount,
-    std::chrono::seconds timeout) {
-  if (timeout.count() == 0) {
+    const SyncBehavior& sync) {
+  auto seconds = getSyncTimeout(sync);
+  if (seconds == 0) {
     return folly::unit;
   }
 
-  return mount.waitForPendingNotifications().semi().within(timeout);
+  auto future = mount.waitForPendingNotifications().semi();
+  if (seconds > 0) {
+    future = std::move(future).within(std::chrono::seconds{seconds});
+  }
+  return std::move(future);
 }
 } // namespace
 
@@ -603,14 +608,14 @@ folly::SemiFuture<folly::Unit>
 EdenServiceHandler::semifuture_synchronizeWorkingCopy(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<SynchronizeWorkingCopyParams> params) {
-  auto timeout = getSyncTimeout(*params->sync_ref());
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, timeout.count());
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3, *mountPoint, getSyncTimeout(*params->sync()));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
 
   return wrapImmediateFuture(
              std::move(helper),
-             waitForPendingNotifications(*edenMount, timeout))
+             waitForPendingNotifications(*edenMount, *params->sync()))
       .semi();
 }
 
@@ -620,13 +625,12 @@ void EdenServiceHandler::getSHA1(
     unique_ptr<vector<string>> paths,
     std::unique_ptr<SyncBehavior> sync) {
   TraceBlock block("getSHA1");
-  auto syncTimeout = getSyncTimeout(*sync);
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, *mountPoint, syncTimeout.count(), toLogArg(*paths));
+      DBG3, *mountPoint, getSyncTimeout(*sync), toLogArg(*paths));
   vector<ImmediateFuture<Hash20>> futures;
   auto mountPath = AbsolutePathPiece{*mountPoint};
 
-  waitForPendingNotifications(*server_->getMount(mountPath), syncTimeout)
+  waitForPendingNotifications(*server_->getMount(mountPath), *sync)
       .thenValue([&](auto&&) {
         for (const auto& path : *paths) {
           futures.emplace_back(getSHA1ForPathDefensively(
@@ -1594,9 +1598,8 @@ EdenServiceHandler::semifuture_getEntryInformation(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths,
     std::unique_ptr<SyncBehavior> sync) {
-  auto syncTimeout = getSyncTimeout(*sync);
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, *mountPoint, syncTimeout.count(), toLogArg(*paths));
+      DBG3, *mountPoint, getSyncTimeout(*sync), toLogArg(*paths));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   auto rootInode = edenMount->getRootInode();
@@ -1605,7 +1608,7 @@ EdenServiceHandler::semifuture_getEntryInformation(
 
   return wrapImmediateFuture(
              std::move(helper),
-             waitForPendingNotifications(*edenMount, syncTimeout)
+             waitForPendingNotifications(*edenMount, *sync)
                  .thenValue([rootInode = std::move(rootInode),
                              paths = std::move(paths),
                              objectStore,
@@ -1646,9 +1649,8 @@ EdenServiceHandler::semifuture_getFileInformation(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths,
     std::unique_ptr<SyncBehavior> sync) {
-  auto syncTimeout = getSyncTimeout(*sync);
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, *mountPoint, syncTimeout.count(), toLogArg(*paths));
+      DBG3, *mountPoint, getSyncTimeout(*sync), toLogArg(*paths));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   auto rootInode = edenMount->getRootInode();
@@ -1658,7 +1660,7 @@ EdenServiceHandler::semifuture_getFileInformation(
 
   return wrapImmediateFuture(
              std::move(helper),
-             waitForPendingNotifications(*edenMount, syncTimeout)
+             waitForPendingNotifications(*edenMount, *sync)
                  .thenValue([rootInode = std::move(rootInode),
                              paths = std::move(paths),
                              lastCheckoutTime,
@@ -1742,16 +1744,15 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
   auto mountPoint = params->get_mountPoint();
   auto mountPath = AbsolutePathPiece{mountPoint};
   auto paths = params->get_directoryPaths();
-  auto syncTimeout = getSyncTimeout(*params->sync());
   // Get requested attributes for each path
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, mountPoint, syncTimeout.count(), toLogArg(paths));
+      DBG3, mountPoint, getSyncTimeout(*params->sync()), toLogArg(paths));
   auto& fetchContext = helper->getFetchContext();
 
   return wrapImmediateFuture(
              std::move(helper),
              waitForPendingNotifications(
-                 *server_->getMount(mountPath), syncTimeout)
+                 *server_->getMount(mountPath), *params->sync())
                  .thenValue([this,
                              paths = std::move(paths),
                              &fetchContext,
@@ -1825,16 +1826,15 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
   auto mountPath = AbsolutePathPiece{mountPoint};
   auto paths = params->get_paths();
   auto reqBitmask = params->get_requestedAttributes();
-  auto syncTimeout = getSyncTimeout(*params->sync_ref());
   // Get requested attributes for each path
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, mountPoint, syncTimeout.count(), toLogArg(paths));
+      DBG3, mountPoint, getSyncTimeout(*params->sync()), toLogArg(paths));
   auto& fetchContext = helper->getFetchContext();
 
   return wrapImmediateFuture(
              std::move(helper),
              waitForPendingNotifications(
-                 *server_->getMount(mountPath), syncTimeout)
+                 *server_->getMount(mountPath), *params->sync())
                  .thenValue([this,
                              paths = std::move(paths),
                              &fetchContext,
@@ -1954,7 +1954,6 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeRecursively(
     std::unique_ptr<RemoveRecursivelyParams> params) {
   auto mountPoint = params->get_mountPoint();
   auto repoPath = params->get_path();
-  auto syncTimeout = getSyncTimeout(*params->sync_ref());
 
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, mountPoint, repoPath);
   auto mountPath = AbsolutePathPiece{mountPoint};
@@ -1968,7 +1967,7 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeRecursively(
                            ->getParentRacy();
   return wrapImmediateFuture(
              std::move(helper),
-             waitForPendingNotifications(*edenMount, syncTimeout)
+             waitForPendingNotifications(*edenMount, *params->sync())
                  .thenValue([inode = std::move(inode),
                              relativePath = std::move(relativePath),
                              &fetchContext](auto&&) {
@@ -2030,7 +2029,6 @@ EdenServiceHandler::semifuture_ensureMaterialized(
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG4, mountPoint, folly::join(",", params->get_paths()));
 
-  auto syncTimeout = getSyncTimeout(*params->sync_ref());
   auto edenMount = server_->getMount(AbsolutePathPiece{mountPoint});
   // The background mode is not fully running on background, instead, it will
   // start to load inodes in a blocking way, and then collect unready
@@ -2041,7 +2039,7 @@ EdenServiceHandler::semifuture_ensureMaterialized(
   bool background = params->get_background();
 
   auto waitForPendingNotificationsFuture =
-      waitForPendingNotifications(*edenMount, syncTimeout);
+      waitForPendingNotifications(*edenMount, *params->sync());
   auto ensureMaterializedFuture =
       std::move(waitForPendingNotificationsFuture)
           .thenValue([params = std::move(params),
@@ -2550,13 +2548,12 @@ void EdenServiceHandler::debugInodeStatus(
         eden_constants::DIS_COMPUTE_BLOB_SIZES_;
   }
 
-  auto syncTimeout = getSyncTimeout(*sync);
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG2, *mountPoint, *path, flags, syncTimeout.count());
+      DBG2, *mountPoint, *path, flags, getSyncTimeout(*sync));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
 
-  waitForPendingNotifications(*edenMount, syncTimeout)
+  waitForPendingNotifications(*edenMount, *sync)
       .thenValue([&](auto&&) {
         auto inode =
             inodeFromUserPath(*edenMount, *path, helper->getFetchContext())
