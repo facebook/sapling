@@ -53,204 +53,6 @@ struct ChildFutures {
 
 static constexpr PathComponentPiece kIgnoreFilename{".gitignore"};
 
-void processAddedSide(
-    DiffContext* context,
-    ChildFutures& childFutures,
-    RelativePathPiece currentPath,
-    const Tree::value_type& wdEntry,
-    const GitIgnoreStack* ignore,
-    bool isIgnored);
-
-void processRemovedSide(
-    DiffContext* context,
-    ChildFutures& childFutures,
-    RelativePathPiece currentPath,
-    const Tree::value_type& scmEntry);
-
-void processBothPresent(
-    DiffContext* context,
-    ChildFutures& childFutures,
-    RelativePathPiece currentPath,
-    const Tree::value_type& scmEntry,
-    const Tree::value_type& wdEntry,
-    const GitIgnoreStack* ignore,
-    bool isIgnored);
-
-Future<Unit> waitOnResults(DiffContext* context, ChildFutures&& childFutures);
-
-/**
- * Diff two trees.
- *
- * The path argument specifies the path to these trees, and will be prefixed
- * to all differences recorded in the results.
- *
- * The differences will be recorded using a callback provided by the caller.
- */
-FOLLY_NODISCARD Future<Unit> computeTreeDiff(
-    DiffContext* context,
-    RelativePathPiece currentPath,
-    std::shared_ptr<const Tree> scmTree,
-    std::shared_ptr<const Tree> wdTree,
-    std::unique_ptr<GitIgnoreStack> ignore,
-    bool isIgnored) {
-  // A list of Futures to wait on for our children's results.
-  ChildFutures childFutures;
-
-  // Walk through the entries in both trees.
-  // This relies on the fact that the entry list in each tree is always sorted.
-  Tree::container emptyEntries{kPathMapDefaultCaseSensitive};
-  auto scmIter = scmTree ? scmTree->cbegin() : emptyEntries.cbegin();
-  auto scmEnd = scmTree ? scmTree->cend() : emptyEntries.cend();
-  auto wdIter = wdTree ? wdTree->cbegin() : emptyEntries.cend();
-  auto wdEnd = wdTree ? wdTree->cend() : emptyEntries.cend();
-  while (true) {
-    if (scmIter == scmEnd) {
-      if (wdIter == wdEnd) {
-        // All Done
-        break;
-      }
-      // This entry is present in wdTree but not scmTree
-      processAddedSide(
-          context, childFutures, currentPath, *wdIter, ignore.get(), isIgnored);
-      ++wdIter;
-    } else if (wdIter == wdEnd) {
-      // This entry is present in scmTree but not wdTree
-      processRemovedSide(context, childFutures, currentPath, *scmIter);
-      ++scmIter;
-    } else {
-      auto compare = comparePathPiece(
-          scmIter->first, wdIter->first, context->getCaseSensitive());
-      if (compare == CompareResult::BEFORE) {
-        processRemovedSide(context, childFutures, currentPath, *scmIter);
-        ++scmIter;
-      } else if (compare == CompareResult::AFTER) {
-        processAddedSide(
-            context,
-            childFutures,
-            currentPath,
-            *wdIter,
-            ignore.get(),
-            isIgnored);
-        ++wdIter;
-      } else {
-        processBothPresent(
-            context,
-            childFutures,
-            currentPath,
-            *scmIter,
-            *wdIter,
-            ignore.get(),
-            isIgnored);
-        ++scmIter;
-        ++wdIter;
-      }
-    }
-  }
-
-  // Add an ensure() block that makes sure the ignore stack exists until all of
-  // our children results have finished processing
-  return waitOnResults(context, std::move(childFutures))
-      .ensure([ignore = std::move(ignore)] {});
-}
-
-FOLLY_NODISCARD Future<Unit> loadGitIgnoreThenDiffTrees(
-    PathComponentPiece gitIgnoreName,
-    DiffContext* context,
-    RelativePathPiece currentPath,
-    std::shared_ptr<const Tree> scmTree,
-    std::shared_ptr<const Tree> wdTree,
-    const GitIgnoreStack* parentIgnore,
-    bool isIgnored) {
-  // TODO: load file contents directly from context->store if gitIgnoreEntry is
-  // a regular file
-  auto loadFileContentsFromPath = context->getLoadFileContentsFromPath();
-  auto gitIgnorePath = currentPath + gitIgnoreName;
-  return loadFileContentsFromPath(context->getFetchContext(), gitIgnorePath)
-      .thenError(
-          [entryPath = gitIgnorePath](const folly::exception_wrapper& ex) {
-            // TODO: add an API to DiffCallback to report user errors like this
-            // (errors that do not indicate a problem with EdenFS itself) that
-            // can be returned to the caller in a thrift response
-            XLOG(WARN) << "error loading gitignore at " << entryPath << ": "
-                       << folly::exceptionStr(ex);
-            return std::string{};
-          })
-      .thenValue([context,
-                  currentPath = currentPath.copy(),
-                  scmTree = std::move(scmTree),
-                  wdTree = std::move(wdTree),
-                  parentIgnore,
-                  isIgnored](std::string&& ignoreFileContents) mutable {
-        return computeTreeDiff(
-            context,
-            currentPath,
-            std::move(scmTree),
-            std::move(wdTree),
-            make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
-            isIgnored);
-      });
-}
-
-FOLLY_NODISCARD Future<Unit> diffTrees(
-    DiffContext* context,
-    RelativePathPiece currentPath,
-    std::shared_ptr<const Tree> scmTree,
-    std::shared_ptr<const Tree> wdTree,
-    const GitIgnoreStack* parentIgnore,
-    bool isIgnored) {
-  if (context->isCancelled()) {
-    XLOG(DBG7) << "diff() on directory " << currentPath
-               << " cancelled due to client request no longer being active";
-    return makeFuture();
-  }
-  // If this directory is already ignored, we don't need to bother loading its
-  // .gitignore file.  Everything inside this directory must also be ignored,
-  // unless it is explicitly tracked in source control.
-  //
-  // Explicit include rules cannot be used to unignore files inside an ignored
-  // directory.
-  //
-  // We check context->getLoadFileContentsFromPath() here as a way to see if we
-  // are processing gitIgnore files or not, since this is only set from code
-  // that enters through eden/fs/inodes/Diff.cpp. Either way, it is
-  // impossible to load file contents without this set.
-  if (isIgnored || !context->getLoadFileContentsFromPath()) {
-    // We can pass in a null GitIgnoreStack pointer here.
-    // Since the entire directory is ignored, we don't need to check ignore
-    // status for any entries that aren't already tracked in source control.
-    return computeTreeDiff(
-        context,
-        currentPath,
-        std::move(scmTree),
-        std::move(wdTree),
-        nullptr,
-        isIgnored);
-  }
-
-  if (wdTree) {
-    // If this directory has a .gitignore file, load it first.
-    const auto it = wdTree->find(kIgnoreFilename);
-    if (it != wdTree->cend() && !it->second.isTree()) {
-      return loadGitIgnoreThenDiffTrees(
-          it->first,
-          context,
-          currentPath,
-          std::move(scmTree),
-          std::move(wdTree),
-          parentIgnore,
-          isIgnored);
-    }
-  }
-
-  return computeTreeDiff(
-      context,
-      currentPath,
-      std::move(scmTree),
-      std::move(wdTree),
-      make_unique<GitIgnoreStack>(parentIgnore), // empty with no rules
-      isIgnored);
-}
-
 /**
  * Process a TreeEntry that is present only on one side of the diff.
  * We don't know yet if this TreeEntry refers to a Tree or a Blob.
@@ -463,6 +265,179 @@ FOLLY_NODISCARD Future<Unit> waitOnResults(
           context->callback->diffError(paths.at(idx), result.exception());
         }
       });
+}
+
+/**
+ * Diff two trees.
+ *
+ * The path argument specifies the path to these trees, and will be prefixed
+ * to all differences recorded in the results.
+ *
+ * The differences will be recorded using a callback provided by the caller.
+ */
+FOLLY_NODISCARD Future<Unit> computeTreeDiff(
+    DiffContext* context,
+    RelativePathPiece currentPath,
+    std::shared_ptr<const Tree> scmTree,
+    std::shared_ptr<const Tree> wdTree,
+    std::unique_ptr<GitIgnoreStack> ignore,
+    bool isIgnored) {
+  // A list of Futures to wait on for our children's results.
+  ChildFutures childFutures;
+
+  // Walk through the entries in both trees.
+  // This relies on the fact that the entry list in each tree is always sorted.
+  Tree::container emptyEntries{kPathMapDefaultCaseSensitive};
+  auto scmIter = scmTree ? scmTree->cbegin() : emptyEntries.cbegin();
+  auto scmEnd = scmTree ? scmTree->cend() : emptyEntries.cend();
+  auto wdIter = wdTree ? wdTree->cbegin() : emptyEntries.cend();
+  auto wdEnd = wdTree ? wdTree->cend() : emptyEntries.cend();
+  while (true) {
+    if (scmIter == scmEnd) {
+      if (wdIter == wdEnd) {
+        // All Done
+        break;
+      }
+      // This entry is present in wdTree but not scmTree
+      processAddedSide(
+          context, childFutures, currentPath, *wdIter, ignore.get(), isIgnored);
+      ++wdIter;
+    } else if (wdIter == wdEnd) {
+      // This entry is present in scmTree but not wdTree
+      processRemovedSide(context, childFutures, currentPath, *scmIter);
+      ++scmIter;
+    } else {
+      auto compare = comparePathPiece(
+          scmIter->first, wdIter->first, context->getCaseSensitive());
+      if (compare == CompareResult::BEFORE) {
+        processRemovedSide(context, childFutures, currentPath, *scmIter);
+        ++scmIter;
+      } else if (compare == CompareResult::AFTER) {
+        processAddedSide(
+            context,
+            childFutures,
+            currentPath,
+            *wdIter,
+            ignore.get(),
+            isIgnored);
+        ++wdIter;
+      } else {
+        processBothPresent(
+            context,
+            childFutures,
+            currentPath,
+            *scmIter,
+            *wdIter,
+            ignore.get(),
+            isIgnored);
+        ++scmIter;
+        ++wdIter;
+      }
+    }
+  }
+
+  // Add an ensure() block that makes sure the ignore stack exists until all of
+  // our children results have finished processing
+  return waitOnResults(context, std::move(childFutures))
+      .ensure([ignore = std::move(ignore)] {});
+}
+
+FOLLY_NODISCARD Future<Unit> loadGitIgnoreThenDiffTrees(
+    PathComponentPiece gitIgnoreName,
+    DiffContext* context,
+    RelativePathPiece currentPath,
+    std::shared_ptr<const Tree> scmTree,
+    std::shared_ptr<const Tree> wdTree,
+    const GitIgnoreStack* parentIgnore,
+    bool isIgnored) {
+  // TODO: load file contents directly from context->store if gitIgnoreEntry is
+  // a regular file
+  auto loadFileContentsFromPath = context->getLoadFileContentsFromPath();
+  auto gitIgnorePath = currentPath + gitIgnoreName;
+  return loadFileContentsFromPath(context->getFetchContext(), gitIgnorePath)
+      .thenError(
+          [entryPath = gitIgnorePath](const folly::exception_wrapper& ex) {
+            // TODO: add an API to DiffCallback to report user errors like this
+            // (errors that do not indicate a problem with EdenFS itself) that
+            // can be returned to the caller in a thrift response
+            XLOG(WARN) << "error loading gitignore at " << entryPath << ": "
+                       << folly::exceptionStr(ex);
+            return std::string{};
+          })
+      .thenValue([context,
+                  currentPath = currentPath.copy(),
+                  scmTree = std::move(scmTree),
+                  wdTree = std::move(wdTree),
+                  parentIgnore,
+                  isIgnored](std::string&& ignoreFileContents) mutable {
+        return computeTreeDiff(
+            context,
+            currentPath,
+            std::move(scmTree),
+            std::move(wdTree),
+            make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
+            isIgnored);
+      });
+}
+
+FOLLY_NODISCARD Future<Unit> diffTrees(
+    DiffContext* context,
+    RelativePathPiece currentPath,
+    std::shared_ptr<const Tree> scmTree,
+    std::shared_ptr<const Tree> wdTree,
+    const GitIgnoreStack* parentIgnore,
+    bool isIgnored) {
+  if (context->isCancelled()) {
+    XLOG(DBG7) << "diff() on directory " << currentPath
+               << " cancelled due to client request no longer being active";
+    return makeFuture();
+  }
+  // If this directory is already ignored, we don't need to bother loading its
+  // .gitignore file.  Everything inside this directory must also be ignored,
+  // unless it is explicitly tracked in source control.
+  //
+  // Explicit include rules cannot be used to unignore files inside an ignored
+  // directory.
+  //
+  // We check context->getLoadFileContentsFromPath() here as a way to see if we
+  // are processing gitIgnore files or not, since this is only set from code
+  // that enters through eden/fs/inodes/Diff.cpp. Either way, it is
+  // impossible to load file contents without this set.
+  if (isIgnored || !context->getLoadFileContentsFromPath()) {
+    // We can pass in a null GitIgnoreStack pointer here.
+    // Since the entire directory is ignored, we don't need to check ignore
+    // status for any entries that aren't already tracked in source control.
+    return computeTreeDiff(
+        context,
+        currentPath,
+        std::move(scmTree),
+        std::move(wdTree),
+        nullptr,
+        isIgnored);
+  }
+
+  if (wdTree) {
+    // If this directory has a .gitignore file, load it first.
+    const auto it = wdTree->find(kIgnoreFilename);
+    if (it != wdTree->cend() && !it->second.isTree()) {
+      return loadGitIgnoreThenDiffTrees(
+          it->first,
+          context,
+          currentPath,
+          std::move(scmTree),
+          std::move(wdTree),
+          parentIgnore,
+          isIgnored);
+    }
+  }
+
+  return computeTreeDiff(
+      context,
+      currentPath,
+      std::move(scmTree),
+      std::move(wdTree),
+      make_unique<GitIgnoreStack>(parentIgnore), // empty with no rules
+      isIgnored);
 }
 
 } // namespace
