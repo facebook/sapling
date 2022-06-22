@@ -1118,13 +1118,24 @@ impl ChangesetContext {
         .await
     }
 
+    /// Find files after applying filters on the prefix and basename.
+    /// A files is returned if the following conditions hold:
+    /// - `prefixes` is None, or there is an element of `prefixes` such that the
+    ///   element is a prefix of the file path.
+    /// - the basename of the file path is in `basenames`, or there is a suffix
+    ///   in `basename_suffixes` such that that suffix is a suffix of the
+    ///   basename of the file, or both `basenames` and `basename_suffixes` are
+    ///   None.
+    /// The order that files are returned is based on the parameter `ordering`.
+    /// To continue a paginated query, use the parameter `ordering`.
     pub async fn find_files(
         &self,
         prefixes: Option<Vec<MononokePath>>,
         basenames: Option<Vec<String>>,
-        _basename_suffixes: Option<Vec<String>>,
+        basename_suffixes: Option<Vec<String>>,
         ordering: ChangesetFileOrdering,
     ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
+        // First, find the entries, and filter by file prefix.
         let entries = self.find_entries(prefixes, ordering).await?;
         let mpaths = entries.try_filter_map(|(path, entry)| async move {
             match (path, entry) {
@@ -1132,20 +1143,71 @@ impl ChangesetContext {
                 _ => Ok(None),
             }
         });
-        let mpaths = match basenames {
-            Some(basenames) => {
-                let basename_set = basenames
+
+        // Now, construct a set of basenames to include.
+        // These basenames are of type MPathElement rather than being strings.
+        let basenames_as_mpath_elements_set = match basenames {
+            Some(basenames) => Some(
+                basenames
                     .into_iter()
                     .map(|basename| MPathElement::new(basename.into()))
                     .collect::<Result<HashSet<_>, _>>()
-                    .map_err(MononokeError::from)?;
+                    .map_err(MononokeError::from)?,
+            ),
+            None => None,
+        };
+
+        // Now, filter by basename. We use "left_stream" and "right_stream" to
+        // satisfy the type checker, because filtering a stream creates a
+        // different "type". Using left and right streams creates an Either type
+        // which satisfies the type checker.
+        let mpaths = match (basenames_as_mpath_elements_set, basename_suffixes) {
+            // If basenames and suffixes are provided, include basenames in
+            // the set basenames_as_mpath_elements_set as well as basenames
+            // with a suffix in basename_suffixes.
+            (Some(basenames_as_mpath_elements_set), Some(basename_suffixes)) => mpaths
+                .try_filter(move |mpath| {
+                    let basename = mpath.basename();
+                    future::ready(
+                        basenames_as_mpath_elements_set.contains(basename)
+                            || basename_suffixes
+                                .iter()
+                                .any(|suffix| basename.has_suffix(suffix.as_bytes())),
+                    )
+                })
+                .into_stream()
+                .left_stream()
+                .left_stream(),
+            // If no suffixes are provided, only match on basenames that are
+            // in the set.
+            (Some(basenames_as_mpath_elements_set), None) => mpaths
+                .try_filter(move |mpath| {
+                    future::ready(basenames_as_mpath_elements_set.contains(mpath.basename()))
+                })
+                .into_stream()
+                .left_stream()
+                .right_stream(),
+            (None, Some(basename_suffixes)) =>
+            // If only suffixes are provided, match on basenames that have a
+            // suffix in basename_suffixes.
+            {
                 mpaths
-                    .try_filter(move |mpath| future::ready(basename_set.contains(mpath.basename())))
+                    .try_filter(move |mpath| {
+                        let basename = mpath.basename();
+                        future::ready(
+                            basename_suffixes
+                                .iter()
+                                .any(|suffix| basename.has_suffix(suffix.as_bytes())),
+                        )
+                    })
                     .into_stream()
+                    .right_stream()
                     .left_stream()
             }
-            None => mpaths.into_stream().right_stream(),
+            // Otherwise, there are no basename filters, so do not filter.
+            (None, None) => mpaths.into_stream().right_stream().right_stream(),
         };
+
         Ok(mpaths
             .map_ok(|mpath| MononokePath::new(Some(mpath)))
             .map_err(MononokeError::from))

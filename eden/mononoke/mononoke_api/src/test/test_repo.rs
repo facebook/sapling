@@ -462,6 +462,261 @@ async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
     let expected_files = vec![MononokePath::try_from("dir2/file_1_in_dir2")?];
     assert_eq!(files, expected_files);
 
+    // Suffixes
+    let mut files: Vec<_> = cs
+        .find_files(
+            None,
+            None,
+            Some(vec![String::from("_1"), String::from("_2")]),
+            ChangesetFileOrdering::Unordered,
+        )
+        .await?
+        .try_collect()
+        .await?;
+    files.sort();
+    let expected_files = vec![
+        MononokePath::try_from("dir1/subdir1/file_1")?,
+        MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+    ];
+    assert_eq!(files, expected_files);
+
+    // Suffixes, ordered
+    let files: Vec<_> = cs
+        .find_files(
+            None,
+            None,
+            Some(vec![String::from("_1"), String::from("_2")]),
+            ChangesetFileOrdering::Ordered {
+                after: Some(MononokePath::try_from("")?),
+            },
+        )
+        .await?
+        .try_collect()
+        .await?;
+    let expected_files = vec![
+        MononokePath::try_from("dir1/subdir1/file_1")?,
+        MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+    ];
+    assert_eq!(files, expected_files);
+
+    // Suffixes, ordered after
+    let files: Vec<_> = cs
+        .find_files(
+            None,
+            None,
+            Some(vec![String::from("_1"), String::from("_2")]),
+            ChangesetFileOrdering::Ordered {
+                after: Some(MononokePath::try_from("dir1/subdir1/subsubdir1a")?),
+            },
+        )
+        .await?
+        .try_collect()
+        .await?;
+    let expected_files = vec![
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+    ];
+    assert_eq!(files, expected_files);
+
+    // Suffixes, prefixes
+    let mut files: Vec<_> = cs
+        .find_files(
+            Some(vec![
+                MononokePath::try_from("dir1/subdir1/subsubdir1")?,
+                MononokePath::try_from("dir1/subdir1/subsubdir2")?,
+            ]),
+            None,
+            Some(vec![String::from("1"), String::from("2")]),
+            ChangesetFileOrdering::Unordered,
+        )
+        .await?
+        .try_collect()
+        .await?;
+    files.sort();
+    let expected_files = vec![
+        MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+    ];
+    assert_eq!(files, expected_files);
+
+    // Suffixes, prefixes, ordered
+    let files: Vec<_> = cs
+        .find_files(
+            Some(vec![
+                MononokePath::try_from("dir1/subdir1/subsubdir1")?,
+                MononokePath::try_from("dir1/subdir1/subsubdir2")?,
+            ]),
+            None,
+            Some(vec![String::from("1"), String::from("2")]),
+            ChangesetFileOrdering::Ordered {
+                after: Some(MononokePath::try_from("")?),
+            },
+        )
+        .await?
+        .try_collect()
+        .await?;
+    let expected_files = vec![
+        MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+    ];
+    assert_eq!(files, expected_files);
+
+    // Suffixes, prefixes, ordered after
+    let files: Vec<_> = cs
+        .find_files(
+            Some(vec![
+                MononokePath::try_from("dir1/subdir1/subsubdir1")?,
+                MononokePath::try_from("dir1/subdir1/subsubdir2")?,
+            ]),
+            None,
+            Some(vec![String::from("1"), String::from("2")]),
+            ChangesetFileOrdering::Ordered {
+                after: Some(MononokePath::try_from("dir1/subdir1/subsubdir1a")?),
+            },
+        )
+        .await?
+        .try_collect()
+        .await?;
+    let expected_files = vec![
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_2")?,
+    ];
+    assert_eq!(files, expected_files);
+
+    // Suffixes, basenames
+    let mut files: Vec<_> = cs
+        .find_files(
+            None,
+            Some(vec![String::from("file_1_in_dir2")]),
+            Some(vec![String::from("1")]),
+            ChangesetFileOrdering::Unordered,
+        )
+        .await?
+        .try_collect()
+        .await?;
+    files.sort();
+    let expected_files = vec![
+        MononokePath::try_from("1")?,
+        MononokePath::try_from("dir1/file_1_in_dir1")?,
+        MononokePath::try_from("dir1/file_2_in_dir1")?,
+        MononokePath::try_from("dir1/subdir1/file_1")?,
+        MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MononokePath::try_from("dir2/file_1_in_dir2")?,
+    ];
+    assert_eq!(files, expected_files);
+
+    // Suffixes, basenames, ordered
+    let files: Vec<_> = cs
+        .find_files(
+            None,
+            Some(vec![String::from("file_1_in_dir2")]),
+            Some(vec![String::from("1")]),
+            ChangesetFileOrdering::Ordered {
+                after: Some(MononokePath::try_from("")?),
+            },
+        )
+        .await?
+        .try_collect()
+        .await?;
+    let expected_files = vec![
+        MononokePath::try_from("1")?,
+        MononokePath::try_from("dir1/file_1_in_dir1")?,
+        MononokePath::try_from("dir1/file_2_in_dir1")?,
+        MononokePath::try_from("dir1/subdir1/file_1")?,
+        MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MononokePath::try_from("dir2/file_1_in_dir2")?,
+    ];
+    assert_eq!(files, expected_files);
+
+    // Suffixes, basenames, ordered after
+    let files: Vec<_> = cs
+        .find_files(
+            None,
+            Some(vec![String::from("file_1_in_dir2")]),
+            Some(vec![String::from("1")]),
+            ChangesetFileOrdering::Ordered {
+                after: Some(MononokePath::try_from("dir1/subdir1/subsubdir1a")?),
+            },
+        )
+        .await?
+        .try_collect()
+        .await?;
+    let expected_files = vec![
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MononokePath::try_from("dir2/file_1_in_dir2")?,
+    ];
+    assert_eq!(files, expected_files);
+
+    // Suffixes, basenames, prefixes
+    let mut files: Vec<_> = cs
+        .find_files(
+            Some(vec![
+                MononokePath::try_from("dir1/subdir1/subsubdir2")?,
+                MononokePath::try_from("dir2")?,
+            ]),
+            Some(vec![String::from("file_1_in_dir2")]),
+            Some(vec![String::from("1")]),
+            ChangesetFileOrdering::Unordered,
+        )
+        .await?
+        .try_collect()
+        .await?;
+    files.sort();
+    let expected_files = vec![
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MononokePath::try_from("dir2/file_1_in_dir2")?,
+    ];
+    assert_eq!(files, expected_files);
+
+    // Suffixes, basenames, prefixes, ordered
+    let files: Vec<_> = cs
+        .find_files(
+            Some(vec![
+                MononokePath::try_from("dir1/subdir1/subsubdir2")?,
+                MononokePath::try_from("dir2")?,
+            ]),
+            Some(vec![String::from("file_1_in_dir2")]),
+            Some(vec![String::from("1")]),
+            ChangesetFileOrdering::Ordered {
+                after: Some(MononokePath::try_from("")?),
+            },
+        )
+        .await?
+        .try_collect()
+        .await?;
+    let expected_files = vec![
+        MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+        MononokePath::try_from("dir2/file_1_in_dir2")?,
+    ];
+    assert_eq!(files, expected_files);
+
+    // Suffixes, basenames, prefixes, ordered after
+    let files: Vec<_> = cs
+        .find_files(
+            Some(vec![
+                MononokePath::try_from("dir1/subdir1/subsubdir2")?,
+                MononokePath::try_from("dir2")?,
+            ]),
+            Some(vec![String::from("file_1_in_dir2")]),
+            Some(vec![String::from("1")]),
+            ChangesetFileOrdering::Ordered {
+                after: Some(MononokePath::try_from("dir1/subdir1/subsubdir3")?),
+            },
+        )
+        .await?
+        .try_collect()
+        .await?;
+    let expected_files = vec![MononokePath::try_from("dir2/file_1_in_dir2")?];
+    assert_eq!(files, expected_files);
+
     Ok(())
 }
 
