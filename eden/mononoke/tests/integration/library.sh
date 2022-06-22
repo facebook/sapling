@@ -155,18 +155,21 @@ function mononoke {
 
   # Ignore specific Python warnings to make tests predictable.
   PYTHONWARNINGS="ignore:::requests,ignore::SyntaxWarning" \
-  GLOG_minloglevel=5 "$MONONOKE_SERVER" "$@" \
-  --scribe-logging-directory "$TESTTMP/scribe_logs" \
-  --ca-pem "$TEST_CERTDIR/root-ca.crt" \
-  --private-key "$TEST_CERTDIR/localhost.key" \
-  --cert "$TEST_CERTDIR/localhost.crt" \
-  --ssl-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
-  --debug \
-  --listening-host-port "$BIND_ADDR" \
-  --bound-address-file "$MONONOKE_SERVER_ADDR_FILE" \
-  --mononoke-config-path "$TESTTMP/mononoke-config" \
-  --no-default-scuba-dataset \
-  "${COMMON_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &
+  GLOG_minloglevel=5 \
+    "$MONONOKE_SERVER" "$@" \
+    --scribe-logging-directory "$TESTTMP/scribe_logs" \
+    --ca-pem "$TEST_CERTDIR/root-ca.crt" \
+    --private-key "$TEST_CERTDIR/localhost.key" \
+    --cert "$TEST_CERTDIR/localhost.crt" \
+    --ssl-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
+    --scs-client-cert="$TEST_CERTDIR/localhost.crt" \
+    --scs-client-private-key="$TEST_CERTDIR/localhost.key" \
+    --debug \
+    --listening-host-port "$BIND_ADDR" \
+    --bound-address-file "$MONONOKE_SERVER_ADDR_FILE" \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --no-default-scuba-dataset \
+    "${COMMON_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &
   export MONONOKE_PID=$!
   echo "$MONONOKE_PID" >> "$DAEMON_PIDS"
 }
@@ -1222,7 +1225,12 @@ function s_client {
 
 function scs {
   rm -f "$TESTTMP/scs_server_addr.txt"
-  GLOG_minloglevel=5 "$SCS_SERVER" "$@" \
+  GLOG_minloglevel=5 \
+    THRIFT_TLS_SRV_CERT="$TEST_CERTDIR/localhost.crt" \
+    THRIFT_TLS_SRV_KEY="$TEST_CERTDIR/localhost.key" \
+    THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
+    THRIFT_TLS_TICKETS="$TEST_CERTDIR/server.pem.seeds" \
+    "$SCS_SERVER" "$@" \
     --host "$LOCALIP" \
     --port 0 \
     --log-level DEBUG \
@@ -1256,7 +1264,11 @@ function megarepo_async_worker {
 }
 
 function scsc {
-  GLOG_minloglevel=5 "$SCS_CLIENT" --host "$LOCALIP:$SCS_PORT" "$@"
+  GLOG_minloglevel=5 \
+    THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/localhost.crt" \
+    THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/localhost.key" \
+    THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
+    "$SCS_CLIENT" --host "$LOCALIP:$SCS_PORT" "$@"
 }
 
 function lfs_health {
