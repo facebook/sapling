@@ -197,6 +197,7 @@ members = [
   "blobstore/redactedblobstore",
   "blobstore/samplingblob",
   "blobstore/sqlblob",
+  "blobstore/test_utils",
   "blobstore/throttledblob",
   "blobstore/virtually_sharded_blobstore",
   "blobstore_healer",
