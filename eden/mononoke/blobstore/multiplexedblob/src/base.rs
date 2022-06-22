@@ -224,17 +224,19 @@ impl MultiplexedBlobstoreBase {
             .map(|f| f.map(|v| (false, v)).left_future())
             .chain(
                 match write_mostly {
-                    ScrubWriteMostly::Scrub | ScrubWriteMostly::SkipMissing => Either::Left(
-                        // Generate queries
-                        multiplexed_get(
-                            ctx,
-                            self.write_mostly_blobstores.as_ref(),
-                            key,
-                            OperationType::ScrubGet,
-                            scuba,
+                    ScrubWriteMostly::Scrub | ScrubWriteMostly::SkipMissing => {
+                        Either::Left(
+                            // Generate queries
+                            multiplexed_get(
+                                ctx,
+                                self.write_mostly_blobstores.as_ref(),
+                                key,
+                                OperationType::ScrubGet,
+                                scuba,
+                            )
+                            .map(|f| f.map(|v| (true, v)).left_future()),
                         )
-                        .map(|f| f.map(|v| (true, v)).left_future()),
-                    ),
+                    }
                     ScrubWriteMostly::PopulateIfAbsent | ScrubWriteMostly::ScrubIfAbsent => {
                         Either::Right(
                             // No need to query, give None for each store
