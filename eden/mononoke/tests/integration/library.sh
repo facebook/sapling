@@ -489,12 +489,10 @@ function mononoke_health {
 
 # Wait until a Mononoke server is available for this repo.
 function wait_for_mononoke {
-  export MONONOKE_SOCKET EDENAPI_URI
+  export MONONOKE_SOCKET
   wait_for_server "Mononoke" MONONOKE_SOCKET "$TESTTMP/mononoke.out" \
     "${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}" "$MONONOKE_SERVER_ADDR_FILE" \
     mononoke_health
-
-  EDENAPI_URI="https://localhost:$MONONOKE_SOCKET/edenapi"
 }
 
 function flush_mononoke_bookmarks {
@@ -548,6 +546,10 @@ mononoke.cert=$TEST_CERTDIR/localhost.crt
 mononoke.key=$TEST_CERTDIR/localhost.key
 mononoke.prefix=mononoke://*
 mononoke.cn=localhost
+edenapi.cert=$TEST_CERTDIR/localhost.crt
+edenapi.key=$TEST_CERTDIR/localhost.key
+edenapi.prefix=localhost
+edenapi.cacerts=$TEST_CERTDIR/root-ca.crt
 EOF
 }
 
@@ -1387,8 +1389,15 @@ function hgmn {
   hg --config paths.default="mononoke://$(mononoke_address)/$REPONAME" "$@"
 }
 
+# Run an hg binary configured with the settings require to talk to Mononoke
+# via EdenAPI
 function hgedenapi {
-  hgmn --config "edenapi.url=${EDENAPI_URI}" --config "auth.edenapi.prefix=localhost" --config "edenapi.enable=true" --config "remotefilelog.http=true" --config "remotefilelog.reponame=$REPONAME" --config "auth.edenapi.cert=$TEST_CERTDIR/localhost.crt" --config "auth.edenapi.key=$TEST_CERTDIR/localhost.key" --config "auth.edenapi.cacerts=$TEST_CERTDIR/root-ca.crt" "$@"
+  hgmn \
+    --config "edenapi.url=https://localhost:$MONONOKE_SOCKET/edenapi" \
+    --config "edenapi.enable=true" \
+    --config "remotefilelog.http=true" \
+    --config "remotefilelog.reponame=$REPONAME" \
+    "$@"
 }
 
 function hginit_treemanifest() {

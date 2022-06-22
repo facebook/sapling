@@ -8,8 +8,7 @@
 
 Start up EdenAPI server.
   $ SCUBA="$TESTTMP/scuba.json"
-  $ setup_mononoke_config
-  $ setup_configerator_configs
+  $ setup_common_config
   $ mononoke --scuba-log-file "$SCUBA"
   $ wait_for_mononoke
 

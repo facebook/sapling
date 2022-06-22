@@ -10,5 +10,5 @@ Start up EdenAPI server.
   $ setup_mononoke_config
   $ start_and_wait_for_mononoke_server
 List repos.
-  $ sslcurl -s "$EDENAPI_URI/repos"
+  $ sslcurl -s "https://localhost:$MONONOKE_SOCKET/edenapi/repos"
   {"repos":["repo"]} (no-eol)
