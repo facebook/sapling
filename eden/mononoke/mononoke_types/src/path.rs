@@ -348,6 +348,15 @@ impl MPathElement {
 
         true
     }
+
+    /// Returns whether potential_suffix is a suffix of this path element.
+    /// For example, if the element is "file.extension", "n", "tension",
+    /// "extension", ".extension", "file.extension" are suffixes of the
+    /// basename, but "file" is not.
+    #[inline]
+    pub fn has_suffix(&self, potential_suffix: &[u8]) -> bool {
+        self.0.ends_with(potential_suffix)
+    }
 }
 
 // Regex for looking for invalid windows filenames
@@ -1571,5 +1580,37 @@ mod test {
         assert!(prefixes.contains_prefix(&path("a/b/c")));
         assert!(prefixes.contains_prefix(&path("x/y/z")));
         assert!(prefixes.contains_everything());
+    }
+
+    #[test]
+    fn has_suffix_suffix() {
+        let path = |path| MPath::new(path).unwrap();
+
+        // Assert that when the suffix equals the basename the result is
+        // correct.
+        assert!(&path("a/b/foo.bar").basename().has_suffix(b"foo.bar"));
+
+        // Assert that when the suffix contains is not the basename, the result
+        // is correct.
+        assert!(!&path("a/b/c").basename().has_suffix(b"b"));
+
+        // Assert when the potential suffix is a suffix the result is correct.
+        assert!(&path("a/b/c.bar").basename().has_suffix(b"r"));
+        assert!(&path("a/b/c.bar").basename().has_suffix(b"bar"));
+        assert!(&path("a/b/c.bar").basename().has_suffix(b".bar"));
+        assert!(&path("a/b/c.bar").basename().has_suffix(b"c.bar"));
+
+        // Assert when the potential suffix is not a suffix the result is
+        // correct.
+        assert!(!&path("a/b/file.bar").basename().has_suffix(b".baz"));
+        assert!(!&path("a/b/file.bar").basename().has_suffix(b"baz"));
+        assert!(!&path("a/b/c.bar").basename().has_suffix(b"c.baz"));
+
+        // Test case when potential suffix is longer than entire path.
+        assert!(
+            !&path("a/b/foo.bar")
+                .basename()
+                .has_suffix(b"file.very_very_very_long_extension")
+        );
     }
 }
