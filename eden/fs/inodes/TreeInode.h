@@ -16,7 +16,7 @@
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeOrTreeOrEntry.h"
-#include "eden/fs/inodes/InodeUtils.h"
+#include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {

@@ -9,7 +9,7 @@
 
 #include <folly/Synchronized.h>
 #include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/inodes/InodeUtils.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 
 namespace facebook::eden {
 
@@ -81,7 +81,7 @@ struct formatter<facebook::eden::InodeMaterializeEvent>
         "Timestamp: {}\nInode Number: {}\nInode Type: {}\nDuration: {}",
         event.timestamp.time_since_epoch().count(),
         event.ino.getRawValue(),
-        (event.inodeType == facebook::eden::InodeType::Tree ? "Tree" : "File"),
+        (event.inodeType == facebook::eden::InodeType::TREE ? "Tree" : "File"),
         event.duration.count());
     return formatter<std::string>::format(eventInfo, ctx);
   }

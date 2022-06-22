@@ -270,7 +270,7 @@ FileInode::runWhileMaterialized(
           materializeInParent();
           // Add materialize event after parent finishes its materialization
           getMount()->addInodeMaterializeEvent(
-              watch.value(), InodeType::File, getNodeId());
+              watch.value(), InodeType::FILE, getNodeId());
         };
         logAccess(fetchContext);
         // Note that we explicitly create a temporary LockedState object
@@ -367,7 +367,7 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
         materializeInParent();
         // Update ActivityBuffer after parent finishes its materialization
         getMount()->addInodeMaterializeEvent(
-            watch, InodeType::File, getNodeId());
+            watch, InodeType::FILE, getNodeId());
       };
 
       // Now invoke the input function.

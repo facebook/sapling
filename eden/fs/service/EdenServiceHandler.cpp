@@ -3088,6 +3088,29 @@ void EdenServiceHandler::getTracePoints(std::vector<TracePoint>& result) {
   }
 }
 
+void EdenServiceHandler::getRetroactiveInodeEvents(
+    GetRetroactiveInodeEventsResult& result,
+    std::unique_ptr<GetRetroactiveInodeEventsParams> params) {
+  auto mountPoint = params->get_mountPoint();
+  auto mountPath = AbsolutePathPiece{mountPoint};
+  auto edenMount = server_->getMount(mountPath);
+
+  std::vector<InodeEvent> thriftEvents;
+  auto bufferEvents = edenMount->getActivityBuffer()->getAllEvents();
+  thriftEvents.reserve(bufferEvents.size());
+  for (auto const& event : bufferEvents) {
+    InodeEvent thriftEvent{};
+    thriftEvent.timestamp_ref() = event.timestamp.time_since_epoch().count();
+    thriftEvent.ino_ref() = event.ino.getRawValue();
+    thriftEvent.inodeType_ref() = event.inodeType;
+    thriftEvent.eventType_ref() = InodeEventType::Materialize;
+    thriftEvent.duration_ref() = event.duration.count();
+    thriftEvents.push_back(std::move(thriftEvent));
+  }
+
+  result.events_ref() = std::move(thriftEvents);
+}
+
 namespace {
 std::optional<folly::exception_wrapper> getFaultError(
     apache::thrift::optional_field_ref<std::string&> errorType,

@@ -816,7 +816,7 @@ void TreeInode::materialize(const RenameLock* renameLock) {
     }
 
     // Finished materializing so add event to ActivityBuffer
-    getMount()->addInodeMaterializeEvent(watch, InodeType::Tree, getNodeId());
+    getMount()->addInodeMaterializeEvent(watch, InodeType::TREE, getNodeId());
   }
 }
 
@@ -859,7 +859,7 @@ void TreeInode::childMaterialized(
 
   // Add InodeMaterializeEvent to ActivityBuffer only if newly materialized
   if (!wasAlreadyMaterialized) {
-    getMount()->addInodeMaterializeEvent(watch, InodeType::Tree, getNodeId());
+    getMount()->addInodeMaterializeEvent(watch, InodeType::TREE, getNodeId());
   }
 }
 
@@ -911,7 +911,7 @@ void TreeInode::childDematerialized(
 
   // Add InodeMaterializeEvent to ActivityBuffer only if newly materialized
   if (!wasAlreadyMaterialized) {
-    getMount()->addInodeMaterializeEvent(watch, InodeType::Tree, getNodeId());
+    getMount()->addInodeMaterializeEvent(watch, InodeType::TREE, getNodeId());
   }
 }
 
@@ -1055,7 +1055,7 @@ FileInodePtr TreeInode::createImpl(
 
     // Once the overlay is fully updated, the inode is materialized so we can
     // record this in the ActivityBuffer
-    getMount()->addInodeMaterializeEvent(watch, InodeType::File, childNumber);
+    getMount()->addInodeMaterializeEvent(watch, InodeType::FILE, childNumber);
   }
 
   if (InvalidationRequired::Yes == invalidate) {
@@ -1223,7 +1223,7 @@ TreeInodePtr TreeInode::mkdir(
 
     // Once the overlay is fully updated, the inode is materialized so we can
     // record this in the ActivityBuffer
-    getMount()->addInodeMaterializeEvent(watch, InodeType::Tree, childNumber);
+    getMount()->addInodeMaterializeEvent(watch, InodeType::TREE, childNumber);
   }
 
   getMount()->getJournal().recordCreated(targetName);

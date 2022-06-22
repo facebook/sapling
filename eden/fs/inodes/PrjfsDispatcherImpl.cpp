@@ -401,10 +401,10 @@ ImmediateFuture<folly::Unit> fileNotificationImpl(
         switch (state) {
           case OnDiskState::MaterializedFile:
             return handleMaterializedFileNotification(
-                mount, std::move(path), InodeType::File, context);
+                mount, std::move(path), InodeType::FILE, context);
           case OnDiskState::MaterializedDirectory:
             return handleMaterializedFileNotification(
-                mount, std::move(path), InodeType::Tree, context);
+                mount, std::move(path), InodeType::TREE, context);
           case OnDiskState::NotPresent:
             return handleNotPresentFileNotification(
                 mount, std::move(path), context);
@@ -466,7 +466,7 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                     if (auto* exc =
                             try_.tryGetExceptionObject<std::system_error>()) {
                       if (isEnoent(*exc)) {
-                        if (inodeType == InodeType::Tree) {
+                        if (inodeType == InodeType::TREE) {
                           auto child = treeInode->mkdir(
                               basename, _S_IFDIR, InvalidationRequired::No);
                           child->incFsRefcount();
@@ -485,7 +485,7 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
 
                   auto inode = std::move(try_).value();
                   switch (inodeType) {
-                    case InodeType::Tree: {
+                    case InodeType::TREE: {
                       if (inode.asTreePtrOrNull()) {
                         // In the case where this is already a directory, we
                         // still need to recursively add all the childrens.
@@ -524,7 +524,7 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                                 mount, std::move(path), context);
                           });
                     }
-                    case InodeType::File: {
+                    case InodeType::FILE: {
                       if (auto fileInode = inode.asFilePtrOrNull()) {
                         fileInode->materialize();
                         return folly::unit;

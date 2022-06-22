@@ -27,7 +27,7 @@ TEST(ActivityBufferTest, buffer_zero_capacity) {
   EXPECT_TRUE(buff.getAllEvents().empty());
   std::chrono::steady_clock::time_point time = std::chrono::steady_clock::now();
   InodeMaterializeEvent event{
-      time, InodeNumber(1), InodeType::File, std::chrono::microseconds(1000)};
+      time, InodeNumber(1), InodeType::FILE, std::chrono::microseconds(1000)};
   buff.addEvent(event);
 
   // Setting the ActivityBuffer max size to 0 means that events never get stored
@@ -41,7 +41,7 @@ TEST(ActivityBufferTest, add_events) {
     std::chrono::steady_clock::time_point time =
         std::chrono::steady_clock::now();
     InodeMaterializeEvent event{
-        time, InodeNumber(i), InodeType::File, std::chrono::microseconds(1000)};
+        time, InodeNumber(i), InodeType::FILE, std::chrono::microseconds(1000)};
     buff.addEvent(event);
 
     EXPECT_EQ(buff.getAllEvents().size(), i);
@@ -60,7 +60,7 @@ TEST(ActivityBufferTest, add_exceed_capacity) {
     std::chrono::steady_clock::time_point time =
         std::chrono::steady_clock::now();
     InodeMaterializeEvent event{
-        time, InodeNumber(i), InodeType::File, std::chrono::microseconds(1000)};
+        time, InodeNumber(i), InodeType::FILE, std::chrono::microseconds(1000)};
     buff.addEvent(event);
   }
 
