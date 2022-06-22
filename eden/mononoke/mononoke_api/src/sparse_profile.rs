@@ -159,7 +159,7 @@ pub async fn get_all_profiles(changeset: &ChangesetContext) -> Result<Vec<MPath>
     // TODO: read profile location from config
     let prefixes = vec![MononokePath::try_from(SPARSE_PROFILES_LOCATION)?];
     let files = changeset
-        .find_files(Some(prefixes), None, ChangesetFileOrdering::Unordered)
+        .find_files(Some(prefixes), None, None, ChangesetFileOrdering::Unordered)
         .await?;
     let matcher = pathmatcher::TreeMatcher::from_rules(
         [

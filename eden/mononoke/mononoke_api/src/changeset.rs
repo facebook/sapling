@@ -1108,14 +1108,21 @@ impl ChangesetContext {
         prefixes: Option<Vec<MononokePath>>,
         basenames: Option<Vec<String>>,
     ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
-        self.find_files(prefixes, basenames, ChangesetFileOrdering::Unordered)
-            .await
+        self.find_files(
+            prefixes,
+            basenames,
+            // None for basename_suffixes
+            None,
+            ChangesetFileOrdering::Unordered,
+        )
+        .await
     }
 
     pub async fn find_files(
         &self,
         prefixes: Option<Vec<MononokePath>>,
         basenames: Option<Vec<String>>,
+        _basename_suffixes: Option<Vec<String>>,
         ordering: ChangesetFileOrdering,
     ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
         let entries = self.find_entries(prefixes, ordering).await?;

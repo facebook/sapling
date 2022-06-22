@@ -653,7 +653,12 @@ impl SourceControlServiceImpl {
         };
 
         let files = changeset
-            .find_files(prefixes, params.basenames, ordering)
+            .find_files(
+                prefixes,
+                params.basenames,
+                params.basename_suffixes,
+                ordering,
+            )
             .await?
             .take(limit)
             .map_ok(|path| path.to_string())

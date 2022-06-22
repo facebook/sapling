@@ -270,7 +270,12 @@ async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
 
     // Find everything ordered
     let files: Vec<_> = cs
-        .find_files(None, None, ChangesetFileOrdering::Ordered { after: None })
+        .find_files(
+            None,
+            None,
+            None,
+            ChangesetFileOrdering::Ordered { after: None },
+        )
         .await?
         .try_collect()
         .await?;
@@ -279,6 +284,7 @@ async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
     // Find everything after a particular file
     let files: Vec<_> = cs
         .find_files(
+            None,
             None,
             None,
             ChangesetFileOrdering::Ordered {
@@ -322,6 +328,7 @@ async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
                 MononokePath::try_from("dir2")?,
             ]),
             None,
+            None,
             ChangesetFileOrdering::Ordered {
                 after: Some(MononokePath::try_from("")?),
             },
@@ -338,6 +345,7 @@ async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
                 MononokePath::try_from("dir1/subdir1/subsubdir1")?,
                 MononokePath::try_from("dir2")?,
             ]),
+            None,
             None,
             ChangesetFileOrdering::Ordered {
                 after: Some(MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?),
@@ -368,6 +376,7 @@ async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
         .find_files(
             None,
             Some(vec![String::from("file_1")]),
+            None,
             ChangesetFileOrdering::Ordered {
                 after: Some(MononokePath::try_from("")?),
             },
@@ -382,6 +391,7 @@ async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
         .find_files(
             None,
             Some(vec![String::from("file_1")]),
+            None,
             ChangesetFileOrdering::Ordered {
                 after: Some(MononokePath::try_from("dir1/subdir1/subsubdir1/file_1")?),
             },
@@ -419,6 +429,7 @@ async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
                 MononokePath::try_from("dir2")?,
             ]),
             Some(vec![String::from("file_2"), String::from("file_1_in_dir2")]),
+            None,
             ChangesetFileOrdering::Ordered {
                 after: Some(MononokePath::try_from("")?),
             },
@@ -440,6 +451,7 @@ async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
                 MononokePath::try_from("dir2")?,
             ]),
             Some(vec![String::from("file_2"), String::from("file_1_in_dir2")]),
+            None,
             ChangesetFileOrdering::Ordered {
                 after: Some(MononokePath::try_from("dir1a/nonexistent")?),
             },
