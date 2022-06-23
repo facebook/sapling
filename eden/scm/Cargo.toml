@@ -107,6 +107,7 @@ members = [
   "lib/status",
   "lib/storemodel",
   "lib/streams",
+  "lib/termlogger",
   "lib/third-party/conch-parser",
   "lib/thrift-types",
   "lib/tracing-analyzer",

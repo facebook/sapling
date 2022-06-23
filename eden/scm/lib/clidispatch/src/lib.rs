@@ -11,5 +11,6 @@ pub mod command;
 pub mod dispatch;
 pub mod errors;
 pub mod global_flags;
+pub mod output;
 
 pub use io;
