@@ -11,7 +11,7 @@ use auto_impl::auto_impl;
 use fbinit::FacebookInit;
 use slog::{trace, Logger};
 
-use metaconfig_types::AllowlistEntry;
+use metaconfig_types::AllowlistIdentity;
 use permission_checker::{
     BoxPermissionChecker, MononokeIdentity, MononokeIdentitySet, PermissionCheckerBuilder,
 };
@@ -69,39 +69,27 @@ impl ProdRepoPermissionChecker {
         repo_hipster_acl: Option<&str>,
         service_hipster_acl: Option<&str>,
         reponame: &str,
-        security_config: &[AllowlistEntry],
+        global_allowlist: &[AllowlistIdentity],
     ) -> Result<Self> {
-        let repo_permchecker = if let Some(acl_name) = repo_hipster_acl {
-            PermissionCheckerBuilder::new()
+        let mut repo_permchecker_builder = PermissionCheckerBuilder::new();
+        if let Some(acl_name) = repo_hipster_acl {
+            repo_permchecker_builder = repo_permchecker_builder
                 .allow_repo_acl(fb, acl_name)
                 .await
-                .with_context(|| format!("Failed to create PermissionChecker for {}", acl_name))?
-                .build()
-        } else {
-            // If we dont have an Acl config here, we just use the allowlisted identities.
-            // Those are the identities we'd allow to impersonate anyone anyway. Note that
-            // that this is not a setup we run in prod — it's just convenient for local
-            // repos.
+                .with_context(|| format!("Failed to create PermissionChecker for {}", acl_name))?;
+        }
+        if !global_allowlist.is_empty() {
             let mut allowlisted_identities = MononokeIdentitySet::new();
 
-            for allowlist_entry in security_config {
-                match allowlist_entry {
-                    AllowlistEntry::HardcodedIdentity { ty, data } => {
-                        allowlisted_identities.insert(MononokeIdentity::new(ty, data)?);
-                    }
-                    AllowlistEntry::Tier(_tier) => (),
-                }
+            for AllowlistIdentity { id_type, id_data } in global_allowlist {
+                allowlisted_identities.insert(MononokeIdentity::new(id_type, id_data)?);
             }
 
-            trace!(
-                logger,
-                "No ACL set for repo {}, defaulting to allowlisted identities",
-                reponame
-            );
-            PermissionCheckerBuilder::new()
-                .allow_allowlist(allowlisted_identities.clone())
-                .build()
+            trace!(logger, "Adding global allowlist for repo {}", reponame);
+            repo_permchecker_builder =
+                repo_permchecker_builder.allow_allowlist(allowlisted_identities);
         };
+        let repo_permchecker = repo_permchecker_builder.build();
         let service_permchecker = if let Some(acl_name) = service_hipster_acl {
             PermissionCheckerBuilder::new()
                 .allow_tier_acl(fb, acl_name)

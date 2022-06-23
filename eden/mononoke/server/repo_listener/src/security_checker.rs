@@ -5,65 +5,43 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use fbinit::FacebookInit;
-use metaconfig_types::{AllowlistEntry, CommonConfig};
+use metaconfig_types::{AllowlistIdentity, CommonConfig};
 use permission_checker::{
-    BoxMembershipChecker, BoxPermissionChecker, MembershipCheckerBuilder, MononokeIdentity,
-    MononokeIdentitySet, PermissionCheckerBuilder,
+    BoxPermissionChecker, MononokeIdentity, MononokeIdentitySet, PermissionCheckerBuilder,
 };
 
 pub struct ConnectionsSecurityChecker {
-    tier_permchecker: BoxPermissionChecker,
-    allowlisted_checker: BoxMembershipChecker,
+    checker: BoxPermissionChecker,
 }
 
 impl ConnectionsSecurityChecker {
     pub async fn new(fb: FacebookInit, common_config: CommonConfig) -> Result<Self> {
-        let mut allowlisted_identities = MononokeIdentitySet::new();
-        let mut tier_permchecker = None;
+        let mut builder = PermissionCheckerBuilder::new();
 
-        for allowlist_entry in common_config.security_config {
-            match allowlist_entry {
-                AllowlistEntry::HardcodedIdentity { ty, data } => {
-                    allowlisted_identities.insert(MononokeIdentity::new(&ty, &data)?);
-                }
-                AllowlistEntry::Tier(tier) => {
-                    if tier_permchecker.is_some() {
-                        bail!("invalid config: only one PermissionChecker for tier is allowed");
-                    }
-                    tier_permchecker = Some(
-                        PermissionCheckerBuilder::new()
-                            .allow_tier_acl(fb, &tier)
-                            .await?
-                            .build(),
-                    );
-                }
-            }
+        if let Some(tier) = &common_config.trusted_parties_hipster_tier {
+            builder = builder.allow_tier_acl(fb, tier).await?;
+        }
+
+        let mut allowlisted_identities = MononokeIdentitySet::new();
+        for AllowlistIdentity { id_type, id_data } in &common_config.trusted_parties_allowlist {
+            allowlisted_identities.insert(MononokeIdentity::new(id_type, id_data)?);
+        }
+        if !allowlisted_identities.is_empty() {
+            builder = builder.allow_allowlist(allowlisted_identities);
         }
 
         Ok(Self {
-            tier_permchecker: tier_permchecker
-                .unwrap_or_else(|| PermissionCheckerBuilder::new().build()),
-            allowlisted_checker: MembershipCheckerBuilder::allowlist_checker(
-                allowlisted_identities,
-            ),
+            checker: builder.build(),
         })
     }
 
+    /// Check if the given identities are trusted to act as a proxy, and
+    /// provide the identities of the originator of the request.
     pub async fn check_if_trusted(&self, identities: &MononokeIdentitySet) -> Result<bool> {
-        // This function is conflating two very different concepts:
-        //  * allowlisted identities (used to allow system admins to always access the system)
-        //  * trusted parties access used to allow trust some tiers (like proxies) with user identities they provide
-        //
-        // There's absolutely no reason for this to be a single function.
-        //
-        // TODO(T115444202): tidy up this logic
-        let action = "trusted_parties";
-        Ok(self.allowlisted_checker.is_member(&identities).await?
-            || self
-                .tier_permchecker
-                .check_set(&identities, &[action])
-                .await?)
+        self.checker
+            .check_set(identities, &["trusted_parties"])
+            .await
     }
 }

@@ -107,26 +107,24 @@ pub async fn request_handler(
         }
     }
 
-    if !metadata.is_trusted_client() {
-        let is_allowed_to_repo = repo.blobrepo().permission_checker()
-            .check_if_read_access_allowed(metadata.identities())
-            .await
-            .with_context(|| {
-                format!(
-                    "failed to check if access to repo '{}' is allowed for client '{}' with identity set '{:#?}'.",
-                    reponame,
-                    addr,
-                    metadata.identities(),
-                )
-            })?;
+    let is_allowed_to_repo = repo.blobrepo().permission_checker()
+        .check_if_read_access_allowed(metadata.identities())
+        .await
+        .with_context(|| {
+            format!(
+                "failed to check if access to repo '{}' is allowed for client '{}' with identity set '{:#?}'.",
+                reponame,
+                addr,
+                metadata.identities(),
+            )
+        })?;
 
-        if !is_allowed_to_repo {
-            let err: Error = ErrorKind::AuthorizationFailed.into();
-            scuba.log_with_msg("Authorization failed", format!("{}", err));
-            error!(conn_log, "Authorization failed: {}", err; "remote" => "true");
+    if !is_allowed_to_repo {
+        let err: Error = ErrorKind::AuthorizationFailed.into();
+        scuba.log_with_msg("Authorization failed", format!("{}", err));
+        error!(conn_log, "Authorization failed: {}", err; "remote" => "true");
 
-            return Err(err);
-        }
+        return Err(err);
     }
 
     // Info per wireproto command within this session

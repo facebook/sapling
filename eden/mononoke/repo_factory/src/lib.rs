@@ -59,7 +59,7 @@ use hooks_content_stores::RepoFileContentManager;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use mercurial_mutation::{ArcHgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
-    AllowlistEntry, ArcRepoConfig, BlobConfig, CensoredScubaParams, CommonConfig,
+    AllowlistIdentity, ArcRepoConfig, BlobConfig, CensoredScubaParams, CommonConfig,
     MetadataDatabaseConfig, Redaction, RedactionConfig, RepoConfig,
 };
 use mutable_counters::{ArcMutableCounters, SqlMutableCountersBuilder};
@@ -152,7 +152,7 @@ pub struct RepoFactory {
     scrub_handler: Arc<dyn ScrubHandler>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
     bonsai_hg_mapping_overwrite: bool,
-    security_config: Vec<AllowlistEntry>,
+    global_allowlist: Vec<AllowlistIdentity>,
 }
 
 impl RepoFactory {
@@ -168,7 +168,7 @@ impl RepoFactory {
             scrub_handler: default_scrub_handler(),
             blobstore_component_sampler: None,
             redaction_config: common.redaction_config.clone(),
-            security_config: common.security_config.clone(),
+            global_allowlist: common.global_allowlist.clone(),
             bonsai_hg_mapping_overwrite: false,
         }
     }
@@ -734,7 +734,7 @@ impl RepoFactory {
                 .service_write_hipster_acl
                 .as_deref(),
             repo_name,
-            &self.security_config,
+            &self.global_allowlist,
         )
         .await?;
         Ok(Arc::new(permission_checker))

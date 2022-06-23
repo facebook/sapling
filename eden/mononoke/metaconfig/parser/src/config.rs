@@ -18,9 +18,8 @@ use crate::errors::ConfigurationError;
 use anyhow::{anyhow, Context, Result};
 use cached_config::ConfigStore;
 use metaconfig_types::{
-    AllowlistEntry, BackupRepoConfig, BlobConfig, CensoredScubaParams, CommonConfig,
-    HgsqlGlobalrevsName, HgsqlName, Redaction, RedactionConfig, RepoConfig, RepoReadOnly,
-    StorageConfig,
+    BackupRepoConfig, BlobConfig, CensoredScubaParams, CommonConfig, HgsqlGlobalrevsName,
+    HgsqlName, Redaction, RedactionConfig, RepoConfig, RepoReadOnly, StorageConfig,
 };
 use mononoke_types::RepositoryId;
 use repos::{
@@ -360,59 +359,21 @@ fn parse_common_config(
     common: RawCommonConfig,
     common_storage_config: &HashMap<String, RawStorageConfig>,
 ) -> Result<CommonConfig> {
-    let mut tiers_num = 0;
-    let security_config: Vec<_> = common
-        .whitelist_entry
+    let trusted_parties_hipster_tier = common
+        .trusted_parties_hipster_tier
+        .filter(|tier| !tier.is_empty());
+    let trusted_parties_allowlist = common
+        .trusted_parties_allowlist
         .unwrap_or_default()
         .into_iter()
-        .map(|allowlist_entry| {
-            let has_tier = allowlist_entry.tier.is_some();
-            let has_identity = {
-                if allowlist_entry.identity_data.is_none() ^ allowlist_entry.identity_type.is_none()
-                {
-                    return Err(ConfigurationError::InvalidFileStructure(
-                        "identity type and data must be specified".into(),
-                    )
-                    .into());
-                }
-
-                allowlist_entry.identity_type.is_some()
-            };
-
-            if has_tier && has_identity {
-                return Err(ConfigurationError::InvalidFileStructure(
-                    "tier and identity cannot be both specified".into(),
-                )
-                .into());
-            }
-
-            if !has_tier && !has_identity {
-                return Err(ConfigurationError::InvalidFileStructure(
-                    "tier or identity must be specified".into(),
-                )
-                .into());
-            }
-
-            if allowlist_entry.tier.is_some() {
-                tiers_num += 1;
-                Ok(AllowlistEntry::Tier(allowlist_entry.tier.unwrap()))
-            } else {
-                let identity_type = allowlist_entry.identity_type.unwrap();
-
-                Ok(AllowlistEntry::HardcodedIdentity {
-                    ty: identity_type,
-                    data: allowlist_entry.identity_data.unwrap(),
-                })
-            }
-        })
-        .collect::<Result<_>>()?;
-
-    if tiers_num > 1 {
-        return Err(
-            ConfigurationError::InvalidFileStructure("only one tier is allowed".into()).into(),
-        );
-    }
-
+        .map(Convert::convert)
+        .collect::<Result<Vec<_>>>()?;
+    let global_allowlist = common
+        .global_allowlist
+        .unwrap_or_default()
+        .into_iter()
+        .map(Convert::convert)
+        .collect::<Result<Vec<_>>>()?;
     let loadlimiter_category = common
         .loadlimiter_category
         .filter(|category| !category.is_empty());
@@ -449,7 +410,9 @@ fn parse_common_config(
     };
 
     Ok(CommonConfig {
-        security_config,
+        trusted_parties_hipster_tier,
+        trusted_parties_allowlist,
+        global_allowlist,
         loadlimiter_category,
         enable_http_control_api: common.enable_http_control_api,
         censored_scuba_params,
@@ -473,8 +436,8 @@ mod test {
     use cached_config::TestSource;
     use maplit::{btreemap, hashmap, hashset};
     use metaconfig_types::{
-        AclRegion, AclRegionConfig, AclRegionRule, BlameVersion, BlobConfig, BlobstoreId,
-        BookmarkParams, BubbleDeletionMode, CacheWarmupParams, CommitSyncConfig,
+        AclRegion, AclRegionConfig, AclRegionRule, AllowlistIdentity, BlameVersion, BlobConfig,
+        BlobstoreId, BookmarkParams, BubbleDeletionMode, CacheWarmupParams, CommitSyncConfig,
         CommitSyncConfigVersion, CrossRepoCommitValidation, DatabaseConfig,
         DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, DerivedDataTypesConfig,
         EphemeralBlobstoreConfig, FilestoreParams, HookBypass, HookConfig, HookManagerParams,
@@ -683,11 +646,9 @@ mod test {
         "#;
         let common_content = r#"
             loadlimiter_category="test-category"
+            trusted_parties_hipster_tier = "tier1"
 
-            [[whitelist_entry]]
-            tier = "tier1"
-
-            [[whitelist_entry]]
+            [[global_allowlist]]
             identity_type = "username"
             identity_data = "user"
         "#;
@@ -862,15 +823,13 @@ mod test {
             loadlimiter_category="test-category"
             scuba_censored_table="censored_table"
             scuba_local_path_censored="censored_local_path"
+            trusted_parties_hipster_tier="tier1"
 
             [redaction_config]
             blobstore="main"
             redaction_sets_location="loc"
 
-            [[whitelist_entry]]
-            tier = "tier1"
-
-            [[whitelist_entry]]
+            [[global_allowlist]]
             identity_type = "username"
             identity_data = "user"
         "#;
@@ -1252,13 +1211,12 @@ mod test {
         assert_eq!(
             repoconfig.common,
             CommonConfig {
-                security_config: vec![
-                    AllowlistEntry::Tier("tier1".to_string()),
-                    AllowlistEntry::HardcodedIdentity {
-                        ty: "username".to_string(),
-                        data: "user".to_string(),
-                    },
-                ],
+                trusted_parties_hipster_tier: Some("tier1".to_string()),
+                trusted_parties_allowlist: vec![],
+                global_allowlist: vec![AllowlistIdentity {
+                    id_type: "username".to_string(),
+                    id_data: "user".to_string()
+                }],
                 loadlimiter_category: Some("test-category".to_string()),
                 enable_http_control_api: false,
                 censored_scuba_params: CensoredScubaParams {
@@ -1381,33 +1339,16 @@ mod test {
         }
 
         let common = r#"
-        [[whitelist_entry]]
+        [[global_allowlist]]
         identity_type="user"
         "#;
         check_fails(common, "identity type and data must be specified");
 
         let common = r#"
-        [[whitelist_entry]]
+        [[global_allowlist]]
         identity_data="user"
         "#;
         check_fails(common, "identity type and data must be specified");
-
-        let common = r#"
-        [[whitelist_entry]]
-        tier="user"
-        identity_type="user"
-        identity_data="user"
-        "#;
-        check_fails(common, "tier and identity cannot be both specified");
-
-        // Only one tier is allowed
-        let common = r#"
-        [[whitelist_entry]]
-        tier="tier1"
-        [[whitelist_entry]]
-        tier="tier2"
-        "#;
-        check_fails(common, "only one tier is allowed");
     }
 
     #[test]

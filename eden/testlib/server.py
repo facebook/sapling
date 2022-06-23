@@ -238,7 +238,7 @@ blobstore = "{blobstorename}"
 darkstorm_blobstore = "{blobstorename}"
 redaction_sets_location = "scm/mononoke/redaction/redaction_sets"
 
-[[whitelist_entry]]
+[[global_allowlist]]
 identity_type = "USER"
 identity_data = "myusername0"
 """,

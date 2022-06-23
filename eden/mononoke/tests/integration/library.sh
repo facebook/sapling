@@ -616,14 +616,20 @@ blobstore = "$blobstorename"
 darkstorm_blobstore = "$blobstorename"
 redaction_sets_location = "scm/mononoke/redaction/redaction_sets"
 
-[[whitelist_entry]]
+[[trusted_parties_allowlist]]
 identity_type = "$PROXY_IDENTITY_TYPE"
 identity_data = "${OVERRIDE_PROXY_IDDATA:-$PROXY_IDENTITY_DATA}"
+CONFIG
 
-[[whitelist_entry]]
+  if [[ -z "$DISABLE_GLOBAL_ALLOWLIST" ]]; then
+  cat >> common/common.toml <<CONFIG
+[[global_allowlist]]
 identity_type = "$ALLOWED_IDENTITY_TYPE"
 identity_data = "${OVERRIDE_ALLOWED_IDDATA:-$ALLOWED_IDENTITY_DATA}"
+CONFIG
+  fi
 
+  cat >> common/common.toml <<CONFIG
 ${ADDITIONAL_MONONOKE_COMMON_CONFIG}
 CONFIG
 

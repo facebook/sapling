@@ -9,6 +9,7 @@ use anyhow::Result;
 
 mod acl_regions;
 mod commit_sync;
+mod common;
 pub(crate) mod repo;
 mod storage;
 

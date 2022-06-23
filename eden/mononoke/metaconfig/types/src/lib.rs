@@ -80,18 +80,13 @@ impl PartialEq for ComparableRegex {
 
 impl Eq for ComparableRegex {}
 
-/// Single entry that
+/// Identity in an allowlist.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum AllowlistEntry {
-    /// Hardcoded allowed identity name i.e. USER (identity type) stash (identity data)
-    HardcodedIdentity {
-        /// Identity type
-        ty: String,
-        /// Identity data
-        data: String,
-    },
-    /// Name of the tier
-    Tier(String),
+pub struct AllowlistIdentity {
+    /// Type of this identity.
+    pub id_type: String,
+    /// Associated data for this identity.
+    pub id_data: String,
 }
 
 /// Configuration for how blobs are redacted
@@ -108,8 +103,12 @@ pub struct RedactionConfig {
 /// Configuration for all repos
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CommonConfig {
-    /// Who can interact with Mononoke
-    pub security_config: Vec<AllowlistEntry>,
+    /// Hipster tier that is permitted to act as a trusted proxy.
+    pub trusted_parties_hipster_tier: Option<String>,
+    /// Identities that act as trusted proxies.
+    pub trusted_parties_allowlist: Vec<AllowlistIdentity>,
+    /// Identities that are permitted to access all repos.
+    pub global_allowlist: Vec<AllowlistIdentity>,
     /// Parent category to use for load limiting
     pub loadlimiter_category: Option<String>,
     /// Params for logging censored blobstore accesses
