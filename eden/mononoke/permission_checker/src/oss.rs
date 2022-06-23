@@ -65,12 +65,20 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
 }
 
 impl PermissionCheckerBuilder {
-    pub async fn acl_for_repo(_fb: FacebookInit, _name: &str) -> Result<BoxPermissionChecker> {
-        Ok(Self::always_allow())
+    pub async fn allow_repo_acl(
+        self,
+        _fb: FacebookInit,
+        _name: &str,
+    ) -> Result<PermissionCheckerBuilder> {
+        Ok(self.allow_all())
     }
 
-    pub async fn acl_for_tier(_fb: FacebookInit, _name: &str) -> Result<BoxPermissionChecker> {
-        Ok(Self::always_allow())
+    pub async fn allow_tier_acl(
+        self,
+        _fb: FacebookInit,
+        _name: &str,
+    ) -> Result<PermissionCheckerBuilder> {
+        Ok(self.allow_all())
     }
 }
 

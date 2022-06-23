@@ -289,7 +289,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let test_acl_checker = if !test_idents.is_empty() {
         Some(ArcPermissionChecker::from(
-            PermissionCheckerBuilder::allowlist_checker(test_idents),
+            PermissionCheckerBuilder::new()
+                .allow_allowlist(test_idents)
+                .build(),
         ))
     } else {
         None
@@ -335,13 +337,18 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         test_checker
                     } else {
                         ArcPermissionChecker::from(match (disable_acl_checker, hipster_acl) {
-                            (true, _) | (false, None) => PermissionCheckerBuilder::always_allow(),
+                            (true, _) | (false, None) => {
+                                PermissionCheckerBuilder::new().allow_all().build()
+                            }
                             (_, Some(acl)) => {
                                 info!(
                                     logger,
                                     "{}: Actions will be checked against {} ACL", name, acl
                                 );
-                                PermissionCheckerBuilder::acl_for_repo(fb, &acl).await?
+                                PermissionCheckerBuilder::new()
+                                    .allow_repo_acl(fb, &acl)
+                                    .await?
+                                    .build()
                             }
                         })
                     };

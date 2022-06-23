@@ -32,15 +32,19 @@ impl ConnectionsSecurityChecker {
                     if tier_permchecker.is_some() {
                         bail!("invalid config: only one PermissionChecker for tier is allowed");
                     }
-                    tier_permchecker =
-                        Some(PermissionCheckerBuilder::acl_for_tier(fb, &tier).await?);
+                    tier_permchecker = Some(
+                        PermissionCheckerBuilder::new()
+                            .allow_tier_acl(fb, &tier)
+                            .await?
+                            .build(),
+                    );
                 }
             }
         }
 
         Ok(Self {
             tier_permchecker: tier_permchecker
-                .unwrap_or_else(|| PermissionCheckerBuilder::always_reject()),
+                .unwrap_or_else(|| PermissionCheckerBuilder::new().build()),
             allowlisted_checker: MembershipCheckerBuilder::allowlist_checker(
                 allowlisted_identities,
             ),

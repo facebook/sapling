@@ -826,7 +826,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_acl_check_no_certificates(_fb: FacebookInit) -> Result<(), Error> {
-        let aclchecker = PermissionCheckerBuilder::always_allow().into();
+        let aclchecker = PermissionCheckerBuilder::new().allow_all().build().into();
 
         let res = acl_check(aclchecker, None, false, true).await;
 

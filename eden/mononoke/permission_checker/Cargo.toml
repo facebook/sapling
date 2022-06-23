@@ -11,6 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.56"
 async-trait = "0.1.56"
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 maplit = "1.0"
 openssl = "0.10.35"
 serde = { version = "1.0.136", features = ["derive", "rc"] }

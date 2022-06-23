@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use futures::stream::{FuturesUnordered, StreamExt};
 use std::panic::RefUnwindSafe;
 use std::sync::Arc;
 
@@ -20,22 +21,42 @@ pub trait PermissionChecker {
     async fn check_set(&self, accessors: &MononokeIdentitySet, actions: &[&str]) -> Result<bool>;
 }
 
-pub struct PermissionCheckerBuilder {}
+pub struct PermissionCheckerBuilder {
+    pub(crate) checkers: Vec<BoxPermissionChecker>,
+}
+
 impl PermissionCheckerBuilder {
-    pub fn always_allow() -> BoxPermissionChecker {
-        Box::new(AlwaysAllow {})
+    pub fn new() -> PermissionCheckerBuilder {
+        PermissionCheckerBuilder {
+            checkers: Vec::new(),
+        }
     }
 
-    pub fn always_reject() -> BoxPermissionChecker {
-        Box::new(AlwaysReject {})
+    pub fn allow_all(mut self) -> PermissionCheckerBuilder {
+        self.checkers.push(Box::new(AlwaysAllow));
+        self
     }
 
-    pub fn allowlist_checker(allowlist: MononokeIdentitySet) -> BoxPermissionChecker {
-        Box::new(AllowlistChecker { allowlist })
+    pub fn allow_allowlist(mut self, allowlist: MononokeIdentitySet) -> PermissionCheckerBuilder {
+        self.checkers.push(Box::new(AllowlistChecker { allowlist }));
+        self
+    }
+
+    pub fn build(mut self) -> BoxPermissionChecker {
+        if self.checkers.len() <= 1 {
+            match self.checkers.pop() {
+                None => Box::new(AlwaysReject),
+                Some(checker) => checker,
+            }
+        } else {
+            Box::new(UnionPermissionChecker {
+                checkers: self.checkers,
+            })
+        }
     }
 }
 
-struct AlwaysAllow {}
+struct AlwaysAllow;
 
 #[async_trait]
 impl PermissionChecker for AlwaysAllow {
@@ -44,7 +65,7 @@ impl PermissionChecker for AlwaysAllow {
     }
 }
 
-struct AlwaysReject {}
+struct AlwaysReject;
 
 #[async_trait]
 impl PermissionChecker for AlwaysReject {
@@ -61,5 +82,43 @@ struct AllowlistChecker {
 impl PermissionChecker for AllowlistChecker {
     async fn check_set(&self, accessors: &MononokeIdentitySet, _actions: &[&str]) -> Result<bool> {
         Ok(!self.allowlist.is_disjoint(accessors))
+    }
+}
+
+struct UnionPermissionChecker {
+    checkers: Vec<BoxPermissionChecker>,
+}
+
+#[async_trait]
+impl PermissionChecker for UnionPermissionChecker {
+    async fn check_set(&self, accessors: &MononokeIdentitySet, actions: &[&str]) -> Result<bool> {
+        // Check all checkers in parallel.
+        let mut checks: FuturesUnordered<_> = self
+            .checkers
+            .iter()
+            .map(|checker| async { checker.check_set(accessors, actions).await })
+            .collect();
+        let mut error = None;
+        while let Some(check_result) = checks.next().await {
+            match check_result {
+                Ok(true) => {
+                    // Return true as soon as any checker says access is permitted.
+                    return Ok(true);
+                }
+                Ok(false) => {}
+                Err(e) => {
+                    // If an error occurs in any checker, we still want other
+                    // checkers to potentially succeed.  For example, this
+                    // will allow the global allowlist to work even when a
+                    // remote ACL checking service is down.  Save the first
+                    // error, and only return it if nothing succeeded.
+                    error = error.or(Some(e));
+                }
+            }
+        }
+        match error {
+            Some(error) => Err(error),
+            None => Ok(false),
+        }
     }
 }

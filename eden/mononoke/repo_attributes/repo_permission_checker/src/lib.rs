@@ -72,9 +72,11 @@ impl ProdRepoPermissionChecker {
         security_config: &[AllowlistEntry],
     ) -> Result<Self> {
         let repo_permchecker = if let Some(acl_name) = repo_hipster_acl {
-            PermissionCheckerBuilder::acl_for_repo(fb, acl_name)
+            PermissionCheckerBuilder::new()
+                .allow_repo_acl(fb, acl_name)
                 .await
                 .with_context(|| format!("Failed to create PermissionChecker for {}", acl_name))?
+                .build()
         } else {
             // If we dont have an Acl config here, we just use the allowlisted identities.
             // Those are the identities we'd allow to impersonate anyone anyway. Note that
@@ -96,16 +98,20 @@ impl ProdRepoPermissionChecker {
                 "No ACL set for repo {}, defaulting to allowlisted identities",
                 reponame
             );
-            PermissionCheckerBuilder::allowlist_checker(allowlisted_identities.clone())
+            PermissionCheckerBuilder::new()
+                .allow_allowlist(allowlisted_identities.clone())
+                .build()
         };
         let service_permchecker = if let Some(acl_name) = service_hipster_acl {
-            PermissionCheckerBuilder::acl_for_tier(fb, acl_name)
+            PermissionCheckerBuilder::new()
+                .allow_tier_acl(fb, acl_name)
                 .await
                 .with_context(|| format!("Failed to create PermissionChecker for {}", acl_name))?
+                .build()
         } else {
             // If no service tier is set we allow anyone to act as a service
             // (this happens in integration tests).
-            PermissionCheckerBuilder::always_allow()
+            PermissionCheckerBuilder::new().allow_all().build()
         };
 
         Ok(Self {

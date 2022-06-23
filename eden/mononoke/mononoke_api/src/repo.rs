@@ -213,16 +213,22 @@ impl Repo {
 
         let repo_permission_checker = async {
             let checker = match &config.hipster_acl {
-                Some(acl) => PermissionCheckerBuilder::acl_for_repo(fb, acl).await?,
-                None => PermissionCheckerBuilder::always_allow(),
+                Some(acl) => PermissionCheckerBuilder::new()
+                    .allow_repo_acl(fb, acl)
+                    .await?
+                    .build(),
+                None => PermissionCheckerBuilder::new().allow_all().build(),
             };
             Ok::<_, Error>(ArcPermissionChecker::from(checker))
         };
 
         let service_permission_checker = async {
             let checker = match &config.source_control_service.service_write_hipster_acl {
-                Some(acl) => PermissionCheckerBuilder::acl_for_tier(fb, acl).await?,
-                None => PermissionCheckerBuilder::always_allow(),
+                Some(acl) => PermissionCheckerBuilder::new()
+                    .allow_tier_acl(fb, acl)
+                    .await?
+                    .build(),
+                None => PermissionCheckerBuilder::new().allow_all().build(),
             };
             Ok::<_, Error>(ArcPermissionChecker::from(checker))
         };
@@ -441,10 +447,10 @@ impl Repo {
             inner,
             warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
             repo_permission_checker: ArcPermissionChecker::from(
-                PermissionCheckerBuilder::always_allow(),
+                PermissionCheckerBuilder::new().allow_all().build(),
             ),
             service_permission_checker: ArcPermissionChecker::from(
-                PermissionCheckerBuilder::always_allow(),
+                PermissionCheckerBuilder::new().allow_all().build(),
             ),
             readonly_fetcher,
             hook_manager: Arc::new(
