@@ -1006,13 +1006,6 @@ fi
 disable_acl_checker=true
 CONFIG
 
-if [[ -n "${ENABLE_PRESERVE_BUNDLE2:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
-[bundle2_replay_params]
-preserve_raw_bundle2 = true
-CONFIG
-fi
-
 if [[ -n "${DISALLOW_NON_PUSHREBASE:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [push]

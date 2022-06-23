@@ -12,22 +12,21 @@ use std::time::Duration;
 use anyhow::{anyhow, Context, Result};
 use bookmarks_types::BookmarkName;
 use metaconfig_types::{
-    BlameVersion, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
-    ComparableRegex, CrossRepoCommitValidation, DerivedDataConfig, DerivedDataTypesConfig,
-    HookBypass, HookConfig, HookManagerParams, HookParams, InfinitepushNamespace,
-    InfinitepushParams, LfsParams, PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs,
-    SegmentedChangelogConfig, SegmentedChangelogHeadConfig, ServiceWriteRestrictions,
-    SourceControlServiceMonitoring, SourceControlServiceParams, SparseProfilesConfig, UnodeVersion,
-    WalkerConfig, WalkerJobParams, WalkerJobType,
+    BlameVersion, BookmarkOrRegex, BookmarkParams, CacheWarmupParams, ComparableRegex,
+    CrossRepoCommitValidation, DerivedDataConfig, DerivedDataTypesConfig, HookBypass, HookConfig,
+    HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams,
+    PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs, SegmentedChangelogConfig,
+    SegmentedChangelogHeadConfig, ServiceWriteRestrictions, SourceControlServiceMonitoring,
+    SourceControlServiceParams, SparseProfilesConfig, UnodeVersion, WalkerConfig, WalkerJobParams,
+    WalkerJobType,
 };
 use mononoke_types::{ChangesetId, MPath, PrefixTrie};
 use regex::Regex;
 use repos::{
-    RawBookmarkConfig, RawBundle2ReplayParams, RawCacheWarmupConfig,
-    RawCrossRepoCommitValidationConfig, RawDerivedDataConfig, RawDerivedDataTypesConfig,
-    RawHookConfig, RawHookManagerParams, RawInfinitepushParams, RawLfsParams, RawPushParams,
-    RawPushrebaseParams, RawRepoClientKnobs, RawSegmentedChangelogConfig,
-    RawSegmentedChangelogHeadConfig, RawServiceWriteRestrictions,
+    RawBookmarkConfig, RawCacheWarmupConfig, RawCrossRepoCommitValidationConfig,
+    RawDerivedDataConfig, RawDerivedDataTypesConfig, RawHookConfig, RawHookManagerParams,
+    RawInfinitepushParams, RawLfsParams, RawPushParams, RawPushrebaseParams, RawRepoClientKnobs,
+    RawSegmentedChangelogConfig, RawSegmentedChangelogHeadConfig, RawServiceWriteRestrictions,
     RawSourceControlServiceMonitoring, RawSourceControlServiceParams, RawSparseProfilesConfig,
     RawWalkerConfig, RawWalkerJobParams, RawWalkerJobType,
 };
@@ -210,16 +209,6 @@ impl Convert for RawPushrebaseParams {
             allow_change_xrepo_mapping_extra: self
                 .allow_change_xrepo_mapping_extra
                 .unwrap_or(false),
-        })
-    }
-}
-
-impl Convert for RawBundle2ReplayParams {
-    type Output = Bundle2ReplayParams;
-
-    fn convert(self) -> Result<Self::Output> {
-        Ok(Bundle2ReplayParams {
-            preserve_raw_bundle2: self.preserve_raw_bundle2.unwrap_or(false),
         })
     }
 }

@@ -387,8 +387,6 @@ pub struct RepoClient {
     // A base logging container. This will be combined with the Session container for each command
     // to produce a CoreContext.
     logging: LoggingContainer,
-    // Whether to save raw bundle2 content into the blobstore
-    preserve_raw_bundle2: bool,
     // There is a race condition in bookmarks handling in Mercurial, which needs protocol-level
     // fixes. See `test-bookmark-race.t` for a reproducer; the issue is that between discovery
     // and bookmark handling (listkeys), we can get new commits and a bookmark change.
@@ -411,7 +409,6 @@ impl RepoClient {
         repo: MononokeRepo,
         session: SessionContainer,
         logging: LoggingContainer,
-        preserve_raw_bundle2: bool,
         maybe_push_redirector_args: Option<PushRedirectorArgs>,
         knobs: RepoClientKnobs,
         maybe_backup_repo_source: Option<BlobRepo>,
@@ -422,7 +419,6 @@ impl RepoClient {
             repo,
             session,
             logging,
-            preserve_raw_bundle2,
             session_bookmarks_cache,
             maybe_push_redirector_args,
             force_lfs: Arc::new(AtomicBool::new(false)),
@@ -2090,11 +2086,6 @@ impl HgCommands for RepoClient {
                 move || s,
             )
         })
-    }
-
-    // whether raw bundle2 contents should be preverved in the blobstore
-    fn should_preserve_raw_bundle2(&self) -> bool {
-        self.preserve_raw_bundle2
     }
 }
 

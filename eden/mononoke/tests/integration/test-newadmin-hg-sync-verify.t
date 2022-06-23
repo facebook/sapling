@@ -12,7 +12,7 @@
   $ FOUR=4444444444444444444444444444444444444444444444444444444444444444
 
 setup configuration
-  $ ENABLE_PRESERVE_BUNDLE2=1 setup_common_config blob_files
+  $ setup_common_config blob_files
   $ create_books_sqlite3_db
   $ mononoke_testtool modify-bookmark -R repo create master_bookmark --to "$ZERO"
   $ mononoke_testtool modify-bookmark -R repo update master_bookmark --from "$ZERO" --to "$ONE"

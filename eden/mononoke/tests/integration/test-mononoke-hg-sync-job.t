@@ -9,7 +9,7 @@
 
 setup configuration
 
-  $ ENABLE_PRESERVE_BUNDLE2=1 setup_common_config blob_files
+  $ setup_common_config blob_files
   $ cd $TESTTMP
 
 setup repo

@@ -172,8 +172,6 @@ pub struct RepoConfig {
     pub hook_manager_params: Option<HookManagerParams>,
     /// Skiplist blobstore key (used to make revset faster)
     pub skiplist_index_blobstore_key: Option<String>,
-    /// Params fro the bunle2 replay
-    pub bundle2_replay_params: Bundle2ReplayParams,
     /// Max number of results in listkeyspatterns.
     pub list_keys_patterns_max: u64,
     /// Params for File storage
@@ -1146,13 +1144,6 @@ pub struct EphemeralBlobstoreConfig {
     /// Mode deciding if the bubbles should be simply marked as
     /// expired or completely deleted from the backing store.
     pub bubble_deletion_mode: BubbleDeletionMode,
-}
-
-/// Params for the bundle2 replay
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
-pub struct Bundle2ReplayParams {
-    /// A flag specifying whether to preserve raw bundle2 contents in the blobstore
-    pub preserve_raw_bundle2: bool,
 }
 
 /// Regex for valid branches that Infinite Pushes can be directed to.

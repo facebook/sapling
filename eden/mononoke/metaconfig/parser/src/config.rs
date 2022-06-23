@@ -160,7 +160,6 @@ fn parse_with_repo_definition(
         lfs,
         hash_validation_percentage,
         skiplist_index_blobstore_key,
-        bundle2_replay_params,
         infinitepush,
         list_keys_patterns_max,
         filestore,
@@ -219,8 +218,6 @@ fn parse_with_repo_definition(
     let push = push.convert()?.unwrap_or_default();
 
     let pushrebase = pushrebase.convert()?.unwrap_or_default();
-
-    let bundle2_replay_params = bundle2_replay_params.convert()?.unwrap_or_default();
 
     let lfs = lfs.convert()?.unwrap_or_default();
 
@@ -314,7 +311,6 @@ fn parse_with_repo_definition(
         readonly,
         redaction,
         skiplist_index_blobstore_key,
-        bundle2_replay_params,
         write_lock_db_address,
         infinitepush,
         list_keys_patterns_max,
@@ -478,8 +474,8 @@ mod test {
     use maplit::{btreemap, hashmap, hashset};
     use metaconfig_types::{
         AclRegion, AclRegionConfig, AclRegionRule, BlameVersion, BlobConfig, BlobstoreId,
-        BookmarkParams, BubbleDeletionMode, Bundle2ReplayParams, CacheWarmupParams,
-        CommitSyncConfig, CommitSyncConfigVersion, CrossRepoCommitValidation, DatabaseConfig,
+        BookmarkParams, BubbleDeletionMode, CacheWarmupParams, CommitSyncConfig,
+        CommitSyncConfigVersion, CrossRepoCommitValidation, DatabaseConfig,
         DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, DerivedDataTypesConfig,
         EphemeralBlobstoreConfig, FilestoreParams, HookBypass, HookConfig, HookManagerParams,
         HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams, LocalDatabaseConfig,
@@ -797,9 +793,6 @@ mod test {
             rollout_percentage = 56
             generate_lfs_blob_in_hg_sync_job = true
 
-            [bundle2_replay_params]
-            preserve_raw_bundle2 = true
-
             [infinitepush]
             allow_writes = true
             namespace_pattern = "foobar/.+"
@@ -1094,9 +1087,6 @@ mod test {
                 readonly: RepoReadOnly::ReadWrite,
                 redaction: Redaction::Enabled,
                 skiplist_index_blobstore_key: Some("skiplist_key".into()),
-                bundle2_replay_params: Bundle2ReplayParams {
-                    preserve_raw_bundle2: true,
-                },
                 infinitepush: InfinitepushParams {
                     allow_writes: true,
                     namespace: Some(InfinitepushNamespace::new(Regex::new("foobar/.+").unwrap())),
@@ -1227,7 +1217,6 @@ mod test {
                 readonly: RepoReadOnly::ReadWrite,
                 redaction: Redaction::Enabled,
                 skiplist_index_blobstore_key: None,
-                bundle2_replay_params: Bundle2ReplayParams::default(),
                 infinitepush: InfinitepushParams::default(),
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,

@@ -429,8 +429,7 @@ async fn run_and_check_if_lfs(
         mononoke_repo,
         ctx.session().clone(),
         logging,
-        false, // Don't preserve raw bundle 2 (we don't push)
-        None,  // No PushRedirectorArgs
+        None, // No PushRedirectorArgs
         Default::default(),
         None, // No backup repo source
     );

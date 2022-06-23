@@ -38,7 +38,6 @@ struct IncompleteRepoHandler {
     logger: Logger,
     scuba: MononokeScubaSampleBuilder,
     repo: MononokeRepo,
-    preserve_raw_bundle2: bool,
     maybe_incomplete_push_redirector_args: Option<IncompletePushRedirectorArgs>,
     repo_client_knobs: RepoClientKnobs,
     /// This is used for repositories that are backups of another prod repository
@@ -90,7 +89,6 @@ impl IncompleteRepoHandler {
             logger,
             scuba,
             repo,
-            preserve_raw_bundle2,
             maybe_incomplete_push_redirector_args,
             repo_client_knobs,
             backup_repo_config,
@@ -118,7 +116,6 @@ impl IncompleteRepoHandler {
             logger,
             scuba,
             repo,
-            preserve_raw_bundle2,
             maybe_push_redirector_args,
             repo_client_knobs,
             maybe_backup_repo_source,
@@ -145,7 +142,6 @@ pub struct RepoHandler {
     pub logger: Logger,
     pub scuba: MononokeScubaSampleBuilder,
     pub repo: MononokeRepo,
-    pub preserve_raw_bundle2: bool,
     pub maybe_push_redirector_args: Option<PushRedirectorArgs>,
     pub repo_client_knobs: RepoClientKnobs,
     pub maybe_backup_repo_source: Option<BlobRepo>,
@@ -171,7 +167,6 @@ pub async fn repo_handlers<'a>(
         // Clone the few things we're going to need later in our bootstrap.
         let cache_warmup_params = config.cache_warmup.clone();
         let db_config = config.storage_config.metadata.clone();
-        let preserve_raw_bundle2 = config.bundle2_replay_params.preserve_raw_bundle2.clone();
 
         let common_commit_sync_config = repo
             .live_commit_sync_config()
@@ -254,7 +249,6 @@ pub async fn repo_handlers<'a>(
                 logger,
                 scuba: scuba.clone(),
                 repo: mononoke_repo,
-                preserve_raw_bundle2,
                 maybe_incomplete_push_redirector_args,
                 repo_client_knobs,
                 backup_repo_config,

@@ -11,7 +11,6 @@
 Set up local hgrc and Mononoke config, with commit cloud, http pull and upload.
   $ export READ_ONLY_REPO=1
   $ INFINITEPUSH_ALLOW_WRITES=true \
-  >   ENABLE_PRESERVE_BUNDLE2=true \
   >   setup_common_config
   $ cd $TESTTMP
   $ merge_tunables <<EOF

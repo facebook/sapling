@@ -12,7 +12,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::io::{self, BufRead, Cursor};
 use std::mem;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use anyhow::{bail, Error, Result};
 use bytes_old::{Buf, Bytes, BytesMut};
@@ -254,12 +254,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
     {
         let hgcmds = &self.commands;
         let dechunker = Dechunker::new(instream);
-        let dechunker = if hgcmds.should_preserve_raw_bundle2() {
-            let full_bundle2_content = Arc::new(Mutex::new(Bytes::new()));
-            dechunker.with_full_content(full_bundle2_content.clone())
-        } else {
-            dechunker
-        };
 
         let bundle2stream =
             Bundle2Stream::new(self.logger.clone(), LimitedAsyncRead::new(dechunker));
@@ -703,11 +697,6 @@ pub trait HgCommands {
     // @wireprotocommand('getcommitdata', 'nodes *')
     fn getcommitdata(&self, _nodes: Vec<HgChangesetId>) -> BoxStream<Bytes, Error> {
         once(Err(ErrorKind::Unimplemented("getcommitdata".into()).into())).boxify()
-    }
-
-    // whether raw bundle2 contents should be preverved in the blobstore
-    fn should_preserve_raw_bundle2(&self) -> bool {
-        unimplemented!("should_preserve_raw_bundle2")
     }
 }
 
