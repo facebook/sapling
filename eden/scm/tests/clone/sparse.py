@@ -104,3 +104,20 @@ class TestSparseClone(BaseTest):
         # clone repo1 from within repo0
         # we shouldn't see the invalid config value from repo0's config
         wc.hg.clone(other_repo.url, other_wc.root)
+
+    @hgtest
+    def test_no_working_copy(self, repo: Repo, wc: WorkingCopy) -> None:
+        other_wc = WorkingCopy(repo, new_dir())
+        other_wc.hg.clone(
+            repo.url, other_wc.root, noupdate=True, enable_profile="banana"
+        )
+
+        # Make sure we have a dirstate file and a null parent.
+        self.assertTrue(other_wc[".hg/dirstate"].exists())
+        self.assertEqual(
+            other_wc.hg.whereami().stdout.strip(),
+            "0000000000000000000000000000000000000000",
+        )
+
+        # Make sure we wrote out the sparse config.
+        self.assertIn("banana", other_wc[".hg/sparse"].content())

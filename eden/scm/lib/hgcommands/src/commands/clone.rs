@@ -265,7 +265,9 @@ pub fn run(
             &reponame,
             &destination,
         )?;
-        if let Some((target_rev, bm)) = get_update_target(&mut logger, &mut repo, &clone_opts)? {
+
+        let target_rev = get_update_target(&mut logger, &mut repo, &clone_opts)?;
+        if let Some((target_rev, bm)) = &target_rev {
             logger.status(format!("Checking out '{}'", bm));
             logger.info(|| {
                 format!(
@@ -273,14 +275,16 @@ pub fn run(
                     target_rev.to_hex(),
                 )
             });
-            let mut repo = repo;
-            clone::init_working_copy(
-                &mut logger,
-                &mut repo,
-                target_rev,
-                clone_opts.enable_profile.clone(),
-            )?;
+        } else {
+            logger.info(|| "Initializing empty non-EdenFS working copy");
         }
+
+        clone::init_working_copy(
+            &mut logger,
+            &mut repo,
+            target_rev.map(|(rev, _)| rev),
+            clone_opts.enable_profile.clone(),
+        )?;
     }
 
     Ok(0)

@@ -67,9 +67,34 @@ pub enum WorkingCopyError {
 pub fn init_working_copy(
     logger: &mut TermLogger,
     repo: &mut Repo,
-    target: HgId,
+    target: Option<HgId>,
     sparse_profiles: Vec<String>,
 ) -> Result<(), WorkingCopyError> {
+    if !sparse_profiles.is_empty() {
+        let mut sparse_contents: Vec<u8> = Vec::new();
+        for profile in &sparse_profiles {
+            write!(&mut sparse_contents, "%include {}\n", profile)?;
+        }
+        atomic_write(&repo.dot_hg_path().join("sparse"), |f| {
+            f.write_all(&sparse_contents)
+        })?;
+    }
+
+    let target = match target {
+        Some(t) => t,
+        None => {
+            // Nothing to check out - init empty dirstate and bail.
+            let mut ts = open_treestate(repo.dot_hg_path())?;
+            checkout::clone::flush_dirstate(
+                repo.config(),
+                &mut ts,
+                repo.dot_hg_path(),
+                types::hgid::NULL_ID,
+            )?;
+            return Ok(());
+        }
+    };
+
     let roots = repo.dag_commits()?.read().to_dyn_read_root_tree_ids();
     let tree_id = match block_on(roots.read_root_tree_ids(vec![target.clone()]))??
         .into_iter()
@@ -85,30 +110,16 @@ pub fn init_working_copy(
     let source_mf = TreeManifest::ephemeral(tree_store.clone());
     let target_mf = TreeManifest::durable(tree_store.clone(), tree_id.clone());
 
-    if !sparse_profiles.is_empty() {
-        let mut sparse_contents: Vec<u8> = Vec::new();
-
-        for profile in sparse_profiles {
-            let path = RepoPath::from_str(&profile).map_err(|e| anyhow!(e))?;
-            if matches!(target_mf.get(path)?, None) {
-                logger.warn(format!(
-                    "The profile '{profile}' does not exist. Check out a commit where it exists, or remove it with 'hg sparse disableprofile'."
-                ));
-            }
-
-            write!(&mut sparse_contents, "%include {}\n", profile)?;
+    for profile in &sparse_profiles {
+        let path = RepoPath::from_str(profile).map_err(|e| anyhow!(e))?;
+        if matches!(target_mf.get(path)?, None) {
+            logger.warn(format!(
+                "The profile '{profile}' does not exist. Check out a commit where it exists, or remove it with 'hg sparse disableprofile'."
+            ));
         }
-        atomic_write(&repo.dot_hg_path().join("sparse"), |f| {
-            f.write_all(&sparse_contents)
-        })?;
     }
 
-    let ts_dir = repo.dot_hg_path().join("treestate");
-    create_shared_dir(&ts_dir)?;
-
-    let ts_path = ts_dir.join(format!("{:x}", Uuid::new_v4()));
-
-    let mut ts = TreeState::open(&ts_path, None)?;
+    let mut ts = open_treestate(repo.dot_hg_path())?;
 
     match checkout::clone::checkout(
         repo.config(),
@@ -135,6 +146,14 @@ pub fn init_working_copy(
             Err(err.source.into())
         }
     }
+}
+
+fn open_treestate(dot_hg_path: &Path) -> Result<TreeState> {
+    let ts_dir = dot_hg_path.join("treestate");
+    create_shared_dir(&ts_dir)?;
+
+    let ts_path = ts_dir.join(format!("{:x}", Uuid::new_v4()));
+    TreeState::open(&ts_path, None)
 }
 
 #[derive(Debug, thiserror::Error)]

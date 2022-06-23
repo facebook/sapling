@@ -201,7 +201,7 @@ impl CheckoutState {
     }
 }
 
-fn flush_dirstate(
+pub fn flush_dirstate(
     config: &dyn Config,
     ts: &mut TreeState,
     dot_hg_path: &Path,
