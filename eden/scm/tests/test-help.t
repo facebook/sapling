@@ -364,7 +364,6 @@ Test extension help:
        tweakdefaults
                      user friendly defaults
        undo          (no help text available)
-       whereami      (no help text available)
        win32mbcs     allow the use of MBCS paths with problematic encodings
 
 
