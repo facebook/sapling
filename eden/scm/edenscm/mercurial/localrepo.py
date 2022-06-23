@@ -1087,7 +1087,7 @@ class localrepository(object):
                 heads.add(node)
 
             fastpathheads = set()
-            fastpathcommits, fastpathsegments = 0, 0
+            fastpathcommits, fastpathsegments, fastpathfallbacks = 0, 0, 0
             for (old, new) in fastpath:
                 try:
                     fastpulldata = self.edenapi.pullfastforwardmaster(old, new)
@@ -1096,6 +1096,7 @@ class localrepository(object):
                         _("failed to get fast pull data (%s), using fallback path\n")
                         % (e,)
                     )
+                    fastpathfallbacks += 1
                     continue
                 vertexopts = {
                     "reserve_size": 0,
@@ -1121,6 +1122,7 @@ class localrepository(object):
                     fastpathcommits += commits
                     fastpathsegments += segments
                 except errormod.NeedSlowPathError as e:
+                    fastpathfallbacks += 1
                     tracing.warn(
                         "cannot use pull fast path: %s\n" % e, target="pull::fastpath"
                     )
@@ -1133,6 +1135,7 @@ class localrepository(object):
                 slowpathheads=len(pullheads),
                 fastpathcommits=fastpathcommits,
                 fastpathsegments=fastpathsegments,
+                fastpathfallbacks=fastpathfallbacks,
             )
 
             # Filter out heads that exist in the repo.
