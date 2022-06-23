@@ -44,10 +44,12 @@ class File:
         return open(self._abspath, mode=mode)
 
     def content(self) -> str:
-        return self.open().read()
+        with self.open() as f:
+            return f.read()
 
     def binary(self) -> bytes:
-        return self.open("rb").read()
+        with self.open("rb") as f:
+            return f.read()
 
     def remove(self) -> None:
         os.remove(self._abspath)
