@@ -40,7 +40,7 @@ Test that nonsupported options fallback to python:
   $ hg clone --git "$TESTTMP/git-source" $TESTTMP/git-clone
 
 Test rust clone
-  $ hg clone -U test:e1 $TESTTMP/rust-clone --config remotenames.selectivepulldefault='master, stable'
+  $ hg clone -Uq test:e1 $TESTTMP/rust-clone --config remotenames.selectivepulldefault='master, stable'
   TRACE hgcommands::commands::clone: performing rust clone
   TRACE hgcommands::commands::clone: fetching lazy commit data and bookmarks
   $ cd $TESTTMP/rust-clone
@@ -73,7 +73,7 @@ Check basic operations
 
 Test cloning with default destination
   $ cd $TESTTMP
-  $ hg clone -U test:e1
+  $ hg clone -Uq test:e1
   TRACE hgcommands::commands::clone: performing rust clone
   TRACE hgcommands::commands::clone: fetching lazy commit data and bookmarks
   $ cd test-repo
@@ -83,7 +83,7 @@ Test cloning with default destination
 Test cloning failures
 
   $ cd $TESTTMP
-  $ FAILPOINTS=run::clone=return hg clone -U test:e1 $TESTTMP/failure-clone
+  $ FAILPOINTS=run::clone=return hg clone -Uq test:e1 $TESTTMP/failure-clone
   TRACE hgcommands::commands::clone: performing rust clone
   TRACE hgcommands::commands::clone: fetching lazy commit data and bookmarks
   abort: Injected clone failure
@@ -93,7 +93,7 @@ Test cloning failures
 
 Check that preexisting directory is not removed in failure case
   $ mkdir failure-clone
-  $ FAILPOINTS=run::clone=return hg clone -U test:e1 $TESTTMP/failure-clone
+  $ FAILPOINTS=run::clone=return hg clone -Uq test:e1 $TESTTMP/failure-clone
   TRACE hgcommands::commands::clone: performing rust clone
   TRACE hgcommands::commands::clone: fetching lazy commit data and bookmarks
   abort: Injected clone failure
@@ -104,27 +104,27 @@ Check that preexisting directory is not removed in failure case
 
 Check that prexisting repo is not modified
   $ mkdir $TESTTMP/failure-clone/.hg
-  $ hg clone -U test:e1 $TESTTMP/failure-clone
-  abort: .hg directory already exists at clone destination
+  $ hg clone -Uq test:e1 $TESTTMP/failure-clone
+  abort: .hg directory already exists at clone destination $TESTTMP/failure-clone
   [255]
   $ [ -d $TESTTMP/failure-clone/.hg ]
 
 Test default-destination-dir
-  $ hg clone -U test:e1 --config clone.default-destination-dir="$TESTTMP/manually-set-dir"
+  $ hg clone -Uq test:e1 --config clone.default-destination-dir="$TESTTMP/manually-set-dir"
   TRACE hgcommands::commands::clone: performing rust clone
   TRACE hgcommands::commands::clone: fetching lazy commit data and bookmarks
   $ ls $TESTTMP | grep manually-set-dir
   manually-set-dir
 
 Test that we get an error when not specifying a destination directory and running in plain mode
-  $ HGPLAIN=1 hg clone -U test:e1
+  $ HGPLAIN=1 hg clone -Uq test:e1
   abort: DEST was not specified
   [255]
-  $ HGPLAINEXCEPT=default_clone_dir hg clone -U test:e1 --config remotefilelog.reponame=test-repo-notquite
+  $ HGPLAINEXCEPT=default_clone_dir hg clone -Uq test:e1 --config remotefilelog.reponame=test-repo-notquite
   TRACE hgcommands::commands::clone: performing rust clone
   TRACE hgcommands::commands::clone: fetching lazy commit data and bookmarks
 
 Not an error for bookmarks to not exist
-  $ hg clone -U test:e1 $TESTTMP/no-bookmarks --config remotenames.selectivepulldefault=banana
+  $ hg clone -Uq test:e1 $TESTTMP/no-bookmarks --config remotenames.selectivepulldefault=banana
   TRACE hgcommands::commands::clone: performing rust clone
   TRACE hgcommands::commands::clone: fetching lazy commit data and bookmarks

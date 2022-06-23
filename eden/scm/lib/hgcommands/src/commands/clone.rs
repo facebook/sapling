@@ -6,13 +6,14 @@
  */
 
 use std::fs;
-use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 
 use async_runtime::block_unless_interrupted as block_on;
 use clidispatch::errors;
 use clidispatch::global_flags::HgGlobalOpts;
+use clidispatch::output::new_logger;
+use clidispatch::output::TermLogger;
 use cliparser::define_flags;
 use edenapi::Builder;
 use migration::feature::deprecate;
@@ -81,6 +82,8 @@ pub fn run(
     io: &IO,
     config: &mut ConfigSet,
 ) -> Result<u8> {
+    let mut logger = new_logger(io, &global_opts);
+
     let deprecated_options = [
         ("--rev", "rev-option", clone_opts.rev.is_empty()),
         (
@@ -109,6 +112,7 @@ pub fn run(
         .contains(&name().to_owned());
     let use_rust = force_rust || config.get_or_default("clone", "use-rust")?;
     if !use_rust {
+        logger.info(|| "Falling back to Python clone (no segmented changelog)");
         return Err(errors::FallbackToPython(name()).into());
     }
 
@@ -125,6 +129,7 @@ pub fn run(
         || clone_opts.git
         || !supported_url
     {
+        logger.info(|| "Falling back to Python clone (incompatible options)");
         return Err(errors::FallbackToPython(name()).into());
     }
 
@@ -139,9 +144,13 @@ pub fn run(
         // This gets the reponame from the --configfile config. Ingore
         // bogus "no-repo" value that dynamicconfig sets when there is
         // no repo name.
-        Some(c) if c != "no-repo" => c,
+        Some(c) if c != "no-repo" => {
+            logger.debug(|| format!("Repo name is {} from config", c));
+            c
+        }
         Some(_) | None => match configparser::hg::repo_name_from_url(&clone_opts.source) {
             Some(name) => {
+                logger.debug(|| format!("Repo name is {} via URL {}", name, clone_opts.source));
                 config.set(
                     "remotefilelog",
                     "reponame",
@@ -185,12 +194,23 @@ pub fn run(
         }
     };
 
+    logger.status(format!(
+        "Cloning {} into {}",
+        reponame,
+        destination.display(),
+    ));
+
     let dest_hg = destination.join(HG_PATH);
 
     if dest_hg.exists() {
-        return Err(
-            errors::Abort(".hg directory already exists at clone destination".into()).into(),
-        );
+        return Err(errors::Abort(
+            format!(
+                ".hg directory already exists at clone destination {}",
+                destination.display()
+            )
+            .into(),
+        )
+        .into());
     }
 
     if clone_opts.eden {
@@ -204,18 +224,55 @@ pub fn run(
         let backing_hg = backing_path.join(".hg");
 
         let mut backing_repo = if !backing_hg.exists() {
-            try_clone_metadata(&clone_opts, &global_opts, config, &reponame, &backing_path)?
+            logger.info(|| {
+                format!(
+                    "Cloning {} backing repo to {}",
+                    reponame,
+                    backing_path.display(),
+                )
+            });
+            try_clone_metadata(
+                &mut logger,
+                &clone_opts,
+                &global_opts,
+                config,
+                &reponame,
+                &backing_path,
+            )?
         } else {
             let mut repo = Repo::load(&backing_path)?;
             repo.config_mut().set_overrides(&global_opts.config)?;
             repo
         };
-        let target_rev = get_update_target(io, &mut backing_repo, &clone_opts, &global_opts)?;
+        let target_rev =
+            get_update_target(&mut logger, &mut backing_repo, &clone_opts)?.map(|(rev, _)| rev);
+        logger.info(|| {
+            format!(
+                "Performing EdenFS clone {}@{} from {} to {}",
+                reponame,
+                target_rev.map_or(String::new(), |t| t.to_hex()),
+                backing_path.display(),
+                destination.display(),
+            )
+        });
         clone::eden_clone(&backing_repo, &destination, target_rev)?;
     } else {
-        let mut repo =
-            try_clone_metadata(&clone_opts, &global_opts, config, &reponame, &destination)?;
-        if let Some(target_rev) = get_update_target(io, &mut repo, &clone_opts, &global_opts)? {
+        let mut repo = try_clone_metadata(
+            &mut logger,
+            &clone_opts,
+            &global_opts,
+            config,
+            &reponame,
+            &destination,
+        )?;
+        if let Some((target_rev, bm)) = get_update_target(&mut logger, &mut repo, &clone_opts)? {
+            logger.status(format!("Checking out '{}'", bm));
+            logger.info(|| {
+                format!(
+                    "Initializing non-EdenFS working copy to commit {}",
+                    target_rev.to_hex(),
+                )
+            });
             let mut repo = repo;
             clone::init_working_copy(&mut repo, target_rev, clone_opts.enable_profile.clone())?;
         }
@@ -225,6 +282,7 @@ pub fn run(
 }
 
 fn try_clone_metadata(
+    logger: &mut TermLogger,
     clone_opts: &CloneOpts,
     global_opts: &HgGlobalOpts,
     config: &mut ConfigSet,
@@ -232,7 +290,14 @@ fn try_clone_metadata(
     destination: &Path,
 ) -> Result<Repo> {
     let dest_preexists = destination.exists();
-    match clone_metadata(clone_opts, global_opts, config, reponame, destination) {
+    match clone_metadata(
+        logger,
+        clone_opts,
+        global_opts,
+        config,
+        reponame,
+        destination,
+    ) {
         Err(e) => {
             let removal_dir = if dest_preexists {
                 destination.join(HG_PATH)
@@ -247,6 +312,7 @@ fn try_clone_metadata(
 }
 
 fn clone_metadata(
+    logger: &mut TermLogger,
     clone_opts: &CloneOpts,
     global_opts: &HgGlobalOpts,
     config: &mut ConfigSet,
@@ -286,12 +352,13 @@ fn clone_metadata(
     let bookmark_names: Vec<String> = get_selective_bookmarks(&repo)?;
 
     tracing::trace!("fetching lazy commit data and bookmarks");
-    exchange::clone(
+    let bookmark_ids = exchange::clone(
         edenapi,
         &mut metalog.write(),
         &mut commits.write(),
         bookmark_names.clone(),
     )?;
+    logger.debug(|| format!("Pulled bookmarks {:?}", bookmark_ids));
 
     ::fail::fail_point!("run::clone", |_| {
         Err(errors::Abort("Injected clone failure".to_string().into()).into())
@@ -312,11 +379,10 @@ fn get_selective_bookmarks(repo: &Repo) -> Result<Vec<String>> {
 }
 
 fn get_update_target(
-    io: &IO,
+    logger: &mut TermLogger,
     repo: &mut Repo,
     clone_opts: &CloneOpts,
-    global_opts: &HgGlobalOpts,
-) -> Result<Option<HgId>> {
+) -> Result<Option<(HgId, String)>> {
     if clone_opts.noupdate {
         return Ok(None);
     }
@@ -325,20 +391,19 @@ fn get_update_target(
         .first()
         .ok_or_else(|| {
             errors::Abort("remotenames.selectivepulldefault config list is empty".into())
-        })
-        .map(|bm| exchange::convert_to_remote(bm))?;
+        })?
+        .clone();
+
+    let remote_bookmark = exchange::convert_to_remote(&main_bookmark);
     let remote_bookmarks = repo.remote_bookmarks()?;
 
-    match remote_bookmarks.get(&main_bookmark) {
-        Some(rev) => Ok(Some(rev.clone())),
+    match remote_bookmarks.get(&remote_bookmark) {
+        Some(rev) => Ok(Some((rev.clone(), main_bookmark))),
         None => {
-            if !global_opts.quiet {
-                write!(
-                    io.error(),
-                    "Server has no '{}' bookmark - skipping checkout.\n",
-                    main_bookmark
-                )?;
-            }
+            logger.status(format!(
+                "Server has no '{}' bookmark - skipping checkout.",
+                remote_bookmark,
+            ));
             Ok(None)
         }
     }
