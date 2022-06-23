@@ -1,14 +1,14 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
+  $ setconfig experimental.allowfilepeer=True clone.use-rust=1 commands.force-rust=clone
 
 test sparse
 
-  $ configure dummyssh
+  $ configure modernclient
   $ setconfig ui.username="nobody <no.reply@fb.com>"
   $ enable sparse rebase
 
-  $ hg init myrepo
-  $ cd myrepo
+  $ newremoterepo repo1
+  $ setconfig paths.default=test:e1
   $ echo a > index.html
   $ echo x > data.py
   $ echo z > readme.txt
@@ -21,57 +21,25 @@ test sparse
   > *.py
   > EOF
   $ hg ci -Aqm 'initial'
-  $ cd ..
+  $ hg push -r . --to master --create -q
 
 Verify local clone with a sparse profile works
 
-  $ hg clone --enable-profile webpage.sparse myrepo clone1
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd $TESTTMP
+  $ hg clone --enable-profile webpage.sparse test:e1 clone1
+  Cloning * into clone1 (glob)
+  Checking out 'master'
   $ cd clone1
-  $ ls
-  index.html
-  $ cd ..
-
-Verify local clone with include works
-
-  $ hg clone --include *.sparse myrepo clone2
-  updating to branch default
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd clone2
-  $ ls
-  backend.sparse
-  webpage.sparse
-  $ cd ..
-
-Verify local clone with exclude works
-
-  $ hg clone --exclude data.py myrepo clone3
-  updating to branch default
-  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd clone3
-  $ ls
-  backend.sparse
-  index.html
-  readme.txt
-  webpage.sparse
-  $ cd ..
-
-Verify sparse clone profile over ssh works
-
-  $ hg clone -q --enable-profile webpage.sparse ssh://user@dummy/myrepo clone4
-  $ cd clone4
   $ ls
   index.html
   $ cd ..
 
 Verify sparse clone with a non-existing sparse profile warns
 
-  $ hg clone --enable-profile nonexisting.sparse myrepo clone5
-  updating to branch default
-  the profile 'nonexisting.sparse' does not exist in the current commit, it will only take effect when you check out a commit containing a profile with that name
-  (if the path is a typo, use 'hg sparse disableprofile' to remove it)
-  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg clone --enable-profile nonexisting.sparse test:e1 clone5
+  Cloning reponame-default into clone5
+  Checking out 'master'
+  The profile 'nonexisting.sparse' does not exist. Check out a commit where it exists, or remove it with 'hg sparse disableprofile'.
   $ cd clone5
   $ ls
   backend.sparse

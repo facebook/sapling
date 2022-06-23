@@ -111,8 +111,6 @@ pub fn checkout(
         ts.insert(updated, &fstate)?;
     }
 
-    // TODO: invalidate treestate mtime
-
     flush_dirstate(config, ts, &dot_hg, target)?;
 
     remove_file(dot_hg.join("updatestate"))?;

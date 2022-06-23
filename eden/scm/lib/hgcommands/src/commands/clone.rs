@@ -274,7 +274,12 @@ pub fn run(
                 )
             });
             let mut repo = repo;
-            clone::init_working_copy(&mut repo, target_rev, clone_opts.enable_profile.clone())?;
+            clone::init_working_copy(
+                &mut logger,
+                &mut repo,
+                target_rev,
+                clone_opts.enable_profile.clone(),
+            )?;
         }
     }
 

@@ -27,7 +27,7 @@ use manifest::File;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
 use manifest::List;
-use manifest::Manifest;
+pub use manifest::Manifest;
 use once_cell::sync::OnceCell;
 use pathmatcher::Matcher;
 use sha1::Digest;

@@ -12,6 +12,7 @@ checkout = { version = "0.1.0", path = "../checkout" }
 configmodel = { version = "0.1.0", path = "../configmodel" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 repo = { version = "0.1.0", path = "../repo" }
+termlogger = { version = "0.1.0", path = "../termlogger" }
 thiserror = "1.0.30"
 treestate = { version = "0.1.0", path = "../treestate" }
 types = { version = "0.1.0", path = "../types" }

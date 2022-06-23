@@ -12,14 +12,18 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use async_runtime::block_unless_interrupted as block_on;
 use configmodel::config::Config;
+use manifest_tree::Manifest;
 use manifest_tree::TreeManifest;
 use repo::repo::Repo;
+use termlogger::TermLogger;
 use treestate::treestate::TreeState;
 use types::HgId;
+use types::RepoPath;
 use util::file::atomic_write;
 use util::path::absolute;
 use util::path::create_shared_dir;
@@ -61,6 +65,7 @@ pub enum WorkingCopyError {
 }
 
 pub fn init_working_copy(
+    logger: &mut TermLogger,
     repo: &mut Repo,
     target: HgId,
     sparse_profiles: Vec<String>,
@@ -82,7 +87,15 @@ pub fn init_working_copy(
 
     if !sparse_profiles.is_empty() {
         let mut sparse_contents: Vec<u8> = Vec::new();
+
         for profile in sparse_profiles {
+            let path = RepoPath::from_str(&profile).map_err(|e| anyhow!(e))?;
+            if matches!(target_mf.get(path)?, None) {
+                logger.warn(format!(
+                    "The profile '{profile}' does not exist. Check out a commit where it exists, or remove it with 'hg sparse disableprofile'."
+                ));
+            }
+
             write!(&mut sparse_contents, "%include {}\n", profile)?;
         }
         atomic_write(&repo.dot_hg_path().join("sparse"), |f| {
