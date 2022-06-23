@@ -630,7 +630,7 @@ def format_cmd(cmd: bytes) -> str:
     return " ".join(shlex.quote(p) for p in [cmd_str] + args[1:])
 
 
-def format_mount(mount) -> str:
+def format_mount(mount: bytes) -> str:
     return os.fsdecode(os.path.basename(mount))
 
 

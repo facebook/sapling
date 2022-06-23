@@ -983,7 +983,7 @@ class Top:
 
 
 class Process:
-    def __init__(self, pid, cmd: bytes, mount) -> None:
+    def __init__(self, pid: int, cmd: bytes, mount: bytes) -> None:
         self.pid = pid
         self.cmd = format_cmd(cmd)
         self.mount = format_mount(mount)
