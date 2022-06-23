@@ -17,15 +17,18 @@ use std::io::Write;
 
 use anyhow::anyhow;
 use anyhow::bail;
+use anyhow::Context;
 use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
 use twox_hash::XxHash;
+use types::hgid::ReadHgIdExt;
 use vlqencoding::VLQDecode;
 use vlqencoding::VLQEncode;
 
 use crate::dirstate::Dirstate;
+use crate::dirstate::TreeStateFields;
 use crate::errors::*;
 use crate::filestate::FileState;
 use crate::filestate::FileStateV2;
@@ -390,7 +393,41 @@ impl Serializable for Dirstate {
         Ok(())
     }
 
-    fn deserialize(_r: &mut dyn Read) -> Result<Self> {
-        unimplemented!()
+    /// Best effort parsing of the dirstate. For non-treestate
+    /// dirstates we only parse the parents.
+    fn deserialize(r: &mut dyn Read) -> Result<Self> {
+        let mut ds = Self {
+            p0: r.read_hgid()?,
+            p1: r.read_hgid()?,
+            tree_state: None,
+        };
+
+        let mut header_buf = [0; DIRSTATE_TREESTATE_HEADER.len()];
+        if r.read_exact(&mut header_buf).is_ok() && header_buf == DIRSTATE_TREESTATE_HEADER {
+            let mut meta = Metadata::deserialize(r)?;
+            ds.tree_state = Some(TreeStateFields {
+                tree_filename: meta
+                    .0
+                    .remove("filename")
+                    .ok_or_else(|| anyhow!("no treestate 'filename' in dirstate"))?,
+                tree_root_id: BlockId(
+                    meta.0
+                        .remove("rootid")
+                        .ok_or_else(|| anyhow!("no treestate 'rootid' in dirstate"))?
+                        .parse()
+                        .context("error parsing dirstate rootid")?,
+                ),
+                repack_threshold: meta
+                    .0
+                    .remove("threshold")
+                    .map(|t| {
+                        t.parse()
+                            .with_context(|| format!("error parsing dirstate threshold {:?}", t))
+                    })
+                    .transpose()?,
+            });
+        }
+
+        Ok(ds)
     }
 }
