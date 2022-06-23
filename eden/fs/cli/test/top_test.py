@@ -14,7 +14,7 @@ from ..util import format_cmd, format_mount
 
 class TopTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.process = Process(42, "ls", "fbsource")
+        self.process = Process(42, b"ls", "fbsource")
 
     def test_format_cmd(self) -> None:
         self.assertEqual("ls", format_cmd(b"/bin/ls"))
