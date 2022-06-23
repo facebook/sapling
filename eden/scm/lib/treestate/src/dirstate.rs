@@ -12,15 +12,17 @@ use types::HgId;
 use crate::store::BlockId;
 
 /// A dirstate object. This maintains .hg/dirstate file
-
 pub struct Dirstate {
     pub p0: HgId,
     pub p1: HgId,
 
+    pub tree_state: Option<TreeStateFields>,
+}
+
+pub struct TreeStateFields {
     // Final component of treestate file. Normally a UUID.
     pub tree_filename: String,
     pub tree_root_id: BlockId,
-
     pub repack_threshold: Option<u64>,
 }
 
@@ -36,9 +38,11 @@ mod test {
         let mut ds = Dirstate {
             p0: HgId::from_hex(b"93a7f768ac7506e31015dfa545b7f1475a76c4cf")?,
             p1: NULL_ID,
-            tree_filename: "2c715852-5e8c-45bf-b1f2-236e25dd648b".to_string(),
-            tree_root_id: BlockId(2236480),
-            repack_threshold: None,
+            tree_state: Some(TreeStateFields {
+                tree_filename: "2c715852-5e8c-45bf-b1f2-236e25dd648b".to_string(),
+                tree_root_id: BlockId(2236480),
+                repack_threshold: None,
+            }),
         };
 
         {
@@ -52,7 +56,7 @@ mod test {
         }
 
         {
-            ds.repack_threshold = Some(123);
+            (&mut ds.tree_state).as_mut().unwrap().repack_threshold = Some(123);
 
             let mut buf: Vec<u8> = Vec::new();
             ds.serialize(&mut buf).unwrap();

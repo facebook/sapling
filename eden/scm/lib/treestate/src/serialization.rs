@@ -360,19 +360,27 @@ impl Serializable for Metadata {
     }
 }
 
-const DIRSTATE_HEADER: &[u8] = b"\ntreestate\n\0";
+const DIRSTATE_TREESTATE_HEADER: &[u8] = b"\ntreestate\n\0";
 
 impl Serializable for Dirstate {
     fn serialize(&self, w: &mut dyn Write) -> Result<()> {
         w.write_all(self.p0.as_ref())?;
         w.write_all(self.p1.as_ref())?;
-        w.write_all(DIRSTATE_HEADER)?;
+
+        let ts_fields = match &self.tree_state {
+            Some(ts) => ts,
+            None => {
+                bail!("tree state fields are required for serializing dirstate")
+            }
+        };
+
+        w.write_all(DIRSTATE_TREESTATE_HEADER)?;
 
         let mut meta = Metadata(BTreeMap::from([
-            ("filename".to_string(), self.tree_filename.clone()),
-            ("rootid".to_string(), self.tree_root_id.0.to_string()),
+            ("filename".to_string(), ts_fields.tree_filename.clone()),
+            ("rootid".to_string(), ts_fields.tree_root_id.0.to_string()),
         ]));
-        if let Some(threshold) = self.repack_threshold {
+        if let Some(threshold) = ts_fields.repack_threshold {
             meta.0
                 .insert("threshold".to_string(), threshold.to_string());
         }

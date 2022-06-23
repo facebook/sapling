@@ -23,6 +23,7 @@ use manifest_tree::TreeManifest;
 use pathmatcher::Matcher;
 use storemodel::ReadFileContents;
 use treestate::dirstate::Dirstate;
+use treestate::dirstate::TreeStateFields;
 use treestate::metadata::Metadata;
 use treestate::serialization::Serializable;
 use treestate::treestate::TreeState;
@@ -245,14 +246,16 @@ fn flush_dirstate(
     let ds = Dirstate {
         p0: target,
         p1: NULL_ID,
-        tree_filename: tree_file.to_owned().into_string().map_err(|_| {
-            anyhow!(
-                "can't convert treestate file name to String: {:?}",
-                tree_file
-            )
-        })?,
-        tree_root_id,
-        repack_threshold: Some(threshold),
+        tree_state: Some(TreeStateFields {
+            tree_filename: tree_file.to_owned().into_string().map_err(|_| {
+                anyhow!(
+                    "can't convert treestate file name to String: {:?}",
+                    tree_file
+                )
+            })?,
+            tree_root_id,
+            repack_threshold: Some(threshold),
+        }),
     };
 
     ds.serialize(dirstate_file.as_file())?;
