@@ -485,7 +485,6 @@ class Top:
                     self.processes[pid] = Process(pid, cmd, mount)
 
                 self.processes[pid].increment_counts(access_counts)
-                # pyre-fixme[16]: `Process` has no attribute `last_access`.
                 self.processes[pid].last_access = time.monotonic()
 
             # When querying older versions of EdenFS fetchCountsByPid will be None
@@ -755,7 +754,7 @@ class Top:
         self.render_row(window, COLUMN_TITLES, self.curses.A_REVERSE)
 
     def render_rows(self, window: Window) -> None:
-        aggregated_processes: Dict[int, Process] = {}
+        aggregated_processes: Dict[Tuple[str, str], Process] = {}
         for process in self.processes.values():
             key = process.get_key()
             if key in aggregated_processes:
@@ -983,29 +982,36 @@ class Top:
 
 
 class Process:
+    pid: int
+    cmd: str
+    mount: str
+    access_counts: AccessCounts
+    fuseFetch: int
+    last_access: float
+    is_running: bool
+
     def __init__(self, pid: int, cmd: bytes, mount: bytes) -> None:
         self.pid = pid
         self.cmd = format_cmd(cmd)
         self.mount = format_mount(mount)
         self.access_counts = AccessCounts(0, 0, 0, 0, 0, 0, 0)
         self.fuseFetch = 0
-        self.last_access_time = time.monotonic()
+        self.last_access = time.monotonic()
         self.is_running = True
 
-    def get_key(self):
+    def get_key(self) -> Tuple[str, str]:
         return (self.cmd, self.mount)
 
-    def aggregate(self, other) -> None:
+    def aggregate(self, other: "Process") -> None:
         self.increment_counts(other.access_counts)
         self.is_running |= other.is_running
 
         # Check if other is more relevant
-        # pyre-fixme[16]: `Process` has no attribute `last_access`.
         if other.is_running or other.last_access > self.last_access:
             self.pid = other.pid
             self.last_access = other.last_access
 
-    def increment_counts(self, access_counts) -> None:
+    def increment_counts(self, access_counts: AccessCounts) -> None:
         self.access_counts.fsChannelReads += access_counts.fsChannelReads
         self.access_counts.fsChannelWrites += access_counts.fsChannelWrites
         self.access_counts.fsChannelTotal += access_counts.fsChannelTotal
@@ -1035,7 +1041,6 @@ class Process:
             fuse_disk_cache_imports=self.access_counts.fsChannelDiskCacheImports,
             fuse_backing_store_imports=self.access_counts.fsChannelBackingStoreImports,
             fuse_duration=self.access_counts.fsChannelDurationNs,
-            # pyre-fixme[16]: `Process` has no attribute `last_access`.
             fuse_last_access=self.last_access,
             command=self.cmd,
         )
