@@ -78,5 +78,5 @@ pub mod private {
     pub use crate::errors::ErrorKind;
     pub use crate::hash::Blake2;
     pub use crate::thrift;
-    pub use crate::typed_hash::Blake2HexVisitor;
+    pub use crate::typed_hash::{Blake2HexVisitor, ThriftConvert};
 }

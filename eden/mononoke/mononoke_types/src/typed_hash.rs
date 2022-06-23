@@ -51,6 +51,12 @@ pub trait BlobstoreKey: FromStr<Err = anyhow::Error> {
     fn parse_blobstore_key(key: &str) -> Result<Self>;
 }
 
+pub trait ThriftConvert: Sized {
+    type Thrift;
+    fn from_thrift(t: Self::Thrift) -> Result<Self>;
+    fn into_thrift(self) -> Self::Thrift;
+}
+
 /// An identifier used throughout Mononoke.
 pub trait MononokeId: BlobstoreKey + Debug + Copy + Eq + Hash + Sync + Send + 'static {
     /// Blobstore value type associated with given MononokeId type
@@ -168,18 +174,6 @@ macro_rules! impl_typed_hash_no_context {
                 Self(blake2)
             }
 
-            // (this is public because downstream code wants to be able to deserialize these nodes)
-            pub fn from_thrift(h: $thrift_typed) -> $crate::private::anyhow::Result<Self> {
-                // This assumes that a null hash is never serialized. This should always be the
-                // case.
-                match h.0 {
-                    $crate::private::thrift::IdType::Blake2(blake2) => Ok(Self::new($crate::private::Blake2::from_thrift(blake2)?)),
-                    $crate::private::thrift::IdType::UnknownField(x) => $crate::private::anyhow::bail!($crate::private::ErrorKind::InvalidThrift(
-                        stringify!($typed).into(),
-                        format!("unknown id type field: {}", x)
-                    )),
-                }
-            }
 
             #[cfg(test)]
             pub(crate) fn from_byte_array(arr: [u8; 32]) -> Self {
@@ -209,8 +203,30 @@ macro_rules! impl_typed_hash_no_context {
                 self.to_hex().into_iter().take(8).collect()
             }
 
-            // (this is public because downstream code wants to be able to serialize these nodes)
+            pub fn from_thrift(h: $thrift_typed) -> $crate::private::anyhow::Result<Self> {
+                $crate::private::ThriftConvert::from_thrift(h)
+            }
+
             pub fn into_thrift(self) -> $thrift_typed {
+                $crate::private::ThriftConvert::into_thrift(self)
+            }
+        }
+
+        impl $crate::private::ThriftConvert for $typed {
+            type Thrift = $thrift_typed;
+
+            fn from_thrift(h: Self::Thrift) -> $crate::private::anyhow::Result<Self> {
+                // This assumes that a null hash is never serialized. This should always be the
+                // case.
+                match h.0 {
+                    $crate::private::thrift::IdType::Blake2(blake2) => Ok(Self::new($crate::private::Blake2::from_thrift(blake2)?)),
+                    $crate::private::thrift::IdType::UnknownField(x) => $crate::private::anyhow::bail!($crate::private::ErrorKind::InvalidThrift(
+                        stringify!($typed).into(),
+                        format!("unknown id type field: {}", x)
+                    )),
+                }
+            }
+            fn into_thrift(self) -> Self::Thrift {
                 $thrift_typed($crate::private::thrift::IdType::Blake2(self.0.into_thrift()))
             }
         }
