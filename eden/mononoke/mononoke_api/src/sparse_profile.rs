@@ -15,20 +15,161 @@ use crate::MononokePath;
 use crate::PathEntry;
 use anyhow::{anyhow, Context, Result};
 use blobstore::Loadable;
-use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{stream, try_join, FutureExt, StreamExt, TryStreamExt};
 use maplit::btreeset;
+use metaconfig_types::SparseProfilesConfig;
 use mononoke_types::{fsnode::FsnodeEntry, MPath};
 use pathmatcher::{DirectoryMatch, Matcher};
-use slog::{error, Logger};
 use types::RepoPath;
 
 use std::collections::HashMap;
 use std::sync::Arc;
 
-const SPARSE_PROFILES_LOCATION: &str = "tools/scm/sparse";
+// This struct contains matchers which will be consulted in various scenarious
+// Clients can request analysis either for ALL profiles or Set of interested
+//  1. If client requests exact list of profiles, then `exact_profiles_matcher`
+//     will be used to check for the config changed and profiles will be
+//     located using `changeset::find_files()`
+//  2. If client asks to analyse all profiles - we check the configuration:
+//     a. If list of monitored_profiles is set, then we use
+//        `monitoring_profiles_only_matcher`
+//     b. If monitored_profiles is None, then profiles would be checked
+//        in configured location with respect of optional excludes.
+pub struct SparseProfileMonitoring {
+    sparse_config: SparseProfilesConfig,
+    exact_profiles_matcher: pathmatcher::TreeMatcher,
+    profiles_location_with_excludes_matcher: pathmatcher::TreeMatcher,
+    monitoring_profiles_only_matcher: Option<pathmatcher::TreeMatcher>,
+    monitoring_profiles: MonitoringProfiles,
+}
+
+impl SparseProfileMonitoring {
+    pub fn new(
+        repo_name: &str,
+        maybe_sparse_config: Option<SparseProfilesConfig>,
+        monitoring_profiles: MonitoringProfiles,
+    ) -> Result<Self, MononokeError> {
+        let sparse_config = maybe_sparse_config.ok_or_else(|| {
+            MononokeError::from(anyhow!(
+                "There isn't sparse profiles monitoring config in repo {}",
+                repo_name
+            ))
+        })?;
+        let rules: Vec<_> = vec![format!("{}/**", sparse_config.sparse_profiles_location)]
+            .into_iter()
+            .chain(
+                sparse_config
+                    .excluded_paths
+                    .iter()
+                    .map(|s| format!("!{}/{}", sparse_config.sparse_profiles_location, s)),
+            )
+            .collect();
+        let profiles_location_with_excludes_matcher =
+            pathmatcher::TreeMatcher::from_rules(rules.iter()).context(format!(
+                "Couldn't create profiles config matcher for repo {} from rules {:?}",
+                repo_name, rules,
+            ))?;
+        let exact_profiles_matcher = match monitoring_profiles {
+            MonitoringProfiles::Exact { ref profiles } => {
+                pathmatcher::TreeMatcher::from_rules(profiles.iter()).context(format!(
+                    "Couldn't create exact profiles matcher for repo {} from rules {:?}",
+                    repo_name, rules,
+                ))?
+            }
+            // In that case exact_proifles_matcher will not be used, however making it Option
+            // brings in some unnecessary complexity, so I just cloned existing matcher.
+            MonitoringProfiles::All => profiles_location_with_excludes_matcher.clone(),
+        };
+        let monitoring_profiles_only_matcher = if sparse_config.monitored_profiles.is_empty() {
+            None
+        } else {
+            Some(
+                pathmatcher::TreeMatcher::from_rules(
+                    sparse_config
+                        .monitored_profiles
+                        .iter()
+                        .map(|p| format!("{}/{}", sparse_config.sparse_profiles_location, p)),
+                )
+                .context(format!(
+                    "Couldn't create monitored profiles matcher for repo {} from rules {:?}",
+                    repo_name, sparse_config.monitored_profiles,
+                ))?,
+            )
+        };
+        Ok(Self {
+            sparse_config,
+            exact_profiles_matcher,
+            profiles_location_with_excludes_matcher,
+            monitoring_profiles_only_matcher,
+            monitoring_profiles,
+        })
+    }
+
+    pub async fn get_monitoring_profiles(
+        &self,
+        changeset: &ChangesetContext,
+    ) -> Result<Vec<MPath>, MononokeError> {
+        match &self.monitoring_profiles {
+            MonitoringProfiles::All => {
+                let prefixes = vec![MononokePath::try_from(
+                    &self.sparse_config.sparse_profiles_location,
+                )?];
+                let files = changeset
+                    .find_files(Some(prefixes), None, None, ChangesetFileOrdering::Unordered)
+                    .await?;
+                files
+                    .try_filter_map(|path| async move {
+                        let matcher = self
+                            .monitoring_profiles_only_matcher
+                            .as_ref()
+                            .map_or_else(|| &self.profiles_location_with_excludes_matcher, |m| m);
+                        Ok(match matcher.matches(path.to_string()) {
+                            // Since None in MononokePath is a root repo directory
+                            // and we are returning list of profiles
+                            // we can safely filter that out.
+                            true => path.into_mpath(),
+                            false => None,
+                        })
+                    })
+                    .try_collect()
+                    .await
+            }
+            MonitoringProfiles::Exact { profiles } => {
+                let prefixes = profiles
+                    .iter()
+                    .map(MononokePath::try_from)
+                    .collect::<Result<Vec<_>, MononokeError>>()?;
+                changeset
+                    .find_files(Some(prefixes), None, None, ChangesetFileOrdering::Unordered)
+                    .await?
+                    .map(|p| {
+                        p.and_then(|path| {
+                            path.into_mpath().ok_or_else(|| {
+                                MononokeError::from(anyhow!(
+                                    "Provided root diretory as monitored profile."
+                                ))
+                            })
+                        })
+                    })
+                    .try_collect()
+                    .await
+            }
+        }
+    }
+
+    fn is_profile_config_change(&self, path: &MononokePath) -> bool {
+        let matcher = match self.monitoring_profiles {
+            MonitoringProfiles::Exact { .. } => &self.exact_profiles_matcher,
+            MonitoringProfiles::All => self
+                .monitoring_profiles_only_matcher
+                .as_ref()
+                .map_or_else(|| &self.profiles_location_with_excludes_matcher, |m| m),
+        };
+        matcher.matches(path.to_string())
+    }
+}
 
 pub(crate) async fn fetch(path: String, changeset: &ChangesetContext) -> Result<Option<Vec<u8>>> {
     let path: &str = &path;
@@ -155,38 +296,6 @@ fn fold_maps(mut a: Out, b: Out) -> Out {
     a
 }
 
-pub async fn get_all_profiles(changeset: &ChangesetContext) -> Result<Vec<MPath>, MononokeError> {
-    // TODO: read profile location from config
-    let prefixes = vec![MononokePath::try_from(SPARSE_PROFILES_LOCATION)?];
-    let files = changeset
-        .find_files(Some(prefixes), None, None, ChangesetFileOrdering::Unordered)
-        .await?;
-    let matcher = pathmatcher::TreeMatcher::from_rules(
-        [
-            "tools/scm/sparse/README.md",
-            "tools/scm/sparse/arvr/.castle/definitions/validate_sparse_profiles.json",
-            "tools/scm/sparse/validation/**",
-        ]
-        .iter(),
-    )
-    .context("Couldn't create matcher for excluded sparse profiles")?;
-    files
-        .try_filter_map(|path| {
-            borrowed!(matcher);
-            async move {
-                Ok(match matcher.matches(path.to_string()) {
-                    // Since None in MononokePath is a root repo directory
-                    // and we are returning list of profiles
-                    // we can safely filter that out.
-                    false => path.into_mpath(),
-                    true => None,
-                })
-            }
-        })
-        .try_collect()
-        .await
-}
-
 async fn get_entry_size(content: &ChangesetPathContentContext) -> Result<u64, MononokeError> {
     let path = content.path();
     match content.entry().await? {
@@ -277,16 +386,18 @@ fn match_path(matcher: &dyn Matcher, path: &MononokePath) -> Result<bool> {
 
 pub async fn get_profile_delta_size(
     ctx: &CoreContext,
+    monitor: &SparseProfileMonitoring,
     current: &ChangesetContext,
     other: &ChangesetContext,
     paths: Vec<MPath>,
 ) -> Result<HashMap<String, ProfileSizeChange>, MononokeError> {
     let matchers = create_matchers(current, paths).await?;
-    calculate_delta_size(ctx, current, other, matchers).await
+    calculate_delta_size(ctx, monitor, current, other, matchers).await
 }
 
 pub async fn calculate_delta_size<'a>(
     ctx: &'a CoreContext,
+    monitor: &'a SparseProfileMonitoring,
     current: &'a ChangesetContext,
     other: &'a ChangesetContext,
     matchers: HashMap<String, Arc<dyn Matcher + Send + Sync>>,
@@ -294,7 +405,7 @@ pub async fn calculate_delta_size<'a>(
     let diff_change = get_bonsai_size_change(current, other).await?;
     let (sparse_config_change, other_changes): (Vec<_>, Vec<_>) = diff_change
         .into_iter()
-        .partition(|entry| is_profile_config_change(ctx.logger(), entry.path()));
+        .partition(|entry| monitor.is_profile_config_change(entry.path()));
     let mut sizes: HashMap<_, _> = other_changes
         .iter()
         .try_fold(HashMap::new(), |mut sizes, entry| {
@@ -316,21 +427,14 @@ pub async fn calculate_delta_size<'a>(
     let profile_configs_change =
         calculate_profile_config_change(ctx, current, other, sparse_config_change).await?;
     sizes.extend(profile_configs_change.into_iter());
-    Ok(sizes)
-}
-
-fn is_profile_config_change(logger: &Logger, path: &MononokePath) -> bool {
-    let profiles_location = MononokePath::try_from(SPARSE_PROFILES_LOCATION);
-    match profiles_location {
-        Ok(prefix) => MPath::is_prefix_of_opt(prefix.as_mpath(), MPath::iter_opt(path.as_mpath())),
-        Err(e) => {
-            error!(
-                logger,
-                "Couldn't convert sparse profiles location {}: {}", path, e
-            );
-            false
-        }
-    }
+    Ok(sizes
+        .into_iter()
+        .filter(|(_, size)| {
+            !(*size == ProfileSizeChange::Added(0)
+                || *size == ProfileSizeChange::Removed(0)
+                || *size == ProfileSizeChange::Changed(0))
+        })
+        .collect())
 }
 
 async fn calculate_profile_config_change<'a>(
@@ -472,4 +576,9 @@ pub enum ProfileSizeChange {
     Added(u64),
     Removed(u64),
     Changed(i64),
+}
+
+pub enum MonitoringProfiles {
+    All,
+    Exact { profiles: Vec<String> },
 }

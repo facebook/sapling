@@ -9,10 +9,9 @@ use anyhow::Result;
 use context::CoreContext;
 use itertools::Itertools;
 use mononoke_api::sparse_profile::{
-    get_all_profiles, get_profile_delta_size, get_profile_size, ProfileSizeChange,
+    get_profile_delta_size, get_profile_size, MonitoringProfiles, ProfileSizeChange,
+    SparseProfileMonitoring,
 };
-use mononoke_api::ChangesetContext;
-use mononoke_types::MPath;
 use source_control as thrift;
 
 use crate::errors;
@@ -42,8 +41,14 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitSparseProfileSizeParams,
     ) -> Result<thrift::CommitSparseProfileSizeResponse, errors::ServiceError> {
-        let (_repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
-        let profiles = get_profiles(params.profiles, &changeset).await?;
+        let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
+        let profiles = convert_profiles_params(params.profiles).await?;
+        let monitor = SparseProfileMonitoring::new(
+            repo.name(),
+            repo.config().sparse_profiles_config.clone(),
+            profiles,
+        )?;
+        let profiles = monitor.get_monitoring_profiles(&changeset).await?;
         let sizes_hashmap = get_profile_size(&ctx, &changeset, profiles).await?;
         let sizes = sizes_hashmap
             .into_iter()
@@ -72,11 +77,18 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitSparseProfileDeltaParams,
     ) -> Result<thrift::CommitSparseProfileDeltaResponse, errors::ServiceError> {
-        let (_repo, changeset, other) = self
+        let (repo, changeset, other) = self
             .repo_changeset_pair(ctx.clone(), &commit, &params.other_id)
             .await?;
-        let profiles = get_profiles(params.profiles, &changeset).await?;
-        let sizes_hashmap = get_profile_delta_size(&ctx, &changeset, &other, profiles).await;
+        let profiles = convert_profiles_params(params.profiles).await?;
+        let monitor = SparseProfileMonitoring::new(
+            repo.name(),
+            repo.config().sparse_profiles_config.clone(),
+            profiles,
+        )?;
+        let profiles = monitor.get_monitoring_profiles(&changeset).await?;
+        let sizes_hashmap =
+            get_profile_delta_size(&ctx, &monitor, &changeset, &other, profiles).await;
         let sizes = sizes_hashmap?
             .into_iter()
             .map(|(source, change)| {
@@ -99,21 +111,12 @@ impl SourceControlServiceImpl {
     }
 }
 
-async fn get_profiles(
+async fn convert_profiles_params(
     params_profiles: thrift::SparseProfiles,
-    changeset: &ChangesetContext,
-) -> Result<Vec<MPath>, errors::ServiceError> {
+) -> Result<MonitoringProfiles, errors::ServiceError> {
     match params_profiles {
-        thrift::SparseProfiles::all_profiles(_) => get_all_profiles(changeset)
-            .await
-            .map_err(errors::ServiceError::from),
-        thrift::SparseProfiles::profiles(profiles) => Ok(profiles
-            .into_iter()
-            .filter_map(|path| {
-                let path: &str = &path;
-                MPath::try_from(path).ok()
-            })
-            .collect()),
+        thrift::SparseProfiles::all_profiles(_) => Ok(MonitoringProfiles::All),
+        thrift::SparseProfiles::profiles(profiles) => Ok(MonitoringProfiles::Exact { profiles }),
         thrift::SparseProfiles::UnknownField(_) => Err(errors::ServiceError::Request(
             errors::not_available("Not implemented".to_string()),
         )),
