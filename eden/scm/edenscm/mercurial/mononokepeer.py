@@ -89,48 +89,49 @@ class mononokepipe(object):
         return len(data)
 
     def _read_segment(self):
-        r = b""
-        while not r.endswith(NETSTRING_SEPARATOR):
+        while True:
+            r = b""
+            while not r.endswith(NETSTRING_SEPARATOR):
+                try:
+                    buf = self._pipe.read(1)
+                except Exception as e:
+                    raise error.NetworkError("failed reading from pipe: {}".format(e))
+                if not buf:
+                    raise error.NetworkError("unexpected EOL, expected netstring digit")
+                r += buf
+
+            segmentlength = int(r[:-1])
+
             try:
-                buf = self._pipe.read(1)
+                r = self._pipe.read(segmentlength + 1)
             except Exception as e:
                 raise error.NetworkError("failed reading from pipe: {}".format(e))
-            if not buf:
-                raise error.NetworkError("unexpected EOL, expected netstring digit")
-            r += buf
-
-        segmentlength = int(r[:-1])
-
-        try:
-            r = self._pipe.read(segmentlength + 1)
-        except Exception as e:
-            raise error.NetworkError("failed reading from pipe: {}".format(e))
-        if len(r) != segmentlength + 1:
-            raise error.NetworkError(
-                "unexpected read length, expected length {}, got length {}: '{}'".format(
-                    segmentlength + 1, len(r), r
+            if len(r) != segmentlength + 1:
+                raise error.NetworkError(
+                    "unexpected read length, expected length {}, got length {}: '{}'".format(
+                        segmentlength + 1, len(r), r
+                    )
                 )
-            )
 
-        stdtype_raw, segment, ending = r[:1], r[1:-1], r[-1:]
-        (stdtype,) = unpack("b", stdtype_raw)
+            stdtype_raw, segment, ending = r[:1], r[1:-1], r[-1:]
+            (stdtype,) = unpack("b", stdtype_raw)
 
-        if ending != NETSTRING_ENDING:
-            raise error.NetworkError(
-                "'%s' is not expected netencoding ending segment '%s'"
-                % (r[segmentlength], NETSTRING_ENDING)
-            )
+            if ending != NETSTRING_ENDING:
+                raise error.NetworkError(
+                    "'%s' is not expected netencoding ending segment '%s'"
+                    % (r[segmentlength], NETSTRING_ENDING)
+                )
 
-        if self._decompresser:
-            segment = self._decompresser.decompress_buffer(segment)
+            if self._decompresser:
+                segment = self._decompresser.decompress_buffer(segment)
 
-        if stdtype == IoStream.STDOUT.value:
-            return segment
-        elif stdtype == IoStream.STDERR.value:
-            stdiopeer._writestderror(self._ui, segment)
-            return self._read_segment()
-        else:
-            raise error.Abort("unexpected stdtype '{}'".format(stdtype))
+            if stdtype == IoStream.STDOUT.value:
+                return segment
+            elif stdtype == IoStream.STDERR.value:
+                stdiopeer._writestderror(self._ui, segment)
+                continue
+            else:
+                raise error.Abort("unexpected stdtype '{}'".format(stdtype))
 
     def read(self, size):
         bufs = [self._readbuf[self._readoffset :]]
