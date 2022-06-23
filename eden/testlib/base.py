@@ -57,13 +57,13 @@ command={str(os.getenv("EDENFSCTL_RUST_PATH"))}
             self.config.append(
                 f"""
 [auth]
-mononoke.cert={cert_dir}/localhost.crt
-mononoke.key={cert_dir}/localhost.key
+mononoke.cert={cert_dir}/client0.crt
+mononoke.key={cert_dir}/client0.key
 mononoke.cacerts={cert_dir}/root-ca.crt
 mononoke.prefix=mononoke://*
 mononoke.cn=localhost
-edenapi.cert={cert_dir}/localhost.crt
-edenapi.key={cert_dir}/localhost.key
+edenapi.cert={cert_dir}/client0.crt
+edenapi.key={cert_dir}/client0.key
 edenapi.prefix=localhost
 edenapi.schemes=https
 edenapi.cacerts={cert_dir}/root-ca.crt

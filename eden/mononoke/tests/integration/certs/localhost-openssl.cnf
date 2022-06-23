@@ -1,0 +1,17 @@
+[ req ]
+default_bits = 2048
+prompt = no
+encrypt_key = no
+distinguished_name = dn
+extensions = v3_ca
+
+[ dn ]
+CN=localhost
+O=Mononoke
+C=US
+ST=CA
+
+[ v3_ca ]
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth, serverAuth

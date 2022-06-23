@@ -31,7 +31,7 @@ start mononoke
   $ start_and_wait_for_mononoke_server
 check if we can talk to mononoke through proxy
   $ PROXY_PORT=$(get_free_socket)
-  $ ncat -lkv localhost $PROXY_PORT -c "tee -a ${TESTTMP}/ncat_proxy.log | ncat -v --ssl-cert $TEST_CERTDIR/localhost.crt --ssl-key $TEST_CERTDIR/localhost.key localhost ${MONONOKE_SOCKET} | tee -a ${TESTTMP}/ncat_proxy.log" 2>/dev/null &
+  $ ncat -lkv localhost $PROXY_PORT -c "tee -a ${TESTTMP}/ncat_proxy.log | ncat -v --ssl-cert $TEST_CERTDIR/proxy.crt --ssl-key $TEST_CERTDIR/proxy.key localhost ${MONONOKE_SOCKET} | tee -a ${TESTTMP}/ncat_proxy.log" 2>/dev/null &
   $ ncat_pid=$!
   $ cat >> .hg/hgrc <<EOF
   > [auth_proxy]

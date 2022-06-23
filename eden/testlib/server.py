@@ -167,8 +167,8 @@ def _start(
     port = _wait(
         process,
         addr_file,
-        cjoin("localhost.crt"),
-        cjoin("localhost.key"),
+        cjoin("client0.crt"),
+        cjoin("client0.key"),
         cjoin("root-ca.crt"),
     )
 

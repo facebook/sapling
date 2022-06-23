@@ -11,9 +11,11 @@ if [ -n "$FB_TEST_FIXTURES" ] && [ -f "$FB_TEST_FIXTURES/fb_library.sh" ]; then
   . "$FB_TEST_FIXTURES/fb_library.sh"
 fi
 
+PROXY_IDENTITY_TYPE="${FB_PROXY_IDENTITY_TYPE:-X509_SUBJECT_NAME}"
+PROXY_IDENTITY_DATA="${FB_PROXY_IDENTITY_DATA:-CN=proxy,O=Mononoke,C=US,ST=CA}"
 ALLOWED_IDENTITY_TYPE="${FB_ALLOWED_IDENTITY_TYPE:-X509_SUBJECT_NAME}"
-ALLOWED_IDENTITY_DATA="${FB_ALLOWED_IDENTITY_DATA:-CN=localhost,O=Mononoke,C=US,ST=CA}"
-JSON_CLIENT_ID="${FB_JSON_CLIENT_ID:-[\"X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA\"]}"
+ALLOWED_IDENTITY_DATA="${FB_ALLOWED_IDENTITY_DATA:-CN=client0,O=Mononoke,C=US,ST=CA}"
+JSON_CLIENT_ID="${FB_JSON_CLIENT_ID:-[\"X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA\"]}"
 
 if [[ -n "$DB_SHARD_NAME" ]]; then
   MONONOKE_DEFAULT_START_TIMEOUT=60
@@ -122,16 +124,14 @@ function random_int() {
   echo $VAL
 }
 
-function sslcurl {
-  curl --noproxy localhost --cert "$TEST_CERTDIR/localhost.crt" --cacert "$TEST_CERTDIR/root-ca.crt" --key "$TEST_CERTDIR/localhost.key" "$@"
+function sslcurlas {
+  local name="$1"
+  shift
+  curl --noproxy localhost --cert "$TEST_CERTDIR/$name.crt" --cacert "$TEST_CERTDIR/root-ca.crt" --key "$TEST_CERTDIR/$name.key" "$@"
 }
 
-function ssldebuglfssend {
-  hg --config extensions.lfs= --config hostsecurity.localhost:verifycertsfile="$TEST_CERTDIR/root-ca.crt" \
-    --config auth.lfs.cert="$TEST_CERTDIR/localhost.crt" \
-    --config auth.lfs.key="$TEST_CERTDIR/localhost.key" \
-    --config auth.lfs.schemes=https \
-    --config auth.lfs.prefix=localhost debuglfssend "$@"
+function sslcurl {
+  sslcurlas proxy "$@"
 }
 
 function mononoke {
@@ -542,12 +542,12 @@ record=False
 [web]
 cacerts=$TEST_CERTDIR/root-ca.crt
 [auth]
-mononoke.cert=$TEST_CERTDIR/localhost.crt
-mononoke.key=$TEST_CERTDIR/localhost.key
+mononoke.cert=$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.crt
+mononoke.key=$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.key
 mononoke.prefix=mononoke://*
 mononoke.cn=localhost
-edenapi.cert=$TEST_CERTDIR/localhost.crt
-edenapi.key=$TEST_CERTDIR/localhost.key
+edenapi.cert=$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.crt
+edenapi.key=$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.key
 edenapi.prefix=localhost
 edenapi.cacerts=$TEST_CERTDIR/root-ca.crt
 EOF
@@ -615,6 +615,10 @@ CONFIG
 blobstore = "$blobstorename"
 darkstorm_blobstore = "$blobstorename"
 redaction_sets_location = "scm/mononoke/redaction/redaction_sets"
+
+[[whitelist_entry]]
+identity_type = "$PROXY_IDENTITY_TYPE"
+identity_data = "${OVERRIDE_PROXY_IDDATA:-$PROXY_IDENTITY_DATA}"
 
 [[whitelist_entry]]
 identity_type = "$ALLOWED_IDENTITY_TYPE"
@@ -1213,8 +1217,8 @@ function s_client {
     /usr/local/fbcode/platform009/bin/openssl s_client \
         -connect "$(mononoke_address)" \
         -CAfile "${TEST_CERTDIR}/root-ca.crt" \
-        -cert "${TEST_CERTDIR}/localhost.crt" \
-        -key "${TEST_CERTDIR}/localhost.key" \
+        -cert "${TEST_CERTDIR}/client0.crt" \
+        -key "${TEST_CERTDIR}/client0.key" \
         -ign_eof "$@"
 }
 
@@ -1260,8 +1264,8 @@ function megarepo_async_worker {
 
 function scsc {
   GLOG_minloglevel=5 \
-    THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/localhost.crt" \
-    THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/localhost.key" \
+    THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/client0.crt" \
+    THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/client0.key" \
     THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
     "$SCS_CLIENT" --host "$LOCALIP:$SCS_PORT" "$@"
 }
@@ -1620,8 +1624,8 @@ getpackversion = 2
 http=True
 useruststore=True
 [auth]
-edenapi.cert=$TEST_CERTDIR/localhost.crt
-edenapi.key=$TEST_CERTDIR/localhost.key
+edenapi.cert=$TEST_CERTDIR/client0.crt
+edenapi.key=$TEST_CERTDIR/client0.key
 edenapi.prefix=localhost
 edenapi.schemes=https
 edenapi.cacerts=$TEST_CERTDIR/root-ca.crt

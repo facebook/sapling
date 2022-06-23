@@ -33,14 +33,6 @@ Clone the repo. Enable LFS. Take a different cache path to make sure we have to 
   $ setup_hg_modern_lfs "$lfs_url" 10B
   $ setconfig "remotefilelog.cachepath=$TESTTMP/cachepath2"
 
-Configure TLS
-
-  $ setconfig "auth.lfs.cert=$TEST_CERTDIR/localhost.crt"
-  $ setconfig "auth.lfs.key=$TEST_CERTDIR/localhost.key"
-  $ setconfig "auth.lfs.cacerts=$TEST_CERTDIR/root-ca.crt"
-  $ setconfig "auth.lfs.schemes=https"
-  $ setconfig "auth.lfs.prefix=localhost"
-
 Initially, enable the killswitch This will fail, because we don't have certs.
 
   $ setconfig "lfs.use-client-certs=false"

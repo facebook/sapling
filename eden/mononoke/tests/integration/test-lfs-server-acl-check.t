@@ -7,6 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
   $ setup_common_config
+  $ enable lfs
 
 # Create a repository without ACL checking enforcement
   $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config repo1
@@ -27,7 +28,7 @@
 
 # Start an LFS server
   $ LFS_LOG="$TESTTMP/lfs.log"
-  $ LFS_ROOT="$(lfs_server --log "$LFS_LOG" --tls --live-config "$(get_configerator_relative_path "${LIVE_CONFIG}")" --allowed-test-identity USER:test --trusted-proxy-identity USER:myusername0)"
+  $ LFS_ROOT="$(lfs_server --log "$LFS_LOG" --tls --live-config "$(get_configerator_relative_path "${LIVE_CONFIG}")" --allowed-test-identity USER:test --trusted-proxy-identity SERVICE_IDENTITY:proxy)"
   $ LFS_URI="$LFS_ROOT/repo1"
   $ LFS_URI_REPO_ENFORCE_ACL="$LFS_ROOT/repo2"
 
@@ -40,10 +41,10 @@
   $ DOWNLOAD_URL_REPO_ENFORCE_ACL="$LFS_URI_REPO_ENFORCE_ACL/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d"
 
 # Upload a blob to both repos
-  $ yes A 2>/dev/null | head -c 2KiB | ssldebuglfssend "$LFS_URI_REPO_ENFORCE_ACL"
+  $ yes A 2>/dev/null | head -c 2KiB | hg debuglfssend "$LFS_URI_REPO_ENFORCE_ACL"
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
 
-  $ yes A 2>/dev/null | head -c 2KiB | ssldebuglfssend "$LFS_URI"
+  $ yes A 2>/dev/null | head -c 2KiB | hg debuglfssend "$LFS_URI"
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
 
 # Make a request with a valid encoded client identity header, but acl
