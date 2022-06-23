@@ -71,6 +71,7 @@ Show all commands except debug commands
   verify
   verifyremotefilelog
   version
+  whereami
 
 Show all commands that start with "a"
   $ hg debugcomplete a
@@ -379,6 +380,7 @@ Show aliases with -v
   verify
   verifyremotefilelog
   version
+  whereami
 
 Show an error if we use --options with an ambiguous abbreviation
   $ hg debugcomplete --options s
@@ -573,6 +575,7 @@ Show all commands + options
   verify: rev, dag
   verifyremotefilelog: decompress
   version: template
+  whereami: 
 
   $ hg init a
   $ cd a

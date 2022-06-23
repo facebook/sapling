@@ -8,10 +8,6 @@
 
   $ hg init repo1
   $ cd repo1
-  $ cat > .hg/hgrc << 'EOF'
-  > [extensions]
-  > whereami=
-  > EOF
 
   $ hg whereami
   0000000000000000000000000000000000000000
@@ -34,7 +30,7 @@
   $ hg add c
   $ hg commit -m c
 
-  $ hg merge 1
+  $ hg merge 'desc(b)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 

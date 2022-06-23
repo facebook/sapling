@@ -31,6 +31,7 @@ commands! {
     mod root;
     mod status;
     mod version;
+    mod whereami;
 }
 
 pub use anyhow::Result;

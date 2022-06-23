@@ -625,7 +625,6 @@ ignorerevnumincompatiblelist = """
     test-fb-hgext-tweakdefaults-remotenames.t
     test-fb-hgext-tweakdefaults.t
     test-fb-hgext-tweakdefaults-update.t
-    test-fb-hgext-whereami.t
     test-fileset.t
     test-git-export.t
     test-glog-topological.t
