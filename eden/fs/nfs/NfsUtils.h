@@ -8,9 +8,11 @@
 #pragma once
 
 #ifndef _WIN32
+
 #include <folly/Try.h>
 #include <sys/stat.h>
 #include "eden/fs/nfs/NfsdRpc.h"
+#include "eden/fs/utils/Throw.h"
 
 namespace facebook::eden {
 
@@ -53,6 +55,7 @@ inline mode_t ftype3ToMode(ftype3 type) {
     case ftype3::NF3FIFO:
       return S_IFIFO;
   }
+  throw_<std::domain_error>("unexpected ftype3 ", type);
 }
 
 /**

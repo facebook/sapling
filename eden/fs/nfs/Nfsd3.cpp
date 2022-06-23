@@ -30,6 +30,7 @@
 #include "eden/fs/utils/IDGen.h"
 #include "eden/fs/utils/StaticAssert.h"
 #include "eden/fs/utils/SystemError.h"
+#include "eden/fs/utils/Throw.h"
 
 namespace folly {
 class Executor;
@@ -1385,6 +1386,7 @@ NfsArgsDetails formatWrite(folly::io::Cursor deser) {
       case stable_how::FILE_SYNC:
         return "FILE_SYNC";
     }
+    throw_<std::domain_error>("unexpected stable_how ", stable);
   };
   return {
       fmt::format(
@@ -1407,6 +1409,7 @@ NfsArgsDetails formatCreate(folly::io::Cursor deser) {
       case createmode3::EXCLUSIVE:
         return "EXCLUSIVE";
     }
+    throw_<std::domain_error>("unexpected createmode3 ", createmode);
   };
   return {
       fmt::format(
@@ -1464,6 +1467,7 @@ NfsArgsDetails formatMknod(folly::io::Cursor deser) {
       case ftype3::NF3FIFO:
         return "FIFO";
     }
+    throw_<std::domain_error>("unexpected ftype3 ", type);
   };
   auto formatWhat = [](const mknoddata3& data) {
     return std::visit(

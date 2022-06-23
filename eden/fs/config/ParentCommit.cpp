@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/config/ParentCommit.h"
+#include "eden/fs/utils/Bug.h"
 
 namespace facebook::eden {
 
@@ -31,6 +32,7 @@ std::optional<RootId> ParentCommit::getLastCheckoutId(
             case ParentCommit::RootIdPreference::OnlyStable:
               return std::nullopt;
           }
+          EDEN_BUG() << "unexpected preference " << preference;
         }
       },
       state_);

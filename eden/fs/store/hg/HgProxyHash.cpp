@@ -79,7 +79,7 @@ folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(
     }
   }
   if (byteRanges.empty()) {
-    return std::move(embedded_results);
+    return folly::Future<std::vector<HgProxyHash>>{std::move(embedded_results)};
   }
   return store->getBatch(KeySpace::HgProxyHashFamily, byteRanges)
       .thenValue([embedded_results,
