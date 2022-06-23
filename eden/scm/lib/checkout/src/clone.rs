@@ -40,6 +40,38 @@ use crate::Checkout;
 
 static CONFIG_OVERRIDE_CACHE: &str = "sparseprofileconfigs";
 
+pub struct CheckoutStats {
+    pub updated: usize,
+    pub merged: usize,
+    pub removed: usize,
+    pub unresolved: usize,
+}
+
+impl std::fmt::Display for CheckoutStats {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut first = true;
+        for (name, val) in [
+            ("updated", self.updated),
+            ("merged", self.merged),
+            ("removed", self.removed),
+            ("unresolved", self.unresolved),
+        ] {
+            if val == 0 {
+                continue;
+            }
+
+            if !first {
+                write!(f, ", ")?;
+            }
+            first = false;
+
+            write!(f, "{} files {}", val, name)?;
+        }
+
+        Ok(())
+    }
+}
+
 /// A somewhat simplified/specialized checkout suitable for use during a clone.
 pub fn checkout(
     config: &dyn Config,
@@ -49,7 +81,7 @@ pub fn checkout(
     file_store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
     ts: &mut TreeState,
     target: HgId,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<CheckoutStats> {
     let dot_hg = wc_path.join(".hg");
 
     let _wlock = repolock::lock_working_copy(config, &dot_hg)?;
@@ -122,7 +154,12 @@ pub fn checkout(
         })?;
     }
 
-    Ok(())
+    Ok(CheckoutStats {
+        updated: plan.stats().0,
+        merged: 0,
+        removed: 0,
+        unresolved: 0,
+    })
 }
 
 fn flush_dirstate(

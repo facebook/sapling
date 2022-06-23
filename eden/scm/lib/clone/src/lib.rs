@@ -110,7 +110,7 @@ pub fn init_working_copy(
 
     let mut ts = TreeState::open(&ts_path, None)?;
 
-    checkout::clone::checkout(
+    let stats = checkout::clone::checkout(
         repo.config(),
         repo.path(),
         &source_mf,
@@ -119,6 +119,8 @@ pub fn init_working_copy(
         &mut ts,
         target,
     )?;
+
+    logger.status(format!("{}", stats));
 
     Ok(())
 }
