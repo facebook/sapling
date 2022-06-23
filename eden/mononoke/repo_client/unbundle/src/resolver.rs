@@ -9,10 +9,8 @@ use anyhow::{bail, ensure, format_err, Context, Error, Result};
 use ascii::AsciiString;
 use blobrepo::BlobRepo;
 use blobrepo_hg::{BlobRepoHg, ChangesetHandle};
-use blobstore::Storable;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
-use bytes_old::Bytes as BytesOld;
 use context::{CoreContext, SessionClass};
 use core::fmt::Debug;
 use futures::{
@@ -21,7 +19,6 @@ use futures::{
     stream::{self, BoxStream},
     try_join, Future, StreamExt, TryStreamExt,
 };
-use futures_stats::TimedTryFutureExt;
 use hooks::HookRejectionInfo;
 use lazy_static::lazy_static;
 use mercurial_bundles::{Bundle2Item, PartHeader, PartHeaderInner, PartHeaderType, PartId};
@@ -29,12 +26,12 @@ use mercurial_mutation::HgMutationEntry;
 use mercurial_revlog::changeset::RevlogChangeset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::PushrebaseFlags;
-use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, RawBundle2, RawBundle2Id};
+use mononoke_types::{BonsaiChangeset, ChangesetId};
 use rate_limiting::RateLimitBody;
-use slog::{debug, trace};
+use slog::trace;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use topo_sort::sort_topological;
 use tunables::tunables;
 use wirepack::TreemanifestBundle2Parser;
@@ -243,7 +240,6 @@ pub async fn resolve<'a>(
     repo: &'a BlobRepo,
     infinitepush_writes_allowed: bool,
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
-    maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     pure_push_allowed: bool,
     pushrebase_flags: PushrebaseFlags,
     maybe_backup_repo_source: Option<BlobRepo>,
@@ -253,7 +249,6 @@ pub async fn resolve<'a>(
         repo,
         infinitepush_writes_allowed,
         bundle2,
-        maybe_full_content,
         pure_push_allowed,
         pushrebase_flags,
         maybe_backup_repo_source,
@@ -268,7 +263,6 @@ async fn resolve_impl<'a>(
     repo: &'a BlobRepo,
     infinitepush_writes_allowed: bool,
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
-    maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     pure_push_allowed: bool,
     pushrebase_flags: PushrebaseFlags,
     maybe_backup_repo_source: Option<BlobRepo>,
@@ -305,7 +299,6 @@ async fn resolve_impl<'a>(
                 bundle2,
                 maybe_pushvars,
                 non_fast_forward_policy,
-                maybe_full_content,
             )
             .await
             .map_err(BundleResolverError::from)
@@ -319,7 +312,6 @@ async fn resolve_impl<'a>(
                 resolver,
                 bundle2,
                 maybe_pushvars,
-                maybe_full_content,
                 changegroup_always_unacceptable,
                 maybe_backup_repo_source,
             )
@@ -332,7 +324,6 @@ async fn resolve_impl<'a>(
             bundle2,
             maybe_pushvars,
             non_fast_forward_policy,
-            maybe_full_content,
             move || pure_push_allowed,
             maybe_backup_repo_source,
         )
@@ -391,7 +382,6 @@ async fn resolve_push<'r>(
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     non_fast_forward_policy: NonFastForwardPolicy,
-    maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
     maybe_backup_repo_source: Option<BlobRepo>,
 ) -> Result<PostResolveAction, Error> {
@@ -456,9 +446,7 @@ async fn resolve_push<'r>(
         .maybe_resolve_infinitepush_bookmarks(bundle2)
         .await
         .context("While resolving B2xInfinitepushBookmarks")?;
-    let _maybe_raw_bundle2_id = resolver
-        .ensure_stream_finished(bundle2, maybe_full_content)
-        .await?;
+    resolver.ensure_stream_finished(bundle2).await?;
 
     let maybe_bonsai_bookmark_push = match maybe_hg_bookmark_push {
         Some(hg_bookmark_push) => {
@@ -578,7 +566,6 @@ async fn resolve_pushrebase<'r>(
     resolver: Bundle2Resolver<'r>,
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
-    maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
     maybe_backup_repo_source: Option<BlobRepo>,
 ) -> Result<PostResolveAction, BundleResolverError> {
@@ -659,9 +646,7 @@ async fn resolve_pushrebase<'r>(
         ),
     };
 
-    let _maybe_raw_bundle2_id = resolver
-        .ensure_stream_finished(bundle2, maybe_full_content)
-        .await?;
+    resolver.ensure_stream_finished(bundle2).await?;
     let bookmark_spec =
         hg_pushrebase_bookmark_spec_to_bonsai(ctx, &resolver.repo, bookmark_spec).await?;
 
@@ -684,7 +669,6 @@ async fn resolve_bookmark_only_pushrebase<'r>(
     bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     non_fast_forward_policy: NonFastForwardPolicy,
-    maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
 ) -> Result<PostResolveAction, Error> {
     // TODO: we probably run hooks even if no changesets are pushed?
     //       however, current run_hooks implementation will no-op such thing
@@ -709,9 +693,7 @@ async fn resolve_bookmark_only_pushrebase<'r>(
     }
 
     let bookmark_push = bookmark_pushes.into_iter().next().unwrap();
-    let _maybe_raw_bundle2_id = resolver
-        .ensure_stream_finished(bundle2, maybe_full_content)
-        .await?;
+    resolver.ensure_stream_finished(bundle2).await?;
     let bookmark_push =
         plain_hg_bookmark_push_to_bonsai(ctx, &resolver.repo, bookmark_push).await?;
     let hook_rejection_remapper = make_hook_rejection_remapper(&ctx, resolver.repo.clone()).into();
@@ -827,32 +809,6 @@ impl<'r> Bundle2Resolver<'r> {
                 }
             }
             _ => Ok((false, bundle2)),
-        }
-    }
-
-    /// Preserve the full raw content of the bundle2 for later replay
-    async fn maybe_save_full_content_bundle2(
-        &self,
-        maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
-    ) -> Result<Option<RawBundle2Id>, Error> {
-        match maybe_full_content {
-            Some(full_content) => {
-                let blob =
-                    RawBundle2::new_bytes(Bytes::copy_from_slice(&full_content.lock().unwrap()))
-                        .into_blob();
-                let (stats, id) = blob
-                    .store(&self.ctx, self.repo.blobstore())
-                    .try_timed()
-                    .await?;
-                debug!(self.ctx.logger(), "Saved a raw bundle2 content: {:?}", id);
-                self.ctx
-                    .scuba()
-                    .clone()
-                    .add_future_stats(&stats)
-                    .log_with_msg("Saved a raw bundle2 content", Some(format!("{}", id)));
-                Ok(Some(id))
-            }
-            None => Ok(None),
         }
     }
 
@@ -1274,14 +1230,12 @@ impl<'r> Bundle2Resolver<'r> {
     async fn ensure_stream_finished(
         &self,
         mut bundle2: BoxStream<'static, Result<Bundle2Item<'static>>>,
-        maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
-    ) -> Result<Option<RawBundle2Id>, Error> {
+    ) -> Result<(), Error> {
         ensure!(
             bundle2.try_next().await?.is_none(),
             "Expected end of Bundle2"
         );
-        self.maybe_save_full_content_bundle2(maybe_full_content)
-            .await
+        Ok(())
     }
 
     /// A method that can use any of the above maybe_resolve_* methods to return

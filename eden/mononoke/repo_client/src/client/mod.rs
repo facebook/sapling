@@ -1607,7 +1607,6 @@ impl HgCommands for RepoClient {
         &self,
         _heads: Vec<String>,
         stream: BoxStream<Bundle2Item<'static>, Error>,
-        maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
         respondlightly: Option<bool>,
         maybereplaydata: Option<String>,
     ) -> HgCommandRes<BytesOld> {
@@ -1643,7 +1642,6 @@ impl HgCommands for RepoClient {
                         repo.as_blob_repo(),
                         infinitepush_writes_allowed,
                         stream.compat().boxed(),
-                        maybe_full_content,
                         pure_push_allowed,
                         pushrebase_flags,
                         maybe_backup_repo_source,

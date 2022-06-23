@@ -254,14 +254,11 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
     {
         let hgcmds = &self.commands;
         let dechunker = Dechunker::new(instream);
-        let (dechunker, maybe_full_content) = if hgcmds.should_preserve_raw_bundle2() {
+        let dechunker = if hgcmds.should_preserve_raw_bundle2() {
             let full_bundle2_content = Arc::new(Mutex::new(Bytes::new()));
-            (
-                dechunker.with_full_content(full_bundle2_content.clone()),
-                Some(full_bundle2_content),
-            )
+            dechunker.with_full_content(full_bundle2_content.clone())
         } else {
-            (dechunker, None)
+            dechunker
         };
 
         let bundle2stream =
@@ -302,13 +299,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             Either::A(ok(SingleResponse::ReadyForStream)),
             Either::B({
                 hgcmds
-                    .unbundle(
-                        heads,
-                        bundle2stream,
-                        maybe_full_content,
-                        respondlightly,
-                        replaydata,
-                    )
+                    .unbundle(heads, bundle2stream, respondlightly, replaydata)
                     .map(SingleResponse::Unbundle)
             }),
         ]);
@@ -675,7 +666,6 @@ pub trait HgCommands {
         &self,
         _heads: Vec<String>,
         _stream: BoxStream<Bundle2Item<'static>, Error>,
-        _maybe_full_content: Option<Arc<Mutex<Bytes>>>,
         _respondlightly: Option<bool>,
         _replaydata: Option<String>,
     ) -> HgCommandRes<Bytes> {
