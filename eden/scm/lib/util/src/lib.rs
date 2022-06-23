@@ -16,6 +16,7 @@
 
 mod bgprocess;
 pub mod file;
+pub mod identity;
 pub mod lock;
 pub mod path;
 

@@ -70,6 +70,11 @@ impl TermLogger {
         }
     }
 
+    /// Short client program name.
+    pub fn cli_name(&self) -> &'static str {
+        util::identity::cli_name()
+    }
+
     pub fn flush(&mut self) {
         let _ = self.output.flush();
         let _ = self.error.flush();

@@ -29,7 +29,7 @@ class TestResumeClone(BaseTest):
 
         clone_wc = WorkingCopy(repo, new_dir())
 
-        with self.assertRaises(CommandFailure):
+        with self.assertRaises(CommandFailure) as cm:
             repo.hg.clone(
                 repo.url,
                 clone_wc.root,
@@ -37,6 +37,7 @@ class TestResumeClone(BaseTest):
             )
 
         self.assertEqual(len(clone_wc.status().untracked), 1)
+        self.assertIn("hg checkout --continue", cm.exception.result.stdout)
 
         # Make sure "checkout --continue" works and skips the file.
         self.assertRegex(

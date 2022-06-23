@@ -72,6 +72,13 @@ impl std::fmt::Display for CheckoutStats {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+#[error("checkout error: {source}")]
+pub struct CheckoutError {
+    pub resumable: bool,
+    pub source: anyhow::Error,
+}
+
 /// A somewhat simplified/specialized checkout suitable for use during a clone.
 pub fn checkout(
     config: &dyn Config,
@@ -81,85 +88,116 @@ pub fn checkout(
     file_store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
     ts: &mut TreeState,
     target: HgId,
-) -> anyhow::Result<CheckoutStats> {
-    let dot_hg = wc_path.join(".hg");
+) -> anyhow::Result<CheckoutStats, CheckoutError> {
+    let mut state = CheckoutState::default();
+    state
+        .checkout(
+            config, wc_path, source_mf, target_mf, file_store, ts, target,
+        )
+        .map_err(|err| CheckoutError {
+            resumable: state.resumable,
+            source: err,
+        })
+}
 
-    let _wlock = repolock::lock_working_copy(config, &dot_hg)?;
+#[derive(Default)]
+struct CheckoutState {
+    resumable: bool,
+}
 
-    let mut sparse_overrides = None;
+impl CheckoutState {
+    fn checkout(
+        &mut self,
+        config: &dyn Config,
+        wc_path: &Path,
+        source_mf: &TreeManifest,
+        target_mf: &TreeManifest,
+        file_store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+        ts: &mut TreeState,
+        target: HgId,
+    ) -> anyhow::Result<CheckoutStats> {
+        let dot_hg = wc_path.join(".hg");
 
-    let matcher: Box<dyn Matcher> = match fs::read_to_string(dot_hg.join("sparse")) {
-        Ok(contents) => {
-            let overrides = sparse::config_overrides(config);
-            sparse_overrides = Some(overrides.clone());
-            Box::new(sparse::sparse_matcher(
-                sparse::Root::from_bytes(contents.as_bytes(), ".hg/sparse".to_string())?,
-                target_mf.clone(),
-                file_store.clone(),
-                overrides,
-            )?)
+        let _wlock = repolock::lock_working_copy(config, &dot_hg)?;
+
+        let mut sparse_overrides = None;
+
+        let matcher: Box<dyn Matcher> = match fs::read_to_string(dot_hg.join("sparse")) {
+            Ok(contents) => {
+                let overrides = sparse::config_overrides(config);
+                sparse_overrides = Some(overrides.clone());
+                Box::new(sparse::sparse_matcher(
+                    sparse::Root::from_bytes(contents.as_bytes(), ".hg/sparse".to_string())?,
+                    target_mf.clone(),
+                    file_store.clone(),
+                    overrides,
+                )?)
+            }
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                Box::new(pathmatcher::AlwaysMatcher::new())
+            }
+            Err(e) => {
+                return Err(e.into());
+            }
+        };
+
+        let diff = Diff::new(source_mf, target_mf, &matcher)?;
+        let actions = ActionMap::from_diff(diff)?;
+
+        let vfs = VFS::new(wc_path.to_path_buf())?;
+        let checkout = Checkout::from_config(vfs.clone(), config)?;
+        let mut plan = checkout.plan_action_map(actions);
+
+        // Write out overrides first so they don't change when resuming
+        // this checkout.
+        if let Some(sparse_overrides) = sparse_overrides {
+            atomic_write(&dot_hg.join(CONFIG_OVERRIDE_CACHE), |f| {
+                serde_json::to_writer(f, &sparse_overrides)?;
+                Ok(())
+            })?;
         }
-        Err(e) if e.kind() == io::ErrorKind::NotFound => {
-            Box::new(pathmatcher::AlwaysMatcher::new())
+
+        if config.get_or_default("checkout", "resumable")? {
+            let progress_path = dot_hg.join("updateprogress");
+            plan.add_progress(progress_path)?;
+            self.resumable = true;
         }
-        Err(e) => {
-            return Err(e.into());
-        }
-    };
 
-    let diff = Diff::new(source_mf, target_mf, &matcher)?;
-    let actions = ActionMap::from_diff(diff)?;
-
-    let vfs = VFS::new(wc_path.to_path_buf())?;
-    let checkout = Checkout::from_config(vfs.clone(), config)?;
-    let mut plan = checkout.plan_action_map(actions);
-
-    if config.get_or_default("checkout", "resumable")? {
-        let progress_path = dot_hg.join("updateprogress");
-        plan.add_progress(progress_path)?;
-    }
-
-    atomic_write(&dot_hg.join("updatestate"), |f| {
-        f.write_all(target.to_hex().as_bytes())
-    })?;
-
-    block_on(plan.apply_store(&file_store))?;
-
-    let ts_meta = Metadata(BTreeMap::from([("p1".to_string(), target.to_hex())]));
-    let mut ts_buf: Vec<u8> = Vec::new();
-    ts_meta.serialize(&mut ts_buf)?;
-    ts.set_metadata(&ts_buf);
-
-    // Probably not required for clone.
-    for removed in plan.removed_files() {
-        ts.remove(removed)?;
-    }
-
-    for updated in plan
-        .updated_content_files()
-        .chain(plan.updated_meta_files())
-    {
-        let fstate = file_state(&vfs, updated)?;
-        ts.insert(updated, &fstate)?;
-    }
-
-    flush_dirstate(config, ts, &dot_hg, target)?;
-
-    remove_file(dot_hg.join("updatestate"))?;
-
-    if let Some(sparse_overrides) = sparse_overrides {
-        atomic_write(&dot_hg.join(CONFIG_OVERRIDE_CACHE), |f| {
-            serde_json::to_writer(f, &sparse_overrides)?;
-            Ok(())
+        atomic_write(&dot_hg.join("updatestate"), |f| {
+            f.write_all(target.to_hex().as_bytes())
         })?;
-    }
 
-    Ok(CheckoutStats {
-        updated: plan.stats().0,
-        merged: 0,
-        removed: 0,
-        unresolved: 0,
-    })
+        block_on(plan.apply_store(&file_store))?;
+
+        let ts_meta = Metadata(BTreeMap::from([("p1".to_string(), target.to_hex())]));
+        let mut ts_buf: Vec<u8> = Vec::new();
+        ts_meta.serialize(&mut ts_buf)?;
+        ts.set_metadata(&ts_buf);
+
+        // Probably not required for clone.
+        for removed in plan.removed_files() {
+            ts.remove(removed)?;
+        }
+
+        for updated in plan
+            .updated_content_files()
+            .chain(plan.updated_meta_files())
+        {
+            let fstate = file_state(&vfs, updated)?;
+            ts.insert(updated, &fstate)?;
+        }
+
+        flush_dirstate(config, ts, &dot_hg, target)?;
+
+        remove_file(dot_hg.join("updatestate"))?;
+
+        Ok(CheckoutStats {
+            updated: plan.stats().0,
+            merged: 0,
+            removed: 0,
+            unresolved: 0,
+        })
+    }
 }
 
 fn flush_dirstate(

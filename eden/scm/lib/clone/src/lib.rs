@@ -110,7 +110,7 @@ pub fn init_working_copy(
 
     let mut ts = TreeState::open(&ts_path, None)?;
 
-    let stats = checkout::clone::checkout(
+    match checkout::clone::checkout(
         repo.config(),
         repo.path(),
         &source_mf,
@@ -118,11 +118,23 @@ pub fn init_working_copy(
         file_store.clone(),
         &mut ts,
         target,
-    )?;
+    ) {
+        Ok(stats) => {
+            logger.status(format!("{}", stats));
 
-    logger.status(format!("{}", stats));
+            Ok(())
+        }
+        Err(err) => {
+            if err.resumable {
+                logger.status(format!(
+                    "Checkout failed. Resume with '{} checkout --continue'",
+                    logger.cli_name(),
+                ));
+            }
 
-    Ok(())
+            Err(err.source.into())
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
