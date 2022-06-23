@@ -23,14 +23,6 @@ Create a non-inlined filelog:
   >   hg commit -m test
   > done
 
-List files in store/data (should show a 'b.d'):
-
-  $ for i in .hg/store/data/*; do
-  >   echo $i
-  > done
-  .hg/store/data/a.i
-  .hg/store/data/b.i
-
 Default operation:
 
   $ hg clone . ../b
@@ -616,10 +608,6 @@ Create repositories to test auto sharing functionality
   $ echo second > foo
   $ hg commit -m second
   $ cd ..
-
-We should not have created a file named owned - if it exists, the
-attack succeeded.
-  $ if test -f owned; then echo 'you got owned'; fi
 
 Cloning without fsmonitor enabled does not print a warning for small repos
 
