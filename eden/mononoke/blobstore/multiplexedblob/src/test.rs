@@ -6,14 +6,12 @@
  */
 
 use std::{
-    cmp,
-    collections::{HashMap, VecDeque},
-    fmt,
+    cmp, fmt,
     future::Future,
     num::NonZeroUsize,
     pin::Pin,
     sync::{Arc, Mutex},
-    time::{Duration, Instant, SystemTime},
+    time::{Duration, Instant},
 };
 
 use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
@@ -21,11 +19,10 @@ use crate::queue::MultiplexedBlobstore;
 use crate::scrub::{
     LoggingScrubHandler, ScrubAction, ScrubBlobstore, ScrubHandler, ScrubOptions, ScrubWriteMostly,
 };
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstoreMetadata, BlobstorePutOps,
-    OverwriteStatus, PutBehaviour,
+    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, OverwriteStatus, PutBehaviour,
 };
 use blobstore_sync_queue::{
     BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey, SqlBlobstoreSyncQueue,
@@ -37,7 +34,6 @@ use cloned::cloned;
 use context::{CoreContext, SessionClass, SessionContainer};
 use fbinit::FacebookInit;
 use futures::{
-    channel::oneshot,
     future::{FutureExt, TryFutureExt},
     task::{Context, Poll},
 };
