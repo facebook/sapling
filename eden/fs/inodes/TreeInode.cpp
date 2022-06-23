@@ -850,15 +850,16 @@ void TreeInode::childMaterialized(
     saveOverlayDir(contents->entries);
   }
 
-  // If we have a parent directory, ask our parent to materialize itself
-  // and mark us materialized when it does so.
-  auto location = getLocationInfo(renameLock);
-  if (location.parent && !location.unlinked) {
-    location.parent->childMaterialized(renameLock, location.name);
-  }
-
-  // Add InodeMaterializeEvent to ActivityBuffer only if newly materialized
+  // Materialize parent and add InodeMaterializeEvent to ActivityBuffer only if
+  // newly materialized
   if (!wasAlreadyMaterialized) {
+    // If we have a parent directory, ask our parent to materialize itself
+    // and mark us materialized when it does so.
+    auto location = getLocationInfo(renameLock);
+    if (location.parent && !location.unlinked) {
+      location.parent->childMaterialized(renameLock, location.name);
+    }
+
     getMount()->addInodeMaterializeEvent(watch, InodeType::TREE, getNodeId());
   }
 }
@@ -901,16 +902,16 @@ void TreeInode::childDematerialized(
     saveOverlayDir(contents->entries);
   }
 
-  // We are materialized now.
-  // If we have a parent directory, ask our parent to materialize itself
-  // and mark us materialized when it does so.
-  auto location = getLocationInfo(renameLock);
-  if (location.parent && !location.unlinked) {
-    location.parent->childMaterialized(renameLock, location.name);
-  }
-
-  // Add InodeMaterializeEvent to ActivityBuffer only if newly materialized
+  // Materialize parent and add InodeMaterializeEvent to ActivityBuffer only if
+  // newly materialized
   if (!wasAlreadyMaterialized) {
+    // We are newly materialized now.
+    // If we have a parent directory, ask our parent to materialize itself
+    // and mark us materialized when it does so.
+    auto location = getLocationInfo(renameLock);
+    if (location.parent && !location.unlinked) {
+      location.parent->childMaterialized(renameLock, location.name);
+    }
     getMount()->addInodeMaterializeEvent(watch, InodeType::TREE, getNodeId());
   }
 }
