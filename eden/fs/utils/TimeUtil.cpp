@@ -84,4 +84,21 @@ bool operator<=(const timespec& a, const timespec& b) {
     return a.tv_sec < b.tv_sec;
   }
 }
+
+std::string formatNsTimeToMs(uint64_t ns) {
+  // Convert to microseconds before converting to double in case we have a
+  // duration longer than 3 months.
+  double d = double(ns / 1000);
+  return fmt::format("{:.3f} ms", d / 1000.0);
+}
+
+std::string formatMicrosecondTime(long microseconds) {
+  if (microseconds < 0) {
+    return "";
+  }
+  if (microseconds < 1000) {
+    return fmt::format("{} μs", microseconds);
+  }
+  return fmt::format("{:.3f} ms", microseconds / 1000.0);
+}
 } // namespace facebook::eden

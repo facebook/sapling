@@ -23,7 +23,10 @@ namespace facebook::eden {
  */
 class InodeMaterializeEvent {
  public:
-  std::chrono::steady_clock::time_point timestamp;
+  // Timestamp refers to the event's finish time. Start times are then able to
+  // be calculated by subtracting duration. Also, system_clock is used over
+  // steady_clock to ensure accurate dates for use by the tracing CLI
+  std::chrono::system_clock::time_point timestamp;
   InodeNumber ino;
   InodeType inodeType;
   std::chrono::microseconds duration;

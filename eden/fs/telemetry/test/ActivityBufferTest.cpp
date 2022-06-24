@@ -25,7 +25,7 @@ TEST(ActivityBufferTest, initialize_buffer) {
 TEST(ActivityBufferTest, buffer_zero_capacity) {
   ActivityBuffer buff(0);
   EXPECT_TRUE(buff.getAllEvents().empty());
-  std::chrono::steady_clock::time_point time = std::chrono::steady_clock::now();
+  std::chrono::system_clock::time_point time = std::chrono::system_clock::now();
   InodeMaterializeEvent event{
       time, InodeNumber(1), InodeType::FILE, std::chrono::microseconds(1000)};
   buff.addEvent(event);
@@ -38,8 +38,8 @@ TEST(ActivityBufferTest, buffer_zero_capacity) {
 TEST(ActivityBufferTest, add_events) {
   ActivityBuffer buff(kMaxBufLength);
   for (uint64_t i = 1; i <= kMaxBufLength; i++) {
-    std::chrono::steady_clock::time_point time =
-        std::chrono::steady_clock::now();
+    std::chrono::system_clock::time_point time =
+        std::chrono::system_clock::now();
     InodeMaterializeEvent event{
         time, InodeNumber(i), InodeType::FILE, std::chrono::microseconds(1000)};
     buff.addEvent(event);
@@ -57,8 +57,8 @@ TEST(ActivityBufferTest, add_events) {
 TEST(ActivityBufferTest, add_exceed_capacity) {
   ActivityBuffer buff(kMaxBufLength);
   for (uint64_t i = 1; i <= kMaxBufLength + 1; i++) {
-    std::chrono::steady_clock::time_point time =
-        std::chrono::steady_clock::now();
+    std::chrono::system_clock::time_point time =
+        std::chrono::system_clock::now();
     InodeMaterializeEvent event{
         time, InodeNumber(i), InodeType::FILE, std::chrono::microseconds(1000)};
     buff.addEvent(event);

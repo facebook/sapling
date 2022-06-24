@@ -2263,8 +2263,8 @@ void EdenMount::addInodeMaterializeEvent(
     InodeType type,
     InodeNumber ino) {
   if (activityBuffer_.has_value()) {
-    std::chrono::steady_clock::time_point time =
-        std::chrono::steady_clock::now();
+    std::chrono::system_clock::time_point time =
+        std::chrono::system_clock::now();
     InodeMaterializeEvent event{time, ino, type, watch.elapsed()};
     activityBuffer_.value().addEvent(event);
   }

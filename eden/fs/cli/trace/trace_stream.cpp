@@ -14,10 +14,11 @@
 #include <thrift/lib/cpp/util/EnumUtils.h>
 #include <thrift/lib/cpp2/async/RocketClientChannel.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
-
+#include "common/time/TimeFormat.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/service/gen-cpp2/streamingeden_constants.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/TimeUtil.h"
 
 using namespace facebook::eden;
 using namespace std::string_view_literals;
@@ -34,13 +35,53 @@ DEFINE_bool(
 
 namespace {
 constexpr auto kTimeout = std::chrono::seconds{1};
+static const auto kTreeEmoji = reinterpret_cast<const char*>(u8"\U0001F332");
+static const auto kBlobEmoji = reinterpret_cast<const char*>(u8"\U0001F954");
+static const auto kDashedArrowEmoji = reinterpret_cast<const char*>(u8"\u21E3");
+static const auto kSolidArrowEmoji = reinterpret_cast<const char*>(u8"\u2193");
+static const auto kRedSquareEmoji =
+    reinterpret_cast<const char*>(u8"\U0001F7E5");
+static const auto kOrangeDiamondEmoji =
+    reinterpret_cast<const char*>(u8"\U0001F536");
+static const auto kGreenCircleEmoji =
+    reinterpret_cast<const char*>(u8"\U0001F7E2");
+static const auto kQuestionEmoji = reinterpret_cast<const char*>(u8"\u2753");
+static const auto kFolderEmoji = reinterpret_cast<const char*>(u8"\U0001F4C1");
+static const auto kFaxMachineEmoji =
+    reinterpret_cast<const char*>(u8"\U0001F4E0");
+static const auto kCalendarEmoji =
+    reinterpret_cast<const char*>(u8"\U0001F4C5");
 
-std::string formatTime(uint64_t ns) {
-  // Convert to microseconds before converting to double in case we have a
-  // duration longer than 3 months.
-  double d = double(ns / 1000);
-  return fmt::format("{:.3f} ms", d / 1000.0);
-}
+static const std::unordered_map<HgEventType, const char*> kHgEventTypes = {
+    {HgEventType::QUEUE, " "},
+    {HgEventType::START, kDashedArrowEmoji},
+    {HgEventType::FINISH, kSolidArrowEmoji},
+};
+
+static const std::unordered_map<InodeEventType, const char*> kInodeEventTypes =
+    {
+        {InodeEventType::Unknown, "?"},
+        {InodeEventType::Materialize, "M"},
+};
+
+static const std::unordered_map<HgResourceType, const char*> kResourceTypes = {
+    {HgResourceType::BLOB, kBlobEmoji},
+    {HgResourceType::TREE, kTreeEmoji},
+};
+
+static const std::unordered_map<HgImportPriority, const char*>
+    kImportPriorities = {
+        {HgImportPriority::LOW, kRedSquareEmoji},
+        {HgImportPriority::NORMAL, kOrangeDiamondEmoji},
+        {HgImportPriority::HIGH, kGreenCircleEmoji},
+};
+
+static const std::unordered_map<HgImportCause, const char*> kImportCauses = {
+    {HgImportCause::UNKNOWN, kQuestionEmoji},
+    {HgImportCause::FS, kFolderEmoji},
+    {HgImportCause::THRIFT, kFaxMachineEmoji},
+    {HgImportCause::PREFETCH, kCalendarEmoji},
+};
 
 std::string formatFuseOpcode(const FuseCall& call) {
   std::string name = call.get_opcodeName();
@@ -121,35 +162,6 @@ int trace_hg(
 
   std::unordered_map<uint64_t, ActiveRequest> activeRequests;
 
-  static const std::unordered_map<HgEventType, const char*> kEventTypes = {
-      {HgEventType::QUEUE, " "},
-      {HgEventType::START, reinterpret_cast<const char*>(u8"\u21E3")},
-      {HgEventType::FINISH, reinterpret_cast<const char*>(u8"\u2193")},
-  };
-
-  static const std::unordered_map<HgResourceType, const char*> kResourceTypes =
-      {
-          {HgResourceType::BLOB, reinterpret_cast<const char*>(u8"\U0001F954")},
-          {HgResourceType::TREE, reinterpret_cast<const char*>(u8"\U0001F332")},
-      };
-
-  static const std::unordered_map<HgImportPriority, const char*>
-      kImportPriorities = {
-          {HgImportPriority::LOW,
-           reinterpret_cast<const char*>(u8"\U0001F7E5")},
-          {HgImportPriority::NORMAL,
-           reinterpret_cast<const char*>(u8"\U0001F536")},
-          {HgImportPriority::HIGH,
-           reinterpret_cast<const char*>(u8"\U0001F7E2")},
-      };
-
-  static const std::unordered_map<HgImportCause, const char*> kImportCauses = {
-      {HgImportCause::UNKNOWN, reinterpret_cast<const char*>(u8"\u2753")},
-      {HgImportCause::FS, reinterpret_cast<const char*>(u8"\U0001F4C1")},
-      {HgImportCause::THRIFT, reinterpret_cast<const char*>(u8"\U0001F4E0")},
-      {HgImportCause::PREFETCH, reinterpret_cast<const char*>(u8"\U0001F4C5")},
-  };
-
   std::move(traceHgStream).subscribeInline([&](folly::Try<HgEvent>&& event) {
     if (event.hasException()) {
       fmt::print("Error: {}\n", folly::exceptionStr(event.exception()));
@@ -201,7 +213,7 @@ int trace_hg(
           // Don't bother printing queue time under 1 ms.
           if (queueTime >= 1000000) {
             timeAnnotation =
-                fmt::format(" queued for {}", formatTime(queueTime));
+                fmt::format(" queued for {}", formatNsTimeToMs(queueTime));
           }
         } else {
           // This event was queued before we subscribed.
@@ -212,12 +224,14 @@ int trace_hg(
         if (startEvent) {
           auto fetchTime = evt.times_ref()->monotonic_time_ns_ref().value() -
               startEvent->times_ref()->monotonic_time_ns_ref().value();
-          timeAnnotation = fmt::format(" fetched in {}", formatTime(fetchTime));
+          timeAnnotation =
+              fmt::format(" fetched in {}", formatNsTimeToMs(fetchTime));
         }
         break;
     }
 
-    const char* eventTypeStr = folly::get_default(kEventTypes, eventType, "?");
+    const char* eventTypeStr =
+        folly::get_default(kHgEventTypes, eventType, "?");
     const char* resourceTypeStr =
         folly::get_default(kResourceTypes, resourceType, "?");
     const char* importPriorityStr =
@@ -438,16 +452,70 @@ int trace_thrift(
 }
 
 int trace_inode(
-    folly::ScopedEventBaseThread& /* evbThread */,
-    const AbsolutePath& /* mountRoot */,
-    apache::thrift::RocketClientChannel::Ptr /* channel */,
-    bool retroactive) {
-  if (!retroactive) {
-    fmt::print(
-        "`eden trace inode` is only currently supported in retroactive mode\n");
-  } else {
-    fmt::print("\U0001F6A7 under construction \U0001F6A7\n");
-  }
+    folly::ScopedEventBaseThread& evbThread,
+    const AbsolutePath& mountRoot,
+    apache::thrift::RocketClientChannel::Ptr channel) {
+  auto client = std::make_unique<EdenServiceAsyncClient>(std::move(channel));
+
+  GetRetroactiveInodeEventsParams params{};
+  params.mountPoint_ref() = mountRoot.stringPiece();
+  auto future = client->semifuture_getRetroactiveInodeEvents(params).via(
+      evbThread.getEventBase());
+
+  std::move(future)
+      .thenValue([](GetRetroactiveInodeEventsResult allEvents) {
+        // For each event, create a corresponding event for the event's
+        // start and sort by timestamp
+        std::vector<InodeEvent> events;
+        auto size = 2 * allEvents.events_ref()->size();
+        events.reserve(size);
+        for (auto finish : *allEvents.events_ref()) {
+          InodeEvent start{};
+          start.timestamp_ref() =
+              *finish.timestamp_ref() - 1000 * (*finish.duration_ref());
+          start.ino_ref() = *finish.ino_ref();
+          start.inodeType_ref() = *finish.inodeType_ref();
+          start.eventType_ref() = *finish.eventType_ref();
+          // Use -1 for the duration to distinguish the event's start
+          start.duration_ref() = -1;
+          events.push_back(std::move(start));
+          events.push_back(std::move(finish));
+        }
+        std::sort(
+            events.begin(), events.end(), [](const auto& a, const auto& b) {
+              return a.timestamp_ref() < b.timestamp_ref();
+            });
+
+        fmt::print("Last {} inode events\n", size);
+        std::string_view header =
+            "  Timestamp                   Ino   Type  Event  Duration "sv;
+        fmt::print("{}\n{}\n", header, std::string(header.size(), '-'));
+        std::string format = "%Y-%m-%d %H:%M:%S";
+
+        for (auto& event : events) {
+          time_t seconds = (*event.timestamp_ref()) / 1000000000;
+          auto formattedTime = TimeFormat::FormatTime(format, seconds);
+          auto milliseconds = *event.timestamp_ref() / 1000 % 1000000;
+          fmt::print(
+              "{} {}.{:0>6}  {:<5} {}    {}      {}\n",
+              // Use arrow emoji based on if the event started or finished
+              (*event.duration_ref() < 0) ? kDashedArrowEmoji
+                                          : kSolidArrowEmoji,
+              formattedTime,
+              milliseconds,
+              *event.ino_ref(),
+              *event.inodeType_ref() == InodeType::TREE ? kTreeEmoji
+                                                        : kBlobEmoji,
+              kInodeEventTypes.at(*event.eventType_ref()),
+              formatMicrosecondTime(*event.duration_ref()));
+        }
+        fmt::print("{}\n", std::string(header.size(), '-'));
+      })
+      .ensure(
+          // Move the client into the callback so that it will be destroyed
+          // on an EventBase thread.
+          [c = std::move(client)] {})
+      .get();
   return 0;
 }
 
@@ -474,14 +542,13 @@ int main(int argc, char** argv) {
   AbsolutePath mountRoot{FLAGS_mountRoot};
   AbsolutePath socketPath = getSocketPath(mountRoot);
 
-  // We check if FLAGS_trace is inode here unlike with hg, fs, and thrift below
-  // and if FLAGS_RETROACTIVE is set in order to simplify the code. This is
-  // because once channel is created we would have to destroy it on the same
-  // event base which we temporarily avoid.
-  if (FLAGS_trace == "inode") {
-    return trace_inode(evbThread, mountRoot, nullptr, FLAGS_retroactive);
-  } else if (FLAGS_retroactive) {
+  if (FLAGS_trace != "inode" && FLAGS_retroactive) {
     fmt::print("Only eden trace inode currently supports retroactive mode\n");
+    return 0;
+  }
+  if (FLAGS_trace == "inode" && !FLAGS_retroactive) {
+    fmt::print(
+        "`eden trace inode` is only currently supported in retroactive mode\n");
     return 0;
   }
 
@@ -503,6 +570,8 @@ int main(int argc, char** argv) {
         evbThread, mountRoot, std::move(channel), FLAGS_reads, FLAGS_writes);
   } else if (FLAGS_trace == "thrift") {
     return trace_thrift(evbThread, std::move(channel));
+  } else if (FLAGS_trace == "inode") {
+    return trace_inode(evbThread, mountRoot, std::move(channel));
   } else if (FLAGS_trace.empty()) {
     fmt::print(stderr, "Must specify trace mode\n");
     return 1;

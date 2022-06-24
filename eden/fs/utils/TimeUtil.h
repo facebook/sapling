@@ -39,4 +39,17 @@ inline bool operator==(const timespec& a, const timespec& b) {
 inline bool operator!=(const timespec& a, const timespec& b) {
   return !(b == a);
 }
+
+/**
+ * Specifically converts a duration of nanoseconds into milliseconds and
+ * returns a string in human readable format.
+ */
+std::string formatNsTimeToMs(uint64_t ns);
+
+/**
+ * Get a human readable string for a time duration of microseconds in either
+ * microsecond or millisecond time. Returns an empty string for negative
+ * durations
+ */
+std::string formatMicrosecondTime(long microseconds);
 } // namespace facebook::eden
