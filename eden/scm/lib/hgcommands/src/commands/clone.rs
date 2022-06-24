@@ -9,7 +9,10 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::bail;
 use async_runtime::block_unless_interrupted as block_on;
+use clidispatch::abort;
+use clidispatch::abort_if;
 use clidispatch::errors;
 use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::output::new_logger;
@@ -159,7 +162,7 @@ pub fn run(
                 );
                 name
             }
-            None => return Err(errors::Abort("could not determine repo name".into()).into()),
+            None => abort!("could not determine repo name"),
         },
     };
 
@@ -174,23 +177,23 @@ pub fn run(
         .iter()
         .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY)
     {
-        return Err(errors::FallbackToPython(name()).into());
+        bail!(errors::FallbackToPython(name()));
     }
 
-    if !clone_opts.eden && !clone_opts.eden_backing_repo.is_empty() {
-        return Err(
-            errors::Abort("--eden option required for eden-backing-repo option".into()).into(),
-        );
-    }
+    abort_if!(
+        !clone_opts.eden && !clone_opts.eden_backing_repo.is_empty(),
+        "--eden option required for eden-backing-repo option",
+    );
 
     let destination = match clone_opts.args.pop() {
         Some(dest) => PathBuf::from(dest),
         None => {
-            if configparser::hg::is_plain(Some("default_clone_dir")) {
-                return Err(errors::Abort("DEST was not specified".into()).into());
-            } else {
-                clone::get_default_destination_directory(config)?.join(&reponame)
-            }
+            abort_if!(
+                configparser::hg::is_plain(Some("default_clone_dir")),
+                "DEST was not specified",
+            );
+
+            clone::get_default_destination_directory(config)?.join(&reponame)
         }
     };
 
@@ -202,16 +205,11 @@ pub fn run(
 
     let dest_hg = destination.join(HG_PATH);
 
-    if dest_hg.exists() {
-        return Err(errors::Abort(
-            format!(
-                ".hg directory already exists at clone destination {}",
-                destination.display()
-            )
-            .into(),
-        )
-        .into());
-    }
+    abort_if!(
+        dest_hg.exists(),
+        ".hg directory already exists at clone destination {}",
+        destination.display(),
+    );
 
     if clone_opts.eden {
         let backing_path = if !clone_opts.eden_backing_repo.is_empty() {
@@ -219,7 +217,7 @@ pub fn run(
         } else if let Some(dir) = clone::get_default_eden_backing_directory(config)? {
             dir.join(&reponame)
         } else {
-            return Err(errors::Abort("eden-backing-repo option is not set".into()).into());
+            abort!("eden-backing-repo option is not set");
         };
         let backing_hg = backing_path.join(".hg");
 
@@ -370,7 +368,7 @@ fn clone_metadata(
     logger.debug(|| format!("Pulled bookmarks {:?}", bookmark_ids));
 
     ::fail::fail_point!("run::clone", |_| {
-        Err(errors::Abort("Injected clone failure".to_string().into()).into())
+        abort!("Injected clone failure");
     });
     Ok(repo)
 }
@@ -382,7 +380,7 @@ fn get_selective_bookmarks(repo: &Repo) -> Result<Vec<String>> {
     {
         Some(bms) => Ok(bms),
         None => {
-            Err(errors::Abort("remotenames.selectivepulldefault config is not set".into()).into())
+            abort!("remotenames.selectivepulldefault config is not set");
         }
     }
 }
