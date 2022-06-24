@@ -118,7 +118,7 @@ Test default-destination-dir
 
 Test that we get an error when not specifying a destination directory and running in plain mode
   $ HGPLAIN=1 hg clone -Uq test:e1
-  abort: DEST was not specified
+  abort: DEST must be specified because HGPLAIN is enabled
   [255]
   $ HGPLAINEXCEPT=default_clone_dir hg clone -Uq test:e1 --config remotefilelog.reponame=test-repo-notquite
   TRACE hgcommands::commands::clone: performing rust clone
@@ -128,3 +128,20 @@ Not an error for bookmarks to not exist
   $ hg clone -Uq test:e1 $TESTTMP/no-bookmarks --config remotenames.selectivepulldefault=banana
   TRACE hgcommands::commands::clone: performing rust clone
   TRACE hgcommands::commands::clone: fetching lazy commit data and bookmarks
+
+Test various --eden errors:
+  $ hg clone -Uq test:e1 --eden-backing-repo /foo/bar
+  abort: --eden-backing-repo requires --eden
+  [255]
+  $ hg clone -q test:e1 --eden --enable-profile foo
+  abort: --enable-profile is not compatible with --eden
+  [255]
+  $ hg clone -q test:e1 -u foo --eden
+  abort: some specified options are not compatible with --eden
+  [255]
+  $ hg clone -Uq test:e1 --eden
+  abort: --noupdate is not compatible with --eden
+  [255]
+  $ hg clone -q test:e1 --eden --config clone.use-rust=0
+  abort: --eden requires --config clone.use-rust=True
+  [255]

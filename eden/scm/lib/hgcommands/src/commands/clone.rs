@@ -110,11 +110,31 @@ pub fn run(
         }
     }
 
+    abort_if!(
+        !clone_opts.eden && !clone_opts.eden_backing_repo.is_empty(),
+        "--eden-backing-repo requires --eden",
+    );
+
+    abort_if!(
+        !clone_opts.enable_profile.is_empty() && clone_opts.eden,
+        "--enable-profile is not compatible with --eden",
+    );
+
+    abort_if!(
+        clone_opts.eden && clone_opts.noupdate,
+        "--noupdate is not compatible with --eden",
+    );
+
     let force_rust = config
         .get_or_default::<Vec<String>>("commands", "force-rust")?
         .contains(&name().to_owned());
     let use_rust = force_rust || config.get_or_default("clone", "use-rust")?;
     if !use_rust {
+        abort_if!(
+            clone_opts.eden,
+            "--eden requires --config clone.use-rust=True"
+        );
+
         logger.info(|| "Falling back to Python clone (no segmented changelog)");
         return Err(errors::FallbackToPython(name()).into());
     }
@@ -132,6 +152,11 @@ pub fn run(
         || clone_opts.git
         || !supported_url
     {
+        abort_if!(
+            clone_opts.eden,
+            "some specified options are not compatible with --eden"
+        );
+
         logger.info(|| "Falling back to Python clone (incompatible options)");
         return Err(errors::FallbackToPython(name()).into());
     }
@@ -177,20 +202,16 @@ pub fn run(
         .iter()
         .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY)
     {
+        logger.info(|| "Falling back to Python clone (no segmented changelog)");
         bail!(errors::FallbackToPython(name()));
     }
-
-    abort_if!(
-        !clone_opts.eden && !clone_opts.eden_backing_repo.is_empty(),
-        "--eden option required for eden-backing-repo option",
-    );
 
     let destination = match clone_opts.args.pop() {
         Some(dest) => PathBuf::from(dest),
         None => {
             abort_if!(
                 configparser::hg::is_plain(Some("default_clone_dir")),
-                "DEST was not specified",
+                "DEST must be specified because HGPLAIN is enabled",
             );
 
             clone::get_default_destination_directory(config)?.join(&reponame)
@@ -217,7 +238,7 @@ pub fn run(
         } else if let Some(dir) = clone::get_default_eden_backing_directory(config)? {
             dir.join(&reponame)
         } else {
-            abort!("eden-backing-repo option is not set");
+            abort!("please specify --eden-backing-repo");
         };
         let backing_hg = backing_path.join(".hg");
 
