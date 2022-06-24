@@ -18,6 +18,7 @@ use std::os::unix::fs::MetadataExt;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::process::Stdio;
 use std::str;
 use std::time::Duration;
 use structopt::StructOpt;
@@ -77,7 +78,10 @@ enum Opt {
 
     /// Unmount and delete all APFS volumes created by this utility
     #[structopt(name = "delete-all")]
-    DeleteAll,
+    DeleteAll {
+        #[structopt(long = "kill_dependent_processes")]
+        kill_dependent_processes: bool,
+    },
 
     /// Unmount and delete a volume.
     /// This will only allow deleting volumes that were created
@@ -283,6 +287,31 @@ fn parse_plist<T>(data: &str) -> Result<T> {
     plist::from_bytes(data.as_bytes()).context("parsing plist data")
 }
 
+fn kill_active_pids_in_mounts(mut mount_points: Vec<String>) -> Result<()> {
+    mount_points.push("-t".to_owned());
+    // -t has to come before the mount point list
+    let last_index = mount_points.len() - 1;
+    mount_points.swap(0, last_index);
+    let mut active_pids = new_cmd_with_best_available_privs("/usr/sbin/lsof")
+        .args(&mount_points)
+        .stdout(Stdio::piped())
+        .spawn()?;
+    let active_pids_output = (active_pids.stdout.take()).context("lsof stdout not available")?;
+
+    let output = new_cmd_with_best_available_privs("/usr/bin/xargs")
+        .args(&["/bin/kill", "-9"])
+        .stdin(active_pids_output)
+        .output()?;
+    if !output.status.success() {
+        return Err(anyhow!(
+            "failed to execute lsof {} | xargs kill -9 \n {:#?}",
+            mount_points.join(", "),
+            output
+        ));
+    }
+    Ok(())
+}
+
 /// Obtain the list of apfs containers and volumes by executing `diskutil`.
 fn apfs_list() -> Result<Vec<ApfsContainer>> {
     let output = new_cmd_unprivileged(DISKUTIL)
@@ -292,6 +321,22 @@ fn apfs_list() -> Result<Vec<ApfsContainer>> {
         anyhow::bail!("failed to execute diskutil list: {:#?}", output);
     }
     Ok(parse_plist::<Containers>(&String::from_utf8(output.stdout)?)?.containers)
+}
+
+fn list_mount_points(containers: &Vec<ApfsContainer>, mounts: &MountTable) -> Result<Vec<String>> {
+    let mut mount_points: Vec<String> = vec![];
+
+    for container in containers {
+        for vol in &container.volumes {
+            if vol.is_edenfs_managed_volume() {
+                if let Some(mount_point) = vol.get_current_mount_point(Some(mounts)) {
+                    mount_points.push(mount_point);
+                }
+            }
+        }
+    }
+
+    Ok(mount_points)
 }
 
 fn find_existing_volume<'a>(containers: &'a [ApfsContainer], name: &str) -> Option<&'a ApfsVolume> {
@@ -337,6 +382,19 @@ fn new_cmd_unprivileged(path: &str) -> Command {
     }
 
     cmd
+}
+
+/// Prepare a command that will be run as root if we have root privileges, and
+/// unprivileged if we do not. Use sparingly, running as root or non root is
+/// better if it suits your needs.
+/// This should be used for commands that can run both privileged and
+/// unprivileged. Where privileged where privilege may give them more
+/// capabilities, but they are best effort any ways, so we still want to try
+/// to run them when we don't have privilege.
+fn new_cmd_with_best_available_privs(path: &str) -> Command {
+    let path: PathBuf = path.into();
+    assert!(path.is_absolute());
+    Command::new(path)
 }
 
 /// Create a new subvolume with the specified name.
@@ -788,9 +846,18 @@ fn main() -> Result<()> {
             Ok(())
         }
 
-        Opt::DeleteAll => {
+        Opt::DeleteAll {
+            kill_dependent_processes,
+        } => {
             let containers = apfs_list()?;
             let mounts = MountTable::parse_system_mount_table()?;
+
+            if kill_dependent_processes {
+                let mount_points: Vec<String> = list_mount_points(&containers, &mounts)?;
+                kill_active_pids_in_mounts(mount_points)?;
+            }
+
+            let mut was_failure = false;
             for container in containers {
                 for vol in container.volumes {
                     if vol.is_edenfs_managed_volume() {
@@ -803,6 +870,7 @@ fn main() -> Result<()> {
                             if let Err(err) = unmount_scratch(&mount_point, force, &mounts) {
                                 eprintln!("Failed to unmount: {}", err);
                                 try_delete = false;
+                                was_failure = true;
                             }
                         }
 
@@ -810,6 +878,7 @@ fn main() -> Result<()> {
                             let mount_point = vol.preferred_mount_point().unwrap();
                             if let Err(err) = delete_scratch(&mount_point) {
                                 eprintln!("Failed to delete {:#?}: {}", vol, err);
+                                was_failure = true
                             } else {
                                 println!("Deleted {}", mount_point);
                             }
@@ -817,7 +886,11 @@ fn main() -> Result<()> {
                     }
                 }
             }
-            Ok(())
+            if was_failure {
+                Err(anyhow!("Failed to unmount or delete one or more volumes."))
+            } else {
+                Ok(())
+            }
         }
     }
 }
