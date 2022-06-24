@@ -28,7 +28,6 @@ pub trait PushrebaseClient {
     /// Pushrebase the given changesets to the given bookmark.
     async fn pushrebase(
         &self,
-        repo: String,
         bookmark: &BookmarkName,
         // Must be a stack
         changesets: HashSet<BonsaiChangeset>,

@@ -7,9 +7,11 @@
 
 use std::collections::HashSet;
 use std::future::Future;
+use std::net::IpAddr;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use connection_security_checker::ConnectionSecurityChecker;
 use ephemeral_blobstore::{BubbleId, RepoEphemeralStore};
 use fbinit::FacebookInit;
 use futures::future::BoxFuture;
@@ -18,6 +20,7 @@ use futures::FutureExt;
 use futures_ext::FbFutureExt;
 use futures_stats::{FutureStats, TimedFutureExt};
 use identity::Identity;
+use itertools::Itertools;
 use maplit::hashset;
 use megarepo_api::MegarepoApi;
 use metadata::Metadata;
@@ -47,6 +50,9 @@ use crate::scuba_response::AddScubaResponse;
 use crate::specifiers::SpecifierExt;
 
 const SCS_IDENTITY: &str = "scm_service_identity";
+const FORWARDED_IDENTITIES_HEADER: &str = "scm_forwarded_identities";
+const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
+const FORWARDED_CLIENT_DEBUG_HEADER: &str = "scm_forwarded_client_debug";
 
 define_stats! {
     prefix = "mononoke.scs_server";
@@ -76,6 +82,7 @@ pub(crate) struct SourceControlServiceImpl {
     pub(crate) scuba_builder: MononokeScubaSampleBuilder,
     pub(crate) service_identity: Identity,
     pub(crate) scribe: Scribe,
+    identity_proxy_checker: Arc<ConnectionSecurityChecker>,
 }
 
 pub(crate) struct SourceControlServiceThriftImpl(SourceControlServiceImpl);
@@ -88,6 +95,7 @@ impl SourceControlServiceImpl {
         logger: Logger,
         mut scuba_builder: MononokeScubaSampleBuilder,
         scribe: Scribe,
+        identity_proxy_checker: ConnectionSecurityChecker,
     ) -> Self {
         scuba_builder.add_common_server_data();
 
@@ -99,6 +107,7 @@ impl SourceControlServiceImpl {
             scuba_builder,
             service_identity: Identity::with_service(SCS_IDENTITY),
             scribe,
+            identity_proxy_checker: Arc::new(identity_proxy_checker),
         }
     }
 
@@ -122,7 +131,7 @@ impl SourceControlServiceImpl {
             .collect();
 
         let mut scuba = self.create_scuba(name, req_ctxt, specifier, params, &identities)?;
-        let session = self.create_session(identities).await?;
+        let session = self.create_session(req_ctxt, identities).await?;
         scuba.add("session_uuid", session.metadata().session_id().to_string());
 
         let ctx = session.new_context_with_scribe(self.logger.clone(), scuba, self.scribe.clone());
@@ -193,10 +202,47 @@ impl SourceControlServiceImpl {
     /// Create and configure the session container for a request.
     async fn create_session(
         &self,
-        identities: MononokeIdentitySet,
+        req_ctxt: &RequestContext,
+        mut identities: MononokeIdentitySet,
     ) -> Result<SessionContainer, errors::ServiceError> {
-        let metadata = Metadata::default().set_identities(identities);
-        let metadata = Arc::new(metadata);
+        let mut client_ip = None;
+        let mut client_debug = false;
+
+        let header = |h: &str| req_ctxt.header(h).map_err(errors::invalid_request);
+
+        // Trusted requests can forward identities from the original request
+        // In this case we validate the source is trusted, and then trust the identities
+        if let (Some(forwarded_identities), Some(forwarded_ip)) = (
+            header(FORWARDED_IDENTITIES_HEADER)?,
+            header(FORWARDED_CLIENT_IP_HEADER)?,
+        ) {
+            if !self
+                .identity_proxy_checker
+                .check_if_trusted(&identities)
+                .await
+                .map_err(errors::invalid_request)?
+            {
+                return Err(errors::invalid_request(format!(
+                    "Untrusted identity for forwarding identities, found {}",
+                    identities.iter().map(ToString::to_string).join(",")
+                ))
+                .into());
+            }
+            let new_identities: MononokeIdentitySet =
+                serde_json::from_str(forwarded_identities.as_str())
+                    .map_err(errors::invalid_request)?;
+            // Fully replace the identities with the forwarded identities
+            identities = new_identities;
+            client_ip = Some(
+                forwarded_ip
+                    .parse::<IpAddr>()
+                    .map_err(errors::invalid_request)?,
+            );
+            client_debug = header(FORWARDED_CLIENT_DEBUG_HEADER)?.is_some();
+        }
+
+        let metadata =
+            Arc::new(Metadata::new(None, false, identities, client_debug, client_ip).await);
         let session = SessionContainer::builder(self.fb)
             .metadata(metadata)
             .blobstore_maybe_read_qps_limiter(tunables().get_scs_request_read_qps())

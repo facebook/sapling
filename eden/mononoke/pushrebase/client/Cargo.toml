@@ -19,13 +19,13 @@ bookmarks_movement = { version = "0.1.0", path = "../../bookmarks/bookmarks_move
 bookmarks_types = { version = "0.1.0", path = "../../bookmarks/bookmarks_types" }
 bytes = { version = "1.1", features = ["serde"] }
 context = { version = "0.1.0", path = "../../server/context" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hooks = { version = "0.1.0", path = "../../hooks" }
 iterhelpers = { version = "0.1.0", path = "../../common/iterhelpers" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 pushrebase = { version = "0.1.0", path = ".." }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
+repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 repo_read_write_status = { version = "0.1.0", path = "../../repo_client/repo_read_write_status" }
 source_control = { version = "0.1.0", path = "../../scs/if" }
 tunables = { version = "0.1.0", path = "../../tunables" }

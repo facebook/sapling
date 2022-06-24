@@ -6,7 +6,7 @@
  */
 
 use anyhow::{bail, Error, Result};
-use serde::ser::{Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::BTreeSet;
 use std::fmt;
 use std::str::FromStr;
@@ -64,6 +64,16 @@ impl Serialize for MononokeIdentity {
         S: Serializer,
     {
         serializer.collect_str(self)
+    }
+}
+
+impl<'de> Deserialize<'de> for MononokeIdentity {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Self::from_str(&s).map_err(serde::de::Error::custom)
     }
 }
 

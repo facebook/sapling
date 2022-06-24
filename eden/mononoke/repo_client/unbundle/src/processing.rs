@@ -512,19 +512,17 @@ async fn normal_pushrebase<'a>(
     cross_repo_push_source: CrossRepoPushSource,
     readonly_fetcher: &RepoReadWriteFetcher,
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
-    let repo_name = repo.repo_identity().name().to_string();
     let bookmark_restriction = BookmarkKindRestrictions::OnlyPublishing;
     let maybe_fallback_scuba: Option<(MononokeScubaSampleBuilder, BookmarkMovementError)> =
         if should_use_scs() {
             #[cfg(fbcode_build)]
             {
                 let result = if let Ok(host_port) = std::env::var("SCS_SERVER_HOST_PORT") {
-                    SCSPushrebaseClient::from_host_port(ctx.fb, host_port)?
+                    SCSPushrebaseClient::from_host_port(ctx, host_port, repo)?
                 } else {
-                    SCSPushrebaseClient::new(ctx.fb)?
+                    SCSPushrebaseClient::new(ctx, repo)?
                 }
                 .pushrebase(
-                    repo_name.clone(),
                     bookmark,
                     changesets.clone(),
                     maybe_pushvars,
@@ -569,7 +567,6 @@ async fn normal_pushrebase<'a>(
         readonly_fetcher,
     }
     .pushrebase(
-        repo_name,
         bookmark,
         changesets,
         maybe_pushvars,

@@ -162,8 +162,8 @@ function mononoke {
     --private-key "$TEST_CERTDIR/localhost.key" \
     --cert "$TEST_CERTDIR/localhost.crt" \
     --ssl-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
-    --scs-client-cert="$TEST_CERTDIR/localhost.crt" \
-    --scs-client-private-key="$TEST_CERTDIR/localhost.key" \
+    --scs-client-cert="$TEST_CERTDIR/proxy.crt" \
+    --scs-client-private-key="$TEST_CERTDIR/proxy.key" \
     --debug \
     --listening-host-port "$BIND_ADDR" \
     --bound-address-file "$MONONOKE_SERVER_ADDR_FILE" \

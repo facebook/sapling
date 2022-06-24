@@ -20,6 +20,7 @@ use clap::Parser;
 use cloned::cloned;
 use cmdlib::helpers::serve_forever;
 use cmdlib_logging::ScribeLoggingArgs;
+use connection_security_checker::ConnectionSecurityChecker;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
 use futures::future::FutureExt;
@@ -119,6 +120,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             make_BaseService_server(proto, facebook::BaseServiceImpl::new(will_exit.clone()))
         }
     };
+    let security_checker = runtime.block_on(ConnectionSecurityChecker::new(
+        fb,
+        app.repo_configs().common.clone(),
+    ))?;
     let source_control_server = source_control_impl::SourceControlServiceImpl::new(
         fb,
         mononoke.clone(),
@@ -126,6 +131,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         logger.clone(),
         scuba_builder.clone(),
         args.scribe_logging_args.get_scribe(fb)?,
+        security_checker,
     );
     let service = {
         move |proto| {
