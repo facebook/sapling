@@ -521,28 +521,6 @@ def dispatch(req):
             duration,
         )
 
-        threshold = req.ui.configint("tracing", "threshold")
-        if duration >= threshold:
-            key = "flat/perftrace-%(host)s-%(pid)s-%(time)s" % {
-                "host": socket.gethostname(),
-                "pid": os.getpid(),
-                "time": time.time(),
-            }
-            # TODO: Move this into a background task that renders from
-            # blackbox instead.
-            # The "duration" is chosen dynamically for long commands.
-            # The ASCII implementation will fold repetitive calls so
-            # the length of the output is practically bounded.
-            output = bindings.tracing.singleton.ascii(
-                # Minimum resolution = 1% of max(duration, threshold)
-                # It's in microseconds (1e6) to divide it by 100 = 1e4
-                int((max([duration, threshold]) * 1e4))
-            )
-            if req.ui.configbool("tracing", "stderr"):
-                req.ui.warn("%s\n" % output)
-            req.ui.log("perftrace", "Trace:\n%s\n", output, key=key, payload=output)
-            req.ui.log("perftracekey", "Trace key:%s\n", key, perftracekey=key)
-
         def truncateduration(duration):
             """Truncate the passed in duration to only 3 significant digits."""
             millis = int(duration * 1000)

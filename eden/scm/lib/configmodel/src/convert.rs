@@ -6,6 +6,7 @@
  */
 
 use std::path::PathBuf;
+use std::time::Duration;
 
 use minibytes::Text;
 use util::path::expand_path;
@@ -175,6 +176,12 @@ impl FromConfigValue for ByteCount {
 impl FromConfigValue for PathBuf {
     fn try_from_str(s: &str) -> Result<Self> {
         Ok(expand_path(s))
+    }
+}
+
+impl FromConfigValue for Duration {
+    fn try_from_str(s: &str) -> Result<Self> {
+        Ok(Duration::from_secs_f64(s.parse()?))
     }
 }
 

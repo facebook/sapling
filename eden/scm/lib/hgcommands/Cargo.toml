@@ -30,6 +30,7 @@ flate2 = { version = "1.0", features = ["rust_backend", "tokio"], default-featur
 fsyncglob = { version = "0.1.0", path = "../fsyncglob" }
 hg-http = { version = "0.1.0", path = "../hg-http" }
 hgtime = { version = "0.1.0", path = "../hgtime" }
+hostname = "0.3"
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
 libc = "0.2.121"
 metrics-render = { version = "0.1.0", path = "../metrics/render" }

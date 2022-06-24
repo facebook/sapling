@@ -1224,4 +1224,8 @@ timeout=600
 
 [checkout]
 resumable=True
+
+[tracing]
+stderr=False
+threshold=10
 "#;

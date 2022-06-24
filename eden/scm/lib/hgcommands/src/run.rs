@@ -136,7 +136,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
                 sampling_config.set(sc).unwrap();
             }
 
-            dispatch_command(io, dispatcher, args, Arc::downgrade(&in_scope))
+            dispatch_command(io, dispatcher, args, Arc::downgrade(&in_scope), now)
         }
         Err(err) => {
             errors::print_error(&err, io, &args[1..]);
@@ -168,6 +168,7 @@ fn dispatch_command(
     mut dispatcher: Dispatcher,
     args: Vec<String>,
     in_scope: Weak<()>,
+    start_time: SystemTime,
 ) -> i32 {
     log_repo_path_and_exe_version(dispatcher.repo());
 
@@ -245,6 +246,8 @@ fn dispatch_command(
             let _ = io.write_err(format!("Error writing final runlog: {}\n", err));
         }
     }
+
+    let _ = log_perftrace(io, dispatcher.config(), start_time);
 
     exit_code
 }
@@ -708,6 +711,37 @@ fn log_repo_path_and_exe_version(repo: Option<&Repo>) {
         }
     }
     tracing::info!(target: "command_info", version = version::VERSION);
+}
+
+fn log_perftrace(io: &IO, config: &ConfigSet, start_time: SystemTime) -> Result<()> {
+    if let Some(threshold) = config.get_opt::<Duration>("tracing", "threshold")? {
+        if let Ok(elapsed) = start_time.elapsed() {
+            if elapsed >= threshold {
+                let key = format!(
+                    "flat/perftrace-{}-{}-{}",
+                    hostname::get()?.to_string_lossy(),
+                    std::process::id(),
+                    (epoch_ms(start_time) as f64) / 1e3,
+                );
+
+                let mut ascii_opts = tracing_collector::model::AsciiOptions::default();
+
+                // Minimum resolution = 1% of duration.
+                ascii_opts.min_duration_micros_to_hide = (elapsed.as_micros() / 100) as u64;
+
+                let output = pytracing::DATA.lock().ascii(&ascii_opts);
+
+                tracing::info!(target: "perftrace", key=key.as_str(), payload=output.as_str(), "Trace:\n{}\n", output);
+                tracing::info!(target: "perftracekey", perftracekey=key.as_str(), "Trace key:\n{}\n", key);
+
+                if config.get_or_default("tracing", "stderr")? {
+                    let _ = write!(io.error(), "{}\n", output);
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 // TODO: Replace this with the 'exitcode' crate once it's available.
