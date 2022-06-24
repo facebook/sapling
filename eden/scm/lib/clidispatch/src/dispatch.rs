@@ -219,14 +219,14 @@ impl Dispatcher {
         }
     }
 
-    /// Return config without a repo's influence even if we are in a repo.
-    pub fn no_repo_config(self) -> Result<ConfigSet, (Error, ConfigSet)> {
-        if let OptionalRepo::None(config) = self.optional_repo {
-            return Ok(config);
+    /// Replace OptionalRepo::Some with OptionalRepo::None(config)
+    /// where config is not influenced by the current repo.
+    pub fn convert_to_repoless_config(&mut self) -> Result<()> {
+        if matches!(self.optional_repo, OptionalRepo::Some(_)) {
+            self.optional_repo = OptionalRepo::None(self.load_repoless_config()?)
         }
 
-        self.load_repoless_config()
-            .map_err(|e| (e, self.optional_repo.take_config()))
+        Ok(())
     }
 
     fn load_repoless_config(&self) -> Result<ConfigSet> {
@@ -331,19 +331,15 @@ impl Dispatcher {
     }
 
     /// Run a command. Return exit code if the command completes.
-    pub fn run_command(
-        mut self,
-        command_table: &CommandTable,
-        io: &IO,
-    ) -> Result<u8, (ConfigSet, Error)> {
+    pub fn run_command(&mut self, command_table: &CommandTable, io: &IO) -> Result<u8> {
         let (handler, parsed) = match self.prepare_command(command_table, io) {
             Ok((name, args)) => (name, args),
-            Err(e) => return Err((self.optional_repo.take_config(), e)),
+            Err(e) => return Err(e),
         };
 
         match handler.func() {
             CommandFunc::Repo(f) => {
-                let res = match self.optional_repo {
+                match self.optional_repo {
                     OptionalRepo::Some(ref mut repo) => f(parsed, io, repo),
                     OptionalRepo::None(_) => {
                         // FIXME: Try to "infer repo" here.
@@ -355,24 +351,16 @@ impl Dispatcher {
                         )
                         .into())
                     }
-                };
-                res.map_err(|e| (self.optional_repo.take_config(), e))
+                }
             }
-            CommandFunc::OptionalRepo(f) => f(parsed, io, &mut self.optional_repo)
-                .map_err(|e| (self.optional_repo.take_config(), e)),
+            CommandFunc::OptionalRepo(f) => f(parsed, io, &mut self.optional_repo),
             CommandFunc::NoRepo(f) => {
-                let mut config = match self.no_repo_config() {
-                    Ok(config) => config,
-                    Err((e, config)) => return Err((config, e)),
-                };
-                f(parsed, io, &mut config).map_err(|e| (config, e))
+                self.convert_to_repoless_config()?;
+                f(parsed, io, self.optional_repo.config_mut())
             }
             CommandFunc::NoRepoGlobalOpts(f) => {
-                let mut config = match self.no_repo_config() {
-                    Ok(config) => config,
-                    Err((e, config)) => return Err((config, e)),
-                };
-                f(parsed, io, &mut config).map_err(|e| (config, e))
+                self.convert_to_repoless_config()?;
+                f(parsed, io, self.optional_repo.config_mut())
             }
         }
     }

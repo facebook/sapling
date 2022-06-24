@@ -163,7 +163,12 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     exit_code
 }
 
-fn dispatch_command(io: &IO, dispatcher: Dispatcher, args: Vec<String>, in_scope: Weak<()>) -> i32 {
+fn dispatch_command(
+    io: &IO,
+    mut dispatcher: Dispatcher,
+    args: Vec<String>,
+    in_scope: Weak<()>,
+) -> i32 {
     log_repo_path_and_exe_version(dispatcher.repo());
 
     let run_logger = match runlog::Logger::from_repo(dispatcher.repo(), args[1..].to_vec()) {
@@ -192,13 +197,11 @@ fn dispatch_command(io: &IO, dispatcher: Dispatcher, args: Vec<String>, in_scope
         Ok(dir) => dir,
     };
 
-    let trace_flag = dispatcher.global_opts().trace;
-
     let table = commands::table();
 
     let dispatch_res = dispatcher
         .run_command(&table, io)
-        .map_err(|(config, err)| errors::triage_error(&config, err));
+        .map_err(|err| errors::triage_error(dispatcher.config(), err));
 
     let exit_code = match dispatch_res {
         Ok(exit_code) => exit_code as i32,
@@ -221,7 +224,7 @@ fn dispatch_command(io: &IO, dispatcher: Dispatcher, args: Vec<String>, in_scope
                 let _ = env::set_current_dir(cwd);
 
                 let mut interp = HgPython::new(&args);
-                if trace_flag {
+                if dispatcher.global_opts().trace {
                     // Error is not fatal.
                     let _ = interp.setup_tracing("*".into());
                 }
