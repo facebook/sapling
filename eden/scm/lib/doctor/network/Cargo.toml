@@ -13,7 +13,7 @@ hg-http = { version = "0.1.0", path = "../../hg-http" }
 http = "0.2"
 http-client = { version = "0.1.0", path = "../../http-client" }
 thiserror = "1.0.30"
-tracing = "0.1.32"
+tracing = "0.1.35"
 url = "2.2.2"
 
 [dev-dependencies]

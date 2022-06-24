@@ -11,7 +11,7 @@ async-runtime = { version = "0.1.0", path = "../async-runtime" }
 dag = { version = "0.1.0", path = "../dag" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
-tracing = "0.1.32"
+tracing = "0.1.35"
 types = { version = "0.1.0", path = "../types" }
 
 [dev-dependencies]

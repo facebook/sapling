@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 glob = "0.3"
-tracing = "0.1.32"
+tracing = "0.1.35"
 
 [dev-dependencies]
 tempfile = "3.3"

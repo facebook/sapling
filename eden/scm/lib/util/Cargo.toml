@@ -11,7 +11,7 @@ atomicfile = { version = "0.1.0", path = "../atomicfile" }
 dirs = "2.0"
 fs2 = "0.4"
 libc = "0.2.121"
-once_cell = "1.8"
+once_cell = "1.12"
 rand = { version = "0.8", features = ["small_rng"] }
 shellexpand = "2.0"
 tempfile = "3.3"

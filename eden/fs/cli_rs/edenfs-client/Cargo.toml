@@ -23,5 +23,5 @@ thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 toml = "=0.5.8"
-tracing = "0.1.32"
+tracing = "0.1.35"
 uuid = { version = "0.8.1", features = ["serde", "v4", "v5"] }

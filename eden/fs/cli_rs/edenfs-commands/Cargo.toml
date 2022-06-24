@@ -19,7 +19,7 @@ edenfs-client = { version = "0.1.0", path = "../edenfs-client" }
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-once_cell = "1.8"
+once_cell = "1.12"
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 shlex = "1.0"
@@ -29,5 +29,5 @@ termwiz = { version = "0.15", features = ["widgets"] }
 thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 toml = "=0.5.8"
-tracing = "0.1.32"
+tracing = "0.1.35"
 util = { version = "0.1.0", path = "../../../scm/lib/util" }

@@ -33,7 +33,7 @@ borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 nonzero_ext = "0.2"
-once_cell = "1.8"
+once_cell = "1.12"
 ratelimit_meter = "5"
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

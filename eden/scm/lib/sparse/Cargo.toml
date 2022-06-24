@@ -11,7 +11,7 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 globset = "0.4.7"
 pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 thiserror = "1.0.30"
-tracing = "0.1.32"
+tracing = "0.1.35"
 types = { version = "0.1.0", path = "../types" }
 
 [dev-dependencies]

@@ -45,7 +45,7 @@ manifest = { version = "0.1.0", path = "../manifest" }
 mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
 mononoke_api_types = { version = "0.1.0", path = "../mononoke_api/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-once_cell = "1.8"
+once_cell = "1.12"
 readonlyblob = { version = "0.1.0", path = "../blobstore/readonlyblob" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }

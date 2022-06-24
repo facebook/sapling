@@ -19,7 +19,7 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 nonzero_ext = "0.2"
-once_cell = "1.8"
+once_cell = "1.12"
 rand = { version = "0.8", features = ["small_rng"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

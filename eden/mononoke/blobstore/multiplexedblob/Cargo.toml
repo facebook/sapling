@@ -22,7 +22,7 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 itertools = "0.10.3"
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-once_cell = "1.8"
+once_cell = "1.12"
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 strum = "0.21"

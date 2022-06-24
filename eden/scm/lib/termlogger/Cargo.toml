@@ -8,5 +8,5 @@ edition = "2021"
 
 [dependencies]
 io = { version = "0.1.0", path = "../io" }
-tracing = "0.1.32"
+tracing = "0.1.35"
 util = { version = "0.1.0", path = "../util" }

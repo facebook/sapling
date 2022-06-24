@@ -20,7 +20,7 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 http = "0.2"
 lru-cache = "0.1.2"
 maplit = "1.0"
-once_cell = "1.8"
+once_cell = "1.12"
 openssl = "0.10.35"
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 paste = "1.0"
@@ -33,7 +33,7 @@ structopt = "0.3.23"
 thiserror = "1.0.30"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.6", features = ["full"] }
-tracing = "0.1.32"
+tracing = "0.1.35"
 url = "2.2.2"
 
 [dev-dependencies]

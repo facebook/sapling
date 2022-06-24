@@ -18,7 +18,7 @@ clap = { version = "=3.1.18", features = ["derive", "regex", "unicode", "wrap_he
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
-once_cell = "1.8"
+once_cell = "1.12"
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }

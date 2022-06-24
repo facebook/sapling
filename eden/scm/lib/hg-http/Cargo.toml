@@ -12,5 +12,5 @@ clientinfo = { version = "0.1.0", path = "../clientinfo" }
 configmodel = { version = "0.1.0", path = "../configmodel" }
 hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
 http-client = { version = "0.1.0", path = "../http-client" }
-once_cell = "1.8"
+once_cell = "1.12"
 progress-model = { version = "0.1.0", path = "../progress/model" }

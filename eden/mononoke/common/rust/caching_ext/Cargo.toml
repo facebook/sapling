@@ -18,7 +18,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 itertools = "0.10.3"
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-once_cell = "1.8"
+once_cell = "1.12"
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 

@@ -13,4 +13,4 @@ edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 stack-config = { version = "0.1.0", path = "../stack-config" }
 toml = "=0.5.8"
-tracing = "0.1.32"
+tracing = "0.1.35"

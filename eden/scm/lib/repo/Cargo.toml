@@ -16,7 +16,7 @@ refencode = { version = "0.1.0", path = "../refencode" }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 thiserror = "1.0.30"
-tracing = "0.1.32"
+tracing = "0.1.35"
 types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }
 

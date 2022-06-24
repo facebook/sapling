@@ -43,7 +43,7 @@ rand = { version = "0.8", features = ["small_rng"] }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 tempfile = { version = "3.3", optional = true }
 thiserror = "1.0.30"
-tracing = "0.1.32"
+tracing = "0.1.35"
 vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 
 [dev-dependencies]
@@ -53,7 +53,7 @@ dev-logger = { version = "0.1.0", path = "../dev-logger" }
 fs2 = "0.4"
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
 minibench = { version = "0.1.0", path = "../minibench" }
-once_cell = "1.8"
+once_cell = "1.12"
 quickcheck = "1.0"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 unicode-width = "0.1"

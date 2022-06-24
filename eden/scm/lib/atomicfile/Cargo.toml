@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 tempfile = "3.3"
-tracing = "0.1.32"
+tracing = "0.1.35"

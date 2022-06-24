@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-once_cell = "1.8"
+once_cell = "1.12"

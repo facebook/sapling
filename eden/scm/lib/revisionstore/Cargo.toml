@@ -33,7 +33,7 @@ memmap = "0.7"
 mincode = { version = "0.1.0", path = "../mincode" }
 minibytes = { version = "0.1.0", path = "../minibytes", features = ["frombytes"] }
 mpatch = { version = "0.1.0", path = "../mpatch" }
-once_cell = "1.8"
+once_cell = "1.12"
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 progress-model = { version = "0.1.0", path = "../progress/model" }
 quickcheck = "1.0"
@@ -51,7 +51,7 @@ tempfile = "3.3"
 thiserror = "1.0.30"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
-tracing = "0.1.32"
+tracing = "0.1.35"
 types = { version = "0.1.0", path = "../types" }
 url = "2.2.2"
 util = { version = "0.1.0", path = "../util" }
