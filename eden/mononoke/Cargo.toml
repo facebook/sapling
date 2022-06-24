@@ -250,6 +250,7 @@ members = [
   "common/async_limiter",
   "common/async_limiter/examples/tokio_v2",
   "common/bounded_traversal",
+  "common/connection_security_checker",
   "common/copy_utils",
   "common/dedupmap",
   "common/futures_watchdog",

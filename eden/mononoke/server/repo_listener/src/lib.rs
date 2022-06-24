@@ -15,7 +15,6 @@ mod http_service;
 mod netspeedtest;
 mod repo_handlers;
 mod request_handler;
-mod security_checker;
 mod wireproto_sink;
 
 pub use crate::connection_acceptor::wait_for_connections_closed;

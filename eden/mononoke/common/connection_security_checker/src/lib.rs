@@ -12,11 +12,11 @@ use permission_checker::{
     BoxPermissionChecker, MononokeIdentity, MononokeIdentitySet, PermissionCheckerBuilder,
 };
 
-pub struct ConnectionsSecurityChecker {
+pub struct ConnectionSecurityChecker {
     checker: BoxPermissionChecker,
 }
 
-impl ConnectionsSecurityChecker {
+impl ConnectionSecurityChecker {
     pub async fn new(fb: FacebookInit, common_config: CommonConfig) -> Result<Self> {
         let mut builder = PermissionCheckerBuilder::new();
 

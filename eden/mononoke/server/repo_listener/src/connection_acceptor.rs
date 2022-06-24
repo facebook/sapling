@@ -22,6 +22,7 @@ use std::time::Duration;
 use anyhow::{Context, Error, Result};
 use bytes::Bytes;
 use cached_config::ConfigStore;
+use connection_security_checker::ConnectionSecurityChecker;
 use edenapi_service::EdenApi;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
@@ -57,7 +58,6 @@ use crate::errors::ErrorKind;
 use crate::http_service::MononokeHttpService;
 use crate::repo_handlers::RepoHandler;
 use crate::request_handler::{create_conn_logger, request_handler};
-use crate::security_checker::ConnectionsSecurityChecker;
 use crate::wireproto_sink::WireprotoSink;
 
 define_stats! {
@@ -107,7 +107,7 @@ pub async fn connection_acceptor(
 ) -> Result<()> {
     let enable_http_control_api = common_config.enable_http_control_api;
 
-    let security_checker = ConnectionsSecurityChecker::new(fb, common_config).await?;
+    let security_checker = ConnectionSecurityChecker::new(fb, common_config).await?;
     let addr: SocketAddr = sockname
         .parse()
         .with_context(|| format!("could not parse '{}'", sockname))?;
@@ -179,7 +179,7 @@ pub struct Acceptor {
     pub fb: FacebookInit,
     pub tls_acceptor: SslAcceptor,
     pub repo_handlers: HashMap<String, RepoHandler>,
-    pub security_checker: ConnectionsSecurityChecker,
+    pub security_checker: ConnectionSecurityChecker,
     pub rate_limiter: Option<RateLimitEnvironment>,
     pub scribe: Scribe,
     pub logger: Logger,

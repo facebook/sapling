@@ -6,11 +6,11 @@
  */
 
 use crate::errors::ErrorKind;
-use crate::security_checker::ConnectionsSecurityChecker;
 use std::collections::HashMap;
 
 use anyhow::{anyhow, Context, Error, Result};
 use bytes::Bytes;
+use connection_security_checker::ConnectionSecurityChecker;
 use context::{LoggingContainer, SessionContainer, SessionId};
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
@@ -49,7 +49,7 @@ pub async fn request_handler(
     fb: FacebookInit,
     reponame: String,
     repo_handlers: &HashMap<String, RepoHandler>,
-    _security_checker: &ConnectionsSecurityChecker,
+    _security_checker: &ConnectionSecurityChecker,
     stdio: Stdio,
     rate_limiter: Option<RateLimitEnvironment>,
     addr: IpAddr,
