@@ -128,21 +128,31 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
 
     metrics_render::init_from_env(Arc::downgrade(&in_scope));
 
-    let exit_code = match dispatch::Dispatcher::from_args(args[1..].to_vec()) {
-        Ok(dispatcher) => {
-            let _guard = span.enter();
-
-            if let Some(sc) = SamplingConfig::new(dispatcher.config()) {
-                sampling_config.set(sc).unwrap();
+    let exit_code = (|| {
+        let cwd = match current_dir(io) {
+            Err(e) => {
+                let _ = io.write_err(format!("abort: cannot get current directory: {}\n", e));
+                return exitcode::IOERR;
             }
+            Ok(dir) => dir,
+        };
 
-            dispatch_command(io, dispatcher, args, Arc::downgrade(&in_scope), now)
+        match dispatch::Dispatcher::from_args(args[1..].to_vec()) {
+            Ok(dispatcher) => {
+                let _guard = span.enter();
+
+                if let Some(sc) = SamplingConfig::new(dispatcher.config()) {
+                    sampling_config.set(sc).unwrap();
+                }
+
+                dispatch_command(io, dispatcher, args, cwd, Arc::downgrade(&in_scope), now)
+            }
+            Err(err) => {
+                errors::print_error(&err, io, &args[1..]);
+                255
+            }
         }
-        Err(err) => {
-            errors::print_error(&err, io, &args[1..]);
-            255
-        }
-    };
+    })();
 
     span.record("exit_code", &exit_code);
     drop(in_scope);
@@ -167,6 +177,7 @@ fn dispatch_command(
     io: &IO,
     mut dispatcher: Dispatcher,
     args: Vec<String>,
+    cwd: PathBuf,
     in_scope: Weak<()>,
     start_time: SystemTime,
 ) -> i32 {
@@ -189,14 +200,6 @@ fn dispatch_command(
         run_logger.clone(),
         in_scope,
     );
-
-    let cwd = match current_dir(io) {
-        Err(e) => {
-            let _ = io.write_err(format!("abort: cannot get current directory: {}\n", e));
-            return exitcode::IOERR;
-        }
-        Ok(dir) => dir,
-    };
 
     let table = commands::table();
 
