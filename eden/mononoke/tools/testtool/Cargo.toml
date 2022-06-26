@@ -14,7 +14,7 @@ blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
-clap = { version = "=3.1.18", features = ["derive", "regex", "unicode", "wrap_help"] }
+clap = { version = "3.2.6", features = ["derive", "regex", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../../server/context" }
 deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manifest" }
 derived_data_filenodes = { version = "0.1.0", path = "../../derived_data/filenodes" }

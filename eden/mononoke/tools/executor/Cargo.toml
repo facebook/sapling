@@ -14,7 +14,7 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1.0.56"
 async-trait = "0.1.56"
-clap = { version = "=3.1.18", features = ["derive", "regex", "unicode", "wrap_help"] }
+clap = { version = "3.2.6", features = ["derive", "regex", "unicode", "wrap_help"] }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }

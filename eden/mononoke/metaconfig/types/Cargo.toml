@@ -11,7 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.56"
 ascii = "1.0"
 bookmarks_types = { version = "0.1.0", path = "../../bookmarks/bookmarks_types" }
-clap = { version = "=3.1.18", features = ["derive", "regex", "unicode", "wrap_help"] }
+clap = { version = "3.2.6", features = ["derive", "regex", "unicode", "wrap_help"] }
 derive_more = "0.99.3"
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
