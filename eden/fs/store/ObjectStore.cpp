@@ -87,8 +87,9 @@ void ObjectStore::updateProcessFetch(
 }
 
 void ObjectStore::sendFetchHeavyEvent(pid_t pid, uint64_t fetch_count) const {
-  auto processName = processNameCache_->getSpacedProcessName(pid);
-  if (processName.has_value()) {
+  auto processName = processNameCache_->getProcessName(pid);
+  if (processName) {
+    std::replace(processName->begin(), processName->end(), '\0', ' ');
     structuredLogger_->logEvent(
         FetchHeavy{processName.value(), pid, fetch_count});
   }

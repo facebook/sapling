@@ -37,7 +37,7 @@ void BackingStoreLogger::logImport(
 
   std::optional<std::string> cmdline;
   if (pid) {
-    cmdline = processNameCache_->getSpacedProcessName(pid.value());
+    cmdline = processNameCache_->getProcessName(pid.value());
   }
 
   std::string cause_string = "<invalid>";
@@ -73,6 +73,10 @@ void BackingStoreLogger::logImport(
     case ObjectFetchContext::ObjectType::kObjectTypeEnumMax:
       // invalid string prolly good here
       break;
+  }
+
+  if (cmdline) {
+    std::replace(cmdline->begin(), cmdline->end(), '\0', ' ');
   }
 
   logger_->logEvent(ServerDataFetch{
