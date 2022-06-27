@@ -57,6 +57,11 @@ pub trait ThriftConvert: Sized {
     fn into_thrift(self) -> Self::Thrift;
 }
 
+pub trait IdContext {
+    type Id;
+    fn id_from_data(data: impl AsRef<[u8]>) -> Self::Id;
+}
+
 /// An identifier used throughout Mononoke.
 pub trait MononokeId: BlobstoreKey + Debug + Copy + Eq + Hash + Sync + Send + 'static {
     /// Blobstore value type associated with given MononokeId type
@@ -118,7 +123,7 @@ pub struct DeletedManifestV2Id(Blake2);
 
 /// An identifier for a sharded map node used in deleted manifest v2
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-pub struct ShardedMapNodeId(Blake2);
+pub struct ShardedMapNodeDMv2Id(Blake2);
 
 /// An identifier for an fsnode
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
@@ -404,6 +409,14 @@ macro_rules! impl_typed_context {
             }
         }
 
+        impl $crate::typed_hash::IdContext for $typed_context {
+            type Id = $typed;
+            fn id_from_data(data: impl AsRef<[u8]>) -> $typed {
+                let mut context = $typed_context::new();
+                context.update(data);
+                context.finish()
+            }
+        }
     }
 }
 
@@ -519,19 +532,17 @@ impl_typed_hash! {
     context_key => "deletedmanifest2",
 }
 
-// Manual implementations for ShardedMapNodeId because it has a generic type
+// Manual implementations for ShardedMapNodeDMv2Id because it has a generic type
 // so we can't implement MononokeId for it
 impl_typed_hash_no_context! {
-    hash_type => ShardedMapNodeId,
+    hash_type => ShardedMapNodeDMv2Id,
     thrift_type => thrift::ShardedMapNodeId,
-    // TODO(yancouto): ShardedMapNode shouldn't depend on something that explicitly
-    // mentions dfm.
     blobstore_key => "deletedmanifest2.mapnode",
 }
 
 impl_typed_context! {
-    hash_type => ShardedMapNodeId,
-    context_type => ShardedMapNodeContext,
+    hash_type => ShardedMapNodeDMv2Id,
+    context_type => ShardedMapNodeDMv2Context,
     context_key => "deletedmanifest2.mapnode",
 }
 
@@ -663,7 +674,7 @@ mod test {
         let id = ContentId::new(Blake2::from_byte_array([1; 32]));
         assert_eq!(id.blobstore_key(), format!("content.blake2.{}", id));
 
-        let id = ShardedMapNodeId::from_byte_array([1; 32]);
+        let id = ShardedMapNodeDMv2Id::from_byte_array([1; 32]);
         assert_eq!(
             id.blobstore_key(),
             format!("deletedmanifest2.mapnode.blake2.{}", id)
@@ -724,7 +735,7 @@ mod test {
         let deserialized = serde_json::from_str(&serialized).unwrap();
         assert_eq!(id, deserialized);
 
-        let id = ShardedMapNodeId::from_byte_array([1; 32]);
+        let id = ShardedMapNodeDMv2Id::from_byte_array([1; 32]);
         let serialized = serde_json::to_string(&id).unwrap();
         let deserialized = serde_json::from_str(&serialized).unwrap();
         assert_eq!(id, deserialized);

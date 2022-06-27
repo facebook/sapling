@@ -23,15 +23,27 @@ use once_cell::sync::OnceCell;
 use smallvec::SmallVec;
 use sorted_vector_map::{sorted_vector_map, SortedVectorMap};
 use std::collections::BTreeMap;
+use std::fmt::Debug;
 
-use crate::blob::{Blob, BlobstoreValue, ShardedMapNodeBlob};
+use crate::blob::{Blob, BlobstoreValue};
 use crate::errors::ErrorKind;
 use crate::thrift;
-use crate::typed_hash::{BlobstoreKey, ShardedMapNodeContext, ShardedMapNodeId};
+use crate::typed_hash::{BlobstoreKey, IdContext, ThriftConvert};
 
-#[trait_alias::trait_alias]
-pub trait MapValue =
-    TryFrom<Bytes, Error = Error> + Into<Bytes> + std::fmt::Debug + Clone + Send + Sync + 'static;
+pub trait MapValue:
+    TryFrom<Bytes, Error = Error> + Into<Bytes> + Debug + Clone + Send + Sync + 'static
+{
+    type Id: BlobstoreKey
+        + ThriftConvert<Thrift = thrift::ShardedMapNodeId>
+        + PartialEq
+        + Eq
+        + Debug
+        + Clone
+        + Send
+        + Sync
+        + 'static;
+    type Context: IdContext<Id = Self::Id>;
+}
 
 type SmallBinary = SmallVec<[u8; 24]>;
 
@@ -61,7 +73,7 @@ pub struct ShardedMapEdge<Value: MapValue> {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ShardedMapChild<Value: MapValue> {
-    Id(ShardedMapNodeId),
+    Id(Value::Id),
     Inlined(ShardedMapNode<Value>),
 }
 
@@ -106,7 +118,7 @@ impl<Value: MapValue> ShardedMapChild<Value> {
             thrift::ShardedMapChild::inlined(inlined) => {
                 Self::Inlined(ShardedMapNode::from_thrift(inlined)?)
             }
-            thrift::ShardedMapChild::id(id) => Self::Id(ShardedMapNodeId::from_thrift(id)?),
+            thrift::ShardedMapChild::id(id) => Self::Id(Value::Id::from_thrift(id)?),
             thrift::ShardedMapChild::UnknownField(_) => bail!("Unknown variant"),
         })
     }
@@ -163,11 +175,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
         }
     }
 
-    async fn load(
-        ctx: &CoreContext,
-        blobstore: &impl Blobstore,
-        id: &ShardedMapNodeId,
-    ) -> Result<Self> {
+    async fn load(ctx: &CoreContext, blobstore: &impl Blobstore, id: &Value::Id) -> Result<Self> {
         let key = id.blobstore_key();
         Self::from_bytes(
             blobstore
@@ -179,11 +187,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
         )
     }
 
-    async fn store(
-        self,
-        ctx: &CoreContext,
-        blobstore: &impl Blobstore,
-    ) -> Result<ShardedMapNodeId> {
+    async fn store(self, ctx: &CoreContext, blobstore: &impl Blobstore) -> Result<Value::Id> {
         let blob = self.into_blob();
         let id = blob.id().clone();
         blobstore.put(ctx, id.blobstore_key(), blob.into()).await?;
@@ -612,14 +616,12 @@ impl<Value: MapValue> ShardedMapNode<Value> {
 }
 
 impl<Value: MapValue> BlobstoreValue for ShardedMapNode<Value> {
-    type Key = ShardedMapNodeId;
+    type Key = Value::Id;
 
-    fn into_blob(self) -> ShardedMapNodeBlob {
+    fn into_blob(self) -> Blob<Self::Key> {
         let thrift = self.into_thrift();
         let data = compact_protocol::serialize(&thrift);
-        let mut context = ShardedMapNodeContext::new();
-        context.update(&data);
-        let id = context.finish();
+        let id = Value::Context::id_from_data(&data);
         Blob::new(id, data)
     }
 
@@ -643,6 +645,13 @@ mod test {
 
     #[derive(Debug, Clone, Copy, Eq, PartialEq)]
     struct MyType(i32);
+
+    // Let's use the DMv2 hashes for tests, for simplicity of not having to
+    // write our own
+    impl MapValue for MyType {
+        type Id = crate::typed_hash::ShardedMapNodeDMv2Id;
+        type Context = crate::typed_hash::ShardedMapNodeDMv2Context;
+    }
 
     type TestShardedMap = ShardedMapNode<MyType>;
 

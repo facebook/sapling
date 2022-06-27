@@ -16,7 +16,7 @@ use std::collections::BTreeMap;
 use crate::blob::{Blob, BlobstoreValue, DeletedManifestV2Blob};
 use crate::deleted_manifest_common::DeletedManifestCommon;
 use crate::errors::ErrorKind;
-use crate::sharded_map::ShardedMapNode;
+use crate::sharded_map::{MapValue, ShardedMapNode};
 use crate::thrift;
 use crate::typed_hash::{BlobstoreKey, ChangesetId, DeletedManifestV2Context, DeletedManifestV2Id};
 use crate::MPathElement;
@@ -93,6 +93,11 @@ use crate::MPathElement;
 pub struct DeletedManifestV2 {
     linknode: Option<ChangesetId>,
     subentries: ShardedMapNode<DeletedManifestV2Id>,
+}
+
+impl MapValue for DeletedManifestV2Id {
+    type Id = crate::typed_hash::ShardedMapNodeDMv2Id;
+    type Context = crate::typed_hash::ShardedMapNodeDMv2Context;
 }
 
 #[async_trait::async_trait]

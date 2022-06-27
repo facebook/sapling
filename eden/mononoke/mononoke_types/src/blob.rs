@@ -13,8 +13,7 @@ use bytes::Bytes;
 
 use crate::typed_hash::{
     ChangesetId, ContentChunkId, ContentId, ContentMetadataId, DeletedManifestV2Id, FastlogBatchId,
-    FileUnodeId, FsnodeId, ManifestUnodeId, RawBundle2Id, RedactionKeyListId, ShardedMapNodeId,
-    SkeletonManifestId,
+    FileUnodeId, FsnodeId, ManifestUnodeId, RawBundle2Id, RedactionKeyListId, SkeletonManifestId,
 };
 
 /// A serialized blob in memory.
@@ -50,7 +49,6 @@ pub type RawBundle2Blob = Blob<RawBundle2Id>;
 pub type FileUnodeBlob = Blob<FileUnodeId>;
 pub type ManifestUnodeBlob = Blob<ManifestUnodeId>;
 pub type DeletedManifestV2Blob = Blob<DeletedManifestV2Id>;
-pub type ShardedMapNodeBlob = Blob<ShardedMapNodeId>;
 pub type FsnodeBlob = Blob<FsnodeId>;
 pub type SkeletonManifestBlob = Blob<SkeletonManifestId>;
 pub type ContentMetadataBlob = Blob<ContentMetadataId>;
