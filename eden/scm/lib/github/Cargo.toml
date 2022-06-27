@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.56"
-graphql_client = "0.10.0"
+graphql_client = "0.11.0"
 http-client = { version = "0.1.0", path = "../http-client" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
