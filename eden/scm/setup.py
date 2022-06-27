@@ -1666,15 +1666,6 @@ def ordinarypath(p):
     return p and p[0] != "." and p[-1] != "~"
 
 
-for root in ("mercurial/templates",):
-    for curdir, dirs, files in os.walk(os.path.join("edenscm", root)):
-        curdir = curdir.split(os.sep, 1)[1]
-        dirs[:] = filter(ordinarypath, dirs)
-        for f in filter(ordinarypath, files):
-            f = os.path.join(curdir, f)
-            packagedata["edenscm"].append(f)
-
-
 # distutils expects version to be str/unicode. Converting it to
 # unicode on Python 2 still works because it won't contain any
 # non-ascii bytes and will be implicitly converted back to bytes

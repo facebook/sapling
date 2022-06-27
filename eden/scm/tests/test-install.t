@@ -13,8 +13,6 @@ hg debuginstall
   checking registered compression engines (*zlib*) (glob)
   checking available compression engines (*zlib*) (glob)
   checking available compression engines for wire protocol (*zlib*) (glob)
-  checking templates (*mercurial?templates)... (glob)
-  checking default template (default)
   checking commit editor (internal:none)
   checking username (test)
   no problems detected
@@ -26,9 +24,6 @@ hg debuginstall JSON
     "compengines": ["bz2", "bz2truncated", "none", "zlib"*], (glob)
     "compenginesavail": ["bz2", "bz2truncated", "none", "zlib"*], (glob)
     "compenginesserver": [*"zlib"*], (glob)
-    "defaulttemplate": "default",
-    "defaulttemplateerror": null,
-    "defaulttemplatenotfound": "default",
     "editor": "internal:none",
     "encoding": "utf-8",
     "encodingerror": null,
@@ -41,7 +36,6 @@ hg debuginstall JSON
     "pythonlib": "*", (glob)
     "pythonsecurity": [*], (glob)
     "pythonver": "*.*.*", (glob)
-    "templatedirs": "*mercurial?templates", (glob)
     "username": "test",
     "usernameerror": null
    }
@@ -62,8 +56,6 @@ hg debuginstall with no username
   checking registered compression engines (*zlib*) (glob)
   checking available compression engines (*zlib*) (glob)
   checking available compression engines for wire protocol (*zlib*) (glob)
-  checking templates (*mercurial?templates)... (glob)
-  checking default template (default)
   checking commit editor (internal:none)
   checking username...
    no username supplied
@@ -79,7 +71,6 @@ hg debuginstall with invalid encoding
 exception message in JSON
 
   $ HGENCODING=invalidenc HGUSER= hg debuginstall -Tjson | grep error
-    "defaulttemplateerror": null,
     "encodingerror": "unknown encoding: invalidenc",
     "extensionserror": null,
     "usernameerror": "no username supplied"
@@ -104,8 +95,6 @@ path variables are expanded (~ is the same as $TESTTMP)
   checking registered compression engines (*zlib*) (glob)
   checking available compression engines (*zlib*) (glob)
   checking available compression engines for wire protocol (*zlib*) (glob)
-  checking templates (*mercurial?templates)... (glob)
-  checking default template (default)
   checking commit editor (internal:none)
   checking username (test)
   no problems detected
