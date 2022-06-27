@@ -13,6 +13,7 @@ pub mod blob;
 pub mod bonsai_changeset;
 pub mod content_chunk;
 pub mod content_metadata;
+pub mod content_metadata_v2;
 pub mod datetime;
 pub mod deleted_manifest_common;
 pub mod deleted_manifest_v2;

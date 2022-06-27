@@ -25,6 +25,7 @@ use crate::{
     bonsai_changeset::BonsaiChangeset,
     content_chunk::ContentChunk,
     content_metadata::ContentMetadata,
+    content_metadata_v2::ContentMetadataV2,
     deleted_manifest_v2::DeletedManifestV2,
     fastlog_batch::FastlogBatch,
     file_contents::FileContents,
@@ -104,6 +105,10 @@ pub struct ContentChunkId(Blake2);
 /// An identifier for mapping from a ContentId to various aliases for that content
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct ContentMetadataId(Blake2);
+
+/// An identifier for mapping from ContentId to ContentMetadata
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct ContentMetadataV2Id(Blake2);
 
 /// An identifier for raw bundle2 contents in Mononoke
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
@@ -582,6 +587,16 @@ impl_typed_hash_loadable_storable! {
     hash_type => ContentMetadataId,
 }
 
+impl_typed_hash_no_context! {
+    hash_type => ContentMetadataV2Id,
+    thrift_type => thrift::ContentMetadataV2Id,
+    blobstore_key => "content_metadata2",
+}
+
+impl_typed_hash_loadable_storable! {
+    hash_type => ContentMetadataV2Id,
+}
+
 impl_typed_hash! {
     hash_type => FastlogBatchId,
     thrift_hash_type => thrift::FastlogBatchId,
@@ -598,6 +613,21 @@ impl From<ContentId> for ContentMetadataId {
 
 impl MononokeId for ContentMetadataId {
     type Value = ContentMetadata;
+
+    #[inline]
+    fn sampling_fingerprint(&self) -> u64 {
+        self.0.sampling_fingerprint()
+    }
+}
+
+impl From<ContentId> for ContentMetadataV2Id {
+    fn from(content_id: ContentId) -> Self {
+        Self(content_id.0)
+    }
+}
+
+impl MononokeId for ContentMetadataV2Id {
+    type Value = ContentMetadataV2;
 
     #[inline]
     fn sampling_fingerprint(&self) -> u64 {
@@ -713,6 +743,12 @@ mod test {
             format!("content_metadata.blake2.{}", id)
         );
 
+        let id = ContentMetadataV2Id::from_byte_array([1; 32]);
+        assert_eq!(
+            id.blobstore_key(),
+            format!("content_metadata2.blake2.{}", id)
+        );
+
         let id = FastlogBatchId::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("fastlogbatch.blake2.{}", id));
 
@@ -776,6 +812,11 @@ mod test {
         assert_eq!(id, deserialized);
 
         let id = ContentMetadataId::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id = ContentMetadataV2Id::from_byte_array([1; 32]);
         let serialized = serde_json::to_string(&id).unwrap();
         let deserialized = serde_json::from_str(&serialized).unwrap();
         assert_eq!(id, deserialized);
