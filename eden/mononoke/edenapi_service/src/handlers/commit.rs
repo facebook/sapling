@@ -26,13 +26,13 @@ use edenapi_types::{
     CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitMutationsRequest,
     CommitMutationsResponse, CommitRevlogData, CommitRevlogDataRequest, CommitTranslateIdRequest,
     CommitTranslateIdResponse, EphemeralPrepareRequest, EphemeralPrepareResponse,
-    FetchSnapshotRequest, FetchSnapshotResponse, GitSha1, UploadBonsaiChangesetRequest,
+    FetchSnapshotRequest, FetchSnapshotResponse, UploadBonsaiChangesetRequest,
     UploadHgChangesetsRequest, UploadToken, UploadTokensResponse,
 };
 use ephemeral_blobstore::BubbleId;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_api_hg::HgRepoContext;
-use mononoke_types::hash::GitSha1 as MononokeGitSha1;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::{ChangesetId, DateTime, FileChange, Globalrev};
 use tunables::tunables;
 use types::{HgId, Parents};
@@ -596,9 +596,7 @@ impl EdenApiHandler for CommitTranslateId {
             match commit {
                 CommitId::Hg(hg_id) => hg_ids.push(HgChangesetId::from(*hg_id)),
                 CommitId::Bonsai(bonsai_id) => bonsai_ids.push(ChangesetId::from(*bonsai_id)),
-                CommitId::GitSha1(git_id) => {
-                    git_ids.push(MononokeGitSha1::from_byte_array(git_id.into_byte_array()))
-                }
+                CommitId::GitSha1(git_id) => git_ids.push(GitSha1::from(*git_id)),
                 CommitId::Globalrev(globalrev) => globalrevs.push(Globalrev::new(*globalrev)),
             }
         }
@@ -636,12 +634,7 @@ impl EdenApiHandler for CommitTranslateId {
                 .many_changeset_git_sha1s(all_bonsai_ids)
                 .await?
                 .into_iter()
-                .map(|(id, git_sha1)| {
-                    (
-                        id,
-                        CommitId::GitSha1(GitSha1::from_byte_array(git_sha1.into_inner())),
-                    )
-                })
+                .map(|(id, git_sha1)| (id, CommitId::GitSha1(git_sha1.into())))
                 .collect(),
             CommitIdScheme::Globalrev => repo
                 .repo()
@@ -659,8 +652,7 @@ impl EdenApiHandler for CommitTranslateId {
                 let id = match commit {
                     CommitId::Hg(hg_id) => *hg_bonsais.get(&HgChangesetId::from(hg_id))?,
                     CommitId::Bonsai(id) => ChangesetId::from(id),
-                    CommitId::GitSha1(git_id) => *git_bonsais
-                        .get(&MononokeGitSha1::from_byte_array(git_id.into_byte_array()))?,
+                    CommitId::GitSha1(git_id) => *git_bonsais.get(&GitSha1::from(git_id))?,
                     CommitId::Globalrev(globalrev) => {
                         *globalrev_bonsais.get(&Globalrev::new(globalrev))?
                     }

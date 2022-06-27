@@ -16,7 +16,7 @@ use blake2::{
     digest::{Update, VariableOutput},
     VarBlake2b,
 };
-use edenapi_types::{Sha1 as EdenapiSha1, Sha256 as EdenapiSha256};
+use edenapi_types::{GitSha1 as EdenapiGitSha1, Sha1 as EdenapiSha1, Sha256 as EdenapiSha256};
 use faster_hex::{hex_decode, hex_encode};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
@@ -508,6 +508,18 @@ impl Debug for RichGitSha1 {
 impl Display for RichGitSha1 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.to_hex(), fmt)
+    }
+}
+
+impl From<GitSha1> for EdenapiGitSha1 {
+    fn from(v: GitSha1) -> Self {
+        EdenapiGitSha1::from(v.0)
+    }
+}
+
+impl From<EdenapiGitSha1> for GitSha1 {
+    fn from(v: EdenapiGitSha1) -> Self {
+        GitSha1::from_byte_array(v.into())
     }
 }
 
