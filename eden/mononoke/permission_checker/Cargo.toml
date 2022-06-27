@@ -15,5 +15,4 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 maplit = "1.0"
 openssl = "0.10.35"
 serde = { version = "1.0.136", features = ["derive", "rc"] }
-serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
