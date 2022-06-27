@@ -31,6 +31,8 @@ use edenapi_types::CommitHashLookupRequest;
 use edenapi_types::CommitHashLookupResponse;
 use edenapi_types::CommitHashToLocationRequestBatch;
 use edenapi_types::CommitHashToLocationResponse;
+use edenapi_types::CommitId;
+use edenapi_types::CommitIdScheme;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::CommitLocationToHashRequest;
 use edenapi_types::CommitLocationToHashRequestBatch;
@@ -39,6 +41,8 @@ use edenapi_types::CommitMutationsRequest;
 use edenapi_types::CommitMutationsResponse;
 use edenapi_types::CommitRevlogData;
 use edenapi_types::CommitRevlogDataRequest;
+use edenapi_types::CommitTranslateIdRequest;
+use edenapi_types::CommitTranslateIdResponse;
 use edenapi_types::EdenApiServerError;
 use edenapi_types::EphemeralPrepareRequest;
 use edenapi_types::EphemeralPrepareResponse;
@@ -137,6 +141,7 @@ mod paths {
     pub const COMMIT_HASH_LOOKUP: &str = "commit/hash_lookup";
     pub const COMMIT_GRAPH: &str = "commit/graph";
     pub const COMMIT_MUTATIONS: &str = "commit/mutations";
+    pub const COMMIT_TRANSLATE_ID: &str = "commit/translate_id";
     pub const BOOKMARKS: &str = "bookmarks";
     pub const SET_BOOKMARK: &str = "bookmarks/set";
     pub const LAND_STACK: &str = "land";
@@ -1246,6 +1251,30 @@ impl EdenApi for Client {
 
         self.fetch_vec_with_retry::<CommitMutationsResponse>(requests)
             .await
+    }
+
+    async fn commit_translate_id(
+        &self,
+        commits: Vec<CommitId>,
+        scheme: CommitIdScheme,
+    ) -> Result<Response<CommitTranslateIdResponse>, EdenApiError> {
+        tracing::info!(
+            "Requesting commit id translation for {} commits into {:?}",
+            commits.len(),
+            scheme
+        );
+        let url = self.build_url(paths::COMMIT_TRANSLATE_ID)?;
+        let requests = self.prepare_requests(
+            &url,
+            commits,
+            self.config().max_commit_translate_id,
+            |commits| {
+                let req = CommitTranslateIdRequest { commits, scheme };
+                self.log_request(&req, "commit_translate_id");
+                req
+            },
+        )?;
+        Ok(self.fetch::<CommitTranslateIdResponse>(requests)?)
     }
 }
 

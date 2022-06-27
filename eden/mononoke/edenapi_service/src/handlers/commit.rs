@@ -7,13 +7,14 @@
 
 use anyhow::{anyhow, Context, Error};
 use async_trait::async_trait;
-use futures::{stream, Stream, StreamExt, TryStreamExt};
+use futures::{stream, try_join, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use gotham_ext::{
     error::HttpError, middleware::scuba::ScubaMiddlewareState, response::TryIntoResponse,
 };
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::num::NonZeroU64;
 use std::time::Duration;
 
@@ -21,16 +22,18 @@ use blobstore::Loadable;
 use edenapi_types::{
     wire::WireCommitHashToLocationRequestBatch, AnyFileContentId, AnyId, Batch, BonsaiFileChange,
     CommitGraphEntry, CommitGraphRequest, CommitHashLookupRequest, CommitHashLookupResponse,
-    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
-    CommitLocationToHashResponse, CommitMutationsRequest, CommitMutationsResponse,
-    CommitRevlogData, CommitRevlogDataRequest, EphemeralPrepareRequest, EphemeralPrepareResponse,
-    FetchSnapshotRequest, FetchSnapshotResponse, UploadBonsaiChangesetRequest,
+    CommitHashToLocationResponse, CommitId, CommitIdScheme, CommitLocationToHashRequest,
+    CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitMutationsRequest,
+    CommitMutationsResponse, CommitRevlogData, CommitRevlogDataRequest, CommitTranslateIdRequest,
+    CommitTranslateIdResponse, EphemeralPrepareRequest, EphemeralPrepareResponse,
+    FetchSnapshotRequest, FetchSnapshotResponse, GitSha1, UploadBonsaiChangesetRequest,
     UploadHgChangesetsRequest, UploadToken, UploadTokensResponse,
 };
 use ephemeral_blobstore::BubbleId;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_api_hg::HgRepoContext;
-use mononoke_types::{ChangesetId, DateTime, FileChange};
+use mononoke_types::hash::GitSha1 as MononokeGitSha1;
+use mononoke_types::{ChangesetId, DateTime, FileChange, Globalrev};
 use tunables::tunables;
 use types::{HgId, Parents};
 
@@ -565,5 +568,108 @@ impl EdenApiHandler for CommitMutationsHandler {
             });
 
         Ok(stream::iter(mutations).boxed())
+    }
+}
+
+pub struct CommitTranslateId;
+
+#[async_trait]
+impl EdenApiHandler for CommitTranslateId {
+    type Request = CommitTranslateIdRequest;
+    type Response = CommitTranslateIdResponse;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::CommitTranslateId;
+    const ENDPOINT: &'static str = "/commit/translate_id";
+
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let mut hg_ids = Vec::new();
+        let mut bonsai_ids = Vec::new();
+        let mut git_ids = Vec::new();
+        let mut globalrevs = Vec::new();
+        for commit in &request.commits {
+            match commit {
+                CommitId::Hg(hg_id) => hg_ids.push(HgChangesetId::from(*hg_id)),
+                CommitId::Bonsai(bonsai_id) => bonsai_ids.push(ChangesetId::from(*bonsai_id)),
+                CommitId::GitSha1(git_id) => {
+                    git_ids.push(MononokeGitSha1::from_byte_array(git_id.into_byte_array()))
+                }
+                CommitId::Globalrev(globalrev) => globalrevs.push(Globalrev::new(*globalrev)),
+            }
+        }
+        // Convert request types to bonsais
+        let (hg_bonsais, git_bonsais, globalrev_bonsais) = try_join!(
+            repo.repo().many_changeset_ids_from_hg(hg_ids),
+            repo.repo().many_changeset_ids_from_git_sha1(git_ids),
+            repo.repo().many_changeset_ids_from_globalrev(globalrevs),
+        )?;
+        let hg_bonsais = hg_bonsais.into_iter().collect::<HashMap<_, _>>();
+        let git_bonsais = git_bonsais.into_iter().collect::<HashMap<_, _>>();
+        let globalrev_bonsais = globalrev_bonsais.into_iter().collect::<HashMap<_, _>>();
+        // Collect all bonsai changeset ids
+        let all_bonsai_ids: Vec<ChangesetId> = bonsai_ids
+            .into_iter()
+            .chain(hg_bonsais.values().copied())
+            .chain(git_bonsais.values().copied())
+            .chain(globalrev_bonsais.values().copied())
+            .collect();
+        // Convert all bonsais to the target type
+        let bonsai_translations: HashMap<ChangesetId, CommitId> = match request.scheme {
+            CommitIdScheme::Bonsai => all_bonsai_ids
+                .into_iter()
+                .map(|id| (id.clone(), CommitId::Bonsai(id.clone().into())))
+                .collect(),
+            CommitIdScheme::Hg => repo
+                .repo()
+                .many_changeset_hg_ids(all_bonsai_ids)
+                .await?
+                .into_iter()
+                .map(|(id, hg_id)| (id, CommitId::Hg(hg_id.into())))
+                .collect(),
+            CommitIdScheme::GitSha1 => repo
+                .repo()
+                .many_changeset_git_sha1s(all_bonsai_ids)
+                .await?
+                .into_iter()
+                .map(|(id, git_sha1)| {
+                    (
+                        id,
+                        CommitId::GitSha1(GitSha1::from_byte_array(git_sha1.into_inner())),
+                    )
+                })
+                .collect(),
+            CommitIdScheme::Globalrev => repo
+                .repo()
+                .many_changeset_globalrev_ids(all_bonsai_ids)
+                .await?
+                .into_iter()
+                .map(|(id, globalrev)| (id, CommitId::Globalrev(globalrev.id())))
+                .collect(),
+        };
+        // Build the response based on the original request
+        let translations: Vec<_> = request
+            .commits
+            .into_iter()
+            .filter_map(|commit| {
+                let id = match commit {
+                    CommitId::Hg(hg_id) => *hg_bonsais.get(&HgChangesetId::from(hg_id))?,
+                    CommitId::Bonsai(id) => ChangesetId::from(id),
+                    CommitId::GitSha1(git_id) => *git_bonsais
+                        .get(&MononokeGitSha1::from_byte_array(git_id.into_byte_array()))?,
+                    CommitId::Globalrev(globalrev) => {
+                        *globalrev_bonsais.get(&Globalrev::new(globalrev))?
+                    }
+                };
+                let translated = bonsai_translations.get(&id)?.clone();
+                Some(CommitTranslateIdResponse { commit, translated })
+            })
+            .map(anyhow::Ok)
+            .collect();
+        Ok(stream::iter(translations).boxed())
     }
 }

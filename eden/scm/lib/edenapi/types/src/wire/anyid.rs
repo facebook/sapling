@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::anyid::BonsaiChangesetId;
 pub use crate::anyid::WireAnyId;
 pub use crate::anyid::WireLookupRequest;
 pub use crate::anyid::WireLookupResponse;
 pub use crate::anyid::WireLookupResult;
+use crate::commitid::BonsaiChangesetId;
+use crate::commitid::GitSha1;
 use crate::wire::ToApi;
 use crate::wire::ToWire;
 
@@ -17,6 +18,12 @@ wire_hash! {
     wire => WireBonsaiChangesetId,
     api  => BonsaiChangesetId,
     size => 32,
+}
+
+wire_hash! {
+    wire => WireGitSha1,
+    api  => GitSha1,
+    size => 20,
 }
 
 #[cfg(test)]

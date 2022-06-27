@@ -14,11 +14,10 @@ use serde_derive::Serialize;
 use type_macros::auto_wire;
 use types::HgId;
 
+use crate::commitid::BonsaiChangesetId;
 use crate::AnyFileContentId;
 use crate::IndexableId;
 use crate::UploadToken;
-
-blake2_hash!(BonsaiChangesetId);
 
 #[auto_wire]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]

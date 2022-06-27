@@ -140,6 +140,7 @@ pub struct HttpClientBuilder {
     max_history: Option<usize>,
     max_location_to_hash: Option<usize>,
     max_commit_mutations: Option<usize>,
+    max_commit_translate_id: Option<usize>,
     timeout: Option<Duration>,
     debug: bool,
     correlator: Option<String>,
@@ -204,6 +205,7 @@ impl HttpClientBuilder {
         let max_history = get_config(config, "edenapi", "maxhistory")?;
         let max_location_to_hash = get_config(config, "edenapi", "maxlocationtohash")?;
         let max_commit_mutations = get_config(config, "edenapi", "maxcommitmutations")?;
+        let max_commit_translate_id = get_config(config, "edenapi", "maxcommittranslateid")?;
         let timeout = get_config(config, "edenapi", "timeout")?.map(Duration::from_secs);
         let debug = get_config(config, "edenapi", "debug")?.unwrap_or_default();
         let http_version =
@@ -247,6 +249,7 @@ impl HttpClientBuilder {
             max_history,
             max_location_to_hash,
             max_commit_mutations,
+            max_commit_translate_id,
             timeout,
             debug,
             correlator: None,
@@ -402,6 +405,7 @@ pub(crate) struct Config {
     pub(crate) max_history: Option<usize>,
     pub(crate) max_location_to_hash: Option<usize>,
     pub(crate) max_commit_mutations: Option<usize>,
+    pub(crate) max_commit_translate_id: Option<usize>,
     pub(crate) timeout: Option<Duration>,
     #[allow(dead_code)]
     pub(crate) debug: bool,
@@ -427,6 +431,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             max_history,
             max_location_to_hash,
             max_commit_mutations,
+            max_commit_translate_id,
             timeout,
             debug,
             correlator,
@@ -463,6 +468,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             max_history,
             max_location_to_hash,
             max_commit_mutations,
+            max_commit_translate_id,
             timeout,
             debug,
             correlator,

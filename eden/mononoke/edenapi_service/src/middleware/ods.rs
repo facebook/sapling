@@ -46,6 +46,7 @@ define_stats! {
     commit_graph_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     download_file_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     commit_mutations_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    commit_translate_id_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
 }
 
 fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
@@ -101,6 +102,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 CommitGraph => STATS::commit_graph_duration_ms.add_value(dur_ms),
                 DownloadFile => STATS::download_file_duration_ms.add_value(dur_ms),
                 CommitMutations => STATS::commit_mutations_duration_ms.add_value(dur_ms),
+                CommitTranslateId => STATS::commit_translate_id_duration_ms.add_value(dur_ms),
             }
         }
 

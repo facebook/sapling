@@ -1121,6 +1121,18 @@ impl RepoContext {
         Ok(mapping)
     }
 
+    /// Get changeset ID from Mercurial ID for multiple changesets
+    pub async fn many_changeset_ids_from_hg(
+        &self,
+        changesets: Vec<HgChangesetId>,
+    ) -> Result<Vec<(HgChangesetId, ChangesetId)>, MononokeError> {
+        let mapping = self
+            .blob_repo()
+            .get_hg_bonsai_mapping(self.ctx.clone(), changesets)
+            .await?;
+        Ok(mapping)
+    }
+
     /// Similar to many_changeset_hg_ids, but returning Git-SHA1s.
     pub async fn many_changeset_git_sha1s(
         &self,
@@ -1137,6 +1149,22 @@ impl RepoContext {
         Ok(mapping)
     }
 
+    /// Get changeset ID from Git-SHA1 for multiple changesets
+    pub async fn many_changeset_ids_from_git_sha1(
+        &self,
+        changesets: Vec<GitSha1>,
+    ) -> Result<Vec<(GitSha1, ChangesetId)>, MononokeError> {
+        let mapping = self
+            .blob_repo()
+            .bonsai_git_mapping()
+            .get(&self.ctx, changesets.into())
+            .await?
+            .into_iter()
+            .map(|entry| (entry.git_sha1, entry.bcs_id))
+            .collect();
+        Ok(mapping)
+    }
+
     /// Similar to many_changeset_hg_ids, but returning Globalrevs.
     pub async fn many_changeset_globalrev_ids(
         &self,
@@ -1149,6 +1177,22 @@ impl RepoContext {
             .await?
             .into_iter()
             .map(|entry| (entry.bcs_id, entry.globalrev))
+            .collect();
+        Ok(mapping)
+    }
+
+    /// Get changeset ID from Globalrev for multiple changesets
+    pub async fn many_changeset_ids_from_globalrev(
+        &self,
+        changesets: Vec<Globalrev>,
+    ) -> Result<Vec<(Globalrev, ChangesetId)>, MononokeError> {
+        let mapping = self
+            .blob_repo()
+            .bonsai_globalrev_mapping()
+            .get(&self.ctx, changesets.into())
+            .await?
+            .into_iter()
+            .map(|entry| (entry.globalrev, entry.bcs_id))
             .collect();
         Ok(mapping)
     }

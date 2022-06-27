@@ -23,6 +23,8 @@ use types::Parents;
 use types::RepoPathBuf;
 
 use crate::BonsaiChangesetId;
+use crate::CommitId;
+use crate::CommitIdScheme;
 use crate::FileType;
 use crate::ServerError;
 use crate::UploadToken;
@@ -411,6 +413,26 @@ pub struct CommitMutationsRequest {
 pub struct CommitMutationsResponse {
     #[id(1)]
     pub mutation: HgMutationEntryContent,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct CommitTranslateIdRequest {
+    #[id(1)]
+    pub commits: Vec<CommitId>,
+    #[id(2)]
+    pub scheme: CommitIdScheme,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct CommitTranslateIdResponse {
+    #[id(1)]
+    pub commit: CommitId,
+    #[id(2)]
+    pub translated: CommitId,
 }
 
 #[cfg(test)]

@@ -18,11 +18,14 @@ use edenapi_types::CloneData;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitHashLookupResponse;
 use edenapi_types::CommitHashToLocationResponse;
+use edenapi_types::CommitId;
+use edenapi_types::CommitIdScheme;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::CommitLocationToHashRequest;
 use edenapi_types::CommitLocationToHashResponse;
 use edenapi_types::CommitMutationsResponse;
 use edenapi_types::CommitRevlogData;
+use edenapi_types::CommitTranslateIdResponse;
 use edenapi_types::EdenApiServerError;
 use edenapi_types::EphemeralPrepareResponse;
 use edenapi_types::FetchSnapshotRequest;
@@ -293,6 +296,16 @@ pub trait EdenApi: Send + Sync + 'static {
         commits: Vec<HgId>,
     ) -> Result<Vec<CommitMutationsResponse>, EdenApiError> {
         let _ = commits;
+        Err(EdenApiError::NotSupported)
+    }
+
+    /// Translate commit IDs to a different commit ID scheme
+    async fn commit_translate_id(
+        &self,
+        commits: Vec<CommitId>,
+        scheme: CommitIdScheme,
+    ) -> Result<Response<CommitTranslateIdResponse>, EdenApiError> {
+        let _ = (commits, scheme);
         Err(EdenApiError::NotSupported)
     }
 }

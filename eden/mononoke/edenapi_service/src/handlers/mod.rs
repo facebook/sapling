@@ -83,6 +83,7 @@ pub enum EdenApiMethod {
     CommitGraph,
     DownloadFile,
     CommitMutations,
+    CommitTranslateId,
 }
 
 impl fmt::Display for EdenApiMethod {
@@ -114,6 +115,7 @@ impl fmt::Display for EdenApiMethod {
             Self::FetchSnapshot => "fetch_snapshot",
             Self::DownloadFile => "download_file",
             Self::CommitMutations => "commit_mutations",
+            Self::CommitTranslateId => "commit_translate_id",
         };
         write!(f, "{}", name)
     }
@@ -300,6 +302,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<commit::GraphHandler>(route);
         Handlers::setup::<files::DownloadFileHandler>(route);
         Handlers::setup::<commit::CommitMutationsHandler>(route);
+        Handlers::setup::<commit::CommitTranslateId>(route);
         route.get("/:repo/health_check").to(health_handler);
         route
             .get("/:repo/capabilities")

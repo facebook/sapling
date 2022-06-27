@@ -28,9 +28,12 @@ use edenapi_types::AnyFileContentId;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitHashLookupResponse;
 use edenapi_types::CommitHashToLocationResponse;
+use edenapi_types::CommitId;
+use edenapi_types::CommitIdScheme;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::CommitLocationToHashResponse;
 use edenapi_types::CommitRevlogData;
+use edenapi_types::CommitTranslateIdResponse;
 use edenapi_types::EphemeralPrepareResponse;
 use edenapi_types::FetchSnapshotRequest;
 use edenapi_types::FetchSnapshotResponse;
@@ -480,6 +483,18 @@ py_class!(pub class client |py| {
             .map_pyerr(py)?
             .map_pyerr(py)
             .map(|responses| Serde(responses.into_iter().map(|r| r.mutation).collect()))
+    }
+
+    def committranslateids(
+        &self,
+        commits: Serde<Vec<CommitId>>,
+        scheme: Serde<CommitIdScheme>,
+    ) -> PyResult<TStream<anyhow::Result<Serde<CommitTranslateIdResponse>>>> {
+        let api = self.inner(py).as_ref();
+        let responses = py.allow_threads(|| block_unless_interrupted(api.commit_translate_id(commits.0, scheme.0)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+        Ok(responses.entries.map_ok(Serde).map_err(Into::into).into())
     }
 });
 
