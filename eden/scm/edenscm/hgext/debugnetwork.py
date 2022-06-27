@@ -259,8 +259,7 @@ def drivespeedtests(ui, latency, upload, download):
     [
         ("", "connection", False, _("run connection tests")),
         ("", "speed", False, _("run speed tests")),
-    ]
-    + cmdutil.remoteopts,
+    ],
     _("[REMOTE]"),
 )
 def debugnetwork(ui, repo, remote="default", **opts):

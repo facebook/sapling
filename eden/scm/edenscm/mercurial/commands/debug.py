@@ -1170,7 +1170,7 @@ def debugdiffdirs(ui, repo, *pats, **opts):
 
 @command(
     "debugdiscovery",
-    [("", "rev", [], "restrict discovery to this set of revs")] + cmdutil.remoteopts,
+    [("", "rev", [], "restrict discovery to this set of revs")],
     _("[--rev REV] [OTHER]"),
 )
 def debugdiscovery(ui, repo, remoteurl="default", **opts):
@@ -3441,15 +3441,12 @@ def debugwalk(ui, repo, *pats, **opts):
 
 @command(
     "debugwireargs",
-    [("", "three", "", "three"), ("", "four", "", "four"), ("", "five", "", "five")]
-    + cmdutil.remoteopts,
+    [("", "three", "", "three"), ("", "four", "", "four"), ("", "five", "", "five")],
     _("REPO [OPTIONS]... [ONE [TWO]]"),
     norepo=True,
 )
 def debugwireargs(ui, repopath, *vals, **opts):
     repo = hg.peer(ui, opts, repopath)
-    for opt in cmdutil.remoteopts:
-        del opts[opt[1]]
     args = {}
     for k, v in pycompat.iteritems(opts):
         if v:

@@ -176,7 +176,6 @@ globalopts = cmdutil._typedflags(
 )
 
 dryrunopts = cmdutil.dryrunopts
-remoteopts = cmdutil.remoteopts
 walkopts = cmdutil.walkopts
 commitopts = cmdutil.commitopts
 commitopts2 = cmdutil.commitopts2
@@ -1310,8 +1309,7 @@ def branch(ui, repo, label=None, **opts):
         ),
         ("a", "all", None, _("bundle all changesets in the repository")),
         ("t", "type", "bzip2", _("bundle compression type to use"), _("TYPE")),
-    ]
-    + remoteopts,
+    ],
     _("[-f] [-t BUNDLESPEC] [-a] [-r REV]... [--base REV]... FILE [DEST]"),
 )
 def bundle(ui, repo, fname, dest=None, **opts):
@@ -1513,8 +1511,7 @@ def cat(ui, repo, file1, *pats, **opts):
             _("use remotefilelog (only turn it off in legacy tests) (ADVANCED)"),
         ),
         ("", "git", False, _("use git protocol (EXPERIMENTAL)")),
-    ]
-    + remoteopts,
+    ],
     norepo=True,
 )
 def clone(ui, source, dest=None, **opts):
@@ -3325,7 +3322,6 @@ def histgrep(ui, repo, pattern, *pats, **opts):
         ("t", "tags", None, _("show tags (DEPRECATED)")),
         ("B", "bookmarks", None, _("show bookmarks")),
     ]
-    + remoteopts
     + formatteropts,
     _("[-nibtB] [-r REV] [SOURCE]"),
     optionalrepo=True,
@@ -3716,8 +3712,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
 
 @command(
     "init|ini",
-    remoteopts
-    + [
+    [
         ("", "git", False, _("use git as backend (EXPERIMENTAL)")),
     ],
     _("[-e CMD] [--remotecmd CMD] [DEST]"),
@@ -4469,8 +4464,7 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
         ("f", "force", None, _("run even when remote repository is unrelated")),
         ("r", "rev", [], _("a remote commit to pull"), _("REV")),
         ("B", "bookmark", [], _("a bookmark to pull"), _("BOOKMARK")),
-    ]
-    + remoteopts,
+    ],
     _("[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]"),
 )
 def pull(ui, repo, source="default", **opts):
@@ -4727,8 +4721,7 @@ def _newpull(ui, repo, source, **opts):
         ("B", "bookmark", [], _("bookmark to push"), _("BOOKMARK")),
         ("", "new-branch", False, _("allow pushing a new branch (DEPRECATED)")),
         ("", "pushvars", [], _("variables that can be sent to server (ADVANCED)")),
-    ]
-    + remoteopts,
+    ],
     _("[-f] [-r REV]... [-e CMD] [--remotecmd CMD] [DEST]"),
 )
 def push(ui, repo, dest=None, **opts):

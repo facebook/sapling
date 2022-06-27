@@ -792,12 +792,10 @@ documented aliases
   
   Options:
   
-   -r --rev REV       identify the specified revision
-   -n --num           show local revision number
-   -i --id            show global revision id
-   -B --bookmarks     show bookmarks
-   -e --ssh CMD       specify ssh command to use
-      --remotecmd CMD specify hg command to run on the remote side
+   -r --rev REV   identify the specified revision
+   -n --num       show local revision number
+   -i --id        show global revision id
+   -B --bookmarks show bookmarks
   
   (some details hidden, use --verbose to show complete help)
 

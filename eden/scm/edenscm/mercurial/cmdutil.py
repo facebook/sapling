@@ -72,11 +72,6 @@ def _typedflags(flags):
 
 dryrunopts = [("n", "dry-run", None, _("do not perform actions, just print output"))]
 
-remoteopts = [
-    ("e", "ssh", "", _("specify ssh command to use"), _("CMD")),
-    ("", "remotecmd", "", _("specify hg command to run on the remote side"), _("CMD")),
-]
-
 walkopts = _typedflags(
     [
         (
