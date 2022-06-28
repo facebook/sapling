@@ -167,8 +167,7 @@ ParentCommit CheckoutConfig::getParentCommit() const {
     }
 
     case kSnapshotFormatCheckoutInProgressVersion: {
-      // Skip the PID
-      cursor.skip(sizeof(uint32_t));
+      auto pid = cursor.readBE<int32_t>();
 
       auto fromLength = cursor.readBE<uint32_t>();
       std::string fromRootId = cursor.readFixedString(fromLength);
@@ -177,7 +176,7 @@ ParentCommit CheckoutConfig::getParentCommit() const {
       std::string toRootId = cursor.readFixedString(toLength);
 
       return ParentCommit::CheckoutInProgress{
-          RootId{std::move(fromRootId)}, RootId{std::move(toRootId)}};
+          RootId{std::move(fromRootId)}, RootId{std::move(toRootId)}, pid};
     }
 
     case kSnapshotFormatWorkingCopyParentAndCheckedOutRevisionVersion: {

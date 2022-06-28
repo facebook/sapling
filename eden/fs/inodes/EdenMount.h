@@ -1155,6 +1155,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
     RootId workingCopyParentRootId;
     bool checkoutInProgress = false;
     std::optional<std::tuple<RootId, RootId>> checkoutOriginalTrees;
+    std::optional<pid_t> checkoutPid;
   };
 
   /**

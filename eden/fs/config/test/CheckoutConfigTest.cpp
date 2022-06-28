@@ -162,7 +162,8 @@ TEST_F(CheckoutConfigTest, testInProgress) {
 
   ParentCommit inProgress = ParentCommit::CheckoutInProgress{
       RootId{"99887766554433221100aabbccddeeffabcdef99"},
-      RootId{"fedcba99887766554433221100ffeeddccbbaa99"}};
+      RootId{"fedcba99887766554433221100ffeeddccbbaa99"},
+      123};
 
   auto parent = config->getParentCommit();
   EXPECT_EQ(inProgress, parent);
@@ -174,7 +175,7 @@ TEST_F(CheckoutConfigTest, testInProgressRoundtrip) {
 
   auto from = RootId{"99887766554433221100aabbccddeeffabcdef99"};
   auto to = RootId{"fedcba998887766554433221100ffeeddccbbaa99"};
-  ParentCommit inProgress = ParentCommit::CheckoutInProgress{from, to};
+  ParentCommit inProgress = ParentCommit::CheckoutInProgress{from, to, 123};
 
   config->setCheckoutInProgress(from, to);
 

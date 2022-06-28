@@ -292,7 +292,8 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
                   checkoutOriginalDest = parentCommit.getLastCheckoutId(
                       ParentCommit::RootIdPreference::To),
                   checkoutOriginalSrc = parentCommit.getLastCheckoutId(
-                      ParentCommit::RootIdPreference::From)](
+                      ParentCommit::RootIdPreference::From),
+                  checkoutPid = parentCommit.getInProgressPid()](
                      std::shared_ptr<const Tree> parentTree) mutable {
         std::optional<std::tuple<RootId, RootId>> originalCheckoutTrees =
             std::nullopt;
@@ -305,7 +306,9 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
             parentTree,
             workingCopyParentRootId,
             inProgressCheckout,
-            originalCheckoutTrees};
+            originalCheckoutTrees,
+            checkoutPid,
+        };
 
         // Record the transition from no snapshot to the current snapshot in
         // the journal.  This also sets things up so that we can carry the
