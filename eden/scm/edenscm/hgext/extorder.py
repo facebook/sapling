@@ -43,8 +43,6 @@ class MercurialExtOrderException(BaseException):
     is incorrect. That's why this class exists.
     """
 
-    pass
-
 
 def uisetup(ui):
 

@@ -14,10 +14,10 @@ import threading
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, Iterable, List, Optional, Set, Union
+from typing import Callable, List, Optional, Union
 
 from . import hghave
-from .runtime import hasfeature, Mismatch, TestTmp
+from .runtime import hasfeature, Mismatch
 from .transform import transform
 
 

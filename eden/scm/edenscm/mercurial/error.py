@@ -18,8 +18,6 @@ imports.
 
 from __future__ import absolute_import
 
-import enum
-
 import bindings
 
 # Do not import anything but pycompat here, please

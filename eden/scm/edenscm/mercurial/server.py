@@ -15,7 +15,7 @@ from __future__ import absolute_import
 import os
 import tempfile
 
-from . import chgserver, cmdutil, commandserver, error, hgweb, pycompat, util
+from . import chgserver, commandserver, error, hgweb, pycompat, util
 from .i18n import _
 from .pycompat import range
 

@@ -8,15 +8,14 @@ from __future__ import absolute_import
 
 import hashlib
 import os
-import sys
 
 from bindings import revisionstore
 from edenscm.hgext import extutil
-from edenscm.mercurial import error, filelog, progress, pycompat, revlog, util
+from edenscm.mercurial import error, filelog, pycompat, revlog
 from edenscm.mercurial.i18n import _, _x
 from edenscm.mercurial.node import bin, hex, nullid, short
 
-from . import constants, fileserverclient, historypack, shallowrepo, shallowutil
+from . import constants, fileserverclient, shallowrepo, shallowutil
 from .contentstore import unioncontentstore
 from .lz4wrapper import lz4decompress
 from .repack import repacklockvfs

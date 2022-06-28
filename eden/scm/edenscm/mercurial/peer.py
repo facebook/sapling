@@ -13,7 +13,7 @@
 
 from __future__ import absolute_import
 
-from . import error, pycompat, util
+from . import error, util
 
 
 # abstract batching support

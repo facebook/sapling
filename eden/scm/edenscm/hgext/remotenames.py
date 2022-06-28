@@ -45,7 +45,6 @@ from edenscm.mercurial import (
     registrar,
     revset,
     scmutil,
-    setdiscovery,
     smartset,
     url,
     util,
@@ -61,7 +60,7 @@ from edenscm.mercurial.bookmarks import (
     splitremotename,
 )
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin, hex, nullid, short
+from edenscm.mercurial.node import bin, hex, short
 
 
 cmdtable = {}

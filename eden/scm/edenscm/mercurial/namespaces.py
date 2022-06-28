@@ -12,7 +12,6 @@ from __future__ import absolute_import
 
 from . import error, pycompat, registrar, templatekw, util
 from .i18n import _
-from .node import hex
 
 
 namespacetable = util.sortdict()

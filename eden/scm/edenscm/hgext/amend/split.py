@@ -23,7 +23,6 @@ from edenscm.mercurial import (
     error,
     hg,
     hintutil,
-    lock as lockmod,
     mutation,
     registrar,
     scmutil,

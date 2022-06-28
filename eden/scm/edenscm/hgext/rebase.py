@@ -22,7 +22,6 @@ https://mercurial-scm.org/wiki/RebaseExtension
 from __future__ import absolute_import
 
 import errno
-import os
 
 from bindings import checkout as nativecheckout
 from edenscm.mercurial import (
@@ -41,13 +40,11 @@ from edenscm.mercurial import (
     merge as mergemod,
     mergeutil,
     mutation,
-    patch,
     perftrace,
     phases,
     progress,
     pycompat,
     registrar,
-    repair,
     revset,
     revsetlang,
     scmutil,

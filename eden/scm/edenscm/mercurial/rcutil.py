@@ -15,7 +15,7 @@ from __future__ import absolute_import
 import errno
 import os
 
-from . import config, encoding, mdiff, pycompat, util
+from . import config, encoding, pycompat, util
 
 
 if pycompat.iswindows:

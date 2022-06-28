@@ -27,9 +27,7 @@ to the user.
 
 from __future__ import absolute_import
 
-import contextlib
 import datetime
-import itertools
 import re
 import time
 
@@ -38,20 +36,14 @@ from edenscm.mercurial import (
     cmdutil,
     commands,
     dagop,
-    error,
     extensions,
     graphmod,
-    mutation,
     node as nodemod,
     phases,
-    pycompat,
     registrar,
-    revlog,
     revset,
     revsetlang,
-    scmutil,
     smartset,
-    templatekw,
     templater,
     util,
 )

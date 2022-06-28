@@ -13,7 +13,6 @@ from edenscm.mercurial import (
     commands,
     error,
     extensions,
-    hintutil,
     mdiff,
     patch,
     pycompat,

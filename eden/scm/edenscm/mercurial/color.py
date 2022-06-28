@@ -13,7 +13,7 @@
 from __future__ import absolute_import
 
 import re
-from typing import Any, Callable, Union
+from typing import Union
 
 from . import encoding, pycompat, util
 from .i18n import _

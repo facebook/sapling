@@ -60,15 +60,12 @@ from edenscm.mercurial import (
     extensions,
     localrepo,
     namespaces,
-    phases,
     progress,
     pycompat,
     registrar,
     revset,
-    smartset,
 )
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin, hex, nullid
 
 from .hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
 from .pushrebase import isnonpushrebaseblocked

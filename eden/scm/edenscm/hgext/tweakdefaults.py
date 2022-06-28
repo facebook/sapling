@@ -47,9 +47,7 @@ Config::
 """
 from __future__ import absolute_import
 
-import inspect
 import json
-import os
 import re
 import subprocess
 import sys
@@ -57,13 +55,11 @@ import time
 
 from edenscm.mercurial import (
     bookmarks,
-    cmdutil,
     commands,
     encoding,
     error,
     extensions,
     hg,
-    hintutil,
     patch,
     pycompat,
     registrar,
@@ -74,7 +70,7 @@ from edenscm.mercurial import (
     util,
 )
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin, short
+from edenscm.mercurial.node import short
 
 from . import rebase
 

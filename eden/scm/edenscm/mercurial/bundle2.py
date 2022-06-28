@@ -174,7 +174,7 @@ from . import (
     urllibcompat,
     util,
 )
-from .i18n import _, _x
+from .i18n import _
 from .vfs import abstractvfs
 
 

@@ -494,7 +494,6 @@ def _get_overlapped_result_ex_impl(pipe, olap, nbytes, millis, alertable):
             # WaitForSingleObjectEx returnes because the system added an I/O completion
             # routine or an asynchronous procedure call (APC) to the thread queue.
             SetLastError(WAIT_IO_COMPLETION)
-            pass
         elif waitReturnCode == WAIT_TIMEOUT:
             # We reached the maximum allowed wait time, the IO operation failed
             # to complete in timely fashion.
@@ -876,8 +875,6 @@ class Bser2WithFallbackCodec(BserCodec):
 class ImmutableBser2Codec(Bser2WithFallbackCodec, ImmutableBserCodec):
     """use the BSER encoding, decoding values using the newer
     immutable object support"""
-
-    pass
 
 
 class JsonCodec(Codec):

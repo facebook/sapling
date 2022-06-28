@@ -13,7 +13,6 @@
 
 from __future__ import absolute_import
 
-import os
 import shlex
 import sys
 import time
@@ -25,7 +24,6 @@ from edenscm import hgdemandimport, hgext, mercurial, traceimport
 from edenscm.hgext import commitcloud as cc
 from edenscm.mercurial import pycompat, registrar, util
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.pycompat import decodeutf8
 
 
 cmdtable = {}

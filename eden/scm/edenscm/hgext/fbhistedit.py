@@ -9,7 +9,6 @@
 Adds a s/stop verb to histedit to stop after a changeset was picked.
 """
 
-import json
 from pipes import quote
 
 from edenscm import mercurial

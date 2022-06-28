@@ -13,22 +13,9 @@
 
 from __future__ import absolute_import
 
-import errno
 import hashlib
 
-from . import (
-    bundle2,
-    changegroup,
-    discovery,
-    error,
-    exchange,
-    obsolete,
-    progress,
-    pycompat,
-    scmutil,
-    util,
-    visibility,
-)
+from . import bundle2, changegroup, discovery, error, progress, scmutil, util
 from .i18n import _
 from .node import hex, short
 from .pycompat import encodeutf8, range

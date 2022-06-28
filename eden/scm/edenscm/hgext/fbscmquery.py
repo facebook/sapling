@@ -6,7 +6,6 @@
 # scmquery.py
 # An extension to augement hg with information obtained from SCMQuery
 
-import json
 import re
 from typing import Any, List
 
@@ -21,8 +20,6 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _, _x
 from edenscm.mercurial.node import bin
-from edenscm.mercurial.pycompat import range
-from edenscm.mercurial.util import httplib
 
 from .extlib.phabricator import arcconfig, graphql
 

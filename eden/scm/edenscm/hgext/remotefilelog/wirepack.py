@@ -8,7 +8,6 @@ from __future__ import absolute_import
 
 import struct
 import time
-from collections import defaultdict
 from typing import cast, Dict, Generator, IO, Iterable, List, Optional, Sequence, Tuple
 
 from edenscm.mercurial import perftrace, progress, pycompat
@@ -17,7 +16,7 @@ from edenscm.mercurial.node import hex, nullid
 from edenscm.mercurial.pycompat import range
 from edenscm.mercurial.types import UI
 
-from . import constants, shallowutil
+from . import constants
 from .mutablestores import mutabledatastore, mutablehistorystore
 from .shallowutil import buildpackmeta, parsepackmeta, readexactly, readpath, readunpack
 

@@ -67,7 +67,7 @@ from edenscm.mercurial import (
     scmutil,
 )
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import nullid, short
+from edenscm.mercurial.node import short
 
 from .. import rebase as rebasemod
 from . import common, fold, hide, metaedit, movement, restack, revsets, split, unamend

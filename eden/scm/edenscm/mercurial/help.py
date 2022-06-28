@@ -13,7 +13,6 @@
 from __future__ import absolute_import
 
 import itertools
-import os
 import textwrap
 
 from bindings import cliparser

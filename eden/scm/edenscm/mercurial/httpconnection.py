@@ -21,8 +21,7 @@ import socket
 
 from bindings import auth as rustauth
 
-from . import httpclient, pycompat, sslutil, urllibcompat, util
-from .i18n import _
+from . import httpclient, sslutil, urllibcompat, util
 
 urlerr = util.urlerr
 urlreq = util.urlreq

@@ -10,13 +10,10 @@
     rpmbin = rpm
 """
 import ctypes
-import datetime
 import glob
 import json
 import os
-import re
 import socket
-import struct
 import subprocess
 import tempfile
 import threading
@@ -28,24 +25,16 @@ from pathlib import Path
 import bindings
 from edenscm.mercurial import (
     bookmarks,
-    cmdutil,
     color,
-    commands,
-    detectissues,
     encoding,
     error,
-    extensions,
-    hg,
     hintutil,
     progress,
     pycompat,
     registrar,
-    scmutil,
     util,
 )
 from edenscm.mercurial.i18n import _
-
-from .remotefilelog import constants, shallowutil
 
 
 cmdtable = {}

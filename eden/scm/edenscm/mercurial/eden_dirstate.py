@@ -16,14 +16,10 @@ from . import (
     encoding,
     localrepo,
     match as matchmod,
-    perftrace,
     pycompat,
-    scmutil,
     ui as ui_mod,
     util,
 )
-from .EdenThriftClient import ScmFileStatus
-from .i18n import _
 from .node import nullid
 
 

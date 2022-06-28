@@ -8,7 +8,7 @@
 from __future__ import absolute_import
 
 from edenscm.hgext import rebase
-from edenscm.mercurial import commands, revsetlang
+from edenscm.mercurial import commands
 from edenscm.mercurial.i18n import _
 
 

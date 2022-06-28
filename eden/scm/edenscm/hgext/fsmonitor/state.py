@@ -12,7 +12,7 @@ import os
 import socket
 import struct
 
-from edenscm.mercurial import pathutil, util
+from edenscm.mercurial import pathutil
 from edenscm.mercurial.i18n import _
 
 

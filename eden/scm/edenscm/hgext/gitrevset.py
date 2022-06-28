@@ -19,7 +19,7 @@ from __future__ import absolute_import
 
 import re
 
-from edenscm.mercurial import error, extensions, hg, namespaces, registrar, revset
+from edenscm.mercurial import error, hg, namespaces, registrar, revset
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex
 

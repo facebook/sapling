@@ -10,11 +10,8 @@ This overrides the dirstate to check with the eden daemon for modifications,
 instead of doing a normal scan of the filesystem.
 """
 
-import errno
 import os
-import random
 import sys
-import time
 
 import toml
 from thrift.Thrift import TApplicationException

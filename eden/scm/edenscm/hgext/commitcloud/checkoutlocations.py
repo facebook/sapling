@@ -44,4 +44,3 @@ def send(ui, repo, parent1, **kwargs):
         ui.debug("finished in %0.2f sec\n" % elapsed)
     except Exception as e:
         ui.debug("syncing checkout locations failed with error: %s" % str(e))
-        pass

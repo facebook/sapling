@@ -43,11 +43,9 @@ from __future__ import absolute_import
 
 import errno
 import os
-import re
 import weakref
 
 from edenscm.mercurial import extensions, registrar, ui as uimod, util
-from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex
 from edenscm.mercurial.pycompat import encodeutf8, range
 

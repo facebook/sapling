@@ -14,12 +14,10 @@ from __future__ import absolute_import, print_function
 
 import contextlib
 import errno
-import sys
 import time
 
 from . import blackbox, error, extensions, pycompat, util
 from .i18n import _
-from .pycompat import decodeutf8
 
 
 def _loadprofiler(ui, profiler):

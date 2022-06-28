@@ -3,15 +3,11 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-import contextlib
 import re
-import sys
-import time
 
 from edenscm.mercurial import (
     autopull,
     bundle2,
-    cmdutil,
     commands,
     discovery,
     encoding,
@@ -19,17 +15,12 @@ from edenscm.mercurial import (
     exchange,
     extensions,
     hg,
-    hintutil,
-    obsolete,
     peer,
     phases,
-    pushkey,
     pycompat,
     registrar,
     scmutil,
-    ui as uimod,
     util,
-    visibility,
     wireproto,
 )
 from edenscm.mercurial.i18n import _

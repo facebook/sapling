@@ -59,7 +59,6 @@ from edenscm.mercurial import (
     localrepo,
     lock as lockmod,
     mdiff,
-    phases,
     progress,
     pycompat,
     registrar,

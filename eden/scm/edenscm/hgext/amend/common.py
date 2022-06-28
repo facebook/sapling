@@ -7,8 +7,6 @@
 
 from __future__ import absolute_import
 
-from collections import defaultdict
-
 from edenscm.hgext import rebase
 from edenscm.mercurial import (
     cmdutil,
@@ -20,7 +18,6 @@ from edenscm.mercurial import (
     mutation,
 )
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import nullid
 
 
 def restackonce(

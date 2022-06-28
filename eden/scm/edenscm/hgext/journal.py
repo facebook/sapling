@@ -12,8 +12,6 @@ bookmarks were previously located.
 
 from __future__ import absolute_import
 
-import collections
-import errno
 import os
 import weakref
 from typing import Dict, NamedTuple, Tuple
@@ -493,7 +491,6 @@ class journalstorage(object):
             except ValueError as ex:
                 self.ui.debug("skipping corrupt journalentry: %s" % ex)
                 # If a journal entry is corrupt, just skip it.
-                pass
 
 
 # journal reading

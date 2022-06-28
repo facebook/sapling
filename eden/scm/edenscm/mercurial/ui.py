@@ -27,7 +27,7 @@ import tempfile
 import time
 import traceback
 from enum import IntEnum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import bindings
 from edenscm import tracing

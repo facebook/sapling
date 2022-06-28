@@ -22,10 +22,9 @@ import os
 import posixpath
 import re
 import shutil
-import sys
 import tempfile
 import zlib
-from typing import List, Optional, Sequence, Tuple
+from typing import Optional, Tuple
 
 from bindings import diffhelpers
 

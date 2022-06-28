@@ -33,7 +33,6 @@ from edenscm.mercurial import (
     copies,
     error,
     extensions,
-    pycompat,
     registrar,
     scmutil,
     similar,

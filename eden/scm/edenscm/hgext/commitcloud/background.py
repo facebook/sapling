@@ -30,18 +30,10 @@ import stat
 import time
 
 import bindings
-from edenscm.mercurial import (
-    dispatch,
-    encoding,
-    error,
-    extensions,
-    localrepo,
-    pycompat,
-    util,
-)
+from edenscm.mercurial import dispatch, encoding, extensions, pycompat, util
 from edenscm.mercurial.i18n import _
 
-from . import util as ccutil, workspace
+from . import workspace
 
 
 def extsetup(ui):

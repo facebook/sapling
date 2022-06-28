@@ -150,13 +150,10 @@ import contextlib
 import hashlib
 import os
 import random
-import shutil
 import struct
-import time
 
 from bindings import manifest as rustmanifest, revisionstore
 from edenscm.hgext import clienttelemetry
-from edenscm.hgext.extutil import flock
 from edenscm.hgext.remotefilelog import (
     cmdtable as remotefilelogcmdtable,
     mutablestores,
@@ -173,15 +170,13 @@ from edenscm.hgext.remotefilelog.contentstore import (
 from edenscm.hgext.remotefilelog.datapack import makedatapackstore, memdatapack
 from edenscm.hgext.remotefilelog.historypack import makehistorypackstore, memhistorypack
 from edenscm.hgext.remotefilelog.metadatastore import unionmetadatastore
-from edenscm.hgext.remotefilelog.repack import domaintenancerepack, repacklockvfs
+from edenscm.hgext.remotefilelog.repack import domaintenancerepack
 from edenscm.mercurial import (
     bundle2,
     bundlerepo,
     changegroup,
-    changelog,
     changelog2,
     commands,
-    encoding,
     error,
     exchange,
     extensions,
@@ -206,7 +201,7 @@ from edenscm.mercurial import (
 from edenscm.mercurial.commands import debug as debugcommands
 from edenscm.mercurial.i18n import _, _n
 from edenscm.mercurial.node import bin, hex, nullid, short
-from edenscm.mercurial.pycompat import decodeutf8, range
+from edenscm.mercurial.pycompat import range
 
 
 try:

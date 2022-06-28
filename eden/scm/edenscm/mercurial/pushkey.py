@@ -12,7 +12,7 @@
 
 from __future__ import absolute_import
 
-from . import bookmarks, encoding, obsolete, phases, util
+from . import bookmarks, phases, util
 from .pycompat import decodeutf8, encodeutf8
 
 

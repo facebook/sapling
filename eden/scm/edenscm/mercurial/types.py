@@ -12,7 +12,6 @@
 
 """Common type definitions
 """
-from typing import Any
 
 from .ui import ui
 

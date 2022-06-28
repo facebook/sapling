@@ -26,7 +26,7 @@ import heapq
 import os
 import struct
 import zlib
-from typing import Any, IO, List, Optional, Tuple, Union
+from typing import IO, Optional, Tuple, Union
 
 import bindings
 from edenscmnative import parsers
@@ -35,7 +35,7 @@ from . import ancestor, error, mdiff, pycompat, templatefilters, util
 from .i18n import _
 
 # import stuff from node for others to import from revlog
-from .node import bbin, bhex, bin, hex, nullid, nullrev, wdirhex, wdirid, wdirrev
+from .node import bbin, bhex, hex, nullid, nullrev, wdirhex, wdirid, wdirrev
 from .pycompat import range
 
 

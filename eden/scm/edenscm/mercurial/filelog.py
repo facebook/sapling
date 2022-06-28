@@ -17,6 +17,7 @@ import struct
 from typing import Dict
 
 from . import error, git, mdiff, revlog
+from .node import bin
 from .pycompat import decodeutf8, encodeutf8
 
 
@@ -70,7 +71,7 @@ class filelog(revlog.revlog):
         t = self.revision(node)
         m = parsemeta(t)[0]
         if m and "copy" in m:
-            return (m["copy"], revlog.bin(m["copyrev"]))
+            return (m["copy"], bin(m["copyrev"]))
         return False
 
     def size(self, rev: int) -> int:

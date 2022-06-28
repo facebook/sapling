@@ -14,13 +14,10 @@ import time
 from typing import Dict, IO, Iterable, List, Set
 
 from edenscm.mercurial import (
-    changegroup,
     context,
     error,
     exchange,
     extensions,
-    match,
-    progress,
     pycompat,
     sshserver,
     store,
@@ -30,7 +27,7 @@ from edenscm.mercurial import (
 from edenscm.mercurial.extensions import wrapfunction
 from edenscm.mercurial.hgweb import protocol as httpprotocol
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin, hex, nullid, nullrev
+from edenscm.mercurial.node import bin, hex, nullid
 from edenscm.mercurial.pycompat import range
 
 from . import constants, lz4wrapper, shallowrepo, shallowutil, wirepack

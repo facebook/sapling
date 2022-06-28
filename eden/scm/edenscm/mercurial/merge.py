@@ -44,7 +44,7 @@ from . import (
     worker,
 )
 from .i18n import _
-from .node import addednodeid, bin, hex, modifiednodeid, nullhex, nullid, nullrev
+from .node import addednodeid, bin, hex, nullhex, nullid, nullrev
 from .pycompat import decodeutf8, encodeutf8
 
 _pack = struct.pack

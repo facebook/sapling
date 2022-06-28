@@ -7,17 +7,13 @@ from __future__ import absolute_import
 
 import collections
 import errno
-import hashlib
 import os
 import stat as statmod
-import struct
 import time
 
 from edenscm.mercurial import pycompat, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.pycompat import range
-
-from . import constants, shallowutil
 
 
 # The amount of time to wait between checking for new packs. This prevents an

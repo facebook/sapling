@@ -12,7 +12,7 @@
 
 from __future__ import absolute_import
 
-from . import error, node, revset
+from . import error, node
 from .i18n import _
 
 

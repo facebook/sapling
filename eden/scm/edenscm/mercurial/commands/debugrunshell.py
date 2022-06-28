@@ -5,8 +5,6 @@
 
 from __future__ import absolute_import
 
-import subprocess
-
 from .. import encoding, util
 from ..i18n import _
 from .cmdtable import command

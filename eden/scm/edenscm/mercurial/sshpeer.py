@@ -22,7 +22,7 @@ from typing import Any
 
 from . import error, progress, stdiopeer, util
 from .i18n import _
-from .pycompat import decodeutf8, encodeutf8
+from .pycompat import decodeutf8
 
 
 # Record of the bytes sent and received to SSH peers.  This records the

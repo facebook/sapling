@@ -29,7 +29,6 @@ from . import (
 from .changelog import changelogrevision, gitcommittext, hgcommittext, readfiles
 from .i18n import _
 from .node import hex, nullid, nullrev, wdirid, wdirrev
-from .pycompat import encodeutf8
 
 
 SEGMENTS_DIR = "segments/v1"

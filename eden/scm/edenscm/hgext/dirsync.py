@@ -42,18 +42,14 @@ create a rule for the subdirectory and prefix it with "exclude":
 
 from __future__ import absolute_import
 
-import errno
-
 import bindings
 from edenscm import tracing
 from edenscm.mercurial import (
-    cmdutil,
     config,
     context,
     error,
     extensions,
     localrepo,
-    match as matchmod,
     pycompat,
     scmutil,
     util,

@@ -12,7 +12,7 @@
 
 from __future__ import absolute_import
 
-from . import pycompat, scmutil
+from . import pycompat
 from .node import nullid, nullrev
 
 

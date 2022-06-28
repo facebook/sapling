@@ -29,9 +29,7 @@ from . import (
     fileset,
     git,
     match as matchmod,
-    mdiff,
     mutation,
-    obsolete as obsmod,
     patch,
     pathutil,
     phases,
@@ -435,7 +433,6 @@ class changectx(basectx):
                     self._repo._warnedworkdir = True
                 # we failed on our optimization pass
                 # this can happen when dirstate is broken
-                pass
             if len(changeid) == 20 and isinstance(changeid, bytes):
                 try:
                     self._node = changeid

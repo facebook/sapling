@@ -20,7 +20,6 @@ maintainers if the command is legitimate. To customize this footer, set:
 (newlines are possible in hgrc by indenting the lines after the first)
 
 """
-import getopt
 import re
 
 from bindings import cliparser

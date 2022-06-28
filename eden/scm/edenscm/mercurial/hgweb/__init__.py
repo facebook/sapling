@@ -15,7 +15,7 @@ from __future__ import absolute_import
 
 import os
 
-from .. import error, pycompat, util
+from .. import error, util
 from ..i18n import _
 from . import hgweb_mod, hgwebdir_mod, server
 

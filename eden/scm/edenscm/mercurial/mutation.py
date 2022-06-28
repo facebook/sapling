@@ -12,7 +12,6 @@ from collections import defaultdict
 from bindings import mutationstore
 
 from . import error, node as nodemod, perftrace, phases, util
-from .i18n import _
 from .node import nullid
 
 

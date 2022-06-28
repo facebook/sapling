@@ -21,12 +21,11 @@ from __future__ import absolute_import
 import os
 import shutil
 import tempfile
-from typing import Any, IO, Optional, Union
+from typing import IO, Optional, Union
 
 from . import (
     bundle2,
     changegroup,
-    changelog,
     changelog2,
     cmdutil,
     discovery,
@@ -37,7 +36,6 @@ from . import (
     manifest,
     mdiff,
     mutation,
-    node as nodemod,
     pathutil,
     phases,
     pycompat,
@@ -47,7 +45,7 @@ from . import (
     visibility,
 )
 from .i18n import _
-from .node import nullid, nullrev
+from .node import nullid
 from .pycompat import isint
 
 

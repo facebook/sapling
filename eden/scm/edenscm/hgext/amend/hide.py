@@ -18,7 +18,6 @@ from edenscm.mercurial import (
     bookmarks as bookmarksmod,
     cmdutil,
     error,
-    extensions,
     hg,
     hintutil,
     node as nodemod,

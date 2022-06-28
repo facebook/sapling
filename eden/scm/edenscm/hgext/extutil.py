@@ -9,12 +9,10 @@ from __future__ import absolute_import
 
 import contextlib
 import errno
-import gc
 import os
-import subprocess
 import time
 
-from edenscm.mercurial import error, lock as lockmod, pycompat, util, vfs as vfsmod
+from edenscm.mercurial import error, lock as lockmod, util, vfs as vfsmod
 
 
 def replaceclass(container, classname):

@@ -7,20 +7,17 @@
 from __future__ import absolute_import
 
 import errno
-import hashlib
 import os
-import stat
 import struct
 import sys
-import tempfile
 import typing
 from collections import defaultdict
-from typing import Any, Dict, IO, Mapping, Tuple
+from typing import Dict, IO, Mapping
 
 from edenscm.mercurial import error, filelog, pycompat, revlog, util
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin, hex, nullid
-from edenscm.mercurial.pycompat import decodeutf8, encodeutf8, range
+from edenscm.mercurial.node import hex
+from edenscm.mercurial.pycompat import decodeutf8, encodeutf8
 
 from ..lfs import pointer
 from . import constants

@@ -13,7 +13,6 @@ from edenscm.mercurial import (
     ancestor,
     context,
     error,
-    extensions,
     perftrace,
     phases,
     progress,

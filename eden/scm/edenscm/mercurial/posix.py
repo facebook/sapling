@@ -21,9 +21,7 @@ import os
 import pwd
 import re
 import resource
-import select
 import stat
-import sys
 import tempfile
 import unicodedata
 from typing import Optional
@@ -33,7 +31,7 @@ from edenscmnative import osutil
 
 from . import encoding, error, fscap, pycompat
 from .i18n import _
-from .pycompat import decodeutf8, encodeutf8
+from .pycompat import encodeutf8
 
 
 getfstype = bindings.fs.fstype
@@ -908,7 +906,6 @@ def hidewindow():
     Used to hide the window opened when starting asynchronous
     child process under Windows, unneeded on other systems.
     """
-    pass
 
 
 class cachestat(object):

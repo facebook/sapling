@@ -6,8 +6,6 @@
 from __future__ import absolute_import
 
 import errno
-import json
-import re
 import time
 
 from edenscm.mercurial import (
@@ -15,7 +13,6 @@ from edenscm.mercurial import (
     cmdutil,
     edenapi_upload,
     error,
-    extensions,
     hg,
     hintutil,
     lock as lockmod,

@@ -14,15 +14,12 @@ from __future__ import absolute_import
 
 import errno
 import glob
-import hashlib
 import os
 import re
 import socket
 import subprocess
 import tempfile
 import time
-import traceback
-import weakref
 
 import bindings
 
@@ -44,7 +41,7 @@ from . import (
 )
 from .i18n import _
 from .node import hex, nullid, short, wdirid, wdirrev
-from .pycompat import basestring, encodeutf8, isint
+from .pycompat import basestring, isint
 
 
 if pycompat.iswindows:

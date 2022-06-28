@@ -20,15 +20,7 @@ import time
 import zipfile
 import zlib
 
-from . import (
-    error,
-    formatter,
-    match as matchmod,
-    progress,
-    pycompat,
-    util,
-    vfs as vfsmod,
-)
+from . import error, formatter, progress, pycompat, util, vfs as vfsmod
 from .i18n import _
 
 

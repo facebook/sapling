@@ -12,14 +12,12 @@
 
 from __future__ import absolute_import
 
-from typing import Any, Dict, IO, List, Optional, Union
+from typing import Dict, List
 
-import bindings
-
-from . import encoding, error, mdiff, revlog, util, visibility
+from . import encoding, error, revlog, util
 from .i18n import _
-from .node import bbin, bin, hex, nullid, nullrev, wdirid, wdirrev
-from .pycompat import decodeutf8, encodeutf8, isint, iteritems, range
+from .node import bbin, hex, nullid
+from .pycompat import decodeutf8, encodeutf8, iteritems
 from .thirdparty import attr
 
 

@@ -27,7 +27,6 @@ Example for www::
 """
 
 import re
-import threading
 
 from edenscm.mercurial import (
     autopull,

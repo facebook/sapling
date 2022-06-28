@@ -13,15 +13,13 @@
 from __future__ import absolute_import
 
 import heapq
-import itertools
-import os
 import struct
 
 from edenscmnative import parsers
 
 from . import error, mdiff, pycompat, revlog, util
 from .i18n import _
-from .node import bin, hex
+from .node import bin
 from .pycompat import encodeutf8, unicode
 
 

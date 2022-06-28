@@ -40,7 +40,6 @@ Configs:
 from __future__ import absolute_import
 
 import errno
-import json
 import mmap
 import os
 import tempfile
@@ -57,13 +56,11 @@ from edenscm.mercurial import (
     exchange,
     extensions,
     hg,
-    lock,
     manifest,
     mutation,
     obsolete,
     perftrace,
     phases as phasesmod,
-    pushkey,
     pycompat,
     registrar,
     revsetlang,

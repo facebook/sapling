@@ -16,7 +16,6 @@ from .. import (
     bookmarks as bookmod,
     changelog2,
     clone,
-    error,
     extensions,
     hg,
     progress,

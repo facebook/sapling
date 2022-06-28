@@ -28,7 +28,7 @@ from __future__ import absolute_import
 import re
 import sys
 
-from . import encoding, identity, pycompat, url, util
+from . import encoding, identity, url, util
 from .i18n import _
 from .pycompat import range
 

@@ -29,7 +29,6 @@ from . import (
     branchmap,
     bundle2,
     changegroup,
-    changelog,
     changelog2,
     color,
     connectionpool,
@@ -37,8 +36,6 @@ from . import (
     dirstate,
     dirstateguard,
     discovery,
-    eagerpeer,
-    edenapi,
     edenfs,
     encoding,
     error as errormod,
@@ -54,15 +51,12 @@ from . import (
     mergeutil,
     mutation,
     namespaces,
-    obsolete,
     pathutil,
     peer,
     phases,
-    progress,
     pushkey,
     pycompat,
     repository,
-    revlog,
     revset,
     revsetlang,
     scmutil,
@@ -70,14 +64,12 @@ from . import (
     store,
     transaction,
     treestate,
-    txnutil,
-    uiconfig,
     util,
     vfs as vfsmod,
     visibility,
 )
 from .i18n import _, _n
-from .node import bin, hex, nullhex, nullid, short
+from .node import bin, hex, nullhex, nullid
 from .pycompat import range
 
 
@@ -3164,14 +3156,12 @@ class localrepository(object):
         """
         # Migration of visibility, and treestate were moved to __init__ so they
         # run for users not running 'pull'.
-        pass
 
     def automigratefinish(self):
         """perform potentially expensive in-place migrations
 
         Called at the end of pull if pull.automigrate is true
         """
-        pass
 
     @property
     def smallcommitmetadata(self):

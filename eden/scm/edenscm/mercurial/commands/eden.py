@@ -5,8 +5,6 @@
 
 # no-check-code
 
-import argparse
-import collections
 import logging
 import os
 import struct
@@ -15,18 +13,7 @@ import time
 import typing
 from typing import Any, Callable, IO, Optional, Tuple, TypeVar
 
-from .. import (
-    context,
-    error,
-    extensions,
-    hg,
-    localrepo,
-    pycompat,
-    scmutil,
-    txnutil,
-    ui,
-    util,
-)
+from .. import error, extensions, hg, localrepo, pycompat, txnutil, ui, util
 from ..i18n import _
 from ..node import bin, hex
 from .cmdtable import command

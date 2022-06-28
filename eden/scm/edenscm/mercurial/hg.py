@@ -14,10 +14,8 @@
 from __future__ import absolute_import
 
 import errno
-import hashlib
 import os
 import shutil
-import weakref
 
 from . import (
     bookmarks,
@@ -25,7 +23,6 @@ from . import (
     clone as clonemod,
     cmdutil,
     destutil,
-    discovery,
     eagerpeer,
     edenfs,
     error,
@@ -43,15 +40,11 @@ from . import (
     scmutil,
     sshpeer,
     ui as uimod,
-    uiconfig,
     url,
     util,
     vfs as vfsmod,
-    visibility,
 )
 from .i18n import _
-from .node import nullid
-from .pycompat import encodeutf8
 
 
 release = lock.release

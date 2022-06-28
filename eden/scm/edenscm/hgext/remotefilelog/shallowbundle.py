@@ -6,8 +6,7 @@
 # shallowbundle.py - bundle10 implementation for use with shallow repositories
 from __future__ import absolute_import
 
-import os
-from typing import Any, Callable, Iterable, Mapping, MutableMapping, Optional, Sequence
+from typing import Any, Iterable, Mapping, MutableMapping, Sequence
 
 from edenscm.mercurial import (
     bundlerepo,
@@ -25,7 +24,7 @@ from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid
 from edenscm.mercurial.pycompat import range
 
-from . import contentstore, fileserverclient, remotefilelog, shallowutil
+from . import remotefilelog, shallowutil
 
 
 NoFiles = NoTrees = 0

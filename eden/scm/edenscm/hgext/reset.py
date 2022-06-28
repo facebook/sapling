@@ -5,7 +5,6 @@
 
 """reset the active bookmark and working copy to a desired revision"""
 
-import binascii
 import glob
 import os
 
@@ -20,7 +19,6 @@ from edenscm.mercurial import (
     phases,
     pycompat,
     registrar,
-    repair,
     scmutil,
     visibility,
 )

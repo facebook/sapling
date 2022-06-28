@@ -43,7 +43,6 @@ import time
 
 from edenscm.mercurial import (
     cmdutil,
-    commands,
     copies as copiesmod,
     dispatch,
     extensions,

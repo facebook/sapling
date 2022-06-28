@@ -3,18 +3,12 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-import os
-import tempfile
 
 from edenscm.mercurial import (
     bundlerepo,
-    encoding,
-    error,
     extensions,
     mutation,
     node as nodemod,
-    pushkey,
-    pycompat,
     util,
     wireproto,
 )

@@ -13,7 +13,7 @@ from bindings import sptui
 from edenscm.mercurial import cmdutil, error, progress, util
 from edenscm.mercurial.i18n import _
 
-from . import service, token as tokenmod, workspace
+from . import service, token as tokenmod
 
 
 def showhistory(ui, repo, reponame, workspacename, template, **opts):

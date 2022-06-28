@@ -127,10 +127,8 @@ from __future__ import absolute_import
 
 import os
 import time
-import traceback
 from contextlib import contextmanager
 
-from bindings import edenapi
 from edenscm.mercurial import (
     archival,
     bundle2,
@@ -140,8 +138,6 @@ from edenscm.mercurial import (
     commands,
     context,
     copies,
-    dirstate,
-    dispatch,
     error,
     exchange,
     extensions,
@@ -151,7 +147,6 @@ from edenscm.mercurial import (
     match,
     merge,
     patch,
-    progress,
     pycompat,
     registrar,
     repair,
@@ -165,10 +160,9 @@ from edenscm.mercurial import (
 from edenscm.mercurial.commands import debug as hgdebugcommands
 from edenscm.mercurial.extensions import wrapfunction
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import hex, nullrev
+from edenscm.mercurial.node import hex
 from edenscm.mercurial.pycompat import isint, sysplatform
 
-from .. import clienttelemetry
 from . import (
     debugcommands,
     fileserverclient,
@@ -179,7 +173,6 @@ from . import (
     shallowbundle,
     shallowrepo,
     shallowstore,
-    shallowutil,
 )
 
 

@@ -65,9 +65,7 @@ else:
 
 
 if sys.version_info[0] >= 3:
-    import functools
     import io
-    import struct
 
     oslinesep = os.linesep
     osname = os.name

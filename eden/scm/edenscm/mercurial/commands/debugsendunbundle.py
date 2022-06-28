@@ -6,8 +6,6 @@
 # sendunbundle.py - send unbundle wireproto command
 from __future__ import absolute_import
 
-import sys
-
 from .. import error, hg, pycompat, util
 from ..i18n import _
 from .cmdtable import command

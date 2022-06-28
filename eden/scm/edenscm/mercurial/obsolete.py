@@ -65,7 +65,7 @@ import struct
 
 from edenscmnative import parsers
 
-from . import error, pycompat, util
+from . import error, util
 from .i18n import _
 from .pycompat import encodeutf8
 

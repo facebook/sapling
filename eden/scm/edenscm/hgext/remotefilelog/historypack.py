@@ -5,13 +5,12 @@
 
 from __future__ import absolute_import
 
-import hashlib
 import struct
 
 from bindings import revisionstore
-from edenscm.mercurial.node import hex, nullid
+from edenscm.mercurial.node import hex
 
-from . import basepack, constants, shallowutil
+from . import basepack
 
 
 # (filename hash, offset, size)

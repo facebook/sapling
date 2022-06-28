@@ -32,19 +32,9 @@ from typing import (
     Tuple,
 )
 
-from . import (
-    error,
-    mdiff,
-    mutation,
-    perftrace,
-    phases,
-    progress,
-    pycompat,
-    util,
-    visibility,
-)
+from . import error, mdiff, perftrace, phases, progress, pycompat, util, visibility
 from .i18n import _
-from .node import hex, nullrev, short
+from .node import hex, nullrev
 from .pycompat import decodeutf8, encodeutf8, range
 
 

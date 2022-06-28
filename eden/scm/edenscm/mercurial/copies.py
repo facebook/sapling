@@ -13,7 +13,6 @@
 from __future__ import absolute_import
 
 import collections
-import heapq
 import os
 
 from . import git, match as matchmod, node, pathutil, pycompat, scmutil, util

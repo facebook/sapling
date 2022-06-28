@@ -30,12 +30,9 @@ Examples::
 """
 from __future__ import absolute_import
 
-import os
 import signal
-import socket
 import subprocess
 import sys
-import time
 import traceback
 
 from edenscm.mercurial import dispatch, encoding, extensions, pycompat, registrar, util

@@ -16,7 +16,7 @@ import cgi
 import struct
 import sys
 
-from .. import error, pycompat, util, wireproto
+from .. import error, util, wireproto
 from .common import HTTP_OK
 
 

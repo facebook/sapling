@@ -21,9 +21,8 @@ from typing import Optional
 import bindings
 from edenscmnative import parsers
 
-from . import encoding, error, hintutil, pycompat, util, vfs as vfsmod
+from . import error, pycompat, util, vfs as vfsmod
 from .i18n import _
-from .node import bin
 from .pycompat import decodeutf8, encodeutf8, inttobyte, range
 
 

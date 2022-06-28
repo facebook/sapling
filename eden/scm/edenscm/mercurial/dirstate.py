@@ -14,11 +14,9 @@
 
 from __future__ import absolute_import
 
-import collections
 import contextlib
 import errno
 import os
-import stat
 import tempfile
 import weakref
 from typing import (
@@ -49,7 +47,6 @@ from . import (
     encoding,
     error,
     filesystem,
-    hintutil,
     match as matchmod,
     pathutil,
     perftrace,

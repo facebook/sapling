@@ -46,7 +46,6 @@ from .. import (
     help,
     hg,
     hintutil,
-    hook,
     lock as lockmod,
     match as matchmod,
     merge as mergemod,
@@ -68,7 +67,7 @@ from .. import (
     visibility,
 )
 from ..i18n import _
-from ..node import bin, hex, nullhex, nullid, short
+from ..node import bin, hex, nullid, short
 from ..pycompat import isint, range
 from . import cmdtable
 

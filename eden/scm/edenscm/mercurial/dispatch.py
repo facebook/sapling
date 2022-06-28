@@ -19,10 +19,8 @@ import os
 import pdb
 import re
 import signal
-import socket
 import sys
 import time
-import traceback
 
 import bindings
 
@@ -35,20 +33,15 @@ from . import (
     encoding,
     error,
     extensions,
-    help,
     hg,
     hintutil,
     hook,
     i18n,
-    mononokepeer,
     perftrace,
     profiling,
     pycompat,
     registrar,
     scmutil,
-    sshpeer,
-    templatekw,
-    templater,
     ui as uimod,
     uiconfig,
     util,

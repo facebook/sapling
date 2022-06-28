@@ -7,35 +7,15 @@
 
 from __future__ import absolute_import
 
-import functools
-import hashlib
-import io
-import itertools
-import os
 import struct
-import subprocess
-import threading
 import time
 import traceback
 
-from edenscm.mercurial import (
-    encoding,
-    error,
-    perftrace,
-    progress,
-    pycompat,
-    revlog,
-    sshpeer,
-    util,
-    wireproto,
-)
-from edenscm.mercurial.i18n import _, _n
-from edenscm.mercurial.node import bin, hex, nullid
+from edenscm.mercurial import error, perftrace, pycompat, revlog, util, wireproto
+from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin
 
 from . import constants, shallowutil, wirepack
-from .contentstore import unioncontentstore
-from .lz4wrapper import lz4decompress
-from .metadatastore import unionmetadatastore
 
 
 # Statistics for debugging

@@ -81,7 +81,6 @@ Some special comments could have side effects:
 from __future__ import absolute_import, print_function
 
 import collections
-import itertools
 import re
 
 import bindings

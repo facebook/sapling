@@ -12,10 +12,8 @@
 
 from __future__ import absolute_import
 
-import functools
-
-from . import bookmarks, branchmap, phases, pycompat, setdiscovery, util
-from .node import hex, nullid
+from . import bookmarks, setdiscovery, util
+from .node import nullid
 
 
 def findcommonincoming(repo, remote, heads=None, force=False, ancestorsof=None):

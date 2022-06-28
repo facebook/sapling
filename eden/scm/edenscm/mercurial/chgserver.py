@@ -45,10 +45,7 @@ Config
 
 from __future__ import absolute_import
 
-import hashlib
-import inspect
 import os
-import re
 import socket
 import struct
 import time
@@ -56,7 +53,7 @@ from typing import BinaryIO, Callable, Dict, List, Optional
 
 from bindings import commands, hgtime
 
-from . import commandserver, encoding, error, extensions, pycompat, ui as uimod, util
+from . import commandserver, encoding, error, pycompat, ui as uimod, util
 from .i18n import _
 
 

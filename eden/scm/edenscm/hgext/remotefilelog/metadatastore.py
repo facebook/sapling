@@ -6,7 +6,6 @@
 from __future__ import absolute_import
 
 from edenscm.mercurial import util
-from edenscm.mercurial.node import hex, nullid
 
 from . import shallowutil
 

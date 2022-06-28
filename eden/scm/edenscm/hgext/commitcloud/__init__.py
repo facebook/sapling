@@ -124,9 +124,7 @@ from edenscm.mercurial import (
     localrepo,
     node as nodemod,
     registrar,
-    revset,
     smartset,
-    util as hgutil,
 )
 from edenscm.mercurial.i18n import _
 

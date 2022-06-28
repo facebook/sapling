@@ -36,7 +36,6 @@ from . import (
     formatter,
     git,
     graphmod,
-    hintutil,
     json,
     match as matchmod,
     mdiff,
@@ -58,7 +57,7 @@ from . import (
 )
 from .i18n import _, _x
 from .node import hex, nullid, nullrev, short
-from .pycompat import ensurestr, ensureunicode, range
+from .pycompat import ensureunicode, range
 
 
 stringio = util.stringio

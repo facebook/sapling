@@ -9,12 +9,10 @@ import errno
 import os
 import time
 import traceback
-from contextlib import contextmanager
 
 from bindings import revisionstore
-from edenscm.mercurial import encoding, error, progress, util, vfs
+from edenscm.mercurial import error, progress, util, vfs
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import nullid, short
 
 from ..extutil import flock
 from . import constants, datapack, historypack, shallowutil

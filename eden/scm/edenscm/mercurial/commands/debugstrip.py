@@ -18,10 +18,8 @@ from .. import (
     lock as lockmod,
     merge,
     node as nodemod,
-    pycompat,
     repair,
     scmutil,
-    util,
 )
 from ..i18n import _
 from .cmdtable import command

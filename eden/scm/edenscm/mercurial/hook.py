@@ -15,7 +15,7 @@ from __future__ import absolute_import
 import os
 import sys
 
-from . import blackbox, demandimport, encoding, error, extensions, pycompat, util
+from . import demandimport, encoding, error, extensions, pycompat, util
 from .i18n import _
 
 

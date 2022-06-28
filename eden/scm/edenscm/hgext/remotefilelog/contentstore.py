@@ -5,12 +5,8 @@
 
 from __future__ import absolute_import
 
-import os
-import threading
-
-from edenscm.mercurial import manifest, mdiff, revlog, util
+from edenscm.mercurial import manifest, mdiff, util
 from edenscm.mercurial.node import hex, nullid
-from edenscm.mercurial.pycompat import range
 
 from . import constants, shallowutil
 

@@ -15,7 +15,6 @@ from __future__ import absolute_import, print_function
 import os
 import re
 import types
-from typing import Any, Iterable
 
 from . import (
     color,

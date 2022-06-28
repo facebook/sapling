@@ -7,7 +7,6 @@ from edenscm.mercurial import error, scmutil
 from edenscm.mercurial.cmdutil import changeset_printer, jsonchangeset
 from edenscm.mercurial.context import memctx, memfilectx
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import nullid
 from edenscm.mercurial.util import pickle
 
 

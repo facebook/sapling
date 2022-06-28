@@ -26,7 +26,6 @@ from __future__ import absolute_import
 
 from . import dagop, smartset, util
 from .node import nullrev
-from .pycompat import range
 
 
 CHANGESET = "C"

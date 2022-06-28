@@ -7,12 +7,11 @@ from __future__ import absolute_import
 
 import hashlib
 import os
-import time
 
 from edenscm.mercurial import error, node as nodemod, util
 from edenscm.mercurial.pycompat import encodeutf8
 
-from . import dependencies, util as ccutil
+from . import dependencies
 
 FORMAT_VERSION = "v1"
 

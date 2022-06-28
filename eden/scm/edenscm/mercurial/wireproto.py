@@ -37,8 +37,8 @@ from . import (
     util,
 )
 from .i18n import _
-from .node import bbin, bhex, bin, hex, nullid
-from .pycompat import decodeutf8, encodeutf8, iteritems, range
+from .node import bbin, bin, hex, nullid
+from .pycompat import decodeutf8, range
 
 
 urlerr = util.urlerr

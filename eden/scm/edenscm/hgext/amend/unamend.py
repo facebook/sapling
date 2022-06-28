@@ -10,7 +10,6 @@ from __future__ import absolute_import
 from edenscm.mercurial import (
     autopull,
     error,
-    extensions,
     mutation,
     node as nodemod,
     pycompat,

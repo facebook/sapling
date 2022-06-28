@@ -21,7 +21,6 @@ from edenscm.mercurial import (
     lock as lockmod,
     merge,
     mutation,
-    obsolete,
     phases,
     pycompat,
     registrar,

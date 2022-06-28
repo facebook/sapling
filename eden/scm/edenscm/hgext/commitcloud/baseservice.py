@@ -12,7 +12,7 @@ import collections
 import bindings
 from edenscm.mercurial import node as nodemod, pycompat
 from edenscm.mercurial.graphmod import CHANGESET, GRANDPARENT, PARENT
-from edenscm.mercurial.pycompat import encodeutf8, ensurestr
+from edenscm.mercurial.pycompat import ensurestr
 
 
 def _joinremotename(remote, name):

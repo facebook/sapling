@@ -200,7 +200,6 @@ class baseformatter(object):
     def templatedata(self, **data):
         """insert extra data into item that is available to template formatters but
         is not shown by default in other output formatter types"""
-        pass
 
     def write(self, fields, deftext, *fielddata, **opts):
         """do default text output while assigning data to item"""

@@ -15,17 +15,13 @@
     speed-test-upload-size = 1M
 """
 
-import os
 import socket
 
 from edenscm.mercurial import (
-    cmdutil,
     error,
     hg,
     httpclient,
     httpconnection,
-    progress,
-    pycompat,
     registrar,
     sslutil,
     util,

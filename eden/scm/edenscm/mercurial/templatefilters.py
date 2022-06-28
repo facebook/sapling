@@ -16,13 +16,11 @@ import os
 import re
 import sys
 import time
-from typing import Any
 
 from . import (
     encoding,
     hbisect,
     json as jsonmod,
-    node,
     pycompat,
     registrar,
     templatekw,

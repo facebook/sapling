@@ -13,7 +13,6 @@ import os
 import sys
 import time
 
-from bindings import tracing
 from edenscm.mercurial import blackbox, encoding, json, progress, pycompat, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex

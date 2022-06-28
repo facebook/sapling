@@ -63,32 +63,23 @@ server, rather than relying on the server to perform this computation.
 """
 from __future__ import absolute_import
 
-import abc
-import contextlib
 import hashlib
 import os
-import random
-import shutil
 import struct
-import time
 
 from bindings import manifest as rustmanifest, revisionstore
 from edenscm.mercurial import (
     bundle2,
     bundlerepo,
     changegroup,
-    changelog,
     changelog2,
     commands,
-    encoding,
     error,
     exchange,
     extensions,
     git,
     hg,
     localrepo,
-    manifest,
-    mdiff,
     perftrace,
     phases,
     progress,
@@ -106,24 +97,22 @@ from edenscm.mercurial import (
 from edenscm.mercurial.commands import debug as debugcommands
 from edenscm.mercurial.i18n import _, _n
 from edenscm.mercurial.node import bin, hex, nullid, short
-from edenscm.mercurial.pycompat import decodeutf8, range
+from edenscm.mercurial.pycompat import range
 
 from .. import clienttelemetry
-from ..extutil import flock
 from ..remotefilelog import (
     cmdtable as remotefilelogcmdtable,
-    mutablestores,
     resolveprefetchopts,
     shallowbundle,
     shallowrepo,
     shallowutil,
     wirepack,
 )
-from ..remotefilelog.contentstore import manifestrevlogstore, unioncontentstore
-from ..remotefilelog.datapack import makedatapackstore, memdatapack
-from ..remotefilelog.historypack import makehistorypackstore, memhistorypack
+from ..remotefilelog.contentstore import unioncontentstore
+from ..remotefilelog.datapack import memdatapack
+from ..remotefilelog.historypack import memhistorypack
 from ..remotefilelog.metadatastore import unionmetadatastore
-from ..remotefilelog.repack import domaintenancerepack, repacklockvfs
+from ..remotefilelog.repack import domaintenancerepack
 
 
 try:

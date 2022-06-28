@@ -14,7 +14,6 @@ from edenscm.mercurial import (
     error,
     extensions,
     json,
-    pathutil,
     perftrace,
     progress,
     pycompat,
