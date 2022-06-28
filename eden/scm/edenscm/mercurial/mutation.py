@@ -269,7 +269,6 @@ class obsoletecache(object):
             return True
         if self.complete[None] or node in self.notobsolete[None]:
             return False
-        unfi = repo
         clhasnode = getisvisiblefunc(repo)
 
         for succ in allsuccessors(repo, [node], startdepth=1):

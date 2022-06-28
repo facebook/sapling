@@ -43,7 +43,6 @@ import errno
 import mmap
 import os
 import tempfile
-import time
 
 from edenscm.mercurial import (
     bundle2,
@@ -303,7 +302,7 @@ def unbundle(orig, repo, cg, heads, source, url, replaydata=None, respondlightly
             respondlightly=respondlightly,
         )
         return result
-    except error.HookAbort as ex:
+    except error.HookAbort:
         raise
 
 

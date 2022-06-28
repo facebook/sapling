@@ -47,7 +47,7 @@ def debugrebuildchangelog(ui, repo, **opts):
 
     if opts.get("revlog"):
         commits = _readdrafts(repo) + shelved
-        _bakname = _backupcommits(repo, commits, ts)
+        _backupcommits(repo, commits, ts)
 
         tmprepopath = repo.svfs.join("changelog-rebuild")
         tmprepo = _clonetotmp(repo, tmprepopath)
