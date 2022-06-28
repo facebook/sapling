@@ -63,7 +63,7 @@ def attr(
     convert=None,
     metadata={},
 ):
-    """
+    r"""
     Create a new attribute on a class.
 
     ..  warning::

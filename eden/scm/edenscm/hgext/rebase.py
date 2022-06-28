@@ -1635,7 +1635,7 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest, wctx):
 
 
 def adjustdest(repo, rev, destmap, state, skipped):
-    """adjust rebase destination given the current rebase state
+    r"""adjust rebase destination given the current rebase state
 
     rev is what is being rebased. Return a list of two revs, which are the
     adjusted destinations for rev's p1 and p2, respectively. If a parent is

@@ -2512,13 +2512,13 @@ def debugprocesstree(ui, *pids, **opts):
         parentchild.setdefault(ppid, []).append(pid)
 
     # Find out hg processes.
-    cmdre = util.re.compile("(^(.*[\\\\/])?(hg|chg)[ \.])|^chg\[worker")
+    cmdre = util.re.compile(r"(^(.*[\\/])?(hg|chg)[ \.])|^chg\[worker")
     if not pids:
         hgpids = {pid for pid, p in pidprocess.items() if cmdre.search(p["cmdline"])}
     else:
         hgpids = {pid for pid in pids if pid in pidprocess}
         # Extend selection so if "chg[worker/x]" is selected, also select "x"
-        chgpidre = util.re.compile("chg\[worker/(\d+)\]")
+        chgpidre = util.re.compile(r"chg\[worker/(\d+)\]")
         for pid in list(hgpids):
             match = chgpidre.match(pidprocess[pid]["cmdline"])
             if match:
@@ -3465,7 +3465,7 @@ def debugwireargs(ui, repopath, *vals, **opts):
     ],
 )
 def debugdrawdag(ui, repo, **opts):
-    """read an ASCII graph from stdin and create changesets
+    r"""read an ASCII graph from stdin and create changesets
 
     The ASCII graph is like what :hg:`log -G` outputs, with each `o` replaced
     to the name of the node. The command will create dummy changesets and local

@@ -60,7 +60,7 @@ def _commit(orig, ui, repo, *pats, **opts):
                     if not k:
                         msg = _("unable to parse '%s', keys can't be empty")
                         raise error.Abort(msg % raw)
-                    if re.search("[^\w-]", k):
+                    if re.search(r"[^\w-]", k):
                         msg = _(
                             "keys can only contain ascii letters, digits,"
                             " '_' and '-'"

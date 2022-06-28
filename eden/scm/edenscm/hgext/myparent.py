@@ -53,7 +53,7 @@ def showmyparentdiff(repo, ctx, templ, **args):
     """Show the differential revision of the commit's parent, if it has the
     same author as this commit.
     """
-    return extract_from_parent(ctx, "Differential Revision:.*/(D\d+)")
+    return extract_from_parent(ctx, r"Differential Revision:.*/(D\d+)")
 
 
 @templatekeyword("myparentreviewers")
@@ -61,7 +61,7 @@ def showmyparentreviewers(repo, ctx, templ, **args):
     """Show the reviewers of the commit's parent, if it has the
     same author as this commit.
     """
-    return extract_from_parent(ctx, "\s*Reviewers: (.*)")
+    return extract_from_parent(ctx, r"\s*Reviewers: (.*)")
 
 
 @templatekeyword("myparentsubscribers")
@@ -69,7 +69,7 @@ def showmyparentsubscribers(repo, ctx, templ, **args):
     """Show the subscribers of the commit's parent, if it has the
     same author as this commit.
     """
-    return extract_from_parent(ctx, "\s*Subscribers: (.*)")
+    return extract_from_parent(ctx, r"\s*Subscribers: (.*)")
 
 
 @templatekeyword("myparenttasks")
@@ -77,7 +77,7 @@ def showmyparenttasks(repo, ctx, templ, **args):
     """Show the tasks from the commit's parent, if it has the
     same author as this commit.
     """
-    return extract_from_parent(ctx, "\s*(?:Tasks|Task ID): (.*)")
+    return extract_from_parent(ctx, r"\s*(?:Tasks|Task ID): (.*)")
 
 
 @templatekeyword("myparenttags")
@@ -85,7 +85,7 @@ def showmyparenttags(repo, ctx, templ, **args):
     """Show the tags from the commit's parent, if it has the
     same author as this commit.
     """
-    return extract_from_parent(ctx, "\s*Tags: (.*)")
+    return extract_from_parent(ctx, r"\s*Tags: (.*)")
 
 
 @templatekeyword("myparenttitleprefix")

@@ -760,8 +760,8 @@ class mempatchstore(object):
 
 
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
-unidesc = re.compile(b"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
-contextdesc = re.compile(b"(?:---|\*\*\*) (\d+)(?:,(\d+))? (?:---|\*\*\*)")
+unidesc = re.compile(rb"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
+contextdesc = re.compile(rb"(?:---|\*\*\*) (\d+)(?:,(\d+))? (?:---|\*\*\*)")
 eolmodes = ["strict", "crlf", "lf", "auto"]
 
 
@@ -881,7 +881,7 @@ class patchfile(object):
             for l in x.hunk:
                 lines.append(l)
                 if l[-1:] != b"\n":
-                    lines.append(b"\n\ No newline at end of file\n")
+                    lines.append(b"\n\\ No newline at end of file\n")
         self.backend.writerej(self.fname, len(self.rej), self.hunks, lines)
 
     def apply(self, h):
@@ -1495,7 +1495,7 @@ class hunk(object):
             self.hunk.append(u)
 
         l = lr.readline()
-        if l.startswith(b"\ "):
+        if l.startswith(rb"\ "):
             s = self.a[-1][:-1]
             self.a[-1] = s
             self.hunk[-1] = s
@@ -1513,7 +1513,7 @@ class hunk(object):
         hunki = 1
         for x in range(self.lenb):
             l = lr.readline()
-            if l.startswith(b"\ "):
+            if l.startswith(rb"\ "):
                 # XXX: the only way to hit this is with an invalid line range.
                 # The no-eol marker is not counted in the line range, but I
                 # guess there are diff(1) out there which behave differently.
@@ -1573,7 +1573,7 @@ class hunk(object):
 
     def _fixnewline(self, lr):
         l = lr.readline()
-        if l.startswith(b"\ "):
+        if l.startswith(rb"\ "):
             diffhelpers.fix_newline(self.hunk, self.a, self.b)
         else:
             lr.push(l)

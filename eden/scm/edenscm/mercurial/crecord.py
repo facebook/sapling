@@ -1844,6 +1844,6 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
                 break
 
         if self.commenttext != "":
-            whitespaceremoved = re.sub("(?m)^\s.*(\n|$)", "", self.commenttext)
+            whitespaceremoved = re.sub("(?m)^\\s.*(\n|$)", "", self.commenttext)
             if whitespaceremoved != "":
                 self.opts["message"] = self.commenttext

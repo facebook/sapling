@@ -428,7 +428,7 @@ def blame(orig, ui, repo, *pats, **opts):
         res = ""
         try:
             d = repo[mapping["rev"]].description()
-            pat = "https://.*/(D\d+)"
+            pat = r"https://.*/(D\d+)"
             m = re.search(pat, d)
             res = m.group(1) if m else ""
         except Exception:

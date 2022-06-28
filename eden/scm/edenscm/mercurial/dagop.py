@@ -199,7 +199,7 @@ def revancestors(
     cutfunc=None,
     prefetchtext=False,
 ):
-    """Like revlog.ancestors(), but supports additional options, includes
+    r"""Like revlog.ancestors(), but supports additional options, includes
     the given revs themselves, and returns a smartset
 
     Scan ends at the stopdepth (exlusive) if specified. Revisions found

@@ -1021,7 +1021,7 @@ def makefilename(
         "H": lambda: hex(node),
         "R": lambda: "%d" % repo.changelog.rev(node),
         "h": lambda: short(node),
-        "m": lambda: re.sub("[^\w]", "_", desc or ""),
+        "m": lambda: re.sub(r"[^\w]", "_", desc or ""),
     }
     expander = {"%": lambda: "%", "b": lambda: os.path.basename(repo.root)}
 

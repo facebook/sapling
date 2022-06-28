@@ -19,7 +19,7 @@ def _split_what(what):
 
 
 def include(*what):
-    """
+    r"""
     Include *what*.
 
     :param what: What to include.
@@ -36,7 +36,7 @@ def include(*what):
 
 
 def exclude(*what):
-    """
+    r"""
     Exclude *what*.
 
     :param what: What to exclude.

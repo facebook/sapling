@@ -160,11 +160,11 @@ class simplecommitctx(context.committablectx):
         for path, data in filemap.items():
             assert isinstance(data, str)
             # check "(renamed from)". mark the source as removed
-            m = re.search("\(renamed from (.+)\)\s*\Z", data, re.S)
+            m = re.search(r"\(renamed from (.+)\)\s*\Z", data, re.S)
             if m:
                 removed.append(m.group(1))
             # check "(removed)"
-            if re.match("\A\s*\(removed\)\s*\Z", data, re.S):
+            if re.match(r"\A\s*\(removed\)\s*\Z", data, re.S):
                 removed.append(path)
             else:
                 if path in removed:
@@ -203,7 +203,7 @@ class simplecommitctx(context.committablectx):
 
     def filectx(self, key):
         data = self._filemap[key]
-        m = re.match("\A(.*) \((?:renamed|copied) from (.+)\)\s*\Z", data, re.S)
+        m = re.match(r"\A(.*) \((?:renamed|copied) from (.+)\)\s*\Z", data, re.S)
         if m:
             data = m.group(1)
             renamed = m.group(2)
@@ -248,7 +248,7 @@ def _walkgraph(edges, extraedges):
 
 
 def _getcomments(text):
-    """
+    r"""
     >>> [s for s in _getcomments(r'''
     ...        G
     ...        |
@@ -267,7 +267,7 @@ def _getcomments(text):
 
 
 def drawdag(repo, text, **opts):
-    """given an ASCII graph as text, create changesets in repo.
+    r"""given an ASCII graph as text, create changesets in repo.
 
     The ASCII graph is like what :hg:`log -G` outputs, with each `o` replaced
     to the name of the node. The command will create dummy changesets and local
