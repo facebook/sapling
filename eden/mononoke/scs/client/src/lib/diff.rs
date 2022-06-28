@@ -12,8 +12,8 @@ use std::io::Write;
 use anyhow::Error;
 use clap::ArgMatches;
 use cloned::cloned;
+use futures_util::stream;
 use futures_util::stream::StreamExt;
-use futures_util::stream::{self};
 use serde_derive::Serialize;
 use source_control as thrift;
 

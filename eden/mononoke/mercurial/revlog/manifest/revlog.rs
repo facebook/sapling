@@ -6,8 +6,8 @@
  */
 
 use std::collections::BTreeMap;
+use std::io;
 use std::io::Write;
-use std::io::{self};
 use std::str;
 use std::vec;
 
@@ -17,11 +17,11 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use futures::future;
 use futures::future::Future;
 use futures::future::IntoFuture;
-use futures::future::{self};
+use futures::stream;
 use futures::stream::Stream;
-use futures::stream::{self};
 use futures::Async;
 use futures::Poll;
 use futures_ext::BoxFuture;

@@ -8,8 +8,8 @@
 use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
+use futures::stream;
 use futures::stream::BoxStream;
-use futures::stream::{self};
 use futures::StreamExt;
 use futures::TryStreamExt;
 

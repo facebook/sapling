@@ -623,9 +623,9 @@ mod test {
         use std::collections::HashMap;
         use std::sync::Mutex;
         use std::time::Duration;
+        use tokio::sync::broadcast;
         use tokio::sync::broadcast::Receiver;
         use tokio::sync::broadcast::Sender;
-        use tokio::sync::broadcast::{self};
 
         const TIMEOUT_MS: u64 = 100;
 

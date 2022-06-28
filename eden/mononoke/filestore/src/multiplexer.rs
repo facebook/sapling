@@ -8,9 +8,9 @@
 use anyhow::format_err;
 use anyhow::Error;
 use futures::channel::mpsc;
+use futures::future;
 use futures::future::Future;
 use futures::future::TryFutureExt;
-use futures::future::{self};
 use futures::sink::Sink;
 use futures::sink::SinkExt;
 use futures::stream::Stream;

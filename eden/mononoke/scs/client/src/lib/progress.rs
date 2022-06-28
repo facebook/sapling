@@ -15,9 +15,9 @@ use anyhow::Error;
 use clap::App;
 use clap::Arg;
 use clap::ArgMatches;
+use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
-use futures::stream::{self};
 use std::io::Write;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

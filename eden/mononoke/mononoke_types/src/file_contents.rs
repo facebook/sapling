@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
 use std::fmt::Debug;
-use std::fmt::{self};
 
 use anyhow::bail;
 use anyhow::Context;

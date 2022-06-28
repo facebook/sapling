@@ -6,9 +6,9 @@
  */
 
 use ref_cast::RefCast;
+use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Display;
-use std::fmt::{self};
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::ops::Deref;

@@ -10,8 +10,8 @@ use mononoke_api::headerless_unified_diff;
 use mononoke_api::FileId;
 use source_control as thrift;
 
+use crate::errors;
 use crate::errors::ServiceErrorResultExt;
-use crate::errors::{self};
 use crate::from_request::check_range_and_convert;
 use crate::from_request::FromRequest;
 use crate::into_response::IntoResponse;

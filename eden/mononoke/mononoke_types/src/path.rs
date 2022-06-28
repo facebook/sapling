@@ -8,10 +8,10 @@
 use ascii::AsciiString;
 use std::cmp;
 use std::collections::HashMap;
+use std::fmt;
 use std::fmt::Display;
-use std::fmt::{self};
+use std::io;
 use std::io::Write;
-use std::io::{self};
 use std::iter::once;
 use std::iter::Once;
 use std::slice::Iter;

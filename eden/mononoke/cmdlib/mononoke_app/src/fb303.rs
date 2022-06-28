@@ -10,9 +10,9 @@ use anyhow::Error;
 use anyhow::Result;
 use clap::Args;
 use fbinit::FacebookInit;
+use services;
 use services::Fb303Service;
 use services::FbStatus;
-use services::{self};
 use slog::info;
 use slog::Logger;
 use slog::Never;
@@ -20,7 +20,7 @@ use slog::SendSyncRefUnwindSafeDrain;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::thread::{self};
+use std::thread;
 
 /// Command line arguments that fb303 for service
 #[derive(Args, Debug)]

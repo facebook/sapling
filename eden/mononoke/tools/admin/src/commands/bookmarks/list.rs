@@ -18,9 +18,9 @@ use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
 use clap::Args;
 use context::CoreContext;
+use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures::stream::{self};
 use mononoke_types::ChangesetId;
 
 use super::Repo;

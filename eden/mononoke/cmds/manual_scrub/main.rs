@@ -27,8 +27,8 @@ use tokio::io::BufReader;
 use blobstore_factory::make_blobstore;
 use blobstore_factory::ScrubAction;
 use blobstore_factory::ScrubWriteMostly;
+use cmdlib::args;
 use cmdlib::args::ArgType;
-use cmdlib::args::{self};
 use context::CoreContext;
 
 mod checkpoint;

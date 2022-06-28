@@ -49,8 +49,8 @@ use std::sync::Arc;
 use tokio::net::TcpListener;
 
 use blobrepo::BlobRepo;
+use cmdlib::args;
 use cmdlib::args::CachelibSettings;
-use cmdlib::args::{self};
 use cmdlib::helpers::serve_forever;
 use cmdlib::monitoring::start_fb303_server;
 use cmdlib::monitoring::AliveService;

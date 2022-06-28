@@ -7,9 +7,9 @@
 
 //! Scaffolding for encoding bundle2 parts.
 
+use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Formatter;
-use std::fmt::{self};
 use std::mem;
 
 use anyhow::Error;

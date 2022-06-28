@@ -16,9 +16,9 @@ use hyper::Version;
 use slog::info;
 use slog::o;
 use slog::Logger;
+use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Display;
-use std::fmt::{self};
 use std::time::Duration;
 use time_ext::DurationExt;
 

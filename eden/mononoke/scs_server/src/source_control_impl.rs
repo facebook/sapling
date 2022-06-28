@@ -56,8 +56,8 @@ use time_ext::DurationExt;
 use tunables::tunables;
 
 use crate::commit_id::CommitIdExt;
+use crate::errors;
 use crate::errors::ServiceErrorResultExt;
-use crate::errors::{self};
 use crate::from_request::FromRequest;
 use crate::scuba_params::AddScubaParams;
 use crate::scuba_response::AddScubaResponse;

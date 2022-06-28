@@ -11,7 +11,7 @@ use stats::prelude::*;
 use std::time::Duration;
 use time_window_counter::BoxGlobalTimeWindowCounter;
 use time_window_counter::GlobalTimeWindowCounterBuilder;
-use tokio::time::{self};
+use tokio::time;
 
 use crate::batch::InternalObject;
 use crate::config::ObjectPopularity;

@@ -6,8 +6,8 @@
  */
 
 use std::collections::HashMap;
+use std::str;
 use std::str::FromStr;
-use std::str::{self};
 
 use anyhow::Context;
 use anyhow::Error;
@@ -28,10 +28,10 @@ use hyper::Request;
 use serde::Deserialize;
 use stats::prelude::*;
 
+use filestore;
 use filestore::Alias;
 use filestore::FetchKey;
 use filestore::StoreRequest;
-use filestore::{self};
 use gotham_ext::error::HttpError;
 use gotham_ext::middleware::HttpScubaKey;
 use gotham_ext::middleware::ScubaMiddlewareState;

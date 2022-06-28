@@ -14,9 +14,9 @@ use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
 use futures::future::try_join;
+use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures::stream::{self};
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 

@@ -166,8 +166,8 @@ mod test {
     use crate::tests::ManifestStore;
     use crate::tests::TestManifestIdStr;
     use crate::tests::TestManifestStr;
+    use fbinit;
     use fbinit::FacebookInit;
-    use fbinit::{self};
     use maplit::hashmap;
     use std::fmt::Debug;
 

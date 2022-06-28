@@ -23,8 +23,8 @@ use futures_util::stream::StreamExt;
 use futures_util::stream::TryStreamExt;
 use mercurial_types::HgChangesetId;
 use std::fs;
+use std::io;
 use std::io::BufRead;
-use std::io::{self};
 use std::path::Path;
 
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {

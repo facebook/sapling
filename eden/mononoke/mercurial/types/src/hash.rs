@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Display;
-use std::fmt::{self};
 use std::str::FromStr;
 
 use abomonation_derive::Abomonation;

@@ -42,11 +42,11 @@ use tokio::io::AsyncReadExt;
 use tunables::force_update_tunables;
 use tunables::tunables;
 
+use crate::connection_acceptor;
 use crate::connection_acceptor::AcceptedConnection;
 use crate::connection_acceptor::Acceptor;
 use crate::connection_acceptor::FramedConn;
 use crate::connection_acceptor::MononokeStream;
-use crate::connection_acceptor::{self};
 
 use qps::Qps;
 

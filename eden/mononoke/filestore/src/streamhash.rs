@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use futures::future;
 use futures::future::FutureExt;
-use futures::future::{self};
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 

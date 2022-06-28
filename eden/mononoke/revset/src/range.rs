@@ -19,9 +19,9 @@ use futures::TryFutureExt;
 use futures_ext::BoxStream;
 use futures_ext::StreamExt;
 use futures_old::future::Future;
+use futures_old::stream;
 use futures_old::stream::iter_ok;
 use futures_old::stream::Stream;
-use futures_old::stream::{self};
 use futures_old::Async;
 use futures_old::Poll;
 

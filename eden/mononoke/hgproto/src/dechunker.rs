@@ -15,9 +15,9 @@
 //! 0-sized chunk is the indication of end of stream, so a proper stream of data should not
 //! contain empty chunks inside.
 
+use std::io;
 use std::io::BufRead;
 use std::io::Read;
-use std::io::{self};
 
 use futures::future::poll_fn;
 use futures::Async;

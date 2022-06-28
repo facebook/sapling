@@ -51,8 +51,8 @@ use nom::Needed;
 use nom::Slice;
 use std::collections::HashMap;
 use std::iter;
+use std::str;
 use std::str::FromStr;
-use std::str::{self};
 
 const BAD_UTF8_ERR_CODE: u32 = 111;
 const BAD_PATH_ERR_CODE: u32 = 222;

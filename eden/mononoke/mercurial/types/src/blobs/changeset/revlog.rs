@@ -23,10 +23,10 @@ use bytes::Bytes;
 use context::CoreContext;
 use mononoke_types::DateTime;
 use std::collections::BTreeMap;
+use std::io;
 use std::io::Write;
-use std::io::{self};
+use std::str;
 use std::str::FromStr;
-use std::str::{self};
 
 // The `user` and `comments` fields are expected to be utf8 encoded, but
 // some older commits might be corrupted. We handle them as pure binary here

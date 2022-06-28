@@ -6,8 +6,8 @@
  */
 
 use std::collections::HashMap;
+use std::io;
 use std::io::Cursor;
-use std::io::{self};
 use std::mem;
 use std::vec::IntoIter;
 
@@ -21,9 +21,9 @@ use bytes_old::Buf;
 use bytes_old::BufMut;
 use bytes_old::Bytes;
 use bytes_old::IntoBuf;
+use futures_ext::io::Either;
 use futures_ext::io::Either::A as UncompressedRead;
 use futures_ext::io::Either::B as CompressedRead;
-use futures_ext::io::Either::{self};
 use futures_old::stream::Forward;
 use futures_old::try_ready;
 use futures_old::Async;

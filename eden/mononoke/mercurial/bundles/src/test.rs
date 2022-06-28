@@ -17,9 +17,9 @@ use assert_matches::assert_matches;
 use futures::compat::Future01CompatExt;
 use futures::stream::BoxStream;
 use futures::TryStreamExt;
+use futures_old::stream;
 use futures_old::stream::Stream;
 use futures_old::stream::Stream as OldStream;
-use futures_old::stream::{self};
 use tokio::runtime::Runtime;
 use tokio_io::AsyncRead;
 

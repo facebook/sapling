@@ -16,10 +16,10 @@ use clap::AppSettings;
 use clap::Arg;
 use clap::ArgMatches;
 use clap::SubCommand;
+use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures::stream::{self};
 use serde_derive::Serialize;
 use source_control::types as thrift;
 

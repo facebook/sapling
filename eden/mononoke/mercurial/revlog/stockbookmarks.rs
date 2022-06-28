@@ -7,10 +7,10 @@
 
 use std::collections::HashMap;
 use std::fs;
+use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Read;
-use std::io::{self};
 use std::path::PathBuf;
 
 use anyhow::bail;
@@ -19,8 +19,8 @@ use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiStr;
 use futures::future;
+use futures::stream;
 use futures::stream::Stream;
-use futures::stream::{self};
 use futures_ext::BoxFuture;
 use futures_ext::BoxStream;
 use futures_ext::StreamExt;

@@ -7,8 +7,8 @@
 
 use anyhow::Context;
 use anyhow::Error;
+use futures::future;
 use futures::future::FutureExt;
-use futures::future::{self};
 use futures::pin_mut;
 use futures::select;
 use gotham::state::FromState;
@@ -688,8 +688,8 @@ mod test {
     use bytes::Bytes;
     use context::CoreContext;
     use fbinit::FacebookInit;
+    use filestore;
     use filestore::StoreRequest;
-    use filestore::{self};
     use futures::stream;
     use hyper::Uri;
     use memblob::Memblob;

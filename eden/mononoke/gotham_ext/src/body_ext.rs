@@ -8,10 +8,10 @@
 use anyhow::Error;
 use bytes::Bytes;
 use bytes::BytesMut;
+use futures::future;
 use futures::future::MapOk;
 use futures::future::Ready;
 use futures::future::TryFutureExt;
-use futures::future::{self};
 use futures::stream::Stream;
 use futures::stream::TryFold;
 use futures::stream::TryStreamExt;

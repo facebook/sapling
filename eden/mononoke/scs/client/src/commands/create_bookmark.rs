@@ -11,8 +11,8 @@ use clap::AppSettings;
 use clap::Arg;
 use clap::ArgMatches;
 use clap::SubCommand;
+use futures::stream;
 use futures::stream::StreamExt;
-use futures::stream::{self};
 use source_control::types as thrift;
 
 use crate::args::commit_id::add_commit_id_args;

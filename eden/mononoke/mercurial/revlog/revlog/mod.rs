@@ -23,8 +23,8 @@ use bytes::Bytes;
 use memmap::Mmap;
 use nom::IResult;
 
+pub use mercurial_types::bdiff;
 pub use mercurial_types::bdiff::Delta;
-pub use mercurial_types::bdiff::{self};
 pub use mercurial_types::delta;
 pub use mercurial_types::HgBlob;
 pub use mercurial_types::HgBlobNode;

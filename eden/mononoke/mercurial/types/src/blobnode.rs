@@ -14,8 +14,8 @@ use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
 use crate::blob::HgBlob;
+use crate::hash;
 use crate::hash::Context;
-use crate::hash::{self};
 use crate::nodehash::HgNodeHash;
 
 /// Equivalent type from Mercurial's Rust code representing parents.

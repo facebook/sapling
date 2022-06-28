@@ -8,8 +8,8 @@
 use std::collections::hash_map::Entry;
 use std::collections::hash_map::HashMap;
 use std::collections::HashSet;
+use std::fmt;
 use std::fmt::Display;
-use std::fmt::{self};
 use std::fs;
 use std::io::BufRead;
 use std::io::BufReader;

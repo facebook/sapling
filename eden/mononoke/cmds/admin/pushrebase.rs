@@ -17,8 +17,8 @@ use clap_old::SubCommand;
 use fbinit::FacebookInit;
 use futures::TryFutureExt;
 
+use cmdlib::args;
 use cmdlib::args::MononokeMatches;
-use cmdlib::args::{self};
 use cmdlib::helpers;
 use context::CoreContext;
 use maplit::hashset;

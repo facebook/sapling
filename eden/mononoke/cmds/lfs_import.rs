@@ -15,8 +15,8 @@ use cmdlib::args;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures::stream;
 use futures::stream::TryStreamExt;
-use futures::stream::{self};
 use lfs_import_lib::lfs_upload;
 use mercurial_types::blobs::File;
 

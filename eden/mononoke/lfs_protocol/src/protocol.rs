@@ -18,9 +18,9 @@ use quickcheck::Gen;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Display;
-use std::fmt::{self};
 use std::mem;
 use std::str::FromStr;
 
@@ -334,8 +334,8 @@ mod test {
     use assert_matches::assert_matches;
     use maplit::hashmap;
     use quickcheck::quickcheck;
+    use serde_json;
     use serde_json::json;
-    use serde_json::{self};
 
     const ONES_SHA256: &str = "1111111111111111111111111111111111111111111111111111111111111111";
 

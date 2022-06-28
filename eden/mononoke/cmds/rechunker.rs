@@ -14,8 +14,8 @@ use clap_old::Arg;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures::stream;
 use futures::stream::TryStreamExt;
-use futures::stream::{self};
 
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgNodeHash;

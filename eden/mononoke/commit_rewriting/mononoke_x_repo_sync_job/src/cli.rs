@@ -7,8 +7,8 @@
 
 use clap_old::Arg;
 use clap_old::SubCommand;
+use cmdlib::args;
 use cmdlib::args::MononokeClapApp;
-use cmdlib::args::{self};
 
 pub const ARG_ONCE: &str = "once";
 pub const ARG_COMMIT: &str = "commit";

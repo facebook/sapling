@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Display;
-use std::fmt::{self};
 use std::hash::Hash;
 use std::result;
 use std::str::FromStr;

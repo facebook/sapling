@@ -25,8 +25,8 @@ use itertools::Itertools;
 use mononoke_types::hash::Sha256;
 use std::collections::HashMap;
 use std::io::Write;
+use std::str;
 use std::str::FromStr;
-use std::str::{self};
 
 #[async_trait]
 impl Loadable for HgFileNodeId {

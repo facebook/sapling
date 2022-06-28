@@ -8,11 +8,11 @@
 use anyhow::Error;
 use futures::channel::mpsc;
 use futures::channel::oneshot;
+use futures::future;
 use futures::future::Future;
 use futures::future::FutureExt;
-use futures::future::{self};
+use futures::stream;
 use futures::stream::StreamExt;
-use futures::stream::{self};
 use ratelimit_meter::algorithms::Algorithm;
 use ratelimit_meter::clock::Clock;
 use ratelimit_meter::DirectRateLimiter;

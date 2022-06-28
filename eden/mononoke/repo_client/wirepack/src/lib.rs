@@ -177,8 +177,8 @@ fn unwrap_field<T: Clone>(field: &mut Option<T>, field_name: &str) -> Result<T> 
 #[cfg(test)]
 mod test {
     use super::*;
+    use futures::stream;
     use futures::stream::StreamExt;
-    use futures::stream::{self};
     use futures_old::Future;
 
     use maplit::btreemap;

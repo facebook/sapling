@@ -26,8 +26,8 @@ use bytes::Bytes;
 use context::CoreContext;
 use mononoke_types::DateTime;
 use std::collections::BTreeMap;
+use std::fmt;
 use std::fmt::Display;
-use std::fmt::{self};
 use std::io::Write;
 
 const STEP_PARENTS_METADATA_KEY: &str = "stepparents";

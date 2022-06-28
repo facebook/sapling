@@ -13,10 +13,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tunables::tunables;
 
+use crate::dag::errors;
 use crate::dag::errors::programming;
 use crate::dag::errors::BackendError;
 use crate::dag::errors::DagError;
-use crate::dag::errors::{self};
 use crate::dag::id::Group;
 use crate::dag::id::Id;
 use crate::dag::idmap::IdMapWrite;

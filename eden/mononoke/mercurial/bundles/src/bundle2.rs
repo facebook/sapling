@@ -7,10 +7,10 @@
 
 //! Overall coordinator for parsing bundle2 streams.
 
+use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Display;
 use std::fmt::Formatter;
-use std::fmt::{self};
 use std::io::BufRead;
 use std::io::Chain;
 use std::io::Cursor;

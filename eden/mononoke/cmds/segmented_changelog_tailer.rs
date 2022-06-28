@@ -20,15 +20,15 @@ use slog::info;
 use slog::o;
 
 use changesets::deserialize_cs_entries;
+use cmdlib::args;
 use cmdlib::args::MononokeMatches;
-use cmdlib::args::{self};
 use cmdlib::helpers;
 use context::CoreContext;
 use context::SessionContainer;
 use fbinit::FacebookInit;
+use segmented_changelog;
 use segmented_changelog::seedheads_from_config;
 use segmented_changelog::SegmentedChangelogTailer;
-use segmented_changelog::{self};
 
 const ONCE_ARG: &str = "once";
 const REPO_ARG: &str = "repo";

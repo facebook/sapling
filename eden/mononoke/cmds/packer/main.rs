@@ -11,16 +11,16 @@ use anyhow::Result;
 use blobstore_factory::make_packblob;
 use borrowed::borrowed;
 use clap_old::Arg;
+use cmdlib::args;
 use cmdlib::args::MononokeClapApp;
-use cmdlib::args::{self};
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures::stream;
 use futures::stream::TryStreamExt;
-use futures::stream::{self};
 use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
+use std::io;
 use std::io::BufRead;
-use std::io::{self};
 
 mod pack_utils;
 

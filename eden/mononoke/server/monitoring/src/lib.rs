@@ -10,8 +10,8 @@
 
 #![feature(never_type)]
 
+use std::thread;
 use std::thread::JoinHandle;
-use std::thread::{self};
 
 use anyhow::Error;
 use anyhow::Result;

@@ -11,10 +11,10 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use cloned::cloned;
+use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStream;
 use futures::stream::TryStreamExt;
-use futures::stream::{self};
 
 use blobstore::Blobstore;
 use blobstore::Loadable;

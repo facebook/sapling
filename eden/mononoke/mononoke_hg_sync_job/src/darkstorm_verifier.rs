@@ -9,13 +9,13 @@ use anyhow::Context;
 use anyhow::Error;
 use blobstore::Blobstore;
 use context::CoreContext;
+use filestore;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use filestore::StoreRequest;
-use filestore::{self};
+use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures::stream::{self};
 use mononoke_types::hash::Sha256;
 use std::sync::Arc;
 

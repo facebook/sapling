@@ -38,9 +38,9 @@ use tempfile::PersistError;
 use tokio::fs::hard_link;
 use tokio::fs::remove_file;
 use tokio::fs::File;
+use tokio::io;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
-use tokio::io::{self};
 
 use walkdir::WalkDir;
 

@@ -8,13 +8,13 @@
 use anyhow::bail;
 use anyhow::Error;
 use failure_ext::SlogKVErrorKey;
+use slog;
 use slog::Drain;
 use slog::Never;
 use slog::OwnedKVList;
 use slog::Record;
 use slog::Serializer;
 use slog::KV;
-use slog::{self};
 use slog_term::Decorator;
 use std::collections::HashSet;
 use std::fmt;

@@ -18,8 +18,8 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::task::Context;
 use futures::task::Poll;
+use std::fmt;
 use std::fmt::Debug;
-use std::fmt::{self};
 use std::pin::Pin;
 
 use crate::expected_size::ExpectedSize;

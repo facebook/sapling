@@ -6,8 +6,8 @@
  */
 
 use std::collections::BTreeMap;
+use std::fmt;
 use std::fmt::Display;
-use std::fmt::{self};
 
 use anyhow::Context;
 use anyhow::Error;

@@ -17,10 +17,10 @@ use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
 use serde::Deserialize;
 
+use filestore;
 use filestore::Alias;
 use filestore::FetchKey;
 use filestore::Range;
-use filestore::{self};
 use gotham_ext::content_encoding::ContentEncoding;
 use gotham_ext::error::HttpError;
 use gotham_ext::middleware::ClientIdentity;

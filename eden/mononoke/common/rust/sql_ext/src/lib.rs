@@ -28,8 +28,8 @@ pub mod facebook {
     #[cfg(fbcode_build)]
     mod r#impl;
 
+    use std::fmt;
     use std::fmt::Debug;
-    use std::fmt::{self};
 
     #[cfg(fbcode_build)]
     pub use r#impl::create_mysql_connections_sharded;

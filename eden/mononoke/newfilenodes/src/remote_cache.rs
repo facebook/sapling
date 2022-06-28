@@ -24,9 +24,9 @@ use crate::local_cache::CacheKey;
 use crate::structs::CachedFilenode;
 use crate::structs::CachedHistory;
 
+use filenodes::thrift;
 use filenodes::thrift::MC_CODEVER;
 use filenodes::thrift::MC_SITEVER;
-use filenodes::thrift::{self};
 use filenodes::FilenodeInfo;
 
 define_stats! {

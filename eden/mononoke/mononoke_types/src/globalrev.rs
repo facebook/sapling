@@ -11,10 +11,10 @@ use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use sql::mysql;
+use std::fmt;
 use std::fmt::Display;
-use std::fmt::{self};
+use std::str;
 use std::str::FromStr;
-use std::str::{self};
 
 pub const GLOBALREV_EXTRA: &str = "global_rev";
 

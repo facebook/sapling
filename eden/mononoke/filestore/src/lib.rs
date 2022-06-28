@@ -14,9 +14,9 @@ use bytes::BytesMut;
 use cloned::cloned;
 use futures::future::Future;
 use futures::future::TryFutureExt;
+use futures::stream;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
-use futures::stream::{self};
 use std::borrow::Borrow;
 
 use blobstore::Blobstore;

@@ -8,8 +8,8 @@
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
+use futures::future;
 use futures::future::try_join_all;
-use futures::future::{self};
 use futures::try_join;
 use futures::FutureExt;
 use futures::Stream;
@@ -356,8 +356,8 @@ mod test {
     use crate::tests::TestManifestIdStr;
     use crate::tests::TestManifestStr;
     use borrowed::borrowed;
+    use fbinit;
     use fbinit::FacebookInit;
-    use fbinit::{self};
 
     impl<ManifestId, FileId> CompositeEntry<ManifestId, FileId>
     where

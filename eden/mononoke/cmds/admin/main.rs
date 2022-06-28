@@ -12,9 +12,9 @@ use blobstore::PutBehaviour;
 use fbinit::FacebookInit;
 use std::process::ExitCode;
 
+use cmdlib::args;
 use cmdlib::args::ArgType;
 use cmdlib::args::MononokeClapApp;
-use cmdlib::args::{self};
 use context::CoreContext;
 use slog::error;
 

@@ -6,8 +6,8 @@
  */
 
 use std::fmt::Display;
+use std::io;
 use std::io::Write;
-use std::io::{self};
 
 use bytes_old::Bytes;
 use bytes_old::BytesMut;

@@ -20,8 +20,8 @@ use futures::TryStreamExt;
 
 use blobrepo::save_bonsai_changesets;
 use blobrepo::BlobRepo;
+use cmdlib::args;
 use cmdlib::args::MononokeMatches;
-use cmdlib::args::{self};
 use cmdlib::helpers;
 use context::CoreContext;
 use mononoke_types::BonsaiChangesetMut;

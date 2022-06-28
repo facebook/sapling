@@ -19,8 +19,8 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt;
 use std::fmt::Debug;
-use std::fmt::{self};
 use std::sync::Mutex;
 
 pub mod batch;

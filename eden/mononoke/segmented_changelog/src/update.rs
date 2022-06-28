@@ -12,8 +12,8 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use futures::future;
+use futures::stream;
 use futures::stream::TryStreamExt;
-use futures::stream::{self};
 use slog::info;
 use std::collections::HashSet;
 

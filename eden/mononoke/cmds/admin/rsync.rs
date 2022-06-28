@@ -20,8 +20,8 @@ use fbinit::FacebookInit;
 use futures::future::try_join;
 
 use blobrepo::BlobRepo;
+use cmdlib::args;
 use cmdlib::args::MononokeMatches;
-use cmdlib::args::{self};
 use cmdlib::helpers;
 use context::CoreContext;
 use mononoke_types::ChangesetId;

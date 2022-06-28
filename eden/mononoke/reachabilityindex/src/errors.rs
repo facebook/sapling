@@ -7,8 +7,8 @@
 
 use std::backtrace::Backtrace;
 use std::error::Error;
+use std::fmt;
 use std::fmt::Display;
-use std::fmt::{self};
 
 use blobrepo_errors::ErrorKind as BlobRepoError;
 use thiserror::Error;

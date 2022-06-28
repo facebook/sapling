@@ -6,13 +6,13 @@
  */
 
 use anyhow::Error;
+use std::cmp;
 use std::cmp::Ordering;
-use std::cmp::{self};
 use std::collections::HashMap;
+use std::fmt;
 use std::fmt::Display;
-use std::fmt::{self};
+use std::io;
 use std::io::Write;
-use std::io::{self};
 
 use ::manifest::Entry;
 use mononoke_types::hash::RichGitSha1;

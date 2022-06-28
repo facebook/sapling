@@ -8,9 +8,9 @@
 use anyhow::Error;
 use anyhow::Result;
 use bytes::Bytes;
+use futures::future;
 use futures::future::Future;
 use futures::future::TryFutureExt;
-use futures::future::{self};
 use futures::stream::Stream;
 use mononoke_types::hash;
 

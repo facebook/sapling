@@ -8,10 +8,10 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
+use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures::stream::{self};
 use mononoke_api::ChangesetContext;
 use mononoke_api::MononokeError;
 use source_control as thrift;
