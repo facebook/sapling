@@ -211,6 +211,10 @@ pub struct RepoConfig {
     pub cross_repo_commit_validation_config: Option<CrossRepoCommitValidation>,
     /// Monitored spares profiles configuration.
     pub sparse_profiles_config: Option<SparseProfilesConfig>,
+    /// Configuration related to hg-sync job for prod repos
+    pub hg_sync_config: Option<HgSyncConfig>,
+    /// Configuration related to hg-sync job for backup repos
+    pub backup_hg_sync_config: Option<HgSyncConfig>,
 }
 
 /// Backup repo configuration
@@ -1747,4 +1751,18 @@ pub struct SparseProfilesConfig {
     /// Exact list of monitored profiles
     /// Takes precedence over excludes.
     pub monitored_profiles: Vec<String>,
+}
+
+/// Repo-specific configuration parameters for hg sync job
+/// for a specific job variant
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct HgSyncConfig {
+    /// Remote path to hg repo to replay to
+    pub hg_repo_ssh_path: String,
+    /// Maximum number of bundles allowed over a single hg peer
+    pub batch_size: i64,
+    /// If set, mononoke repo will be locked on sync failure
+    pub lock_on_failure: bool,
+    /// The darkstorm backup repo-id to be used as target for sync
+    pub darkstorm_backup_repo_id: Option<i32>,
 }

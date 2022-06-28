@@ -177,6 +177,8 @@ fn parse_with_repo_definition(
         walker_config,
         cross_repo_commit_validation_config,
         sparse_profiles_config,
+        hg_sync_config,
+        backup_hg_sync_config,
         ..
     } = named_repo_config;
 
@@ -291,6 +293,8 @@ fn parse_with_repo_definition(
     let cross_repo_commit_validation_config = cross_repo_commit_validation_config.convert()?;
 
     let sparse_profiles_config = sparse_profiles_config.convert()?;
+    let hg_sync_config = hg_sync_config.convert()?;
+    let backup_hg_sync_config = backup_hg_sync_config.convert()?;
 
     Ok(RepoConfig {
         enabled,
@@ -331,6 +335,8 @@ fn parse_with_repo_definition(
         walker_config,
         cross_repo_commit_validation_config,
         sparse_profiles_config,
+        hg_sync_config,
+        backup_hg_sync_config,
     })
 }
 
@@ -440,13 +446,14 @@ mod test {
         BlobstoreId, BookmarkParams, BubbleDeletionMode, CacheWarmupParams, CommitSyncConfig,
         CommitSyncConfigVersion, CrossRepoCommitValidation, DatabaseConfig,
         DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, DerivedDataTypesConfig,
-        EphemeralBlobstoreConfig, FilestoreParams, HookBypass, HookConfig, HookManagerParams,
-        HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams, LocalDatabaseConfig,
-        MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PushParams, PushrebaseFlags,
-        PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, RepoClientKnobs,
-        SegmentedChangelogConfig, SegmentedChangelogHeadConfig, ShardableRemoteDatabaseConfig,
-        ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig, SourceControlServiceMonitoring,
-        SourceControlServiceParams, SparseProfilesConfig, UnodeVersion, WalkerConfig,
+        EphemeralBlobstoreConfig, FilestoreParams, HgSyncConfig, HookBypass, HookConfig,
+        HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams,
+        LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PushParams,
+        PushrebaseFlags, PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig,
+        RepoClientKnobs, SegmentedChangelogConfig, SegmentedChangelogHeadConfig,
+        ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig,
+        SourceControlServiceMonitoring, SourceControlServiceParams, SparseProfilesConfig,
+        UnodeVersion, WalkerConfig,
     };
     use mononoke_types::MPath;
     use mononoke_types_mocks::changesetid::ONES_CSID;
@@ -792,6 +799,17 @@ mod test {
 
             [sparse_profiles_config]
             sparse_profiles_location = "sparse"
+            
+            [hg_sync_config]
+            hg_repo_ssh_path = "ssh://hg.vip.facebook.com//data/scm/just_some_repo"
+            batch_size = 10
+            lock_on_failure = true
+            
+            [backup_hg_sync_config]
+            hg_repo_ssh_path = "mononoke://mononoke-backup.internal.tfbnw.net/just_some_repo"
+            batch_size = 20
+            lock_on_failure = false
+            darkstorm_backup_repo_id = 1001   
         "#;
         let fbsource_repo_def = r#"
             repo_id=0
@@ -1134,6 +1152,20 @@ mod test {
                     excluded_paths: vec![],
                     monitored_profiles: vec![],
                 }),
+                hg_sync_config: Some(HgSyncConfig {
+                    hg_repo_ssh_path: "ssh://hg.vip.facebook.com//data/scm/just_some_repo"
+                        .to_string(),
+                    batch_size: 10,
+                    lock_on_failure: true,
+                    darkstorm_backup_repo_id: None,
+                }),
+                backup_hg_sync_config: Some(HgSyncConfig {
+                    hg_repo_ssh_path:
+                        "mononoke://mononoke-backup.internal.tfbnw.net/just_some_repo".to_string(),
+                    batch_size: 20,
+                    lock_on_failure: false,
+                    darkstorm_backup_repo_id: Some(1001),
+                }),
             },
         );
 
@@ -1206,6 +1238,8 @@ mod test {
                 walker_config: None,
                 cross_repo_commit_validation_config: None,
                 sparse_profiles_config: None,
+                hg_sync_config: None,
+                backup_hg_sync_config: None,
             },
         );
         assert_eq!(

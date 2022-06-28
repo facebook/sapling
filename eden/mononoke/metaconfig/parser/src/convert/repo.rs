@@ -13,22 +13,22 @@ use anyhow::{anyhow, Context, Result};
 use bookmarks_types::BookmarkName;
 use metaconfig_types::{
     BlameVersion, BookmarkOrRegex, BookmarkParams, CacheWarmupParams, ComparableRegex,
-    CrossRepoCommitValidation, DerivedDataConfig, DerivedDataTypesConfig, HookBypass, HookConfig,
-    HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams,
-    PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs, SegmentedChangelogConfig,
-    SegmentedChangelogHeadConfig, ServiceWriteRestrictions, SourceControlServiceMonitoring,
-    SourceControlServiceParams, SparseProfilesConfig, UnodeVersion, WalkerConfig, WalkerJobParams,
-    WalkerJobType,
+    CrossRepoCommitValidation, DerivedDataConfig, DerivedDataTypesConfig, HgSyncConfig, HookBypass,
+    HookConfig, HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams,
+    LfsParams, PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs,
+    SegmentedChangelogConfig, SegmentedChangelogHeadConfig, ServiceWriteRestrictions,
+    SourceControlServiceMonitoring, SourceControlServiceParams, SparseProfilesConfig, UnodeVersion,
+    WalkerConfig, WalkerJobParams, WalkerJobType,
 };
 use mononoke_types::{ChangesetId, MPath, PrefixTrie};
 use regex::Regex;
 use repos::{
     RawBookmarkConfig, RawCacheWarmupConfig, RawCrossRepoCommitValidationConfig,
-    RawDerivedDataConfig, RawDerivedDataTypesConfig, RawHookConfig, RawHookManagerParams,
-    RawInfinitepushParams, RawLfsParams, RawPushParams, RawPushrebaseParams, RawRepoClientKnobs,
-    RawSegmentedChangelogConfig, RawSegmentedChangelogHeadConfig, RawServiceWriteRestrictions,
-    RawSourceControlServiceMonitoring, RawSourceControlServiceParams, RawSparseProfilesConfig,
-    RawWalkerConfig, RawWalkerJobParams, RawWalkerJobType,
+    RawDerivedDataConfig, RawDerivedDataTypesConfig, RawHgSyncConfig, RawHookConfig,
+    RawHookManagerParams, RawInfinitepushParams, RawLfsParams, RawPushParams, RawPushrebaseParams,
+    RawRepoClientKnobs, RawSegmentedChangelogConfig, RawSegmentedChangelogHeadConfig,
+    RawServiceWriteRestrictions, RawSourceControlServiceMonitoring, RawSourceControlServiceParams,
+    RawSparseProfilesConfig, RawWalkerConfig, RawWalkerJobParams, RawWalkerJobType,
 };
 
 use crate::convert::Convert;
@@ -541,6 +541,19 @@ impl Convert for RawSparseProfilesConfig {
             sparse_profiles_location: self.sparse_profiles_location,
             excluded_paths: self.excluded_paths.unwrap_or_default(),
             monitored_profiles: self.monitored_profiles.unwrap_or_default(),
+        })
+    }
+}
+
+impl Convert for RawHgSyncConfig {
+    type Output = HgSyncConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(HgSyncConfig {
+            hg_repo_ssh_path: self.hg_repo_ssh_path,
+            batch_size: self.batch_size,
+            lock_on_failure: self.lock_on_failure,
+            darkstorm_backup_repo_id: self.darkstorm_backup_repo_id,
         })
     }
 }
