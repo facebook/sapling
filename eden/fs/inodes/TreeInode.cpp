@@ -2545,15 +2545,15 @@ Future<Unit> TreeInode::computeDiff(
       }
     };
 
-    auto processBothPresent = [&](const Tree::value_type& scmEntry,
+    auto processBothPresent = [&](PathComponentPiece componentPath,
+                                  const TreeEntry& scmEntry,
                                   DirEntry* inodeEntry) {
       // We only need to know the ignored status if this is a directory.
       // If this is a regular file on disk and in source control, then it
       // is always included since it is already tracked in source control.
       bool entryIgnored = isIgnored;
-      auto entryPath = currentPath + scmEntry.first;
-      if (!isIgnored &&
-          (inodeEntry->isDirectory() || scmEntry.second.isTree())) {
+      auto entryPath = currentPath + componentPath;
+      if (!isIgnored && (inodeEntry->isDirectory() || scmEntry.isTree())) {
         auto fileType = inodeEntry->isDirectory() ? GitIgnore::TYPE_DIR
                                                   : GitIgnore::TYPE_FILE;
         auto ignoreStatus = ignore->match(entryPath, fileType);
@@ -2575,7 +2575,7 @@ Future<Unit> TreeInode::computeDiff(
         deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
             context,
             entryPath,
-            scmEntry.second,
+            scmEntry,
             std::move(childInodePtr),
             ignore.get(),
             entryIgnored));
@@ -2584,7 +2584,7 @@ Future<Unit> TreeInode::computeDiff(
         // We'll have to load it to confirm if it is the same or different.
         auto inodeFuture = self->loadChildLocked(
             contents->entries,
-            scmEntry.first,
+            componentPath,
             *inodeEntry,
             pendingLoads,
             context->getFetchContext());
@@ -2592,7 +2592,7 @@ Future<Unit> TreeInode::computeDiff(
             DeferredDiffEntry::createModifiedEntryFromInodeFuture(
                 context,
                 entryPath,
-                scmEntry.second,
+                scmEntry,
                 std::move(inodeFuture),
                 ignore.get(),
                 entryIgnored));
@@ -2602,8 +2602,8 @@ Future<Unit> TreeInode::computeDiff(
           // metadata changes will cause the inode to be materialized, and
           // the previous path will be taken.
           treeEntryTypeFromMode(inodeEntry->getInitialMode()) ==
-              scmEntry.second.getType() &&
-          inodeEntry->getHash() == scmEntry.second.getHash()) {
+              scmEntry.getType() &&
+          inodeEntry->getHash() == scmEntry.getHash()) {
         // This file or directory is unchanged.  We can skip it.
         XLOG(DBG9) << "diff: unchanged unloaded file: " << entryPath;
       } else if (inodeEntry->isDirectory()) {
@@ -2615,11 +2615,11 @@ Future<Unit> TreeInode::computeDiff(
         deferredEntries.emplace_back(DeferredDiffEntry::createModifiedScmEntry(
             context,
             entryPath,
-            scmEntry.second.getHash(),
+            scmEntry.getHash(),
             inodeEntry->getHash(),
             ignore.get(),
             entryIgnored));
-      } else if (scmEntry.second.isTree()) {
+      } else if (scmEntry.isTree()) {
         // This used to be a directory in the source control state,
         // but is now a file or symlink.  Report the new file, then add a
         // deferred entry to report the entire source control Tree as
@@ -2633,9 +2633,9 @@ Future<Unit> TreeInode::computeDiff(
           XLOG(DBG6) << "diff: directory --> untracked file: " << entryPath;
           context->callback->addedPath(entryPath, inodeEntry->getDtype());
         }
-        context->callback->removedPath(entryPath, scmEntry.second.getDType());
+        context->callback->removedPath(entryPath, scmEntry.getDType());
         deferredEntries.emplace_back(DeferredDiffEntry::createRemovedScmEntry(
-            context, entryPath, scmEntry.second.getHash()));
+            context, entryPath, scmEntry.getHash()));
       } else {
         // This file corresponds to a different blob hash, or has a
         // different mode.
@@ -2651,7 +2651,7 @@ Future<Unit> TreeInode::computeDiff(
         // janky hashing scheme for mercurial data, we should be able just
         // immediately assume the file is different here, without checking.
         if (treeEntryTypeFromMode(inodeEntry->getInitialMode()) !=
-            scmEntry.second.getType()) {
+            scmEntry.getType()) {
           // The mode is definitely modified
           XLOG(DBG5) << "diff: file modified due to mode change: " << entryPath;
           context->callback->modifiedPath(entryPath, inodeEntry->getDtype());
@@ -2663,7 +2663,7 @@ Future<Unit> TreeInode::computeDiff(
           deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
               context,
               entryPath,
-              scmEntry.second,
+              scmEntry,
               inodeEntry->getHash(),
               inodeEntry->getDtype()));
         }
@@ -2705,7 +2705,8 @@ Future<Unit> TreeInode::computeDiff(
           processUntracked(inodeIter->first, &inodeIter->second);
           ++inodeIter;
         } else {
-          processBothPresent(*scIter, &inodeIter->second);
+          processBothPresent(
+              inodeIter->first, scIter->second, &inodeIter->second);
           ++scIter;
           ++inodeIter;
         }
