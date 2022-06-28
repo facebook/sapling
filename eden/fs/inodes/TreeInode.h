@@ -316,7 +316,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   folly::Future<folly::Unit> diff(
       DiffContext* context,
       RelativePathPiece currentPath,
-      std::shared_ptr<const Tree> tree,
+      std::vector<std::shared_ptr<const Tree>> trees,
       const GitIgnoreStack* parentIgnore,
       bool isIgnored);
 
@@ -700,7 +700,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       InodePtr gitignoreInode,
       DiffContext* context,
       RelativePathPiece currentPath,
-      std::shared_ptr<const Tree> tree,
+      std::vector<std::shared_ptr<const Tree>> trees,
       const GitIgnoreStack* parentIgnore,
       bool isIgnored);
 
@@ -716,7 +716,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       folly::Synchronized<TreeInodeState>::LockedPtr contentsLock,
       DiffContext* context,
       RelativePathPiece currentPath,
-      std::shared_ptr<const Tree> tree,
+      std::vector<std::shared_ptr<const Tree>> trees,
       std::unique_ptr<GitIgnoreStack> ignore,
       bool isIgnored);
 

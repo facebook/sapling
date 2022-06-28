@@ -83,7 +83,12 @@ class UntrackedDiffEntry : public DeferredDiffEntry {
     }
 
     // Recursively diff the untracked directory.
-    return treeInode->diff(context_, getPath(), nullptr, ignore_, isIgnored_);
+    return treeInode->diff(
+        context_,
+        getPath(),
+        std::vector<shared_ptr<const Tree>>{},
+        ignore_,
+        isIgnored_);
   }
 
  private:
@@ -196,7 +201,11 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
         .thenValue([this, treeInode = std::move(treeInode)](
                        shared_ptr<const Tree>&& tree) {
           return treeInode->diff(
-              context_, getPath(), std::move(tree), ignore_, isIgnored_);
+              context_,
+              getPath(),
+              std::vector{std::move(tree)},
+              ignore_,
+              isIgnored_);
         });
   }
 
@@ -215,7 +224,12 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       if (isIgnored_ && !context_->listIgnored) {
         return makeFuture();
       }
-      return treeInode->diff(context_, getPath(), nullptr, ignore_, isIgnored_);
+      return treeInode->diff(
+          context_,
+          getPath(),
+          std::vector<shared_ptr<const Tree>>{},
+          ignore_,
+          isIgnored_);
     }
 
     return fileInode

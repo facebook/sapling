@@ -2242,7 +2242,7 @@ return from the parent call.
 Future<Unit> TreeInode::diff(
     DiffContext* context,
     RelativePathPiece currentPath,
-    shared_ptr<const Tree> tree,
+    std::vector<shared_ptr<const Tree>> trees,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
   if (context->isCancelled()) {
@@ -2265,14 +2265,18 @@ Future<Unit> TreeInode::diff(
                        ? "materialized"
                        : contents->treeHash->toLogString())
                << ") vs "
-               << (tree ? tree->getHash().toLogString() : "null tree");
+               << (trees.size() == 1 ? trees[0]->getHash().toLogString()
+                                     : "null tree");
 
     // Check to see if we can short-circuit the diff operation if we have the
     // same hash as the tree we are being compared to.
-    if (!contents->isMaterialized() && tree &&
-        contents->treeHash.value() == tree->getHash()) {
-      // There are no changes in our tree or any children subtrees.
-      return makeFuture();
+    if (!contents->isMaterialized()) {
+      for (auto& tree : trees) {
+        if (contents->treeHash.value() == tree->getHash()) {
+          // There are no changes in our tree or any children subtrees.
+          return makeFuture();
+        }
+      }
     }
 
     // If this directory is already ignored, we don't need to bother loading its
@@ -2289,7 +2293,7 @@ Future<Unit> TreeInode::diff(
           std::move(contents),
           context,
           currentPath,
-          std::move(tree),
+          std::move(trees),
           nullptr,
           isIgnored);
     }
@@ -2317,7 +2321,7 @@ Future<Unit> TreeInode::diff(
           std::move(contents),
           context,
           currentPath,
-          std::move(tree),
+          std::move(trees),
           make_unique<GitIgnoreStack>(parentIgnore), // empty with no rules
           isIgnored);
     }
@@ -2345,14 +2349,14 @@ Future<Unit> TreeInode::diff(
         .thenValue([self = inodePtrFromThis(),
                     context,
                     currentPath = RelativePath{currentPath},
-                    tree = std::move(tree),
+                    trees = std::move(trees),
                     parentIgnore,
                     isIgnored](InodePtr&& loadedInode) mutable {
           return self->loadGitIgnoreThenDiff(
               std::move(loadedInode),
               context,
               currentPath,
-              std::move(tree),
+              std::move(trees),
               parentIgnore,
               isIgnored);
         });
@@ -2361,7 +2365,7 @@ Future<Unit> TreeInode::diff(
         std::move(inode),
         context,
         currentPath,
-        std::move(tree),
+        std::move(trees),
         parentIgnore,
         isIgnored);
   }
@@ -2371,7 +2375,7 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
     InodePtr gitignoreInode,
     DiffContext* context,
     RelativePathPiece currentPath,
-    shared_ptr<const Tree> tree,
+    std::vector<shared_ptr<const Tree>> trees,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
   return getMount()
@@ -2385,14 +2389,14 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
       .thenValue([self = inodePtrFromThis(),
                   context,
                   currentPath = RelativePath{currentPath}, // deep copy
-                  tree,
+                  trees = std::move(trees),
                   parentIgnore,
                   isIgnored](std::string&& ignoreFileContents) mutable {
         return self->computeDiff(
             self->contents_.wlock(),
             context,
             currentPath,
-            std::move(tree),
+            std::move(trees),
             make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
             isIgnored);
       });
@@ -2427,11 +2431,16 @@ Future<Unit> TreeInode::computeDiff(
     folly::Synchronized<TreeInodeState>::LockedPtr contentsLock,
     DiffContext* context,
     RelativePathPiece currentPath,
-    shared_ptr<const Tree> tree,
+    std::vector<shared_ptr<const Tree>> trees,
     std::unique_ptr<GitIgnoreStack> ignore,
     bool isIgnored) {
   XDCHECK(isIgnored || ignore != nullptr)
       << "the ignore stack is required if this directory is not ignored";
+
+  XCHECK_LE(trees.size(), (size_t)1)
+      << "TreeInode::computeDiff doesn't accept multiple trees yet";
+
+  shared_ptr<const Tree> tree = trees.size() == 1 ? trees[0] : nullptr;
 
   std::vector<std::unique_ptr<DeferredDiffEntry>> deferredEntries;
   auto self = inodePtrFromThis();

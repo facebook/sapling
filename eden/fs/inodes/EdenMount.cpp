@@ -133,7 +133,7 @@ class EdenMount::JournalDiffCallback : public DiffCallback {
   FOLLY_NODISCARD Future<StatsFetchContext> performDiff(
       EdenMount* mount,
       TreeInodePtr rootInode,
-      std::shared_ptr<const Tree> rootTree) {
+      std::vector<std::shared_ptr<const Tree>> rootTrees) {
     auto diffContext =
         mount->createDiffContext(this, folly::CancellationToken{});
     auto rawContext = diffContext.get();
@@ -142,7 +142,7 @@ class EdenMount::JournalDiffCallback : public DiffCallback {
         ->diff(
             rawContext,
             RelativePathPiece{},
-            std::move(rootTree),
+            std::move(rootTrees),
             rawContext->getToplevelIgnore(),
             false)
         .thenValue([diffContext = std::move(diffContext), rootInode](
@@ -1408,7 +1408,8 @@ folly::Future<CheckoutResult> EdenMount::checkout(
         }
 
         auto& fromTree = std::get<0>(treeResults);
-        return journalDiffCallback->performDiff(this, getRootInode(), fromTree)
+        return journalDiffCallback
+            ->performDiff(this, getRootInode(), std::vector{fromTree})
             .thenValue([ctx, journalDiffCallback, treeResults](
                            const StatsFetchContext& diffFetchContext) {
               ctx->getFetchContext().merge(diffFetchContext);
@@ -1645,7 +1646,7 @@ Future<Unit> EdenMount::diff(DiffContext* ctxPtr, const RootId& commitHash)
         return rootInode->diff(
             ctxPtr,
             RelativePathPiece{},
-            std::move(rootTree),
+            std::vector{std::move(rootTree)},
             ctxPtr->getToplevelIgnore(),
             false);
       });
