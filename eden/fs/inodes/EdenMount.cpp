@@ -1337,11 +1337,15 @@ folly::Future<CheckoutResult> EdenMount::checkout(
     CheckoutMode checkoutMode) {
   const folly::stop_watch<> stopWatch;
   auto checkoutTimes = std::make_shared<CheckoutTimes>();
+  bool resumingCheckout = false;
 
   RootId oldParent;
   {
     auto parentLock = parentState_.wlock();
     if (parentLock->checkoutInProgress) {
+      // Currently unused, but will be soon.
+      resumingCheckout = true;
+
       // Another update is already pending, we should bail.
       // TODO: Report the pid of the client that requested the first checkout
       // operation in this error
@@ -1473,12 +1477,18 @@ folly::Future<CheckoutResult> EdenMount::checkout(
         // Complete the checkout
         return ctx->finish(snapshotHash);
       })
-      .ensure([this]() {
+      .ensure([this, ctx, resumingCheckout]() {
         // Checkout completed, make sure to always reset the checkoutInProgress
         // flag!
         auto parentLock = parentState_.wlock();
         XCHECK(parentLock->checkoutInProgress);
-        parentLock->checkoutInProgress = false;
+        if (ctx->isDryRun()) {
+          // After a dryrun, set checkoutInProgress back to the value it was
+          // previously.
+          parentLock->checkoutInProgress = resumingCheckout;
+        } else {
+          parentLock->checkoutInProgress = false;
+        }
       })
       .thenValue(
           [this,
