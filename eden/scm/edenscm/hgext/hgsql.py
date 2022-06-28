@@ -890,12 +890,12 @@ def wraprepo(repo):
             lockname = self._lockname(name)
             self.sqlcursor.execute("SELECT IS_USED_LOCK('%s')" % (lockname,))
             lockheldby = self.sqlcursor.fetchall()[0][0]
-            if lockheldby == None:
+            if lockheldby is None:
                 raise Exception("unable to check %s lock" % lockname)
 
             self.sqlcursor.execute("SELECT CONNECTION_ID()")
             myconnectid = self.sqlcursor.fetchall()[0][0]
-            if myconnectid == None:
+            if myconnectid is None:
                 raise Exception("unable to read connection id")
 
             return lockheldby == myconnectid
@@ -1458,7 +1458,7 @@ def wraprepo(repo):
             if self.disablesync:
                 return
 
-            if self.sqlconn == None:
+            if self.sqlconn is None:
                 raise util.Abort(
                     "invalid repo change - only hg push and pull are allowed"
                 )
@@ -1625,7 +1625,7 @@ def wraprepo(repo):
                 or not self.sqlreplaytransaction
             ):
                 minlinkrev = min(revisions, key=lambda x: x[1])[1]
-                if maxlinkrev == None or maxlinkrev != minlinkrev - 1:
+                if maxlinkrev is None or maxlinkrev != minlinkrev - 1:
                     raise CorruptionException(
                         "attempting to write non-sequential "
                         + "linkrev %s, expected %s" % (minlinkrev, maxlinkrev + 1)
