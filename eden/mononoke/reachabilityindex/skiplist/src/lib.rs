@@ -8,9 +8,7 @@
 use reloader::Loader;
 use reloader::Reloader;
 use std::cmp::min;
-#[deny(warnings)]
 use std::collections::HashMap;
-#[deny(warnings)]
 use std::collections::HashSet;
 use std::num::NonZeroI64;
 use std::sync::Arc;
