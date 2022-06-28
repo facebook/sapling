@@ -4,7 +4,6 @@ async-compression = { git = "https://github.com/lei2022/async-compression", rev 
 curve25519-dalek = { git = "https://github.com/hariria/curve25519-dalek", rev = "1f39e7b369dc70f432370c9703229a45bfa9664e" }
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }
 git-config = { git = "https://github.com/mzr/gitoxide", rev = "28c51a1d99af3f4e5ea8f6bb2319e0a5d812c891" }
-graphql-parser = { git = "https://github.com/vmagro/graphql-parser", rev = "1d155d96e6052767380ab5e67c57e3d6608a31ac" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d174c6796d736b2b61dab0297670390f8" }
 mysql_async = { git = "https://github.com/mzr/mysql_async", rev = "76b6fa05d7bb3408402033e6f94042a756ab55ab" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
