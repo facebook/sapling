@@ -21,6 +21,7 @@ use futures_ext::FbFutureExt;
 use futures_stats::{FutureStats, TimedFutureExt};
 use identity::Identity;
 use itertools::Itertools;
+use login_objects_thrift::EnvironmentType;
 use maplit::hashset;
 use megarepo_api::MegarepoApi;
 use metadata::Metadata;
@@ -123,7 +124,10 @@ impl SourceControlServiceImpl {
         params: &dyn AddScubaParams,
     ) -> Result<CoreContext, errors::ServiceError> {
         let identities: MononokeIdentitySet = req_ctxt
-            .identities_for_service(&self.service_identity)
+            .identities_including_cats(
+                &self.service_identity,
+                &[EnvironmentType::PROD, EnvironmentType::CORP],
+            )
             .map_err(errors::internal_error)?
             .entries()
             .into_iter()
