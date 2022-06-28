@@ -80,7 +80,7 @@ class DeferredDiffEntry {
   static std::unique_ptr<DeferredDiffEntry> createModifiedEntry(
       DiffContext* context,
       RelativePath path,
-      const TreeEntry& scmEntry,
+      std::vector<TreeEntry> scmEntries,
       InodePtr inode,
       const GitIgnoreStack* ignore,
       bool isIgnored);
@@ -88,7 +88,7 @@ class DeferredDiffEntry {
   static std::unique_ptr<DeferredDiffEntry> createModifiedEntryFromInodeFuture(
       DiffContext* context,
       RelativePath path,
-      const TreeEntry& scmEntry,
+      std::vector<TreeEntry> scmEntries,
       folly::Future<InodePtr>&& inodeFuture,
       const GitIgnoreStack* ignore,
       bool isIgnored);

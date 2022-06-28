@@ -380,26 +380,33 @@ DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedEntry(
     DiffContext* context,
     RelativePath path,
-    const TreeEntry& scmEntry,
+    std::vector<TreeEntry> scmEntries,
     InodePtr inode,
     const GitIgnoreStack* ignore,
     bool isIgnored) {
+  XCHECK_GT(scmEntries.size(), 0ull);
   return make_unique<ModifiedDiffEntry>(
-      context, std::move(path), scmEntry, std::move(inode), ignore, isIgnored);
+      context,
+      std::move(path),
+      scmEntries[0],
+      std::move(inode),
+      ignore,
+      isIgnored);
 }
 
 unique_ptr<DeferredDiffEntry>
 DeferredDiffEntry::createModifiedEntryFromInodeFuture(
     DiffContext* context,
     RelativePath path,
-    const TreeEntry& scmEntry,
+    std::vector<TreeEntry> scmEntries,
     folly::Future<InodePtr>&& inodeFuture,
     const GitIgnoreStack* ignore,
     bool isIgnored) {
+  XCHECK_GT(scmEntries.size(), 0ull);
   return make_unique<ModifiedDiffEntry>(
       context,
       std::move(path),
-      scmEntry,
+      scmEntries[0],
       std::move(inodeFuture),
       ignore,
       isIgnored);
