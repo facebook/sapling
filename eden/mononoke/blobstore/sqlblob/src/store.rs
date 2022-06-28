@@ -5,16 +5,21 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashMap, hash::Hasher, num::NonZeroUsize, sync::Arc};
+use std::collections::HashMap;
+use std::hash::Hasher;
+use std::num::NonZeroUsize;
+use std::sync::Arc;
 
-use anyhow::{bail, format_err, Error};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Error;
 use bytes::BytesMut;
 use cached_config::ConfigHandle;
-use futures::{
-    future::TryFutureExt,
-    stream::{self, Stream},
-};
-use sql::{queries, Connection};
+use futures::future::TryFutureExt;
+use futures::stream::Stream;
+use futures::stream::{self};
+use sql::queries;
+use sql::Connection;
 use twox_hash::XxHash32;
 use xdb_gc_structs::XdbGc;
 
@@ -22,10 +27,10 @@ use crate::delay::BlobDelay;
 
 mod types {
     use sql::mysql;
-    use sql::mysql_async::{
-        prelude::{ConvIr, FromValue},
-        FromValueError, Value,
-    };
+    use sql::mysql_async::prelude::ConvIr;
+    use sql::mysql_async::prelude::FromValue;
+    use sql::mysql_async::FromValueError;
+    use sql::mysql_async::Value;
 
     type FromValueResult<T> = Result<T, FromValueError>;
 

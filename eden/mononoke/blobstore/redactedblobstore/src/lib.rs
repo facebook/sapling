@@ -9,22 +9,27 @@ mod errors;
 mod redaction_config_blobstore;
 pub mod store;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData, BlobstoreIsPresent};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use std::num::NonZeroU64;
-use std::{ops::Deref, sync::Arc};
+use std::ops::Deref;
+use std::sync::Arc;
 use tunables::tunables;
 
 pub use crate::errors::ErrorKind;
-pub use crate::redaction_config_blobstore::{
-    ArcRedactionConfigBlobstore, RedactionConfigBlobstore,
-};
-pub use crate::store::{RedactedBlobs, RedactedMetadata, SqlRedactedContentStore};
+pub use crate::redaction_config_blobstore::ArcRedactionConfigBlobstore;
+pub use crate::redaction_config_blobstore::RedactionConfigBlobstore;
+pub use crate::store::RedactedBlobs;
+pub use crate::store::RedactedMetadata;
+pub use crate::store::SqlRedactedContentStore;
 
 pub mod config {
     pub const GET_OPERATION: &str = "GET";

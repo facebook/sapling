@@ -10,36 +10,64 @@
 /// NOTE - this is not a production quality tool, but rather a best effort attempt to
 /// half-automate a rare case that might occur. Tool most likely doesn't cover all the cases.
 /// USE WITH CARE!
-use anyhow::{format_err, Context, Error};
+use anyhow::format_err;
+/// This is a very hacky temporary tool that's used with only one purpose -
+/// to half-manually sync a diamond merge commit from a small repo into a large repo.
+/// NOTE - this is not a production quality tool, but rather a best effort attempt to
+/// half-automate a rare case that might occur. Tool most likely doesn't cover all the cases.
+/// USE WITH CARE!
+use anyhow::Context;
+/// This is a very hacky temporary tool that's used with only one purpose -
+/// to half-manually sync a diamond merge commit from a small repo into a large repo.
+/// NOTE - this is not a production quality tool, but rather a best effort attempt to
+/// half-automate a rare case that might occur. Tool most likely doesn't cover all the cases.
+/// USE WITH CARE!
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use cacheblob::LeaseOps;
 use cloned::cloned;
 use commit_transformation::upload_commits;
 use context::CoreContext;
-use cross_repo_sync::{
-    create_commit_syncers, rewrite_commit, update_mapping_with_version, CandidateSelectionHint,
-    CommitRewrittenToEmpty, CommitSyncContext, CommitSyncOutcome, CommitSyncer, Syncers,
-};
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt, TryFutureExt},
-    stream::{futures_unordered::FuturesUnordered, StreamExt, TryStreamExt},
-};
-use futures_ext::{BoxStream, StreamExt as _};
-use futures_old::{Future, IntoFuture, Stream};
+use cross_repo_sync::create_commit_syncers;
+use cross_repo_sync::rewrite_commit;
+use cross_repo_sync::update_mapping_with_version;
+use cross_repo_sync::CandidateSelectionHint;
+use cross_repo_sync::CommitRewrittenToEmpty;
+use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncOutcome;
+use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::Syncers;
+use futures::compat::Future01CompatExt;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::stream::futures_unordered::FuturesUnordered;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures_ext::BoxStream;
+use futures_ext::StreamExt as _;
+use futures_old::Future;
+use futures_old::IntoFuture;
+use futures_old::Stream;
 use live_commit_sync_config::LiveCommitSyncConfig;
-use manifest::{bonsai_diff, BonsaiDiffFileChange};
+use manifest::bonsai_diff;
+use manifest::BonsaiDiffFileChange;
 use maplit::hashmap;
 use mercurial_derived_data::DeriveHgChangeset;
-use mercurial_types::{HgFileNodeId, HgManifestId};
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_api_types::InnerRepo;
-use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, MPath};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::FileChange;
+use mononoke_types::MPath;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
-use slog::{info, warn};
+use slog::info;
+use slog::warn;
 use sorted_vector_map::SortedVectorMap;
 use std::collections::HashMap;
 use std::sync::Arc;

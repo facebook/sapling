@@ -5,9 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Context, Result};
-use bookmarks::{BookmarkName, BookmarkUpdateReason, Bookmarks, BookmarksRef};
-use clap::{Parser, Subcommand};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
+use bookmarks::Bookmarks;
+use bookmarks::BookmarksRef;
+use clap::Parser;
+use clap::Subcommand;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;

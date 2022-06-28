@@ -7,47 +7,70 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        back_sync_commits_to_small_repo, check_dependent_systems, derive_bonsais_single_repo,
-        find_mapping_version, get_large_repo_config_if_pushredirected, get_large_repo_setting,
-        merge_imported_commit, move_bookmark, push_merge_commit, rewrite_file_paths, ChangesetArgs,
-        CheckerFlags, ImportStage, RecoveryFields, Repo, RepoImportSetting,
-    };
+    use crate::back_sync_commits_to_small_repo;
+    use crate::check_dependent_systems;
+    use crate::derive_bonsais_single_repo;
+    use crate::find_mapping_version;
+    use crate::get_large_repo_config_if_pushredirected;
+    use crate::get_large_repo_setting;
+    use crate::merge_imported_commit;
+    use crate::move_bookmark;
+    use crate::push_merge_commit;
+    use crate::rewrite_file_paths;
+    use crate::ChangesetArgs;
+    use crate::CheckerFlags;
+    use crate::ImportStage;
+    use crate::RecoveryFields;
+    use crate::Repo;
+    use crate::RepoImportSetting;
     use anyhow::Result;
     use ascii::AsciiString;
     use blobrepo::AsBlobRepo;
     use blobstore::Loadable;
-    use bookmarks::{
-        BookmarkName, BookmarkUpdateLogRef, BookmarkUpdateReason, BookmarksRef, Freshness,
-    };
+    use bookmarks::BookmarkName;
+    use bookmarks::BookmarkUpdateLogRef;
+    use bookmarks::BookmarkUpdateReason;
+    use bookmarks::BookmarksRef;
+    use bookmarks::Freshness;
     use cacheblob::InProcessLease;
-    use cached_config::{ConfigStore, ModificationTime, TestSource};
+    use cached_config::ConfigStore;
+    use cached_config::ModificationTime;
+    use cached_config::TestSource;
     use context::CoreContext;
-    use cross_repo_sync::{create_commit_syncers, CommitSyncContext};
+    use cross_repo_sync::create_commit_syncers;
+    use cross_repo_sync::CommitSyncContext;
     use derived_data_manager::BonsaiDerivable;
     use derived_data_utils::derived_data_utils;
     use fbinit::FacebookInit;
     use futures::stream::TryStreamExt;
     use git_types::TreeHandle;
-    use live_commit_sync_config::{
-        CfgrLiveCommitSyncConfig, LiveCommitSyncConfig, TestLiveCommitSyncConfig,
-        CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS, CONFIGERATOR_PUSHREDIRECT_ENABLE,
-    };
+    use live_commit_sync_config::CfgrLiveCommitSyncConfig;
+    use live_commit_sync_config::LiveCommitSyncConfig;
+    use live_commit_sync_config::TestLiveCommitSyncConfig;
+    use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
+    use live_commit_sync_config::CONFIGERATOR_PUSHREDIRECT_ENABLE;
     use maplit::hashmap;
     use mercurial_types::MPath;
     use mercurial_types_mocks::nodehash::ONES_CSID as HG_CSID;
-    use metaconfig_types::{
-        CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig,
-        DefaultSmallToLargeCommitSyncPathAction, PushrebaseParams, RepoConfig,
-        SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
-    };
+    use metaconfig_types::CommitSyncConfig;
+    use metaconfig_types::CommitSyncConfigVersion;
+    use metaconfig_types::CommonCommitSyncConfig;
+    use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+    use metaconfig_types::PushrebaseParams;
+    use metaconfig_types::RepoConfig;
+    use metaconfig_types::SmallRepoCommitSyncConfig;
+    use metaconfig_types::SmallRepoPermanentConfig;
     use mononoke_hg_sync_job_helper_lib::LATEST_REPLAYED_REQUEST_KEY;
-    use mononoke_types::{
-        globalrev::{Globalrev, START_COMMIT_GLOBALREV},
-        BonsaiChangeset, ChangesetId, DateTime, RepositoryId,
-    };
-    use mononoke_types_mocks::changesetid::{ONES_CSID as MON_CSID, TWOS_CSID};
-    use movers::{DefaultAction, Mover};
+    use mononoke_types::globalrev::Globalrev;
+    use mononoke_types::globalrev::START_COMMIT_GLOBALREV;
+    use mononoke_types::BonsaiChangeset;
+    use mononoke_types::ChangesetId;
+    use mononoke_types::DateTime;
+    use mononoke_types::RepositoryId;
+    use mononoke_types_mocks::changesetid::ONES_CSID as MON_CSID;
+    use mononoke_types_mocks::changesetid::TWOS_CSID;
+    use movers::DefaultAction;
+    use movers::Mover;
     use mutable_counters::MutableCountersRef;
     use repo_blobstore::RepoBlobstoreRef;
     use sql_construct::SqlConstruct;
@@ -57,9 +80,10 @@ mod tests {
     use std::time::Duration;
     use synced_commit_mapping::SqlSyncedCommitMapping;
     use test_repo_factory::TestRepoFactory;
-    use tests_utils::{
-        bookmark, drawdag::create_from_dag, list_working_copy_utf8, CreateCommitContext,
-    };
+    use tests_utils::bookmark;
+    use tests_utils::drawdag::create_from_dag;
+    use tests_utils::list_working_copy_utf8;
+    use tests_utils::CreateCommitContext;
     use tokio::time;
 
     fn create_bookmark_name(book: &str) -> BookmarkName {

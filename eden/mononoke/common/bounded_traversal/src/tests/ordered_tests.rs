@@ -10,16 +10,20 @@ use std::num::NonZeroUsize;
 use std::time::Duration;
 
 use anyhow::Error;
-use futures::future::{BoxFuture, FutureExt};
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
 use futures::stream::TryStreamExt;
 use pretty_assertions::assert_eq;
-use quickcheck::{empty_shrinker, Arbitrary, Gen};
+use quickcheck::empty_shrinker;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 use tokio::task::yield_now;
 
-use super::utils::{StateLog, Tick};
-use crate::{
-    bounded_traversal_limited_ordered_stream, bounded_traversal_ordered_stream, OrderedTraversal,
-};
+use super::utils::StateLog;
+use super::utils::Tick;
+use crate::bounded_traversal_limited_ordered_stream;
+use crate::bounded_traversal_ordered_stream;
+use crate::OrderedTraversal;
 
 /// Ordered tree for test purposes
 #[derive(Clone, Debug)]

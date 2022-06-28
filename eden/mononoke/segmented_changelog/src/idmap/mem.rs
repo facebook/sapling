@@ -13,7 +13,8 @@ use parking_lot::RwLock;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
-use crate::idmap::{IdMap, IdMapVersion};
+use crate::idmap::IdMap;
+use crate::idmap::IdMapVersion;
 use crate::DagId;
 
 #[derive(Debug)]
@@ -153,7 +154,9 @@ mod test {
 
     use fbinit::FacebookInit;
 
-    use mononoke_types_mocks::changesetid::{AS_CSID, ONES_CSID, TWOS_CSID};
+    use mononoke_types_mocks::changesetid::AS_CSID;
+    use mononoke_types_mocks::changesetid::ONES_CSID;
+    use mononoke_types_mocks::changesetid::TWOS_CSID;
 
     #[fbinit::test]
     async fn test_concurrent_mem_idmap(fb: FacebookInit) -> Result<()> {

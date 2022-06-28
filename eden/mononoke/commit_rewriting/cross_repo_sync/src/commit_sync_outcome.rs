@@ -6,21 +6,26 @@
  */
 
 use crate::commit_sync_data_provider::CommitSyncDataProvider;
-use crate::types::{Source, Target};
-use anyhow::{anyhow, Error};
+use crate::types::Source;
+use crate::types::Target;
+use anyhow::anyhow;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures::Future;
-use metaconfig_types::{CommitSyncConfigVersion, CommitSyncDirection};
-use mononoke_types::{ChangesetId, RepositoryId};
+use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::CommitSyncDirection;
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use slog::debug;
 use std::fmt;
 use std::pin::Pin;
 use std::sync::Arc;
-use synced_commit_mapping::{SyncedCommitMapping, WorkingCopyEquivalence};
+use synced_commit_mapping::SyncedCommitMapping;
+use synced_commit_mapping::WorkingCopyEquivalence;
 
 /// The state of a source repo commit in a target repo, assuming
 /// that any multiple `RewrittenAs` options have been resolved
@@ -662,15 +667,18 @@ mod tests {
     use bookmarks::BookmarkUpdateReason;
     use fbinit::FacebookInit;
     use live_commit_sync_config::TestLiveCommitSyncConfig;
-    use mononoke_types_mocks::changesetid::{FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID};
+    use mononoke_types_mocks::changesetid::FOURS_CSID;
+    use mononoke_types_mocks::changesetid::ONES_CSID;
+    use mononoke_types_mocks::changesetid::THREES_CSID;
+    use mononoke_types_mocks::changesetid::TWOS_CSID;
     use skiplist::SkiplistIndex;
     use sql::rusqlite::Connection as SqliteConnection;
     use sql::Connection;
     use sql_construct::SqlConstruct;
     use sql_ext::SqlConnections;
-    use synced_commit_mapping::{
-        SqlSyncedCommitMapping, SyncedCommitMappingEntry, SyncedCommitSourceRepo,
-    };
+    use synced_commit_mapping::SqlSyncedCommitMapping;
+    use synced_commit_mapping::SyncedCommitMappingEntry;
+    use synced_commit_mapping::SyncedCommitSourceRepo;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::drawdag::create_from_dag;
 

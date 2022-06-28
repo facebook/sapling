@@ -5,16 +5,21 @@
  * GNU General Public License version 2.
  */
 
-use crate::{
-    CrossRepoPushSource, FileContentManager, FileHook, HookExecution, HookRejectionInfo,
-    PushAuthoredBy,
-};
+use crate::CrossRepoPushSource;
+use crate::FileContentManager;
+use crate::FileHook;
+use crate::HookExecution;
+use crate::HookRejectionInfo;
+use crate::PushAuthoredBy;
 
-use anyhow::{Context, Error, Result};
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
 use metaconfig_types::HookConfig;
-use mononoke_types::{BasicFileChange, MPath};
+use mononoke_types::BasicFileChange;
+use mononoke_types::MPath;
 use regex::bytes::Regex;
 
 #[derive(Default)]

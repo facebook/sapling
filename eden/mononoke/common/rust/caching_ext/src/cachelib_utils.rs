@@ -12,7 +12,10 @@ use std::time::Duration;
 
 use crate::mock_store::MockStore;
 use anyhow::Result;
-use cachelib::{get_cached, set_cached, Abomonation, VolatileLruCachePool};
+use cachelib::get_cached;
+use cachelib::set_cached;
+use cachelib::Abomonation;
+use cachelib::VolatileLruCachePool;
 
 use crate::CachelibKey;
 
@@ -97,7 +100,8 @@ mod tests {
 
     use std::collections::HashSet;
 
-    use quickcheck::{quickcheck, TestResult};
+    use quickcheck::quickcheck;
+    use quickcheck::TestResult;
 
     quickcheck! {
         fn multiple_roundtrip(

@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Result};
+use anyhow::bail;
+use anyhow::Result;
 use clap_old::App;
-use mercurial_revlog::revlog::{RevIdx, Revlog};
+use mercurial_revlog::revlog::RevIdx;
+use mercurial_revlog::revlog::Revlog;
 use std::str::FromStr;
 
 fn run() -> Result<()> {

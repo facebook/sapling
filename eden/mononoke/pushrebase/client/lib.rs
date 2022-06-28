@@ -9,16 +9,20 @@
 mod facebook;
 mod local;
 
-use bookmarks_movement::{BookmarkKindRestrictions, BookmarkMovementError};
+use bookmarks_movement::BookmarkKindRestrictions;
+use bookmarks_movement::BookmarkMovementError;
 use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use hooks::CrossRepoPushSource;
 use mononoke_types::BonsaiChangeset;
 use pushrebase::PushrebaseOutcome;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 #[cfg(fbcode_build)]
-pub use facebook::scs::{override_certificate_paths, SCSPushrebaseClient};
+pub use facebook::scs::override_certificate_paths;
+#[cfg(fbcode_build)]
+pub use facebook::scs::SCSPushrebaseClient;
 pub use local::LocalPushrebaseClient;
 
 #[async_trait::async_trait]

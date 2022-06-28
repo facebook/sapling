@@ -5,32 +5,57 @@
  * GNU General Public License version 2.
  */
 
-use super::filenode_lookup::{lookup_filenode_id, store_filenode_id, FileNodeIdPointer};
-use super::{errors::ErrorKind, File, META_SZ};
-use crate::{
-    calculate_hg_node_id_stream, FileBytes, HgBlobNode, HgFileEnvelopeMut, HgFileNodeId,
-    HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents,
-};
+use super::errors::ErrorKind;
+use super::filenode_lookup::lookup_filenode_id;
+use super::filenode_lookup::store_filenode_id;
+use super::filenode_lookup::FileNodeIdPointer;
+use super::File;
+use super::META_SZ;
+use crate::calculate_hg_node_id_stream;
+use crate::FileBytes;
+use crate::HgBlobNode;
+use crate::HgFileEnvelopeMut;
+use crate::HgFileNodeId;
+use crate::HgManifestEnvelopeMut;
+use crate::HgManifestId;
+use crate::HgNodeHash;
+use crate::HgParents;
 use ::manifest::Entry;
-use anyhow::{bail, Context, Error, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
+use filestore::FetchKey;
 use filestore::FilestoreConfig;
-use filestore::{self, FetchKey};
-use futures::{
-    compat::Future01CompatExt,
-    future::{self, Future, FutureExt, TryFutureExt},
-    pin_mut,
-    stream::{StreamExt, TryStreamExt},
-};
-use futures_ext::{BoxFuture, FutureExt as _};
-use futures_old::{future as future_old, stream, Future as FutureOld, IntoFuture, Stream};
-use futures_stats::{FutureStats, TimedFutureExt, TimedTryFutureExt};
-use mononoke_types::{ContentId, MPath, RepoPath};
-use slog::{trace, Logger};
+use filestore::{self};
+use futures::compat::Future01CompatExt;
+use futures::future::Future;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::pin_mut;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures_ext::BoxFuture;
+use futures_ext::FutureExt as _;
+use futures_old::future as future_old;
+use futures_old::stream;
+use futures_old::Future as FutureOld;
+use futures_old::IntoFuture;
+use futures_old::Stream;
+use futures_stats::FutureStats;
+use futures_stats::TimedFutureExt;
+use futures_stats::TimedTryFutureExt;
+use mononoke_types::ContentId;
+use mononoke_types::MPath;
+use mononoke_types::RepoPath;
+use slog::trace;
+use slog::Logger;
 use stats::prelude::*;
 use std::sync::Arc;
 use time_ext::DurationExt;

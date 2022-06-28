@@ -7,14 +7,20 @@
 
 use std::fmt;
 
-use anyhow::{Error, Result};
-use bookmarks::{
-    Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, BookmarksRef,
-    Freshness,
-};
+use anyhow::Error;
+use anyhow::Result;
+use bookmarks::Bookmark;
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkPagination;
+use bookmarks::BookmarkPrefix;
+use bookmarks::BookmarksRef;
+use bookmarks::Freshness;
 use clap::Args;
 use context::CoreContext;
-use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use mononoke_types::ChangesetId;
 
 use super::Repo;

@@ -5,21 +5,28 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use context::CoreContext;
-use derived_data::batch::{split_batch_in_linear_stacks, FileConflicts, StackItem};
-use derived_data_manager::{BonsaiDerivable, DerivationContext};
-use futures::stream::{FuturesOrdered, TryStreamExt};
+use derived_data::batch::split_batch_in_linear_stacks;
+use derived_data::batch::FileConflicts;
+use derived_data::batch::StackItem;
+use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivationContext;
+use futures::stream::FuturesOrdered;
+use futures::stream::TryStreamExt;
 use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use stats::prelude::*;
 
 use crate::derive::derive_skeleton_manifest_stack;
-use crate::{RootSkeletonManifestId, SkeletonManifestId};
+use crate::RootSkeletonManifestId;
+use crate::SkeletonManifestId;
 
 define_stats! {
     prefix = "mononoke.derived_data.skeleton_manifest";
@@ -164,8 +171,9 @@ mod test {
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use test_repo_factory::TestRepoFactory;
+    use tests_utils::bookmark;
+    use tests_utils::drawdag::create_from_dag;
     use tests_utils::resolve_cs_id;
-    use tests_utils::{bookmark, drawdag::create_from_dag};
 
     #[fbinit::test]
     async fn batch_derive(fb: FacebookInit) -> Result<(), Error> {

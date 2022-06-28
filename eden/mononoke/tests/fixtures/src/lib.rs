@@ -8,25 +8,33 @@
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::StoreRequest;
-use futures::{future::try_join_all, stream};
+use futures::future::try_join_all;
+use futures::stream;
 use maplit::btreemap;
 use mercurial_derived_data::MappedHgChangesetId;
-use mercurial_types::{HgChangesetId, MPath};
+use mercurial_types::HgChangesetId;
+use mercurial_types::MPath;
 use mononoke_api_types::InnerRepo;
-use mononoke_types::{
-    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, RepositoryId,
-};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
+use mononoke_types::FileChange;
+use mononoke_types::FileType;
+use mononoke_types::RepositoryId;
 use sorted_vector_map::SortedVectorMap;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 use test_repo_factory::TestRepoFactory;
-use tests_utils::{Repo, TestRepo};
+use tests_utils::Repo;
+use tests_utils::TestRepo;
 
 pub async fn store_files(
     ctx: &CoreContext,

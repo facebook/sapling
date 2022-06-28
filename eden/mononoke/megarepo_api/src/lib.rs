@@ -9,7 +9,9 @@
 
 use add_branching_sync_target::AddBranchingSyncTarget;
 use add_sync_target::AddSyncTarget;
-use anyhow::{anyhow, bail, Error};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Error;
 use async_once_cell::AsyncOnceCell;
 use async_requests::AsyncMethodRequestQueue;
 use blobstore::Blobstore;
@@ -17,24 +19,33 @@ use change_target_config::ChangeTargetConfig;
 use context::CoreContext;
 use environment::MononokeEnvironment;
 use futures::future::try_join_all;
-use megarepo_config::{
-    CfgrMononokeMegarepoConfigs, MononokeMegarepoConfigs, MononokeMegarepoConfigsOptions,
-    SyncConfigVersion, SyncTargetConfig, Target, TestMononokeMegarepoConfigs,
-};
+use megarepo_config::CfgrMononokeMegarepoConfigs;
+use megarepo_config::MononokeMegarepoConfigs;
+use megarepo_config::MononokeMegarepoConfigsOptions;
+use megarepo_config::SyncConfigVersion;
+use megarepo_config::SyncTargetConfig;
+use megarepo_config::Target;
+use megarepo_config::TestMononokeMegarepoConfigs;
 use megarepo_error::MegarepoError;
 use megarepo_mapping::CommitRemappingState;
-use megarepo_mapping::{MegarepoMapping, SourceName};
+use megarepo_mapping::MegarepoMapping;
+use megarepo_mapping::SourceName;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::ArcRepoConfig;
-use mononoke_api::{Mononoke, RepoContext};
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_api::Mononoke;
+use mononoke_api::RepoContext;
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use mutable_renames::MutableRenames;
 use parking_lot::Mutex;
 use remerge_source::RemergeSource;
 use repo_factory::RepoFactory;
-use repo_identity::{ArcRepoIdentity, RepoIdentity};
+use repo_identity::ArcRepoIdentity;
+use repo_identity::RepoIdentity;
 use requests_table::LongRunningRequestsQueue;
-use slog::{info, o, warn};
+use slog::info;
+use slog::o;
+use slog::warn;
 use std::collections::HashMap;
 use std::future::Future;
 use std::hash::Hash;

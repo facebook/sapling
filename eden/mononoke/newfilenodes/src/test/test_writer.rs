@@ -6,14 +6,18 @@
  */
 
 use anyhow::Error;
-use context::{CoreContext, PerfCounterType};
+use context::CoreContext;
+use context::PerfCounterType;
 use fbinit::FacebookInit;
-use filenodes::{FilenodeInfo, PreparedFilenode};
-use mercurial_types_mocks::nodehash::{ONES_CSID, ONES_FNID};
+use filenodes::FilenodeInfo;
+use filenodes::PreparedFilenode;
+use mercurial_types_mocks::nodehash::ONES_CSID;
+use mercurial_types_mocks::nodehash::ONES_FNID;
 use mononoke_types::RepoPath;
 use mononoke_types_mocks::repo::REPO_ZERO;
 
-use super::util::{build_reader_writer, build_shard};
+use super::util::build_reader_writer;
+use super::util::build_shard;
 
 #[fbinit::test]
 async fn test_batching(fb: FacebookInit) -> Result<(), Error> {

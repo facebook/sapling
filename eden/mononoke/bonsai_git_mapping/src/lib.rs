@@ -10,14 +10,17 @@ use anyhow::Result;
 use ascii::AsciiStr;
 use async_trait::async_trait;
 use context::CoreContext;
-use mononoke_types::{hash::GitSha1, BonsaiChangeset, ChangesetId};
+use mononoke_types::hash::GitSha1;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use slog::warn;
 
 mod errors;
 mod sql;
 
 pub use crate::errors::AddGitMappingErrorKind;
-pub use crate::sql::{SqlBonsaiGitMapping, SqlBonsaiGitMappingBuilder};
+pub use crate::sql::SqlBonsaiGitMapping;
+pub use crate::sql::SqlBonsaiGitMappingBuilder;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct BonsaiGitMappingEntry {

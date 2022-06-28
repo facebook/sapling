@@ -7,20 +7,25 @@
 
 use crate::add_sync_target::AddSyncTarget;
 use crate::change_target_config::ChangeTargetConfig;
-use crate::megarepo_test_utils::{MegarepoTest, SyncTargetConfigBuilder};
+use crate::megarepo_test_utils::MegarepoTest;
+use crate::megarepo_test_utils::SyncTargetConfigBuilder;
 use anyhow::Error;
 use blobstore::Loadable;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use maplit::{btreemap, hashmap};
+use maplit::btreemap;
+use maplit::hashmap;
 use megarepo_config::MononokeMegarepoConfigs;
 use megarepo_config::Target;
-use megarepo_mapping::{SourceName, REMAPPING_STATE_FILE};
-use mononoke_types::{FileType, MPath};
+use megarepo_mapping::SourceName;
+use megarepo_mapping::REMAPPING_STATE_FILE;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
 use std::sync::Arc;
-use tests_utils::{
-    bookmark, list_working_copy_utf8_with_types, resolve_cs_id, CreateCommitContext,
-};
+use tests_utils::bookmark;
+use tests_utils::list_working_copy_utf8_with_types;
+use tests_utils::resolve_cs_id;
+use tests_utils::CreateCommitContext;
 
 #[fbinit::test]
 async fn test_change_target_config(fb: FacebookInit) -> Result<(), Error> {

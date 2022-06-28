@@ -5,18 +5,20 @@
  * GNU General Public License version 2.
  */
 
-use futures::{
-    future::{BoxFuture, FutureExt, TryFutureExt},
-    ready,
-    stream::{self, BoxStream, FuturesUnordered, StreamExt},
-    Stream,
-};
-use std::{
-    collections::{HashMap, VecDeque},
-    future::Future,
-    hash::Hash,
-    task::Poll,
-};
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::ready;
+use futures::stream::BoxStream;
+use futures::stream::FuturesUnordered;
+use futures::stream::StreamExt;
+use futures::stream::{self};
+use futures::Stream;
+use std::collections::HashMap;
+use std::collections::VecDeque;
+use std::future::Future;
+use std::hash::Hash;
+use std::task::Poll;
 
 /// `bounded_traversal_stream` traverses implicit asynchronous tree specified by `init`
 /// and `unfold` arguments. All `unfold` operations are executed in parallel if they

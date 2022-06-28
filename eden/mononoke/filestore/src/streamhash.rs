@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use futures::{
-    future::{self, FutureExt},
-    stream::{Stream, StreamExt},
-};
+use futures::future::FutureExt;
+use futures::future::{self};
+use futures::stream::Stream;
+use futures::stream::StreamExt;
 
 use crate::incremental_hash::Hasher;
 
@@ -32,17 +32,17 @@ mod test {
     use bytes::Bytes;
     use futures::stream;
 
-    use crate::incremental_hash::{
-        ContentIdIncrementalHasher, GitSha1IncrementalHasher, Sha1IncrementalHasher,
-        Sha256IncrementalHasher,
-    };
+    use crate::incremental_hash::ContentIdIncrementalHasher;
+    use crate::incremental_hash::GitSha1IncrementalHasher;
+    use crate::incremental_hash::Sha1IncrementalHasher;
+    use crate::incremental_hash::Sha256IncrementalHasher;
 
     use crate::expected_size::ExpectedSize;
 
-    use mononoke_types::{
-        hash::{RichGitSha1, Sha1, Sha256},
-        ContentId,
-    };
+    use mononoke_types::hash::RichGitSha1;
+    use mononoke_types::hash::Sha1;
+    use mononoke_types::hash::Sha256;
+    use mononoke_types::ContentId;
 
     #[tokio::test]
     async fn sha1_simple() {

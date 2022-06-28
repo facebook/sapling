@@ -7,7 +7,8 @@
 
 use crate::add_branching_sync_target::AddBranchingSyncTarget;
 use crate::add_sync_target::AddSyncTarget;
-use crate::megarepo_test_utils::{MegarepoTest, SyncTargetConfigBuilder};
+use crate::megarepo_test_utils::MegarepoTest;
+use crate::megarepo_test_utils::SyncTargetConfigBuilder;
 use anyhow::Error;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -16,7 +17,9 @@ use megarepo_config::MononokeMegarepoConfigs;
 use megarepo_config::Target;
 use megarepo_mapping::SourceName;
 use std::sync::Arc;
-use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
+use tests_utils::bookmark;
+use tests_utils::resolve_cs_id;
+use tests_utils::CreateCommitContext;
 
 #[fbinit::test]
 async fn test_add_branching_sync_target_success(fb: FacebookInit) -> Result<(), Error> {

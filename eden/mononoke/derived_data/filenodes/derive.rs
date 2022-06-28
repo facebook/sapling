@@ -5,23 +5,39 @@
  * GNU General Public License version 2.
  */
 
-use crate::mapping::{FilenodesOnlyPublic, PreparedRootFilenode};
-use anyhow::{format_err, Result};
+use crate::mapping::FilenodesOnlyPublic;
+use crate::mapping::PreparedRootFilenode;
+use anyhow::format_err;
+use anyhow::Result;
 use blobstore::Loadable;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
-use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
-use futures::{
-    future::try_join_all, pin_mut, stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
-};
-use itertools::{Either, Itertools};
-use manifest::{find_intersection_of_diffs_and_parents, Entry};
+use filenodes::FilenodeInfo;
+use filenodes::FilenodeResult;
+use filenodes::PreparedFilenode;
+use futures::future::try_join_all;
+use futures::pin_mut;
+use futures::stream;
+use futures::FutureExt;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
+use itertools::Either;
+use itertools::Itertools;
+use manifest::find_intersection_of_diffs_and_parents;
+use manifest::Entry;
 use mercurial_derived_data::MappedHgChangesetId;
-use mercurial_types::{
-    blobs::File, fetch_manifest_envelope, nodehash::NULL_HASH, HgChangesetId, HgFileEnvelope,
-    HgFileNodeId, HgManifestEnvelope,
-};
-use mononoke_types::{BonsaiChangeset, ChangesetId, MPath, RepoPath};
+use mercurial_types::blobs::File;
+use mercurial_types::fetch_manifest_envelope;
+use mercurial_types::nodehash::NULL_HASH;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileEnvelope;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestEnvelope;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
+use mononoke_types::RepoPath;
 
 pub async fn derive_filenodes(
     ctx: &CoreContext,
@@ -270,14 +286,17 @@ fn create_file_filenode(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::{anyhow, Context, Result};
+    use anyhow::anyhow;
+    use anyhow::Context;
+    use anyhow::Result;
     use async_trait::async_trait;
     use blobrepo::BlobRepo;
     use blobrepo_hg::BlobRepoHg;
     use cloned::cloned;
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
-    use filenodes::{FilenodeRangeResult, Filenodes};
+    use filenodes::FilenodeRangeResult;
+    use filenodes::Filenodes;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use futures::compat::Stream01CompatExt;
@@ -288,14 +307,14 @@ mod tests {
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use slog::info;
-    use std::{
-        collections::HashMap,
-        sync::{Arc, Mutex},
-    };
+    use std::collections::HashMap;
+    use std::sync::Arc;
+    use std::sync::Mutex;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
-    use tunables::{with_tunables, MononokeTunables};
+    use tunables::with_tunables;
+    use tunables::MononokeTunables;
 
     async fn verify_filenodes(
         ctx: &CoreContext,

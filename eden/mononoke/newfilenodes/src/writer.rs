@@ -5,14 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
-use context::{CoreContext, PerfCounterType};
-use filenodes::{FilenodeResult, PreparedFilenode};
+use anyhow::Context;
+use anyhow::Error;
+use context::CoreContext;
+use context::PerfCounterType;
+use filenodes::FilenodeResult;
+use filenodes::PreparedFilenode;
 use futures::future;
-use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::RepoPath;
 use mononoke_types::RepositoryId;
-use path_hash::{PathBytes, PathHash, PathHashBytes};
-use sql::{queries, Connection};
+use path_hash::PathBytes;
+use path_hash::PathHash;
+use path_hash::PathHashBytes;
+use sql::queries;
+use sql::Connection;
 use stats::prelude::*;
 use std::collections::HashSet;
 use thiserror::Error as DeriveError;

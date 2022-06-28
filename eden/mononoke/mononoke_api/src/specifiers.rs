@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Result};
-use ephemeral_blobstore::{BubbleId, RepoEphemeralStore};
+use anyhow::Context;
+use anyhow::Result;
+use ephemeral_blobstore::BubbleId;
+use ephemeral_blobstore::RepoEphemeralStore;
 use std::fmt;
 
 /// A changeset ID.  This is the canonical ID for a changeset.

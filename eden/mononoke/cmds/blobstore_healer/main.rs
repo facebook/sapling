@@ -11,39 +11,53 @@
 mod dummy;
 mod healer;
 
-use anyhow::{bail, format_err, Context, Error, Result};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use blobstore::Blobstore;
-use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
-use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
+use blobstore_factory::make_blobstore;
+use blobstore_factory::BlobstoreOptions;
+use blobstore_factory::ReadOnlyStorage;
+use blobstore_sync_queue::BlobstoreSyncQueue;
+use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use borrowed::borrowed;
 use cached_config::ConfigStore;
 use chrono::Duration as ChronoDuration;
 use clap::Parser;
-use context::{CoreContext, SessionContainer};
-use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
+use context::CoreContext;
+use context::SessionContainer;
+use dummy::DummyBlobstore;
+use dummy::DummyBlobstoreSyncQueue;
 use fbinit::FacebookInit;
 use futures::future;
 use futures_03_ext::BufferedParams;
 use healer::Healer;
-use metaconfig_types::{BlobConfig, DatabaseConfig, StorageConfig};
+use metaconfig_types::BlobConfig;
+use metaconfig_types::DatabaseConfig;
+use metaconfig_types::StorageConfig;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_types::DateTime;
-use slog::{error, info, o};
+use slog::error;
+use slog::info;
+use slog::o;
 use sql_construct::SqlConstructFromDatabaseConfig;
 #[cfg(fbcode_build)]
 use sql_ext::facebook::MyAdmin;
-use sql_ext::{
-    facebook::MysqlOptions,
-    replication::{NoReplicaLagMonitor, ReplicaLagMonitor, WaitForReplicationConfig},
-};
+use sql_ext::facebook::MysqlOptions;
+use sql_ext::replication::NoReplicaLagMonitor;
+use sql_ext::replication::ReplicaLagMonitor;
+use sql_ext::replication::WaitForReplicationConfig;
 #[cfg(test)]
 use stats as _;
 #[cfg(not(test))]
 use stats::schedule_stats_aggregation_preview;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use std::time::Instant;
 
 #[derive(Parser)]
 #[clap(about = "Monitors blobstore_sync_queue to heal blobstores with missing data")]

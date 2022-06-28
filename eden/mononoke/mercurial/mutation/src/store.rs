@@ -5,22 +5,35 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{hash_map, HashMap, HashSet};
+use std::collections::hash_map;
+use std::collections::HashMap;
+use std::collections::HashSet;
 
-use anyhow::{anyhow, Context, Error, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
-use context::{CoreContext, PerfCounterType};
-use futures::future::{self, FutureExt};
-use futures::stream::{self, StreamExt, TryStreamExt};
+use context::CoreContext;
+use context::PerfCounterType;
+use futures::future::FutureExt;
+use futures::future::{self};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use itertools::Itertools;
 use mercurial_types::HgChangesetId;
-use mononoke_types::{DateTime, RepositoryId};
+use mononoke_types::DateTime;
+use mononoke_types::RepositoryId;
 use slog::debug;
 use smallvec::SmallVec;
-use sql::{queries, Connection};
+use sql::queries;
+use sql::Connection;
 use sql_ext::SqlConnections;
 
-use crate::entry::{HgMutationEntry, HgMutationEntrySet, HgMutationEntrySetAdded};
+use crate::entry::HgMutationEntry;
+use crate::entry::HgMutationEntrySet;
+use crate::entry::HgMutationEntrySetAdded;
 use crate::HgMutationStore;
 
 /// To avoid overloading the database with too many changesets in a single

@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use mercurial_types::{Delta, HgNodeHash, MPath, RevFlags};
+use mercurial_types::Delta;
+use mercurial_types::HgNodeHash;
+use mercurial_types::MPath;
+use mercurial_types::RevFlags;
 
 pub mod packer;
 pub mod unpacker;
@@ -51,16 +54,26 @@ mod test {
     use std::io::Cursor;
 
     use futures::compat::Future01CompatExt;
-    use futures_old::{Future, Stream};
-    use quickcheck::{Gen, QuickCheck, TestResult};
-    use tokio_codec::{FramedRead, FramedWrite};
+    use futures_old::Future;
+    use futures_old::Stream;
+    use quickcheck::Gen;
+    use quickcheck::QuickCheck;
+    use quickcheck::TestResult;
+    use tokio_codec::FramedRead;
+    use tokio_codec::FramedWrite;
 
     use futures_ext::StreamLayeredExt;
-    use partial_io::{GenWouldBlock, PartialAsyncRead, PartialAsyncWrite, PartialWithErrors};
+    use partial_io::GenWouldBlock;
+    use partial_io::PartialAsyncRead;
+    use partial_io::PartialAsyncWrite;
+    use partial_io::PartialWithErrors;
 
-    use crate::chunk::{ChunkDecoder, ChunkEncoder};
+    use crate::chunk::ChunkDecoder;
+    use crate::chunk::ChunkEncoder;
     use crate::quickcheck_types::CgPartSequence;
-    use slog::{o, Discard, Logger};
+    use slog::o;
+    use slog::Discard;
+    use slog::Logger;
 
     use super::*;
 

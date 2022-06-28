@@ -5,14 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error, Result};
-use mercurial_types::{MPath, MPathElement};
-use metaconfig_types::{
-    CommitSyncConfig, CommitSyncDirection, DefaultSmallToLargeCommitSyncPathAction,
-    SmallRepoCommitSyncConfig,
-};
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
+use mercurial_types::MPath;
+use mercurial_types::MPathElement;
+use metaconfig_types::CommitSyncConfig;
+use metaconfig_types::CommitSyncDirection;
+use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+use metaconfig_types::SmallRepoCommitSyncConfig;
 use mononoke_types::RepositoryId;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 use thiserror::Error;
 

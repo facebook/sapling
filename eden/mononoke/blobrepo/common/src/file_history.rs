@@ -5,26 +5,42 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
 use blobrepo::BlobRepo;
-use blobstore::{Blobstore, Loadable};
+use blobstore::Blobstore;
+use blobstore::Loadable;
 use changesets::ChangesetsRef;
 use cloned::cloned;
-use context::{CoreContext, PerfCounterType};
-use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult};
-use futures::{
-    future::{self, try_join},
-    stream, FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
-};
+use context::CoreContext;
+use context::PerfCounterType;
+use filenodes::FilenodeInfo;
+use filenodes::FilenodeRangeResult;
+use filenodes::FilenodeResult;
+use futures::future::try_join;
+use futures::future::{self};
+use futures::stream;
+use futures::FutureExt;
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
 use maplit::hashset;
-use mercurial_types::{
-    HgBlobEnvelope, HgChangesetId, HgFileHistoryEntry, HgFileNodeId, HgParents, MPath, RepoPath,
-    NULL_CSID, NULL_HASH,
-};
+use mercurial_types::HgBlobEnvelope;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileHistoryEntry;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgParents;
+use mercurial_types::MPath;
+use mercurial_types::RepoPath;
+use mercurial_types::NULL_CSID;
+use mercurial_types::NULL_HASH;
 use mononoke_types::ChangesetId;
 use slog::debug;
 use stats::prelude::*;
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
+use std::collections::VecDeque;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

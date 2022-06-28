@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
@@ -15,7 +17,9 @@ use context::CoreContext;
 use futures::future::join;
 use mercurial_types::HgChangesetId;
 use mononoke_types::hash::GitSha1;
-use mononoke_types::{ChangesetId, Globalrev, Svnrev};
+use mononoke_types::ChangesetId;
+use mononoke_types::Globalrev;
+use mononoke_types::Svnrev;
 use strum_macros::ToString;
 use trait_alias::trait_alias;
 

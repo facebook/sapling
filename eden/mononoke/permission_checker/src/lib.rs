@@ -13,10 +13,14 @@ mod membership;
 #[cfg(not(fbcode_build))]
 mod oss;
 
-pub use checker::{
-    ArcPermissionChecker, BoxPermissionChecker, PermissionChecker, PermissionCheckerBuilder,
-};
-pub use identity::{MononokeIdentity, MononokeIdentitySet, MononokeIdentitySetExt};
-pub use membership::{
-    ArcMembershipChecker, BoxMembershipChecker, MembershipChecker, MembershipCheckerBuilder,
-};
+pub use checker::ArcPermissionChecker;
+pub use checker::BoxPermissionChecker;
+pub use checker::PermissionChecker;
+pub use checker::PermissionCheckerBuilder;
+pub use identity::MononokeIdentity;
+pub use identity::MononokeIdentitySet;
+pub use identity::MononokeIdentitySetExt;
+pub use membership::ArcMembershipChecker;
+pub use membership::BoxMembershipChecker;
+pub use membership::MembershipChecker;
+pub use membership::MembershipCheckerBuilder;

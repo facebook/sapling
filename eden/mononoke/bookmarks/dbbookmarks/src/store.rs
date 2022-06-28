@@ -5,22 +5,41 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
-use bookmarks::{
-    Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, BookmarkTransaction,
-    BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks,
-    BookmarksSubscription, Freshness,
-};
+use bookmarks::Bookmark;
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkPagination;
+use bookmarks::BookmarkPrefix;
+use bookmarks::BookmarkTransaction;
+use bookmarks::BookmarkUpdateLog;
+use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::BookmarkUpdateReason;
+use bookmarks::Bookmarks;
+use bookmarks::BookmarksSubscription;
+use bookmarks::Freshness;
 use cloned::cloned;
-use context::{CoreContext, PerfCounterType, SessionClass};
-use futures::future::{BoxFuture, Future, FutureExt, TryFutureExt};
-use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
+use context::CoreContext;
+use context::PerfCounterType;
+use context::SessionClass;
+use futures::future::BoxFuture;
+use futures::future::Future;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use futures_watchdog::WatchdogExt;
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
-use mononoke_types::{ChangesetId, RepositoryId};
 use rand::Rng;
-use sql::{queries, Connection};
+use sql::queries;
+use sql::Connection;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 

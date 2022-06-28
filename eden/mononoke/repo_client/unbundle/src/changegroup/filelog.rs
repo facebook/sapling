@@ -8,22 +8,42 @@
 use std::collections::HashMap;
 use std::mem;
 
-use anyhow::{bail, Context, Error, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future::BoxFuture, Future, FutureExt, Stream, TryFutureExt, TryStreamExt};
-use futures_ext::{future::TryShared, FbTryFutureExt};
-use quickcheck::{Arbitrary, Gen};
+use futures::future::BoxFuture;
+use futures::Future;
+use futures::FutureExt;
+use futures::Stream;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
+use futures_ext::future::TryShared;
+use futures_ext::FbTryFutureExt;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use filestore::FetchKey;
 use mercurial_bundles::changegroup::CgDeltaChunk;
-use mercurial_types::{
-    blobs::{ContentBlobMeta, File, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash},
-    delta, Delta, HgFileNodeId, HgNodeHash, HgNodeKey, MPath, RepoPath, RevFlags, NULL_HASH,
-};
+use mercurial_types::blobs::ContentBlobMeta;
+use mercurial_types::blobs::File;
+use mercurial_types::blobs::UploadHgFileContents;
+use mercurial_types::blobs::UploadHgFileEntry;
+use mercurial_types::blobs::UploadHgNodeHash;
+use mercurial_types::delta;
+use mercurial_types::Delta;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::HgNodeKey;
+use mercurial_types::MPath;
+use mercurial_types::RepoPath;
+use mercurial_types::RevFlags;
+use mercurial_types::NULL_HASH;
 use remotefilelog::create_raw_filenode_blob;
 
 use crate::stats::*;
@@ -317,7 +337,9 @@ mod tests {
 
     use fbinit::FacebookInit;
     use futures::stream::iter;
-    use itertools::{assert_equal, EitherOrBoth, Itertools};
+    use itertools::assert_equal;
+    use itertools::EitherOrBoth;
+    use itertools::Itertools;
     use quickcheck_macros::quickcheck;
 
     use mercurial_types::delta::Fragment;

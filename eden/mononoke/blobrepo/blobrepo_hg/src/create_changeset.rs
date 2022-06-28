@@ -5,33 +5,48 @@
  * GNU General Public License version 2.
  */
 
-use crate::bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
+use crate::bonsai_generation::create_bonsai_changeset_object;
+use crate::bonsai_generation::save_bonsai_changeset_object;
 use crate::repo_commit::*;
 use crate::ErrorKind;
 use ::manifest::Entry;
-use anyhow::{anyhow, format_err, Context, Error, Result};
+use anyhow::anyhow;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use blobrepo::scribe::log_commit_to_scribe;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingArc, BonsaiHgMappingEntry};
-use changesets::{ChangesetInsert, Changesets};
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiHgMappingArc;
+use bonsai_hg_mapping::BonsaiHgMappingEntry;
+use changesets::ChangesetInsert;
+use changesets::Changesets;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    channel::oneshot,
-    future::{self, BoxFuture, FutureExt, TryFutureExt},
-    stream::BoxStream,
-};
+use futures::channel::oneshot;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream::BoxStream;
 use futures_ext::FbTryFutureExt;
 use futures_stats::TimedTryFutureExt;
-use mercurial_types::{
-    blobs::{ChangesetMetadata, HgBlobChangeset},
-    HgFileNodeId, HgManifestId, HgNodeHash, RepoPath,
-};
-use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, MPath};
+use mercurial_types::blobs::ChangesetMetadata;
+use mercurial_types::blobs::HgBlobChangeset;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::RepoPath;
+use mononoke_types::BlobstoreValue;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 use uuid::Uuid;
 
 type BonsaiChangesetHook = dyn Fn(

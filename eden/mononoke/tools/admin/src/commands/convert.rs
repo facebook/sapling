@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
@@ -14,7 +15,9 @@ use clap::Parser;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 
-use crate::commit_id::{parse_commit_id, print_commit_id, IdentityScheme};
+use crate::commit_id::parse_commit_id;
+use crate::commit_id::print_commit_id;
+use crate::commit_id::IdentityScheme;
 
 /// Convert commit identity between identity schemes
 #[derive(Parser)]

@@ -5,15 +5,24 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt::{self, Debug, Display};
+use std::fmt::Debug;
+use std::fmt::Display;
+use std::fmt::{self};
 use std::str::FromStr;
 
 use abomonation_derive::Abomonation;
-use anyhow::{bail, Error, Result};
-use ascii::{AsciiStr, AsciiString};
-use faster_hex::{hex_decode, hex_encode};
-use quickcheck::{single_shrinker, Arbitrary, Gen};
-use serde_derive::{Deserialize, Serialize};
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
+use ascii::AsciiStr;
+use ascii::AsciiString;
+use faster_hex::hex_decode;
+use faster_hex::hex_encode;
+use quickcheck::single_shrinker;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use sha1::Digest;
 
 use crate::errors::ErrorKind;
@@ -296,7 +305,8 @@ impl Context {
 
 #[cfg(test)]
 mod test {
-    use quickcheck::{quickcheck, TestResult};
+    use quickcheck::quickcheck;
+    use quickcheck::TestResult;
     use std::str::FromStr;
 
     use super::*;

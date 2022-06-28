@@ -5,17 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Context, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
 use sql::queries;
 use sql_ext::SqlConnections;
 
 use stats::prelude::*;
 
-use context::{CoreContext, PerfCounterType};
+use context::CoreContext;
+use context::PerfCounterType;
 use mononoke_types::RepositoryId;
 
 use crate::logging::log_new_segmented_changelog_version;
-use crate::types::{IdDagVersion, IdMapVersion, SegmentedChangelogVersion};
+use crate::types::IdDagVersion;
+use crate::types::IdMapVersion;
+use crate::types::SegmentedChangelogVersion;
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.sql_version_store";

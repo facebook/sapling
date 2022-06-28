@@ -5,26 +5,38 @@
  * GNU General Public License version 2.
  */
 
-use super::{canonical, chunk, request};
+use super::canonical;
+use super::chunk;
+use super::request;
 use crate as filestore;
-use crate::{errors, Alias, FetchKey, FilestoreConfig, StoreRequest};
+use crate::errors;
+use crate::Alias;
+use crate::FetchKey;
+use crate::FilestoreConfig;
+use crate::StoreRequest;
 
-use super::failing_blobstore::{FailingBlobstore, FailingBlobstoreError};
-use anyhow::{Error, Result};
+use super::failing_blobstore::FailingBlobstore;
+use super::failing_blobstore::FailingBlobstoreError;
+use anyhow::Error;
+use anyhow::Result;
 use assert_matches::assert_matches;
-use blobstore::{Blobstore, PutBehaviour};
+use blobstore::Blobstore;
+use blobstore::PutBehaviour;
 use borrowed::borrowed;
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
+use bytes::BytesMut;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{
-    future::{self, TryFutureExt},
-    stream::{self, TryStreamExt},
-};
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use lazy_static::lazy_static;
-use mononoke_types::{
-    hash, typed_hash::BlobstoreKey, ContentId, ContentMetadata, ContentMetadataId,
-};
+use mononoke_types::hash;
+use mononoke_types::typed_hash::BlobstoreKey;
+use mononoke_types::ContentId;
+use mononoke_types::ContentMetadata;
+use mononoke_types::ContentMetadataId;
 use mononoke_types_mocks::contentid::ONES_CTID;
 
 const HELLO_WORLD: &[u8] = b"hello, world";

@@ -5,18 +5,27 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashSet, VecDeque};
-use std::hash::{Hash, Hasher};
+use std::collections::HashSet;
+use std::collections::VecDeque;
+use std::hash::Hash;
+use std::hash::Hasher;
 
 use anyhow::Error;
 use futures::future::Future;
-use futures::stream::{empty, iter_ok, once, Stream};
-use futures_ext::{BoxStream, StreamExt};
+use futures::stream::empty;
+use futures::stream::iter_ok;
+use futures::stream::once;
+use futures::stream::Stream;
+use futures_ext::BoxStream;
+use futures_ext::StreamExt;
 
-use mercurial_types::{MPath, MPathElement, Type};
+use mercurial_types::MPath;
+use mercurial_types::MPathElement;
+use mercurial_types::Type;
 
 use super::revlog::EntryContent;
-use super::{RevlogEntry, RevlogManifest};
+use super::RevlogEntry;
+use super::RevlogManifest;
 
 // Note that:
 // * this isn't "left" and "right" because an explicit direction makes the API clearer

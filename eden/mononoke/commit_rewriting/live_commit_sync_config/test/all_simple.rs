@@ -10,7 +10,8 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use mononoke_types::RepositoryId;
 use pretty_assertions::assert_eq;
 
-use crate::{get_ctx_source_store_and_live_config, EMPTY_PUSHREDIRECTOR};
+use crate::get_ctx_source_store_and_live_config;
+use crate::EMPTY_PUSHREDIRECTOR;
 
 const ALL_COMMIT_SYNC_CONFIG_V1: &str = r#"{
     "repos": {

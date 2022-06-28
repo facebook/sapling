@@ -9,19 +9,26 @@ use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use dedupmap::DedupMap;
+use futures::future;
 use futures::stream::TryStreamExt;
-use futures::{future, try_join};
+use futures::try_join;
 use maplit::btreeset;
-use mononoke_api::{
-    ChangesetPathHistoryOptions, ChangesetSpecifier, MononokeError, MononokePath, PathEntry,
-};
+use mononoke_api::ChangesetPathHistoryOptions;
+use mononoke_api::ChangesetSpecifier;
+use mononoke_api::MononokeError;
+use mononoke_api::MononokePath;
+use mononoke_api::PathEntry;
 use source_control as thrift;
 use std::borrow::Cow;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
 
-use crate::commit_id::{map_commit_identities, map_commit_identity};
+use crate::commit_id::map_commit_identities;
+use crate::commit_id::map_commit_identity;
 use crate::errors;
-use crate::from_request::{check_range_and_convert, validate_timestamp};
+use crate::from_request::check_range_and_convert;
+use crate::from_request::validate_timestamp;
 use crate::history::collect_history;
 use crate::into_response::IntoResponse;
 use crate::source_control_impl::SourceControlServiceImpl;

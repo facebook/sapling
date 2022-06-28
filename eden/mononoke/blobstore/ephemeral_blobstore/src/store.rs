@@ -15,12 +15,17 @@ use chrono::Duration as ChronoDuration;
 use context::CoreContext;
 use derivative::Derivative;
 use metaconfig_types::BubbleDeletionMode;
-use mononoke_types::{ChangesetId, DateTime, RepositoryId, Timestamp};
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
+use mononoke_types::RepositoryId;
+use mononoke_types::Timestamp;
 use sql::queries;
 use sql_ext::SqlConnections;
 use std::time::Duration;
 
-use crate::bubble::{Bubble, BubbleId, ExpiryStatus};
+use crate::bubble::Bubble;
+use crate::bubble::BubbleId;
+use crate::bubble::ExpiryStatus;
 use crate::error::EphemeralBlobstoreError;
 
 /// Ephemeral Store.
@@ -433,12 +438,16 @@ mod test {
     use super::*;
     use crate::builder::RepoEphemeralStoreBuilder;
     use anyhow::anyhow;
-    use blobstore::{Blobstore, BlobstoreBytes, BlobstoreEnumerableWithUnlink, BlobstoreKeyParam};
+    use blobstore::Blobstore;
+    use blobstore::BlobstoreBytes;
+    use blobstore::BlobstoreEnumerableWithUnlink;
+    use blobstore::BlobstoreKeyParam;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use maplit::hashset;
     use memblob::Memblob;
-    use metaconfig_types::{BubbleDeletionMode, PackFormat};
+    use metaconfig_types::BubbleDeletionMode;
+    use metaconfig_types::PackFormat;
     use mononoke_types_mocks::repo::REPO_ZERO;
     use packblob::PackBlob;
     use repo_blobstore::RepoBlobstore;

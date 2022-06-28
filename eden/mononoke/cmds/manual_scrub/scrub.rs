@@ -5,14 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use cloned::cloned;
-use futures::{
-    channel::mpsc,
-    future::{self, FutureExt},
-    sink::SinkExt,
-    stream::{Stream, StreamExt, TryStreamExt},
-};
+use futures::channel::mpsc;
+use futures::future::FutureExt;
+use futures::future::{self};
+use futures::sink::SinkExt;
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use std::time::Instant;
 
 use blobstore::Blobstore;

@@ -9,26 +9,35 @@ use abomonation_derive::Abomonation;
 use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
-use caching_ext::{
-    get_or_fill, get_or_fill_chunked, CacheDisposition, CacheTtl, CachelibHandler, EntityStore,
-    KeyedEntityStore, MemcacheEntity, MemcacheHandler,
-};
+use caching_ext::get_or_fill;
+use caching_ext::get_or_fill_chunked;
+use caching_ext::CacheDisposition;
+use caching_ext::CacheTtl;
+use caching_ext::CachelibHandler;
+use caching_ext::EntityStore;
+use caching_ext::KeyedEntityStore;
+use caching_ext::MemcacheEntity;
+use caching_ext::MemcacheHandler;
 use changeset_entry_thrift as thrift;
-use changesets::{ChangesetEntry, ChangesetInsert, Changesets, SortOrder};
+use changesets::ChangesetEntry;
+use changesets::ChangesetInsert;
+use changesets::Changesets;
+use changesets::SortOrder;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures::stream::BoxStream;
 use maplit::hashset;
-use memcache::{KeyGen, MemcacheClient};
-use mononoke_types::{
-    ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
-};
+use memcache::KeyGen;
+use memcache::MemcacheClient;
+use mononoke_types::ChangesetId;
+use mononoke_types::ChangesetIdPrefix;
+use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::RepositoryId;
 use ref_cast::RefCast;
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
 
 #[cfg(test)]
 use caching_ext::MockStoreStats;

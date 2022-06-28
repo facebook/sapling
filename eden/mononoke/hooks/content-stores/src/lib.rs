@@ -11,10 +11,13 @@ mod repo;
 mod store;
 mod text_only;
 
-pub use crate::memory::{InMemoryFileContentManager, InMemoryFileText};
+pub use crate::memory::InMemoryFileContentManager;
+pub use crate::memory::InMemoryFileText;
 pub use crate::repo::RepoFileContentManager;
 pub use crate::text_only::TextOnlyFileContentManager;
-pub use store::{FileChange, FileContentManager, PathContent};
+pub use store::FileChange;
+pub use store::FileContentManager;
+pub use store::PathContent;
 
 use bookmarks::BookmarksArc;
 use errors::ErrorKind;

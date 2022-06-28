@@ -12,7 +12,8 @@ use anyhow::Error;
 use gotham::helpers::http::header::X_REQUEST_ID;
 use gotham::state::State;
 use hyper::header::HeaderValue;
-use hyper::{Body, Response};
+use hyper::Body;
+use hyper::Response;
 
 use super::Middleware;
 use crate::state_ext::StateExt;

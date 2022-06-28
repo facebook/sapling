@@ -12,23 +12,32 @@ mod errors;
 pub use errors::ErrorKind;
 
 pub mod file;
-pub use file::{File, LFSContent, META_MARKER, META_SZ};
+pub use file::File;
+pub use file::LFSContent;
+pub use file::META_MARKER;
+pub use file::META_SZ;
 
 mod manifest;
-pub use self::manifest::{
-    fetch_manifest_envelope, fetch_manifest_envelope_opt, fetch_raw_manifest_bytes, HgBlobManifest,
-    ManifestContent,
-};
+pub use self::manifest::fetch_manifest_envelope;
+pub use self::manifest::fetch_manifest_envelope_opt;
+pub use self::manifest::fetch_raw_manifest_bytes;
+pub use self::manifest::HgBlobManifest;
+pub use self::manifest::ManifestContent;
 
 mod changeset;
-pub use changeset::{
-    serialize_cs, serialize_extras, ChangesetMetadata, Extra, HgBlobChangeset, HgChangesetContent,
-    RevlogChangeset,
-};
+pub use changeset::serialize_cs;
+pub use changeset::serialize_extras;
+pub use changeset::ChangesetMetadata;
+pub use changeset::Extra;
+pub use changeset::HgBlobChangeset;
+pub use changeset::HgChangesetContent;
+pub use changeset::RevlogChangeset;
 
 pub mod filenode_lookup;
 
 mod upload;
-pub use upload::{
-    ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
-};
+pub use upload::ContentBlobMeta;
+pub use upload::UploadHgFileContents;
+pub use upload::UploadHgFileEntry;
+pub use upload::UploadHgNodeHash;
+pub use upload::UploadHgTreeEntry;

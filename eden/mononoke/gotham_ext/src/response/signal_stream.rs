@@ -9,15 +9,16 @@ use std::pin::Pin;
 
 use anyhow::Error;
 use bytes::Bytes;
-use futures::{
-    channel::oneshot::Sender,
-    ready,
-    stream::Stream,
-    task::{Context, Poll},
-};
-use pin_project::{pin_project, pinned_drop};
+use futures::channel::oneshot::Sender;
+use futures::ready;
+use futures::stream::Stream;
+use futures::task::Context;
+use futures::task::Poll;
+use pin_project::pin_project;
+use pin_project::pinned_drop;
 
-use super::error_meta::{ErrorMeta, ErrorMetaProvider};
+use super::error_meta::ErrorMeta;
+use super::error_meta::ErrorMetaProvider;
 use super::response_meta::BodyMeta;
 
 pub trait Sizeable {

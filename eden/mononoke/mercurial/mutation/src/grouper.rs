@@ -7,7 +7,8 @@
 
 //! Utility for grouping commits with their primordials.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::hash::Hash;
 
 /// A group of commits, and their assigned primordial commit (if known).

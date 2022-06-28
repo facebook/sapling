@@ -5,18 +5,23 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
 use context::CoreContext;
 use futures::future;
-use futures::stream::{StreamExt, TryStreamExt};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use lock_ext::LockExt;
 use mononoke_types::BlobstoreBytes;
 use std::collections::HashMap;
 use std::mem;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::Mutex;
 use tokio::sync::Mutex as AsyncMutex;
 
 #[derive(Default, Debug)]

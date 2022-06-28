@@ -15,8 +15,10 @@ pub use self::context::DerivationContext;
 pub use self::derivable::BonsaiDerivable;
 pub use self::error::DerivationError;
 pub use self::lease::DerivedDataLease;
-pub use self::manager::derive::{BatchDeriveOptions, BatchDeriveStats, Rederivation};
-pub use self::manager::util::derived_data_service::{
-    ArcDerivedDataManagerSet, DerivedDataManagerSet, DerivedDataServiceRepo,
-};
+pub use self::manager::derive::BatchDeriveOptions;
+pub use self::manager::derive::BatchDeriveStats;
+pub use self::manager::derive::Rederivation;
+pub use self::manager::util::derived_data_service::ArcDerivedDataManagerSet;
+pub use self::manager::util::derived_data_service::DerivedDataManagerSet;
+pub use self::manager::util::derived_data_service::DerivedDataServiceRepo;
 pub use self::manager::DerivedDataManager;

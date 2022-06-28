@@ -5,46 +5,64 @@
  * GNU General Public License version 2.
  */
 
-use crate::commands::{JobParams, JobWalkParams, RepoSubcommandParams, COMPRESSION_BENEFIT};
-use crate::detail::{
-    graph::{FileContentData, Node, NodeData, NodeType, WrappedPath},
-    progress::{
-        progress_stream, report_state, ProgressOptions, ProgressReporter,
-        ProgressReporterUnprotected, ProgressStateCountByType, ProgressStateMutex,
-    },
-    sampling::{
-        PathTrackingRoute, SamplingOptions, SamplingWalkVisitor, WalkKeyOptPath, WalkPayloadMtime,
-        WalkSampleMapping,
-    },
-    tail::walk_exact_tail,
-    walk::{RepoWalkParams, RepoWalkTypeParams},
-};
+use crate::commands::JobParams;
+use crate::commands::JobWalkParams;
+use crate::commands::RepoSubcommandParams;
+use crate::commands::COMPRESSION_BENEFIT;
+use crate::detail::graph::FileContentData;
+use crate::detail::graph::Node;
+use crate::detail::graph::NodeData;
+use crate::detail::graph::NodeType;
+use crate::detail::graph::WrappedPath;
+use crate::detail::progress::progress_stream;
+use crate::detail::progress::report_state;
+use crate::detail::progress::ProgressOptions;
+use crate::detail::progress::ProgressReporter;
+use crate::detail::progress::ProgressReporterUnprotected;
+use crate::detail::progress::ProgressStateCountByType;
+use crate::detail::progress::ProgressStateMutex;
+use crate::detail::sampling::PathTrackingRoute;
+use crate::detail::sampling::SamplingOptions;
+use crate::detail::sampling::SamplingWalkVisitor;
+use crate::detail::sampling::WalkKeyOptPath;
+use crate::detail::sampling::WalkPayloadMtime;
+use crate::detail::sampling::WalkSampleMapping;
+use crate::detail::tail::walk_exact_tail;
+use crate::detail::walk::RepoWalkParams;
+use crate::detail::walk::RepoWalkTypeParams;
 
 use anyhow::Error;
-use async_compression::{metered::MeteredWrite, Compressor, CompressorType};
+use async_compression::metered::MeteredWrite;
+use async_compression::Compressor;
+use async_compression::CompressorType;
 use blobstore::BlobstoreGetData;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use derive_more::{Add, Div, Mul, Sub};
+use derive_more::Add;
+use derive_more::Div;
+use derive_more::Mul;
+use derive_more::Sub;
 use fbinit::FacebookInit;
-use futures::{
-    future::{self, try_join_all, FutureExt, TryFutureExt},
-    stream::{Stream, TryStreamExt},
-};
+use futures::future::try_join_all;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream::Stream;
+use futures::stream::TryStreamExt;
 use maplit::hashset;
 use mononoke_types::BlobstoreBytes;
 use samplingblob::SamplingHandler;
 use slog::info;
+use std::cmp::min;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt;
+use std::io::Cursor;
+use std::io::Write;
 use std::sync::atomic::AtomicBool;
-use std::{
-    cmp::min,
-    collections::{HashMap, HashSet},
-    fmt,
-    io::{Cursor, Write},
-    sync::Arc,
-    time::Duration,
-};
+use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(Add, Div, Mul, Sub, Clone, Copy, Default, Debug)]
 struct SizingStats {

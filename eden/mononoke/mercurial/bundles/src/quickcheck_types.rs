@@ -13,13 +13,20 @@ use std::iter;
 use std::vec::IntoIter;
 
 #[cfg(test)]
-use anyhow::{Error, Result};
+use anyhow::Error;
+#[cfg(test)]
+use anyhow::Result;
 use bytes::Bytes;
 #[cfg(test)]
 use futures_old::stream;
-use quickcheck::{empty_shrinker, Arbitrary, Gen};
+use quickcheck::empty_shrinker;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 
-use mercurial_types::{Delta, HgNodeHash, MPath, RevFlags};
+use mercurial_types::Delta;
+use mercurial_types::HgNodeHash;
+use mercurial_types::MPath;
+use mercurial_types::RevFlags;
 
 use crate::changegroup;
 

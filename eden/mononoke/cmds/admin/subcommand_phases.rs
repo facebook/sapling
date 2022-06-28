@@ -5,25 +5,34 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, format_err, Error};
-use clap_old::{App, Arg, ArgMatches, SubCommand};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Error;
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
 use fbinit::FacebookInit;
-use futures::{stream, StreamExt, TryStreamExt};
-use std::{
-    fs::File,
-    io::{BufRead, BufReader, Write},
-    str::FromStr,
-    time::Duration,
-};
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use std::fs::File;
+use std::io::BufRead;
+use std::io::BufReader;
+use std::io::Write;
+use std::str::FromStr;
+use std::time::Duration;
 
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
-use cmdlib::args::{self, MononokeMatches};
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
 use context::CoreContext;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use phases::PhasesRef;
-use slog::{info, Logger};
+use slog::info;
+use slog::Logger;
 
 use crate::error::SubcommandError;
 

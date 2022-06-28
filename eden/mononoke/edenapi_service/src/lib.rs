@@ -18,24 +18,29 @@ mod utils;
 use anyhow::Error;
 use fbinit::FacebookInit;
 use gotham::router::Router;
-use gotham_ext::{
-    handler::MononokeHttpHandler,
-    middleware::{
-        ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, PostResponseMiddleware,
-        ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware, TlsSessionDataMiddleware,
-    },
-};
+use gotham_ext::handler::MononokeHttpHandler;
+use gotham_ext::middleware::ClientIdentityMiddleware;
+use gotham_ext::middleware::LoadMiddleware;
+use gotham_ext::middleware::LogMiddleware;
+use gotham_ext::middleware::PostResponseMiddleware;
+use gotham_ext::middleware::ScubaMiddleware;
+use gotham_ext::middleware::ServerIdentityMiddleware;
+use gotham_ext::middleware::TimerMiddleware;
+use gotham_ext::middleware::TlsSessionDataMiddleware;
 use http::HeaderValue;
 use mononoke_api::Mononoke;
 use rate_limiting::RateLimitEnvironment;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use std::path::Path;
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 
 use crate::context::ServerContext;
 use crate::handlers::build_router;
-use crate::middleware::{OdsMiddleware, RequestContextMiddleware, RequestDumperMiddleware};
+use crate::middleware::OdsMiddleware;
+use crate::middleware::RequestContextMiddleware;
+use crate::middleware::RequestDumperMiddleware;
 use crate::scuba::EdenApiScubaHandler;
 
 pub type EdenApi = MononokeHttpHandler<Router>;

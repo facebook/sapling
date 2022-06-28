@@ -5,13 +5,19 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Context, Error, Result};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use blobstore::BlobstoreGetData;
 use derived_data_thrift as thrift;
 use fbthrift::compact_protocol;
-use mononoke_types::{
-    errors::ErrorKind, BlobstoreBytes, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime,
-};
+use mononoke_types::errors::ErrorKind;
+use mononoke_types::BlobstoreBytes;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
 use sorted_vector_map::SortedVectorMap;
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -254,7 +260,11 @@ fn get_title(message: &String) -> &str {
 #[cfg(test)]
 mod test {
     use super::*;
-    use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, MPath};
+    use mononoke_types::BonsaiChangeset;
+    use mononoke_types::BonsaiChangesetMut;
+    use mononoke_types::DateTime;
+    use mononoke_types::FileChange;
+    use mononoke_types::MPath;
 
     use sorted_vector_map::sorted_vector_map;
 

@@ -7,14 +7,18 @@
 
 use anyhow::Error;
 use bytes::Bytes;
-use futures::future::{BoxFuture, FutureExt};
-use sql::{queries, Connection};
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use sql::queries;
+use sql::Connection;
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use thiserror::Error;
 
 use blobstore::Blobstore;
-use context::{CoreContext, PerfCounterType};
+use context::CoreContext;
+use context::PerfCounterType;
 use mononoke_types::RepositoryId;
 
 #[derive(Debug, Error)]

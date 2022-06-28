@@ -5,16 +5,23 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
-use bookmark_renaming::{get_bookmark_renamers, BookmarkRenamer, BookmarkRenamers};
+use anyhow::anyhow;
+use anyhow::Error;
+use bookmark_renaming::get_bookmark_renamers;
+use bookmark_renaming::BookmarkRenamer;
+use bookmark_renaming::BookmarkRenamers;
 use bookmarks::BookmarkName;
 use live_commit_sync_config::LiveCommitSyncConfig;
-use metaconfig_types::{
-    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
-};
+use metaconfig_types::CommitSyncConfig;
+use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::CommitSyncDirection;
+use metaconfig_types::CommonCommitSyncConfig;
 use mononoke_types::RepositoryId;
-use movers::{get_movers, Mover, Movers};
-use std::{collections::HashSet, sync::Arc};
+use movers::get_movers;
+use movers::Mover;
+use movers::Movers;
+use std::collections::HashSet;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub enum CommitSyncDataProvider {

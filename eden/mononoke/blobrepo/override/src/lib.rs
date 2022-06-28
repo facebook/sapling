@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use blobrepo::{BlobRepo, BlobRepoInner};
+use blobrepo::BlobRepo;
+use blobrepo::BlobRepoInner;
 use blobstore::Blobstore;
 use bonsai_hg_mapping::ArcBonsaiHgMapping;
 use cacheblob::LeaseOps;

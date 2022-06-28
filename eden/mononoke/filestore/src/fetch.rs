@@ -5,22 +5,26 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    borrow::Borrow,
-    cmp::{max, min},
-};
+use std::borrow::Borrow;
+use std::cmp::max;
+use std::cmp::min;
 
 use anyhow::Error;
-use blobstore::{Blobstore, Loadable, LoadableError};
+use blobstore::Blobstore;
+use blobstore::Loadable;
+use blobstore::LoadableError;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    future,
-    stream::{self, Stream, StreamExt},
-};
+use futures::future;
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::{self};
 use itertools::Either;
-use mononoke_types::{ContentChunk, ContentChunkId, ContentId, FileContents};
+use mononoke_types::ContentChunk;
+use mononoke_types::ContentChunkId;
+use mononoke_types::ContentId;
+use mononoke_types::FileContents;
 use thiserror::Error;
 
 // TODO: Make this configurable? Perhaps as a global, since it's something that only makes sense at

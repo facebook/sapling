@@ -5,21 +5,34 @@
  * GNU General Public License version 2.
  */
 
-use crate::base::{ErrorKind, MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
+use crate::base::ErrorKind;
+use crate::base::MultiplexedBlobstoreBase;
+use crate::base::MultiplexedBlobstorePutHandler;
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, OverwriteStatus, PutBehaviour,
-};
-use blobstore_stats::{add_completion_time, record_queue_stats, OperationType};
-use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
+use blobstore::BlobstorePutOps;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
+use blobstore_stats::add_completion_time;
+use blobstore_stats::record_queue_stats;
+use blobstore_stats::OperationType;
+use blobstore_sync_queue::BlobstoreSyncQueue;
+use blobstore_sync_queue::BlobstoreSyncQueueEntry;
+use blobstore_sync_queue::OperationKey;
 use context::CoreContext;
-use futures_stats::{FutureStats, TimedFutureExt};
-use metaconfig_types::{BlobstoreId, MultiplexId};
-use mononoke_types::{BlobstoreBytes, DateTime};
+use futures_stats::FutureStats;
+use futures_stats::TimedFutureExt;
+use metaconfig_types::BlobstoreId;
+use metaconfig_types::MultiplexId;
+use mononoke_types::BlobstoreBytes;
+use mononoke_types::DateTime;
 use scuba_ext::MononokeScubaSampleBuilder;
 use std::fmt;
-use std::num::{NonZeroU64, NonZeroUsize};
+use std::num::NonZeroU64;
+use std::num::NonZeroUsize;
 use std::sync::Arc;
 use tunables::tunables;
 

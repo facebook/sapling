@@ -6,27 +6,49 @@
  */
 
 use std::collections::HashMap;
-use std::io::{self, Cursor};
+use std::io::Cursor;
+use std::io::{self};
 use std::mem;
 use std::vec::IntoIter;
 
-use anyhow::{bail, Context, Error, Result};
-use byteorder::{BigEndian, ByteOrder};
-use bytes_old::{Buf, BufMut, Bytes, IntoBuf};
-use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::ByteOrder;
+use bytes_old::Buf;
+use bytes_old::BufMut;
+use bytes_old::Bytes;
+use bytes_old::IntoBuf;
+use futures_ext::io::Either::A as UncompressedRead;
+use futures_ext::io::Either::B as CompressedRead;
+use futures_ext::io::Either::{self};
 use futures_old::stream::Forward;
-use futures_old::{try_ready, Async, AsyncSink, Future, Poll, Sink, StartSend, Stream};
+use futures_old::try_ready;
+use futures_old::Async;
+use futures_old::AsyncSink;
+use futures_old::Future;
+use futures_old::Poll;
+use futures_old::Sink;
+use futures_old::StartSend;
+use futures_old::Stream;
 use tokio_codec::FramedWrite;
 use tokio_io::AsyncWrite;
 
-use async_compression::{Compressor, CompressorType};
+use async_compression::Compressor;
+use async_compression::CompressorType;
 
-use crate::chunk::{Chunk, ChunkEncoder};
+use crate::chunk::Chunk;
+use crate::chunk::ChunkEncoder;
 use crate::errors::ErrorKind;
-use crate::part_encode::{PartEncode, PartEncodeBuilder};
+use crate::part_encode::PartEncode;
+use crate::part_encode::PartEncodeBuilder;
 use crate::part_header::PartId;
 use crate::types::StreamHeader;
-use crate::utils::{capitalize_first, get_compression_param, is_mandatory_param};
+use crate::utils::capitalize_first;
+use crate::utils::get_compression_param;
+use crate::utils::is_mandatory_param;
 use mercurial_types::percent_encode;
 
 /// This is a general wrapper around a Sink to prevent closing of the underlying Sink. This is

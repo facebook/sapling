@@ -10,10 +10,14 @@ use std::collections::HashSet;
 use anyhow::Error;
 use context::CoreContext;
 use futures::future::try_join_all;
-use futures::stream::{iter, StreamExt, TryStreamExt};
+use futures::stream::iter;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 
-use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
-use mononoke_types::{ChangesetId, Generation};
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
+use mononoke_types::ChangesetId;
+use mononoke_types::Generation;
 use reachabilityindex::errors::*;
 
 /// Fetches parents of the commit together with their generation numbers

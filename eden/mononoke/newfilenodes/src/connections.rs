@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use path_hash::{PathHashBytes, PathWithHash};
+use path_hash::PathHashBytes;
+use path_hash::PathWithHash;
 use sql::Connection;
 use stats::prelude::*;
 

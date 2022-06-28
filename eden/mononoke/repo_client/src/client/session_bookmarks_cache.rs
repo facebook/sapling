@@ -7,23 +7,33 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use blobrepo_hg::{to_hg_bookmark_stream, BlobRepoHg};
-use bookmarks::{
-    Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness,
-};
+use blobrepo_hg::to_hg_bookmark_stream;
+use blobrepo_hg::BlobRepoHg;
+use bookmarks::Bookmark;
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkPagination;
+use bookmarks::BookmarkPrefix;
+use bookmarks::Freshness;
 use context::CoreContext;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future, FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
-};
+use futures::compat::Future01CompatExt;
+use futures::compat::Stream01CompatExt;
+use futures::future;
+use futures::FutureExt;
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
 use futures_01_ext::StreamExt as OldStreamExt;
-use futures_ext::{FbFutureExt, FbTryFutureExt};
+use futures_ext::FbFutureExt;
+use futures_ext::FbTryFutureExt;
 use futures_old::Future;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_repo::MononokeRepo;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
 use tunables::tunables;
 use warm_bookmarks_cache::BookmarksCache;
@@ -277,7 +287,8 @@ mod test {
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use mononoke_api_types::InnerRepo;
-    use tests_utils::{bookmark, CreateCommitContext};
+    use tests_utils::bookmark;
+    use tests_utils::CreateCommitContext;
     use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
 
     struct TestRepo {

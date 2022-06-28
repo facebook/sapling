@@ -7,10 +7,14 @@
 
 #![feature(result_flattening)]
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::anyhow;
+use anyhow::Error;
+use anyhow::Result;
 use clientinfo::ClientInfo;
-use permission_checker::{MononokeIdentitySet, MononokeIdentitySetExt};
-use session_id::{generate_session_id, SessionId};
+use permission_checker::MononokeIdentitySet;
+use permission_checker::MononokeIdentitySetExt;
+use session_id::generate_session_id;
+use session_id::SessionId;
 use std::net::IpAddr;
 use std::time::Duration;
 use tokio::time::timeout;

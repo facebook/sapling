@@ -8,14 +8,16 @@
 use anyhow::Error;
 use metaconfig_types::HgsqlName;
 use sql::mysql;
-use sql::{queries, Connection};
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql::queries;
+use sql::Connection;
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 
-use sql::mysql_async::{
-    prelude::{ConvIr, FromValue},
-    FromValueError, Value,
-};
+use sql::mysql_async::prelude::ConvIr;
+use sql::mysql_async::prelude::FromValue;
+use sql::mysql_async::FromValueError;
+use sql::mysql_async::Value;
 
 use metaconfig_types::RepoReadOnly;
 

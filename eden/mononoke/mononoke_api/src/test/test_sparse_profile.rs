@@ -5,26 +5,35 @@
  * GNU General Public License version 2.
  */
 
+use crate::sparse_profile::fetch;
+use crate::sparse_profile::get_profile_delta_size;
+use crate::sparse_profile::get_profile_size;
+use crate::sparse_profile::MonitoringProfiles;
 use crate::sparse_profile::ProfileSizeChange;
-use crate::sparse_profile::{
-    fetch, get_profile_delta_size, get_profile_size, MonitoringProfiles, SparseProfileMonitoring,
-};
+use crate::sparse_profile::SparseProfileMonitoring;
 use crate::ChangesetContext;
 use crate::Mononoke;
 use crate::RepoContext;
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use fixtures::{ManyFilesDirs, TestRepoFixture};
-use maplit::{btreemap, hashmap, hashset};
+use fixtures::ManyFilesDirs;
+use fixtures::TestRepoFixture;
+use maplit::btreemap;
+use maplit::hashmap;
+use maplit::hashset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::SparseProfilesConfig;
-use mononoke_types::{ChangesetId, MPath};
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 use pathmatcher::Matcher;
-use tests_utils::{store_files, CreateCommitContext};
+use tests_utils::store_files;
+use tests_utils::CreateCommitContext;
 use types::RepoPath;
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashSet;
 
 async fn init_sparse_profile(
     ctx: &CoreContext,

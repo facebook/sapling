@@ -5,55 +5,51 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error, Result};
-use blobstore::{impl_loadable_storable, Blobstore};
+use anyhow::anyhow;
+use anyhow::Error;
+use anyhow::Result;
+use blobstore::impl_loadable_storable;
+use blobstore::Blobstore;
 use context::CoreContext;
 use fbthrift::compact_protocol;
 pub use megarepo_config::Target;
 use megarepo_error::MegarepoError;
-pub use megarepo_types_thrift::{
-    MegarepoAsynchronousRequestParams as ThriftMegarepoAsynchronousRequestParams,
-    MegarepoAsynchronousRequestParamsId as ThriftMegarepoAsynchronousRequestParamsId,
-    MegarepoAsynchronousRequestResult as ThriftMegarepoAsynchronousRequestResult,
-    MegarepoAsynchronousRequestResultId as ThriftMegarepoAsynchronousRequestResultId,
-};
-use mononoke_types::{hash::Blake2, impl_typed_context, impl_typed_hash_no_context, BlobstoreKey};
-pub use requests_table::{RequestStatus, RequestType, RowId};
-use source_control::{
-    MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams,
-    MegarepoAddTargetParams as ThriftMegarepoAddTargetParams,
-    MegarepoChangeTargetConfigParams as ThriftMegarepoChangeTargetConfigParams,
-    MegarepoRemergeSourceParams as ThriftMegarepoRemergeSourceParams,
-    MegarepoSyncChangesetParams as ThriftMegarepoSyncChangesetParams,
-};
-use source_control::{
-    MegarepoAddBranchingTargetPollResponse as ThriftMegarepoAddBranchingTargetPollResponse,
-    MegarepoAddTargetPollResponse as ThriftMegarepoAddTargetPollResponse,
-    MegarepoChangeTargetConfigPollResponse as ThriftMegarepoChangeTargetConfigPollResponse,
-    MegarepoRemergeSourcePollResponse as ThriftMegarepoRemergeSourcePollResponse,
-    MegarepoSyncChangesetPollResponse as ThriftMegarepoSyncChangesetPollResponse,
-};
-use source_control::{
-    MegarepoAddBranchingTargetResponse as ThriftMegarepoAddBranchingTargetResponse,
-    MegarepoAddTargetResponse as ThriftMegarepoAddTargetResponse,
-    MegarepoChangeTargetConfigResponse as ThriftMegarepoChangeTargetConfigResponse,
-    MegarepoRemergeSourceResponse as ThriftMegarepoRemergeSourceResponse,
-    MegarepoSyncChangesetResponse as ThriftMegarepoSyncChangesetResponse,
-};
-use source_control::{
-    MegarepoAddBranchingTargetResult as ThriftMegarepoAddBranchingTargetResult,
-    MegarepoAddTargetResult as ThriftMegarepoAddTargetResult,
-    MegarepoChangeTargetConfigResult as ThriftMegarepoChangeTargetConfigResult,
-    MegarepoRemergeSourceResult as ThriftMegarepoRemergeSourceResult,
-    MegarepoSyncChangesetResult as ThriftMegarepoSyncChangesetResult,
-};
-use source_control::{
-    MegarepoAddBranchingTargetToken as ThriftMegarepoAddBranchingTargetToken,
-    MegarepoAddTargetToken as ThriftMegarepoAddTargetToken,
-    MegarepoChangeConfigToken as ThriftMegarepoChangeConfigToken,
-    MegarepoRemergeSourceToken as ThriftMegarepoRemergeSourceToken,
-    MegarepoSyncChangesetToken as ThriftMegarepoSyncChangesetToken,
-};
+pub use megarepo_types_thrift::MegarepoAsynchronousRequestParams as ThriftMegarepoAsynchronousRequestParams;
+pub use megarepo_types_thrift::MegarepoAsynchronousRequestParamsId as ThriftMegarepoAsynchronousRequestParamsId;
+pub use megarepo_types_thrift::MegarepoAsynchronousRequestResult as ThriftMegarepoAsynchronousRequestResult;
+pub use megarepo_types_thrift::MegarepoAsynchronousRequestResultId as ThriftMegarepoAsynchronousRequestResultId;
+use mononoke_types::hash::Blake2;
+use mononoke_types::impl_typed_context;
+use mononoke_types::impl_typed_hash_no_context;
+use mononoke_types::BlobstoreKey;
+pub use requests_table::RequestStatus;
+pub use requests_table::RequestType;
+pub use requests_table::RowId;
+use source_control::MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams;
+use source_control::MegarepoAddBranchingTargetPollResponse as ThriftMegarepoAddBranchingTargetPollResponse;
+use source_control::MegarepoAddBranchingTargetResponse as ThriftMegarepoAddBranchingTargetResponse;
+use source_control::MegarepoAddBranchingTargetResult as ThriftMegarepoAddBranchingTargetResult;
+use source_control::MegarepoAddBranchingTargetToken as ThriftMegarepoAddBranchingTargetToken;
+use source_control::MegarepoAddTargetParams as ThriftMegarepoAddTargetParams;
+use source_control::MegarepoAddTargetPollResponse as ThriftMegarepoAddTargetPollResponse;
+use source_control::MegarepoAddTargetResponse as ThriftMegarepoAddTargetResponse;
+use source_control::MegarepoAddTargetResult as ThriftMegarepoAddTargetResult;
+use source_control::MegarepoAddTargetToken as ThriftMegarepoAddTargetToken;
+use source_control::MegarepoChangeConfigToken as ThriftMegarepoChangeConfigToken;
+use source_control::MegarepoChangeTargetConfigParams as ThriftMegarepoChangeTargetConfigParams;
+use source_control::MegarepoChangeTargetConfigPollResponse as ThriftMegarepoChangeTargetConfigPollResponse;
+use source_control::MegarepoChangeTargetConfigResponse as ThriftMegarepoChangeTargetConfigResponse;
+use source_control::MegarepoChangeTargetConfigResult as ThriftMegarepoChangeTargetConfigResult;
+use source_control::MegarepoRemergeSourceParams as ThriftMegarepoRemergeSourceParams;
+use source_control::MegarepoRemergeSourcePollResponse as ThriftMegarepoRemergeSourcePollResponse;
+use source_control::MegarepoRemergeSourceResponse as ThriftMegarepoRemergeSourceResponse;
+use source_control::MegarepoRemergeSourceResult as ThriftMegarepoRemergeSourceResult;
+use source_control::MegarepoRemergeSourceToken as ThriftMegarepoRemergeSourceToken;
+use source_control::MegarepoSyncChangesetParams as ThriftMegarepoSyncChangesetParams;
+use source_control::MegarepoSyncChangesetPollResponse as ThriftMegarepoSyncChangesetPollResponse;
+use source_control::MegarepoSyncChangesetResponse as ThriftMegarepoSyncChangesetResponse;
+use source_control::MegarepoSyncChangesetResult as ThriftMegarepoSyncChangesetResult;
+use source_control::MegarepoSyncChangesetToken as ThriftMegarepoSyncChangesetToken;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -545,7 +541,9 @@ impl MegarepoAsynchronousRequestParams {
 #[cfg(test)]
 mod test {
     use super::*;
-    use blobstore::{Loadable, PutBehaviour, Storable};
+    use blobstore::Loadable;
+    use blobstore::PutBehaviour;
+    use blobstore::Storable;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use memblob::Memblob;

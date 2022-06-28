@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 
 pub const H2_ALPN: &str = "h2";
 pub const HGCLI_ALPN: &str = "hgcli";

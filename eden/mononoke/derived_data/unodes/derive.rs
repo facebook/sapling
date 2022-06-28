@@ -7,30 +7,43 @@
 
 use std::sync::Arc;
 
-use anyhow::{format_err, Error};
-use blobstore::{Blobstore, Loadable};
+use anyhow::format_err;
+use anyhow::Error;
+use blobstore::Blobstore;
+use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
-use futures::{
-    channel::mpsc,
-    future::{
-        self as new_future, try_join_all, BoxFuture, FutureExt as NewFutureExt, TryFutureExt,
-    },
-};
-use manifest::{
-    derive_manifest_with_io_sender, derive_manifests_for_simple_stack_of_commits, Entry, LeafInfo,
-    ManifestChanges, TreeInfo,
-};
+use futures::channel::mpsc;
+use futures::future::try_join_all;
+use futures::future::BoxFuture;
+use futures::future::FutureExt as NewFutureExt;
+use futures::future::TryFutureExt;
+use futures::future::{self as new_future};
+use manifest::derive_manifest_with_io_sender;
+use manifest::derive_manifests_for_simple_stack_of_commits;
+use manifest::Entry;
+use manifest::LeafInfo;
+use manifest::ManifestChanges;
+use manifest::TreeInfo;
 use metaconfig_types::UnodeVersion;
-use mononoke_types::unode::{FileUnode, ManifestUnode, UnodeEntry};
-use mononoke_types::{
-    BlobstoreKey, BlobstoreValue, ChangesetId, ContentId, FileType, FileUnodeId, MPath,
-    MPathElement, MPathHash, ManifestUnodeId,
-};
+use mononoke_types::unode::FileUnode;
+use mononoke_types::unode::ManifestUnode;
+use mononoke_types::unode::UnodeEntry;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::BlobstoreValue;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::FileType;
+use mononoke_types::FileUnodeId;
+use mononoke_types::MPath;
+use mononoke_types::MPathElement;
+use mononoke_types::MPathHash;
+use mononoke_types::ManifestUnodeId;
 use sorted_vector_map::SortedVectorMap;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use crate::ErrorKind;
 
@@ -452,7 +465,8 @@ fn return_if_unique_filenode(unodes: &Vec<FileUnode>) -> Option<(&ContentId, &Fi
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mapping::{get_file_changes, RootUnodeManifestId};
+    use crate::mapping::get_file_changes;
+    use crate::mapping::RootUnodeManifestId;
     use anyhow::Result;
     use async_trait::async_trait;
     use blobrepo::save_bonsai_changesets;
@@ -462,7 +476,8 @@ mod tests {
     use bytes::Bytes;
     use derived_data::BonsaiDerived;
     use derived_data_filenodes::FilenodesOnlyPublic;
-    use derived_data_test_utils::{bonsai_changeset_from_hg, iterate_all_manifest_entries};
+    use derived_data_test_utils::bonsai_changeset_from_hg;
+    use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
@@ -470,15 +485,23 @@ mod tests {
     use manifest::ManifestOps;
     use maplit::btreemap;
     use mercurial_derived_data::DeriveHgChangeset;
-    use mercurial_types::{blobs::HgBlobManifest, HgFileNodeId, HgManifestId};
-    use mononoke_types::{
-        BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileContents,
-        RepoPath,
-    };
+    use mercurial_types::blobs::HgBlobManifest;
+    use mercurial_types::HgFileNodeId;
+    use mercurial_types::HgManifestId;
+    use mononoke_types::BlobstoreValue;
+    use mononoke_types::BonsaiChangeset;
+    use mononoke_types::BonsaiChangesetMut;
+    use mononoke_types::DateTime;
+    use mononoke_types::FileChange;
+    use mononoke_types::FileContents;
+    use mononoke_types::RepoPath;
     use repo_derived_data::RepoDerivedDataRef;
-    use std::collections::{BTreeMap, HashSet, VecDeque};
+    use std::collections::BTreeMap;
+    use std::collections::HashSet;
+    use std::collections::VecDeque;
     use test_repo_factory::TestRepoFactory;
-    use tests_utils::{resolve_cs_id, CreateCommitContext};
+    use tests_utils::resolve_cs_id;
+    use tests_utils::CreateCommitContext;
 
     #[fbinit::test]
     async fn linear_test(fb: FacebookInit) -> Result<(), Error> {

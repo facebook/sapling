@@ -5,15 +5,19 @@
  * GNU General Public License version 2.
  */
 
-use crate::{
-    CrossRepoPushSource, FileContentManager, FileHook, HookConfig, HookExecution,
-    HookRejectionInfo, PushAuthoredBy,
-};
+use crate::CrossRepoPushSource;
+use crate::FileContentManager;
+use crate::FileHook;
+use crate::HookConfig;
+use crate::HookExecution;
+use crate::HookRejectionInfo;
+use crate::PushAuthoredBy;
 use anyhow::Error;
 use async_trait::async_trait;
 use context::CoreContext;
 use lazy_static::lazy_static;
-use mononoke_types::{BasicFileChange, MPath};
+use mononoke_types::BasicFileChange;
+use mononoke_types::MPath;
 use regex::Regex;
 
 const NOCOMMIT_MARKER: &str = "\x40nocommit";

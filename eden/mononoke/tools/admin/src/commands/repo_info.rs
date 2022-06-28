@@ -5,12 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Result};
-use bookmarks::{BookmarkName, Bookmarks, BookmarksRef};
+use anyhow::Context;
+use anyhow::Result;
+use bookmarks::BookmarkName;
+use bookmarks::Bookmarks;
+use bookmarks::BookmarksRef;
 use clap::Parser;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
-use repo_identity::{RepoIdentity, RepoIdentityRef};
+use repo_identity::RepoIdentity;
+use repo_identity::RepoIdentityRef;
 
 /// Show information about a repository
 #[derive(Parser)]

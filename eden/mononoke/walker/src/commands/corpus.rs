@@ -5,22 +5,31 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use async_trait::async_trait;
 use clap::Parser;
-use executor_lib::{BackgroundProcessExecutor, RepoShardedProcess, RepoShardedProcessExecutor};
+use executor_lib::BackgroundProcessExecutor;
+use executor_lib::RepoShardedProcess;
+use executor_lib::RepoShardedProcessExecutor;
 use fbinit::FacebookInit;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::MononokeApp;
 use once_cell::sync::OnceCell;
-use slog::{info, Logger};
-use std::sync::atomic::{AtomicBool, Ordering};
+use slog::info;
+use slog::Logger;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use crate::commands::CORPUS;
-use crate::detail::corpus::{corpus, CorpusCommand, CorpusSample, CorpusSamplingHandler};
+use crate::detail::corpus::corpus;
+use crate::detail::corpus::CorpusCommand;
+use crate::detail::corpus::CorpusSample;
+use crate::detail::corpus::CorpusSamplingHandler;
 
-use crate::args::{SamplingArgs, WalkerCommonArgs};
+use crate::args::SamplingArgs;
+use crate::args::WalkerCommonArgs;
 use crate::commands::JobParams;
 use crate::setup::setup_common;
 use crate::WalkerArgs;

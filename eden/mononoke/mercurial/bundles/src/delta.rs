@@ -7,11 +7,15 @@
 
 //! Code to deal with deltas received or sent over the wire.
 
-use bytes_old::{BufMut, BytesMut};
+use bytes_old::BufMut;
+use bytes_old::BytesMut;
 
-use anyhow::{bail, Context, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
 use bufsize::SizeCounter;
-use mercurial_types::delta::{Delta, Fragment};
+use mercurial_types::delta::Delta;
+use mercurial_types::delta::Fragment;
 
 use crate::errors::ErrorKind;
 use crate::utils::BytesExt;
@@ -86,7 +90,8 @@ mod test {
     use super::*;
 
     use assert_matches::assert_matches;
-    use failure_ext::{err_downcast, err_downcast_ref};
+    use failure_ext::err_downcast;
+    use failure_ext::err_downcast_ref;
     use quickcheck::quickcheck;
 
     #[test]

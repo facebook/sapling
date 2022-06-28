@@ -5,15 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use crate::common::{
-    find_source_config, find_target_bookmark_and_value, find_target_sync_config, MegarepoOp,
-};
+use crate::common::find_source_config;
+use crate::common::find_target_bookmark_and_value;
+use crate::common::find_target_sync_config;
+use crate::common::MegarepoOp;
 use anyhow::anyhow;
 use context::CoreContext;
-use megarepo_config::{MononokeMegarepoConfigs, Target};
+use megarepo_config::MononokeMegarepoConfigs;
+use megarepo_config::Target;
 use megarepo_error::MegarepoError;
 use megarepo_mapping::SourceName;
-use mononoke_api::{Mononoke, RepoContext};
+use mononoke_api::Mononoke;
+use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
 use std::sync::Arc;

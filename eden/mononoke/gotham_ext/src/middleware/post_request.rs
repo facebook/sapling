@@ -6,20 +6,26 @@
  */
 
 use std::panic::RefUnwindSafe;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::Error;
 use async_trait::async_trait;
 use cached_config::ConfigHandle;
 use futures::prelude::*;
-use gotham::state::{FromState, State};
+use gotham::state::FromState;
+use gotham::state::State;
 use gotham_derive::StateData;
-use hyper::{body::Body, Response};
+use hyper::body::Body;
+use hyper::Response;
 use tokio::task;
 
-use crate::response::{PendingResponseMeta, ResponseMeta};
+use crate::response::PendingResponseMeta;
+use crate::response::ResponseMeta;
 
-use super::{ClientIdentity, Middleware, RequestStartTime};
+use super::ClientIdentity;
+use super::Middleware;
+use super::RequestStartTime;
 
 type Callback = Box<dyn FnOnce(&PostResponseInfo) + Send + 'static>;
 

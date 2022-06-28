@@ -5,23 +5,33 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use abomonation_derive::Abomonation;
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
 
-use caching_ext::{
-    get_or_fill_chunked, CacheDisposition, CacheTtl, CachelibHandler, EntityStore,
-    KeyedEntityStore, MemcacheEntity, MemcacheHandler,
-};
+use caching_ext::get_or_fill_chunked;
+use caching_ext::CacheDisposition;
+use caching_ext::CacheTtl;
+use caching_ext::CachelibHandler;
+use caching_ext::EntityStore;
+use caching_ext::KeyedEntityStore;
+use caching_ext::MemcacheEntity;
+use caching_ext::MemcacheHandler;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::future::{self, FutureExt, TryFutureExt};
-use memcache::{KeyGen, MemcacheClient};
-use mononoke_types::{ChangesetId, RepositoryId};
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use memcache::KeyGen;
+use memcache::MemcacheClient;
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 
 use crate::idmap::IdMap;
 use crate::types::IdMapVersion;
@@ -342,7 +352,8 @@ mod tests {
 
     use fbinit::FacebookInit;
 
-    use mononoke_types_mocks::changesetid::{ONES_CSID, TWOS_CSID};
+    use mononoke_types_mocks::changesetid::ONES_CSID;
+    use mononoke_types_mocks::changesetid::TWOS_CSID;
     use sql_construct::SqlConstruct;
     use sql_ext::replication::NoReplicaLagMonitor;
 

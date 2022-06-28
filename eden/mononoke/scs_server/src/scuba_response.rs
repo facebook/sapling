@@ -9,7 +9,8 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use source_control as thrift;
 
 use crate::commit_id::CommitIdExt;
-use crate::scuba_common::{report_megarepo_target, Reported};
+use crate::scuba_common::report_megarepo_target;
+use crate::scuba_common::Reported;
 
 /// A trait for logging a thrift `Response` struct to scuba.
 pub(crate) trait AddScubaResponse: Send + Sync {

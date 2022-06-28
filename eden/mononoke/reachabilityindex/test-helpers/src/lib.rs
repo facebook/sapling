@@ -10,12 +10,15 @@ use std::sync::Arc;
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use fixtures::BranchWide;
+use fixtures::Linear;
+use fixtures::MergeUneven;
 use fixtures::TestRepoFixture;
-use fixtures::{BranchWide, Linear, MergeUneven};
 
 #[cfg(test)]
 use common::fetch_generation;
-use mercurial_types::{HgChangesetId, HgNodeHash};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgNodeHash;
 use mononoke_types::ChangesetId;
 use reachabilityindex::ReachabilityIndex;
 

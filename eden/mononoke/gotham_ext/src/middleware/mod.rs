@@ -8,7 +8,8 @@
 use std::panic::RefUnwindSafe;
 
 use gotham::state::State;
-use hyper::{Body, Response};
+use hyper::Body;
+use hyper::Response;
 
 pub mod client_identity;
 pub mod load;
@@ -19,15 +20,23 @@ pub mod server_identity;
 pub mod timer;
 pub mod tls_session_data;
 
-pub use self::client_identity::{ClientIdentity, ClientIdentityMiddleware};
-pub use self::load::{LoadMiddleware, RequestLoad};
+pub use self::client_identity::ClientIdentity;
+pub use self::client_identity::ClientIdentityMiddleware;
+pub use self::load::LoadMiddleware;
+pub use self::load::RequestLoad;
 pub use self::log::LogMiddleware;
-pub use self::post_request::{
-    PostResponseCallbacks, PostResponseConfig, PostResponseInfo, PostResponseMiddleware,
-};
-pub use self::scuba::{HttpScubaKey, ScubaHandler, ScubaMiddleware, ScubaMiddlewareState};
+pub use self::post_request::PostResponseCallbacks;
+pub use self::post_request::PostResponseConfig;
+pub use self::post_request::PostResponseInfo;
+pub use self::post_request::PostResponseMiddleware;
+pub use self::scuba::HttpScubaKey;
+pub use self::scuba::ScubaHandler;
+pub use self::scuba::ScubaMiddleware;
+pub use self::scuba::ScubaMiddlewareState;
 pub use self::server_identity::ServerIdentityMiddleware;
-pub use self::timer::{HeadersDuration, RequestStartTime, TimerMiddleware};
+pub use self::timer::HeadersDuration;
+pub use self::timer::RequestStartTime;
+pub use self::timer::TimerMiddleware;
 pub use self::tls_session_data::TlsSessionDataMiddleware;
 
 #[async_trait::async_trait]

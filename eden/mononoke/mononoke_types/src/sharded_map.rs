@@ -8,27 +8,41 @@
 #![allow(dead_code)]
 #![allow(clippy::mutable_key_type)] // false positive: Bytes is not inner mutable
 
-use anyhow::{anyhow, bail, Context, Error, Ok, Result};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Ok;
+use anyhow::Result;
 use async_recursion::async_recursion;
 use blobstore::Blobstore;
-use bounded_traversal::{bounded_traversal_ordered_stream, OrderedTraversal};
+use bounded_traversal::bounded_traversal_ordered_stream;
+use bounded_traversal::OrderedTraversal;
 use bytes::Bytes;
 use context::CoreContext;
 use derivative::Derivative;
 use fbthrift::compact_protocol;
-use futures::{stream, FutureExt, Stream, StreamExt, TryStreamExt};
+use futures::stream;
+use futures::FutureExt;
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use itertools::Itertools;
 use nonzero_ext::nonzero;
 use once_cell::sync::OnceCell;
 use smallvec::SmallVec;
-use sorted_vector_map::{sorted_vector_map, SortedVectorMap};
+use sorted_vector_map::sorted_vector_map;
+use sorted_vector_map::SortedVectorMap;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 
-use crate::blob::{Blob, BlobstoreValue};
+use crate::blob::Blob;
+use crate::blob::BlobstoreValue;
 use crate::errors::ErrorKind;
 use crate::thrift;
-use crate::typed_hash::{BlobstoreKey, IdContext, ThriftConvert};
+use crate::typed_hash::BlobstoreKey;
+use crate::typed_hash::IdContext;
+use crate::typed_hash::ThriftConvert;
 
 pub trait MapValue:
     TryFrom<Bytes, Error = Error> + Into<Bytes> + Debug + Clone + Send + Sync + 'static
@@ -633,14 +647,22 @@ impl<Value: MapValue> BlobstoreValue for ShardedMapNode<Value> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use blobstore::{BlobstoreKeyParam, BlobstoreKeyRange, BlobstoreKeySource};
-    use bytes::{Buf, BufMut, BytesMut};
+    use blobstore::BlobstoreKeyParam;
+    use blobstore::BlobstoreKeyRange;
+    use blobstore::BlobstoreKeySource;
+    use bytes::Buf;
+    use bytes::BufMut;
+    use bytes::BytesMut;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures::TryStreamExt;
     use memblob::Memblob;
     use pretty_assertions::assert_eq;
-    use quickcheck::{Arbitrary, Gen, QuickCheck, TestResult, Testable};
+    use quickcheck::Arbitrary;
+    use quickcheck::Gen;
+    use quickcheck::QuickCheck;
+    use quickcheck::TestResult;
+    use quickcheck::Testable;
     use ShardedMapNode::*;
 
     #[derive(Debug, Clone, Copy, Eq, PartialEq)]

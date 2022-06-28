@@ -5,25 +5,32 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use bytes::Bytes;
-use futures::{
-    channel::oneshot,
-    stream::{Stream, StreamExt},
-};
-use gotham::{handler::HandlerError, helpers::http::response::create_response, state::State};
-use hyper::{
-    header::{HeaderValue, CONTENT_ENCODING, CONTENT_LENGTH, CONTENT_TYPE},
-    Body, Response, StatusCode,
-};
+use futures::channel::oneshot;
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use gotham::handler::HandlerError;
+use gotham::helpers::http::response::create_response;
+use gotham::state::State;
+use hyper::header::HeaderValue;
+use hyper::header::CONTENT_ENCODING;
+use hyper::header::CONTENT_LENGTH;
+use hyper::header::CONTENT_TYPE;
+use hyper::Body;
+use hyper::Response;
+use hyper::StatusCode;
 use mime::Mime;
 
 use crate::content_encoding::ContentEncoding;
-use crate::error::{ErrorFormatter, HttpError};
+use crate::error::ErrorFormatter;
+use crate::error::HttpError;
 
 use super::content_meta::ContentMetaProvider;
 use super::error_meta::ErrorMetaProvider;
-use super::response_meta::{HeadersMeta, PendingResponseMeta};
+use super::response_meta::HeadersMeta;
+use super::response_meta::PendingResponseMeta;
 use super::signal_stream::SignalStream;
 
 pub trait TryIntoResponse {

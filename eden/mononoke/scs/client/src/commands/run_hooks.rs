@@ -8,17 +8,28 @@
 use std::collections::BTreeMap;
 use std::io::Write;
 
-use anyhow::{Error, Result};
-use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use futures::stream::{self, StreamExt};
+use anyhow::Error;
+use anyhow::Result;
+use clap::App;
+use clap::AppSettings;
+use clap::Arg;
+use clap::ArgMatches;
+use clap::SubCommand;
+use futures::stream::StreamExt;
+use futures::stream::{self};
 use serde_derive::Serialize;
 use source_control::types as thrift;
 
-use crate::args::commit_id::{add_commit_id_args, get_commit_id, resolve_commit_id};
-use crate::args::pushvars::{add_pushvar_args, get_pushvars};
-use crate::args::repo::{add_repo_args, get_repo_specifier};
+use crate::args::commit_id::add_commit_id_args;
+use crate::args::commit_id::get_commit_id;
+use crate::args::commit_id::resolve_commit_id;
+use crate::args::pushvars::add_pushvar_args;
+use crate::args::pushvars::get_pushvars;
+use crate::args::repo::add_repo_args;
+use crate::args::repo::get_repo_specifier;
 use crate::connection::Connection;
-use crate::render::{Render, RenderStream};
+use crate::render::Render;
+use crate::render::RenderStream;
 
 pub(super) const NAME: &str = "run-hooks";
 

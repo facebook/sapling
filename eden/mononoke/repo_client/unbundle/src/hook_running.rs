@@ -5,16 +5,25 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use bookmarks_movement::BookmarkMovementError;
 use context::CoreContext;
-use futures::future::{BoxFuture, FutureExt};
-use futures::stream::{self, StreamExt, TryStreamExt};
-use hooks::{CrossRepoPushSource, HookManager, HookRejection, PushAuthoredBy};
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use hooks::CrossRepoPushSource;
+use hooks::HookManager;
+use hooks::HookRejection;
+use hooks::PushAuthoredBy;
 use mercurial_derived_data::DeriveHgChangeset;
 
-use crate::resolver::{HgHookRejection, PostResolveAction, PostResolvePushRebase};
+use crate::resolver::HgHookRejection;
+use crate::resolver::PostResolveAction;
+use crate::resolver::PostResolvePushRebase;
 use crate::BundleResolverError;
 
 /// A function to remap hook rejections from Bonsai to Hg.

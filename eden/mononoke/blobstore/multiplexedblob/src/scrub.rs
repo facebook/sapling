@@ -5,34 +5,45 @@
  * GNU General Public License version 2.
  */
 
-use crate::{
-    base::{inner_put, ErrorKind, MultiplexedBlobstoreBase},
-    queue::MultiplexedBlobstore,
-};
+use crate::base::inner_put;
+use crate::base::ErrorKind;
+use crate::base::MultiplexedBlobstoreBase;
+use crate::queue::MultiplexedBlobstore;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstoreMetadata, BlobstorePutOps,
-    OverwriteStatus, PutBehaviour,
-};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
+use blobstore::BlobstoreMetadata;
+use blobstore::BlobstorePutOps;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
 use blobstore_sync_queue::BlobstoreSyncQueue;
 use chrono::Duration as ChronoDuration;
 use clap::ArgEnum;
 use context::CoreContext;
-use futures::stream::{FuturesUnordered, TryStreamExt};
-use metaconfig_types::{BlobstoreId, MultiplexId};
-use mononoke_types::{BlobstoreBytes, Timestamp};
+use futures::stream::FuturesUnordered;
+use futures::stream::TryStreamExt;
+use metaconfig_types::BlobstoreId;
+use metaconfig_types::MultiplexId;
+use mononoke_types::BlobstoreBytes;
+use mononoke_types::Timestamp;
 use once_cell::sync::Lazy;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{info, warn};
+use slog::info;
+use slog::warn;
 use std::cmp::max;
 use std::collections::HashMap;
 use std::fmt;
-use std::num::{NonZeroU64, NonZeroUsize};
-use std::sync::{atomic::AtomicUsize, Arc};
+use std::num::NonZeroU64;
+use std::num::NonZeroUsize;
+use std::sync::atomic::AtomicUsize;
+use std::sync::Arc;
 use std::time::Duration;
-use strum_macros::{EnumString, EnumVariantNames, IntoStaticStr};
+use strum_macros::EnumString;
+use strum_macros::EnumVariantNames;
+use strum_macros::IntoStaticStr;
 
 static HEAL_MAX_BACKLOG: Lazy<Duration> =
     Lazy::new(|| Duration::from_secs(ChronoDuration::days(7).num_seconds() as u64));

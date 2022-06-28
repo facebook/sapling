@@ -5,18 +5,29 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::graph::{
-    AliasKey, AliasType, ChangesetKey, FastlogKey, Node, NodeType, PathKey, UnitKey, UnodeFlags,
-    UnodeKey, WrappedPath,
-};
+use crate::detail::graph::AliasKey;
+use crate::detail::graph::AliasType;
+use crate::detail::graph::ChangesetKey;
+use crate::detail::graph::FastlogKey;
+use crate::detail::graph::Node;
+use crate::detail::graph::NodeType;
+use crate::detail::graph::PathKey;
+use crate::detail::graph::UnitKey;
+use crate::detail::graph::UnodeFlags;
+use crate::detail::graph::UnodeKey;
+use crate::detail::graph::WrappedPath;
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use filestore::Alias;
-use mercurial_types::{HgFileNodeId, HgManifestId};
-use mononoke_types::{
-    hash::{GitSha1, Sha1, Sha256},
-    FileUnodeId, MPath, ManifestUnodeId,
-};
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mononoke_types::hash::GitSha1;
+use mononoke_types::hash::Sha1;
+use mononoke_types::hash::Sha256;
+use mononoke_types::FileUnodeId;
+use mononoke_types::MPath;
+use mononoke_types::ManifestUnodeId;
 use std::str::FromStr;
 use strum::IntoEnumIterator;
 

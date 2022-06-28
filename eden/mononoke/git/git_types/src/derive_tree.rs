@@ -5,24 +5,35 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, bail, Error, Result};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    future::ready,
-    stream::{FuturesUnordered, TryStreamExt},
-};
+use futures::future::ready;
+use futures::stream::FuturesUnordered;
+use futures::stream::TryStreamExt;
 use manifest::derive_manifest;
 
-use blobstore::{Blobstore, Storable};
+use blobstore::Blobstore;
+use blobstore::Storable;
 use derived_data::impl_bonsai_derived_via_manager;
-use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
-use filestore::{self, FetchKey};
-use mononoke_types::{BonsaiChangeset, ChangesetId, MPath};
+use derived_data_manager::dependencies;
+use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivationContext;
+use filestore::FetchKey;
+use filestore::{self};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 
 use crate::errors::ErrorKind;
-use crate::{BlobHandle, Tree, TreeBuilder, TreeHandle};
+use crate::BlobHandle;
+use crate::Tree;
+use crate::TreeBuilder;
+use crate::TreeHandle;
 
 use derived_data_service_if::types as thrift;
 
@@ -191,7 +202,8 @@ mod test {
     use filestore::Alias;
     use fixtures::TestRepoFixture;
     use futures_util::stream::TryStreamExt;
-    use git2::{Oid, Repository};
+    use git2::Oid;
+    use git2::Repository;
     use manifest::ManifestOps;
     use std::fs::File;
     use std::io::Write;

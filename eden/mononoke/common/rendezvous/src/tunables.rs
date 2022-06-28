@@ -7,9 +7,13 @@
 
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::{AcquireError, OwnedSemaphorePermit, Semaphore};
+use tokio::sync::AcquireError;
+use tokio::sync::OwnedSemaphorePermit;
+use tokio::sync::Semaphore;
 
-use crate::{MultiRendezVousController, RendezVousController, RendezVousOptions};
+use crate::MultiRendezVousController;
+use crate::RendezVousController;
+use crate::RendezVousOptions;
 
 #[derive(Copy, Clone)]
 pub struct TunablesMultiRendezVousController {

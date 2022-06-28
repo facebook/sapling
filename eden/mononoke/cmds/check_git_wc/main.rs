@@ -8,13 +8,14 @@
 use anyhow::Result;
 use check_git_wc::check_git_wc;
 use clap_old::Arg;
-use cmdlib::{
-    args::{self, MononokeClapApp, MononokeMatches},
-    helpers::block_execute,
-};
+use cmdlib::args::MononokeClapApp;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
+use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use git2::{Repository, RepositoryOpenFlags};
+use git2::Repository;
+use git2::RepositoryOpenFlags;
 use mononoke_types::ChangesetId;
 use std::str::FromStr;
 

@@ -5,12 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use changeset_fetcher::ArcChangesetFetcher;
 use context::CoreContext;
 use futures_old::stream::Stream;
-use futures_old::{Async, Poll};
-use mononoke_types::{ChangesetId, Generation};
+use futures_old::Async;
+use futures_old::Poll;
+use mononoke_types::ChangesetId;
+use mononoke_types::Generation;
 use std::collections::HashSet;
 
 use crate::setcommon::*;
@@ -128,11 +131,13 @@ mod test {
     use context::CoreContext;
     use failure_ext::err_downcast;
     use fbinit::FacebookInit;
-    use futures::{compat::Stream01CompatExt, stream::StreamExt as _};
+    use futures::compat::Stream01CompatExt;
+    use futures::stream::StreamExt as _;
     use futures_ext::StreamExt;
     use futures_old::executor::spawn;
     use revset_test_helper::assert_changesets_sequence;
-    use revset_test_helper::{single_changeset_id, string_to_bonsai};
+    use revset_test_helper::single_changeset_id;
+    use revset_test_helper::string_to_bonsai;
     use std::sync::Arc;
 
     #[fbinit::test]

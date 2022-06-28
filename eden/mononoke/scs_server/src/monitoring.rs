@@ -6,7 +6,8 @@
  */
 
 use futures::StreamExt;
-use mononoke_api::{CoreContext, Mononoke};
+use mononoke_api::CoreContext;
+use mononoke_api::Mononoke;
 use slog::warn;
 use std::sync::Arc;
 use std::time::Duration;

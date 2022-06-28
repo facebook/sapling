@@ -5,19 +5,27 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
+use std::fmt::{self};
 
-use anyhow::{bail, Context, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
 use bytes::Bytes;
 use fbthrift::compact_protocol;
-use quickcheck::{empty_shrinker, single_shrinker, Arbitrary, Gen};
+use quickcheck::empty_shrinker;
+use quickcheck::single_shrinker;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 
-use crate::{
-    blob::{Blob, BlobstoreValue, ContentBlob},
-    errors::ErrorKind,
-    thrift,
-    typed_hash::{ContentChunkId, ContentId, ContentIdContext},
-};
+use crate::blob::Blob;
+use crate::blob::BlobstoreValue;
+use crate::blob::ContentBlob;
+use crate::errors::ErrorKind;
+use crate::thrift;
+use crate::typed_hash::ContentChunkId;
+use crate::typed_hash::ContentId;
+use crate::typed_hash::ContentIdContext;
 
 /// An enum representing contents for a file.
 #[derive(Clone, Eq, PartialEq)]

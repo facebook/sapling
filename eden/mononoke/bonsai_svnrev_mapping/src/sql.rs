@@ -5,18 +5,26 @@
  * GNU General Public License version 2.
  */
 
-use ::sql::{queries, Connection};
+use ::sql::queries;
+use ::sql::Connection;
 use anyhow::Error;
 use async_trait::async_trait;
-use context::{CoreContext, PerfCounterType};
-use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId, Svnrev};
+use context::CoreContext;
+use context::PerfCounterType;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
+use mononoke_types::Svnrev;
 use slog::warn;
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use std::collections::HashSet;
 use thiserror::Error;
 
-use super::{BonsaiSvnrevMapping, BonsaiSvnrevMappingEntry, BonsaisOrSvnrevs};
+use super::BonsaiSvnrevMapping;
+use super::BonsaiSvnrevMappingEntry;
+use super::BonsaisOrSvnrevs;
 
 queries! {
     write DangerouslyAddSvnrevs(values: (

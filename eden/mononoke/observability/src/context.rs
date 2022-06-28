@@ -6,12 +6,16 @@
  */
 
 use anyhow::Error;
-use cached_config::{ConfigHandle, ConfigStore};
+use cached_config::ConfigHandle;
+use cached_config::ConfigStore;
 use slog::Level;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 
-use crate::config::{ObservabilityConfig, ScubaVerbosityLevel};
-use crate::scuba::{should_log_scuba_sample, ScubaLoggingDecisionFields};
+use crate::config::ObservabilityConfig;
+use crate::config::ScubaVerbosityLevel;
+use crate::scuba::should_log_scuba_sample;
+use crate::scuba::ScubaLoggingDecisionFields;
 
 const CONFIGERATOR_OBSERVABILITY_CONFIG: &str = "scm/mononoke/observability/observability_config";
 

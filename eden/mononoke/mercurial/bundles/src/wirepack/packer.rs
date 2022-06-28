@@ -11,16 +11,25 @@
 
 #![allow(deprecated)] // TODO: T29077977 convert from put_X::<BigEndian> -> put_X_be
 
-use anyhow::{bail, Error, Result};
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
 use byteorder::BigEndian;
 use bytes_old::BufMut;
-use futures_old::{Poll, Stream};
+use futures_old::Poll;
+use futures_old::Stream;
 
 use crate::chunk::Chunk;
-use mercurial_types::{MPath, RepoPath};
+use mercurial_types::MPath;
+use mercurial_types::RepoPath;
 
-use super::converter::{WirePackConverter, WirePackPartProcessor};
-use super::{DataEntry, HistoryEntry, Kind, Part, WIREPACK_END};
+use super::converter::WirePackConverter;
+use super::converter::WirePackPartProcessor;
+use super::DataEntry;
+use super::HistoryEntry;
+use super::Kind;
+use super::Part;
+use super::WIREPACK_END;
 
 use crate::errors::ErrorKind;
 

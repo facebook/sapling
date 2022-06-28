@@ -5,37 +5,52 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, format_err, Error};
-use backsyncer::{
-    backsync_latest, format_counter, open_backsyncer_dbs, BacksyncLimit, TargetRepoDbs,
-};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Error;
+use backsyncer::backsync_latest;
+use backsyncer::format_counter;
+use backsyncer::open_backsyncer_dbs;
+use backsyncer::BacksyncLimit;
+use backsyncer::TargetRepoDbs;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::Freshness;
-use clap::{Arg, SubCommand};
+use clap::Arg;
+use clap::SubCommand;
 use cloned::cloned;
-use cmdlib::{args, helpers, monitoring};
+use cmdlib::args;
+use cmdlib::helpers;
+use cmdlib::monitoring;
 use cmdlib_x_repo::create_commit_syncer_from_matches;
-use context::{CoreContext, SessionContainer};
-use cross_repo_sync::{CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer};
+use context::CoreContext;
+use context::SessionContainer;
+use cross_repo_sync::CandidateSelectionHint;
+use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncOutcome;
+use cross_repo_sync::CommitSyncer;
 use fbinit::FacebookInit;
-use futures::{
-    future::FutureExt,
-    stream::{self, StreamExt, TryStreamExt},
-    try_join,
-};
-use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use futures::future::FutureExt;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use futures::try_join;
+use live_commit_sync_config::CfgrLiveCommitSyncConfig;
+use live_commit_sync_config::LiveCommitSyncConfig;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{debug, info};
+use slog::debug;
+use slog::info;
 use stats::prelude::*;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::BufRead;
+use std::io::BufReader;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
-use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
+use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMapping;
 
 const ARG_MODE_BACKSYNC_FOREVER: &str = "backsync-forever";
 const ARG_MODE_BACKSYNC_ALL: &str = "backsync-all";

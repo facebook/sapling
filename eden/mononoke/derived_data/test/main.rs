@@ -5,38 +5,55 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::anyhow;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
-use bookmarks::{BookmarkName, BookmarksRef};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarksRef;
 use bytes::Bytes;
 use cacheblob::LeaseOps;
 use changesets::ChangesetsRef;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use fixtures::BranchEven;
+use fixtures::BranchUneven;
+use fixtures::BranchWide;
+use fixtures::Linear;
+use fixtures::ManyDiamonds;
+use fixtures::ManyFilesDirs;
+use fixtures::MergeEven;
+use fixtures::MergeUneven;
 use fixtures::TestRepoFixture;
-use fixtures::{
-    BranchEven, BranchUneven, BranchWide, Linear, ManyDiamonds, ManyFilesDirs, MergeEven,
-    MergeUneven, UnsharedMergeEven, UnsharedMergeUneven,
-};
+use fixtures::UnsharedMergeEven;
+use fixtures::UnsharedMergeUneven;
 use futures::future::BoxFuture;
-use futures_stats::{TimedFutureExt, TimedTryFutureExt};
+use futures_stats::TimedFutureExt;
+use futures_stats::TimedTryFutureExt;
 use lock_ext::LockExt;
 use maplit::hashmap;
-use mononoke_types::{ChangesetId, MPath, RepositoryId};
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
+use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstoreRef;
-use repo_derived_data::{RepoDerivedDataArc, RepoDerivedDataRef};
+use repo_derived_data::RepoDerivedDataArc;
+use repo_derived_data::RepoDerivedDataRef;
 use tests_utils::CreateCommitContext;
-use tunables::{override_tunables, MononokeTunables};
+use tunables::override_tunables;
+use tunables::MononokeTunables;
 
-use derived_data_manager::{BonsaiDerivable, DerivationError};
-use derived_data_test_derived_generation::{make_test_repo_factory, DerivedGeneration};
+use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivationError;
+use derived_data_test_derived_generation::make_test_repo_factory;
+use derived_data_test_derived_generation::DerivedGeneration;
 
 async fn derive_for_master(
     ctx: &CoreContext,

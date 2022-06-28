@@ -7,27 +7,41 @@
 
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use blobstore::Blobstore;
-use blobstore_factory::{make_sql_blobstore_xdb, ReadOnlyStorage};
-use bytes::{Bytes, BytesMut};
+use blobstore_factory::make_sql_blobstore_xdb;
+use blobstore_factory::ReadOnlyStorage;
+use bytes::Bytes;
+use bytes::BytesMut;
 use cacheblob::new_memcache_blobstore_no_lease;
 use cached_config::ConfigStore;
-use clap_old::{Arg, SubCommand};
-use cmdlib::args::{self, MononokeMatches};
+use clap_old::Arg;
+use clap_old::SubCommand;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
-use futures::stream::{self, StreamExt, TryStreamExt};
-use futures_stats::{FutureStats, TimedFutureExt};
-use mononoke_types::{BlobstoreKey, ContentMetadata};
+use filestore::FetchKey;
+use filestore::FilestoreConfig;
+use filestore::StoreRequest;
+use filestore::{self};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use futures_stats::FutureStats;
+use futures_stats::TimedFutureExt;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::ContentMetadata;
 use rand::Rng;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::Duration;
 use throttledblob::ThrottledBlob;
-use tokio::{fs::File, io::BufReader};
-use tokio_util::codec::{BytesCodec, FramedRead};
+use tokio::fs::File;
+use tokio::io::BufReader;
+use tokio_util::codec::BytesCodec;
+use tokio_util::codec::FramedRead;
 
 const NAME: &str = "benchmark_filestore";
 

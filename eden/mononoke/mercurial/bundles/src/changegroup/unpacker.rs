@@ -11,19 +11,26 @@
 use std::cmp;
 use std::mem;
 
-use anyhow::{bail, format_err, Context, Error, Result};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use bytes_old::BytesMut;
 use slog::Logger;
 use std::str::FromStr;
 use tokio_io::codec::Decoder;
 
-use mercurial_types::{MPath, RevFlags};
+use mercurial_types::MPath;
+use mercurial_types::RevFlags;
 
 use crate::delta;
 use crate::errors::ErrorKind;
 use crate::utils::BytesExt;
 
-use super::{CgDeltaChunk, Part, Section};
+use super::CgDeltaChunk;
+use super::Part;
+use super::Section;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum CgVersion {

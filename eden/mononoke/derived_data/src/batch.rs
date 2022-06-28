@@ -9,12 +9,19 @@ use std::cmp::Ordering as CmpOrdering;
 use std::collections::BTreeMap;
 
 use anyhow::Error;
-use blobstore::{Blobstore, Loadable};
+use blobstore::Blobstore;
+use blobstore::Loadable;
 use context::CoreContext;
-use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use itertools::Itertools;
-use mononoke_types::{BonsaiChangeset, FileChange, MPath};
-use mononoke_types::{ChangesetId, ContentId, FileType};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::FileChange;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
 
 pub type FileToContent = BTreeMap<MPath, Option<(ContentId, FileType)>>;
 pub const DEFAULT_STACK_FILE_CHANGES_LIMIT: u64 = 10000;

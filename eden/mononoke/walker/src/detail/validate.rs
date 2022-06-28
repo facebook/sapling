@@ -12,48 +12,67 @@
 //  3. Add a new validation method
 //  4. Add the method to the match/case in ValidatingVisitor::visit()
 
-use crate::commands::{JobParams, JobWalkParams, RepoSubcommandParams};
-use crate::detail::{
-    graph::{EdgeType, Node, NodeData, NodeType, WrappedPath},
-    log,
-    progress::{
-        progress_stream, report_state, sort_by_string, ProgressOptions, ProgressRecorder,
-        ProgressRecorderUnprotected, ProgressReporter, ProgressReporterUnprotected,
-        ProgressStateMutex,
-    },
-    state::{InternedType, StepStats, WalkState},
-    tail::walk_exact_tail,
-    walk::{
-        EmptyRoute, OutgoingEdge, RepoWalkParams, RepoWalkTypeParams, StepRoute,
-        TailingWalkVisitor, VisitOne, WalkVisitor,
-    },
-};
+use crate::commands::JobParams;
+use crate::commands::JobWalkParams;
+use crate::commands::RepoSubcommandParams;
+use crate::detail::graph::EdgeType;
+use crate::detail::graph::Node;
+use crate::detail::graph::NodeData;
+use crate::detail::graph::NodeType;
+use crate::detail::graph::WrappedPath;
+use crate::detail::log;
+use crate::detail::progress::progress_stream;
+use crate::detail::progress::report_state;
+use crate::detail::progress::sort_by_string;
+use crate::detail::progress::ProgressOptions;
+use crate::detail::progress::ProgressRecorder;
+use crate::detail::progress::ProgressRecorderUnprotected;
+use crate::detail::progress::ProgressReporter;
+use crate::detail::progress::ProgressReporterUnprotected;
+use crate::detail::progress::ProgressStateMutex;
+use crate::detail::state::InternedType;
+use crate::detail::state::StepStats;
+use crate::detail::state::WalkState;
+use crate::detail::tail::walk_exact_tail;
+use crate::detail::walk::EmptyRoute;
+use crate::detail::walk::OutgoingEdge;
+use crate::detail::walk::RepoWalkParams;
+use crate::detail::walk::RepoWalkTypeParams;
+use crate::detail::walk::StepRoute;
+use crate::detail::walk::TailingWalkVisitor;
+use crate::detail::walk::VisitOne;
+use crate::detail::walk::WalkVisitor;
 
 use anyhow::Error;
 use async_trait::async_trait;
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use bulkops::Direction;
 use cloned::cloned;
 use context::CoreContext;
 use derive_more::AddAssign;
 use fbinit::FacebookInit;
-use futures::{future::try_join_all, stream::TryStreamExt};
+use futures::future::try_join_all;
+use futures::stream::TryStreamExt;
 use itertools::Itertools;
 use maplit::hashset;
 use mercurial_types::HgChangesetId;
-use mononoke_types::{ChangesetId, MPath};
-use phases::{Phase, Phases};
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
+use phases::Phase;
+use phases::Phases;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{info, warn, Logger};
+use slog::info;
+use slog::warn;
+use slog::Logger;
 use stats::prelude::*;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt;
+use std::hash::Hash;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
-use std::{
-    collections::{HashMap, HashSet},
-    fmt,
-    hash::Hash,
-    time::Instant,
-};
+use std::time::Instant;
 
 pub const NODES: &str = "nodes";
 pub const EDGES: &str = "edges";

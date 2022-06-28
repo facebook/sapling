@@ -8,4 +8,5 @@
 mod changeset_info;
 mod derive;
 
-pub use crate::changeset_info::{ChangesetInfo, ChangesetMessage};
+pub use crate::changeset_info::ChangesetInfo;
+pub use crate::changeset_info::ChangesetMessage;

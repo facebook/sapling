@@ -8,18 +8,26 @@
 use std::io::Write;
 use std::path::PathBuf;
 
-use anyhow::{Context, Result};
-use blobstore::{Blobstore, BlobstoreGetData};
+use anyhow::Context;
+use anyhow::Result;
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
 use bytes::Bytes;
-use chrono::{Local, TimeZone};
-use clap::{ArgEnum, Args};
+use chrono::Local;
+use chrono::TimeZone;
+use clap::ArgEnum;
+use clap::Args;
 use cmdlib_displaying::hexdump;
 use context::CoreContext;
 use git_types::Tree as GitTree;
-use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
+use mercurial_types::HgChangesetEnvelope;
+use mercurial_types::HgFileEnvelope;
+use mercurial_types::HgManifestEnvelope;
 use mononoke_types::fsnode::Fsnode;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
-use mononoke_types::{BonsaiChangeset, ContentChunk, FileContents};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ContentChunk;
+use mononoke_types::FileContents;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 

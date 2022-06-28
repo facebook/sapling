@@ -8,17 +8,22 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 use ascii::AsciiString;
 use bookmarks_types::BookmarkName;
 use commitsync::types::CommonCommitSyncConfig as RawCommonCommitSyncConfig;
 use itertools::Itertools;
-use metaconfig_types::{
-    CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig,
-    DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
-};
-use mononoke_types::{MPath, RepositoryId};
-use repos::{RawCommitSyncConfig, RawCommitSyncSmallRepoConfig};
+use metaconfig_types::CommitSyncConfig;
+use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::CommonCommitSyncConfig;
+use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+use metaconfig_types::SmallRepoCommitSyncConfig;
+use metaconfig_types::SmallRepoPermanentConfig;
+use mononoke_types::MPath;
+use mononoke_types::RepositoryId;
+use repos::RawCommitSyncConfig;
+use repos::RawCommitSyncSmallRepoConfig;
 
 use crate::convert::Convert;
 

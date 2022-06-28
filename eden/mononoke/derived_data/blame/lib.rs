@@ -20,19 +20,25 @@ mod tests;
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use blobstore::{Loadable, LoadableError};
+use blobstore::Loadable;
+use blobstore::LoadableError;
 use context::CoreContext;
-use derived_data::{BonsaiDerived, DeriveError};
+use derived_data::BonsaiDerived;
+use derived_data::DeriveError;
 use manifest::ManifestOps;
 use metaconfig_types::BlameVersion;
-use mononoke_types::blame::{BlameId, BlameRejected};
+use mononoke_types::blame::BlameId;
+use mononoke_types::blame::BlameRejected;
 use mononoke_types::blame_v2::BlameV2Id;
-use mononoke_types::{ChangesetId, FileUnodeId, MPath};
+use mononoke_types::ChangesetId;
+use mononoke_types::FileUnodeId;
+use mononoke_types::MPath;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
 
 pub use compat::CompatBlame;
-pub use fetch::{fetch_content_for_blame, FetchOutcome};
+pub use fetch::fetch_content_for_blame;
+pub use fetch::FetchOutcome;
 pub use mapping_v1::BlameRoot;
 pub use mapping_v2::RootBlameV2;
 

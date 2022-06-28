@@ -8,7 +8,8 @@
 use std::collections::HashMap;
 
 use anyhow::Context;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use bytes::Bytes;
 use metaconfig_types::BookmarkAttrs;
 use mononoke_types::ChangesetId;

@@ -10,14 +10,17 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use blobrepo::BlobRepo;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
 use mononoke_types::ChangesetId;
 use tests_utils::drawdag::create_from_dag;
 
-use crate::repo::{BookmarkFreshness, Repo, RepoContext};
+use crate::repo::BookmarkFreshness;
+use crate::repo::Repo;
+use crate::repo::RepoContext;
 
 async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, ChangesetId>)> {
     let blob_repo: BlobRepo = test_repo_factory::build_empty(ctx.fb)?;

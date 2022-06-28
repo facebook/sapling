@@ -8,8 +8,10 @@
 use std::io::Write;
 use std::path::PathBuf;
 
-use anyhow::{Context, Result};
-use blobstore::{Blobstore, BlobstoreBytes};
+use anyhow::Context;
+use anyhow::Result;
+use blobstore::Blobstore;
+use blobstore::BlobstoreBytes;
 use clap::Args;
 use context::CoreContext;
 

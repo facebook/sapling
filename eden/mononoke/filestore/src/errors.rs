@@ -8,11 +8,12 @@
 use std::fmt::Debug;
 use thiserror::Error;
 
-use crate::{expected_size::ExpectedSize, FetchKey};
-use mononoke_types::{
-    hash::{RichGitSha1, Sha1, Sha256},
-    ContentId,
-};
+use crate::expected_size::ExpectedSize;
+use crate::FetchKey;
+use mononoke_types::hash::RichGitSha1;
+use mononoke_types::hash::Sha1;
+use mononoke_types::hash::Sha256;
+use mononoke_types::ContentId;
 
 #[derive(Debug)]
 pub struct InvalidHash<T: Debug> {

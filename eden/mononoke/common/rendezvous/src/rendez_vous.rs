@@ -7,17 +7,24 @@
 
 use anyhow::Error;
 use fbinit::FacebookInit;
-use futures::future::{BoxFuture, Future, FutureExt, Shared};
+use futures::future::BoxFuture;
+use futures::future::Future;
+use futures::future::FutureExt;
+use futures::future::Shared;
 use futures_ext::FbTryFutureExt;
 use futures_stats::TimedFutureExt;
-use shared_error::anyhow::{IntoSharedError, SharedError};
-use std::collections::{HashMap, HashSet};
+use shared_error::anyhow::IntoSharedError;
+use shared_error::anyhow::SharedError;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::hash::Hash;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 use time_ext::DurationExt;
 use tokio::sync::Notify;
 
-use crate::{RendezVousStats, TunablesRendezVousController};
+use crate::RendezVousStats;
+use crate::TunablesRendezVousController;
 
 /// The RendezVousController controls the behavior of a RendezVous instance. It notably decides
 /// when to wait for a batch to build up and when to kick off queries.

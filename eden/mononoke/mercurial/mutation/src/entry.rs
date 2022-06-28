@@ -5,12 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{hash_map, HashMap, HashSet};
+use std::collections::hash_map;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::io::Read;
 
-use anyhow::{anyhow, Error, Result};
-use edenapi_types::{Extra, HgMutationEntryContent};
-use mercurial_types::{HgChangesetId, HgNodeHash};
+use anyhow::anyhow;
+use anyhow::Error;
+use anyhow::Result;
+use edenapi_types::Extra;
+use edenapi_types::HgMutationEntryContent;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgNodeHash;
 use mononoke_types::DateTime;
 use smallvec::SmallVec;
 use types::mutation::MutationEntry;

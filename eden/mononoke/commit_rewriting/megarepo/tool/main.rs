@@ -5,53 +5,71 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, format_err, Context, Error, Result};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use borrowed::borrowed;
 use clap::ArgMatches;
-use cmdlib::{
-    args::{self, MononokeMatches},
-    helpers,
-};
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
+use cmdlib::helpers;
 use cmdlib_x_repo::create_commit_syncer_from_matches;
 use context::CoreContext;
-use cross_repo_sync::{
-    create_commit_syncer_lease, find_toposorted_unsynced_ancestors,
-    types::{Source, Target},
-    validation::verify_working_copy_with_version_fast_path,
-    CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer,
-};
+use cross_repo_sync::create_commit_syncer_lease;
+use cross_repo_sync::find_toposorted_unsynced_ancestors;
+use cross_repo_sync::types::Source;
+use cross_repo_sync::types::Target;
+use cross_repo_sync::validation::verify_working_copy_with_version_fast_path;
+use cross_repo_sync::CandidateSelectionHint;
+use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncOutcome;
+use cross_repo_sync::CommitSyncer;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
-use futures::{
-    compat::Future01CompatExt,
-    future::{try_join, try_join_all},
-    Stream, StreamExt, TryStreamExt,
-};
-use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
-use manifest::{Entry, ManifestOps, PathOrPrefix};
-use metaconfig_types::{CommitSyncConfigVersion, MetadataDatabaseConfig};
+use futures::compat::Future01CompatExt;
+use futures::future::try_join;
+use futures::future::try_join_all;
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use live_commit_sync_config::CfgrLiveCommitSyncConfig;
+use live_commit_sync_config::LiveCommitSyncConfig;
+use manifest::Entry;
+use manifest::ManifestOps;
+use manifest::PathOrPrefix;
+use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_api_types::InnerRepo;
-use mononoke_types::{ChangesetId, FileChange, MPath, RepositoryId};
+use mononoke_types::ChangesetId;
+use mononoke_types::FileChange;
+use mononoke_types::MPath;
+use mononoke_types::RepositoryId;
 use movers::get_small_to_large_mover;
 use movers::Mover;
 use regex::Regex;
-use slog::{info, warn};
+use slog::info;
+use slog::warn;
 #[cfg(fbcode_build)]
 use sql_ext::facebook::MyAdmin;
-use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor, WaitForReplicationConfig};
+use sql_ext::replication::NoReplicaLagMonitor;
+use sql_ext::replication::ReplicaLagMonitor;
+use sql_ext::replication::WaitForReplicationConfig;
 use std::num::NonZeroU64;
 use std::sync::Arc;
-use synced_commit_mapping::{
-    EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
-    SyncedCommitMappingEntry, WorkingCopyEquivalence,
-};
-use tokio::{
-    fs::{read_to_string, File},
-    io::{AsyncBufReadExt, BufReader},
-};
+use synced_commit_mapping::EquivalentWorkingCopyEntry;
+use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMappingEntry;
+use synced_commit_mapping::WorkingCopyEquivalence;
+use tokio::fs::read_to_string;
+use tokio::fs::File;
+use tokio::io::AsyncBufReadExt;
+use tokio::io::BufReader;
 
 mod catchup;
 mod cli;
@@ -60,31 +78,79 @@ mod manual_commit_sync;
 mod merging;
 mod sync_diamond_merge;
 
-use crate::cli::{
-    cs_args_from_matches, get_catchup_head_delete_commits_cs_args_factory,
-    get_delete_commits_cs_args_factory, get_gradual_merge_commits_cs_args_factory, setup_app,
-    BACKFILL_NOOP_MAPPING, BASE_COMMIT_HASH, BONSAI_MERGE, BONSAI_MERGE_P1, BONSAI_MERGE_P2,
-    CATCHUP_DELETE_HEAD, CATCHUP_VALIDATE_COMMAND, CHANGESET, CHECK_PUSH_REDIRECTION_PREREQS,
-    CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH, COMMIT_HASH_CORRECT_HISTORY,
-    DELETE_NO_LONGER_BOUND_FILES_FROM_LARGE_REPO, DELETION_CHUNK_SIZE, DIFF_MAPPING_VERSIONS,
-    DRY_RUN, EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_DELETE, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS,
-    HEAD_BOOKMARK, HISTORY_FIXUP_DELETE, INPUT_FILE, LAST_DELETION_COMMIT, LIMIT,
-    MANUAL_COMMIT_SYNC, MAPPING_VERSION_NAME, MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT,
-    MERGE, MOVE, ORIGIN_REPO, OVERWRITE, PARENTS, PATH, PATHS_FILE, PATH_PREFIX, PATH_REGEX,
-    PRE_DELETION_COMMIT, PRE_MERGE_DELETE, RUN_MOVER, SECOND_PARENT, SELECT_PARENTS_AUTOMATICALLY,
-    SOURCE_CHANGESET, SYNC_COMMIT_AND_ANCESTORS, SYNC_DIAMOND_MERGE, TARGET_CHANGESET,
-    TO_MERGE_CS_ID, VERSION, WAIT_SECS,
-};
+use crate::cli::cs_args_from_matches;
+use crate::cli::get_catchup_head_delete_commits_cs_args_factory;
+use crate::cli::get_delete_commits_cs_args_factory;
+use crate::cli::get_gradual_merge_commits_cs_args_factory;
+use crate::cli::setup_app;
+use crate::cli::BACKFILL_NOOP_MAPPING;
+use crate::cli::BASE_COMMIT_HASH;
+use crate::cli::BONSAI_MERGE;
+use crate::cli::BONSAI_MERGE_P1;
+use crate::cli::BONSAI_MERGE_P2;
+use crate::cli::CATCHUP_DELETE_HEAD;
+use crate::cli::CATCHUP_VALIDATE_COMMAND;
+use crate::cli::CHANGESET;
+use crate::cli::CHECK_PUSH_REDIRECTION_PREREQS;
+use crate::cli::CHUNKING_HINT_FILE;
+use crate::cli::COMMIT_BOOKMARK;
+use crate::cli::COMMIT_HASH;
+use crate::cli::COMMIT_HASH_CORRECT_HISTORY;
+use crate::cli::DELETE_NO_LONGER_BOUND_FILES_FROM_LARGE_REPO;
+use crate::cli::DELETION_CHUNK_SIZE;
+use crate::cli::DIFF_MAPPING_VERSIONS;
+use crate::cli::DRY_RUN;
+use crate::cli::EVEN_CHUNK_SIZE;
+use crate::cli::FIRST_PARENT;
+use crate::cli::GRADUAL_DELETE;
+use crate::cli::GRADUAL_MERGE;
+use crate::cli::GRADUAL_MERGE_PROGRESS;
+use crate::cli::HEAD_BOOKMARK;
+use crate::cli::HISTORY_FIXUP_DELETE;
+use crate::cli::INPUT_FILE;
+use crate::cli::LAST_DELETION_COMMIT;
+use crate::cli::LIMIT;
+use crate::cli::MANUAL_COMMIT_SYNC;
+use crate::cli::MAPPING_VERSION_NAME;
+use crate::cli::MARK_NOT_SYNCED_COMMAND;
+use crate::cli::MAX_NUM_OF_MOVES_IN_COMMIT;
+use crate::cli::MERGE;
+use crate::cli::MOVE;
+use crate::cli::ORIGIN_REPO;
+use crate::cli::OVERWRITE;
+use crate::cli::PARENTS;
+use crate::cli::PATH;
+use crate::cli::PATHS_FILE;
+use crate::cli::PATH_PREFIX;
+use crate::cli::PATH_REGEX;
+use crate::cli::PRE_DELETION_COMMIT;
+use crate::cli::PRE_MERGE_DELETE;
+use crate::cli::RUN_MOVER;
+use crate::cli::SECOND_PARENT;
+use crate::cli::SELECT_PARENTS_AUTOMATICALLY;
+use crate::cli::SOURCE_CHANGESET;
+use crate::cli::SYNC_COMMIT_AND_ANCESTORS;
+use crate::cli::SYNC_DIAMOND_MERGE;
+use crate::cli::TARGET_CHANGESET;
+use crate::cli::TO_MERGE_CS_ID;
+use crate::cli::VERSION;
+use crate::cli::WAIT_SECS;
 use crate::merging::perform_merge;
-use megarepolib::chunking::{
-    even_chunker_with_max_size, parse_chunking_hint, path_chunker_from_hint, Chunker,
-};
+use megarepolib::chunking::even_chunker_with_max_size;
+use megarepolib::chunking::parse_chunking_hint;
+use megarepolib::chunking::path_chunker_from_hint;
+use megarepolib::chunking::Chunker;
 use megarepolib::commit_sync_config_utils::diff_small_repo_commit_sync_configs;
-use megarepolib::common::{create_and_save_bonsai, delete_files_in_chunks};
-use megarepolib::history_fixup_delete::{create_history_fixup_deletes, HistoryFixupDeletes};
-use megarepolib::pre_merge_delete::{create_pre_merge_delete, PreMergeDelete};
+use megarepolib::common::create_and_save_bonsai;
+use megarepolib::common::delete_files_in_chunks;
+use megarepolib::common::StackPosition;
+use megarepolib::history_fixup_delete::create_history_fixup_deletes;
+use megarepolib::history_fixup_delete::HistoryFixupDeletes;
+use megarepolib::perform_move;
+use megarepolib::perform_stack_move;
+use megarepolib::pre_merge_delete::create_pre_merge_delete;
+use megarepolib::pre_merge_delete::PreMergeDelete;
 use megarepolib::working_copy::get_working_copy_paths_by_prefixes;
-use megarepolib::{common::StackPosition, perform_move, perform_stack_move};
 
 async fn run_move<'a>(
     ctx: CoreContext,

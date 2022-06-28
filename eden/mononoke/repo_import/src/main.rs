@@ -6,70 +6,108 @@
  */
 
 #![type_length_limit = "4522397"]
-use anyhow::{bail, format_err, Context, Error};
-use backsyncer::{backsync_latest, open_backsyncer_dbs, BacksyncLimit, TargetRepoDbs};
-use blobrepo::{save_bonsai_changesets, AsBlobRepo};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use backsyncer::backsync_latest;
+use backsyncer::open_backsyncer_dbs;
+use backsyncer::BacksyncLimit;
+use backsyncer::TargetRepoDbs;
+use blobrepo::save_bonsai_changesets;
+use blobrepo::AsBlobRepo;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateReason, BookmarksRef};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
+use bookmarks::BookmarksRef;
 use borrowed::borrowed;
 use clap::ArgMatches;
-use cmdlib::args::{self, MononokeMatches};
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
-use cross_repo_sync::{
-    create_commit_syncer_lease, create_commit_syncers, find_toposorted_unsynced_ancestors,
-    rewrite_commit, CandidateSelectionHint, CommitRewrittenToEmpty, CommitSyncContext,
-    CommitSyncOutcome, CommitSyncer, Syncers,
-};
+use cross_repo_sync::create_commit_syncer_lease;
+use cross_repo_sync::create_commit_syncers;
+use cross_repo_sync::find_toposorted_unsynced_ancestors;
+use cross_repo_sync::rewrite_commit;
+use cross_repo_sync::CandidateSelectionHint;
+use cross_repo_sync::CommitRewrittenToEmpty;
+use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncOutcome;
+use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::Syncers;
 use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
-use futures::{
-    future::{self, TryFutureExt},
-    stream::{self, StreamExt, TryStreamExt},
-};
-use import_tools::{GitimportPreferences, GitimportTarget};
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use import_tools::GitimportPreferences;
+use import_tools::GitimportTarget;
 use itertools::Itertools;
-use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use live_commit_sync_config::CfgrLiveCommitSyncConfig;
+use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::ManifestOps;
 use maplit::hashset;
 use mercurial_derived_data::DeriveHgChangeset;
-use mercurial_types::{HgChangesetId, MPath};
-use metaconfig_types::{
-    BookmarkAttrs, CommitSyncConfigVersion, MetadataDatabaseConfig, RepoConfig,
-    SegmentedChangelogConfig,
-};
+use mercurial_types::HgChangesetId;
+use mercurial_types::MPath;
+use metaconfig_types::BookmarkAttrs;
+use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::MetadataDatabaseConfig;
+use metaconfig_types::RepoConfig;
+use metaconfig_types::SegmentedChangelogConfig;
 use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
-use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime};
-use movers::{DefaultAction, Mover};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
+use movers::DefaultAction;
+use movers::Mover;
 use pushrebase::do_pushrebase_bonsai;
-use question::{Answer, Question};
+use question::Answer;
+use question::Question;
 use repo_blobstore::RepoBlobstoreRef;
-use segmented_changelog::{self, seedheads_from_config, SeedHead, SegmentedChangelogTailer};
-use serde::{Deserialize, Serialize};
+use segmented_changelog::seedheads_from_config;
+use segmented_changelog::SeedHead;
+use segmented_changelog::SegmentedChangelogTailer;
+use segmented_changelog::{self};
+use serde::Deserialize;
+use serde::Serialize;
 use serde_json;
 use slog::info;
 use sql_ext::facebook::MysqlOptions;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::Path;
 use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
-use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
-use tokio::{
-    fs,
-    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
-    process, time,
-};
+use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMapping;
+use tokio::fs;
+use tokio::io::AsyncBufReadExt;
+use tokio::io::AsyncReadExt;
+use tokio::io::AsyncWriteExt;
+use tokio::io::BufReader;
+use tokio::process;
+use tokio::time;
 use topo_sort::sort_topological;
 
 mod cli;
 mod repo;
 mod tests;
 
-use crate::cli::{
-    setup_app, setup_import_args, ARG_BOOKMARK_SUFFIX, ARG_DEST_BOOKMARK, ARG_PHAB_CHECK_DISABLED,
-    CHECK_ADDITIONAL_SETUP_STEPS, IMPORT, RECOVER_PROCESS, SAVED_RECOVERY_FILE_PATH,
-};
+use crate::cli::setup_app;
+use crate::cli::setup_import_args;
+use crate::cli::ARG_BOOKMARK_SUFFIX;
+use crate::cli::ARG_DEST_BOOKMARK;
+use crate::cli::ARG_PHAB_CHECK_DISABLED;
+use crate::cli::CHECK_ADDITIONAL_SETUP_STEPS;
+use crate::cli::IMPORT;
+use crate::cli::RECOVER_PROCESS;
+use crate::cli::SAVED_RECOVERY_FILE_PATH;
 use crate::repo::Repo;
 
 #[derive(Deserialize, Clone, Debug)]

@@ -5,24 +5,36 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error, Result};
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 
-use crate::blob::{Blob, BlobstoreValue, SkeletonManifestBlob};
+use crate::blob::Blob;
+use crate::blob::BlobstoreValue;
+use crate::blob::SkeletonManifestBlob;
 use crate::errors::ErrorKind;
-use crate::path::{MPath, MPathElement};
+use crate::path::MPath;
+use crate::path::MPathElement;
 use crate::thrift;
-use crate::typed_hash::{SkeletonManifestId, SkeletonManifestIdContext};
+use crate::typed_hash::SkeletonManifestId;
+use crate::typed_hash::SkeletonManifestIdContext;
 
-use blobstore::{Blobstore, StoreLoadable};
+use blobstore::Blobstore;
+use blobstore::StoreLoadable;
 use borrowed::borrowed;
 use bounded_traversal::bounded_traversal;
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures::future::{try_join, try_join_all, FutureExt};
-use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::future::try_join;
+use futures::future::try_join_all;
+use futures::future::FutureExt;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use sorted_vector_map::SortedVectorMap;
 use std::borrow::Cow;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 /// A skeleton manifest is a manifest node containing summary information about the
 /// the structure of files (their names, but not their contents) that is useful

@@ -6,10 +6,16 @@
  */
 
 use std::collections::BTreeMap;
-use std::fmt::{self, Display};
+use std::fmt::Display;
+use std::fmt::{self};
 
-use anyhow::{Context, Error, Result};
-use mononoke_types::{BonsaiChangeset, ChangesetId, DateTime, FileChange};
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
+use mononoke_types::FileChange;
 use serde::Serialize;
 
 #[derive(Serialize)]

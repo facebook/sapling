@@ -8,18 +8,23 @@
 use crate::PushrebaseClient;
 
 use bookmarks::BookmarkName;
-use bookmarks_movement::{
-    BookmarkKindRestrictions, BookmarkMovementError, PushrebaseOntoBookmarkOp, Repo,
-};
+use bookmarks_movement::BookmarkKindRestrictions;
+use bookmarks_movement::BookmarkMovementError;
+use bookmarks_movement::PushrebaseOntoBookmarkOp;
+use bookmarks_movement::Repo;
 use bytes::Bytes;
 use context::CoreContext;
-use hooks::{CrossRepoPushSource, HookManager};
-use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
+use hooks::CrossRepoPushSource;
+use hooks::HookManager;
+use metaconfig_types::BookmarkAttrs;
+use metaconfig_types::InfinitepushParams;
+use metaconfig_types::PushrebaseParams;
 use mononoke_types::BonsaiChangeset;
 use pushrebase::PushrebaseOutcome;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::RepoReadWriteFetcher;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 pub struct LocalPushrebaseClient<'a, R: Repo> {

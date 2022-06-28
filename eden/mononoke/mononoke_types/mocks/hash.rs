@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use mononoke_types::hash::{Blake2, GitSha1, Sha256};
+use mononoke_types::hash::Blake2;
+use mononoke_types::hash::GitSha1;
+use mononoke_types::hash::Sha256;
 
 // Definitions for hashes 1111...1111 to ffff...ffff.
 

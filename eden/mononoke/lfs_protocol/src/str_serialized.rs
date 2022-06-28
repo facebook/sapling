@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use serde::{de, ser};
+use serde::de;
+use serde::ser;
 use std::fmt;
 use std::marker::PhantomData;
 use std::str::FromStr;

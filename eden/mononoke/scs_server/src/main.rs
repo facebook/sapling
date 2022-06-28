@@ -12,10 +12,12 @@
 
 use std::fs::File;
 use std::io::Write;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use clap::Parser;
 use cloned::cloned;
 use cmdlib::helpers::serve_forever;
@@ -25,16 +27,24 @@ use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
 use futures::future::FutureExt;
 use megarepo_api::MegarepoApi;
-use mononoke_api::{CoreContext, Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData};
-use mononoke_app::args::{HooksAppExtension, ShutdownTimeoutArgs};
+use mononoke_api::CoreContext;
+use mononoke_api::Mononoke;
+use mononoke_api::MononokeApiEnvironment;
+use mononoke_api::WarmBookmarksCacheDerivedData;
+use mononoke_app::args::HooksAppExtension;
+use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::MononokeAppBuilder;
 use panichandler::Fate;
 use slog::info;
 use source_control::server::make_SourceControlService_server;
-use srserver::service_framework::{
-    BuildModule, ContextPropModule, Fb303Module, ProfileModule, ServiceFramework, ThriftStatsModule,
-};
-use srserver::{ThriftServer, ThriftServerBuilder};
+use srserver::service_framework::BuildModule;
+use srserver::service_framework::ContextPropModule;
+use srserver::service_framework::Fb303Module;
+use srserver::service_framework::ProfileModule;
+use srserver::service_framework::ServiceFramework;
+use srserver::service_framework::ThriftStatsModule;
+use srserver::ThriftServer;
+use srserver::ThriftServerBuilder;
 use tokio::task;
 
 mod commit_id;

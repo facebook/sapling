@@ -8,7 +8,9 @@
 use std::ops::Deref;
 use std::str::FromStr;
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use fbinit::FacebookInit;
 use fixtures::ManyFilesDirs;
@@ -16,10 +18,13 @@ use fixtures::TestRepoFixture;
 use maplit::btreeset;
 use pretty_assertions::assert_eq;
 
-use crate::{
-    ChangesetDiffItem, ChangesetFileOrdering, ChangesetPathDiffContext, CoreContext, HgChangesetId,
-    Mononoke, MononokePath,
-};
+use crate::ChangesetDiffItem;
+use crate::ChangesetFileOrdering;
+use crate::ChangesetPathDiffContext;
+use crate::CoreContext;
+use crate::HgChangesetId;
+use crate::Mononoke;
+use crate::MononokePath;
 use tests_utils::CreateCommitContext;
 
 #[fbinit::test]

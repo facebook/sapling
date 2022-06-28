@@ -7,27 +7,48 @@
 
 //! Recursively fetch the contents of a directory.
 
-use anyhow::{bail, Context, Error};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
 use bytesize::ByteSize;
-use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use futures::future::{BoxFuture, FutureExt};
+use clap::App;
+use clap::AppSettings;
+use clap::Arg;
+use clap::ArgMatches;
+use clap::SubCommand;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
 use futures::pin_mut;
-use futures::stream::{self, Stream, StreamExt, TryStreamExt};
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use source_control::types as thrift;
 use std::borrow::Cow;
 use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+use tokio::io::AsyncBufReadExt;
+use tokio::io::AsyncWriteExt;
 
-use crate::args::commit_id::{add_commit_id_args, get_commit_id, resolve_commit_id};
-use crate::args::path::{add_path_args, get_path};
-use crate::args::repo::{add_repo_args, get_repo_specifier};
+use crate::args::commit_id::add_commit_id_args;
+use crate::args::commit_id::get_commit_id;
+use crate::args::commit_id::resolve_commit_id;
+use crate::args::path::add_path_args;
+use crate::args::path::get_path;
+use crate::args::repo::add_repo_args;
+use crate::args::repo::get_repo_specifier;
 use crate::connection::Connection;
-use crate::lib::path_tree::{PathItem, PathTree};
-use crate::lib::progress::{add_progress_args, progress_renderer, ProgressOutput};
-use crate::render::{Render, RenderStream};
+use crate::lib::path_tree::PathItem;
+use crate::lib::path_tree::PathTree;
+use crate::lib::progress::add_progress_args;
+use crate::lib::progress::progress_renderer;
+use crate::lib::progress::ProgressOutput;
+use crate::render::Render;
+use crate::render::RenderStream;
 
 pub(super) const NAME: &str = "export";
 

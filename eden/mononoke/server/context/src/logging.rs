@@ -8,10 +8,9 @@
 use fbinit::FacebookInit;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use std::sync::{
-    atomic::{AtomicU32, Ordering},
-    Arc,
-};
+use std::sync::atomic::AtomicU32;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 use crate::perf_counters::PerfCounters;
 use crate::perf_counters_stack::PerfCountersStack;

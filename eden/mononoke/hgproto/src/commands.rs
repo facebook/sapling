@@ -9,19 +9,38 @@
 //!
 //! To implement a Mercurial service, implement `HgCommands` and then use it to handle incominng
 //! connections.
-use std::collections::{BTreeMap, HashMap, HashSet};
-use std::io::{self, BufRead, Cursor};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::io::BufRead;
+use std::io::Cursor;
+use std::io::{self};
 use std::mem;
 use std::sync::Arc;
 
-use anyhow::{bail, Error, Result};
-use bytes_old::{Buf, Bytes, BytesMut};
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
+use bytes_old::Buf;
+use bytes_old::Bytes;
+use bytes_old::BytesMut;
 use failure_ext::FutureFailureErrorExt;
-use futures::future::{self, err, ok, Either, Future};
-use futures::stream::{self, futures_ordered, once, Stream};
+use futures::future::err;
+use futures::future::ok;
+use futures::future::Either;
+use futures::future::Future;
+use futures::future::{self};
+use futures::stream::futures_ordered;
+use futures::stream::once;
+use futures::stream::Stream;
+use futures::stream::{self};
 use futures::sync::oneshot;
 use futures::IntoFuture;
-use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
+use futures_ext::BoxFuture;
+use futures_ext::BoxStream;
+use futures_ext::BytesStream;
+use futures_ext::FutureExt;
+use futures_ext::StreamExt;
 use limited_async_read::LimitedAsyncRead;
 use qps::Qps;
 use slog::Logger;
@@ -30,10 +49,17 @@ use tokio_io::AsyncRead;
 
 use crate::dechunker::Dechunker;
 use crate::errors::*;
-use crate::{GetbundleArgs, GettreepackArgs, SingleRequest, SingleResponse};
-use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
+use crate::GetbundleArgs;
+use crate::GettreepackArgs;
+use crate::SingleRequest;
+use crate::SingleResponse;
+use mercurial_bundles::bundle2::Bundle2Stream;
+use mercurial_bundles::bundle2::StreamEvent;
+use mercurial_bundles::bundle2::{self};
 use mercurial_bundles::Bundle2Item;
-use mercurial_types::{HgChangesetId, HgFileNodeId, MPath};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::MPath;
 
 pub struct HgCommandHandler<H> {
     logger: Logger,
@@ -704,9 +730,12 @@ pub trait HgCommands {
 mod test {
     use super::*;
 
-    use bytes_old::{BufMut, BytesMut};
-    use futures::{future, stream};
-    use slog::{o, Discard};
+    use bytes_old::BufMut;
+    use bytes_old::BytesMut;
+    use futures::future;
+    use futures::stream;
+    use slog::o;
+    use slog::Discard;
 
     struct Dummy;
     impl HgCommands for Dummy {

@@ -5,8 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::{HgFileNodeId, HgNodeHash, Type};
-use mononoke_types::{ContentId, RepoPath};
+use crate::HgFileNodeId;
+use crate::HgNodeHash;
+use crate::Type;
+use mononoke_types::ContentId;
+use mononoke_types::RepoPath;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

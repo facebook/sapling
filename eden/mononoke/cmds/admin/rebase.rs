@@ -5,23 +5,28 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use blobstore::Loadable;
-use clap_old::{App, Arg, ArgMatches, SubCommand};
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
 use fbinit::FacebookInit;
-use futures::{
-    compat::Stream01CompatExt,
-    future::{try_join, try_join3},
-    TryStreamExt,
-};
+use futures::compat::Stream01CompatExt;
+use futures::future::try_join;
+use futures::future::try_join3;
+use futures::TryStreamExt;
 
-use blobrepo::{save_bonsai_changesets, BlobRepo};
-use cmdlib::{
-    args::{self, MononokeMatches},
-    helpers,
-};
+use blobrepo::save_bonsai_changesets;
+use blobrepo::BlobRepo;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
+use cmdlib::helpers;
 use context::CoreContext;
-use mononoke_types::{BonsaiChangesetMut, ChangesetId, FileChange};
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::FileChange;
 use slog::Logger;
 
 use crate::error::SubcommandError;

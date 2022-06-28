@@ -5,24 +5,34 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
-use cmdlib::{args, helpers};
+use cmdlib::args;
+use cmdlib::helpers;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::try_join;
 use futures::TryStreamExt;
 use manifest::ManifestOps;
-use mercurial_types::{HgChangesetId, HgFileNodeId, MPath};
-use mononoke_types::{BonsaiChangeset, DateTime, FileChange, Timestamp};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::MPath;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::DateTime;
+use mononoke_types::FileChange;
+use mononoke_types::Timestamp;
 use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentityRef;
-use serde_json::{json, to_string_pretty};
-use slog::{debug, Logger};
+use serde_json::json;
+use serde_json::to_string_pretty;
+use slog::debug;
+use slog::Logger;
 use std::collections::HashMap;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 

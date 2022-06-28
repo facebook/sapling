@@ -10,17 +10,27 @@
 use std::io::Write;
 
 use anyhow::Error;
-use clap::{App, AppSettings, ArgMatches, SubCommand};
-use futures::{future, stream, TryFutureExt};
+use clap::App;
+use clap::AppSettings;
+use clap::ArgMatches;
+use clap::SubCommand;
+use futures::future;
+use futures::stream;
+use futures::TryFutureExt;
 use futures_util::stream::StreamExt;
 use serde_json::json;
 use source_control::types as thrift;
 
-use crate::args::commit_id::{add_commit_id_args, get_commit_id, resolve_commit_id};
-use crate::args::path::{add_path_args, get_path};
-use crate::args::repo::{add_repo_args, get_repo_specifier};
+use crate::args::commit_id::add_commit_id_args;
+use crate::args::commit_id::get_commit_id;
+use crate::args::commit_id::resolve_commit_id;
+use crate::args::path::add_path_args;
+use crate::args::path::get_path;
+use crate::args::repo::add_repo_args;
+use crate::args::repo::get_repo_specifier;
 use crate::connection::Connection;
-use crate::render::{Render, RenderStream};
+use crate::render::Render;
+use crate::render::RenderStream;
 
 pub(super) const NAME: &str = "cat";
 

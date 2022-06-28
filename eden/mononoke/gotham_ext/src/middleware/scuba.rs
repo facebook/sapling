@@ -9,23 +9,30 @@ use std::marker::PhantomData;
 use std::num::NonZeroU64;
 use std::panic::RefUnwindSafe;
 
-use gotham::state::{FromState, State};
+use gotham::state::FromState;
+use gotham::state::State;
 use gotham_derive::StateData;
-use hyper::{
-    header::{self, AsHeaderName, HeaderMap},
-    Method, StatusCode, Uri,
-};
-use hyper::{Body, Response};
-use scuba_ext::{MononokeScubaSampleBuilder, ScubaValue};
+use hyper::header::AsHeaderName;
+use hyper::header::HeaderMap;
+use hyper::header::{self};
+use hyper::Body;
+use hyper::Method;
+use hyper::Response;
+use hyper::StatusCode;
+use hyper::Uri;
+use scuba_ext::MononokeScubaSampleBuilder;
+use scuba_ext::ScubaValue;
 use time_ext::DurationExt;
 
-use crate::{
-    middleware::{ClientIdentity, Middleware, PostResponseCallbacks, PostResponseInfo},
-    response::HeadersMeta,
-    state_ext::StateExt,
-};
+use crate::middleware::ClientIdentity;
+use crate::middleware::Middleware;
+use crate::middleware::PostResponseCallbacks;
+use crate::middleware::PostResponseInfo;
+use crate::response::HeadersMeta;
+use crate::state_ext::StateExt;
 
-use super::{HeadersDuration, RequestLoad};
+use super::HeadersDuration;
+use super::RequestLoad;
 
 /// Common HTTP-related Scuba columns that the middlware will set automatically.
 /// Applications using the middleware are encouraged to follow a similar pattern

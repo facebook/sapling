@@ -8,7 +8,10 @@
 // Ignore deprecation of HgNodeHash::new
 #![allow(deprecated)]
 
-use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgNodeHash;
 // NULL_HASH is exported for convenience.
 pub use mercurial_types::NULL_HASH;
 

@@ -7,18 +7,20 @@
 
 use crate::datetime::Timestamp;
 use crate::globalrev::Globalrev;
-use crate::hash::{Blake2, GitSha1};
+use crate::hash::Blake2;
+use crate::hash::GitSha1;
 use crate::repo::RepositoryId;
 use crate::svnrev::Svnrev;
 use crate::typed_hash::ChangesetId;
-use sql::mysql_async::{
-    from_value_opt,
-    prelude::{ConvIr, FromValue},
-    FromValueError, Value,
-};
-use sql::sql_common::mysql::{
-    opt_try_from_rowfield, OptionalTryFromRowField, RowField, ValueError,
-};
+use sql::mysql_async::from_value_opt;
+use sql::mysql_async::prelude::ConvIr;
+use sql::mysql_async::prelude::FromValue;
+use sql::mysql_async::FromValueError;
+use sql::mysql_async::Value;
+use sql::sql_common::mysql::opt_try_from_rowfield;
+use sql::sql_common::mysql::OptionalTryFromRowField;
+use sql::sql_common::mysql::RowField;
+use sql::sql_common::mysql::ValueError;
 
 type FromValueResult<T> = Result<T, FromValueError>;
 

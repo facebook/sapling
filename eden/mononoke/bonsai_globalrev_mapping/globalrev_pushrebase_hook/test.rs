@@ -15,19 +15,23 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future::try_join_all;
 use maplit::hashset;
-use mononoke_types::{
-    globalrev::{Globalrev, START_COMMIT_GLOBALREV},
-    BonsaiChangesetMut, ChangesetId, RepositoryId,
-};
+use mononoke_types::globalrev::Globalrev;
+use mononoke_types::globalrev::START_COMMIT_GLOBALREV;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use pushrebase::do_pushrebase_bonsai;
-use pushrebase_hook::{
-    PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
-};
+use pushrebase_hook::PushrebaseCommitHook;
+use pushrebase_hook::PushrebaseHook;
+use pushrebase_hook::PushrebaseTransactionHook;
+use pushrebase_hook::RebasedChangesets;
 use rand::Rng;
 use sql::Transaction;
 use std::time::Duration;
 use test_repo_factory::TestRepoFactory;
-use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
+use tests_utils::bookmark;
+use tests_utils::resolve_cs_id;
+use tests_utils::CreateCommitContext;
 
 use crate::GlobalrevPushrebaseHook;
 

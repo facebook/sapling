@@ -5,10 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Error};
+use anyhow::bail;
+use anyhow::Error;
 use fbinit::FacebookInit;
 use http::HeaderMap;
-use permission_checker::{MononokeIdentity, MononokeIdentitySet};
+use permission_checker::MononokeIdentity;
+use permission_checker::MononokeIdentitySet;
 
 pub const HEADER_CRYPTO_AUTH_TOKENS: &str = "x-auth-cats";
 

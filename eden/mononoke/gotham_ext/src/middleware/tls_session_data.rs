@@ -6,13 +6,17 @@
  */
 
 use anyhow::Error;
-use gotham::state::{FromState, State};
+use gotham::state::FromState;
+use gotham::state::State;
 use hex;
-use hyper::{Body, Response};
-use std::fs::{File, OpenOptions};
+use hyper::Body;
+use hyper::Response;
+use std::fs::File;
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use super::Middleware;
 

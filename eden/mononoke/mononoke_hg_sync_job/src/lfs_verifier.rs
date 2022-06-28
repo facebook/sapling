@@ -7,26 +7,44 @@
 
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use filestore::{fetch_stream, FetchKey};
-use futures::{future, pin_mut, stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
+use filestore::fetch_stream;
+use filestore::FetchKey;
+use futures::future;
+use futures::pin_mut;
+use futures::stream;
+use futures::FutureExt;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
 use futures_old::Future;
 use gotham_ext::body_ext::BodyExt;
-use http::{status::StatusCode, uri::Uri};
-use hyper::{client::HttpConnector, Client};
-use hyper::{Body, Request};
+use http::status::StatusCode;
+use http::uri::Uri;
+use hyper::client::HttpConnector;
+use hyper::Body;
+use hyper::Client;
+use hyper::Request;
 use hyper_openssl::HttpsConnector;
-use slog::{info, warn};
+use slog::info;
+use slog::warn;
 use thiserror::Error;
 
-use lfs_protocol::{
-    ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
-    ResponseObject, Sha256 as LfsSha256, Transfer,
-};
+use lfs_protocol::ObjectAction;
+use lfs_protocol::ObjectStatus;
+use lfs_protocol::Operation;
+use lfs_protocol::RequestBatch;
+use lfs_protocol::RequestObject;
+use lfs_protocol::ResponseBatch;
+use lfs_protocol::ResponseObject;
+use lfs_protocol::Sha256 as LfsSha256;
+use lfs_protocol::Transfer;
 use mononoke_types::hash::Sha256;
 
 pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;

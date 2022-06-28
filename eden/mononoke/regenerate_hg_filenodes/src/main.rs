@@ -8,26 +8,30 @@
 //! Tool to regenerate filenodes. It can be used to fix up linknodes -
 //! but it should be used with caution! PLEASE RUN IT ONLY IF YOU KNOW WHAT YOU ARE DOING!
 
-use anyhow::{bail, format_err, Error};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobrepo_override::DangerousOverride;
-use blobstore::{Blobstore, Loadable};
+use blobstore::Blobstore;
+use blobstore::Loadable;
 use cacheblob::MemWritesBlobstore;
 use cmdlib::args;
 use context::CoreContext;
 use derived_data_filenodes::generate_all_filenodes;
 use fbinit::FacebookInit;
-use futures::future::{join_all, FutureExt};
-use mercurial_types::{HgChangesetId, HgNodeHash};
+use futures::future::join_all;
+use futures::future::FutureExt;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgNodeHash;
 use repo_derived_data::RepoDerivedDataRef;
 use slog::info;
 use std::fs::File;
+use std::io::BufRead;
+use std::io::BufReader;
 use std::str::FromStr;
-use std::{
-    io::{BufRead, BufReader},
-    sync::Arc,
-};
+use std::sync::Arc;
 
 fn convert_to_cs(s: &str) -> Option<HgChangesetId> {
     let nodehash = HgNodeHash::from_str(s).expect(&format!("malformed hash: {}", s));

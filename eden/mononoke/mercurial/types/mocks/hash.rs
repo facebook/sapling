@@ -7,7 +7,8 @@
 
 use std::cmp::min;
 
-use byteorder::{BigEndian, ByteOrder};
+use byteorder::BigEndian;
+use byteorder::ByteOrder;
 
 // NULL is exported for convenience.
 use mercurial_types::hash::Sha1;

@@ -5,10 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::Freshness;
-use clap_old::{App, Arg, ArgMatches, SubCommand};
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
 use cloned::cloned;
 use context::CoreContext;
 use futures::TryStreamExt;
@@ -16,13 +20,17 @@ use humantime::parse_duration;
 use mercurial_derived_data::DeriveHgChangeset;
 use mononoke_types::Timestamp;
 use repo_blobstore::RepoBlobstoreRef;
-use serde_json::{json, to_string_pretty};
-use slog::{info, Logger};
+use serde_json::json;
+use serde_json::to_string_pretty;
+use slog::info;
+use slog::Logger;
 
 use blobrepo::BlobRepo;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 
-use crate::common::{fetch_bonsai_changeset, format_bookmark_log_entry};
+use crate::common::fetch_bonsai_changeset;
+use crate::common::format_bookmark_log_entry;
 use crate::error::SubcommandError;
 
 pub const BOOKMARKS: &str = "bookmarks";

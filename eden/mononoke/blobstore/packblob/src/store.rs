@@ -8,15 +8,23 @@
 use crate::envelope::PackEnvelope;
 use crate::pack;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{
-    Blobstore, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreIsPresent, BlobstoreKeyParam,
-    BlobstoreKeySource, BlobstoreMetadata, BlobstorePutOps, BlobstoreUnlinkOps, OverwriteStatus,
-    PutBehaviour,
-};
+use blobstore::Blobstore;
+use blobstore::BlobstoreEnumerationData;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
+use blobstore::BlobstoreKeyParam;
+use blobstore::BlobstoreKeySource;
+use blobstore::BlobstoreMetadata;
+use blobstore::BlobstorePutOps;
+use blobstore::BlobstoreUnlinkOps;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
 use context::CoreContext;
-use futures::stream::{FuturesUnordered, TryStreamExt};
+use futures::stream::FuturesUnordered;
+use futures::stream::TryStreamExt;
 use metaconfig_types::PackFormat;
 use mononoke_types::BlobstoreBytes;
 
@@ -251,7 +259,8 @@ mod tests {
     use bytes::Bytes;
     use fbinit::FacebookInit;
     use memblob::Memblob;
-    use rand::{RngCore, SeedableRng};
+    use rand::RngCore;
+    use rand::SeedableRng;
     use rand_xorshift::XorShiftRng;
     use std::sync::Arc;
 

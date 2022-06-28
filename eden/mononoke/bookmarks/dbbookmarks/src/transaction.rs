@@ -5,16 +5,25 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Result};
-use bookmarks::{
-    BookmarkKind, BookmarkName, BookmarkTransaction, BookmarkTransactionError,
-    BookmarkTransactionHook, BookmarkUpdateReason,
-};
-use context::{CoreContext, PerfCounterType};
-use futures::future::{self, BoxFuture, FutureExt};
+use anyhow::anyhow;
+use anyhow::Result;
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkTransaction;
+use bookmarks::BookmarkTransactionError;
+use bookmarks::BookmarkTransactionHook;
+use bookmarks::BookmarkUpdateReason;
+use context::CoreContext;
+use context::PerfCounterType;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::future::{self};
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
-use mononoke_types::{ChangesetId, RepositoryId};
-use sql::{queries, Connection, Transaction as SqlTransaction};
+use sql::queries;
+use sql::Connection;
+use sql::Transaction as SqlTransaction;
 use stats::prelude::*;
 use std::collections::HashSet;
 use std::sync::Arc;

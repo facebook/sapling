@@ -6,15 +6,23 @@
  */
 
 use anyhow::Error;
-use context::{CoreContext, PerfCounterType};
+use context::CoreContext;
+use context::PerfCounterType;
 use faster_hex::hex_encode;
-use futures::future::{self, Future};
+use futures::future::Future;
+use futures::future::{self};
 use itertools::Itertools;
-use mercurial_types::{HgChangesetId, HgFileNodeId};
-use mononoke_types::{RepoPath, RepositoryId};
-use path_hash::{PathBytes, PathHashBytes, PathWithHash};
-use rand::{thread_rng, Rng};
-use sql::{queries, Connection};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mononoke_types::RepoPath;
+use mononoke_types::RepositoryId;
+use path_hash::PathBytes;
+use path_hash::PathHashBytes;
+use path_hash::PathWithHash;
+use rand::thread_rng;
+use rand::Rng;
+use sql::queries;
+use sql::Connection;
 use stats::prelude::*;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -25,14 +33,20 @@ use thiserror::Error as DeriveError;
 use tokio::time::timeout;
 use tunables::tunables;
 
-use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, PreparedFilenode};
+use filenodes::FilenodeInfo;
+use filenodes::FilenodeRangeResult;
+use filenodes::FilenodeResult;
+use filenodes::PreparedFilenode;
 
-use crate::connections::{AcquireReason, Connections};
-use crate::local_cache::{CacheKey, LocalCache};
+use crate::connections::AcquireReason;
+use crate::connections::Connections;
+use crate::local_cache::CacheKey;
+use crate::local_cache::LocalCache;
 use crate::remote_cache::RemoteCache;
 use crate::shards::Shards;
 use crate::sql_timeout_knobs;
-use crate::structs::{CachedFilenode, CachedHistory};
+use crate::structs::CachedFilenode;
+use crate::structs::CachedHistory;
 
 define_stats! {
     prefix = "mononoke.filenodes";

@@ -5,15 +5,27 @@
  * GNU General Public License version 2.
  */
 
-use crate::{Entry, LeafInfo, Manifest, PathTree, TreeInfo};
+use crate::Entry;
+use crate::LeafInfo;
+use crate::Manifest;
+use crate::PathTree;
+use crate::TreeInfo;
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
 use blobstore::StoreLoadable;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{Future, FutureExt};
-use mononoke_types::{ChangesetId, MPath, MPathElement};
-use std::{collections::BTreeMap, fmt, hash::Hash, sync::Arc};
+use futures::Future;
+use futures::FutureExt;
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
+use mononoke_types::MPathElement;
+use std::collections::BTreeMap;
+use std::fmt;
+use std::hash::Hash;
+use std::sync::Arc;
 
 pub struct ManifestChanges<Leaf> {
     pub cs_id: ChangesetId,

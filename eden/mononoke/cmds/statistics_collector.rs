@@ -8,31 +8,47 @@
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
-use blobstore::{Blobstore, Loadable};
+use blobstore::Blobstore;
+use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
-use changesets::{deserialize_cs_entries, ChangesetEntry};
-use clap_old::{Arg, SubCommand};
-use cmdlib::{
-    args::{self, MononokeClapApp, MononokeMatches},
-    helpers::block_execute,
-};
+use changesets::deserialize_cs_entries;
+use changesets::ChangesetEntry;
+use clap_old::Arg;
+use clap_old::SubCommand;
+use cmdlib::args::MononokeClapApp;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
+use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::Stream01CompatExt;
-use futures::stream::{self, Stream, StreamExt, TryStreamExt};
-use futures::{future::FutureExt, try_join};
-use futures_ext::{BoxStream, StreamExt as OldStreamExt};
-use manifest::{Diff, Entry, ManifestOps};
+use futures::future::FutureExt;
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use futures::try_join;
+use futures_ext::BoxStream;
+use futures_ext::StreamExt as OldStreamExt;
+use manifest::Diff;
+use manifest::Entry;
+use manifest::ManifestOps;
 use mercurial_derived_data::DeriveHgChangeset;
-use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId};
-use mononoke_types::{FileType, RepositoryId};
+use mercurial_types::FileBytes;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mononoke_types::FileType;
+use mononoke_types::RepositoryId;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{info, Logger};
+use slog::info;
+use slog::Logger;
 use stats::prelude::*;
 use std::collections::HashMap;
 use std::fs;
-use std::ops::{Add, Sub};
+use std::ops::Add;
+use std::ops::Sub;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
@@ -550,10 +566,12 @@ mod tests {
     use bytes::Bytes;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
-    use futures::{future, stream};
+    use futures::future;
+    use futures::stream;
     use maplit::btreemap;
     use std::str::FromStr;
-    use tests_utils::{create_commit, store_files};
+    use tests_utils::create_commit;
+    use tests_utils::store_files;
     use tokio::runtime::Runtime;
 
     #[test]

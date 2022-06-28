@@ -12,7 +12,10 @@ use cross_repo_sync::CommitSyncer;
 use futures_stats::FutureStats;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{error, info, warn, Logger};
+use slog::error;
+use slog::info;
+use slog::warn;
+use slog::Logger;
 use synced_commit_mapping::SyncedCommitMapping;
 
 pub const SCUBA_TABLE: &str = "mononoke_x_repo_sync";

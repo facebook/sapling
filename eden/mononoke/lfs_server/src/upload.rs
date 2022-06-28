@@ -6,29 +6,45 @@
  */
 
 use std::collections::HashMap;
-use std::str::{self, FromStr};
+use std::str::FromStr;
+use std::str::{self};
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use bytes::Bytes;
-use futures::{channel::mpsc::channel, SinkExt, Stream, StreamExt, TryStreamExt};
+use futures::channel::mpsc::channel;
+use futures::SinkExt;
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use futures_util::try_join;
-use gotham::state::{FromState, State};
-use gotham_derive::{StateData, StaticResponseExtender};
+use gotham::state::FromState;
+use gotham::state::State;
+use gotham_derive::StateData;
+use gotham_derive::StaticResponseExtender;
 use http::header::CONTENT_LENGTH;
-use hyper::{Body, Request};
+use hyper::Body;
+use hyper::Request;
 use serde::Deserialize;
 use stats::prelude::*;
 
-use filestore::{self, Alias, FetchKey, StoreRequest};
-use gotham_ext::{
-    error::HttpError,
-    middleware::{HttpScubaKey, ScubaMiddlewareState},
-    response::{EmptyBody, TryIntoResponse},
-};
-use lfs_protocol::{
-    ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
-    Sha256 as LfsSha256, Transfer,
-};
+use filestore::Alias;
+use filestore::FetchKey;
+use filestore::StoreRequest;
+use filestore::{self};
+use gotham_ext::error::HttpError;
+use gotham_ext::middleware::HttpScubaKey;
+use gotham_ext::middleware::ScubaMiddlewareState;
+use gotham_ext::response::EmptyBody;
+use gotham_ext::response::TryIntoResponse;
+use lfs_protocol::ObjectAction;
+use lfs_protocol::ObjectStatus;
+use lfs_protocol::Operation;
+use lfs_protocol::RequestBatch;
+use lfs_protocol::RequestObject;
+use lfs_protocol::ResponseBatch;
+use lfs_protocol::Sha256 as LfsSha256;
+use lfs_protocol::Transfer;
 use mononoke_types::hash::Sha256;
 
 use crate::errors::ErrorKind;
@@ -52,11 +68,11 @@ const BUFFER_SIZE: usize = 5;
 mod closeable_sender {
     use pin_project::pin_project;
 
-    use futures::{
-        channel::mpsc::{SendError, Sender},
-        sink::Sink,
-        task::{Context, Poll},
-    };
+    use futures::channel::mpsc::SendError;
+    use futures::channel::mpsc::Sender;
+    use futures::sink::Sink;
+    use futures::task::Context;
+    use futures::task::Poll;
     use std::pin::Pin;
 
     #[pin_project]
@@ -419,9 +435,11 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
 #[cfg(test)]
 mod test {
     use super::*;
-    use chaosblob::{ChaosBlobstore, ChaosOptions};
+    use chaosblob::ChaosBlobstore;
+    use chaosblob::ChaosOptions;
     use fbinit::FacebookInit;
-    use futures::{future, stream};
+    use futures::future;
+    use futures::stream;
     use memblob::Memblob;
     use std::num::NonZeroU32;
     use std::sync::Arc;

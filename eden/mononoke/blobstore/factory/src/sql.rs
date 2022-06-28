@@ -5,19 +5,21 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Error};
+use anyhow::bail;
+use anyhow::Error;
 use fbinit::FacebookInit;
-use metaconfig_types::{
-    LocalDatabaseConfig, MetadataDatabaseConfig, ShardableRemoteDatabaseConfig,
-};
-use sql::{Connection, SqlConnections, SqlConnectionsWithSchema};
-use sql_construct::{
-    SqlConstructFromMetadataDatabaseConfig, SqlShardableConstructFromMetadataDatabaseConfig,
-};
-use sql_ext::{
-    facebook::{create_mysql_connections_unsharded, MysqlOptions},
-    open_existing_sqlite_path, open_sqlite_path,
-};
+use metaconfig_types::LocalDatabaseConfig;
+use metaconfig_types::MetadataDatabaseConfig;
+use metaconfig_types::ShardableRemoteDatabaseConfig;
+use sql::Connection;
+use sql::SqlConnections;
+use sql::SqlConnectionsWithSchema;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_construct::SqlShardableConstructFromMetadataDatabaseConfig;
+use sql_ext::facebook::create_mysql_connections_unsharded;
+use sql_ext::facebook::MysqlOptions;
+use sql_ext::open_existing_sqlite_path;
+use sql_ext::open_sqlite_path;
 
 use crate::ReadOnlyStorage;
 

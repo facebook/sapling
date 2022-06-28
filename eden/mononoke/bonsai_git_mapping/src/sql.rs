@@ -5,18 +5,28 @@
  * GNU General Public License version 2.
  */
 
-use ::sql::{queries, Connection, Transaction};
-use anyhow::{Error, Result};
+use ::sql::queries;
+use ::sql::Connection;
+use ::sql::Transaction;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
-use context::{CoreContext, PerfCounterType};
-use mononoke_types::{hash::GitSha1, ChangesetId, RepositoryId};
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use context::CoreContext;
+use context::PerfCounterType;
+use mononoke_types::hash::GitSha1;
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashSet;
 
 use crate::errors::AddGitMappingErrorKind;
-use crate::{BonsaiGitMapping, BonsaiGitMappingEntry, BonsaisOrGitShas};
+use crate::BonsaiGitMapping;
+use crate::BonsaiGitMappingEntry;
+use crate::BonsaisOrGitShas;
 
 define_stats! {
     prefix = "mononoke.bonsai_git_mapping";

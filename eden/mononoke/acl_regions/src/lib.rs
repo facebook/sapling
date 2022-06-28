@@ -7,13 +7,18 @@
 
 mod trie;
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 use async_trait::async_trait;
 use changeset_fetcher::ArcChangesetFetcher;
 use context::CoreContext;
-use futures::stream::{self, StreamExt, TryStreamExt};
-use metaconfig_types::{AclRegion, AclRegionConfig};
-use mononoke_types::{ChangesetId, MPath};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use metaconfig_types::AclRegion;
+use metaconfig_types::AclRegionConfig;
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 use reachabilityindex::ReachabilityIndex;
 use std::collections::HashMap;
 use std::sync::Arc;

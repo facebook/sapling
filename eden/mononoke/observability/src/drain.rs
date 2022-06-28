@@ -5,7 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use slog::{Drain, Level, Never, OwnedKVList, Record};
+use slog::Drain;
+use slog::Level;
+use slog::Never;
+use slog::OwnedKVList;
+use slog::Record;
 
 use crate::context::ObservabilityContext;
 

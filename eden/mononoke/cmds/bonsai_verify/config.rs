@@ -5,12 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use mercurial_types::HgChangesetId;
 use mononoke_types::DateTime;
 use serde_derive::Deserialize;
-use std::{fs::File, io::Read};
-use toml::{self, value};
+use std::fs::File;
+use std::io::Read;
+use toml::value;
+use toml::{self};
 
 /// Configuration for the bonsai verify tool.
 #[derive(Clone, Debug)]

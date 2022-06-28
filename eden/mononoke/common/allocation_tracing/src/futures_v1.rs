@@ -6,7 +6,9 @@
  */
 
 use anyhow::Error;
-use futures_old::{Async, Future, Stream};
+use futures_old::Async;
+use futures_old::Future;
+use futures_old::Stream;
 use std::cmp;
 
 use crate::trace_allocations;

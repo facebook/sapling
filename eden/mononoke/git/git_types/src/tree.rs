@@ -6,18 +6,23 @@
  */
 
 use anyhow::Error;
-use std::cmp::{self, Ordering};
+use std::cmp::Ordering;
+use std::cmp::{self};
 use std::collections::HashMap;
-use std::fmt::{self, Display};
-use std::io::{self, Write};
+use std::fmt::Display;
+use std::fmt::{self};
+use std::io::Write;
+use std::io::{self};
 
 use ::manifest::Entry;
-use mononoke_types::{hash::RichGitSha1, MPathElement};
+use mononoke_types::hash::RichGitSha1;
+use mononoke_types::MPathElement;
 
 use crate::errors::ErrorKind;
 use crate::mode;
 use crate::thrift;
-use crate::{BlobHandle, ObjectKind};
+use crate::BlobHandle;
+use crate::ObjectKind;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
 pub struct TreeHandle {

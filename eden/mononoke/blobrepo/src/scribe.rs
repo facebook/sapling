@@ -13,10 +13,16 @@ use changesets::ChangesetsRef;
 use chrono::Utc;
 use context::CoreContext;
 use ephemeral_blobstore::BubbleId;
-use futures::{stream, StreamExt, TryStreamExt};
-use mononoke_types::{BonsaiChangeset, ChangesetId, Generation};
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::Generation;
 use repo_identity::RepoIdentityRef;
-use scribe_commit_queue::{ChangedFilesInfo, CommitInfo, LogToScribe};
+use scribe_commit_queue::ChangedFilesInfo;
+use scribe_commit_queue::CommitInfo;
+use scribe_commit_queue::LogToScribe;
 
 pub struct ScribeCommitInfo {
     pub changeset_id: ChangesetId,

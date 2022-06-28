@@ -5,25 +5,34 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
-use blobrepo::{save_bonsai_changesets, BlobRepo};
+use anyhow::anyhow;
+use anyhow::Error;
+use blobrepo::save_bonsai_changesets;
+use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use commit_transformation::copy_file_contents;
 use context::CoreContext;
-use cross_repo_sync::types::{Source, Target};
+use cross_repo_sync::types::Source;
+use cross_repo_sync::types::Target;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::TryStreamExt;
 use manifest::ManifestOps;
-use mononoke_types::{
-    fsnode::FsnodeFile, BonsaiChangesetMut, ChangesetId, ContentId, DateTime, FileChange, FileType,
-    MPath,
-};
+use mononoke_types::fsnode::FsnodeFile;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::DateTime;
+use mononoke_types::FileChange;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
 use slog::info;
 use std::collections::BTreeMap;
 
-use crate::common::{decode_latest_synced_state_extras, encode_latest_synced_state_extras};
+use crate::common::decode_latest_synced_state_extras;
+use crate::common::encode_latest_synced_state_extras;
 
 pub async fn add_source_repo(
     ctx: &CoreContext,
@@ -231,9 +240,13 @@ mod tests {
     use super::*;
     use fbinit::FacebookInit;
     use maplit::hashmap;
-    use mononoke_types::{MPath, RepositoryId};
+    use mononoke_types::MPath;
+    use mononoke_types::RepositoryId;
     use test_repo_factory::TestRepoFactory;
-    use tests_utils::{bookmark, list_working_copy_utf8, resolve_cs_id, CreateCommitContext};
+    use tests_utils::bookmark;
+    use tests_utils::list_working_copy_utf8;
+    use tests_utils::resolve_cs_id;
+    use tests_utils::CreateCommitContext;
 
     #[fbinit::test]
     async fn add_source_repo_simple(fb: FacebookInit) -> Result<(), Error> {

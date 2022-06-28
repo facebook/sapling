@@ -9,7 +9,9 @@ use anyhow::Result;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_types_mocks::repo::REPO_ZERO;
-use mutable_counters::{MutableCounters, SqlMutableCounters, SqlMutableCountersBuilder};
+use mutable_counters::MutableCounters;
+use mutable_counters::SqlMutableCounters;
+use mutable_counters::SqlMutableCountersBuilder;
 use sql_construct::SqlConstruct;
 
 fn create_db() -> Result<SqlMutableCounters> {

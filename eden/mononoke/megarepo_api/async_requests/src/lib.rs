@@ -10,11 +10,14 @@
 pub mod types;
 
 mod queue;
-pub use queue::{AsyncMethodRequestQueue, ClaimedBy, RequestId};
+pub use queue::AsyncMethodRequestQueue;
+pub use queue::ClaimedBy;
+pub use queue::RequestId;
 
 pub mod tokens {
-    pub use crate::types::{
-        MegarepoAddBranchingTargetToken, MegarepoAddTargetToken, MegarepoChangeTargetConfigToken,
-        MegarepoRemergeSourceToken, MegarepoSyncChangesetToken,
-    };
+    pub use crate::types::MegarepoAddBranchingTargetToken;
+    pub use crate::types::MegarepoAddTargetToken;
+    pub use crate::types::MegarepoChangeTargetConfigToken;
+    pub use crate::types::MegarepoRemergeSourceToken;
+    pub use crate::types::MegarepoSyncChangesetToken;
 }

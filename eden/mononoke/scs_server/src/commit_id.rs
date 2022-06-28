@@ -5,12 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
 use cloned::cloned;
 use faster_hex::hex_string;
-use futures_util::{future, FutureExt};
-use mononoke_api::{ChangesetContext, ChangesetId, MononokeError, RepoContext};
+use futures_util::future;
+use futures_util::FutureExt;
+use mononoke_api::ChangesetContext;
+use mononoke_api::ChangesetId;
+use mononoke_api::MononokeError;
+use mononoke_api::RepoContext;
 use source_control as thrift;
 
 /// Generate a mapping for a commit's identity into the requested identity

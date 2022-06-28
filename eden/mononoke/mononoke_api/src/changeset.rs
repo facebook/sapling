@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
+use std::collections::BTreeSet;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
 use std::fmt;
 use std::future::Future;
 
@@ -16,26 +19,42 @@ use bookmarks::BookmarkName;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use changesets::ChangesetsRef;
-use chrono::{DateTime, FixedOffset};
+use chrono::DateTime;
+use chrono::FixedOffset;
 use cloned::cloned;
-use context::{CoreContext, PerfCounterType};
-use deleted_manifest::{DeletedManifestOps, RootDeletedManifestIdCommon, RootDeletedManifestV2Id};
+use context::CoreContext;
+use context::PerfCounterType;
+use deleted_manifest::DeletedManifestOps;
+use deleted_manifest::RootDeletedManifestIdCommon;
+use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data::BonsaiDerived;
 use derived_data_manager::BonsaiDerivable;
 use fsnodes::RootFsnodeId;
-use futures::future::{self, try_join, try_join_all};
-use futures::stream::{self, Stream, StreamExt, TryStreamExt};
+use futures::future::try_join;
+use futures::future::try_join_all;
+use futures::future::{self};
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use futures_lazy_shared::LazyShared;
-use hooks::{CrossRepoPushSource, HookOutcome, PushAuthoredBy};
-use manifest::{
-    Diff as ManifestDiff, Entry as ManifestEntry, ManifestOps, ManifestOrderedOps, PathOrPrefix,
-};
+use hooks::CrossRepoPushSource;
+use hooks::HookOutcome;
+use hooks::PushAuthoredBy;
+use manifest::Diff as ManifestDiff;
+use manifest::Entry as ManifestEntry;
+use manifest::ManifestOps;
+use manifest::ManifestOrderedOps;
+use manifest::PathOrPrefix;
 use maplit::hashset;
 use mercurial_types::Globalrev;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::FileChange;
 pub use mononoke_types::Generation;
-use mononoke_types::{
-    BonsaiChangeset, FileChange, MPath, MPathElement, SkeletonManifestId, Svnrev,
-};
+use mononoke_types::MPath;
+use mononoke_types::MPathElement;
+use mononoke_types::SkeletonManifestId;
+use mononoke_types::Svnrev;
 use rand;
 use reachabilityindex::ReachabilityIndex;
 use repo_blobstore::RepoBlobstoreArc;
@@ -45,14 +64,17 @@ use sorted_vector_map::SortedVectorMap;
 use tunables::tunables;
 use unodes::RootUnodeManifestId;
 
-use crate::changeset_path::{
-    ChangesetPathContentContext, ChangesetPathContext, ChangesetPathHistoryContext,
-};
+use crate::changeset_path::ChangesetPathContentContext;
+use crate::changeset_path::ChangesetPathContext;
+use crate::changeset_path::ChangesetPathHistoryContext;
 use crate::changeset_path_diff::ChangesetPathDiffContext;
 use crate::errors::MononokeError;
-use crate::path::{is_related_to, MononokePath};
+use crate::path::is_related_to;
+use crate::path::MononokePath;
 use crate::repo::RepoContext;
-use crate::specifiers::{ChangesetId, GitSha1, HgChangesetId};
+use crate::specifiers::ChangesetId;
+use crate::specifiers::GitSha1;
+use crate::specifiers::HgChangesetId;
 
 #[derive(Clone, Debug)]
 enum PathMutableHistory {

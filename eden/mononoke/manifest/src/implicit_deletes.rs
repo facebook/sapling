@@ -9,11 +9,21 @@ use anyhow::Error;
 use blobstore::StoreLoadable;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future, stream, Stream, StreamExt, TryFutureExt, TryStreamExt};
-use mononoke_types::{FileType, MPath};
-use std::{collections::HashSet, hash::Hash, marker::Unpin};
+use futures::future;
+use futures::stream;
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
+use std::collections::HashSet;
+use std::hash::Hash;
+use std::marker::Unpin;
 
-use crate::{Entry, Manifest, ManifestOps};
+use crate::Entry;
+use crate::Manifest;
+use crate::ManifestOps;
 
 /// Get implicit directory deletes
 /// These may happen when a path, occupied by a dir in the parent manifest
@@ -148,10 +158,16 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::tests::{
-        ctx, dir, element, file, path, ManifestStore, TestManifestIdStr, TestManifestStr,
-    };
-    use fbinit::{self, FacebookInit};
+    use crate::tests::ctx;
+    use crate::tests::dir;
+    use crate::tests::element;
+    use crate::tests::file;
+    use crate::tests::path;
+    use crate::tests::ManifestStore;
+    use crate::tests::TestManifestIdStr;
+    use crate::tests::TestManifestStr;
+    use fbinit::FacebookInit;
+    use fbinit::{self};
     use maplit::hashmap;
     use std::fmt::Debug;
 

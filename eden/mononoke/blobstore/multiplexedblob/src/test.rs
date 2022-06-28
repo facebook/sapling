@@ -5,48 +5,63 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    cmp, fmt,
-    future::Future,
-    num::NonZeroUsize,
-    pin::Pin,
-    sync::{Arc, Mutex},
-    time::{Duration, Instant},
-};
+use std::cmp;
+use std::fmt;
+use std::future::Future;
+use std::num::NonZeroUsize;
+use std::pin::Pin;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::Duration;
+use std::time::Instant;
 
-use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
+use crate::base::MultiplexedBlobstoreBase;
+use crate::base::MultiplexedBlobstorePutHandler;
 use crate::queue::MultiplexedBlobstore;
-use crate::scrub::{
-    LoggingScrubHandler, ScrubAction, ScrubBlobstore, ScrubHandler, ScrubOptions, ScrubWriteMostly,
-};
-use anyhow::{anyhow, Result};
+use crate::scrub::LoggingScrubHandler;
+use crate::scrub::ScrubAction;
+use crate::scrub::ScrubBlobstore;
+use crate::scrub::ScrubHandler;
+use crate::scrub::ScrubOptions;
+use crate::scrub::ScrubWriteMostly;
+use anyhow::anyhow;
+use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, OverwriteStatus, PutBehaviour,
-};
-use blobstore_sync_queue::{
-    BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey, SqlBlobstoreSyncQueue,
-};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
+use blobstore::BlobstorePutOps;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
+use blobstore_sync_queue::BlobstoreSyncQueue;
+use blobstore_sync_queue::BlobstoreSyncQueueEntry;
+use blobstore_sync_queue::OperationKey;
+use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use blobstore_test_utils::Tickable;
 use borrowed::borrowed;
 use bytes::Bytes;
 use cloned::cloned;
-use context::{CoreContext, SessionClass, SessionContainer};
+use context::CoreContext;
+use context::SessionClass;
+use context::SessionContainer;
 use fbinit::FacebookInit;
-use futures::{
-    future::{FutureExt, TryFutureExt},
-    task::{Context, Poll},
-};
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::task::Context;
+use futures::task::Poll;
 use lock_ext::LockExt;
 use maplit::hashmap;
 use memblob::Memblob;
-use metaconfig_types::{BlobstoreId, MultiplexId};
-use mononoke_types::{BlobstoreBytes, DateTime};
+use metaconfig_types::BlobstoreId;
+use metaconfig_types::MultiplexId;
+use mononoke_types::BlobstoreBytes;
+use mononoke_types::DateTime;
 use nonzero_ext::nonzero;
 use readonlyblob::ReadOnlyBlobstore;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstruct;
-use tunables::{with_tunables_async, MononokeTunables};
+use tunables::with_tunables_async;
+use tunables::MononokeTunables;
 
 #[async_trait]
 impl MultiplexedBlobstorePutHandler for Tickable<BlobstoreId> {

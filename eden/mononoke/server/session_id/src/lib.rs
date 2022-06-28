@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use rand::{self, distributions::Alphanumeric, thread_rng, Rng};
+use rand::distributions::Alphanumeric;
+use rand::thread_rng;
+use rand::Rng;
+use rand::{self};
 use std::fmt;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]

@@ -8,7 +8,15 @@
 mod protocol;
 mod str_serialized;
 
-pub use protocol::{
-    git_lfs_mime, ObjectAction, ObjectError, ObjectStatus, Operation, RequestBatch, RequestObject,
-    ResponseBatch, ResponseError, ResponseObject, Sha256, Transfer,
-};
+pub use protocol::git_lfs_mime;
+pub use protocol::ObjectAction;
+pub use protocol::ObjectError;
+pub use protocol::ObjectStatus;
+pub use protocol::Operation;
+pub use protocol::RequestBatch;
+pub use protocol::RequestObject;
+pub use protocol::ResponseBatch;
+pub use protocol::ResponseError;
+pub use protocol::ResponseObject;
+pub use protocol::Sha256;
+pub use protocol::Transfer;

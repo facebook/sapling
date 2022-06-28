@@ -12,7 +12,8 @@ use std::process::ExitCode;
 
 use ansi_term::Colour;
 use atty::Stream;
-use clap::{App, AppSettings};
+use clap::App;
+use clap::AppSettings;
 use fbinit::FacebookInit;
 
 mod args;

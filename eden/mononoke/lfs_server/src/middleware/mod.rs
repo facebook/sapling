@@ -9,4 +9,6 @@ mod ods;
 mod request_context;
 
 pub use self::ods::OdsMiddleware;
-pub use self::request_context::{LfsMethod, RequestContext, RequestContextMiddleware};
+pub use self::request_context::LfsMethod;
+pub use self::request_context::RequestContext;
+pub use self::request_context::RequestContextMiddleware;

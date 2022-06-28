@@ -5,22 +5,29 @@
  * GNU General Public License version 2.
  */
 
-use crate::{
-    thrift,
-    typed_hash::{BlobstoreKey, FileUnodeId, MononokeId},
-    ChangesetId, MPath,
-};
-use anyhow::{bail, format_err, Error, Result};
+use crate::thrift;
+use crate::typed_hash::BlobstoreKey;
+use crate::typed_hash::FileUnodeId;
+use crate::typed_hash::MononokeId;
+use crate::ChangesetId;
+use crate::MPath;
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreBytes, Loadable, LoadableError};
+use blobstore::Blobstore;
+use blobstore::BlobstoreBytes;
+use blobstore::Loadable;
+use blobstore::LoadableError;
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use std::{
-    collections::{HashMap, VecDeque},
-    str::FromStr,
-};
+use std::collections::HashMap;
+use std::collections::VecDeque;
+use std::str::FromStr;
 use thiserror::Error;
-use xdiff::{diff_hunks, Hunk};
+use xdiff::diff_hunks;
+use xdiff::Hunk;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BlameId(FileUnodeId);

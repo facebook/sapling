@@ -6,7 +6,8 @@
  */
 
 use ahash::RandomState;
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use bitflags::bitflags;
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
@@ -17,45 +18,63 @@ use context::CoreContext;
 use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
-use fastlog::{unode_entry_to_fastlog_batch_key, RootFastlog};
+use fastlog::unode_entry_to_fastlog_batch_key;
+use fastlog::RootFastlog;
 use filenodes::FilenodeInfo;
 use filestore::Alias;
 use fsnodes::RootFsnodeId;
-use futures::{
-    compat::Future01CompatExt,
-    future::BoxFuture,
-    stream::{self, BoxStream},
-    FutureExt, StreamExt, TryStreamExt,
-};
+use futures::compat::Future01CompatExt;
+use futures::future::BoxFuture;
+use futures::stream::BoxStream;
+use futures::stream::{self};
+use futures::FutureExt;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use hash_memo::EagerHashMemoizer;
 use internment::ArcIntern;
 use manifest::Entry;
 use mercurial_derived_data::MappedHgChangesetId;
-use mercurial_types::{
-    blobs::{HgBlobChangeset, HgBlobManifest},
-    calculate_hg_node_id_stream, FileBytes, HgChangesetId, HgFileEnvelope, HgFileEnvelopeMut,
-    HgFileNodeId, HgManifestId, HgParents,
-};
-use mononoke_types::{
-    blame::Blame,
-    deleted_manifest_v2::DeletedManifestV2,
-    fastlog_batch::FastlogBatch,
-    fsnode::Fsnode,
-    skeleton_manifest::SkeletonManifest,
-    unode::{FileUnode, ManifestUnode},
-    BlameId, BlobstoreKey, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata,
-    DeletedManifestV2Id, FastlogBatchId, FileUnodeId, FsnodeId, MPath, MPathHash, ManifestUnodeId,
-    MononokeId, RepoPath, SkeletonManifestId,
-};
+use mercurial_types::blobs::HgBlobChangeset;
+use mercurial_types::blobs::HgBlobManifest;
+use mercurial_types::calculate_hg_node_id_stream;
+use mercurial_types::FileBytes;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileEnvelope;
+use mercurial_types::HgFileEnvelopeMut;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgParents;
+use mononoke_types::blame::Blame;
+use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
+use mononoke_types::fastlog_batch::FastlogBatch;
+use mononoke_types::fsnode::Fsnode;
+use mononoke_types::skeleton_manifest::SkeletonManifest;
+use mononoke_types::unode::FileUnode;
+use mononoke_types::unode::ManifestUnode;
+use mononoke_types::BlameId;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::ContentMetadata;
+use mononoke_types::DeletedManifestV2Id;
+use mononoke_types::FastlogBatchId;
+use mononoke_types::FileUnodeId;
+use mononoke_types::FsnodeId;
+use mononoke_types::MPath;
+use mononoke_types::MPathHash;
+use mononoke_types::ManifestUnodeId;
+use mononoke_types::MononokeId;
+use mononoke_types::RepoPath;
+use mononoke_types::SkeletonManifestId;
 use newfilenodes::PathHash;
 use once_cell::sync::OnceCell;
 use phases::Phase;
 use skeleton_manifest::RootSkeletonManifestId;
-use std::{
-    fmt,
-    hash::{Hash, Hasher},
-    str::FromStr,
-};
+use std::fmt;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::str::FromStr;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
 
@@ -1078,8 +1097,10 @@ impl Node {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{collections::HashSet, mem::size_of};
-    use strum::{EnumCount, IntoEnumIterator};
+    use std::collections::HashSet;
+    use std::mem::size_of;
+    use strum::EnumCount;
+    use strum::IntoEnumIterator;
 
     #[test]
     fn test_node_size() {

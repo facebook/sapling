@@ -9,7 +9,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{format_err, Context, Result};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
 
 use futures_stats::TimedFutureExt;
@@ -17,17 +19,21 @@ use futures_stats::TimedFutureExt;
 use bookmarks::Bookmarks;
 use changeset_fetcher::ArcChangesetFetcher;
 use context::CoreContext;
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::IdMapFactory;
 use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::owned::OwnedSegmentedChangelog;
+use crate::segmented_changelog_delegate;
 use crate::types::SegmentedChangelogVersion;
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{
-    segmented_changelog_delegate, CloneData, CloneHints, Location, SeedHead, SegmentedChangelog,
-};
+use crate::CloneData;
+use crate::CloneHints;
+use crate::Location;
+use crate::SeedHead;
+use crate::SegmentedChangelog;
 
 pub enum SegmentedChangelogType {
     OnDemand {

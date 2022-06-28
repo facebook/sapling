@@ -5,20 +5,29 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Context, Error};
-use backsyncer::{open_backsyncer_dbs, TargetRepoDbs};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use backsyncer::open_backsyncer_dbs;
+use backsyncer::TargetRepoDbs;
 use blobrepo::BlobRepo;
 use blobstore_factory::ReadOnlyStorage;
 use cache_warmup::cache_warmup;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use metaconfig_types::{BackupRepoConfig, CommonCommitSyncConfig, RepoClientKnobs};
+use metaconfig_types::BackupRepoConfig;
+use metaconfig_types::CommonCommitSyncConfig;
+use metaconfig_types::RepoClientKnobs;
 use mononoke_api::Mononoke;
 use mononoke_types::RepositoryId;
-use repo_client::{MononokeRepo, PushRedirectorArgs};
+use repo_client::MononokeRepo;
+use repo_client::PushRedirectorArgs;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{debug, info, o, Logger};
+use slog::debug;
+use slog::info;
+use slog::o;
+use slog::Logger;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use std::collections::HashMap;

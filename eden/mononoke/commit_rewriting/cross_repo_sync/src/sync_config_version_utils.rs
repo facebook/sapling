@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Context, Error};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;

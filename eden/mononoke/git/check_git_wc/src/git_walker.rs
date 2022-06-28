@@ -5,13 +5,25 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, bail, Result};
-use git2::{ObjectType, Oid, Repository, Tree, TreeEntry};
-use mononoke_types::{hash, FileType, MPath, MPathElement, RepoPath};
-use std::{collections::HashMap, str::FromStr};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Result;
+use git2::ObjectType;
+use git2::Oid;
+use git2::Repository;
+use git2::Tree;
+use git2::TreeEntry;
+use mononoke_types::hash;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
+use mononoke_types::MPathElement;
+use mononoke_types::RepoPath;
+use std::collections::HashMap;
+use std::str::FromStr;
 use tokio::sync::mpsc;
 
-use crate::{CheckEntry, CheckNode};
+use crate::CheckEntry;
+use crate::CheckNode;
 
 fn get_sha256(git_lfs: bool, contents: &[u8]) -> hash::Sha256 {
     if git_lfs

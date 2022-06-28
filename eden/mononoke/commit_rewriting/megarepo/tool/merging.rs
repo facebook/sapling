@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
@@ -16,7 +17,8 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use slog::info;
 
-use megarepolib::common::{create_save_and_generate_hg_changeset, ChangesetArgs};
+use megarepolib::common::create_save_and_generate_hg_changeset;
+use megarepolib::common::ChangesetArgs;
 
 async fn fail_on_path_conflicts(
     ctx: &CoreContext,

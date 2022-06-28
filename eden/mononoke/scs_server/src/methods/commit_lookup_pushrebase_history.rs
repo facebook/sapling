@@ -10,7 +10,8 @@ use std::sync::Arc;
 
 use context::CoreContext;
 use metaconfig_types::CommonCommitSyncConfig;
-use mononoke_api::{Mononoke, RepoContext};
+use mononoke_api::Mononoke;
+use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use phases::PhasesRef;
 use source_control as thrift;

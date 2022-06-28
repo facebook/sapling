@@ -6,7 +6,10 @@
  */
 
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData, CountedBlobstore};
+use blobstore::Blobstore;
+use blobstore::BlobstoreBytes;
+use blobstore::BlobstoreGetData;
+use blobstore::CountedBlobstore;
 use bytes::Bytes;
 use cachelib::LruCachePool;
 use context::PerfCounterType;

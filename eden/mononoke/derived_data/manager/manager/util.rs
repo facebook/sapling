@@ -6,7 +6,8 @@
  */
 
 use anyhow::Result;
-use context::{CoreContext, SessionClass};
+use context::CoreContext;
+use context::SessionClass;
 use scuba_ext::MononokeScubaSampleBuilder;
 use std::time::Duration;
 
@@ -100,7 +101,8 @@ pub mod derived_data_service {
     use changesets::Changesets;
     use derived_data_remote::DerivationClient;
     use filenodes::Filenodes;
-    use metaconfig_types::{DerivedDataConfig, DerivedDataTypesConfig};
+    use metaconfig_types::DerivedDataConfig;
+    use metaconfig_types::DerivedDataTypesConfig;
     use mononoke_types::RepositoryId;
     use repo_blobstore::RepoBlobstore;
     use scuba_ext::MononokeScubaSampleBuilder;

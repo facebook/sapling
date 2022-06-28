@@ -19,27 +19,28 @@
 //! 1) Non-forward bookmark moves are not supported
 //! 2) Syncing merges is not supported
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
-use clap_old::{Arg, ArgMatches, SubCommand};
-use cmdlib::{
-    args::{self, MononokeMatches},
-    helpers,
-};
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
+use cmdlib::helpers;
 use context::CoreContext;
-use cross_repo_sync::{
-    types::{Source, Target},
-    validation::verify_working_copy_inner,
-};
+use cross_repo_sync::types::Source;
+use cross_repo_sync::types::Target;
+use cross_repo_sync::validation::verify_working_copy_inner;
 use fbinit::FacebookInit;
 use futures::future::try_join;
 use slog::info;
 use std::time::Duration;
 
-use crate::common::{
-    find_source_repos, find_source_repos_and_latest_synced_cs_ids, get_mover_and_reverse_mover,
-};
+use crate::common::find_source_repos;
+use crate::common::find_source_repos_and_latest_synced_cs_ids;
+use crate::common::get_mover_and_reverse_mover;
 use crate::tail::tail_once;
 
 const ARG_CHANGESET: &str = "changeset";

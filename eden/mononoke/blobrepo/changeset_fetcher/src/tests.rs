@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use super::{ChangesetFetcher, PrefetchedChangesetsFetcher};
+use super::ChangesetFetcher;
+use super::PrefetchedChangesetsFetcher;
 use anyhow::Result;
-use changesets::{ChangesetEntry, ChangesetInsert, Changesets};
+use changesets::ChangesetEntry;
+use changesets::ChangesetInsert;
+use changesets::Changesets;
 use changesets_impl::SqlChangesetsBuilder;
 use context::CoreContext;
 use fbinit::FacebookInit;

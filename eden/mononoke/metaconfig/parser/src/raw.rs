@@ -5,15 +5,21 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeSet;
+use std::collections::HashMap;
 use std::path::Path;
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 use cached_config::ConfigStore;
-use repos::{
-    RawAclRegionConfig, RawCommitSyncConfig, RawCommonConfig, RawRepoConfig, RawRepoConfigs,
-    RawRepoDefinition, RawRepoDefinitions, RawStorageConfig,
-};
+use repos::RawAclRegionConfig;
+use repos::RawCommitSyncConfig;
+use repos::RawCommonConfig;
+use repos::RawRepoConfig;
+use repos::RawRepoConfigs;
+use repos::RawRepoDefinition;
+use repos::RawRepoDefinitions;
+use repos::RawStorageConfig;
 
 use crate::errors::ConfigurationError;
 

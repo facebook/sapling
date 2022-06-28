@@ -7,27 +7,39 @@
 
 use crate::error::SubcommandError;
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use clap_old::{App, Arg, ArgMatches, SubCommand};
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
 use cloned::cloned;
-use cmdlib::{
-    args::{self, MononokeMatches},
-    helpers,
-};
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
+use cmdlib::helpers;
 use context::CoreContext;
-use deleted_manifest::{DeletedManifestOps, RootDeletedManifestV2Id};
+use deleted_manifest::DeletedManifestOps;
+use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::{compat::Stream01CompatExt, future, StreamExt, TryStreamExt};
-use manifest::{get_implicit_deletes, PathOrPrefix};
+use futures::compat::Stream01CompatExt;
+use futures::future;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use manifest::get_implicit_deletes;
+use manifest::PathOrPrefix;
 use mercurial_derived_data::DeriveHgChangeset;
-use mononoke_types::{ChangesetId, DeletedManifestV2Id, MPath};
+use mononoke_types::ChangesetId;
+use mononoke_types::DeletedManifestV2Id;
+use mononoke_types::MPath;
 use revset::AncestorsNodeStream;
-use slog::{debug, Logger};
-use std::{collections::BTreeSet, str::FromStr};
+use slog::debug;
+use slog::Logger;
+use std::collections::BTreeSet;
+use std::str::FromStr;
 
 pub const DELETED_MANIFEST: &str = "deleted-manifest";
 const COMMAND_MANIFEST: &str = "manifest";

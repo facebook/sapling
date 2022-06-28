@@ -5,21 +5,31 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt::{self, Debug, Display};
+use std::fmt::Debug;
+use std::fmt::Display;
+use std::fmt::{self};
 use std::io::Write;
 use std::str::FromStr;
 
 use abomonation_derive::Abomonation;
-use anyhow::{bail, Error, Result};
-use ascii::{AsciiStr, AsciiString};
-use blake2::{
-    digest::{Update, VariableOutput},
-    VarBlake2b,
-};
-use edenapi_types::{GitSha1 as EdenapiGitSha1, Sha1 as EdenapiSha1, Sha256 as EdenapiSha256};
-use faster_hex::{hex_decode, hex_encode};
-use quickcheck::{empty_shrinker, Arbitrary, Gen};
-use serde_derive::{Deserialize, Serialize};
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
+use ascii::AsciiStr;
+use ascii::AsciiString;
+use blake2::digest::Update;
+use blake2::digest::VariableOutput;
+use blake2::VarBlake2b;
+use edenapi_types::GitSha1 as EdenapiGitSha1;
+use edenapi_types::Sha1 as EdenapiSha1;
+use edenapi_types::Sha256 as EdenapiSha256;
+use faster_hex::hex_decode;
+use faster_hex::hex_encode;
+use quickcheck::empty_shrinker;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use sql::mysql;
 
 use crate::errors::ErrorKind;
@@ -596,7 +606,8 @@ impl Arbitrary for Sha256 {
 #[cfg(test)]
 mod test {
     use super::*;
-    use quickcheck::{quickcheck, TestResult};
+    use quickcheck::quickcheck;
+    use quickcheck::TestResult;
 
     // NULL is not exposed because no production code should use it.
     const NULL: Blake2 = Blake2([0; BLAKE2_HASH_LENGTH_BYTES]);

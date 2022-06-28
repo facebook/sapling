@@ -6,7 +6,9 @@
  */
 
 use crate::errors::ErrorKind;
-use anyhow::{anyhow, Error, Result};
+use anyhow::anyhow;
+use anyhow::Error;
+use anyhow::Result;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -14,57 +16,77 @@ use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
 use changeset_fetcher::ArcChangesetFetcher;
 use cloned::cloned;
-use context::{CoreContext, PerfCounterType};
+use context::CoreContext;
+use context::PerfCounterType;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use filestore::FetchKey;
-use futures::{
-    compat::Stream01CompatExt,
-    future::{self, FutureExt, TryFutureExt},
-    stream::{self, Stream, StreamExt, TryStreamExt},
-};
-use futures_01_ext::{
-    BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, BufferedParams, FutureExt as _,
-    StreamExt as OldStreamExt,
-};
+use futures::compat::Stream01CompatExt;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use futures_01_ext::BoxFuture as OldBoxFuture;
+use futures_01_ext::BoxStream as OldBoxStream;
+use futures_01_ext::BufferedParams;
+use futures_01_ext::FutureExt as _;
+use futures_01_ext::StreamExt as OldStreamExt;
 use futures_ext::stream::FbStreamExt;
-use futures_old::{
-    future as old_future, stream as old_stream, Future as OldFuture, Stream as OldStream,
-};
+use futures_old::future as old_future;
+use futures_old::stream as old_stream;
+use futures_old::Future as OldFuture;
+use futures_old::Stream as OldStream;
 use futures_stats::TimedTryFutureExt;
 use futures_util::try_join;
-use manifest::{find_intersection_of_diffs_and_parents, Entry};
-use mercurial_bundles::{
-    changegroup::CgVersion,
-    part_encode::PartEncodeBuilder,
-    parts::{self, FilenodeEntry},
-};
-use mercurial_revlog::{self, RevlogChangeset};
-use mercurial_types::{
-    blobs::{fetch_manifest_envelope, File},
-    FileBytes, HgBlobNode, HgChangesetId, HgFileNodeId, HgManifestId, HgParents, MPath, RevFlags,
-    NULL_CSID,
-};
-use mononoke_types::{hash::Sha256, ChangesetId, ContentId, Generation};
-use phases::{Phase, Phases, PhasesRef};
+use manifest::find_intersection_of_diffs_and_parents;
+use manifest::Entry;
+use mercurial_bundles::changegroup::CgVersion;
+use mercurial_bundles::part_encode::PartEncodeBuilder;
+use mercurial_bundles::parts::FilenodeEntry;
+use mercurial_bundles::parts::{self};
+use mercurial_revlog::RevlogChangeset;
+use mercurial_revlog::{self};
+use mercurial_types::blobs::fetch_manifest_envelope;
+use mercurial_types::blobs::File;
+use mercurial_types::FileBytes;
+use mercurial_types::HgBlobNode;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgParents;
+use mercurial_types::MPath;
+use mercurial_types::RevFlags;
+use mercurial_types::NULL_CSID;
+use mononoke_types::hash::Sha256;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::Generation;
+use phases::Phase;
+use phases::Phases;
+use phases::PhasesRef;
 use rate_limiting::Metric;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
-use sha1::{Digest, Sha1};
-use slog::{debug, info, o};
+use sha1::Digest;
+use sha1::Sha1;
+use slog::debug;
+use slog::info;
+use slog::o;
 use stats::prelude::*;
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
 use tunables::tunables;
 
 mod errors;
 mod low_gen_nums_optimization;
-use low_gen_nums_optimization::{
-    compute_partial_getbundle, low_gen_num_optimization, LowGenNumChecker,
-};
+use low_gen_nums_optimization::compute_partial_getbundle;
+use low_gen_nums_optimization::low_gen_num_optimization;
+use low_gen_nums_optimization::LowGenNumChecker;
 
 pub const MAX_FILENODE_BYTES_IN_MEMORY: u64 = 100_000_000;
 pub const GETBUNDLE_COMMIT_NUM_WARN: u64 = 1_000_000;

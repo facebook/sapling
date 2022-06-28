@@ -21,7 +21,8 @@ pub use crate::connection_acceptor::wait_for_connections_closed;
 
 use crate::connection_acceptor::connection_acceptor;
 use crate::repo_handlers::repo_handlers;
-use anyhow::{Context as _, Result};
+use anyhow::Context as _;
+use anyhow::Result;
 use blobstore_factory::ReadOnlyStorage;
 use cached_config::ConfigStore;
 use cmdlib::monitoring::ReadyFlagService;
@@ -33,10 +34,12 @@ use openssl::ssl::SslAcceptor;
 use rate_limiting::RateLimitEnvironment;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{o, Logger};
+use slog::o;
+use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
 use std::path::PathBuf;
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 
 const CONFIGERATOR_RATE_LIMITING_CONFIG: &str = "scm/mononoke/ratelimiting/ratelimits";
 

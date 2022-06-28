@@ -8,8 +8,10 @@
 use crate::mock_store::MockStore;
 use anyhow::Result;
 use bytes::Bytes;
-use memcache::{MemcacheClient, MemcacheSetType};
-use std::{sync::atomic::Ordering, time::Duration};
+use memcache::MemcacheClient;
+use memcache::MemcacheSetType;
+use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 #[derive(Clone)]
 pub enum MemcacheHandler {

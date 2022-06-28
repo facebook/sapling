@@ -7,8 +7,12 @@
 
 use std::convert::TryInto;
 
-use anyhow::{anyhow, bail, Context, Result};
-use bookmarks::{BookmarkUpdateLogRef, Freshness};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
+use bookmarks::BookmarkUpdateLogRef;
+use bookmarks::Freshness;
 use clap::Args;
 use context::CoreContext;
 use futures::stream::StreamExt;

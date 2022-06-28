@@ -6,19 +6,23 @@
  */
 
 use crate::from_request::FromRequest;
-use anyhow::{anyhow, Result};
-use async_requests::tokens::{
-    MegarepoAddBranchingTargetToken, MegarepoAddTargetToken, MegarepoChangeTargetConfigToken,
-    MegarepoRemergeSourceToken, MegarepoSyncChangesetToken,
-};
-use async_requests::types::{ThriftParams, Token};
+use anyhow::anyhow;
+use anyhow::Result;
+use async_requests::tokens::MegarepoAddBranchingTargetToken;
+use async_requests::tokens::MegarepoAddTargetToken;
+use async_requests::tokens::MegarepoChangeTargetConfigToken;
+use async_requests::tokens::MegarepoRemergeSourceToken;
+use async_requests::tokens::MegarepoSyncChangesetToken;
+use async_requests::types::ThriftParams;
+use async_requests::types::Token;
 use context::CoreContext;
 use megarepo_config::SyncTargetConfig;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_types::RepositoryId;
 use slog::warn;
 use source_control as thrift;
-use std::{collections::HashSet, time::Duration};
+use std::collections::HashSet;
+use std::time::Duration;
 
 use crate::errors;
 use crate::source_control_impl::SourceControlServiceImpl;

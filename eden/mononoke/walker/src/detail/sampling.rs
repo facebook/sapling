@@ -5,24 +5,40 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::{
-    graph::{EdgeType, Node, NodeData, NodeType, WrappedPathHash, WrappedPathLike},
-    state::{InternedType, StepStats, WalkState},
-    walk::{EmptyRoute, OutgoingEdge, StepRoute, TailingWalkVisitor, VisitOne, WalkVisitor},
-};
+use crate::detail::graph::EdgeType;
+use crate::detail::graph::Node;
+use crate::detail::graph::NodeData;
+use crate::detail::graph::NodeType;
+use crate::detail::graph::WrappedPathHash;
+use crate::detail::graph::WrappedPathLike;
+use crate::detail::state::InternedType;
+use crate::detail::state::StepStats;
+use crate::detail::state::WalkState;
+use crate::detail::walk::EmptyRoute;
+use crate::detail::walk::OutgoingEdge;
+use crate::detail::walk::StepRoute;
+use crate::detail::walk::TailingWalkVisitor;
+use crate::detail::walk::VisitOne;
+use crate::detail::walk::WalkVisitor;
 
 use anyhow::Error;
 use async_trait::async_trait;
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use bulkops::Direction;
-use context::{CoreContext, SamplingKey};
+use context::CoreContext;
+use context::SamplingKey;
 use dashmap::DashMap;
 use mercurial_types::HgChangesetId;
-use mononoke_types::{datetime::DateTime, ChangesetId};
+use mononoke_types::datetime::DateTime;
+use mononoke_types::ChangesetId;
 use phases::Phases;
 use regex::Regex;
 use slog::Logger;
-use std::{collections::HashSet, fmt, hash, sync::Arc};
+use std::collections::HashSet;
+use std::fmt;
+use std::hash;
+use std::sync::Arc;
 
 pub trait SampleTrigger<K> {
     fn map_keys(&self, key: SamplingKey, walk_key: K);

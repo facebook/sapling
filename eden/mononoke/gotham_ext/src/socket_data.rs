@@ -9,7 +9,8 @@ use bytes::Bytes;
 use gotham::state::State;
 use gotham_derive::StateData;
 use openssl::ssl::SslRef;
-use permission_checker::{MononokeIdentity, MononokeIdentitySet};
+use permission_checker::MononokeIdentity;
+use permission_checker::MononokeIdentitySet;
 
 #[derive(Clone)]
 pub struct TlsSocketData {

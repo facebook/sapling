@@ -5,22 +5,32 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt;
 use std::sync::Arc;
 
 use abomonation_derive::Abomonation;
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use ascii::AsciiString;
 use async_trait::async_trait;
-use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use futures::future::{try_join, BoxFuture, FutureExt};
-use mononoke_types::{ChangesetId, RepositoryId};
-use phases::{ArcPhases, Phase, Phases};
+use futures::future::try_join;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
+use phases::ArcPhases;
+use phases::Phase;
+use phases::Phases;
 use sql::mysql;
-use sql::mysql_async::prelude::{ConvIr, FromValue};
-use sql::mysql_async::{FromValueError, Value};
+use sql::mysql_async::prelude::ConvIr;
+use sql::mysql_async::prelude::FromValue;
+use sql::mysql_async::FromValueError;
+use sql::mysql_async::Value;
 
 use crate::errors::SqlPhasesError;
 use crate::sql_store::SqlPhasesStore;

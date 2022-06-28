@@ -5,17 +5,25 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use clap_old::{App, ArgMatches, SubCommand};
-use cmdlib::args::{self, MononokeMatches};
+use clap_old::App;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{compat::Stream01CompatExt, TryStreamExt};
-use manifest::{bonsai_diff, BonsaiDiffFileChange};
+use futures::compat::Stream01CompatExt;
+use futures::TryStreamExt;
+use manifest::bonsai_diff;
+use manifest::BonsaiDiffFileChange;
 use mercurial_derived_data::DeriveHgChangeset;
-use mercurial_types::{HgChangesetId, HgManifestId, MPath};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgManifestId;
+use mercurial_types::MPath;
 use revset::RangeNodeStream;
 use serde_derive::Serialize;
 use slog::Logger;

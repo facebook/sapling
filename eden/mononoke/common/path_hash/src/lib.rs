@@ -6,15 +6,21 @@
  */
 
 use abomonation_derive::Abomonation;
-use mononoke_types::{hash, path_bytes_from_mpath, MPath, RepoPath};
+use mononoke_types::hash;
+use mononoke_types::path_bytes_from_mpath;
+use mononoke_types::MPath;
+use mononoke_types::RepoPath;
 use sql::mysql;
-use sql::mysql_async::{
-    prelude::{ConvIr, FromValue},
-    FromValueError, Value,
-};
+use sql::mysql_async::prelude::ConvIr;
+use sql::mysql_async::prelude::FromValue;
+use sql::mysql_async::FromValueError;
+use sql::mysql_async::Value;
 use std::borrow::Borrow;
 use std::borrow::Cow;
-use std::cmp::{Eq, Ord, PartialEq, PartialOrd};
+use std::cmp::Eq;
+use std::cmp::Ord;
+use std::cmp::PartialEq;
+use std::cmp::PartialOrd;
 use std::hash::Hash;
 #[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[derive(mysql::OptTryFromRowField)]

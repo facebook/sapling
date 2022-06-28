@@ -6,7 +6,8 @@
  */
 
 use bytes::Bytes;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
 use blobstore::BlobstoreBytes;
 

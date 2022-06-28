@@ -6,7 +6,8 @@
  */
 
 use anyhow::Error;
-use futures_old::{Future, Stream};
+use futures_old::Future;
+use futures_old::Stream;
 
 /// A general source control Node
 ///

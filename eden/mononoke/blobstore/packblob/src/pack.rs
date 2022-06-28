@@ -8,21 +8,32 @@
 use crate::envelope::PackEnvelope;
 use crate::store;
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Error;
+use anyhow::Result;
 use ascii::AsciiString;
-use blobstore::{PackMetadata, SizeMetadata};
-use bytes::{Buf, BufMut, Bytes, BytesMut};
+use blobstore::PackMetadata;
+use blobstore::SizeMetadata;
+use bytes::Buf;
+use bytes::BufMut;
+use bytes::Bytes;
+use bytes::BytesMut;
 use mononoke_types::hash::Context as HashContext;
-use mononoke_types::repo::{EPH_REPO_PREFIX_REGEX, REPO_PREFIX_REGEX};
+use mononoke_types::repo::EPH_REPO_PREFIX_REGEX;
+use mononoke_types::repo::REPO_PREFIX_REGEX;
 use mononoke_types::BlobstoreBytes;
-use packblob_thrift::{
-    PackedEntry, PackedFormat, PackedValue, SingleValue, StorageEnvelope, StorageFormat,
-    ZstdFromDictValue,
-};
-use std::{
-    collections::HashMap,
-    io::{self, Cursor, Write},
-};
+use packblob_thrift::PackedEntry;
+use packblob_thrift::PackedFormat;
+use packblob_thrift::PackedValue;
+use packblob_thrift::SingleValue;
+use packblob_thrift::StorageEnvelope;
+use packblob_thrift::StorageFormat;
+use packblob_thrift::ZstdFromDictValue;
+use std::collections::HashMap;
+use std::io::Cursor;
+use std::io::Write;
+use std::io::{self};
 use zstd::bulk::Compressor;
 use zstd::dict::EncoderDictionary;
 use zstd::stream::read::Decoder as ZstdDecoder;
@@ -369,7 +380,9 @@ fn split_key_prefix(key: &str) -> (&str, &str) {
 mod tests {
     use super::*;
     use bytes::Bytes;
-    use rand::{Rng, RngCore, SeedableRng};
+    use rand::Rng;
+    use rand::RngCore;
+    use rand::SeedableRng;
     use rand_xorshift::XorShiftRng;
 
     #[test]

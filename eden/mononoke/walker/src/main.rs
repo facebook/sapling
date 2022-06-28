@@ -13,15 +13,19 @@ mod detail;
 mod setup;
 
 use anyhow::Error;
-use blobstore_factory::{BlobstoreArgDefaults, ReadOnlyStorage};
-use clap::{ArgGroup, Parser};
+use blobstore_factory::BlobstoreArgDefaults;
+use blobstore_factory::ReadOnlyStorage;
+use clap::ArgGroup;
+use clap::Parser;
 use cmdlib::args::CachelibSettings;
 use cmdlib_scrubbing::ScrubAppExtension;
 use fbinit::FacebookInit;
 use metaconfig_types::WalkerJobType;
 use mononoke_app::args::MultiRepoArgs;
-use mononoke_app::fb303::{Fb303AppExtension, ReadyFlagService};
-use mononoke_app::{MononokeApp, MononokeAppBuilder};
+use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::fb303::ReadyFlagService;
+use mononoke_app::MononokeApp;
+use mononoke_app::MononokeAppBuilder;
 use multiplexedblob::ScrubWriteMostly;
 use std::num::NonZeroU32;
 

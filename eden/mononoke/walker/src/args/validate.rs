@@ -5,10 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::validate::{CheckType, DEFAULT_CHECK_TYPES};
-use clap::{ArgEnum, Args};
+use crate::detail::validate::CheckType;
+use crate::detail::validate::DEFAULT_CHECK_TYPES;
+use clap::ArgEnum;
+use clap::Args;
 use std::collections::HashSet;
-use strum_macros::{AsRefStr, EnumString, EnumVariantNames};
+use strum_macros::AsRefStr;
+use strum_macros::EnumString;
+use strum_macros::EnumVariantNames;
 
 #[derive(Args, Debug)]
 pub struct ValidateCheckTypeArgs {

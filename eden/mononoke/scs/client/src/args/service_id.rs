@@ -7,7 +7,9 @@
 
 //! Arguments for Service Identities
 
-use clap::{App, Arg, ArgMatches};
+use clap::App;
+use clap::Arg;
+use clap::ArgMatches;
 
 pub(crate) const ARG_SERVICE_ID: &str = "SERVICE_ID";
 

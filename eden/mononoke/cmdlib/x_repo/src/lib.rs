@@ -7,18 +7,23 @@
 
 //! Scaffolding that's generally useful to build CLI tools on top of Mononoke.
 
-use anyhow::{bail, Error};
+use anyhow::bail;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use cacheblob::LeaseOps;
-use cmdlib::args::{self, MononokeMatches};
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
 use context::CoreContext;
-use cross_repo_sync::{
-    create_commit_syncer_lease, create_commit_syncers,
-    types::{Source, Target},
-    CommitSyncRepos, CommitSyncer, Syncers,
-};
+use cross_repo_sync::create_commit_syncer_lease;
+use cross_repo_sync::create_commit_syncers;
+use cross_repo_sync::types::Source;
+use cross_repo_sync::types::Target;
+use cross_repo_sync::CommitSyncRepos;
+use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::Syncers;
 use futures_util::try_join;
-use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use live_commit_sync_config::CfgrLiveCommitSyncConfig;
+use live_commit_sync_config::LiveCommitSyncConfig;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;

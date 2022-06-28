@@ -9,7 +9,8 @@ use anyhow::Error;
 use fbinit::FacebookInit;
 use stats::prelude::*;
 use std::time::Duration;
-use time_window_counter::{BoxGlobalTimeWindowCounter, GlobalTimeWindowCounterBuilder};
+use time_window_counter::BoxGlobalTimeWindowCounter;
+use time_window_counter::GlobalTimeWindowCounterBuilder;
 use tokio::time::{self};
 
 use crate::batch::InternalObject;
@@ -111,14 +112,15 @@ mod test {
 
     use async_trait::async_trait;
     use futures::future;
-    use mononoke_types_mocks::{contentid::ONES_CTID, hash::ONES_SHA256};
-    use std::sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc,
-    };
+    use mononoke_types_mocks::contentid::ONES_CTID;
+    use mononoke_types_mocks::hash::ONES_SHA256;
+    use std::sync::atomic::AtomicU64;
+    use std::sync::atomic::Ordering;
+    use std::sync::Arc;
     use time_window_counter::GlobalTimeWindowCounter;
 
-    use crate::config::{ObjectPopularity, ServerConfig};
+    use crate::config::ObjectPopularity;
+    use crate::config::ServerConfig;
 
     fn dummy(size: impl Into<Option<u64>>) -> InternalObject {
         InternalObject::new(ONES_CTID, ONES_SHA256, size.into())

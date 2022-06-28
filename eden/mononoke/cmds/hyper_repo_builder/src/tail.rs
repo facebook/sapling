@@ -5,28 +5,36 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Context, Error};
-use blobrepo::{save_bonsai_changesets, BlobRepo};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
+use blobrepo::save_bonsai_changesets;
+use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
-use commit_transformation::{copy_file_contents, rewrite_stack_no_merges};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
+use commit_transformation::copy_file_contents;
+use commit_transformation::rewrite_stack_no_merges;
 use context::CoreContext;
-use cross_repo_sync::{
-    mover_to_multi_mover,
-    types::{Source, Target},
-};
-use futures::{compat::Stream01CompatExt, stream, StreamExt, TryStreamExt};
+use cross_repo_sync::mover_to_multi_mover;
+use cross_repo_sync::types::Source;
+use cross_repo_sync::types::Target;
+use futures::compat::Stream01CompatExt;
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use mononoke_api_types::InnerRepo;
-use mononoke_types::{ChangesetId, DateTime, FileChange};
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
+use mononoke_types::FileChange;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::RangeNodeStream;
 use slog::info;
 use std::collections::HashMap;
 
-use crate::common::{
-    decode_latest_synced_state_extras, encode_latest_synced_state_extras,
-    get_mover_and_reverse_mover,
-};
+use crate::common::decode_latest_synced_state_extras;
+use crate::common::encode_latest_synced_state_extras;
+use crate::common::get_mover_and_reverse_mover;
 
 const CHUNK_SIZE: usize = 100;
 
@@ -280,9 +288,13 @@ mod test {
     use crate::add_source_repo::add_source_repo;
     use fbinit::FacebookInit;
     use maplit::hashmap;
-    use mononoke_types::{MPath, RepositoryId};
+    use mononoke_types::MPath;
+    use mononoke_types::RepositoryId;
     use test_repo_factory::TestRepoFactory;
-    use tests_utils::{bookmark, list_working_copy_utf8, resolve_cs_id, CreateCommitContext};
+    use tests_utils::bookmark;
+    use tests_utils::list_working_copy_utf8;
+    use tests_utils::resolve_cs_id;
+    use tests_utils::CreateCommitContext;
 
     #[fbinit::test]
     async fn test_sync_commit(fb: FacebookInit) -> Result<(), Error> {

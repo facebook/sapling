@@ -5,60 +5,85 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use ascii::AsciiString;
 use assert_matches::assert_matches;
-use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobrepo::save_bonsai_changesets;
+use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
+use bookmarks::Freshness;
 use cloned::cloned;
 use commit_transformation::upload_commits;
 use context::CoreContext;
-use cross_repo_sync::{rewrite_commit, CommitSyncOutcome, CommitSyncer};
-use cross_repo_sync::{
-    CandidateSelectionHint, CommitRewrittenToEmpty, CommitSyncContext, CommitSyncDataProvider,
-    CommitSyncRepos, CHANGE_XREPO_MAPPING_EXTRA,
-};
+use cross_repo_sync::rewrite_commit;
+use cross_repo_sync::CandidateSelectionHint;
+use cross_repo_sync::CommitRewrittenToEmpty;
+use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncDataProvider;
+use cross_repo_sync::CommitSyncOutcome;
+use cross_repo_sync::CommitSyncRepos;
+use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
 use fbinit::FacebookInit;
 use fixtures::Linear;
 use fixtures::TestRepoFixture;
-use futures::{compat::Stream01CompatExt, FutureExt, TryFutureExt, TryStreamExt};
+use futures::compat::Stream01CompatExt;
+use futures::FutureExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
 use futures_ext::FbTryFutureExt;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
-use manifest::{Entry, ManifestOps};
-use maplit::{btreemap, hashmap};
+use manifest::Entry;
+use manifest::ManifestOps;
+use maplit::btreemap;
+use maplit::hashmap;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
-use metaconfig_types::{
-    CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig,
-    DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
-};
+use metaconfig_types::CommitSyncConfig;
+use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::CommonCommitSyncConfig;
+use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+use metaconfig_types::SmallRepoCommitSyncConfig;
+use metaconfig_types::SmallRepoPermanentConfig;
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 use mononoke_types::RepositoryId;
-use mononoke_types::{ChangesetId, MPath};
 use movers::Mover;
 use mutable_counters::MutableCountersArc;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use skiplist::SkiplistIndex;
 use sql_construct::SqlConstruct;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
-use synced_commit_mapping::{
-    EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
-    SyncedCommitMappingEntry, SyncedCommitSourceRepo,
-};
+use synced_commit_mapping::EquivalentWorkingCopyEntry;
+use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMappingEntry;
+use synced_commit_mapping::SyncedCommitSourceRepo;
 use test_repo_factory::TestRepoFactory;
-use tests_utils::{
-    bookmark, create_commit, list_working_copy_utf8, resolve_cs_id, store_files, store_rename,
-    CreateCommitContext,
-};
+use tests_utils::bookmark;
+use tests_utils::create_commit;
+use tests_utils::list_working_copy_utf8;
+use tests_utils::resolve_cs_id;
+use tests_utils::store_files;
+use tests_utils::store_rename;
+use tests_utils::CreateCommitContext;
 use tokio::runtime::Runtime;
 use tunables::with_tunables_async;
 
 use pretty_assertions::assert_eq;
 
-use crate::{backsync_latest, format_counter, sync_entries, BacksyncLimit, TargetRepoDbs};
+use crate::backsync_latest;
+use crate::format_counter;
+use crate::sync_entries;
+use crate::BacksyncLimit;
+use crate::TargetRepoDbs;
 
 const REPOMERGE_FOLDER: &str = "repomerge";
 const REPOMERGE_FILE: &str = "repomergefile";

@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use chrono::{FixedOffset, TimeZone};
+use chrono::FixedOffset;
+use chrono::TimeZone;
 use lazy_static::lazy_static;
 use mononoke_types::DateTime;
 

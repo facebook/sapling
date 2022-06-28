@@ -63,7 +63,8 @@ pub fn chunk_by_accumulation<T, A: Copy>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::{anyhow, Error};
+    use anyhow::anyhow;
+    use anyhow::Error;
 
     #[test]
     fn test_chunk_by_accumulation_simple() {

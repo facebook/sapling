@@ -8,7 +8,8 @@
 mod core;
 mod futures_v1;
 
-pub use crate::core::{trace_allocations, AllocationStats};
-pub use crate::futures_v1::{
-    AllocationTraced, AllocationTracingFutureExt, AllocationTracingStreamExt,
-};
+pub use crate::core::trace_allocations;
+pub use crate::core::AllocationStats;
+pub use crate::futures_v1::AllocationTraced;
+pub use crate::futures_v1::AllocationTracingFutureExt;
+pub use crate::futures_v1::AllocationTracingStreamExt;

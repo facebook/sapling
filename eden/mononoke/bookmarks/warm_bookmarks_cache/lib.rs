@@ -6,50 +6,76 @@
  */
 
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
 use std::ops::RangeBounds;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use std::sync::RwLock;
 use std::time::Duration;
 
-use anyhow::{anyhow, Context as _, Error};
+use anyhow::anyhow;
+use anyhow::Context as _;
+use anyhow::Error;
 use async_trait::async_trait;
-use blame::{BlameRoot, RootBlameV2};
-use bookmarks::{
-    ArcBookmarks, BookmarkName, BookmarkUpdateLog, BookmarkUpdateLogArc, BookmarkUpdateLogRef,
-    Bookmarks, BookmarksArc, BookmarksRef, BookmarksSubscription, Freshness,
-};
-use bookmarks_types::{Bookmark, BookmarkKind, BookmarkPagination, BookmarkPrefix};
+use blame::BlameRoot;
+use blame::RootBlameV2;
+use bookmarks::ArcBookmarks;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateLog;
+use bookmarks::BookmarkUpdateLogArc;
+use bookmarks::BookmarkUpdateLogRef;
+use bookmarks::Bookmarks;
+use bookmarks::BookmarksArc;
+use bookmarks::BookmarksRef;
+use bookmarks::BookmarksSubscription;
+use bookmarks::Freshness;
+use bookmarks_types::Bookmark;
+use bookmarks_types::BookmarkKind;
+use bookmarks_types::BookmarkPagination;
+use bookmarks_types::BookmarkPrefix;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
-use context::{CoreContext, SessionClass};
+use context::CoreContext;
+use context::SessionClass;
 use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fastlog::RootFastlog;
 use fsnodes::RootFsnodeId;
-use futures::{
-    channel::oneshot,
-    future::{self, select, BoxFuture, FutureExt},
-    stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
-};
+use futures::channel::oneshot;
+use futures::future::select;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::future::{self};
+use futures::stream::FuturesUnordered;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use futures_stats::TimedFutureExt;
 use futures_watchdog::WatchdogExt;
 use itertools::Itertools;
 use lock_ext::RwLockExt;
 use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_types::BlameVersion;
-use mononoke_types::{ChangesetId, Timestamp};
+use mononoke_types::ChangesetId;
+use mononoke_types::Timestamp;
 use phases::PhasesArc;
 use repo_derived_data::RepoDerivedDataArc;
-use repo_identity::{RepoIdentity, RepoIdentityArc, RepoIdentityRef};
+use repo_identity::RepoIdentity;
+use repo_identity::RepoIdentityArc;
+use repo_identity::RepoIdentityRef;
 use skeleton_manifest::RootSkeletonManifestId;
-use slog::{debug, info, warn};
+use slog::debug;
+use slog::info;
+use slog::warn;
 use stats::prelude::*;
 use tunables::tunables;
 use unodes::RootUnodeManifestId;
 
 mod warmers;
-pub use warmers::{create_derived_data_warmer, create_public_phase_warmer};
+pub use warmers::create_derived_data_warmer;
+pub use warmers::create_public_phase_warmer;
 
 define_stats! {
     prefix = "mononoke.warm_bookmarks_cache";
@@ -1008,7 +1034,9 @@ mod tests {
     use mononoke_types::RepositoryId;
     use sql::queries;
     use test_repo_factory::TestRepoFactory;
-    use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
+    use tests_utils::bookmark;
+    use tests_utils::resolve_cs_id;
+    use tests_utils::CreateCommitContext;
     use tokio::time;
 
     #[fbinit::test]

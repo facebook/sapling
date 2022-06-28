@@ -8,16 +8,21 @@
 use changeset_fetcher::ArcChangesetFetcher;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{FutureExt, TryFutureExt};
-use futures_ext::{BoxStream, StreamExt};
-use futures_old::{future::Future, stream::Stream};
-use mononoke_types::{ChangesetId, Generation};
+use futures::FutureExt;
+use futures::TryFutureExt;
+use futures_ext::BoxStream;
+use futures_ext::StreamExt;
+use futures_old::future::Future;
+use futures_old::stream::Stream;
+use mononoke_types::ChangesetId;
+use mononoke_types::Generation;
 
 use crate::errors::*;
 use crate::BonsaiNodeStream;
 use anyhow::Error;
 
-use futures_old::{Async, Poll};
+use futures_old::Async;
+use futures_old::Poll;
 
 type GenericStream<T> = BoxStream<(T, Generation), Error>;
 pub type BonsaiInputStream = GenericStream<ChangesetId>;
@@ -128,4 +133,6 @@ mod test_utils {
 }
 
 #[cfg(test)]
-pub use test_utils::{NotReadyEmptyStream, RepoErrorStream};
+pub use test_utils::NotReadyEmptyStream;
+#[cfg(test)]
+pub use test_utils::RepoErrorStream;

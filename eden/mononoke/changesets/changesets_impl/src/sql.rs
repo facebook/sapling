@@ -5,25 +5,38 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
-use changesets::{ChangesetEntry, ChangesetInsert, Changesets, SortOrder};
-use context::{CoreContext, PerfCounterType};
+use changesets::ChangesetEntry;
+use changesets::ChangesetInsert;
+use changesets::Changesets;
+use changesets::SortOrder;
+use context::CoreContext;
+use context::PerfCounterType;
 use fbinit::FacebookInit;
-use futures::{
-    stream::{self, BoxStream, StreamExt},
-    TryFutureExt,
-};
-use mononoke_types::{
-    ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
-};
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
+use futures::stream::{self};
+use futures::TryFutureExt;
+use mononoke_types::ChangesetId;
+use mononoke_types::ChangesetIdPrefix;
+use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::RepositoryId;
 use rand::Rng;
-use rendezvous::{RendezVous, RendezVousOptions, RendezVousStats, TunablesRendezVousController};
-use sql::{queries, Connection, Transaction};
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use rendezvous::RendezVous;
+use rendezvous::RendezVousOptions;
+use rendezvous::RendezVousStats;
+use rendezvous::TunablesRendezVousController;
+use sql::queries;
+use sql::Connection;
+use sql::Transaction;
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 use thiserror::Error;
 

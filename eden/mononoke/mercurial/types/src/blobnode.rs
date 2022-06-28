@@ -6,12 +6,16 @@
  */
 
 use bytes::Bytes;
-use futures_old::{Future, Stream};
-use quickcheck::{Arbitrary, Gen};
-use serde_derive::{Deserialize, Serialize};
+use futures_old::Future;
+use futures_old::Stream;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
 use crate::blob::HgBlob;
-use crate::hash::{self, Context};
+use crate::hash::Context;
+use crate::hash::{self};
 use crate::nodehash::HgNodeHash;
 
 /// Equivalent type from Mercurial's Rust code representing parents.

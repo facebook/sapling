@@ -5,19 +5,24 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Error, Result};
-use faster_hex::{hex_decode, hex_string};
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
+use faster_hex::hex_decode;
+use faster_hex::hex_string;
 use http::Uri;
 use mime::Mime;
 use once_cell::sync::Lazy;
-use quickcheck::{Arbitrary, Gen};
-use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    fmt::{self, Debug, Display},
-    mem,
-    str::FromStr,
-};
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
+use serde::Deserialize;
+use serde::Serialize;
+use std::collections::HashMap;
+use std::fmt::Debug;
+use std::fmt::Display;
+use std::fmt::{self};
+use std::mem;
+use std::str::FromStr;
 
 use crate::str_serialized;
 
@@ -329,7 +334,8 @@ mod test {
     use assert_matches::assert_matches;
     use maplit::hashmap;
     use quickcheck::quickcheck;
-    use serde_json::{self, json};
+    use serde_json::json;
+    use serde_json::{self};
 
     const ONES_SHA256: &str = "1111111111111111111111111111111111111111111111111111111111111111";
 

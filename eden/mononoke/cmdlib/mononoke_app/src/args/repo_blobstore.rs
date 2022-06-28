@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use clap::{ArgEnum, ArgGroup, Args};
+use clap::ArgEnum;
+use clap::ArgGroup;
+use clap::Args;
 
 /// Command line arguments for specifying a blobstore, either by
 /// repo, or by storage name.

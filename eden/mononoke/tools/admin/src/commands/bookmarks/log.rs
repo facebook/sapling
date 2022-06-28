@@ -5,8 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Result};
-use bookmarks::{BookmarkName, BookmarkUpdateLogRef, Freshness};
+use anyhow::anyhow;
+use anyhow::Result;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateLogRef;
+use bookmarks::Freshness;
 use clap::Args;
 use context::CoreContext;
 use futures::stream::TryStreamExt;

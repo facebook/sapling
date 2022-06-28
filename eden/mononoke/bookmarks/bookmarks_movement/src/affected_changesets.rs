@@ -5,27 +5,41 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Error, Result};
-use blobrepo::scribe::{log_commits_to_scribe_raw, ScribeCommitInfo};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
+use blobrepo::scribe::log_commits_to_scribe_raw;
+use blobrepo::scribe::ScribeCommitInfo;
 use blobstore::Loadable;
 use bookmarks::BookmarkUpdateReason;
-use bookmarks_types::{BookmarkKind, BookmarkName};
+use bookmarks_types::BookmarkKind;
+use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
 use futures::compat::Stream01CompatExt;
 use futures::future;
-use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use futures_ext::FbStreamExt;
-use hooks::{CrossRepoPushSource, HookManager};
-use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use hooks::CrossRepoPushSource;
+use hooks::HookManager;
+use metaconfig_types::BookmarkAttrs;
+use metaconfig_types::InfinitepushParams;
+use metaconfig_types::PushrebaseParams;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
-use scribe_commit_queue::{self, ChangedFilesInfo};
+use scribe_commit_queue::ChangedFilesInfo;
+use scribe_commit_queue::{self};
 use skeleton_manifest::RootSkeletonManifestId;
 use tunables::tunables;
 
@@ -635,7 +649,8 @@ mod test {
     use maplit::hashset;
     use mononoke_api_types::InnerRepo;
     use std::collections::HashSet;
-    use tests_utils::{bookmark, drawdag::create_from_dag};
+    use tests_utils::bookmark;
+    use tests_utils::drawdag::create_from_dag;
 
     #[fbinit::test]
     async fn test_find_draft_ancestors_simple(fb: FacebookInit) -> Result<(), Error> {

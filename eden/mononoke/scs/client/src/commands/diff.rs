@@ -7,8 +7,13 @@
 
 //! Diff two commits
 
-use anyhow::{bail, Error};
-use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
+use anyhow::bail;
+use anyhow::Error;
+use clap::App;
+use clap::AppSettings;
+use clap::Arg;
+use clap::ArgMatches;
+use clap::SubCommand;
 use futures::stream;
 use futures_util::stream::StreamExt;
 use maplit::btreeset;
@@ -16,12 +21,17 @@ use source_control as thrift;
 use std::collections::BTreeSet;
 use std::io::Write;
 
-use crate::args::commit_id::{add_multiple_commit_id_args, get_commit_ids, resolve_commit_ids};
-use crate::args::path::{add_optional_multiple_path_args, get_paths};
-use crate::args::repo::{add_repo_args, get_repo_specifier};
+use crate::args::commit_id::add_multiple_commit_id_args;
+use crate::args::commit_id::get_commit_ids;
+use crate::args::commit_id::resolve_commit_ids;
+use crate::args::path::add_optional_multiple_path_args;
+use crate::args::path::get_paths;
+use crate::args::repo::add_repo_args;
+use crate::args::repo::get_repo_specifier;
 use crate::connection::Connection;
 use crate::lib::diff::diff_files;
-use crate::render::{Render, RenderStream};
+use crate::render::Render;
+use crate::render::RenderStream;
 use serde_derive::Serialize;
 
 pub(super) const NAME: &str = "diff";

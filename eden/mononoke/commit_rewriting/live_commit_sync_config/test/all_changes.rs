@@ -7,13 +7,16 @@
 
 use cached_config::ModificationTime;
 use fbinit::FacebookInit;
+use live_commit_sync_config::ErrorKind;
+use live_commit_sync_config::LiveCommitSyncConfig;
 use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
-use live_commit_sync_config::{ErrorKind, LiveCommitSyncConfig};
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::RepositoryId;
 use pretty_assertions::assert_eq;
 
-use crate::{ensure_all_updated, get_ctx_source_store_and_live_config, EMPTY_PUSHREDIRECTOR};
+use crate::ensure_all_updated;
+use crate::get_ctx_source_store_and_live_config;
+use crate::EMPTY_PUSHREDIRECTOR;
 
 // Since these huge blobs of json may be hard to read, I will explain
 // the difference in the comment. The comparison of `ALL_COMMIT_SYNC_CONFIG_V1`

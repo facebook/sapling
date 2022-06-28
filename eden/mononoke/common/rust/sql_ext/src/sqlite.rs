@@ -6,8 +6,11 @@
  */
 
 use anyhow::Result;
-use sql::rusqlite::{Connection as SqliteConnection, OpenFlags as SqliteOpenFlags};
-use std::{fs::create_dir_all, path::Path, time::Duration};
+use sql::rusqlite::Connection as SqliteConnection;
+use sql::rusqlite::OpenFlags as SqliteOpenFlags;
+use std::fs::create_dir_all;
+use std::path::Path;
+use std::time::Duration;
 
 fn sqlite_setup_connection(con: &SqliteConnection) {
     // By default, when there's a read/write contention, SQLite will not wait,

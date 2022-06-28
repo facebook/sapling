@@ -5,20 +5,28 @@
  * GNU General Public License version 2.
  */
 
-use crate::common::{find_target_bookmark_and_value, find_target_sync_config, MegarepoOp};
+use crate::common::find_target_bookmark_and_value;
+use crate::common::find_target_sync_config;
+use crate::common::MegarepoOp;
 use anyhow::anyhow;
 use context::CoreContext;
 use core::cmp::Ordering;
 use derived_data_utils::derived_data_utils;
 use futures::future;
-use futures::{stream::FuturesUnordered, TryStreamExt};
-use itertools::{EitherOrBoth, Itertools};
-use megarepo_config::{
-    MononokeMegarepoConfigs, Source, SyncConfigVersion, SyncTargetConfig, Target,
-};
+use futures::stream::FuturesUnordered;
+use futures::TryStreamExt;
+use itertools::EitherOrBoth;
+use itertools::Itertools;
+use megarepo_config::MononokeMegarepoConfigs;
+use megarepo_config::Source;
+use megarepo_config::SyncConfigVersion;
+use megarepo_config::SyncTargetConfig;
+use megarepo_config::Target;
 use megarepo_error::MegarepoError;
-use megarepo_mapping::{CommitRemappingState, SourceName};
-use mononoke_api::{Mononoke, RepoContext};
+use megarepo_mapping::CommitRemappingState;
+use megarepo_mapping::SourceName;
+use mononoke_api::Mononoke;
+use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
 use std::collections::BTreeMap;
@@ -394,7 +402,9 @@ mod test {
     use maplit::btreemap;
     use megarepo_config::Target;
     use mononoke_types::RepositoryId;
-    use mononoke_types_mocks::changesetid::{ONES_CSID, THREES_CSID, TWOS_CSID};
+    use mononoke_types_mocks::changesetid::ONES_CSID;
+    use mononoke_types_mocks::changesetid::THREES_CSID;
+    use mononoke_types_mocks::changesetid::TWOS_CSID;
 
     fn source_names(sources: &[(Source, ChangesetId)]) -> Vec<String> {
         sources

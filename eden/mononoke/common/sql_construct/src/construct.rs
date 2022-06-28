@@ -8,8 +8,13 @@
 use std::path::Path;
 
 use anyhow::Result;
-use sql::{Connection, SqlConnections, SqlConnectionsWithSchema, SqlShardedConnections};
-use sql_ext::{open_existing_sqlite_path, open_sqlite_in_memory, open_sqlite_path};
+use sql::Connection;
+use sql::SqlConnections;
+use sql::SqlConnectionsWithSchema;
+use sql::SqlShardedConnections;
+use sql_ext::open_existing_sqlite_path;
+use sql_ext::open_sqlite_in_memory;
+use sql_ext::open_sqlite_path;
 
 /// Construct a SQL data manager backed by a database
 ///

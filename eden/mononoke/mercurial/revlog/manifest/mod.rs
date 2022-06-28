@@ -9,4 +9,8 @@ mod manifest_utils;
 mod revlog;
 
 pub use self::manifest_utils::new_entry_intersection_stream;
-pub use self::revlog::{Details, EntryContent, ManifestContent, RevlogEntry, RevlogManifest};
+pub use self::revlog::Details;
+pub use self::revlog::EntryContent;
+pub use self::revlog::ManifestContent;
+pub use self::revlog::RevlogEntry;
+pub use self::revlog::RevlogManifest;

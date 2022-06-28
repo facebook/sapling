@@ -5,20 +5,30 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Result};
-use blobstore::{Blobstore, Storable};
+use anyhow::Context;
+use anyhow::Result;
+use blobstore::Blobstore;
+use blobstore::Storable;
 use bytes::Bytes;
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures::{stream::BoxStream, StreamExt, TryStreamExt};
+use futures::stream::BoxStream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use std::collections::BTreeMap;
 
-use crate::blob::{Blob, BlobstoreValue, DeletedManifestV2Blob};
+use crate::blob::Blob;
+use crate::blob::BlobstoreValue;
+use crate::blob::DeletedManifestV2Blob;
 use crate::deleted_manifest_common::DeletedManifestCommon;
 use crate::errors::ErrorKind;
-use crate::sharded_map::{MapValue, ShardedMapNode};
+use crate::sharded_map::MapValue;
+use crate::sharded_map::ShardedMapNode;
 use crate::thrift;
-use crate::typed_hash::{BlobstoreKey, ChangesetId, DeletedManifestV2Context, DeletedManifestV2Id};
+use crate::typed_hash::BlobstoreKey;
+use crate::typed_hash::ChangesetId;
+use crate::typed_hash::DeletedManifestV2Context;
+use crate::typed_hash::DeletedManifestV2Id;
 use crate::MPathElement;
 
 /// Deleted Manifest is a data structure that tracks deleted files and commits where they

@@ -6,19 +6,27 @@
  */
 
 use std::collections::hash_set::IntoIter;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::iter;
 use std::mem::replace;
 
 use anyhow::Error;
 use cloned::cloned;
-use futures::{FutureExt, TryFutureExt};
-use futures_ext::{BoxStream, StreamExt};
+use futures::FutureExt;
+use futures::TryFutureExt;
+use futures_ext::BoxStream;
+use futures_ext::StreamExt;
 use futures_old::future::Future;
-use futures_old::stream::{self, iter_ok, Stream};
-use futures_old::{Async, Poll};
+use futures_old::stream::iter_ok;
+use futures_old::stream::Stream;
+use futures_old::stream::{self};
+use futures_old::Async;
+use futures_old::Poll;
 
-use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;

@@ -5,14 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
 
-use super::{
-    Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstorePutOps, BlobstoreUnlinkOps,
-    OverwriteStatus, PutBehaviour,
-};
+use super::Blobstore;
+use super::BlobstoreBytes;
+use super::BlobstoreGetData;
+use super::BlobstorePutOps;
+use super::BlobstoreUnlinkOps;
+use super::OverwriteStatus;
+use super::PutBehaviour;
 
 /// Disabled blobstore which fails all operations with a reason. Primarily used as a
 /// placeholder for administratively disabled blobstores.

@@ -5,29 +5,44 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::{format_err, Context, Error, Result};
-use blobstore::{Blobstore, Loadable};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
+use blobstore::Blobstore;
+use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
 use futures::channel::mpsc;
-use futures::future::{BoxFuture, FutureExt};
-use futures::stream::{FuturesOrdered, FuturesUnordered, TryStreamExt};
-use manifest::{
-    derive_manifest_with_io_sender, derive_manifests_for_simple_stack_of_commits, Entry,
-    ManifestChanges, TreeInfo,
-};
-use mononoke_types::skeleton_manifest::{
-    SkeletonManifest, SkeletonManifestDirectory, SkeletonManifestEntry, SkeletonManifestSummary,
-};
-use mononoke_types::{
-    BlobstoreKey, BlobstoreValue, ChangesetId, ContentId, FileType, MPath, MPathElement,
-    SkeletonManifestId,
-};
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::stream::FuturesOrdered;
+use futures::stream::FuturesUnordered;
+use futures::stream::TryStreamExt;
+use manifest::derive_manifest_with_io_sender;
+use manifest::derive_manifests_for_simple_stack_of_commits;
+use manifest::Entry;
+use manifest::ManifestChanges;
+use manifest::TreeInfo;
+use mononoke_types::skeleton_manifest::SkeletonManifest;
+use mononoke_types::skeleton_manifest::SkeletonManifestDirectory;
+use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
+use mononoke_types::skeleton_manifest::SkeletonManifestSummary;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::BlobstoreValue;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
+use mononoke_types::MPathElement;
+use mononoke_types::SkeletonManifestId;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::SkeletonManifestDerivationError;
@@ -313,7 +328,8 @@ mod test {
     use mononoke_types::ChangesetId;
     use pretty_assertions::assert_eq;
     use repo_derived_data::RepoDerivedDataRef;
-    use tests_utils::drawdag::{changes, create_from_dag_with_changes};
+    use tests_utils::drawdag::changes;
+    use tests_utils::drawdag::create_from_dag_with_changes;
     use tests_utils::CreateCommitContext;
 
     use crate::mapping::get_file_changes;

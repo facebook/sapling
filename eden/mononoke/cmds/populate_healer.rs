@@ -5,31 +5,48 @@
  * GNU General Public License version 2.
  */
 
-use std::{sync::Arc, time::Instant};
+use std::sync::Arc;
+use std::time::Instant;
 
-use anyhow::{bail, format_err, Error};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Error;
 use clap_old::Arg;
 use cloned::cloned;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
-use futures_old::{Future, IntoFuture};
-use serde_derive::{Deserialize, Serialize};
+use futures::compat::Future01CompatExt;
+use futures::FutureExt;
+use futures::TryFutureExt;
+use futures_old::Future;
+use futures_old::IntoFuture;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
-use blobstore::{Blobstore, BlobstoreKeyParam, BlobstoreKeySource, DEFAULT_PUT_BEHAVIOUR};
-use blobstore_sync_queue::{
-    BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey, SqlBlobstoreSyncQueue,
-};
+use blobstore::Blobstore;
+use blobstore::BlobstoreKeyParam;
+use blobstore::BlobstoreKeySource;
+use blobstore::DEFAULT_PUT_BEHAVIOUR;
+use blobstore_sync_queue::BlobstoreSyncQueue;
+use blobstore_sync_queue::BlobstoreSyncQueueEntry;
+use blobstore_sync_queue::OperationKey;
+use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use cmdlib::args;
 use context::CoreContext;
 use fileblob::Fileblob;
 use manifoldblob::ManifoldBlob;
-use metaconfig_types::{
-    BlobConfig, BlobstoreId, MetadataDatabaseConfig, MultiplexId, RemoteDatabaseConfig,
-    RemoteMetadataDatabaseConfig, StorageConfig,
-};
-use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
+use metaconfig_types::BlobConfig;
+use metaconfig_types::BlobstoreId;
+use metaconfig_types::MetadataDatabaseConfig;
+use metaconfig_types::MultiplexId;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
+use metaconfig_types::StorageConfig;
+use mononoke_types::BlobstoreBytes;
+use mononoke_types::DateTime;
+use mononoke_types::RepositoryId;
 use sql_construct::facebook::FbSqlConstruct;
-use sql_ext::facebook::{MysqlOptions, ReadConnectionType};
+use sql_ext::facebook::MysqlOptions;
+use sql_ext::facebook::ReadConnectionType;
 
 /// Save manifold continuation token each once per `PRESERVE_STATE_RATIO` entries
 const PRESERVE_STATE_RATIO: usize = 10_000;

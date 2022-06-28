@@ -5,43 +5,70 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use ::manifest::Entry;
-use anyhow::{bail, Context, Error};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{Compat, FutureFailureErrorExt, StreamFailureErrorExt};
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    FutureExt, StreamExt, TryFutureExt,
-};
-use futures_01_ext::{
-    try_boxfuture, try_boxstream, BoxFuture, BoxStream, FutureExt as _, StreamExt as _,
-};
+use failure_ext::Compat;
+use failure_ext::FutureFailureErrorExt;
+use failure_ext::StreamFailureErrorExt;
+use futures::compat::Future01CompatExt;
+use futures::compat::Stream01CompatExt;
+use futures::FutureExt;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures_01_ext::try_boxfuture;
+use futures_01_ext::try_boxstream;
+use futures_01_ext::BoxFuture;
+use futures_01_ext::BoxStream;
+use futures_01_ext::FutureExt as _;
+use futures_01_ext::StreamExt as _;
 use futures_ext::FbTryFutureExt;
-use futures_old::{
-    future::{self, SharedItem},
-    stream::{self, Stream},
-    Future, IntoFuture,
-};
+use futures_old::future::SharedItem;
+use futures_old::future::{self};
+use futures_old::stream::Stream;
+use futures_old::stream::{self};
+use futures_old::Future;
+use futures_old::IntoFuture;
 use tokio::runtime::Handle;
 
 use blobrepo::BlobRepo;
-use blobrepo_hg::{create_bonsai_changeset_hook, ChangesetHandle, CreateChangeset};
+use blobrepo_hg::create_bonsai_changeset_hook;
+use blobrepo_hg::ChangesetHandle;
+use blobrepo_hg::CreateChangeset;
 use lfs_import_lib::lfs_upload;
-use mercurial_revlog::{manifest, revlog::RevIdx, RevlogChangeset, RevlogEntry, RevlogRepo};
-use mercurial_types::{
-    blobs::{
-        ChangesetMetadata, ContentBlobMeta, File, HgBlobChangeset, LFSContent,
-        UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
-    },
-    HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath, Type,
-    NULL_HASH,
-};
-use mononoke_types::{BonsaiChangeset, ContentMetadata};
+use mercurial_revlog::manifest;
+use mercurial_revlog::revlog::RevIdx;
+use mercurial_revlog::RevlogChangeset;
+use mercurial_revlog::RevlogEntry;
+use mercurial_revlog::RevlogRepo;
+use mercurial_types::blobs::ChangesetMetadata;
+use mercurial_types::blobs::ContentBlobMeta;
+use mercurial_types::blobs::File;
+use mercurial_types::blobs::HgBlobChangeset;
+use mercurial_types::blobs::LFSContent;
+use mercurial_types::blobs::UploadHgFileContents;
+use mercurial_types::blobs::UploadHgFileEntry;
+use mercurial_types::blobs::UploadHgNodeHash;
+use mercurial_types::blobs::UploadHgTreeEntry;
+use mercurial_types::HgBlob;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::MPath;
+use mercurial_types::RepoPath;
+use mercurial_types::Type;
+use mercurial_types::NULL_HASH;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ContentMetadata;
 use phases::PhasesArc;
 use slog::info;
 

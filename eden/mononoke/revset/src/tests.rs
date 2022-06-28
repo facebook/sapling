@@ -6,14 +6,17 @@
  */
 
 use crate::BonsaiNodeStream;
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use futures_ext::StreamExt;
-use mononoke_types::{ChangesetId, Generation};
-use revset_test_helper::{single_changeset_id, string_to_bonsai};
+use mononoke_types::ChangesetId;
+use mononoke_types::Generation;
+use revset_test_helper::single_changeset_id;
+use revset_test_helper::string_to_bonsai;
 use std::any::Any;
 use std::collections::HashMap;
 

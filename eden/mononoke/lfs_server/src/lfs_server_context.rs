@@ -7,42 +7,56 @@
 
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::fmt::{Arguments, Write};
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
-};
+use std::fmt::Arguments;
+use std::fmt::Write;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::Mutex;
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use bytes::Bytes;
 use cached_config::ConfigHandle;
-use futures::{
-    future,
-    stream::{Stream, StreamExt, TryStreamExt},
-};
-use gotham::state::{FromState, State};
+use futures::future;
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use gotham::state::FromState;
+use gotham::state::State;
 use gotham_derive::StateData;
-use gotham_ext::{body_ext::BodyExt, middleware::ClientIdentity};
-use http::{
-    header::HeaderMap,
-    uri::{Authority, Parts, PathAndQuery, Scheme, Uri},
-};
-use hyper::{header, Body, Request};
-use permission_checker::{ArcPermissionChecker, MononokeIdentitySet};
+use gotham_ext::body_ext::BodyExt;
+use gotham_ext::middleware::ClientIdentity;
+use http::header::HeaderMap;
+use http::uri::Authority;
+use http::uri::Parts;
+use http::uri::PathAndQuery;
+use http::uri::Scheme;
+use http::uri::Uri;
+use hyper::header;
+use hyper::Body;
+use hyper::Request;
+use permission_checker::ArcPermissionChecker;
+use permission_checker::MononokeIdentitySet;
 use slog::Logger;
 use tokio::runtime::Handle;
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use hyper::{client::HttpConnector, Client};
+use hyper::client::HttpConnector;
+use hyper::Client;
 use hyper_openssl::HttpsConnector;
-use lfs_protocol::{RequestBatch, RequestObject, ResponseBatch};
+use lfs_protocol::RequestBatch;
+use lfs_protocol::RequestObject;
+use lfs_protocol::ResponseBatch;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ContentId;
 
 use crate::config::ServerConfig;
-use crate::errors::{ErrorKind, LfsServerContextErrorKind};
-use crate::middleware::{LfsMethod, RequestContext};
+use crate::errors::ErrorKind;
+use crate::errors::LfsServerContextErrorKind;
+use crate::middleware::LfsMethod;
+use crate::middleware::RequestContext;
 
 pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
 
@@ -527,7 +541,8 @@ mod test {
     use anyhow::anyhow;
     use fbinit::FacebookInit;
     use lfs_protocol::Sha256 as LfsSha256;
-    use mononoke_types::{hash::Sha256, ContentId};
+    use mononoke_types::hash::Sha256;
+    use mononoke_types::ContentId;
     use permission_checker::PermissionCheckerBuilder;
     use std::str::FromStr;
     use test_repo_factory::TestRepoFactory;

@@ -5,27 +5,38 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, bail, Error};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Error;
 use cachelib::VolatileLruCachePool;
 use changesets::Changesets;
-use context::{CoreContext, PerfCounterType};
+use context::CoreContext;
+use context::PerfCounterType;
 use fbinit::FacebookInit;
 use futures::try_join;
 use manifest::Entry;
 use maplit::hashset;
-use mononoke_types::{
-    hash::Blake2, path_bytes_from_mpath, ChangesetId, FileUnodeId, MPath, ManifestUnodeId,
-    RepositoryId,
-};
-use path_hash::{PathHash, PathHashBytes};
-use sql::{queries, Connection};
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use mononoke_types::hash::Blake2;
+use mononoke_types::path_bytes_from_mpath;
+use mononoke_types::ChangesetId;
+use mononoke_types::FileUnodeId;
+use mononoke_types::MPath;
+use mononoke_types::ManifestUnodeId;
+use mononoke_types::RepositoryId;
+use path_hash::PathHash;
+use path_hash::PathHashBytes;
+use sql::queries;
+use sql::Connection;
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use std::collections::HashSet;
 use std::sync::Arc;
 
 mod caching;
-use crate::caching::{CacheHandlers, GetCsIdsKey, RenameKey};
+use crate::caching::CacheHandlers;
+use crate::caching::GetCsIdsKey;
+use crate::caching::RenameKey;
 #[cfg(test)]
 mod tests;
 

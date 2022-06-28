@@ -7,16 +7,25 @@
 
 use std::collections::HashMap;
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::anyhow;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::impl_bonsai_derived_via_manager;
-use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
-use mononoke_types::{
-    BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, FsnodeId, MPath,
-};
+use derived_data_manager::dependencies;
+use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivationContext;
+use mononoke_types::BlobstoreBytes;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::FileType;
+use mononoke_types::FsnodeId;
+use mononoke_types::MPath;
 
 use crate::batch::derive_fsnode_in_batch;
 use crate::derive::derive_fsnode;
@@ -172,18 +181,26 @@ mod test {
     use derived_data::BonsaiDerived;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
+    use fixtures::BranchEven;
+    use fixtures::BranchUneven;
+    use fixtures::BranchWide;
+    use fixtures::Linear;
+    use fixtures::ManyDiamonds;
+    use fixtures::ManyFilesDirs;
+    use fixtures::MergeEven;
+    use fixtures::MergeUneven;
     use fixtures::TestRepoFixture;
-    use fixtures::{
-        BranchEven, BranchUneven, BranchWide, Linear, ManyDiamonds, ManyFilesDirs, MergeEven,
-        MergeUneven, UnsharedMergeEven, UnsharedMergeUneven,
-    };
+    use fixtures::UnsharedMergeEven;
+    use fixtures::UnsharedMergeUneven;
     use futures::compat::Stream01CompatExt;
     use futures::future::Future;
-    use futures::stream::{Stream, TryStreamExt};
+    use futures::stream::Stream;
+    use futures::stream::TryStreamExt;
     use futures::try_join;
     use manifest::Entry;
     use mercurial_derived_data::DeriveHgChangeset;
-    use mercurial_types::{HgChangesetId, HgManifestId};
+    use mercurial_types::HgChangesetId;
+    use mercurial_types::HgManifestId;
     use revset::AncestorsNodeStream;
     use tokio::runtime::Runtime;
 

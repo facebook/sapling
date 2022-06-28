@@ -5,23 +5,29 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use async_trait::async_trait;
-use futures::{
-    stream::{self, BoxStream},
-    StreamExt, TryStreamExt,
-};
+use futures::stream::BoxStream;
+use futures::stream::{self};
+use futures::StreamExt;
+use futures::TryStreamExt;
 
 use cloned::cloned;
-use edenapi_types::{HistoryRequest, HistoryResponseChunk, WireHistoryEntry};
-use mercurial_types::{HgFileNodeId, HgNodeHash};
+use edenapi_types::HistoryRequest;
+use edenapi_types::HistoryResponseChunk;
+use edenapi_types::WireHistoryEntry;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgNodeHash;
 use mononoke_api_hg::HgRepoContext;
 use types::Key;
 
 use crate::errors::ErrorKind;
 use crate::utils::to_mpath;
 
-use super::{EdenApiHandler, EdenApiMethod, HandlerResult};
+use super::EdenApiHandler;
+use super::EdenApiMethod;
+use super::HandlerResult;
 
 type HistoryStream = BoxStream<'static, Result<WireHistoryEntry, Error>>;
 

@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    collections::{BTreeSet, HashMap, HashSet, VecDeque},
-    hash::Hash,
-    iter,
-};
+use std::collections::BTreeSet;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
+use std::hash::Hash;
+use std::iter;
 
 /// Sort nodes of DAG topologically. Implemented as depth-first search with tail-call
 /// eliminated. Complexity: `O(N)` from number of nodes.
@@ -175,7 +176,8 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use maplit::{hashmap, hashset};
+    use maplit::hashmap;
+    use maplit::hashset;
 
     #[test]
     fn sort_topological_test() {

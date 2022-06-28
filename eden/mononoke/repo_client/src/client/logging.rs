@@ -5,14 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use context::{CoreContext, PerfCounters};
-use futures_stats::{FutureStats, StreamStats};
+use context::CoreContext;
+use context::PerfCounters;
+use futures_stats::FutureStats;
+use futures_stats::StreamStats;
 use hgproto::GettreepackArgs;
 use iterhelpers::chunk_by_accumulation;
 use mercurial_types::HgManifestId;
 use mononoke_types::MPath;
+use scuba_ext::MononokeScubaSampleBuilder;
+use scuba_ext::ScubaValue;
 use scuba_ext::ScubaVerbosityLevel;
-use scuba_ext::{MononokeScubaSampleBuilder, ScubaValue};
 use std::collections::HashMap;
 use std::sync::Arc;
 

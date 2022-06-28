@@ -7,14 +7,19 @@
 
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
 use clap::Args;
 use context::CoreContext;
-use ephemeral_blobstore::{BubbleId, RepoEphemeralStoreRef};
-use filestore::{Alias, FetchKey};
+use ephemeral_blobstore::BubbleId;
+use ephemeral_blobstore::RepoEphemeralStoreRef;
+use filestore::Alias;
+use filestore::FetchKey;
 use repo_blobstore::RepoBlobstoreRef;
 
-use super::{FilestoreItemIdArgs, Repo};
+use super::FilestoreItemIdArgs;
+use super::Repo;
 
 #[derive(Args)]
 pub struct FilestoreVerifyArgs {

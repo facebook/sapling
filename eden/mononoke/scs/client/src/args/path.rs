@@ -7,7 +7,9 @@
 
 //! Arguments for path selection.
 
-use clap::{App, Arg, ArgMatches};
+use clap::App;
+use clap::Arg;
+use clap::ArgMatches;
 
 const ARG_PATH: &str = "PATH";
 

@@ -10,5 +10,7 @@ mod sql;
 #[cfg(test)]
 mod test;
 
-pub use crate::caching::{get_cache_key, CachingChangesets};
-pub use crate::sql::{SqlChangesets, SqlChangesetsBuilder};
+pub use crate::caching::get_cache_key;
+pub use crate::caching::CachingChangesets;
+pub use crate::sql::SqlChangesets;
+pub use crate::sql::SqlChangesetsBuilder;

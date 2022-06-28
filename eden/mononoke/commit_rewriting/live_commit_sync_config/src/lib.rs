@@ -5,17 +5,27 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::anyhow;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
-use cached_config::{ConfigHandle, ConfigStore};
-use commitsync::types::{RawCommitSyncAllVersions, RawCommitSyncConfigAllVersionsOneRepo};
+use cached_config::ConfigHandle;
+use cached_config::ConfigStore;
+use commitsync::types::RawCommitSyncAllVersions;
+use commitsync::types::RawCommitSyncConfigAllVersionsOneRepo;
 use metaconfig_parser::Convert;
-use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig};
+use metaconfig_types::CommitSyncConfig;
+use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::CommonCommitSyncConfig;
 use mononoke_types::RepositoryId;
-use pushredirect_enable::types::{MononokePushRedirectEnable, PushRedirectEnableState};
-use slog::{debug, error, Logger};
+use pushredirect_enable::types::MononokePushRedirectEnable;
+use pushredirect_enable::types::PushRedirectEnableState;
+use slog::debug;
+use slog::error;
+use slog::Logger;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 use thiserror::Error;
 
 pub const CONFIGERATOR_PUSHREDIRECT_ENABLE: &str = "scm/mononoke/pushredirect/enable";

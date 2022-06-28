@@ -7,10 +7,12 @@
 
 use anyhow::Context;
 use bytes::Bytes;
-use gotham::state::{FromState, State};
+use gotham::state::FromState;
+use gotham::state::State;
 use serde::Serialize;
 
-use gotham_ext::{error::HttpError, response::BytesBody};
+use gotham_ext::error::HttpError;
+use gotham_ext::response::BytesBody;
 
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;

@@ -5,31 +5,40 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use blobstore::Blobstore;
-use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey};
+use blobstore_sync_queue::BlobstoreSyncQueue;
+use blobstore_sync_queue::BlobstoreSyncQueueEntry;
+use blobstore_sync_queue::OperationKey;
 use context::CoreContext;
-use futures::{
-    future::{join_all, FutureExt, TryFutureExt},
-    stream::{self, TryStreamExt},
-};
-use futures_03_ext::{BufferedParams, FbStreamExt};
-use itertools::{Either, Itertools};
-use metaconfig_types::{BlobstoreId, MultiplexId};
-use mononoke_types::{BlobstoreBytes, DateTime};
-use rand::{thread_rng, Rng};
-use slog::{debug, info, warn};
-use std::{
-    collections::{HashMap, HashSet},
-    future::Future,
-    iter::Sum,
-    ops::Add,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    },
-    time::Duration,
-};
+use futures::future::join_all;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use futures_03_ext::BufferedParams;
+use futures_03_ext::FbStreamExt;
+use itertools::Either;
+use itertools::Itertools;
+use metaconfig_types::BlobstoreId;
+use metaconfig_types::MultiplexId;
+use mononoke_types::BlobstoreBytes;
+use mononoke_types::DateTime;
+use rand::thread_rng;
+use rand::Rng;
+use slog::debug;
+use slog::info;
+use slog::warn;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::future::Future;
+use std::iter::Sum;
+use std::ops::Add;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::Duration;
 
 #[cfg(test)]
 mod tests;

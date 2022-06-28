@@ -5,38 +5,51 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
-use blobstore::{Blobstore, StoreLoadable};
-use bonsai_hg_mapping::{ArcBonsaiHgMapping, MemWritesBonsaiHgMapping};
+use blobstore::Blobstore;
+use blobstore::StoreLoadable;
+use bonsai_hg_mapping::ArcBonsaiHgMapping;
+use bonsai_hg_mapping::MemWritesBonsaiHgMapping;
 use borrowed::borrowed;
 use cacheblob::MemWritesBlobstore;
 use clap_old::ArgMatches;
-use cmdlib::args::{self, MononokeMatches};
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use derived_data_manager::BonsaiDerivable;
-use derived_data_utils::{derived_data_utils, DerivedUtils, DERIVED_DATA_DEPS};
+use derived_data_utils::derived_data_utils;
+use derived_data_utils::DerivedUtils;
+use derived_data_utils::DERIVED_DATA_DEPS;
 use fsnodes::RootFsnodeId;
-use futures::{
-    future::{try_join, try_join_all},
-    stream, StreamExt, TryStreamExt,
-};
-use manifest::{
-    find_intersection_of_diffs, find_intersection_of_diffs_and_parents, Entry, Manifest,
-};
+use futures::future::try_join;
+use futures::future::try_join_all;
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use manifest::find_intersection_of_diffs;
+use manifest::find_intersection_of_diffs_and_parents;
+use manifest::Entry;
+use manifest::Manifest;
 use mercurial_derived_data::MappedHgChangesetId;
-use mononoke_types::{BlobstoreKey, ChangesetId};
+use mononoke_types::BlobstoreKey;
+use mononoke_types::ChangesetId;
 use readonlyblob::ReadOnlyBlobstore;
 use skeleton_manifest::RootSkeletonManifestId;
-use slog::{info, warn};
-use std::sync::{Arc, Once};
+use slog::info;
+use slog::warn;
+use std::sync::Arc;
+use std::sync::Once;
 use unodes::RootUnodeManifestId;
 
 use crate::commit_discovery::CommitDiscoveryOptions;
 use crate::regenerate;
-use crate::{ARG_DERIVED_DATA_TYPE, ARG_VALIDATE_CHUNK_SIZE};
+use crate::ARG_DERIVED_DATA_TYPE;
+use crate::ARG_VALIDATE_CHUNK_SIZE;
 
 pub async fn validate(
     ctx: &CoreContext,

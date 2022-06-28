@@ -5,22 +5,26 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Result};
+use anyhow::bail;
+use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, OverwriteStatus, PutBehaviour,
-};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreMetadata;
+use blobstore::BlobstorePutOps;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
 use context::CoreContext;
 use futures::channel::oneshot;
 use lock_ext::LockExt;
 use mononoke_types::BlobstoreBytes;
-use std::{
-    collections::{HashMap, VecDeque},
-    fmt,
-    future::Future,
-    sync::{Arc, Mutex},
-    time::SystemTime,
-};
+use std::collections::HashMap;
+use std::collections::VecDeque;
+use std::fmt;
+use std::future::Future;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::SystemTime;
 
 pub struct Tickable<T> {
     pub storage: Arc<Mutex<HashMap<String, T>>>,

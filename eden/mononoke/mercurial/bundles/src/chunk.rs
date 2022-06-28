@@ -5,9 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Error, Result};
-use bytes_old::{BufMut, Bytes, BytesMut};
-use tokio_codec::{Decoder, Encoder};
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
+use bytes_old::BufMut;
+use bytes_old::Bytes;
+use bytes_old::BytesMut;
+use tokio_codec::Decoder;
+use tokio_codec::Encoder;
 
 use crate::errors::ErrorKind;
 use crate::utils::BytesExt;
@@ -158,9 +163,14 @@ mod test {
 
     use assert_matches::assert_matches;
     use futures::compat::Future01CompatExt;
-    use futures_old::{stream, Future, Sink, Stream};
-    use quickcheck::{quickcheck, TestResult};
-    use tokio_codec::{FramedRead, FramedWrite};
+    use futures_old::stream;
+    use futures_old::Future;
+    use futures_old::Sink;
+    use futures_old::Stream;
+    use quickcheck::quickcheck;
+    use quickcheck::TestResult;
+    use tokio_codec::FramedRead;
+    use tokio_codec::FramedWrite;
 
     use super::*;
 

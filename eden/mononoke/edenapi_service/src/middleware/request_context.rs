@@ -5,19 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use gotham::state::{FromState, State};
+use gotham::state::FromState;
+use gotham::state::State;
 use gotham_derive::StateData;
-use hyper::{Body, Response};
+use hyper::Body;
+use hyper::Response;
 use rate_limiting::RateLimitEnvironment;
-use slog::{o, Logger};
+use slog::o;
+use slog::Logger;
 use std::sync::Arc;
 
-use context::{CoreContext, SessionContainer};
+use context::CoreContext;
+use context::SessionContainer;
 use fbinit::FacebookInit;
-use gotham_ext::{
-    middleware::{ClientIdentity, Middleware},
-    state_ext::StateExt,
-};
+use gotham_ext::middleware::ClientIdentity;
+use gotham_ext::middleware::Middleware;
+use gotham_ext::state_ext::StateExt;
 use metadata::Metadata;
 use scuba_ext::MononokeScubaSampleBuilder;
 

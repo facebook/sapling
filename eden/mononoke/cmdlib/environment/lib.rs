@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 
-use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
+use blobstore_factory::BlobstoreOptions;
+use blobstore_factory::ReadOnlyStorage;
 use cached_config::ConfigStore;
 use derived_data_remote::RemoteDerivationOptions;
 use fbinit::FacebookInit;

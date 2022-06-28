@@ -5,10 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
-use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, RepoPath};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::RepoPath;
 use mononoke_types::hash;
 use quickcheck_arbitrary_derive::Arbitrary;
 

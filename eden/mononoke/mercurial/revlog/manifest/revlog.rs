@@ -6,22 +6,43 @@
  */
 
 use std::collections::BTreeMap;
-use std::io::{self, Write};
+use std::io::Write;
+use std::io::{self};
 use std::str;
 use std::vec;
 
-use anyhow::{bail, ensure, format_err, Context, Error, Result};
-use futures::future::{self, Future, IntoFuture};
-use futures::stream::{self, Stream};
-use futures::{Async, Poll};
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
+use futures::future::Future;
+use futures::future::IntoFuture;
+use futures::future::{self};
+use futures::stream::Stream;
+use futures::stream::{self};
+use futures::Async;
+use futures::Poll;
+use futures_ext::BoxFuture;
+use futures_ext::BoxStream;
+use futures_ext::FutureExt;
+use futures_ext::StreamExt;
 
 use crate::errors::ErrorKind;
+use mercurial_types::blobs::file;
 use mercurial_types::manifest::Type;
-use mercurial_types::{
-    blobs::file, FileType, HgBlob, HgBlobNode, HgEntryId, HgFileNodeId, HgManifestId, HgNodeHash,
-    HgParents, MPath, MPathElement, RepoPath,
-};
+use mercurial_types::FileType;
+use mercurial_types::HgBlob;
+use mercurial_types::HgBlobNode;
+use mercurial_types::HgEntryId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::HgParents;
+use mercurial_types::MPath;
+use mercurial_types::MPathElement;
+use mercurial_types::RepoPath;
 
 use crate::RevlogRepo;
 

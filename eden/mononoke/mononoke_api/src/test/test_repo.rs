@@ -9,34 +9,55 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use blobstore::Loadable;
 use bytes::Bytes;
 use cacheblob::InProcessLease;
-use chrono::{FixedOffset, TimeZone};
+use chrono::FixedOffset;
+use chrono::TimeZone;
 use fbinit::FacebookInit;
+use fixtures::BranchUneven;
+use fixtures::Linear;
+use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
-use fixtures::{BranchUneven, Linear, ManyFilesDirs};
 use futures::stream::TryStreamExt;
 use maplit::hashmap;
 
-use crate::{
-    BookmarkFreshness, ChangesetFileOrdering, ChangesetId, ChangesetIdPrefix,
-    ChangesetPrefixSpecifier, ChangesetSpecifier, ChangesetSpecifierPrefixResolution, CoreContext,
-    FileId, FileMetadata, FileType, HgChangesetId, HgChangesetIdPrefix, Mononoke, MononokePath,
-    TreeEntry, TreeId,
-};
-use cross_repo_sync::{update_mapping_with_version, CommitSyncRepos, CommitSyncer};
+use crate::BookmarkFreshness;
+use crate::ChangesetFileOrdering;
+use crate::ChangesetId;
+use crate::ChangesetIdPrefix;
+use crate::ChangesetPrefixSpecifier;
+use crate::ChangesetSpecifier;
+use crate::ChangesetSpecifierPrefixResolution;
+use crate::CoreContext;
+use crate::FileId;
+use crate::FileMetadata;
+use crate::FileType;
+use crate::HgChangesetId;
+use crate::HgChangesetIdPrefix;
+use crate::Mononoke;
+use crate::MononokePath;
+use crate::TreeEntry;
+use crate::TreeId;
+use cross_repo_sync::update_mapping_with_version;
+use cross_repo_sync::CommitSyncRepos;
+use cross_repo_sync::CommitSyncer;
 use cross_repo_sync_test_utils::init_small_large_repo;
 use live_commit_sync_config::TestLiveCommitSyncConfigSource;
-use metaconfig_types::{CommitSyncConfigVersion, DefaultSmallToLargeCommitSyncPathAction};
-use mononoke_types::{
-    hash::{GitSha1, RichGitSha1, Sha1, Sha256},
-    MPath,
-};
+use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+use mononoke_types::hash::GitSha1;
+use mononoke_types::hash::RichGitSha1;
+use mononoke_types::hash::Sha1;
+use mononoke_types::hash::Sha256;
+use mononoke_types::MPath;
 use slog::info;
 use synced_commit_mapping::SyncedCommitMapping;
-use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
+use tests_utils::bookmark;
+use tests_utils::resolve_cs_id;
+use tests_utils::CreateCommitContext;
 
 #[fbinit::test]
 async fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {

@@ -8,16 +8,24 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 
-use manifest::{Entry, Manifest};
-use mercurial_types::{
-    fetch_manifest_envelope, fetch_manifest_envelope_opt, HgBlobEnvelope, HgFileNodeId,
-    HgManifestEnvelope, HgManifestId, HgNodeHash, HgParents,
-};
+use manifest::Entry;
+use manifest::Manifest;
+use mercurial_types::fetch_manifest_envelope;
+use mercurial_types::fetch_manifest_envelope_opt;
+use mercurial_types::HgBlobEnvelope;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestEnvelope;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::HgParents;
 use mononoke_api::errors::MononokeError;
-use mononoke_types::{file_change::FileType, path::MPathElement};
+use mononoke_types::file_change::FileType;
+use mononoke_types::path::MPathElement;
 use revisionstore_types::Metadata;
 
-use super::{HgDataContext, HgDataId, HgRepoContext};
+use super::HgDataContext;
+use super::HgDataId;
+use super::HgRepoContext;
 
 #[derive(Clone)]
 pub struct HgTreeContext {
@@ -125,7 +133,8 @@ impl HgDataId for HgManifestId {
 mod tests {
     use super::*;
 
-    use std::{str::FromStr, sync::Arc};
+    use std::str::FromStr;
+    use std::sync::Arc;
 
     use blobstore::Loadable;
     use context::CoreContext;
@@ -133,10 +142,9 @@ mod tests {
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use mercurial_types::NULL_HASH;
-    use mononoke_api::{
-        repo::{Repo, RepoContext},
-        specifiers::HgChangesetId,
-    };
+    use mononoke_api::repo::Repo;
+    use mononoke_api::repo::RepoContext;
+    use mononoke_api::specifiers::HgChangesetId;
 
     use crate::RepoContextHgExt;
 

@@ -10,9 +10,13 @@
 pub use session_id::SessionId;
 
 pub use crate::core::CoreContext;
-pub use crate::logging::{LoggingContainer, SamplingKey};
-pub use crate::perf_counters::{PerfCounterType, PerfCounters};
-pub use crate::session::{SessionClass, SessionContainer, SessionContainerBuilder};
+pub use crate::logging::LoggingContainer;
+pub use crate::logging::SamplingKey;
+pub use crate::perf_counters::PerfCounterType;
+pub use crate::perf_counters::PerfCounters;
+pub use crate::session::SessionClass;
+pub use crate::session::SessionContainer;
+pub use crate::session::SessionContainerBuilder;
 
 mod core;
 mod logging;

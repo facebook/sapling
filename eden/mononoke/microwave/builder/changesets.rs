@@ -7,15 +7,19 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
-use changesets::{ChangesetEntry, ChangesetInsert, Changesets, SortOrder};
+use changesets::ChangesetEntry;
+use changesets::ChangesetInsert;
+use changesets::Changesets;
+use changesets::SortOrder;
 use cloned::cloned;
 use context::CoreContext;
 use futures::channel::mpsc::Sender;
 use futures::sink::SinkExt;
 use futures::stream::BoxStream;
-use mononoke_types::{
-    ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
-};
+use mononoke_types::ChangesetId;
+use mononoke_types::ChangesetIdPrefix;
+use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::RepositoryId;
 use std::sync::Arc;
 
 #[derive(Clone)]

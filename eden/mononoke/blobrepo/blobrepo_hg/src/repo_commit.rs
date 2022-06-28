@@ -5,35 +5,55 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Context, Error, Result};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use cloned::cloned;
-use futures::{
-    channel::oneshot,
-    future::{self, BoxFuture, FutureExt, TryFutureExt},
-    stream::{self, BoxStream, TryStreamExt},
-    StreamExt,
-};
-use futures_ext::{future::TryShared, FbTryFutureExt};
+use futures::channel::oneshot;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream::BoxStream;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use futures::StreamExt;
+use futures_ext::future::TryShared;
+use futures_ext::FbTryFutureExt;
 use futures_stats::TimedTryFutureExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::mem;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 
-use ::manifest::{find_intersection_of_diffs, Entry};
+use ::manifest::find_intersection_of_diffs;
+use ::manifest::Entry;
 pub use blobrepo_common::changed_files::compute_changed_files;
-use blobstore::{Blobstore, ErrorKind as BlobstoreError, Loadable};
+use blobstore::Blobstore;
+use blobstore::ErrorKind as BlobstoreError;
+use blobstore::Loadable;
 use context::CoreContext;
-use mercurial_types::{
-    blobs::{
-        fetch_manifest_envelope, ChangesetMetadata, HgBlobChangeset, HgBlobEnvelope,
-        HgChangesetContent,
-    },
-    nodehash::{HgFileNodeId, HgManifestId},
-    HgChangesetId, HgNodeHash, HgParents, MPath, RepoPath, NULL_HASH,
-};
-use mononoke_types::{self, BlobstoreKey, BonsaiChangeset, ChangesetId};
+use mercurial_types::blobs::fetch_manifest_envelope;
+use mercurial_types::blobs::ChangesetMetadata;
+use mercurial_types::blobs::HgBlobChangeset;
+use mercurial_types::blobs::HgBlobEnvelope;
+use mercurial_types::blobs::HgChangesetContent;
+use mercurial_types::nodehash::HgFileNodeId;
+use mercurial_types::nodehash::HgManifestId;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::HgParents;
+use mercurial_types::MPath;
+use mercurial_types::RepoPath;
+use mercurial_types::NULL_HASH;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::{self};
 
 use crate::errors::*;
 use crate::BlobRepo;

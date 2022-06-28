@@ -5,17 +5,25 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
+use std::fmt::{self};
 
-use anyhow::{bail, Context, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
 use bytes::Bytes;
 use fbthrift::compact_protocol;
-use quickcheck::{single_shrinker, Arbitrary, Gen};
+use quickcheck::single_shrinker;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 
-use crate::blob::{Blob, BlobstoreValue, RawBundle2Blob};
+use crate::blob::Blob;
+use crate::blob::BlobstoreValue;
+use crate::blob::RawBundle2Blob;
 use crate::errors::ErrorKind;
 use crate::thrift;
-use crate::typed_hash::{RawBundle2Id, RawBundle2IdContext};
+use crate::typed_hash::RawBundle2Id;
+use crate::typed_hash::RawBundle2IdContext;
 
 /// An enum representing contents of a raw bundle2 blob
 #[derive(Clone, Eq, PartialEq)]

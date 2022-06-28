@@ -5,23 +5,32 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
-use cacheblob::{dummy::DummyLease, LeaseOps};
-use clap_old::{App, Arg, ArgMatches};
+use cacheblob::dummy::DummyLease;
+use cacheblob::LeaseOps;
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
-use derived_data_utils::{build_derive_graph, derived_data_utils, DeriveGraph, ThinOut};
-use futures::{stream, FutureExt, StreamExt, TryStreamExt};
+use derived_data_utils::build_derive_graph;
+use derived_data_utils::derived_data_utils;
+use derived_data_utils::DeriveGraph;
+use derived_data_utils::ThinOut;
+use futures::stream;
+use futures::FutureExt;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
 use slog::debug;
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
 
 const ARG_BACKFILL: &str = "backfill";
 const ARG_BATCH_SIZE: &str = "batch-size";

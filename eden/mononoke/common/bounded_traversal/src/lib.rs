@@ -20,12 +20,13 @@ mod dag;
 pub use dag::bounded_traversal_dag;
 
 mod stream;
-pub use stream::{bounded_traversal_stream, bounded_traversal_stream2, limited_by_key_shardable};
+pub use stream::bounded_traversal_stream;
+pub use stream::bounded_traversal_stream2;
+pub use stream::limited_by_key_shardable;
 
 mod ordered_stream;
-pub use ordered_stream::{
-    bounded_traversal_limited_ordered_stream, bounded_traversal_ordered_stream,
-};
+pub use ordered_stream::bounded_traversal_limited_ordered_stream;
+pub use ordered_stream::bounded_traversal_ordered_stream;
 
 mod common;
 pub use common::OrderedTraversal;

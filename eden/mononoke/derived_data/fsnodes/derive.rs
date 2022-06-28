@@ -5,31 +5,53 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::{format_err, Context, Error, Result};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use ascii::AsciiString;
-use blobstore::{Blobstore, Loadable};
+use blobstore::Blobstore;
+use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
 use digest::Digest;
-use filestore::{get_metadata, FetchKey};
+use filestore::get_metadata;
+use filestore::FetchKey;
 use futures::channel::mpsc;
-use futures::future::{BoxFuture, FutureExt};
-use futures::stream::{FuturesOrdered, FuturesUnordered, TryStreamExt};
-use manifest::{
-    derive_manifest_with_io_sender, derive_manifests_for_simple_stack_of_commits, Entry, LeafInfo,
-    ManifestChanges, TreeInfo,
-};
-use mononoke_types::fsnode::{Fsnode, FsnodeDirectory, FsnodeEntry, FsnodeFile, FsnodeSummary};
-use mononoke_types::hash::{Sha1, Sha256};
-use mononoke_types::{
-    BlobstoreKey, BlobstoreValue, ChangesetId, ContentId, ContentMetadata, FileType, FsnodeId,
-};
-use mononoke_types::{MPath, MPathElement};
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::stream::FuturesOrdered;
+use futures::stream::FuturesUnordered;
+use futures::stream::TryStreamExt;
+use manifest::derive_manifest_with_io_sender;
+use manifest::derive_manifests_for_simple_stack_of_commits;
+use manifest::Entry;
+use manifest::LeafInfo;
+use manifest::ManifestChanges;
+use manifest::TreeInfo;
+use mononoke_types::fsnode::Fsnode;
+use mononoke_types::fsnode::FsnodeDirectory;
+use mononoke_types::fsnode::FsnodeEntry;
+use mononoke_types::fsnode::FsnodeFile;
+use mononoke_types::fsnode::FsnodeSummary;
+use mononoke_types::hash::Sha1;
+use mononoke_types::hash::Sha256;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::BlobstoreValue;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::ContentMetadata;
+use mononoke_types::FileType;
+use mononoke_types::FsnodeId;
+use mononoke_types::MPath;
+use mononoke_types::MPathElement;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::FsnodeDerivationError;
@@ -459,10 +481,12 @@ async fn check_fsnode_leaf(
 mod test {
     use super::*;
     use crate::mapping::get_file_changes;
-    use derived_data_test_utils::{bonsai_changeset_from_hg, iterate_all_manifest_entries};
+    use derived_data_test_utils::bonsai_changeset_from_hg;
+    use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
+    use fixtures::Linear;
+    use fixtures::ManyFilesDirs;
     use fixtures::TestRepoFixture;
-    use fixtures::{Linear, ManyFilesDirs};
     use repo_derived_data::RepoDerivedDataRef;
     use std::str::FromStr;
     use tokio::runtime::Runtime;

@@ -5,25 +5,36 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use commit_transformation::create_source_to_target_multi_mover;
 use context::CoreContext;
 use maplit::btreemap;
-use megarepo_config::{
-    MergeMode, MononokeMegarepoConfigs, SourceRevision, SyncConfigVersion, Target,
-    TestMononokeMegarepoConfigs,
-};
-use megarepo_mapping::{
-    CommitRemappingState, MegarepoMapping, Source, SourceMappingRules, SourceName, SyncTargetConfig,
-};
+use megarepo_config::MergeMode;
+use megarepo_config::MononokeMegarepoConfigs;
+use megarepo_config::SourceRevision;
+use megarepo_config::SyncConfigVersion;
+use megarepo_config::Target;
+use megarepo_config::TestMononokeMegarepoConfigs;
+use megarepo_mapping::CommitRemappingState;
+use megarepo_mapping::MegarepoMapping;
+use megarepo_mapping::Source;
+use megarepo_mapping::SourceMappingRules;
+use megarepo_mapping::SourceName;
+use megarepo_mapping::SyncTargetConfig;
 use mononoke_api::Mononoke;
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use mutable_renames::MutableRenames;
+use std::collections::BTreeMap;
 use std::path::Path;
-use std::{collections::BTreeMap, sync::Arc};
+use std::sync::Arc;
 use test_repo_factory::TestRepoFactory;
-use tests_utils::{bookmark, list_working_copy_utf8, resolve_cs_id, CreateCommitContext};
+use tests_utils::bookmark;
+use tests_utils::list_working_copy_utf8;
+use tests_utils::resolve_cs_id;
+use tests_utils::CreateCommitContext;
 
 pub struct MegarepoTest {
     pub blobrepo: BlobRepo,

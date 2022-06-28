@@ -7,14 +7,16 @@
 
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use fbinit::FacebookInit;
 #[cfg(fbcode_build)]
 use scribe::ScribeClient;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow as _; // oss uses anyhow
 

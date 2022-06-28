@@ -5,14 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use cached_config::{ConfigStore, ModificationTime, TestSource};
+use cached_config::ConfigStore;
+use cached_config::ModificationTime;
+use cached_config::TestSource;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use live_commit_sync_config::{
-    CfgrLiveCommitSyncConfig, CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS,
-    CONFIGERATOR_PUSHREDIRECT_ENABLE,
-};
-use std::{sync::Arc, thread, time::Duration};
+use live_commit_sync_config::CfgrLiveCommitSyncConfig;
+use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
+use live_commit_sync_config::CONFIGERATOR_PUSHREDIRECT_ENABLE;
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
 macro_rules! is_error_kind {
     ($result_expression:expr, $( $pattern:pat_param )|+ $( if $guard: expr )?) => {

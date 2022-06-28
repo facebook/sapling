@@ -7,14 +7,18 @@
 
 use std::collections::BTreeSet;
 
-use mononoke_types::blame::{
-    BlameLines as BlameLinesV1, BlameMaybeRejected, BlameRange as BlameRangeV1, BlameRejected,
-};
-use mononoke_types::blame_v2::{
-    BlameLine as BlameLineV2, BlameLineParent, BlameLines as BlameLinesV2,
-    BlameRange as BlameRangeV2, BlameRanges as BlameRangesV2, BlameV2,
-};
-use mononoke_types::{ChangesetId, MPath};
+use mononoke_types::blame::BlameLines as BlameLinesV1;
+use mononoke_types::blame::BlameMaybeRejected;
+use mononoke_types::blame::BlameRange as BlameRangeV1;
+use mononoke_types::blame::BlameRejected;
+use mononoke_types::blame_v2::BlameLine as BlameLineV2;
+use mononoke_types::blame_v2::BlameLineParent;
+use mononoke_types::blame_v2::BlameLines as BlameLinesV2;
+use mononoke_types::blame_v2::BlameRange as BlameRangeV2;
+use mononoke_types::blame_v2::BlameRanges as BlameRangesV2;
+use mononoke_types::blame_v2::BlameV2;
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 
 #[derive(Clone)]
 pub enum CompatBlame {

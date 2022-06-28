@@ -8,18 +8,26 @@
 //! This benchmark generates linear stack with specified parameters, and then
 //! measures how log it takes to convert it from Bonsai to Hg.
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::anyhow;
+use anyhow::Error;
+use anyhow::Result;
 use blobrepo::BlobRepo;
 use clap::Arg;
-use cmdlib::args::{self, get_and_parse_opt, ArgType, MononokeMatches};
+use cmdlib::args::get_and_parse_opt;
+use cmdlib::args::ArgType;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
 use context::CoreContext;
-use derived_data_utils::{derived_data_utils, POSSIBLE_DERIVED_TYPES};
+use derived_data_utils::derived_data_utils;
+use derived_data_utils::POSSIBLE_DERIVED_TYPES;
 use fbinit::FacebookInit;
 use futures::future::TryFutureExt;
 use futures_stats::futures03::TimedFutureExt;
 use rand::SeedableRng;
 use rand_xorshift::XorShiftRng;
-use simulated_repo::{new_benchmark_repo, DelaySettings, GenManifest};
+use simulated_repo::new_benchmark_repo;
+use simulated_repo::DelaySettings;
+use simulated_repo::GenManifest;
 use tokio::runtime::Runtime;
 
 const ARG_SEED: &str = "seed";

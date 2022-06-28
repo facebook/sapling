@@ -6,7 +6,9 @@
  */
 
 use abomonation::Abomonation;
-use cachelib::{get_cached, set_cached, VolatileLruCachePool};
+use cachelib::get_cached;
+use cachelib::set_cached;
+use cachelib::VolatileLruCachePool;
 use stats::prelude::*;
 use std::marker::PhantomData;
 

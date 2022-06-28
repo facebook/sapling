@@ -8,16 +8,22 @@
 //! This sub module contains functions to load hooks for the server
 
 use crate::errors::*;
-use crate::{ChangesetHook, FileHook, HookManager};
+use crate::ChangesetHook;
+use crate::FileHook;
+use crate::HookManager;
 use anyhow::Error;
 use fbinit::FacebookInit;
 use metaconfig_types::RepoConfig;
 use std::collections::HashSet;
 
 #[cfg(fbcode_build)]
-use crate::facebook::rust_hooks::{hook_name_to_changeset_hook, hook_name_to_file_hook};
+use crate::facebook::rust_hooks::hook_name_to_changeset_hook;
+#[cfg(fbcode_build)]
+use crate::facebook::rust_hooks::hook_name_to_file_hook;
 #[cfg(not(fbcode_build))]
-use crate::rust_hooks::{hook_name_to_changeset_hook, hook_name_to_file_hook};
+use crate::rust_hooks::hook_name_to_changeset_hook;
+#[cfg(not(fbcode_build))]
+use crate::rust_hooks::hook_name_to_file_hook;
 
 enum LoadedRustHook {
     ChangesetHook(Box<dyn ChangesetHook>),

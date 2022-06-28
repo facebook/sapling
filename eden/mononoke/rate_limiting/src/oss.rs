@@ -13,10 +13,13 @@ use async_trait::async_trait;
 use fbinit::FacebookInit;
 use permission_checker::MononokeIdentitySet;
 
-use crate::{
-    BoxRateLimiter, LoadCost, Metric, MononokeRateLimitConfig, RateLimitBody, RateLimitReason,
-    RateLimiter,
-};
+use crate::BoxRateLimiter;
+use crate::LoadCost;
+use crate::Metric;
+use crate::MononokeRateLimitConfig;
+use crate::RateLimitBody;
+use crate::RateLimitReason;
+use crate::RateLimiter;
 
 pub fn get_region_capacity(_datacenter_capacity: &BTreeMap<String, i32>) -> Option<i32> {
     None

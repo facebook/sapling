@@ -7,15 +7,26 @@
 
 #[cfg(fbcode_build)]
 use anyhow::format_err;
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use cached_config::ConfigStore;
-use clap::{ArgEnum, Args};
+use clap::ArgEnum;
+use clap::Args;
 use fbinit::FacebookInit;
 use observability::ObservabilityContext;
-use panichandler::{self, Fate};
-use slog::{debug, o, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
+use panichandler::Fate;
+use panichandler::{self};
+use slog::debug;
+use slog::o;
+use slog::Drain;
+use slog::Level;
+use slog::Logger;
+use slog::Never;
+use slog::SendSyncRefUnwindSafeDrain;
 use slog_ext::make_tag_filter_drain;
-use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV, GlogFormat};
+use slog_glog_fmt::kv_categorizer::FacebookCategorizer;
+use slog_glog_fmt::kv_defaults::FacebookKV;
+use slog_glog_fmt::GlogFormat;
 use slog_term::TermDecorator;
 use std::str::FromStr;
 use std::sync::Arc;

@@ -7,7 +7,8 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::stream::{FuturesUnordered, StreamExt};
+use futures::stream::FuturesUnordered;
+use futures::stream::StreamExt;
 use std::panic::RefUnwindSafe;
 use std::sync::Arc;
 

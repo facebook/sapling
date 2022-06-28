@@ -7,7 +7,8 @@
 
 use std::cell::RefCell;
 use std::ops::Deref;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::thread;
 use std::thread_local;
 use std::time::Duration;
@@ -15,10 +16,15 @@ use std::time::Duration;
 use anyhow::Result;
 use arc_swap::ArcSwap;
 use cached_config::ConfigHandle;
-use futures::{future::poll_fn, Future, FutureExt};
+use futures::future::poll_fn;
+use futures::Future;
+use futures::FutureExt;
 use once_cell::sync::OnceCell;
-use slog::{debug, warn, Logger};
-use std::sync::atomic::{AtomicBool, AtomicI64};
+use slog::debug;
+use slog::warn;
+use slog::Logger;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicI64;
 
 use tunables_derive::Tunables;
 use tunables_structs::Tunables as TunablesStruct;

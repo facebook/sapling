@@ -7,8 +7,10 @@
 
 // Support for lz4revlog
 
-use super::parser::{detach_result, Error};
-use nom::{self, IResult};
+use super::parser::detach_result;
+use super::parser::Error;
+use nom::IResult;
+use nom::{self};
 
 pub fn lz4_decompress<'a, P, R: 'a>(i: &'a [u8], parse: P) -> IResult<&'a [u8], R, Error>
 where

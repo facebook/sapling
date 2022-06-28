@@ -8,24 +8,37 @@
 use std::collections::HashSet;
 use std::io::Write;
 
-use anyhow::{bail, format_err, Error};
-use chrono::{naive::NaiveDateTime, DateTime};
-use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use futures::{future, stream};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Error;
+use chrono::naive::NaiveDateTime;
+use chrono::DateTime;
+use clap::App;
+use clap::AppSettings;
+use clap::Arg;
+use clap::ArgMatches;
+use clap::SubCommand;
+use futures::future;
+use futures::stream;
 use futures_util::stream::StreamExt;
 use source_control::types as thrift;
 
-use crate::args::commit_id::{
-    add_multiple_commit_id_args, add_scheme_args, get_commit_ids, get_request_schemes, get_schemes,
-    resolve_commit_ids,
-};
-use crate::args::path::{add_optional_path_args, get_path};
-use crate::args::repo::{add_repo_args, get_repo_specifier};
+use crate::args::commit_id::add_multiple_commit_id_args;
+use crate::args::commit_id::add_scheme_args;
+use crate::args::commit_id::get_commit_ids;
+use crate::args::commit_id::get_request_schemes;
+use crate::args::commit_id::get_schemes;
+use crate::args::commit_id::resolve_commit_ids;
+use crate::args::path::add_optional_path_args;
+use crate::args::path::get_path;
+use crate::args::repo::add_repo_args;
+use crate::args::repo::get_repo_specifier;
 use crate::connection::Connection;
-use crate::lib::commit::{
-    render_commit_info, render_commit_summary, CommitInfo as CommitInfoOutput,
-};
-use crate::render::{Render, RenderStream};
+use crate::lib::commit::render_commit_info;
+use crate::lib::commit::render_commit_summary;
+use crate::lib::commit::CommitInfo as CommitInfoOutput;
+use crate::render::Render;
+use crate::render::RenderStream;
 
 pub(super) const NAME: &str = "log";
 

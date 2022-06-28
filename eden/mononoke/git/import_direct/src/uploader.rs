@@ -7,23 +7,33 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
-use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobrepo::save_bonsai_changesets;
+use blobrepo::BlobRepo;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use filestore::{self, StoreRequest};
-use futures::stream::{self, Stream};
+use filestore::StoreRequest;
+use filestore::{self};
+use futures::stream::Stream;
+use futures::stream::{self};
 use futures_stats::TimedTryFutureExt;
 use git_hash::ObjectId;
-use import_tools::{
-    CommitMetadata, GitImportLfs, GitUploader, HGGIT_COMMIT_ID_EXTRA, HGGIT_MARKER_EXTRA,
-    HGGIT_MARKER_VALUE,
-};
-use mononoke_types::{
-    hash, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, FileType, MPath,
-};
-use slog::{debug, info};
+use import_tools::CommitMetadata;
+use import_tools::GitImportLfs;
+use import_tools::GitUploader;
+use import_tools::HGGIT_COMMIT_ID_EXTRA;
+use import_tools::HGGIT_MARKER_EXTRA;
+use import_tools::HGGIT_MARKER_VALUE;
+use mononoke_types::hash;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::FileChange;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
+use slog::debug;
+use slog::info;
 use sorted_vector_map::SortedVectorMap;
 use std::sync::Arc;
 

@@ -8,17 +8,22 @@
 use std::pin::Pin;
 
 use anyhow::Error;
-use async_compression::tokio::bufread::{GzipEncoder, ZstdEncoder};
+use async_compression::tokio::bufread::GzipEncoder;
+use async_compression::tokio::bufread::ZstdEncoder;
 use bytes::Bytes;
-use futures::{
-    future::Either,
-    stream::{BoxStream, Stream, StreamExt, TryStreamExt},
-    task::{Context, Poll},
-};
+use futures::future::Either;
+use futures::stream::BoxStream;
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::task::Context;
+use futures::task::Poll;
 use pin_project::pin_project;
-use tokio_util::io::{ReaderStream, StreamReader};
+use tokio_util::io::ReaderStream;
+use tokio_util::io::StreamReader;
 
-use crate::content_encoding::{ContentCompression, ContentEncoding};
+use crate::content_encoding::ContentCompression;
+use crate::content_encoding::ContentEncoding;
 
 /// Create a response stream using the specified Content-Encoding.
 ///

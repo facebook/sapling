@@ -5,17 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Result};
-use futures::{
-    future, ready,
-    task::{Context, Poll},
-    Stream, StreamExt, TryFutureExt, TryStreamExt,
-};
+use anyhow::anyhow;
+use anyhow::Result;
+use futures::future;
+use futures::ready;
+use futures::task::Context;
+use futures::task::Poll;
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
 use futures_ext::FbStreamExt;
 use pin_project::pin_project;
 use std::pin::Pin;
 
-use mercurial_bundles::changegroup::{Part, Section};
+use mercurial_bundles::changegroup::Part;
+use mercurial_bundles::changegroup::Section;
 
 use crate::changegroup::changeset::ChangesetDeltaed;
 use crate::changegroup::filelog::FilelogDeltaed;
@@ -186,7 +191,8 @@ mod tests {
     use super::*;
 
     use futures::stream::iter;
-    use itertools::{assert_equal, equal};
+    use itertools::assert_equal;
+    use itertools::equal;
 
     use mercurial_bundles::changegroup::CgDeltaChunk;
     use mercurial_types::MPath;

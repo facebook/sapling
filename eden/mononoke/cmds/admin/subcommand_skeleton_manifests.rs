@@ -11,20 +11,27 @@ use crate::error::SubcommandError;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use clap_old::{App, Arg, ArgMatches, SubCommand};
-use cmdlib::{
-    args::{self, MononokeMatches},
-    helpers,
-};
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
+use cmdlib::helpers;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::StreamExt;
-use manifest::{Entry, ManifestOps, ManifestOrderedOps, PathOrPrefix};
+use manifest::Entry;
+use manifest::ManifestOps;
+use manifest::ManifestOrderedOps;
+use manifest::PathOrPrefix;
 
 use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
-use mononoke_types::{ChangesetId, MPath};
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 use skeleton_manifest::RootSkeletonManifestId;
-use slog::{info, Logger};
+use slog::info;
+use slog::Logger;
 
 pub const SKELETON_MANIFESTS: &str = "skeleton-manifests";
 const COMMAND_TREE: &str = "tree";

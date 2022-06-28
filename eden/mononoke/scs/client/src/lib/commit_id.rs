@@ -7,10 +7,12 @@
 
 //! Helper library for rendering commit ids
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::io::Write;
 
-use anyhow::{bail, Error};
+use anyhow::bail;
+use anyhow::Error;
 use itertools::Itertools;
 
 /// Render a Commit ID, potentially in multiple schemes.

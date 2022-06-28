@@ -5,17 +5,21 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use clap_old::ArgMatches;
-use cmdlib::{args::MononokeMatches, helpers};
+use cmdlib::args::MononokeMatches;
+use cmdlib::helpers;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use std::time::Duration;
 
 use scuba_ext::MononokeScubaSampleBuilder;
 
-use crate::cli::{ARG_COMMIT, ARG_LOG_TO_SCUBA, ARG_SLEEP_SECS};
+use crate::cli::ARG_COMMIT;
+use crate::cli::ARG_LOG_TO_SCUBA;
+use crate::cli::ARG_SLEEP_SECS;
 use crate::reporting::SCUBA_TABLE;
 
 const DEFAULT_SLEEP_SECS: u64 = 10;

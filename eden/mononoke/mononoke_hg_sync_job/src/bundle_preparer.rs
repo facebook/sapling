@@ -5,23 +5,31 @@
  * GNU General Public License version 2.
  */
 
-use crate::bundle_generator::{BookmarkChange, FilenodeVerifier};
-use crate::errors::{
-    ErrorKind::{BookmarkMismatchInBundleCombining, UnexpectedBookmarkMove},
-    PipelineError,
-};
-use crate::{bind_sync_err, BookmarkOverlay, CombinedBookmarkUpdateLogEntry, CommitsInBundle};
-use anyhow::{anyhow, Error};
+use crate::bind_sync_err;
+use crate::bundle_generator::BookmarkChange;
+use crate::bundle_generator::FilenodeVerifier;
+use crate::errors::ErrorKind::BookmarkMismatchInBundleCombining;
+use crate::errors::ErrorKind::UnexpectedBookmarkMove;
+use crate::errors::PipelineError;
+use crate::BookmarkOverlay;
+use crate::CombinedBookmarkUpdateLogEntry;
+use crate::CommitsInBundle;
+use anyhow::anyhow;
+use anyhow::Error;
 use blobrepo::BlobRepo;
-use bookmarks::{BookmarkName, BookmarkUpdateLogEntry, BookmarkUpdateReason};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::BookmarkUpdateReason;
 use changeset_fetcher::ArcChangesetFetcher;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    compat::Future01CompatExt,
-    future::{try_join, try_join_all, BoxFuture, FutureExt, TryFutureExt},
-    Future,
-};
+use futures::compat::Future01CompatExt;
+use futures::future::try_join;
+use futures::future::try_join_all;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::Future;
 use futures_watchdog::WatchdogExt;
 use getbundle_response::SessionLfsParams;
 use itertools::Itertools;
@@ -29,11 +37,14 @@ use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::LfsParams;
 use mononoke_api_types::InnerRepo;
-use mononoke_hg_sync_job_helper_lib::{save_bytes_to_temp_file, write_to_named_temp_file};
-use mononoke_types::{datetime::Timestamp, ChangesetId};
+use mononoke_hg_sync_job_helper_lib::save_bytes_to_temp_file;
+use mononoke_hg_sync_job_helper_lib::write_to_named_temp_file;
+use mononoke_types::datetime::Timestamp;
+use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
-use slog::{info, warn};
+use slog::info;
+use slog::warn;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tempfile::NamedTempFile;

@@ -5,44 +5,60 @@
  * GNU General Public License version 2.
  */
 
-use crate::commands::{JobParams, JobWalkParams, RepoSubcommandParams, CORPUS};
-use crate::detail::{
-    graph::{FileContentData, Node, NodeData, NodeType, WrappedPath},
-    progress::{
-        progress_stream, report_state, ProgressOptions, ProgressReporter, ProgressStateCountByType,
-        ProgressStateMutex,
-    },
-    sampling::{
-        PathTrackingRoute, SampleTrigger, SamplingOptions, SamplingWalkVisitor, WalkKeyOptPath,
-        WalkPayloadMtime, WalkSampleMapping,
-    },
-    scrub::ScrubStats,
-    tail::walk_exact_tail,
-    walk::{RepoWalkParams, RepoWalkTypeParams},
-};
+use crate::commands::JobParams;
+use crate::commands::JobWalkParams;
+use crate::commands::RepoSubcommandParams;
+use crate::commands::CORPUS;
+use crate::detail::graph::FileContentData;
+use crate::detail::graph::Node;
+use crate::detail::graph::NodeData;
+use crate::detail::graph::NodeType;
+use crate::detail::graph::WrappedPath;
+use crate::detail::progress::progress_stream;
+use crate::detail::progress::report_state;
+use crate::detail::progress::ProgressOptions;
+use crate::detail::progress::ProgressReporter;
+use crate::detail::progress::ProgressStateCountByType;
+use crate::detail::progress::ProgressStateMutex;
+use crate::detail::sampling::PathTrackingRoute;
+use crate::detail::sampling::SampleTrigger;
+use crate::detail::sampling::SamplingOptions;
+use crate::detail::sampling::SamplingWalkVisitor;
+use crate::detail::sampling::WalkKeyOptPath;
+use crate::detail::sampling::WalkPayloadMtime;
+use crate::detail::sampling::WalkSampleMapping;
+use crate::detail::scrub::ScrubStats;
+use crate::detail::tail::walk_exact_tail;
+use crate::detail::walk::RepoWalkParams;
+use crate::detail::walk::RepoWalkTypeParams;
 
 use anyhow::Error;
 use blobstore::BlobstoreGetData;
 use cloned::cloned;
-use context::{CoreContext, SamplingKey};
+use context::CoreContext;
+use context::SamplingKey;
 use fbinit::FacebookInit;
-use filetime::{self, FileTime};
-use futures::{
-    future::{self, try_join_all, FutureExt, TryFutureExt},
-    stream::{Stream, TryStreamExt},
-};
+use filetime::FileTime;
+use filetime::{self};
+use futures::future::try_join_all;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream::Stream;
+use futures::stream::TryStreamExt;
 use maplit::hashset;
 use mononoke_types::datetime::DateTime;
-use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
+use percent_encoding::percent_encode;
+use percent_encoding::AsciiSet;
+use percent_encoding::CONTROLS;
 use regex::Regex;
 use samplingblob::SamplingHandler;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::io::Write;
+use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
-use std::{
-    collections::{HashMap, HashSet},
-    io::Write,
-    path::PathBuf,
-    sync::Arc,
-};
+use std::sync::Arc;
 use tokio::fs::{self as tkfs};
 
 // https://url.spec.whatwg.org/#fragment-percent-encode-set

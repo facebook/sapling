@@ -5,15 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use futures::{
-    future::{BoxFuture, FutureExt},
-    task,
-};
-use gotham::{
-    handler::{Handler, HandlerFuture, IntoResponse, NewHandler},
-    state::State,
-};
-use hyper::{service::Service, Body, Request, Response};
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::task;
+use gotham::handler::Handler;
+use gotham::handler::HandlerFuture;
+use gotham::handler::IntoResponse;
+use gotham::handler::NewHandler;
+use gotham::state::State;
+use hyper::service::Service;
+use hyper::Body;
+use hyper::Request;
+use hyper::Response;
 use std::net::SocketAddr;
 use std::panic::RefUnwindSafe;
 use std::pin::Pin;
@@ -191,7 +194,8 @@ mod test {
     use futures::future;
     use gotham::test::TestServer;
     use gotham_derive::StateData;
-    use hyper::{http::StatusCode, Body};
+    use hyper::http::StatusCode;
+    use hyper::Body;
 
     // Basic response handler for tests
 

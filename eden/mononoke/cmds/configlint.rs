@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Result};
+use anyhow::bail;
+use anyhow::Result;
 use fbinit::FacebookInit;
 use itertools::Itertools;
 use std::collections::BTreeMap;

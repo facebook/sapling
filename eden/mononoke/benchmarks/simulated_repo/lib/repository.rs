@@ -8,58 +8,90 @@
 //! Main function is `new_benchmark_repo` which creates `BlobRepo` which delay applied
 //! to all underlying stores, but which all the caching enabled.
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::anyhow;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
-use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingBuilder};
-use bonsai_globalrev_mapping::{ArcBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMappingBuilder};
-use bonsai_hg_mapping::{
-    ArcBonsaiHgMapping, BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds,
-    CachingBonsaiHgMapping, SqlBonsaiHgMappingBuilder,
-};
-use bonsai_svnrev_mapping::{ArcBonsaiSvnrevMapping, SqlBonsaiSvnrevMappingBuilder};
-use bookmarks::{bookmark_heads_fetcher, ArcBookmarkUpdateLog, ArcBookmarks};
-use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, CachelibBlobstoreOptions};
-use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
-use changesets::{ArcChangesets, ChangesetEntry, ChangesetInsert, Changesets, SortOrder};
-use changesets_impl::{CachingChangesets, SqlChangesetsBuilder};
+use bonsai_git_mapping::ArcBonsaiGitMapping;
+use bonsai_git_mapping::SqlBonsaiGitMappingBuilder;
+use bonsai_globalrev_mapping::ArcBonsaiGlobalrevMapping;
+use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
+use bonsai_hg_mapping::ArcBonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiHgMappingEntry;
+use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
+use bonsai_hg_mapping::CachingBonsaiHgMapping;
+use bonsai_hg_mapping::SqlBonsaiHgMappingBuilder;
+use bonsai_svnrev_mapping::ArcBonsaiSvnrevMapping;
+use bonsai_svnrev_mapping::SqlBonsaiSvnrevMappingBuilder;
+use bookmarks::bookmark_heads_fetcher;
+use bookmarks::ArcBookmarkUpdateLog;
+use bookmarks::ArcBookmarks;
+use cacheblob::dummy::DummyLease;
+use cacheblob::new_cachelib_blobstore;
+use cacheblob::CachelibBlobstoreOptions;
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::SimpleChangesetFetcher;
+use changesets::ArcChangesets;
+use changesets::ChangesetEntry;
+use changesets::ChangesetInsert;
+use changesets::Changesets;
+use changesets::SortOrder;
+use changesets_impl::CachingChangesets;
+use changesets_impl::SqlChangesetsBuilder;
 use context::CoreContext;
-use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
+use dbbookmarks::ArcSqlBookmarks;
+use dbbookmarks::SqlBookmarksBuilder;
 use delayblob::DelayedBlobstore;
 use fbinit::FacebookInit;
-use filenodes::{
-    ArcFilenodes, FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes, PreparedFilenode,
-};
-use filestore::{ArcFilestoreConfig, FilestoreConfig};
+use filenodes::ArcFilenodes;
+use filenodes::FilenodeInfo;
+use filenodes::FilenodeRangeResult;
+use filenodes::FilenodeResult;
+use filenodes::Filenodes;
+use filenodes::PreparedFilenode;
+use filestore::ArcFilestoreConfig;
+use filestore::FilestoreConfig;
 use futures::stream::BoxStream;
 use memblob::Memblob;
-use mercurial_mutation::{ArcHgMutationStore, SqlHgMutationStoreBuilder};
-use mercurial_types::{HgChangesetId, HgFileNodeId};
+use mercurial_mutation::ArcHgMutationStore;
+use mercurial_mutation::SqlHgMutationStoreBuilder;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
 use metaconfig_types::ArcRepoConfig;
-use mononoke_types::{
-    ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepoPath, RepositoryId,
-};
-use mutable_counters::{ArcMutableCounters, SqlMutableCountersBuilder};
+use mononoke_types::ChangesetId;
+use mononoke_types::ChangesetIdPrefix;
+use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::RepoPath;
+use mononoke_types::RepositoryId;
+use mutable_counters::ArcMutableCounters;
+use mutable_counters::SqlMutableCountersBuilder;
 use newfilenodes::NewFilenodesBuilder;
 use phases::ArcPhases;
-use pushrebase_mutation_mapping::{
-    ArcPushrebaseMutationMapping, SqlPushrebaseMutationMappingConnection,
-};
+use pushrebase_mutation_mapping::ArcPushrebaseMutationMapping;
+use pushrebase_mutation_mapping::SqlPushrebaseMutationMappingConnection;
 use rand::Rng;
 use rand_distr::Distribution;
 use rendezvous::RendezVousOptions;
-use repo_blobstore::{ArcRepoBlobstore, RepoBlobstore};
-use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData};
-use repo_identity::{ArcRepoIdentity, RepoIdentity};
-use repo_permission_checker::{AlwaysAllowMockRepoPermissionChecker, ArcRepoPermissionChecker};
+use repo_blobstore::ArcRepoBlobstore;
+use repo_blobstore::RepoBlobstore;
+use repo_derived_data::ArcRepoDerivedData;
+use repo_derived_data::RepoDerivedData;
+use repo_identity::ArcRepoIdentity;
+use repo_identity::RepoIdentity;
+use repo_permission_checker::AlwaysAllowMockRepoPermissionChecker;
+use repo_permission_checker::ArcRepoPermissionChecker;
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::DisabledSegmentedChangelog;
 use segmented_changelog_types::ArcSegmentedChangelog;
-use skiplist::{ArcSkiplistIndex, SkiplistIndex};
+use skiplist::ArcSkiplistIndex;
+use skiplist::SkiplistIndex;
 use sql_construct::SqlConstruct;
 use sqlphases::SqlPhasesBuilder;
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
+use std::time::Duration;
 
 pub type Normal = rand_distr::Normal<f64>;
 

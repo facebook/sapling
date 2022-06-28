@@ -18,11 +18,10 @@
 //! Special care is taken to make sure this collection works well with `Send` and `Sync` objects,
 //! as well as `Arc<?Sized>` types (i.e `Arc<dyn Trait>` types).
 
-use std::{
-    any::{Any, TypeId},
-    collections::HashMap,
-    sync::Arc,
-};
+use std::any::Any;
+use std::any::TypeId;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 struct Handle<T: ?Sized + Send + Sync + 'static>(Arc<T>);
 

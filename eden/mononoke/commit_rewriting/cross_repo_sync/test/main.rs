@@ -7,57 +7,82 @@
 
 //! Tests for the synced commits mapping.
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use ascii::AsciiString;
 use assert_matches::assert_matches;
 use bytes::Bytes;
 use fbinit::FacebookInit;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use blobrepo::{save_bonsai_changesets, BlobRepo};
-use blobstore::{Loadable, Storable};
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use blobrepo::save_bonsai_changesets;
+use blobrepo::BlobRepo;
+use blobstore::Loadable;
+use blobstore::Storable;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use cacheblob::InProcessLease;
 use cloned::cloned;
 use context::CoreContext;
-use cross_repo_sync::{
-    update_mapping_with_version, validation::verify_working_copy, CommitSyncContext,
-    CommitSyncDataProvider, CommitSyncOutcome, ErrorKind,
-};
+use cross_repo_sync::update_mapping_with_version;
+use cross_repo_sync::validation::verify_working_copy;
+use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncDataProvider;
+use cross_repo_sync::CommitSyncOutcome;
+use cross_repo_sync::ErrorKind;
 use cross_repo_sync_test_utils::rebase_root_on_master;
+use fixtures::Linear;
+use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
-use fixtures::{Linear, ManyFilesDirs};
-use futures::{future::join_all, FutureExt, TryStreamExt};
-use live_commit_sync_config::{TestLiveCommitSyncConfig, TestLiveCommitSyncConfigSource};
+use futures::future::join_all;
+use futures::FutureExt;
+use futures::TryStreamExt;
+use live_commit_sync_config::TestLiveCommitSyncConfig;
+use live_commit_sync_config::TestLiveCommitSyncConfigSource;
 use manifest::ManifestOps;
-use maplit::{btreemap, hashmap};
+use maplit::btreemap;
+use maplit::hashmap;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
-use metaconfig_types::{
-    CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig,
-    DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
-};
-use mononoke_types::{
-    BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
-    MPath, RepositoryId,
-};
+use metaconfig_types::CommitSyncConfig;
+use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::CommonCommitSyncConfig;
+use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+use metaconfig_types::SmallRepoCommitSyncConfig;
+use metaconfig_types::SmallRepoPermanentConfig;
+use mononoke_types::BlobstoreValue;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
+use mononoke_types::FileChange;
+use mononoke_types::FileContents;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
+use mononoke_types::RepositoryId;
 use pushrebase::PushrebaseError;
 use reachabilityindex::LeastCommonAncestorsHint;
 use skiplist::SkiplistIndex;
-use sorted_vector_map::{sorted_vector_map, SortedVectorMap};
+use sorted_vector_map::sorted_vector_map;
+use sorted_vector_map::SortedVectorMap;
 use sql_construct::SqlConstruct;
-use synced_commit_mapping::{
-    SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
-};
+use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMappingEntry;
 use test_repo_factory::TestRepoFactory;
-use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
-use tunables::{with_tunables_async, MononokeTunables};
+use tests_utils::bookmark;
+use tests_utils::resolve_cs_id;
+use tests_utils::CreateCommitContext;
+use tunables::with_tunables_async;
+use tunables::MononokeTunables;
 
-use cross_repo_sync::{
-    types::Target, CandidateSelectionHint, CommitSyncRepos, CommitSyncer, PluralCommitSyncOutcome,
-};
+use cross_repo_sync::types::Target;
+use cross_repo_sync::CandidateSelectionHint;
+use cross_repo_sync::CommitSyncRepos;
+use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::PluralCommitSyncOutcome;
 use sql::rusqlite::Connection as SqliteConnection;
 
 fn mpath(p: &str) -> MPath {

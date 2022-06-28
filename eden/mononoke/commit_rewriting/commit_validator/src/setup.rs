@@ -5,17 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error, Result};
+use anyhow::format_err;
+use anyhow::Error;
+use anyhow::Result;
 use blobstore_factory::ReadOnlyStorage;
 use bookmarks::BookmarkName;
 use borrowed::borrowed;
 use clap_old::ArgMatches;
-use cmdlib::args::{self, MononokeMatches};
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
 use context::CoreContext;
-use cross_repo_sync::types::{Large, Small};
+use cross_repo_sync::types::Large;
+use cross_repo_sync::types::Small;
 use fbinit::FacebookInit;
 use futures::future::try_join_all;
-use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use live_commit_sync_config::CfgrLiveCommitSyncConfig;
+use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::RepoConfig;
 use mononoke_api_types::InnerRepo;
 use mutable_counters::MutableCountersRef;
@@ -24,7 +29,9 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
-use crate::cli::{ARG_ENTRY_ID, ARG_MASTER_BOOKMARK, ARG_START_ID};
+use crate::cli::ARG_ENTRY_ID;
+use crate::cli::ARG_MASTER_BOOKMARK;
+use crate::cli::ARG_START_ID;
 use crate::reporting::add_common_commit_syncing_fields;
 use crate::validation::ValidationHelpers;
 

@@ -6,24 +6,32 @@
  */
 
 use anyhow::Error;
-use blame::{fetch_content_for_blame, BlameRoot};
+use blame::fetch_content_for_blame;
+use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use context::CoreContext;
 use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data::BonsaiDerived;
 use fastlog::RootFastlog;
-use fsnodes::{prefetch_content_metadata, RootFsnodeId};
-use futures::{
-    future::{self, try_join3, try_join4, FutureExt},
-    stream::{self, StreamExt, TryStreamExt},
-    TryFutureExt,
-};
+use fsnodes::prefetch_content_metadata;
+use fsnodes::RootFsnodeId;
+use futures::future::try_join3;
+use futures::future::try_join4;
+use futures::future::FutureExt;
+use futures::future::{self};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use futures::TryFutureExt;
 use manifest::find_intersection_of_diffs;
-use mononoke_types::{ChangesetId, FileUnodeId};
+use mononoke_types::ChangesetId;
+use mononoke_types::FileUnodeId;
 use repo_derived_data::RepoDerivedDataRef;
-use std::{collections::HashSet, sync::Arc};
-use unodes::{find_unode_rename_sources, RootUnodeManifestId};
+use std::collections::HashSet;
+use std::sync::Arc;
+use unodes::find_unode_rename_sources;
+use unodes::RootUnodeManifestId;
 
 /// Types of derived data for which prefetching content for changed files
 /// migth speed up derivation.

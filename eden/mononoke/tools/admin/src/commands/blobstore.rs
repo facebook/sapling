@@ -8,8 +8,10 @@
 mod fetch;
 mod upload;
 
-use anyhow::{Context, Result};
-use clap::{Parser, Subcommand};
+use anyhow::Context;
+use anyhow::Result;
+use clap::Parser;
+use clap::Subcommand;
 use mononoke_app::args::RepoBlobstoreArgs;
 use mononoke_app::MononokeApp;
 

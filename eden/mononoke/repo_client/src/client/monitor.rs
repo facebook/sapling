@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use futures_old::{Future, Poll, Stream};
+use futures_old::Future;
+use futures_old::Poll;
+use futures_old::Stream;
 
 pub struct Monitor<T, P> {
     inner: T,

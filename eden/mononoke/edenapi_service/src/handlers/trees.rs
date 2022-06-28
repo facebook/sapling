@@ -5,34 +5,61 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
 use context::PerfCounterType;
-use futures::{stream, Future, FutureExt, Stream, StreamExt, TryStreamExt};
-use gotham::state::{FromState, State};
-use gotham_derive::{StateData, StaticResponseExtender};
+use futures::stream;
+use futures::Future;
+use futures::FutureExt;
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use gotham::state::FromState;
+use gotham::state::State;
+use gotham_derive::StateData;
+use gotham_derive::StaticResponseExtender;
 use serde::Deserialize;
 
-use edenapi_types::{
-    wire::WireTreeRequest, AnyId, Batch, EdenApiServerError, FileMetadata, TreeChildEntry,
-    TreeEntry, TreeRequest, UploadToken, UploadTreeRequest, UploadTreeResponse,
-};
-use gotham_ext::{
-    error::HttpError, middleware::scuba::ScubaMiddlewareState, response::TryIntoResponse,
-};
+use edenapi_types::wire::WireTreeRequest;
+use edenapi_types::AnyId;
+use edenapi_types::Batch;
+use edenapi_types::EdenApiServerError;
+use edenapi_types::FileMetadata;
+use edenapi_types::TreeChildEntry;
+use edenapi_types::TreeEntry;
+use edenapi_types::TreeRequest;
+use edenapi_types::UploadToken;
+use edenapi_types::UploadTreeRequest;
+use edenapi_types::UploadTreeResponse;
+use gotham_ext::error::HttpError;
+use gotham_ext::middleware::scuba::ScubaMiddlewareState;
+use gotham_ext::response::TryIntoResponse;
 use manifest::Entry;
-use mercurial_types::{FileType, HgFileNodeId, HgManifestId, HgNodeHash};
-use mononoke_api_hg::{HgDataContext, HgDataId, HgRepoContext, HgTreeContext};
+use mercurial_types::FileType;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgNodeHash;
+use mononoke_api_hg::HgDataContext;
+use mononoke_api_hg::HgDataId;
+use mononoke_api_hg::HgRepoContext;
+use mononoke_api_hg::HgTreeContext;
 use rate_limiting::Metric;
-use types::{Key, RepoPathBuf};
+use types::Key;
+use types::RepoPathBuf;
 
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{custom_cbor_stream, get_repo, parse_wire_request};
+use crate::utils::custom_cbor_stream;
+use crate::utils::get_repo;
+use crate::utils::parse_wire_request;
 
-use super::{EdenApiHandler, EdenApiMethod, HandlerInfo, HandlerResult};
+use super::EdenApiHandler;
+use super::EdenApiMethod;
+use super::HandlerInfo;
+use super::HandlerResult;
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_TREE_FETCHES_PER_REQUEST: usize = 10;

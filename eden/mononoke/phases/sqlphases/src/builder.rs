@@ -10,15 +10,19 @@ use std::sync::Arc;
 use cachelib::VolatileLruCachePool;
 use changeset_fetcher::ArcChangesetFetcher;
 use fbinit::FacebookInit;
-use memcache::{KeyGen, MemcacheClient};
+use memcache::KeyGen;
+use memcache::MemcacheClient;
 use mononoke_types::RepositoryId;
 use phases::ArcPhases;
 use sql::Connection;
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 
-use crate::sql_phases::{HeadsFetcher, SqlPhases};
-use crate::sql_store::{Caches, SqlPhasesStore};
+use crate::sql_phases::HeadsFetcher;
+use crate::sql_phases::SqlPhases;
+use crate::sql_store::Caches;
+use crate::sql_store::SqlPhasesStore;
 
 // Memcache constants, should be changed when we want to invalidate memcache
 // entries

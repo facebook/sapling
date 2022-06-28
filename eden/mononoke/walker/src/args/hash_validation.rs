@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use clap::{ArgEnum, Args};
+use clap::ArgEnum;
+use clap::Args;
 use std::collections::HashSet;
-use strum_macros::{AsRefStr, EnumString, EnumVariantNames};
+use strum_macros::AsRefStr;
+use strum_macros::EnumString;
+use strum_macros::EnumVariantNames;
 
 use crate::detail::graph::NodeType;
 

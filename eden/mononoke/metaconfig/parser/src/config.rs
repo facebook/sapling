@@ -7,25 +7,35 @@
 
 //! Functions to load and parse Mononoke configuration.
 
-use std::{
-    collections::{HashMap, HashSet},
-    path::Path,
-    str,
-};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::path::Path;
+use std::str;
 
 use crate::convert::Convert;
 use crate::errors::ConfigurationError;
-use anyhow::{anyhow, Context, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
 use cached_config::ConfigStore;
-use metaconfig_types::{
-    BackupRepoConfig, BlobConfig, CensoredScubaParams, CommonConfig, HgsqlGlobalrevsName,
-    HgsqlName, Redaction, RedactionConfig, RepoConfig, RepoReadOnly, StorageConfig,
-};
+use metaconfig_types::BackupRepoConfig;
+use metaconfig_types::BlobConfig;
+use metaconfig_types::CensoredScubaParams;
+use metaconfig_types::CommonConfig;
+use metaconfig_types::HgsqlGlobalrevsName;
+use metaconfig_types::HgsqlName;
+use metaconfig_types::Redaction;
+use metaconfig_types::RedactionConfig;
+use metaconfig_types::RepoConfig;
+use metaconfig_types::RepoReadOnly;
+use metaconfig_types::StorageConfig;
 use mononoke_types::RepositoryId;
-use repos::{
-    RawAclRegionConfig, RawCommonConfig, RawRepoConfig, RawRepoConfigs, RawRepoDefinition,
-    RawStorageConfig,
-};
+use repos::RawAclRegionConfig;
+use repos::RawCommonConfig;
+use repos::RawRepoConfig;
+use repos::RawRepoConfigs;
+use repos::RawRepoDefinition;
+use repos::RawStorageConfig;
 
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
 const HOOK_MAX_FILE_SIZE_DEFAULT: u64 = 8 * 1024 * 1024; // 8MiB
@@ -440,28 +450,64 @@ mod test {
     use super::*;
     use bookmarks_types::BookmarkName;
     use cached_config::TestSource;
-    use maplit::{btreemap, hashmap, hashset};
-    use metaconfig_types::{
-        AclRegion, AclRegionConfig, AclRegionRule, AllowlistIdentity, BlameVersion, BlobConfig,
-        BlobstoreId, BookmarkParams, BubbleDeletionMode, CacheWarmupParams, CommitSyncConfig,
-        CommitSyncConfigVersion, CrossRepoCommitValidation, DatabaseConfig,
-        DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, DerivedDataTypesConfig,
-        EphemeralBlobstoreConfig, FilestoreParams, HgSyncConfig, HookBypass, HookConfig,
-        HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams,
-        LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PushParams,
-        PushrebaseFlags, PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig,
-        RepoClientKnobs, SegmentedChangelogConfig, SegmentedChangelogHeadConfig,
-        ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig,
-        SourceControlServiceMonitoring, SourceControlServiceParams, SparseProfilesConfig,
-        UnodeVersion, WalkerConfig,
-    };
+    use maplit::btreemap;
+    use maplit::hashmap;
+    use maplit::hashset;
+    use metaconfig_types::AclRegion;
+    use metaconfig_types::AclRegionConfig;
+    use metaconfig_types::AclRegionRule;
+    use metaconfig_types::AllowlistIdentity;
+    use metaconfig_types::BlameVersion;
+    use metaconfig_types::BlobConfig;
+    use metaconfig_types::BlobstoreId;
+    use metaconfig_types::BookmarkParams;
+    use metaconfig_types::BubbleDeletionMode;
+    use metaconfig_types::CacheWarmupParams;
+    use metaconfig_types::CommitSyncConfig;
+    use metaconfig_types::CommitSyncConfigVersion;
+    use metaconfig_types::CrossRepoCommitValidation;
+    use metaconfig_types::DatabaseConfig;
+    use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+    use metaconfig_types::DerivedDataConfig;
+    use metaconfig_types::DerivedDataTypesConfig;
+    use metaconfig_types::EphemeralBlobstoreConfig;
+    use metaconfig_types::FilestoreParams;
+    use metaconfig_types::HgSyncConfig;
+    use metaconfig_types::HookBypass;
+    use metaconfig_types::HookConfig;
+    use metaconfig_types::HookManagerParams;
+    use metaconfig_types::HookParams;
+    use metaconfig_types::InfinitepushNamespace;
+    use metaconfig_types::InfinitepushParams;
+    use metaconfig_types::LfsParams;
+    use metaconfig_types::LocalDatabaseConfig;
+    use metaconfig_types::MetadataDatabaseConfig;
+    use metaconfig_types::MultiplexId;
+    use metaconfig_types::MultiplexedStoreType;
+    use metaconfig_types::PushParams;
+    use metaconfig_types::PushrebaseFlags;
+    use metaconfig_types::PushrebaseParams;
+    use metaconfig_types::RemoteDatabaseConfig;
+    use metaconfig_types::RemoteMetadataDatabaseConfig;
+    use metaconfig_types::RepoClientKnobs;
+    use metaconfig_types::SegmentedChangelogConfig;
+    use metaconfig_types::SegmentedChangelogHeadConfig;
+    use metaconfig_types::ShardableRemoteDatabaseConfig;
+    use metaconfig_types::ShardedRemoteDatabaseConfig;
+    use metaconfig_types::SmallRepoCommitSyncConfig;
+    use metaconfig_types::SourceControlServiceMonitoring;
+    use metaconfig_types::SourceControlServiceParams;
+    use metaconfig_types::SparseProfilesConfig;
+    use metaconfig_types::UnodeVersion;
+    use metaconfig_types::WalkerConfig;
     use mononoke_types::MPath;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use nonzero_ext::nonzero;
     use pretty_assertions::assert_eq;
     use regex::Regex;
     use repos::RawCommitSyncConfig;
-    use std::fs::{create_dir_all, write};
+    use std::fs::create_dir_all;
+    use std::fs::write;
     use std::num::NonZeroUsize;
     use std::sync::Arc;
     use std::time::Duration;

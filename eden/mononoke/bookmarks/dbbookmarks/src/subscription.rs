@@ -5,9 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Context, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
-use bookmarks::{BookmarkKind, BookmarkName, BookmarksSubscription, Freshness};
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarksSubscription;
+use bookmarks::Freshness;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
@@ -16,10 +21,13 @@ use slog::warn;
 use sql::queries;
 use stats::prelude::*;
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use std::time::Instant;
 use tunables::tunables;
 
-use crate::store::{GetLargestLogId, SelectAllUnordered, SqlBookmarks};
+use crate::store::GetLargestLogId;
+use crate::store::SelectAllUnordered;
+use crate::store::SqlBookmarks;
 
 define_stats! {
     prefix = "mononoke.dbbookmarks.subscription";
@@ -211,10 +219,12 @@ queries! {
 mod test {
     use super::*;
 
-    use bookmarks::{BookmarkUpdateReason, Bookmarks};
+    use bookmarks::BookmarkUpdateReason;
+    use bookmarks::Bookmarks;
     use fbinit::FacebookInit;
     use maplit::hashmap;
-    use mononoke_types_mocks::{changesetid::ONES_CSID, repo::REPO_ZERO};
+    use mononoke_types_mocks::changesetid::ONES_CSID;
+    use mononoke_types_mocks::repo::REPO_ZERO;
     use sql_construct::SqlConstruct;
     use tunables::MononokeTunables;
 

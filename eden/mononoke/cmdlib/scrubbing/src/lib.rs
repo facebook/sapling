@@ -8,7 +8,9 @@
 use std::time::Duration;
 
 use anyhow::Result;
-use blobstore_factory::{ScrubAction, ScrubOptions, ScrubWriteMostly};
+use blobstore_factory::ScrubAction;
+use blobstore_factory::ScrubOptions;
+use blobstore_factory::ScrubWriteMostly;
 use clap::Args;
 use environment::MononokeEnvironment;
 use mononoke_app::AppExtension;

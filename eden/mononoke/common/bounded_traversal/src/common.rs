@@ -7,7 +7,8 @@
 
 use std::future::Future;
 use std::pin::Pin;
-use std::task::{Context, Poll};
+use std::task::Context;
+use std::task::Poll;
 
 use either::Either;
 use futures::ready;

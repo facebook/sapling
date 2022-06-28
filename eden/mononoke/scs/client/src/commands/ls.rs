@@ -9,20 +9,30 @@
 
 use std::io::Write;
 
-use anyhow::{bail, Error};
-use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
+use anyhow::bail;
+use anyhow::Error;
+use clap::App;
+use clap::AppSettings;
+use clap::Arg;
+use clap::ArgMatches;
+use clap::SubCommand;
 use futures::stream;
-use futures_util::stream::{StreamExt, TryStreamExt};
+use futures_util::stream::StreamExt;
+use futures_util::stream::TryStreamExt;
 use serde_derive::Serialize;
 use source_control::types as thrift;
 
-use crate::args::commit_id::{
-    add_commit_id_args, add_scheme_args, get_commit_id, resolve_commit_id,
-};
-use crate::args::path::{add_optional_path_args, get_path};
-use crate::args::repo::{add_repo_args, get_repo_specifier};
+use crate::args::commit_id::add_commit_id_args;
+use crate::args::commit_id::add_scheme_args;
+use crate::args::commit_id::get_commit_id;
+use crate::args::commit_id::resolve_commit_id;
+use crate::args::path::add_optional_path_args;
+use crate::args::path::get_path;
+use crate::args::repo::add_repo_args;
+use crate::args::repo::get_repo_specifier;
 use crate::connection::Connection;
-use crate::render::{Render, RenderStream};
+use crate::render::Render;
+use crate::render::RenderStream;
 use crate::util::byte_count_short;
 
 pub(super) const NAME: &str = "ls";

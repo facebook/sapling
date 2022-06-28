@@ -7,17 +7,22 @@
 
 use crate::derive::RootDeletedManifestDeriver;
 use crate::mapping::RootDeletedManifestIdCommon;
-use anyhow::{anyhow, Error, Result};
+use anyhow::anyhow;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::BlobstoreGetData;
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::impl_bonsai_derived_via_manager;
-use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
-use mononoke_types::{
-    deleted_manifest_v2::DeletedManifestV2, BlobstoreBytes, BonsaiChangeset, ChangesetId,
-    DeletedManifestV2Id,
-};
+use derived_data_manager::dependencies;
+use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivationContext;
+use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
+use mononoke_types::BlobstoreBytes;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::DeletedManifestV2Id;
 use std::collections::HashMap;
 use unodes::RootUnodeManifestId;
 

@@ -15,11 +15,15 @@
 //! 0-sized chunk is the indication of end of stream, so a proper stream of data should not
 //! contain empty chunks inside.
 
-use std::io::{self, BufRead, Read};
+use std::io::BufRead;
+use std::io::Read;
+use std::io::{self};
 
 use futures::future::poll_fn;
-use futures::{Async, Future};
-use tokio_io::{try_nb, AsyncRead};
+use futures::Async;
+use futures::Future;
+use tokio_io::try_nb;
+use tokio_io::AsyncRead;
 
 /// Structure that wraps around a `AsyncRead + BufRead` object to provide chunked-based encoding
 /// over it. See this module's doc for the description of the format.
@@ -187,8 +191,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::{ensure, Result};
-    use quickcheck::{quickcheck, Arbitrary, Gen, TestResult};
+    use anyhow::ensure;
+    use anyhow::Result;
+    use quickcheck::quickcheck;
+    use quickcheck::Arbitrary;
+    use quickcheck::Gen;
+    use quickcheck::TestResult;
     use std::io::Cursor;
 
     // Vec of non empty Vec<u8> for quickcheck::Arbitrary

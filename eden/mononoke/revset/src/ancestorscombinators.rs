@@ -24,24 +24,38 @@
 /// The stream below aims to solve the aforementioned problems. It's primary usage is in
 /// Mercurial pull to find commits that need to be sent to a client.
 use std::collections::hash_set::IntoIter;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::iter;
 use std::sync::Arc;
 
 use anyhow::Error;
 use cloned::cloned;
-use futures_ext::{BoxFuture, BoxStream, FutureExt as FBFutureExt, SelectAll, StreamExt};
-use futures_old::future::{ok, Future};
-use futures_old::stream::{self, iter_ok, Stream};
-use futures_old::{try_ready, Async, IntoFuture, Poll};
-use futures_util::future::{FutureExt, TryFutureExt};
+use futures_ext::BoxFuture;
+use futures_ext::BoxStream;
+use futures_ext::FutureExt as FBFutureExt;
+use futures_ext::SelectAll;
+use futures_ext::StreamExt;
+use futures_old::future::ok;
+use futures_old::future::Future;
+use futures_old::stream::iter_ok;
+use futures_old::stream::Stream;
+use futures_old::stream::{self};
+use futures_old::try_ready;
+use futures_old::Async;
+use futures_old::IntoFuture;
+use futures_old::Poll;
+use futures_util::future::FutureExt;
+use futures_util::future::TryFutureExt;
 use maplit::hashset;
 
-use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
-use reachabilityindex::{LeastCommonAncestorsHint, NodeFrontier};
+use reachabilityindex::LeastCommonAncestorsHint;
+use reachabilityindex::NodeFrontier;
 
 use crate::errors::*;
 use crate::setcommon::*;
@@ -393,7 +407,8 @@ mod test {
     use crate::tests::TestChangesetFetcher;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use revset_test_helper::{assert_changesets_sequence, string_to_bonsai};
+    use revset_test_helper::assert_changesets_sequence;
+    use revset_test_helper::string_to_bonsai;
     use skiplist::SkiplistIndex;
 
     #[fbinit::test]

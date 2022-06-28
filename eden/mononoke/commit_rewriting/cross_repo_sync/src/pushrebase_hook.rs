@@ -5,10 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use ::pushrebase_hook::{
-    PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
-};
-use anyhow::{format_err, Error};
+use ::pushrebase_hook::PushrebaseCommitHook;
+use ::pushrebase_hook::PushrebaseHook;
+use ::pushrebase_hook::PushrebaseTransactionHook;
+use ::pushrebase_hook::RebasedChangesets;
+use anyhow::format_err;
+use anyhow::Error;
 use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
@@ -17,8 +19,11 @@ use mononoke_types::ChangesetId;
 use sql::Transaction;
 use tunables::tunables;
 
-use crate::{create_synced_commit_mapping_entry, CommitSyncRepos, ErrorKind};
-use synced_commit_mapping::{add_many_in_txn, SyncedCommitMappingEntry};
+use crate::create_synced_commit_mapping_entry;
+use crate::CommitSyncRepos;
+use crate::ErrorKind;
+use synced_commit_mapping::add_many_in_txn;
+use synced_commit_mapping::SyncedCommitMappingEntry;
 
 #[derive(Clone)]
 pub struct CrossRepoSyncPushrebaseHook {

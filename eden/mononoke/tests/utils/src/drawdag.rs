@@ -5,13 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
-use crate::{CreateCommitContext, Repo};
+use crate::CreateCommitContext;
+use crate::Repo;
 
 pub type ChangeFn<R> = dyn for<'a, 'b> FnOnce(
         CreateCommitContext<'a, R>,

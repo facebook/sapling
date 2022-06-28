@@ -14,7 +14,8 @@ use bookmarks_types::BookmarkName;
 use changeset_fetcher::ChangesetFetcherArc;
 use changesets::ChangesetsRef;
 use itertools::Itertools;
-use mononoke_types::{ChangesetId, MPath};
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 use phases::PhasesRef;
 use pushrebase::PushrebaseError;
 use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
@@ -37,15 +38,20 @@ mod restrictions;
 mod update;
 
 pub use bookmarks_types::BookmarkKind;
-pub use hooks::{CrossRepoPushSource, HookRejection};
+pub use hooks::CrossRepoPushSource;
+pub use hooks::HookRejection;
 pub use pushrebase::PushrebaseOutcome;
 
 pub use crate::create::CreateBookmarkOp;
 pub use crate::delete::DeleteBookmarkOp;
 pub use crate::hook_running::run_hooks;
-pub use crate::pushrebase_onto::{get_pushrebase_hooks, PushrebaseOntoBookmarkOp};
-pub use crate::restrictions::{check_bookmark_sync_config, BookmarkKindRestrictions};
-pub use crate::update::{BookmarkUpdatePolicy, BookmarkUpdateTargets, UpdateBookmarkOp};
+pub use crate::pushrebase_onto::get_pushrebase_hooks;
+pub use crate::pushrebase_onto::PushrebaseOntoBookmarkOp;
+pub use crate::restrictions::check_bookmark_sync_config;
+pub use crate::restrictions::BookmarkKindRestrictions;
+pub use crate::update::BookmarkUpdatePolicy;
+pub use crate::update::BookmarkUpdateTargets;
+pub use crate::update::UpdateBookmarkOp;
 
 /// Trait alias for bookmarks movement repositories.
 ///

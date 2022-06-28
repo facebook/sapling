@@ -7,16 +7,20 @@
 
 use anyhow::Error;
 use fbinit::FacebookInit;
-use futures::future::{BoxFuture, FutureExt};
-use maplit::{hashmap, hashset};
-use std::collections::{HashMap, HashSet};
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc,
-};
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use maplit::hashmap;
+use maplit::hashset;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use tokio::sync::Notify;
 
-pub use crate::{RendezVous, RendezVousController, RendezVousStats};
+pub use crate::RendezVous;
+pub use crate::RendezVousController;
+pub use crate::RendezVousStats;
 
 #[derive(Clone)]
 struct MockController {

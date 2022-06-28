@@ -7,14 +7,16 @@
 
 use super::*;
 use anyhow::Error;
-use changesets::{ChangesetInsert, Changesets};
-use changesets_impl::{SqlChangesets, SqlChangesetsBuilder};
+use changesets::ChangesetInsert;
+use changesets::Changesets;
+use changesets_impl::SqlChangesets;
+use changesets_impl::SqlChangesetsBuilder;
 use fbinit::FacebookInit;
-use mononoke_types_mocks::{
-    changesetid::{ONES_CSID, TWOS_CSID},
-    hash::{ONES, TWOS},
-    repo::REPO_ZERO,
-};
+use mononoke_types_mocks::changesetid::ONES_CSID;
+use mononoke_types_mocks::changesetid::TWOS_CSID;
+use mononoke_types_mocks::hash::ONES;
+use mononoke_types_mocks::hash::TWOS;
+use mononoke_types_mocks::repo::REPO_ZERO;
 use rendezvous::RendezVousOptions;
 
 async fn setup_changesets(ctx: &CoreContext) -> Result<SqlChangesets, Error> {

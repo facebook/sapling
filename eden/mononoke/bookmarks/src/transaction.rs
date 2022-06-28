@@ -7,7 +7,8 @@
 
 use std::sync::Arc;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use bookmarks_types::BookmarkName;
 use context::CoreContext;
 use futures::future::BoxFuture;

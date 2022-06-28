@@ -7,7 +7,8 @@
 
 use anyhow::Error;
 use gotham::state::State;
-use hyper::{Body, StatusCode};
+use hyper::Body;
+use hyper::StatusCode;
 use mime::Mime;
 use rate_limiting::RateLimitReason;
 

@@ -12,15 +12,20 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
 pub use bookmarks::BookmarkName;
-use futures::{stream, StreamExt};
+use futures::stream;
+use futures::StreamExt;
 use futures_watchdog::WatchdogExt;
 use metaconfig_parser::RepoConfigs;
 use mononoke_types::RepositoryId;
 use repo_factory::RepoFactory;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{debug, info, o};
+use slog::debug;
+use slog::info;
+use slog::o;
 
 use crate::repo::RepoContextBuilder;
 
@@ -42,34 +47,56 @@ mod xrepo;
 #[cfg(test)]
 mod test;
 
-pub use crate::changeset::{
-    ChangesetContext, ChangesetDiffItem, ChangesetFileOrdering, ChangesetHistoryOptions, Generation,
-};
-pub use crate::changeset_path::{
-    unified_diff, ChangesetPathContentContext, ChangesetPathHistoryOptions, CopyInfo, PathEntry,
-    UnifiedDiff, UnifiedDiffMode,
-};
+pub use crate::changeset::ChangesetContext;
+pub use crate::changeset::ChangesetDiffItem;
+pub use crate::changeset::ChangesetFileOrdering;
+pub use crate::changeset::ChangesetHistoryOptions;
+pub use crate::changeset::Generation;
+pub use crate::changeset_path::unified_diff;
+pub use crate::changeset_path::ChangesetPathContentContext;
+pub use crate::changeset_path::ChangesetPathHistoryOptions;
+pub use crate::changeset_path::CopyInfo;
+pub use crate::changeset_path::PathEntry;
+pub use crate::changeset_path::UnifiedDiff;
+pub use crate::changeset_path::UnifiedDiffMode;
 pub use crate::changeset_path_diff::ChangesetPathDiffContext;
 pub use crate::errors::MononokeError;
-pub use crate::file::{
-    headerless_unified_diff, FileContext, FileId, FileMetadata, FileType, HeaderlessUnifiedDiff,
-};
+pub use crate::file::headerless_unified_diff;
+pub use crate::file::FileContext;
+pub use crate::file::FileId;
+pub use crate::file::FileMetadata;
+pub use crate::file::FileType;
+pub use crate::file::HeaderlessUnifiedDiff;
 pub use crate::path::MononokePath;
-pub use crate::repo::{BookmarkFreshness, BookmarkInfo, Repo, RepoContext};
-pub use crate::repo_draft::create_changeset::{CreateChange, CreateChangeFile, CreateCopyInfo};
+pub use crate::repo::BookmarkFreshness;
+pub use crate::repo::BookmarkInfo;
+pub use crate::repo::Repo;
+pub use crate::repo::RepoContext;
+pub use crate::repo_draft::create_changeset::CreateChange;
+pub use crate::repo_draft::create_changeset::CreateChangeFile;
+pub use crate::repo_draft::create_changeset::CreateCopyInfo;
 pub use crate::repo_draft::RepoDraftContext;
 pub use crate::repo_write::land_stack::PushrebaseOutcome;
 pub use crate::repo_write::RepoWriteContext;
-pub use crate::specifiers::{
-    ChangesetId, ChangesetIdPrefix, ChangesetPrefixSpecifier, ChangesetSpecifier,
-    ChangesetSpecifierPrefixResolution, Globalrev, HgChangesetId, HgChangesetIdPrefix,
-};
-pub use crate::tree::{TreeContext, TreeEntry, TreeId, TreeSummary};
+pub use crate::specifiers::ChangesetId;
+pub use crate::specifiers::ChangesetIdPrefix;
+pub use crate::specifiers::ChangesetPrefixSpecifier;
+pub use crate::specifiers::ChangesetSpecifier;
+pub use crate::specifiers::ChangesetSpecifierPrefixResolution;
+pub use crate::specifiers::Globalrev;
+pub use crate::specifiers::HgChangesetId;
+pub use crate::specifiers::HgChangesetIdPrefix;
+pub use crate::tree::TreeContext;
+pub use crate::tree::TreeEntry;
+pub use crate::tree::TreeId;
+pub use crate::tree::TreeSummary;
 pub use crate::xrepo::CandidateSelectionHintArgs;
 
 // Re-export types that are useful for clients.
 pub use blame::CompatBlame;
-pub use context::{CoreContext, LoggingContainer, SessionContainer};
+pub use context::CoreContext;
+pub use context::LoggingContainer;
+pub use context::SessionContainer;
 
 /// An instance of Mononoke, which may manage multiple repositories.
 pub struct Mononoke {
@@ -229,7 +256,8 @@ pub mod test_impl {
             ctx: CoreContext,
             repos: impl IntoIterator<Item = (String, BlobRepo)>,
         ) -> Result<Self, Error> {
-            use futures::stream::{FuturesOrdered, TryStreamExt};
+            use futures::stream::FuturesOrdered;
+            use futures::stream::TryStreamExt;
 
             let repos = repos
                 .into_iter()
@@ -256,7 +284,8 @@ pub mod test_impl {
             mapping: Arc<dyn SyncedCommitMapping>,
             lv_cfg: Arc<dyn LiveCommitSyncConfig>,
         ) -> Result<Self, Error> {
-            use futures::stream::{FuturesOrdered, TryStreamExt};
+            use futures::stream::FuturesOrdered;
+            use futures::stream::TryStreamExt;
 
             let repos = vec![small_repo, large_repo]
                 .into_iter()

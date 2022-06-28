@@ -5,25 +5,43 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Context as _};
+use anyhow::format_err;
+use anyhow::Context as _;
 use async_trait::async_trait;
 use blobstore::Loadable;
-use bookmarks::{ArcBookmarks, BookmarkName, BookmarksArc};
+use bookmarks::ArcBookmarks;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarksArc;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
-use futures::{future, stream::TryStreamExt};
+use futures::future;
+use futures::stream::TryStreamExt;
 use futures_util::future::TryFutureExt;
-use manifest::{Diff, Entry, ManifestOps};
+use manifest::Diff;
+use manifest::Entry;
+use manifest::ManifestOps;
 use mercurial_derived_data::MappedHgChangesetId;
-use mercurial_types::{FileType, HgFileNodeId, HgManifestId};
-use mononoke_types::{ChangesetId, ContentId, MPath, ManifestUnodeId};
-use repo_blobstore::{ArcRepoBlobstore, RepoBlobstore, RepoBlobstoreArc};
-use repo_derived_data::{ArcRepoDerivedData, RepoDerivedData, RepoDerivedDataArc};
+use mercurial_types::FileType;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::MPath;
+use mononoke_types::ManifestUnodeId;
+use repo_blobstore::ArcRepoBlobstore;
+use repo_blobstore::RepoBlobstore;
+use repo_blobstore::RepoBlobstoreArc;
+use repo_derived_data::ArcRepoDerivedData;
+use repo_derived_data::RepoDerivedData;
+use repo_derived_data::RepoDerivedDataArc;
 use std::collections::HashMap;
 use unodes::RootUnodeManifestId;
 
-use crate::{ErrorKind, FileChange, FileContentManager, PathContent};
+use crate::ErrorKind;
+use crate::FileChange;
+use crate::FileContentManager;
+use crate::PathContent;
 
 pub struct RepoFileContentManager {
     repo_blobstore: ArcRepoBlobstore,

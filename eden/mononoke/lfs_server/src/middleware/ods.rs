@@ -6,13 +6,16 @@
  */
 
 use gotham::state::State;
-use gotham_ext::middleware::{Middleware, PostResponseCallbacks};
+use gotham_ext::middleware::Middleware;
+use gotham_ext::middleware::PostResponseCallbacks;
+use hyper::Body;
+use hyper::Response;
 use hyper::StatusCode;
-use hyper::{Body, Response};
 use stats::prelude::*;
 use time_ext::DurationExt;
 
-use super::{LfsMethod, RequestContext};
+use super::LfsMethod;
+use super::RequestContext;
 
 define_stats! {
     prefix = "mononoke.lfs.request";

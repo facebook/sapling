@@ -5,25 +5,37 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+use std::collections::HashSet;
 
 use blobstore::Loadable;
 use bytes::Bytes;
 use changesets::ChangesetsRef;
-use chrono::{DateTime, FixedOffset};
+use chrono::DateTime;
+use chrono::FixedOffset;
 use context::CoreContext;
 use ephemeral_blobstore::Bubble;
-use filestore::{FetchKey, FilestoreConfig, StoreRequest};
-use futures::{
-    stream::{self, FuturesOrdered, FuturesUnordered, Stream, TryStreamExt},
-    try_join, StreamExt,
-};
+use filestore::FetchKey;
+use filestore::FilestoreConfig;
+use filestore::StoreRequest;
+use futures::stream::FuturesOrdered;
+use futures::stream::FuturesUnordered;
+use futures::stream::Stream;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use futures::try_join;
+use futures::StreamExt;
 use futures_stats::TimedFutureExt;
 use manifest::PathTree;
-use mononoke_types::{
-    fsnode::FsnodeEntry, BonsaiChangeset, BonsaiChangesetMut, ChangesetId,
-    DateTime as MononokeDateTime, FileChange, MPath, MPathElement,
-};
+use mononoke_types::fsnode::FsnodeEntry;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime as MononokeDateTime;
+use mononoke_types::FileChange;
+use mononoke_types::MPath;
+use mononoke_types::MPathElement;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
@@ -31,7 +43,8 @@ use sorted_vector_map::SortedVectorMap;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
-use crate::file::{FileId, FileType};
+use crate::file::FileId;
+use crate::file::FileType;
 use crate::path::MononokePath;
 use crate::repo_draft::RepoDraftContext;
 use crate::specifiers::ChangesetSpecifier;

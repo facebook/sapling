@@ -7,14 +7,17 @@
 
 use std::convert::TryInto;
 
-use anyhow::{Context, Result};
-use bookmarks::{BookmarkUpdateLogRef, BookmarkUpdateReason};
+use anyhow::Context;
+use anyhow::Result;
+use bookmarks::BookmarkUpdateLogRef;
+use bookmarks::BookmarkUpdateReason;
 use clap::Args;
 use context::CoreContext;
 use mutable_counters::MutableCountersRef;
 use repo_identity::RepoIdentityRef;
 
-use super::{Repo, LATEST_REPLAYED_REQUEST_KEY};
+use super::Repo;
+use super::LATEST_REPLAYED_REQUEST_KEY;
 
 #[derive(Args)]
 pub struct HgSyncRemainsArgs {

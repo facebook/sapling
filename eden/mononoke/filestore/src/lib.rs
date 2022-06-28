@@ -9,17 +9,25 @@
 #![type_length_limit = "2000000"]
 
 use anyhow::Error;
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
+use bytes::BytesMut;
 use cloned::cloned;
-use futures::{
-    future::{Future, TryFutureExt},
-    stream::{self, Stream, TryStreamExt},
-};
+use futures::future::Future;
+use futures::future::TryFutureExt;
+use futures::stream::Stream;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use std::borrow::Borrow;
 
-use blobstore::{Blobstore, Loadable, LoadableError};
+use blobstore::Blobstore;
+use blobstore::Loadable;
+use blobstore::LoadableError;
 use context::CoreContext;
-use mononoke_types::{hash, BlobstoreKey, ContentId, ContentMetadata, FileContents};
+use mononoke_types::hash;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::ContentId;
+use mononoke_types::ContentMetadata;
+use mononoke_types::FileContents;
 
 mod alias;
 mod chunk;
@@ -36,10 +44,14 @@ mod prepare;
 mod rechunk;
 mod streamhash;
 
-pub use copy::{copy, BlobCopier};
+pub use copy::copy;
+pub use copy::BlobCopier;
 pub use fetch::Range;
-pub use fetch_key::{Alias, AliasBlob, FetchKey};
-pub use rechunk::{force_rechunk, rechunk};
+pub use fetch_key::Alias;
+pub use fetch_key::AliasBlob;
+pub use fetch_key::FetchKey;
+pub use rechunk::force_rechunk;
+pub use rechunk::rechunk;
 
 #[cfg(test)]
 mod test;

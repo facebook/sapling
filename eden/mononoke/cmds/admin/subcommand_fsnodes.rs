@@ -9,20 +9,26 @@ use crate::error::SubcommandError;
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use clap_old::{App, Arg, ArgMatches, SubCommand};
-use cmdlib::{
-    args::{self, MononokeMatches},
-    helpers,
-};
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
+use cmdlib::helpers;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::stream::StreamExt;
-use manifest::{Entry, ManifestOps, PathOrPrefix};
+use manifest::Entry;
+use manifest::ManifestOps;
+use manifest::PathOrPrefix;
 
 use fsnodes::RootFsnodeId;
-use mononoke_types::{ChangesetId, MPath};
-use slog::{info, Logger};
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
+use slog::info;
+use slog::Logger;
 
 pub const FSNODES: &str = "fsnodes";
 const COMMAND_TREE: &str = "tree";

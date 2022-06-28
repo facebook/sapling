@@ -9,19 +9,26 @@
 
 use std::io::Write;
 
-use anyhow::{bail, Error};
-use clap::{App, AppSettings, ArgMatches, SubCommand};
+use anyhow::bail;
+use anyhow::Error;
+use clap::App;
+use clap::AppSettings;
+use clap::ArgMatches;
+use clap::SubCommand;
 use futures::stream;
 use futures_util::stream::StreamExt;
 use serde_derive::Serialize;
 use source_control::types as thrift;
 
-use crate::args::commit_id::{
-    add_multiple_commit_id_args, add_scheme_args, get_commit_ids, resolve_commit_ids,
-};
-use crate::args::repo::{add_repo_args, get_repo_specifier};
+use crate::args::commit_id::add_multiple_commit_id_args;
+use crate::args::commit_id::add_scheme_args;
+use crate::args::commit_id::get_commit_ids;
+use crate::args::commit_id::resolve_commit_ids;
+use crate::args::repo::add_repo_args;
+use crate::args::repo::get_repo_specifier;
 use crate::connection::Connection;
-use crate::render::{Render, RenderStream};
+use crate::render::Render;
+use crate::render::RenderStream;
 
 pub(super) const NAME: &str = "is-ancestor";
 

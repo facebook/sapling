@@ -7,22 +7,28 @@
 
 use std::time::Duration;
 
-use anyhow::{format_err, Context, Error};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use bytes::Bytes;
 use clap_old::Arg;
 use futures::future::join_all;
 use futures::stream;
-use slog::{error, info, o};
+use slog::error;
+use slog::info;
+use slog::o;
 
 use changesets::deserialize_cs_entries;
-use cmdlib::{
-    args::{self, MononokeMatches},
-    helpers,
-};
-use context::{CoreContext, SessionContainer};
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
+use cmdlib::helpers;
+use context::CoreContext;
+use context::SessionContainer;
 use fbinit::FacebookInit;
-use segmented_changelog::{self, seedheads_from_config, SegmentedChangelogTailer};
+use segmented_changelog::seedheads_from_config;
+use segmented_changelog::SegmentedChangelogTailer;
+use segmented_changelog::{self};
 
 const ONCE_ARG: &str = "once";
 const REPO_ARG: &str = "repo";

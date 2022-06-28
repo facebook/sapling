@@ -6,8 +6,10 @@
  */
 
 use anyhow::Error;
-use gotham::state::{FromState, State};
-use http::header::{AsHeaderName, HeaderMap};
+use gotham::state::FromState;
+use gotham::state::State;
+use http::header::AsHeaderName;
+use http::header::HeaderMap;
 use permission_checker::MononokeIdentitySet;
 use std::str::FromStr;
 

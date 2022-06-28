@@ -5,19 +5,26 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Result};
+use anyhow::bail;
+use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
 use context::CoreContext;
-use mononoke_types::{RepositoryId, Timestamp};
+use mononoke_types::RepositoryId;
+use mononoke_types::Timestamp;
 use sql::queries;
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 
+use crate::BlobstoreKey;
+use crate::ClaimedBy;
+use crate::LongRunningRequestEntry;
 use crate::LongRunningRequestsQueue;
-use crate::{
-    BlobstoreKey, ClaimedBy, LongRunningRequestEntry, RequestId, RequestStatus, RequestType, RowId,
-};
+use crate::RequestId;
+use crate::RequestStatus;
+use crate::RequestType;
+use crate::RowId;
 
 queries! {
     read TestGetRequest(id: RowId) -> (

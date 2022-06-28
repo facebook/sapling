@@ -5,35 +5,51 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
-use blobstore::{Loadable, LoadableError};
-use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
+use blobstore::Loadable;
+use blobstore::LoadableError;
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use cloned::cloned;
 use context::CoreContext;
-use deleted_manifest::{DeletedManifestOps, PathState, RootDeletedManifestV2Id};
-use derived_data::{BonsaiDerived, DeriveError};
-use futures::{
-    future,
-    stream::{self, Stream as NewStream},
-};
+use deleted_manifest::DeletedManifestOps;
+use deleted_manifest::PathState;
+use deleted_manifest::RootDeletedManifestV2Id;
+use derived_data::BonsaiDerived;
+use derived_data::DeriveError;
+use futures::future;
+use futures::stream::Stream as NewStream;
+use futures::stream::{self};
 use futures_stats::futures03::TimedFutureExt;
-use futures_util::{StreamExt, TryStreamExt};
+use futures_util::StreamExt;
+use futures_util::TryStreamExt;
 use itertools::Itertools;
-use manifest::{Entry, ManifestOps};
-use mononoke_types::{ChangesetId, FileUnodeId, Generation, MPath, ManifestUnodeId};
+use manifest::Entry;
+use manifest::ManifestOps;
+use mononoke_types::ChangesetId;
+use mononoke_types::FileUnodeId;
+use mononoke_types::Generation;
+use mononoke_types::MPath;
+use mononoke_types::ManifestUnodeId;
 use mutable_renames::MutableRenames;
 use stats::prelude::*;
 use std::cmp::Reverse;
-use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
+use std::collections::BinaryHeap;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
 use std::sync::Arc;
 use thiserror::Error;
 use time_ext::DurationExt;
 use unodes::RootUnodeManifestId;
 
-use crate::fastlog_impl::{fetch_fastlog_batch_by_unode_id, fetch_flattened};
-use crate::mapping::{FastlogParent, RootFastlog};
+use crate::fastlog_impl::fetch_fastlog_batch_by_unode_id;
+use crate::fastlog_impl::fetch_flattened;
+use crate::mapping::FastlogParent;
+use crate::mapping::RootFastlog;
 
 define_stats! {
     prefix = "mononoke.fastlog";
@@ -867,10 +883,12 @@ mod test {
     use changesets::ChangesetsRef;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use futures::future::{FutureExt, TryFutureExt};
+    use futures::future::FutureExt;
+    use futures::future::TryFutureExt;
     use maplit::hashmap;
     use mutable_renames::MutableRenameEntry;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
     use tests_utils::CreateCommitContext;
     use tunables::with_tunables_async_arc;
 

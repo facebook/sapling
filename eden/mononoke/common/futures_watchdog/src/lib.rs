@@ -5,15 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use futures::{
-    future::Future,
-    task::{Context, Poll},
-};
+use futures::future::Future;
+use futures::task::Context;
+use futures::task::Poll;
 use maybe_owned::MaybeOwned;
 use pin_project::pin_project;
-use slog::{Logger, Record};
+use slog::Logger;
+use slog::Record;
 use std::pin::Pin;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use std::time::Instant;
 
 #[pin_project]
 pub struct WatchedFuture<R, F> {

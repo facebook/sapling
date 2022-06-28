@@ -11,4 +11,6 @@ pub mod errors;
 pub use crate::errors::ErrorKind;
 
 mod index;
-pub use crate::index::{LeastCommonAncestorsHint, NodeFrontier, ReachabilityIndex};
+pub use crate::index::LeastCommonAncestorsHint;
+pub use crate::index::NodeFrontier;
+pub use crate::index::ReachabilityIndex;

@@ -5,15 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context as _, Error};
+use anyhow::Context as _;
+use anyhow::Error;
 use cloned::cloned;
 use futures::future::TryFutureExt;
 use gotham::handler::Handler;
 use hyper::server::conn::Http;
-use openssl::ssl::{Ssl, SslAcceptor};
+use openssl::ssl::Ssl;
+use openssl::ssl::SslAcceptor;
 use permission_checker::MononokeIdentitySet;
 use quiet_stream::QuietShutdownStream;
-use slog::{warn, Logger};
+use slog::warn;
+use slog::Logger;
 use std::panic::RefUnwindSafe;
 use std::sync::Arc;
 use tokio::net::TcpListener;

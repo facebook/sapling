@@ -15,7 +15,11 @@ use futures::stream::TryStreamExt;
 use mononoke_types::DateTime;
 use tests_utils::CreateCommitContext;
 
-use crate::{ChangesetHistoryOptions, ChangesetId, ChangesetPathHistoryOptions, Repo, RepoContext};
+use crate::ChangesetHistoryOptions;
+use crate::ChangesetId;
+use crate::ChangesetPathHistoryOptions;
+use crate::Repo;
+use crate::RepoContext;
 
 // Generates this commit graph:
 //

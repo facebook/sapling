@@ -65,28 +65,47 @@ pub mod utils;
 
 pub use self::manifest::Type;
 pub use blob::HgBlob;
-pub use blobnode::{calculate_hg_node_id, calculate_hg_node_id_stream, HgBlobNode, HgParents};
-pub use blobs::{
-    fetch_manifest_envelope, fetch_manifest_envelope_opt, fetch_raw_manifest_bytes, HgBlobEnvelope,
-};
+pub use blobnode::calculate_hg_node_id;
+pub use blobnode::calculate_hg_node_id_stream;
+pub use blobnode::HgBlobNode;
+pub use blobnode::HgParents;
+pub use blobs::fetch_manifest_envelope;
+pub use blobs::fetch_manifest_envelope_opt;
+pub use blobs::fetch_raw_manifest_bytes;
+pub use blobs::HgBlobEnvelope;
 pub use delta::Delta;
-pub use envelope::{
-    HgChangesetEnvelope, HgChangesetEnvelopeMut, HgFileEnvelope, HgFileEnvelopeMut,
-    HgManifestEnvelope, HgManifestEnvelopeMut,
-};
+pub use envelope::HgChangesetEnvelope;
+pub use envelope::HgChangesetEnvelopeMut;
+pub use envelope::HgFileEnvelope;
+pub use envelope::HgFileEnvelopeMut;
+pub use envelope::HgManifestEnvelope;
+pub use envelope::HgManifestEnvelopeMut;
 pub use errors::ErrorKind;
-pub use flags::{parse_rev_flags, RevFlags};
-pub use fsencode::{fncache_fsencode, simple_fsencode};
+pub use flags::parse_rev_flags;
+pub use flags::RevFlags;
+pub use fsencode::fncache_fsencode;
+pub use fsencode::simple_fsencode;
 // Re-exports from mononoke_types. Eventually these should go away and everything should depend
 // directly on mononoke_types;
 pub use file::FileBytes;
-pub use mononoke_types::{FileType, Globalrev, MPath, MPathElement, RepoPath};
+pub use mononoke_types::FileType;
+pub use mononoke_types::Globalrev;
+pub use mononoke_types::MPath;
+pub use mononoke_types::MPathElement;
+pub use mononoke_types::RepoPath;
 pub use node::Node;
-pub use nodehash::{
-    HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgEntryId, HgFileNodeId,
-    HgManifestId, HgNodeHash, HgNodeKey, NULL_CSID, NULL_HASH,
-};
-pub use remotefilelog::{convert_parents_to_remotefilelog_format, HgFileHistoryEntry};
+pub use nodehash::HgChangesetId;
+pub use nodehash::HgChangesetIdPrefix;
+pub use nodehash::HgChangesetIdsResolvedFromPrefix;
+pub use nodehash::HgEntryId;
+pub use nodehash::HgFileNodeId;
+pub use nodehash::HgManifestId;
+pub use nodehash::HgNodeHash;
+pub use nodehash::HgNodeKey;
+pub use nodehash::NULL_CSID;
+pub use nodehash::NULL_HASH;
+pub use remotefilelog::convert_parents_to_remotefilelog_format;
+pub use remotefilelog::HgFileHistoryEntry;
 pub use utils::percent_encode;
 
 #[cfg(test)]

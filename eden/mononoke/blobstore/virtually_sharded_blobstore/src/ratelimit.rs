@@ -7,8 +7,11 @@
 
 use anyhow::Error;
 use async_limiter::AsyncLimiter;
-use context::{CoreContext, PerfCounterType};
-use futures::future::{BoxFuture, Fuse, FutureExt};
+use context::CoreContext;
+use context::PerfCounterType;
+use futures::future::BoxFuture;
+use futures::future::Fuse;
+use futures::future::FutureExt;
 use futures_stats::TimedTryFutureExt;
 use time_ext::DurationExt;
 

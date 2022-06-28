@@ -8,11 +8,17 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use fbinit::FacebookInit;
-use tests_utils::drawdag::{changes, create_from_dag_with_changes};
+use tests_utils::drawdag::changes;
+use tests_utils::drawdag::create_from_dag_with_changes;
 
-use crate::{headerless_unified_diff, ChangesetId, CoreContext, Repo, RepoContext};
+use crate::headerless_unified_diff;
+use crate::ChangesetId;
+use crate::CoreContext;
+use crate::Repo;
+use crate::RepoContext;
 
 async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, ChangesetId>)> {
     let blob_repo = test_repo_factory::build_empty(ctx.fb)?;

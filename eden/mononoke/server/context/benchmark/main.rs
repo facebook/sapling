@@ -9,7 +9,8 @@ use std::sync::Arc;
 use std::thread;
 
 use chrono::Local;
-use context::{PerfCounterType, PerfCounters};
+use context::PerfCounterType;
+use context::PerfCounters;
 
 fn main() {
     let ctrs = Arc::new(PerfCounters::default());

@@ -6,33 +6,55 @@
  */
 
 use std::any::TypeId;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::future::Future;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
 use blobstore::Blobstore;
-use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
+use blobstore_factory::BlobstoreOptions;
+use blobstore_factory::ReadOnlyStorage;
 use cached_config::ConfigStore;
-use clap::{ArgMatches, Error as ClapError, FromArgMatches};
+use clap::ArgMatches;
+use clap::Error as ClapError;
+use clap::FromArgMatches;
 use context::CoreContext;
 use environment::MononokeEnvironment;
 use facet::AsyncBuildable;
 use fbinit::FacebookInit;
-use futures::stream::{self, StreamExt, TryStreamExt};
-use metaconfig_parser::{RepoConfigs, StorageConfigs};
-use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, RepoConfig};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use metaconfig_parser::RepoConfigs;
+use metaconfig_parser::StorageConfigs;
+use metaconfig_types::BlobConfig;
+use metaconfig_types::BlobstoreId;
+use metaconfig_types::Redaction;
+use metaconfig_types::RepoConfig;
 use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
-use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig, RedactionConfigBlobstore};
-use repo_factory::{RepoFactory, RepoFactoryBuilder};
+use redactedblobstore::RedactedBlobstore;
+use redactedblobstore::RedactedBlobstoreConfig;
+use redactedblobstore::RedactionConfigBlobstore;
+use repo_factory::RepoFactory;
+use repo_factory::RepoFactoryBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
 use tokio::runtime::Handle;
 
-use crate::args::{ConfigArgs, ConfigMode, MultiRepoArgs, RepoArg, RepoArgs, RepoBlobstoreArgs};
-use crate::extension::{AppExtension, AppExtensionArgsBox, BoxedAppExtensionArgs};
+use crate::args::ConfigArgs;
+use crate::args::ConfigMode;
+use crate::args::MultiRepoArgs;
+use crate::args::RepoArg;
+use crate::args::RepoArgs;
+use crate::args::RepoBlobstoreArgs;
+use crate::extension::AppExtension;
+use crate::extension::AppExtensionArgsBox;
+use crate::extension::BoxedAppExtensionArgs;
 
 pub struct MononokeApp {
     pub fb: FacebookInit,

@@ -6,7 +6,8 @@
  */
 
 use futures::Future;
-use slog::{info, Logger};
+use slog::info;
+use slog::Logger;
 use std::time::Duration;
 
 #[derive(Copy, Clone)]

@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use std::sync::Arc;
 
 use bonsai_hg_mapping::BonsaiHgMapping;
@@ -15,7 +16,8 @@ use context::CoreContext;
 use derived_data_remote::DerivationClient;
 use filenodes::Filenodes;
 use metaconfig_types::DerivedDataTypesConfig;
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
 use scuba_ext::MononokeScubaSampleBuilder;
 

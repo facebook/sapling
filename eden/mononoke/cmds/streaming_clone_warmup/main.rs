@@ -5,33 +5,39 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use blobstore::Blobstore;
-use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
+use blobstore_factory::make_blobstore;
+use blobstore_factory::BlobstoreOptions;
+use blobstore_factory::ReadOnlyStorage;
 use cacheblob::new_memcache_blobstore;
 use cached_config::ConfigStore;
 use clap_old::Arg;
-use cmdlib::{
-    args::{self, MononokeMatches},
-    helpers,
-};
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
+use cmdlib::helpers;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{
-    future::{self, try_join, try_join_all, TryFutureExt},
-    stream::{self, StreamExt, TryStreamExt},
-};
+use futures::future::try_join;
+use futures::future::try_join_all;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use metaconfig_types::RepoConfig;
 use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
-use slog::{error, info};
+use slog::error;
+use slog::info;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
-use streaming_clone::{RevlogStreamingChunks, SqlStreamingChunksFetcher};
+use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
+use streaming_clone::RevlogStreamingChunks;
+use streaming_clone::SqlStreamingChunksFetcher;
 use tokio::time;
 
 const REPO_ARG: &str = "repo";

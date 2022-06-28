@@ -43,12 +43,15 @@
 //! convention the streaming responses are chunked. See `hgproto/dechunker.rs` for the format of
 //! chunking.
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use bytes_old::BytesMut;
 use tokio_io::codec::Decoder;
 
-use crate::handler::{OutputStream, ResponseEncoder};
-use crate::{Request, Response};
+use crate::handler::OutputStream;
+use crate::handler::ResponseEncoder;
+use crate::Request;
+use crate::Response;
 
 pub mod request;
 pub mod response;

@@ -9,7 +9,9 @@ use anyhow::Result;
 use async_trait::async_trait;
 use fbinit::FacebookInit;
 
-use crate::{BoxGlobalTimeWindowCounter, GlobalTimeWindowCounter, GlobalTimeWindowCounterBuilder};
+use crate::BoxGlobalTimeWindowCounter;
+use crate::GlobalTimeWindowCounter;
+use crate::GlobalTimeWindowCounterBuilder;
 
 struct AlwaysZeroCounter {}
 

@@ -5,19 +5,34 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
 use blobrepo::BlobRepo;
-use context::{CoreContext, PerfCounterType};
+use context::CoreContext;
+use context::PerfCounterType;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
-use manifest::{Entry, ManifestOps};
-pub use megarepo_configs::types::{
-    Source, SourceMappingRules, SourceRevision, SyncConfigVersion, SyncTargetConfig, Target,
-};
-use mononoke_types::{BonsaiChangesetMut, ChangesetId, ContentId, FileChange, FileType, MPath};
-use serde::{Deserialize, Serialize};
-use sql::{queries, Connection};
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use manifest::Entry;
+use manifest::ManifestOps;
+pub use megarepo_configs::types::Source;
+pub use megarepo_configs::types::SourceMappingRules;
+pub use megarepo_configs::types::SourceRevision;
+pub use megarepo_configs::types::SyncConfigVersion;
+pub use megarepo_configs::types::SyncTargetConfig;
+pub use megarepo_configs::types::Target;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::FileChange;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
+use serde::Deserialize;
+use serde::Serialize;
+use sql::queries;
+use sql::Connection;
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -417,7 +432,9 @@ mod test {
     use super::*;
     use fbinit::FacebookInit;
     use maplit::btreemap;
-    use mononoke_types_mocks::changesetid::{ONES_CSID, THREES_CSID, TWOS_CSID};
+    use mononoke_types_mocks::changesetid::ONES_CSID;
+    use mononoke_types_mocks::changesetid::THREES_CSID;
+    use mononoke_types_mocks::changesetid::TWOS_CSID;
 
     #[fbinit::test]
     async fn test_simple_mapping(fb: FacebookInit) -> Result<(), Error> {

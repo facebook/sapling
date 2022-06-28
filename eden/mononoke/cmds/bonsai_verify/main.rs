@@ -7,40 +7,50 @@
 
 mod config;
 
-use anyhow::{format_err, Error, Result};
+use anyhow::format_err;
+use anyhow::Error;
+use anyhow::Result;
 use blobrepo::BlobRepo;
-use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
+use blobrepo_utils::BonsaiMFVerify;
+use blobrepo_utils::BonsaiMFVerifyResult;
 use blobstore::Loadable;
-use clap::{Parser, Subcommand};
+use clap::Parser;
+use clap::Subcommand;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::DisplayChain;
 use fbinit::FacebookInit;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, TryFutureExt},
-    stream::{StreamExt, TryStreamExt},
-};
-use futures_old::{
-    future::{self as old_future, Either},
-    Future, Stream,
-};
+use futures::compat::Future01CompatExt;
+use futures::compat::Stream01CompatExt;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures_old::future::Either;
+use futures_old::future::{self as old_future};
+use futures_old::Future;
+use futures_old::Stream;
 use lock_ext::LockExt;
-use mercurial_derived_data::{get_manifest_from_bonsai, DeriveHgChangeset};
+use mercurial_derived_data::get_manifest_from_bonsai;
+use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
-use mononoke_app::{args::RepoArgs, MononokeAppBuilder};
+use mononoke_app::args::RepoArgs;
+use mononoke_app::MononokeAppBuilder;
 use revset::AncestorsNodeStream;
-use slog::{debug, error, info, warn, Logger};
-use std::{
-    collections::HashSet,
-    io::Write,
-    process,
-    sync::{
-        atomic::{AtomicU64, AtomicUsize, Ordering},
-        Arc, Mutex,
-    },
-    time::Instant,
-};
+use slog::debug;
+use slog::error;
+use slog::info;
+use slog::warn;
+use slog::Logger;
+use std::collections::HashSet;
+use std::io::Write;
+use std::process;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::Instant;
 
 #[derive(Parser)]
 struct CommandArgs {

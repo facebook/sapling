@@ -5,20 +5,24 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
-use futures::{
-    future::{self, FutureExt},
-    pin_mut, select,
-};
-use gotham::state::{FromState, State};
-use gotham_derive::{StateData, StaticResponseExtender};
-use gotham_ext::{
-    body_ext::BodyExt,
-    middleware::{RequestStartTime, ScubaMiddlewareState},
-    response::{BytesBody, TryIntoResponse},
-};
+use anyhow::Context;
+use anyhow::Error;
+use futures::future::FutureExt;
+use futures::future::{self};
+use futures::pin_mut;
+use futures::select;
+use gotham::state::FromState;
+use gotham::state::State;
+use gotham_derive::StateData;
+use gotham_derive::StaticResponseExtender;
+use gotham_ext::body_ext::BodyExt;
+use gotham_ext::middleware::RequestStartTime;
+use gotham_ext::middleware::ScubaMiddlewareState;
+use gotham_ext::response::BytesBody;
+use gotham_ext::response::TryIntoResponse;
 use http::header::HeaderMap;
-use hyper::{Body, StatusCode};
+use hyper::Body;
+use hyper::StatusCode;
 use maplit::hashmap;
 use rand::Rng;
 use redactedblobstore::has_redaction_root_cause;
@@ -31,17 +35,28 @@ use std::time::Instant;
 use time_ext::DurationExt;
 use time_window_counter::GlobalTimeWindowCounterBuilder;
 
-use blobstore::{Blobstore, Loadable, LoadableError};
+use blobstore::Blobstore;
+use blobstore::Loadable;
+use blobstore::LoadableError;
 use filestore::Alias;
 use gotham_ext::error::HttpError;
-use lfs_protocol::{
-    git_lfs_mime, ObjectAction, ObjectError, ObjectStatus, Operation, RequestBatch, RequestObject,
-    ResponseBatch, ResponseObject, Transfer,
-};
-use mononoke_types::{hash::Sha256, typed_hash::ContentId, BlobstoreKey};
+use lfs_protocol::git_lfs_mime;
+use lfs_protocol::ObjectAction;
+use lfs_protocol::ObjectError;
+use lfs_protocol::ObjectStatus;
+use lfs_protocol::Operation;
+use lfs_protocol::RequestBatch;
+use lfs_protocol::RequestObject;
+use lfs_protocol::ResponseBatch;
+use lfs_protocol::ResponseObject;
+use lfs_protocol::Transfer;
+use mononoke_types::hash::Sha256;
+use mononoke_types::typed_hash::ContentId;
+use mononoke_types::BlobstoreKey;
 
 use crate::errors::ErrorKind;
-use crate::lfs_server_context::{RepositoryRequestContext, UriBuilder};
+use crate::lfs_server_context::RepositoryRequestContext;
+use crate::lfs_server_context::UriBuilder;
 use crate::middleware::LfsMethod;
 use crate::popularity::allow_consistent_routing;
 use crate::scuba::LfsScubaKey;
@@ -668,22 +683,27 @@ mod test {
 
     use async_trait::async_trait;
     use blobrepo::BlobRepo;
-    use blobstore::{BlobstoreBytes, BlobstoreGetData};
+    use blobstore::BlobstoreBytes;
+    use blobstore::BlobstoreGetData;
     use bytes::Bytes;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use filestore::{self, StoreRequest};
+    use filestore::StoreRequest;
+    use filestore::{self};
     use futures::stream;
     use hyper::Uri;
     use memblob::Memblob;
     use mononoke_types::ContentMetadataId;
-    use mononoke_types_mocks::hash::{FOURS_SHA256, ONES_SHA256, THREES_SHA256, TWOS_SHA256};
-    use redactedblobstore::{RedactedBlobs, RedactedMetadata};
+    use mononoke_types_mocks::hash::FOURS_SHA256;
+    use mononoke_types_mocks::hash::ONES_SHA256;
+    use mononoke_types_mocks::hash::THREES_SHA256;
+    use mononoke_types_mocks::hash::TWOS_SHA256;
+    use redactedblobstore::RedactedBlobs;
+    use redactedblobstore::RedactedMetadata;
     use std::collections::HashSet;
-    use std::sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc,
-    };
+    use std::sync::atomic::AtomicU64;
+    use std::sync::atomic::Ordering;
+    use std::sync::Arc;
     use test_repo_factory::TestRepoFactory;
 
     use pretty_assertions::assert_eq;

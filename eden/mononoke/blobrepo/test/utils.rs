@@ -11,23 +11,30 @@ use anyhow::Error;
 use ascii::AsAsciiStr;
 use bytes::Bytes;
 use fbinit::FacebookInit;
-use futures::{
-    compat::Future01CompatExt, future::BoxFuture, stream::FuturesUnordered, FutureExt, StreamExt,
-    TryFutureExt,
-};
+use futures::compat::Future01CompatExt;
+use futures::future::BoxFuture;
+use futures::stream::FuturesUnordered;
+use futures::FutureExt;
+use futures::StreamExt;
+use futures::TryFutureExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use ::manifest::Entry;
 use blobrepo::BlobRepo;
-use blobrepo_hg::{ChangesetHandle, CreateChangeset};
+use blobrepo_hg::ChangesetHandle;
+use blobrepo_hg::CreateChangeset;
 use context::CoreContext;
-use mercurial_types::{
-    blobs::{
-        ChangesetMetadata, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
-        UploadHgTreeEntry,
-    },
-    HgBlobNode, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath,
-};
+use mercurial_types::blobs::ChangesetMetadata;
+use mercurial_types::blobs::UploadHgFileContents;
+use mercurial_types::blobs::UploadHgFileEntry;
+use mercurial_types::blobs::UploadHgNodeHash;
+use mercurial_types::blobs::UploadHgTreeEntry;
+use mercurial_types::HgBlobNode;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::MPath;
+use mercurial_types::RepoPath;
 use mononoke_types::DateTime;
 
 pub fn upload_file_no_parents<B>(

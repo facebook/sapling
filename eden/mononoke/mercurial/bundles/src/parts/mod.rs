@@ -5,8 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use super::changegroup::{packer::CgPacker, unpacker::CgVersion};
-use super::changegroup::{CgDeltaChunk, Part, Section};
+use super::changegroup::packer::CgPacker;
+use super::changegroup::unpacker::CgVersion;
+use super::changegroup::CgDeltaChunk;
+use super::changegroup::Part;
+use super::changegroup::Section;
 use super::chunk::Chunk;
 use super::infinitepush::infinitepush_mutation_packer;
 use super::obsmarkers::packer::obsmarkers_packer_stream;
@@ -15,22 +18,37 @@ use super::wirepack;
 use super::wirepack::packer::WirePackPacker;
 use crate::errors::ErrorKind;
 use crate::part_encode::PartEncodeBuilder;
-use crate::part_header::{PartHeaderType, PartId};
-use anyhow::{Context, Error, Result};
-use byteorder::{BigEndian, WriteBytesExt};
+use crate::part_header::PartHeaderType;
+use crate::part_header::PartId;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::WriteBytesExt;
 use bytes::Bytes as BytesNew;
 use bytes_old::Bytes;
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture, BoxStream, StreamExt};
-use futures_old::stream::{iter_ok, once};
-use futures_old::{Future, Stream};
+use futures::compat::Future01CompatExt;
+use futures::FutureExt;
+use futures::TryFutureExt;
+use futures_ext::BoxFuture;
+use futures_ext::BoxStream;
+use futures_ext::StreamExt;
+use futures_old::stream::iter_ok;
+use futures_old::stream::once;
+use futures_old::Future;
+use futures_old::Stream;
 use futures_stats::TimedFutureExt;
 use mercurial_mutation::HgMutationEntry;
-use mercurial_types::{
-    Delta, HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, MPath, RepoPath, RevFlags,
-    NULL_HASH,
-};
+use mercurial_types::Delta;
+use mercurial_types::HgBlobNode;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::MPath;
+use mercurial_types::RepoPath;
+use mercurial_types::RevFlags;
+use mercurial_types::NULL_HASH;
 use mononoke_types::DateTime;
 use phases::Phase;
 use std::collections::HashMap;

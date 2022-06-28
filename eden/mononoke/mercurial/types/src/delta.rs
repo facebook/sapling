@@ -5,13 +5,20 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, ensure, format_err, Context, Result};
-use quickcheck::{Arbitrary, Gen};
-use rand_distr::{Distribution, LogNormal};
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Result;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
+use rand_distr::Distribution;
+use rand_distr::LogNormal;
 
 use crate::errors::ErrorKind;
 
-use super::delta_apply::{mpatch_fold, wrap_deltas};
+use super::delta_apply::mpatch_fold;
+use super::delta_apply::wrap_deltas;
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Delta {

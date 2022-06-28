@@ -12,7 +12,8 @@ use futures::future::BoxFuture;
 
 use blobstore::BlobstoreGetData;
 
-use crate::{CacheOps, LeaseOps};
+use crate::CacheOps;
+use crate::LeaseOps;
 
 /// A dummy implementation of LeaseOps that meets the letter of the spec, but uselessly
 #[derive(Clone, Debug)]

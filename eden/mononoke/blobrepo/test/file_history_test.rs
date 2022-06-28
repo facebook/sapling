@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_hg::file_history::get_file_history;
 use blobstore::Loadable;

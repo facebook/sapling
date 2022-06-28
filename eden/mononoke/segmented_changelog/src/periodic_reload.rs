@@ -13,7 +13,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 
 use context::CoreContext;
-use futures::future::{abortable, AbortHandle};
+use futures::future::abortable;
+use futures::future::AbortHandle;
 use mononoke_types::ChangesetId;
 use rand::Rng;
 use slog::info;
@@ -21,11 +22,13 @@ use tokio::sync::Notify;
 use tunables::tunables;
 
 use crate::manager::SegmentedChangelogManager;
-use crate::{
-    segmented_changelog_delegate, types::SegmentedChangelogVersion, CloneData, Location,
-    SegmentedChangelog,
-};
-use reloader::{Loader, Reloader};
+use crate::segmented_changelog_delegate;
+use crate::types::SegmentedChangelogVersion;
+use crate::CloneData;
+use crate::Location;
+use crate::SegmentedChangelog;
+use reloader::Loader;
+use reloader::Reloader;
 
 struct SegmentedChangelogLoader {
     manager: SegmentedChangelogManager,

@@ -5,25 +5,40 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, bail, format_err, Context, Error};
-use blobstore::{Blobstore, Loadable};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use blobstore::Blobstore;
+use blobstore::Loadable;
 use borrowed::borrowed;
 use bounded_traversal::bounded_traversal;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::batch::{split_bonsais_in_linear_stacks, FileConflicts};
+use derived_data::batch::split_bonsais_in_linear_stacks;
+use derived_data::batch::FileConflicts;
 use derived_data_manager::DerivationContext;
-use futures::{
-    channel::mpsc,
-    future::{self, BoxFuture, FutureExt},
-    stream::{self, StreamExt, TryStreamExt},
-};
-use manifest::{Diff, ManifestOps, PathTree};
-use mononoke_types::{
-    deleted_manifest_common::DeletedManifestCommon, BlobstoreKey, BonsaiChangeset, ChangesetId,
-    MPath, MPathElement, ManifestUnodeId,
-};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use futures::channel::mpsc;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::future::{self};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use manifest::Diff;
+use manifest::ManifestOps;
+use manifest::PathTree;
+use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
+use mononoke_types::MPathElement;
+use mononoke_types::ManifestUnodeId;
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tunables::tunables;
@@ -729,9 +744,9 @@ mod test {
     use fbinit::FacebookInit;
     use maplit::btreemap;
     use memblob::Memblob;
-    use mononoke_types::{
-        deleted_manifest_v2::DeletedManifestV2, hash::Blake2, DeletedManifestV2Id,
-    };
+    use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
+    use mononoke_types::hash::Blake2;
+    use mononoke_types::DeletedManifestV2Id;
     use pretty_assertions::assert_eq;
 
     use PathChange::*;

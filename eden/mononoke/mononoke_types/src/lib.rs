@@ -36,30 +36,60 @@ pub mod svnrev;
 pub mod typed_hash;
 pub mod unode;
 
-pub use blame::{Blame, BlameId, BlameRange};
-pub use blob::{Blob, BlobstoreValue, ChangesetBlob, ContentBlob, RawBundle2Blob};
+pub use blame::Blame;
+pub use blame::BlameId;
+pub use blame::BlameRange;
+pub use blob::Blob;
+pub use blob::BlobstoreValue;
+pub use blob::ChangesetBlob;
+pub use blob::ContentBlob;
+pub use blob::RawBundle2Blob;
 pub use blobstore::BlobstoreBytes;
-pub use bonsai_changeset::{BonsaiChangeset, BonsaiChangesetMut};
+pub use bonsai_changeset::BonsaiChangeset;
+pub use bonsai_changeset::BonsaiChangesetMut;
 pub use content_chunk::ContentChunk;
-pub use content_metadata::{ContentAlias, ContentMetadata};
-pub use datetime::{DateTime, Timestamp};
-pub use file_change::{BasicFileChange, FileChange, FileType, TrackedFileChange};
-pub use file_contents::{ChunkedFileContents, ContentChunkPointer, FileContents};
-pub use generation::{Generation, FIRST_GENERATION};
+pub use content_metadata::ContentAlias;
+pub use content_metadata::ContentMetadata;
+pub use datetime::DateTime;
+pub use datetime::Timestamp;
+pub use file_change::BasicFileChange;
+pub use file_change::FileChange;
+pub use file_change::FileType;
+pub use file_change::TrackedFileChange;
+pub use file_contents::ChunkedFileContents;
+pub use file_contents::ContentChunkPointer;
+pub use file_contents::FileContents;
+pub use generation::Generation;
+pub use generation::FIRST_GENERATION;
 pub use globalrev::Globalrev;
-pub use path::{
-    check_case_conflicts, mpath_element_iter, path_bytes_from_mpath, MPath, MPathElement,
-    MPathHash, PrefixTrie, RepoPath,
-};
+pub use path::check_case_conflicts;
+pub use path::mpath_element_iter;
+pub use path::path_bytes_from_mpath;
+pub use path::MPath;
+pub use path::MPathElement;
+pub use path::MPathHash;
+pub use path::PrefixTrie;
+pub use path::RepoPath;
 pub use rawbundle2::RawBundle2;
 pub use redaction_key_list::RedactionKeyList;
-pub use repo::{RepositoryId, REPO_PREFIX_REGEX};
+pub use repo::RepositoryId;
+pub use repo::REPO_PREFIX_REGEX;
 pub use svnrev::Svnrev;
-pub use typed_hash::{
-    BlobstoreKey, ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, ContentChunkId,
-    ContentId, ContentMetadataId, DeletedManifestV2Id, FastlogBatchId, FileUnodeId, FsnodeId,
-    ManifestUnodeId, MononokeId, RawBundle2Id, SkeletonManifestId,
-};
+pub use typed_hash::BlobstoreKey;
+pub use typed_hash::ChangesetId;
+pub use typed_hash::ChangesetIdPrefix;
+pub use typed_hash::ChangesetIdsResolvedFromPrefix;
+pub use typed_hash::ContentChunkId;
+pub use typed_hash::ContentId;
+pub use typed_hash::ContentMetadataId;
+pub use typed_hash::DeletedManifestV2Id;
+pub use typed_hash::FastlogBatchId;
+pub use typed_hash::FileUnodeId;
+pub use typed_hash::FsnodeId;
+pub use typed_hash::ManifestUnodeId;
+pub use typed_hash::MononokeId;
+pub use typed_hash::RawBundle2Id;
+pub use typed_hash::SkeletonManifestId;
 
 mod macros;
 
@@ -69,15 +99,21 @@ pub mod thrift {
 
 pub mod private {
     pub use anyhow;
-    pub use ascii::{AsciiStr, AsciiString};
+    pub use ascii::AsciiStr;
+    pub use ascii::AsciiString;
     pub use bytes::Bytes;
-    pub use quickcheck::{empty_shrinker, Arbitrary, Gen};
-    pub use serde::{
-        de::Deserialize, de::Deserializer, de::Error as DeError, Serialize, Serializer,
-    };
+    pub use quickcheck::empty_shrinker;
+    pub use quickcheck::Arbitrary;
+    pub use quickcheck::Gen;
+    pub use serde::de::Deserialize;
+    pub use serde::de::Deserializer;
+    pub use serde::de::Error as DeError;
+    pub use serde::Serialize;
+    pub use serde::Serializer;
 
     pub use crate::errors::ErrorKind;
     pub use crate::hash::Blake2;
     pub use crate::thrift;
-    pub use crate::typed_hash::{Blake2HexVisitor, ThriftConvert};
+    pub use crate::typed_hash::Blake2HexVisitor;
+    pub use crate::typed_hash::ThriftConvert;
 }

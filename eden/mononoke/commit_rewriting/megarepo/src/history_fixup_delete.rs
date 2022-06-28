@@ -13,7 +13,8 @@ use mononoke_types::ChangesetId;
 use std::collections::BTreeSet;
 
 use crate::chunking::Chunker;
-use crate::common::{delete_files_in_chunks, ChangesetArgsFactory};
+use crate::common::delete_files_in_chunks;
+use crate::common::ChangesetArgsFactory;
 use crate::working_copy::get_changed_content_working_copy_paths;
 
 /// A struct containing pre-merge delete information
@@ -94,7 +95,8 @@ pub async fn create_history_fixup_deletes<'a>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::common::{ChangesetArgs, StackPosition};
+    use crate::common::ChangesetArgs;
+    use crate::common::StackPosition;
     use crate::working_copy::get_working_copy_paths;
     use cloned::cloned;
     use fbinit::FacebookInit;

@@ -6,26 +6,33 @@
  */
 
 use crate::commands::SCRUB;
-use crate::detail::{
-    graph::Node,
-    sampling::WalkSampleMapping,
-    scrub::{scrub_objects, ScrubCommand, ScrubSample},
-};
-use anyhow::{Context, Error};
+use crate::detail::graph::Node;
+use crate::detail::sampling::WalkSampleMapping;
+use crate::detail::scrub::scrub_objects;
+use crate::detail::scrub::ScrubCommand;
+use crate::detail::scrub::ScrubSample;
+use anyhow::Context;
+use anyhow::Error;
 use async_trait::async_trait;
 use clap::Parser;
-use executor_lib::{BackgroundProcessExecutor, RepoShardedProcess, RepoShardedProcessExecutor};
+use executor_lib::BackgroundProcessExecutor;
+use executor_lib::RepoShardedProcess;
+use executor_lib::RepoShardedProcessExecutor;
 use fbinit::FacebookInit;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::MononokeApp;
 use once_cell::sync::OnceCell;
-use slog::{info, Logger};
-use std::sync::atomic::{AtomicBool, Ordering};
+use slog::info;
+use slog::Logger;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use crate::args::{
-    OutputFormat, SamplingArgs, ScrubOutputNodeArgs, ScrubPackLogArgs, WalkerCommonArgs,
-};
+use crate::args::OutputFormat;
+use crate::args::SamplingArgs;
+use crate::args::ScrubOutputNodeArgs;
+use crate::args::ScrubPackLogArgs;
+use crate::args::WalkerCommonArgs;
 use crate::commands::JobParams;
 use crate::setup::setup_common;
 use crate::WalkerArgs;

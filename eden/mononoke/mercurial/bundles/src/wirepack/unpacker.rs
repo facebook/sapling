@@ -10,14 +10,23 @@
 use std::cmp;
 use std::mem;
 
-use anyhow::{bail, Context, Error, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use bytes_old::BytesMut;
-use slog::{trace, Logger};
+use slog::trace;
+use slog::Logger;
 use tokio_codec::Decoder;
 
 use mercurial_types::RepoPath;
 
-use super::{DataEntry, DataEntryVersion, HistoryEntry, Kind, Part, WIREPACK_END};
+use super::DataEntry;
+use super::DataEntryVersion;
+use super::HistoryEntry;
+use super::Kind;
+use super::Part;
+use super::WIREPACK_END;
 use crate::errors::ErrorKind;
 use crate::utils::BytesExt;
 
@@ -260,8 +269,10 @@ mod test {
     use std::io::Cursor;
 
     use futures::compat::Future01CompatExt;
-    use futures_old::{Future, Stream};
-    use slog::{o, Discard};
+    use futures_old::Future;
+    use futures_old::Stream;
+    use slog::o;
+    use slog::Discard;
     use tokio_codec::FramedRead;
 
     use super::*;

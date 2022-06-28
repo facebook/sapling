@@ -9,37 +9,58 @@ use std::convert::identity;
 use std::fmt;
 use std::sync::Arc;
 
-use anyhow::{anyhow, bail, Context, Error};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
 use async_recursion::async_recursion;
 use async_trait::async_trait;
-use blame::{fetch_blame_compat, fetch_content_for_blame, BlameError, CompatBlame};
+use blame::fetch_blame_compat;
+use blame::fetch_content_for_blame;
+use blame::BlameError;
+use blame::CompatBlame;
 use blobrepo::BlobRepo;
-use blobstore::{Blobstore, Loadable};
+use blobstore::Blobstore;
+use blobstore::Loadable;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
-use deleted_manifest::{DeletedManifestOps, RootDeletedManifestIdCommon};
+use deleted_manifest::DeletedManifestOps;
+use deleted_manifest::RootDeletedManifestIdCommon;
 use derived_data::BonsaiDerived;
-use fastlog::{
-    list_file_history, CsAndPath, FastlogError, FollowMutableFileHistory, HistoryAcrossDeletions,
-    TraversalOrder, Visitor,
-};
+use fastlog::list_file_history;
+use fastlog::CsAndPath;
+use fastlog::FastlogError;
+use fastlog::FollowMutableFileHistory;
+use fastlog::HistoryAcrossDeletions;
+use fastlog::TraversalOrder;
+use fastlog::Visitor;
 use filestore::FetchKey;
-use futures::future::{try_join_all, TryFutureExt};
-use futures::stream::{self, Stream, TryStreamExt};
+use futures::future::try_join_all;
+use futures::future::TryFutureExt;
+use futures::stream::Stream;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use futures::try_join;
 use futures_lazy_shared::LazyShared;
-use manifest::{Entry, ManifestOps};
-use mononoke_types::blame_v2::{BlameParent, BlameV2};
+use manifest::Entry;
+use manifest::ManifestOps;
+use mononoke_types::blame_v2::BlameParent;
+use mononoke_types::blame_v2::BlameV2;
+use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::fsnode::FsnodeFile;
-use mononoke_types::{
-    deleted_manifest_common::DeletedManifestCommon, ChangesetId, FileType, FileUnodeId, FsnodeId,
-    Generation, ManifestUnodeId, SkeletonManifestId,
-};
+use mononoke_types::ChangesetId;
+use mononoke_types::FileType;
+use mononoke_types::FileUnodeId;
+use mononoke_types::FsnodeId;
+use mononoke_types::Generation;
+use mononoke_types::ManifestUnodeId;
+use mononoke_types::SkeletonManifestId;
 use reachabilityindex::ReachabilityIndex;
 use skiplist::SkiplistIndex;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use xdiff;
 
 pub use xdiff::CopyInfo;

@@ -10,7 +10,8 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use context::CoreContext;
 use mononoke_types::RepositoryId;
 
-use crate::types::{IdDagVersion, SegmentedChangelogVersion};
+use crate::types::IdDagVersion;
+use crate::types::SegmentedChangelogVersion;
 
 const SCUBA_TABLE: &str = "segmented_changelog_version";
 

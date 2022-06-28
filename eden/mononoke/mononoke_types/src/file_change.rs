@@ -7,15 +7,22 @@
 
 use std::fmt;
 
-use anyhow::{bail, Context, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
 use edenapi_types::FileType as EdenapiFileType;
-use quickcheck::{empty_shrinker, single_shrinker, Arbitrary, Gen};
-use serde_derive::{Deserialize, Serialize};
+use quickcheck::empty_shrinker;
+use quickcheck::single_shrinker;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
 use crate::errors::ErrorKind;
 use crate::path::MPath;
 use crate::thrift;
-use crate::typed_hash::{ChangesetId, ContentId};
+use crate::typed_hash::ChangesetId;
+use crate::typed_hash::ContentId;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct TrackedFileChange {

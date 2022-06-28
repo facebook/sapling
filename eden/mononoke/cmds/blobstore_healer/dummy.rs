@@ -10,12 +10,17 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData, BlobstoreIsPresent};
-use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
+use blobstore_sync_queue::BlobstoreSyncQueue;
+use blobstore_sync_queue::BlobstoreSyncQueueEntry;
 use context::CoreContext;
 use metaconfig_types::MultiplexId;
-use mononoke_types::{BlobstoreBytes, DateTime};
-use slog::{info, Logger};
+use mononoke_types::BlobstoreBytes;
+use mononoke_types::DateTime;
+use slog::info;
+use slog::Logger;
 
 #[derive(Debug)]
 pub struct DummyBlobstore<B> {

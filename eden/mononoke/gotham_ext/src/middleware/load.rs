@@ -5,17 +5,20 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt::{self, Debug, Display};
-use std::sync::{
-    atomic::{AtomicI64, Ordering},
-    Arc,
-};
+use std::fmt::Debug;
+use std::fmt::Display;
+use std::fmt::{self};
+use std::sync::atomic::AtomicI64;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 use gotham::state::State;
 use gotham_derive::StateData;
-use hyper::{Body, Response};
+use hyper::Body;
+use hyper::Response;
 
-use super::{Middleware, PostResponseCallbacks};
+use super::Middleware;
+use super::PostResponseCallbacks;
 
 #[derive(StateData, Debug, Copy, Clone)]
 pub struct RequestLoad(pub i64);

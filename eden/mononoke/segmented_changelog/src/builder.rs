@@ -7,7 +7,8 @@
 
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use blobstore::Blobstore;
 use bookmarks::ArcBookmarks;
 use changeset_fetcher::ArcChangesetFetcher;
@@ -16,20 +17,26 @@ use fbinit::FacebookInit;
 use metaconfig_types::SegmentedChangelogConfig;
 use mononoke_types::RepositoryId;
 use repo_identity::RepoIdentity;
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::replication::NoReplicaLagMonitor;
 use sql_ext::SqlConnections;
 
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::{CacheHandlers, ConcurrentMemIdMap, IdMapFactory};
-use crate::manager::{SegmentedChangelogManager, SegmentedChangelogType};
+use crate::idmap::CacheHandlers;
+use crate::idmap::ConcurrentMemIdMap;
+use crate::idmap::IdMapFactory;
+use crate::manager::SegmentedChangelogManager;
+use crate::manager::SegmentedChangelogType;
 use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::periodic_reload::PeriodicReloadSegmentedChangelog;
+use crate::seedheads_from_config;
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{
-    seedheads_from_config, CloneHints, DisabledSegmentedChangelog, InProcessIdDag, JobType,
-    SegmentedChangelog,
-};
+use crate::CloneHints;
+use crate::DisabledSegmentedChangelog;
+use crate::InProcessIdDag;
+use crate::JobType;
+use crate::SegmentedChangelog;
 
 #[derive(Clone)]
 pub struct SegmentedChangelogSqlConnections(pub SqlConnections);

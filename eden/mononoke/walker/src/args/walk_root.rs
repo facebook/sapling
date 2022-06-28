@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::graph::{EdgeType, Node};
+use crate::detail::graph::EdgeType;
+use crate::detail::graph::Node;
 use crate::detail::parse_node::parse_node;
 use crate::detail::walk::OutgoingEdge;
 use anyhow::Error;

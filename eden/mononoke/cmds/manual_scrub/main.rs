@@ -5,22 +5,30 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error, Result};
-use async_compression::{tokio::write::ZstdEncoder, Level};
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
+use async_compression::tokio::write::ZstdEncoder;
+use async_compression::Level;
 use clap_old::Arg;
-use futures::{
-    channel::mpsc,
-    stream::{FuturesUnordered, StreamExt, TryStreamExt},
-};
+use futures::channel::mpsc;
+use futures::stream::FuturesUnordered;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use slog::info;
 use std::ffi::OsStr;
-use tokio::{
-    fs::File,
-    io::{stdin, AsyncBufReadExt, AsyncWrite, AsyncWriteExt, BufReader},
-};
+use tokio::fs::File;
+use tokio::io::stdin;
+use tokio::io::AsyncBufReadExt;
+use tokio::io::AsyncWrite;
+use tokio::io::AsyncWriteExt;
+use tokio::io::BufReader;
 
-use blobstore_factory::{make_blobstore, ScrubAction, ScrubWriteMostly};
-use cmdlib::args::{self, ArgType};
+use blobstore_factory::make_blobstore;
+use blobstore_factory::ScrubAction;
+use blobstore_factory::ScrubWriteMostly;
+use cmdlib::args::ArgType;
+use cmdlib::args::{self};
 use context::CoreContext;
 
 mod checkpoint;

@@ -5,14 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    cmp::min,
-    num::NonZeroUsize,
-    time::{Duration, Instant},
-};
+use std::cmp::min;
+use std::num::NonZeroUsize;
+use std::time::Duration;
+use std::time::Instant;
 
 use futures::stream::StreamExt;
-use rand::{thread_rng, Rng};
+use rand::thread_rng;
+use rand::Rng;
 use stats::prelude::*;
 use tokio::sync::watch;
 

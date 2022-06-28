@@ -11,47 +11,72 @@ mod file_history_test;
 mod tracing_blobstore;
 mod utils;
 
-use ::manifest::{Entry, Manifest, ManifestOps};
+use ::manifest::Entry;
+use ::manifest::Manifest;
+use ::manifest::ManifestOps;
 use anyhow::Error;
 use assert_matches::assert_matches;
 use blobrepo::BlobRepo;
 use blobrepo_errors::ErrorKind;
-use blobrepo_hg::repo_commit::{compute_changed_files, UploadEntries};
-use blobstore::{Loadable, Storable};
+use blobrepo_hg::repo_commit::compute_changed_files;
+use blobrepo_hg::repo_commit::UploadEntries;
+use blobstore::Loadable;
+use blobstore::Storable;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use fixtures::{create_bonsai_changeset, ManyFilesDirs, MergeUneven, TestRepoFixture};
-use futures::future::{BoxFuture, FutureExt, TryFutureExt};
+use fixtures::create_bonsai_changeset;
+use fixtures::ManyFilesDirs;
+use fixtures::MergeUneven;
+use fixtures::TestRepoFixture;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
 use memblob::Memblob;
-use mercurial_derived_data::{get_manifest_from_bonsai, DeriveHgChangeset};
-use mercurial_types::{
-    blobs::{
-        ContentBlobMeta, File, HgBlobChangeset, HgBlobManifest, UploadHgFileContents,
-        UploadHgFileEntry, UploadHgNodeHash,
-    },
-    FileType, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId, HgNodeHash, HgParents,
-    MPath, RepoPath,
-};
+use mercurial_derived_data::get_manifest_from_bonsai;
+use mercurial_derived_data::DeriveHgChangeset;
+use mercurial_types::blobs::ContentBlobMeta;
+use mercurial_types::blobs::File;
+use mercurial_types::blobs::HgBlobChangeset;
+use mercurial_types::blobs::HgBlobManifest;
+use mercurial_types::blobs::UploadHgFileContents;
+use mercurial_types::blobs::UploadHgFileEntry;
+use mercurial_types::blobs::UploadHgNodeHash;
+use mercurial_types::FileType;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileEnvelope;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::HgParents;
+use mercurial_types::MPath;
+use mercurial_types::RepoPath;
 use mercurial_types_mocks::nodehash::ONES_FNID;
+use mononoke_types::blob::BlobstoreValue;
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
-use mononoke_types::{
-    blob::BlobstoreValue, BonsaiChangeset, ChangesetId, DateTime, FileChange, FileContents,
-};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
+use mononoke_types::FileChange;
+use mononoke_types::FileContents;
 use scuba_ext::MononokeScubaSampleBuilder;
-use std::{
-    collections::{BTreeMap, HashMap},
-    sync::Arc,
-};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::sync::Arc;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::CreateCommitContext;
 use tracing_blobstore::TracingBlobstore;
-use utils::{
-    create_changeset_no_parents, create_changeset_one_parent, string_to_nodehash, to_leaf,
-    to_mpath, to_tree, upload_file_no_parents, upload_file_one_parent, upload_manifest_no_parents,
-    upload_manifest_one_parent,
-};
+use utils::create_changeset_no_parents;
+use utils::create_changeset_one_parent;
+use utils::string_to_nodehash;
+use utils::to_leaf;
+use utils::to_mpath;
+use utils::to_tree;
+use utils::upload_file_no_parents;
+use utils::upload_file_one_parent;
+use utils::upload_manifest_no_parents;
+use utils::upload_manifest_one_parent;
 
 async fn get_content(
     ctx: &CoreContext,
@@ -947,7 +972,9 @@ async fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> 
     use rand::SeedableRng;
     use rand_distr::Normal;
     use rand_xorshift::XorShiftRng;
-    use simulated_repo::{new_benchmark_repo, DelaySettings, GenManifest};
+    use simulated_repo::new_benchmark_repo;
+    use simulated_repo::DelaySettings;
+    use simulated_repo::GenManifest;
 
     let ctx = CoreContext::test_mock(fb);
     let delay_settings = DelaySettings {

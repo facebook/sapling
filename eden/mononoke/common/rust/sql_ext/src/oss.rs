@@ -5,10 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use crate::replication::{ReplicaLag, ReplicaLagMonitor};
-use crate::{facebook::*, *};
+use crate::facebook::*;
+use crate::replication::ReplicaLag;
+use crate::replication::ReplicaLagMonitor;
+use crate::*;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use fbinit::FacebookInit;
 use std::time::Duration;

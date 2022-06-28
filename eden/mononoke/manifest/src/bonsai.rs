@@ -8,17 +8,24 @@
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    future::{self, try_join_all},
-    try_join, FutureExt, Stream, TryFutureExt, TryStreamExt,
-};
-use maplit::{hashmap, hashset};
-use mononoke_types::{FileType, MPath};
-use std::collections::{HashMap, HashSet};
+use futures::future::try_join_all;
+use futures::future::{self};
+use futures::try_join;
+use futures::FutureExt;
+use futures::Stream;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
+use maplit::hashmap;
+use maplit::hashset;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use crate::{Entry, Manifest};
+use crate::Entry;
+use crate::Manifest;
 use blobstore::StoreLoadable;
 
 pub(crate) type BonsaiEntry<ManifestId, FileId> = Entry<ManifestId, (FileType, FileId)>;
@@ -339,12 +346,18 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::tests::{
-        ctx, dir, element, file, path, ManifestStore, TestFileId, TestManifestIdStr,
-        TestManifestStr,
-    };
+    use crate::tests::ctx;
+    use crate::tests::dir;
+    use crate::tests::element;
+    use crate::tests::file;
+    use crate::tests::path;
+    use crate::tests::ManifestStore;
+    use crate::tests::TestFileId;
+    use crate::tests::TestManifestIdStr;
+    use crate::tests::TestManifestStr;
     use borrowed::borrowed;
-    use fbinit::{self, FacebookInit};
+    use fbinit::FacebookInit;
+    use fbinit::{self};
 
     impl<ManifestId, FileId> CompositeEntry<ManifestId, FileId>
     where

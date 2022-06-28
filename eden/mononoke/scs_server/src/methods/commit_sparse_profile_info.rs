@@ -8,10 +8,11 @@
 use anyhow::Result;
 use context::CoreContext;
 use itertools::Itertools;
-use mononoke_api::sparse_profile::{
-    get_profile_delta_size, get_profile_size, MonitoringProfiles, ProfileSizeChange,
-    SparseProfileMonitoring,
-};
+use mononoke_api::sparse_profile::get_profile_delta_size;
+use mononoke_api::sparse_profile::get_profile_size;
+use mononoke_api::sparse_profile::MonitoringProfiles;
+use mononoke_api::sparse_profile::ProfileSizeChange;
+use mononoke_api::sparse_profile::SparseProfileMonitoring;
 use source_control as thrift;
 
 use crate::errors;

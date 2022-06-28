@@ -9,8 +9,11 @@
 
 use std::collections::BTreeMap;
 
-use anyhow::{anyhow, Result};
-use clap::{App, Arg, ArgMatches};
+use anyhow::anyhow;
+use anyhow::Result;
+use clap::App;
+use clap::Arg;
+use clap::ArgMatches;
 
 const ARG_PUSHVAR: &str = "PUSHVAR";
 

@@ -13,29 +13,58 @@
 /// It's a special job that is used to synchronize Mononoke to Mercurial when Mononoke is a source
 /// of truth. All writes to Mononoke are replayed to Mercurial using this job. That can be used
 /// to verify Mononoke's correctness and/or use hg as a disaster recovery mechanism.
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::bail;
+/// Mononoke -> hg sync job
+///
+/// It's a special job that is used to synchronize Mononoke to Mercurial when Mononoke is a source
+/// of truth. All writes to Mononoke are replayed to Mercurial using this job. That can be used
+/// to verify Mononoke's correctness and/or use hg as a disaster recovery mechanism.
+use anyhow::format_err;
+/// Mononoke -> hg sync job
+///
+/// It's a special job that is used to synchronize Mononoke to Mercurial when Mononoke is a source
+/// of truth. All writes to Mononoke are replayed to Mercurial using this job. That can be used
+/// to verify Mononoke's correctness and/or use hg as a disaster recovery mechanism.
+use anyhow::Error;
+/// Mononoke -> hg sync job
+///
+/// It's a special job that is used to synchronize Mononoke to Mercurial when Mononoke is a source
+/// of truth. All writes to Mononoke are replayed to Mercurial using this job. That can be used
+/// to verify Mononoke's correctness and/or use hg as a disaster recovery mechanism.
+use anyhow::Result;
 use blobrepo::BlobRepo;
-use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateLogEntry, Freshness};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateLog;
+use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::Freshness;
 use borrowed::borrowed;
 use bundle_generator::FilenodeVerifier;
-use bundle_preparer::{maybe_adjust_batch, BundlePreparer};
-use clap_old::{Arg, ArgGroup, SubCommand};
+use bundle_preparer::maybe_adjust_batch;
+use bundle_preparer::BundlePreparer;
+use clap_old::Arg;
+use clap_old::ArgGroup;
+use clap_old::SubCommand;
 use cloned::cloned;
-use cmdlib::{
-    args::{self, MononokeMatches},
-    helpers::block_execute,
-};
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
+use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use darkstorm_verifier::DarkstormVerifier;
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
-use futures::{
-    future::{self, try_join, try_join3, BoxFuture, FutureExt as _, TryFutureExt},
-    pin_mut,
-    stream::{self, StreamExt, TryStreamExt},
-    Stream,
-};
-use futures_stats::{futures03::TimedFutureExt, FutureStats};
+use futures::future::try_join;
+use futures::future::try_join3;
+use futures::future::BoxFuture;
+use futures::future::FutureExt as _;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::pin_mut;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use futures::Stream;
+use futures_stats::futures03::TimedFutureExt;
+use futures_stats::FutureStats;
 use futures_watchdog::WatchdogExt;
 use http::Uri;
 use lfs_verifier::LfsVerifier;
@@ -44,13 +73,18 @@ use metaconfig_types::HgsqlName;
 use metaconfig_types::RepoReadOnly;
 use mononoke_api_types::InnerRepo;
 use mononoke_types::ChangesetId;
-use mutable_counters::{ArcMutableCounters, MutableCountersArc};
+use mutable_counters::ArcMutableCounters;
+use mutable_counters::MutableCountersArc;
 use regex::Regex;
-use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
-use retry::{retry, RetryAttemptsCount};
+use repo_read_write_status::RepoReadWriteFetcher;
+use repo_read_write_status::SqlRepoReadWriteStatus;
+use retry::retry;
+use retry::RetryAttemptsCount;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{error, info};
-use sql_construct::{facebook::FbSqlConstruct, SqlConstruct};
+use slog::error;
+use slog::info;
+use sql_construct::facebook::FbSqlConstruct;
+use sql_construct::SqlConstruct;
 use sql_ext::facebook::MysqlOptions;
 
 use std::collections::HashMap;
@@ -67,12 +101,13 @@ mod globalrev_syncer;
 mod hgrepo;
 mod lfs_verifier;
 
-use errors::{
-    ErrorKind::SyncFailed,
-    PipelineError::{self, AnonymousError, EntryError},
-};
+use errors::ErrorKind::SyncFailed;
+use errors::PipelineError::AnonymousError;
+use errors::PipelineError::EntryError;
+use errors::PipelineError::{self};
 use globalrev_syncer::GlobalrevSyncer;
-use hgrepo::{list_hg_server_bookmarks, HgRepo};
+use hgrepo::list_hg_server_bookmarks;
+use hgrepo::HgRepo;
 use hgserver_config::ServerConfig;
 
 const ARG_BOOKMARK_REGEX_FORCE_GENERATE_LFS: &str = "bookmark-regex-force-generate-lfs";

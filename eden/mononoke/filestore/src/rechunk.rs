@@ -10,11 +10,21 @@ use futures::future::TryFutureExt;
 use slog::debug;
 use thiserror::Error;
 
-use blobstore::{Blobstore, Loadable, LoadableError};
+use blobstore::Blobstore;
+use blobstore::Loadable;
+use blobstore::LoadableError;
 use context::CoreContext;
-use mononoke_types::{ChunkedFileContents, ContentId, ContentMetadata, FileContents};
+use mononoke_types::ChunkedFileContents;
+use mononoke_types::ContentId;
+use mononoke_types::ContentMetadata;
+use mononoke_types::FileContents;
 
-use crate::{fetch, get_metadata, store, FetchKey, FilestoreConfig, StoreRequest};
+use crate::fetch;
+use crate::get_metadata;
+use crate::store;
+use crate::FetchKey;
+use crate::FilestoreConfig;
+use crate::StoreRequest;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {

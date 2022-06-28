@@ -5,19 +5,26 @@
  * GNU General Public License version 2.
  */
 
-use crate::{fetch_blame_compat, CompatBlame};
-use anyhow::{anyhow, Error};
+use crate::fetch_blame_compat;
+use crate::CompatBlame;
+use anyhow::anyhow;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use borrowed::borrowed;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use maplit::{btreemap, hashmap};
+use maplit::btreemap;
+use maplit::hashmap;
 use metaconfig_types::BlameVersion;
 use mononoke_types::blame::BlameRejected;
-use mononoke_types::{ChangesetId, MPath};
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 use std::collections::HashMap;
 use test_repo_factory::TestRepoFactory;
-use tests_utils::{create_commit, store_files, store_rename, CreateCommitContext};
+use tests_utils::create_commit;
+use tests_utils::store_files;
+use tests_utils::store_rename;
+use tests_utils::CreateCommitContext;
 
 // File with multiple changes and a merge
 const F0: &[&str] = &[

@@ -7,21 +7,24 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use governor::{
-    clock::DefaultClock,
-    state::{direct::NotKeyed, InMemoryState},
-    Jitter, Quota, RateLimiter,
-};
+use governor::clock::DefaultClock;
+use governor::state::direct::NotKeyed;
+use governor::state::InMemoryState;
+use governor::Jitter;
+use governor::Quota;
+use governor::RateLimiter;
 use nonzero_ext::nonzero;
-use std::{
-    fmt,
-    num::{NonZeroU32, NonZeroUsize},
-    time::Duration,
-};
+use std::fmt;
+use std::num::NonZeroU32;
+use std::num::NonZeroUsize;
+use std::time::Duration;
 
-use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, OverwriteStatus, PutBehaviour,
-};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
+use blobstore::BlobstorePutOps;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 

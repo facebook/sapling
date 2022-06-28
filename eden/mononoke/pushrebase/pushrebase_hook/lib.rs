@@ -9,7 +9,9 @@ use anyhow::Error;
 use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
-use mononoke_types::{BonsaiChangesetMut, ChangesetId, Timestamp};
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::Timestamp;
 use sql::Transaction;
 use std::collections::HashMap;
 

@@ -6,7 +6,8 @@
  */
 
 use anyhow::Error;
-use bookmarks::{BookmarkName, BookmarkUpdateLogEntry};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateLogEntry;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

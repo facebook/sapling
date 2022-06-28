@@ -8,7 +8,8 @@
 use rate_limiting::RateLimitReason;
 use thiserror::Error;
 
-use mercurial_types::{HgNodeHash, RepoPath};
+use mercurial_types::HgNodeHash;
+use mercurial_types::RepoPath;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {

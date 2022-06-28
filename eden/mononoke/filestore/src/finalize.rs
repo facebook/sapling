@@ -6,13 +6,18 @@
  */
 
 use anyhow::Error;
-use blobstore::{Blobstore, Storable};
+use blobstore::Blobstore;
+use blobstore::Storable;
 use context::CoreContext;
 use futures::future;
-use mononoke_types::{BlobstoreValue, ContentAlias, ContentMetadata};
+use mononoke_types::BlobstoreValue;
+use mononoke_types::ContentAlias;
+use mononoke_types::ContentMetadata;
 
-use crate::errors::{ErrorKind, InvalidHash};
-use crate::fetch_key::{Alias, AliasBlob};
+use crate::errors::ErrorKind;
+use crate::errors::InvalidHash;
+use crate::fetch_key::Alias;
+use crate::fetch_key::AliasBlob;
 use crate::prepare::Prepared;
 use crate::StoreRequest;
 

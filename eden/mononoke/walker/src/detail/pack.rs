@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::{graph::NodeType, validate::REPO};
+use crate::detail::graph::NodeType;
+use crate::detail::validate::REPO;
 
 use blobstore::SizeMetadata;
 use metaconfig_types::BlobstoreId;

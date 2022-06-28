@@ -5,18 +5,26 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Context, Error, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use blobstore::Loadable;
 use changesets::ChangesetsRef;
 use clap::Args;
 use context::CoreContext;
-use futures::{stream, StreamExt, TryStreamExt};
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use manifest::ManifestOps;
 use mononoke_types::ChangesetId;
-use mutable_renames::{MutableRenameEntry, MutableRenamesRef};
-use repo_blobstore::{RepoBlobstoreArc, RepoBlobstoreRef};
+use mutable_renames::MutableRenameEntry;
+use mutable_renames::MutableRenamesRef;
+use repo_blobstore::RepoBlobstoreArc;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use unodes::RootUnodeManifestId;
 
 use super::Repo;

@@ -8,56 +8,78 @@
 #![type_length_limit = "15000000"]
 #![feature(map_first_last)]
 
-use anyhow::{anyhow, format_err, Context, Error, Result};
+use anyhow::anyhow;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::StoreLoadable;
-use bookmarks::{
-    BookmarkKind, BookmarkPagination, BookmarkPrefix, BookmarksSubscription, Freshness,
-};
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkPagination;
+use bookmarks::BookmarkPrefix;
+use bookmarks::BookmarksSubscription;
+use bookmarks::Freshness;
 use bytes::Bytes;
-use cacheblob::{dummy::DummyLease, InProcessLease, LeaseOps};
-use changesets::{deserialize_cs_entries, ChangesetEntry};
-use clap_old::{Arg, ArgMatches, SubCommand};
+use cacheblob::dummy::DummyLease;
+use cacheblob::InProcessLease;
+use cacheblob::LeaseOps;
+use changesets::deserialize_cs_entries;
+use changesets::ChangesetEntry;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
 use cloned::cloned;
-use cmdlib::{
-    args::{self, MononokeMatches, RepoRequirement},
-    helpers,
-};
-use context::{CoreContext, SessionContainer};
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::RepoRequirement;
+use cmdlib::args::{self};
+use cmdlib::helpers;
+use context::CoreContext;
+use context::SessionContainer;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
-use derived_data_utils::{
-    create_derive_graph_scuba_sample, derived_data_utils, derived_data_utils_for_config,
-    DerivedUtils, ThinOut, DEFAULT_BACKFILLING_CONFIG_NAME, POSSIBLE_DERIVED_TYPES,
-};
-use executor_lib::{BackgroundProcessExecutor, RepoShardedProcess, RepoShardedProcessExecutor};
+use derived_data_utils::create_derive_graph_scuba_sample;
+use derived_data_utils::derived_data_utils;
+use derived_data_utils::derived_data_utils_for_config;
+use derived_data_utils::DerivedUtils;
+use derived_data_utils::ThinOut;
+use derived_data_utils::DEFAULT_BACKFILLING_CONFIG_NAME;
+use derived_data_utils::POSSIBLE_DERIVED_TYPES;
+use executor_lib::BackgroundProcessExecutor;
+use executor_lib::RepoShardedProcess;
+use executor_lib::RepoShardedProcessExecutor;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
-use futures::{
-    future::{self, try_join, FutureExt},
-    stream::{self, StreamExt, TryStreamExt},
-};
-use futures_stats::{TimedFutureExt, TimedTryFutureExt};
+use futures::future::try_join;
+use futures::future::FutureExt;
+use futures::future::{self};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use futures_stats::TimedFutureExt;
+use futures_stats::TimedTryFutureExt;
 use mononoke_api_types::InnerRepo;
-use mononoke_types::{BonsaiChangeset, ChangesetId, DateTime};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
 use once_cell::sync::OnceCell;
 use repo_factory::RepoFactoryBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
-use slog::{info, Logger};
+use slog::info;
+use slog::Logger;
 use stats::prelude::*;
-use std::{
-    collections::{BTreeSet, HashSet},
-    fs,
-    path::Path,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-    time::{Duration, Instant},
-};
+use std::collections::BTreeSet;
+use std::collections::HashSet;
+use std::fs;
+use std::path::Path;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
 use time_ext::DurationExt;
 use topo_sort::sort_topological;
 use tunables::tunables;
@@ -1574,16 +1596,17 @@ async fn subcommand_single(
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData};
+    use blobstore::Blobstore;
+    use blobstore::BlobstoreBytes;
+    use blobstore::BlobstoreGetData;
     use derived_data::BonsaiDerived;
     use derived_data_manager::BonsaiDerivable;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use mercurial_types::HgChangesetId;
-    use std::{
-        str::FromStr,
-        sync::atomic::{AtomicUsize, Ordering},
-    };
+    use std::str::FromStr;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
     use tests_utils::resolve_cs_id;
     use unodes::RootUnodeManifestId;
 

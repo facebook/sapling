@@ -5,30 +5,39 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 
-use super::{CommitSyncConfigVersion, CommitSyncOutcome, CommitSyncer};
-use crate::types::{Source, Target};
+use super::CommitSyncConfigVersion;
+use super::CommitSyncOutcome;
+use super::CommitSyncer;
+use crate::types::Source;
+use crate::types::Target;
 
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
-use futures::{
-    future::FutureExt,
-    stream::{self, StreamExt},
-    try_join, TryStreamExt,
-};
+use futures::future::FutureExt;
+use futures::stream::StreamExt;
+use futures::stream::{self};
+use futures::try_join;
+use futures::TryStreamExt;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::ManifestOps;
 use mercurial_types::FileType;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
-use mononoke_types::{ChangesetId, ContentId, MPath};
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::MPath;
 use movers::Mover;
 use ref_cast::RefCast;
-use slog::{debug, error, info};
-use std::collections::{HashMap, HashSet};
+use slog::debug;
+use slog::error;
+use slog::info;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt::Debug;
 use std::sync::Arc;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -779,7 +788,8 @@ async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{CommitSyncDataProvider, CommitSyncRepos};
+    use crate::CommitSyncDataProvider;
+    use crate::CommitSyncRepos;
     use ascii::AsciiString;
     use bookmarks::BookmarkName;
     use fbinit::FacebookInit;
@@ -789,20 +799,25 @@ mod test {
     use futures_old::stream::Stream;
     use live_commit_sync_config::TestLiveCommitSyncConfig;
     use maplit::hashmap;
-    use metaconfig_types::{
-        CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
-        SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
-    };
-    use mononoke_types::{MPath, RepositoryId};
+    use metaconfig_types::CommitSyncConfig;
+    use metaconfig_types::CommitSyncConfigVersion;
+    use metaconfig_types::CommitSyncDirection;
+    use metaconfig_types::CommonCommitSyncConfig;
+    use metaconfig_types::SmallRepoCommitSyncConfig;
+    use metaconfig_types::SmallRepoPermanentConfig;
+    use mononoke_types::MPath;
+    use mononoke_types::RepositoryId;
     use revset::AncestorsNodeStream;
     use sql_construct::SqlConstruct;
     use std::str::FromStr;
     use std::sync::Arc;
     // To support async tests
     use cross_repo_sync_test_utils::get_live_commit_sync_config;
-    use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMappingEntry};
+    use synced_commit_mapping::SqlSyncedCommitMapping;
+    use synced_commit_mapping::SyncedCommitMappingEntry;
     use test_repo_factory::TestRepoFactory;
-    use tests_utils::{bookmark, CreateCommitContext};
+    use tests_utils::bookmark;
+    use tests_utils::CreateCommitContext;
 
     #[fbinit::test]
     fn test_bookmark_diff_with_renamer(fb: FacebookInit) -> Result<(), Error> {

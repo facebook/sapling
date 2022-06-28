@@ -5,16 +5,21 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
 use fbinit::FacebookInit;
-use metaconfig_types::{
-    DatabaseConfig, LocalDatabaseConfig, MetadataDatabaseConfig, RemoteDatabaseConfig,
-    RemoteMetadataDatabaseConfig, ShardableRemoteDatabaseConfig,
-};
+use metaconfig_types::DatabaseConfig;
+use metaconfig_types::LocalDatabaseConfig;
+use metaconfig_types::MetadataDatabaseConfig;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
+use metaconfig_types::ShardableRemoteDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 
 use crate::construct::SqlConstruct;
-use crate::facebook::{FbSqlConstruct, FbSqlShardedConstruct};
+use crate::facebook::FbSqlConstruct;
+use crate::facebook::FbSqlShardedConstruct;
 
 /// Trait that allows construction from database config.
 pub trait SqlConstructFromDatabaseConfig: FbSqlConstruct + SqlConstruct {

@@ -7,19 +7,25 @@
 
 #![feature(trait_alias)]
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use context::CoreContext;
-use futures::{future, Stream, TryStreamExt};
+use futures::future;
+use futures::Stream;
+use futures::TryStreamExt;
 use itertools::Itertools;
 use manifest::ManifestOps;
 use mercurial_derived_data::DeriveHgChangeset;
-use mercurial_types::{
-    blobs::{HgBlobChangeset, HgBlobEnvelope},
-    HgChangesetId, MPath,
-};
-use mononoke_types::{ChangesetId, ContentId, FileChange, FileType};
+use mercurial_types::blobs::HgBlobChangeset;
+use mercurial_types::blobs::HgBlobEnvelope;
+use mercurial_types::HgChangesetId;
+use mercurial_types::MPath;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::FileChange;
+use mononoke_types::FileType;
 use movers::Mover;
 use slog::info;
 use std::collections::BTreeMap;
@@ -32,9 +38,10 @@ pub mod history_fixup_delete;
 pub mod pre_merge_delete;
 pub mod working_copy;
 
-use crate::common::{
-    create_save_and_generate_hg_changeset, ChangesetArgs, ChangesetArgsFactory, StackPosition,
-};
+use crate::common::create_save_and_generate_hg_changeset;
+use crate::common::ChangesetArgs;
+use crate::common::ChangesetArgsFactory;
+use crate::common::StackPosition;
 
 const BUFFER_SIZE: usize = 100;
 const REPORTING_INTERVAL_FILES: usize = 10000;
@@ -222,11 +229,14 @@ mod test {
     use anyhow::Result;
     use cloned::cloned;
     use fbinit::FacebookInit;
+    use fixtures::Linear;
+    use fixtures::ManyFilesDirs;
     use fixtures::TestRepoFixture;
-    use fixtures::{Linear, ManyFilesDirs};
     use futures::FutureExt;
     use mercurial_types::HgChangesetId;
-    use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime};
+    use mononoke_types::BonsaiChangeset;
+    use mononoke_types::BonsaiChangesetMut;
+    use mononoke_types::DateTime;
     use sorted_vector_map::sorted_vector_map;
     use std::str::FromStr;
     use std::sync::Arc;

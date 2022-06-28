@@ -6,9 +6,13 @@
  */
 
 use anyhow::Error;
-use env_logger::filter::{Builder, Filter};
+use env_logger::filter::Builder;
+use env_logger::filter::Filter;
 use log;
-use slog::{BorrowedKV, Level, Logger, SingleKV};
+use slog::BorrowedKV;
+use slog::Level;
+use slog::Logger;
+use slog::SingleKV;
 
 // NOTE: The following 2 methods and parts of the implementation of LinkedLogger::log are borrowed
 // from the slog-stdlog crate (MIT-licensed).

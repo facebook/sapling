@@ -5,33 +5,47 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::future;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use anyhow::{anyhow, Context, Error, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use async_recursion::async_recursion;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::{try_join, FutureExt, TryFutureExt};
-use futures::stream::{self, FuturesUnordered, StreamExt, TryStreamExt};
-use futures::{join, select_biased};
-use futures_stats::{TimedFutureExt, TimedTryFutureExt};
+use futures::future::try_join;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::join;
+use futures::select_biased;
+use futures::stream::FuturesUnordered;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use futures_stats::TimedFutureExt;
+use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
 use slog::debug;
 use topo_sort::TopoSortedDagTraversal;
 
 use crate::context::DerivationContext;
-use crate::derivable::{BonsaiDerivable, DerivationDependencies};
+use crate::derivable::BonsaiDerivable;
+use crate::derivable::DerivationDependencies;
 use crate::error::DerivationError;
 use crate::manager::util::DiscoveryStats;
-use derived_data_service_if::types::{DerivationType, DeriveSingle};
+use derived_data_service_if::types::DerivationType;
+use derived_data_service_if::types::DeriveSingle;
 
-use super::{DerivationAssignment, DerivedDataManager};
+use super::DerivationAssignment;
+use super::DerivedDataManager;
 
 #[derive(Clone, Copy)]
 pub enum BatchDeriveOptions {

@@ -5,11 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use blobstore::Blobstore;
 use context::CoreContext;
-use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
-use futures::stream::{self, StreamExt, TryStreamExt};
+use filestore::FetchKey;
+use filestore::FilestoreConfig;
+use filestore::StoreRequest;
+use filestore::{self};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use mononoke_types::hash::Sha256;
 use std::sync::Arc;
 
@@ -66,7 +72,9 @@ mod test {
     #![allow(warnings)]
     use super::*;
     use fbinit::FacebookInit;
-    use futures::{stream, TryFutureExt, TryStreamExt};
+    use futures::stream;
+    use futures::TryFutureExt;
+    use futures::TryStreamExt;
     use memblob::Memblob;
 
     #[fbinit::test]

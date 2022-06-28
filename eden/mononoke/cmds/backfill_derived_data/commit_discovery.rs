@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use blobrepo::BlobRepo;
-use clap_old::{App, Arg, ArgMatches};
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
 use cmdlib::helpers;
 use context::CoreContext;
 use mononoke_types::ChangesetId;

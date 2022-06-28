@@ -8,23 +8,32 @@
 use ascii::AsciiString;
 use std::cmp;
 use std::collections::HashMap;
-use std::fmt::{self, Display};
-use std::io::{self, Write};
-use std::iter::{once, Once};
+use std::fmt::Display;
+use std::fmt::{self};
+use std::io::Write;
+use std::io::{self};
+use std::iter::once;
+use std::iter::Once;
 use std::slice::Iter;
 
-use anyhow::{bail, Context as _, Error, Result};
+use anyhow::bail;
+use anyhow::Context as _;
+use anyhow::Error;
+use anyhow::Result;
 use lazy_static::lazy_static;
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 use quickcheck_arbitrary_derive::Arbitrary;
 use regex::bytes::Regex as BytesRegex;
 use regex::Regex;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use smallvec::SmallVec;
 
 use crate::bonsai_changeset::BonsaiChangeset;
 use crate::errors::ErrorKind;
-use crate::hash::{Blake2, Context};
+use crate::hash::Blake2;
+use crate::hash::Context;
 use crate::thrift;
 
 // Filesystems on Linux commonly limit path *elements* to 255 bytes. Enforce this on MPaths as well
@@ -1232,7 +1241,8 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use quickcheck::{quickcheck, TestResult};
+    use quickcheck::quickcheck;
+    use quickcheck::TestResult;
     use std::mem::size_of;
 
     #[test]

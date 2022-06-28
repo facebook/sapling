@@ -6,11 +6,13 @@
  */
 
 use crate::AppExtension;
-use anyhow::{format_err, Result};
+use anyhow::format_err;
+use anyhow::Result;
 use clap::Args;
 use environment::MononokeEnvironment;
 use slog::warn;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 /// Command line arguments for tweaking hooks
 #[derive(Args, Debug)]

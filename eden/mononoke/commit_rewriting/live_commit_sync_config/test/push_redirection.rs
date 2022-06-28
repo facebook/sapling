@@ -10,10 +10,10 @@ use fbinit::FacebookInit;
 use live_commit_sync_config::*;
 use mononoke_types::RepositoryId;
 
-use crate::{
-    ensure_all_updated, get_ctx_source_store_and_live_config, EMPTY_PUSHREDIRECTOR,
-    EMTPY_COMMIT_SYNC_ALL,
-};
+use crate::ensure_all_updated;
+use crate::get_ctx_source_store_and_live_config;
+use crate::EMPTY_PUSHREDIRECTOR;
+use crate::EMTPY_COMMIT_SYNC_ALL;
 
 const PUSHREDIRECTOR_PUBLIC_ENABLED: &str = r#"{
     "per_repo": {

@@ -5,38 +5,54 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::anyhow;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, OverwriteStatus, PutBehaviour,
-};
-use blobstore_stats::{record_get_stats, record_is_present_stats, record_put_stats, OperationType};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
+use blobstore::BlobstorePutOps;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
+use blobstore_stats::record_get_stats;
+use blobstore_stats::record_is_present_stats;
+use blobstore_stats::record_put_stats;
+use blobstore_stats::OperationType;
 use blobstore_sync_queue::OperationKey;
 use cloned::cloned;
-use context::{CoreContext, PerfCounterType, SessionClass};
-use futures::{
-    future::{self, join_all, select, Either as FutureEither, FutureExt},
-    pin_mut,
-    stream::{FuturesUnordered, StreamExt, TryStreamExt},
-};
+use context::CoreContext;
+use context::PerfCounterType;
+use context::SessionClass;
+use futures::future::join_all;
+use futures::future::select;
+use futures::future::Either as FutureEither;
+use futures::future::FutureExt;
+use futures::future::{self};
+use futures::pin_mut;
+use futures::stream::FuturesUnordered;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use futures_stats::TimedFutureExt;
-use itertools::{Either, Itertools};
-use metaconfig_types::{BlobstoreId, MultiplexId};
+use itertools::Either;
+use itertools::Itertools;
+use metaconfig_types::BlobstoreId;
+use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
 use scuba_ext::MononokeScubaSampleBuilder;
-use std::{
-    borrow::Borrow,
-    collections::{hash_map::RandomState, HashMap, HashSet},
-    fmt,
-    future::Future,
-    hash::Hasher,
-    num::{NonZeroU64, NonZeroUsize},
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    },
-    time::Duration,
-};
+use std::borrow::Borrow;
+use std::collections::hash_map::RandomState;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt;
+use std::future::Future;
+use std::hash::Hasher;
+use std::num::NonZeroU64;
+use std::num::NonZeroUsize;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::Duration;
 use thiserror::Error;
 use time_ext::DurationExt;
 use tokio::time::timeout;

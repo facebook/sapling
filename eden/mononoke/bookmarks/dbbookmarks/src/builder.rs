@@ -6,7 +6,8 @@
  */
 
 use mononoke_types::RepositoryId;
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 
 use crate::store::SqlBookmarks;

@@ -11,9 +11,12 @@ mod changeset_envelope;
 mod file_envelope;
 mod manifest_envelope;
 
-pub use self::changeset_envelope::{HgChangesetEnvelope, HgChangesetEnvelopeMut};
-pub use self::file_envelope::{HgFileEnvelope, HgFileEnvelopeMut};
-pub use self::manifest_envelope::{HgManifestEnvelope, HgManifestEnvelopeMut};
+pub use self::changeset_envelope::HgChangesetEnvelope;
+pub use self::changeset_envelope::HgChangesetEnvelopeMut;
+pub use self::file_envelope::HgFileEnvelope;
+pub use self::file_envelope::HgFileEnvelopeMut;
+pub use self::manifest_envelope::HgManifestEnvelope;
+pub use self::manifest_envelope::HgManifestEnvelopeMut;
 
 use blobstore::BlobstoreGetData;
 use mononoke_types::BlobstoreBytes;

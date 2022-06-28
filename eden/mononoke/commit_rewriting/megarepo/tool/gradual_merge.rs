@@ -11,11 +11,13 @@ use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cmdlib::helpers;
 use context::CoreContext;
-use futures::{compat::Stream01CompatExt, TryStreamExt};
+use futures::compat::Stream01CompatExt;
+use futures::TryStreamExt;
 use maplit::hashset;
-use megarepolib::common::{
-    create_and_save_bonsai, ChangesetArgs, ChangesetArgsFactory, StackPosition,
-};
+use megarepolib::common::create_and_save_bonsai;
+use megarepolib::common::ChangesetArgs;
+use megarepolib::common::ChangesetArgsFactory;
+use megarepolib::common::StackPosition;
 use mercurial_derived_data::DeriveHgChangeset;
 use metaconfig_types::PushrebaseFlags;
 use mononoke_api_types::InnerRepo;
@@ -24,7 +26,9 @@ use pushrebase::do_pushrebase_bonsai;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::RangeNodeStream;
 use slog::info;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
 
 pub struct GradualMergeParams {
     pub pre_deletion_commit: ChangesetId,
@@ -337,10 +341,12 @@ mod test {
     use super::*;
     use fbinit::FacebookInit;
     use maplit::hashmap;
-    use mononoke_types::{DateTime, MPath};
-    use tests_utils::{
-        bookmark, drawdag::create_from_dag, list_working_copy_utf8, CreateCommitContext,
-    };
+    use mononoke_types::DateTime;
+    use mononoke_types::MPath;
+    use tests_utils::bookmark;
+    use tests_utils::drawdag::create_from_dag;
+    use tests_utils::list_working_copy_utf8;
+    use tests_utils::CreateCommitContext;
 
     #[fbinit::test]
     async fn test_find_all_commits_to_merge(fb: FacebookInit) -> Result<(), Error> {

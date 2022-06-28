@@ -5,17 +5,24 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Context, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
 use fbthrift::compact_protocol;
 use sorted_vector_map::SortedVectorMap;
 
-use crate::blob::{Blob, BlobstoreValue, FsnodeBlob};
+use crate::blob::Blob;
+use crate::blob::BlobstoreValue;
+use crate::blob::FsnodeBlob;
 use crate::errors::ErrorKind;
 use crate::file_change::FileType;
-use crate::hash::{Sha1, Sha256};
+use crate::hash::Sha1;
+use crate::hash::Sha256;
 use crate::path::MPathElement;
 use crate::thrift;
-use crate::typed_hash::{ContentId, FsnodeId, FsnodeIdContext};
+use crate::typed_hash::ContentId;
+use crate::typed_hash::FsnodeId;
+use crate::typed_hash::FsnodeIdContext;
 
 /// An fsnode is a manifest node containing summary information about the
 /// files in the manifest that is useful in the implementation of

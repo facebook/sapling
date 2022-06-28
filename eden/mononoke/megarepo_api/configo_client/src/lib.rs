@@ -11,7 +11,9 @@
 #[cfg(fbcode_build)]
 mod facebook;
 #[cfg(fbcode_build)]
-pub use facebook::{ConfigObject, MononokeConfigoClient};
+pub use facebook::ConfigObject;
+#[cfg(fbcode_build)]
+pub use facebook::MononokeConfigoClient;
 
 // There is no way to implement this for non-fbcode builds
 // and it's worth having this crate's users know this, so

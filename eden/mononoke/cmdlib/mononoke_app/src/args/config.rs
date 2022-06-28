@@ -7,7 +7,8 @@
 
 use std::path::PathBuf;
 
-use clap::{ArgGroup, Args};
+use clap::ArgGroup;
+use clap::Args;
 
 #[derive(Args, Debug)]
 #[clap(group(ArgGroup::new("config").args(&["config-path", "config-tier", "prod"]).required(true)))]

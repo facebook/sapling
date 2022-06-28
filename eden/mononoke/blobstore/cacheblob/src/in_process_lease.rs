@@ -8,12 +8,14 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
-use futures::{
-    channel::oneshot::{channel, Receiver, Sender},
-    future::Shared,
-    future::{BoxFuture, FutureExt},
-};
-use std::collections::{hash_map::Entry, HashMap};
+use futures::channel::oneshot::channel;
+use futures::channel::oneshot::Receiver;
+use futures::channel::oneshot::Sender;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::future::Shared;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 

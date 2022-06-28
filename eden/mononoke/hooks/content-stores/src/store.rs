@@ -12,7 +12,9 @@ use bookmarks::BookmarkName;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
-use mononoke_types::{ChangesetId, ContentId, MPath};
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::MPath;
 use std::collections::HashMap;
 
 #[async_trait]

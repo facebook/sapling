@@ -11,11 +11,19 @@ use anyhow::Result;
 use blobstore::BlobstoreBytes;
 use bytes::Bytes;
 
-use crate::typed_hash::{
-    ChangesetId, ContentChunkId, ContentId, ContentMetadataId, ContentMetadataV2Id,
-    DeletedManifestV2Id, FastlogBatchId, FileUnodeId, FsnodeId, ManifestUnodeId, RawBundle2Id,
-    RedactionKeyListId, SkeletonManifestId,
-};
+use crate::typed_hash::ChangesetId;
+use crate::typed_hash::ContentChunkId;
+use crate::typed_hash::ContentId;
+use crate::typed_hash::ContentMetadataId;
+use crate::typed_hash::ContentMetadataV2Id;
+use crate::typed_hash::DeletedManifestV2Id;
+use crate::typed_hash::FastlogBatchId;
+use crate::typed_hash::FileUnodeId;
+use crate::typed_hash::FsnodeId;
+use crate::typed_hash::ManifestUnodeId;
+use crate::typed_hash::RawBundle2Id;
+use crate::typed_hash::RedactionKeyListId;
+use crate::typed_hash::SkeletonManifestId;
 
 /// A serialized blob in memory.
 #[derive(Clone)]

@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::ops::{Add, Mul};
+use std::ops::Add;
+use std::ops::Mul;
 use std::str::FromStr;
 use std::u32;
 

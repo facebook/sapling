@@ -5,11 +5,21 @@
  * GNU General Public License version 2.
  */
 
-use super::revlog::{escape, serialize_extras, unescape, Extra, RevlogChangeset};
-use crate::{HgBlob, HgBlobNode, HgManifestId, HgNodeHash, MPath};
+use super::revlog::escape;
+use super::revlog::serialize_extras;
+use super::revlog::unescape;
+use super::revlog::Extra;
+use super::revlog::RevlogChangeset;
+use crate::HgBlob;
+use crate::HgBlobNode;
+use crate::HgManifestId;
+use crate::HgNodeHash;
+use crate::MPath;
 use bytes::Bytes;
 use mononoke_types::DateTime;
-use quickcheck::{quickcheck, QuickCheck, TestResult};
+use quickcheck::quickcheck;
+use quickcheck::QuickCheck;
+use quickcheck::TestResult;
 use std::collections::BTreeMap;
 
 const CHANGESET: &[u8] = include_bytes!("cset.bin");

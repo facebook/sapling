@@ -10,8 +10,10 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
-use anyhow::{Error, Result};
-use bytes_old::{Bytes, BytesMut};
+use anyhow::Error;
+use anyhow::Result;
+use bytes_old::Bytes;
+use bytes_old::BytesMut;
 use mercurial_types::utils::percent_encode;
 use percent_encoding::percent_decode;
 use tokio_io::codec::Decoder;

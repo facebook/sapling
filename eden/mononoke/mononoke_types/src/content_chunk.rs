@@ -5,20 +5,26 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
+use std::fmt::{self};
 
-use anyhow::{bail, Context, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
 use bytes::Bytes;
 use fbthrift::compact_protocol;
-use quickcheck::{single_shrinker, Arbitrary, Gen};
+use quickcheck::single_shrinker;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 
-use crate::{
-    blob::{Blob, BlobstoreValue, ContentChunkBlob},
-    errors::ErrorKind,
-    file_contents::ContentChunkPointer,
-    thrift,
-    typed_hash::{ContentChunkId, ContentChunkIdContext},
-};
+use crate::blob::Blob;
+use crate::blob::BlobstoreValue;
+use crate::blob::ContentChunkBlob;
+use crate::errors::ErrorKind;
+use crate::file_contents::ContentChunkPointer;
+use crate::thrift;
+use crate::typed_hash::ContentChunkId;
+use crate::typed_hash::ContentChunkIdContext;
 
 /// Chunk of a file's contents.
 #[derive(Clone, Eq, PartialEq)]

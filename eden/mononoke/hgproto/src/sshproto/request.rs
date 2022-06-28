@@ -7,21 +7,52 @@
 
 use crate::batch;
 use crate::errors;
-use crate::{GetbundleArgs, GettreepackArgs, Request, SingleRequest};
-use anyhow::{bail, Error, Result};
-use bytes_old::{Bytes, BytesMut};
+use crate::GetbundleArgs;
+use crate::GettreepackArgs;
+use crate::Request;
+use crate::SingleRequest;
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
+use bytes_old::Bytes;
+use bytes_old::BytesMut;
 use hex::FromHex;
-use mercurial_types::{HgChangesetId, HgManifestId};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgManifestId;
 use mononoke_types::MPath;
-use nom::{
-    alt, apply, call, closure, complete, do_parse, eof, error_position, is_alphanumeric, is_digit,
-    many0, map, map_res, named, named_args, separated_list, separated_list_complete, tag, take,
-    take_until_and_consume1, take_while, take_while1, try_parse, Err, ErrorKind, FindSubstring,
-    IResult, Needed, Slice,
-};
+use nom::alt;
+use nom::apply;
+use nom::call;
+use nom::closure;
+use nom::complete;
+use nom::do_parse;
+use nom::eof;
+use nom::error_position;
+use nom::is_alphanumeric;
+use nom::is_digit;
+use nom::many0;
+use nom::map;
+use nom::map_res;
+use nom::named;
+use nom::named_args;
+use nom::separated_list;
+use nom::separated_list_complete;
+use nom::tag;
+use nom::take;
+use nom::take_until_and_consume1;
+use nom::take_while;
+use nom::take_while1;
+use nom::try_parse;
+use nom::Err;
+use nom::ErrorKind;
+use nom::FindSubstring;
+use nom::IResult;
+use nom::Needed;
+use nom::Slice;
 use std::collections::HashMap;
 use std::iter;
-use std::str::{self, FromStr};
+use std::str::FromStr;
+use std::str::{self};
 
 const BAD_UTF8_ERR_CODE: u32 = 111;
 const BAD_PATH_ERR_CODE: u32 = 222;
@@ -1154,7 +1185,9 @@ mod test {
 #[cfg(test)]
 mod test_parse {
     use super::*;
-    use maplit::{btreeset, hashmap, hashset};
+    use maplit::btreeset;
+    use maplit::hashmap;
+    use maplit::hashset;
     use std::fmt::Debug;
 
     fn hash_ones() -> HgChangesetId {

@@ -5,16 +5,21 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{hash_map, HashMap, HashSet};
+use std::collections::hash_map;
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use maplit::{hashmap, hashset};
+use maplit::hashmap;
+use maplit::hashset;
 
-use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use mononoke_types::{ChangesetId, Generation};
+use mononoke_types::ChangesetId;
+use mononoke_types::Generation;
 use uniqueheap::UniqueHeap;
 
 #[derive(Clone, Debug)]

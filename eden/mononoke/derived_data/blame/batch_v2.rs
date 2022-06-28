@@ -8,17 +8,23 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use anyhow::{anyhow, Context, Error, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::batch::{
-    split_bonsais_in_linear_stacks, FileConflicts, SplitOptions, DEFAULT_STACK_FILE_CHANGES_LIMIT,
-};
+use derived_data::batch::split_bonsais_in_linear_stacks;
+use derived_data::batch::FileConflicts;
+use derived_data::batch::SplitOptions;
+use derived_data::batch::DEFAULT_STACK_FILE_CHANGES_LIMIT;
 use derived_data_manager::DerivationContext;
-use futures::stream::{FuturesOrdered, TryStreamExt};
+use futures::stream::FuturesOrdered;
+use futures::stream::TryStreamExt;
 use lock_ext::LockExt;
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use slog::debug;
 use unodes::RootUnodeManifestId;
 

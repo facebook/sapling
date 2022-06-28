@@ -6,25 +6,36 @@
  */
 
 use abomonation_derive::Abomonation;
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
 use cachelib::VolatileLruCachePool;
-use caching_ext::{
-    CacheDisposition, CacheTtl, CachelibHandler, EntityStore, KeyedEntityStore, MemcacheEntity,
-    MemcacheHandler,
-};
+use caching_ext::CacheDisposition;
+use caching_ext::CacheTtl;
+use caching_ext::CachelibHandler;
+use caching_ext::EntityStore;
+use caching_ext::KeyedEntityStore;
+use caching_ext::MemcacheEntity;
+use caching_ext::MemcacheHandler;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
-use memcache::{KeyGen, MemcacheClient};
-use mononoke_types::{hash::Blake2, path_bytes_from_mpath, ChangesetId, MPath};
+use memcache::KeyGen;
+use memcache::MemcacheClient;
+use mononoke_types::hash::Blake2;
+use mononoke_types::path_bytes_from_mpath;
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 use mutable_rename_thrift as thrift;
-use path_hash::{PathHash, PathHashBytes};
-use std::collections::{HashMap, HashSet};
+use path_hash::PathHash;
+use path_hash::PathHashBytes;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::time::Duration;
 
-use crate::{MutableRenameEntry, MutableRenames};
+use crate::MutableRenameEntry;
+use crate::MutableRenames;
 
 /// Bump this when code changes the layout of memcache
 pub const CODEVER: u32 = 0;

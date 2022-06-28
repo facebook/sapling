@@ -9,7 +9,8 @@ use regex::Regex;
 use scuba::ScubaValue;
 use std::sync::RwLock;
 
-use crate::config::{ScubaObservabilityConfig, ScubaVerbosityLevel};
+use crate::config::ScubaObservabilityConfig;
+use crate::config::ScubaVerbosityLevel;
 
 #[derive(Clone)]
 pub struct ScubaLoggingDecisionFields<'a> {

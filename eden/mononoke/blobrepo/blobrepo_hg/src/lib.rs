@@ -8,15 +8,18 @@
 mod bonsai_generation;
 mod create_changeset;
 pub mod repo_commit;
-pub use crate::bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
+pub use crate::bonsai_generation::create_bonsai_changeset_object;
+pub use crate::bonsai_generation::save_bonsai_changeset_object;
 pub use crate::repo_commit::ChangesetHandle;
 pub use changeset_fetcher::ChangesetFetcher;
 // TODO: This is exported for testing - is this the right place for it?
-pub use crate::repo_commit::{compute_changed_files, UploadEntries};
+pub use crate::repo_commit::compute_changed_files;
+pub use crate::repo_commit::UploadEntries;
 pub mod errors {
     pub use blobrepo_errors::*;
 }
-pub use create_changeset::{create_bonsai_changeset_hook, CreateChangeset};
+pub use create_changeset::create_bonsai_changeset_hook;
+pub use create_changeset::CreateChangeset;
 pub mod file_history {
     pub use blobrepo_common::file_history::*;
 }
@@ -25,24 +28,36 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobrepo_errors::ErrorKind;
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiOrHgChangesetIds};
-use bookmarks::{
-    Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness,
-};
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
+use bookmarks::Bookmark;
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkPagination;
+use bookmarks::BookmarkPrefix;
+use bookmarks::Freshness;
 use cloned::cloned;
 use context::CoreContext;
-use filenodes::{ArcFilenodes, FilenodeInfo, FilenodeRangeResult, FilenodeResult};
-use futures::{
-    future,
-    stream::{self, BoxStream},
-    Stream, StreamExt, TryFutureExt, TryStreamExt,
-};
+use filenodes::ArcFilenodes;
+use filenodes::FilenodeInfo;
+use filenodes::FilenodeRangeResult;
+use filenodes::FilenodeResult;
+use futures::future;
+use futures::stream::BoxStream;
+use futures::stream::{self};
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_mutation::ArcHgMutationStore;
-use mercurial_types::{HgChangesetId, HgFileNodeId};
-use mononoke_types::{ChangesetId, RepoPath};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mononoke_types::ChangesetId;
+use mononoke_types::RepoPath;
 use stats::prelude::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 /// `BlobRepoHg` is an extension trait for `BlobRepo` which contains
 /// mercurial specific methods.

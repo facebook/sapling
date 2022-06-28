@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore_factory::ReadOnlyStorage;
 use cacheblob::LeaseOps;
@@ -13,9 +14,11 @@ use fbinit::FacebookInit;
 use getbundle_response::SessionLfsParams;
 use hooks::HookManager;
 use live_commit_sync_config::LiveCommitSyncConfig;
-use metaconfig_types::{
-    BookmarkAttrs, InfinitepushParams, MetadataDatabaseConfig, PushParams, PushrebaseParams,
-};
+use metaconfig_types::BookmarkAttrs;
+use metaconfig_types::InfinitepushParams;
+use metaconfig_types::MetadataDatabaseConfig;
+use metaconfig_types::PushParams;
+use metaconfig_types::PushrebaseParams;
 use mononoke_api::Repo;
 use mononoke_api_types::InnerRepo;
 use mononoke_types::RepositoryId;
@@ -25,12 +28,12 @@ use repo_blobstore::RepoBlobstore;
 use repo_read_write_status::RepoReadWriteFetcher;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
-use std::fmt::{self, Debug};
+use std::collections::hash_map::DefaultHasher;
+use std::fmt::Debug;
+use std::fmt::{self};
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::sync::Arc;
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{Hash, Hasher},
-};
 use streaming_clone::SqlStreamingChunksFetcher;
 use warm_bookmarks_cache::BookmarksCache;
 

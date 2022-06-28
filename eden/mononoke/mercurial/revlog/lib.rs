@@ -12,11 +12,15 @@ pub mod revlogrepo;
 pub mod stockbookmarks;
 
 pub use crate::errors::*;
-pub use crate::manifest::{EntryContent, RevlogEntry};
-pub use crate::revlogrepo::{RevlogManifest, RevlogRepo, RevlogRepoOptions};
+pub use crate::manifest::EntryContent;
+pub use crate::manifest::RevlogEntry;
+pub use crate::revlogrepo::RevlogManifest;
+pub use crate::revlogrepo::RevlogRepo;
+pub use crate::revlogrepo::RevlogRepoOptions;
 
 pub mod changeset {
-    pub use mercurial_types::blobs::{serialize_cs, RevlogChangeset};
+    pub use mercurial_types::blobs::serialize_cs;
+    pub use mercurial_types::blobs::RevlogChangeset;
 }
 pub use crate::changeset::RevlogChangeset;
 

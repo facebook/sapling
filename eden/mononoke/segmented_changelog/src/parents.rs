@@ -5,14 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 
 use crate::dag::errors::BackendError;
 use crate::dag::namedag::MemNameDag;
 use crate::dag::ops::Parents;
-use crate::dag::{Result, VertexName};
-use crate::idmap::{cs_id_from_vertex_name, vertex_name_from_cs_id};
+use crate::dag::Result;
+use crate::dag::VertexName;
+use crate::idmap::cs_id_from_vertex_name;
+use crate::idmap::vertex_name_from_cs_id;
 
 pub struct FetchParents {
     ctx: CoreContext,

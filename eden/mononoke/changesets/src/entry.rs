@@ -9,7 +9,8 @@ use abomonation_derive::Abomonation;
 use anyhow::Result;
 use bytes::Bytes;
 use fbthrift::compact_protocol;
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 
 #[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ChangesetEntry {

@@ -46,40 +46,143 @@
 /// Pushrebase supports hooks, which can be used to modify rebased Bonsai commits as well as
 /// sideload database updates in the transaction that moves forward the bookmark. See hooks.rs for
 /// more information on those;
-use anyhow::{format_err, Error, Result};
-use blobrepo::{save_bonsai_changesets, BlobRepo};
+use anyhow::format_err;
+/// Mononoke pushrebase implementation. The main goal of pushrebase is to decrease push contention.
+/// Commits that client pushed are rebased on top of `onto_bookmark` on the server
+///
+///  Client
+///  ```text
+///     O <- `onto` on client, potentially outdated
+///     |
+///     O  O <- pushed set (in this case just one commit)
+///     | /
+///     O <- root
+///  ```
+///
+///  Server
+///  ```text
+///     O  <- update `onto` bookmark, pointing at the pushed commit
+///     |
+///     O  <- `onto` bookmark on the server before the push
+///     |
+///     O
+///     |
+///     O
+///     |
+///     O <- root
+///  ```
+///
+///  Terminology:
+///  *onto bookmark* - bookmark that is the destination of the rebase, for example "master"
+///
+///  *pushed set* - a set of commits that client has sent us.
+///  Note: all pushed set MUST be committed before doing pushrebase
+///  Note: pushed set MUST contain only one head
+///  Note: not all commits from pushed set maybe rebased on top of onto bookmark. See *rebased set*
+///
+///  *root* - parents of pushed set that are not in the pushed set (see graphs above)
+///
+///  *rebased set* - subset of pushed set that will be rebased on top of onto bookmark
+///  Note: Usually rebased set == pushed set. However in case of merges it may differ
+///
+/// Pushrebase supports hooks, which can be used to modify rebased Bonsai commits as well as
+/// sideload database updates in the transaction that moves forward the bookmark. See hooks.rs for
+/// more information on those;
+use anyhow::Error;
+/// Mononoke pushrebase implementation. The main goal of pushrebase is to decrease push contention.
+/// Commits that client pushed are rebased on top of `onto_bookmark` on the server
+///
+///  Client
+///  ```text
+///     O <- `onto` on client, potentially outdated
+///     |
+///     O  O <- pushed set (in this case just one commit)
+///     | /
+///     O <- root
+///  ```
+///
+///  Server
+///  ```text
+///     O  <- update `onto` bookmark, pointing at the pushed commit
+///     |
+///     O  <- `onto` bookmark on the server before the push
+///     |
+///     O
+///     |
+///     O
+///     |
+///     O <- root
+///  ```
+///
+///  Terminology:
+///  *onto bookmark* - bookmark that is the destination of the rebase, for example "master"
+///
+///  *pushed set* - a set of commits that client has sent us.
+///  Note: all pushed set MUST be committed before doing pushrebase
+///  Note: pushed set MUST contain only one head
+///  Note: not all commits from pushed set maybe rebased on top of onto bookmark. See *rebased set*
+///
+///  *root* - parents of pushed set that are not in the pushed set (see graphs above)
+///
+///  *rebased set* - subset of pushed set that will be rebased on top of onto bookmark
+///  Note: Usually rebased set == pushed set. However in case of merges it may differ
+///
+/// Pushrebase supports hooks, which can be used to modify rebased Bonsai commits as well as
+/// sideload database updates in the transaction that moves forward the bookmark. See hooks.rs for
+/// more information on those;
+use anyhow::Result;
+use blobrepo::save_bonsai_changesets;
+use blobrepo::BlobRepo;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
-use futures::{
-    compat::Stream01CompatExt,
-    future::{self, try_join, try_join_all},
-    stream, FutureExt, StreamExt, TryFutureExt, TryStream, TryStreamExt,
-};
-use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
+use futures::compat::Stream01CompatExt;
+use futures::future::try_join;
+use futures::future::try_join_all;
+use futures::future::{self};
+use futures::stream;
+use futures::FutureExt;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures::TryStream;
+use futures::TryStreamExt;
+use manifest::bonsai_diff;
+use manifest::BonsaiDiffFileChange;
+use manifest::ManifestOps;
 use maplit::hashmap;
 use mercurial_derived_data::DeriveHgChangeset;
-use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, MPath};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mercurial_types::MPath;
 use metaconfig_types::PushrebaseFlags;
-use mononoke_types::{
-    check_case_conflicts, BonsaiChangeset, ChangesetId, DateTime, FileChange, Timestamp,
-};
+use mononoke_types::check_case_conflicts;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
+use mononoke_types::FileChange;
+use mononoke_types::Timestamp;
 use revset::RangeNodeStream;
 use slog::info;
 use stats::prelude::*;
-use std::cmp::{max, Ordering};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::cmp::max;
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Instant;
 use thiserror::Error;
 use tunables::tunables;
 
-use pushrebase_hook::{
-    PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
-};
+use pushrebase_hook::PushrebaseCommitHook;
+use pushrebase_hook::PushrebaseHook;
+use pushrebase_hook::PushrebaseTransactionHook;
+use pushrebase_hook::RebasedChangesets;
 
 define_stats! {
     prefix = "mononoke.pushrebase";
@@ -1196,30 +1299,41 @@ async fn try_move_bookmark(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::{format_err, Context};
+    use anyhow::format_err;
+    use anyhow::Context;
     use async_trait::async_trait;
     use blobrepo_hg::BlobRepoHg;
     use bookmarks::BookmarkTransactionError;
     use cloned::cloned;
     use fbinit::FacebookInit;
+    use fixtures::Linear;
+    use fixtures::ManyFilesDirs;
+    use fixtures::MergeEven;
     use fixtures::TestRepoFixture;
-    use fixtures::{Linear, ManyFilesDirs, MergeEven};
-    use futures::{
-        future::{try_join_all, TryFutureExt},
-        stream::{self, TryStreamExt},
-    };
-    use manifest::{Entry, ManifestOps};
-    use maplit::{btreemap, hashmap, hashset};
+    use futures::future::try_join_all;
+    use futures::future::TryFutureExt;
+    use futures::stream::TryStreamExt;
+    use futures::stream::{self};
+    use manifest::Entry;
+    use manifest::ManifestOps;
+    use maplit::btreemap;
+    use maplit::hashmap;
+    use maplit::hashset;
+    use mononoke_types::BonsaiChangesetMut;
     use mononoke_types::FileType;
-    use mononoke_types::{BonsaiChangesetMut, RepositoryId};
-    use mutable_counters::{MutableCountersRef, SqlMutableCounters};
+    use mononoke_types::RepositoryId;
+    use mutable_counters::MutableCountersRef;
+    use mutable_counters::SqlMutableCounters;
     use rand::Rng;
     use sql::Transaction;
     use sql_ext::TransactionResult;
+    use std::collections::BTreeMap;
+    use std::str::FromStr;
     use std::time::Duration;
-    use std::{collections::BTreeMap, str::FromStr};
     use test_repo_factory::TestRepoFactory;
-    use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
+    use tests_utils::bookmark;
+    use tests_utils::resolve_cs_id;
+    use tests_utils::CreateCommitContext;
 
     async fn fetch_bonsai_changesets(
         ctx: &CoreContext,

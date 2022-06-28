@@ -11,13 +11,17 @@ use anyhow::Error;
 use async_trait::async_trait;
 
 use assert_matches::assert_matches;
-use bonsai_hg_mapping::{
-    BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds, CachingBonsaiHgMapping,
-    ErrorKind, SqlBonsaiHgMappingBuilder,
-};
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiHgMappingEntry;
+use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
+use bonsai_hg_mapping::CachingBonsaiHgMapping;
+use bonsai_hg_mapping::ErrorKind;
+use bonsai_hg_mapping::SqlBonsaiHgMappingBuilder;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use mercurial_types::{HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgChangesetIdPrefix;
+use mercurial_types::HgChangesetIdsResolvedFromPrefix;
 use mercurial_types_mocks::nodehash as hg;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::changesetid as bonsai;
@@ -26,10 +30,9 @@ use rendezvous::RendezVousOptions;
 use sql_construct::SqlConstruct;
 
 use std::str::FromStr;
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc,
-};
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 async fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     let ctx = CoreContext::test_mock(fb);

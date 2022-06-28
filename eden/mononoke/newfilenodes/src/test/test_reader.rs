@@ -5,17 +5,27 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, PreparedFilenode};
+use filenodes::FilenodeInfo;
+use filenodes::FilenodeRangeResult;
+use filenodes::FilenodeResult;
+use filenodes::PreparedFilenode;
 use maplit::hashmap;
 use mercurial_types::HgFileNodeId;
-use mercurial_types_mocks::nodehash::{
-    ONES_CSID, ONES_FNID, THREES_CSID, THREES_FNID, TWOS_CSID, TWOS_FNID,
-};
-use mononoke_types::{MPath, RepoPath, RepositoryId};
-use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
+use mercurial_types_mocks::nodehash::ONES_CSID;
+use mercurial_types_mocks::nodehash::ONES_FNID;
+use mercurial_types_mocks::nodehash::THREES_CSID;
+use mercurial_types_mocks::nodehash::THREES_FNID;
+use mercurial_types_mocks::nodehash::TWOS_CSID;
+use mercurial_types_mocks::nodehash::TWOS_FNID;
+use mononoke_types::MPath;
+use mononoke_types::RepoPath;
+use mononoke_types::RepositoryId;
+use mononoke_types_mocks::repo::REPO_ONE;
+use mononoke_types_mocks::repo::REPO_ZERO;
 use sql::queries;
 use sql::Connection;
 use std::sync::Arc;
@@ -23,11 +33,13 @@ use tunables::with_tunables;
 use tunables::MononokeTunables;
 
 use crate::builder::SQLITE_INSERT_CHUNK_SIZE;
-use crate::local_cache::{test::HashMapCache, LocalCache};
+use crate::local_cache::test::HashMapCache;
+use crate::local_cache::LocalCache;
 use crate::reader::FilenodesReader;
 use crate::writer::FilenodesWriter;
 
-use super::util::{build_reader_writer, build_shard};
+use super::util::build_reader_writer;
+use super::util::build_shard;
 
 async fn check_roundtrip(
     ctx: &CoreContext,

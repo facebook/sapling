@@ -12,13 +12,17 @@ use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use context::CoreContext;
-use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId, Svnrev};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
+use mononoke_types::Svnrev;
 use slog::warn;
 
 pub use crate::caching::CachingBonsaiSvnrevMapping;
-pub use crate::sql::{
-    bulk_import_svnrevs, AddSvnrevsErrorKind, SqlBonsaiSvnrevMapping, SqlBonsaiSvnrevMappingBuilder,
-};
+pub use crate::sql::bulk_import_svnrevs;
+pub use crate::sql::AddSvnrevsErrorKind;
+pub use crate::sql::SqlBonsaiSvnrevMapping;
+pub use crate::sql::SqlBonsaiSvnrevMappingBuilder;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct BonsaiSvnrevMappingEntry {

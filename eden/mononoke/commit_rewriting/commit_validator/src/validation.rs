@@ -5,44 +5,62 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateLogEntry};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateLogEntry;
 use cloned::cloned;
 use context::CoreContext;
-use cross_repo_sync::{
-    get_commit_sync_outcome,
-    types::{Large, Small, Source, Target},
-    validation::report_different,
-    CommitSyncDataProvider, CommitSyncOutcome,
-};
+use cross_repo_sync::get_commit_sync_outcome;
+use cross_repo_sync::types::Large;
+use cross_repo_sync::types::Small;
+use cross_repo_sync::types::Source;
+use cross_repo_sync::types::Target;
+use cross_repo_sync::validation::report_different;
+use cross_repo_sync::CommitSyncDataProvider;
+use cross_repo_sync::CommitSyncOutcome;
 use futures::compat::Stream01CompatExt;
-use futures::stream::{self, Stream, StreamExt, TryStreamExt};
+use futures::future::try_join_all;
+use futures::future::{self};
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use futures::try_join;
-use futures::{
-    future::{self, try_join_all},
-    TryFutureExt,
-};
+use futures::TryFutureExt;
 use futures_stats::TimedFutureExt;
-use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
-use manifest::{Diff, Entry, ManifestOps};
+use live_commit_sync_config::CfgrLiveCommitSyncConfig;
+use live_commit_sync_config::LiveCommitSyncConfig;
+use manifest::Diff;
+use manifest::Entry;
+use manifest::ManifestOps;
 use mercurial_derived_data::DeriveHgChangeset;
-use mercurial_types::{FileType, HgFileNodeId, HgManifestId};
-use metaconfig_types::{CommitSyncConfigVersion, CommitSyncDirection};
+use mercurial_types::FileType;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::CommitSyncDirection;
 use mononoke_api_types::InnerRepo;
+use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
-use mononoke_types::{ChangesetId, RepositoryId};
-use movers::{get_movers, Mover};
+use mononoke_types::RepositoryId;
+use movers::get_movers;
+use movers::Mover;
 use reachabilityindex::LeastCommonAncestorsHint;
 use ref_cast::RefCast;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{debug, error, info};
+use slog::debug;
+use slog::error;
+use slog::info;
 use stats::prelude::*;
 use std::cmp::min;
-use std::collections::{HashMap, HashSet};
-use std::fmt::{self, Debug};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt::Debug;
+use std::fmt::{self};
 use std::sync::Arc;
 use std::time::Duration;
 use synced_commit_mapping::SqlSyncedCommitMapping;
@@ -1531,13 +1549,13 @@ async fn verify_filenodes_have_same_contents<
 mod tests {
     use super::*;
     use cross_repo_sync::update_mapping_with_version;
-    use cross_repo_sync_test_utils::{
-        init_small_large_repo, xrepo_mapping_version_with_small_repo,
-    };
+    use cross_repo_sync_test_utils::init_small_large_repo;
+    use cross_repo_sync_test_utils::xrepo_mapping_version_with_small_repo;
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use skiplist::SkiplistIndex;
-    use tests_utils::{CommitIdentifier, CreateCommitContext};
+    use tests_utils::CommitIdentifier;
+    use tests_utils::CreateCommitContext;
     use tokio::runtime::Runtime;
 
     async fn add_commits_to_repo(

@@ -5,19 +5,30 @@
  * GNU General Public License version 2.
  */
 
-use super::revlog::{serialize_extras, Extra, RevlogChangeset};
-use crate::{
-    nodehash::{HgChangesetId, HgManifestId},
-    HgBlobNode, HgChangesetEnvelopeMut, HgNodeHash, HgParents, MPath,
-};
-use anyhow::{bail, Error, Result};
+use super::revlog::serialize_extras;
+use super::revlog::Extra;
+use super::revlog::RevlogChangeset;
+use crate::nodehash::HgChangesetId;
+use crate::nodehash::HgManifestId;
+use crate::HgBlobNode;
+use crate::HgChangesetEnvelopeMut;
+use crate::HgNodeHash;
+use crate::HgParents;
+use crate::MPath;
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, Loadable, LoadableError};
+use blobstore::Blobstore;
+use blobstore::Loadable;
+use blobstore::LoadableError;
 use bytes::Bytes;
 use context::CoreContext;
 use mononoke_types::DateTime;
-use std::fmt::{self, Display};
-use std::{collections::BTreeMap, io::Write};
+use std::collections::BTreeMap;
+use std::fmt::Display;
+use std::fmt::{self};
+use std::io::Write;
 
 const STEP_PARENTS_METADATA_KEY: &str = "stepparents";
 

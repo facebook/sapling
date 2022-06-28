@@ -11,7 +11,8 @@
 use std::collections::HashMap;
 
 use mercurial_types::HgChangesetId;
-use mononoke_types::{RawBundle2Id, Timestamp};
+use mononoke_types::RawBundle2Id;
+use mononoke_types::Timestamp;
 
 pub struct BundleReplayData {
     pub bundle2_id: RawBundle2Id,

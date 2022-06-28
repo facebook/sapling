@@ -5,20 +5,26 @@
  * GNU General Public License version 2.
  */
 
-use bookmarks::{BookmarkKind, BookmarkName, BookmarkUpdateReason};
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use context::CoreContext;
-use futures::{stream, StreamExt, TryStreamExt};
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use hooks::PushAuthoredBy;
-use metaconfig_types::{
-    BookmarkAttrs, InfinitepushParams, PushrebaseParams, SourceControlServiceParams,
-};
+use metaconfig_types::BookmarkAttrs;
+use metaconfig_types::InfinitepushParams;
+use metaconfig_types::PushrebaseParams;
+use metaconfig_types::SourceControlServiceParams;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_identity::RepoIdentityRef;
 use tunables::tunables;
 
-use crate::{BookmarkMovementError, Repo};
+use crate::BookmarkMovementError;
+use crate::Repo;
 
 /// How authorization for the bookmark move should be determined.
 #[derive(Clone, Debug, Eq, PartialEq)]

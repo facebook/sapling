@@ -5,14 +5,19 @@
  * GNU General Public License version 2.
  */
 
-use crate::{ErrorKind, FileChange, FileContentManager, PathContent};
+use crate::ErrorKind;
+use crate::FileChange;
+use crate::FileContentManager;
+use crate::PathContent;
 
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
-use mononoke_types::{ChangesetId, ContentId, MPath};
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::MPath;
 use std::collections::HashMap;
 use std::sync::Arc;
 

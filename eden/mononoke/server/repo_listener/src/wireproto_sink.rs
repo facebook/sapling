@@ -5,11 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use chrono::{DateTime, Utc};
+use chrono::DateTime;
+use chrono::Utc;
 use futures::sink::Sink;
-use futures::task::{Context, Poll};
+use futures::task::Context;
+use futures::task::Poll;
 use pin_project::pin_project;
-use sshrelay::{IoStream, SshMsg};
+use sshrelay::IoStream;
+use sshrelay::SshMsg;
 use std::pin::Pin;
 
 #[pin_project]

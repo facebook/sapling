@@ -10,25 +10,33 @@ mod mem_writes_changesets;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
-use blobstore::{Blobstore, Loadable};
-use bonsai_hg_mapping::{ArcBonsaiHgMapping, MemWritesBonsaiHgMapping};
-use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
+use blobstore::Blobstore;
+use blobstore::Loadable;
+use bonsai_hg_mapping::ArcBonsaiHgMapping;
+use bonsai_hg_mapping::MemWritesBonsaiHgMapping;
+use cacheblob::dummy::DummyLease;
+use cacheblob::LeaseOps;
+use cacheblob::MemWritesBlobstore;
 use changesets::ArcChangesets;
-use clap::{Arg, SubCommand};
-use cmdlib::{
-    args::{self, RepoRequirement},
-    helpers::block_execute,
-};
+use clap::Arg;
+use clap::SubCommand;
+use cmdlib::args::RepoRequirement;
+use cmdlib::args::{self};
+use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future;
-use import_tools::{import_tree_as_single_bonsai_changeset, GitimportPreferences, GitimportTarget};
+use import_tools::import_tree_as_single_bonsai_changeset;
+use import_tools::GitimportPreferences;
+use import_tools::GitimportTarget;
 use linked_hash_map::LinkedHashMap;
-use mercurial_derived_data::{get_manifest_from_bonsai, DeriveHgChangeset};
+use mercurial_derived_data::get_manifest_from_bonsai;
+use mercurial_derived_data::DeriveHgChangeset;
 use mononoke_types::ChangesetId;
 use slog::info;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::mem_writes_changesets::MemWritesChangesets;

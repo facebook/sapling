@@ -7,17 +7,28 @@
 
 use std::sync::Arc;
 
-use anyhow::{format_err, Error, Result};
-use clap_old::{App, Arg, ArgMatches, SubCommand};
+use anyhow::format_err;
+use anyhow::Error;
+use anyhow::Result;
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
 use fbinit::FacebookInit;
 
 use blobstore::BlobstoreUnlinkOps;
-use blobstore_factory::{make_sql_blobstore, BlobstoreOptions, ReadOnlyStorage};
+use blobstore_factory::make_sql_blobstore;
+use blobstore_factory::BlobstoreOptions;
+use blobstore_factory::ReadOnlyStorage;
 use cached_config::ConfigStore;
-use cmdlib::args::{self, MononokeMatches};
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
 use context::CoreContext;
-use metaconfig_types::{BlobConfig, BlobstoreId, StorageConfig};
-use slog::{info, Logger};
+use metaconfig_types::BlobConfig;
+use metaconfig_types::BlobstoreId;
+use metaconfig_types::StorageConfig;
+use slog::info;
+use slog::Logger;
 
 use crate::error::SubcommandError;
 

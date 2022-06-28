@@ -9,7 +9,8 @@ use anyhow::Result;
 use fbinit::FacebookInit;
 use sql_ext::facebook::MysqlOptions;
 
-use crate::{SqlConstruct, SqlShardedConstruct};
+use crate::SqlConstruct;
+use crate::SqlShardedConstruct;
 
 macro_rules! fb_unimplemented {
     () => {

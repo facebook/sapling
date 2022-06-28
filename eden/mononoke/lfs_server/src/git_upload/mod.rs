@@ -7,4 +7,5 @@
 
 mod blob;
 
-pub use blob::{git_upload_blob, GitBlobParams};
+pub use blob::git_upload_blob;
+pub use blob::GitBlobParams;

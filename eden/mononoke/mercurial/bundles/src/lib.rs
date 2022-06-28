@@ -30,22 +30,30 @@ mod errors;
 pub use crate::errors::ErrorKind;
 mod utils;
 
-use anyhow::{bail, Error, Result};
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
 use bytes_old::Bytes;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future::{BoxFuture, FutureExt},
-    stream::{BoxStream, StreamExt},
-};
-use futures_ext::{BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, SinkToAsyncWrite};
-use futures_old::{
-    sync::{mpsc, oneshot},
-    Future as OldFuture, Stream as OldStream,
-};
+use futures::compat::Future01CompatExt;
+use futures::compat::Stream01CompatExt;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
+use futures_ext::BoxFuture as OldBoxFuture;
+use futures_ext::BoxStream as OldBoxStream;
+use futures_ext::SinkToAsyncWrite;
+use futures_old::sync::mpsc;
+use futures_old::sync::oneshot;
+use futures_old::Future as OldFuture;
+use futures_old::Stream as OldStream;
 use std::fmt;
 
 pub use crate::bundle2_encode::Bundle2EncodeBuilder;
-pub use crate::part_header::{PartHeader, PartHeaderInner, PartHeaderType, PartId};
+pub use crate::part_header::PartHeader;
+pub use crate::part_header::PartHeaderInner;
+pub use crate::part_header::PartHeaderType;
+pub use crate::part_header::PartId;
 pub use crate::types::StreamHeader;
 
 pub enum Bundle2Item<'a> {

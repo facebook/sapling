@@ -8,16 +8,22 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use anyhow::{bail, Error, Result};
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{BlobstoreBytes, BlobstoreGetData};
+use blobstore::BlobstoreBytes;
+use blobstore::BlobstoreGetData;
 use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use test_repo_factory::TestRepoFactory;
 
-use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
+use derived_data_manager::dependencies;
+use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivationContext;
 
 use derived_data_service_if::types as thrift;
 

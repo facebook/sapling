@@ -5,21 +5,27 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
 use dashmap::DashMap;
-use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
-use futures_ext::{send_discard, BoxFuture};
-use futures_old::{
-    sync::mpsc::{self, Sender},
-    Future, Stream,
-};
-use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId};
-use slog::{o, Logger};
+use futures::compat::Future01CompatExt;
+use futures::FutureExt;
+use futures::TryFutureExt;
+use futures_ext::send_discard;
+use futures_ext::BoxFuture;
+use futures_old::sync::mpsc::Sender;
+use futures_old::sync::mpsc::{self};
+use futures_old::Future;
+use futures_old::Stream;
+use mercurial_types::blobs::HgBlobChangeset;
+use mercurial_types::HgChangesetId;
+use slog::o;
+use slog::Logger;
 use std::sync::Arc;
 
 /// This trait enables parallelized walks over changesets.

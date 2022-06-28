@@ -12,20 +12,25 @@ mod memcache_utils;
 mod mock_store;
 
 use std::borrow::Borrow;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::future::Future;
 use std::hash::Hash;
 use std::time::Duration;
 
 use abomonation::Abomonation;
-use anyhow::{Context as _, Error};
+use anyhow::Context as _;
+use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use bytes::Bytes;
 use cloned::cloned;
-use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use itertools::Itertools;
-use memcache::{KeyGen, MEMCACHE_VALUE_MAX_SIZE};
+use memcache::KeyGen;
+use memcache::MEMCACHE_VALUE_MAX_SIZE;
 use stats::prelude::*;
 
 pub use crate::cachelib_utils::CachelibHandler;
@@ -478,8 +483,10 @@ mod test {
     use super::*;
 
     use abomonation_derive::Abomonation;
-    use maplit::{hashmap, hashset};
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use maplit::hashmap;
+    use maplit::hashset;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
 
     #[derive(Abomonation, Clone, Debug, PartialEq, Eq)]
     struct TestEntity(Vec<u8>);

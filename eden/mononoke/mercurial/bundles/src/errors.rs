@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::part_header::{PartHeader, PartHeaderType};
+use crate::part_header::PartHeader;
+use crate::part_header::PartHeaderType;
 
 use thiserror::Error;
 

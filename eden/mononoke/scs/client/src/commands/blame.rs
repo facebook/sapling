@@ -7,9 +7,16 @@
 
 //! Fetch the blame of a file
 
-use anyhow::{format_err, Context, Error};
-use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use futures::{future, stream};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use clap::App;
+use clap::AppSettings;
+use clap::Arg;
+use clap::ArgMatches;
+use clap::SubCommand;
+use futures::future;
+use futures::stream;
 use futures_util::stream::StreamExt;
 use maplit::btreeset;
 use serde_json::json;
@@ -17,19 +24,26 @@ use source_control::types as thrift;
 use std::fmt::Write as _;
 use std::io::Write;
 use std::str::FromStr;
-use unicode_truncate::{Alignment, UnicodeTruncateStr};
+use unicode_truncate::Alignment;
+use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
 
-use crate::args::commit_id::{
-    add_commit_id_args, add_scheme_args, get_commit_id, get_request_schemes, get_schemes,
-    map_commit_ids, resolve_commit_id,
-};
-use crate::args::path::{add_path_args, get_path};
-use crate::args::repo::{add_repo_args, get_repo_specifier};
+use crate::args::commit_id::add_commit_id_args;
+use crate::args::commit_id::add_scheme_args;
+use crate::args::commit_id::get_commit_id;
+use crate::args::commit_id::get_request_schemes;
+use crate::args::commit_id::get_schemes;
+use crate::args::commit_id::map_commit_ids;
+use crate::args::commit_id::resolve_commit_id;
+use crate::args::path::add_path_args;
+use crate::args::path::get_path;
+use crate::args::repo::add_repo_args;
+use crate::args::repo::get_repo_specifier;
 use crate::connection::Connection;
 use crate::lib::commit_id::render_commit_id;
 use crate::lib::datetime;
-use crate::render::{Render, RenderStream};
+use crate::render::Render;
+use crate::render::RenderStream;
 
 pub(super) const NAME: &str = "blame";
 

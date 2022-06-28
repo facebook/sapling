@@ -8,7 +8,9 @@
 use std::io::Write;
 
 use anyhow::Error;
-use clap::{App, Arg, ArgMatches};
+use clap::App;
+use clap::Arg;
+use clap::ArgMatches;
 use fbinit::FacebookInit;
 use futures_util::stream::TryStreamExt;
 

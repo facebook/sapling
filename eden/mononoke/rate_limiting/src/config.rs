@@ -8,12 +8,20 @@
 use std::str::FromStr;
 use std::time::Duration;
 
-use anyhow::{anyhow, Context, Error};
-use serde::de::{Deserializer, Error as _};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
+use serde::de::Deserializer;
+use serde::de::Error as _;
 use serde::Deserialize;
 
+use crate::LoadShedLimit;
+use crate::Metric;
 use crate::MononokeRateLimitConfig;
-use crate::{LoadShedLimit, Metric, RateLimit, RateLimitBody, StaticSlice, Target};
+use crate::RateLimit;
+use crate::RateLimitBody;
+use crate::StaticSlice;
+use crate::Target;
 
 #[cfg(fbcode_build)]
 pub use crate::facebook::get_region_capacity;

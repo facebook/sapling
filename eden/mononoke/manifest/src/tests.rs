@@ -5,33 +5,56 @@
  * GNU General Public License version 2.
  */
 
-pub(crate) use crate::{
-    bonsai::BonsaiEntry,
-    derive_batch::{derive_manifests_for_simple_stack_of_commits, ManifestChanges},
-    derive_manifest, find_intersection_of_diffs, Diff, Entry, Manifest, ManifestOps,
-    ManifestOrderedOps, OrderedManifest, PathOrPrefix, PathTree, TreeInfo,
-};
-use anyhow::{Error, Result};
+pub(crate) use crate::bonsai::BonsaiEntry;
+pub(crate) use crate::derive_batch::derive_manifests_for_simple_stack_of_commits;
+pub(crate) use crate::derive_batch::ManifestChanges;
+pub(crate) use crate::derive_manifest;
+pub(crate) use crate::find_intersection_of_diffs;
+pub(crate) use crate::Diff;
+pub(crate) use crate::Entry;
+pub(crate) use crate::Manifest;
+pub(crate) use crate::ManifestOps;
+pub(crate) use crate::ManifestOrderedOps;
+pub(crate) use crate::OrderedManifest;
+pub(crate) use crate::PathOrPrefix;
+pub(crate) use crate::PathTree;
+pub(crate) use crate::TreeInfo;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, Loadable, LoadableError, Storable, StoreLoadable};
+use blobstore::Blobstore;
+use blobstore::Loadable;
+use blobstore::LoadableError;
+use blobstore::Storable;
+use blobstore::StoreLoadable;
 use borrowed::borrowed;
 use bounded_traversal::bounded_traversal_stream;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::future::{self, FutureExt};
+use futures::future::FutureExt;
+use futures::future::{self};
 use futures::stream::TryStreamExt;
 use maplit::btreemap;
 use memblob::Memblob;
-use mononoke_types::{BlobstoreBytes, ChangesetId, FileType, MPath, MPathElement};
-use mononoke_types_mocks::changesetid::{ONES_CSID, THREES_CSID, TWOS_CSID};
+use mononoke_types::BlobstoreBytes;
+use mononoke_types::ChangesetId;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
+use mononoke_types::MPathElement;
+use mononoke_types_mocks::changesetid::ONES_CSID;
+use mononoke_types_mocks::changesetid::THREES_CSID;
+use mononoke_types_mocks::changesetid::TWOS_CSID;
 use pretty_assertions::assert_eq;
-use serde_derive::{Deserialize, Serialize};
-use std::{
-    collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet, HashMap},
-    hash::{Hash, Hasher},
-    sync::Arc,
-};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
+use std::collections::hash_map::DefaultHasher;
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+use std::collections::HashMap;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 struct TestLeafId(u64);

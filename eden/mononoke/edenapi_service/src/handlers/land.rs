@@ -7,19 +7,26 @@
 
 use std::collections::HashMap;
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use async_trait::async_trait;
 use bookmarks_movement::BookmarkKindRestrictions;
 use bytes::Bytes;
-use edenapi_types::{HgId, LandStackRequest, LandStackResponse};
-use futures::{stream, StreamExt};
+use edenapi_types::HgId;
+use edenapi_types::LandStackRequest;
+use edenapi_types::LandStackResponse;
+use futures::stream;
+use futures::StreamExt;
 use hooks::CrossRepoPushSource;
-use mercurial_types::{HgChangesetId, HgNodeHash};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgNodeHash;
 use mononoke_api_hg::HgRepoContext;
 
 use crate::errors::ErrorKind;
 
-use super::{EdenApiHandler, EdenApiMethod, HandlerResult};
+use super::EdenApiHandler;
+use super::EdenApiMethod;
+use super::HandlerResult;
 
 /// Rebase a stack of commits onto a bookmark, and update the bookmark to the top of the newly-rebased stack.
 pub struct LandStackHandler;

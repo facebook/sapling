@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -18,10 +19,12 @@ use context::CoreContext;
 use futures_stats::TimedFutureExt;
 use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
-use hooks::{CrossRepoPushSource, HookManager};
-use metaconfig_types::{
-    BookmarkAttrs, InfinitepushParams, PushrebaseParams, SourceControlServiceParams,
-};
+use hooks::CrossRepoPushSource;
+use hooks::HookManager;
+use metaconfig_types::BookmarkAttrs;
+use metaconfig_types::InfinitepushParams;
+use metaconfig_types::PushrebaseParams;
+use metaconfig_types::SourceControlServiceParams;
 use mononoke_types::BonsaiChangeset;
 use pushrebase_hook::PushrebaseHook;
 use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
@@ -29,12 +32,15 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use repo_identity::RepoIdentityRef;
 use repo_read_write_status::RepoReadWriteFetcher;
 
-use crate::affected_changesets::{AdditionalChangesets, AffectedChangesets};
-use crate::repo_lock::{check_repo_lock, RepoLockPushrebaseHook};
-use crate::restrictions::{
-    check_bookmark_sync_config, BookmarkKindRestrictions, BookmarkMoveAuthorization,
-};
-use crate::{BookmarkMovementError, Repo};
+use crate::affected_changesets::AdditionalChangesets;
+use crate::affected_changesets::AffectedChangesets;
+use crate::repo_lock::check_repo_lock;
+use crate::repo_lock::RepoLockPushrebaseHook;
+use crate::restrictions::check_bookmark_sync_config;
+use crate::restrictions::BookmarkKindRestrictions;
+use crate::restrictions::BookmarkMoveAuthorization;
+use crate::BookmarkMovementError;
+use crate::Repo;
 
 #[must_use = "PushrebaseOntoBookmarkOp must be run to have an effect"]
 pub struct PushrebaseOntoBookmarkOp<'op> {

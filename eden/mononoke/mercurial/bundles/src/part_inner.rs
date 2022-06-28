@@ -7,17 +7,27 @@
 
 //! Type definitions for inner streams.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::io::BufRead;
 use std::str;
 
-use anyhow::{bail, ensure, Error, Result};
-use bytes_old::{Bytes, BytesMut};
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future, Future, Stream};
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::Error;
+use anyhow::Result;
+use bytes_old::Bytes;
+use bytes_old::BytesMut;
+use futures_ext::BoxFuture;
+use futures_ext::FutureExt;
+use futures_old::future;
+use futures_old::Future;
+use futures_old::Stream;
 use lazy_static::lazy_static;
 use maplit::hashset;
-use slog::{o, warn, Logger};
+use slog::o;
+use slog::warn;
+use slog::Logger;
 use tokio_io::codec::Decoder;
 use tokio_io::AsyncRead;
 
@@ -25,12 +35,15 @@ use crate::capabilities;
 use crate::changegroup;
 use crate::errors::ErrorKind;
 use crate::infinitepush;
-use crate::part_header::{PartHeader, PartHeaderType};
-use crate::part_outer::{OuterFrame, OuterStream};
+use crate::part_header::PartHeader;
+use crate::part_header::PartHeaderType;
+use crate::part_outer::OuterFrame;
+use crate::part_outer::OuterStream;
 use crate::pushrebase;
 use crate::wirepack;
 use crate::OldBundle2Item;
-use futures_ext::{StreamExt, StreamLayeredExt};
+use futures_ext::StreamExt;
+use futures_ext::StreamLayeredExt;
 
 // --- Part parameters
 
@@ -238,7 +251,8 @@ impl Decoder for EmptyUnpacker {
 #[cfg(test)]
 mod test {
     use crate::changegroup::unpacker::CgVersion;
-    use crate::part_header::{PartHeaderBuilder, PartHeaderType};
+    use crate::part_header::PartHeaderBuilder;
+    use crate::part_header::PartHeaderType;
     use crate::part_inner::*;
 
     #[test]

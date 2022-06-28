@@ -5,25 +5,37 @@
  * GNU General Public License version 2.
  */
 
-use crate::derive::{get_changes, DeletedManifestDeriver};
+use crate::derive::get_changes;
+use crate::derive::DeletedManifestDeriver;
 use crate::mapping::RootDeletedManifestIdCommon;
 use crate::ops::DeletedManifestOps;
 use anyhow::Error;
-use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobrepo::save_bonsai_changesets;
+use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bounded_traversal::bounded_traversal_stream;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_test_utils::bonsai_changeset_from_hg;
 use fbinit::FacebookInit;
-use fixtures::{store_files, ManyFilesDirs, TestRepoFixture};
-use futures::{pin_mut, stream::iter, FutureExt, Stream, StreamExt, TryStreamExt};
+use fixtures::store_files;
+use fixtures::ManyFilesDirs;
+use fixtures::TestRepoFixture;
+use futures::pin_mut;
+use futures::stream::iter;
+use futures::FutureExt;
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use manifest::PathOrPrefix;
 use maplit::btreemap;
-use mononoke_types::{
-    deleted_manifest_common::DeletedManifestCommon, BonsaiChangeset, BonsaiChangesetMut,
-    ChangesetId, DateTime, FileChange, MPath,
-};
+use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
+use mononoke_types::FileChange;
+use mononoke_types::MPath;
 use pretty_assertions::assert_eq;
 use repo_derived_data::RepoDerivedDataRef;
 use sorted_vector_map::SortedVectorMap;

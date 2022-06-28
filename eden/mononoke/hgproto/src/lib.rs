@@ -12,10 +12,15 @@
 //! protocols, and a Tokio Service framework for them via a trait.
 
 use bytes_old::Bytes;
-use mercurial_types::{HgChangesetId, HgManifestId};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgManifestId;
 use mononoke_types::MPath;
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::fmt::{self, Debug};
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt::Debug;
+use std::fmt::{self};
 use std::sync::Mutex;
 
 pub mod batch;
@@ -226,6 +231,7 @@ impl SingleResponse {
     }
 }
 
-pub use commands::{HgCommandRes, HgCommands};
+pub use commands::HgCommandRes;
+pub use commands::HgCommands;
 pub use errors::ErrorKind;
 pub use handler::HgProtoHandler;

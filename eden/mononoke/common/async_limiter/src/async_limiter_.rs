@@ -6,14 +6,20 @@
  */
 
 use anyhow::Error;
-use futures::{
-    channel::{mpsc, oneshot},
-    future::{self, Future, FutureExt},
-    stream::{self, StreamExt},
-};
-use ratelimit_meter::{algorithms::Algorithm, clock::Clock, DirectRateLimiter};
+use futures::channel::mpsc;
+use futures::channel::oneshot;
+use futures::future::Future;
+use futures::future::FutureExt;
+use futures::future::{self};
+use futures::stream::StreamExt;
+use futures::stream::{self};
+use ratelimit_meter::algorithms::Algorithm;
+use ratelimit_meter::clock::Clock;
+use ratelimit_meter::DirectRateLimiter;
 
-use crate::{EarliestPossible, ErrorKind, RateLimitStream};
+use crate::EarliestPossible;
+use crate::ErrorKind;
+use crate::RateLimitStream;
 
 /// A shared asynchronous rate limiter.
 #[derive(Clone)]
@@ -84,8 +90,10 @@ impl AsyncLimiter {
 mod test {
     use super::*;
     use nonzero_ext::nonzero;
-    use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
-    use std::time::{Duration, Instant};
+    use ratelimit_meter::algorithms::LeakyBucket;
+    use ratelimit_meter::DirectRateLimiter;
+    use std::time::Duration;
+    use std::time::Instant;
 
     #[tokio::test]
     async fn test_access_enters_queue_lazily() -> Result<(), Error> {

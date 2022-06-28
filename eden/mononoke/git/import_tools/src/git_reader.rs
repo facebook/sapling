@@ -5,17 +5,28 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
 use git_hash::ObjectId;
-use git_object::{Kind, Object, ObjectRef};
+use git_object::Kind;
+use git_object::Object;
+use git_object::ObjectRef;
 use std::collections::HashMap;
 use std::future::Future;
 use std::path::Path;
 use std::process::Stdio;
-use std::sync::{Arc, Mutex};
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
-use tokio::process::{ChildStdout, Command};
-use tokio::sync::{mpsc, oneshot};
+use std::sync::Arc;
+use std::sync::Mutex;
+use tokio::io::AsyncBufReadExt;
+use tokio::io::AsyncReadExt;
+use tokio::io::AsyncWriteExt;
+use tokio::io::BufReader;
+use tokio::process::ChildStdout;
+use tokio::process::Command;
+use tokio::sync::mpsc;
+use tokio::sync::oneshot;
 
 type ObjectSender = oneshot::Sender<Result<Object>>;
 

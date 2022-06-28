@@ -5,17 +5,27 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt::{self, Display};
+use std::fmt::Display;
+use std::fmt::{self};
 use std::str::FromStr;
 
-use anyhow::{bail, Context, Result};
-use chrono::{
-    DateTime as ChronoDateTime, Duration as ChronoDuration, FixedOffset, Local, LocalResult,
-    NaiveDateTime, TimeZone,
-};
-use chrono_english::{parse_date_string, Dialect};
-use quickcheck::{empty_shrinker, Arbitrary, Gen};
-use serde_derive::{Deserialize, Serialize};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
+use chrono::DateTime as ChronoDateTime;
+use chrono::Duration as ChronoDuration;
+use chrono::FixedOffset;
+use chrono::Local;
+use chrono::LocalResult;
+use chrono::NaiveDateTime;
+use chrono::TimeZone;
+use chrono_english::parse_date_string;
+use chrono_english::Dialect;
+use quickcheck::empty_shrinker;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use sql::mysql;
 
 use crate::errors::ErrorKind;

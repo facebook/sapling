@@ -8,13 +8,14 @@
 use cached_config::ConfigHandle;
 use fbinit::FacebookInit;
 use futures::future::FutureExt;
-use gotham::{
-    handler::HandlerFuture,
-    middleware::Middleware,
-    state::{FromState, State},
-};
+use gotham::handler::HandlerFuture;
+use gotham::middleware::Middleware;
+use gotham::state::FromState;
+use gotham::state::State;
 use gotham_derive::NewMiddleware;
-use gotham_ext::{error::HttpError, middleware::ClientIdentity, response::build_error_response};
+use gotham_ext::error::HttpError;
+use gotham_ext::middleware::ClientIdentity;
+use gotham_ext::response::build_error_response;
 use hyper::Uri;
 use std::pin::Pin;
 

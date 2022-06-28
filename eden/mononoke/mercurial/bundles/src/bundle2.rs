@@ -7,25 +7,37 @@
 
 //! Overall coordinator for parsing bundle2 streams.
 
-use std::fmt::{self, Debug, Display, Formatter};
-use std::io::{BufRead, Chain, Cursor, Read};
+use std::fmt::Debug;
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::fmt::{self};
+use std::io::BufRead;
+use std::io::Chain;
+use std::io::Cursor;
+use std::io::Read;
 use std::mem;
 
 use anyhow::Error;
 use bytes_old::BytesMut;
-use futures_old::{Async, Poll, Stream};
+use futures_old::Async;
+use futures_old::Poll;
+use futures_old::Stream;
 
 use futures_ext::io::Either;
 use futures_ext::BoxFuture;
 use slog::Logger;
-use tokio_codec::{Framed, FramedParts};
+use tokio_codec::Framed;
+use tokio_codec::FramedParts;
 use tokio_io::AsyncRead;
 
 use crate::errors::ErrorKind;
 use crate::part_inner::inner_stream;
-use crate::part_outer::{outer_stream, OuterFrame, OuterStream};
+use crate::part_outer::outer_stream;
+use crate::part_outer::OuterFrame;
+use crate::part_outer::OuterStream;
 use crate::stream_start::StartDecoder;
-use crate::{Bundle2Item, OldBundle2Item};
+use crate::Bundle2Item;
+use crate::OldBundle2Item;
 
 pub enum StreamEvent<I, S> {
     Next(I),

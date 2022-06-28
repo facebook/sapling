@@ -6,12 +6,16 @@
  */
 
 use gotham::state::State;
-use gotham_ext::middleware::{ClientIdentity, Middleware, PostResponseCallbacks};
+use gotham_ext::middleware::ClientIdentity;
+use gotham_ext::middleware::Middleware;
+use gotham_ext::middleware::PostResponseCallbacks;
+use hyper::Body;
+use hyper::Response;
 use hyper::StatusCode;
-use hyper::{Body, Response};
 use stats::prelude::*;
 
-use crate::handlers::{EdenApiMethod, HandlerInfo};
+use crate::handlers::EdenApiMethod;
+use crate::handlers::HandlerInfo;
 
 define_stats! {
     prefix = "mononoke.edenapi.request";

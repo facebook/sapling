@@ -7,24 +7,30 @@
 
 #![feature(never_type)]
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use clap::Parser;
 use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
 use futures_watchdog::WatchdogExt;
-use mononoke_api::{Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData};
-use mononoke_app::args::{HooksAppExtension, McrouterAppExtension, ShutdownTimeoutArgs};
-use mononoke_app::fb303::{Fb303AppExtension, ReadyFlagService};
+use mononoke_api::Mononoke;
+use mononoke_api::MononokeApiEnvironment;
+use mononoke_api::WarmBookmarksCacheDerivedData;
+use mononoke_app::args::HooksAppExtension;
+use mononoke_app::args::McrouterAppExtension;
+use mononoke_app::args::ShutdownTimeoutArgs;
+use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::fb303::ReadyFlagService;
 use mononoke_app::MononokeAppBuilder;
 use openssl::ssl::AlpnError;
-use slog::{error, info};
+use slog::error;
+use slog::info;
 use std::path::PathBuf;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 /// Mononoke Server
 #[derive(Parser)]

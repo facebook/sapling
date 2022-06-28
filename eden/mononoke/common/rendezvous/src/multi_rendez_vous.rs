@@ -9,7 +9,10 @@ use dashmap::DashMap;
 use std::hash::Hash;
 use std::sync::Arc;
 
-use crate::{RendezVous, RendezVousController, RendezVousStats, TunablesMultiRendezVousController};
+use crate::RendezVous;
+use crate::RendezVousController;
+use crate::RendezVousStats;
+use crate::TunablesMultiRendezVousController;
 
 pub trait MultiRendezVousController: Send + Sync + 'static {
     type Controller: RendezVousController;

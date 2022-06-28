@@ -9,7 +9,9 @@ use clap::ArgEnum;
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
 use strum::IntoEnumIterator;
-use strum_macros::{AsRefStr, EnumString, EnumVariantNames};
+use strum_macros::AsRefStr;
+use strum_macros::EnumString;
+use strum_macros::EnumVariantNames;
 
 use crate::detail::graph::NodeType;
 use crate::detail::state::InternedType;

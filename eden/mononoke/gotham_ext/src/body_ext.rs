@@ -6,12 +6,17 @@
  */
 
 use anyhow::Error;
-use bytes::{Bytes, BytesMut};
-use futures::{
-    future::{self, MapOk, Ready, TryFutureExt},
-    stream::{Stream, TryFold, TryStreamExt},
-};
-use http::header::{HeaderMap, CONTENT_LENGTH};
+use bytes::Bytes;
+use bytes::BytesMut;
+use futures::future::MapOk;
+use futures::future::Ready;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream::Stream;
+use futures::stream::TryFold;
+use futures::stream::TryStreamExt;
+use http::header::HeaderMap;
+use http::header::CONTENT_LENGTH;
 use std::str;
 
 type BodyFuture<S, E> = MapOk<

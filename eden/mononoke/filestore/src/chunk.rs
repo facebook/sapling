@@ -5,14 +5,21 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Error, Result};
-use bytes::{Bytes, BytesMut};
-use futures::{
-    future::{BoxFuture, FutureExt, TryFutureExt},
-    stream::{BoxStream, Stream, StreamExt, TryStreamExt},
-    task::{Context, Poll},
-};
-use std::fmt::{self, Debug};
+use anyhow::Error;
+use anyhow::Result;
+use bytes::Bytes;
+use bytes::BytesMut;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::stream::BoxStream;
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::task::Context;
+use futures::task::Poll;
+use std::fmt::Debug;
+use std::fmt::{self};
 use std::pin::Pin;
 
 use crate::expected_size::ExpectedSize;

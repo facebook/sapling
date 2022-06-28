@@ -6,11 +6,13 @@
  */
 
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 use anyhow::Result;
 use context::CoreContext;
-use mercurial_mutation::{HgMutationEntry, HgMutationStore};
+use mercurial_mutation::HgMutationEntry;
+use mercurial_mutation::HgMutationStore;
 use mercurial_types::HgChangesetId;
 
 fn compare_entries(a: &HgMutationEntry, b: &HgMutationEntry) -> Ordering {

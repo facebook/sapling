@@ -5,27 +5,44 @@
  * GNU General Public License version 2.
  */
 
-use crate::{
-    BundleResolverError, BundleResolverResultExt, InfiniteBookmarkPush, NonFastForwardPolicy,
-    PlainBookmarkPush, PostResolveAction, PostResolveBookmarkOnlyPushRebase,
-    PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, PushrebaseBookmarkSpec,
-};
-use anyhow::{anyhow, Context, Error, Result};
-use blobrepo::scribe::{log_commits_to_scribe_raw, ScribeCommitInfo};
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
-use bookmarks_movement::{
-    BookmarkKindRestrictions, BookmarkMovementError, BookmarkUpdatePolicy, BookmarkUpdateTargets,
-};
+use crate::BundleResolverError;
+use crate::BundleResolverResultExt;
+use crate::InfiniteBookmarkPush;
+use crate::NonFastForwardPolicy;
+use crate::PlainBookmarkPush;
+use crate::PostResolveAction;
+use crate::PostResolveBookmarkOnlyPushRebase;
+use crate::PostResolveInfinitePush;
+use crate::PostResolvePush;
+use crate::PostResolvePushRebase;
+use crate::PushrebaseBookmarkSpec;
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
+use blobrepo::scribe::log_commits_to_scribe_raw;
+use blobrepo::scribe::ScribeCommitInfo;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
+use bookmarks_movement::BookmarkKindRestrictions;
+use bookmarks_movement::BookmarkMovementError;
+use bookmarks_movement::BookmarkUpdatePolicy;
+use bookmarks_movement::BookmarkUpdateTargets;
 use bytes::Bytes;
 use context::CoreContext;
 use hooks::HookManager;
 use mercurial_mutation::HgMutationStoreRef;
-use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushParams, PushrebaseParams};
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use metaconfig_types::BookmarkAttrs;
+use metaconfig_types::InfinitepushParams;
+use metaconfig_types::PushParams;
+use metaconfig_types::PushrebaseParams;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseError;
+use pushrebase_client::LocalPushrebaseClient;
+use pushrebase_client::PushrebaseClient;
 #[cfg(fbcode_build)]
 use pushrebase_client::SCSPushrebaseClient;
-use pushrebase_client::{LocalPushrebaseClient, PushrebaseClient};
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -34,17 +51,20 @@ use repo_read_write_status::RepoReadWriteFetcher;
 use scribe_commit_queue::ChangedFilesInfo;
 use slog::debug;
 use stats::prelude::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 use trait_alias::trait_alias;
 use tunables::tunables;
 
-use crate::hook_running::{map_hook_rejections, HookRejectionRemapper};
+use crate::hook_running::map_hook_rejections;
+use crate::hook_running::HookRejectionRemapper;
 use crate::rate_limits::enforce_commit_rate_limits;
-use crate::response::{
-    UnbundleBookmarkOnlyPushRebaseResponse, UnbundleInfinitePushResponse,
-    UnbundlePushRebaseResponse, UnbundlePushResponse, UnbundleResponse,
-};
+use crate::response::UnbundleBookmarkOnlyPushRebaseResponse;
+use crate::response::UnbundleInfinitePushResponse;
+use crate::response::UnbundlePushRebaseResponse;
+use crate::response::UnbundlePushResponse;
+use crate::response::UnbundleResponse;
 use crate::CrossRepoPushSource;
 
 define_stats! {

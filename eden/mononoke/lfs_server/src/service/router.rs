@@ -7,19 +7,22 @@
 
 use fbinit::FacebookInit;
 use futures::FutureExt;
-use gotham::{
-    handler::HandlerFuture,
-    helpers::http::response::{create_empty_response, create_response},
-    middleware::state::StateMiddleware,
-    pipeline::{new_pipeline, single::single_pipeline},
-    router::{
-        builder::{build_router as gotham_build_router, DefineSingleRoute, DrawRoutes},
-        Router,
-    },
-    state::{FromState, State},
-};
+use gotham::handler::HandlerFuture;
+use gotham::helpers::http::response::create_empty_response;
+use gotham::helpers::http::response::create_response;
+use gotham::middleware::state::StateMiddleware;
+use gotham::pipeline::new_pipeline;
+use gotham::pipeline::single::single_pipeline;
+use gotham::router::builder::build_router as gotham_build_router;
+use gotham::router::builder::DefineSingleRoute;
+use gotham::router::builder::DrawRoutes;
+use gotham::router::Router;
+use gotham::state::FromState;
+use gotham::state::State;
 use gotham_ext::response::build_response;
-use hyper::{Body, Response, StatusCode};
+use hyper::Body;
+use hyper::Response;
+use hyper::StatusCode;
 use std::pin::Pin;
 
 use crate::batch;

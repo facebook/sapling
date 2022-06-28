@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use metaconfig_types::{DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig};
+use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+use metaconfig_types::SmallRepoCommitSyncConfig;
 use mononoke_types::MPath;
 use std::collections::HashMap;
 

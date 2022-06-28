@@ -5,10 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use hyper::{Body, Response};
+use hyper::Body;
+use hyper::Response;
 
 use crate::middleware::RequestContext;
-use anyhow::{bail, Context, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
 use base64::encode as b64encode;
 use bytes::Bytes;
 use fbinit::FacebookInit;
@@ -19,7 +22,8 @@ use gotham_ext::middleware::Middleware;
 use http::HeaderMap;
 use lazy_static::lazy_static;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{trace, warn};
+use slog::trace;
+use slog::warn;
 use std::collections::HashSet;
 use tunables::tunables;
 

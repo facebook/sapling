@@ -7,29 +7,41 @@
 
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
 
-use anyhow::{bail, format_err, Context, Error, Result};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use ascii::AsciiString;
 use blobimport_lib;
 use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
-use clap_old::{Arg, ArgGroup};
-use cmdlib::{
-    args::{self, MononokeClapApp, MononokeMatches, RepoRequirement},
-    helpers::block_execute,
-};
-use context::{CoreContext, SessionContainer};
+use clap_old::Arg;
+use clap_old::ArgGroup;
+use cmdlib::args::MononokeClapApp;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::RepoRequirement;
+use cmdlib::args::{self};
+use cmdlib::helpers::block_execute;
+use context::CoreContext;
+use context::SessionContainer;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_utils::POSSIBLE_DERIVED_TYPES;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
-use futures::future::{try_join, TryFutureExt};
+use futures::future::try_join;
+use futures::future::TryFutureExt;
 #[cfg(fbcode_build)]
 use mercurial_revlog::revlog::RevIdx;
-use mercurial_types::{HgChangesetId, HgNodeHash};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgNodeHash;
 use mononoke_types::ChangesetId;
 use mutable_counters::MutableCountersRef;
-use slog::{error, info, warn, Logger};
+use slog::error;
+use slog::info;
+use slog::warn;
+use slog::Logger;
 use std::collections::HashMap;
 use std::fs::read;
 use std::path::Path;
@@ -193,11 +205,10 @@ fn parse_fixed_parent_order<P: AsRef<Path>>(
 mod facebook {
     use super::*;
 
-    use manifold_client::{
-        cpp_client::{ClientOptionsBuilder, ManifoldCppClient},
-        write::WriteRequestOptionsBuilder,
-        ManifoldClient,
-    };
+    use manifold_client::cpp_client::ClientOptionsBuilder;
+    use manifold_client::cpp_client::ManifoldCppClient;
+    use manifold_client::write::WriteRequestOptionsBuilder;
+    use manifold_client::ManifoldClient;
 
     pub async fn update_manifold_key(
         fb: FacebookInit,

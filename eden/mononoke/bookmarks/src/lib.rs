@@ -12,8 +12,10 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
-use futures::future::{BoxFuture, FutureExt};
-use futures::stream::{BoxStream, TryStreamExt};
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::stream::BoxStream;
+use futures::stream::TryStreamExt;
 use mononoke_types::ChangesetId;
 
 mod cache;
@@ -21,17 +23,24 @@ mod log;
 mod subscription;
 mod transaction;
 
-pub use bookmarks_types::{
-    Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, BookmarkPrefixRange,
-    Freshness,
-};
+pub use bookmarks_types::Bookmark;
+pub use bookmarks_types::BookmarkKind;
+pub use bookmarks_types::BookmarkName;
+pub use bookmarks_types::BookmarkPagination;
+pub use bookmarks_types::BookmarkPrefix;
+pub use bookmarks_types::BookmarkPrefixRange;
+pub use bookmarks_types::Freshness;
 pub use cache::CachedBookmarks;
-pub use log::{
-    ArcBookmarkUpdateLog, BookmarkUpdateLog, BookmarkUpdateLogArc, BookmarkUpdateLogEntry,
-    BookmarkUpdateLogRef, BookmarkUpdateReason,
-};
+pub use log::ArcBookmarkUpdateLog;
+pub use log::BookmarkUpdateLog;
+pub use log::BookmarkUpdateLogArc;
+pub use log::BookmarkUpdateLogEntry;
+pub use log::BookmarkUpdateLogRef;
+pub use log::BookmarkUpdateReason;
 pub use subscription::BookmarksSubscription;
-pub use transaction::{BookmarkTransaction, BookmarkTransactionError, BookmarkTransactionHook};
+pub use transaction::BookmarkTransaction;
+pub use transaction::BookmarkTransactionError;
+pub use transaction::BookmarkTransactionHook;
 
 #[facet::facet]
 #[async_trait]

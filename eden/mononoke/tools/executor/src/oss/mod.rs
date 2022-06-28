@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::{RepoShardedProcess, RepoShardedProcessExecutor};
+use crate::RepoShardedProcess;
+use crate::RepoShardedProcessExecutor;
 use anyhow::Result;
 use fbinit::FacebookInit;
 use slog::Logger;

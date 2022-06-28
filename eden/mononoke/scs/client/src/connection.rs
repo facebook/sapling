@@ -10,10 +10,15 @@
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Error};
-use clap::{App, Arg, ArgGroup, ArgMatches};
+use anyhow::anyhow;
+use anyhow::Error;
+use clap::App;
+use clap::Arg;
+use clap::ArgGroup;
+use clap::ArgMatches;
 use fbinit::FacebookInit;
-use source_control::client::{make_SourceControlService, SourceControlService};
+use source_control::client::make_SourceControlService;
+use source_control::client::SourceControlService;
 use x2pclient::X2pClientBuilder;
 
 const ARG_TIER: &str = "TIER";

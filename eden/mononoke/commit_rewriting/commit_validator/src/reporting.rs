@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use cross_repo_sync::types::{Large, Small};
-use mononoke_types::{ChangesetId, RepositoryId};
+use cross_repo_sync::types::Large;
+use cross_repo_sync::types::Small;
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use std::time::Duration;
 

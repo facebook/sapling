@@ -5,29 +5,49 @@
  * GNU General Public License version 2.
  */
 
-use crate::changeset::{visit_changesets, ChangesetVisitMeta, ChangesetVisitor};
-use anyhow::{bail, Error};
+use crate::changeset::visit_changesets;
+use crate::changeset::ChangesetVisitMeta;
+use crate::changeset::ChangesetVisitor;
+use anyhow::bail;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
-use blobstore::{Blobstore, Loadable};
+use blobstore::Blobstore;
+use blobstore::Loadable;
 use cacheblob::MemWritesBlobstore;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future::try_join, FutureExt, TryFutureExt, TryStreamExt};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt as _, StreamExt as _};
-use futures_old::{
-    future::{self, Either},
-    Future, Stream,
-};
-use manifest::{bonsai_diff, BonsaiDiffFileChange, Diff, Entry, ManifestOps};
+use futures::future::try_join;
+use futures::FutureExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
+use futures_ext::try_boxfuture;
+use futures_ext::BoxFuture;
+use futures_ext::FutureExt as _;
+use futures_ext::StreamExt as _;
+use futures_old::future::Either;
+use futures_old::future::{self};
+use futures_old::Future;
+use futures_old::Stream;
+use manifest::bonsai_diff;
+use manifest::BonsaiDiffFileChange;
+use manifest::Diff;
+use manifest::Entry;
+use manifest::ManifestOps;
 use mercurial_derived_data::derive_hg_manifest;
-use mercurial_types::{
-    blobs::{HgBlobChangeset, HgBlobManifest},
-    HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash,
-};
-use mononoke_types::{DateTime, FileType};
-use slog::{debug, Logger};
-use std::{collections::HashSet, fmt, sync::Arc};
+use mercurial_types::blobs::HgBlobChangeset;
+use mercurial_types::blobs::HgBlobManifest;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgNodeHash;
+use mononoke_types::DateTime;
+use mononoke_types::FileType;
+use slog::debug;
+use slog::Logger;
+use std::collections::HashSet;
+use std::fmt;
+use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub enum BonsaiMFVerifyResult {

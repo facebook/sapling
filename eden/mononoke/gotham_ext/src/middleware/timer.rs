@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use std::time::Instant;
 
 use gotham::state::State;
 use gotham_derive::StateData;
-use hyper::{Body, Response};
+use hyper::Body;
+use hyper::Response;
 
 use super::Middleware;
 

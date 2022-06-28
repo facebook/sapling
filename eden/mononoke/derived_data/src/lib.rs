@@ -55,7 +55,8 @@
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
-use context::{CoreContext, SessionClass};
+use context::CoreContext;
+use context::SessionClass;
 use mononoke_types::ChangesetId;
 
 pub mod batch;
@@ -64,7 +65,8 @@ pub use derived_data_manager::DerivationError as DeriveError;
 pub use metaconfig_types::DerivedDataTypesConfig;
 
 pub mod macro_export {
-    pub use super::{BonsaiDerived, DeriveError};
+    pub use super::BonsaiDerived;
+    pub use super::DeriveError;
     pub use anyhow::Error;
     pub use async_trait::async_trait;
     pub use blobrepo::BlobRepo;

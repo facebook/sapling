@@ -5,26 +5,31 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error, Result};
+use anyhow::format_err;
+use anyhow::Error;
+use anyhow::Result;
 use blobstore::Blobstore;
 use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{
-    future::{self, TryFutureExt},
-    stream,
-};
-use quickcheck::{Arbitrary, Gen};
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 use std::collections::HashSet;
 use std::sync::Arc;
 
 use crate as filestore;
-use crate::incremental_hash::{
-    hash_bytes, ContentIdIncrementalHasher, GitSha1IncrementalHasher, Sha1IncrementalHasher,
-    Sha256IncrementalHasher,
-};
-use crate::{Alias, FetchKey, FilestoreConfig};
+use crate::incremental_hash::hash_bytes;
+use crate::incremental_hash::ContentIdIncrementalHasher;
+use crate::incremental_hash::GitSha1IncrementalHasher;
+use crate::incremental_hash::Sha1IncrementalHasher;
+use crate::incremental_hash::Sha256IncrementalHasher;
+use crate::Alias;
+use crate::FetchKey;
+use crate::FilestoreConfig;
 
 use super::failing_blobstore::FailingBlobstore;
 use super::request;

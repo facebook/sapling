@@ -6,7 +6,8 @@
  */
 
 use anyhow::Error;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use std::time::Instant;
 
 #[derive(thiserror::Error, Debug)]
 pub enum TimeseriesError {

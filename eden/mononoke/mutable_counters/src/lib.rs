@@ -14,11 +14,15 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use context::{CoreContext, PerfCounterType};
+use context::CoreContext;
+use context::PerfCounterType;
 use mononoke_types::RepositoryId;
-use sql::{queries, Transaction as SqlTransaction};
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
-use sql_ext::{SqlConnections, TransactionResult};
+use sql::queries;
+use sql::Transaction as SqlTransaction;
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::SqlConnections;
+use sql_ext::TransactionResult;
 
 #[facet::facet]
 #[async_trait]

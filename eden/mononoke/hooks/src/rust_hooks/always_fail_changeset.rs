@@ -5,10 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::{
-    ChangesetHook, CrossRepoPushSource, FileContentManager, HookExecution, HookRejectionInfo,
-    PushAuthoredBy,
-};
+use crate::ChangesetHook;
+use crate::CrossRepoPushSource;
+use crate::FileContentManager;
+use crate::HookExecution;
+use crate::HookRejectionInfo;
+use crate::PushAuthoredBy;
 use anyhow::Error;
 use async_trait::async_trait;
 use bookmarks::BookmarkName;

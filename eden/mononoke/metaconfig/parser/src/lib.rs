@@ -14,8 +14,10 @@ mod convert;
 pub mod errors;
 mod raw;
 
-pub use crate::config::{
-    load_common_config, load_repo_configs, load_storage_configs, RepoConfigs, StorageConfigs,
-};
+pub use crate::config::load_common_config;
+pub use crate::config::load_repo_configs;
+pub use crate::config::load_storage_configs;
+pub use crate::config::RepoConfigs;
+pub use crate::config::StorageConfigs;
 pub use crate::errors::ConfigurationError;
 pub use convert::Convert;

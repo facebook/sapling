@@ -5,24 +5,31 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Result};
-use blobstore::{Blobstore, Loadable};
+use anyhow::bail;
+use anyhow::Result;
+use blobstore::Blobstore;
+use blobstore::Loadable;
 use borrowed::borrowed;
 use bounded_traversal::bounded_traversal;
 use context::CoreContext;
-use futures::{
-    future::FutureExt,
-    stream::{self, StreamExt, TryStreamExt},
-};
+use futures::future::FutureExt;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use itertools::Itertools;
 use manifest::PathTree;
-use mononoke_types::{
-    deleted_manifest_common::DeletedManifestCommon, BlobstoreKey, ChangesetId, MPath, MPathElement,
-};
-use std::collections::{BTreeMap, HashMap};
+use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
+use mononoke_types::MPathElement;
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::derive::{DeletedManifestChangeType, DeletedManifestDeriver, PathChange};
+use crate::derive::DeletedManifestChangeType;
+use crate::derive::DeletedManifestDeriver;
+use crate::derive::PathChange;
 
 struct UnfoldNode<M: DeletedManifestCommon> {
     path_element: Option<MPathElement>,

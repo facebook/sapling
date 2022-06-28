@@ -9,15 +9,20 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
 use context::CoreContext;
-use mononoke_types::{RepositoryId, Timestamp};
+use mononoke_types::RepositoryId;
+use mononoke_types::Timestamp;
 
 mod store;
 mod types;
 
 pub use crate::store::SqlLongRunningRequestsQueue;
-pub use crate::types::{
-    BlobstoreKey, ClaimedBy, LongRunningRequestEntry, RequestId, RequestStatus, RequestType, RowId,
-};
+pub use crate::types::BlobstoreKey;
+pub use crate::types::ClaimedBy;
+pub use crate::types::LongRunningRequestEntry;
+pub use crate::types::RequestId;
+pub use crate::types::RequestStatus;
+pub use crate::types::RequestType;
+pub use crate::types::RowId;
 
 /// A queue of long-running requests
 /// This is designed to support the use case of

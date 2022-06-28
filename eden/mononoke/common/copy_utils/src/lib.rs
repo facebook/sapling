@@ -5,24 +5,32 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use blobrepo::save_bonsai_changesets;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
-use futures::{future::try_join, TryStreamExt};
+use futures::future::try_join;
+use futures::TryStreamExt;
 
 use blobrepo::BlobRepo;
 use commit_transformation::copy_file_contents;
 use context::CoreContext;
-use manifest::{Entry, ManifestOps};
-use mononoke_types::{
-    fsnode::FsnodeFile, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange,
-    MPath,
-};
+use manifest::Entry;
+use manifest::ManifestOps;
+use mononoke_types::fsnode::FsnodeFile;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
+use mononoke_types::FileChange;
+use mononoke_types::MPath;
 use regex::Regex;
-use slog::{debug, info};
+use slog::debug;
+use slog::info;
 use sorted_vector_map::SortedVectorMap;
-use std::{collections::BTreeMap, num::NonZeroU64};
+use std::collections::BTreeMap;
+use std::num::NonZeroU64;
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Limits {
@@ -328,7 +336,8 @@ mod test {
     use maplit::hashmap;
     use mononoke_types::RepositoryId;
     use test_repo_factory::TestRepoFactory;
-    use tests_utils::{list_working_copy_utf8, CreateCommitContext};
+    use tests_utils::list_working_copy_utf8;
+    use tests_utils::CreateCommitContext;
 
     #[fbinit::test]
     async fn test_list_directory(fb: FacebookInit) -> Result<(), Error> {

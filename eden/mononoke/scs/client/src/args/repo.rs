@@ -7,7 +7,9 @@
 
 //! Arguments for repository selection.
 
-use clap::{App, Arg, ArgMatches};
+use clap::App;
+use clap::Arg;
+use clap::ArgMatches;
 use source_control::types as thrift;
 
 const ARG_REPO: &str = "REPO";

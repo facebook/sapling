@@ -7,14 +7,20 @@
 
 use std::sync::Arc;
 
-use criterion::{BenchmarkId, Criterion, Throughput};
-use rand::{thread_rng, Rng, RngCore};
+use criterion::BenchmarkId;
+use criterion::Criterion;
+use criterion::Throughput;
+use rand::thread_rng;
+use rand::Rng;
+use rand::RngCore;
 use tokio::runtime::Handle;
 
-use blobstore::{Blobstore, BlobstoreBytes};
+use blobstore::Blobstore;
+use blobstore::BlobstoreBytes;
 use context::CoreContext;
 
-use crate::{KB, MB};
+use crate::KB;
+use crate::MB;
 
 pub fn benchmark(
     c: &mut Criterion,

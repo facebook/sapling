@@ -7,8 +7,10 @@
 
 use std::time::Duration;
 
-use anyhow::{Error, Result};
-use context::{CoreContext, PerfCounters};
+use anyhow::Error;
+use anyhow::Result;
+use context::CoreContext;
+use context::PerfCounters;
 use futures_stats::FutureStats;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;

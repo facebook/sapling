@@ -32,19 +32,23 @@ mod construct;
 #[cfg(not(fbcode_build))]
 mod oss;
 
-pub use config::{
-    SqlConstructFromDatabaseConfig, SqlConstructFromMetadataDatabaseConfig,
-    SqlShardableConstructFromMetadataDatabaseConfig,
-};
-pub use construct::{SqlConstruct, SqlShardedConstruct};
+pub use config::SqlConstructFromDatabaseConfig;
+pub use config::SqlConstructFromMetadataDatabaseConfig;
+pub use config::SqlShardableConstructFromMetadataDatabaseConfig;
+pub use construct::SqlConstruct;
+pub use construct::SqlShardedConstruct;
 
 pub mod facebook {
     #[cfg(fbcode_build)]
     mod r#impl;
 
     #[cfg(fbcode_build)]
-    pub use r#impl::{FbSqlConstruct, FbSqlShardedConstruct};
+    pub use r#impl::FbSqlConstruct;
+    #[cfg(fbcode_build)]
+    pub use r#impl::FbSqlShardedConstruct;
 
     #[cfg(not(fbcode_build))]
-    pub use crate::oss::{FbSqlConstruct, FbSqlShardedConstruct};
+    pub use crate::oss::FbSqlConstruct;
+    #[cfg(not(fbcode_build))]
+    pub use crate::oss::FbSqlShardedConstruct;
 }

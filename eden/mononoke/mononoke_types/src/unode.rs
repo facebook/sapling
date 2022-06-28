@@ -5,19 +5,27 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Context, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
 use fbthrift::compact_protocol;
 use sorted_vector_map::SortedVectorMap;
 
-use crate::blob::{Blob, BlobstoreValue, FileUnodeBlob, ManifestUnodeBlob};
+use crate::blob::Blob;
+use crate::blob::BlobstoreValue;
+use crate::blob::FileUnodeBlob;
+use crate::blob::ManifestUnodeBlob;
 use crate::errors::ErrorKind;
 use crate::file_change::FileType;
-use crate::path::{MPathElement, MPathHash};
+use crate::path::MPathElement;
+use crate::path::MPathHash;
 use crate::thrift;
-use crate::typed_hash::{
-    ChangesetId, ContentId, FileUnodeId, FileUnodeIdContext, ManifestUnodeId,
-    ManifestUnodeIdContext,
-};
+use crate::typed_hash::ChangesetId;
+use crate::typed_hash::ContentId;
+use crate::typed_hash::FileUnodeId;
+use crate::typed_hash::FileUnodeIdContext;
+use crate::typed_hash::ManifestUnodeId;
+use crate::typed_hash::ManifestUnodeIdContext;
 
 /// Unode is a filenode with fixed linknodes. They are designed to find file or directory history
 /// quickly which can be used to answer "log" or "blame" requests.

@@ -30,15 +30,19 @@ use std::collections::HashMap;
 use anyhow::Result;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use maplit::{hashmap, hashset};
-use mercurial_mutation::{HgMutationEntry, HgMutationStore, SqlHgMutationStoreBuilder};
+use maplit::hashmap;
+use maplit::hashset;
+use mercurial_mutation::HgMutationEntry;
+use mercurial_mutation::HgMutationStore;
+use mercurial_mutation::SqlHgMutationStoreBuilder;
 use mercurial_types_mocks::nodehash::make_hg_cs_id;
 use mononoke_types_mocks::datetime::EPOCH_ZERO;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use smallvec::smallvec;
 use sql_construct::SqlConstruct;
 
-use crate::util::{check_entries, get_entries};
+use crate::util::check_entries;
+use crate::util::get_entries;
 
 fn create_entries() -> HashMap<usize, HgMutationEntry> {
     // Generate the mutation graph:

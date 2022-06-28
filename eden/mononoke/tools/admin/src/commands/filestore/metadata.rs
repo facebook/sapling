@@ -5,13 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use clap::Args;
 use context::CoreContext;
-use ephemeral_blobstore::{BubbleId, RepoEphemeralStoreRef};
+use ephemeral_blobstore::BubbleId;
+use ephemeral_blobstore::RepoEphemeralStoreRef;
 use repo_blobstore::RepoBlobstoreRef;
 
-use super::{FilestoreItemIdArgs, Repo};
+use super::FilestoreItemIdArgs;
+use super::Repo;
 
 #[derive(Args)]
 pub struct FilestoreMetadataArgs {

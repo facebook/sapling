@@ -6,9 +6,12 @@
  */
 
 use anyhow::Error;
-use derive_more::{Add, Sub};
-use slog::{info, Logger};
-use std::{fmt, time::Instant};
+use derive_more::Add;
+use derive_more::Sub;
+use slog::info;
+use slog::Logger;
+use std::fmt;
+use std::time::Instant;
 
 #[derive(Add, Sub, Clone, Copy, Default, Debug)]
 pub struct Progress {

@@ -7,11 +7,15 @@
 
 //! Helper library for rendering commit info
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::io::Write;
 
 use anyhow::Error;
-use chrono::{DateTime, FixedOffset, Local, TimeZone};
+use chrono::DateTime;
+use chrono::FixedOffset;
+use chrono::Local;
+use chrono::TimeZone;
 use serde_derive::Serialize;
 use source_control::types as thrift;
 

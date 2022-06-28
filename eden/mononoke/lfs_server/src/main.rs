@@ -8,48 +8,61 @@
 #![recursion_limit = "256"]
 #![feature(never_type)]
 
-use anyhow::{anyhow, bail, Context, Error};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
 use cached_config::ConfigHandle;
-use clap::{Arg, Values};
+use clap::Arg;
+use clap::Values;
 use cloned::cloned;
 use fbinit::FacebookInit;
-use futures::{
-    channel::oneshot,
-    future::{lazy, select, try_join_all},
-    FutureExt, TryFutureExt,
-};
-use gotham_ext::{
-    handler::MononokeHttpHandler,
-    middleware::{
-        ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, PostResponseMiddleware,
-        ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware, TlsSessionDataMiddleware,
-    },
-    serve,
-};
+use futures::channel::oneshot;
+use futures::future::lazy;
+use futures::future::select;
+use futures::future::try_join_all;
+use futures::FutureExt;
+use futures::TryFutureExt;
+use gotham_ext::handler::MononokeHttpHandler;
+use gotham_ext::middleware::ClientIdentityMiddleware;
+use gotham_ext::middleware::LoadMiddleware;
+use gotham_ext::middleware::LogMiddleware;
+use gotham_ext::middleware::PostResponseMiddleware;
+use gotham_ext::middleware::ScubaMiddleware;
+use gotham_ext::middleware::ServerIdentityMiddleware;
+use gotham_ext::middleware::TimerMiddleware;
+use gotham_ext::middleware::TlsSessionDataMiddleware;
+use gotham_ext::serve;
 use hyper::header::HeaderValue;
-use permission_checker::{ArcPermissionChecker, MononokeIdentitySet, PermissionCheckerBuilder};
+use permission_checker::ArcPermissionChecker;
+use permission_checker::MononokeIdentitySet;
+use permission_checker::PermissionCheckerBuilder;
 use slog::info;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::net::ToSocketAddrs;
 use std::str::FromStr;
-use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use tokio::net::TcpListener;
 
 use blobrepo::BlobRepo;
-use cmdlib::{
-    args::{self, CachelibSettings},
-    helpers::serve_forever,
-    monitoring::{start_fb303_server, AliveService},
-};
+use cmdlib::args::CachelibSettings;
+use cmdlib::args::{self};
+use cmdlib::helpers::serve_forever;
+use cmdlib::monitoring::start_fb303_server;
+use cmdlib::monitoring::AliveService;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::parse_config_spec_to_path;
 use repo_factory::RepoFactory;
 
-use crate::lfs_server_context::{LfsServerContext, ServerUris};
-use crate::middleware::{OdsMiddleware, RequestContextMiddleware};
+use crate::lfs_server_context::LfsServerContext;
+use crate::lfs_server_context::ServerUris;
+use crate::middleware::OdsMiddleware;
+use crate::middleware::RequestContextMiddleware;
 use crate::scuba::LfsScubaHandler;
 use crate::service::build_router;
 

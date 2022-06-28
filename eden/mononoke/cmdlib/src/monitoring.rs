@@ -12,8 +12,10 @@ use std::thread::{self};
 use anyhow::Error;
 use fbinit::FacebookInit;
 pub use mononoke_app::fb303::ReadyFlagService;
-use services::{self, Fb303Service};
-use slog::{info, Logger};
+use services::Fb303Service;
+use services::{self};
+use slog::info;
+use slog::Logger;
 
 use crate::args::MononokeMatches;
 

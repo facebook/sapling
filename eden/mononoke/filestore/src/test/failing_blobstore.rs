@@ -7,10 +7,13 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData, BlobstoreIsPresent};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
-use rand::{thread_rng, Rng};
+use rand::thread_rng;
+use rand::Rng;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

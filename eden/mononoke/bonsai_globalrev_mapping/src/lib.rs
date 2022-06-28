@@ -12,13 +12,16 @@ use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use context::CoreContext;
-use mononoke_types::{ChangesetId, Globalrev, RepositoryId};
+use mononoke_types::ChangesetId;
+use mononoke_types::Globalrev;
+use mononoke_types::RepositoryId;
 
 pub use crate::caching::CachingBonsaiGlobalrevMapping;
-pub use crate::sql::{
-    add_globalrevs, bulk_import_globalrevs, AddGlobalrevsErrorKind, SqlBonsaiGlobalrevMapping,
-    SqlBonsaiGlobalrevMappingBuilder,
-};
+pub use crate::sql::add_globalrevs;
+pub use crate::sql::bulk_import_globalrevs;
+pub use crate::sql::AddGlobalrevsErrorKind;
+pub use crate::sql::SqlBonsaiGlobalrevMapping;
+pub use crate::sql::SqlBonsaiGlobalrevMappingBuilder;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct BonsaiGlobalrevMappingEntry {

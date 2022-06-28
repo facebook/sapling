@@ -10,16 +10,21 @@ use std::collections::BTreeSet;
 use anyhow::Error;
 use cloned::cloned;
 use futures::future::FutureExt;
-use futures::stream::{self, Stream, StreamExt, TryStreamExt};
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use maplit::hashmap;
 use pretty_assertions::assert_eq;
 use tokio::task::yield_now;
 
-use super::utils::{StateLog, Tick};
-use crate::{
-    bounded_traversal, bounded_traversal_dag, bounded_traversal_stream, bounded_traversal_stream2,
-    limited_by_key_shardable,
-};
+use super::utils::StateLog;
+use super::utils::Tick;
+use crate::bounded_traversal;
+use crate::bounded_traversal_dag;
+use crate::bounded_traversal_stream;
+use crate::bounded_traversal_stream2;
+use crate::limited_by_key_shardable;
 
 // Tree for test purposes
 #[derive(Debug)]

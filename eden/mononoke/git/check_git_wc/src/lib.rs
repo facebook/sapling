@@ -5,19 +5,28 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Result;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
-use futures::{stream, StreamExt, TryStreamExt};
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use git2::Repository;
-use mononoke_types::{
-    fsnode::FsnodeEntry, hash, ChangesetId, FileType, MPath, MPathElement, RepoPath,
-};
+use mononoke_types::fsnode::FsnodeEntry;
+use mononoke_types::hash;
+use mononoke_types::ChangesetId;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
+use mononoke_types::MPathElement;
+use mononoke_types::RepoPath;
 use sorted_vector_map::SortedVectorMap;
-use std::{collections::HashMap, sync::Mutex};
+use std::collections::HashMap;
+use std::sync::Mutex;
 use tokio::sync::mpsc;
 
 mod git_walker;

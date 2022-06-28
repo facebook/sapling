@@ -5,26 +5,37 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, bail, Error};
-use blobrepo::{save_bonsai_changesets, BlobRepo};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Error;
+use blobrepo::save_bonsai_changesets;
+use blobrepo::BlobRepo;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
 use blobsync::copy_content;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future::try_join_all, stream, StreamExt, TryStreamExt};
+use futures::future::try_join_all;
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use manifest::get_implicit_deletes;
 use megarepo_configs::types::SourceMappingRules;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgManifestId;
-use mononoke_types::{
-    mpath_element_iter, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, ContentId, FileChange,
-    MPath, TrackedFileChange,
-};
+use mononoke_types::mpath_element_iter;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::FileChange;
+use mononoke_types::MPath;
+use mononoke_types::TrackedFileChange;
 use pushrebase::find_bonsai_diff;
 use sorted_vector_map::SortedVectorMap;
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
+use std::sync::Arc;
 use thiserror::Error;
 
 pub type MultiMover = Arc<dyn Fn(&MPath) -> Result<Vec<MPath>, Error> + Send + Sync + 'static>;
@@ -568,11 +579,14 @@ mod test {
     use anyhow::bail;
     use blobrepo::save_bonsai_changesets;
     use fbinit::FacebookInit;
-    use maplit::{btreemap, hashmap};
-    use mononoke_types::{ContentId, FileType};
+    use maplit::btreemap;
+    use maplit::hashmap;
+    use mononoke_types::ContentId;
+    use mononoke_types::FileType;
     use std::collections::BTreeMap;
     use test_repo_factory::TestRepoFactory;
-    use tests_utils::{list_working_copy_utf8, CreateCommitContext};
+    use tests_utils::list_working_copy_utf8;
+    use tests_utils::CreateCommitContext;
 
     #[test]
     fn test_multi_mover_simple() -> Result<(), Error> {

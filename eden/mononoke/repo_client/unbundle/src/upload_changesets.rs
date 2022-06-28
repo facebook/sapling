@@ -6,23 +6,35 @@
  */
 
 use ::manifest::Entry;
-use anyhow::{bail, Error, Result};
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
 use blobrepo::BlobRepo;
-use blobrepo_hg::{create_bonsai_changeset_hook, ChangesetHandle, CreateChangeset};
+use blobrepo_hg::create_bonsai_changeset_hook;
+use blobrepo_hg::ChangesetHandle;
+use blobrepo_hg::CreateChangeset;
 use context::CoreContext;
-use futures::{
-    future::{self, BoxFuture},
-    stream::{self, BoxStream, FuturesUnordered},
-    FutureExt, StreamExt, TryFutureExt, TryStreamExt,
-};
-use mercurial_revlog::{
-    changeset::RevlogChangeset,
-    manifest::{Details, ManifestContent},
-};
-use mercurial_types::{
-    blobs::ChangesetMetadata, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, HgNodeKey,
-    MPath, RepoPath, NULL_HASH,
-};
+use futures::future::BoxFuture;
+use futures::future::{self};
+use futures::stream::BoxStream;
+use futures::stream::FuturesUnordered;
+use futures::stream::{self};
+use futures::FutureExt;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
+use mercurial_revlog::changeset::RevlogChangeset;
+use mercurial_revlog::manifest::Details;
+use mercurial_revlog::manifest::ManifestContent;
+use mercurial_types::blobs::ChangesetMetadata;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::HgNodeKey;
+use mercurial_types::MPath;
+use mercurial_types::RepoPath;
+use mercurial_types::NULL_HASH;
 use scuba_ext::MononokeScubaSampleBuilder;
 use std::collections::HashMap;
 use std::ops::AddAssign;

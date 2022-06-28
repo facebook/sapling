@@ -356,7 +356,8 @@ fn hashencode(dirs: Vec<&[u8]>, file: &[u8], dotencode: bool) -> PathBuf {
 
 #[cfg(test)]
 mod test {
-    use mononoke_types::{MPath, MPathElement};
+    use mononoke_types::MPath;
+    use mononoke_types::MPathElement;
 
     use super::*;
 

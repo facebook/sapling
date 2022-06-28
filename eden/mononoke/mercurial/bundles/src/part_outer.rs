@@ -12,20 +12,32 @@
 use std::io::BufRead;
 use std::mem;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use async_compression::Decompressor;
-use bytes_old::{Bytes, BytesMut};
-use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
+use bytes_old::Bytes;
+use bytes_old::BytesMut;
+use futures_ext::io::Either::A as UncompressedRead;
+use futures_ext::io::Either::B as CompressedRead;
+use futures_ext::io::Either::{self};
 use limited_async_read::LimitedAsyncRead;
-use slog::{debug, o, Logger};
-use tokio_codec::{Decoder, Framed, FramedParts};
+use slog::debug;
+use slog::o;
+use slog::Logger;
+use tokio_codec::Decoder;
+use tokio_codec::Framed;
+use tokio_codec::FramedParts;
 use tokio_io::AsyncRead;
 
 use crate::errors::ErrorKind;
-use crate::part_header::{self, PartHeader, PartHeaderType, PartId};
+use crate::part_header::PartHeader;
+use crate::part_header::PartHeaderType;
+use crate::part_header::PartId;
+use crate::part_header::{self};
 use crate::part_inner::validate_header;
 use crate::types::StreamHeader;
-use crate::utils::{get_decompressor_type, BytesExt};
+use crate::utils::get_decompressor_type;
+use crate::utils::BytesExt;
 
 pub fn outer_stream<R: AsyncRead + BufRead + Send + 'static>(
     logger: Logger,

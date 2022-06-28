@@ -7,17 +7,28 @@
 
 use crate::CommitsInBundle;
 
-use anyhow::{bail, format_err, Context as _, Error, Result};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context as _;
+use anyhow::Error;
+use anyhow::Result;
 use bookmarks::BookmarkName;
-use futures::future::{self, FutureExt, TryFuture, TryFutureExt};
-use futures_ext::future::{FbFutureExt, FbTryFutureExt};
+use futures::future::FutureExt;
+use futures::future::TryFuture;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures_ext::future::FbFutureExt;
+use futures_ext::future::FbTryFutureExt;
 use futures_watchdog::WatchdogExt;
 use itertools::Itertools;
 use mercurial_types::HgChangesetId;
-use mononoke_hg_sync_job_helper_lib::{
-    lines_after, read_file_contents, wait_till_more_lines, write_to_named_temp_file,
-};
-use slog::{debug, info, Logger};
+use mononoke_hg_sync_job_helper_lib::lines_after;
+use mononoke_hg_sync_job_helper_lib::read_file_contents;
+use mononoke_hg_sync_job_helper_lib::wait_till_more_lines;
+use mononoke_hg_sync_job_helper_lib::write_to_named_temp_file;
+use slog::debug;
+use slog::info;
+use slog::Logger;
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
@@ -26,11 +37,11 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tempfile::NamedTempFile;
-use tokio::{
-    io::AsyncWriteExt,
-    process::{Child, ChildStdin, Command},
-    sync::Mutex,
-};
+use tokio::io::AsyncWriteExt;
+use tokio::process::Child;
+use tokio::process::ChildStdin;
+use tokio::process::Command;
+use tokio::sync::Mutex;
 
 const BOOKMARK_LOCATION_LOOKUP_TIMEOUT_MS: u64 = 10_000;
 const LIST_SERVER_BOOKMARKS_EXTENSION: &str = include_str!("listserverbookmarks.py");

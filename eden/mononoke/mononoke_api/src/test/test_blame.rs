@@ -11,13 +11,16 @@ use std::sync::Arc;
 use anyhow::Result;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use mononoke_types::{DateTime, MPath};
+use mononoke_types::DateTime;
+use mononoke_types::MPath;
 use mutable_renames::MutableRenameEntry;
 use pretty_assertions::assert_eq;
 use tests_utils::CreateCommitContext;
 
 use crate::changeset_path::ChangesetPathHistoryContext;
-use crate::{ChangesetId, Repo, RepoContext};
+use crate::ChangesetId;
+use crate::Repo;
+use crate::RepoContext;
 
 // Generates this commit graph:
 //

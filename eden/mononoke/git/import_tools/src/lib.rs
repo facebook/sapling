@@ -12,29 +12,46 @@ mod gitimport_objects;
 mod gitlfs;
 
 pub use crate::git_reader::GitRepoReader;
-pub use crate::gitimport_objects::{
-    convert_time_to_datetime, oid_to_sha1, CommitMetadata, ExtractedCommit, GitLeaf, GitManifest,
-    GitTree, GitUploader, GitimportPreferences, GitimportTarget,
-};
-pub use crate::gitlfs::{GitImportLfs, LfsMetaData};
+pub use crate::gitimport_objects::convert_time_to_datetime;
+pub use crate::gitimport_objects::oid_to_sha1;
+pub use crate::gitimport_objects::CommitMetadata;
+pub use crate::gitimport_objects::ExtractedCommit;
+pub use crate::gitimport_objects::GitLeaf;
+pub use crate::gitimport_objects::GitManifest;
+pub use crate::gitimport_objects::GitTree;
+pub use crate::gitimport_objects::GitUploader;
+pub use crate::gitimport_objects::GitimportPreferences;
+pub use crate::gitimport_objects::GitimportTarget;
+pub use crate::gitlfs::GitImportLfs;
+pub use crate::gitlfs::LfsMetaData;
 
-use anyhow::{bail, format_err, Context, Error};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{Stream, StreamExt, TryFutureExt, TryStreamExt};
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
 use git_hash::ObjectId;
 use git_object::Object;
 use linked_hash_map::LinkedHashMap;
-use manifest::{bonsai_diff, BonsaiDiffFileChange};
-use mononoke_types::{ChangesetId, MPath};
+use manifest::bonsai_diff;
+use manifest::BonsaiDiffFileChange;
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
 use std::cell::RefCell;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::path::Path;
 use std::process::Stdio;
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::AsyncBufReadExt;
+use tokio::io::BufReader;
 use tokio::process::Command;
 use tokio::task;
 

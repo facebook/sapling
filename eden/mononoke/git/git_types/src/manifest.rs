@@ -5,10 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use ::manifest::{Entry, Manifest};
+use ::manifest::Entry;
+use ::manifest::Manifest;
 use mononoke_types::MPathElement;
 
-use crate::{BlobHandle, Tree, TreeHandle, Treeish};
+use crate::BlobHandle;
+use crate::Tree;
+use crate::TreeHandle;
+use crate::Treeish;
 
 impl Manifest for Tree {
     type TreeId = TreeHandle;

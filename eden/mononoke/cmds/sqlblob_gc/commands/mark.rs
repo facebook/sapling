@@ -9,16 +9,19 @@ use std::sync::Arc;
 
 use crate::utils;
 use crate::MononokeSQLBlobGCArgs;
-use anyhow::{anyhow, Context, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
 use clap::Parser;
-use futures::{
-    channel::mpsc,
-    sink::SinkExt,
-    stream::{self, StreamExt, TryStreamExt},
-};
+use futures::channel::mpsc;
+use futures::sink::SinkExt;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use mononoke_app::MononokeApp;
 use retry::retry;
-use slog::{info, Logger};
+use slog::info;
+use slog::Logger;
 
 use sqlblob::Sqlblob;
 

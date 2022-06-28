@@ -5,15 +5,24 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Context, Error, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use futures::stream::TryStreamExt;
-use futures_ext::{stream::StreamTimeoutError, FbStreamExt, FbTryStreamExt};
-use http::{HeaderMap, HeaderValue, Method, Response};
+use futures_ext::stream::StreamTimeoutError;
+use futures_ext::FbStreamExt;
+use futures_ext::FbTryStreamExt;
+use http::HeaderMap;
+use http::HeaderValue;
+use http::Method;
+use http::Response;
 use hyper::Body;
 use std::time::Duration;
 use thiserror::Error;
 use tokio::io::AsyncReadExt;
-use tokio_util::codec::{BytesCodec, FramedRead};
+use tokio_util::codec::BytesCodec;
+use tokio_util::codec::FramedRead;
 
 use crate::http_service::HttpError;
 

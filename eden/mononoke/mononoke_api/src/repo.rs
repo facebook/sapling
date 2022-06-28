@@ -5,86 +5,129 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::fmt;
-use std::{
-    collections::HashMap,
-    sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::sync::Arc;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 
 use acl_regions::build_disabled_acl_regions;
-use anyhow::{anyhow, format_err, Error};
-use blobrepo::{AsBlobRepo, BlobRepo};
+use anyhow::anyhow;
+use anyhow::format_err;
+use anyhow::Error;
+use blobrepo::AsBlobRepo;
+use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
+use blobstore_factory::make_metadata_sql_factory;
+use blobstore_factory::ReadOnlyStorage;
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkPagination;
+use bookmarks::BookmarkPrefix;
 pub use bookmarks::Freshness as BookmarkFreshness;
-use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness};
-use cacheblob::{InProcessLease, LeaseOps};
+use bookmarks::Freshness;
+use cacheblob::InProcessLease;
+use cacheblob::LeaseOps;
 use changeset_info::ChangesetInfo;
-use changesets::{Changesets, ChangesetsArc, ChangesetsRef};
+use changesets::Changesets;
+use changesets::ChangesetsArc;
+use changesets::ChangesetsRef;
 use context::CoreContext;
-use cross_repo_sync::{
-    types::Target, CandidateSelectionHint, CommitSyncContext, CommitSyncRepos, CommitSyncer,
-};
+use cross_repo_sync::types::Target;
+use cross_repo_sync::CandidateSelectionHint;
+use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncRepos;
+use cross_repo_sync::CommitSyncer;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
+use ephemeral_blobstore::Bubble;
+use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
-use ephemeral_blobstore::{Bubble, BubbleId, StorageLocation};
+use ephemeral_blobstore::StorageLocation;
 use fbinit::FacebookInit;
-use filestore::{Alias, FetchKey};
+use filestore::Alias;
+use filestore::FetchKey;
 use futures::compat::Stream01CompatExt;
-use futures::stream::{self, Stream, StreamExt, TryStreamExt};
-use futures::{try_join, Future, FutureExt};
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use futures::try_join;
+use futures::Future;
+use futures::FutureExt;
 use futures_watchdog::WatchdogExt;
 use hook_manager_factory::make_hook_manager;
-use hooks::{ArcHookManager, HookManager};
+use hooks::ArcHookManager;
+use hooks::HookManager;
 use hooks_content_stores::RepoFileContentManager;
 use itertools::Itertools;
-use live_commit_sync_config::{LiveCommitSyncConfig, TestLiveCommitSyncConfig};
+use live_commit_sync_config::LiveCommitSyncConfig;
+use live_commit_sync_config::TestLiveCommitSyncConfig;
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::Globalrev;
-use metaconfig_types::{
-    HookManagerParams, InfinitepushNamespace, InfinitepushParams, LfsParams, RepoConfig,
-    SourceControlServiceParams,
-};
+use metaconfig_types::HookManagerParams;
+use metaconfig_types::InfinitepushNamespace;
+use metaconfig_types::InfinitepushParams;
+use metaconfig_types::LfsParams;
+use metaconfig_types::RepoConfig;
+use metaconfig_types::SourceControlServiceParams;
 use mononoke_api_types::InnerRepo;
-use mononoke_types::{
-    hash::{GitSha1, Sha1, Sha256},
-    Generation, RepositoryId, Svnrev, Timestamp,
-};
-use mutable_renames::{MutableRenames, SqlMutableRenamesStore};
-use permission_checker::{ArcPermissionChecker, PermissionCheckerBuilder};
+use mononoke_types::hash::GitSha1;
+use mononoke_types::hash::Sha1;
+use mononoke_types::hash::Sha256;
+use mononoke_types::Generation;
+use mononoke_types::RepositoryId;
+use mononoke_types::Svnrev;
+use mononoke_types::Timestamp;
+use mutable_renames::MutableRenames;
+use mutable_renames::SqlMutableRenamesStore;
+use permission_checker::ArcPermissionChecker;
+use permission_checker::PermissionCheckerBuilder;
 use phases::PhasesRef;
 use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use repo_cross_repo::RepoCrossRepo;
-use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
+use repo_read_write_status::RepoReadWriteFetcher;
+use repo_read_write_status::SqlRepoReadWriteStatus;
 use revset::AncestorsNodeStream;
-use segmented_changelog::{CloneData, DisabledSegmentedChangelog, Location, SegmentedChangelog};
+use segmented_changelog::CloneData;
+use segmented_changelog::DisabledSegmentedChangelog;
+use segmented_changelog::Location;
+use segmented_changelog::SegmentedChangelog;
 use skiplist::SkiplistIndex;
-use slog::{debug, error, o};
+use slog::debug;
+use slog::error;
+use slog::o;
 use sql_construct::facebook::FbSqlConstruct;
 use sql_construct::SqlConstruct;
 use sql_ext::facebook::MysqlOptions;
 use stats::prelude::*;
 use std::collections::HashSet;
-use std::hash::{Hash, Hasher};
-use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
-use warm_bookmarks_cache::{BookmarksCache, NoopBookmarksCache, WarmBookmarksCacheBuilder};
+use std::hash::Hash;
+use std::hash::Hasher;
+use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMapping;
+use warm_bookmarks_cache::BookmarksCache;
+use warm_bookmarks_cache::NoopBookmarksCache;
+use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
-use crate::file::{FileContext, FileId};
+use crate::file::FileContext;
+use crate::file::FileId;
 use crate::permissions::WritePermissionsModel;
 use crate::repo_draft::RepoDraftContext;
 use crate::repo_write::RepoWriteContext;
-use crate::specifiers::{
-    ChangesetId, ChangesetPrefixSpecifier, ChangesetSpecifier, ChangesetSpecifierPrefixResolution,
-    HgChangesetId,
-};
-use crate::tree::{TreeContext, TreeId};
+use crate::specifiers::ChangesetId;
+use crate::specifiers::ChangesetPrefixSpecifier;
+use crate::specifiers::ChangesetSpecifier;
+use crate::specifiers::ChangesetSpecifierPrefixResolution;
+use crate::specifiers::HgChangesetId;
+use crate::tree::TreeContext;
+use crate::tree::TreeId;
 use crate::xrepo::CandidateSelectionHintArgs;
-use crate::{MononokeApiEnvironment, WarmBookmarksCacheDerivedData};
+use crate::MononokeApiEnvironment;
+use crate::WarmBookmarksCacheDerivedData;
 
 define_stats! {
     prefix = "mononoke.api";
@@ -1843,8 +1886,9 @@ impl RepoContext {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fixtures::Linear;
+    use fixtures::MergeEven;
     use fixtures::TestRepoFixture;
-    use fixtures::{Linear, MergeEven};
     use std::str::FromStr;
 
     #[fbinit::test]

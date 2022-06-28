@@ -6,14 +6,18 @@
  */
 
 use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::time::Duration;
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use async_trait::async_trait;
 use cached_config::ConfigHandle;
 use fbinit::FacebookInit;
-use permission_checker::{MononokeIdentity, MononokeIdentitySet, MononokeIdentitySetExt};
+use permission_checker::MononokeIdentity;
+use permission_checker::MononokeIdentitySet;
+use permission_checker::MononokeIdentitySetExt;
 use stats::prelude::*;
 use thiserror::Error;
 
@@ -23,9 +27,13 @@ mod facebook;
 mod oss;
 
 #[cfg(fbcode_build)]
-pub use facebook::{create_rate_limiter, get_region_capacity};
+pub use facebook::create_rate_limiter;
+#[cfg(fbcode_build)]
+pub use facebook::get_region_capacity;
 #[cfg(not(fbcode_build))]
-pub use oss::{create_rate_limiter, get_region_capacity};
+pub use oss::create_rate_limiter;
+#[cfg(not(fbcode_build))]
+pub use oss::get_region_capacity;
 
 pub use rate_limiting_config::RateLimitStatus;
 

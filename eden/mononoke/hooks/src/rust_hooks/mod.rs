@@ -30,7 +30,8 @@ use metaconfig_types::HookConfig;
 use permission_checker::ArcMembershipChecker;
 
 pub(crate) use self::lua_pattern::LuaPattern;
-use crate::{ChangesetHook, FileHook};
+use crate::ChangesetHook;
+use crate::FileHook;
 
 fn b(t: impl ChangesetHook + 'static) -> Box<dyn ChangesetHook> {
     Box::new(t)

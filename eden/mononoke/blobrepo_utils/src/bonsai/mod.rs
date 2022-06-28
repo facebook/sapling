@@ -7,4 +7,6 @@
 
 mod manifest;
 
-pub use self::manifest::{BonsaiMFVerify, BonsaiMFVerifyDifference, BonsaiMFVerifyResult};
+pub use self::manifest::BonsaiMFVerify;
+pub use self::manifest::BonsaiMFVerifyDifference;
+pub use self::manifest::BonsaiMFVerifyResult;

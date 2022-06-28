@@ -7,17 +7,27 @@
 
 //! Scaffolding for encoding bundle2 parts.
 
-use std::fmt::{self, Debug, Formatter};
+use std::fmt::Debug;
+use std::fmt::Formatter;
+use std::fmt::{self};
 use std::mem;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use bytes::Bytes as BytesNew;
 use bytes_old::Bytes;
-use futures_ext::{BoxStream, StreamExt};
-use futures_old::{Async, Future, Poll, Stream};
+use futures_ext::BoxStream;
+use futures_ext::StreamExt;
+use futures_old::Async;
+use futures_old::Future;
+use futures_old::Poll;
+use futures_old::Stream;
 
 use crate::chunk::Chunk;
-use crate::part_header::{PartHeader, PartHeaderBuilder, PartHeaderType, PartId};
+use crate::part_header::PartHeader;
+use crate::part_header::PartHeaderBuilder;
+use crate::part_header::PartHeaderType;
+use crate::part_header::PartId;
 
 /// Represents a stream of chunks produced by the individual part handler.
 pub struct ChunkStream(BoxStream<Chunk, Error>);

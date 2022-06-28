@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 use context::CoreContext;
 use megarepo_configs::types::SyncTargetConfig;
 use slog::warn;
@@ -45,9 +46,12 @@ mod verification_tests {
     use super::*;
     use fbinit::FacebookInit;
     use maplit::btreemap;
-    use megarepo_configs::types::{
-        MergeMode, Source, SourceMappingRules, SourceRevision, Target, WithExtraMoveCommit,
-    };
+    use megarepo_configs::types::MergeMode;
+    use megarepo_configs::types::Source;
+    use megarepo_configs::types::SourceMappingRules;
+    use megarepo_configs::types::SourceRevision;
+    use megarepo_configs::types::Target;
+    use megarepo_configs::types::WithExtraMoveCommit;
 
     fn s(v: &str) -> String {
         v.to_owned()

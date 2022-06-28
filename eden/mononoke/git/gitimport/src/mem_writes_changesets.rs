@@ -7,18 +7,21 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
-use changesets::{ChangesetEntry, ChangesetInsert, Changesets, SortOrder};
+use changesets::ChangesetEntry;
+use changesets::ChangesetInsert;
+use changesets::Changesets;
+use changesets::SortOrder;
 use context::CoreContext;
 use futures::future;
 use futures::stream::BoxStream;
 use lock_ext::LockExt;
-use mononoke_types::{
-    ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
-};
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use mononoke_types::ChangesetId;
+use mononoke_types::ChangesetIdPrefix;
+use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::RepositoryId;
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 #[derive(Clone)]
 pub struct MemWritesChangesets<T: Changesets + Clone + 'static> {

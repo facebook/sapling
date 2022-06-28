@@ -5,13 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use clap_old::{App, Arg, ArgMatches};
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
 use environment::Caching;
 use fbinit::FacebookInit;
-use once_cell::sync::{Lazy, OnceCell};
+use once_cell::sync::Lazy;
+use once_cell::sync::OnceCell;
 use std::time::Duration;
 
-use super::app::{bool_as_str, BOOL_VALUES};
+use super::app::bool_as_str;
+use super::app::BOOL_VALUES;
 
 pub use cmdlib_caching::CachelibSettings;
 

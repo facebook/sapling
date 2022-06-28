@@ -7,17 +7,22 @@
 
 use std::sync::Arc;
 
-use anyhow::{format_err, Context, Result};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Result;
 use blobstore::Blobstore;
 use context::CoreContext;
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use sql_ext::replication::ReplicaLagMonitor;
 
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::{IdMap, SqlIdMap};
+use crate::idmap::IdMap;
+use crate::idmap::SqlIdMap;
 use crate::types::SegmentedChangelogVersion;
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{InProcessIdDag, SegmentedChangelogSqlConnections};
+use crate::InProcessIdDag;
+use crate::SegmentedChangelogSqlConnections;
 
 pub async fn copy_segmented_changelog(
     ctx: &CoreContext,

@@ -5,16 +5,21 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use fbthrift::compact_protocol;
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 
-use crate::{
-    blob::{Blob, BlobstoreValue, ContentMetadataV2Blob},
-    errors::ErrorKind,
-    hash, thrift, thrift_field,
-    typed_hash::{ContentId, ContentMetadataV2Id},
-};
+use crate::blob::Blob;
+use crate::blob::BlobstoreValue;
+use crate::blob::ContentMetadataV2Blob;
+use crate::errors::ErrorKind;
+use crate::hash;
+use crate::thrift;
+use crate::thrift_field;
+use crate::typed_hash::ContentId;
+use crate::typed_hash::ContentMetadataV2Id;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ContentMetadataV2 {

@@ -5,15 +5,27 @@
  * GNU General Public License version 2.
  */
 
-use gotham::state::{FromState, State};
-use hyper::{Body, Response};
-use hyper::{Method, StatusCode, Uri, Version};
-use slog::{info, o, Logger};
-use std::fmt::{self, Debug, Display};
+use gotham::state::FromState;
+use gotham::state::State;
+use hyper::Body;
+use hyper::Method;
+use hyper::Response;
+use hyper::StatusCode;
+use hyper::Uri;
+use hyper::Version;
+use slog::info;
+use slog::o;
+use slog::Logger;
+use std::fmt::Debug;
+use std::fmt::Display;
+use std::fmt::{self};
 use std::time::Duration;
 use time_ext::DurationExt;
 
-use super::{ClientIdentity, Middleware, PostResponseCallbacks, RequestLoad};
+use super::ClientIdentity;
+use super::Middleware;
+use super::PostResponseCallbacks;
+use super::RequestLoad;
 use crate::state_ext::StateExt;
 
 const DIRECTION_REQUEST_IN: &str = "IN  >";

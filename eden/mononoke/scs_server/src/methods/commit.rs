@@ -5,28 +5,50 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeSet;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use bytes::Bytes;
 use context::CoreContext;
-use futures::stream::{self, FuturesOrdered, StreamExt, TryStreamExt};
-use futures::{future, try_join};
-use hooks::{HookExecution, HookOutcome};
-use itertools::{Either, Itertools};
+use futures::future;
+use futures::stream::FuturesOrdered;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use futures::try_join;
+use hooks::HookExecution;
+use hooks::HookOutcome;
+use itertools::Either;
+use itertools::Itertools;
 use maplit::btreeset;
-use mononoke_api::{
-    unified_diff, CandidateSelectionHintArgs, ChangesetContext, ChangesetDiffItem,
-    ChangesetFileOrdering, ChangesetHistoryOptions, ChangesetId, ChangesetPathDiffContext,
-    ChangesetSpecifier, CopyInfo, MononokeError, MononokePath, RepoContext, UnifiedDiffMode,
-};
+use mononoke_api::unified_diff;
+use mononoke_api::CandidateSelectionHintArgs;
+use mononoke_api::ChangesetContext;
+use mononoke_api::ChangesetDiffItem;
+use mononoke_api::ChangesetFileOrdering;
+use mononoke_api::ChangesetHistoryOptions;
+use mononoke_api::ChangesetId;
+use mononoke_api::ChangesetPathDiffContext;
+use mononoke_api::ChangesetSpecifier;
+use mononoke_api::CopyInfo;
+use mononoke_api::MononokeError;
+use mononoke_api::MononokePath;
+use mononoke_api::RepoContext;
+use mononoke_api::UnifiedDiffMode;
 use source_control as thrift;
 
-use crate::commit_id::{map_commit_identities, map_commit_identity};
-use crate::errors::{self, ServiceErrorResultExt};
-use crate::from_request::{check_range_and_convert, validate_timestamp, FromRequest};
+use crate::commit_id::map_commit_identities;
+use crate::commit_id::map_commit_identity;
+use crate::errors::ServiceErrorResultExt;
+use crate::errors::{self};
+use crate::from_request::check_range_and_convert;
+use crate::from_request::validate_timestamp;
+use crate::from_request::FromRequest;
 use crate::history::collect_history;
-use crate::into_response::{AsyncIntoResponse, AsyncIntoResponseWith, IntoResponse};
+use crate::into_response::AsyncIntoResponse;
+use crate::into_response::AsyncIntoResponseWith;
+use crate::into_response::IntoResponse;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 // Magic number used when we want to limit concurrency with buffer_unordered.

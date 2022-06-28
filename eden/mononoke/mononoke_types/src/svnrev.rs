@@ -7,10 +7,14 @@
 
 use crate::BonsaiChangeset;
 use abomonation_derive::Abomonation;
-use anyhow::{bail, Error, Result};
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
 use sql::mysql;
-use std::fmt::{self, Display};
-use std::str::{self, FromStr};
+use std::fmt::Display;
+use std::fmt::{self};
+use std::str::FromStr;
+use std::str::{self};
 
 // Changeset svnrev. Present only in some repos which were imported from SVN.
 #[derive(Abomonation, Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]

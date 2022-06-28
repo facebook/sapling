@@ -9,11 +9,15 @@ use crate::verification::verify_config;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use context::CoreContext;
-use megarepo_configs::types::{SyncConfigVersion, SyncTargetConfig, Target};
+use megarepo_configs::types::SyncConfigVersion;
+use megarepo_configs::types::SyncTargetConfig;
+use megarepo_configs::types::Target;
 use megarepo_error::MegarepoError;
-use slog::{info, Logger};
+use slog::info;
+use slog::Logger;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use crate::MononokeMegarepoConfigs;
 

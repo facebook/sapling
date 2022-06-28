@@ -5,17 +5,24 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use context::CoreContext;
-use derived_data::batch::{split_batch_in_linear_stacks, FileConflicts, StackItem};
-use derived_data_manager::{BonsaiDerivable, DerivationContext};
-use futures::stream::{FuturesOrdered, TryStreamExt};
+use derived_data::batch::split_batch_in_linear_stacks;
+use derived_data::batch::FileConflicts;
+use derived_data::batch::StackItem;
+use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivationContext;
+use futures::stream::FuturesOrdered;
+use futures::stream::TryStreamExt;
 use itertools::Itertools;
-use mononoke_types::{ChangesetId, FsnodeId};
+use mononoke_types::ChangesetId;
+use mononoke_types::FsnodeId;
 use stats::prelude::*;
 
 use crate::derive::derive_fsnodes_stack;
@@ -185,7 +192,9 @@ mod test {
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use test_repo_factory::TestRepoFactory;
-    use tests_utils::{bookmark, drawdag::create_from_dag, resolve_cs_id};
+    use tests_utils::bookmark;
+    use tests_utils::drawdag::create_from_dag;
+    use tests_utils::resolve_cs_id;
 
     #[fbinit::test]
     async fn batch_derive(fb: FacebookInit) -> Result<(), Error> {

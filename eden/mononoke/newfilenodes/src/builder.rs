@@ -7,18 +7,22 @@
 
 use cachelib::VolatileLruCachePool;
 use fbinit::FacebookInit;
-use metaconfig_types::{RemoteMetadataDatabaseConfig, ShardableRemoteDatabaseConfig};
+use metaconfig_types::RemoteMetadataDatabaseConfig;
+use metaconfig_types::ShardableRemoteDatabaseConfig;
 use mononoke_types::RepositoryId;
 use sql::Connection;
-use sql_construct::{
-    SqlConstruct, SqlShardableConstructFromMetadataDatabaseConfig, SqlShardedConstruct,
-};
-use sql_ext::{SqlConnections, SqlShardedConnections};
+use sql_construct::SqlConstruct;
+use sql_construct::SqlShardableConstructFromMetadataDatabaseConfig;
+use sql_construct::SqlShardedConstruct;
+use sql_ext::SqlConnections;
+use sql_ext::SqlShardedConnections;
 use std::sync::Arc;
 
-use crate::local_cache::{CachelibCache, LocalCache};
+use crate::local_cache::CachelibCache;
+use crate::local_cache::LocalCache;
 use crate::reader::FilenodesReader;
-use crate::remote_cache::{MemcacheCache, RemoteCache};
+use crate::remote_cache::MemcacheCache;
+use crate::remote_cache::RemoteCache;
 use crate::writer::FilenodesWriter;
 use crate::NewFilenodes;
 

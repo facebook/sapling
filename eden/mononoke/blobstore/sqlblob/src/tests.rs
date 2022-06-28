@@ -6,12 +6,16 @@
  */
 
 use super::*;
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use blobstore::DEFAULT_PUT_BEHAVIOUR;
 use borrowed::borrowed;
 use bytes::Bytes;
 use fbinit::FacebookInit;
-use rand::{distributions::Alphanumeric, thread_rng, Rng, RngCore};
+use rand::distributions::Alphanumeric;
+use rand::thread_rng;
+use rand::Rng;
+use rand::RngCore;
 use strum::IntoEnumIterator;
 
 async fn test_chunking_methods<Test, Fut>(

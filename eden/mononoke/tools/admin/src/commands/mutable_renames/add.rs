@@ -5,14 +5,23 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Context, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
 use changesets::ChangesetsRef;
 use clap::Args;
 use context::CoreContext;
 use futures::TryStreamExt;
-use manifest::{Entry, ManifestOps, PathOrPrefix};
-use mononoke_types::{mpath_element_iter, ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
-use mutable_renames::{MutableRenameEntry, MutableRenamesRef};
+use manifest::Entry;
+use manifest::ManifestOps;
+use manifest::PathOrPrefix;
+use mononoke_types::mpath_element_iter;
+use mononoke_types::ChangesetId;
+use mononoke_types::FileUnodeId;
+use mononoke_types::MPath;
+use mononoke_types::ManifestUnodeId;
+use mutable_renames::MutableRenameEntry;
+use mutable_renames::MutableRenamesRef;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use std::collections::HashMap;

@@ -11,11 +11,15 @@ use std::sync::Arc;
 
 use blobstore::Blobstore;
 use context::CoreContext;
-use filestore::{BlobCopier, FetchKey, FilestoreConfig};
-use mononoke_types::{ContentMetadata, RepositoryId};
+use filestore::BlobCopier;
+use filestore::FetchKey;
+use filestore::FilestoreConfig;
+use mononoke_types::ContentMetadata;
+use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
 
-use crate::{Bubble, BubbleId};
+use crate::Bubble;
+use crate::BubbleId;
 
 struct Copier {
     /// Blobstore that writes to ephemeral blobstore but has no bubble prefix

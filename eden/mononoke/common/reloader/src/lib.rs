@@ -7,13 +7,16 @@
 
 #![feature(fn_traits)]
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 use arc_swap::ArcSwap;
 use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{select, FutureExt};
-use futures_ext::future::{spawn_controlled, ControlledHandle};
+use futures::select;
+use futures::FutureExt;
+use futures_ext::future::spawn_controlled;
+use futures_ext::future::ControlledHandle;
 use rand::Rng;
 use slog::warn;
 use std::future::Future;
@@ -205,7 +208,9 @@ impl<R: 'static + Send + Sync> Reloader<R> {
 mod test {
     use super::*;
     use fbinit::FacebookInit;
-    use std::sync::atomic::{AtomicBool, AtomicU32, Ordering::Relaxed};
+    use std::sync::atomic::AtomicBool;
+    use std::sync::atomic::AtomicU32;
+    use std::sync::atomic::Ordering::Relaxed;
     use std::time::Duration;
 
     #[test]

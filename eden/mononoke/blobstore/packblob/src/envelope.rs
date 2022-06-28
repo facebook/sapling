@@ -7,16 +7,21 @@
 
 use crate::pack;
 
-use anyhow::{format_err, Context, Error};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
 use blobstore::SizeMetadata;
 use bufsize::SizeCounter;
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-use fbthrift::{
-    compact_protocol::{self, CompactProtocolSerializer},
-    serialize::Serialize as ThriftSerialize,
-};
+use bytes::Buf;
+use bytes::BufMut;
+use bytes::Bytes;
+use bytes::BytesMut;
+use fbthrift::compact_protocol::CompactProtocolSerializer;
+use fbthrift::compact_protocol::{self};
+use fbthrift::serialize::Serialize as ThriftSerialize;
 use mononoke_types::BlobstoreBytes;
-use packblob_thrift::{StorageEnvelope, StorageFormat};
+use packblob_thrift::StorageEnvelope;
+use packblob_thrift::StorageFormat;
 use std::mem::size_of;
 
 enum HeaderType {

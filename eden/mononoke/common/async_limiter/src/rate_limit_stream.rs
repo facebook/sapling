@@ -5,14 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use futures::{ready, task::Context, Future, Stream};
+use futures::ready;
+use futures::task::Context;
+use futures::Future;
+use futures::Stream;
 use pin_project::pin_project;
-use ratelimit_meter::{
-    algorithms::{leaky_bucket::TooEarly, Algorithm},
-    clock::Clock,
-    example_algorithms::Impossible,
-    DirectRateLimiter, NonConformance,
-};
+use ratelimit_meter::algorithms::leaky_bucket::TooEarly;
+use ratelimit_meter::algorithms::Algorithm;
+use ratelimit_meter::clock::Clock;
+use ratelimit_meter::example_algorithms::Impossible;
+use ratelimit_meter::DirectRateLimiter;
+use ratelimit_meter::NonConformance;
 use std::pin::Pin;
 use std::task::Poll;
 use std::time::Instant;

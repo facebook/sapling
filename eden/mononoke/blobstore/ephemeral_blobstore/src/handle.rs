@@ -9,7 +9,10 @@ use std::fmt;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstoreIsPresent};
+use blobstore::Blobstore;
+use blobstore::BlobstoreBytes;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
 use context::CoreContext;
 
 use crate::bubble::Bubble;

@@ -6,25 +6,40 @@
  */
 
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::Duration;
+use std::time::Instant;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
-use bookmarks_types::{
-    Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness,
-};
+use bookmarks_types::Bookmark;
+use bookmarks_types::BookmarkKind;
+use bookmarks_types::BookmarkName;
+use bookmarks_types::BookmarkPagination;
+use bookmarks_types::BookmarkPrefix;
+use bookmarks_types::Freshness;
 use context::CoreContext;
-use futures::future::{self, BoxFuture, FutureExt, TryFutureExt};
-use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
-use mononoke_types::{ChangesetId, RepositoryId};
-use shared_error::anyhow::{IntoSharedError, SharedError};
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
+use shared_error::anyhow::IntoSharedError;
+use shared_error::anyhow::SharedError;
 use stats::prelude::*;
 use tunables::tunables;
 
 use crate::log::BookmarkUpdateReason;
 use crate::subscription::BookmarksSubscription;
-use crate::transaction::{BookmarkTransaction, BookmarkTransactionHook};
+use crate::transaction::BookmarkTransaction;
+use crate::transaction::BookmarkTransactionHook;
 use crate::Bookmarks;
 
 define_stats! {
@@ -457,18 +472,22 @@ mod tests {
     use super::*;
     use ascii::AsciiString;
     use fbinit::FacebookInit;
-    use futures::{
-        channel::{mpsc, oneshot},
-        future::{Either, Future},
-        stream::{Stream, StreamFuture},
-    };
+    use futures::channel::mpsc;
+    use futures::channel::oneshot;
+    use futures::future::Either;
+    use futures::future::Future;
+    use futures::stream::Stream;
+    use futures::stream::StreamFuture;
     use maplit::hashmap;
-    use mononoke_types_mocks::changesetid::{ONES_CSID, THREES_CSID, TWOS_CSID};
+    use mononoke_types_mocks::changesetid::ONES_CSID;
+    use mononoke_types_mocks::changesetid::THREES_CSID;
+    use mononoke_types_mocks::changesetid::TWOS_CSID;
     use quickcheck::quickcheck;
     use std::collections::HashSet;
     use std::fmt::Debug;
     use tokio::runtime::Runtime;
-    use tunables::{with_tunables_async, MononokeTunables};
+    use tunables::with_tunables_async;
+    use tunables::MononokeTunables;
 
     fn bookmark(name: impl AsRef<str>) -> Bookmark {
         Bookmark::new(

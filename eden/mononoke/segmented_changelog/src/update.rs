@@ -7,22 +7,36 @@
 
 use std::sync::Arc;
 
-use anyhow::{format_err, Context, Error, Result};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use futures::future;
-use futures::stream::{self, TryStreamExt};
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use slog::info;
 use std::collections::HashSet;
 
-use bookmarks::{
-    BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Bookmarks, Freshness,
-};
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkPagination;
+use bookmarks::BookmarkPrefix;
+use bookmarks::Bookmarks;
+use bookmarks::Freshness;
 use context::CoreContext;
-use metaconfig_types::{SegmentedChangelogConfig, SegmentedChangelogHeadConfig};
+use metaconfig_types::SegmentedChangelogConfig;
+use metaconfig_types::SegmentedChangelogHeadConfig;
 use mononoke_types::ChangesetId;
 
-use crate::dag::{NameDagBuilder, VertexListWithOptions, VertexName, VertexOptions};
-use crate::idmap::{vertex_name_from_cs_id, IdMap, IdMapWrapper};
-use crate::{Group, InProcessIdDag};
+use crate::dag::NameDagBuilder;
+use crate::dag::VertexListWithOptions;
+use crate::dag::VertexName;
+use crate::dag::VertexOptions;
+use crate::idmap::vertex_name_from_cs_id;
+use crate::idmap::IdMap;
+use crate::idmap::IdMapWrapper;
+use crate::Group;
+use crate::InProcessIdDag;
 
 pub type SeedHead = SegmentedChangelogHeadConfig;
 
@@ -162,7 +176,9 @@ mod tests {
     use super::*;
     use blobrepo::BlobRepo;
     use fbinit::FacebookInit;
-    use fixtures::{set_bookmark, BranchWide, TestRepoFixture};
+    use fixtures::set_bookmark;
+    use fixtures::BranchWide;
+    use fixtures::TestRepoFixture;
 
     async fn prep_branch_wide_repo(fb: FacebookInit) -> Result<Arc<BlobRepo>> {
         let blobrepo = BranchWide::getrepo(fb).await;

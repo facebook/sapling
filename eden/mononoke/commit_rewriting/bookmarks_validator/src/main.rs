@@ -5,25 +5,35 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
-use bookmarks::{BookmarkName, Freshness};
+use anyhow::format_err;
+use anyhow::Error;
+use bookmarks::BookmarkName;
+use bookmarks::Freshness;
 use cached_config::ConfigStore;
-use cmdlib::{args, helpers, monitoring};
+use cmdlib::args;
+use cmdlib::helpers;
+use cmdlib::monitoring;
 use cmdlib_x_repo::create_commit_syncers_from_matches;
-use context::{CoreContext, SessionContainer};
-use cross_repo_sync::{
-    validation::{self, BookmarkDiff},
-    CommitSyncOutcome, CommitSyncer, Syncers,
-};
+use context::CoreContext;
+use context::SessionContainer;
+use cross_repo_sync::validation::BookmarkDiff;
+use cross_repo_sync::validation::{self};
+use cross_repo_sync::CommitSyncOutcome;
+use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::Syncers;
 use fbinit::FacebookInit;
-use futures::{future, TryStreamExt};
+use futures::future;
+use futures::TryStreamExt;
 use live_commit_sync_config::CONFIGERATOR_PUSHREDIRECT_ENABLE;
 use mononoke_types::ChangesetId;
 use pushredirect_enable::types::MononokePushRedirectEnable;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{error, info, Logger};
+use slog::error;
+use slog::info;
+use slog::Logger;
 use stats::prelude::*;
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
+use std::time::Duration;
 use synced_commit_mapping::SyncedCommitMapping;
 
 define_stats! {
@@ -321,10 +331,13 @@ async fn remap<M: SyncedCommitMapping + Clone + 'static>(
 mod tests {
     use super::*;
 
-    use cross_repo_sync::{CandidateSelectionHint, CommitSyncContext};
+    use cross_repo_sync::CandidateSelectionHint;
+    use cross_repo_sync::CommitSyncContext;
     use cross_repo_sync_test_utils::init_small_large_repo;
     use mononoke_types::DateTime;
-    use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
+    use tests_utils::bookmark;
+    use tests_utils::resolve_cs_id;
+    use tests_utils::CreateCommitContext;
 
     #[fbinit::test]
     async fn test_simple_check_large_bookmark_history(fb: FacebookInit) -> Result<(), Error> {

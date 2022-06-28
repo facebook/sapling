@@ -6,22 +6,29 @@
  */
 
 use crate::select::select_path_tree;
-use crate::{Entry, Manifest, PathOrPrefix, PathTree, StoreLoadable};
+use crate::Entry;
+use crate::Manifest;
+use crate::PathOrPrefix;
+use crate::PathTree;
+use crate::StoreLoadable;
 use anyhow::Error;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    future::{self, BoxFuture},
-    pin_mut,
-    stream::{self, BoxStream, Stream},
-    FutureExt, StreamExt, TryFutureExt, TryStreamExt,
-};
+use futures::future::BoxFuture;
+use futures::future::{self};
+use futures::pin_mut;
+use futures::stream::BoxStream;
+use futures::stream::Stream;
+use futures::stream::{self};
+use futures::FutureExt;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
 use mononoke_types::MPath;
-use std::{
-    collections::HashMap,
-    marker::{PhantomData, Unpin},
-};
+use std::collections::HashMap;
+use std::marker::PhantomData;
+use std::marker::Unpin;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Diff<Entry> {

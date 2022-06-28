@@ -8,14 +8,24 @@
 mod ratelimit;
 mod shard;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstoreMetadata};
-use bytes::{Buf, BufMut, Bytes, BytesMut};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
+use blobstore::BlobstoreMetadata;
+use bytes::Buf;
+use bytes::BufMut;
+use bytes::Bytes;
+use bytes::BytesMut;
 use cacheblob::CachelibBlobstoreOptions;
 use cachelib::VolatileLruCachePool;
 use cloned::cloned;
-use context::{CoreContext, PerfCounterType, SessionClass};
+use context::CoreContext;
+use context::PerfCounterType;
+use context::SessionClass;
 use mononoke_types::BlobstoreBytes;
 use stats::prelude::*;
 use std::fmt;
@@ -26,8 +36,10 @@ use std::sync::Arc;
 use tunables::tunables;
 use twox_hash::XxHash;
 
-use crate::ratelimit::{AccessReason, Ticket};
-use shard::{SemaphoreAcquisition, Shards};
+use crate::ratelimit::AccessReason;
+use crate::ratelimit::Ticket;
+use shard::SemaphoreAcquisition;
+use shard::Shards;
 
 define_stats! {
     prefix = "mononoke.virtually_sharded_blobstore";
@@ -568,7 +580,8 @@ mod test {
     mod caching {
         use super::*;
 
-        use mononoke_types::{content_chunk::new_blob_and_pointer, BlobstoreKey};
+        use mononoke_types::content_chunk::new_blob_and_pointer;
+        use mononoke_types::BlobstoreKey;
 
         #[fbinit::test]
         fn test_filestore_chunk_is_not_compressed(fb: FacebookInit) -> Result<()> {
@@ -610,7 +623,9 @@ mod test {
         use std::collections::HashMap;
         use std::sync::Mutex;
         use std::time::Duration;
-        use tokio::sync::broadcast::{self, Receiver, Sender};
+        use tokio::sync::broadcast::Receiver;
+        use tokio::sync::broadcast::Sender;
+        use tokio::sync::broadcast::{self};
 
         const TIMEOUT_MS: u64 = 100;
 
@@ -1071,9 +1086,13 @@ mod test {
         use context::SessionContainer;
         use fbinit::FacebookInit;
         use nonzero_ext::nonzero;
-        use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
+        use ratelimit_meter::algorithms::LeakyBucket;
+        use ratelimit_meter::DirectRateLimiter;
         use scuba_ext::MononokeScubaSampleBuilder;
-        use slog::{o, Drain, Level, Logger};
+        use slog::o;
+        use slog::Drain;
+        use slog::Level;
+        use slog::Logger;
         use slog_glog_fmt::default_drain;
         use std::time::Duration;
 

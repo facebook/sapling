@@ -5,20 +5,25 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use bytes::Bytes;
 use filestore::StoreRequest;
-use futures::{Stream, TryStreamExt};
-use gotham::state::{FromState, State};
-use gotham_derive::{StateData, StaticResponseExtender};
-use gotham_ext::{
-    error::HttpError,
-    middleware::{HttpScubaKey, ScubaMiddlewareState},
-    response::{EmptyBody, TryIntoResponse},
-};
+use futures::Stream;
+use futures::TryStreamExt;
+use gotham::state::FromState;
+use gotham::state::State;
+use gotham_derive::StateData;
+use gotham_derive::StaticResponseExtender;
+use gotham_ext::error::HttpError;
+use gotham_ext::middleware::HttpScubaKey;
+use gotham_ext::middleware::ScubaMiddlewareState;
+use gotham_ext::response::EmptyBody;
+use gotham_ext::response::TryIntoResponse;
 use http::header::CONTENT_LENGTH;
 use hyper::Body;
-use mononoke_types::hash::{GitSha1, RichGitSha1};
+use mononoke_types::hash::GitSha1;
+use mononoke_types::hash::RichGitSha1;
 use serde::Deserialize;
 use stats::prelude::*;
 use std::str::FromStr;

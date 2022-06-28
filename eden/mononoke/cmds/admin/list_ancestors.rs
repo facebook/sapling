@@ -7,14 +7,18 @@
 
 use anyhow::anyhow;
 use blobrepo::BlobRepo;
-use clap_old::{App, Arg, ArgMatches, SubCommand};
-use cmdlib::{
-    args::{self, MononokeMatches},
-    helpers,
-};
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
+use cmdlib::helpers;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{compat::Stream01CompatExt, StreamExt, TryStreamExt};
+use futures::compat::Stream01CompatExt;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use revset::AncestorsNodeStream;
 use slog::Logger;
 

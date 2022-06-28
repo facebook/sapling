@@ -11,7 +11,8 @@
 //! in a given repository. It provides algorithms over the commit graph.
 use std::collections::HashMap;
 
-use anyhow::{format_err, Result};
+use anyhow::format_err;
+use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
@@ -38,24 +39,38 @@ mod version_store;
 mod tests;
 
 use mercurial_types::HgChangesetId;
-pub use segmented_changelog_types::{
-    dag, ArcSegmentedChangelog, CloneData, DagId, DagIdSet, FirstAncestorConstraint, FlatSegment,
-    Group, InProcessIdDag, Location, MismatchedHeadsError, PreparedFlatSegments,
-    SegmentedChangelog, SegmentedChangelogArc, SegmentedChangelogRef,
-};
+pub use segmented_changelog_types::dag;
+pub use segmented_changelog_types::ArcSegmentedChangelog;
+pub use segmented_changelog_types::CloneData;
+pub use segmented_changelog_types::DagId;
+pub use segmented_changelog_types::DagIdSet;
+pub use segmented_changelog_types::FirstAncestorConstraint;
+pub use segmented_changelog_types::FlatSegment;
+pub use segmented_changelog_types::Group;
+pub use segmented_changelog_types::InProcessIdDag;
+pub use segmented_changelog_types::Location;
+pub use segmented_changelog_types::MismatchedHeadsError;
+pub use segmented_changelog_types::PreparedFlatSegments;
+pub use segmented_changelog_types::SegmentedChangelog;
+pub use segmented_changelog_types::SegmentedChangelogArc;
+pub use segmented_changelog_types::SegmentedChangelogRef;
 
-pub use crate::builder::{
-    new_server_segmented_changelog, new_server_segmented_changelog_manager,
-    new_test_segmented_changelog, SegmentedChangelogSqlConnections,
-};
+pub use crate::builder::new_server_segmented_changelog;
+pub use crate::builder::new_server_segmented_changelog_manager;
+pub use crate::builder::new_test_segmented_changelog;
+pub use crate::builder::SegmentedChangelogSqlConnections;
 pub use crate::clone_hints::CloneHints;
 pub use crate::copy::copy_segmented_changelog;
-pub use crate::manager::{ArcSegmentedChangelogManager, SegmentedChangelogManager};
+pub use crate::manager::ArcSegmentedChangelogManager;
+pub use crate::manager::SegmentedChangelogManager;
 pub use crate::tailer::SegmentedChangelogTailer;
-pub use crate::update::{seedheads_from_config, JobType, SeedHead};
+pub use crate::update::seedheads_from_config;
+pub use crate::update::JobType;
+pub use crate::update::SeedHead;
 
 // public for benchmarking
-pub use crate::idmap::{ConcurrentMemIdMap, IdMap};
+pub use crate::idmap::ConcurrentMemIdMap;
+pub use crate::idmap::IdMap;
 
 // TODO(T74420661): use `thiserror` to represent error case
 

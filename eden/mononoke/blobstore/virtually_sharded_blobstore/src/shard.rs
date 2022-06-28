@@ -6,13 +6,16 @@
  */
 
 use anyhow::Error;
-use context::{CoreContext, PerfCounterType};
+use context::CoreContext;
+use context::PerfCounterType;
 use futures_stats::TimedTryFutureExt;
 use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::num::NonZeroUsize;
 use time_ext::DurationExt;
-use tokio::sync::{Semaphore, SemaphorePermit};
+use tokio::sync::Semaphore;
+use tokio::sync::SemaphorePermit;
 
 use crate::ratelimit::Ticket;
 

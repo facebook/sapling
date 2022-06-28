@@ -5,28 +5,40 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
+use blobstore::Blobstore;
 use blobstore::PutBehaviour;
-use blobstore::{Blobstore, Storable};
+use blobstore::Storable;
 use bookmarks::BookmarkName;
 use context::CoreContext;
-use futures::{stream, StreamExt, TryStreamExt};
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use megarepo_error::MegarepoError;
 use memblob::Memblob;
-use mononoke_types::{BlobstoreKey as BlobstoreKeyTrait, RepositoryId, Timestamp};
-use requests_table::{
-    BlobstoreKey, LongRunningRequestEntry, LongRunningRequestsQueue, RequestStatus, RequestType,
-    SqlLongRunningRequestsQueue,
-};
-pub use requests_table::{ClaimedBy, RequestId, RowId};
+use mononoke_types::BlobstoreKey as BlobstoreKeyTrait;
+use mononoke_types::RepositoryId;
+use mononoke_types::Timestamp;
+use requests_table::BlobstoreKey;
+pub use requests_table::ClaimedBy;
+use requests_table::LongRunningRequestEntry;
+use requests_table::LongRunningRequestsQueue;
+pub use requests_table::RequestId;
+use requests_table::RequestStatus;
+use requests_table::RequestType;
+pub use requests_table::RowId;
+use requests_table::SqlLongRunningRequestsQueue;
 use sql_construct::SqlConstruct;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use std::time::Instant;
 
-use crate::types::{
-    MegarepoAsynchronousRequestParams, MegarepoAsynchronousRequestResult, Request, ThriftParams,
-    Token,
-};
+use crate::types::MegarepoAsynchronousRequestParams;
+use crate::types::MegarepoAsynchronousRequestResult;
+use crate::types::Request;
+use crate::types::ThriftParams;
+use crate::types::Token;
 
 const INITIAL_POLL_DELAY_MS: u64 = 1000;
 const MAX_POLL_DURATION: Duration = Duration::from_secs(60);
@@ -299,27 +311,28 @@ mod tests {
     use super::*;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use requests_table::{ClaimedBy, RequestStatus};
+    use requests_table::ClaimedBy;
+    use requests_table::RequestStatus;
 
-    use source_control::{
-        MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams,
-        MegarepoAddTargetParams as ThriftMegarepoAddTargetParams,
-        MegarepoChangeTargetConfigParams as ThriftMegarepoChangeTargetConfigParams,
-        MegarepoRemergeSourceParams as ThriftMegarepoRemergeSourceParams,
-        MegarepoSyncChangesetParams as ThriftMegarepoSyncChangesetParams,
-    };
+    use source_control::MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams;
+    use source_control::MegarepoAddTargetParams as ThriftMegarepoAddTargetParams;
+    use source_control::MegarepoChangeTargetConfigParams as ThriftMegarepoChangeTargetConfigParams;
+    use source_control::MegarepoRemergeSourceParams as ThriftMegarepoRemergeSourceParams;
+    use source_control::MegarepoSyncChangesetParams as ThriftMegarepoSyncChangesetParams;
 
     use crate::types::MegarepoAsynchronousRequestResult;
 
-    use source_control::{
-        MegarepoAddBranchingTargetResult, MegarepoAddTargetResult,
-        MegarepoChangeTargetConfigResult, MegarepoRemergeSourceResult, MegarepoSyncChangesetResult,
-    };
+    use source_control::MegarepoAddBranchingTargetResult;
+    use source_control::MegarepoAddTargetResult;
+    use source_control::MegarepoChangeTargetConfigResult;
+    use source_control::MegarepoRemergeSourceResult;
+    use source_control::MegarepoSyncChangesetResult;
 
-    use crate::types::{
-        MegarepoAddBranchingSyncTarget, MegarepoAddSyncTarget, MegarepoChangeTargetConfig,
-        MegarepoRemergeSource, MegarepoSyncChangeset,
-    };
+    use crate::types::MegarepoAddBranchingSyncTarget;
+    use crate::types::MegarepoAddSyncTarget;
+    use crate::types::MegarepoChangeTargetConfig;
+    use crate::types::MegarepoRemergeSource;
+    use crate::types::MegarepoSyncChangeset;
 
     macro_rules! test_enqueue_dequeue_and_poll_once {
         {

@@ -12,8 +12,11 @@ mod sqlite;
 
 use sql::Transaction;
 
-pub use sql::{SqlConnections, SqlShardedConnections};
-pub use sqlite::{open_existing_sqlite_path, open_sqlite_in_memory, open_sqlite_path};
+pub use sql::SqlConnections;
+pub use sql::SqlShardedConnections;
+pub use sqlite::open_existing_sqlite_path;
+pub use sqlite::open_sqlite_in_memory;
+pub use sqlite::open_sqlite_path;
 
 #[must_use]
 pub enum TransactionResult {
@@ -25,20 +28,36 @@ pub mod facebook {
     #[cfg(fbcode_build)]
     mod r#impl;
 
-    use std::fmt::{self, Debug};
+    use std::fmt::Debug;
+    use std::fmt::{self};
 
     #[cfg(fbcode_build)]
-    pub use r#impl::{
-        create_mysql_connections_sharded, create_mysql_connections_unsharded,
-        myadmin::{replication_status_chunked, MyAdmin, MyAdminLagMonitor},
-        PoolConfig, SharedConnectionPool,
-    };
+    pub use r#impl::create_mysql_connections_sharded;
+    #[cfg(fbcode_build)]
+    pub use r#impl::create_mysql_connections_unsharded;
+    #[cfg(fbcode_build)]
+    pub use r#impl::myadmin::replication_status_chunked;
+    #[cfg(fbcode_build)]
+    pub use r#impl::myadmin::MyAdmin;
+    #[cfg(fbcode_build)]
+    pub use r#impl::myadmin::MyAdminLagMonitor;
+    #[cfg(fbcode_build)]
+    pub use r#impl::PoolConfig;
+    #[cfg(fbcode_build)]
+    pub use r#impl::SharedConnectionPool;
 
     #[cfg(not(fbcode_build))]
-    pub use crate::oss::{
-        create_mysql_connections_sharded, create_mysql_connections_unsharded, MyAdmin,
-        MyAdminLagMonitor, PoolConfig, SharedConnectionPool,
-    };
+    pub use crate::oss::create_mysql_connections_sharded;
+    #[cfg(not(fbcode_build))]
+    pub use crate::oss::create_mysql_connections_unsharded;
+    #[cfg(not(fbcode_build))]
+    pub use crate::oss::MyAdmin;
+    #[cfg(not(fbcode_build))]
+    pub use crate::oss::MyAdminLagMonitor;
+    #[cfg(not(fbcode_build))]
+    pub use crate::oss::PoolConfig;
+    #[cfg(not(fbcode_build))]
+    pub use crate::oss::SharedConnectionPool;
 
     /// MySQL global shared connection pool configuration.
     #[derive(Clone)]

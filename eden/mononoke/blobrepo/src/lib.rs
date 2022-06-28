@@ -8,6 +8,9 @@
 mod repo;
 pub mod scribe;
 
-pub use crate::repo::{save_bonsai_changesets, AsBlobRepo, BlobRepo, BlobRepoInner};
+pub use crate::repo::save_bonsai_changesets;
+pub use crate::repo::AsBlobRepo;
+pub use crate::repo::BlobRepo;
+pub use crate::repo::BlobRepoInner;
 pub use changeset_fetcher::ChangesetFetcher;
 pub use filestore::StoreRequest;

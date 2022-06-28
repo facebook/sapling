@@ -5,15 +5,19 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
-use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateLogEntry, Freshness};
+use anyhow::Context;
+use anyhow::Error;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateLog;
+use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::Freshness;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    future::{self, FutureExt},
-    stream::{self, StreamExt},
-    TryStreamExt,
-};
+use futures::future::FutureExt;
+use futures::future::{self};
+use futures::stream::StreamExt;
+use futures::stream::{self};
+use futures::TryStreamExt;
 use mononoke_types::RepositoryId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;

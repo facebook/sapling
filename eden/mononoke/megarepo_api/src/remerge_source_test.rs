@@ -6,18 +6,25 @@
  */
 
 use crate::add_sync_target::AddSyncTarget;
-use crate::megarepo_test_utils::{MegarepoTest, SyncTargetConfigBuilder};
+use crate::megarepo_test_utils::MegarepoTest;
+use crate::megarepo_test_utils::SyncTargetConfigBuilder;
 use crate::remerge_source::RemergeSource;
 use anyhow::Error;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use maplit::{btreemap, hashmap};
+use maplit::btreemap;
+use maplit::hashmap;
 use megarepo_config::MononokeMegarepoConfigs;
 use megarepo_config::Target;
-use megarepo_mapping::{CommitRemappingState, SourceName, REMAPPING_STATE_FILE};
+use megarepo_mapping::CommitRemappingState;
+use megarepo_mapping::SourceName;
+use megarepo_mapping::REMAPPING_STATE_FILE;
 use mononoke_types::MPath;
 use std::sync::Arc;
-use tests_utils::{bookmark, list_working_copy_utf8, resolve_cs_id, CreateCommitContext};
+use tests_utils::bookmark;
+use tests_utils::list_working_copy_utf8;
+use tests_utils::resolve_cs_id;
+use tests_utils::CreateCommitContext;
 
 #[fbinit::test]
 async fn test_remerge_source_simple(fb: FacebookInit) -> Result<(), Error> {

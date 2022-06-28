@@ -11,7 +11,8 @@ use anyhow::Result;
 use fbinit::FacebookInit;
 use hooks::hook_loader::load_hooks;
 use hooks::HookManager;
-use hooks_content_stores::{RepoFileContentManager, TextOnlyFileContentManager};
+use hooks_content_stores::RepoFileContentManager;
+use hooks_content_stores::TextOnlyFileContentManager;
 use metaconfig_types::RepoConfig;
 use scuba_ext::MononokeScubaSampleBuilder;
 

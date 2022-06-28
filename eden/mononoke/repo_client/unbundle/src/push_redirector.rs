@@ -6,22 +6,30 @@
  */
 
 use crate::run_post_resolve_action;
-use crate::{
-    UnbundleBookmarkOnlyPushRebaseResponse, UnbundleInfinitePushResponse,
-    UnbundlePushRebaseResponse, UnbundlePushResponse, UnbundleResponse,
-};
+use crate::UnbundleBookmarkOnlyPushRebaseResponse;
+use crate::UnbundleInfinitePushResponse;
+use crate::UnbundlePushRebaseResponse;
+use crate::UnbundlePushResponse;
+use crate::UnbundleResponse;
 
 use crate::hook_running::HookRejectionRemapper;
 use crate::resolver::HgHookRejection;
+use crate::BundleResolverError;
 use crate::InfiniteBookmarkPush;
 use crate::PlainBookmarkPush;
+use crate::PostResolveAction;
+use crate::PostResolveBookmarkOnlyPushRebase;
+use crate::PostResolveInfinitePush;
+use crate::PostResolvePush;
+use crate::PostResolvePushRebase;
 use crate::PushrebaseBookmarkSpec;
-use crate::{
-    BundleResolverError, PostResolveAction, PostResolveBookmarkOnlyPushRebase,
-    PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, UploadedBonsais,
-};
-use anyhow::{format_err, Context, Error};
-use backsyncer::{backsync_latest, BacksyncLimit, TargetRepoDbs};
+use crate::UploadedBonsais;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use backsyncer::backsync_latest;
+use backsyncer::BacksyncLimit;
+use backsyncer::TargetRepoDbs;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
@@ -30,21 +38,27 @@ use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::types::Target;
-use cross_repo_sync::{CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer};
-use futures::{
-    future::{try_join_all, FutureExt},
-    try_join,
-};
-use hooks::{CrossRepoPushSource, HookRejection};
+use cross_repo_sync::CandidateSelectionHint;
+use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncOutcome;
+use cross_repo_sync::CommitSyncer;
+use futures::future::try_join_all;
+use futures::future::FutureExt;
+use futures::try_join;
+use hooks::CrossRepoPushSource;
+use hooks::HookRejection;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use mercurial_derived_data::DeriveHgChangeset;
 use mononoke_repo::MononokeRepo;
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseChangesetPair;
 use slog::debug;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
-use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
+use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMapping;
 use topo_sort::sort_topological;
 
 /// An auxillary struct, which contains nearly

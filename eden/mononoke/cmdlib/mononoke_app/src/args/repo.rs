@@ -6,7 +6,8 @@
  */
 
 use anyhow::Result;
-use clap::{ArgGroup, Args};
+use clap::ArgGroup;
+use clap::Args;
 use mononoke_types::RepositoryId;
 
 /// Command line arguments for specifying a single repo.

@@ -5,17 +5,25 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
-use std::task::{Context, Poll};
+use std::task::Context;
+use std::task::Poll;
 
 use either::Either;
-use futures::future::{join, ready, BoxFuture, Join, Ready};
+use futures::future::join;
+use futures::future::ready;
+use futures::future::BoxFuture;
+use futures::future::Join;
+use futures::future::Ready;
 use futures::ready;
-use futures::stream::{FuturesUnordered, StreamExt};
+use futures::stream::FuturesUnordered;
+use futures::stream::StreamExt;
 
-use super::{common::Either2, Iter};
+use super::common::Either2;
+use super::Iter;
 
 /// `bounded_traversal` traverses implicit asynchronous tree specified by `init`
 /// and `unfold` arguments, and it also does backward pass with `fold` operation.

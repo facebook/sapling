@@ -5,20 +5,25 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
-use mononoke_types::{hash::GitSha1, BonsaiChangesetMut, ChangesetId};
-use pushrebase_hook::{
-    PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
-};
+use mononoke_types::hash::GitSha1;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use pushrebase_hook::PushrebaseCommitHook;
+use pushrebase_hook::PushrebaseHook;
+use pushrebase_hook::PushrebaseTransactionHook;
+use pushrebase_hook::RebasedChangesets;
 use sql::Transaction;
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
+use std::sync::Arc;
 
-use bonsai_git_mapping::{
-    extract_git_sha1_from_bonsai_extra, BonsaiGitMapping, BonsaiGitMappingEntry,
-};
+use bonsai_git_mapping::extract_git_sha1_from_bonsai_extra;
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_git_mapping::BonsaiGitMappingEntry;
 
 #[cfg(test)]
 mod test;

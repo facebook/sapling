@@ -5,35 +5,50 @@
  * GNU General Public License version 2.
  */
 
-use reloader::{Loader, Reloader};
+use reloader::Loader;
+use reloader::Reloader;
 use std::cmp::min;
 #[deny(warnings)]
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+#[deny(warnings)]
+use std::collections::HashSet;
 use std::num::NonZeroI64;
 use std::sync::Arc;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use cloned::cloned;
-use context::{CoreContext, PerfCounterType};
+use context::CoreContext;
+use context::PerfCounterType;
 use dashmap::DashMap;
 use futures::future::try_join_all;
-use futures::stream::{futures_unordered::FuturesUnordered, TryStreamExt};
+use futures::stream::futures_unordered::FuturesUnordered;
+use futures::stream::TryStreamExt;
 use futures_util::try_join;
-use maplit::{hashmap, hashset};
-use slog::{info, Logger};
+use maplit::hashmap;
+use maplit::hashset;
+use slog::info;
+use slog::Logger;
 use tokio::task;
 
-use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
-use mononoke_types::{ChangesetId, Generation, FIRST_GENERATION};
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
+use mononoke_types::ChangesetId;
+use mononoke_types::Generation;
+use mononoke_types::FIRST_GENERATION;
 
-use common::{
-    advance_bfs_layer, changesets_with_generation_numbers, check_if_node_exists, fetch_generation,
-    get_parents,
-};
-use reachabilityindex::{errors::*, LeastCommonAncestorsHint, NodeFrontier, ReachabilityIndex};
+use common::advance_bfs_layer;
+use common::changesets_with_generation_numbers;
+use common::check_if_node_exists;
+use common::fetch_generation;
+use common::get_parents;
+use reachabilityindex::errors::*;
+use reachabilityindex::LeastCommonAncestorsHint;
+use reachabilityindex::NodeFrontier;
+use reachabilityindex::ReachabilityIndex;
 
 use fbthrift::compact_protocol;
 
@@ -1122,10 +1137,9 @@ impl SkiplistIndex {
 
 #[cfg(test)]
 mod test {
-    use std::sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    };
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
+    use std::sync::Arc;
 
     use async_trait::async_trait;
     use blobrepo::BlobRepo;
@@ -1135,19 +1149,28 @@ mod test {
     use dashmap::DashMap;
     use fbinit::FacebookInit;
     use futures::compat::Future01CompatExt;
-    use futures::stream::{iter, StreamExt, TryStreamExt};
-    use futures_ext_compat::{BoxFuture, FutureExt as FBFutureExt};
-    use futures_old::future::{join_all, Future};
+    use futures::stream::iter;
+    use futures::stream::StreamExt;
+    use futures::stream::TryStreamExt;
+    use futures_ext_compat::BoxFuture;
+    use futures_ext_compat::FutureExt as FBFutureExt;
+    use futures_old::future::join_all;
+    use futures_old::future::Future;
     use futures_old::stream::Stream;
-    use futures_util::future::{FutureExt, TryFutureExt};
+    use futures_util::future::FutureExt;
+    use futures_util::future::TryFutureExt;
     use revset::AncestorsNodeStream;
     use std::collections::HashSet;
 
     use super::*;
+    use fixtures::BranchEven;
+    use fixtures::BranchUneven;
+    use fixtures::BranchWide;
+    use fixtures::Linear;
+    use fixtures::MergeEven;
+    use fixtures::MergeUneven;
     use fixtures::TestRepoFixture;
-    use fixtures::{
-        BranchEven, BranchUneven, BranchWide, Linear, MergeEven, MergeUneven, UnsharedMergeEven,
-    };
+    use fixtures::UnsharedMergeEven;
     use test_helpers::string_to_bonsai;
     use test_helpers::test_branch_wide_reachability;
     use test_helpers::test_linear_reachability;

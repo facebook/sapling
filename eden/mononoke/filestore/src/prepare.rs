@@ -5,27 +5,34 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    future::{self, FutureExt, TryFutureExt},
-    stream::{Stream, StreamExt, TryStreamExt},
-    task::Poll,
-};
-use mononoke_types::{
-    content_chunk::new_blob_and_pointer, hash, BlobstoreKey, ChunkedFileContents, FileContents,
-};
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::task::Poll;
+use mononoke_types::content_chunk::new_blob_and_pointer;
+use mononoke_types::hash;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::ChunkedFileContents;
+use mononoke_types::FileContents;
 
 use crate::alias::add_aliases_to_multiplexer;
 use crate::expected_size::ExpectedSize;
-use crate::incremental_hash::{
-    hash_bytes, ContentIdIncrementalHasher, GitSha1IncrementalHasher, Sha1IncrementalHasher,
-    Sha256IncrementalHasher,
-};
-use crate::multiplexer::{Multiplexer, MultiplexerError};
+use crate::incremental_hash::hash_bytes;
+use crate::incremental_hash::ContentIdIncrementalHasher;
+use crate::incremental_hash::GitSha1IncrementalHasher;
+use crate::incremental_hash::Sha1IncrementalHasher;
+use crate::incremental_hash::Sha256IncrementalHasher;
+use crate::multiplexer::Multiplexer;
+use crate::multiplexer::MultiplexerError;
 use crate::streamhash::hash_stream;
 
 #[derive(Debug, Clone)]

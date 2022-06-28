@@ -8,22 +8,26 @@
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bonsai_globalrev_mapping::{
-    bulk_import_globalrevs, BonsaiGlobalrevMapping, SqlBonsaiGlobalrevMappingBuilder,
-};
+use bonsai_globalrev_mapping::bulk_import_globalrevs;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
 use bytes::Bytes;
-use changesets::{deserialize_cs_entries, ChangesetEntry};
+use changesets::deserialize_cs_entries;
+use changesets::ChangesetEntry;
 use clap_old::Arg;
 use cloned::cloned;
-use cmdlib::{
-    args::{self, MononokeClapApp},
-    helpers::block_execute,
-};
+use cmdlib::args::MononokeClapApp;
+use cmdlib::args::{self};
+use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt as _};
-use futures_old::future::{Future, IntoFuture};
+use futures::compat::Future01CompatExt;
+use futures::FutureExt;
+use futures::TryFutureExt;
+use futures_ext::BoxFuture;
+use futures_ext::FutureExt as _;
+use futures_old::future::Future;
+use futures_old::future::IntoFuture;
 use futures_old::stream;
 use futures_old::stream::Stream;
 use std::fs;

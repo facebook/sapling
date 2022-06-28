@@ -5,18 +5,24 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Context, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
 use blobstore::BlobstoreBytes;
 use bytes::Bytes;
 use fbthrift::compact_protocol;
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 
-use crate::{
-    blob::{Blob, BlobstoreValue, ContentMetadataBlob},
-    errors::ErrorKind,
-    hash, thrift, thrift_field,
-    typed_hash::{ContentId, ContentMetadataId},
-};
+use crate::blob::Blob;
+use crate::blob::BlobstoreValue;
+use crate::blob::ContentMetadataBlob;
+use crate::errors::ErrorKind;
+use crate::hash;
+use crate::thrift;
+use crate::thrift_field;
+use crate::typed_hash::ContentId;
+use crate::typed_hash::ContentMetadataId;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ContentAlias(ContentId);

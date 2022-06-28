@@ -5,45 +5,82 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{self, format_err, Context, Error};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::{self};
 use blobrepo::BlobRepo;
-use blobrepo_hg::{save_bonsai_changeset_object, BlobRepoHg, ChangesetHandle};
-use blobstore::{Blobstore, Loadable, LoadableError};
+use blobrepo_hg::save_bonsai_changeset_object;
+use blobrepo_hg::BlobRepoHg;
+use blobrepo_hg::ChangesetHandle;
+use blobstore::Blobstore;
+use blobstore::Loadable;
+use blobstore::LoadableError;
 use bookmarks::Freshness;
 use bytes::Bytes;
-use changesets::{ChangesetInsert, Changesets};
-use context::{CoreContext, SessionClass};
-use edenapi_types::{AnyId, UploadToken};
-use ephemeral_blobstore::{Bubble, BubbleId, RepoEphemeralStore, StorageLocation};
-use filestore::{self, FetchKey, StoreRequest};
-use futures::compat::{Future01CompatExt, Stream01CompatExt};
-use futures::{future, stream, Stream, StreamExt, TryStream, TryStreamExt};
+use changesets::ChangesetInsert;
+use changesets::Changesets;
+use context::CoreContext;
+use context::SessionClass;
+use edenapi_types::AnyId;
+use edenapi_types::UploadToken;
+use ephemeral_blobstore::Bubble;
+use ephemeral_blobstore::BubbleId;
+use ephemeral_blobstore::RepoEphemeralStore;
+use ephemeral_blobstore::StorageLocation;
+use filestore::FetchKey;
+use filestore::StoreRequest;
+use filestore::{self};
+use futures::compat::Future01CompatExt;
+use futures::compat::Stream01CompatExt;
+use futures::future;
+use futures::stream;
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryStream;
+use futures::TryStreamExt;
 use futures_util::try_join;
 use hgproto::GettreepackArgs;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_mutation::HgMutationEntry;
-use mercurial_types::blobs::{RevlogChangeset, UploadHgNodeHash, UploadHgTreeEntry};
-use mercurial_types::{HgChangesetId, HgFileEnvelopeMut, HgFileNodeId, HgManifestId, HgNodeHash};
+use mercurial_types::blobs::RevlogChangeset;
+use mercurial_types::blobs::UploadHgNodeHash;
+use mercurial_types::blobs::UploadHgTreeEntry;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileEnvelopeMut;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgNodeHash;
 use metaconfig_types::RepoConfig;
+use mononoke_api::errors::MononokeError;
+use mononoke_api::path::MononokePath;
+use mononoke_api::repo::RepoContext;
 use mononoke_api::RepoWriteContext;
-use mononoke_api::{errors::MononokeError, path::MononokePath, repo::RepoContext};
-use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath, RepoPath};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::ContentMetadata;
+use mononoke_types::MPath;
+use mononoke_types::RepoPath;
 use phases::PhasesRef;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
-use repo_client::{
-    find_commits_to_send, find_new_draft_commits_and_derive_filenodes_for_public_roots,
-    gettreepack_entries,
-};
-use segmented_changelog::{CloneData, Location};
+use repo_client::find_commits_to_send;
+use repo_client::find_new_draft_commits_and_derive_filenodes_for_public_roots;
+use repo_client::gettreepack_entries;
+use segmented_changelog::CloneData;
+use segmented_changelog::Location;
 use tunables::tunables;
 use unbundle::upload_changeset;
 
-use super::{HgFileContext, HgTreeContext};
+use super::HgFileContext;
+use super::HgTreeContext;
 
 #[derive(Clone)]
 pub struct HgRepoContext {

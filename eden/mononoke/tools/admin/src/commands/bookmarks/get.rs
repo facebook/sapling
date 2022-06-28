@@ -5,13 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Result};
-use bookmarks::{BookmarkName, BookmarksRef};
+use anyhow::Context;
+use anyhow::Result;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarksRef;
 use clap::Args;
 use context::CoreContext;
 
 use super::Repo;
-use crate::commit_id::{print_commit_id, IdentityScheme};
+use crate::commit_id::print_commit_id;
+use crate::commit_id::IdentityScheme;
 
 #[derive(Args)]
 pub struct BookmarksGetArgs {

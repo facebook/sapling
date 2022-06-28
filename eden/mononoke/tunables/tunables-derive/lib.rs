@@ -9,7 +9,12 @@ extern crate proc_macro;
 
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields, Ident, Type};
+use syn::parse_macro_input;
+use syn::Data;
+use syn::DeriveInput;
+use syn::Fields;
+use syn::Ident;
+use syn::Type;
 
 const UNIMPLEMENTED_MSG: &str = "Only AtomicBool and AtomicI64 are supported";
 const STRUCT_FIELD_MSG: &str = "Only implemented for named fields of a struct";

@@ -5,10 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Context, Error, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use clap_old::App;
 use mercurial_revlog::revlog::Revlog;
-use std::{fs::File, io::Write, str::FromStr};
+use std::fs::File;
+use std::io::Write;
+use std::str::FromStr;
 
 fn run() -> Result<()> {
     // Define command line args and parse command line

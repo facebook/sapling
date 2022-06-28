@@ -6,17 +6,28 @@
  */
 
 use crate::RedactionConfigBlobstore;
-use anyhow::{Context, Error, Result};
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, Loadable};
-use cached_config::{ConfigHandle, ConfigStore};
+use blobstore::Blobstore;
+use blobstore::Loadable;
+use cached_config::ConfigHandle;
+use cached_config::ConfigStore;
 use context::CoreContext;
-use futures::stream::{self, StreamExt, TryStreamExt};
-use mononoke_types::{typed_hash::RedactionKeyListId, RedactionKeyList, Timestamp};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use mononoke_types::typed_hash::RedactionKeyListId;
+use mononoke_types::RedactionKeyList;
+use mononoke_types::Timestamp;
 use redaction_set::RedactionSets;
-use reloader::{Loader, Reloader};
-use sql::{queries, Connection};
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use reloader::Loader;
+use reloader::Reloader;
+use sql::queries;
+use sql::Connection;
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use std::collections::HashMap;
 use std::str::FromStr;

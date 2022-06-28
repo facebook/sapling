@@ -8,9 +8,11 @@
 use std::io::Write;
 
 use anyhow::Result;
-use manifest::{Entry, Manifest};
+use manifest::Entry;
+use manifest::Manifest;
 use mercurial_types::blobs::HgBlobManifest;
-use unicode_truncate::{Alignment, UnicodeTruncateStr};
+use unicode_truncate::Alignment;
+use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
 
 /// Displays a Mercurial manifest, one entry per line.

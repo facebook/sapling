@@ -5,18 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use context::CoreContext;
 use futures::stream::BoxStream;
-use mononoke_types::{
-    ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
-};
+use mononoke_types::ChangesetId;
+use mononoke_types::ChangesetIdPrefix;
+use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::RepositoryId;
 
 mod entry;
 
-pub use crate::entry::{deserialize_cs_entries, serialize_cs_entries, ChangesetEntry};
+pub use crate::entry::deserialize_cs_entries;
+pub use crate::entry::serialize_cs_entries;
+pub use crate::entry::ChangesetEntry;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ChangesetInsert {

@@ -5,41 +5,66 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
 use async_trait::async_trait;
-use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobrepo::save_bonsai_changesets;
+use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use bytes::Bytes;
-use changesets::{Changesets, ChangesetsRef};
-use commit_transformation::{
-    create_directory_source_to_target_multi_mover, create_source_to_target_multi_mover,
-    DirectoryMultiMover, MultiMover,
-};
+use changesets::Changesets;
+use changesets::ChangesetsRef;
+use commit_transformation::create_directory_source_to_target_multi_mover;
+use commit_transformation::create_source_to_target_multi_mover;
+use commit_transformation::DirectoryMultiMover;
+use commit_transformation::MultiMover;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
-use futures::{
-    future::{try_join, try_join_all},
-    stream, StreamExt, TryFutureExt, TryStreamExt,
-};
-use itertools::{EitherOrBoth, Itertools};
-use manifest::{bonsai_diff, BonsaiDiffFileChange, Entry, ManifestOps};
-use megarepo_config::{
-    MononokeMegarepoConfigs, Source, SourceRevision, SyncConfigVersion, SyncTargetConfig, Target,
-};
+use futures::future::try_join;
+use futures::future::try_join_all;
+use futures::stream;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
+use itertools::EitherOrBoth;
+use itertools::Itertools;
+use manifest::bonsai_diff;
+use manifest::BonsaiDiffFileChange;
+use manifest::Entry;
+use manifest::ManifestOps;
+use megarepo_config::MononokeMegarepoConfigs;
+use megarepo_config::Source;
+use megarepo_config::SourceRevision;
+use megarepo_config::SyncConfigVersion;
+use megarepo_config::SyncTargetConfig;
+use megarepo_config::Target;
 use megarepo_error::MegarepoError;
-use megarepo_mapping::{CommitRemappingState, SourceName};
+use megarepo_mapping::CommitRemappingState;
+use megarepo_mapping::SourceName;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
-use mononoke_api::{ChangesetContext, Mononoke, MononokePath, RepoContext};
-use mononoke_types::{
-    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath,
-    RepositoryId,
-};
-use mutable_renames::{MutableRenameEntry, MutableRenames};
+use mononoke_api::ChangesetContext;
+use mononoke_api::Mononoke;
+use mononoke_api::MononokePath;
+use mononoke_api::RepoContext;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
+use mononoke_types::FileChange;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
+use mononoke_types::RepositoryId;
+use mutable_renames::MutableRenameEntry;
+use mutable_renames::MutableRenames;
 use sorted_vector_map::SortedVectorMap;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 use tunables::tunables;
 use unodes::RootUnodeManifestId;

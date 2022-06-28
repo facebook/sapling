@@ -7,20 +7,31 @@
 
 use std::io::Write;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
 use blobstore::Loadable;
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingRef};
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::Bookmarks;
-use clap::{ArgEnum, Parser};
-use cmdlib_displaying::{display_content, display_hg_manifest, DisplayChangeset};
+use clap::ArgEnum;
+use clap::Parser;
+use cmdlib_displaying::display_content;
+use cmdlib_displaying::display_hg_manifest;
+use cmdlib_displaying::DisplayChangeset;
 use context::CoreContext;
-use ephemeral_blobstore::{BubbleId, RepoEphemeralStore, RepoEphemeralStoreRef};
-use manifest::{Entry, ManifestOps};
+use ephemeral_blobstore::BubbleId;
+use ephemeral_blobstore::RepoEphemeralStore;
+use ephemeral_blobstore::RepoEphemeralStoreRef;
+use manifest::Entry;
+use manifest::ManifestOps;
 use mercurial_types::HgChangesetId;
-use mononoke_app::args::{ChangesetArgs, RepoArgs};
+use mononoke_app::args::ChangesetArgs;
+use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use mononoke_types::MPath;
-use repo_blobstore::{RepoBlobstore, RepoBlobstoreRef};
+use repo_blobstore::RepoBlobstore;
+use repo_blobstore::RepoBlobstoreRef;
 
 /// Fetch commit, tree or file data.
 #[derive(Parser)]

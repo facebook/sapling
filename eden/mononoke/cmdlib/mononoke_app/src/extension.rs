@@ -6,9 +6,13 @@
  */
 
 use anyhow::Result;
-use clap::{ArgMatches, Args, Command, FromArgMatches};
+use clap::ArgMatches;
+use clap::Args;
+use clap::Command;
+use clap::FromArgMatches;
 use environment::MononokeEnvironment;
-use slog::{Never, SendSyncRefUnwindSafeDrain};
+use slog::Never;
+use slog::SendSyncRefUnwindSafeDrain;
 use std::any::Any;
 use std::sync::Arc;
 

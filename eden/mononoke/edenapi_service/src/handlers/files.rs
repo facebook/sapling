@@ -7,35 +7,62 @@
 
 use std::num::NonZeroU64;
 
-use anyhow::{format_err, Context, Error};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
 use context::PerfCounterType;
-use futures::{stream, Stream, StreamExt, TryStreamExt};
-use gotham::state::{FromState, State};
-use gotham_derive::{StateData, StaticResponseExtender};
+use futures::stream;
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use gotham::state::FromState;
+use gotham::state::State;
+use gotham_derive::StateData;
+use gotham_derive::StaticResponseExtender;
 use hyper::Body;
 use serde::Deserialize;
 use std::str::FromStr;
 
-use edenapi_types::{
-    wire::ToWire, AnyFileContentId, AnyId, Batch, FileAttributes, FileAuxData, FileContent,
-    FileContentTokenMetadata, FileEntry, FileRequest, FileResponse, FileSpec, ServerError,
-    UploadHgFilenodeRequest, UploadToken, UploadTokenMetadata, UploadTokensResponse,
-};
+use edenapi_types::wire::ToWire;
+use edenapi_types::AnyFileContentId;
+use edenapi_types::AnyId;
+use edenapi_types::Batch;
+use edenapi_types::FileAttributes;
+use edenapi_types::FileAuxData;
+use edenapi_types::FileContent;
+use edenapi_types::FileContentTokenMetadata;
+use edenapi_types::FileEntry;
+use edenapi_types::FileRequest;
+use edenapi_types::FileResponse;
+use edenapi_types::FileSpec;
+use edenapi_types::ServerError;
+use edenapi_types::UploadHgFilenodeRequest;
+use edenapi_types::UploadToken;
+use edenapi_types::UploadTokenMetadata;
+use edenapi_types::UploadTokensResponse;
 use ephemeral_blobstore::BubbleId;
-use gotham_ext::{error::HttpError, response::TryIntoResponse};
-use mercurial_types::{HgFileNodeId, HgNodeHash};
-use mononoke_api_hg::{HgDataContext, HgDataId, HgRepoContext};
+use gotham_ext::error::HttpError;
+use gotham_ext::response::TryIntoResponse;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgNodeHash;
+use mononoke_api_hg::HgDataContext;
+use mononoke_api_hg::HgDataId;
+use mononoke_api_hg::HgRepoContext;
 use rate_limiting::Metric;
 use types::Key;
 
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream_filtered_errors, get_repo};
+use crate::utils::cbor_stream_filtered_errors;
+use crate::utils::get_repo;
 
-use super::{EdenApiHandler, EdenApiMethod, HandlerInfo, HandlerResult};
+use super::EdenApiHandler;
+use super::EdenApiMethod;
+use super::HandlerInfo;
+use super::HandlerResult;
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST: usize = 10;

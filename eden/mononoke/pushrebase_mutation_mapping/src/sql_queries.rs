@@ -7,16 +7,22 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use context::{CoreContext, PerfCounterType};
-use mononoke_types::{ChangesetId, RepositoryId};
+use context::CoreContext;
+use context::PerfCounterType;
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use pushrebase_hook::PushrebaseHook;
-use sql::{queries, Connection, Transaction};
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql::queries;
+use sql::Connection;
+use sql::Transaction;
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use tunables::tunables;
 
 use crate::save_mapping_pushrebase_hook::SaveMappingPushrebaseHook;
-use crate::{PushrebaseMutationMapping, PushrebaseMutationMappingEntry};
+use crate::PushrebaseMutationMapping;
+use crate::PushrebaseMutationMappingEntry;
 
 queries! {
     read SelectPrepushrebaseIds(

@@ -10,7 +10,9 @@ use digest::Digest;
 use sha1::Sha1;
 use sha2::Sha256;
 
-use mononoke_types::{hash, typed_hash, ContentId};
+use mononoke_types::hash;
+use mononoke_types::typed_hash;
+use mononoke_types::ContentId;
 
 pub fn hash_bytes<H>(mut hasher: impl Hasher<H>, bytes: &Bytes) -> H {
     hasher.update(&bytes);

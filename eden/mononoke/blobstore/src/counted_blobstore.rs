@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::{fmt::Display, ops::Deref};
+use std::fmt::Display;
+use std::ops::Deref;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -13,11 +14,17 @@ use stats::prelude::*;
 
 use context::CoreContext;
 
-use crate::{
-    Blobstore, BlobstoreBytes, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreIsPresent,
-    BlobstoreKeyParam, BlobstoreKeySource, BlobstorePutOps, BlobstoreUnlinkOps, OverwriteStatus,
-    PutBehaviour,
-};
+use crate::Blobstore;
+use crate::BlobstoreBytes;
+use crate::BlobstoreEnumerationData;
+use crate::BlobstoreGetData;
+use crate::BlobstoreIsPresent;
+use crate::BlobstoreKeyParam;
+use crate::BlobstoreKeySource;
+use crate::BlobstorePutOps;
+use crate::BlobstoreUnlinkOps;
+use crate::OverwriteStatus;
+use crate::PutBehaviour;
 
 define_stats_struct! {
     CountedBlobstoreStats("mononoke.blobstore.{}", prefix: String),

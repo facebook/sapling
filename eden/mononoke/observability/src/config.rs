@@ -5,15 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
-use observability_config::types::{
-    ObservabilityConfig as CfgrObservabilityConfig,
-    ScubaObservabilityConfig as CfgrScubaObservabilityConfig,
-    ScubaVerbosityLevel as CfgrScubaVerbosityLevel, SlogLoggingLevel as CfgrLoggingLevel,
-    SlogObservabilityConfig as CfgrSlogObservabilityConfig,
-};
+use anyhow::anyhow;
+use anyhow::Error;
+use observability_config::types::ObservabilityConfig as CfgrObservabilityConfig;
+use observability_config::types::ScubaObservabilityConfig as CfgrScubaObservabilityConfig;
+use observability_config::types::ScubaVerbosityLevel as CfgrScubaVerbosityLevel;
+use observability_config::types::SlogLoggingLevel as CfgrLoggingLevel;
+use observability_config::types::SlogObservabilityConfig as CfgrSlogObservabilityConfig;
 use regex::Regex;
-use serde::de::{Deserializer, Error as _};
+use serde::de::Deserializer;
+use serde::de::Error as _;
 use serde::Deserialize;
 use slog::Level;
 use std::sync::RwLock;

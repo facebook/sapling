@@ -8,13 +8,20 @@
 use std::io::Write;
 use std::sync::Arc;
 
-use anyhow::{format_err, Context, Error, Result};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use blobstore::BlobstoreUnlinkOps;
-use blobstore_factory::{make_sql_blobstore, BlobstoreOptions, ReadOnlyStorage};
+use blobstore_factory::make_sql_blobstore;
+use blobstore_factory::BlobstoreOptions;
+use blobstore_factory::ReadOnlyStorage;
 use cached_config::ConfigStore;
 use clap::Parser;
 use fbinit::FacebookInit;
-use metaconfig_types::{BlobConfig, BlobstoreId, StorageConfig};
+use metaconfig_types::BlobConfig;
+use metaconfig_types::BlobstoreId;
+use metaconfig_types::StorageConfig;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 

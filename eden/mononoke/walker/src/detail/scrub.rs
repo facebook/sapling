@@ -6,49 +6,68 @@
  */
 
 use crate::args::OutputFormat;
-use crate::commands::{JobParams, JobWalkParams, RepoSubcommandParams, SCRUB};
-use crate::detail::{
-    graph::{FileContentData, Node, NodeData, NodeType, WrappedPathHash, WrappedPathLike},
-    log,
-    pack::{PackInfo, PackInfoLogOptions, PackInfoLogger},
-    progress::{
-        progress_stream, report_state, ProgressOptions, ProgressReporter,
-        ProgressReporterUnprotected, ProgressStateCountByType, ProgressStateMutex,
-    },
-    sampling::{
-        PathTrackingRoute, SamplingOptions, SamplingWalkVisitor, WalkKeyOptPath, WalkPayloadMtime,
-        WalkSampleMapping,
-    },
-    sizing::SizingSample,
-    tail::walk_exact_tail,
-    validate::TOTAL,
-    walk::{EmptyRoute, RepoWalkParams, RepoWalkTypeParams},
-};
+use crate::commands::JobParams;
+use crate::commands::JobWalkParams;
+use crate::commands::RepoSubcommandParams;
+use crate::commands::SCRUB;
+use crate::detail::graph::FileContentData;
+use crate::detail::graph::Node;
+use crate::detail::graph::NodeData;
+use crate::detail::graph::NodeType;
+use crate::detail::graph::WrappedPathHash;
+use crate::detail::graph::WrappedPathLike;
+use crate::detail::log;
+use crate::detail::pack::PackInfo;
+use crate::detail::pack::PackInfoLogOptions;
+use crate::detail::pack::PackInfoLogger;
+use crate::detail::progress::progress_stream;
+use crate::detail::progress::report_state;
+use crate::detail::progress::ProgressOptions;
+use crate::detail::progress::ProgressReporter;
+use crate::detail::progress::ProgressReporterUnprotected;
+use crate::detail::progress::ProgressStateCountByType;
+use crate::detail::progress::ProgressStateMutex;
+use crate::detail::sampling::PathTrackingRoute;
+use crate::detail::sampling::SamplingOptions;
+use crate::detail::sampling::SamplingWalkVisitor;
+use crate::detail::sampling::WalkKeyOptPath;
+use crate::detail::sampling::WalkPayloadMtime;
+use crate::detail::sampling::WalkSampleMapping;
+use crate::detail::sizing::SizingSample;
+use crate::detail::tail::walk_exact_tail;
+use crate::detail::validate::TOTAL;
+use crate::detail::walk::EmptyRoute;
+use crate::detail::walk::RepoWalkParams;
+use crate::detail::walk::RepoWalkTypeParams;
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use blobstore::BlobstoreGetData;
 use blobstore::SizeMetadata;
 use cloned::cloned;
 use context::CoreContext;
-use derive_more::{Add, Div, Mul, Sub};
+use derive_more::Add;
+use derive_more::Div;
+use derive_more::Mul;
+use derive_more::Sub;
 use fbinit::FacebookInit;
-use futures::{
-    future::{self, try_join_all, FutureExt},
-    stream::{Stream, TryStreamExt},
-    TryFutureExt,
-};
+use futures::future::try_join_all;
+use futures::future::FutureExt;
+use futures::future::{self};
+use futures::stream::Stream;
+use futures::stream::TryStreamExt;
+use futures::TryFutureExt;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::datetime::DateTime;
 use samplingblob::ComponentSamplingHandler;
 use slog::info;
 use stats::prelude::*;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt;
 use std::sync::atomic::AtomicBool;
-use std::{
-    collections::{HashMap, HashSet},
-    fmt,
-    sync::Arc,
-    time::Duration,
-};
+use std::sync::Arc;
+use std::time::Duration;
 
 define_stats! {
     prefix = "mononoke.walker";

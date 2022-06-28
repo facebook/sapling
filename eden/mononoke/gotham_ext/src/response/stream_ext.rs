@@ -7,15 +7,15 @@
 
 use std::pin::Pin;
 
-use futures::{
-    prelude::*,
-    ready,
-    stream::Stream,
-    task::{Context, Poll},
-};
+use futures::prelude::*;
+use futures::ready;
+use futures::stream::Stream;
+use futures::task::Context;
+use futures::task::Poll;
 use pin_project::pin_project;
 
-use super::error_meta::{ErrorMeta, ErrorMetaProvider};
+use super::error_meta::ErrorMeta;
+use super::error_meta::ErrorMetaProvider;
 
 pub trait ResponseTryStreamExt: TryStream {
     /// Filter out errors from a `TryStream` and capture the first one (then count further errors),

@@ -5,10 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
-use futures::stream::{self, Stream, StreamExt, TryStreamExt};
-use mononoke_api::{ChangesetContext, MononokeError};
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use mononoke_api::ChangesetContext;
+use mononoke_api::MononokeError;
 use source_control as thrift;
 
 use crate::errors;

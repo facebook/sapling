@@ -8,16 +8,27 @@
 use std::fmt::Debug;
 use std::mem;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use bytes::Bytes;
-use futures::{compat::Compat, stream::BoxStream, TryStreamExt};
-use futures_old::{Poll, Stream as OldStream};
+use futures::compat::Compat;
+use futures::stream::BoxStream;
+use futures::TryStreamExt;
+use futures_old::Poll;
+use futures_old::Stream as OldStream;
 use thiserror::Error;
 
-use mercurial_bundles::wirepack::converter::{WirePackConverter, WirePackPartProcessor};
-use mercurial_bundles::wirepack::{DataEntry, HistoryEntry, Part};
+use mercurial_bundles::wirepack::converter::WirePackConverter;
+use mercurial_bundles::wirepack::converter::WirePackPartProcessor;
+use mercurial_bundles::wirepack::DataEntry;
+use mercurial_bundles::wirepack::HistoryEntry;
+use mercurial_bundles::wirepack::Part;
 use mercurial_revlog::manifest::ManifestContent;
-use mercurial_types::{delta, HgNodeHash, HgNodeKey, RepoPath, NULL_HASH};
+use mercurial_types::delta;
+use mercurial_types::HgNodeHash;
+use mercurial_types::HgNodeKey;
+use mercurial_types::RepoPath;
+use mercurial_types::NULL_HASH;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -166,13 +177,15 @@ fn unwrap_field<T: Clone>(field: &mut Option<T>, field_name: &str) -> Result<T> 
 #[cfg(test)]
 mod test {
     use super::*;
-    use futures::stream::{self, StreamExt};
+    use futures::stream::StreamExt;
+    use futures::stream::{self};
     use futures_old::Future;
 
     use maplit::btreemap;
     use mercurial_revlog::manifest::Details;
     use mercurial_types::manifest::Type;
-    use mercurial_types::{FileType, MPath};
+    use mercurial_types::FileType;
+    use mercurial_types::MPath;
     use mercurial_types_mocks::nodehash::*;
 
     #[test]

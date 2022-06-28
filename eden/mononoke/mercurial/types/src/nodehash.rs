@@ -9,21 +9,23 @@
 
 use abomonation_derive::Abomonation;
 use anyhow::Result;
-use ascii::{AsciiStr, AsciiString};
+use ascii::AsciiStr;
+use ascii::AsciiString;
 use mononoke_types::FileType;
 use quickcheck_arbitrary_derive::Arbitrary;
 use sql::mysql;
-use std::{
-    fmt::{self, Display},
-    result,
-    str::FromStr,
-};
+use std::fmt::Display;
+use std::fmt::{self};
+use std::result;
+use std::str::FromStr;
 
 /// Type used to represent a node hash in the Mercurial client's Rust code.
 /// Equivalent to HgNodeHash;
 use types::HgId;
 
-use crate::hash::{self, Sha1, Sha1Prefix};
+use crate::hash::Sha1;
+use crate::hash::Sha1Prefix;
+use crate::hash::{self};
 use crate::manifest::Type;
 use crate::thrift;
 use crate::RepoPath;

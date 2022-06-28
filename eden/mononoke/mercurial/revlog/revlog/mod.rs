@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt::Debug;
 use std::fs::File;
 use std::io;
@@ -13,13 +15,22 @@ use std::path::Path;
 use std::sync::Arc;
 
 use crate::errors::ErrorKind;
-use anyhow::{bail, format_err, Context, Result};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Result;
 use bytes::Bytes;
 use memmap::Mmap;
 use nom::IResult;
 
-pub use mercurial_types::bdiff::{self, Delta};
-pub use mercurial_types::{delta, HgBlob, HgBlobNode, HgEntryId, HgNodeHash, HgParents};
+pub use mercurial_types::bdiff::Delta;
+pub use mercurial_types::bdiff::{self};
+pub use mercurial_types::delta;
+pub use mercurial_types::HgBlob;
+pub use mercurial_types::HgBlobNode;
+pub use mercurial_types::HgEntryId;
+pub use mercurial_types::HgNodeHash;
+pub use mercurial_types::HgParents;
 
 // Submodules
 mod lz4;
@@ -30,7 +41,9 @@ mod revidx;
 mod test;
 
 pub use self::parser::Entry;
-use self::parser::{Header, IdxFlags, Version};
+use self::parser::Header;
+use self::parser::IdxFlags;
+use self::parser::Version;
 pub use self::revidx::RevIdx;
 
 #[derive(Debug)]

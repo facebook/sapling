@@ -5,22 +5,26 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use args::MononokeClapApp;
 use ascii::AsciiStr;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use clap_old::{Arg, ArgGroup};
+use clap_old::Arg;
+use clap_old::ArgGroup;
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream;
 use futures_util::future::TryFutureExt;
-use futures_util::stream::{StreamExt, TryStreamExt};
+use futures_util::stream::StreamExt;
+use futures_util::stream::TryStreamExt;
 use mercurial_types::HgChangesetId;
 use std::fs;
-use std::io::{self, BufRead};
+use std::io::BufRead;
+use std::io::{self};
 use std::path::Path;
 
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {

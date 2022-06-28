@@ -7,23 +7,37 @@
 
 //! Tests for the Bookmarks store.
 
-use anyhow::{Error, Result};
-use bookmarks::{
-    Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, BookmarkUpdateLog,
-    BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, Freshness,
-};
+use anyhow::Error;
+use anyhow::Result;
+use bookmarks::Bookmark;
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkPagination;
+use bookmarks::BookmarkPrefix;
+use bookmarks::BookmarkUpdateLog;
+use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::BookmarkUpdateReason;
+use bookmarks::Bookmarks;
+use bookmarks::Freshness;
 use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
 use maplit::hashmap;
-use mononoke_types::{ChangesetId, Timestamp};
-use mononoke_types_mocks::changesetid::{
-    FIVES_CSID, FOURS_CSID, ONES_CSID, SIXES_CSID, THREES_CSID, TWOS_CSID,
-};
-use mononoke_types_mocks::repo::{REPO_ONE, REPO_TWO, REPO_ZERO};
+use mononoke_types::ChangesetId;
+use mononoke_types::Timestamp;
+use mononoke_types_mocks::changesetid::FIVES_CSID;
+use mononoke_types_mocks::changesetid::FOURS_CSID;
+use mononoke_types_mocks::changesetid::ONES_CSID;
+use mononoke_types_mocks::changesetid::SIXES_CSID;
+use mononoke_types_mocks::changesetid::THREES_CSID;
+use mononoke_types_mocks::changesetid::TWOS_CSID;
+use mononoke_types_mocks::repo::REPO_ONE;
+use mononoke_types_mocks::repo::REPO_TWO;
+use mononoke_types_mocks::repo::REPO_ZERO;
 use quickcheck_arbitrary_derive::Arbitrary;
-use sql::mysql_async::{prelude::ConvIr, Value};
+use sql::mysql_async::prelude::ConvIr;
+use sql::mysql_async::Value;
 use sql_construct::SqlConstruct;
 use std::collections::HashMap;
 

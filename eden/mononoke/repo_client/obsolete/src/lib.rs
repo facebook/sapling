@@ -5,13 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use futures::{FutureExt, TryFutureExt};
-use futures_old::{stream, Stream as StreamOld};
+use futures::FutureExt;
+use futures::TryFutureExt;
+use futures_old::stream;
+use futures_old::Stream as StreamOld;
 use mercurial_bundles::obsmarkers::MetadataEntry;
-use mercurial_bundles::{part_encode::PartEncodeBuilder, parts};
+use mercurial_bundles::part_encode::PartEncodeBuilder;
+use mercurial_bundles::parts;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_types::DateTime;

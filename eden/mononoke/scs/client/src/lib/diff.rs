@@ -12,12 +12,14 @@ use std::io::Write;
 use anyhow::Error;
 use clap::ArgMatches;
 use cloned::cloned;
-use futures_util::stream::{self, StreamExt};
+use futures_util::stream::StreamExt;
+use futures_util::stream::{self};
 use serde_derive::Serialize;
 use source_control as thrift;
 
 use crate::connection::Connection;
-use crate::render::{Render, RenderStream};
+use crate::render::Render;
+use crate::render::RenderStream;
 
 #[derive(Serialize)]
 struct DiffOutput {

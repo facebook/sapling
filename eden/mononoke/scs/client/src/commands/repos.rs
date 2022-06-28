@@ -10,14 +10,18 @@
 use std::io::Write;
 
 use anyhow::Error;
-use clap::{App, AppSettings, ArgMatches, SubCommand};
+use clap::App;
+use clap::AppSettings;
+use clap::ArgMatches;
+use clap::SubCommand;
 use futures::stream;
 use futures_util::stream::StreamExt;
 use serde_derive::Serialize;
 use source_control::types as thrift;
 
 use crate::connection::Connection;
-use crate::render::{Render, RenderStream};
+use crate::render::Render;
+use crate::render::RenderStream;
 
 pub(super) const NAME: &str = "repos";
 

@@ -6,7 +6,9 @@
  */
 
 use blobstore::LoadableError;
-use bookmarks_movement::{describe_hook_rejections, BookmarkMovementError, HookRejection};
+use bookmarks_movement::describe_hook_rejections;
+use bookmarks_movement::BookmarkMovementError;
+use bookmarks_movement::HookRejection;
 use derived_data::DeriveError;
 use itertools::Itertools;
 use megarepo_error::MegarepoError;

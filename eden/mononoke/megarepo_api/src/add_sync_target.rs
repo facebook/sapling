@@ -9,14 +9,21 @@ use crate::common::MegarepoOp;
 use bookmarks::BookmarkName;
 use context::CoreContext;
 use derived_data_utils::derived_data_utils;
-use futures::{future, stream::FuturesUnordered, TryFutureExt, TryStreamExt};
-use megarepo_config::{verify_config, MononokeMegarepoConfigs, SyncTargetConfig};
+use futures::future;
+use futures::stream::FuturesUnordered;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
+use megarepo_config::verify_config;
+use megarepo_config::MononokeMegarepoConfigs;
+use megarepo_config::SyncTargetConfig;
 use megarepo_error::MegarepoError;
 use megarepo_mapping::SourceName;
-use mononoke_api::{Mononoke, RepoContext};
+use mononoke_api::Mononoke;
+use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
-use std::{collections::BTreeMap, sync::Arc};
+use std::collections::BTreeMap;
+use std::sync::Arc;
 
 // Create a new sync target given a config.
 // After this command finishes it creates

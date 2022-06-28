@@ -9,10 +9,14 @@
 
 use std::collections::HashMap;
 
-use anyhow::{bail, Context, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
 use bytes::Bytes as BytesNew;
-use bytes_old::{BufMut, Bytes};
-use quickcheck::{Arbitrary, Gen};
+use bytes_old::BufMut;
+use bytes_old::Bytes;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 
 use crate::chunk::Chunk;
 use crate::errors::ErrorKind;
@@ -455,7 +459,8 @@ impl Arbitrary for PartHeaderType {
 
 #[cfg(test)]
 mod test {
-    use quickcheck::{quickcheck, TestResult};
+    use quickcheck::quickcheck;
+    use quickcheck::TestResult;
 
     use super::*;
     use crate::quickcheck_types::QCBytes;

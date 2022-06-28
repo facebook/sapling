@@ -6,62 +6,106 @@
  */
 
 use crate::commands::JobWalkParams;
-use crate::detail::{
-    graph::{
-        AliasKey, ChangesetKey, EdgeType, FastlogKey, FileContentData, HashValidationError, Node,
-        NodeData, NodeType, PathKey, SqlShardInfo, UnodeFlags, UnodeKey, UnodeManifestEntry,
-        WrappedPath,
-    },
-    log,
-    state::InternedType,
-    validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE, ERROR_MSG},
-};
+use crate::detail::graph::AliasKey;
+use crate::detail::graph::ChangesetKey;
+use crate::detail::graph::EdgeType;
+use crate::detail::graph::FastlogKey;
+use crate::detail::graph::FileContentData;
+use crate::detail::graph::HashValidationError;
+use crate::detail::graph::Node;
+use crate::detail::graph::NodeData;
+use crate::detail::graph::NodeType;
+use crate::detail::graph::PathKey;
+use crate::detail::graph::SqlShardInfo;
+use crate::detail::graph::UnodeFlags;
+use crate::detail::graph::UnodeKey;
+use crate::detail::graph::UnodeManifestEntry;
+use crate::detail::graph::WrappedPath;
+use crate::detail::log;
+use crate::detail::state::InternedType;
+use crate::detail::validate::add_node_to_scuba;
+use crate::detail::validate::CHECK_FAIL;
+use crate::detail::validate::CHECK_TYPE;
+use crate::detail::validate::EDGE_TYPE;
+use crate::detail::validate::ERROR_MSG;
 
-use anyhow::{format_err, Context, Error};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
-use blobstore::{Loadable, LoadableError};
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingArc, BonsaiHgMappingEntry};
-use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness};
+use blobstore::Loadable;
+use blobstore::LoadableError;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiHgMappingArc;
+use bonsai_hg_mapping::BonsaiHgMappingEntry;
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkPagination;
+use bookmarks::BookmarkPrefix;
+use bookmarks::Freshness;
 use bounded_traversal::limited_by_key_shardable;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
-use deleted_manifest::{RootDeletedManifestIdCommon, RootDeletedManifestV2Id};
+use deleted_manifest::RootDeletedManifestIdCommon;
+use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
-use fastlog::{fetch_fastlog_batch_by_unode_id, RootFastlog};
+use fastlog::fetch_fastlog_batch_by_unode_id;
+use fastlog::RootFastlog;
 use filenodes::FilenodeInfo;
-use filestore::{self, Alias};
+use filestore::Alias;
+use filestore::{self};
 use fsnodes::RootFsnodeId;
-use futures::{
-    future::{self, FutureExt, TryFutureExt},
-    stream::{Stream, TryStreamExt},
-};
-use itertools::{Either, Itertools};
-use manifest::{Entry, Manifest};
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream::Stream;
+use futures::stream::TryStreamExt;
+use itertools::Either;
+use itertools::Itertools;
+use manifest::Entry;
+use manifest::Manifest;
 use mercurial_derived_data::MappedHgChangesetId;
-use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId, RepoPath};
-use mononoke_types::{
-    blame::BlameMaybeRejected, deleted_manifest_common::DeletedManifestCommon, fsnode::FsnodeEntry,
-    skeleton_manifest::SkeletonManifestEntry, unode::UnodeEntry, BlameId, ChangesetId, ContentId,
-    DeletedManifestV2Id, FastlogBatchId, FileUnodeId, FsnodeId, MPath, ManifestUnodeId,
-    SkeletonManifestId,
-};
-use phases::{Phase, Phases, PhasesRef};
+use mercurial_types::FileBytes;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mercurial_types::RepoPath;
+use mononoke_types::blame::BlameMaybeRejected;
+use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
+use mononoke_types::fsnode::FsnodeEntry;
+use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
+use mononoke_types::unode::UnodeEntry;
+use mononoke_types::BlameId;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::DeletedManifestV2Id;
+use mononoke_types::FastlogBatchId;
+use mononoke_types::FileUnodeId;
+use mononoke_types::FsnodeId;
+use mononoke_types::MPath;
+use mononoke_types::ManifestUnodeId;
+use mononoke_types::SkeletonManifestId;
+use phases::Phase;
+use phases::Phases;
+use phases::PhasesRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::RootSkeletonManifestId;
-use slog::{info, warn, Logger};
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-    iter::{IntoIterator, Iterator},
-    sync::Arc,
-};
+use slog::info;
+use slog::warn;
+use slog::Logger;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt::Debug;
+use std::iter::IntoIterator;
+use std::iter::Iterator;
+use std::sync::Arc;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
 

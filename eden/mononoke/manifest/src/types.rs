@@ -7,19 +7,29 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, Loadable, LoadableError, Storable};
+use blobstore::Blobstore;
+use blobstore::Loadable;
+use blobstore::LoadableError;
+use blobstore::Storable;
 use context::CoreContext;
-use mononoke_types::{
-    fsnode::{Fsnode, FsnodeEntry, FsnodeFile},
-    skeleton_manifest::{SkeletonManifest, SkeletonManifestEntry},
-    unode::{ManifestUnode, UnodeEntry},
-    FileUnodeId, FsnodeId, MPath, MPathElement, ManifestUnodeId, SkeletonManifestId,
-};
-use serde_derive::{Deserialize, Serialize};
-use std::{
-    collections::BTreeMap,
-    hash::{Hash, Hasher},
-};
+use mononoke_types::fsnode::Fsnode;
+use mononoke_types::fsnode::FsnodeEntry;
+use mononoke_types::fsnode::FsnodeFile;
+use mononoke_types::skeleton_manifest::SkeletonManifest;
+use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
+use mononoke_types::unode::ManifestUnode;
+use mononoke_types::unode::UnodeEntry;
+use mononoke_types::FileUnodeId;
+use mononoke_types::FsnodeId;
+use mononoke_types::MPath;
+use mononoke_types::MPathElement;
+use mononoke_types::ManifestUnodeId;
+use mononoke_types::SkeletonManifestId;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
+use std::collections::BTreeMap;
+use std::hash::Hash;
+use std::hash::Hasher;
 
 pub trait Manifest: Sized + 'static {
     type TreeId;

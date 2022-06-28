@@ -6,7 +6,8 @@
  */
 
 use anyhow::Context;
-use bonsai_git_mapping::{BonsaiGitMappingEntry, BonsaiGitMappingRef};
+use bonsai_git_mapping::BonsaiGitMappingEntry;
+use bonsai_git_mapping::BonsaiGitMappingRef;
 use itertools::Itertools;
 
 use crate::changeset::ChangesetContext;

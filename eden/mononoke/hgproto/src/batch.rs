@@ -11,7 +11,8 @@
 //! <https://www.mercurial-scm.org/repo/hg/file/@/mercurial/help/internals/wireprotocol.txt>
 
 use crate::errors::ErrorKind;
-use anyhow::{bail, Result};
+use anyhow::bail;
+use anyhow::Result;
 
 /// Unescape a batch-escaped argument key or value.
 pub fn unescape(bs: &[u8]) -> Result<Vec<u8>> {
@@ -59,7 +60,8 @@ pub fn escape<T: AsRef<[u8]>>(res: T) -> Vec<u8> {
 mod test {
     use super::*;
     use bytes_old::Bytes;
-    use quickcheck::{quickcheck, TestResult};
+    use quickcheck::quickcheck;
+    use quickcheck::TestResult;
 
     const BAD_BYTES: [u8; 3] = [b',', b';', b'='];
     const BYTES_TO_ESCAPE: [u8; 4] = [b':', b',', b';', b'='];

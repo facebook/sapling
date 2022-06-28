@@ -5,46 +5,66 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, ensure, format_err, Context, Error, Result};
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use ascii::AsciiString;
 use blobrepo::BlobRepo;
-use blobrepo_hg::{BlobRepoHg, ChangesetHandle};
+use blobrepo_hg::BlobRepoHg;
+use blobrepo_hg::ChangesetHandle;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
-use context::{CoreContext, SessionClass};
+use context::CoreContext;
+use context::SessionClass;
 use core::fmt::Debug;
-use futures::{
-    compat::Stream01CompatExt,
-    future::{self, try_join_all},
-    stream::{self, BoxStream},
-    try_join, Future, StreamExt, TryStreamExt,
-};
+use futures::compat::Stream01CompatExt;
+use futures::future::try_join_all;
+use futures::future::{self};
+use futures::stream::BoxStream;
+use futures::stream::{self};
+use futures::try_join;
+use futures::Future;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use hooks::HookRejectionInfo;
 use lazy_static::lazy_static;
-use mercurial_bundles::{Bundle2Item, PartHeader, PartHeaderInner, PartHeaderType, PartId};
+use mercurial_bundles::Bundle2Item;
+use mercurial_bundles::PartHeader;
+use mercurial_bundles::PartHeaderInner;
+use mercurial_bundles::PartHeaderType;
+use mercurial_bundles::PartId;
 use mercurial_mutation::HgMutationEntry;
 use mercurial_revlog::changeset::RevlogChangeset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::PushrebaseFlags;
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use rate_limiting::RateLimitBody;
 use slog::trace;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt::Display;
 use std::sync::Arc;
 use topo_sort::sort_topological;
 use tunables::tunables;
 use wirepack::TreemanifestBundle2Parser;
 
-use crate::changegroup::{
-    convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup,
-};
+use crate::changegroup::convert_to_revlog_changesets;
+use crate::changegroup::convert_to_revlog_filelog;
+use crate::changegroup::split_changegroup;
 use crate::errors::*;
-use crate::hook_running::{make_hook_rejection_remapper, HookRejectionRemapper};
-use crate::rate_limits::{enforce_file_changes_rate_limits, RateLimitedPushKind};
+use crate::hook_running::make_hook_rejection_remapper;
+use crate::hook_running::HookRejectionRemapper;
+use crate::rate_limits::enforce_file_changes_rate_limits;
+use crate::rate_limits::RateLimitedPushKind;
 use crate::stats::*;
 use crate::upload_blobs::upload_hg_blobs;
-use crate::upload_changesets::{upload_changeset, Filelogs, Manifests};
+use crate::upload_changesets::upload_changeset;
+use crate::upload_changesets::Filelogs;
+use crate::upload_changesets::Manifests;
 
 #[allow(non_snake_case)]
 mod UNBUNDLE_STATS {

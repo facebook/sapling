@@ -11,12 +11,18 @@
 use async_trait::async_trait;
 use clap::Args;
 use context::CoreContext;
-pub use megarepo_configs::types::{
-    MergeMode, Source, SourceMappingRules, SourceRevision, Squashed, SyncConfigVersion,
-    SyncTargetConfig, Target, WithExtraMoveCommit,
-};
+pub use megarepo_configs::types::MergeMode;
+pub use megarepo_configs::types::Source;
+pub use megarepo_configs::types::SourceMappingRules;
+pub use megarepo_configs::types::SourceRevision;
+pub use megarepo_configs::types::Squashed;
+pub use megarepo_configs::types::SyncConfigVersion;
+pub use megarepo_configs::types::SyncTargetConfig;
+pub use megarepo_configs::types::Target;
+pub use megarepo_configs::types::WithExtraMoveCommit;
 use megarepo_error::MegarepoError;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 #[cfg(fbcode_build)]
 mod facebook;
 #[cfg(not(fbcode_build))]

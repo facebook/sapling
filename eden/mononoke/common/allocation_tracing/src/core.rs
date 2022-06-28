@@ -6,7 +6,9 @@
  */
 
 use anyhow::Error;
-use std::alloc::{GlobalAlloc, Layout, System};
+use std::alloc::GlobalAlloc;
+use std::alloc::Layout;
+use std::alloc::System;
 use std::cell::UnsafeCell;
 use std::mem;
 use std::thread_local;

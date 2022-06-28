@@ -13,10 +13,12 @@ use slog::Logger;
 use slog_glog_fmt::logger_that_can_work_in_tests;
 use std::sync::Arc;
 
-use crate::logging::{LoggingContainer, SamplingKey};
+use crate::logging::LoggingContainer;
+use crate::logging::SamplingKey;
 use crate::perf_counters::PerfCounters;
 use crate::perf_counters_stack::PerfCountersStack;
-use crate::session::{SessionClass, SessionContainer};
+use crate::session::SessionClass;
+use crate::session::SessionContainer;
 
 #[derive(Clone)]
 pub struct CoreContext {

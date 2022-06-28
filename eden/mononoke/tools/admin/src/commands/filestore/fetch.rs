@@ -7,15 +7,20 @@
 
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
 use clap::Args;
 use context::CoreContext;
-use ephemeral_blobstore::{BubbleId, RepoEphemeralStoreRef};
+use ephemeral_blobstore::BubbleId;
+use ephemeral_blobstore::RepoEphemeralStoreRef;
 use futures::TryStreamExt;
 use repo_blobstore::RepoBlobstoreRef;
-use tokio::io::{AsyncWriteExt, BufWriter};
+use tokio::io::AsyncWriteExt;
+use tokio::io::BufWriter;
 
-use super::{FilestoreItemIdArgs, Repo};
+use super::FilestoreItemIdArgs;
+use super::Repo;
 
 #[derive(Args)]
 pub struct FilestoreFetchArgs {

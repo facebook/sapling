@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::common::{find_target_sync_config, MegarepoOp};
+use crate::common::find_target_sync_config;
+use crate::common::MegarepoOp;
 use context::CoreContext;
-use megarepo_config::{MononokeMegarepoConfigs, SyncTargetConfig, Target};
+use megarepo_config::MononokeMegarepoConfigs;
+use megarepo_config::SyncTargetConfig;
+use megarepo_config::Target;
 use megarepo_error::MegarepoError;
 use mononoke_api::Mononoke;
 use mononoke_types::ChangesetId;

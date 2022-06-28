@@ -5,30 +5,51 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::hash_map::{Entry, HashMap};
+use std::collections::hash_map::Entry;
+use std::collections::hash_map::HashMap;
 use std::collections::HashSet;
-use std::fmt::{self, Display};
+use std::fmt::Display;
+use std::fmt::{self};
 use std::fs;
-use std::io::{BufRead, BufReader};
+use std::io::BufRead;
+use std::io::BufReader;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use std::sync::RwLock;
 
-use anyhow::{format_err, Context, Error, Result};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use futures::future;
 use futures::stream;
-use futures::{Async, IntoFuture, Poll, Stream};
-use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures::Async;
+use futures::IntoFuture;
+use futures::Poll;
+use futures::Stream;
+use futures_ext::try_boxfuture;
+use futures_ext::BoxFuture;
+use futures_ext::BoxStream;
+use futures_ext::FutureExt;
+use futures_ext::StreamExt;
 
 use crate::stockbookmarks::StockBookmarks;
-use mercurial_types::{
-    blobs::RevlogChangeset, fncache_fsencode, simple_fsencode, HgChangesetId, HgManifestId,
-    HgNodeHash, MPath, MPathElement, RepoPath,
-};
+use mercurial_types::blobs::RevlogChangeset;
+use mercurial_types::fncache_fsencode;
+use mercurial_types::simple_fsencode;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::MPath;
+use mercurial_types::MPathElement;
+use mercurial_types::RepoPath;
 
 use crate::errors::ErrorKind;
 pub use crate::manifest::RevlogManifest;
-use crate::revlog::{RevIdx, Revlog, RevlogIter};
+use crate::revlog::RevIdx;
+use crate::revlog::Revlog;
+use crate::revlog::RevlogIter;
 
 const DEFAULT_LOGS_CAPACITY: usize = 1000000;
 

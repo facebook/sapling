@@ -6,7 +6,8 @@
  */
 
 use scuba_ext::MononokeScubaSampleBuilder;
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::AtomicI64;
+use std::sync::atomic::Ordering;
 
 macro_rules! define_perf_counters {
     (enum $enum_name:ident {

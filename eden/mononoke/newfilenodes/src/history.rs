@@ -8,7 +8,8 @@
 use abomonation_derive::Abomonation;
 use anyhow::Error;
 
-use filenodes::{FilenodeInfo, FilenodeInfoCached};
+use filenodes::FilenodeInfo;
+use filenodes::FilenodeInfoCached;
 
 #[derive(Abomonation, Clone)]
 pub struct FilenodeHistoryCached {

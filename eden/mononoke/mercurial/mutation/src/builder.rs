@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use metaconfig_types::{RemoteDatabaseConfig, RemoteMetadataDatabaseConfig};
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::RepositoryId;
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 
 use crate::store::SqlHgMutationStore;

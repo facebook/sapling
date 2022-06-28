@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use mononoke_types::{ContentId, FsnodeId};
+use mononoke_types::ContentId;
+use mononoke_types::FsnodeId;
 use thiserror::Error;
 
 mod batch;

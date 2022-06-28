@@ -7,10 +7,17 @@
 
 #![type_length_limit = "1817182"]
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 use blobstore::Blobstore;
 use context::CoreContext;
-use filestore::{exists, fetch, get_metadata, store, FetchKey, FilestoreConfig, StoreRequest};
+use filestore::exists;
+use filestore::fetch;
+use filestore::get_metadata;
+use filestore::store;
+use filestore::FetchKey;
+use filestore::FilestoreConfig;
+use filestore::StoreRequest;
 use mononoke_types::ContentId;
 use repo_blobstore::RepoBlobstore;
 
@@ -73,7 +80,10 @@ mod test {
     use fbinit::FacebookInit;
     use futures::stream;
     use memblob::Memblob;
-    use mononoke_types::{typed_hash, BlobstoreBytes, ContentMetadata, RepositoryId};
+    use mononoke_types::typed_hash;
+    use mononoke_types::BlobstoreBytes;
+    use mononoke_types::ContentMetadata;
+    use mononoke_types::RepositoryId;
     use redactedblobstore::RedactedBlobstore;
     use repo_blobstore::RepoBlobstore;
     use scuba_ext::MononokeScubaSampleBuilder;

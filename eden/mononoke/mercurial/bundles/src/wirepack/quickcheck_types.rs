@@ -7,12 +7,20 @@
 
 //! QuickCheck support for wire packs.
 
-use quickcheck::{empty_shrinker, Arbitrary, Gen};
+use quickcheck::empty_shrinker;
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 
-use mercurial_types::{Delta, HgNodeHash, MPath, RepoPath, NULL_HASH};
+use mercurial_types::Delta;
+use mercurial_types::HgNodeHash;
+use mercurial_types::MPath;
+use mercurial_types::RepoPath;
+use mercurial_types::NULL_HASH;
 use revisionstore_types::Metadata;
 
-use super::{DataEntry, HistoryEntry, Kind};
+use super::DataEntry;
+use super::HistoryEntry;
+use super::Kind;
 
 #[derive(Clone, Debug)]
 pub struct WirePackPartSequence {

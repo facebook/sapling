@@ -7,33 +7,41 @@
 
 mod tailer;
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Error;
+use anyhow::Result;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use clap::Arg;
-use cmdlib::{
-    args::{MononokeClapApp, MononokeMatches},
-    helpers::{block_execute, csid_resolve},
-};
+use cmdlib::args::MononokeClapApp;
+use cmdlib::args::MononokeMatches;
+use cmdlib::helpers::block_execute;
+use cmdlib::helpers::csid_resolve;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{
-    future,
-    stream::{FuturesUnordered, StreamExt, TryStreamExt},
-};
-use hooks::{CrossRepoPushSource, PushAuthoredBy};
+use futures::future;
+use futures::stream::FuturesUnordered;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use hooks::CrossRepoPushSource;
+use hooks::PushAuthoredBy;
 use mononoke_types::ChangesetId;
 use repo_factory::RepoFactory;
-use slog::{debug, info, Logger};
+use slog::debug;
+use slog::info;
+use slog::Logger;
 use std::collections::HashSet;
 use std::time::Duration;
 use time_ext::DurationExt;
-use tokio::{
-    fs::{File, OpenOptions},
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
-};
+use tokio::fs::File;
+use tokio::fs::OpenOptions;
+use tokio::io::AsyncBufReadExt;
+use tokio::io::AsyncWriteExt;
+use tokio::io::BufReader;
 
-use tailer::{HookExecutionInstance, Tailer};
+use tailer::HookExecutionInstance;
+use tailer::Tailer;
 
 async fn get_changesets<'a>(
     matches: &'a MononokeMatches<'a>,

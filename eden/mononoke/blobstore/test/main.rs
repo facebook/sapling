@@ -19,12 +19,17 @@ use fbinit::FacebookInit;
 use strum::IntoEnumIterator;
 use tempdir::TempDir;
 
-use blobstore::{Blobstore, BlobstorePutOps, BlobstoreUnlinkOps, OverwriteStatus, PutBehaviour};
+use blobstore::Blobstore;
+use blobstore::BlobstorePutOps;
+use blobstore::BlobstoreUnlinkOps;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
 use context::CoreContext;
 use fileblob::Fileblob;
 use memblob::Memblob;
 use mononoke_types::BlobstoreBytes;
-use sqlblob::{get_test_config_store, Sqlblob};
+use sqlblob::get_test_config_store;
+use sqlblob::Sqlblob;
 
 async fn overwrite<B: Blobstore + BlobstorePutOps>(
     fb: FacebookInit,

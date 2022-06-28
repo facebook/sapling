@@ -13,12 +13,15 @@ use anyhow::Error;
 use context::CoreContext;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types_mocks::changesetid as bonsai;
-use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
+use mononoke_types_mocks::repo::REPO_ONE;
+use mononoke_types_mocks::repo::REPO_ZERO;
 use sql_construct::SqlConstruct;
-use synced_commit_mapping::{
-    EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
-    SyncedCommitMappingEntry, SyncedCommitSourceRepo, WorkingCopyEquivalence,
-};
+use synced_commit_mapping::EquivalentWorkingCopyEntry;
+use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMappingEntry;
+use synced_commit_mapping::SyncedCommitSourceRepo;
+use synced_commit_mapping::WorkingCopyEquivalence;
 
 async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
     let version_name = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());

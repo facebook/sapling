@@ -5,27 +5,34 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    compat::Stream01CompatExt,
-    future::{self, TryFutureExt},
-    stream::{self, Stream, StreamExt, TryStreamExt},
-};
-use futures_stats::{FutureStats, TimedFutureExt};
-use hooks::{
-    hook_loader::load_hooks, CrossRepoPushSource, HookManager, HookOutcome, PushAuthoredBy,
-};
+use futures::compat::Stream01CompatExt;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use futures_stats::FutureStats;
+use futures_stats::TimedFutureExt;
+use hooks::hook_loader::load_hooks;
+use hooks::CrossRepoPushSource;
+use hooks::HookManager;
+use hooks::HookOutcome;
+use hooks::PushAuthoredBy;
 use hooks_content_stores::repo_text_only_fetcher;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{debug, info};
+use slog::debug;
+use slog::info;
 use std::collections::HashSet;
 use std::sync::Arc;
 use thiserror::Error;

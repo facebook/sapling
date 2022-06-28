@@ -7,18 +7,30 @@
 
 use crate::commands::HgCommandHandler;
 use crate::errors::*;
-use crate::{HgCommands, Request, Response};
+use crate::HgCommands;
+use crate::Request;
+use crate::Response;
 use anyhow::Error;
 use bytes_old::Bytes;
 use failure_ext::FutureFailureErrorExt;
-use futures::future::{err, ok, Either};
+use futures::future::err;
+use futures::future::ok;
+use futures::future::Either;
+use futures::stream;
 use futures::sync::oneshot;
-use futures::{stream, Future, Poll, Stream};
-use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
+use futures::Future;
+use futures::Poll;
+use futures::Stream;
+use futures_ext::BoxFuture;
+use futures_ext::BoxStream;
+use futures_ext::BytesStream;
+use futures_ext::FutureExt;
+use futures_ext::StreamExt;
 use qps::Qps;
 use slog::Logger;
 use std::io;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 use tokio_io::codec::Decoder;
 
 pub type OutputStream = BoxStream<Bytes, Error>;

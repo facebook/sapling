@@ -5,47 +5,87 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
 use async_trait::async_trait;
-use futures::{stream, try_join, Stream, StreamExt, TryStreamExt};
-use gotham::state::{FromState, State};
-use gotham_derive::{StateData, StaticResponseExtender};
-use gotham_ext::{
-    error::HttpError, middleware::scuba::ScubaMiddlewareState, response::TryIntoResponse,
-};
+use futures::stream;
+use futures::try_join;
+use futures::Stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use gotham::state::FromState;
+use gotham::state::State;
+use gotham_derive::StateData;
+use gotham_derive::StaticResponseExtender;
+use gotham_ext::error::HttpError;
+use gotham_ext::middleware::scuba::ScubaMiddlewareState;
+use gotham_ext::response::TryIntoResponse;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::num::NonZeroU64;
 use std::time::Duration;
 
 use blobstore::Loadable;
-use edenapi_types::{
-    wire::WireCommitHashToLocationRequestBatch, AnyFileContentId, AnyId, Batch, BonsaiFileChange,
-    CommitGraphEntry, CommitGraphRequest, CommitHashLookupRequest, CommitHashLookupResponse,
-    CommitHashToLocationResponse, CommitId, CommitIdScheme, CommitLocationToHashRequest,
-    CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitMutationsRequest,
-    CommitMutationsResponse, CommitRevlogData, CommitRevlogDataRequest, CommitTranslateIdRequest,
-    CommitTranslateIdResponse, EphemeralPrepareRequest, EphemeralPrepareResponse,
-    FetchSnapshotRequest, FetchSnapshotResponse, UploadBonsaiChangesetRequest,
-    UploadHgChangesetsRequest, UploadToken, UploadTokensResponse,
-};
+use edenapi_types::wire::WireCommitHashToLocationRequestBatch;
+use edenapi_types::AnyFileContentId;
+use edenapi_types::AnyId;
+use edenapi_types::Batch;
+use edenapi_types::BonsaiFileChange;
+use edenapi_types::CommitGraphEntry;
+use edenapi_types::CommitGraphRequest;
+use edenapi_types::CommitHashLookupRequest;
+use edenapi_types::CommitHashLookupResponse;
+use edenapi_types::CommitHashToLocationResponse;
+use edenapi_types::CommitId;
+use edenapi_types::CommitIdScheme;
+use edenapi_types::CommitLocationToHashRequest;
+use edenapi_types::CommitLocationToHashRequestBatch;
+use edenapi_types::CommitLocationToHashResponse;
+use edenapi_types::CommitMutationsRequest;
+use edenapi_types::CommitMutationsResponse;
+use edenapi_types::CommitRevlogData;
+use edenapi_types::CommitRevlogDataRequest;
+use edenapi_types::CommitTranslateIdRequest;
+use edenapi_types::CommitTranslateIdResponse;
+use edenapi_types::EphemeralPrepareRequest;
+use edenapi_types::EphemeralPrepareResponse;
+use edenapi_types::FetchSnapshotRequest;
+use edenapi_types::FetchSnapshotResponse;
+use edenapi_types::UploadBonsaiChangesetRequest;
+use edenapi_types::UploadHgChangesetsRequest;
+use edenapi_types::UploadToken;
+use edenapi_types::UploadTokensResponse;
 use ephemeral_blobstore::BubbleId;
-use mercurial_types::{HgChangesetId, HgNodeHash};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgNodeHash;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_types::hash::GitSha1;
-use mononoke_types::{ChangesetId, DateTime, FileChange, Globalrev};
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
+use mononoke_types::FileChange;
+use mononoke_types::Globalrev;
 use tunables::tunables;
-use types::{HgId, Parents};
+use types::HgId;
+use types::Parents;
 
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{
-    cbor_stream_filtered_errors, custom_cbor_stream, get_repo, parse_cbor_request,
-    parse_wire_request, to_create_change, to_hg_path, to_mononoke_path, to_revlog_changeset,
-};
+use crate::utils::cbor_stream_filtered_errors;
+use crate::utils::custom_cbor_stream;
+use crate::utils::get_repo;
+use crate::utils::parse_cbor_request;
+use crate::utils::parse_wire_request;
+use crate::utils::to_create_change;
+use crate::utils::to_hg_path;
+use crate::utils::to_mononoke_path;
+use crate::utils::to_revlog_changeset;
 
-use super::{EdenApiHandler, EdenApiMethod, HandlerInfo, HandlerResult};
+use super::EdenApiHandler;
+use super::EdenApiMethod;
+use super::HandlerInfo;
+use super::HandlerResult;
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;

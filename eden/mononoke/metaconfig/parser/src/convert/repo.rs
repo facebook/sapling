@@ -9,27 +9,66 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Duration;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
 use bookmarks_types::BookmarkName;
-use metaconfig_types::{
-    BlameVersion, BookmarkOrRegex, BookmarkParams, CacheWarmupParams, ComparableRegex,
-    CrossRepoCommitValidation, DerivedDataConfig, DerivedDataTypesConfig, HgSyncConfig, HookBypass,
-    HookConfig, HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams,
-    LfsParams, PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs,
-    SegmentedChangelogConfig, SegmentedChangelogHeadConfig, ServiceWriteRestrictions,
-    SourceControlServiceMonitoring, SourceControlServiceParams, SparseProfilesConfig, UnodeVersion,
-    WalkerConfig, WalkerJobParams, WalkerJobType,
-};
-use mononoke_types::{ChangesetId, MPath, PrefixTrie};
+use metaconfig_types::BlameVersion;
+use metaconfig_types::BookmarkOrRegex;
+use metaconfig_types::BookmarkParams;
+use metaconfig_types::CacheWarmupParams;
+use metaconfig_types::ComparableRegex;
+use metaconfig_types::CrossRepoCommitValidation;
+use metaconfig_types::DerivedDataConfig;
+use metaconfig_types::DerivedDataTypesConfig;
+use metaconfig_types::HgSyncConfig;
+use metaconfig_types::HookBypass;
+use metaconfig_types::HookConfig;
+use metaconfig_types::HookManagerParams;
+use metaconfig_types::HookParams;
+use metaconfig_types::InfinitepushNamespace;
+use metaconfig_types::InfinitepushParams;
+use metaconfig_types::LfsParams;
+use metaconfig_types::PushParams;
+use metaconfig_types::PushrebaseFlags;
+use metaconfig_types::PushrebaseParams;
+use metaconfig_types::RepoClientKnobs;
+use metaconfig_types::SegmentedChangelogConfig;
+use metaconfig_types::SegmentedChangelogHeadConfig;
+use metaconfig_types::ServiceWriteRestrictions;
+use metaconfig_types::SourceControlServiceMonitoring;
+use metaconfig_types::SourceControlServiceParams;
+use metaconfig_types::SparseProfilesConfig;
+use metaconfig_types::UnodeVersion;
+use metaconfig_types::WalkerConfig;
+use metaconfig_types::WalkerJobParams;
+use metaconfig_types::WalkerJobType;
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
+use mononoke_types::PrefixTrie;
 use regex::Regex;
-use repos::{
-    RawBookmarkConfig, RawCacheWarmupConfig, RawCrossRepoCommitValidationConfig,
-    RawDerivedDataConfig, RawDerivedDataTypesConfig, RawHgSyncConfig, RawHookConfig,
-    RawHookManagerParams, RawInfinitepushParams, RawLfsParams, RawPushParams, RawPushrebaseParams,
-    RawRepoClientKnobs, RawSegmentedChangelogConfig, RawSegmentedChangelogHeadConfig,
-    RawServiceWriteRestrictions, RawSourceControlServiceMonitoring, RawSourceControlServiceParams,
-    RawSparseProfilesConfig, RawWalkerConfig, RawWalkerJobParams, RawWalkerJobType,
-};
+use repos::RawBookmarkConfig;
+use repos::RawCacheWarmupConfig;
+use repos::RawCrossRepoCommitValidationConfig;
+use repos::RawDerivedDataConfig;
+use repos::RawDerivedDataTypesConfig;
+use repos::RawHgSyncConfig;
+use repos::RawHookConfig;
+use repos::RawHookManagerParams;
+use repos::RawInfinitepushParams;
+use repos::RawLfsParams;
+use repos::RawPushParams;
+use repos::RawPushrebaseParams;
+use repos::RawRepoClientKnobs;
+use repos::RawSegmentedChangelogConfig;
+use repos::RawSegmentedChangelogHeadConfig;
+use repos::RawServiceWriteRestrictions;
+use repos::RawSourceControlServiceMonitoring;
+use repos::RawSourceControlServiceParams;
+use repos::RawSparseProfilesConfig;
+use repos::RawWalkerConfig;
+use repos::RawWalkerJobParams;
+use repos::RawWalkerJobType;
 
 use crate::convert::Convert;
 use crate::errors::ConfigurationError;

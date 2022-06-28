@@ -7,14 +7,20 @@
 
 use crate::detail::log;
 
-use anyhow::{bail, Error};
+use anyhow::bail;
+use anyhow::Error;
 use bulkops::Direction;
-use mononoke_types::{RepositoryId, Timestamp};
-use slog::{info, Logger};
+use mononoke_types::RepositoryId;
+use mononoke_types::Timestamp;
+use slog::info;
+use slog::Logger;
 use sql::queries;
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
-use std::{cmp::Ordering, fmt, sync::Arc};
+use std::cmp::Ordering;
+use std::fmt;
+use std::sync::Arc;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Checkpoint {

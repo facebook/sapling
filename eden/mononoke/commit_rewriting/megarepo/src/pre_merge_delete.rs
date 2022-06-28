@@ -12,8 +12,10 @@ use mercurial_types::MPath;
 use mononoke_types::ChangesetId;
 
 use crate::chunking::Chunker;
-use crate::common::{delete_files_in_chunks, ChangesetArgsFactory};
-use crate::working_copy::{get_changed_working_copy_paths, get_working_copy_paths};
+use crate::common::delete_files_in_chunks;
+use crate::common::ChangesetArgsFactory;
+use crate::working_copy::get_changed_working_copy_paths;
+use crate::working_copy::get_working_copy_paths;
 
 /// A struct containing pre-merge delete information
 /// Pre-merge delete commits look like this:
@@ -71,14 +73,16 @@ pub async fn create_pre_merge_delete<'a>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::common::{ChangesetArgs, StackPosition};
+    use crate::common::ChangesetArgs;
+    use crate::common::StackPosition;
     use cloned::cloned;
     use fbinit::FacebookInit;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
     use mononoke_types::DateTime;
     use std::collections::HashSet;
-    use tests_utils::{resolve_cs_id, CreateCommitContext};
+    use tests_utils::resolve_cs_id;
+    use tests_utils::CreateCommitContext;
 
     #[fbinit::test]
     async fn test_create_pre_merge_delete(fb: FacebookInit) -> Result<(), Error> {

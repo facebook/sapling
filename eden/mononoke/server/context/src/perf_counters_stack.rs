@@ -9,7 +9,8 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use std::iter;
 use std::sync::Arc;
 
-use crate::perf_counters::{PerfCounterType, PerfCounters};
+use crate::perf_counters::PerfCounterType;
+use crate::perf_counters::PerfCounters;
 
 #[derive(Debug, Clone)]
 pub struct PerfCountersStack {

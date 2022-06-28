@@ -8,20 +8,32 @@
 use std::collections::BTreeMap;
 use std::io::Write;
 
-use anyhow::{bail, Result};
-use clap::{App, AppSettings, ArgMatches, SubCommand};
-use futures::stream::{self, StreamExt, TryStreamExt};
+use anyhow::bail;
+use anyhow::Result;
+use clap::App;
+use clap::AppSettings;
+use clap::ArgMatches;
+use clap::SubCommand;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use serde_derive::Serialize;
 use source_control::types as thrift;
 
-use crate::args::commit_id::{
-    add_commit_id_args, add_scheme_args, get_commit_id, get_request_schemes, get_schemes,
-    map_commit_id, map_commit_ids, resolve_commit_id,
-};
-use crate::args::repo::{add_repo_args, get_repo_specifier};
+use crate::args::commit_id::add_commit_id_args;
+use crate::args::commit_id::add_scheme_args;
+use crate::args::commit_id::get_commit_id;
+use crate::args::commit_id::get_request_schemes;
+use crate::args::commit_id::get_schemes;
+use crate::args::commit_id::map_commit_id;
+use crate::args::commit_id::map_commit_ids;
+use crate::args::commit_id::resolve_commit_id;
+use crate::args::repo::add_repo_args;
+use crate::args::repo::get_repo_specifier;
 use crate::connection::Connection;
 use crate::lib::commit_id::render_commit_id;
-use crate::render::{Render, RenderStream};
+use crate::render::Render;
+use crate::render::RenderStream;
 
 pub(super) const NAME: &str = "lookup-pushrebase-history";
 

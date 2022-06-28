@@ -10,8 +10,10 @@
 
 use super::MetadataEntry;
 use crate::chunk::Chunk;
-use anyhow::{Error, Result};
-use byteorder::{BigEndian, ByteOrder};
+use anyhow::Error;
+use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::ByteOrder;
 use bytes_old::BufMut;
 use futures_old::stream::iter_result;
 use futures_old::Stream;
@@ -100,7 +102,9 @@ mod test {
     use super::*;
     use anyhow::Error;
     use futures_ext::StreamExt;
-    use futures_old::{stream, Async, Poll};
+    use futures_old::stream;
+    use futures_old::Async;
+    use futures_old::Poll;
     use mercurial_types_mocks::nodehash;
     use quickcheck::quickcheck;
 

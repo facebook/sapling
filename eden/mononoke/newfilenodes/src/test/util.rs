@@ -6,10 +6,12 @@
  */
 
 use anyhow::Error;
-use sql::{rusqlite::Connection as SqliteConnection, Connection};
+use sql::rusqlite::Connection as SqliteConnection;
+use sql::Connection;
 use sql_construct::SqlConstruct;
 
-use crate::builder::{NewFilenodesBuilder, SQLITE_INSERT_CHUNK_SIZE};
+use crate::builder::NewFilenodesBuilder;
+use crate::builder::SQLITE_INSERT_CHUNK_SIZE;
 use crate::reader::FilenodesReader;
 use crate::writer::FilenodesWriter;
 

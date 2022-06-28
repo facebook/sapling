@@ -9,9 +9,12 @@ use async_trait::async_trait;
 use cached_config::ConfigStore;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use megarepo_configs::types::{SyncConfigVersion, SyncTargetConfig, Target};
+use megarepo_configs::types::SyncConfigVersion;
+use megarepo_configs::types::SyncTargetConfig;
+use megarepo_configs::types::Target;
 use megarepo_error::MegarepoError;
-use slog::{warn, Logger};
+use slog::warn;
+use slog::Logger;
 use std::path::PathBuf;
 
 use crate::MononokeMegarepoConfigs;

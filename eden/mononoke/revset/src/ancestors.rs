@@ -10,24 +10,28 @@
 // generation Vec. Once current generation Vec is empty, rotate.
 
 use std::collections::hash_set::IntoIter;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Error;
 use cloned::cloned;
-use futures::{FutureExt, TryFutureExt};
+use futures::FutureExt;
+use futures::TryFutureExt;
 use futures_ext::StreamExt;
-use futures_old::{
-    future::Future,
-    stream::{iter_ok, Stream},
-    Async, Poll,
-};
+use futures_old::future::Future;
+use futures_old::stream::iter_ok;
+use futures_old::stream::Stream;
+use futures_old::Async;
+use futures_old::Poll;
 use maplit::hashset;
 
 use crate::UniqueHeap;
-use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use mononoke_types::{ChangesetId, Generation};
+use mononoke_types::ChangesetId;
+use mononoke_types::Generation;
 
 use crate::errors::*;
 use crate::BonsaiNodeStream;

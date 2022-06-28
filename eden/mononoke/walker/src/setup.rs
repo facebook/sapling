@@ -5,39 +5,62 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, format_err, Context, Error};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use blobstore_factory::ScrubHandler;
 use cloned::cloned;
 use cmdlib::args::ResolvedRepo;
 use fbinit::FacebookInit;
-use metaconfig_types::{
-    MetadataDatabaseConfig, Redaction, RepoConfig, WalkerJobParams, WalkerJobType,
-};
-use mononoke_app::{args::MultiRepoArgs, MononokeApp};
+use metaconfig_types::MetadataDatabaseConfig;
+use metaconfig_types::Redaction;
+use metaconfig_types::RepoConfig;
+use metaconfig_types::WalkerJobParams;
+use metaconfig_types::WalkerJobType;
+use mononoke_app::args::MultiRepoArgs;
+use mononoke_app::MononokeApp;
 use mononoke_types::repo::RepositoryId;
 use newfilenodes::NewFilenodesBuilder;
 use repo_factory::RepoFactory;
-use samplingblob::{ComponentSamplingHandler, SamplingBlobstore, SamplingHandler};
+use samplingblob::ComponentSamplingHandler;
+use samplingblob::SamplingBlobstore;
+use samplingblob::SamplingHandler;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{info, o, warn, Logger};
+use slog::info;
+use slog::o;
+use slog::warn;
+use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::num::NonZeroU64;
 use std::sync::Arc;
 
-use crate::args::{NodeTypeArg, TailArgs, WalkerCommonArgs, WalkerGraphParams};
-use crate::commands::{JobParams, JobWalkParams, RepoSubcommandParams};
-use crate::detail::{
-    blobstore::{replace_blobconfig, StatsScrubHandler},
-    graph::{EdgeType, NodeType, SqlShardInfo},
-    log,
-    progress::{sort_by_string, ProgressOptions, ProgressStateCountByType, ProgressStateMutex},
-    tail::TailParams,
-    validate::{REPO, WALK_TYPE},
-    walk::{OutgoingEdge, RepoWalkParams},
-};
+use crate::args::NodeTypeArg;
+use crate::args::TailArgs;
+use crate::args::WalkerCommonArgs;
+use crate::args::WalkerGraphParams;
+use crate::commands::JobParams;
+use crate::commands::JobWalkParams;
+use crate::commands::RepoSubcommandParams;
+use crate::detail::blobstore::replace_blobconfig;
+use crate::detail::blobstore::StatsScrubHandler;
+use crate::detail::graph::EdgeType;
+use crate::detail::graph::NodeType;
+use crate::detail::graph::SqlShardInfo;
+use crate::detail::log;
+use crate::detail::progress::sort_by_string;
+use crate::detail::progress::ProgressOptions;
+use crate::detail::progress::ProgressStateCountByType;
+use crate::detail::progress::ProgressStateMutex;
+use crate::detail::tail::TailParams;
+use crate::detail::validate::REPO;
+use crate::detail::validate::WALK_TYPE;
+use crate::detail::walk::OutgoingEdge;
+use crate::detail::walk::RepoWalkParams;
 
 use crate::WalkerArgs;
 const CHECKPOINT_PREFIX: &str = "mononoke_sharded_walker";

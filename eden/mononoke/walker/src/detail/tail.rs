@@ -6,41 +6,55 @@
  */
 
 use crate::commands::JobWalkParams;
-use crate::detail::{
-    checkpoint::{Checkpoint, CheckpointsByName},
-    graph::{ChangesetKey, Node, NodeType},
-    log,
-    state::InternedType,
-    walk::{
-        walk_exact, OutgoingEdge, RepoWalkParams, RepoWalkTypeParams, StepRoute,
-        TailingWalkVisitor, WalkVisitor,
-    },
-};
+use crate::detail::checkpoint::Checkpoint;
+use crate::detail::checkpoint::CheckpointsByName;
+use crate::detail::graph::ChangesetKey;
+use crate::detail::graph::Node;
+use crate::detail::graph::NodeType;
+use crate::detail::log;
+use crate::detail::state::InternedType;
+use crate::detail::walk::walk_exact;
+use crate::detail::walk::OutgoingEdge;
+use crate::detail::walk::RepoWalkParams;
+use crate::detail::walk::RepoWalkTypeParams;
+use crate::detail::walk::StepRoute;
+use crate::detail::walk::TailingWalkVisitor;
+use crate::detail::walk::WalkVisitor;
 
-use anyhow::{anyhow, bail, Error};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Error;
 use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
-use bulkops::{Direction, PublicChangesetBulkFetch, MAX_FETCH_STEP};
+use bulkops::Direction;
+use bulkops::PublicChangesetBulkFetch;
+use bulkops::MAX_FETCH_STEP;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fbinit::FacebookInit;
-use futures::{
-    future::{self, Future},
-    stream::{self, BoxStream, StreamExt, TryStreamExt},
-};
+use futures::future::Future;
+use futures::future::{self};
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use mercurial_derived_data::MappedHgChangesetId;
-use mononoke_types::{ChangesetId, RepositoryId, Timestamp};
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
+use mononoke_types::Timestamp;
 use phases::PhasesArc;
-use slog::{info, Logger};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::{
-    cmp::{max, min},
-    collections::HashSet,
-    sync::Arc,
-};
+use slog::info;
+use slog::Logger;
+use std::cmp::max;
+use std::cmp::min;
+use std::collections::HashSet;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use strum::IntoEnumIterator;
-use tokio::time::{Duration, Instant};
+use tokio::time::Duration;
+use tokio::time::Instant;
 
 // We can chose to go direct from the ChangesetId to types keyed by it without loading the Changeset
 fn roots_for_chunk(

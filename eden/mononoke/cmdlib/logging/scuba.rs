@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error, Result};
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use clap::Args;
 use fbinit::FacebookInit;
 use observability::ObservabilityContext;

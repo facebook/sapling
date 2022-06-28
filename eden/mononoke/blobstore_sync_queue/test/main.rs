@@ -5,14 +5,19 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
-use blobstore_sync_queue::{
-    BlobstoreSyncQueue, BlobstoreSyncQueueEntry, BlobstoreWal, BlobstoreWalEntry, OperationKey,
-    SqlBlobstoreSyncQueue, SqlBlobstoreWal,
-};
+use anyhow::format_err;
+use anyhow::Error;
+use blobstore_sync_queue::BlobstoreSyncQueue;
+use blobstore_sync_queue::BlobstoreSyncQueueEntry;
+use blobstore_sync_queue::BlobstoreWal;
+use blobstore_sync_queue::BlobstoreWalEntry;
+use blobstore_sync_queue::OperationKey;
+use blobstore_sync_queue::SqlBlobstoreSyncQueue;
+use blobstore_sync_queue::SqlBlobstoreWal;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use metaconfig_types::{BlobstoreId, MultiplexId};
+use metaconfig_types::BlobstoreId;
+use metaconfig_types::MultiplexId;
 use mononoke_types::DateTime;
 use sql_construct::SqlConstruct;
 use uuid::Uuid;

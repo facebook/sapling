@@ -7,7 +7,9 @@
 
 use anyhow::Error;
 use bytes::Bytes;
-use futures_old::{Async, Future, Poll};
+use futures_old::Async;
+use futures_old::Future;
+use futures_old::Poll;
 use mercurial_types::FileBytes;
 
 use redactedblobstore::has_redaction_root_cause;

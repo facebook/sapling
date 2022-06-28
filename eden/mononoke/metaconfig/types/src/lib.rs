@@ -10,32 +10,43 @@
 
 #![deny(missing_docs)]
 
-use anyhow::{anyhow, Error, Result};
-use std::{
-    collections::{HashMap, HashSet},
-    fmt,
-    num::{NonZeroU64, NonZeroUsize},
-    ops::Deref,
-    path::PathBuf,
-    str,
-    str::FromStr,
-    sync::Arc,
-    time::Duration,
-};
+use anyhow::anyhow;
+use anyhow::Error;
+use anyhow::Result;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt;
+use std::num::NonZeroU64;
+use std::num::NonZeroUsize;
+use std::ops::Deref;
+use std::path::PathBuf;
+use std::str;
+use std::str::FromStr;
+use std::sync::Arc;
+use std::time::Duration;
 
 use ascii::AsciiString;
 use bookmarks_types::BookmarkName;
-use derive_more::{From, Into};
+use derive_more::From;
+use derive_more::Into;
 use fbinit::FacebookInit;
 use metadata::Metadata;
-use mononoke_types::{BonsaiChangeset, ChangesetId, MPath, PrefixTrie, RepositoryId};
-use mysql_common::value::convert::{ConvIr, FromValue, ParseIr};
-use permission_checker::{BoxMembershipChecker, MembershipCheckerBuilder};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
+use mononoke_types::PrefixTrie;
+use mononoke_types::RepositoryId;
+use mysql_common::value::convert::ConvIr;
+use mysql_common::value::convert::FromValue;
+use mysql_common::value::convert::ParseIr;
+use permission_checker::BoxMembershipChecker;
+use permission_checker::MembershipCheckerBuilder;
 use regex::Regex;
 use scuba::ScubaValue;
 use serde_derive::Deserialize;
 use sql::mysql;
-use sql::mysql_async::{FromValueError, Value};
+use sql::mysql_async::FromValueError;
+use sql::mysql_async::Value;
 
 /// A Regex that can be compared against other Regexes.
 ///

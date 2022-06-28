@@ -10,11 +10,19 @@
 use std::fmt;
 use std::io::Cursor;
 
-use anyhow::{bail, ensure, Context, Result};
-use byteorder::{BigEndian, ByteOrder};
-use bytes_old::{BufMut, BytesMut};
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::Context;
+use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::ByteOrder;
+use bytes_old::BufMut;
+use bytes_old::BytesMut;
 
-use mercurial_types::{Delta, HgNodeHash, RepoPath, NULL_HASH};
+use mercurial_types::Delta;
+use mercurial_types::HgNodeHash;
+use mercurial_types::RepoPath;
+use mercurial_types::NULL_HASH;
 use revisionstore_types::Metadata;
 
 use crate::delta;
@@ -362,10 +370,13 @@ impl DataEntry {
 mod test {
     use itertools::iproduct;
     use maplit::hashset;
-    use quickcheck::{quickcheck, Arbitrary, Gen};
+    use quickcheck::quickcheck;
+    use quickcheck::Arbitrary;
+    use quickcheck::Gen;
 
     use mercurial_types::delta::Fragment;
-    use mercurial_types_mocks::nodehash::{AS_HASH, BS_HASH};
+    use mercurial_types_mocks::nodehash::AS_HASH;
+    use mercurial_types_mocks::nodehash::BS_HASH;
 
     use super::*;
 

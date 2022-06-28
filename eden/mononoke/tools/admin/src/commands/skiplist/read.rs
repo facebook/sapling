@@ -6,14 +6,17 @@
  */
 
 use super::Repo;
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use blobstore::Blobstore;
 use clap::Args;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
-use skiplist::{deserialize_skiplist_index, SkiplistIndex};
-use slog::{debug, Logger};
+use skiplist::deserialize_skiplist_index;
+use skiplist::SkiplistIndex;
+use slog::debug;
+use slog::Logger;
 
 #[derive(Args)]
 /// Subcommand to build skiplist indexes.

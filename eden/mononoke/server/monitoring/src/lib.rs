@@ -10,13 +10,17 @@
 
 #![feature(never_type)]
 
-use std::thread::{self, JoinHandle};
+use std::thread::JoinHandle;
+use std::thread::{self};
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use fbinit::FacebookInit;
-use slog::{info, Logger};
+use slog::info;
+use slog::Logger;
 
-use cmdlib::{args::MononokeMatches, monitoring::ReadyFlagService};
+use cmdlib::args::MononokeMatches;
+use cmdlib::monitoring::ReadyFlagService;
 
 // TODO: Stop using this one-off for Mononoke server, and instead use the one from cmdlib.
 pub fn start_thrift_service<'a>(

@@ -5,26 +5,32 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use futures::{
-    future::{self, try_join},
-    TryStreamExt,
-};
+use futures::future::try_join;
+use futures::future::{self};
+use futures::TryStreamExt;
 use itertools::Itertools;
-use manifest::{Diff, ManifestOps};
+use manifest::Diff;
+use manifest::ManifestOps;
 use maplit::hashset;
-use megarepolib::common::{create_and_save_bonsai, ChangesetArgsFactory, StackPosition};
+use megarepolib::common::create_and_save_bonsai;
+use megarepolib::common::ChangesetArgsFactory;
+use megarepolib::common::StackPosition;
 use mercurial_derived_data::DeriveHgChangeset;
 use metaconfig_types::PushrebaseFlags;
-use mononoke_types::{ChangesetId, FileChange, MPath};
+use mononoke_types::ChangesetId;
+use mononoke_types::FileChange;
+use mononoke_types::MPath;
 use pushrebase::do_pushrebase_bonsai;
 use regex::Regex;
-use slog::{error, info};
+use slog::error;
+use slog::info;
 use std::time::Duration;
 use tokio::time::sleep;
 use unodes::RootUnodeManifestId;
@@ -216,7 +222,9 @@ mod test {
     use megarepolib::common::ChangesetArgs;
     use mononoke_types::DateTime;
     use revset::RangeNodeStream;
-    use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
+    use tests_utils::bookmark;
+    use tests_utils::resolve_cs_id;
+    use tests_utils::CreateCommitContext;
 
     const PATH_REGEX: &'static str = "^(unchanged/.*|changed/.*|toremove/.*)";
 

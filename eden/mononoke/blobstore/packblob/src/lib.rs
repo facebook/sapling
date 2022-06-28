@@ -9,5 +9,9 @@ mod envelope;
 mod pack;
 mod store;
 
-pub use pack::{get_entry_compressed_size, EmptyPack, Pack, SingleCompressed};
-pub use store::{PackBlob, PackOptions};
+pub use pack::get_entry_compressed_size;
+pub use pack::EmptyPack;
+pub use pack::Pack;
+pub use pack::SingleCompressed;
+pub use store::PackBlob;
+pub use store::PackOptions;

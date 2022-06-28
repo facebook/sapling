@@ -9,8 +9,10 @@ use std::str::FromStr;
 
 use gotham::state::State;
 
-use clientinfo::{ClientInfo, CLIENT_INFO_HEADER};
-use gotham_ext::middleware::{PostResponseInfo, ScubaHandler};
+use clientinfo::ClientInfo;
+use clientinfo::CLIENT_INFO_HEADER;
+use gotham_ext::middleware::PostResponseInfo;
+use gotham_ext::middleware::ScubaHandler;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::middleware::RequestContext;

@@ -11,18 +11,38 @@
 ///
 /// This is a special job used to validate that cross-repo sync,
 /// produced correct results
-use anyhow::{format_err, Context, Error, Result};
+use anyhow::format_err;
+/// Mononoke Cross Repo validator job
+///
+/// This is a special job used to validate that cross-repo sync,
+/// produced correct results
+use anyhow::Context;
+/// Mononoke Cross Repo validator job
+///
+/// This is a special job used to validate that cross-repo sync,
+/// produced correct results
+use anyhow::Error;
+/// Mononoke Cross Repo validator job
+///
+/// This is a special job used to validate that cross-repo sync,
+/// produced correct results
+use anyhow::Result;
 use blobrepo::BlobRepo;
-use bookmarks::{BookmarkName, BookmarkUpdateLogEntry, Freshness};
-use cmdlib::{
-    args::{self, MononokeClapApp, MononokeMatches},
-    helpers::block_execute,
-    monitoring::AliveService,
-};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::Freshness;
+use cmdlib::args::MononokeClapApp;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
+use cmdlib::helpers::block_execute;
+use cmdlib::monitoring::AliveService;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future;
-use futures::stream::{self, Stream, StreamExt, TryStreamExt};
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use mononoke_api_types::InnerRepo;
 use mutable_counters::MutableCountersRef;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -34,13 +54,21 @@ mod setup;
 mod tail;
 mod validation;
 
-use crate::cli::{create_app, ARG_ONCE, ARG_TAIL};
-use crate::setup::{format_counter, get_entry_id, get_start_id, get_validation_helpers};
-use crate::tail::{tail_entries, QueueSize};
-use crate::validation::{
-    get_entry_with_small_repo_mapings, prepare_entry, unfold_bookmarks_update_log_entry,
-    validate_entry, EntryCommitId, ValidationHelpers,
-};
+use crate::cli::create_app;
+use crate::cli::ARG_ONCE;
+use crate::cli::ARG_TAIL;
+use crate::setup::format_counter;
+use crate::setup::get_entry_id;
+use crate::setup::get_start_id;
+use crate::setup::get_validation_helpers;
+use crate::tail::tail_entries;
+use crate::tail::QueueSize;
+use crate::validation::get_entry_with_small_repo_mapings;
+use crate::validation::prepare_entry;
+use crate::validation::unfold_bookmarks_update_log_entry;
+use crate::validation::validate_entry;
+use crate::validation::EntryCommitId;
+use crate::validation::ValidationHelpers;
 
 const SERVICE_NAME: &str = "mononoke_x_repo_commit_validator";
 

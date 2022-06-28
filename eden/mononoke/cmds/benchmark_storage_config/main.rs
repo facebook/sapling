@@ -5,16 +5,20 @@
  * GNU General Public License version 2.
  */
 
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
+use std::time::Duration;
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
 use clap_old::Arg;
 use criterion::Criterion;
 use tokio::runtime::Handle;
 
 use blobstore::Blobstore;
 use blobstore_factory::make_blobstore;
-use cacheblob::{new_memcache_blobstore_no_lease, CachelibBlobstoreOptions};
+use cacheblob::new_memcache_blobstore_no_lease;
+use cacheblob::CachelibBlobstoreOptions;
 use cmdlib::args;
 use context::CoreContext;
 use environment::Caching;

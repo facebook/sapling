@@ -8,34 +8,61 @@
 use anyhow::Error;
 use async_trait::async_trait;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateReason, BookmarksRef};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
+use bookmarks::BookmarksRef;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::TestRepoFixture;
-use futures::stream::{futures_unordered, TryStreamExt};
-use futures::{future, TryFutureExt};
-use hooks::{
-    hook_loader::load_hooks, ChangesetHook, CrossRepoPushSource, ErrorKind, FileHook,
-    HookExecution, HookManager, HookRejectionInfo, PushAuthoredBy,
-};
-use hooks_content_stores::{
-    FileChange as FileDiff, FileContentManager, InMemoryFileContentManager, PathContent,
-    RepoFileContentManager,
-};
-use maplit::{btreemap, hashmap, hashset};
-use metaconfig_types::{BookmarkParams, HookConfig, HookManagerParams, HookParams, RepoConfig};
-use mononoke_types::{
-    BasicFileChange, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange,
-    FileType, MPath,
-};
-use mononoke_types_mocks::contentid::{ONES_CTID, THREES_CTID, TWOS_CTID};
+use futures::future;
+use futures::stream::futures_unordered;
+use futures::stream::TryStreamExt;
+use futures::TryFutureExt;
+use hooks::hook_loader::load_hooks;
+use hooks::ChangesetHook;
+use hooks::CrossRepoPushSource;
+use hooks::ErrorKind;
+use hooks::FileHook;
+use hooks::HookExecution;
+use hooks::HookManager;
+use hooks::HookRejectionInfo;
+use hooks::PushAuthoredBy;
+use hooks_content_stores::FileChange as FileDiff;
+use hooks_content_stores::FileContentManager;
+use hooks_content_stores::InMemoryFileContentManager;
+use hooks_content_stores::PathContent;
+use hooks_content_stores::RepoFileContentManager;
+use maplit::btreemap;
+use maplit::hashmap;
+use maplit::hashset;
+use metaconfig_types::BookmarkParams;
+use metaconfig_types::HookConfig;
+use metaconfig_types::HookManagerParams;
+use metaconfig_types::HookParams;
+use metaconfig_types::RepoConfig;
+use mononoke_types::BasicFileChange;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
+use mononoke_types::FileChange;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
+use mononoke_types_mocks::contentid::ONES_CTID;
+use mononoke_types_mocks::contentid::THREES_CTID;
+use mononoke_types_mocks::contentid::TWOS_CTID;
 use regex::Regex;
 use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sorted_vector_map::sorted_vector_map;
 use std::collections::hash_map::Entry;
-use std::collections::{HashMap, HashSet};
-use tests_utils::{bookmark, create_commit, store_files, CreateCommitContext, TestRepo};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use tests_utils::bookmark;
+use tests_utils::create_commit;
+use tests_utils::store_files;
+use tests_utils::CreateCommitContext;
+use tests_utils::TestRepo;
 
 #[derive(Clone, Debug)]
 struct FnChangesetHook {

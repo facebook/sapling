@@ -7,7 +7,8 @@
 
 use crate::darkstorm_verifier::DarkstormVerifier;
 use crate::lfs_verifier::LfsVerifier;
-use anyhow::{bail, Error};
+use anyhow::bail;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
@@ -16,27 +17,43 @@ use bytes_old::Bytes as BytesOld;
 use cloned::cloned;
 use context::CoreContext;
 use futures::compat::Future01CompatExt;
-use futures::{stream, Future as NewFuture, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
-use futures_01_ext::{try_boxfuture, FutureExt as _, StreamExt as _};
-use futures_old::{future::IntoFuture, stream as stream_old, Future, Stream};
-use getbundle_response::{
-    create_filenodes, create_manifest_entries_stream, get_manifests_and_filenodes,
-    PreparedFilenodeEntry, SessionLfsParams,
-};
+use futures::stream;
+use futures::Future as NewFuture;
+use futures::FutureExt;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
+use futures_01_ext::try_boxfuture;
+use futures_01_ext::FutureExt as _;
+use futures_01_ext::StreamExt as _;
+use futures_old::future::IntoFuture;
+use futures_old::stream as stream_old;
+use futures_old::Future;
+use futures_old::Stream;
+use getbundle_response::create_filenodes;
+use getbundle_response::create_manifest_entries_stream;
+use getbundle_response::get_manifests_and_filenodes;
+use getbundle_response::PreparedFilenodeEntry;
+use getbundle_response::SessionLfsParams;
 use maplit::hashmap;
-use mercurial_bundles::{
-    capabilities::{encode_capabilities, Capabilities},
-    changegroup::CgVersion,
-    create_bundle_stream, parts,
-};
+use mercurial_bundles::capabilities::encode_capabilities;
+use mercurial_bundles::capabilities::Capabilities;
+use mercurial_bundles::changegroup::CgVersion;
+use mercurial_bundles::create_bundle_stream;
+use mercurial_bundles::parts;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_revlog::RevlogChangeset;
-use mercurial_types::{HgBlobNode, HgChangesetId, MPath};
-use mononoke_types::{datetime::Timestamp, hash::Sha256, ChangesetId};
+use mercurial_types::HgBlobNode;
+use mercurial_types::HgChangesetId;
+use mercurial_types::MPath;
+use mononoke_types::datetime::Timestamp;
+use mononoke_types::hash::Sha256;
+use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use slog::debug;
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 pub fn create_bundle(
     ctx: CoreContext,

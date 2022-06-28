@@ -9,12 +9,20 @@
 
 use std::mem;
 
-use anyhow::{bail, ensure, Error, Result};
-use futures_old::{try_ready, Async, Poll, Stream};
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::Error;
+use anyhow::Result;
+use futures_old::try_ready;
+use futures_old::Async;
+use futures_old::Poll;
+use futures_old::Stream;
 
 use mercurial_types::RepoPath;
 
-use super::{DataEntry, HistoryEntry, Part};
+use super::DataEntry;
+use super::HistoryEntry;
+use super::Part;
 
 use crate::errors::ErrorKind;
 

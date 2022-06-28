@@ -5,14 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use git_hash::ObjectId;
-use import_tools::{oid_to_sha1, GitRepoReader, GitimportTarget};
+use import_tools::oid_to_sha1;
+use import_tools::GitRepoReader;
+use import_tools::GitimportTarget;
 use mononoke_types::typed_hash::ChangesetId;
 use slog::debug;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::Path;
 use std::time::Instant;
 

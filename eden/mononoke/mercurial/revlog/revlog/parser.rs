@@ -12,9 +12,16 @@ use std::io::Read;
 
 use bitflags::bitflags;
 use flate2::read::ZlibDecoder;
-use nom::{be_u16, be_u32, Err, ErrorKind, IResult, Needed, *};
+use nom::be_u16;
+use nom::be_u32;
+use nom::Err;
+use nom::ErrorKind;
+use nom::IResult;
+use nom::Needed;
+use nom::*;
 
-use mercurial_types::{bdiff::Delta, HgNodeHash};
+use mercurial_types::bdiff::Delta;
+use mercurial_types::HgNodeHash;
 
 use crate::revlog::revidx::RevIdx;
 
@@ -284,7 +291,10 @@ fn be_u48(i: &[u8]) -> IResult<&[u8], u64> {
 
 #[cfg(test)]
 mod test {
-    use super::{header, Features, Header, Version};
+    use super::header;
+    use super::Features;
+    use super::Header;
+    use super::Version;
     use nom::IResult;
 
     #[test]

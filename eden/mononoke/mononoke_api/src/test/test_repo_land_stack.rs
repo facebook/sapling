@@ -5,12 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Result;
 use blobrepo::BlobRepo;
-use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
+use bookmarks::Freshness;
 use bookmarks_movement::BookmarkKindRestrictions::AnyKind;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -20,7 +24,9 @@ use maplit::hashset;
 use mononoke_types::ChangesetId;
 use tests_utils::drawdag::create_from_dag;
 
-use crate::repo::{BookmarkFreshness, Repo, RepoContext};
+use crate::repo::BookmarkFreshness;
+use crate::repo::Repo;
+use crate::repo::RepoContext;
 
 async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, ChangesetId>)> {
     let blob_repo: BlobRepo = test_repo_factory::build_empty(ctx.fb)?;

@@ -7,24 +7,38 @@
 
 mod redaction;
 
-use std::{collections::HashSet, fmt};
+use std::collections::HashSet;
+use std::fmt;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use blobrepo::BlobRepo;
 use blobrepo_hg::file_history::get_file_history_maybe_incomplete;
 use blobstore::Loadable;
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
+use bytes::BytesMut;
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FetchKey;
-use futures::{future::BoxFuture, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
+use futures::future::BoxFuture;
+use futures::FutureExt;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
 use futures_01_ext::select_all;
-use futures_old::{Future, Stream};
+use futures_old::Future;
+use futures_old::Stream;
 use getbundle_response::SessionLfsParams;
-use mercurial_types::{
-    blobs::File, calculate_hg_node_id, FileBytes, HgFileEnvelope, HgFileEnvelopeMut,
-    HgFileHistoryEntry, HgFileNodeId, HgParents, MPath, RevFlags,
-};
+use mercurial_types::blobs::File;
+use mercurial_types::calculate_hg_node_id;
+use mercurial_types::FileBytes;
+use mercurial_types::HgFileEnvelope;
+use mercurial_types::HgFileEnvelopeMut;
+use mercurial_types::HgFileHistoryEntry;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgParents;
+use mercurial_types::MPath;
+use mercurial_types::RevFlags;
 use revisionstore_types::Metadata;
 use thiserror::Error;
 
@@ -352,7 +366,8 @@ mod test {
     use assert_matches::assert_matches;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
-    use manifest::{Entry, Manifest};
+    use manifest::Entry;
+    use manifest::Manifest;
     use mercurial_derived_data::DeriveHgChangeset;
     use metaconfig_types::FilestoreParams;
     use mononoke_types::MPathElement;

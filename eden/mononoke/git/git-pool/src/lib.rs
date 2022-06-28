@@ -6,9 +6,12 @@
  */
 
 #![feature(never_type)]
-use anyhow::{anyhow, Error};
-use git2::{Error as Git2Error, Repository};
-use r2d2::{ManageConnection, Pool};
+use anyhow::anyhow;
+use anyhow::Error;
+use git2::Error as Git2Error;
+use git2::Repository;
+use r2d2::ManageConnection;
+use r2d2::Pool;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;

@@ -8,7 +8,8 @@
 use anyhow::Result;
 use ascii::AsciiString;
 use bookmarks::BookmarkName;
-use metaconfig_types::{CommitSyncDirection, CommonCommitSyncConfig};
+use metaconfig_types::CommitSyncDirection;
+use metaconfig_types::CommonCommitSyncConfig;
 use mononoke_types::RepositoryId;
 use std::collections::HashSet;
 use std::sync::Arc;

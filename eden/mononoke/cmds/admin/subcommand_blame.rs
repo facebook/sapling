@@ -7,31 +7,46 @@
 
 use crate::error::SubcommandError;
 
-use anyhow::{format_err, Error};
-use blame::{fetch_blame_compat, fetch_content_for_blame, CompatBlame, FetchOutcome};
+use anyhow::format_err;
+use anyhow::Error;
+use blame::fetch_blame_compat;
+use blame::fetch_content_for_blame;
+use blame::CompatBlame;
+use blame::FetchOutcome;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use bounded_traversal::{bounded_traversal_dag, Iter};
-use clap_old::{App, Arg, ArgMatches, SubCommand};
+use bounded_traversal::bounded_traversal_dag;
+use bounded_traversal::Iter;
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
 use cloned::cloned;
-use cmdlib::{
-    args::{self, MononokeMatches},
-    helpers,
-};
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
+use cmdlib::helpers;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::{
-    future::{try_join, try_join_all},
-    Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
-};
+use futures::future::try_join;
+use futures::future::try_join_all;
+use futures::Future;
+use futures::FutureExt;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
 use manifest::ManifestOps;
-use mononoke_types::{
-    blame::{Blame, BlameMaybeRejected, BlameRejected},
-    blame_v2::{BlameParent, BlameV2},
-    BlameId, ChangesetId, FileChange, FileUnodeId, MPath,
-};
+use mononoke_types::blame::Blame;
+use mononoke_types::blame::BlameMaybeRejected;
+use mononoke_types::blame::BlameRejected;
+use mononoke_types::blame_v2::BlameParent;
+use mononoke_types::blame_v2::BlameV2;
+use mononoke_types::BlameId;
+use mononoke_types::ChangesetId;
+use mononoke_types::FileChange;
+use mononoke_types::FileUnodeId;
+use mononoke_types::MPath;
 use slog::Logger;
 use std::collections::HashMap;
 use std::fmt::Write;

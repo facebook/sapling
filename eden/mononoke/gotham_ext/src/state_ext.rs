@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use gotham::state::{request_id, State};
+use gotham::state::request_id;
+use gotham::state::State;
 
 pub trait StateExt {
     fn short_request_id(&self) -> &str;

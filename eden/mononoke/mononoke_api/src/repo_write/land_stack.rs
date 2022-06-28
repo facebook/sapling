@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use blobstore::Loadable;
@@ -14,7 +15,8 @@ use bookmarks_movement::BookmarkKindRestrictions;
 use bytes::Bytes;
 use cloned::cloned;
 use futures::compat::Stream01CompatExt;
-use futures::future::{self, TryFutureExt};
+use futures::future::TryFutureExt;
+use futures::future::{self};
 use futures::stream::TryStreamExt;
 use hooks::CrossRepoPushSource;
 use metaconfig_types::BookmarkAttrs;

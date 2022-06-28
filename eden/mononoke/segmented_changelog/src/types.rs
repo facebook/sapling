@@ -9,7 +9,8 @@ use std::fmt;
 
 use sql::mysql;
 
-use mononoke_types::hash::{self, Blake2};
+use mononoke_types::hash::Blake2;
+use mononoke_types::hash::{self};
 
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 #[derive(mysql::OptTryFromRowField)]

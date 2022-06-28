@@ -5,13 +5,19 @@
  * GNU General Public License version 2.
  */
 
-use std::cmp::{Ord, Ordering};
-use std::collections::{BTreeSet, BinaryHeap};
-use std::sync::{Arc, Mutex};
+use std::cmp::Ord;
+use std::cmp::Ordering;
+use std::collections::BTreeSet;
+use std::collections::BinaryHeap;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow::Error;
-use futures::channel::oneshot::{channel, Sender};
-use futures::future::{self, Future, FutureExt};
+use futures::channel::oneshot::channel;
+use futures::channel::oneshot::Sender;
+use futures::future::Future;
+use futures::future::FutureExt;
+use futures::future::{self};
 use lock_ext::LockExt;
 use pretty_assertions::assert_eq;
 use tokio::task::yield_now;

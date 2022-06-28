@@ -7,15 +7,21 @@
 
 use std::fmt;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use context::CoreContext;
-use futures::stream::{self, StreamExt, TryStreamExt};
-use mononoke_types::{ChangesetId, DateTime, Timestamp};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
+use mononoke_types::Timestamp;
 use trait_alias::trait_alias;
 
 use crate::commit_id::IdentityScheme;

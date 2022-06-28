@@ -7,18 +7,26 @@
 
 use std::collections::HashMap;
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use async_trait::async_trait;
 use bookmarks::Freshness;
 use bytes::Bytes;
-use edenapi_types::{BookmarkEntry, BookmarkRequest, HgId, SetBookmarkRequest};
-use futures::{stream, StreamExt};
-use mercurial_types::{HgChangesetId, HgNodeHash};
+use edenapi_types::BookmarkEntry;
+use edenapi_types::BookmarkRequest;
+use edenapi_types::HgId;
+use edenapi_types::SetBookmarkRequest;
+use futures::stream;
+use futures::StreamExt;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgNodeHash;
 use mononoke_api_hg::HgRepoContext;
 
 use crate::errors::ErrorKind;
 
-use super::{EdenApiHandler, EdenApiMethod, HandlerResult};
+use super::EdenApiHandler;
+use super::EdenApiMethod;
+use super::HandlerResult;
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;

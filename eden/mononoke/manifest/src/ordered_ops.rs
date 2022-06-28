@@ -13,15 +13,24 @@ use anyhow::Error;
 use borrowed::borrowed;
 use bounded_traversal::OrderedTraversal;
 use context::CoreContext;
-use futures::future::{self, FutureExt};
+use futures::future::FutureExt;
+use futures::future::{self};
 use futures::pin_mut;
-use futures::stream::{self, BoxStream, StreamExt};
-use mononoke_types::{MPath, MPathElement};
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
+use futures::stream::{self};
+use mononoke_types::MPath;
+use mononoke_types::MPathElement;
 use nonzero_ext::nonzero;
 
 use crate::ops::Diff;
 use crate::select::select_path_tree;
-use crate::{Entry, Manifest, OrderedManifest, PathOrPrefix, PathTree, StoreLoadable};
+use crate::Entry;
+use crate::Manifest;
+use crate::OrderedManifest;
+use crate::PathOrPrefix;
+use crate::PathTree;
+use crate::StoreLoadable;
 
 /// Track where we are relative to the `after` parameter.
 enum After {

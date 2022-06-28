@@ -6,33 +6,45 @@
  */
 
 use std::cmp;
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc,
-};
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
-use anyhow::{format_err, Error, Result};
+use anyhow::format_err;
+use anyhow::Error;
+use anyhow::Result;
 use bytes::Bytes;
 use clap_old::Arg;
 use fbinit::FacebookInit;
 use futures::future::TryFutureExt;
-use futures::stream::{self, StreamExt, TryStreamExt};
-use slog::{debug, info, Logger};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use slog::debug;
+use slog::info;
+use slog::Logger;
 
 use blobrepo::BlobRepo;
-use blobstore::{Loadable, Storable};
+use blobstore::Loadable;
+use blobstore::Storable;
 use changesets::ChangesetsRef;
-use cmdlib::{
-    args::{self, MononokeClapApp, MononokeMatches},
-    helpers::block_execute,
-};
+use cmdlib::args::MononokeClapApp;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
+use cmdlib::helpers::block_execute;
 use context::CoreContext;
-use filestore::{self, Alias, AliasBlob, FetchKey};
+use filestore::Alias;
+use filestore::AliasBlob;
+use filestore::FetchKey;
+use filestore::{self};
 use mercurial_types::FileBytes;
-use mononoke_types::{
-    hash::{self, Sha256},
-    ChangesetId, ContentAlias, ContentId, FileChange, RepositoryId,
-};
+use mononoke_types::hash::Sha256;
+use mononoke_types::hash::{self};
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentAlias;
+use mononoke_types::ContentId;
+use mononoke_types::FileChange;
+use mononoke_types::RepositoryId;
 
 const LIMIT: usize = 1000;
 

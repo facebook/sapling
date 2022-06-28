@@ -18,21 +18,26 @@ mod test {
     use super::*;
     use anyhow::Result;
     use ascii::AsciiString;
-    use bookmarks::{
-        Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix,
-        BookmarkUpdateReason, Bookmarks, Freshness,
-    };
+    use bookmarks::Bookmark;
+    use bookmarks::BookmarkKind;
+    use bookmarks::BookmarkName;
+    use bookmarks::BookmarkPagination;
+    use bookmarks::BookmarkPrefix;
+    use bookmarks::BookmarkUpdateReason;
+    use bookmarks::Bookmarks;
+    use bookmarks::Freshness;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures::stream::TryStreamExt;
-    use mononoke_types::{ChangesetId, RepositoryId};
-    use mononoke_types_mocks::{
-        changesetid::{ONES_CSID, TWOS_CSID},
-        repo::REPO_ZERO,
-    };
+    use mononoke_types::ChangesetId;
+    use mononoke_types::RepositoryId;
+    use mononoke_types_mocks::changesetid::ONES_CSID;
+    use mononoke_types_mocks::changesetid::TWOS_CSID;
+    use mononoke_types_mocks::repo::REPO_ZERO;
     use quickcheck::quickcheck;
     use sql_construct::SqlConstruct;
-    use std::collections::{BTreeMap, HashSet};
+    use std::collections::BTreeMap;
+    use std::collections::HashSet;
     use tokio::runtime::Runtime;
 
     #[fbinit::test]

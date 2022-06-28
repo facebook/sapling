@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use acl_regions::{AclRegions, AclRegionsRef, AssociatedRulesResult};
+use acl_regions::AclRegions;
+use acl_regions::AclRegionsRef;
+use acl_regions::AssociatedRulesResult;
 use anyhow::Result;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
@@ -13,8 +15,11 @@ use changesets::Changesets;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
-use metaconfig_types::{AclRegion, AclRegionConfig, AclRegionRule};
-use mononoke_types::{ChangesetId, MPath};
+use metaconfig_types::AclRegion;
+use metaconfig_types::AclRegionConfig;
+use metaconfig_types::AclRegionRule;
+use mononoke_types::ChangesetId;
+use mononoke_types::MPath;
 use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;

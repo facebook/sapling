@@ -8,17 +8,24 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use ascii::AsciiString;
 use cloned::cloned;
-use futures::{FutureExt, TryFutureExt};
-use futures_01_ext::{try_boxfuture, BoxFuture, FutureExt as _};
-use futures_old::{prelude::*, stream};
-use slog::{info, Logger};
+use futures::FutureExt;
+use futures::TryFutureExt;
+use futures_01_ext::try_boxfuture;
+use futures_01_ext::BoxFuture;
+use futures_01_ext::FutureExt as _;
+use futures_old::prelude::*;
+use futures_old::stream;
+use slog::info;
+use slog::Logger;
 
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use context::CoreContext;
 use mercurial_revlog::RevlogRepo;
 use mercurial_types::HgChangesetId;

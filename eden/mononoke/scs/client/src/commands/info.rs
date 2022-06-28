@@ -10,24 +10,39 @@
 use std::collections::HashSet;
 use std::io::Write;
 
-use anyhow::{anyhow, bail, Error};
-use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Error;
+use clap::App;
+use clap::AppSettings;
+use clap::Arg;
+use clap::ArgMatches;
+use clap::SubCommand;
 use futures::stream;
 use futures_util::stream::StreamExt;
 use serde_derive::Serialize;
 use source_control::types as thrift;
 
-use crate::args::commit_id::{
-    add_commit_id_args, add_scheme_args, get_bookmark_name, get_commit_id, get_request_schemes,
-    get_schemes, resolve_commit_id,
-};
-use crate::args::path::{add_optional_multiple_path_args, get_paths};
-use crate::args::repo::{add_repo_args, get_repo_specifier};
+use crate::args::commit_id::add_commit_id_args;
+use crate::args::commit_id::add_scheme_args;
+use crate::args::commit_id::get_bookmark_name;
+use crate::args::commit_id::get_commit_id;
+use crate::args::commit_id::get_request_schemes;
+use crate::args::commit_id::get_schemes;
+use crate::args::commit_id::resolve_commit_id;
+use crate::args::path::add_optional_multiple_path_args;
+use crate::args::path::get_paths;
+use crate::args::repo::add_repo_args;
+use crate::args::repo::get_repo_specifier;
 use crate::connection::Connection;
-use crate::lib::bookmark::{render_bookmark_info, BookmarkInfo};
-use crate::lib::commit::{render_commit_info, CommitInfo};
-use crate::render::{Render, RenderStream};
-use crate::util::{byte_count_iec, plural};
+use crate::lib::bookmark::render_bookmark_info;
+use crate::lib::bookmark::BookmarkInfo;
+use crate::lib::commit::render_commit_info;
+use crate::lib::commit::CommitInfo;
+use crate::render::Render;
+use crate::render::RenderStream;
+use crate::util::byte_count_iec;
+use crate::util::plural;
 
 pub(super) const NAME: &str = "info";
 pub(super) const ARG_BOOKMARK_INFO: &str = "BOOKMARK_INFO";

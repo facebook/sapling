@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Result};
+use anyhow::format_err;
+use anyhow::Result;
 
 mod changeset;
 mod config;
@@ -21,11 +22,15 @@ mod tunables;
 pub use self::tunables::TunablesArgs;
 pub use crate::fb303::Fb303Args;
 pub use changeset::ChangesetArgs;
-pub use config::{ConfigArgs, ConfigMode};
+pub use config::ConfigArgs;
+pub use config::ConfigMode;
 pub use hooks::HooksAppExtension;
-pub use mcrouter::{McrouterAppExtension, McrouterArgs};
+pub use mcrouter::McrouterAppExtension;
+pub use mcrouter::McrouterArgs;
 pub use mysql::MysqlArgs;
-pub use repo::{MultiRepoArgs, RepoArg, RepoArgs};
+pub use repo::MultiRepoArgs;
+pub use repo::RepoArg;
+pub use repo::RepoArgs;
 pub use repo_blobstore::RepoBlobstoreArgs;
 pub use runtime::RuntimeArgs;
 pub use shutdown_timeout::ShutdownTimeoutArgs;

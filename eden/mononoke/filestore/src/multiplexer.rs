@@ -5,13 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
-use futures::{
-    channel::mpsc,
-    future::{self, Future, TryFutureExt},
-    sink::{Sink, SinkExt},
-    stream::{Stream, StreamExt, TryStreamExt},
-};
+use anyhow::format_err;
+use anyhow::Error;
+use futures::channel::mpsc;
+use futures::future::Future;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::sink::Sink;
+use futures::sink::SinkExt;
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use tokio::task::JoinHandle;
 
 // NOTE: This buffer size is used by the Multiplexer to let the overall multiplexer make progress

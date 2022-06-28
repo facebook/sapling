@@ -5,29 +5,41 @@
  * GNU General Public License version 2.
  */
 
-use crate::common::{
-    find_source_config, find_target_bookmark_and_value, find_target_sync_config, MegarepoOp,
-    SourceAndMovedChangesets,
-};
-use anyhow::{anyhow, Context};
+use crate::common::find_source_config;
+use crate::common::find_target_bookmark_and_value;
+use crate::common::find_target_sync_config;
+use crate::common::MegarepoOp;
+use crate::common::SourceAndMovedChangesets;
+use anyhow::anyhow;
+use anyhow::Context;
 use async_trait::async_trait;
-use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobrepo::save_bonsai_changesets;
+use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use changesets::ChangesetsRef;
-use commit_transformation::{
-    create_directory_source_to_target_multi_mover, create_source_to_target_multi_mover,
-    rewrite_as_squashed_commit, rewrite_commit, upload_commits, CommitRewrittenToEmpty,
-};
+use commit_transformation::create_directory_source_to_target_multi_mover;
+use commit_transformation::create_source_to_target_multi_mover;
+use commit_transformation::rewrite_as_squashed_commit;
+use commit_transformation::rewrite_commit;
+use commit_transformation::upload_commits;
+use commit_transformation::CommitRewrittenToEmpty;
 use context::CoreContext;
-use futures::{stream, StreamExt, TryStreamExt};
-use megarepo_config::{
-    MononokeMegarepoConfigs, Source, SourceMappingRules, SourceRevision, Target,
-};
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use megarepo_config::MononokeMegarepoConfigs;
+use megarepo_config::Source;
+use megarepo_config::SourceMappingRules;
+use megarepo_config::SourceRevision;
+use megarepo_config::Target;
 use megarepo_error::MegarepoError;
-use megarepo_mapping::{CommitRemappingState, MegarepoMapping, SourceName};
+use megarepo_mapping::CommitRemappingState;
+use megarepo_mapping::MegarepoMapping;
+use megarepo_mapping::SourceName;
 use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -469,13 +481,18 @@ fn find_latest_synced_cs_id(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::megarepo_test_utils::{MegarepoTest, SyncTargetConfigBuilder};
+    use crate::megarepo_test_utils::MegarepoTest;
+    use crate::megarepo_test_utils::SyncTargetConfigBuilder;
     use anyhow::Error;
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use megarepo_mapping::REMAPPING_STATE_FILE;
-    use mononoke_types::{FileChange, MPath};
-    use tests_utils::{bookmark, list_working_copy_utf8, resolve_cs_id, CreateCommitContext};
+    use mononoke_types::FileChange;
+    use mononoke_types::MPath;
+    use tests_utils::bookmark;
+    use tests_utils::list_working_copy_utf8;
+    use tests_utils::resolve_cs_id;
+    use tests_utils::CreateCommitContext;
 
     #[fbinit::test]
     async fn test_sync_changeset_simple(fb: FacebookInit) -> Result<(), Error> {

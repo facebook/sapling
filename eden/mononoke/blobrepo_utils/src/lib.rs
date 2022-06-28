@@ -11,8 +11,11 @@ mod bonsai;
 mod changeset;
 mod errors;
 
-pub use crate::bonsai::{BonsaiMFVerify, BonsaiMFVerifyDifference, BonsaiMFVerifyResult};
-pub use crate::changeset::{visit_changesets, ChangesetVisitor};
+pub use crate::bonsai::BonsaiMFVerify;
+pub use crate::bonsai::BonsaiMFVerifyDifference;
+pub use crate::bonsai::BonsaiMFVerifyResult;
+pub use crate::changeset::visit_changesets;
+pub use crate::changeset::ChangesetVisitor;
 pub use crate::errors::ErrorKind;
 
 use anyhow::Result;
@@ -21,7 +24,8 @@ use blobstore::Loadable;
 use context::CoreContext;
 use manifest::BonsaiDiffFileChange;
 use mercurial_types::HgFileNodeId;
-use mononoke_types::{FileChange, MPath};
+use mononoke_types::FileChange;
+use mononoke_types::MPath;
 
 /// This is a function that's used to generate additional file changes for rebased diamond merges.
 /// It's used in a very specific use case - rebasing of a diamond merge and it should be used with

@@ -5,12 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use blobstore::{BlobstoreGetData, Loadable};
+use blobstore::BlobstoreGetData;
+use blobstore::Loadable;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
-use mononoke_types::{
-    deleted_manifest_common::DeletedManifestCommon, BlobstoreBytes, ChangesetId, MononokeId,
-};
+use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
+use mononoke_types::BlobstoreBytes;
+use mononoke_types::ChangesetId;
+use mononoke_types::MononokeId;
 
 /// Common trait for the root id of all deleted manifest types
 pub trait RootDeletedManifestIdCommon:

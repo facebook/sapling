@@ -8,18 +8,22 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::{format_err, Error, Result};
+use anyhow::format_err;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
-use sql::{queries, Connection};
-use sql_ext::{
-    replication::{ReplicaLagMonitor, WaitForReplicationConfig},
-    SqlConnections,
-};
+use sql::queries;
+use sql::Connection;
+use sql_ext::replication::ReplicaLagMonitor;
+use sql_ext::replication::WaitForReplicationConfig;
+use sql_ext::SqlConnections;
 
 use stats::prelude::*;
 
-use context::{CoreContext, PerfCounterType};
-use mononoke_types::{ChangesetId, RepositoryId};
+use context::CoreContext;
+use context::PerfCounterType;
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 
 use crate::idmap::IdMap;
 use crate::types::IdMapVersion;
@@ -482,13 +486,18 @@ mod tests {
     use super::*;
 
     use maplit::hashmap;
-    use sql::{rusqlite::Connection as SqliteConnection, Connection};
+    use sql::rusqlite::Connection as SqliteConnection;
+    use sql::Connection;
 
     use fbinit::FacebookInit;
 
-    use mononoke_types_mocks::changesetid::{
-        AS_CSID, BS_CSID, FIVES_CSID, FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID,
-    };
+    use mononoke_types_mocks::changesetid::AS_CSID;
+    use mononoke_types_mocks::changesetid::BS_CSID;
+    use mononoke_types_mocks::changesetid::FIVES_CSID;
+    use mononoke_types_mocks::changesetid::FOURS_CSID;
+    use mononoke_types_mocks::changesetid::ONES_CSID;
+    use mononoke_types_mocks::changesetid::THREES_CSID;
+    use mononoke_types_mocks::changesetid::TWOS_CSID;
     use sql_construct::SqlConstruct;
     use sql_ext::replication::NoReplicaLagMonitor;
 

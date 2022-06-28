@@ -5,21 +5,27 @@
  * GNU General Public License version 2.
  */
 
-use sql::{Connection, Transaction};
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql::Connection;
+use sql::Transaction;
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use context::{CoreContext, PerfCounterType};
+use context::CoreContext;
+use context::PerfCounterType;
 use metaconfig_types::CommitSyncConfigVersion;
-use mononoke_types::{ChangesetId, RepositoryId};
-use sql::mysql_async::{
-    prelude::{ConvIr, FromValue},
-    FromValueError, Value,
-};
-use sql::{mysql, queries};
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
+use sql::mysql;
+use sql::mysql_async::prelude::ConvIr;
+use sql::mysql_async::prelude::FromValue;
+use sql::mysql_async::FromValueError;
+use sql::mysql_async::Value;
+use sql::queries;
 use stats::prelude::*;
 use thiserror::Error;
 

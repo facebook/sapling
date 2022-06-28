@@ -18,27 +18,45 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Error;
+use anyhow::Result;
 use cached_config::ConfigStore;
 use clap_old::ArgMatches;
 use fbinit::FacebookInit;
 use scribe_ext::Scribe;
-use slog::{info, warn, Logger};
+use slog::info;
+use slog::warn;
+use slog::Logger;
 
-pub use metaconfig_parser::{RepoConfigs, StorageConfigs};
-use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig};
+pub use metaconfig_parser::RepoConfigs;
+pub use metaconfig_parser::StorageConfigs;
+use metaconfig_types::BlobConfig;
+use metaconfig_types::CommonConfig;
+use metaconfig_types::Redaction;
+use metaconfig_types::RepoConfig;
 use mononoke_types::RepositoryId;
-use repo_factory::{RepoFactory, RepoFactoryBuilder};
+use repo_factory::RepoFactory;
+use repo_factory::RepoFactoryBuilder;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 
-use crate::helpers::{setup_repo_dir, CreateStorage};
+use crate::helpers::setup_repo_dir;
+use crate::helpers::CreateStorage;
 
-use self::app::{
-    CONFIG_PATH, REPO_ID, REPO_NAME, SCRIBE_LOGGING_DIRECTORY, SOURCE_REPO_ID, SOURCE_REPO_NAME,
-    TARGET_REPO_ID, TARGET_REPO_NAME,
-};
+use self::app::CONFIG_PATH;
+use self::app::REPO_ID;
+use self::app::REPO_NAME;
+use self::app::SCRIBE_LOGGING_DIRECTORY;
+use self::app::SOURCE_REPO_ID;
+use self::app::SOURCE_REPO_NAME;
+use self::app::TARGET_REPO_ID;
+use self::app::TARGET_REPO_NAME;
 
-pub use self::app::{ArgType, MononokeAppBuilder, MononokeClapApp, RepoRequirement};
+pub use self::app::ArgType;
+pub use self::app::MononokeAppBuilder;
+pub use self::app::MononokeClapApp;
+pub use self::app::RepoRequirement;
 pub use self::matches::MononokeMatches;
 
 fn get_repo_id_and_name_from_values<'a>(

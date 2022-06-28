@@ -7,9 +7,12 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, OverwriteStatus, PutBehaviour,
-};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
+use blobstore::BlobstorePutOps;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
 use context::CoreContext;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::BlobstoreBytes;
@@ -230,7 +233,8 @@ mod test {
 
     use borrowed::borrowed;
     use fbinit::FacebookInit;
-    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::atomic::AtomicBool;
+    use std::sync::atomic::Ordering;
 
     use context::SamplingKey;
     use memblob::Memblob;

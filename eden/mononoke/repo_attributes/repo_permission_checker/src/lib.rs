@@ -5,16 +5,19 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use fbinit::FacebookInit;
-use slog::{trace, Logger};
+use slog::trace;
+use slog::Logger;
 
 use metaconfig_types::AllowlistIdentity;
-use permission_checker::{
-    BoxPermissionChecker, MononokeIdentity, MononokeIdentitySet, PermissionCheckerBuilder,
-};
+use permission_checker::BoxPermissionChecker;
+use permission_checker::MononokeIdentity;
+use permission_checker::MononokeIdentitySet;
+use permission_checker::PermissionCheckerBuilder;
 
 /// Repository permissions checks
 ///

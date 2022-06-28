@@ -8,23 +8,31 @@
 //! Functions for maintaining git mappings during bookmark movement.
 
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::{Context, Error, Result};
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use blobstore::Loadable;
-use bonsai_git_mapping::{
-    extract_git_sha1_from_bonsai_extra, BonsaiGitMapping, BonsaiGitMappingEntry,
-};
+use bonsai_git_mapping::extract_git_sha1_from_bonsai_extra;
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bookmarks::BookmarkTransactionHook;
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::{try_join, FutureExt, TryFutureExt};
-use futures::stream::{FuturesOrdered, StreamExt};
+use futures::future::try_join;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::stream::FuturesOrdered;
+use futures::stream::StreamExt;
 use metaconfig_types::PushrebaseParams;
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 
-use crate::{BookmarkMovementError, Repo};
+use crate::BookmarkMovementError;
+use crate::Repo;
 
 /// New mapping entries that should be added to the mapping.
 struct NewMappingEntries {
@@ -217,21 +225,29 @@ pub(crate) async fn populate_git_mapping_txn_hook(
 mod tests {
     use super::*;
     use anyhow::Result;
-    use blobrepo::{AsBlobRepo, BlobRepo};
-    use bonsai_git_mapping::{CONVERT_REVISION_EXTRA, HGGIT_SOURCE_EXTRA};
-    use bookmarks::{BookmarkName, BookmarkUpdateReason, BookmarksRef};
+    use blobrepo::AsBlobRepo;
+    use blobrepo::BlobRepo;
+    use bonsai_git_mapping::CONVERT_REVISION_EXTRA;
+    use bonsai_git_mapping::HGGIT_SOURCE_EXTRA;
+    use bookmarks::BookmarkName;
+    use bookmarks::BookmarkUpdateReason;
+    use bookmarks::BookmarksRef;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
-    use maplit::{hashmap, hashset};
+    use maplit::hashmap;
+    use maplit::hashset;
     use mononoke_api_types::InnerRepo;
     use mononoke_types::hash::GitSha1;
-    use mononoke_types_mocks::hash::{
-        FIVES_GIT_SHA1, FOURS_GIT_SHA1, ONES_GIT_SHA1, SIXES_GIT_SHA1, THREES_GIT_SHA1,
-        TWOS_GIT_SHA1,
-    };
+    use mononoke_types_mocks::hash::FIVES_GIT_SHA1;
+    use mononoke_types_mocks::hash::FOURS_GIT_SHA1;
+    use mononoke_types_mocks::hash::ONES_GIT_SHA1;
+    use mononoke_types_mocks::hash::SIXES_GIT_SHA1;
+    use mononoke_types_mocks::hash::THREES_GIT_SHA1;
+    use mononoke_types_mocks::hash::TWOS_GIT_SHA1;
     use repo_blobstore::RepoBlobstoreRef;
     use test_repo_factory::TestRepoFactory;
-    use tests_utils::drawdag::{changes, create_from_dag_with_changes};
+    use tests_utils::drawdag::changes;
+    use tests_utils::drawdag::create_from_dag_with_changes;
     use tests_utils::CreateCommitContext;
 
     fn add_git_extras(

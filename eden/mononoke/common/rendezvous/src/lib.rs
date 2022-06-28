@@ -15,9 +15,12 @@ mod tunables;
 #[cfg(test)]
 mod test;
 
-pub use crate::tunables::{TunablesMultiRendezVousController, TunablesRendezVousController};
-pub use multi_rendez_vous::{MultiRendezVous, MultiRendezVousController};
-pub use rendez_vous::{RendezVous, RendezVousController};
+pub use crate::tunables::TunablesMultiRendezVousController;
+pub use crate::tunables::TunablesRendezVousController;
+pub use multi_rendez_vous::MultiRendezVous;
+pub use multi_rendez_vous::MultiRendezVousController;
+pub use rendez_vous::RendezVous;
+pub use rendez_vous::RendezVousController;
 pub use rendez_vous_stats::RendezVousStats;
 
 #[derive(Copy, Clone, Debug)]
@@ -55,7 +58,8 @@ mod demo {
 
     use anyhow::Error;
     use fbinit::FacebookInit;
-    use maplit::{hashmap, hashset};
+    use maplit::hashmap;
+    use maplit::hashset;
     use std::collections::HashMap;
     use std::sync::Arc;
 

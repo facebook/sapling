@@ -8,7 +8,8 @@
 use std::fmt;
 
 use anyhow::Error;
-use blobstore::{Loadable, LoadableError};
+use blobstore::Loadable;
+use blobstore::LoadableError;
 use cloned::cloned;
 use futures_lazy_shared::LazyShared;
 use mononoke_types::fsnode::Fsnode;

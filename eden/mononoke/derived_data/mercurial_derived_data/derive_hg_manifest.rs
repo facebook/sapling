@@ -5,35 +5,44 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use blobrepo_errors::ErrorKind;
-use blobstore::{Blobstore, Loadable};
+use blobstore::Blobstore;
+use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
+use futures::channel::mpsc;
+use futures::compat::Future01CompatExt;
 use futures::future::try_join_all;
-use futures::{
-    channel::mpsc,
-    compat::Future01CompatExt,
-    future::{self, BoxFuture, FutureExt, TryFutureExt},
-};
-use manifest::{
-    derive_manifest_with_io_sender, derive_manifests_for_simple_stack_of_commits, Entry, LeafInfo,
-    ManifestChanges, Traced, TreeInfo,
-};
-use mercurial_types::{
-    blobs::{
-        ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
-        UploadHgTreeEntry,
-    },
-    HgFileNodeId, HgManifestId,
-};
-use mononoke_types::{ChangesetId, FileType, MPath, RepoPath, TrackedFileChange};
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use manifest::derive_manifest_with_io_sender;
+use manifest::derive_manifests_for_simple_stack_of_commits;
+use manifest::Entry;
+use manifest::LeafInfo;
+use manifest::ManifestChanges;
+use manifest::Traced;
+use manifest::TreeInfo;
+use mercurial_types::blobs::ContentBlobMeta;
+use mercurial_types::blobs::UploadHgFileContents;
+use mercurial_types::blobs::UploadHgFileEntry;
+use mercurial_types::blobs::UploadHgNodeHash;
+use mercurial_types::blobs::UploadHgTreeEntry;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mononoke_types::ChangesetId;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
+use mononoke_types::RepoPath;
+use mononoke_types::TrackedFileChange;
 use sorted_vector_map::SortedVectorMap;
-use std::{
-    collections::{BTreeMap, HashMap},
-    io::Write,
-    sync::Arc,
-};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::io::Write;
+use std::sync::Arc;
 
 use crate::derive_hg_changeset::store_file_change;
 

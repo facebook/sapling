@@ -5,15 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::anyhow;
+use anyhow::Error;
 use blobrepo::BlobRepo;
-use blobstore::{Blobstore, BlobstoreBytes};
-use clap_old::{App, Arg, ArgMatches, SubCommand};
-use cmdlib::args::{self, MononokeMatches};
+use blobstore::Blobstore;
+use blobstore::BlobstoreBytes;
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::TryFutureExt;
-use slog::{info, Logger};
+use slog::info;
+use slog::Logger;
 
 use crate::error::SubcommandError;
 

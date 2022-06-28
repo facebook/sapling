@@ -5,21 +5,30 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Result};
+use anyhow::bail;
+use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Loadable;
-use changesets::{ChangesetEntry, ChangesetInsert, Changesets, SortOrder};
+use changesets::ChangesetEntry;
+use changesets::ChangesetInsert;
+use changesets::Changesets;
+use changesets::SortOrder;
 use context::CoreContext;
 use derivative::Derivative;
-use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 use futures::try_join;
 use itertools::Itertools;
-use mononoke_types::{
-    ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
-};
+use mononoke_types::ChangesetId;
+use mononoke_types::ChangesetIdPrefix;
+use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
 use sorted_vector_map::SortedVectorMap;
-use sql::{queries, Connection};
+use sql::queries;
+use sql::Connection;
 use sql_ext::SqlConnections;
 
 use std::sync::Arc;

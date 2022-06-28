@@ -7,8 +7,10 @@
 
 use blobstore::impl_loadable_storable;
 
-use crate::thrift::{Tree as ThriftTree, TreeHandle as ThriftTreeHandle};
-use crate::{Tree, TreeHandle};
+use crate::thrift::Tree as ThriftTree;
+use crate::thrift::TreeHandle as ThriftTreeHandle;
+use crate::Tree;
+use crate::TreeHandle;
 
 impl_loadable_storable! {
     handle_type => TreeHandle,

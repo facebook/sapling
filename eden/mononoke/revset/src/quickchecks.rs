@@ -32,12 +32,21 @@ mod test {
     use cloned::cloned;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use futures::{compat::Stream01CompatExt, stream::StreamExt as _, TryStreamExt};
-    use futures_ext::{BoxFuture, BoxStream, StreamExt};
-    use futures_old::{future::ok, Stream};
+    use futures::compat::Stream01CompatExt;
+    use futures::stream::StreamExt as _;
+    use futures::TryStreamExt;
+    use futures_ext::BoxFuture;
+    use futures_ext::BoxStream;
+    use futures_ext::StreamExt;
+    use futures_old::future::ok;
+    use futures_old::Stream;
     use mononoke_types::ChangesetId;
-    use quickcheck::{quickcheck, Arbitrary, Gen};
-    use rand::{seq::SliceRandom, thread_rng, Rng};
+    use quickcheck::quickcheck;
+    use quickcheck::Arbitrary;
+    use quickcheck::Gen;
+    use rand::seq::SliceRandom;
+    use rand::thread_rng;
+    use rand::Rng;
     use revset_test_helper::single_changeset_id;
     use skiplist::SkiplistIndex;
     use std::collections::HashSet;
@@ -494,7 +503,9 @@ mod test {
         use futures::stream::TryStreamExt;
         use futures_ext::FutureExt;
         use futures_old::Future;
-        use futures_util::future::{try_join_all, FutureExt as NewFutureExt, TryFutureExt};
+        use futures_util::future::try_join_all;
+        use futures_util::future::FutureExt as NewFutureExt;
+        use futures_util::future::TryFutureExt;
 
         fn create_skiplist(
             ctx: CoreContext,

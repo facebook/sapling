@@ -6,11 +6,14 @@
  */
 
 use crate::CommitsInBundle;
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
 use context::CoreContext;
-use futures::{stream, StreamExt, TryStreamExt};
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
@@ -112,10 +115,13 @@ mod test {
     use super::*;
     use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
     use fbinit::FacebookInit;
-    use mercurial_types_mocks::globalrev::{GLOBALREV_ONE, GLOBALREV_TWO};
-    use mercurial_types_mocks::nodehash::{ONES_CSID as ONES_HG_CSID, TWOS_CSID as TWOS_HG_CSID};
+    use mercurial_types_mocks::globalrev::GLOBALREV_ONE;
+    use mercurial_types_mocks::globalrev::GLOBALREV_TWO;
+    use mercurial_types_mocks::nodehash::ONES_CSID as ONES_HG_CSID;
+    use mercurial_types_mocks::nodehash::TWOS_CSID as TWOS_HG_CSID;
     use mononoke_types::RepositoryId;
-    use mononoke_types_mocks::changesetid::{ONES_CSID, TWOS_CSID};
+    use mononoke_types_mocks::changesetid::ONES_CSID;
+    use mononoke_types_mocks::changesetid::TWOS_CSID;
     use test_repo_factory::TestRepoFactory;
 
     #[fbinit::test]

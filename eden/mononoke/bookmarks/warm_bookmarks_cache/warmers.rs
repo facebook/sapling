@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use super::{IsWarmFn, Warmer, WarmerFn};
+use super::IsWarmFn;
+use super::Warmer;
+use super::WarmerFn;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
@@ -14,7 +16,8 @@ use futures_watchdog::WatchdogExt;
 use mononoke_types::ChangesetId;
 use phases::PhasesArc;
 use repo_derived_data::RepoDerivedDataArc;
-use slog::{info, o};
+use slog::info;
+use slog::o;
 
 pub fn create_derived_data_warmer<Derivable, Repo>(ctx: &CoreContext, repo: &Repo) -> Warmer
 where

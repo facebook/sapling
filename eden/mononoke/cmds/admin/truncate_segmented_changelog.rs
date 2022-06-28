@@ -6,21 +6,27 @@
  */
 
 use anyhow::Context;
-use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
+use blobstore_factory::make_metadata_sql_factory;
+use blobstore_factory::ReadOnlyStorage;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
-use clap_old::{App, ArgMatches, SubCommand};
-use cmdlib::args::{self, MononokeMatches};
+use clap_old::App;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
 use cmdlib::helpers;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::MetadataDatabaseConfig;
 use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
-use segmented_changelog::{copy_segmented_changelog, SegmentedChangelogSqlConnections};
+use segmented_changelog::copy_segmented_changelog;
+use segmented_changelog::SegmentedChangelogSqlConnections;
 use slog::Logger;
 use sql_ext::facebook::MyAdmin;
-use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
+use sql_ext::replication::NoReplicaLagMonitor;
+use sql_ext::replication::ReplicaLagMonitor;
 use std::sync::Arc;
 
 use crate::error::SubcommandError;

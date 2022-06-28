@@ -5,21 +5,26 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, bail, Context, Error, Result};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use context::CoreContext;
-use derived_data::{
-    batch::{
-        split_bonsais_in_linear_stacks, FileConflicts, SplitOptions,
-        DEFAULT_STACK_FILE_CHANGES_LIMIT,
-    },
-    impl_bonsai_derived_via_manager,
-};
-use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
+use derived_data::batch::split_bonsais_in_linear_stacks;
+use derived_data::batch::FileConflicts;
+use derived_data::batch::SplitOptions;
+use derived_data::batch::DEFAULT_STACK_FILE_CHANGES_LIMIT;
+use derived_data::impl_bonsai_derived_via_manager;
+use derived_data_manager::dependencies;
+use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivationContext;
 use futures::future::try_join_all;
 use mercurial_types::HgChangesetId;
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use slog::debug;
 use stats::prelude::*;
 use std::collections::HashMap;
@@ -243,12 +248,22 @@ mod test {
     use cloned::cloned;
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
+    use fixtures::BranchEven;
+    use fixtures::BranchUneven;
+    use fixtures::BranchWide;
+    use fixtures::Linear;
+    use fixtures::ManyDiamonds;
+    use fixtures::ManyFilesDirs;
+    use fixtures::MergeEven;
+    use fixtures::MergeUneven;
     use fixtures::TestRepoFixture;
-    use fixtures::{
-        BranchEven, BranchUneven, BranchWide, Linear, ManyDiamonds, ManyFilesDirs, MergeEven,
-        MergeUneven, UnsharedMergeEven, UnsharedMergeUneven,
-    };
-    use futures::{compat::Stream01CompatExt, Future, Stream, TryFutureExt, TryStreamExt};
+    use fixtures::UnsharedMergeEven;
+    use fixtures::UnsharedMergeUneven;
+    use futures::compat::Stream01CompatExt;
+    use futures::Future;
+    use futures::Stream;
+    use futures::TryFutureExt;
+    use futures::TryStreamExt;
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use tests_utils::CreateCommitContext;

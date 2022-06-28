@@ -16,7 +16,8 @@ use mononoke_types::RepositoryId;
 use mononoke_types_mocks::hash::*;
 use pushrebase::do_pushrebase_bonsai;
 use test_repo_factory::TestRepoFactory;
-use tests_utils::{bookmark, CreateCommitContext};
+use tests_utils::bookmark;
+use tests_utils::CreateCommitContext;
 
 use crate::GitMappingPushrebaseHook;
 

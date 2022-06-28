@@ -8,9 +8,12 @@
 //! cbor.rs - Utilities for working with CBOR data in HTTP requests and responses.
 use std::pin::Pin;
 
-use anyhow::{format_err, Context, Error};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
 use bytes::Bytes;
-use edenapi_types::{ToApi, ToWire};
+use edenapi_types::ToApi;
+use edenapi_types::ToWire;
 use futures::prelude::*;
 use futures::ready;
 use futures::task::Poll;
@@ -18,16 +21,18 @@ use gotham::state::State;
 use mime::Mime;
 use once_cell::sync::Lazy;
 use pin_project::pin_project;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 
-use gotham_ext::{
-    content_encoding::ContentEncoding,
-    error::HttpError,
-    response::{
-        ContentMetaProvider, ErrorMeta, ErrorMetaProvider, ResponseStream, ResponseTryStreamExt,
-        StreamBody, TryIntoResponse,
-    },
-};
+use gotham_ext::content_encoding::ContentEncoding;
+use gotham_ext::error::HttpError;
+use gotham_ext::response::ContentMetaProvider;
+use gotham_ext::response::ErrorMeta;
+use gotham_ext::response::ErrorMetaProvider;
+use gotham_ext::response::ResponseStream;
+use gotham_ext::response::ResponseTryStreamExt;
+use gotham_ext::response::StreamBody;
+use gotham_ext::response::TryIntoResponse;
 
 use crate::errors::ErrorKind;
 

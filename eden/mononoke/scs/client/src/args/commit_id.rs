@@ -7,15 +7,25 @@
 
 //! Arguments for Commit IDs and Commit Identity Schemes
 
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+use std::collections::HashSet;
 use std::fmt;
 use std::num::NonZeroU64;
 
-use anyhow::{bail, format_err, Error};
-use clap::{App, Arg, ArgGroup, ArgMatches};
-use faster_hex::{hex_decode, hex_string};
-use futures_util::future::{try_join_all, FutureExt};
-use futures_util::stream::{FuturesOrdered, TryStreamExt};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Error;
+use clap::App;
+use clap::Arg;
+use clap::ArgGroup;
+use clap::ArgMatches;
+use faster_hex::hex_decode;
+use faster_hex::hex_string;
+use futures_util::future::try_join_all;
+use futures_util::future::FutureExt;
+use futures_util::stream::FuturesOrdered;
+use futures_util::stream::TryStreamExt;
 use source_control::types as thrift;
 
 use crate::connection::Connection;

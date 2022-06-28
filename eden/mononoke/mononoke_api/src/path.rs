@@ -7,7 +7,8 @@
 
 use std::fmt;
 
-use mononoke_types::{MPath, MPathElement};
+use mononoke_types::MPath;
+use mononoke_types::MPathElement;
 
 use crate::errors::MononokeError;
 

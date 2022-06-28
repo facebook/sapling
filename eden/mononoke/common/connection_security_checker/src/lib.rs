@@ -7,10 +7,12 @@
 
 use anyhow::Result;
 use fbinit::FacebookInit;
-use metaconfig_types::{AllowlistIdentity, CommonConfig};
-use permission_checker::{
-    BoxPermissionChecker, MononokeIdentity, MononokeIdentitySet, PermissionCheckerBuilder,
-};
+use metaconfig_types::AllowlistIdentity;
+use metaconfig_types::CommonConfig;
+use permission_checker::BoxPermissionChecker;
+use permission_checker::MononokeIdentity;
+use permission_checker::MononokeIdentitySet;
+use permission_checker::PermissionCheckerBuilder;
 
 pub struct ConnectionSecurityChecker {
     checker: BoxPermissionChecker,

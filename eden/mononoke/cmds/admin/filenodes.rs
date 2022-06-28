@@ -5,25 +5,37 @@
  * GNU General Public License version 2.
  */
 
-use clap_old::{App, Arg, ArgMatches, SubCommand};
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
 use cmdlib::args;
 
-use anyhow::{anyhow, format_err, Error};
+use anyhow::anyhow;
+use anyhow::format_err;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use cloned::cloned;
-use cmdlib::{args::MononokeMatches, helpers};
+use cmdlib::args::MononokeMatches;
+use cmdlib::helpers;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
-use futures::{future::try_join_all, TryStreamExt};
+use futures::future::try_join_all;
+use futures::TryStreamExt;
 use futures_stats::TimedFutureExt;
-use manifest::{Entry, ManifestOps};
+use manifest::Entry;
+use manifest::ManifestOps;
 use mercurial_derived_data::DeriveHgChangeset;
-use mercurial_types::{HgFileEnvelope, HgFileNodeId, MPath};
+use mercurial_types::HgFileEnvelope;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::MPath;
 use mononoke_types::RepoPath;
-use slog::{debug, info, Logger};
+use slog::debug;
+use slog::info;
+use slog::Logger;
 
 use crate::common::get_file_nodes;
 use crate::error::SubcommandError;

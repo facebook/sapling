@@ -10,22 +10,25 @@
 mod methods;
 mod worker;
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use fbinit::FacebookInit;
 
 use anyhow::Error;
-use clap::{value_t, Arg};
-use cmdlib::{
-    args,
-    helpers::serve_forever,
-    monitoring::{start_fb303_server, AliveService},
-};
+use clap::value_t;
+use clap::Arg;
+use cmdlib::args;
+use cmdlib::helpers::serve_forever;
+use cmdlib::monitoring::start_fb303_server;
+use cmdlib::monitoring::AliveService;
 use context::SessionContainer;
 use hostname::get_hostname;
 use megarepo_api::MegarepoApi;
-use mononoke_api::{Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData};
+use mononoke_api::Mononoke;
+use mononoke_api::MononokeApiEnvironment;
+use mononoke_api::WarmBookmarksCacheDerivedData;
 use repo_factory::RepoFactory;
 use scuba_ext::MononokeScubaSampleBuilder;
 

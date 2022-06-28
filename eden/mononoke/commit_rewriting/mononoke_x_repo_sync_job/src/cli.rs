@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use clap_old::{Arg, SubCommand};
-use cmdlib::args::{self, MononokeClapApp};
+use clap_old::Arg;
+use clap_old::SubCommand;
+use cmdlib::args::MononokeClapApp;
+use cmdlib::args::{self};
 
 pub const ARG_ONCE: &str = "once";
 pub const ARG_COMMIT: &str = "commit";

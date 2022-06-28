@@ -5,13 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Result};
+use anyhow::bail;
+use anyhow::Result;
 use fbinit::FacebookInit;
 use openssl::x509::X509;
 
-use crate::checker::{BoxPermissionChecker, PermissionCheckerBuilder};
-use crate::identity::{MononokeIdentity, MononokeIdentitySet, MononokeIdentitySetExt};
-use crate::membership::{BoxMembershipChecker, MembershipCheckerBuilder};
+use crate::checker::BoxPermissionChecker;
+use crate::checker::PermissionCheckerBuilder;
+use crate::identity::MononokeIdentity;
+use crate::identity::MononokeIdentitySet;
+use crate::identity::MononokeIdentitySetExt;
+use crate::membership::BoxMembershipChecker;
+use crate::membership::MembershipCheckerBuilder;
 
 impl MononokeIdentity {
     pub fn reviewer_identities(_username: &str) -> MononokeIdentitySet {

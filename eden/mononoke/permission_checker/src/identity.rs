@@ -5,8 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Error, Result};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
+use serde::Deserialize;
+use serde::Deserializer;
+use serde::Serialize;
+use serde::Serializer;
 use std::collections::BTreeSet;
 use std::fmt;
 use std::str::FromStr;

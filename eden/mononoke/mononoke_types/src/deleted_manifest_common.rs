@@ -6,13 +6,17 @@
  */
 
 use anyhow::Result;
-use blobstore::{Blobstore, Loadable};
+use blobstore::Blobstore;
+use blobstore::Loadable;
 use context::CoreContext;
 use futures::stream::BoxStream;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 
-use crate::{blob::BlobstoreValue, ChangesetId, MPathElement, MononokeId};
+use crate::blob::BlobstoreValue;
+use crate::ChangesetId;
+use crate::MPathElement;
+use crate::MononokeId;
 
 /// This trait has common behaviour that should be shared among all versions
 /// of deleted manifest, and should be used to generalize usage of them.

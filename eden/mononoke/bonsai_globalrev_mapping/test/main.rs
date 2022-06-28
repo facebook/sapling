@@ -14,12 +14,16 @@ use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use sql::Connection;
 use sql_construct::SqlConstruct;
-use sql_ext::{open_sqlite_in_memory, SqlConnections};
+use sql_ext::open_sqlite_in_memory;
+use sql_ext::SqlConnections;
 
-use bonsai_globalrev_mapping::{
-    add_globalrevs, AddGlobalrevsErrorKind, BonsaiGlobalrevMapping, BonsaiGlobalrevMappingEntry,
-    BonsaisOrGlobalrevs, CachingBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMappingBuilder,
-};
+use bonsai_globalrev_mapping::add_globalrevs;
+use bonsai_globalrev_mapping::AddGlobalrevsErrorKind;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
+use bonsai_globalrev_mapping::BonsaisOrGlobalrevs;
+use bonsai_globalrev_mapping::CachingBonsaiGlobalrevMapping;
+use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
 
 #[fbinit::test]
 async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {

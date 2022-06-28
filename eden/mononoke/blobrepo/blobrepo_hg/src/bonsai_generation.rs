@@ -7,20 +7,34 @@
 
 use std::collections::HashSet;
 
-use anyhow::{Context, Error, Result};
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use cloned::cloned;
-use futures::stream::{self, StreamExt, TryStream, TryStreamExt};
+use futures::stream::StreamExt;
+use futures::stream::TryStream;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
 
-use blobstore::{Blobstore, Loadable};
+use blobstore::Blobstore;
+use blobstore::Loadable;
 use context::CoreContext;
-use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
-use mercurial_types::{
-    blobs::{HgBlobChangeset, HgBlobEnvelope},
-    HgFileEnvelope, HgFileNodeId, HgManifestId, MPath, RepoPath,
-};
-use mononoke_types::{
-    BlobstoreKey, BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange,
-};
+use manifest::bonsai_diff;
+use manifest::BonsaiDiffFileChange;
+use manifest::ManifestOps;
+use mercurial_types::blobs::HgBlobChangeset;
+use mercurial_types::blobs::HgBlobEnvelope;
+use mercurial_types::HgFileEnvelope;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mercurial_types::MPath;
+use mercurial_types::RepoPath;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::BlobstoreValue;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::FileChange;
 use repo_blobstore::RepoBlobstore;
 use sorted_vector_map::SortedVectorMap;
 

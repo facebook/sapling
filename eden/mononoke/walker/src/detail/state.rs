@@ -5,43 +5,64 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::{
-    graph::{EdgeType, Node, NodeData, NodeType, UnodeFlags, WrappedPath, WrappedPathHash},
-    log,
-    progress::sort_by_string,
-    walk::{
-        expand_checked_nodes, EmptyRoute, OutgoingEdge, TailingWalkVisitor, VisitOne, WalkVisitor,
-    },
-};
+use crate::detail::graph::EdgeType;
+use crate::detail::graph::Node;
+use crate::detail::graph::NodeData;
+use crate::detail::graph::NodeType;
+use crate::detail::graph::UnodeFlags;
+use crate::detail::graph::WrappedPath;
+use crate::detail::graph::WrappedPathHash;
+use crate::detail::log;
+use crate::detail::progress::sort_by_string;
+use crate::detail::walk::expand_checked_nodes;
+use crate::detail::walk::EmptyRoute;
+use crate::detail::walk::OutgoingEdge;
+use crate::detail::walk::TailingWalkVisitor;
+use crate::detail::walk::VisitOne;
+use crate::detail::walk::WalkVisitor;
 
 use ahash::RandomState;
-use anyhow::{bail, Error};
+use anyhow::bail;
+use anyhow::Error;
 use array_init::array_init;
 use async_trait::async_trait;
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use bulkops::Direction;
 use context::CoreContext;
-use dashmap::{mapref::one::Ref, DashMap};
+use dashmap::mapref::one::Ref;
+use dashmap::DashMap;
 use futures::future::TryFutureExt;
 use itertools::Itertools;
-use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
-use mononoke_types::{
-    ChangesetId, ContentId, DeletedManifestV2Id, FastlogBatchId, FileUnodeId, FsnodeId,
-    ManifestUnodeId, SkeletonManifestId,
-};
-use phases::{Phase, Phases};
-use slog::{info, Logger};
-use std::{
-    cmp,
-    collections::{HashMap, HashSet},
-    fmt,
-    hash::Hash,
-    marker::PhantomData,
-    ops::Add,
-    sync::atomic::{AtomicU32, AtomicUsize, Ordering},
-};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::DeletedManifestV2Id;
+use mononoke_types::FastlogBatchId;
+use mononoke_types::FileUnodeId;
+use mononoke_types::FsnodeId;
+use mononoke_types::ManifestUnodeId;
+use mononoke_types::SkeletonManifestId;
+use phases::Phase;
+use phases::Phases;
+use slog::info;
+use slog::Logger;
+use std::cmp;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt;
+use std::hash::Hash;
+use std::marker::PhantomData;
+use std::ops::Add;
+use std::sync::atomic::AtomicU32;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 use strum::EnumCount;
-use strum_macros::{EnumIter, EnumString, EnumVariantNames};
+use strum_macros::EnumIter;
+use strum_macros::EnumString;
+use strum_macros::EnumVariantNames;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub struct StepStats {

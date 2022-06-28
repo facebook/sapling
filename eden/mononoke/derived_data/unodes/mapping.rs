@@ -5,20 +5,34 @@
  * GNU General Public License version 2.
  */
 
-use crate::derive::{derive_unode_manifest, derive_unode_manifest_stack};
-use anyhow::{anyhow, Context, Error, Result};
+use crate::derive::derive_unode_manifest;
+use crate::derive::derive_unode_manifest_stack;
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData, Loadable};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
+use blobstore::Loadable;
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::batch::{split_bonsais_in_linear_stacks, FileConflicts};
+use derived_data::batch::split_bonsais_in_linear_stacks;
+use derived_data::batch::FileConflicts;
 use derived_data::impl_bonsai_derived_via_manager;
-use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
-use futures::{future::try_join_all, TryFutureExt};
+use derived_data_manager::dependencies;
+use derived_data_manager::BonsaiDerivable;
+use derived_data_manager::DerivationContext;
+use futures::future::try_join_all;
+use futures::TryFutureExt;
 use metaconfig_types::UnodeVersion;
-use mononoke_types::{
-    BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, ManifestUnodeId,
-};
+use mononoke_types::BlobstoreBytes;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
+use mononoke_types::ManifestUnodeId;
 use slog::debug;
 use stats::prelude::*;
 use std::collections::HashMap;
@@ -242,15 +256,25 @@ mod test {
     use derived_data_manager::BatchDeriveOptions;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
+    use fixtures::BranchEven;
+    use fixtures::BranchUneven;
+    use fixtures::BranchWide;
+    use fixtures::Linear;
+    use fixtures::ManyDiamonds;
+    use fixtures::ManyFilesDirs;
+    use fixtures::MergeEven;
+    use fixtures::MergeUneven;
     use fixtures::TestRepoFixture;
-    use fixtures::{
-        BranchEven, BranchUneven, BranchWide, Linear, ManyDiamonds, ManyFilesDirs, MergeEven,
-        MergeUneven, UnsharedMergeEven, UnsharedMergeUneven,
-    };
-    use futures::{compat::Stream01CompatExt, Future, Stream, TryStreamExt};
+    use fixtures::UnsharedMergeEven;
+    use fixtures::UnsharedMergeUneven;
+    use futures::compat::Stream01CompatExt;
+    use futures::Future;
+    use futures::Stream;
+    use futures::TryStreamExt;
     use manifest::Entry;
     use mercurial_derived_data::DeriveHgChangeset;
-    use mercurial_types::{HgChangesetId, HgManifestId};
+    use mercurial_types::HgChangesetId;
+    use mercurial_types::HgManifestId;
     use mononoke_types::ChangesetId;
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;

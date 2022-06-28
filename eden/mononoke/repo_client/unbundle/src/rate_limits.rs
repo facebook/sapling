@@ -5,22 +5,29 @@
  * GNU General Public License version 2.
  */
 
-use crate::{BundleResolverError, PostResolveAction, PostResolvePush, PostResolvePushRebase};
-use anyhow::{anyhow, Result};
+use crate::BundleResolverError;
+use crate::PostResolveAction;
+use crate::PostResolvePush;
+use crate::PostResolvePushRebase;
+use anyhow::anyhow;
+use anyhow::Result;
 use context::CoreContext;
-use futures::{
-    future::{try_join_all, BoxFuture},
-    FutureExt,
-};
+use futures::future::try_join_all;
+use futures::future::BoxFuture;
+use futures::FutureExt;
 use maplit::hashmap;
 use mercurial_revlog::changeset::RevlogChangeset;
 use mononoke_types::BonsaiChangeset;
-use rate_limiting::{RateLimitBody, RateLimitStatus};
-use sha2::{Digest, Sha256};
-use slog::{debug, warn};
+use rate_limiting::RateLimitBody;
+use rate_limiting::RateLimitStatus;
+use sha2::Digest;
+use sha2::Sha256;
+use slog::debug;
+use slog::warn;
 use std::collections::HashMap;
 use std::time::Duration;
-use time_window_counter::{BoxGlobalTimeWindowCounter, GlobalTimeWindowCounterBuilder};
+use time_window_counter::BoxGlobalTimeWindowCounter;
+use time_window_counter::GlobalTimeWindowCounterBuilder;
 use tokio::time::timeout;
 
 const TIME_WINDOW_MIN: u32 = 10;

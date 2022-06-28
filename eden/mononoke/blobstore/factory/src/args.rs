@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::num::{NonZeroU32, NonZeroUsize};
+use std::num::NonZeroU32;
+use std::num::NonZeroUsize;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
 use arg_extensions::ArgDefaults;
 use clap::Args;
 use metaconfig_types::PackFormat;

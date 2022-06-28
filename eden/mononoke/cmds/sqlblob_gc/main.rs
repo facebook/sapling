@@ -9,7 +9,8 @@ use anyhow::Result;
 use clap::Parser;
 use cmdlib_logging::ScribeLoggingArgs;
 use fbinit::FacebookInit;
-use mononoke_app::{MononokeApp, MononokeAppBuilder};
+use mononoke_app::MononokeApp;
+use mononoke_app::MononokeAppBuilder;
 
 mod commands;
 mod utils;

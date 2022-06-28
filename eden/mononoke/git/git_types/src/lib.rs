@@ -20,5 +20,9 @@ mod store;
 mod tree;
 
 pub use crate::blob::BlobHandle;
-pub use crate::tree::{Tree, TreeBuilder, TreeHandle, TreeMember, Treeish};
+pub use crate::tree::Tree;
+pub use crate::tree::TreeBuilder;
+pub use crate::tree::TreeHandle;
+pub use crate::tree::TreeMember;
+pub use crate::tree::Treeish;
 pub use object::ObjectKind;

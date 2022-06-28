@@ -8,13 +8,15 @@
 use std::convert::TryInto;
 
 use anyhow::Result;
-use bookmarks::{BookmarkUpdateLogRef, Freshness};
+use bookmarks::BookmarkUpdateLogRef;
+use bookmarks::Freshness;
 use clap::Args;
 use context::CoreContext;
 use futures::stream::TryStreamExt;
 use mutable_counters::MutableCountersRef;
 
-use super::{Repo, LATEST_REPLAYED_REQUEST_KEY};
+use super::Repo;
+use super::LATEST_REPLAYED_REQUEST_KEY;
 use crate::bookmark_log_entry::BookmarkLogEntry;
 use crate::commit_id::IdentityScheme;
 

@@ -7,8 +7,12 @@
 
 use std::collections::HashMap;
 
-use anyhow::{bail, Context, Error, Result};
-use byteorder::{BigEndian, ByteOrder};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::ByteOrder;
 use bytes_old::BytesMut;
 use tokio_io::codec::Decoder;
 

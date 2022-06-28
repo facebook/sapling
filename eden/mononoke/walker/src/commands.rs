@@ -5,8 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::detail::graph::{EdgeType, NodeType};
-use crate::detail::progress::{ProgressStateCountByType, ProgressStateMutex, ProgressSummary};
+use crate::detail::graph::EdgeType;
+use crate::detail::graph::NodeType;
+use crate::detail::progress::ProgressStateCountByType;
+use crate::detail::progress::ProgressStateMutex;
+use crate::detail::progress::ProgressSummary;
 use crate::detail::state::StepStats;
 use crate::detail::tail::TailParams;
 use crate::detail::walk::RepoWalkParams;

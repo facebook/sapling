@@ -7,9 +7,15 @@
 
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Error};
-use clap_old::{App, Arg, ArgMatches, SubCommand};
-use cmdlib::args::{self, MononokeMatches};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
 use cmdlib::value_t;
 use context::CoreContext;
 use context::SessionContainer;
@@ -18,23 +24,29 @@ use maplit::hashmap;
 use megarepo_api::MegarepoApi;
 use mononoke_types::ChangesetId;
 use mononoke_types::Timestamp;
-use prettytable::{cell, format, row, Table};
+use prettytable::cell;
+use prettytable::format;
+use prettytable::row;
+use prettytable::Table;
 use slog::Logger;
 
 use crate::error::SubcommandError;
 
-use async_requests::types::{
-    MegarepoAsynchronousRequestResult, RequestStatus, RowId,
-    ThriftMegarepoAsynchronousRequestParams,
-};
+use async_requests::types::MegarepoAsynchronousRequestResult;
+use async_requests::types::RequestStatus;
+use async_requests::types::RowId;
+use async_requests::types::ThriftMegarepoAsynchronousRequestParams;
 use megarepo_error::MegarepoError;
-use mononoke_api::{Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData};
+use mononoke_api::Mononoke;
+use mononoke_api::MononokeApiEnvironment;
+use mononoke_api::WarmBookmarksCacheDerivedData;
 use repo_factory::RepoFactory;
 use scuba_ext::MononokeScubaSampleBuilder;
-use source_control::{
-    MegarepoAddBranchingTargetResult, MegarepoAddTargetResult, MegarepoChangeTargetConfigResult,
-    MegarepoRemergeSourceResult, MegarepoSyncChangesetResult,
-};
+use source_control::MegarepoAddBranchingTargetResult;
+use source_control::MegarepoAddTargetResult;
+use source_control::MegarepoChangeTargetConfigResult;
+use source_control::MegarepoRemergeSourceResult;
+use source_control::MegarepoSyncChangesetResult;
 
 pub const ASYNC_REQUESTS: &str = "async-requests";
 const LIST_CMD: &str = "list";

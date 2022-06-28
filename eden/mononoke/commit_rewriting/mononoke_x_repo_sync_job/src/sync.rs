@@ -5,39 +5,46 @@
  * GNU General Public License version 2.
  */
 
-use crate::reporting::{
-    log_bookmark_deletion_result, log_non_pushrebase_sync_single_changeset_result,
-    log_pushrebase_sync_single_changeset_result,
-};
-use anyhow::{format_err, Context, Error};
+use crate::reporting::log_bookmark_deletion_result;
+use crate::reporting::log_non_pushrebase_sync_single_changeset_result;
+use crate::reporting::log_pushrebase_sync_single_changeset_result;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateLogEntry, BookmarkUpdateReason};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::BookmarkUpdateReason;
 use cloned::cloned;
 use context::CoreContext;
-use cross_repo_sync::{
-    find_toposorted_unsynced_ancestors,
-    types::{Source, Target},
-    CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer,
-};
-use futures::{
-    compat::Future01CompatExt,
-    future::{try_join_all, FutureExt, TryFutureExt},
-    try_join,
-};
-use futures_old::{stream::Stream, Future};
+use cross_repo_sync::find_toposorted_unsynced_ancestors;
+use cross_repo_sync::types::Source;
+use cross_repo_sync::types::Target;
+use cross_repo_sync::CandidateSelectionHint;
+use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncOutcome;
+use cross_repo_sync::CommitSyncer;
+use futures::compat::Future01CompatExt;
+use futures::future::try_join_all;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::try_join;
+use futures_old::stream::Stream;
+use futures_old::Future;
 use futures_stats::TimedFutureExt;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
-use reachabilityindex::{LeastCommonAncestorsHint, ReachabilityIndex};
+use reachabilityindex::LeastCommonAncestorsHint;
+use reachabilityindex::ReachabilityIndex;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
-use slog::{info, warn};
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use slog::info;
+use slog::warn;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
 use synced_commit_mapping::SyncedCommitMapping;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -652,7 +659,9 @@ mod test {
     use maplit::hashset;
     use mutable_counters::MutableCountersRef;
     use synced_commit_mapping::SqlSyncedCommitMapping;
-    use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
+    use tests_utils::bookmark;
+    use tests_utils::resolve_cs_id;
+    use tests_utils::CreateCommitContext;
     use tokio::runtime::Runtime;
 
     #[fbinit::test]

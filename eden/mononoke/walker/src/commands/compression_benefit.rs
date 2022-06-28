@@ -5,26 +5,32 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
+use anyhow::Context;
+use anyhow::Error;
 use async_trait::async_trait;
 use clap::Parser;
-use executor_lib::{BackgroundProcessExecutor, RepoShardedProcess, RepoShardedProcessExecutor};
+use executor_lib::BackgroundProcessExecutor;
+use executor_lib::RepoShardedProcess;
+use executor_lib::RepoShardedProcessExecutor;
 use fbinit::FacebookInit;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::MononokeApp;
 use once_cell::sync::OnceCell;
-use slog::{info, Logger};
-use std::sync::atomic::{AtomicBool, Ordering};
+use slog::info;
+use slog::Logger;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use crate::commands::COMPRESSION_BENEFIT;
-use crate::detail::{
-    graph::Node,
-    sampling::WalkSampleMapping,
-    sizing::{compression_benefit, SizingCommand, SizingSample},
-};
+use crate::detail::graph::Node;
+use crate::detail::sampling::WalkSampleMapping;
+use crate::detail::sizing::compression_benefit;
+use crate::detail::sizing::SizingCommand;
+use crate::detail::sizing::SizingSample;
 
-use crate::args::{SamplingArgs, WalkerCommonArgs};
+use crate::args::SamplingArgs;
+use crate::args::WalkerCommonArgs;
 use crate::commands::JobParams;
 use crate::setup::setup_common;
 use crate::WalkerArgs;

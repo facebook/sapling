@@ -7,17 +7,20 @@
 
 use std::fmt;
 
-use context::{CoreContext, SessionContainer};
+use context::CoreContext;
+use context::SessionContainer;
 use fbinit::FacebookInit;
-use gotham::state::{FromState, State};
+use gotham::state::FromState;
+use gotham::state::State;
 use gotham_derive::StateData;
-use gotham_ext::{
-    middleware::{ClientIdentity, Middleware},
-    state_ext::StateExt,
-};
-use hyper::{body::Body, Response};
+use gotham_ext::middleware::ClientIdentity;
+use gotham_ext::middleware::Middleware;
+use gotham_ext::state_ext::StateExt;
+use hyper::body::Body;
+use hyper::Response;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{o, Logger};
+use slog::o;
+use slog::Logger;
 
 #[derive(Copy, Clone)]
 pub enum LfsMethod {

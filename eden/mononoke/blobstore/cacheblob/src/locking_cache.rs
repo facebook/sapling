@@ -8,13 +8,19 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use blobstore::{Blobstore, BlobstoreGetData, BlobstoreIsPresent, CountedBlobstore};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
+use blobstore::CountedBlobstore;
 use cloned::cloned;
-use context::{CoreContext, PerfCounterType};
-use futures::future::{BoxFuture, FutureExt};
+use context::CoreContext;
+use context::PerfCounterType;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
 use mononoke_types::BlobstoreBytes;
 use prefixblob::PrefixBlobstore;
-use redactedblobstore::{config::GET_OPERATION, RedactedBlobstore};
+use redactedblobstore::config::GET_OPERATION;
+use redactedblobstore::RedactedBlobstore;
 use stats::prelude::*;
 use std::fmt;
 

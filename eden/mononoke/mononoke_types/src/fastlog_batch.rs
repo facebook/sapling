@@ -5,18 +5,25 @@
  * GNU General Public License version 2.
  */
 
-use crate::{
-    blob::{Blob, BlobstoreValue, FastlogBatchBlob},
-    errors::ErrorKind,
-    thrift,
-    typed_hash::{ChangesetId, FastlogBatchId, FastlogBatchIdContext},
-};
-use anyhow::{Context, Result};
-use blobstore::{Blobstore, Loadable, Storable};
+use crate::blob::Blob;
+use crate::blob::BlobstoreValue;
+use crate::blob::FastlogBatchBlob;
+use crate::errors::ErrorKind;
+use crate::thrift;
+use crate::typed_hash::ChangesetId;
+use crate::typed_hash::FastlogBatchId;
+use crate::typed_hash::FastlogBatchIdContext;
+use anyhow::Context;
+use anyhow::Result;
+use blobstore::Blobstore;
+use blobstore::Loadable;
+use blobstore::Storable;
 use bytes::Bytes;
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures::future::{try_join_all, BoxFuture, FutureExt};
+use futures::future::try_join_all;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
 use itertools::Itertools;
 use std::collections::VecDeque;
 

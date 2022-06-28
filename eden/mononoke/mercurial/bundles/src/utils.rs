@@ -10,12 +10,19 @@
 use std::ops::Deref;
 use std::str;
 
-use anyhow::{bail, Context, Error, Result};
-use byteorder::{BigEndian, ByteOrder};
-use bytes_old::{Bytes, BytesMut};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::ByteOrder;
+use bytes_old::Bytes;
+use bytes_old::BytesMut;
 
-use async_compression::{CompressorType, DecompressorType};
-use mercurial_types::{HgNodeHash, MPath};
+use async_compression::CompressorType;
+use async_compression::DecompressorType;
+use mercurial_types::HgNodeHash;
+use mercurial_types::MPath;
 
 use crate::errors::ErrorKind;
 

@@ -7,11 +7,14 @@
 
 use std::collections::BTreeSet;
 
-use scuba_ext::{MononokeScubaSampleBuilder, ScubaValue};
+use scuba_ext::MononokeScubaSampleBuilder;
+use scuba_ext::ScubaValue;
 use source_control as thrift;
 
 use crate::commit_id::CommitIdExt;
-use crate::scuba_common::{hex, report_megarepo_target, Reported};
+use crate::scuba_common::hex;
+use crate::scuba_common::report_megarepo_target;
+use crate::scuba_common::Reported;
 
 /// A trait for logging a thrift `Params` struct to scuba.
 ///

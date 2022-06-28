@@ -10,32 +10,60 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use arg_extensions::ArgDefaults;
+use blobstore_factory::BlobstoreArgs;
+use blobstore_factory::BlobstoreOptions;
+use blobstore_factory::CachelibBlobstoreOptions;
+use blobstore_factory::ChaosOptions;
+use blobstore_factory::DelayOptions;
 #[cfg(fbcode_build)]
 use blobstore_factory::ManifoldArgs;
-use blobstore_factory::{
-    BlobstoreArgs, BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, DelayOptions,
-    PackOptions, ReadOnlyStorage, ReadOnlyStorageArgs, ThrottleOptions,
-};
-use cached_config::{ConfigHandle, ConfigStore};
-use clap::{Args, Command, FromArgMatches, IntoApp};
-use cmdlib_caching::{init_cachelib, CachelibArgs, CachelibSettings};
-use cmdlib_logging::{LoggingArgs, ScubaLoggingArgs};
+use blobstore_factory::PackOptions;
+use blobstore_factory::ReadOnlyStorage;
+use blobstore_factory::ReadOnlyStorageArgs;
+use blobstore_factory::ThrottleOptions;
+use cached_config::ConfigHandle;
+use cached_config::ConfigStore;
+use clap::Args;
+use clap::Command;
+use clap::FromArgMatches;
+use clap::IntoApp;
+use cmdlib_caching::init_cachelib;
+use cmdlib_caching::CachelibArgs;
+use cmdlib_caching::CachelibSettings;
+use cmdlib_logging::LoggingArgs;
+use cmdlib_logging::ScubaLoggingArgs;
 use derived_data_remote::RemoteDerivationArgs;
 use environment::MononokeEnvironment;
 use fbinit::FacebookInit;
-use megarepo_config::{MegarepoConfigsArgs, MononokeMegarepoConfigsOptions};
+use megarepo_config::MegarepoConfigsArgs;
+use megarepo_config::MononokeMegarepoConfigsOptions;
 use observability::DynamicLevelDrain;
 use rendezvous::RendezVousArgs;
-use slog::{debug, o, Logger, Never, SendSyncRefUnwindSafeDrain};
-use sql_ext::facebook::{MysqlOptions, PoolConfig, ReadConnectionType, SharedConnectionPool};
+use slog::debug;
+use slog::o;
+use slog::Logger;
+use slog::Never;
+use slog::SendSyncRefUnwindSafeDrain;
+use sql_ext::facebook::MysqlOptions;
+use sql_ext::facebook::PoolConfig;
+use sql_ext::facebook::ReadConnectionType;
+use sql_ext::facebook::SharedConnectionPool;
 use tokio::runtime::Runtime;
 use tunables;
 
 use crate::app::MononokeApp;
-use crate::args::{parse_config_spec_to_path, ConfigArgs, MysqlArgs, RuntimeArgs, TunablesArgs};
-use crate::extension::{AppExtension, AppExtensionBox, BoxedAppExtension, BoxedAppExtensionArgs};
+use crate::args::parse_config_spec_to_path;
+use crate::args::ConfigArgs;
+use crate::args::MysqlArgs;
+use crate::args::RuntimeArgs;
+use crate::args::TunablesArgs;
+use crate::extension::AppExtension;
+use crate::extension::AppExtensionBox;
+use crate::extension::BoxedAppExtension;
+use crate::extension::BoxedAppExtensionArgs;
 
 pub struct MononokeAppBuilder {
     fb: FacebookInit,

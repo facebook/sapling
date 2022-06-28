@@ -31,14 +31,19 @@
 //!
 //! Paths can be surrounded by quotes if they contain special characters.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::io::Write;
 
-use anyhow::{anyhow, Context, Error, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use blame::RootBlameV2;
 use blobrepo::BlobRepo;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use changeset_info::ChangesetInfo;
 use clap::Parser;
 use context::CoreContext;
@@ -55,8 +60,10 @@ use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
-use tests_utils::drawdag::{extend_from_dag_with_changes, ChangeFn};
-use tests_utils::{CommitIdentifier, CreateCommitContext};
+use tests_utils::drawdag::extend_from_dag_with_changes;
+use tests_utils::drawdag::ChangeFn;
+use tests_utils::CommitIdentifier;
+use tests_utils::CreateCommitContext;
 use tokio::io::AsyncReadExt;
 use topo_sort::sort_topological;
 use unodes::RootUnodeManifestId;

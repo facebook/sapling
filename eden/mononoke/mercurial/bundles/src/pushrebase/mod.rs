@@ -7,9 +7,11 @@
 
 // Pushrebase codecs
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use bytes_old::BytesMut;
-use mercurial_types::{HgChangesetId, HgNodeHash};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgNodeHash;
 use tokio_codec::Decoder;
 
 #[derive(Debug)]

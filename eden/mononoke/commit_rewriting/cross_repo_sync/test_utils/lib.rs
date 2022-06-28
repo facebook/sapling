@@ -7,34 +7,48 @@
 
 use ascii::AsciiString;
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
 use commit_transformation::upload_commits;
 use context::CoreContext;
-use cross_repo_sync::{
-    rewrite_commit, update_mapping_with_version, CommitRewrittenToEmpty, CommitSyncContext,
-    CommitSyncDataProvider, CommitSyncRepos, CommitSyncer, Syncers,
-};
-use live_commit_sync_config::{
-    LiveCommitSyncConfig, TestLiveCommitSyncConfig, TestLiveCommitSyncConfigSource,
-};
+use cross_repo_sync::rewrite_commit;
+use cross_repo_sync::update_mapping_with_version;
+use cross_repo_sync::CommitRewrittenToEmpty;
+use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncDataProvider;
+use cross_repo_sync::CommitSyncRepos;
+use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::Syncers;
+use live_commit_sync_config::LiveCommitSyncConfig;
+use live_commit_sync_config::TestLiveCommitSyncConfig;
+use live_commit_sync_config::TestLiveCommitSyncConfigSource;
 use maplit::hashmap;
-use megarepolib::{common::ChangesetArgs, perform_move};
-use metaconfig_types::{
-    CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig,
-    DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
-};
+use megarepolib::common::ChangesetArgs;
+use megarepolib::perform_move;
+use metaconfig_types::CommitSyncConfig;
+use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::CommonCommitSyncConfig;
+use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+use metaconfig_types::SmallRepoCommitSyncConfig;
+use metaconfig_types::SmallRepoPermanentConfig;
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
+use mononoke_types::MPath;
 use mononoke_types::RepositoryId;
-use mononoke_types::{ChangesetId, DateTime, MPath};
 use sql_construct::SqlConstruct;
-use std::{collections::HashMap, str::FromStr, sync::Arc};
-use synced_commit_mapping::{
-    SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
-};
+use std::collections::HashMap;
+use std::str::FromStr;
+use std::sync::Arc;
+use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMappingEntry;
 use test_repo_factory::TestRepoFactory;
-use tests_utils::{bookmark, CreateCommitContext};
+use tests_utils::bookmark;
+use tests_utils::CreateCommitContext;
 
 pub fn xrepo_mapping_version_with_small_repo() -> CommitSyncConfigVersion {
     CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())

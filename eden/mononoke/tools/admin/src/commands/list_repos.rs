@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use clap::Parser;
 use mononoke_app::MononokeApp;
 use regex::Regex;

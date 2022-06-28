@@ -7,7 +7,8 @@
 
 use thiserror::Error;
 
-use mercurial_types::{HgChangesetId, HgNodeHash};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgNodeHash;
 use mononoke_types::ChangesetId;
 
 #[derive(Debug, Error)]

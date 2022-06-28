@@ -8,31 +8,51 @@
 use std::fmt;
 use std::sync::Arc;
 
-use anyhow::{format_err, Error, Result};
-use clap_old::{App, Arg, ArgMatches, SubCommand};
+use anyhow::format_err;
+use anyhow::Error;
+use anyhow::Result;
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
 use fbinit::FacebookInit;
 use futures::future::try_join;
 
-use blobstore::{Blobstore, BlobstoreGetData};
-use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
-use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
+use blobstore_factory::make_blobstore;
+use blobstore_factory::BlobstoreOptions;
+use blobstore_factory::ReadOnlyStorage;
+use cacheblob::new_memcache_blobstore;
+use cacheblob::CacheBlobstoreExt;
 use cached_config::ConfigStore;
-use cmdlib::args::{self, MononokeMatches};
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
 use context::CoreContext;
 use git_types::Tree as GitTree;
-use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
-use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, StorageConfig};
-use mononoke_types::{FileContents, RepositoryId};
+use mercurial_types::HgChangesetEnvelope;
+use mercurial_types::HgFileEnvelope;
+use mercurial_types::HgManifestEnvelope;
+use metaconfig_types::BlobConfig;
+use metaconfig_types::BlobstoreId;
+use metaconfig_types::Redaction;
+use metaconfig_types::StorageConfig;
+use mononoke_types::FileContents;
+use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
-use redactedblobstore::{
-    RedactedBlobs, RedactedBlobstore, RedactedBlobstoreConfig, RedactionConfigBlobstore,
-    SqlRedactedContentStore,
-};
+use redactedblobstore::RedactedBlobs;
+use redactedblobstore::RedactedBlobstore;
+use redactedblobstore::RedactedBlobstoreConfig;
+use redactedblobstore::RedactionConfigBlobstore;
+use redactedblobstore::SqlRedactedContentStore;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{info, warn, Logger};
+use slog::info;
+use slog::warn;
+use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
 use std::ffi::OsStr;
-use tokio::{fs::File, io::AsyncWriteExt};
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
 use tunables::tunables;
 
 use crate::error::SubcommandError;

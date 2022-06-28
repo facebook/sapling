@@ -7,8 +7,10 @@
 
 use crate::content_encoding::ContentEncoding;
 
-use super::stream::{CompressedResponseStream, ResponseStream};
-use super::stream_ext::{CaptureFirstErr, EndOnErr};
+use super::stream::CompressedResponseStream;
+use super::stream::ResponseStream;
+use super::stream_ext::CaptureFirstErr;
+use super::stream_ext::EndOnErr;
 
 pub trait ContentMetaProvider {
     /// Provide the content (i.e. Content-Encoding) for the underlying content. This will be sent

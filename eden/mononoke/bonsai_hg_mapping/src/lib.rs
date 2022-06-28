@@ -7,19 +7,28 @@
 
 use std::sync::Arc;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use context::{CoreContext, PerfCounterType};
+use context::CoreContext;
+use context::PerfCounterType;
 use fbinit::FacebookInit;
 use futures::future;
-use mercurial_types::{HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix};
-use mononoke_types::{ChangesetId, RepositoryId};
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgChangesetIdPrefix;
+use mercurial_types::HgChangesetIdsResolvedFromPrefix;
+use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use rand::Rng;
-use rendezvous::{RendezVous, RendezVousOptions, RendezVousStats, TunablesRendezVousController};
+use rendezvous::RendezVous;
+use rendezvous::RendezVousOptions;
+use rendezvous::RendezVousStats;
+use rendezvous::TunablesRendezVousController;
 use sql::queries;
 use sql::Connection;
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 

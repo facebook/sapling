@@ -5,10 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::{bail, format_err, Context, Result};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
 use futures::prelude::*;
 
@@ -19,8 +23,14 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 
 use crate::idmap::IdMap;
+use crate::CloneData;
+use crate::DagId;
+use crate::DagIdSet;
+use crate::FirstAncestorConstraint;
+use crate::Group;
+use crate::InProcessIdDag;
+use crate::Location;
 use crate::SegmentedChangelog;
-use crate::{CloneData, DagId, DagIdSet, FirstAncestorConstraint, Group, InProcessIdDag, Location};
 
 const IDMAP_CHANGESET_FETCH_BATCH: usize = 500;
 

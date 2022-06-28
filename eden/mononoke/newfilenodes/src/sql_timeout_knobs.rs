@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 
 static ENFORCE_SQL_TIMEOUTS: AtomicBool = AtomicBool::new(true);
 

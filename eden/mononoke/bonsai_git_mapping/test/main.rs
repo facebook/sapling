@@ -7,10 +7,11 @@
 
 use anyhow::Error;
 use assert_matches::assert_matches;
-use bonsai_git_mapping::{
-    AddGitMappingErrorKind, BonsaiGitMapping, BonsaiGitMappingEntry, BonsaisOrGitShas,
-    SqlBonsaiGitMappingBuilder,
-};
+use bonsai_git_mapping::AddGitMappingErrorKind;
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_git_mapping::BonsaiGitMappingEntry;
+use bonsai_git_mapping::BonsaisOrGitShas;
+use bonsai_git_mapping::SqlBonsaiGitMappingBuilder;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_types_mocks::changesetid as bonsai;
@@ -18,7 +19,8 @@ use mononoke_types_mocks::hash::*;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use sql::Connection;
 use sql_construct::SqlConstruct;
-use sql_ext::{open_sqlite_in_memory, SqlConnections};
+use sql_ext::open_sqlite_in_memory;
+use sql_ext::SqlConnections;
 
 #[fbinit::test]
 async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {

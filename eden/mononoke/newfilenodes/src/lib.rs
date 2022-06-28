@@ -18,12 +18,18 @@ mod writer;
 #[cfg(test)]
 mod test;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
-use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes, PreparedFilenode};
+use filenodes::FilenodeInfo;
+use filenodes::FilenodeRangeResult;
+use filenodes::FilenodeResult;
+use filenodes::Filenodes;
+use filenodes::PreparedFilenode;
 use mercurial_types::HgFileNodeId;
-use mononoke_types::{RepoPath, RepositoryId};
+use mononoke_types::RepoPath;
+use mononoke_types::RepositoryId;
 use std::sync::Arc;
 use thiserror::Error as DeriveError;
 

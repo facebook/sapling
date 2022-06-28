@@ -5,35 +5,62 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
-use bonsai_git_mapping::{ArcBonsaiGitMapping, BonsaiGitMapping};
-use bonsai_globalrev_mapping::{ArcBonsaiGlobalrevMapping, BonsaiGlobalrevMapping};
-use bonsai_hg_mapping::{ArcBonsaiHgMapping, BonsaiHgMapping};
-use bonsai_svnrev_mapping::{ArcBonsaiSvnrevMapping, BonsaiSvnrevMapping};
-use bookmarks::{
-    self, ArcBookmarkUpdateLog, ArcBookmarks, Bookmark, BookmarkKind, BookmarkName,
-    BookmarkPagination, BookmarkPrefix, BookmarkTransaction, BookmarkUpdateLog,
-    BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, Freshness,
-};
+use anyhow::format_err;
+use anyhow::Error;
+use bonsai_git_mapping::ArcBonsaiGitMapping;
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_globalrev_mapping::ArcBonsaiGlobalrevMapping;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
+use bonsai_hg_mapping::ArcBonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_svnrev_mapping::ArcBonsaiSvnrevMapping;
+use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
+use bookmarks::ArcBookmarkUpdateLog;
+use bookmarks::ArcBookmarks;
+use bookmarks::Bookmark;
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkPagination;
+use bookmarks::BookmarkPrefix;
+use bookmarks::BookmarkTransaction;
+use bookmarks::BookmarkUpdateLog;
+use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::BookmarkUpdateReason;
+use bookmarks::Bookmarks;
+use bookmarks::Freshness;
+use bookmarks::{self};
 use cacheblob::LeaseOps;
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use changeset_fetcher::SimpleChangesetFetcher;
-use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
-use changesets::{Changesets, ChangesetsRef};
+use changesets::Changesets;
+use changesets::ChangesetsRef;
 use context::CoreContext;
 use ephemeral_blobstore::Bubble;
-use filenodes::{ArcFilenodes, Filenodes};
+use filenodes::ArcFilenodes;
+use filenodes::Filenodes;
 use filestore::FilestoreConfig;
-use futures::{future::BoxFuture, Stream, TryStreamExt};
-use mercurial_mutation::{ArcHgMutationStore, HgMutationStore};
-use metaconfig_types::{DerivedDataConfig, DerivedDataTypesConfig};
-use mononoke_types::{BonsaiChangeset, ChangesetId, Generation, RepositoryId};
+use futures::future::BoxFuture;
+use futures::Stream;
+use futures::TryStreamExt;
+use mercurial_mutation::ArcHgMutationStore;
+use mercurial_mutation::HgMutationStore;
+use metaconfig_types::DerivedDataConfig;
+use metaconfig_types::DerivedDataTypesConfig;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
+use mononoke_types::Generation;
+use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
 use phases::Phases;
-use pushrebase_mutation_mapping::{ArcPushrebaseMutationMapping, PushrebaseMutationMapping};
-use repo_blobstore::{RepoBlobstore, RepoBlobstoreRef};
+use pushrebase_mutation_mapping::ArcPushrebaseMutationMapping;
+use pushrebase_mutation_mapping::PushrebaseMutationMapping;
+use repo_blobstore::RepoBlobstore;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
-use repo_permission_checker::{ArcRepoPermissionChecker, RepoPermissionChecker};
+use repo_permission_checker::ArcRepoPermissionChecker;
+use repo_permission_checker::RepoPermissionChecker;
 use stats::prelude::*;
 use std::sync::Arc;
 

@@ -8,16 +8,22 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use futures::{compat::Future01CompatExt, future::BoxFuture, FutureExt, Stream, TryStreamExt};
-use futures_ext::{future::TryShared, FbTryFutureExt};
+use futures::compat::Future01CompatExt;
+use futures::future::BoxFuture;
+use futures::FutureExt;
+use futures::Stream;
+use futures::TryStreamExt;
+use futures_ext::future::TryShared;
+use futures_ext::FbTryFutureExt;
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use mercurial_revlog::manifest::ManifestContent;
-use mercurial_types::{
-    blobs::{UploadHgNodeHash, UploadHgTreeEntry},
-    HgManifestId, HgNodeHash, HgNodeKey,
-};
+use mercurial_types::blobs::UploadHgNodeHash;
+use mercurial_types::blobs::UploadHgTreeEntry;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::HgNodeKey;
 use mononoke_types::RepoPath;
 use wirepack::TreemanifestEntry;
 

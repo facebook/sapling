@@ -6,7 +6,8 @@
  */
 
 use ahash::RandomState;
-use anyhow::{bail, Error};
+use anyhow::bail;
+use anyhow::Error;
 use dashmap::DashMap;
 
 #[derive(Debug)]

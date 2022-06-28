@@ -14,24 +14,30 @@
 //! but not exactly once i.e. the same request might be executed a few times.
 
 use crate::methods::megarepo_async_request_compute;
-use async_requests::{
-    types::MegarepoAsynchronousRequestParams, AsyncMethodRequestQueue, ClaimedBy, RequestId,
-};
+use async_requests::types::MegarepoAsynchronousRequestParams;
+use async_requests::AsyncMethodRequestQueue;
+use async_requests::ClaimedBy;
+use async_requests::RequestId;
 use async_stream::try_stream;
 use cloned::cloned;
 use context::CoreContext;
+use futures::future::abortable;
+use futures::future::select;
+use futures::future::Either;
+use futures::pin_mut;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use futures::Stream;
-use futures::{
-    future::{abortable, select, Either},
-    pin_mut,
-    stream::{StreamExt, TryStreamExt},
-};
 use megarepo_api::MegarepoApi;
 use megarepo_config::Target;
 use megarepo_error::MegarepoError;
-use mononoke_types::{RepositoryId, Timestamp};
-use slog::{debug, error, info};
-use std::sync::atomic::{AtomicBool, Ordering};
+use mononoke_types::RepositoryId;
+use mononoke_types::Timestamp;
+use slog::debug;
+use slog::error;
+use slog::info;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 

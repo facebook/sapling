@@ -7,83 +7,144 @@
 
 use crate::errors::ErrorKind;
 
-use unbundle::{
-    run_hooks, run_post_resolve_action, BundleResolverError, CrossRepoPushSource, PushRedirector,
-    PushRedirectorArgs,
-};
+use unbundle::run_hooks;
+use unbundle::run_post_resolve_action;
+use unbundle::BundleResolverError;
+use unbundle::CrossRepoPushSource;
+use unbundle::PushRedirector;
+use unbundle::PushRedirectorArgs;
 
-use anyhow::{format_err, Context, Error, Result};
-use blobrepo::{AsBlobRepo, BlobRepo};
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
+use blobrepo::AsBlobRepo;
+use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
+use bookmarks::Bookmark;
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkPrefix;
 use bookmarks_types::BookmarkKind;
 use bytes::Bytes;
-use bytes_old::{BufMut as BufMutOld, Bytes as BytesOld, BytesMut as BytesMutOld};
+use bytes_old::BufMut as BufMutOld;
+use bytes_old::Bytes as BytesOld;
+use bytes_old::BytesMut as BytesMutOld;
 use cloned::cloned;
-use context::{CoreContext, LoggingContainer, PerfCounterType, PerfCounters, SessionContainer};
+use context::CoreContext;
+use context::LoggingContainer;
+use context::PerfCounterType;
+use context::PerfCounters;
+use context::SessionContainer;
 use filenodes::FilenodeResult;
-use futures::{
-    channel::oneshot::{self, Sender},
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, FutureExt, TryFutureExt},
-    stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
-};
-use futures_01_ext::{
-    try_boxstream, BoxFuture, BoxStream, FutureExt as OldFutureExt, StreamExt as OldStreamExt,
-};
+use futures::channel::oneshot::Sender;
+use futures::channel::oneshot::{self};
+use futures::compat::Future01CompatExt;
+use futures::compat::Stream01CompatExt;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream::FuturesUnordered;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use futures_01_ext::try_boxstream;
+use futures_01_ext::BoxFuture;
+use futures_01_ext::BoxStream;
+use futures_01_ext::FutureExt as OldFutureExt;
+use futures_01_ext::StreamExt as OldStreamExt;
 use futures_ext::stream::FbTryStreamExt;
-use futures_ext::{BufferedParams, FbFutureExt, FbStreamExt, FbTryFutureExt};
+use futures_ext::BufferedParams;
+use futures_ext::FbFutureExt;
+use futures_ext::FbStreamExt;
+use futures_ext::FbTryFutureExt;
+use futures_old::future as future_old;
 use futures_old::future::ok;
-use futures_old::{
-    future as future_old, stream as stream_old, try_ready, Async, Future, IntoFuture, Poll, Stream,
-};
-use futures_stats::{TimedFutureExt, TimedStreamExt};
-use getbundle_response::{
-    create_getbundle_response, DraftsInBundlesPolicy, PhasesPart, SessionLfsParams,
-};
-use hgproto::{GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
+use futures_old::stream as stream_old;
+use futures_old::try_ready;
+use futures_old::Async;
+use futures_old::Future;
+use futures_old::IntoFuture;
+use futures_old::Poll;
+use futures_old::Stream;
+use futures_stats::TimedFutureExt;
+use futures_stats::TimedStreamExt;
+use getbundle_response::create_getbundle_response;
+use getbundle_response::DraftsInBundlesPolicy;
+use getbundle_response::PhasesPart;
+use getbundle_response::SessionLfsParams;
+use hgproto::GetbundleArgs;
+use hgproto::GettreepackArgs;
+use hgproto::HgCommandRes;
+use hgproto::HgCommands;
 use hostname::get_hostname;
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use manifest::{Diff, Entry, ManifestOps};
+use manifest::Diff;
+use manifest::Entry;
+use manifest::ManifestOps;
 use maplit::hashmap;
-use mercurial_bundles::{create_bundle_stream, parts, wirepack, Bundle2Item};
+use mercurial_bundles::create_bundle_stream;
+use mercurial_bundles::parts;
+use mercurial_bundles::wirepack;
+use mercurial_bundles::Bundle2Item;
 use mercurial_derived_data::DeriveHgChangeset;
-use mercurial_revlog::{self, RevlogChangeset};
-use mercurial_types::{
-    blobs::HgBlobChangeset, calculate_hg_node_id, convert_parents_to_remotefilelog_format,
-    fetch_manifest_envelope, percent_encode, Delta, HgChangesetId, HgChangesetIdPrefix,
-    HgChangesetIdsResolvedFromPrefix, HgFileNodeId, HgManifestId, HgNodeHash, HgParents, MPath,
-    RepoPath, NULL_CSID, NULL_HASH,
-};
+use mercurial_revlog::RevlogChangeset;
+use mercurial_revlog::{self};
+use mercurial_types::blobs::HgBlobChangeset;
+use mercurial_types::calculate_hg_node_id;
+use mercurial_types::convert_parents_to_remotefilelog_format;
+use mercurial_types::fetch_manifest_envelope;
+use mercurial_types::percent_encode;
+use mercurial_types::Delta;
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgChangesetIdPrefix;
+use mercurial_types::HgChangesetIdsResolvedFromPrefix;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgManifestId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::HgParents;
+use mercurial_types::MPath;
+use mercurial_types::RepoPath;
+use mercurial_types::NULL_CSID;
+use mercurial_types::NULL_HASH;
 use metaconfig_types::RepoClientKnobs;
-use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
-use mononoke_types::{hash::GitSha1, ChangesetId};
+use mononoke_repo::MononokeRepo;
+use mononoke_repo::SqlStreamingCloneConfig;
+use mononoke_types::hash::GitSha1;
+use mononoke_types::ChangesetId;
 use nonzero_ext::nonzero;
 use phases::PhasesArc;
-use rand::{self, Rng};
+use rand::Rng;
+use rand::{self};
 use rate_limiting::Metric;
 use regex::Regex;
-use remotefilelog::{
-    create_getpack_v1_blob, create_getpack_v2_blob, get_unordered_file_history_for_multiple_nodes,
-    GetpackBlobInfo,
-};
+use remotefilelog::create_getpack_v1_blob;
+use remotefilelog::create_getpack_v2_blob;
+use remotefilelog::get_unordered_file_history_for_multiple_nodes;
+use remotefilelog::GetpackBlobInfo;
 use revisionstore_types::Metadata;
 use serde::Deserialize;
-use serde_json::{self, json};
-use slog::{debug, error, info, o};
+use serde_json::json;
+use serde_json::{self};
+use slog::debug;
+use slog::error;
+use slog::info;
+use slog::o;
 use stats::prelude::*;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt::Write;
 use std::mem;
 use std::num::NonZeroU64;
 use std::str::FromStr;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
-};
-use std::time::{Duration, Instant};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::Duration;
+use std::time::Instant;
 use streaming_clone::RevlogStreamingChunks;
 use time_ext::DurationExt;
 use tunables::tunables;
@@ -93,10 +154,11 @@ mod monitor;
 mod session_bookmarks_cache;
 mod tests;
 
-use logging::{
-    debug_format_manifest, debug_format_path, log_getpack_params_verbose,
-    log_gettreepack_params_verbose, CommandLogger,
-};
+use logging::debug_format_manifest;
+use logging::debug_format_path;
+use logging::log_getpack_params_verbose;
+use logging::log_gettreepack_params_verbose;
+use logging::CommandLogger;
 use monitor::Monitor;
 use session_bookmarks_cache::SessionBookmarkCache;
 

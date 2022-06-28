@@ -10,25 +10,31 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use bookmarks::BookmarkUpdateReason;
-use bookmarks_types::{BookmarkKind, BookmarkName};
+use bookmarks_types::BookmarkKind;
+use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
-use hooks::{CrossRepoPushSource, HookManager};
-use metaconfig_types::{
-    BookmarkAttrs, InfinitepushParams, PushrebaseParams, SourceControlServiceParams,
-};
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use hooks::CrossRepoPushSource;
+use hooks::HookManager;
+use metaconfig_types::BookmarkAttrs;
+use metaconfig_types::InfinitepushParams;
+use metaconfig_types::PushrebaseParams;
+use metaconfig_types::SourceControlServiceParams;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::RepoReadWriteFetcher;
 
-use crate::affected_changesets::{
-    find_draft_ancestors, log_bonsai_commits_to_scribe, AdditionalChangesets, AffectedChangesets,
-};
+use crate::affected_changesets::find_draft_ancestors;
+use crate::affected_changesets::log_bonsai_commits_to_scribe;
+use crate::affected_changesets::AdditionalChangesets;
+use crate::affected_changesets::AffectedChangesets;
 use crate::repo_lock::check_repo_lock;
-use crate::restrictions::{
-    check_bookmark_sync_config, BookmarkKindRestrictions, BookmarkMoveAuthorization,
-};
-use crate::{BookmarkMovementError, Repo};
+use crate::restrictions::check_bookmark_sync_config;
+use crate::restrictions::BookmarkKindRestrictions;
+use crate::restrictions::BookmarkMoveAuthorization;
+use crate::BookmarkMovementError;
+use crate::Repo;
 
 /// The old and new changeset during a bookmark update.
 ///

@@ -9,13 +9,18 @@
 
 use std::io::Cursor;
 
-use anyhow::{bail, Error, Result};
-use byteorder::{ReadBytesExt, WriteBytesExt};
-use bytes_old::{Bytes, BytesMut};
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
+use bytes_old::Bytes;
+use bytes_old::BytesMut;
 use mercurial_mutation::HgMutationEntry;
 use tokio_io::codec::Decoder;
 use types::mutation::MutationEntry;
-use vlqencoding::{VLQDecode, VLQEncode};
+use vlqencoding::VLQDecode;
+use vlqencoding::VLQEncode;
 
 use crate::utils::BytesExt;
 

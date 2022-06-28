@@ -5,23 +5,28 @@
  * GNU General Public License version 2.
  */
 
-use crate::{Entry, Manifest, PathTree, StoreLoadable};
-use anyhow::{format_err, Error};
+use crate::Entry;
+use crate::Manifest;
+use crate::PathTree;
+use crate::StoreLoadable;
+use anyhow::format_err;
+use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    channel::mpsc,
-    future::{self, FutureExt, TryFutureExt},
-    stream::{StreamExt, TryStreamExt},
-};
-use mononoke_types::{MPath, MPathElement};
-use std::{
-    collections::{BTreeMap, HashSet},
-    fmt,
-    future::Future,
-    hash::Hash,
-    sync::Arc,
-};
+use futures::channel::mpsc;
+use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::future::{self};
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use mononoke_types::MPath;
+use mononoke_types::MPathElement;
+use std::collections::BTreeMap;
+use std::collections::HashSet;
+use std::fmt;
+use std::future::Future;
+use std::hash::Hash;
+use std::sync::Arc;
 
 /// Information passed to `create_tree` function when tree node is constructed
 ///

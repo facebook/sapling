@@ -13,7 +13,8 @@
 //! handling, enqueuing and polling should be done by the callers.
 
 use anyhow::anyhow;
-use async_requests::types::{MegarepoAsynchronousRequestParams, MegarepoAsynchronousRequestResult};
+use async_requests::types::MegarepoAsynchronousRequestParams;
+use async_requests::types::MegarepoAsynchronousRequestResult;
 use context::CoreContext;
 use megarepo_api::MegarepoApi;
 use megarepo_error::MegarepoError;

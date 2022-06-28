@@ -8,12 +8,17 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use executor_lib::{BackgroundProcessExecutor, RepoShardedProcess, RepoShardedProcessExecutor};
+use executor_lib::BackgroundProcessExecutor;
+use executor_lib::RepoShardedProcess;
+use executor_lib::RepoShardedProcessExecutor;
 use fbinit::FacebookInit;
-use mononoke_app::{MononokeApp, MononokeAppBuilder};
+use mononoke_app::MononokeApp;
+use mononoke_app::MononokeAppBuilder;
 use once_cell::sync::OnceCell;
-use slog::{info, Logger};
-use std::sync::atomic::{AtomicBool, Ordering};
+use slog::info;
+use slog::Logger;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::time;
 

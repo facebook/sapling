@@ -5,17 +5,25 @@
  * GNU General Public License version 2.
  */
 
-use std::{iter::repeat, sync::Arc};
+use std::iter::repeat;
+use std::sync::Arc;
 
-use criterion::{BenchmarkId, Criterion, Throughput};
-use futures::stream::{FuturesUnordered, TryStreamExt};
-use rand::{thread_rng, Rng, RngCore};
+use criterion::BenchmarkId;
+use criterion::Criterion;
+use criterion::Throughput;
+use futures::stream::FuturesUnordered;
+use futures::stream::TryStreamExt;
+use rand::thread_rng;
+use rand::Rng;
+use rand::RngCore;
 use tokio::runtime::Handle;
 
-use blobstore::{Blobstore, BlobstoreBytes};
+use blobstore::Blobstore;
+use blobstore::BlobstoreBytes;
 use context::CoreContext;
 
-use crate::{KB, MB};
+use crate::KB;
+use crate::MB;
 
 pub fn benchmark(
     c: &mut Criterion,

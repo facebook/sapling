@@ -7,15 +7,20 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{Blobstore, Loadable};
+use blobstore::Blobstore;
+use blobstore::Loadable;
 use context::CoreContext;
-use futures::{
-    future,
-    stream::{self, StreamExt, TryStreamExt},
-};
-use mononoke_types::{BlobstoreKey, BlobstoreValue, ContentMetadata};
+use futures::future;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::{self};
+use mononoke_types::BlobstoreKey;
+use mononoke_types::BlobstoreValue;
+use mononoke_types::ContentMetadata;
 
-use crate::{Alias, FileContents, FilestoreConfig};
+use crate::Alias;
+use crate::FileContents;
+use crate::FilestoreConfig;
 
 #[async_trait]
 pub trait BlobCopier {

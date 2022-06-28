@@ -5,47 +5,70 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, format_err, Error};
+use anyhow::anyhow;
+use anyhow::format_err;
+use anyhow::Error;
 use backsyncer::format_counter as format_backsyncer_counter;
-use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobrepo::save_bonsai_changesets;
+use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmark_renaming::get_small_to_large_renamer;
-use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
+use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateReason;
+use bookmarks::Freshness;
 use cached_config::ConfigStore;
-use clap_old::{App, Arg, ArgMatches, SubCommand};
-use cmdlib::{
-    args::{self, MononokeMatches},
-    helpers,
-};
+use clap_old::App;
+use clap_old::Arg;
+use clap_old::ArgMatches;
+use clap_old::SubCommand;
+use cmdlib::args::MononokeMatches;
+use cmdlib::args::{self};
+use cmdlib::helpers;
 use context::CoreContext;
-use cross_repo_sync::{
-    create_commit_syncer_lease,
-    types::{Large, Small},
-    validation::{self, BookmarkDiff},
-    CommitSyncContext, CommitSyncRepos, CommitSyncer, CHANGE_XREPO_MAPPING_EXTRA,
-};
+use cross_repo_sync::create_commit_syncer_lease;
+use cross_repo_sync::types::Large;
+use cross_repo_sync::types::Small;
+use cross_repo_sync::validation::BookmarkDiff;
+use cross_repo_sync::validation::{self};
+use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::CommitSyncRepos;
+use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
 use fbinit::FacebookInit;
-use futures::{stream, try_join, TryFutureExt};
+use futures::stream;
+use futures::try_join;
+use futures::TryFutureExt;
 use itertools::Itertools;
-use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
-use maplit::{btreemap, hashmap, hashset};
-use metaconfig_types::{BookmarkAttrs, CommitSyncConfig};
-use metaconfig_types::{
-    CommitSyncConfigVersion, CommonCommitSyncConfig, DefaultSmallToLargeCommitSyncPathAction,
-};
-use mononoke_types::{
-    BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath, RepositoryId,
-};
+use live_commit_sync_config::CfgrLiveCommitSyncConfig;
+use live_commit_sync_config::LiveCommitSyncConfig;
+use maplit::btreemap;
+use maplit::hashmap;
+use maplit::hashset;
+use metaconfig_types::BookmarkAttrs;
+use metaconfig_types::CommitSyncConfig;
+use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::CommonCommitSyncConfig;
+use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
+use mononoke_types::FileChange;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
+use mononoke_types::RepositoryId;
 use mutable_counters::MutableCountersRef;
-use pushrebase::{do_pushrebase_bonsai, FAILUPUSHREBASE_EXTRA};
-use slog::{info, warn, Logger};
+use pushrebase::do_pushrebase_bonsai;
+use pushrebase::FAILUPUSHREBASE_EXTRA;
+use slog::info;
+use slog::warn;
+use slog::Logger;
 use sorted_vector_map::sorted_vector_map;
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use synced_commit_mapping::{
-    EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
-    SyncedCommitMappingEntry,
-};
+use synced_commit_mapping::EquivalentWorkingCopyEntry;
+use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMappingEntry;
 
 use crate::common::get_source_target_repos_and_mapping;
 use crate::error::SubcommandError;
@@ -1391,20 +1414,27 @@ mod test {
     use super::*;
     use ascii::AsciiString;
     use bookmarks::BookmarkName;
-    use cross_repo_sync::{validation::find_bookmark_diff, CommitSyncDataProvider};
+    use cross_repo_sync::validation::find_bookmark_diff;
+    use cross_repo_sync::CommitSyncDataProvider;
+    use fixtures::set_bookmark;
+    use fixtures::Linear;
     use fixtures::TestRepoFixture;
-    use fixtures::{set_bookmark, Linear};
-    use futures::{compat::Stream01CompatExt, TryStreamExt};
+    use futures::compat::Stream01CompatExt;
+    use futures::TryStreamExt;
     use live_commit_sync_config::TestLiveCommitSyncConfig;
-    use maplit::{hashmap, hashset};
-    use metaconfig_types::{
-        CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
-        SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
-    };
+    use maplit::hashmap;
+    use maplit::hashset;
+    use metaconfig_types::CommitSyncConfig;
+    use metaconfig_types::CommitSyncConfigVersion;
+    use metaconfig_types::CommitSyncDirection;
+    use metaconfig_types::CommonCommitSyncConfig;
+    use metaconfig_types::SmallRepoCommitSyncConfig;
+    use metaconfig_types::SmallRepoPermanentConfig;
     use mononoke_types::RepositoryId;
     use revset::AncestorsNodeStream;
     use sql_construct::SqlConstruct;
-    use std::{collections::HashSet, sync::Arc};
+    use std::collections::HashSet;
+    use std::sync::Arc;
     use synced_commit_mapping::SyncedCommitMappingEntry;
 
     #[fbinit::test]

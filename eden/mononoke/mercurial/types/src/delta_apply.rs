@@ -6,10 +6,12 @@
  */
 
 use anyhow::Result;
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
+use bytes::BytesMut;
 use std::cmp;
 
-use crate::delta::{Delta, Fragment};
+use crate::delta::Delta;
+use crate::delta::Fragment;
 
 /*
  * Algorithm is taken from fbcode/scm/hg/mercurial/mpatch.c

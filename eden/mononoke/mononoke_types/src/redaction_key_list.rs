@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use crate::blob::Blob;
+use crate::blob::BlobstoreValue;
+use crate::blob::RedactionKeyListBlob;
+use crate::errors::ErrorKind;
 use crate::thrift;
-use crate::{
-    blob::{Blob, BlobstoreValue, RedactionKeyListBlob},
-    errors::ErrorKind,
-    typed_hash::{RedactionKeyListId, RedactionKeyListIdContext},
-};
-use anyhow::{Context, Result};
+use crate::typed_hash::RedactionKeyListId;
+use crate::typed_hash::RedactionKeyListIdContext;
+use anyhow::Context;
+use anyhow::Result;
 use fbthrift::compact_protocol;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]

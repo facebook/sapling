@@ -6,11 +6,13 @@
  */
 
 use acl_regions::AclRegions;
-use blobrepo::{AsBlobRepo, BlobRepo};
+use blobrepo::AsBlobRepo;
+use blobrepo::BlobRepo;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
-use bookmarks::{BookmarkUpdateLog, Bookmarks};
+use bookmarks::BookmarkUpdateLog;
+use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use ephemeral_blobstore::RepoEphemeralStore;
