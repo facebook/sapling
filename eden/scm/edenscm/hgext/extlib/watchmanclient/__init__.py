@@ -11,9 +11,11 @@ import ctypes
 import getpass
 import os
 import sys
+import time
 
 from bindings import tracing
 from edenscm.mercurial import blackbox, encoding, json, progress, pycompat, util
+from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex
 
 from .. import pywatchman
@@ -101,6 +103,7 @@ class client(object):
         self._resolved_root = getcanonicalpath(self._root)
         self._ui = repo.ui
         self._firsttime = True
+        self._approx_total_file_count = len(repo.dirstate._map)
 
     def settimeout(self, timeout):
         self._timeout = timeout
@@ -197,9 +200,97 @@ class client(object):
         if needretry:
             return self._retrycommand(span, retry + 1, *args)
 
+    def debug_status(self):
+        """Return the RootDebugStatus, which might look like:
+
+            {
+                "recrawl_info": {
+                    "count": 0,
+                    "should-recrawl": true,
+                    "warning": null,
+                    "reason": "startup",
+                    "completed": null,
+                    "started": -20162,
+                    "stats": 295541
+                }
+                "crawl-status": "crawling for ...",
+                "enable_parallel_crawl": false,
+                "cookie_list": [],
+                "path": "...",
+                "queries": [],
+                "fstype": "btrfs",
+                "cookie_prefix": ["..."],
+                "watcher": "inotify",
+                "uptime": ...,
+                "done_initial": false,
+                "cookie_dir": [".../.hg"],
+                "case_sensitive": true,
+                "cancelled": false,
+            }
+
+        Return an empty dict if watchman does not support debug-root-status.
+        """
+        try:
+            # use _command to bypass progress and util.timefuntion
+            root_status = self._command("debug-root-status")["root_status"]
+        except (Unavailable, AttributeError):
+            # watchman does not support this command
+            root_status = {}
+        return root_status
+
+    def recrawl_info(self):
+        """Return the RootRecrawlInfo in the RootDebugStatus.
+
+        Return an empty dict if watchman does not support getting the recrawl
+        info.
+        """
+        debug_status = self.debug_status()
+        info = {}
+        try:
+            info = debug_status["recrawl_info"]
+        except AttributeError:
+            pass
+        return info
+
+    def recrawl_stat_count(self):
+        """Return the count of files stat()-ed by watchman during a full crawl
+        Return None if watchman does not provide the information, or watchman
+        is not in a full crawl state.
+        """
+        stats = None
+        try:
+            stats = self.recrawl_info()["stats"]
+        except AttributeError:
+            pass
+        return stats
+
+    def wait_for_full_crawl(self):
+        """Wait for watchman to complete a full recrawl. Blocking.
+        Show a progress bar.
+        """
+        ui = self._ui
+        if not ui.configbool("fsmonitor", "wait-full-crawl"):
+            return
+
+        stats = self.recrawl_stat_count()
+        if stats is None:
+            # Not in full recrawl
+            return
+
+        # Show progress bar.
+        total = self._approx_total_file_count
+        with progress.bar(ui, _("crawling"), _("files (approx)"), total) as prog:
+            while stats is not None:
+                prog.value = stats
+                stats = self.recrawl_stat_count()
+                if stats is not None:
+                    time.sleep(0.1)
+
     @util.timefunction("watchmanquery", 0, "_ui")
     def command(self, *args, **kwargs):
         ignoreerrors = kwargs.get("ignoreerrors", False)
+        if args and args[0] in {"clock", "query"}:
+            self.wait_for_full_crawl()
         with progress.spinner(self._ui, "querying watchman"):
             try:
                 try:

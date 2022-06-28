@@ -152,6 +152,12 @@ operation. (default = true)
 
 If set to true then take a lock when running watchman queries to avoid
 overloading watchman.
+
+::
+    [fsmonitor]
+    wait-full-crawl = true
+
+If set, wait for watchman to complete a full crawl before performing queries.
 """
 
 # Platforms Supported
@@ -243,6 +249,7 @@ configitem("fsmonitor", "tcp", default=False)
 configitem("fsmonitor", "tcp-host", default="::1")
 configitem("fsmonitor", "tcp-port", default=12300)
 configitem("fsmonitor", "watchman-query-lock", default=False)
+configitem("fsmonitor", "wait-full-crawl", default=True)
 
 # This extension is incompatible with the following incompatible extensions
 # and will disable itself when encountering one of these:
