@@ -1360,22 +1360,39 @@ folly::Future<CheckoutResult> EdenMount::checkout(
   {
     auto parentLock = parentState_.wlock();
     if (parentLock->checkoutInProgress) {
-      // Currently unused, but will be soon.
-      resumingCheckout = true;
-
-      // Another update is already pending, we should bail.
-      // TODO: Report the pid of the client that requested the first checkout
-      // operation in this error
-      return makeFuture<CheckoutResult>(newEdenError(
-          EdenErrorType::CHECKOUT_IN_PROGRESS,
-          "another checkout operation is still in progress"));
+      auto allowResume = getEdenConfig()->allowResumeCheckout.getValue();
+      auto optPid = parentLock->checkoutPid;
+      auto optTrees = parentLock->checkoutOriginalTrees;
+      if (allowResume && optTrees.has_value() && optPid.has_value() &&
+          optPid.value() != folly::get_cached_pid()) {
+        auto originalTrees = optTrees.value();
+        auto [src, dest] = originalTrees;
+        if (dest != snapshotHash) {
+          return makeFuture<CheckoutResult>(newEdenError(
+              EdenErrorType::CHECKOUT_IN_PROGRESS,
+              fmt::format(
+                  "a previous checkout was interrupted - please 'hg checkout {}' again first",
+                  dest.value())));
+        } else {
+          oldParent = src;
+          resumingCheckout = true;
+        }
+      } else {
+        // Another update is already pending, we should bail.
+        // TODO: Report the pid of the client that requested the first checkout
+        // operation in this error
+        return makeFuture<CheckoutResult>(newEdenError(
+            EdenErrorType::CHECKOUT_IN_PROGRESS,
+            "another checkout operation is still in progress"));
+      }
+    } else {
+      // Set checkoutInProgress and release the lock. An alternative way of
+      // achieving the same would be to hold the lock during the checkout
+      // operation, but this might lead to deadlocks on Windows due to callbacks
+      // needing to access the parent commit to service callbacks.
+      parentLock->checkoutInProgress = true;
+      oldParent = parentLock->workingCopyParentRootId;
     }
-    // Set checkoutInProgress and release the lock. An alternative way of
-    // achieving the same would be to hold the lock during the checkout
-    // operation, but this might lead to deadlocks on Windows due to callbacks
-    // needing to access the parent commit to service callbacks.
-    parentLock->checkoutInProgress = true;
-    oldParent = parentLock->workingCopyParentRootId;
   }
 
   auto ctx = std::make_shared<CheckoutContext>(
@@ -1413,7 +1430,12 @@ folly::Future<CheckoutResult> EdenMount::checkout(
                 })
                 .semi();
           })
-      .thenValue([this, ctx, checkoutTimes, stopWatch, journalDiffCallback](
+      .thenValue([this,
+                  ctx,
+                  checkoutTimes,
+                  stopWatch,
+                  journalDiffCallback,
+                  resumingCheckout](
                      std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
                          treeResults) {
         XLOG(DBG7) << "Checkout: performDiff";
@@ -1429,8 +1451,12 @@ folly::Future<CheckoutResult> EdenMount::checkout(
         }
 
         auto& fromTree = std::get<0>(treeResults);
+        auto trees = std::vector{fromTree};
+        if (resumingCheckout) {
+          trees.push_back(std::get<1>(treeResults));
+        }
         return journalDiffCallback
-            ->performDiff(this, getRootInode(), std::vector{fromTree})
+            ->performDiff(this, getRootInode(), std::move(trees))
             .thenValue([ctx, journalDiffCallback, treeResults](
                            const StatsFetchContext& diffFetchContext) {
               ctx->getFetchContext().merge(diffFetchContext);

@@ -2259,6 +2259,7 @@ Future<Unit> TreeInode::diff(
     // the .gitignore inode, which changes the entry status
     auto contents = contents_.wlock();
 
+    // TODO: support trees.size() != 1
     XLOG(DBG7) << "diff() on directory " << getLogPath() << " (" << getNodeId()
                << ", "
                << (contents->isMaterialized()
@@ -2436,11 +2437,6 @@ Future<Unit> TreeInode::computeDiff(
     bool isIgnored) {
   XDCHECK(isIgnored || ignore != nullptr)
       << "the ignore stack is required if this directory is not ignored";
-
-  XCHECK_LE(trees.size(), 1ull)
-      << "TreeInode::computeDiff doesn't accept multiple trees yet";
-
-  shared_ptr<const Tree> tree = trees.size() == 1 ? trees[0] : nullptr;
 
   std::vector<std::unique_ptr<DeferredDiffEntry>> deferredEntries;
   auto self = inodePtrFromThis();
@@ -2695,43 +2691,88 @@ Future<Unit> TreeInode::computeDiff(
     //
     // This code relies on the fact that the source control entries and our
     // inode entries are both sorted in the same order.
-    Tree::container emptyEntries{context->getCaseSensitive()};
-    auto scEnd = tree ? tree->cend() : emptyEntries.cend();
-    auto scIter = tree ? tree->cbegin() : emptyEntries.cbegin();
+    std::vector<Tree::const_iterator> scEnds{};
+    std::vector<Tree::const_iterator> scIters{};
+    scEnds.reserve(trees.size());
+    scIters.reserve(trees.size());
+
+    for (auto& tree : trees) {
+      scEnds.push_back(tree->cend());
+      scIters.push_back(tree->cbegin());
+    }
     auto& inodeEntries = contents->entries;
     auto inodeIter = inodeEntries.begin();
     while (true) {
-      if (scIter == scEnd) {
-        if (inodeIter == inodeEntries.end()) {
-          // All Done
-          break;
+      const Tree::key_type* earliestPath =
+          inodeIter != inodeEntries.end() ? &inodeIter->first : nullptr;
+      DirContents::iterator* matchingInodeIter =
+          inodeIter != inodeEntries.end() ? &inodeIter : nullptr;
+      std::vector<Tree::const_iterator*> matchingScIters{};
+
+      // Find the earliest path in all the iterators, and record which iterators
+      // have that path.
+      for (size_t i = 0; i < scEnds.size(); i++) {
+        auto& scEnd = scEnds[i];
+        auto& scIter = scIters[i];
+        if (scIter != scEnd) {
+          if (!earliestPath) {
+            earliestPath = &scIter->first;
+            matchingScIters.push_back(&scIter);
+          } else {
+            auto compare = comparePathPiece(
+                scIter->first, *earliestPath, context->getCaseSensitive());
+
+            if (compare == CompareResult::BEFORE) {
+              // If we find an earlier path, reset our current state.
+              earliestPath = &scIter->first;
+              matchingInodeIter = nullptr;
+              matchingScIters.clear();
+              matchingScIters.push_back(&scIter);
+            } else if (compare == CompareResult::AFTER) {
+              // If we find a later path, ignore it.
+            } else {
+              // If the path matches the earliest path we've seen, record it.
+              matchingScIters.push_back(&scIter);
+            }
+          }
         }
+      }
 
-        // This entry is present locally but not in the source control tree.
-        processUntracked(inodeIter->first, &inodeIter->second);
-        ++inodeIter;
-      } else if (inodeIter == inodeEntries.end()) {
-        // This entry is present in the old tree but not the old one.
-        processRemoved(*scIter);
-        ++scIter;
-      } else {
-        auto compare = comparePathPiece(
-            scIter->first, inodeIter->first, context->getCaseSensitive());
+      // If there are no matches, then we've finished the entire walk.
+      if (!matchingInodeIter && matchingScIters.size() == 0) {
+        break;
+      }
 
-        if (compare == CompareResult::BEFORE) {
-          processRemoved(*scIter);
-          ++scIter;
-        } else if (compare == CompareResult::AFTER) {
+      if (!matchingInodeIter) { // If the inode doesn't have this path...
+        if (matchingScIters.size() == scIters.size()) { // ...but all trees do..
+          // ...then this entry is considered removed.
+          processRemoved(**matchingScIters[0]);
+        } else { // ...but not all trees do...
+          // ...then this entry is considered unchanged, since some tree matches
+          // the inode.
+        }
+      } else { // If the inode has this path...
+        if (matchingScIters.size() == 0) { // ...but no trees do...
+          // ...then the entry is considered untracked.
           processUntracked(inodeIter->first, &inodeIter->second);
-          ++inodeIter;
-        } else {
+        } else { // ...and some trees do as well...
+          // ...then we need to compare this entry with the trees that have it.
+          std::vector<TreeEntry> matchingTrees{};
+          matchingTrees.reserve(matchingScIters.size());
+          for (auto& scIter : matchingScIters) {
+            matchingTrees.push_back((*scIter)->second);
+          }
           processBothPresent(
-              inodeIter->first,
-              std::vector{scIter->second},
-              &inodeIter->second);
-          ++scIter;
-          ++inodeIter;
+              inodeIter->first, matchingTrees, &inodeIter->second);
         }
+      }
+
+      // Move everything forward that had the earliest path.
+      if (matchingInodeIter) {
+        ++(*matchingInodeIter);
+      }
+      for (auto& scIter : matchingScIters) {
+        ++(*scIter);
       }
     }
   }

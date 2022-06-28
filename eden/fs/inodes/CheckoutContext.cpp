@@ -73,7 +73,8 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(RootId newSnapshot) {
   auto config = mount_->getCheckoutConfig();
 
   auto parentCommit = config->getParentCommit();
-  if (parentCommit.isCheckoutInProgress()) {
+  auto optPid = parentCommit.getInProgressPid();
+  if (optPid.has_value() && optPid.value() == folly::get_cached_pid()) {
     XCHECK_EQ(
         parentCommit.getLastCheckoutId(ParentCommit::RootIdPreference::To)
             .value(),

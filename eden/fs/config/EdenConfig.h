@@ -638,6 +638,14 @@ class EdenConfig : private ConfigSettingManager {
   // [experimental]
 
   /**
+   * Controls whether interrupted checkouts can be resumed.
+   */
+  ConfigSetting<bool> allowResumeCheckout{
+      "experimental:allow-resume-checkout",
+      false,
+      this};
+
+  /**
    * Controls whether if EdenFS caches blobs in local store.
    */
   ConfigSetting<bool> enableBlobCaching{

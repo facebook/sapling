@@ -331,6 +331,7 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
 
   auto useWriteBackCache = repository->get_as<bool>(kUseWriteBackCache.str());
   config->useWriteBackCache_ = useWriteBackCache.value_or(false);
+
 #ifdef _WIN32
   auto guid = repository->get_as<std::string>(kRepoGuid.str());
   config->repoGuid_ = guid ? Guid{*guid} : Guid::generate();
