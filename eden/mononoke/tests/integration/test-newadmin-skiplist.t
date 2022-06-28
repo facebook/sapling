@@ -77,10 +77,11 @@ Check we can read and display an existing skiplist [with explicitly
 provided blobstore key]
   $ mononoke_newadmin skiplist -R repo -k skiplist_5 read
   *] cmap size 5, parent nodecount 0, skip nodecount 5, maxsedgelen 1, maxpedgelen 0 (glob)
-  *] skiplist graph has 5 entries (glob)
+  Skiplist graph has 5 entries
 
 Check we can read and display an existing skiplist [with blobstore
 key taken from repo config]
-  $ mononoke_newadmin skiplist -R repo read
+  $ mononoke_newadmin skiplist -R repo read --show 7e2f312f229d09b0a17cdf9bdbd08d9a7203e9fc24764e45b70ce14d2079ed2d
   *] cmap size 2, parent nodecount 0, skip nodecount 2, maxsedgelen 1, maxpedgelen 0 (glob)
-  *] skiplist graph has 2 entries (glob)
+  Skiplist graph has 2 entries
+  7e2f312f229d09b0a17cdf9bdbd08d9a7203e9fc24764e45b70ce14d2079ed2d: Some([(ChangesetId(Blake2(3a2426d009267ba6f83945ecb29f63116a21984fb62df772d3bbe0143163b8fd)), Generation(5))])

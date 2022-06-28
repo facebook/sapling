@@ -8,28 +8,38 @@
 use super::Repo;
 use anyhow::{Error, Result};
 use blobstore::Blobstore;
+use clap::Args;
 use context::CoreContext;
+use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 use skiplist::{deserialize_skiplist_index, SkiplistIndex};
-use slog::{debug, info, Logger};
+use slog::{debug, Logger};
+
+#[derive(Args)]
+/// Subcommand to build skiplist indexes.
+pub struct SkiplistReadArgs {
+    /// Show entries for these changesets.
+    #[clap(long, short = 's')]
+    show: Vec<ChangesetId>,
+}
 
 pub async fn read_skiplist(
     ctx: &CoreContext,
     repo: &Repo,
     logger: &Logger,
     blobstore_key: String,
+    args: SkiplistReadArgs,
 ) -> Result<()> {
     let maybe_index = get_skiplist_index(ctx, repo, logger, blobstore_key).await?;
     match maybe_index {
         Some(index) => {
-            info!(
-                logger,
-                "skiplist graph has {} entries",
-                index.indexed_node_count()
-            );
+            println!("Skiplist graph has {} entries", index.indexed_node_count());
+            for cs_id in args.show {
+                println!("{}: {:?}", cs_id, index.get_furthest_edges(cs_id));
+            }
         }
         None => {
-            info!(logger, "skiplist not found");
+            println!("Skiplist not found");
         }
     };
     Ok(())
