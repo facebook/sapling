@@ -961,7 +961,6 @@ def _hideredundantnodes(repo, tr, pctx, shelvectx, tmpwctx):
 
 
 def _hidenodes(repo, nodes):
-    unfi = repo
     if visibility.tracking(repo):
         visibility.remove(repo, nodes)
 
@@ -1082,7 +1081,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
         raise error.Abort(_("shelved change '%s' not found") % basename)
 
     lock = tr = None
-    obsshelvedfile = shelvedfile(repo, basename, "oshelve")
+    shelvedfile(repo, basename, "oshelve")
     try:
         lock = repo.lock()
         tr = repo.transaction("unshelve", report=lambda x: None)

@@ -622,17 +622,13 @@ def ln(args: List[str], fs: ShellFS):
 @command
 def ls(args: List[str], fs: ShellFS):
     entries = []
-    verbose = False
 
     def listdir(path: str, fs=fs) -> List[str]:
         return [f for f in fs.listdir(path) if not f.startswith(".")]
 
     for arg in args:
         if arg.startswith("-"):
-            if arg == "-l":
-                verbose = True
-            else:
-                raise NotImplementedError(f"ls with flag {arg}")
+            raise NotImplementedError(f"ls with flag {arg}")
         elif fs.isdir(arg):
             entries += listdir(arg)
         elif fs.exists(arg):

@@ -138,8 +138,6 @@ def wraprepo(repo):
                 self._prefetch(revs, base, matcher)
 
         def _prefetch(self, revs, base=None, matcher=None):
-            mfl = self.manifestlog
-
             # Copy the skip set to start large and avoid constant resizing,
             # and since it's likely to be very similar to the prefetch set.
             files = set()

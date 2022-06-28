@@ -65,7 +65,7 @@ def main():
 
     try:
         runtest(testid, exts, mismatchcb)
-    except SkipTest as e:
+    except SkipTest:
         return 80
     except Exception:
         raise

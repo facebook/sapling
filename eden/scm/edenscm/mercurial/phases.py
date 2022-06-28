@@ -328,7 +328,6 @@ class phasecache(object):
             )
 
         if self._draftrevs is None:
-            cl = repo.changelog
             self.publicrevs(repo)
 
         return self._draftrevs

@@ -1728,10 +1728,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             z += 1
             prog.value = (z, f)
 
-        # When merging in-memory, we can't support worker processes, so set the
-        # per-item cost at 0 in that case.
-        cost = 0 if wctx.isinmemory() else 0.001
-
         # Flush any pending data to disk before forking workers, so the workers
         # don't all flush duplicate data.
         repo.commitpending()

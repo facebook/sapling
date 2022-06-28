@@ -83,7 +83,7 @@ def debugrebuildchangelog(ui, repo, **opts):
             ), repo.dirstate.parentchange():
                 # Backup non-master commits
                 commits = _readnonmasterdrafts(repo) + shelved
-                _bakname = _backupcommits(repo, commits, ts)
+                _backupcommits(repo, commits, ts)
 
                 allnodes = hgcommits.dagalgo().all()
 

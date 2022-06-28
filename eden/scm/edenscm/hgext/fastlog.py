@@ -191,7 +191,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst=False):
     try:
         # Test that the GraphQL client can be constructed, to rule
         # out configuration issues like missing `.arcrc` etc.
-        _graphqlclient = graphql.Client(repo=repo)
+        graphql.Client(repo=repo)
     except Exception as ex:
         repo.ui.debug(
             "fastlog: not used because graphql client cannot be constructed: %r\n" % ex

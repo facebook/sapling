@@ -2244,7 +2244,6 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
                 else:
                     date = None
                 prec = parsenodeid(precursor)
-                parents = None
                 if succs:
                     mutation.createsyntheticentry(
                         repo,

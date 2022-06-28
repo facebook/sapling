@@ -293,7 +293,6 @@ def unbundle(orig, repo, cg, heads, source, url, replaydata=None, respondlightly
                 repo.manifestlog[bin(mfnode)].read()
 
     try:
-        starttime = time.time()
         result = orig(
             repo,
             cg,
@@ -305,10 +304,6 @@ def unbundle(orig, repo, cg, heads, source, url, replaydata=None, respondlightly
         )
         return result
     except error.HookAbort as ex:
-        if ex.reason:
-            errmsg = "%s reason: %s" % (ex, ex.reason)
-        else:
-            errmsg = "%s" % ex
         raise
 
 

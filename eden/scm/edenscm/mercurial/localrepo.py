@@ -2986,7 +2986,6 @@ class localrepository(object):
         # them by "hg hide".
         publicnodes, _draftnodes = _remotenodes(self)
         cl = self.changelog
-        torev = cl.nodemap.get
         if includepublic:
             nodes += publicnodes
         if includedraft:

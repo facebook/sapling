@@ -1631,17 +1631,6 @@ def _profilesizeinfo(ui, repo, *config, **kwargs):
     this.
 
     """
-    try:
-        cache = extensions.find("simplecache")
-        cacheget = functools.partial(
-            cache.cacheget, serializer=cache.jsonserializer, ui=ui
-        )
-        cacheset = functools.partial(
-            cache.cacheset, serializer=cache.jsonserializer, ui=ui
-        )
-    except KeyError:
-        cacheget = cacheset = lambda *args: None
-
     collectsize = kwargs.get("collectsize", False)
 
     results = {}

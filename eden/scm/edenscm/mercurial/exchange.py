@@ -542,7 +542,6 @@ def _findblobs(pushop):
     clrevision = repo.changelog.revision
     subdirdiff = bindings.manifest.subdirdiff
     mfstore = repo.manifestlog.datastore
-    mfget = repo.manifestlog.get
     treedepth = 1 << 15
 
     def mfread(node, get=repo.manifestlog.get):

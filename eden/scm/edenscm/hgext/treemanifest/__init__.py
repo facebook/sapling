@@ -413,7 +413,6 @@ def _prunesharedpacks(repo, packpath):
 
 
 def setuptreestores(repo, mfl):
-    ui = repo.ui
     if git.isgitstore(repo):
         mfl._isgit = True
         mfl.datastore = git.openstore(repo)
@@ -1001,7 +1000,6 @@ def _registerbundle2parts():
         if category != PACK_CATEGORY:
             raise error.Abort(_("invalid treegroup pack category: %s") % category)
 
-        cl = repo.changelog
         mfl = repo.manifestlog
 
         if part.params.get("cache", "False") == "True":

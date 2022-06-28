@@ -413,7 +413,6 @@ class changelog(object):
         textmap = {}  # {node: btext}
         commits = []
         buffersize = self._groupbuffersize
-        nodemap = self.nodemap
         tip = None
         for node, p1, p2, linknode, deltabase, delta, flags in deltas:
             assert flags == 0, "changelog flags cannot be non-zero"
@@ -929,7 +928,6 @@ def migratetosegments(repo):
 
 def migratetorevlog(repo):
     """Migrate to revlog backend."""
-    svfs = repo.svfs
     with repo.lock():
         # Migrate from segmentedchangelog
         needmigrate = False
@@ -1018,7 +1016,6 @@ def removebackupfiles(repo):
     Only works for the lazy changelog backend. Has no effects for other
     changelog backends.
     """
-    ui = repo.ui
     # Only works for lazy changelog.
     if "lazychangelog" not in repo.storerequirements:
         return

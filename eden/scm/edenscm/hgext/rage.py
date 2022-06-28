@@ -282,6 +282,7 @@ def _makerage(ui, repo, **opts):
         ("debugnetwork", "speed-test-download-size"): "4M",
         ("debugnetwork", "speed-test-upload-size"): "1M",
     }
+    configargs = [f"--config={k[0]}.{k[1]}={v}" for k, v in configoverrides.items()]
 
     # Override the encoding to "UTF-8" to generate the rage in UTF-8.
     oldencoding = encoding.encoding
@@ -290,7 +291,7 @@ def _makerage(ui, repo, **opts):
     encoding.encodingmode = "replace"
 
     def hgcmd(cmdname, *args, **additional_opts):
-        cmdargs = ["hg", *cmdname.split(), *args]
+        cmdargs = ["hg", *configargs, *cmdname.split(), *args]
         for flagname, flagvalue in additional_opts.items():
             flagname = flagname.replace("_", "-")
             if isinstance(flagvalue, list):

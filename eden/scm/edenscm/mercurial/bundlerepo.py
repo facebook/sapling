@@ -538,9 +538,8 @@ class bundlerepository(localrepo.localrepository):
 
     # Check if parents exist in localrepo before setting
     def setparents(self, p1: bytes, p2: bytes = nullid) -> None:
-        p1rev = self.changelog.rev(p1)
-        p2rev = self.changelog.rev(p2)
-        msg = _("setting parent to node %s that only exists in the bundle\n")
+        self.changelog.rev(p1)
+        self.changelog.rev(p2)
         return super(bundlerepository, self).setparents(p1, p2)
 
 

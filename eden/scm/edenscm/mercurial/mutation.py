@@ -271,7 +271,6 @@ class obsoletecache(object):
             return False
         unfi = repo
         clhasnode = getisvisiblefunc(repo)
-        clrev = unfi.changelog.rev
 
         for succ in allsuccessors(repo, [node], startdepth=1):
             # If any successor is already known to be obsolete, we can
@@ -317,7 +316,6 @@ class obsoletecache(object):
             # Note that "visible" here means "visible in a normal filtered repo",
             # even if the filter for this repo includes other commits.
             clhasnode = getisvisiblefunc(repo)
-            clrev = repo.changelog.rev
             obsolete = self.obsolete[None]
             for node in repo.nodes("not public()"):
                 if any(

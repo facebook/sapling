@@ -2111,7 +2111,7 @@ def addgroup(orig, self, deltas, linkmapper, transaction):
                 raise LookupError(deltabase, self.indexfile, _("unknown delta base"))
 
             baserev = self.rev(deltabase)
-            chain = self._addrevision(
+            self._addrevision(
                 node, None, transaction, link, p1, p2, flags, (baserev, delta), ifh, dfh
             )
 
