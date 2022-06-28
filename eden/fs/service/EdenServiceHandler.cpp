@@ -3095,6 +3095,13 @@ void EdenServiceHandler::getRetroactiveInodeEvents(
   auto mountPath = AbsolutePathPiece{mountPoint};
   auto edenMount = server_->getMount(mountPath);
 
+  if (!edenMount->getActivityBuffer().has_value()) {
+    throw newEdenError(
+        ENOTSUP,
+        EdenErrorType::POSIX_ERROR,
+        "ActivityBuffer not initialized in EdenFS mount.");
+  }
+
   std::vector<InodeEvent> thriftEvents;
   auto bufferEvents = edenMount->getActivityBuffer()->getAllEvents();
   thriftEvents.reserve(bufferEvents.size());

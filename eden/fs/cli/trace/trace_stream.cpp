@@ -511,6 +511,13 @@ int trace_inode(
         }
         fmt::print("{}\n", std::string(header.size(), '-'));
       })
+      .thenError([](const folly::exception_wrapper& ex) {
+        fmt::print("{}\n", ex.what());
+        if (ex.get_exception<EdenError>()->errorCode_ref() == ENOTSUP) {
+          fmt::print(
+              "Can't run retroactive command in eden mount without an initialized ActivityBuffer. Make sure the enable-activitybuffer config is true to save events retroactively.\n");
+        }
+      })
       .ensure(
           // Move the client into the callback so that it will be destroyed
           // on an EventBase thread.
