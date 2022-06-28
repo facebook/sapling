@@ -1351,7 +1351,7 @@ apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
 EdenServiceHandler::streamChangesSince(
     std::unique_ptr<StreamChangesSinceParams> params) {
   auto helper = INSTRUMENT_THRIFT_CALL_WITH_STAT(
-      DBG3, &ThriftThreadStats::streamChangesSince, *params->mountPoint_ref());
+      DBG2, &ThriftThreadStats::streamChangesSince, *params->mountPoint_ref());
   auto mountPath = AbsolutePathPiece{*params->mountPoint_ref()};
   auto edenMount = server_->getMount(mountPath);
   const auto& fromPosition = *params->fromPosition_ref();
