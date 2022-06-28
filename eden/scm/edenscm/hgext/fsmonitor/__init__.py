@@ -473,106 +473,103 @@ def _innerwalk(self, match, event, span):
         normalize = None
 
     # step 2: query Watchman
-    with progress.spinner(self._ui, "watchman query"):
-        try:
-            # Use the user-configured timeout for the query.
-            # Add a little slack over the top of the user query to allow for
-            # overheads while transferring the data
-            excludes = ["anyof", ["dirname", ".hg"], ["name", ".hg", "wholename"]]
-            # Exclude submodules.
-            if git.isgitformat(self._repo):
-                submods = git.parsesubmodules(self._repo[None])
-                excludes += [["dirname", s.path] for s in submods]
-            self._watchmanclient.settimeout(state.timeout + 0.1)
-            result = self._watchmanclient.command(
-                "query",
-                {
-                    "fields": ["mode", "mtime", "size", "exists", "name"],
-                    "since": clock,
-                    "expression": ["not", excludes],
-                    "sync_timeout": int(state.timeout * 1000),
-                    "empty_on_fresh_instance": state.walk_on_invalidate,
-                },
-            )
-        except Exception as ex:
-            event["is_error"] = True
-            span.record(error=ex)
-            _handleunavailable(self._ui, state, ex)
-            self._watchmanclient.clearconnection()
-            # XXX: Legacy scuba logging. Remove this once the source of truth
-            # is moved to the Rust Event.
-            self._ui.log("fsmonitor_status", fsmonitor_status="exception")
-            if self._ui.configbool("fsmonitor", "fallback-on-watchman-exception"):
-                raise fsmonitorfallback("exception during run")
-            else:
-                raise ex
+    try:
+        # Use the user-configured timeout for the query.
+        # Add a little slack over the top of the user query to allow for
+        # overheads while transferring the data
+        excludes = ["anyof", ["dirname", ".hg"], ["name", ".hg", "wholename"]]
+        # Exclude submodules.
+        if git.isgitformat(self._repo):
+            submods = git.parsesubmodules(self._repo[None])
+            excludes += [["dirname", s.path] for s in submods]
+        self._watchmanclient.settimeout(state.timeout + 0.1)
+        result = self._watchmanclient.command(
+            "query",
+            {
+                "fields": ["mode", "mtime", "size", "exists", "name"],
+                "since": clock,
+                "expression": ["not", excludes],
+                "sync_timeout": int(state.timeout * 1000),
+                "empty_on_fresh_instance": state.walk_on_invalidate,
+            },
+        )
+    except Exception as ex:
+        event["is_error"] = True
+        span.record(error=ex)
+        _handleunavailable(self._ui, state, ex)
+        self._watchmanclient.clearconnection()
+        # XXX: Legacy scuba logging. Remove this once the source of truth
+        # is moved to the Rust Event.
+        self._ui.log("fsmonitor_status", fsmonitor_status="exception")
+        if self._ui.configbool("fsmonitor", "fallback-on-watchman-exception"):
+            raise fsmonitorfallback("exception during run")
         else:
-            # We need to propagate the last observed clock up so that we
-            # can use it for our next query
-            event["new_clock"] = result["clock"]
-            event["is_fresh"] = result["is_fresh_instance"]
-            span.record(newclock=result["clock"], isfresh=result["is_fresh_instance"])
-            state.setlastclock(result["clock"])
-            state.setlastisfresh(result["is_fresh_instance"])
+            raise ex
+    else:
+        # We need to propagate the last observed clock up so that we
+        # can use it for our next query
+        event["new_clock"] = result["clock"]
+        event["is_fresh"] = result["is_fresh_instance"]
+        span.record(newclock=result["clock"], isfresh=result["is_fresh_instance"])
+        state.setlastclock(result["clock"])
+        state.setlastisfresh(result["is_fresh_instance"])
 
-            files = list(
-                filter(lambda x: _isutf8(self._ui, x["name"]), result["files"])
+        files = list(filter(lambda x: _isutf8(self._ui, x["name"]), result["files"]))
+
+        self._ui.metrics.gauge("watchmanfilecount", len(files))
+        # Ideally we'd just track a bool for fresh_instance or not, but there
+        # could be multiple queries during a command, so let's use a counter.
+        self._ui.metrics.gauge(
+            "watchmanfreshinstances",
+            1 if result["is_fresh_instance"] else 0,
+        )
+
+        if result["is_fresh_instance"]:
+            if not self._ui.plain() and self._ui.configbool(
+                "fsmonitor", "warn-fresh-instance"
+            ):
+                oldpid = _watchmanpid(event["old_clock"])
+                newpid = _watchmanpid(event["new_clock"])
+                if oldpid is not None and newpid is not None and oldpid != newpid:
+                    self._ui.warn(
+                        _(
+                            "warning: watchman has recently restarted (old pid %s, new pid %s) - operation will be slower than usual\n"
+                        )
+                        % (oldpid, newpid)
+                    )
+                elif oldpid is None and newpid is not None:
+                    self._ui.warn(
+                        _(
+                            "warning: watchman has recently started (pid %s) - operation will be slower than usual\n"
+                        )
+                        % (newpid,)
+                    )
+                else:
+                    self._ui.warn(
+                        _(
+                            "warning: watchman failed to catch up with file change events and requires a full scan - operation will be slower than usual\n"
+                        )
+                    )
+
+            if state.walk_on_invalidate:
+                state.invalidate(reason="fresh_instance")
+                raise fsmonitorfallback("fresh instance")
+            fresh_instance = True
+            # Ignore any prior noteable files from the state info
+            notefiles = []
+        else:
+            count = len(files)
+            state.setwatchmanchangedfilecount(count)
+            event["new_files"] = blackbox.shortlist(
+                sorted(e["name"] for e in files), count
             )
-
-            self._ui.metrics.gauge("watchmanfilecount", len(files))
-            # Ideally we'd just track a bool for fresh_instance or not, but there
-            # could be multiple queries during a command, so let's use a counter.
-            self._ui.metrics.gauge(
-                "watchmanfreshinstances",
-                1 if result["is_fresh_instance"] else 0,
-            )
-
-            if result["is_fresh_instance"]:
-                if not self._ui.plain() and self._ui.configbool(
-                    "fsmonitor", "warn-fresh-instance"
-                ):
-                    oldpid = _watchmanpid(event["old_clock"])
-                    newpid = _watchmanpid(event["new_clock"])
-                    if oldpid is not None and newpid is not None and oldpid != newpid:
-                        self._ui.warn(
-                            _(
-                                "warning: watchman has recently restarted (old pid %s, new pid %s) - operation will be slower than usual\n"
-                            )
-                            % (oldpid, newpid)
-                        )
-                    elif oldpid is None and newpid is not None:
-                        self._ui.warn(
-                            _(
-                                "warning: watchman has recently started (pid %s) - operation will be slower than usual\n"
-                            )
-                            % (newpid,)
-                        )
-                    else:
-                        self._ui.warn(
-                            _(
-                                "warning: watchman failed to catch up with file change events and requires a full scan - operation will be slower than usual\n"
-                            )
-                        )
-
-                if state.walk_on_invalidate:
-                    state.invalidate(reason="fresh_instance")
-                    raise fsmonitorfallback("fresh instance")
-                fresh_instance = True
-                # Ignore any prior noteable files from the state info
-                notefiles = []
-            else:
-                count = len(files)
-                state.setwatchmanchangedfilecount(count)
-                event["new_files"] = blackbox.shortlist(
-                    sorted(e["name"] for e in files), count
-                )
-                span.record(newfileslen=len(files))
-            # XXX: Legacy scuba logging. Remove this once the source of truth
-            # is moved to the Rust Event.
-            if event["is_fresh"]:
-                self._ui.log("fsmonitor_status", fsmonitor_status="fresh")
-            else:
-                self._ui.log("fsmonitor_status", fsmonitor_status="normal")
+            span.record(newfileslen=len(files))
+        # XXX: Legacy scuba logging. Remove this once the source of truth
+        # is moved to the Rust Event.
+        if event["is_fresh"]:
+            self._ui.log("fsmonitor_status", fsmonitor_status="fresh")
+        else:
+            self._ui.log("fsmonitor_status", fsmonitor_status="normal")
 
     results = {}
 
