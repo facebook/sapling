@@ -418,3 +418,22 @@ Rebase merging conflicts
   rebasing e03992db70e4 "B"
   merging f
 
+Test amend:
+
+  $ cd
+  $ hg init --git amend
+  $ cd amend
+  $ enable amend
+  $ echo 1 > file
+  $ hg commit -Aqm 'one'
+  $ echo 2 > file
+  $ hg commit -Aqm 'base'
+  $ echo 3 > file
+# This used to trigger a bug.
+  $ HGEDITOR=cat hg commit --amend --config committemplate.changeset='{diff()}'
+  diff --git a/file b/file
+  --- a/file
+  +++ b/file
+  @@ -1,1 +1,1 @@
+  -1
+  +3
