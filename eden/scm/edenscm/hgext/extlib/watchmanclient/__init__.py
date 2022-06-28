@@ -233,7 +233,7 @@ class client(object):
         try:
             # use _command to bypass progress and util.timefuntion
             root_status = self._command("debug-root-status")["root_status"]
-        except (Unavailable, AttributeError):
+        except (Unavailable, KeyError):
             # watchman does not support this command
             root_status = {}
         return root_status
@@ -248,7 +248,7 @@ class client(object):
         info = {}
         try:
             info = debug_status["recrawl_info"]
-        except AttributeError:
+        except KeyError:
             pass
         return info
 
@@ -260,7 +260,7 @@ class client(object):
         stats = None
         try:
             stats = self.recrawl_info()["stats"]
-        except AttributeError:
+        except KeyError:
             pass
         return stats
 
