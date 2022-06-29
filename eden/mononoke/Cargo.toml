@@ -190,6 +190,7 @@ members = [
   "blobstore/logblob",
   "blobstore/memblob",
   "blobstore/multiplexedblob",
+  "blobstore/multiplexedblob_wal",
   "blobstore/packblob",
   "blobstore/packblob/if",
   "blobstore/prefixblob",
