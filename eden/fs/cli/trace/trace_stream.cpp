@@ -173,11 +173,11 @@ int trace_hg(
     std::optional<HgEvent> queueEvent;
     std::optional<HgEvent> startEvent;
 
-    const HgEventType eventType = *evt.eventType_ref();
-    const HgResourceType resourceType = *evt.resourceType_ref();
-    const HgImportPriority importPriority = *evt.importPriority_ref();
-    const HgImportCause importCause = *evt.importCause_ref();
-    const uint64_t unique = *evt.unique_ref();
+    const HgEventType eventType = *evt.eventType();
+    const HgResourceType resourceType = *evt.resourceType();
+    const HgImportPriority importPriority = *evt.importPriority();
+    const HgImportCause importCause = *evt.importCause();
+    const uint64_t unique = *evt.unique();
 
     switch (eventType) {
       case HgEventType::UNKNOWN:
@@ -208,8 +208,8 @@ int trace_hg(
         return;
       case HgEventType::START:
         if (queueEvent) {
-          auto queueTime = evt.times_ref()->monotonic_time_ns_ref().value() -
-              queueEvent->times_ref()->monotonic_time_ns_ref().value();
+          auto queueTime = evt.times()->monotonic_time_ns().value() -
+              queueEvent->times()->monotonic_time_ns().value();
           // Don't bother printing queue time under 1 ms.
           if (queueTime >= 1000000) {
             timeAnnotation =
@@ -222,8 +222,8 @@ int trace_hg(
 
       case HgEventType::FINISH:
         if (startEvent) {
-          auto fetchTime = evt.times_ref()->monotonic_time_ns_ref().value() -
-              startEvent->times_ref()->monotonic_time_ns_ref().value();
+          auto fetchTime = evt.times()->monotonic_time_ns().value() -
+              startEvent->times()->monotonic_time_ns().value();
           timeAnnotation =
               fmt::format(" fetched in {}", formatNsTimeToMs(fetchTime));
         }
@@ -246,14 +246,14 @@ int trace_hg(
           resourceTypeStr,
           importPriorityStr,
           importCauseStr,
-          *evt.path_ref(),
+          *evt.path(),
           timeAnnotation);
     } else {
       fmt::print(
           "{} {} {}{}\n",
           eventTypeStr,
           resourceTypeStr,
-          *evt.path_ref(),
+          *evt.path(),
           timeAnnotation);
     }
   });
@@ -458,7 +458,7 @@ int trace_inode(
   auto client = std::make_unique<EdenServiceAsyncClient>(std::move(channel));
 
   GetRetroactiveInodeEventsParams params{};
-  params.mountPoint_ref() = mountRoot.stringPiece();
+  params.mountPoint() = mountRoot.stringPiece();
   auto future = client->semifuture_getRetroactiveInodeEvents(params).via(
       evbThread.getEventBase());
 
@@ -467,17 +467,16 @@ int trace_inode(
         // For each event, create a corresponding event for the event's
         // start and sort by timestamp
         std::vector<InodeEvent> events;
-        auto size = 2 * allEvents.events_ref()->size();
+        auto size = 2 * allEvents.events()->size();
         events.reserve(size);
-        for (auto finish : *allEvents.events_ref()) {
+        for (auto finish : *allEvents.events()) {
           InodeEvent start{};
-          start.timestamp_ref() =
-              *finish.timestamp_ref() - 1000 * (*finish.duration_ref());
-          start.ino_ref() = *finish.ino_ref();
-          start.inodeType_ref() = *finish.inodeType_ref();
-          start.eventType_ref() = *finish.eventType_ref();
+          start.timestamp() = *finish.timestamp() - 1000 * (*finish.duration());
+          start.ino() = *finish.ino();
+          start.inodeType() = *finish.inodeType();
+          start.eventType() = *finish.eventType();
           // Use -1 for the duration to distinguish the event's start
-          start.duration_ref() = -1;
+          start.duration() = -1;
           events.push_back(std::move(start));
           events.push_back(std::move(finish));
         }
@@ -493,27 +492,25 @@ int trace_inode(
         std::string format = "%Y-%m-%d %H:%M:%S";
 
         for (auto& event : events) {
-          time_t seconds = (*event.timestamp_ref()) / 1000000000;
+          time_t seconds = (*event.timestamp()) / 1000000000;
           auto formattedTime = TimeFormat::FormatTime(format, seconds);
-          auto milliseconds = *event.timestamp_ref() / 1000 % 1000000;
+          auto milliseconds = *event.timestamp() / 1000 % 1000000;
           fmt::print(
               "{} {}.{:0>6}  {:<5} {}    {}      {}\n",
               // Use arrow emoji based on if the event started or finished
-              (*event.duration_ref() < 0) ? kDashedArrowEmoji
-                                          : kSolidArrowEmoji,
+              (*event.duration() < 0) ? kDashedArrowEmoji : kSolidArrowEmoji,
               formattedTime,
               milliseconds,
-              *event.ino_ref(),
-              *event.inodeType_ref() == InodeType::TREE ? kTreeEmoji
-                                                        : kBlobEmoji,
-              kInodeEventTypes.at(*event.eventType_ref()),
-              formatMicrosecondTime(*event.duration_ref()));
+              *event.ino(),
+              *event.inodeType() == InodeType::TREE ? kTreeEmoji : kBlobEmoji,
+              kInodeEventTypes.at(*event.eventType()),
+              formatMicrosecondTime(*event.duration()));
         }
         fmt::print("{}\n", std::string(header.size(), '-'));
       })
       .thenError([](const folly::exception_wrapper& ex) {
         fmt::print("{}\n", ex.what());
-        if (ex.get_exception<EdenError>()->errorCode_ref() == ENOTSUP) {
+        if (ex.get_exception<EdenError>()->errorCode() == ENOTSUP) {
           fmt::print(
               "Can't run retroactive command in eden mount without an initialized ActivityBuffer. Make sure the enable-activitybuffer config is true to save events retroactively.\n");
         }
