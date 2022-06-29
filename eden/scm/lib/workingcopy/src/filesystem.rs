@@ -118,6 +118,15 @@ pub enum ChangeType {
     Deleted(RepoPathBuf),
 }
 
+impl ChangeType {
+    pub fn get_path(&self) -> &RepoPathBuf {
+        match self {
+            ChangeType::Changed(path) => path,
+            ChangeType::Deleted(path) => path,
+        }
+    }
+}
+
 #[derive(Serialize)]
 pub enum PendingChangeResult {
     File(ChangeType),

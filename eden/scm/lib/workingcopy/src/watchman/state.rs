@@ -17,7 +17,6 @@ use watchman_client::prelude::*;
 use crate::filechangedetector::FileChangeDetectorTrait;
 use crate::filechangedetector::FileChangeResult;
 use crate::filechangedetector::ResolvedFileChangeResult;
-use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
 
 use super::treestate::WatchmanTreeStateRead;
@@ -108,11 +107,7 @@ impl WatchmanState {
         for result in file_change_detector.resolve_maybes() {
             match result {
                 Ok(ResolvedFileChangeResult::Yes(change)) => {
-                    match change {
-                        ChangeType::Changed(ref path) | ChangeType::Deleted(ref path) => {
-                            needs_mark.push(path.clone())
-                        }
-                    };
+                    needs_mark.push(change.get_path().clone());
                     pending_changes.push(Ok(PendingChangeResult::File(change)));
                 }
                 Ok(ResolvedFileChangeResult::No(path)) => {
