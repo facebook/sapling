@@ -8,23 +8,22 @@
 use anyhow::bail;
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
-use blobstore::BlobstoreGetData;
-use blobstore::BlobstoreMetadata;
-use blobstore::BlobstorePutOps;
-use blobstore::OverwriteStatus;
-use blobstore::PutBehaviour;
+use blobstore::{
+    Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, OverwriteStatus, PutBehaviour,
+};
+use blobstore_sync_queue::{BlobstoreWal, BlobstoreWalEntry, OperationKey};
 use context::CoreContext;
 use futures::channel::oneshot;
 use lock_ext::LockExt;
-use mononoke_types::BlobstoreBytes;
-use std::collections::HashMap;
-use std::collections::VecDeque;
-use std::fmt;
-use std::future::Future;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::time::SystemTime;
+use metaconfig_types::MultiplexId;
+use mononoke_types::{BlobstoreBytes, Timestamp};
+use std::{
+    collections::{HashMap, VecDeque},
+    fmt,
+    future::Future,
+    sync::{Arc, Mutex},
+    time::SystemTime,
+};
 
 pub struct Tickable<T> {
     pub storage: Arc<Mutex<HashMap<String, T>>>,
@@ -152,5 +151,37 @@ impl BlobstorePutOps for Tickable<(BlobstoreBytes, u64)> {
     ) -> Result<OverwriteStatus> {
         self.put_explicit(ctx, key, value, PutBehaviour::Overwrite)
             .await
+    }
+}
+
+#[async_trait]
+impl BlobstoreWal for Tickable<OperationKey> {
+    async fn log<'a>(&'a self, _ctx: &'a CoreContext, entry: BlobstoreWalEntry) -> Result<()> {
+        self.on_tick().await?;
+        self.storage.with(|s| {
+            s.insert(entry.blobstore_key, entry.operation_key);
+        });
+        Ok(())
+    }
+
+    async fn log_many<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        entries: Vec<BlobstoreWalEntry>,
+    ) -> Result<()> {
+        for entry in entries {
+            self.log(ctx, entry).await?;
+        }
+        Ok(())
+    }
+
+    async fn read<'a>(
+        &'a self,
+        _c: &'a CoreContext,
+        _u: &MultiplexId,
+        _o: &Timestamp,
+        _l: usize,
+    ) -> Result<Vec<BlobstoreWalEntry>> {
+        unimplemented!();
     }
 }
