@@ -944,10 +944,6 @@ class dirstate(object):
         dirstate and return a scmutil.status.
         """
         if self._ui.configbool("workingcopy", "ruststatus"):
-            if ignored or clean:
-                raise error.Abort(_("Rust status does not support ignored or clean"))
-            pendingchanges = self._fs.pendingchanges(match, listignored=False)
-
             if "eden" in self._repo.requirements:
                 # EdenFS repos still use an old dirstate to track working copy
                 # changes. We need a TreeState for Rust status, so if the map
@@ -966,15 +962,16 @@ class dirstate(object):
                 #  treedirstatemap, treestatemap]` has no attribute `_tree`.
                 tree = self._map._tree
 
-            status = bindings.workingcopy.status.compute(
-                self._repo[self.p1()].manifest(),
-                tree,
-                pendingchanges,
-                match,
-            )
-            if not unknown:
-                status.unknown = []
-            return status
+            if not ignored and not clean:
+                return bindings.workingcopy.status.status(
+                    self._root,
+                    self._repo[self.p1()].manifest(),
+                    self._repo.fileslog.filescmstore,
+                    tree,
+                    self._lastnormaltime,
+                    match,
+                    unknown,
+                )
 
         wctx = self._repo[None]
         # Prime the wctx._parents cache so the parent doesn't change out from

@@ -7,19 +7,39 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
 use manifest::Manifest;
+use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
+use parking_lot::RwLock;
 use pathmatcher::ExactMatcher;
 use pathmatcher::Matcher;
-use status::{Status, StatusBuilder};
+use status::Status;
+use status::StatusBuilder;
+use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::RepoPathBuf;
 
+use crate::filechangedetector::HgModifiedTime;
 use crate::filesystem::ChangeType;
+
+type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
+
+pub fn status<M: Matcher + Clone + Send + Sync + 'static>(
+    _root: PathBuf,
+    _manifest: Arc<RwLock<TreeManifest>>,
+    _store: ArcReadFileContents,
+    _treestate: Arc<Mutex<TreeState>>,
+    _last_write: HgModifiedTime,
+    _matcher: M,
+    _list_unknown: bool,
+) -> Result<Status> {
+    todo!();
+}
 
 /// Compute the status of the working copy relative to the current commit.
 #[allow(unused_variables)]

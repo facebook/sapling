@@ -19,6 +19,7 @@ use cpython_ext::PyPathBuf;
 use pathmatcher::Matcher;
 use pymanifest::treemanifest;
 use pypathmatcher::extract_matcher;
+use pypathmatcher::extract_option_matcher;
 use pytreestate::treestate;
 use storemodel::ReadFileContents;
 use types::RepoPathBuf;
@@ -154,6 +155,7 @@ py_class!(class pendingchanges |py| {
         }
     }
 });
+
 py_class!(class walker |py| {
     data inner: RefCell<Walker<Arc<dyn Matcher + Sync + Send>>>;
     data _errors: RefCell<Vec<Error>>;
@@ -187,6 +189,34 @@ py_class!(class walker |py| {
 });
 
 py_class!(class status |py| {
+    @staticmethod
+    def status(
+        pyroot: PyPathBuf,
+        pymanifest: treemanifest,
+        pystore: ImplInto<ArcReadFileContents>,
+        pytreestate: treestate,
+        last_write: u32,
+        pymatcher: Option<PyObject>,
+        listunknown: bool,
+    ) -> PyResult<PyObject> {
+        let root = pyroot.to_path_buf();
+        let manifest = pymanifest.get_underlying(py);
+        let store = pystore.into();
+        let treestate = pytreestate.get_state(py);
+        let last_write = last_write.into();
+        let matcher = extract_option_matcher(py, pymatcher)?;
+        let status = workingcopy::status::status(
+            root,
+            manifest,
+            store,
+            treestate,
+            last_write,
+            matcher,
+            listunknown
+        ).map_pyerr(py)?;
+        pystatus::to_python_status(py, &status)
+    }
+
     @staticmethod
     def compute(
         pymanifest: treemanifest,
