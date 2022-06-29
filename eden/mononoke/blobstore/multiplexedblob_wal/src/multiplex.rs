@@ -44,6 +44,8 @@ pub enum ErrorKind {
     SomePutsFailed(Arc<BlobstoresReturnedError>),
     #[error("Failures on get in underlying single blobstores: {0:?}")]
     SomeGetsFailed(Arc<BlobstoresReturnedError>),
+    #[error("Failures on is_present in underlying single blobstores: {0:?}")]
+    SomeIsPresentsFailed(Arc<BlobstoresReturnedError>),
 }
 
 #[derive(Clone, Debug)]
@@ -238,7 +240,7 @@ impl WalMultiplexedBlobstore {
                 Ok(None) => {
                     quorum = quorum.saturating_sub(1);
                     if quorum == 0 {
-                        // quorum blobstores couldn't find the given key in the blobstoers
+                        // quorum blobstores couldn't find the given key in the blobstores
                         // let's trust them
                         return Ok(None);
                     }
@@ -266,6 +268,61 @@ impl WalMultiplexedBlobstore {
 
         Err(result_err.into())
     }
+
+    // TODO(aida): comprehensive lookup (D30839608)
+    async fn is_present_impl<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
+        let mut futs = inner_multi_is_present(ctx, self.blobstores.clone(), key);
+
+        // Wait for the quorum successful "Not Found" reads before
+        // returning Ok(None).
+        let mut quorum: usize = self.quorum.read.get();
+        let mut errors = HashMap::with_capacity(futs.len());
+        while let Some(result) = futs.next().await {
+            match result {
+                (_, Ok(BlobstoreIsPresent::Present)) => {
+                    return Ok(BlobstoreIsPresent::Present);
+                }
+                (_, Ok(BlobstoreIsPresent::Absent)) => {
+                    quorum = quorum.saturating_sub(1);
+                    if quorum == 0 {
+                        // quorum blobstores couldn't find the given key in the blobstores
+                        // let's trust them
+                        return Ok(BlobstoreIsPresent::Absent);
+                    }
+                }
+                (bs_id, Ok(BlobstoreIsPresent::ProbablyNotPresent(err))) => {
+                    // Treat this like an error from the underlying blobstore.
+                    // In reality, this won't happen as multiplexed operates over sinle
+                    // standard blobstores, which always can answer if the blob is present.
+                    errors.insert(bs_id, err);
+                }
+                (bs_id, Err(err)) => {
+                    errors.insert(bs_id, err);
+                }
+            }
+        }
+
+        // TODO(aida): read from write-mostly blobstores once in a while, but don't use
+        // those in the quorum.
+
+        // At this point the multiplexed is_present either failed or cannot say for sure
+        // if the blob is present:
+        // - no blob was found, but some of the blobstore `is_present` calls failed
+        // - there was no read quorum on "not found" result
+        let errors = Arc::new(errors);
+        if errors.len() == self.blobstores.len() {
+            // all main reads failed -> is_present failed
+            return Err(ErrorKind::AllFailed(errors).into());
+        }
+
+        Ok(BlobstoreIsPresent::ProbablyNotPresent(
+            ErrorKind::SomeIsPresentsFailed(errors).into(),
+        ))
+    }
 }
 
 #[async_trait]
@@ -280,10 +337,10 @@ impl Blobstore for WalMultiplexedBlobstore {
 
     async fn is_present<'a>(
         &'a self,
-        _ctx: &'a CoreContext,
-        _key: &'a str,
+        ctx: &'a CoreContext,
+        key: &'a str,
     ) -> Result<BlobstoreIsPresent> {
-        unimplemented!();
+        self.is_present_impl(ctx, key).await
     }
 
     async fn put<'a>(
@@ -373,4 +430,19 @@ fn inner_multi_get<'a>(
         })
         .collect();
     get_futs
+}
+
+fn inner_multi_is_present<'a>(
+    ctx: &'a CoreContext,
+    blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
+    key: &'a str,
+) -> FuturesUnordered<impl Future<Output = (BlobstoreId, Result<BlobstoreIsPresent, Error>)> + 'a> {
+    let futs: FuturesUnordered<_> = blobstores
+        .iter()
+        .map(|(bs_id, bs)| {
+            cloned!(bs_id, bs, ctx);
+            async move { (bs_id, bs.is_present(&ctx, key).await) }
+        })
+        .collect();
+    futs
 }

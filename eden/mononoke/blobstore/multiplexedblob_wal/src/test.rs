@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::anyhow;
 use anyhow::Result;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstorePutOps;
 use blobstore_sync_queue::BlobstoreWal;
 use blobstore_sync_queue::OperationKey;
@@ -558,8 +560,214 @@ async fn test_get_on_existing(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-async fn assert_pending<T: PartialEq + Debug>(fut: &mut (impl Future<Output = T> + Unpin)) {
-    assert_eq!(PollOnce::new(fut).await, Poll::Pending);
+#[fbinit::test]
+async fn test_is_present_missing(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let (_tickable_queue, wal_queue) = setup_queue();
+    let (tickable_blobstores, blobstores) = setup_blobstores(3);
+
+    let quorum = 2;
+    let multiplex =
+        WalMultiplexedBlobstore::new(MultiplexId::new(1), wal_queue, blobstores, vec![], quorum)?;
+
+    // No blobstores have the key
+    let k = "k1";
+
+    // all `is_present` succeed, multiplexed returns `Absent`
+    {
+        let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut fut).await;
+
+        tickable_blobstores[0].1.tick(None);
+        assert_pending(&mut fut).await;
+        tickable_blobstores[1].1.tick(None);
+
+        // the read-quorum on `None` achieved, multiplexed returns `Absent`
+        assert_is_present_ok(fut.await, BlobstoreIsPresent::Absent);
+        tickable_blobstores[2].1.drain(1);
+    }
+
+    // two `is_present`s succeed, multiplexed returns `Absent`
+    {
+        let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut fut).await;
+
+        tickable_blobstores[0].1.tick(None);
+        tickable_blobstores[1].1.tick(Some("bs1 failed"));
+        // muliplexed is_present waits on the third
+        assert_pending(&mut fut).await;
+        tickable_blobstores[2].1.tick(None);
+
+        // the read-quorum achieved, multiplexed returns `Absent`
+        assert_is_present_ok(fut.await, BlobstoreIsPresent::Absent);
+    }
+
+    // two `is_present`s fail, multiplexed returns `ProbablyNotPresent`
+    {
+        let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut fut).await;
+
+        tickable_blobstores[0].1.tick(Some("bs0 failed"));
+        tickable_blobstores[1].1.tick(None);
+        // muliplexed is_present waits on the third
+        assert_pending(&mut fut).await;
+        tickable_blobstores[2].1.tick(Some("bs2 failed"));
+
+        assert_is_present_ok(
+            fut.await,
+            BlobstoreIsPresent::ProbablyNotPresent(anyhow!("some failed!")),
+        );
+    }
+
+    // all `is_present`s fail, multiplexed fails
+    {
+        let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut fut).await;
+
+        for (id, store) in tickable_blobstores {
+            store.tick(Some(format!("bs{} failed!", id).as_str()));
+        }
+        assert!(fut.await.is_err());
+    }
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let (tickable_queue, wal_queue) = setup_queue();
+    let (tickable_blobstores, blobstores) = setup_blobstores(3);
+
+    let quorum = 2;
+    let multiplex =
+        WalMultiplexedBlobstore::new(MultiplexId::new(1), wal_queue, blobstores, vec![], quorum)?;
+
+    // Two blobstores have the key, one failed to write: [ ] [x] [ ]
+    {
+        let v = make_value("v1");
+        let k = "k1";
+
+        let mut put_fut = multiplex
+            .put(&ctx, k.to_owned(), v.clone())
+            .map_err(|_| ())
+            .boxed();
+        assert_pending(&mut put_fut).await;
+
+        // wal queue write succeeds
+        tickable_queue.tick(None);
+        assert_pending(&mut put_fut).await;
+
+        tickable_blobstores[0].1.tick(None);
+        tickable_blobstores[1].1.tick(Some("bs1 failed"));
+        tickable_blobstores[2].1.tick(None);
+
+        // multiplexed put succeeds: write quorum achieved
+        assert!(put_fut.await.is_ok());
+
+        // first `is_present` succeed with `Present`, multiplexed returns `Present`
+        {
+            let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+            assert_pending(&mut fut).await;
+
+            tickable_blobstores[0].1.tick(None);
+            assert_is_present_ok(fut.await, BlobstoreIsPresent::Present);
+
+            for (_id, store) in &tickable_blobstores[1..] {
+                store.drain(1);
+            }
+        }
+
+        // first `is_present` fails, second succeed with `Absent`, third returns `Present`
+        // multiplexed returns `Present`
+        {
+            let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+            assert_pending(&mut fut).await;
+
+            tickable_blobstores[0].1.tick(Some("bs0 failed"));
+            tickable_blobstores[1].1.tick(None);
+            assert_pending(&mut fut).await;
+
+            tickable_blobstores[2].1.tick(None);
+            assert_is_present_ok(fut.await, BlobstoreIsPresent::Present);
+        }
+    }
+
+    // Two blobstores failed to write, one succeeded: [x] [ ] [x]
+    {
+        let v = make_value("v2");
+        let k = "k2";
+
+        let mut put_fut = multiplex
+            .put(&ctx, k.to_owned(), v.clone())
+            .map_err(|_| ())
+            .boxed();
+        assert_pending(&mut put_fut).await;
+
+        // wal queue write succeeds
+        tickable_queue.tick(None);
+        assert_pending(&mut put_fut).await;
+
+        tickable_blobstores[0].1.tick(Some("bs0 failed"));
+        tickable_blobstores[1].1.tick(None);
+        tickable_blobstores[2].1.tick(Some("bs2 failed"));
+
+        // multiplexed put failed: no write quorum
+        assert!(put_fut.await.is_err());
+
+        // the first `is_present` to succeed returns `Present`, multiplexed returns `Present`
+        {
+            let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+            assert_pending(&mut fut).await;
+
+            tickable_blobstores[1].1.tick(None);
+            assert_is_present_ok(fut.await, BlobstoreIsPresent::Present);
+
+            tickable_blobstores[0].1.drain(1);
+            tickable_blobstores[2].1.drain(1);
+        }
+
+        // if the first two `is_present` calls return `Absent`, multiplexed returns `Absent`
+        {
+            let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+            assert_pending(&mut fut).await;
+
+            tickable_blobstores[0].1.tick(None);
+            tickable_blobstores[2].1.tick(None);
+
+            assert_is_present_ok(fut.await, BlobstoreIsPresent::Absent);
+            tickable_blobstores[1].1.drain(1);
+        }
+
+        // if one `is_present` returns `Absent`, another 2 fail, multiplexed is unsure
+        {
+            let mut fut = multiplex.is_present(&ctx, k).map_err(|_| ()).boxed();
+            assert_pending(&mut fut).await;
+
+            tickable_blobstores[0].1.tick(None);
+            for (id, store) in &tickable_blobstores[1..] {
+                store.tick(Some(format!("bs{} failed", id).as_str()));
+            }
+
+            assert_is_present_ok(
+                fut.await,
+                BlobstoreIsPresent::ProbablyNotPresent(anyhow!("some failed!")),
+            );
+        }
+    }
+
+    Ok(())
+}
+
+async fn assert_pending<T: Debug>(fut: &mut (impl Future<Output = T> + Unpin)) {
+    match PollOnce::new(fut).await {
+        Poll::Pending => {}
+        state => {
+            panic!("future must be pending, received: {:?}", state);
+        }
+    }
 }
 
 type TickableBytes = Tickable<(BlobstoreBytes, u64)>;
@@ -599,5 +807,21 @@ fn validate_blob(
     if let Ok(expected) = expected {
         let get_data = get_data.unwrap().map(|data| data.into_bytes());
         assert_eq!(get_data.as_ref(), expected);
+    }
+}
+
+fn assert_is_present_ok(result: Result<BlobstoreIsPresent, ()>, expected: BlobstoreIsPresent) {
+    assert!(result.is_ok());
+    match (result.unwrap(), expected) {
+        (BlobstoreIsPresent::Absent, BlobstoreIsPresent::Absent)
+        | (BlobstoreIsPresent::Present, BlobstoreIsPresent::Present)
+        | (BlobstoreIsPresent::ProbablyNotPresent(_), BlobstoreIsPresent::ProbablyNotPresent(_)) => {
+        }
+        (res, exp) => {
+            panic!(
+                "`is_present` call must return {:?}, received: {:?}",
+                exp, res
+            );
+        }
     }
 }
