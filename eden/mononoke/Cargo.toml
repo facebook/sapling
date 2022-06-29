@@ -225,6 +225,7 @@ members = [
   "changesets/changesets_impl",
   "changesets/if",
   "cmdlib",
+  "cmdlib/base_app",
   "cmdlib/caching",
   "cmdlib/displaying",
   "cmdlib/environment",

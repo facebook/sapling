@@ -14,6 +14,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use base_app::BaseApp;
 use blobstore::Blobstore;
 use blobstore_factory::BlobstoreOptions;
 use blobstore_factory::ReadOnlyStorage;
@@ -65,6 +66,12 @@ pub struct MononokeApp {
     storage_configs: StorageConfigs,
     repo_configs: RepoConfigs,
     repo_factory: RepoFactory,
+}
+
+impl BaseApp for MononokeApp {
+    fn subcommand(&self) -> Option<(&str, &ArgMatches)> {
+        self.args.subcommand()
+    }
 }
 
 impl MononokeApp {
@@ -120,12 +127,6 @@ impl MononokeApp {
         let env = self.env.clone();
         env.runtime
             .block_on(async move { tokio::spawn(main(self)).await? })
-    }
-
-    /// Returns the selected subcommand of the app (if this app
-    /// has subcommands).
-    pub fn subcommand(&self) -> Option<(&str, &ArgMatches)> {
-        self.args.subcommand()
     }
 
     /// Returns the selected subcommand of the app (if this app

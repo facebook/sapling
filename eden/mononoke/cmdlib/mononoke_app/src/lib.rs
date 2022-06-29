@@ -17,9 +17,7 @@ pub use extension::AppExtension;
 
 #[doc(hidden)]
 pub mod macro_export {
-    pub use anyhow;
-    pub use clap;
-    pub use heck;
+    pub use base_app;
 }
 
 /// Define subcommands for a Mononoke App
@@ -61,37 +59,6 @@ pub mod macro_export {
 #[macro_export]
 macro_rules! subcommands {
     ( $( mod $command:ident; )* ) => {
-        $( mod $command; )*
-
-        /// Add args for all commands.
-        pub(crate) fn subcommands<'help>() -> Vec<$crate::macro_export::clap::Command<'help>> {
-            use $crate::macro_export::clap::IntoApp;
-            use $crate::macro_export::heck::KebabCase;
-            vec![
-                $(
-                    $command::CommandArgs::command()
-                        .name(stringify!($command).to_kebab_case()),
-                )*
-            ]
-        }
-
-        /// Dispatch a command invocation.
-        pub(crate) async fn dispatch(app: $crate::MononokeApp) -> $crate::macro_export::anyhow::Result<()> {
-            use $crate::macro_export::clap::FromArgMatches;
-            use $crate::macro_export::heck::SnakeCase;
-            if let Some((name, matches)) = app.subcommand() {
-                match name.to_snake_case().as_str() {
-                    $(
-                        stringify!($command) => {
-                            let args = $command::CommandArgs::from_arg_matches(matches)?;
-                            $command::run(app, args).await
-                        }
-                    )*
-                    _ => Err($crate::macro_export::anyhow::anyhow!("unrecognised subcommand: {}", name)),
-                }
-            } else {
-                Err($crate::macro_export::anyhow::anyhow!("no subcommand specified"))
-            }
-        }
+        $crate::macro_export::base_app::subcommands!{ $( mod $command; )* app = $crate::MononokeApp }
     }
 }
