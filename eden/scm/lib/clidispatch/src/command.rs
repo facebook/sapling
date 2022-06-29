@@ -23,6 +23,7 @@ pub enum CommandFunc {
     NoRepo(Box<dyn Fn(ParseOutput, &IO, &mut ConfigSet) -> Result<u8>>),
     NoRepoGlobalOpts(Box<dyn Fn(ParseOutput, &IO, &mut ConfigSet) -> Result<u8>>),
     OptionalRepo(Box<dyn Fn(ParseOutput, &IO, &mut OptionalRepo) -> Result<u8>>),
+    OptionalRepoGlobalOpts(Box<dyn Fn(ParseOutput, &IO, &mut OptionalRepo) -> Result<u8>>),
     Repo(Box<dyn Fn(ParseOutput, &IO, &mut Repo) -> Result<u8>>),
 }
 
@@ -178,6 +179,23 @@ where
             f(opts.clone().try_into()?, opts.try_into()?, io, config)
         };
         let func = CommandFunc::NoRepoGlobalOpts(Box::new(func));
+        let def = CommandDefinition::new(name, doc, S::flags, func, synopsis);
+        self.commands.insert(name.to_string(), def);
+    }
+}
+
+// OptionalRepoGlobalOpts commands.
+impl<S, FN> Register<FN, ((), (), (), (), S)> for CommandTable
+where
+    S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
+    FN: Fn(S, HgGlobalOpts, &IO, &mut OptionalRepo) -> Result<u8> + 'static,
+{
+    fn register(&mut self, f: FN, name: &str, doc: &str, synopsis: Option<&str>) {
+        self.insert_aliases(name);
+        let func = move |opts: ParseOutput, io: &IO, repo: &mut OptionalRepo| {
+            f(opts.clone().try_into()?, opts.try_into()?, io, repo)
+        };
+        let func = CommandFunc::OptionalRepoGlobalOpts(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func, synopsis);
         self.commands.insert(name.to_string(), def);
     }
