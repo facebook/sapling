@@ -1276,6 +1276,14 @@ function scsc {
     "$SCS_CLIENT" --host "$LOCALIP:$SCS_PORT" "$@"
 }
 
+function scsc_new {
+  GLOG_minloglevel=5 \
+    THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/client0.crt" \
+    THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/client0.key" \
+    THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
+    "$SCS_CLIENT_NEW" --host "$LOCALIP:$SCS_PORT" "$@"
+}
+
 function lfs_health {
   local poll proto bound_addr_file
   poll="$1"; shift
