@@ -666,9 +666,7 @@ class UpdateTest(EdenHgTestCase):
             )
             self.assertEqual(self.read_file("DIR2/untracked"), "untracked")
 
-        untrackedPath = (
-            "DIR2/untracked" if sys.platform == "win32" else "dir2/untracked"
-        )
+        untrackedPath = "dir2/untracked"
         self.assert_status({untrackedPath: "?"})
 
     def test_update_to_null_with_untracked_directory(self) -> None:
