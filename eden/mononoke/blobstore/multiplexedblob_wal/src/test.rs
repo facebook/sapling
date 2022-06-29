@@ -22,6 +22,7 @@ use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
 use sql_construct::SqlConstruct;
+use std::fmt::Debug;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -139,7 +140,7 @@ async fn test_put_wal_fails(fb: FacebookInit) -> Result<()> {
     let k = "k".to_owned();
 
     let mut put_fut = multiplex.put(&ctx, k, v).map_err(|_| ()).boxed();
-    assert_eq!(PollOnce::new(&mut put_fut).await, Poll::Pending);
+    assert_pending(&mut put_fut).await;
 
     // wal queue write fails
     tickable_queue.tick(Some("wal queue failed"));
@@ -176,11 +177,11 @@ async fn test_puts(fb: FacebookInit) -> Result<()> {
         let k = "k0";
 
         let mut put_fut = multiplex.put(&ctx, k.to_owned(), v).map_err(|_| ()).boxed();
-        assert_eq!(PollOnce::new(&mut put_fut).await, Poll::Pending);
+        assert_pending(&mut put_fut).await;
 
         // wal queue write succeeds
         tickable_queue.tick(None);
-        assert_eq!(PollOnce::new(&mut put_fut).await, Poll::Pending);
+        assert_pending(&mut put_fut).await;
 
         // all blobstores should fail
         for (id, store) in tickable_blobstores.iter() {
@@ -196,18 +197,18 @@ async fn test_puts(fb: FacebookInit) -> Result<()> {
         let k = "k1";
 
         let mut put_fut = multiplex.put(&ctx, k.to_owned(), v).map_err(|_| ()).boxed();
-        assert_eq!(PollOnce::new(&mut put_fut).await, Poll::Pending);
+        assert_pending(&mut put_fut).await;
 
         // wal queue write succeeds
         tickable_queue.tick(None);
-        assert_eq!(PollOnce::new(&mut put_fut).await, Poll::Pending);
+        assert_pending(&mut put_fut).await;
 
         // first blobstore fails
         tickable_blobstores[0].1.tick(Some("all fail: bs0 failed"));
-        assert_eq!(PollOnce::new(&mut put_fut).await, Poll::Pending);
+        assert_pending(&mut put_fut).await;
         // second blobstore succeeds
         tickable_blobstores[1].1.tick(None);
-        assert_eq!(PollOnce::new(&mut put_fut).await, Poll::Pending);
+        assert_pending(&mut put_fut).await;
         // third blobstore fails
         tickable_blobstores[2].1.tick(Some("all fail: bs2 failed"));
 
@@ -222,18 +223,18 @@ async fn test_puts(fb: FacebookInit) -> Result<()> {
         let k = "k2";
 
         let mut put_fut = multiplex.put(&ctx, k.to_owned(), v).map_err(|_| ()).boxed();
-        assert_eq!(PollOnce::new(&mut put_fut).await, Poll::Pending);
+        assert_pending(&mut put_fut).await;
 
         // wal queue write succeeds
         tickable_queue.tick(None);
-        assert_eq!(PollOnce::new(&mut put_fut).await, Poll::Pending);
+        assert_pending(&mut put_fut).await;
 
         // first blobstore succeeds
         tickable_blobstores[0].1.tick(None);
-        assert_eq!(PollOnce::new(&mut put_fut).await, Poll::Pending);
+        assert_pending(&mut put_fut).await;
         // second blobstore fails
         tickable_blobstores[1].1.tick(Some("all fail: bs1 failed"));
-        assert_eq!(PollOnce::new(&mut put_fut).await, Poll::Pending);
+        assert_pending(&mut put_fut).await;
         // third blobstore succeeds
         tickable_blobstores[2].1.tick(None);
 
@@ -247,11 +248,11 @@ async fn test_puts(fb: FacebookInit) -> Result<()> {
         let k = "k3";
 
         let mut put_fut = multiplex.put(&ctx, k.to_owned(), v).map_err(|_| ()).boxed();
-        assert_eq!(PollOnce::new(&mut put_fut).await, Poll::Pending);
+        assert_pending(&mut put_fut).await;
 
         // wal queue write succeeds
         tickable_queue.tick(None);
-        assert_eq!(PollOnce::new(&mut put_fut).await, Poll::Pending);
+        assert_pending(&mut put_fut).await;
 
         // first quorum blobstore puts succeed, multiplex doesn't wait for the rest
         // of the puts
@@ -263,6 +264,10 @@ async fn test_puts(fb: FacebookInit) -> Result<()> {
     }
 
     Ok(())
+}
+
+async fn assert_pending<T: PartialEq + Debug>(fut: &mut (impl Future<Output = T> + Unpin)) {
+    assert_eq!(PollOnce::new(fut).await, Poll::Pending);
 }
 
 fn make_value(value: &str) -> BlobstoreBytes {
