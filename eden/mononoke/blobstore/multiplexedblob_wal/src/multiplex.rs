@@ -41,12 +41,13 @@ pub enum ErrorKind {
     #[error("All blobstores failed: {0:?}")]
     AllFailed(Arc<BlobstoresReturnedError>),
     #[error("Failures on put in underlying single blobstores: {0:?}")]
-    UnderlyingPutFailures(Arc<BlobstoresReturnedError>),
+    SomePutsFailed(Arc<BlobstoresReturnedError>),
+    #[error("Failures on get in underlying single blobstores: {0:?}")]
+    SomeGetsFailed(Arc<BlobstoresReturnedError>),
 }
 
 #[derive(Clone, Debug)]
 pub struct MultiplexQuorum {
-    #[allow(dead_code)]
     read: NonZeroUsize,
     write: NonZeroUsize,
 }
@@ -212,7 +213,55 @@ impl WalMultiplexedBlobstore {
             ErrorKind::AllFailed(errors)
         } else {
             // some main writes failed
-            ErrorKind::UnderlyingPutFailures(errors)
+            ErrorKind::SomePutsFailed(errors)
+        };
+
+        Err(result_err.into())
+    }
+
+    async fn get_impl<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        let mut get_futs = inner_multi_get(ctx, self.blobstores.clone(), key);
+
+        // Wait for the quorum successful "Not Found" reads before
+        // returning Ok(None).
+        let mut quorum: usize = self.quorum.read.get();
+        let mut get_errors = HashMap::with_capacity(get_futs.len());
+        while let Some(result) = get_futs.next().await {
+            match result {
+                Ok(Some(get_data)) => {
+                    return Ok(Some(get_data));
+                }
+                Ok(None) => {
+                    quorum = quorum.saturating_sub(1);
+                    if quorum == 0 {
+                        // quorum blobstores couldn't find the given key in the blobstoers
+                        // let's trust them
+                        return Ok(None);
+                    }
+                }
+                Err((bs_id, err)) => {
+                    get_errors.insert(bs_id, err);
+                }
+            }
+        }
+
+        // TODO(aida): read from write-mostly blobstores once in a while, but don't use
+        // those in the quorum.
+
+        // At this point the multiplexed get failed:
+        // - we couldn't find the blob
+        // - and there was no quorum on "not found" result
+        let errors = Arc::new(get_errors);
+        let result_err = if errors.len() == self.blobstores.len() {
+            // all main reads failed
+            ErrorKind::AllFailed(errors)
+        } else {
+            // some main reads failed
+            ErrorKind::SomeGetsFailed(errors)
         };
 
         Err(result_err.into())
@@ -223,10 +272,10 @@ impl WalMultiplexedBlobstore {
 impl Blobstore for WalMultiplexedBlobstore {
     async fn get<'a>(
         &'a self,
-        _ctx: &'a CoreContext,
-        _key: &'a str,
+        ctx: &'a CoreContext,
+        key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        unimplemented!();
+        self.get_impl(ctx, key).await
     }
 
     async fn is_present<'a>(
@@ -307,4 +356,21 @@ async fn inner_put(
     } else {
         blobstore.put_with_status(ctx, key, value).await
     }
+}
+
+fn inner_multi_get<'a>(
+    ctx: &'a CoreContext,
+    blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
+    key: &'a str,
+) -> FuturesUnordered<
+    impl Future<Output = Result<Option<BlobstoreGetData>, (BlobstoreId, Error)>> + 'a,
+> {
+    let get_futs: FuturesUnordered<_> = blobstores
+        .iter()
+        .map(|(bs_id, bs)| {
+            cloned!(bs_id, bs, ctx);
+            async move { bs.get(&ctx, key).await.map_err(|er| (bs_id, er)) }
+        })
+        .collect();
+    get_futs
 }

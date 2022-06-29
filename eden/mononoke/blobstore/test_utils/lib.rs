@@ -8,22 +8,28 @@
 use anyhow::bail;
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, OverwriteStatus, PutBehaviour,
-};
-use blobstore_sync_queue::{BlobstoreWal, BlobstoreWalEntry, OperationKey};
+use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreMetadata;
+use blobstore::BlobstorePutOps;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
+use blobstore_sync_queue::BlobstoreWal;
+use blobstore_sync_queue::BlobstoreWalEntry;
+use blobstore_sync_queue::OperationKey;
 use context::CoreContext;
 use futures::channel::oneshot;
 use lock_ext::LockExt;
 use metaconfig_types::MultiplexId;
-use mononoke_types::{BlobstoreBytes, Timestamp};
-use std::{
-    collections::{HashMap, VecDeque},
-    fmt,
-    future::Future,
-    sync::{Arc, Mutex},
-    time::SystemTime,
-};
+use mononoke_types::BlobstoreBytes;
+use mononoke_types::Timestamp;
+use std::collections::HashMap;
+use std::collections::VecDeque;
+use std::fmt;
+use std::future::Future;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::SystemTime;
 
 pub struct Tickable<T> {
     pub storage: Arc<Mutex<HashMap<String, T>>>,
@@ -61,6 +67,13 @@ impl<T> Tickable<T> {
         for send in queue.drain(..) {
             send.send(error.map(String::from)).unwrap();
         }
+    }
+
+    // Drain the queue of the first N pending requests. Helpful when the consumers
+    // on the other end of the channels already dropped.
+    pub fn drain(&self, num: usize) {
+        let mut queue = self.queue.lock().unwrap();
+        for _entry in queue.drain(0..num) {}
     }
 
     // Register this task on the tick queue and wait for it to progress.

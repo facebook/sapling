@@ -7,8 +7,10 @@
 
 use anyhow::Result;
 use blobstore::Blobstore;
+use blobstore::BlobstoreGetData;
 use blobstore::BlobstorePutOps;
 use blobstore_sync_queue::BlobstoreWal;
+use blobstore_sync_queue::OperationKey;
 use blobstore_sync_queue::SqlBlobstoreWal;
 use blobstore_test_utils::Tickable;
 use bytes::Bytes;
@@ -118,28 +120,19 @@ impl<'a, F: Future + Unpin> Future for PollOnce<'a, F> {
 
 #[fbinit::test]
 async fn test_put_wal_fails(fb: FacebookInit) -> Result<()> {
-    let tickable_blobstores: Vec<_> = (0..3)
-        .map(|id| (BlobstoreId::new(id), Arc::new(Tickable::new())))
-        .collect();
-    let blobstores = tickable_blobstores
-        .clone()
-        .into_iter()
-        .map(|(id, store)| (id, store as Arc<dyn BlobstorePutOps>))
-        .collect();
+    let ctx = CoreContext::test_mock(fb);
+
+    let (tickable_queue, wal_queue) = setup_queue();
+    let (tickable_blobstores, blobstores) = setup_blobstores(3);
 
     let quorum = 2;
-
-    let tickable_queue = Arc::new(Tickable::new());
-    let wal_queue = tickable_queue.clone() as Arc<dyn BlobstoreWal>;
     let multiplex =
         WalMultiplexedBlobstore::new(MultiplexId::new(1), wal_queue, blobstores, vec![], quorum)?;
 
-    let ctx = CoreContext::test_mock(fb);
-
     let v = make_value("v");
-    let k = "k".to_owned();
+    let k = "k";
 
-    let mut put_fut = multiplex.put(&ctx, k, v).map_err(|_| ()).boxed();
+    let mut put_fut = multiplex.put(&ctx, k.to_owned(), v).map_err(|_| ()).boxed();
     assert_pending(&mut put_fut).await;
 
     // wal queue write fails
@@ -148,28 +141,31 @@ async fn test_put_wal_fails(fb: FacebookInit) -> Result<()> {
     // multiplex put should fail
     assert!(put_fut.await.is_err());
 
+    // check there is no blob in the storage
+    {
+        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut get_fut).await;
+
+        // blobstore gets succeed
+        for (_id, store) in tickable_blobstores.iter() {
+            store.tick(None);
+        }
+        validate_blob(get_fut.await, Ok(None));
+    }
+
     Ok(())
 }
 
 #[fbinit::test]
-async fn test_puts(fb: FacebookInit) -> Result<()> {
-    let tickable_blobstores: Vec<_> = (0..3)
-        .map(|id| (BlobstoreId::new(id), Arc::new(Tickable::new())))
-        .collect();
-    let blobstores = tickable_blobstores
-        .clone()
-        .into_iter()
-        .map(|(id, store)| (id, store as Arc<dyn BlobstorePutOps>))
-        .collect();
+async fn test_put_fails(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let (tickable_queue, wal_queue) = setup_queue();
+    let (tickable_blobstores, blobstores) = setup_blobstores(3);
 
     let quorum = 2;
-
-    let tickable_queue = Arc::new(Tickable::new());
-    let wal_queue = tickable_queue.clone() as Arc<dyn BlobstoreWal>;
     let multiplex =
         WalMultiplexedBlobstore::new(MultiplexId::new(1), wal_queue, blobstores, vec![], quorum)?;
-
-    let ctx = CoreContext::test_mock(fb);
 
     // All puts fail, the multiplex put should fail: [x] [x] [x]
     {
@@ -189,14 +185,29 @@ async fn test_puts(fb: FacebookInit) -> Result<()> {
         }
 
         assert!(put_fut.await.is_err());
+
+        // No `put` succeeded, there is no blob in the storage
+        {
+            let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+            assert_pending(&mut get_fut).await;
+
+            // blobstore gets succeed
+            for (_id, store) in tickable_blobstores.iter() {
+                store.tick(None);
+            }
+            validate_blob(get_fut.await, Ok(None));
+        }
     }
 
-    // No quorum puts succeeded, the multiplex put fails: [x] [ ] [x]
+    // Second blobstore put succeeded but no quorum was achieved, multiplex put fails: [x] [ ] [x]
     {
         let v = make_value("v1");
         let k = "k1";
 
-        let mut put_fut = multiplex.put(&ctx, k.to_owned(), v).map_err(|_| ()).boxed();
+        let mut put_fut = multiplex
+            .put(&ctx, k.to_owned(), v.clone())
+            .map_err(|_| ())
+            .boxed();
         assert_pending(&mut put_fut).await;
 
         // wal queue write succeeds
@@ -214,7 +225,61 @@ async fn test_puts(fb: FacebookInit) -> Result<()> {
 
         // the multiplex put fails
         assert!(put_fut.await.is_err());
+
+        // The blob was written to the second blobstore even if the multiplex put failed.
+        // That means `get` result is undefined: it can either return `None` or `Some`
+        // depending on which blobstores' put returned first.
+        //
+        // This is fine because if multiplex `put` failed, multiplex blobstore doesn't provide
+        // any guarantees whether the blob is present in the storage or not.
+        // There is only guarantee: if `put` succeeded, the blob will always be present,
+        // i.e. `get` will always return `Some` (if it didn't fail for some other reason).
+
+        // 1st and 3rd blobstore returned `None`, before 2nd blobstore returned anything
+        // there is a read quorum on `None`, so multiplex `get` should also return `None`
+        {
+            let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+            assert_pending(&mut get_fut).await;
+
+            // first and third blobstores don't have the blob
+            tickable_blobstores[0].1.tick(None);
+            tickable_blobstores[2].1.tick(None);
+
+            // the result is ready
+            validate_blob(get_fut.await, Ok(None));
+            tickable_blobstores[1].1.drain(1);
+        }
+
+        // 2nd blobstore returned before the read quorum on `None` was achieved, so
+        // multiplex `get` should also return `Some`
+        {
+            let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+            assert_pending(&mut get_fut).await;
+
+            // first blobstore doesn't have the blob
+            tickable_blobstores[0].1.tick(None);
+            // second blobstore has
+            tickable_blobstores[1].1.tick(None);
+
+            // the result is ready
+            validate_blob(get_fut.await, Ok(Some(&v)));
+            tickable_blobstores[2].1.drain(1);
+        }
     }
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_put_succeeds(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let (tickable_queue, wal_queue) = setup_queue();
+    let (tickable_blobstores, blobstores) = setup_blobstores(3);
+
+    let quorum = 2;
+    let multiplex =
+        WalMultiplexedBlobstore::new(MultiplexId::new(1), wal_queue, blobstores, vec![], quorum)?;
 
     // Quorum puts succeed, the multiplex put succeeds: [ ] [x] [ ]
     // Should wait for the third put to complete.
@@ -222,7 +287,10 @@ async fn test_puts(fb: FacebookInit) -> Result<()> {
         let v = make_value("v2");
         let k = "k2";
 
-        let mut put_fut = multiplex.put(&ctx, k.to_owned(), v).map_err(|_| ()).boxed();
+        let mut put_fut = multiplex
+            .put(&ctx, k.to_owned(), v.clone())
+            .map_err(|_| ())
+            .boxed();
         assert_pending(&mut put_fut).await;
 
         // wal queue write succeeds
@@ -239,6 +307,39 @@ async fn test_puts(fb: FacebookInit) -> Result<()> {
         tickable_blobstores[2].1.tick(None);
 
         assert!(put_fut.await.is_ok());
+
+        // check we can read the blob from the 1st store
+        {
+            let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+            assert_pending(&mut get_fut).await;
+
+            // first blobstore returns the blob
+            tickable_blobstores[0].1.tick(None);
+            validate_blob(get_fut.await, Ok(Some(&v)));
+
+            // drain the tickables of the pending requests, as they won't be claimed
+            for (_id, store) in &tickable_blobstores[1..3] {
+                store.drain(1);
+            }
+        }
+
+        // check we can read the blob from the 3rd store
+        {
+            let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+            assert_pending(&mut get_fut).await;
+
+            // first blobstore fails
+            tickable_blobstores[0].1.tick(Some("bs0 failed"));
+            assert_pending(&mut get_fut).await;
+
+            // second blobstore doesn't have the blob
+            tickable_blobstores[1].1.tick(None);
+            assert_pending(&mut get_fut).await;
+
+            // third blobstore succeeds
+            tickable_blobstores[2].1.tick(None);
+            validate_blob(get_fut.await, Ok(Some(&v)));
+        }
     }
 
     // All puts succeed, the multiplex put succeeds: [ ] [ ] [ ]
@@ -247,7 +348,10 @@ async fn test_puts(fb: FacebookInit) -> Result<()> {
         let v = make_value("v3");
         let k = "k3";
 
-        let mut put_fut = multiplex.put(&ctx, k.to_owned(), v).map_err(|_| ()).boxed();
+        let mut put_fut = multiplex
+            .put(&ctx, k.to_owned(), v.clone())
+            .map_err(|_| ())
+            .boxed();
         assert_pending(&mut put_fut).await;
 
         // wal queue write succeeds
@@ -261,6 +365,194 @@ async fn test_puts(fb: FacebookInit) -> Result<()> {
         }
 
         assert!(put_fut.await.is_ok());
+
+        // check we can read the blob
+        {
+            let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+            assert_pending(&mut get_fut).await;
+
+            // blobstore gets succeed
+            for (_id, store) in tickable_blobstores.iter() {
+                store.tick(None);
+            }
+            validate_blob(get_fut.await, Ok(Some(&v)));
+        }
+    }
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_get_on_missing(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let (_tickable_queue, wal_queue) = setup_queue();
+    let (tickable_blobstores, blobstores) = setup_blobstores(3);
+
+    let quorum = 2;
+    let multiplex =
+        WalMultiplexedBlobstore::new(MultiplexId::new(1), wal_queue, blobstores, vec![], quorum)?;
+
+    // No blobstores have the key
+    let k = "k1";
+
+    // all gets succeed, but multiplexed returns `None`
+    {
+        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut get_fut).await;
+
+        tickable_blobstores[0].1.tick(None);
+        assert_pending(&mut get_fut).await;
+        tickable_blobstores[1].1.tick(None);
+
+        // the read-quorum on `None` achieved, multiplexed get returns `None`
+        validate_blob(get_fut.await, Ok(None));
+        tickable_blobstores[2].1.drain(1);
+    }
+
+    // two gets succeed, but multiplexed returns `None`
+    {
+        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut get_fut).await;
+
+        tickable_blobstores[0].1.tick(None);
+        tickable_blobstores[1].1.tick(Some("bs1 failed"));
+        // muliplexed get waits on the third
+        assert_pending(&mut get_fut).await;
+        tickable_blobstores[2].1.tick(None);
+
+        // the read-quorum on `None` achieved, multiplexed get returns `None`
+        validate_blob(get_fut.await, Ok(None));
+    }
+
+    // two gets fail, multiplexed get fails, because no read quorum
+    {
+        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut get_fut).await;
+
+        tickable_blobstores[0].1.tick(Some("bs0 failed"));
+        tickable_blobstores[1].1.tick(Some("bs1 failed"));
+        // muliplexed get waits on the third, which returns `None`
+        assert_pending(&mut get_fut).await;
+        tickable_blobstores[2].1.tick(None);
+
+        // no read-quorum, multiplexed get fails
+        validate_blob(get_fut.await, Err(()));
+    }
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_get_on_existing(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let (tickable_queue, wal_queue) = setup_queue();
+    let (tickable_blobstores, blobstores) = setup_blobstores(3);
+
+    let quorum = 2;
+    let multiplex =
+        WalMultiplexedBlobstore::new(MultiplexId::new(1), wal_queue, blobstores, vec![], quorum)?;
+
+    // Two blobstores have the key, one failed to write: [ ] [x] [ ]
+
+    let v = make_value("v1");
+    let k = "k1";
+
+    let mut put_fut = multiplex
+        .put(&ctx, k.to_owned(), v.clone())
+        .map_err(|_| ())
+        .boxed();
+    assert_pending(&mut put_fut).await;
+
+    // wal queue write succeeds
+    tickable_queue.tick(None);
+    assert_pending(&mut put_fut).await;
+
+    tickable_blobstores[0].1.tick(None);
+    tickable_blobstores[1].1.tick(Some("bs1 failed"));
+    tickable_blobstores[2].1.tick(None);
+
+    // multiplexed put succeeds: write quorum achieved
+    assert!(put_fut.await.is_ok());
+
+    // all gets succeed, but multiplexed returns on the first successful `Some`
+    {
+        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut get_fut).await;
+
+        // first blobstore returns the blob
+        tickable_blobstores[0].1.tick(None);
+        validate_blob(get_fut.await, Ok(Some(&v)));
+
+        // drain the tickables of the pending requests, as they won't be claimed
+        for (_id, store) in &tickable_blobstores[1..3] {
+            store.drain(1);
+        }
+    }
+
+    // first get fails, but multiplexed returns on the third get
+    {
+        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut get_fut).await;
+
+        // first blobstore get fails
+        tickable_blobstores[0].1.tick(Some("bs1 failed!"));
+        assert_pending(&mut get_fut).await;
+
+        // second blobstore get returns None
+        tickable_blobstores[1].1.tick(None);
+        assert_pending(&mut get_fut).await;
+
+        // third blobstore get returns Some
+        tickable_blobstores[2].1.tick(None);
+        validate_blob(get_fut.await, Ok(Some(&v)));
+    }
+
+    // 2 first gets fail, but multiplexed returns `Some` on the third get
+    {
+        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut get_fut).await;
+
+        // first blobstore get fails
+        tickable_blobstores[0].1.tick(Some("bs1 failed!"));
+        assert_pending(&mut get_fut).await;
+
+        // second blobstore get fails
+        tickable_blobstores[1].1.tick(Some("bs2 failed!"));
+        assert_pending(&mut get_fut).await;
+
+        // third blobstore get returns Some
+        tickable_blobstores[2].1.tick(None);
+        validate_blob(get_fut.await, Ok(Some(&v)));
+    }
+
+    // all blobstores that have the blob fail, multiplexed get fail:
+    // no read quorum on `None` was achieved
+    {
+        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut get_fut).await;
+
+        // first and third blobstore gets fail
+        tickable_blobstores[0].1.tick(Some("bs1 failed!"));
+        tickable_blobstores[2].1.tick(Some("bs3 failed!"));
+        assert_pending(&mut get_fut).await;
+
+        // second blobstore get returns None
+        tickable_blobstores[1].1.tick(None);
+        validate_blob(get_fut.await, Err(()));
+    }
+
+    // all blobstores gets fail, multiplexed get fail
+    {
+        let mut get_fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut get_fut).await;
+
+        for (id, store) in tickable_blobstores {
+            store.tick(Some(format!("bs{} failed!", id).as_str()));
+        }
+
+        validate_blob(get_fut.await, Err(()));
     }
 
     Ok(())
@@ -270,6 +562,42 @@ async fn assert_pending<T: PartialEq + Debug>(fut: &mut (impl Future<Output = T>
     assert_eq!(PollOnce::new(fut).await, Poll::Pending);
 }
 
+type TickableBytes = Tickable<(BlobstoreBytes, u64)>;
+
+fn setup_blobstores(
+    num: u64,
+) -> (
+    Vec<(BlobstoreId, Arc<TickableBytes>)>,
+    Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
+) {
+    let tickable_blobstores: Vec<_> = (0..num)
+        .map(|id| (BlobstoreId::new(id), Arc::new(TickableBytes::new())))
+        .collect();
+    let blobstores = tickable_blobstores
+        .clone()
+        .into_iter()
+        .map(|(id, store)| (id, store as Arc<dyn BlobstorePutOps>))
+        .collect();
+    (tickable_blobstores, blobstores)
+}
+
+fn setup_queue() -> (Arc<Tickable<OperationKey>>, Arc<dyn BlobstoreWal>) {
+    let tickable_queue = Arc::new(Tickable::new());
+    let wal_queue = tickable_queue.clone() as Arc<dyn BlobstoreWal>;
+    (tickable_queue, wal_queue)
+}
+
 fn make_value(value: &str) -> BlobstoreBytes {
     BlobstoreBytes::from_bytes(Bytes::copy_from_slice(value.as_bytes()))
+}
+
+fn validate_blob(
+    get_data: Result<Option<BlobstoreGetData>, ()>,
+    expected: Result<Option<&BlobstoreBytes>, ()>,
+) {
+    assert_eq!(get_data.is_ok(), expected.is_ok());
+    if let Ok(expected) = expected {
+        let get_data = get_data.unwrap().map(|data| data.into_bytes());
+        assert_eq!(get_data.as_ref(), expected);
+    }
 }
