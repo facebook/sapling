@@ -253,9 +253,9 @@ mod test {
 
     #[test]
     fn test_target_matches() {
-        let test_ident = MononokeIdentity::new("USER", "foo").unwrap();
-        let test2_ident = MononokeIdentity::new("USER", "bar").unwrap();
-        let test3_ident = MononokeIdentity::new("USER", "baz").unwrap();
+        let test_ident = MononokeIdentity::new("USER", "foo");
+        let test2_ident = MononokeIdentity::new("USER", "bar");
+        let test3_ident = MononokeIdentity::new("USER", "baz");
 
         let ident_target = Target::Identity(test_ident.clone());
         let ident2_target = Target::Identity(test2_ident.clone());
@@ -286,7 +286,7 @@ mod test {
     #[test]
     fn test_target_in_static_slice() {
         let mut identities = MononokeIdentitySet::new();
-        identities.insert(MononokeIdentity::new("MACHINE", "abc123.abc1.facebook.com").unwrap());
+        identities.insert(MononokeIdentity::new("MACHINE", "abc123.abc1.facebook.com"));
 
         assert!(!in_throttled_slice(None, 100.try_into().unwrap(), "abc"));
 

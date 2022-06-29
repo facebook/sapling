@@ -46,7 +46,7 @@ impl MononokeIdentity {
         let subject_name = subject_vec?.as_slice().join(",");
 
         let mut idents = MononokeIdentitySet::new();
-        idents.insert(MononokeIdentity::new("X509_SUBJECT_NAME", subject_name)?);
+        idents.insert(MononokeIdentity::new("X509_SUBJECT_NAME", subject_name));
         Ok(idents)
     }
 }

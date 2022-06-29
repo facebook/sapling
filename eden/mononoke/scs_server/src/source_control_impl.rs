@@ -144,7 +144,7 @@ impl SourceControlServiceImpl {
             .map_err(errors::internal_error)?
             .entries()
             .into_iter()
-            .filter_map(|id| MononokeIdentity::try_from_identity_ref(id).ok())
+            .map(MononokeIdentity::from_identity_ref)
             .collect();
 
         let mut scuba = self.create_scuba(name, req_ctxt, specifier, params, &identities)?;

@@ -40,8 +40,7 @@ const CLIENT_CORRELATOR: &str = "x-client-correlator";
 
 lazy_static! {
     static ref PROXYGEN_ORIGIN_IDENTITY: MononokeIdentity =
-        MononokeIdentity::new("SERVICE_IDENTITY", "proxygen-origin")
-            .expect("SERVICE_IDENTITY is not a valid identity type");
+        MononokeIdentity::new("SERVICE_IDENTITY", "proxygen-origin");
 }
 
 #[derive(StateData, Default)]

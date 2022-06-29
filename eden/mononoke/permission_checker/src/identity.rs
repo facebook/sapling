@@ -25,11 +25,11 @@ pub struct MononokeIdentity {
 }
 
 impl MononokeIdentity {
-    pub fn new(id_type: impl Into<String>, id_data: impl Into<String>) -> Result<Self> {
+    pub fn new(id_type: impl Into<String>, id_data: impl Into<String>) -> Self {
         let id_type = id_type.into();
         let id_data = id_data.into();
 
-        Ok(Self { id_type, id_data })
+        Self { id_type, id_data }
     }
 
     pub fn id_type(&self) -> &str {
@@ -54,7 +54,7 @@ impl FromStr for MononokeIdentity {
         let mut parts = value.split(':');
 
         match (parts.next(), parts.next(), parts.next()) {
-            (Some(ty), Some(data), None) => Self::new(ty, data),
+            (Some(ty), Some(data), None) => Ok(Self::new(ty, data)),
             _ => bail!(
                 "MononokeIdentity parse error, expected TYPE:data, got {:?}",
                 value

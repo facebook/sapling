@@ -48,7 +48,7 @@ pub fn try_get_cats_idents(
                 &token.serializedCryptoAuthTokenData[..],
             )?;
             let m_ident =
-                MononokeIdentity::new(tdata.signerIdentity.id_type, tdata.signerIdentity.id_data)?;
+                MononokeIdentity::new(tdata.signerIdentity.id_type, tdata.signerIdentity.id_data);
             idents_acc.insert(m_ident);
             let res = cryptocat::verify_crypto_auth_token(fb, token, &svc_scm_ident, None)?;
             if res.code != cryptocat::CATVerificationCode::SUCCESS {
