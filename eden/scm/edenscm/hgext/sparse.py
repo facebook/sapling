@@ -1590,7 +1590,12 @@ def _discover(ui, repo, rev=None):
             repo.root,
             repo.getcwd(),
             patterns=["path:" + profile_directory],
-            exclude=["relglob:README.*", "relglob:README"],
+            exclude=[
+                "relglob:README.*",
+                "relglob:README",
+                "relglob:.*",
+                "relglob:*.py",
+            ],
         )
         available.update(mf.matches(matcher))
 
@@ -2334,7 +2339,7 @@ def _listprofiles(ui, repo, *pats, **opts):
     with ui.formatter("sparse", opts) as fm:
         fm.plain("Available Profiles:\n\n")
         load_matcher = lambda p: repo.sparsematch(
-            rev=rev,
+            rev,
             config=readsparseconfig(
                 repo, getrawprofile(repo, p, rev), filename=p, warn=False
             ),

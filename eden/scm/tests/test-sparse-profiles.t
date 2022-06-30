@@ -339,9 +339,11 @@ Test profile discovery
   > [hint]
   > ack-hint-ack = True
   > EOF
-  $ mkdir -p profiles/foo profiles/bar interesting
+  $ mkdir -p profiles/foo profiles/bar profiles/.hidden interesting
   $ touch profiles/README.txt
   $ touch profiles/foo/README
+  $ touch profiles/.hidden/nope
+  $ touch profiles/why_is_this_here.py
   $ dd if=/dev/zero of=interesting/sizeable bs=4048 count=1024 2> /dev/null
   $ cat > profiles/foo/spam <<EOF
   > %include profiles/bar/eggs
@@ -660,7 +662,7 @@ We can look at invididual profiles:
   Size impact compared to a full checkout
   =======================================
   
-  file count    8 (80.00%)
+  file count    10 (83.33%)
   
   Additional metadata
   ===================
@@ -681,7 +683,7 @@ We can look at invididual profiles:
     "metadata": {"title": "An extended profile including some interesting files"},
     "path": "profiles/bar/ham",
     "profiles": ["profiles/bar/eggs"],
-    "stats": {"filecount": 9, "filecountpercentage": 90.0}
+    "stats": {"filecount": 11, "filecountpercentage": 91.66666666666666}
    }
   ]
   hint[sparse-explain-verbose]: use 'hg sparse explain --verbose profiles/bar/ham' to include the total file size for a give profile
@@ -692,7 +694,7 @@ We can look at invididual profiles:
     "metadata": {"title": "An extended profile including some interesting files"},
     "path": "profiles/bar/ham",
     "profiles": ["profiles/bar/eggs"],
-    "stats": {"filecount": 9, "filecountpercentage": 90.0, "totalsize": 4145875}
+    "stats": {"filecount": 11, "filecountpercentage": 91.66666666666666, "totalsize": 4145875}
    }
   ]
   $ cat >> .hg/hgrc << EOF  # enough hints now
@@ -711,7 +713,7 @@ We can look at invididual profiles:
   Size impact compared to a full checkout
   =======================================
   
-  file count    8 (80.00%)
+  file count    10 (83.33%)
   
   Additional metadata
   ===================
@@ -736,7 +738,7 @@ We can look at invididual profiles:
   Size impact compared to a full checkout
   =======================================
   
-  file count    8 (80.00%)
+  file count    10 (83.33%)
   total size    723 bytes
   
   Additional metadata
@@ -763,7 +765,7 @@ We can look at invididual profiles:
   Size impact compared to a full checkout
   =======================================
   
-  file count    8 (80.00%)
+  file count    10 (83.33%)
   total size    723 bytes
   
   Additional metadata
@@ -785,7 +787,7 @@ We can look at invididual profiles:
   Size impact compared to a full checkout
   =======================================
   
-  file count    9 (90.00%)
+  file count    11 (91.67%)
   total size    3.95 MB
   
   Profiles included
@@ -801,7 +803,7 @@ We can look at invididual profiles:
   $ hg sparse explain profiles/bar/eggs -T "{path}\n{metadata.title}\n{stats.filecount}\n"
   profiles/bar/eggs
   Profile including the profiles directory
-  8
+  10
 
 The -r switch tells hg sparse explain to look at something other than the
 current working copy:
@@ -810,9 +812,9 @@ current working copy:
   $ touch interesting/later_revision
   $ hg commit -Aqm 'Add another file in a later revision'
   $ hg sparse explain profiles/bar/ham -T "{stats.filecount}\n" -r ".^"
-  9
+  11
   $ hg sparse explain profiles/bar/ham -T "{stats.filecount}\n" -r .
-  10
+  12
   $ hg sparse list --contains-file interesting/later_revision -r ".^"
   Available Profiles:
   
@@ -835,6 +837,8 @@ We can list the files in a profile with the hg sparse files command:
 
   $ hg sparse files profiles/bar/eggs
   profiles/README.txt
+  profiles/why_is_this_here.py
+  profiles/.hidden/nope
   profiles/bar/eggs
   profiles/bar/ham
   profiles/bar/python
@@ -849,7 +853,7 @@ We can list the files in a profile with the hg sparse files command:
 Files for included profiles are taken along:
 
   $ hg sparse files profiles/bar/ham | wc -l
-  \s*9 (re)
+  \s*11 (re)
 
 File count and size data for hg explain is cached in the simplecache extension:
 
