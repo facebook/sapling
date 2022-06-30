@@ -26,6 +26,7 @@ use crate::render::OutputTarget;
 mod args;
 mod commands;
 mod connection;
+pub(crate) mod lib;
 mod render;
 
 lazy_static::lazy_static! {

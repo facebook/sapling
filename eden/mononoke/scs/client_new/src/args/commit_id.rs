@@ -7,6 +7,8 @@
 
 //! Arguments for Commit IDs and Commit Identity Schemes
 
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::fmt;
 use std::num::NonZeroU64;
 
@@ -23,6 +25,52 @@ use futures_util::stream::TryStreamExt;
 use source_control::types as thrift;
 
 use crate::connection::Connection;
+
+#[derive(
+    strum_macros::EnumString,
+    strum_macros::Display,
+    Clone,
+    PartialEq,
+    Eq,
+    Hash
+)]
+#[strum(serialize_all = "kebab-case")]
+pub(crate) enum Scheme {
+    Bonsai,
+    Hg,
+    Git,
+    Globalrev,
+    Svnrev,
+}
+
+impl Scheme {
+    pub(crate) fn into_thrift(self) -> thrift::CommitIdentityScheme {
+        match self {
+            Self::Hg => thrift::CommitIdentityScheme::HG,
+            Self::Bonsai => thrift::CommitIdentityScheme::BONSAI,
+            Self::Git => thrift::CommitIdentityScheme::GIT,
+            Self::Globalrev => thrift::CommitIdentityScheme::GLOBALREV,
+            Self::Svnrev => thrift::CommitIdentityScheme::SVNREV,
+        }
+    }
+}
+
+#[derive(Args, Clone)]
+pub(crate) struct SchemeArgs {
+    #[clap(long, short('S'), default_value = "hg")]
+    /// Commit identity schemes to display
+    schemes: Vec<Scheme>,
+}
+
+impl SchemeArgs {
+    pub(crate) fn into_request_schemes(self) -> BTreeSet<thrift::CommitIdentityScheme> {
+        self.schemes.into_iter().map(Scheme::into_thrift).collect()
+    }
+
+    pub(crate) fn schemes(&self) -> &Vec<Scheme> {
+        &self.schemes
+    }
+}
 
 #[derive(Args, Clone)]
 #[clap(group(
@@ -399,4 +447,23 @@ pub(crate) async fn resolve_commit_id(
 ) -> Result<thrift::CommitId, Error> {
     let commit_ids = resolve_commit_ids(conn, repo, Some(commit_id).into_iter()).await?;
     Ok(commit_ids.into_iter().next().expect("commit id expected"))
+}
+
+/// Map commit IDs to the scheme name and string representation of the commit ID.
+pub(crate) fn map_commit_ids<'a>(
+    ids: impl Iterator<Item = &'a thrift::CommitId>,
+) -> BTreeMap<String, String> {
+    ids.filter_map(map_commit_id).collect()
+}
+
+/// Map a commit ID to its scheme name and string representation.
+pub(crate) fn map_commit_id(id: &thrift::CommitId) -> Option<(String, String)> {
+    match id {
+        thrift::CommitId::bonsai(hash) => Some((String::from("bonsai"), hex_string(hash))),
+        thrift::CommitId::hg(hash) => Some((String::from("hg"), hex_string(hash))),
+        thrift::CommitId::git(hash) => Some((String::from("git"), hex_string(hash))),
+        thrift::CommitId::globalrev(rev) => Some((String::from("globalrev"), rev.to_string())),
+        thrift::CommitId::svnrev(rev) => Some((String::from("svnrev"), rev.to_string())),
+        _ => None,
+    }
 }
