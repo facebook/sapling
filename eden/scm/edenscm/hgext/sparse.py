@@ -1422,7 +1422,7 @@ def readsparseprofile(repo, rev, name, profileconfigs):
             if profile is not None:
                 for (i, rule) in enumerate(profile.rules):
                     rules.append(rule)
-                    ruleorigins.append(profile.ruleorigin(i))
+                    ruleorigins.append("{} -> {}".format(name, profile.ruleorigin(i)))
                 for subprofile in profile.profiles:
                     profiles.add(subprofile)
         elif kind == "include":
@@ -2158,7 +2158,7 @@ def debugsparseexplainmatch(ui, repo, *args, **opts):
             raise error.Abort(_("no such profile %s") % (profile))
 
         raw = "%%include %s" % profile
-        config = readsparseconfig(repo, raw=raw, filename=profile)
+        config = readsparseconfig(repo, raw=raw, filename="<cli>")
     elif not repo.localvfs.exists("sparse"):
         # If there is no implicit sparse config (e.g. non-sparse or
         # EdenFS working copies), the user must specify a sparse

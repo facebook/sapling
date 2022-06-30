@@ -44,10 +44,10 @@ test sparse
 
 
   $ hg debugsparseexplainmatch inc/exc/incfile.txt
-  inc/exc/incfile.txt: excluded by rule !inc/exc/** ($TESTTMP/myrepo/.hg/sparse -> base.sparse)
+  inc/exc/incfile.txt: excluded by rule !inc/exc/** ($TESTTMP/myrepo/.hg/sparse -> main.sparse -> base.sparse)
 
   $ hg debugsparseexplainmatch -s main.sparse inc/exc/incfile.txt
-  inc/exc/incfile.txt: excluded by rule !inc/exc/** (main.sparse -> base.sparse)
+  inc/exc/incfile.txt: excluded by rule !inc/exc/** (<cli> -> main.sparse -> base.sparse)
 
 # Upgrade main.sparse to v2
   $ cat > main.sparse <<EOF
