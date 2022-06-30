@@ -235,6 +235,13 @@ class client(object):
         except (Unavailable, KeyError):
             # watchman does not support this command
             root_status = {}
+        # log enable_parallel_crawl
+        try:
+            enable_parallel_crawl = root_status["enable_parallel_crawl"]
+        except KeyError:
+            pass
+        else:
+            self._ui.log("fsmonitor_status", parallel_crawl=enable_parallel_crawl)
         return root_status
 
     def recrawl_info(self):
