@@ -1447,8 +1447,17 @@ EdenServiceHandler::streamChangesSince(
       const auto& from = *rootIt;
       const auto& to = *(rootIt + 1);
 
-      futures.push_back(edenMount->diffBetweenRoots(
-          from, to, cancellationSource->getToken(), callback.get()));
+      // Make sure that the diffBetweenRoots is not run immediately.
+      auto semi = folly::makeSemiFuture().deferValue(
+          [from,
+           to,
+           edenMount = edenMount.get(),
+           token = cancellationSource->getToken(),
+           callback = callback.get()](auto&&) {
+            return edenMount->diffBetweenRoots(from, to, token, callback)
+                .semi();
+          });
+      futures.push_back(ImmediateFuture{std::move(semi)});
     }
 
     folly::futures::detachOn(
