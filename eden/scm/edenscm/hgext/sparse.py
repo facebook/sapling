@@ -1034,7 +1034,12 @@ def _wraprepo(ui, repo):
                 if result is not None:
                     return result
 
-            result = computesparsematcher(self, revs, rawconfig=rawconfig)
+            result = computesparsematcher(
+                self,
+                revs,
+                rawconfig=rawconfig,
+                nocatchall=kwargs.get("nocatchall", False),
+            )
 
             if kwargs.get("includetemp", True):
                 tempincludes = self.gettemporaryincludes()
@@ -1141,7 +1146,9 @@ def _wraprepo(ui, repo):
     repo.__class__ = SparseRepo
 
 
-def computesparsematcher(repo, revs, rawconfig=None, debugversion=None):
+def computesparsematcher(
+    repo, revs, rawconfig=None, debugversion=None, nocatchall=False
+):
     matchers = []
     isalways = False
 
@@ -1152,6 +1159,7 @@ def computesparsematcher(repo, revs, rawconfig=None, debugversion=None):
                 rev,
                 rawconfig=rawconfig,
                 debugversion=debugversion,
+                nocatchall=nocatchall,
             )
 
             matchrules = config.mainrules
@@ -1199,7 +1207,7 @@ def computesparsematcher(repo, revs, rawconfig=None, debugversion=None):
         return matchmod.union(matchers, repo.root, "")
 
 
-def getsparsepatterns(repo, rev, rawconfig=None, debugversion=None):
+def getsparsepatterns(repo, rev, rawconfig=None, debugversion=None, nocatchall=False):
     """Produce the full sparse config for a revision as a SparseConfig
 
     This includes all patterns from included profiles, transitively.
@@ -1281,7 +1289,7 @@ def getsparsepatterns(repo, rev, rawconfig=None, debugversion=None):
 
     # If all rules (excluding the default '.hg*') are exclude rules, add
     # an initial "**" to provide the default include of everything.
-    if not includes and onlyv1:
+    if not includes and onlyv1 and not nocatchall:
         rules.insert(0, "**")
         ruleorigins.append("sparse.py")
 
@@ -2338,11 +2346,13 @@ def _listprofiles(ui, repo, *pats, **opts):
     ui.pager("sparse list")
     with ui.formatter("sparse", opts) as fm:
         fm.plain("Available Profiles:\n\n")
+
         load_matcher = lambda p: repo.sparsematch(
             rev,
             config=readsparseconfig(
                 repo, getrawprofile(repo, p, rev), filename=p, warn=False
             ),
+            nocatchall=True,
         )
 
         predicate = _build_profile_filter(filters, load_matcher)
