@@ -288,6 +288,11 @@ fn parse_plist<T>(data: &str) -> Result<T> {
 }
 
 fn kill_active_pids_in_mounts(mut mount_points: Vec<String>) -> Result<()> {
+    if mount_points.is_empty() {
+        println!("Not killing anything as there are no mounts");
+        return Ok(());
+    }
+
     mount_points.push("-t".to_owned());
     // -t has to come before the mount point list
     let last_index = mount_points.len() - 1;
