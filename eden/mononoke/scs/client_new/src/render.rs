@@ -11,6 +11,7 @@ use std::io::Write;
 use anyhow::Result;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
+use futures::stream::{self};
 
 /// A renderable item.  This trait should be implemented by anything that can
 /// be output from a command.
@@ -63,5 +64,11 @@ impl OutputTarget {
             Ok(())
         })
         .await
+    }
+
+    /// Render a single element for a command invocation
+    pub(crate) async fn render_one<R: Render>(self, matches: &R::Args, obj: R) -> Result<()> {
+        self.render(matches, stream::once(futures::future::ok(obj)))
+            .await
     }
 }

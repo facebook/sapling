@@ -1250,7 +1250,7 @@ function wait_for_scs {
   export SCS_PORT
   wait_for_server "SCS server" SCS_PORT "$TESTTMP/scs_server.out" \
     "${MONONOKE_SCS_START_TIMEOUT:-"$MONONOKE_SCS_DEFAULT_START_TIMEOUT"}" "$TESTTMP/scs_server_addr.txt" \
-    scsc repos
+    scsc_new repos
 }
 
 function start_and_wait_for_scs_server {

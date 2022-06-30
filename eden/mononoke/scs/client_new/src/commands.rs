@@ -9,5 +9,6 @@ use crate::SCSCApp;
 
 base_app::subcommands! {
     mod cat;
+    mod repos;
     app = SCSCApp
 }
