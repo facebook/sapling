@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use serde::Deserialize;
@@ -51,15 +51,13 @@ impl FromStr for MononokeIdentity {
     type Err = Error;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let mut parts = value.split(':');
-
-        match (parts.next(), parts.next(), parts.next()) {
-            (Some(ty), Some(data), None) => Ok(Self::new(ty, data)),
-            _ => bail!(
+        let (ty, data) = value.split_once(':').with_context(|| {
+            format!(
                 "MononokeIdentity parse error, expected TYPE:data, got {:?}",
                 value
-            ),
-        }
+            )
+        })?;
+        Ok(Self::new(ty, data))
     }
 }
 
@@ -90,4 +88,10 @@ pub trait MononokeIdentitySetExt {
     fn hostprefix(&self) -> Option<&str>;
 
     fn hostname(&self) -> Option<&str>;
+}
+
+#[test]
+fn test_ipv6_identity() {
+    let id = MononokeIdentity::from_str("MACHINE:2621:10d:c1a8:12c9::1162").unwrap();
+    assert_eq!(id.id_data(), "2621:10d:c1a8:12c9::1162");
 }
