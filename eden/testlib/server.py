@@ -12,6 +12,35 @@ import time
 from pathlib import Path
 from typing import Dict, Optional, TextIO, Tuple
 
+try:
+    from __manifest__ import fbmake  # noqa: F401
+
+    FBCODE = True
+except ImportError:
+    FBCODE = False
+
+if FBCODE and os.environ.get("USE_MONONOKE", False):
+    from mononoke.repos.repos.thrift_types import (
+        RawAllowlistIdentity,
+        RawBlobstoreConfig,
+        RawBlobstoreFilePath,
+        RawCommonConfig,
+        RawDbLocal,
+        RawDerivedDataConfig,
+        RawDerivedDataTypesConfig,
+        RawHookManagerParams,
+        RawMetadataConfig,
+        RawPushParams,
+        RawPushrebaseParams,
+        RawRedactionConfig,
+        RawRepoConfig,
+        RawRepoConfigs,
+        RawRepoDefinition,
+        RawRepoDefinitions,
+        RawStorageConfig,
+    )
+    from thrift.python.serializer import Protocol, serialize
+
 from .hg import hg
 from .repo import Repo
 from .util import new_dir
@@ -116,10 +145,11 @@ def _start(
     addr_file = tjoin("mononoke_server_addr.txt")
     config_path = tjoin("mononoke-config")
 
-    _setup_mononoke_configs(config_path)
     _setup_configerator(configerator_path)
-    for i in range(repo_count):
-        _setup_repo(config_path, i)
+
+    repo_confs, repo_defs = _setup_repos(repo_count)
+
+    mononoke_config = _setup_mononoke_configs(config_path, repo_defs, repo_confs)
 
     if stderr_file:
         stderr = stderr_file
@@ -145,7 +175,7 @@ def _start(
             "--bound-address-file",
             addr_file,
             "--mononoke-config-path",
-            config_path,
+            mononoke_config,
             "--no-default-scuba-dataset",
             "--debug",
             "--skip-caching",
@@ -217,95 +247,101 @@ def _wait(
     return port
 
 
-def _setup_mononoke_configs(config_dir: str) -> None:
-    def write(path: str, content: str) -> None:
-        path = os.path.join(config_dir, path)
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w+") as f:
-            f.write(content)
+def _setup_mononoke_configs(
+    config_dir: str,
+    repo_definitions: Dict[str, RawRepoDefinition],
+    repo_configs: Dict[str, RawRepoConfig],
+) -> str:
+    blobstore_name = "blobstore"
+    blobstore_path = os.path.join(config_dir, blobstore_name)
 
-    db_path = new_dir(label="Mononoke DB")
-
-    repotype = "blob_sqlite"
-    blobstorename = "blobstore"
-    blobstorepath = os.path.join(config_dir, blobstorename)
-
-    write(
-        "common/common.toml",
-        f"""
-[redaction_config]
-blobstore = "{blobstorename}"
-darkstorm_blobstore = "{blobstorename}"
-redaction_sets_location = "scm/mononoke/redaction/redaction_sets"
-
-[[global_allowlist]]
-identity_type = "USER"
-identity_data = "myusername0"
-""",
+    metadata_storage = RawMetadataConfig(
+        local=RawDbLocal(local_db_path=str(new_dir(label="Mononoke DB")))
     )
-    write("common/commitsyncmap.toml", "")
-    write(
-        "common/storage.toml",
-        f"""
-[{blobstorename}.metadata.local]
-local_db_path = "{db_path}"
-
-[{blobstorename}.ephemeral_blobstore]
-initial_bubble_lifespan_secs = 1000
-bubble_expiration_grace_secs = 1000
-bubble_deletion_mode = 0
-blobstore = {{ blob_files = {{ path = "{blobstorepath}" }} }}
-
-[{blobstorename}.ephemeral_blobstore.metadata.local]
-local_db_path = "{db_path}"
-
-[{blobstorename}.blobstore]
-{repotype} = {{ path = "{blobstorepath}" }}
-""",
+    blobstore = RawBlobstoreConfig(
+        blob_sqlite=RawBlobstoreFilePath(path=blobstore_path)
+    )
+    storage_config = RawStorageConfig(metadata=metadata_storage, blobstore=blobstore)
+    redaction_config = RawRedactionConfig(
+        blobstore=blobstore_name,
+        redaction_sets_location="scm/mononoke/redaction/redaction_sets",
+    )
+    allowlist_entry = RawAllowlistIdentity(
+        identity_type="USER", identity_data="myusername0"
+    )
+    common_config = RawCommonConfig(
+        enable_http_control_api=True,
+        redaction_config=redaction_config,
+        global_allowlist=[allowlist_entry],
+    )
+    mononoke_config: RawRepoConfigs = RawRepoConfigs(
+        commit_sync={},
+        common=common_config,
+        repos=repo_configs,
+        storage={blobstore_name: storage_config},
+        acl_region_configs={},
+        repo_definitions=RawRepoDefinitions(repo_definitions=repo_definitions),
     )
 
+    config_file = os.path.join(config_dir, "config.json")
+    Path(config_file).parent.mkdir(parents=True, exist_ok=True)
+    with open(config_file, "w+") as f:
+        f.write(serialize(mononoke_config, protocol=Protocol.JSON).decode("utf-8"))
 
-def _setup_repo(config_dir: str, repoid: int) -> None:
-    reponame = f"repo{repoid}"
+    return config_file
 
-    def write(path: str, content: str) -> None:
-        path = os.path.join(config_dir, path)
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w+") as f:
-            f.write(content)
 
-    write(
-        f"repos/{reponame}/server.toml",
-        """
-hash_validation_percentage=100
-storage_config = "blobstore"
+def _setup_repos(
+    repo_count: int,
+) -> Tuple[Dict[str, RawRepoConfig], Dict[str, RawRepoDefinition]]:
+    repo_defs = {}
+    repo_confs = {}
+    for repoid in range(repo_count):
+        repo_name = f"repo{repoid}"
+        repo_confs[repo_name], repo_defs[repo_name] = _setup_repo(repoid, repo_name)
 
-[pushrebase]
-forbid_p2_root_rebases = false
-rewritedates = false
+    return (repo_confs, repo_defs)
 
-[hook_manager_params]
-disable_acl_checker= true
 
-[push]
-pure_push_allowed = true
-
-[derived_data_config]
-enabled_config_name = "default"
-
-[derived_data_config.available_configs.default]
-types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes", "hgchangesets", "skeleton_manifests"]
-""",
+def _setup_repo(repoid: int, repo_name: str) -> Tuple[RawRepoConfig, RawRepoDefinition]:
+    repo_def = RawRepoDefinition(
+        repo_id=repoid,
+        repo_name=repo_name,
+        repo_config=repo_name,
     )
-    write(
-        f"repo_definitions/{reponame}/server.toml",
-        f"""
-repo_id={repoid}
-repo_name="{reponame}"
-repo_config="{reponame}"
-enabled=true
-""",
+
+    derived_data_types = RawDerivedDataTypesConfig(
+        types={
+            "blame",
+            "changeset_info",
+            "deleted_manifest",
+            "fastlog",
+            "filenodes",
+            "fsnodes",
+            "unodes",
+            "hgchangesets",
+            "skeleton_manifests",
+        }
     )
+    derived_data_config = RawDerivedDataConfig(
+        available_configs={"default": derived_data_types},
+        enabled_config_name="default",
+    )
+    hook_params = RawHookManagerParams(disable_acl_checker=True)
+    pushrebase_params = RawPushrebaseParams(
+        rewritedates=False, forbid_p2_root_rebases=False
+    )
+    push_params = RawPushParams(pure_push_allowed=True)
+
+    repo_config = RawRepoConfig(
+        derived_data_config=derived_data_config,
+        storage_config="blobstore",
+        hook_manager_params=hook_params,
+        pushrebase=pushrebase_params,
+        push=push_params,
+    )
+
+    return (repo_config, repo_def)
 
 
 def _setup_configerator(cfgr_root: str) -> None:
