@@ -297,23 +297,38 @@ fn kill_active_pids_in_mounts(mut mount_points: Vec<String>) -> Result<()> {
     // -t has to come before the mount point list
     let last_index = mount_points.len() - 1;
     mount_points.swap(0, last_index);
-    let mut active_pids = new_cmd_with_best_available_privs("/usr/sbin/lsof")
+    let lsof: &str = "/usr/sbin/lsof";
+    println!(
+        "Listing dependent processes with: `{} {}`",
+        lsof,
+        mount_points.join(" ")
+    );
+    let mut active_pids = new_cmd_with_best_available_privs(lsof)
         .args(&mount_points)
         .stdout(Stdio::piped())
         .spawn()?;
     let active_pids_output = (active_pids.stdout.take()).context("lsof stdout not available")?;
 
-    let output = new_cmd_with_best_available_privs("/usr/bin/xargs")
-        .args(&["/bin/kill", "-9"])
+    let xargs = "/usr/bin/xargs";
+    let kill_args: Vec<&str> = vec!["-t", "/bin/kill", "-9"];
+    println!(
+        "and then killing them with : `{} {}`",
+        xargs,
+        kill_args.join(" ")
+    );
+
+    let output = new_cmd_with_best_available_privs(xargs)
+        .args(&kill_args)
         .stdin(active_pids_output)
         .output()?;
     if !output.status.success() {
         return Err(anyhow!(
             "failed to execute lsof {} | xargs kill -9 \n {:#?}",
-            mount_points.join(", "),
+            mount_points.join(" "),
             output
         ));
     }
+    println!("result: {:?}", output);
     Ok(())
 }
 
