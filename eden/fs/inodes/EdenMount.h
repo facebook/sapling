@@ -327,6 +327,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   bool isFuseChannel() const;
   bool isNfsdChannel() const;
   bool isPrjfsChannel() const;
+  bool fsChannelIsInitialized() const;
   std::optional<MountProtocol> getMountProtocol() const;
 
   /**

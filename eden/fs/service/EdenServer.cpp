@@ -583,9 +583,22 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
         } else if (auto* channel = info.edenMount->getNfsdChannel()) {
           XLOG(DBG7) << "Calling takeover stop on nfsd3";
           channel->takeoverStop();
-        } else {
+        } else if (!info.edenMount->fsChannelIsInitialized()) {
           return EDEN_BUG_FUTURE(TakeoverData)
-              << "Takeover isn't (yet) supported for non-FUSE mounts.";
+              << "Takeover isn't (yet) supported during mount initialization."
+              << "Mount State "
+              << folly::to_underlying(info.edenMount->getState());
+        } else {
+          auto mountProtocol = info.edenMount->getMountProtocol();
+          std::string formatedMountProtocol = "<unknown>";
+          if (mountProtocol.has_value()) {
+            formatedMountProtocol =
+                fmt::format("{}", folly::to_underlying(mountProtocol.value()));
+          }
+          return EDEN_BUG_FUTURE(TakeoverData)
+              << "Takeover isn't (yet) supported for non-FUSE/NFS mounts."
+              << "Mount type: " << formatedMountProtocol << ". Mount State: "
+              << folly::to_underlying(info.edenMount->getState());
         }
 
         futures.emplace_back(std::move(future).thenValue(

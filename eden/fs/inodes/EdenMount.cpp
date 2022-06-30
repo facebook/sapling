@@ -934,6 +934,14 @@ PrjfsChannel* FOLLY_NULLABLE EdenMount::getPrjfsChannel() const {
 }
 #endif
 
+bool EdenMount::fsChannelIsInitialized() const {
+#ifndef _WIN32
+  return !std::holds_alternative<std::monostate>(channel_);
+#else
+  return channel_.get() != nullptr;
+#endif
+}
+
 bool EdenMount::isFuseChannel() const {
 #ifndef _WIN32
   return std::holds_alternative<EdenMount::FuseChannelVariant>(channel_);
