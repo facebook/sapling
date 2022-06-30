@@ -345,7 +345,7 @@ https://fb.facebook.com/groups/eden.users/
 EdenFS is currently still starting.
 Please wait for edenfs to finish starting.
 If EdenFS seems to be taking too long to start you can try restarting it
-with "eden restart"
+with "eden restart --force"
 
 <yellow>1 issue requires manual attention.<reset>
 Ask in the EdenFS Users group if you need help fixing issues with EdenFS:

@@ -398,7 +398,7 @@ class EdenfsStarting(Problem):
         remediation = '''\
 Please wait for edenfs to finish starting.
 If EdenFS seems to be taking too long to start you can try restarting it
-with "eden restart"'''
+with "eden restart --force"'''
         super().__init__("EdenFS is currently still starting.", remediation=remediation)
 
 
