@@ -12,6 +12,7 @@ use crate::common::MegarepoOp;
 use crate::common::SourceAndMovedChangesets;
 use anyhow::anyhow;
 use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
 use blobrepo::save_bonsai_changesets;
 use blobrepo::BlobRepo;
@@ -36,12 +37,14 @@ use megarepo_error::MegarepoError;
 use megarepo_mapping::CommitRemappingState;
 use megarepo_mapping::MegarepoMapping;
 use megarepo_mapping::SourceName;
+use mononoke_api::ChangesetContext;
 use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
 use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 pub(crate) struct SyncChangeset<'a> {
@@ -144,27 +147,43 @@ impl<'a> SyncChangeset<'a> {
         // In case of merge commits we need to add move commits on top of the
         // merged-in commits or squash side-branch.
         let merge_mode = match &source_config.merge_mode {
-            Some(megarepo_config::MergeMode::squashed(sq)) => MergeMode::Squashed {
-                commits_limit: sq
-                    .squash_limit
-                    .try_into()
-                    .context("couldn't convert squash commits limit")?,
-            },
-            None | Some(megarepo_config::MergeMode::with_move_commit(_)) => {
-                MergeMode::ExtraMoveCommits {
-                    side_parents_move_commits: self
-                        .create_move_commits(
-                            ctx,
-                            target,
-                            &source_cs,
-                            &commit_remapping_state,
-                            &source_repo,
-                            source_name,
-                            source_config,
-                        )
-                        .await?,
+            Some(megarepo_config::MergeMode::squashed(sq))
+                if self
+                    .is_commit_squashable(
+                        ctx,
+                        target,
+                        &source_cs,
+                        &commit_remapping_state,
+                        source_name,
+                        &source_repo,
+                        sq.squash_limit
+                            .try_into()
+                            .context("couldn't convert squash commits limit")?,
+                    )
+                    .await? =>
+            {
+                MergeMode::Squashed {
+                    commits_limit: sq
+                        .squash_limit
+                        .try_into()
+                        .context("couldn't convert squash commits limit")?,
                 }
             }
+            None
+            | Some(megarepo_config::MergeMode::with_move_commit(_))
+            | Some(megarepo_config::MergeMode::squashed(_)) => MergeMode::ExtraMoveCommits {
+                side_parents_move_commits: self
+                    .create_move_commits(
+                        ctx,
+                        target,
+                        &source_cs,
+                        &commit_remapping_state,
+                        &source_repo,
+                        source_name,
+                        source_config,
+                    )
+                    .await?,
+            },
             Some(megarepo_config::MergeMode::UnknownField(_)) => {
                 return Err(anyhow!("Unknown MergeMode").into());
             }
@@ -207,6 +226,91 @@ impl<'a> SyncChangeset<'a> {
         .await?;
 
         Ok(new_target_cs_id)
+    }
+
+    async fn is_commit_squashable(
+        &self,
+        ctx: &CoreContext,
+        target: &Target,
+        source_cs: &BonsaiChangeset,
+        commit_remapping_state: &CommitRemappingState,
+        source_name: &SourceName,
+        source_repo: &RepoContext,
+        limit: u64,
+    ) -> Result<bool> {
+        if limit == 0 {
+            return Ok(false);
+        }
+
+        let latest_synced_cs_id =
+            find_latest_synced_cs_id(commit_remapping_state, source_name, target)?;
+        let side_parents: VecDeque<_> =
+            stream::iter(source_cs.parents().filter(|p| *p != latest_synced_cs_id))
+                .map(|p| async move {
+                    source_repo
+                        .changeset(p)
+                        .await?
+                        .ok_or_else(|| anyhow!("commit specifier not found {}", p))
+                })
+                .buffered(100)
+                .try_collect()
+                .await?;
+        let author = match side_parents.front() {
+            Some(p) => p.author().await?,
+            None => {
+                return Ok(false);
+            }
+        };
+        Ok(stream::try_unfold(
+            (0, side_parents),
+            |(local_limit, mut queue): (u64, VecDeque<ChangesetContext>)| {
+                let author = author.clone();
+                async move {
+                    if let Some(cs) = queue.pop_front() {
+                        // if we traversed more than a limit commits
+                        if local_limit >= limit {
+                            // check if commit is not in the target's mapping
+                            // that means branch is too long and we shouldn't add more parents
+                            // otherwise it's a forking point and good for squashing
+                            if self
+                                .target_megarepo_mapping
+                                .get_reverse_mapping_entry(ctx, target, cs.id())
+                                .await?
+                                .is_empty()
+                            {
+                                return anyhow::Ok(Some((Some(false), (local_limit, queue))));
+                            } else {
+                                return anyhow::Ok(Some((Some(true), (local_limit, queue))));
+                            }
+                        }
+                        // if author is different
+                        if author != cs.author().await? {
+                            return anyhow::Ok(Some((Some(false), (local_limit, queue))));
+                        }
+                        // still need to check parents
+                        let parents: Result<VecDeque<_>> =
+                            stream::iter(cs.parents().await?.into_iter())
+                                .map(|p| async move {
+                                    source_repo
+                                        .changeset(p)
+                                        .await?
+                                        .ok_or_else(|| anyhow!("commit specifier not found {}", p))
+                                })
+                                .buffered(100)
+                                .try_collect()
+                                .await;
+                        queue.extend(parents?);
+                        anyhow::Ok(Some((Some(true), (local_limit + 1, queue))))
+                    } else {
+                        anyhow::Ok(None)
+                    }
+                }
+            },
+        )
+        .try_collect::<Vec<_>>()
+        .await?
+        .into_iter()
+        .all(|x| matches!(x, Some(a) if a)))
     }
 
     // Creates move commits on top of the merge parents in the source that
