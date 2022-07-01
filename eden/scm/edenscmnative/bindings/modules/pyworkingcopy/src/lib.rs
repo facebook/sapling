@@ -225,7 +225,7 @@ py_class!(class status |py| {
         pymatcher: PyObject,
     ) -> PyResult<PyObject> {
         // Convert the pending changes (a Iterable[Tuple[str, bool]]) into a Vec<ChangeType>.
-        let mut pending_changes = Vec::<ChangeType>::new();
+        let mut pending_changes = Vec::<Result<ChangeType>>::new();
         for change in pypendingchanges.iter(py)? {
             let tuple: PyTuple = change?.cast_into(py)?;
             let file: PyString = tuple.get_item(py, 0).cast_into(py)?;
@@ -233,9 +233,9 @@ py_class!(class status |py| {
             let file = RepoPathBuf::from_string(file.to_string()).map_pyerr(py)?;
             let file_exists = tuple.get_item(py, 1).cast_into::<PyBool>(py)?.is_true();
             let change = if file_exists {
-                ChangeType::Changed(file)
+                Ok(ChangeType::Changed(file))
             } else {
-                ChangeType::Deleted(file)
+                Ok(ChangeType::Deleted(file))
             };
             pending_changes.push(change);
         }

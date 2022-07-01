@@ -26,19 +26,30 @@ use types::RepoPathBuf;
 
 use crate::filechangedetector::HgModifiedTime;
 use crate::filesystem::ChangeType;
+use crate::filesystem::PendingChangeResult;
+use crate::watchman::watchman::Watchman;
 
 type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 
 pub fn status<M: Matcher + Clone + Send + Sync + 'static>(
-    _root: PathBuf,
-    _manifest: Arc<RwLock<TreeManifest>>,
-    _store: ArcReadFileContents,
-    _treestate: Arc<Mutex<TreeState>>,
-    _last_write: HgModifiedTime,
-    _matcher: M,
+    root: PathBuf,
+    manifest: Arc<RwLock<TreeManifest>>,
+    store: ArcReadFileContents,
+    treestate: Arc<Mutex<TreeState>>,
+    last_write: HgModifiedTime,
+    matcher: M,
     _list_unknown: bool,
 ) -> Result<Status> {
-    todo!();
+    let watchmanfs = Watchman::new(root)?;
+    let pending_changes = watchmanfs
+        .pending_changes(treestate.clone(), last_write, manifest.clone(), store)?
+        .filter_map(|result| match result {
+            Ok(PendingChangeResult::File(change_type)) => Some(Ok(change_type)),
+            Err(e) => Some(Err(e)),
+            _ => None,
+        });
+
+    compute_status(&*manifest.read(), treestate, pending_changes, matcher)
 }
 
 /// Compute the status of the working copy relative to the current commit.
@@ -46,7 +57,7 @@ pub fn status<M: Matcher + Clone + Send + Sync + 'static>(
 pub fn compute_status<M: Matcher + Clone + Send + Sync + 'static>(
     manifest: &impl Manifest,
     treestate: Arc<Mutex<TreeState>>,
-    pending_changes: impl Iterator<Item = ChangeType>,
+    pending_changes: impl Iterator<Item = Result<ChangeType>>,
     matcher: M,
 ) -> Result<Status> {
     let mut modified = vec![];
@@ -64,8 +75,9 @@ pub fn compute_status<M: Matcher + Clone + Send + Sync + 'static>(
     let mut manifest_files = HashMap::<RepoPathBuf, (bool, bool)>::new();
     for change in pending_changes {
         let (path, is_deleted) = match change {
-            ChangeType::Changed(path) => (path, false),
-            ChangeType::Deleted(path) => (path, true),
+            Ok(ChangeType::Changed(path)) => (path, false),
+            Ok(ChangeType::Deleted(path)) => (path, true),
+            Err(e) => return Err(e),
         };
 
         match treestate.get(&path)? {
@@ -344,9 +356,9 @@ mod tests {
         let changes = changes.iter().map(|&(path, is_deleted)| {
             let path = RepoPathBuf::from_string(path.to_string()).expect("path");
             if is_deleted {
-                ChangeType::Deleted(path)
+                Ok(ChangeType::Deleted(path))
             } else {
-                ChangeType::Changed(path)
+                Ok(ChangeType::Changed(path))
             }
         });
 

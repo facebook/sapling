@@ -936,6 +936,44 @@ class dirstate(object):
                 files.append(fullpath)
         return files
 
+    class FallbackToPythonStatus(Exception):
+        pass
+
+    def _ruststatus(
+        self, match: "Callable[[str], bool]", ignored: bool, clean: bool, unknown: bool
+    ) -> "scmutil.status":
+        iswatchman = util.safehasattr(self._fs, "_fsmonitorstate")
+        if ignored or clean or not iswatchman:
+            raise self.FallbackToPythonStatus
+
+        if "eden" in self._repo.requirements:
+            # EdenFS repos still use an old dirstate to track working copy
+            # changes. We need a TreeState for Rust status, so if the map
+            # doesn't have a tree, we create a temporary read-only one.
+            # Note: this TreeState won't track clean files, only added/removed/etc.
+            # TODO: get rid of this when EdenFS migrates to TreeState.
+            tempdir = tempfile.TemporaryDirectory()
+            tempvfs = vfs.vfs(tempdir.name)
+            tempvfs.makedir("treestate")
+            tempmap = treestate.treestatemap(
+                self._ui, tempvfs, tempdir.name, importdirstate=self
+            )
+            tree = tempmap._tree
+        else:
+            # pyre-fixme[16]: Item `dirstatemap` of `Union[dirstatemap,
+            #  treedirstatemap, treestatemap]` has no attribute `_tree`.
+            tree = self._map._tree
+
+        return bindings.workingcopy.status.status(
+            self._root,
+            self._repo[self.p1()].manifest(),
+            self._repo.fileslog.filescmstore,
+            tree,
+            self._lastnormaltime,
+            match,
+            unknown,
+        )
+
     @perftrace.tracefunc("Status")
     def status(
         self, match: "Callable[[str], bool]", ignored: bool, clean: bool, unknown: bool
@@ -944,34 +982,10 @@ class dirstate(object):
         dirstate and return a scmutil.status.
         """
         if self._ui.configbool("workingcopy", "ruststatus"):
-            if "eden" in self._repo.requirements:
-                # EdenFS repos still use an old dirstate to track working copy
-                # changes. We need a TreeState for Rust status, so if the map
-                # doesn't have a tree, we create a temporary read-only one.
-                # Note: this TreeState won't track clean files, only added/removed/etc.
-                # TODO: get rid of this when EdenFS migrates to TreeState.
-                tempdir = tempfile.TemporaryDirectory()
-                tempvfs = vfs.vfs(tempdir.name)
-                tempvfs.makedir("treestate")
-                tempmap = treestate.treestatemap(
-                    self._ui, tempvfs, tempdir.name, importdirstate=self
-                )
-                tree = tempmap._tree
-            else:
-                # pyre-fixme[16]: Item `dirstatemap` of `Union[dirstatemap,
-                #  treedirstatemap, treestatemap]` has no attribute `_tree`.
-                tree = self._map._tree
-
-            if not ignored and not clean:
-                return bindings.workingcopy.status.status(
-                    self._root,
-                    self._repo[self.p1()].manifest(),
-                    self._repo.fileslog.filescmstore,
-                    tree,
-                    self._lastnormaltime,
-                    match,
-                    unknown,
-                )
+            try:
+                return self._ruststatus(match, ignored, clean, unknown)
+            except self.FallbackToPythonStatus:
+                pass
 
         wctx = self._repo[None]
         # Prime the wctx._parents cache so the parent doesn't change out from
