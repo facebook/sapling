@@ -1,5 +1,10 @@
 #chg-compatible
 
+#testcases pythonstatus ruststatus
+#if ruststatus
+  $ setconfig workingcopy.ruststatus=true 
+#endif
+
   $ configure modernclient
   $ newclientrepo repo1
   $ mkdir a b a/1 b/1 b/2
@@ -159,7 +164,7 @@ hg status:
 hg status modified added removed deleted unknown never-existed ignored:
 
   $ hg status modified added removed deleted unknown never-existed ignored
-  never-existed: * (glob)
+  never-existed: * (glob) (?)
   A added
   R removed
   ! deleted
