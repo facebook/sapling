@@ -41,15 +41,27 @@ pub fn status<M: Matcher + Clone + Send + Sync + 'static>(
     _list_unknown: bool,
 ) -> Result<Status> {
     let watchmanfs = Watchman::new(root)?;
+
     let pending_changes = watchmanfs
         .pending_changes(treestate.clone(), last_write, manifest.clone(), store)?
         .filter_map(|result| match result {
-            Ok(PendingChangeResult::File(change_type)) => Some(Ok(change_type)),
+            Ok(PendingChangeResult::File(change_type)) => {
+                match matcher.matches_file(change_type.get_path()) {
+                    Ok(true) => Some(Ok(change_type)),
+                    Err(e) => Some(Err(e)),
+                    _ => None,
+                }
+            }
             Err(e) => Some(Err(e)),
             _ => None,
         });
 
-    compute_status(&*manifest.read(), treestate, pending_changes, matcher)
+    compute_status(
+        &*manifest.read(),
+        treestate,
+        pending_changes,
+        matcher.clone(),
+    )
 }
 
 /// Compute the status of the working copy relative to the current commit.
