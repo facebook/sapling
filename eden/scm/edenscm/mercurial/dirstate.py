@@ -946,6 +946,10 @@ class dirstate(object):
         if ignored or clean or not iswatchman:
             raise self.FallbackToPythonStatus
 
+        # TODO: Handle the case that a file is ignored but is still tracked
+        # in p1.
+        match = matchmod.differencematcher(match, self._ignore)
+
         if "eden" in self._repo.requirements:
             # EdenFS repos still use an old dirstate to track working copy
             # changes. We need a TreeState for Rust status, so if the map
