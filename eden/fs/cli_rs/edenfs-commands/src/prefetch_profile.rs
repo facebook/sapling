@@ -17,11 +17,48 @@ use std::path::PathBuf;
 use std::str;
 use util::path::expand_path;
 
-use edenfs_client::checkout::CheckoutConfig;
+use edenfs_client::checkout::{find_checkout, CheckoutConfig};
 use edenfs_client::EdenFsInstance;
 use edenfs_error::{EdenFsError, Result, ResultExt};
 
+#[cfg(fbcode_build)]
+use {
+    edenfs_telemetry::prefetch_profile::PrefetchProfileSample, edenfs_telemetry::send,
+    fbinit::expect_init,
+};
+
 use crate::{ExitCode, Subcommand};
+
+#[derive(Parser, Debug)]
+pub struct CommonOptions {
+    // Need default value = False and Store_true
+    #[clap(
+        short,
+        long,
+        help = "Print extra info including warnings and the names of the matching files to fetch."
+    )]
+    verbose: bool,
+    #[clap(long, parse(from_str = expand_path), help = "The checkout for which you want to activate this profile")]
+    checkout: Option<PathBuf>,
+    #[clap(
+        short,
+        long,
+        help = "Do not prefetch profiles only find all the files that match \
+    them. This will still list the names of matching files when the \
+    verbose flag is also used, and will activate the profile when running \
+    `activate`."
+    )]
+    skip_prefetch: bool,
+    #[clap(
+        short,
+        long,
+        help = "Run the prefetch in the main thread rather than in the \
+    background. Normally this command will return once the prefetch \
+    has been kicked off, but when this flag is used it to block until \
+    all of the files are prefetched."
+    )]
+    foreground: bool,
+}
 
 #[derive(Parser, Debug)]
 #[clap(name = "prefetch-profile")]
@@ -40,6 +77,18 @@ pub enum PrefetchCmd {
     List {
         #[clap(long, parse(from_str = expand_path), help = "The checkout for which you want to see all the profiles")]
         checkout: Option<PathBuf>,
+    },
+    Activate {
+        #[clap(flatten)]
+        common: CommonOptions,
+        #[clap(help = "Profile to activate.")]
+        profile_name: String,
+    },
+    Deactivate {
+        #[clap(flatten)]
+        common: CommonOptions,
+        #[clap(help = "Profile to deactivate.")]
+        profile_name: String,
     },
 }
 
@@ -97,6 +146,132 @@ impl PrefetchCmd {
             ))),
         }
     }
+
+    async fn activate(
+        &self,
+        instance: EdenFsInstance,
+        options: &CommonOptions,
+        profile_name: &str,
+    ) -> Result<ExitCode> {
+        let checkout_path = match &options.checkout {
+            Some(p) => p.clone(),
+            None => env::current_dir().context("Unable to retrieve current working dir")?,
+        };
+
+        let client_name = instance.client_name(&checkout_path)?;
+
+        let mut telemetry = if cfg!(fbcode_build) {
+            let _fb = expect_init();
+            let sample = PrefetchProfileSample::build(_fb);
+            Some(sample)
+        } else {
+            None
+        };
+
+        #[cfg(fbcode_build)]
+        {
+            if let Some(telemetry) = telemetry.as_mut() {
+                telemetry.set_activate_event(
+                    profile_name,
+                    client_name.as_str(),
+                    options.skip_prefetch,
+                );
+            }
+        }
+
+        let config_dir = instance.config_directory(&client_name);
+        let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
+        match checkout_config {
+            Ok(mut checkout_config) => {
+                checkout_config.activate_profile(profile_name, config_dir)?;
+                if let Some(telemetry) = telemetry {
+                    send(telemetry.builder);
+                }
+            }
+            Err(e) => {
+                if let Some(mut telemetry) = telemetry {
+                    telemetry.fail(&e.to_string());
+                    send(telemetry.builder);
+                }
+            }
+        }
+
+        if !options.skip_prefetch {
+            let checkout = find_checkout(&instance, &checkout_path)?;
+            let result_globs = checkout
+                .prefetch_profiles(
+                    &instance,
+                    vec![profile_name.to_string()],
+                    !options.foreground,
+                    true,
+                    !options.verbose,
+                    None,
+                    false,
+                    false,
+                    0,
+                )
+                .await?;
+            // there will only every be one commit used to query globFiles here,
+            // so no need to list which commit a file is fetched for, it will
+            // be the current commit.
+            if options.verbose {
+                for result in result_globs {
+                    for name in result.matchingFiles {
+                        println!("{}", String::from_utf8_lossy(&name));
+                    }
+                }
+            }
+        }
+
+        Ok(0)
+    }
+
+    async fn deactivate(
+        &self,
+        instance: EdenFsInstance,
+        options: &CommonOptions,
+        profile_name: &str,
+    ) -> Result<ExitCode> {
+        let checkout_path = match &options.checkout {
+            Some(p) => p.clone(),
+            None => env::current_dir().context("Unable to retrieve current working dir")?,
+        };
+        let client_name = instance.client_name(&checkout_path)?;
+
+        let mut telemetry = if cfg!(fbcode_build) {
+            let _fb = expect_init();
+            let sample = PrefetchProfileSample::build(_fb);
+            Some(sample)
+        } else {
+            None
+        };
+
+        #[cfg(fbcode_build)]
+        {
+            if let Some(telemetry) = telemetry.as_mut() {
+                telemetry.set_deactivate_event(profile_name, client_name.as_str());
+            }
+        }
+
+        let config_dir = instance.config_directory(&client_name);
+        let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
+        match checkout_config {
+            Ok(mut checkout_config) => {
+                checkout_config.deactivate_profile(profile_name, config_dir)?;
+                if let Some(telemetry) = telemetry {
+                    send(telemetry.builder);
+                }
+                Ok(0)
+            }
+            Err(e) => {
+                if let Some(mut telemetry) = telemetry {
+                    telemetry.fail(&e.to_string());
+                    send(telemetry.builder);
+                }
+                Err(e)
+            }
+        }
+    }
 }
 
 #[async_trait]
@@ -106,6 +281,14 @@ impl Subcommand for PrefetchCmd {
             Self::Finish { output_path } => self.finish(instance, output_path).await,
             Self::Record {} => self.record(instance).await,
             Self::List { checkout } => self.list(instance, checkout).await,
+            Self::Activate {
+                common,
+                profile_name,
+            } => self.activate(instance, common, profile_name).await,
+            Self::Deactivate {
+                common,
+                profile_name,
+            } => self.deactivate(instance, common, profile_name).await,
         }
     }
 }

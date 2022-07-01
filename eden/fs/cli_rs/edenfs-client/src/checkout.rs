@@ -6,20 +6,29 @@
  */
 
 use anyhow::anyhow;
+use anyhow::Context;
+use atomicfile::atomic_write;
 use byteorder::{BigEndian, ReadBytesExt};
 use edenfs_error::{EdenFsError, Result, ResultExt};
 use edenfs_utils::path_from_bytes;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::BTreeMap;
+use std::collections::HashSet;
+use std::env;
 use std::fmt;
-use std::fmt::Write;
+use std::fmt::Write as _;
 use std::fs;
 use std::fs::File;
-use std::io::Read;
+use std::io::{prelude::*, BufReader, Read, Write};
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
+use std::process::Command;
+
 use std::time::Duration;
-use thrift_types::edenfs::types::{MountInfo, MountState};
+use std::vec;
+use thrift_types::edenfs::types::{Glob, GlobParams, MountInfo, MountState, PredictiveFetch};
+
 use toml::value::Value;
 use uuid::Uuid;
 
@@ -39,21 +48,21 @@ const SNAPSHOT_MAGIC_4: &[u8] = b"eden\x00\x00\x00\x04";
 const SUPPORTED_REPOS: &[&str] = &["git", "hg", "recas"];
 const SUPPORTED_MOUNT_PROTOCOLS: &[&str] = &["fuse", "nfs", "prjfs"];
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 struct Repository {
     path: PathBuf,
 
     #[serde(rename = "type", deserialize_with = "deserialize_repo_type")]
     repo_type: String,
 
+    #[serde(default = "default_guid")]
+    guid: Uuid,
+
     #[serde(
         deserialize_with = "deserialize_protocol",
         default = "default_protocol"
     )]
     protocol: String,
-
-    #[serde(default = "default_guid")]
-    guid: Uuid,
 
     #[serde(rename = "case-sensitive", default = "default_case_sensitive")]
     case_sensitive: bool,
@@ -63,6 +72,9 @@ struct Repository {
 
     #[serde(rename = "enable-tree-overlay", default)]
     enable_tree_overlay: bool,
+
+    #[serde(rename = "use-write-back-cache", default)]
+    use_write_back_cache: bool,
 }
 
 fn deserialize_repo_type<'de, D>(deserializer: D) -> Result<String, D::Error>
@@ -120,10 +132,16 @@ fn default_require_utf8_path() -> bool {
     true
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 struct PrefetchProfiles {
     #[serde(deserialize_with = "deserialize_active", default)]
     pub active: Vec<String>,
+}
+
+impl PrefetchProfiles {
+    fn push(&mut self, profile: &str) {
+        self.active.push(profile.into());
+    }
 }
 
 fn deserialize_active<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
@@ -146,7 +164,7 @@ where
     Ok(arr)
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 struct PredictivePrefetch {
     #[serde(default)]
@@ -156,11 +174,11 @@ struct PredictivePrefetch {
     predictive_prefetch_num_dirs: u32,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct CheckoutConfig {
     repository: Repository,
 
-    #[serde(deserialize_with = "deserialize_redirections", default)]
+    #[serde(deserialize_with = "deserialize_redirections")]
     redirections: BTreeMap<PathBuf, RedirectionType>,
 
     profiles: Option<PrefetchProfiles>,
@@ -185,6 +203,82 @@ impl CheckoutConfig {
                 println!("{}", s);
             }
         }
+    }
+
+    pub fn contains_prefetch_profile(&self, profile: &str) -> bool {
+        if let Some(profiles) = &self.profiles {
+            profiles.active.iter().any(|x| x == profile)
+        } else {
+            false
+        }
+    }
+
+    pub fn remove_prefetch_profile(&mut self, profile: &str, config_dir: PathBuf) -> Result<()> {
+        if let Some(profiles) = &mut self.profiles {
+            if profiles.active.iter().any(|x| x == profile) {
+                profiles.active.retain(|x| *x != *profile);
+                self.save_config(config_dir)?;
+            }
+        };
+        Ok(())
+    }
+
+    /// Store information about the mount in the config.toml file.
+    pub fn save_config(&mut self, state_dir: PathBuf) -> Result<()> {
+        let toml_out = &toml::to_string(&self).with_context(|| {
+            anyhow!(
+                "could not toml-ize checkout config for repo '{}'",
+                self.repository.path.display()
+            )
+        })?;
+        let config_path = state_dir.join(MOUNT_CONFIG);
+        // set default permissions to 0o644 (420 in decimal)
+        #[cfg(windows)]
+        let perm = 0o664;
+
+        #[cfg(not(windows))]
+        let perm = std::fs::metadata(&config_path)
+            .map(|meta| meta.permissions().mode())
+            .unwrap_or(0o664);
+
+        atomic_write(config_path.as_path(), perm, true, |f| {
+            f.write_all(toml_out.as_bytes())?;
+            Ok(())
+        })
+        .from_err()?;
+        Ok(())
+    }
+
+    /// Add a profile to the config (read the config file and write it back
+    /// with profile added). Returns 0 on sucess and EdenFsError on failure
+    pub fn activate_profile(&mut self, profile: &str, config_dir: PathBuf) -> Result<()> {
+        if let Some(profiles) = &mut self.profiles {
+            if profiles.active.iter().any(|x| x == profile) {
+                return Err(EdenFsError::Other(anyhow!(
+                    "{} is already an active prefetch profile",
+                    profile
+                )));
+            }
+            profiles.push(profile);
+            self.save_config(config_dir)?;
+        }
+        Ok(())
+    }
+
+    /// Remove a profile to the config (read the config file and write it back
+    /// with profile added). Returns 0 on sucess and EdenFsError on failure
+    pub fn deactivate_profile(&mut self, profile: &str, config_dir: PathBuf) -> Result<i32> {
+        if let Some(profiles) = &mut self.profiles {
+            if !profiles.active.iter().any(|x| x == profile) {
+                return Err(EdenFsError::Other(anyhow!(
+                    "Profile {} was not deactivated since it wasn't active.",
+                    profile
+                )));
+            }
+            profiles.active.retain(|x| *x != *profile);
+            self.save_config(config_dir)?;
+        };
+        Ok(0)
     }
 }
 
@@ -335,6 +429,265 @@ impl EdenFsCheckout {
             self.backing_repo = Some(config.repository.path.clone());
         }
         self.configured = true;
+    }
+
+    pub fn get_contents_for_profile(
+        &self,
+        profile: &String,
+        silent: bool,
+    ) -> Result<HashSet<String>> {
+        const relative_profiles_location: &str = "xplat/scm/prefetch_profiles/profiles";
+        let profile_path = self.path.join(relative_profiles_location).join(profile);
+
+        if !profile_path.exists() {
+            if !silent {
+                return Err(EdenFsError::Other(anyhow!(
+                    "Profile '{}' not found for checkout {}.",
+                    profile,
+                    self.path().display()
+                )));
+            }
+            return Ok(HashSet::new());
+        }
+
+        let file = File::open(&profile_path).with_context(|| {
+            anyhow!("Sparse profile '{}' does not exist", profile_path.display())
+        })?;
+        Ok(BufReader::new(file)
+            .lines()
+            .collect::<std::io::Result<HashSet<_>>>()
+            .with_context(|| {
+                anyhow!(
+                    "Cannot read conents for prefetch profile '{}'",
+                    profile_path.display()
+                )
+            })?)
+    }
+
+    /// Function to actually cause the prefetch, can be called on a background
+    /// process or in the main process.
+    /// Only print here if silent is False, as that could send messages
+    /// randomly to stdout.
+    pub async fn make_prefetch_request(
+        &self,
+        instance: &EdenFsInstance,
+        all_profile_contents: HashSet<String>,
+        enable_prefetch: bool,
+        silent: bool,
+        revisions: Option<Vec<String>>,
+        predict_revisions: bool,
+        background: bool,
+        predictive: bool,
+        predictive_num_dirs: i32,
+    ) -> Result<Glob> {
+        let mut commit_vec = vec![];
+        if predict_revisions {
+            // The arc and hg commands need to be run in the mount mount, so we need
+            // to change the working path if it is not within the mount.
+            let cwd = env::current_dir().context("Unable to get current working directory")?;
+            let mut changed_dir = false;
+            if find_checkout(instance, &cwd).is_err() {
+                println!("Setting the current working directory");
+                env::set_current_dir(&self.path).with_context(|| {
+                    anyhow!(
+                        "failed to change working directory to '{}'",
+                        self.path.display()
+                    )
+                })?;
+                changed_dir = true;
+            }
+
+            let output = Command::new("arc")
+                .arg("stable")
+                .arg("best")
+                .arg("--verbose")
+                .arg("error")
+                .output()
+                .with_context(|| {
+                    anyhow!("Failed to execute subprocess `arc stable best --verbose error`")
+                })?;
+            if !output.status.success() {
+                return Err(EdenFsError::Other(anyhow!(
+                    "Unable to predict commits to prefetch, error finding bookmark \
+            to prefetch: {}",
+                    String::from_utf8_lossy(output.stderr.as_slice())
+                )));
+            }
+
+            let bookmark = String::from_utf8_lossy(output.stdout.as_slice());
+            let bookmark = bookmark.trim();
+
+            let output = Command::new("hg")
+                .arg("log")
+                .arg("-r")
+                .arg(bookmark)
+                .arg("-T")
+                .arg("{node}")
+                .output()
+                .with_context(|| {
+                    anyhow!(
+                        "Failed to execute subprocess `hg log -r {} -T {{node}}`",
+                        bookmark
+                    )
+                })?;
+
+            if !output.status.success() {
+                return Err(EdenFsError::Other(anyhow!(
+                    "Unable to predict commits to prefetch, error converting \
+                bookmark to commit: {}",
+                    String::from_utf8_lossy(output.stderr.as_slice())
+                )));
+            }
+
+            // If we changed directories to run the subcommands, we should switch
+            // back to our previous location
+            if changed_dir {
+                env::set_current_dir(&cwd)
+                    .context("failed to change back to old working directory")?;
+            }
+
+            let commit = String::from_utf8_lossy(output.stdout.as_slice());
+            let commit = commit.trim().as_bytes().to_vec();
+            commit_vec.push(commit);
+        }
+
+        if let Some(revs) = revisions {
+            for rev in revs {
+                let commit = rev.trim().as_bytes().to_vec();
+                commit_vec.push(commit);
+            }
+        }
+
+        let client = instance.connect(None).await?;
+        let mnt_pt = self
+            .path
+            .to_str()
+            .context("failed to get mount point as str")?
+            .as_bytes()
+            .to_vec();
+        if predictive {
+            let predictive_params = PredictiveFetch {
+                numTopDirectories: Some(predictive_num_dirs),
+                ..Default::default()
+            };
+            let glob_params = GlobParams {
+                mountPoint: mnt_pt,
+                includeDotfiles: false,
+                prefetchFiles: enable_prefetch,
+                suppressFileList: silent,
+                revisions: commit_vec,
+                background,
+                predictiveGlob: Some(predictive_params),
+                ..Default::default()
+            };
+            let res = client.predictiveGlobFiles(&glob_params).await;
+            Ok(res.context("Failed predictiveGlobFiles() thrift call")?)
+        } else {
+            let profile_set = all_profile_contents.into_iter().collect::<Vec<_>>();
+            let glob_params = GlobParams {
+                mountPoint: mnt_pt,
+                globs: profile_set,
+                includeDotfiles: false,
+                prefetchFiles: enable_prefetch,
+                suppressFileList: silent,
+                revisions: commit_vec,
+                background,
+                ..Default::default()
+            };
+            let res = client.predictiveGlobFiles(&glob_params).await;
+            Ok(res.context("Failed predictiveGlobFiles() thrift call")?)
+        }
+    }
+
+    pub async fn prefetch_profiles(
+        &self,
+        instance: &EdenFsInstance,
+        profiles: Vec<String>,
+        background: bool,
+        enable_prefetch: bool,
+        silent: bool,
+        revisions: Option<Vec<String>>,
+        predict_revisions: bool,
+        predictive: bool,
+        predictive_num_dirs: i32,
+    ) -> Result<Vec<Glob>> {
+        let client_name = instance.client_name(&self.path)?;
+        let config_dir = instance.config_directory(&client_name);
+        let mut checkout_config = CheckoutConfig::parse_config(config_dir.clone())?;
+
+        if predictive && !instance.should_prefetch_predictive_profiles() {
+            if !silent {
+                return Err(EdenFsError::Other(anyhow!(
+                    "Skipping Predictive Prefetch Profiles fetch due to global kill switch. \
+                    This means prefetch-profiles.predictive-prefetching-enabled is not set in \
+                    the EdenFS configs.",
+                )));
+            } else {
+                return Ok(vec![Glob::default()]);
+            }
+        }
+        if !instance.should_prefetch_profiles() && !predictive {
+            if !silent {
+                return Err(EdenFsError::Other(anyhow!(
+                    "Skipping Prefetch Profiles fetch due to global kill switch. \
+                This means prefetch-profiles.prefetching-enabled is not set in \
+                the EdenFS configs."
+                )));
+            }
+            return Ok(vec![Glob::default()]);
+        }
+
+        let mut profile_contents = HashSet::new();
+        let mut glob_results = vec![];
+
+        if !predictive {
+            // special trees prefetch profile which fetches all of the trees in the repo, kick this
+            // off before activating the rest of the prefetch profiles
+            let tree_profile = "trees";
+            if checkout_config.contains_prefetch_profile(tree_profile) {
+                checkout_config.remove_prefetch_profile(tree_profile, config_dir)?;
+                let mut profile_set = HashSet::new();
+                profile_set.insert("**/*".to_owned());
+
+                let blob_res = self
+                    .make_prefetch_request(
+                        instance,
+                        profile_set,
+                        enable_prefetch,
+                        silent,
+                        revisions.clone(),
+                        predict_revisions,
+                        background,
+                        predictive,
+                        predictive_num_dirs,
+                    )
+                    .await?;
+                glob_results.push(blob_res);
+                if profiles.is_empty() {
+                    return Ok(glob_results);
+                }
+            }
+
+            for profile in profiles {
+                let res = self.get_contents_for_profile(&profile, silent)?;
+                profile_contents.extend(res);
+            }
+        }
+        let blob_res = self
+            .make_prefetch_request(
+                instance,
+                profile_contents,
+                enable_prefetch,
+                silent,
+                revisions,
+                predict_revisions,
+                background,
+                predictive,
+                predictive_num_dirs,
+            )
+            .await?;
+        glob_results.push(blob_res);
+        Ok(glob_results)
     }
 }
 

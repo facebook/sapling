@@ -31,6 +31,16 @@ pub struct EdenFsConfig {
     other: toml::value::Table,
 }
 
+impl EdenFsConfig {
+    pub fn get_bool(&self, section: &str, entry: &str) -> Option<bool> {
+        self.other
+            .get(section)
+            .and_then(|x| x.as_table())
+            .and_then(|x| x.get(entry))
+            .and_then(|x| x.as_bool())
+    }
+}
+
 fn merge_table(lhs: &mut toml::value::Table, rhs: toml::value::Table) {
     for (key, value) in rhs.into_iter() {
         if let Some(lhs_value) = lhs.get_mut(&key) {

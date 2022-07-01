@@ -8,7 +8,7 @@
 use anyhow::anyhow;
 use edenfs_error::{EdenFsError, Result, ResultExt};
 use edenfs_utils::metadata::MetadataExt;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::fs;
@@ -26,7 +26,8 @@ const REPO_SOURCE: &str = ".eden-redirections";
 const USER_REDIRECTION_SOURCE: &str = ".eden/client/config.toml:redirections";
 const APFS_HELPER: &str = "/usr/local/libexec/eden/eden_apfs_mount_helper";
 
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Serialize, Copy, Debug, PartialEq, PartialOrd)]
+#[serde(rename_all = "lowercase")]
 pub(crate) enum RedirectionType {
     /// Linux: a bind mount to a mkscratch generated path
     /// macOS: a mounted dmg file in a mkscratch generated path
