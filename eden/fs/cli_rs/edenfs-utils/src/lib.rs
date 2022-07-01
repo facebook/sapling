@@ -8,10 +8,14 @@
 //! EdenFS utils
 
 use anyhow::anyhow;
-use edenfs_error::{EdenFsError, Result, ResultExt};
+use edenfs_error::EdenFsError;
+use edenfs_error::Result;
+use edenfs_error::ResultExt;
 use std::ffi::OsString;
-use std::path::{Path, PathBuf};
-use subprocess::{Exec, Redirection};
+use std::path::Path;
+use std::path::PathBuf;
+use subprocess::Exec;
+use subprocess::Redirection;
 
 pub mod humantime;
 pub mod metadata;

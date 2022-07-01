@@ -7,13 +7,17 @@
 
 use std::process::Command;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
 use clap::Parser;
 use fbinit::FacebookInit;
 use tracing_subscriber::filter::EnvFilter;
 
 #[cfg(fbcode_build)]
-use edenfs_telemetry::{cli_usage::CliUsageSample, send};
+use edenfs_telemetry::cli_usage::CliUsageSample;
+#[cfg(fbcode_build)]
+use edenfs_telemetry::send;
 
 fn python_fallback() -> Result<Command> {
     if let Ok(args) = std::env::var("EDENFSCTL_REAL") {

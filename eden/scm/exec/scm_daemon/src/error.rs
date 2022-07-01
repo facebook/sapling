@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-pub use anyhow::{Error, Result};
+pub use anyhow::Error;
+pub use anyhow::Result;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

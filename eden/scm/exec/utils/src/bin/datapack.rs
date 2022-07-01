@@ -9,11 +9,13 @@ use std::path::PathBuf;
 
 use structopt::StructOpt;
 
-use revisionstore::{
-    datapack::DataPack, datastore::DataStore, localstore::ExtStoredPolicy,
-    uniondatastore::UnionDataStore,
-};
-use types::{Key, Node, RepoPathBuf};
+use revisionstore::datapack::DataPack;
+use revisionstore::datastore::DataStore;
+use revisionstore::localstore::ExtStoredPolicy;
+use revisionstore::uniondatastore::UnionDataStore;
+use types::Key;
+use types::Node;
+use types::RepoPathBuf;
 
 #[derive(StructOpt)]
 struct Cli {

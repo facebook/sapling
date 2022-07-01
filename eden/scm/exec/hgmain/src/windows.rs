@@ -5,17 +5,20 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use std::path::Path;
 use winapi::shared::minwindef::DWORD;
 use winapi::um::consoleapi::GetConsoleMode;
 use winapi::um::consoleapi::SetConsoleMode;
 use winapi::um::errhandlingapi::GetLastError;
-use winapi::um::handleapi::{SetHandleInformation, INVALID_HANDLE_VALUE};
+use winapi::um::handleapi::SetHandleInformation;
+use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::um::processenv::GetStdHandle;
-use winapi::um::winbase::{
-    HANDLE_FLAG_INHERIT, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
-};
+use winapi::um::winbase::HANDLE_FLAG_INHERIT;
+use winapi::um::winbase::STD_ERROR_HANDLE;
+use winapi::um::winbase::STD_INPUT_HANDLE;
+use winapi::um::winbase::STD_OUTPUT_HANDLE;
 use winapi::um::wincon::ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 use winapi::um::winnt::HANDLE;
 

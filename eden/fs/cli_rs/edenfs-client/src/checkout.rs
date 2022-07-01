@@ -8,10 +8,16 @@
 use anyhow::anyhow;
 use anyhow::Context;
 use atomicfile::atomic_write;
-use byteorder::{BigEndian, ReadBytesExt};
-use edenfs_error::{EdenFsError, Result, ResultExt};
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+use edenfs_error::EdenFsError;
+use edenfs_error::Result;
+use edenfs_error::ResultExt;
 use edenfs_utils::path_from_bytes;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::Deserialize;
+use serde::Deserializer;
+use serde::Serialize;
+use serde::Serializer;
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::env;
@@ -19,7 +25,10 @@ use std::fmt;
 use std::fmt::Write as _;
 use std::fs;
 use std::fs::File;
-use std::io::{prelude::*, BufReader, Read, Write};
+use std::io::prelude::*;
+use std::io::BufReader;
+use std::io::Read;
+use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
@@ -27,12 +36,17 @@ use std::process::Command;
 
 use std::time::Duration;
 use std::vec;
-use thrift_types::edenfs::types::{Glob, GlobParams, MountInfo, MountState, PredictiveFetch};
+use thrift_types::edenfs::types::Glob;
+use thrift_types::edenfs::types::GlobParams;
+use thrift_types::edenfs::types::MountInfo;
+use thrift_types::edenfs::types::MountState;
+use thrift_types::edenfs::types::PredictiveFetch;
 
 use toml::value::Value;
 use uuid::Uuid;
 
-use crate::redirect::{deserialize_redirections, RedirectionType};
+use crate::redirect::deserialize_redirections;
+use crate::redirect::RedirectionType;
 use crate::EdenFsInstance;
 
 // files in the client directory (aka data_dir aka state_dir)

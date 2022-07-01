@@ -15,6 +15,7 @@ mod mounttable;
 pub mod redirect;
 mod utils;
 
-pub use instance::{DaemonHealthy, EdenFsInstance};
+pub use instance::DaemonHealthy;
+pub use instance::EdenFsInstance;
 
 pub type EdenFsClient = Arc<dyn EdenService + Sync>;

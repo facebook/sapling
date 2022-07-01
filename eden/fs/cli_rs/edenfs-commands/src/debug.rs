@@ -13,7 +13,8 @@ use clap::Parser;
 use edenfs_client::EdenFsInstance;
 use edenfs_error::Result;
 
-use crate::{ExitCode, Subcommand};
+use crate::ExitCode;
+use crate::Subcommand;
 
 mod clear_local_caches;
 mod compact_local_storage;

@@ -7,7 +7,8 @@
 
 //! Define common EdenFS errors
 
-use std::{path::PathBuf, result::Result as StdResult};
+use std::path::PathBuf;
+use std::result::Result as StdResult;
 
 use thiserror::Error;
 

@@ -6,13 +6,20 @@
  */
 
 use proc_macro::TokenStream;
-use proc_macro_error::{abort, proc_macro_error};
-use quote::{format_ident, quote};
-use syn::{
-    parse_macro_input, parse_quote,
-    visit_mut::{self, VisitMut},
-    Attribute, Field, Ident, ItemStruct, Type, Visibility,
-};
+use proc_macro_error::abort;
+use proc_macro_error::proc_macro_error;
+use quote::format_ident;
+use quote::quote;
+use syn::parse_macro_input;
+use syn::parse_quote;
+use syn::visit_mut::VisitMut;
+use syn::visit_mut::{self};
+use syn::Attribute;
+use syn::Field;
+use syn::Ident;
+use syn::ItemStruct;
+use syn::Type;
+use syn::Visibility;
 
 mod field;
 

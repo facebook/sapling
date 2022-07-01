@@ -9,26 +9,44 @@
 
 use async_trait::async_trait;
 use clap::Parser;
-use comfy_table::{presets::UTF8_BORDERS_ONLY, Table};
-use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyModifiers};
+use comfy_table::presets::UTF8_BORDERS_ONLY;
+use comfy_table::Table;
+use crossterm::cursor;
+use crossterm::event::Event;
+use crossterm::event::EventStream;
+use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
+use crossterm::event::KeyModifiers;
 use crossterm::queue;
-use crossterm::{cursor, style, terminal};
-use futures::{FutureExt, StreamExt};
+use crossterm::style;
+use crossterm::terminal;
+use futures::FutureExt;
+use futures::StreamExt;
 use shlex::quote;
 use std::collections::BTreeMap;
-use std::io::{stdout, Stdout, Write};
+use std::io::stdout;
+use std::io::Stdout;
+use std::io::Write;
 use std::path::Path;
 use std::time::Duration;
 use std::time::Instant;
-use sysinfo::{Pid, System, SystemExt};
+use sysinfo::Pid;
+use sysinfo::System;
+use sysinfo::SystemExt;
 
 use anyhow::anyhow;
-use edenfs_client::{EdenFsClient, EdenFsInstance};
-use edenfs_error::{EdenFsError, Result, ResultExt};
-use edenfs_utils::humantime::{HumanTime, TimeUnit};
+use edenfs_client::EdenFsClient;
+use edenfs_client::EdenFsInstance;
+use edenfs_error::EdenFsError;
+use edenfs_error::Result;
+use edenfs_error::ResultExt;
+use edenfs_utils::humantime::HumanTime;
+use edenfs_utils::humantime::TimeUnit;
 use edenfs_utils::path_from_bytes;
 
-use thrift_types::edenfs::types::{pid_t, AccessCounts, GetAccessCountsResult};
+use thrift_types::edenfs::types::pid_t;
+use thrift_types::edenfs::types::AccessCounts;
+use thrift_types::edenfs::types::GetAccessCountsResult;
 
 use crate::ExitCode;
 

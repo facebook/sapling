@@ -7,7 +7,8 @@
 
 //! edenfsctl prefetch-profile
 
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
+use anyhow::Context;
 use async_trait::async_trait;
 use clap::Parser;
 use std::env;
@@ -17,17 +18,22 @@ use std::path::PathBuf;
 use std::str;
 use util::path::expand_path;
 
-use edenfs_client::checkout::{find_checkout, CheckoutConfig};
+use edenfs_client::checkout::find_checkout;
+use edenfs_client::checkout::CheckoutConfig;
 use edenfs_client::EdenFsInstance;
-use edenfs_error::{EdenFsError, Result, ResultExt};
+use edenfs_error::EdenFsError;
+use edenfs_error::Result;
+use edenfs_error::ResultExt;
 
 #[cfg(fbcode_build)]
-use {
-    edenfs_telemetry::prefetch_profile::PrefetchProfileSample, edenfs_telemetry::send,
-    fbinit::expect_init,
-};
+use edenfs_telemetry::prefetch_profile::PrefetchProfileSample;
+#[cfg(fbcode_build)]
+use edenfs_telemetry::send;
+#[cfg(fbcode_build)]
+use fbinit::expect_init;
 
-use crate::{ExitCode, Subcommand};
+use crate::ExitCode;
+use crate::Subcommand;
 
 #[derive(Parser, Debug)]
 pub struct CommonOptions {

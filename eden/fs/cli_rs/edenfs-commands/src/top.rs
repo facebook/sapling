@@ -9,22 +9,29 @@
 
 use async_trait::async_trait;
 use clap::Parser;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::RwLock;
 use std::time::Duration;
 
 use once_cell::sync::Lazy;
-use termwiz::{
-    caps::Capabilities,
-    color::ColorAttribute,
-    input::{InputEvent, KeyCode, KeyEvent},
-    surface::Change,
-    terminal::buffered::BufferedTerminal,
-    terminal::{new_terminal, Terminal},
-    widgets::layout::{ChildOrientation, Constraints},
-    widgets::{RenderArgs, Ui, UpdateArgs, Widget, WidgetEvent},
-    Error,
-};
+use termwiz::caps::Capabilities;
+use termwiz::color::ColorAttribute;
+use termwiz::input::InputEvent;
+use termwiz::input::KeyCode;
+use termwiz::input::KeyEvent;
+use termwiz::surface::Change;
+use termwiz::terminal::buffered::BufferedTerminal;
+use termwiz::terminal::new_terminal;
+use termwiz::terminal::Terminal;
+use termwiz::widgets::layout::ChildOrientation;
+use termwiz::widgets::layout::Constraints;
+use termwiz::widgets::RenderArgs;
+use termwiz::widgets::Ui;
+use termwiz::widgets::UpdateArgs;
+use termwiz::widgets::Widget;
+use termwiz::widgets::WidgetEvent;
+use termwiz::Error;
 
 use edenfs_client::EdenFsInstance;
 use edenfs_error::Result;

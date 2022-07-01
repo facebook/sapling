@@ -6,7 +6,8 @@
  */
 
 use std::path::PathBuf;
-use sysinfo::{ProcessExt, SystemExt};
+use sysinfo::ProcessExt;
+use sysinfo::SystemExt;
 use tracing::trace;
 
 pub fn get_executable(pid: sysinfo::Pid) -> Option<PathBuf> {

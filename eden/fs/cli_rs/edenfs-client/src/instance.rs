@@ -9,19 +9,25 @@
 //! [`EdenFsClient`]).
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 use std::time::Duration;
 
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
+use anyhow::Context;
 
 use edenfs_config::EdenFsConfig;
-use edenfs_error::{EdenFsError, Result, ResultExt};
+use edenfs_error::EdenFsError;
+use edenfs_error::Result;
+use edenfs_error::ResultExt;
 use fbthrift_socket::SocketTransport;
-use thrift_types::edenfs::{client::EdenService, types::DaemonInfo};
+use thrift_types::edenfs::client::EdenService;
+use thrift_types::edenfs::types::DaemonInfo;
 use thrift_types::fb303_core::types::fb303_status;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use tokio_uds_compat::UnixStream;
-use tracing::{event, Level};
+use tracing::event;
+use tracing::Level;
 
 use crate::utils::get_executable;
 use crate::EdenFsClient;

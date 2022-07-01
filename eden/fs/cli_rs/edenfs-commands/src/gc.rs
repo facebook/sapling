@@ -7,13 +7,15 @@
 
 //! edenfsctl gc
 
-use std::io::{stderr, Write};
+use std::io::stderr;
+use std::io::Write;
 
 use async_trait::async_trait;
 use clap::Parser;
 
 use edenfs_client::EdenFsInstance;
-use edenfs_error::{Result, ResultExt};
+use edenfs_error::Result;
+use edenfs_error::ResultExt;
 
 use crate::ExitCode;
 

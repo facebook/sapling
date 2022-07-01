@@ -9,4 +9,5 @@ mod multiplex;
 #[cfg(test)]
 mod test;
 
-pub use multiplex::{MultiplexQuorum, WalMultiplexedBlobstore};
+pub use multiplex::MultiplexQuorum;
+pub use multiplex::WalMultiplexedBlobstore;

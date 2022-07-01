@@ -9,7 +9,9 @@ use darling::FromMeta;
 use proc_macro2::TokenStream as TokenStream2;
 use proc_macro_error::abort;
 use quote::quote;
-use syn::{Ident, Meta, Path};
+use syn::Ident;
+use syn::Meta;
+use syn::Path;
 
 #[derive(Debug, FromMeta)]
 struct MetaArgsFlag {

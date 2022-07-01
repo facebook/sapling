@@ -7,10 +7,14 @@
 
 use std::path::Path;
 
-use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
+use anyhow::Context;
+use anyhow::Result;
+use serde::Deserialize;
+use serde::Serialize;
 use stack_config::StackConfig;
-use tracing::{event, trace, Level};
+use tracing::event;
+use tracing::trace;
+use tracing::Level;
 
 use edenfs_error::EdenFsError;
 

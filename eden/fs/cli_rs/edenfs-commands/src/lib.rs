@@ -10,7 +10,8 @@ use std::path::PathBuf;
 use anyhow::Context;
 use async_trait::async_trait;
 use clap::Parser;
-use tracing::{event, Level};
+use tracing::event;
+use tracing::Level;
 
 use edenfs_client::EdenFsInstance;
 use edenfs_error::Result;

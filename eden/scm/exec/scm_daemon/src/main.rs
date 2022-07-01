@@ -7,11 +7,13 @@
 
 pub mod error;
 
-use anyhow::{bail, Result};
-use clap::{App, Arg};
-use commitcloudsubscriber::{
-    CommitCloudConfig, CommitCloudTcpReceiverService, CommitCloudWorkspaceSubscriberService,
-};
+use anyhow::bail;
+use anyhow::Result;
+use clap::App;
+use clap::Arg;
+use commitcloudsubscriber::CommitCloudConfig;
+use commitcloudsubscriber::CommitCloudTcpReceiverService;
+use commitcloudsubscriber::CommitCloudWorkspaceSubscriberService;
 use log::info;
 use serde::Deserialize;
 use std::fs::File;

@@ -11,7 +11,8 @@ use anyhow::Error;
 #[cfg(test)]
 use chrono::TimeZone;
 use chrono::Utc;
-use runlog::{Entry, Progress};
+use runlog::Entry;
+use runlog::Progress;
 
 struct EntryState {
     last_time: chrono::DateTime<chrono::Utc>,

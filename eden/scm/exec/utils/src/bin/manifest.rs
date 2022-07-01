@@ -5,15 +5,21 @@
  * GNU General Public License version 2.
  */
 
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
+use std::sync::Arc;
 
-use anyhow::{format_err, Result};
+use anyhow::format_err;
+use anyhow::Result;
 use bytes::Bytes;
 use structopt::StructOpt;
 
 use pathmatcher::AlwaysMatcher;
-use revisionstore::{datapack::DataPack, datastore::DataStore, uniondatastore::UnionDataStore};
-use types::{HgId, Key, RepoPath};
+use revisionstore::datapack::DataPack;
+use revisionstore::datastore::DataStore;
+use revisionstore::uniondatastore::UnionDataStore;
+use types::HgId;
+use types::Key;
+use types::RepoPath;
 
 #[derive(StructOpt)]
 #[structopt(rename_all = "verbatim")]

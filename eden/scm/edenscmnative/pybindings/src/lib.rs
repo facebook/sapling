@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use cpython::{PyResult, Python, *};
+use cpython::PyResult;
+use cpython::Python;
+use cpython::*;
 
 use hgcommands::prepare_builtin_modules;
 

@@ -6,10 +6,13 @@
  */
 
 use anyhow::anyhow;
-use edenfs_error::{EdenFsError, Result, ResultExt};
+use edenfs_error::EdenFsError;
+use edenfs_error::Result;
+use edenfs_error::ResultExt;
 use regex::Regex;
 use std::path::PathBuf;
-use subprocess::{Exec, Redirection};
+use subprocess::Exec;
+use subprocess::Redirection;
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct MountTableInfo {

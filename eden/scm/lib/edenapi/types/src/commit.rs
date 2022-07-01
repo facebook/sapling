@@ -12,7 +12,9 @@ use anyhow::Result;
 use bytes::Bytes;
 use dag_types::Location;
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::Arbitrary;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Gen;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;

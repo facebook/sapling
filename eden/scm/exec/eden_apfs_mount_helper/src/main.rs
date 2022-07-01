@@ -11,12 +11,18 @@
 //! It is intended to be used together with edenfs, but may also be
 //! useful for non-virtualized repos as a way to move IO out of a recursive
 //! watch.
-use anyhow::{anyhow, bail, format_err, Context, Result};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Result;
 use serde::*;
-use sha2::{Digest, Sha256};
+use sha2::Digest;
+use sha2::Sha256;
 use std::os::unix::fs::MetadataExt;
 use std::os::unix::process::CommandExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
 use std::process::Stdio;
 use std::str;
@@ -262,7 +268,8 @@ struct PartitionInfo {
 
 #[cfg(feature = "json-plist")]
 fn parse_plist<T: de::DeserializeOwned>(data: &str) -> Result<T> {
-    use std::io::{Read, Write};
+    use std::io::Read;
+    use std::io::Write;
 
     // Run plutil and tell it to convert stdin (that last `-` arg)
     // into json and output it to stdout (the `-o -`).

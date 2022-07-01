@@ -28,7 +28,8 @@ use once_cell::sync::Lazy;
 use openssl::pkcs12::Pkcs12;
 use openssl::pkey::PKey;
 use openssl::x509::X509;
-use parking_lot::{Mutex, RwLock};
+use parking_lot::Mutex;
+use parking_lot::RwLock;
 use serde::Serialize;
 use url::Url;
 

@@ -16,7 +16,9 @@ use chg::maybe_call_chg;
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
-use windows::{disable_standard_handle_inheritability, is_edenfs_stopped};
+use windows::disable_standard_handle_inheritability;
+#[cfg(windows)]
+use windows::is_edenfs_stopped;
 
 #[cfg_attr(fbcode_build, fbinit::main)]
 fn main() {

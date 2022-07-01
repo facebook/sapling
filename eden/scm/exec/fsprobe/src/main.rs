@@ -5,16 +5,26 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Result};
+use anyhow::bail;
+use anyhow::Result;
 use std::fmt;
-use std::fs::{
-    create_dir, create_dir_all, remove_dir, remove_dir_all, remove_file, File, OpenOptions,
-};
-use std::io::{BufRead, BufReader, Read};
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::fs::create_dir;
+use std::fs::create_dir_all;
+use std::fs::remove_dir;
+use std::fs::remove_dir_all;
+use std::fs::remove_file;
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::io::BufRead;
+use std::io::BufReader;
+use std::io::Read;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
+use std::sync::mpsc;
 use std::sync::mpsc::TrySendError;
-use std::sync::{mpsc, Arc};
+use std::sync::Arc;
 use std::thread;
 use std::time::Instant;
 use structopt::StructOpt;

@@ -13,7 +13,8 @@
 // Write code paths are not used.
 #![allow(dead_code)]
 
-use std::{env, path::Path};
+use std::env;
+use std::path::Path;
 
 fn main() {
     for arg in env::args().skip(1) {
