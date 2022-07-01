@@ -35,9 +35,12 @@ class File:
     def abspath(self) -> str:
         return self._abspath
 
+    def basename(self) -> str:
+        return Path(self.path).name
+
     # pyre-ignore[3] - pyre doesn't like that this can return str and bytes
     def open(self, mode: str = "r") -> IO[Any]:
-        if "w" in mode:
+        if "w" in mode or "a" in mode:
             # Create the directories if they don't already exist.
             create_dirs(self.root, self.path)
 

@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import json
-from typing import List
+from typing import List, Optional
 
 
 class Status:
@@ -16,6 +16,12 @@ class Status:
     modified: List[str]
     removed: List[str]
     untracked: List[str]
+
+    ADDED = "added"
+    DELETED = "deleted"
+    MODIFIED = "modified"
+    REMOVED = "removed"
+    UNTRACKED = "untracked"
 
     def __init__(self, raw_json: str) -> None:
         self.added = []
@@ -39,6 +45,19 @@ class Status:
                 self.untracked.append(path)
             else:
                 raise ValueError("unknown status state '%s' for '%s'" % (st, path))
+
+    def __getitem__(self, path: str) -> Optional[str]:
+        for kind, entries in [
+            (Status.ADDED, self.added),
+            (Status.DELETED, self.deleted),
+            (Status.MODIFIED, self.modified),
+            (Status.REMOVED, self.removed),
+            (Status.UNTRACKED, self.untracked),
+        ]:
+            if path in entries:
+                return kind
+
+        return None
 
     def empty(self) -> bool:
         return not (

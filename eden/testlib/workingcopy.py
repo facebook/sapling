@@ -68,6 +68,32 @@ class WorkingCopy:
         self.hg.commit(*files, **options)
         return self.current_commit()
 
+    def amend(
+        self,
+        message: Optional[str] = None,
+        files: Optional[List[str]] = None,
+        author: Optional[str] = None,
+        date: Optional[str] = None,
+        addremove: bool = False,
+    ) -> Commit:
+        default_data = test_globals.repo_gen.gen_commit_data()
+
+        files = files or []
+        if date is None:
+            date = default_data["date"]
+        if author is None:
+            author = "Tester Author"
+
+        options = {
+            "message": message,
+            "date": date,
+            "addremove": addremove,
+            "user": author,
+        }
+
+        self.hg.amend(*files, **options)
+        return self.current_commit()
+
     def current_commit(self) -> Commit:
         return Commit(self.repo, self.hg.log(rev=".", template="{node}").stdout)
 

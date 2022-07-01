@@ -12,6 +12,8 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from typing import Any, Dict, List
 
+from .commit import Commit
+from .file import File
 from .util import override_environ, test_globals, trace
 
 hg_bin = Path(os.environ["HGTEST_HG"])
@@ -69,9 +71,17 @@ class CliCmd:
                         cmd_args.append(option)
                 elif isinstance(value, str):
                     cmd_args.extend([option, value])
+                elif isinstance(value, Commit):
+                    cmd_args.extend([option, value.hash])
+                elif isinstance(value, File):
+                    cmd_args.extend([option, value.path])
                 elif isinstance(value, list):
                     for v in value:
                         process_arg(key, v)
+                elif value is None:
+                    # This allows code to pass Optional[]'s more easily, and we
+                    # can just ignore them.
+                    return
                 else:
                     raise ValueError(
                         "clicmd does not support type %s ('%s')" % (type(value), value)
