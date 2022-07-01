@@ -418,30 +418,83 @@ def _adjuststatus(status, ctx1, ctx2):
     """Adjusts the status result to remove item that don't differ between ctx1
     and ctx2
 
-    `status` is the memctx status for a reparented mirror of ctx2. `ctx1` is the
-    predecessor to `ctx2`. So this function adjusts status to remove items that
-    didn't change between the predecessor and the successor, and adds items that
-    existed in the predecessor but not the successor.
-    """
+    `ctx2` is the post-amend, pre-dirsync commit. `ctx1` is the pre-amend
+    predecessor commit. `status` is the status for ctx2. So this function
+    adjusts status to remove items that didn't change between the predecessor
+    and the successor, and adds items that existed in the predecessor but not
+    the successor."""
+    # Table of possible states for a file between ctx1 and ctx2:
+    #  C - clean relative to p1()
+    #  X - not present in p1() or in ctx
+    #  A - added relative to p1
+    #  M - modified relative to p1
+    #  = - added/modified but ctx1[file].data() == ctx2[file].data()
+    #  R - removed - present in p1() but not in ctx
+    #
+    #  ctx1  ctx2  action     note
+    #   XC    XC    -         The file is unaffected by this commit
+    #   XC    AMR   -         The file is already in `status`
+    #
+    #   A     X     removed   The file was Added before, then was reverted. Add to `status.removed` (case 2)
+    #   A     C     modified  The file was Added before, but is now tracked/clean. Add to `status.modified`. (case 3)
+    #   A     =     drop      Remove the file from `status.added` as it does not need syncing (case 1)
+    #   A     AMR   -         The file is already in `status`
+    #
+    #   M     X     removed   The file was removed during rebase. Add to `status.removed` (case 2)
+    #   M     C     modified  The file was Modified before, but is now clean. Add to `status.modified` (case 3)
+    #   M     =     drop      Remove the file from `status.modified` as it does not need syncing (case 1)
+    #   M     AMR   -         The file is already in `status`
+
+    #   R     X     -         The file is already removed. No need to dirsync.
+    #   R     C     modified  The file was Removed before, but is now clean. Add to `status.modified` (case 3)
+    #   R     R     -         Remove the file from `status.removed` as it does not need syncing (case 1)
+    #   R     AMR   -         The file is already in `status`
+
     newmodified = []
     newadded = []
-    newremoved = list(status.removed)
+    newremoved = []
+    skipped = set()
+
+    # Remove files that haven't changed.
     for oldpaths, newpaths in [
         (status.modified, newmodified),
         (status.added, newadded),
     ]:
         for path in oldpaths:
-            # No real changes?
+            # No real changes? (case 1)
             if path in ctx1 and path in ctx2:
                 f1 = ctx1[path]
                 f2 = ctx2[path]
                 if f1.flags() == f2.flags() and not f1.cmp(f2):
+                    skipped.add(path)
                     continue
             newpaths.append(path)
 
+    for path in status.removed:
+        # No real changes (case 1)
+        if path not in ctx1 and path not in ctx2:
+            skipped.add(path)
+            continue
+        newremoved.append(path)
+
+    # Add files that have been reverted.
     for oldpath in ctx1.files():
-        if oldpath not in status.removed and oldpath not in ctx2:
+        if (
+            oldpath in ctx1
+            and oldpath not in ctx2
+            and oldpath not in newremoved
+            and oldpath not in skipped
+        ):
+            # The file was in ctx1, but is no longer in ctx2. Mark it removed. (case 2)
             newremoved.append(oldpath)
+        elif (
+            oldpath not in newmodified
+            and oldpath not in newadded
+            and oldpath not in skipped
+        ):
+            # The file had a change in ctx1, but no longer has a change in ctx2.
+            # Mark it as modified, so the revert will be synced to ctx2. (case 3)
+            newmodified.append(oldpath)
 
     return scmutil.status(newmodified, newadded, newremoved, [], [], [], [])
 

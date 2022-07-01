@@ -88,11 +88,6 @@ foo.B = {dirB}
         actions.remove((MODIFY, ADD))
         actions.remove((REMOVE, ADD))
 
-        # BUG: these cases give the wrong result and fail an assertion below.
-        actions.remove((MODIFY, REVERT))
-        actions.remove((REMOVE, REVERT))
-        actions.remove((REMOVE, MODIFY))
-
         for (initial, amend) in actions:
             print(f"Initial Action: {initial}, Amend Action: {amend}")
 

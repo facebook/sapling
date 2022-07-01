@@ -200,8 +200,6 @@ Test amending a change where there has already been a sync before
   $ hg commit --amend -m "amend b in dir1"
   amending changeset * (glob)
   mirrored copy 'dir1/a -> dir1/b' to 'dir2/subdir/a -> dir2/subdir/b'
-  not mirroring remove of 'dir1/a' to 'dir2/subdir/a'; it is already removed
-  not mirroring remove of 'dir2/subdir/a' to 'dir1/a'; it is already removed
   committing files:
   dir1/b
   dir2/subdir/b
