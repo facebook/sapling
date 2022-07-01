@@ -9,6 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.56"
+atomicfile = { version = "0.1.0", path = "../../../scm/lib/atomicfile" }
 byteorder = "1.3"
 edenfs-config = { version = "0.1.0", path = "../edenfs-config" }
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
