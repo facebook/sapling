@@ -1,7 +1,7 @@
 #chg-compatible
 
-  $ hg init repo1
-  $ cd repo1
+  $ configure modernclient
+  $ newclientrepo repo1
   $ mkdir a b a/1 b/1 b/2
   $ touch in_root a/in_a b/in_b a/1/in_a_1 b/1/in_b_1 b/2/in_b_2
 
@@ -135,10 +135,7 @@ relative paths can be requested
   > status.relative = False
   > EOF
 
-  $ cd ..
-
-  $ hg init repo2
-  $ cd repo2
+  $ newclientrepo repo2
   $ touch modified removed deleted ignored
   $ echo "ignored" > .gitignore
   $ hg ci -A -m 'initial checkin'
@@ -279,12 +276,10 @@ hg status -i ignoreddir/file:
 
   $ hg status -i ignoreddir/file
   I ignoreddir/file
-  $ cd ..
 
 Check 'status -q' and some combinations
 
-  $ hg init repo3
-  $ cd repo3
+  $ newclientrepo repo3
   $ touch modified removed deleted ignored
   $ echo "ignored" > .gitignore
   $ hg commit -A -m 'initial checkin'
@@ -344,10 +339,8 @@ Assert flag1 flag2 [0-same | 1-different]
   $ assert "-q" "-u"         1
   $ assert "-m" "-a"         1
   $ assert "-r" "-d"         1
-  $ cd ..
 
-  $ hg init repo4
-  $ cd repo4
+  $ newclientrepo repo4
   $ touch modified removed deleted
   $ hg ci -q -A -m 'initial checkin'
   $ touch added unknown
@@ -384,7 +377,7 @@ hg status -C --change 1 added modified copied removed deleted:
 
 hg status -A --change 1 and revset:
 
-  $ hg status -A --change '1|1'
+  $ hg status -A --change 'desc(test)'
   M modified
   A added
   A copied
@@ -392,12 +385,9 @@ hg status -A --change 1 and revset:
   R removed
   C deleted
 
-  $ cd ..
-
 hg status with --rev and reverted changes:
 
-  $ hg init reverted-changes-repo
-  $ cd reverted-changes-repo
+  $ newclientrepo reverted-changes-repo
   $ echo a > file
   $ hg add file
   $ hg ci -m a
@@ -427,18 +417,15 @@ reverted and committed file with changed flag should appear modified
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ chmod +x file
   $ hg ci -m 'change flag'
-  $ hg status -A --rev 1 --rev 2
+  $ hg status -A --rev 'desc(b)' --rev 'desc(change)'
   M file
-  $ hg diff -r 1 -r 2
+  $ hg diff -r 'desc(b)' -r 'desc(change)'
 
 #endif
 
-  $ cd ..
-
 hg status of binary file starting with '\1\n', a separator for metadata:
 
-  $ hg init repo5
-  $ cd repo5
+  $ newclientrepo repo5
   >>> _ = open("010a", "wb").write(b"\1\nfoo")
   $ hg ci -q -A -m 'initial checkin'
   $ hg status -A
@@ -456,13 +443,10 @@ hg status of binary file starting with '\1\n', a separator for metadata:
   $ hg status -A --rev 'desc(modify)':'desc(add)' 010a
   C 010a
 
-  $ cd ..
-
 test "hg status" with "directory pattern" which matches against files
 only known on target revision.
 
-  $ hg init repo6
-  $ cd repo6
+  $ newclientrepo repo6
 
   $ echo a > a.txt
   $ hg add a.txt
@@ -504,14 +488,11 @@ warning message about such pattern.
   R 1/2/3/4/5/b.txt
 #endif
 
-  $ cd ..
-
 Status after move overwriting a file (issue4458)
 =================================================
 
 
-  $ hg init issue4458
-  $ cd issue4458
+  $ newclientrepo issue4458
   $ echo a > a
   $ echo b > b
   $ hg commit -Am base
