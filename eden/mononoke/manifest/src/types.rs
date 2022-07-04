@@ -12,6 +12,10 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use blobstore::Storable;
 use context::CoreContext;
+
+use futures::stream;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
 use mononoke_types::fsnode::Fsnode;
 use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::fsnode::FsnodeFile;
@@ -31,12 +35,44 @@ use std::collections::BTreeMap;
 use std::hash::Hash;
 use std::hash::Hasher;
 
-pub trait Manifest: Sized + 'static {
-    type TreeId;
-    type LeafId;
+#[async_trait]
+pub trait AsyncManifest: Sized + 'static {
+    type TreeId: Send + Sync;
+    type LeafId: Send + Sync;
 
+    async fn list(
+        &self,
+    ) -> Result<BoxStream<'_, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
+    async fn lookup(
+        &self,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>>;
+}
+
+pub trait Manifest: Sync + Sized + 'static {
+    type TreeId: Send + Sync;
+    type LeafId: Send + Sync;
     fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>>;
     fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>>;
+}
+
+#[async_trait]
+impl<M: Manifest> AsyncManifest for M {
+    type TreeId = <Self as Manifest>::TreeId;
+    type LeafId = <Self as Manifest>::LeafId;
+
+    async fn list(
+        &self,
+    ) -> Result<BoxStream<'_, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>> {
+        Ok(stream::iter(Manifest::list(self).map(anyhow::Ok).collect::<Vec<_>>()).boxed())
+    }
+
+    async fn lookup(
+        &self,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+        anyhow::Ok(Manifest::lookup(self, name))
+    }
 }
 
 impl Manifest for ManifestUnode {
@@ -484,7 +520,7 @@ impl<I, TreeId, LeafId> Into<Entry<TreeId, LeafId>>
     }
 }
 
-impl<I: Copy + 'static, M: Manifest> Manifest for Traced<I, M> {
+impl<I: Send + Sync + Copy + 'static, M: Manifest> Manifest for Traced<I, M> {
     type TreeId = Traced<I, <M as Manifest>::TreeId>;
     type LeafId = Traced<I, <M as Manifest>::LeafId>;
 
