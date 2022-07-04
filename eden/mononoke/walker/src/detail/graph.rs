@@ -53,6 +53,7 @@ use mononoke_types::unode::FileUnode;
 use mononoke_types::unode::ManifestUnode;
 use mononoke_types::BlameId;
 use mononoke_types::BlobstoreKey;
+use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
@@ -280,7 +281,10 @@ pub struct UnodeKey<T> {
     pub flags: UnodeFlags,
 }
 
-impl<T: MononokeId> UnodeKey<T> {
+impl<T: MononokeId> UnodeKey<T>
+where
+    T::Value: BlobstoreValue<Key = T>,
+{
     fn blobstore_key(&self) -> String {
         self.inner.blobstore_key()
     }
@@ -298,7 +302,10 @@ pub struct FastlogKey<T> {
     pub inner: T,
 }
 
-impl<T: MononokeId> FastlogKey<T> {
+impl<T: MononokeId> FastlogKey<T>
+where
+    T::Value: BlobstoreValue<Key = T>,
+{
     fn sampling_fingerprint(&self) -> u64 {
         self.inner.sampling_fingerprint()
     }

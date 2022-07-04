@@ -8,9 +8,14 @@
 //! Support for converting Mononoke data structures into in-memory blobs.
 
 use anyhow::Result;
+use async_trait::async_trait;
+use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
+use blobstore::Storable;
 use bytes::Bytes;
+use context::CoreContext;
 
+use crate::typed_hash::BlobstoreKey;
 use crate::typed_hash::ChangesetId;
 use crate::typed_hash::ContentChunkId;
 use crate::typed_hash::ContentId;
@@ -27,12 +32,12 @@ use crate::typed_hash::SkeletonManifestId;
 
 /// A serialized blob in memory.
 #[derive(Clone)]
-pub struct Blob<Id> {
+pub struct Blob<Id: BlobstoreKey> {
     id: Id,
     data: Bytes,
 }
 
-impl<Id> Blob<Id> {
+impl<Id: BlobstoreKey> Blob<Id> {
     pub fn new(id: Id, data: Bytes) -> Self {
         Self { id, data }
     }
@@ -51,6 +56,22 @@ impl<Id> Blob<Id> {
     }
 }
 
+#[async_trait]
+impl<K: BlobstoreKey + Copy + Send + Sync + 'static> Storable for Blob<K> {
+    type Key = K;
+
+    async fn store<'a, B: Blobstore>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a B,
+    ) -> Result<Self::Key> {
+        let id = *self.id();
+        let bytes = self.into();
+        blobstore.put(ctx, id.blobstore_key(), bytes).await?;
+        Ok(id)
+    }
+}
+
 pub type ChangesetBlob = Blob<ChangesetId>;
 pub type ContentBlob = Blob<ContentId>;
 pub type ContentChunkBlob = Blob<ContentChunkId>;
@@ -65,7 +86,7 @@ pub type ContentMetadataV2Blob = Blob<ContentMetadataV2Id>;
 pub type FastlogBatchBlob = Blob<FastlogBatchId>;
 pub type RedactionKeyListBlob = Blob<RedactionKeyListId>;
 
-impl<Id> From<Blob<Id>> for BlobstoreBytes {
+impl<Id: BlobstoreKey> From<Blob<Id>> for BlobstoreBytes {
     #[inline]
     fn from(blob: Blob<Id>) -> BlobstoreBytes {
         BlobstoreBytes::from_bytes(blob.data)
@@ -73,7 +94,7 @@ impl<Id> From<Blob<Id>> for BlobstoreBytes {
 }
 
 pub trait BlobstoreValue: Sized + Send {
-    type Key;
+    type Key: BlobstoreKey;
     fn into_blob(self) -> Blob<Self::Key>;
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self>;
 }

@@ -8,7 +8,6 @@
 #![allow(dead_code)]
 #![allow(clippy::mutable_key_type)] // false positive: Bytes is not inner mutable
 
-use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
@@ -16,6 +15,8 @@ use anyhow::Ok;
 use anyhow::Result;
 use async_recursion::async_recursion;
 use blobstore::Blobstore;
+use blobstore::Loadable;
+use blobstore::Storable;
 use bounded_traversal::bounded_traversal_ordered_stream;
 use bounded_traversal::OrderedTraversal;
 use bytes::Bytes;
@@ -40,22 +41,14 @@ use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::errors::ErrorKind;
 use crate::thrift;
-use crate::typed_hash::BlobstoreKey;
 use crate::typed_hash::IdContext;
+use crate::typed_hash::MononokeId;
 use crate::typed_hash::ThriftConvert;
 
 pub trait MapValue:
     TryFrom<Bytes, Error = Error> + Into<Bytes> + Debug + Clone + Send + Sync + 'static
 {
-    type Id: BlobstoreKey
-        + ThriftConvert<Thrift = thrift::ShardedMapNodeId>
-        + PartialEq
-        + Eq
-        + Debug
-        + Clone
-        + Send
-        + Sync
-        + 'static;
+    type Id: MononokeId<Thrift = thrift::ShardedMapNodeId, Value = ShardedMapNode<Self>>;
     type Context: IdContext<Id = Self::Id>;
 }
 
@@ -123,7 +116,7 @@ impl<Value: MapValue> ShardedMapChild<Value> {
     ) -> Result<ShardedMapNode<Value>> {
         match self {
             Self::Inlined(inlined) => Ok(inlined),
-            Self::Id(id) => ShardedMapNode::load(ctx, blobstore, &id).await,
+            Self::Id(id) => id.load(ctx, blobstore).await.map_err(Into::into),
         }
     }
 
@@ -189,25 +182,6 @@ impl<Value: MapValue> ShardedMapNode<Value> {
         }
     }
 
-    async fn load(ctx: &CoreContext, blobstore: &impl Blobstore, id: &Value::Id) -> Result<Self> {
-        let key = id.blobstore_key();
-        Self::from_bytes(
-            blobstore
-                .get(ctx, &key)
-                .await?
-                .with_context(|| anyhow!("Blob is missing: {}", key))?
-                .into_raw_bytes()
-                .as_ref(),
-        )
-    }
-
-    async fn store(self, ctx: &CoreContext, blobstore: &impl Blobstore) -> Result<Value::Id> {
-        let blob = self.into_blob();
-        let id = blob.id().clone();
-        blobstore.put(ctx, id.blobstore_key(), blob.into()).await?;
-        Ok(id)
-    }
-
     /// Given a key, what's the value for that key, if any?
     // See the detailed description of the logic in docs/sharded_map.md
     #[async_recursion]
@@ -235,7 +209,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                                     node.lookup(ctx, blobstore, rest).await?
                                 }
                                 ShardedMapChild::Id(id) => {
-                                    Self::load(ctx, blobstore, id)
+                                    id.load(ctx, blobstore)
                                         .await?
                                         .lookup(ctx, blobstore, rest)
                                         .await?
@@ -465,9 +439,9 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                                     // Design decision: Inline all intermediate nodes and store
                                     // terminal nodes separated
                                     Self::Intermediate { .. } => ShardedMapChild::Inlined(node),
-                                    Self::Terminal { .. } => {
-                                        ShardedMapChild::Id(node.store(ctx, blobstore).await?)
-                                    }
+                                    Self::Terminal { .. } => ShardedMapChild::Id(
+                                        node.into_blob().store(ctx, blobstore).await?,
+                                    ),
                                 };
                                 Ok((byte, ShardedMapEdge { size, child }))
                             })
@@ -647,9 +621,14 @@ impl<Value: MapValue> BlobstoreValue for ShardedMapNode<Value> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::impl_typed_hash;
+    use crate::private::Blake2;
+    use crate::typed_hash::BlobstoreKey;
+    use async_trait::async_trait;
     use blobstore::BlobstoreKeyParam;
     use blobstore::BlobstoreKeyRange;
     use blobstore::BlobstoreKeySource;
+    use blobstore::LoadableError;
     use bytes::Buf;
     use bytes::BufMut;
     use bytes::BytesMut;
@@ -663,16 +642,26 @@ mod test {
     use quickcheck::QuickCheck;
     use quickcheck::TestResult;
     use quickcheck::Testable;
+    use std::str::FromStr;
     use ShardedMapNode::*;
 
     #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-    struct MyType(i32);
+    pub struct MyType(i32);
 
-    // Let's use the DMv2 hashes for tests, for simplicity of not having to
-    // write our own
+    #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+    pub struct ShardedMapNodeMyId(Blake2);
+
+    impl_typed_hash! {
+        hash_type => ShardedMapNodeMyId,
+        thrift_hash_type => thrift::ShardedMapNodeId,
+        value_type => ShardedMapNode<MyType>,
+        context_type => ShardedMapNodeMyContext,
+        context_key => "mytype.mapnode",
+    }
+
     impl MapValue for MyType {
-        type Id = crate::typed_hash::ShardedMapNodeDMv2Id;
-        type Context = crate::typed_hash::ShardedMapNodeDMv2Context;
+        type Id = ShardedMapNodeMyId;
+        type Context = ShardedMapNodeMyContext;
     }
 
     type TestShardedMap = ShardedMapNode<MyType>;
@@ -1020,13 +1009,8 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = Memblob::default();
         let map = example_map();
-        map.store(&ctx, &blobstore).await?;
-        assert_all_keys(
-            &ctx,
-            &blobstore,
-            vec!["deletedmanifest2.mapnode.blake2.faa5cf45a62744c36771e1ded03fe98a7ba55ffff7fc66082184f0ed3d58eedc"],
-        )
-        .await?;
+        map.into_blob().store(&ctx, &blobstore).await?;
+        assert_all_keys(&ctx, &blobstore, vec!["mytype.mapnode.blake2.9630d1340c7493f3349ccc843900304bdd5798a803baab5999419e427a2d425a"]).await?;
         Ok(())
     }
 
@@ -1041,11 +1025,9 @@ mod test {
         assert_all_keys(
             &ctx,
             &blobstore,
-            vec![
-                "deletedmanifest2.mapnode.blake2.1d1fed7c96edbdb45e0399854ead99dcac9b67b710c8666afe02b52767aa412f",
-                "deletedmanifest2.mapnode.blake2.467adc16abe35cb1ed6ee161fd359b23897efc8a26fd119840e5c353366e78f5",
-                "deletedmanifest2.mapnode.blake2.f1e1595a55864e3719af9e1ac80adeddb302a889e1871b33b8a161566290c687",
-            ],
+            vec!["mytype.mapnode.blake2.1ad24a2a13cda9a5eb92778b926c7bd6997bb310ea44e7f30077c751c44f9231",
+                "mytype.mapnode.blake2.d928eb3252d524dc8b1a7f2ec0ca3b6d22c94c80b2fa12f7fe35bac1bca80575",
+                "mytype.mapnode.blake2.fb6be2d7e5ad86ca33a4e97f8d711e909c519109bab5fa0a1787c43ce36124a4"],
         )
         .await?;
         {

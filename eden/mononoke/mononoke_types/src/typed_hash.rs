@@ -18,7 +18,6 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
-use blobstore::Storable;
 use context::CoreContext;
 use edenapi_types::BonsaiChangesetId as EdenapiBonsaiChangesetId;
 use edenapi_types::ContentId as EdenapiContentId;
@@ -39,6 +38,7 @@ use crate::hash::Blake2;
 use crate::hash::Blake2Prefix;
 use crate::rawbundle2::RawBundle2;
 use crate::redaction_key_list::RedactionKeyList;
+use crate::sharded_map::ShardedMapNode;
 use crate::skeleton_manifest::SkeletonManifest;
 use crate::thrift;
 use crate::unode::FileUnode;
@@ -70,10 +70,11 @@ pub trait IdContext {
 }
 
 /// An identifier used throughout Mononoke.
-pub trait MononokeId: BlobstoreKey + Debug + Copy + Eq + Hash + Sync + Send + 'static {
-    /// Blobstore value type associated with given MononokeId type
-    type Value: BlobstoreValue<Key = Self>;
-
+pub trait MononokeId:
+    BlobstoreKey + Loadable + ThriftConvert + Debug + Copy + Eq + Hash + Sync + Send + 'static
+where
+    <Self as Loadable>::Value: BlobstoreValue<Key = Self>,
+{
     /// Return a stable hash fingerprint that can be used for sampling
     fn sampling_fingerprint(&self) -> u64;
 }
@@ -333,6 +334,7 @@ macro_rules! impl_typed_hash_no_context {
                 D: $crate::private::Deserializer<'de>,
             {
                 use std::str::FromStr;
+                use std::result::Result::*;
 
                 let hex = deserializer.deserialize_string($crate::private::Blake2HexVisitor)?;
                 match $crate::private::Blake2::from_str(hex.as_str()) {
@@ -345,14 +347,16 @@ macro_rules! impl_typed_hash_no_context {
     }
 }
 
-macro_rules! impl_typed_hash_loadable_storable {
+#[macro_export]
+macro_rules! impl_typed_hash_loadable {
     {
         hash_type => $typed: ident,
+        value_type => $value_type: ty,
     } => {
         #[async_trait]
         impl Loadable for $typed
         {
-            type Value = <$typed as MononokeId>::Value;
+            type Value = $value_type;
 
             async fn load<'a, B: Blobstore>(
                 &'a self,
@@ -369,22 +373,6 @@ macro_rules! impl_typed_hash_loadable_storable {
             }
         }
 
-        #[async_trait]
-        impl Storable for Blob<$typed>
-        {
-            type Key = $typed;
-
-            async fn store<'a, B: Blobstore>(
-                self,
-                ctx: &'a CoreContext,
-                blobstore: &'a B,
-            ) -> Result<Self::Key> {
-                let id = *self.id();
-                let bytes = self.into();
-                blobstore.put(ctx, id.blobstore_key(), bytes).await?;
-                Ok(id)
-            }
-        }
     }
 }
 
@@ -431,33 +419,33 @@ macro_rules! impl_typed_context {
     }
 }
 
+#[macro_export]
 macro_rules! impl_typed_hash {
     {
         hash_type => $typed: ident,
         thrift_hash_type => $thrift_hash_type: path,
-        value_type => $value_type: ident,
+        value_type => $value_type: ty,
         context_type => $typed_context: ident,
         context_key => $key: expr,
     } => {
-        impl_typed_hash_no_context! {
+        $crate::impl_typed_hash_no_context! {
             hash_type => $typed,
             thrift_type => $thrift_hash_type,
             blobstore_key => $key,
         }
 
-        impl_typed_hash_loadable_storable! {
+        $crate::impl_typed_hash_loadable! {
             hash_type => $typed,
+            value_type => $value_type,
         }
 
-        impl_typed_context! {
+        $crate::impl_typed_context! {
             hash_type => $typed,
             context_type => $typed_context,
             context_key => $key,
         }
 
         impl MononokeId for $typed {
-            type Value = $value_type;
-
             #[inline]
             fn sampling_fingerprint(&self) -> u64 {
                 self.0.sampling_fingerprint()
@@ -543,16 +531,10 @@ impl_typed_hash! {
     context_key => "deletedmanifest2",
 }
 
-// Manual implementations for ShardedMapNodeDMv2Id because it has a generic type
-// so we can't implement MononokeId for it
-impl_typed_hash_no_context! {
+impl_typed_hash! {
     hash_type => ShardedMapNodeDMv2Id,
-    thrift_type => thrift::ShardedMapNodeId,
-    blobstore_key => "deletedmanifest2.mapnode",
-}
-
-impl_typed_context! {
-    hash_type => ShardedMapNodeDMv2Id,
+    thrift_hash_type => thrift::ShardedMapNodeId,
+    value_type => ShardedMapNode<DeletedManifestV2Id>,
     context_type => ShardedMapNodeDMv2Context,
     context_key => "deletedmanifest2.mapnode",
 }
@@ -589,8 +571,9 @@ impl_typed_hash_no_context! {
     blobstore_key => "content_metadata",
 }
 
-impl_typed_hash_loadable_storable! {
+impl_typed_hash_loadable! {
     hash_type => ContentMetadataId,
+    value_type => ContentMetadata,
 }
 
 impl_typed_hash_no_context! {
@@ -599,8 +582,9 @@ impl_typed_hash_no_context! {
     blobstore_key => "content_metadata2",
 }
 
-impl_typed_hash_loadable_storable! {
+impl_typed_hash_loadable! {
     hash_type => ContentMetadataV2Id,
+    value_type => ContentMetadataV2,
 }
 
 impl_typed_hash! {
@@ -618,8 +602,6 @@ impl From<ContentId> for ContentMetadataId {
 }
 
 impl MononokeId for ContentMetadataId {
-    type Value = ContentMetadata;
-
     #[inline]
     fn sampling_fingerprint(&self) -> u64 {
         self.0.sampling_fingerprint()
@@ -633,8 +615,6 @@ impl From<ContentId> for ContentMetadataV2Id {
 }
 
 impl MononokeId for ContentMetadataV2Id {
-    type Value = ContentMetadataV2;
-
     #[inline]
     fn sampling_fingerprint(&self) -> u64 {
         self.0.sampling_fingerprint()
