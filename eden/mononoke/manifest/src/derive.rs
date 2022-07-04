@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use crate::AsyncManifest as Manifest;
 use crate::Entry;
-use crate::Manifest;
 use crate::PathTree;
 use crate::StoreLoadable;
 use anyhow::format_err;
@@ -82,7 +82,7 @@ where
     IntermediateLeafId: Send + From<LeafId> + 'static + fmt::Debug + Clone + Eq + Hash,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
-    <TreeId as StoreLoadable<Store>>::Value: Send,
+    <TreeId as StoreLoadable<Store>>::Value: Send + Sync,
     T: Fn(TreeInfo<TreeId, IntermediateLeafId, Ctx>) -> TFut + Send + Sync + 'static,
     TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'static,
     L: Fn(LeafInfo<IntermediateLeafId, Leaf>) -> LFut + Send + Sync + 'static,
@@ -170,7 +170,7 @@ where
     IntermediateLeafId: Send + From<LeafId> + 'static + Eq + Hash + Clone + fmt::Debug,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
-    <TreeId as StoreLoadable<Store>>::Value: Send,
+    <TreeId as StoreLoadable<Store>>::Value: Send + Sync,
     T: Fn(TreeInfo<TreeId, IntermediateLeafId, Ctx>) -> TFut + Send + Sync + 'static,
     TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'static,
     L: Fn(LeafInfo<IntermediateLeafId, Leaf>) -> LFut + Send + Sync + 'static,
@@ -309,7 +309,7 @@ where
     Store: Sync + Send + Clone + 'static,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
-    <TreeId as StoreLoadable<Store>>::Value: Send,
+    <TreeId as StoreLoadable<Store>>::Value: Send + Sync,
     T: Fn(
             TreeInfo<TreeId, IntermediateLeafId, Ctx>,
             mpsc::UnboundedSender<BoxFuture<(), Error>>,
@@ -544,7 +544,10 @@ where
     let mut deps: BTreeMap<MPathElement, _> = Default::default();
     // add subentries from all parents
     for manifest in manifests {
-        for (name, entry) in manifest.list() {
+        // TODO(T123518092): Do this concurrently where possible. Also, skip
+        // it altogether if possible, instead using lookup.
+        let mut stream = manifest.list().await?;
+        while let Some((name, entry)) = stream.try_next().await? {
             let subentry = deps.entry(name.clone()).or_insert_with(|| MergeNode {
                 path: Some(MPath::join_opt_element(path.as_ref(), &name)),
                 name: Some(name),
