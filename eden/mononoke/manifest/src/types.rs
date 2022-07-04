@@ -36,15 +36,19 @@ use std::hash::Hash;
 use std::hash::Hasher;
 
 #[async_trait]
-pub trait AsyncManifest: Sized + 'static {
+pub trait AsyncManifest<Store: Send + Sync>: Sized + 'static {
     type TreeId: Send + Sync;
     type LeafId: Send + Sync;
 
     async fn list(
         &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
     ) -> Result<BoxStream<'_, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
     async fn lookup(
         &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
         name: &MPathElement,
     ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>>;
 }
@@ -57,18 +61,22 @@ pub trait Manifest: Sync + Sized + 'static {
 }
 
 #[async_trait]
-impl<M: Manifest> AsyncManifest for M {
+impl<M: Manifest, Store: Send + Sync> AsyncManifest<Store> for M {
     type TreeId = <Self as Manifest>::TreeId;
     type LeafId = <Self as Manifest>::LeafId;
 
     async fn list(
         &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
     ) -> Result<BoxStream<'_, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>> {
         Ok(stream::iter(Manifest::list(self).map(anyhow::Ok).collect::<Vec<_>>()).boxed())
     }
 
     async fn lookup(
         &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
         name: &MPathElement,
     ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
         anyhow::Ok(Manifest::lookup(self, name))
