@@ -178,6 +178,55 @@ pub trait OrderedManifest: Manifest {
     >;
 }
 
+#[async_trait]
+pub trait AsyncOrderedManifest<Store: Send + Sync>: AsyncManifest<Store> {
+    async fn list_weighted(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<
+        BoxStream<
+            'async_trait,
+            Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::LeafId>)>,
+        >,
+    >;
+    async fn lookup_weighted(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::LeafId>>>;
+}
+
+#[async_trait]
+impl<M: OrderedManifest, Store: Send + Sync> AsyncOrderedManifest<Store> for M {
+    async fn list_weighted(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<
+        BoxStream<
+            'async_trait,
+            Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::LeafId>)>,
+        >,
+    > {
+        Ok(stream::iter(
+            OrderedManifest::list_weighted(self)
+                .map(anyhow::Ok)
+                .collect::<Vec<_>>(),
+        )
+        .boxed())
+    }
+    async fn lookup_weighted(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::LeafId>>> {
+        anyhow::Ok(OrderedManifest::lookup_weighted(self, name))
+    }
+}
+
 impl OrderedManifest for SkeletonManifest {
     fn lookup_weighted(
         &self,
