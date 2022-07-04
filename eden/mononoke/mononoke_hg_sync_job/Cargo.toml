@@ -58,6 +58,7 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
 regex = "1.5.4"
+repo_lock = { version = "0.1.0", path = "../repo_attributes/repo_lock/repo_lock" }
 repo_read_write_status = { version = "0.1.0", path = "../repo_client/repo_read_write_status" }
 retry = { version = "0.1.0", path = "../common/retry" }
 revset = { version = "0.1.0", path = "../revset" }

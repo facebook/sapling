@@ -13,24 +13,10 @@
 /// It's a special job that is used to synchronize Mononoke to Mercurial when Mononoke is a source
 /// of truth. All writes to Mononoke are replayed to Mercurial using this job. That can be used
 /// to verify Mononoke's correctness and/or use hg as a disaster recovery mechanism.
+use anyhow::anyhow;
 use anyhow::bail;
-/// Mononoke -> hg sync job
-///
-/// It's a special job that is used to synchronize Mononoke to Mercurial when Mononoke is a source
-/// of truth. All writes to Mononoke are replayed to Mercurial using this job. That can be used
-/// to verify Mononoke's correctness and/or use hg as a disaster recovery mechanism.
 use anyhow::format_err;
-/// Mononoke -> hg sync job
-///
-/// It's a special job that is used to synchronize Mononoke to Mercurial when Mononoke is a source
-/// of truth. All writes to Mononoke are replayed to Mercurial using this job. That can be used
-/// to verify Mononoke's correctness and/or use hg as a disaster recovery mechanism.
 use anyhow::Error;
-/// Mononoke -> hg sync job
-///
-/// It's a special job that is used to synchronize Mononoke to Mercurial when Mononoke is a source
-/// of truth. All writes to Mononoke are replayed to Mercurial using this job. That can be used
-/// to verify Mononoke's correctness and/or use hg as a disaster recovery mechanism.
 use anyhow::Result;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
@@ -70,12 +56,19 @@ use http::Uri;
 use lfs_verifier::LfsVerifier;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::HgsqlName;
+use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::RepoReadOnly;
 use mononoke_api_types::InnerRepo;
 use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use mutable_counters::ArcMutableCounters;
 use mutable_counters::MutableCountersArc;
 use regex::Regex;
+use repo_lock::AlwaysUnlockedRepoLock;
+use repo_lock::MutableRepoLock;
+use repo_lock::RepoLock;
+use repo_lock::RepoLockState;
+use repo_lock::SqlRepoLock;
 use repo_read_write_status::RepoReadWriteFetcher;
 use repo_read_write_status::SqlRepoReadWriteStatus;
 use retry::retry;
@@ -85,6 +78,7 @@ use slog::error;
 use slog::info;
 use sql_construct::facebook::FbSqlConstruct;
 use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 
 use std::collections::HashMap;
@@ -118,6 +112,7 @@ const ARG_DARKSTORM_BACKUP_REPO_GROUP: &str = "darkstorm-backup-repo";
 const ARG_DARKSTORM_BACKUP_REPO_ID: &str = "darkstorm-backup-repo-id";
 const ARG_DARKSTORM_BACKUP_REPO_NAME: &str = "darkstorm-backup-repo-name";
 const ARG_BYPASS_READONLY: &str = "bypass-readonly";
+const ARG_SQLITE_REPO_LOCK_DB: &str = "sqlite-repo-lock-db-path";
 const MODE_SYNC_ONCE: &str = "sync-once";
 const MODE_SYNC_LOOP: &str = "sync-loop";
 const LATEST_REPLAYED_REQUEST_KEY: &str = "latest-replayed-request";
@@ -253,12 +248,18 @@ fn get_read_write_fetcher(
     fb: FacebookInit,
     mysql_options: &MysqlOptions,
     repo_lock_db_addr: Option<&str>,
+    repo_lock_sqlite_db_path: Option<&str>,
     hgsql_name: HgsqlName,
+    repo_id: RepositoryId,
     lock_on_failure: bool,
     use_sqlite: bool,
     readonly_storage: bool,
-) -> Result<(Option<RepoReadWriteFetcher>, RepoReadWriteFetcher)> {
-    let unlock_via: Result<RepoReadWriteFetcher> = match repo_lock_db_addr {
+    metadata_db_config: &MetadataDatabaseConfig,
+) -> Result<(
+    Option<(RepoReadWriteFetcher, Arc<dyn RepoLock>)>,
+    (RepoReadWriteFetcher, Arc<dyn RepoLock>),
+)> {
+    let unlock_via: Result<(RepoReadWriteFetcher, Arc<dyn RepoLock>)> = match repo_lock_db_addr {
         Some(repo_lock_db_addr) => {
             let sql_repo_read_write_status = if use_sqlite {
                 let path = Path::new(repo_lock_db_addr);
@@ -271,12 +272,33 @@ fn get_read_write_fetcher(
                     readonly_storage,
                 )
             };
-            sql_repo_read_write_status.and_then(|connection| {
-                Ok(RepoReadWriteFetcher::new(
-                    Some(connection),
-                    RepoReadOnly::ReadWrite,
-                    hgsql_name,
-                ))
+
+            let sql_repo_lock = if use_sqlite {
+                let sqlite_path = repo_lock_sqlite_db_path
+                    .ok_or_else(|| anyhow!("Missing {} arg", ARG_SQLITE_REPO_LOCK_DB))?;
+
+                SqlRepoLock::with_sqlite_path(sqlite_path, readonly_storage)?
+            } else {
+                SqlRepoLock::with_metadata_database_config(
+                    fb,
+                    metadata_db_config,
+                    mysql_options,
+                    readonly_storage,
+                )?
+            };
+
+            let repo_lock: Arc<dyn RepoLock> =
+                Arc::new(MutableRepoLock::new(sql_repo_lock, repo_id));
+
+            sql_repo_read_write_status.map(|connection| {
+                (
+                    RepoReadWriteFetcher::new(
+                        Some(connection),
+                        RepoReadOnly::ReadWrite,
+                        hgsql_name,
+                    ),
+                    repo_lock,
+                )
             })
         }
         None => {
@@ -285,10 +307,11 @@ fn get_read_write_fetcher(
                     "repo_lock_db_addr not specified with lock_on_failure",
                 ))
             } else {
-                Ok(RepoReadWriteFetcher::new(
-                    None,
-                    RepoReadOnly::ReadWrite,
-                    hgsql_name,
+                let repo_lock: Arc<dyn RepoLock> = Arc::new(AlwaysUnlockedRepoLock);
+
+                Ok((
+                    RepoReadWriteFetcher::new(None, RepoReadOnly::ReadWrite, hgsql_name),
+                    repo_lock,
                 ))
             }
         }
@@ -307,17 +330,22 @@ fn get_read_write_fetcher(
 async fn unlock_repo_if_locked(
     ctx: &CoreContext,
     read_write_fetcher: &RepoReadWriteFetcher,
+    repo_lock: &dyn RepoLock,
 ) -> Result<(), Error> {
     let repo_state = read_write_fetcher.readonly().await?;
 
     match repo_state {
         RepoReadOnly::ReadOnly(ref lock_msg) if lock_msg == LOCK_REASON => {
-            let updated = read_write_fetcher
+            let hgsql_updated = read_write_fetcher
                 .set_mononoke_read_write(&UNLOCK_REASON.to_string())
                 .await?;
-            if updated {
+
+            let mononoke_updated = repo_lock.set_repo_lock(RepoLockState::Unlocked).await?;
+
+            if hgsql_updated && mononoke_updated {
                 info!(ctx.logger(), "repo is unlocked");
             }
+
             Ok(())
         }
         RepoReadOnly::ReadOnly(..) | RepoReadOnly::ReadWrite => Ok(()),
@@ -327,18 +355,25 @@ async fn unlock_repo_if_locked(
 async fn lock_repo_if_unlocked(
     ctx: &CoreContext,
     read_write_fetcher: &RepoReadWriteFetcher,
+    repo_lock: &dyn RepoLock,
 ) -> Result<(), Error> {
     info!(ctx.logger(), "locking repo...");
     let repo_state = read_write_fetcher.readonly().await?;
 
     match repo_state {
         RepoReadOnly::ReadWrite => {
-            let updated = read_write_fetcher
+            let hgsql_updated = read_write_fetcher
                 .set_read_only(&LOCK_REASON.to_string())
                 .await?;
-            if updated {
+
+            let mononoke_updated = repo_lock
+                .set_repo_lock(RepoLockState::Locked(LOCK_REASON.to_string()))
+                .await?;
+
+            if hgsql_updated && mononoke_updated {
                 info!(ctx.logger(), "repo is locked now");
             }
+
             Ok(())
         }
 
@@ -351,7 +386,7 @@ async fn lock_repo_if_unlocked(
 
 fn build_outcome_handler<'a>(
     ctx: &'a CoreContext,
-    lock_via: &'a Option<RepoReadWriteFetcher>,
+    lock_via: &'a Option<(RepoReadWriteFetcher, Arc<dyn RepoLock>)>,
 ) -> impl Fn(Outcome) -> BoxFuture<'a, Result<Vec<BookmarkUpdateLogEntry>, Error>> {
     move |res| {
         async move {
@@ -369,8 +404,10 @@ fn build_outcome_handler<'a>(
                     Err(e)
                 }
                 Err(EntryError { cause: e, .. }) => match &lock_via {
-                    Some(repo_read_write_fetcher) => {
-                        let _ = lock_repo_if_unlocked(ctx, repo_read_write_fetcher).await;
+                    Some((repo_read_write_fetcher, repo_lock)) => {
+                        let _ =
+                            lock_repo_if_unlocked(ctx, repo_read_write_fetcher, repo_lock.as_ref())
+                                .await;
                         Err(e)
                     }
                     None => Err(e),
@@ -543,16 +580,14 @@ fn loop_over_log_entries<'a, B>(
     scuba_sample: &'a MononokeScubaSampleBuilder,
     fetch_up_to_bundles: u64,
     repo_read_write_fetcher: &'a RepoReadWriteFetcher,
+    repo_lock: Arc<dyn RepoLock>,
 ) -> impl Stream<Item = Result<Vec<BookmarkUpdateLogEntry>, Error>> + 'a
 where
     B: BookmarkUpdateLog + Clone,
 {
     stream::try_unfold(Some(start_id), {
-        let ctx = ctx.clone();
-        let bookmarks = bookmarks.clone();
         move |maybe_id| {
-            let ctx = ctx.clone();
-            let bookmarks = bookmarks.clone();
+            cloned!(ctx, bookmarks, repo_lock);
             async move {
                 match maybe_id {
                     Some(current_id) => {
@@ -576,9 +611,13 @@ where
                                     // Some(current_id) means that bookmarks will be fetched again
                                     tokio::time::sleep(Duration::new(SLEEP_SECS, 0)).await;
 
-                                    unlock_repo_if_locked(&ctx, &repo_read_write_fetcher)
-                                        .watched(ctx.logger())
-                                        .await?;
+                                    unlock_repo_if_locked(
+                                        &ctx,
+                                        repo_read_write_fetcher,
+                                        repo_lock.as_ref(),
+                                    )
+                                    .watched(ctx.logger())
+                                    .await?;
                                     Ok(Some((vec![], Some(current_id))))
                                 } else {
                                     Ok(Some((vec![], None)))
@@ -859,10 +898,16 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         ctx.fb,
         &mysql_options,
         get_repo_sqldb_address(&matches, &repo_config.hgsql_name)?.as_deref(),
+        // This SQLite DB is used for the new RepoLock code, it will become the default
+        // in a later diff.
+        matches.value_of(ARG_SQLITE_REPO_LOCK_DB),
         repo_config.hgsql_name.clone(),
+        repo_id,
         matches.is_present("lock-on-failure"),
+        // TODO: Remove this and instead use ARG_SQLITE_REPO_LOCK_DB to control sqlite usage.
         matches.is_present("repo-lock-sqlite"),
         readonly_storage.0,
+        &repo_config.storage_config.metadata,
     )?;
 
     match matches.subcommand() {
@@ -968,7 +1013,8 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                 loop_forever,
                 &scuba_sample,
                 combine_bundles,
-                &unlock_via,
+                &unlock_via.0,
+                unlock_via.1,
             )
             .try_take_while({
                 borrowed!(can_continue);
@@ -1170,6 +1216,13 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .takes_value(false)
                 .required(false)
                 .help("Enable sqlite for repo_lock access, path is in repo-lock-db-address"),
+        )
+        .arg(
+            Arg::with_name(ARG_SQLITE_REPO_LOCK_DB)
+                .long(ARG_SQLITE_REPO_LOCK_DB)
+                .takes_value(true)
+                .required(false)
+                .help("Path to a sqlite DB for the repo_lock"),
         )
         .arg(
             Arg::with_name("repo-lock-db-address")
