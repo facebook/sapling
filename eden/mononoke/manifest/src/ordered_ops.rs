@@ -19,15 +19,16 @@ use futures::pin_mut;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use nonzero_ext::nonzero;
 
 use crate::ops::Diff;
 use crate::select::select_path_tree;
+use crate::AsyncManifest as Manifest;
+use crate::AsyncOrderedManifest as OrderedManifest;
 use crate::Entry;
-use crate::Manifest;
-use crate::OrderedManifest;
 use crate::PathOrPrefix;
 use crate::PathTree;
 use crate::StoreLoadable;
@@ -107,8 +108,9 @@ pub trait ManifestOrderedOps<Store>
 where
     Store: Sync + Send + Clone + 'static,
     Self: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
-    <Self as StoreLoadable<Store>>::Value: Manifest<TreeId = Self> + OrderedManifest + Send,
-    <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId: Clone + Send + Eq + Unpin,
+    <Self as StoreLoadable<Store>>::Value:
+        Manifest<Store, TreeId = Self> + OrderedManifest<Store> + Send + Sync,
+    <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId: Clone + Send + Eq + Unpin,
 {
     fn find_entries_ordered<I, P>(
         &self,
@@ -121,7 +123,7 @@ where
         Result<
             (
                 Option<MPath>,
-                Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId>,
+                Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>,
             ),
             Error,
         >,
@@ -181,7 +183,8 @@ where
                                     Entry::Tree(manifest_id),
                                 )));
                             }
-                            for (name, entry) in manifest.list_weighted() {
+                            let mut stream = manifest.list_weighted(ctx, store).await?;
+                            while let Some((name, entry)) = stream.try_next().await? {
                                 if after.skip(&name) {
                                     continue;
                                 }
@@ -220,7 +223,7 @@ where
                                 if after.skip(&name) {
                                     continue;
                                 }
-                                if let Some(entry) = manifest.lookup_weighted(&name) {
+                                if let Some(entry) = manifest.lookup_weighted(ctx, store, &name).await? {
                                     let path = Some(MPath::join_opt_element(path.as_ref(), &name));
                                     match entry {
                                         Entry::Leaf(leaf) => {
@@ -277,7 +280,7 @@ where
     ) -> BoxStream<
         'static,
         Result<
-            Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId>>,
+            Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>>,
             Error,
         >,
     > {
@@ -300,7 +303,9 @@ where
     ) -> BoxStream<'static, Result<Out, Error>>
     where
         FilterMap: Fn(
-                Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId>>,
+                Diff<
+                    Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>,
+                >,
             ) -> Option<Out>
             + Send
             + Sync
@@ -381,8 +386,8 @@ where
                                 }
 
                                 let iter = EntryDiffIterator::new(
-                                    left_mf.list_weighted(),
-                                    right_mf.list_weighted(),
+                                    left_mf.list_weighted(ctx, store).await?.try_collect::<Vec<_>>().await?.into_iter(),
+                                    right_mf.list_weighted(ctx, other_store).await?.try_collect::<Vec<_>>().await?.into_iter(),
                                 );
                                 for (name, left, right) in iter {
                                     if after.skip(&name) || left == right {
@@ -502,7 +507,8 @@ where
                                     );
                                 }
                                 let manifest = tree.load(ctx, other_store).await?;
-                                for (name, entry) in manifest.list_weighted() {
+                            let mut stream = manifest.list_weighted(ctx, store).await?;
+                            while let Some((name, entry)) = stream.try_next().await? {
                                     if after.skip(&name) {
                                         continue;
                                     }
@@ -535,7 +541,8 @@ where
                                     );
                                 }
                                 let manifest = tree.load(ctx, store).await?;
-                                for (name, entry) in manifest.list_weighted() {
+                            let mut stream = manifest.list_weighted(ctx, store).await?;
+                            while let Some((name, entry)) = stream.try_next().await? {
                                     if after.skip(&name) {
                                         continue;
                                     }
@@ -637,7 +644,8 @@ impl<TreeId, Store> ManifestOrderedOps<Store> for TreeId
 where
     Store: Sync + Send + Clone + 'static,
     Self: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
-    <Self as StoreLoadable<Store>>::Value: Manifest<TreeId = Self> + OrderedManifest + Send,
-    <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId: Send + Clone + Eq + Unpin,
+    <Self as StoreLoadable<Store>>::Value:
+        Manifest<Store, TreeId = Self> + OrderedManifest<Store> + Send + Sync,
+    <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId: Send + Clone + Eq + Unpin,
 {
 }

@@ -19,6 +19,7 @@ pub use crate::ops::ManifestOps;
 pub use crate::ordered_ops::ManifestOrderedOps;
 pub use crate::select::PathOrPrefix;
 pub use crate::types::AsyncManifest;
+pub use crate::types::AsyncOrderedManifest;
 pub use crate::types::Entry;
 pub use crate::types::Manifest;
 pub use crate::types::OrderedManifest;
