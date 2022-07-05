@@ -69,6 +69,7 @@ repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 repo_read_write_status = { version = "0.1.0", path = "../repo_client/repo_read_write_status" }
+repo_sparse_profiles = { version = "0.1.0", path = "../repo_attributes/repo_sparse_profiles" }
 revset = { version = "0.1.0", path = "../revset" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }

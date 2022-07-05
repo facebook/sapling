@@ -116,6 +116,9 @@ use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
 use repo_permission_checker::ArcRepoPermissionChecker;
 use repo_permission_checker::ProdRepoPermissionChecker;
+use repo_sparse_profiles::ArcRepoSparseProfiles;
+use repo_sparse_profiles::RepoSparseProfiles;
+use repo_sparse_profiles::SqlSparseProfilesSizes;
 use requests_table::ArcLongRunningRequestsQueue;
 use requests_table::SqlLongRunningRequestsQueue;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -1136,6 +1139,18 @@ impl RepoFactory {
         .context(RepoFactoryError::HookManager)?;
 
         Ok(Arc::new(hook_manager))
+    }
+
+    pub async fn sparse_profiles(
+        &self,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcRepoSparseProfiles> {
+        let sql = self
+            .open::<SqlSparseProfilesSizes>(&repo_config.storage_config.metadata)
+            .await?;
+        Ok(Arc::new(RepoSparseProfiles {
+            sql_profile_sizes: Some(sql),
+        }))
     }
 }
 

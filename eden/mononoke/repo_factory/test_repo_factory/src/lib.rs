@@ -91,6 +91,9 @@ use repo_identity::RepoIdentity;
 use repo_lock::SqlRepoLock;
 use repo_permission_checker::AlwaysAllowMockRepoPermissionChecker;
 use repo_permission_checker::ArcRepoPermissionChecker;
+use repo_sparse_profiles::ArcRepoSparseProfiles;
+use repo_sparse_profiles::RepoSparseProfiles;
+use repo_sparse_profiles::SqlSparseProfilesSizes;
 use requests_table::SqlLongRunningRequestsQueue;
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::new_test_segmented_changelog;
@@ -212,6 +215,7 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
         metadata_con.execute_batch(SegmentedChangelogSqlConnections::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlRepoLock::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlSparseProfilesSizes::CREATION_QUERY)?;
         let metadata_db =
             SqlConnectionsWithSchema::new_single(Connection::with_sqlite(metadata_con));
 
@@ -586,5 +590,12 @@ impl TestRepoFactory {
             repo_identity.name().to_string(),
             Box::new(content_store),
         ))
+    }
+
+    /// Sparse profiles
+    pub fn sparse_profile(&self, _repo_config: &ArcRepoConfig) -> ArcRepoSparseProfiles {
+        Arc::new(RepoSparseProfiles {
+            sql_profile_sizes: None,
+        })
     }
 }

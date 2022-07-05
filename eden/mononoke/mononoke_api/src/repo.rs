@@ -89,6 +89,7 @@ use regex::Regex;
 use repo_cross_repo::RepoCrossRepo;
 use repo_read_write_status::RepoReadWriteFetcher;
 use repo_read_write_status::SqlRepoReadWriteStatus;
+use repo_sparse_profiles::RepoSparseProfiles;
 use revset::AncestorsNodeStream;
 use segmented_changelog::CloneData;
 use segmented_changelog::DisabledSegmentedChangelog;
@@ -473,6 +474,7 @@ impl Repo {
                 Arc::new(InProcessLease::new()),
             )),
             acl_regions: build_disabled_acl_regions(),
+            sparse_profiles: Arc::new(RepoSparseProfiles::new(None)),
         };
 
         let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(ctx.clone(), &inner);
@@ -580,6 +582,10 @@ impl Repo {
 
     pub fn mutable_renames(&self) -> &Arc<MutableRenames> {
         &self.inner.mutable_renames
+    }
+
+    pub fn sparse_profiles(&self) -> &Arc<RepoSparseProfiles> {
+        &self.inner.sparse_profiles
     }
 
     pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
@@ -962,6 +968,10 @@ impl RepoContext {
 
     pub fn mutable_renames(&self) -> &Arc<MutableRenames> {
         &self.repo.mutable_renames()
+    }
+
+    pub fn sparse_profiles(&self) -> &Arc<RepoSparseProfiles> {
+        self.repo.sparse_profiles()
     }
 
     pub fn derive_changeset_info_enabled(&self) -> bool {

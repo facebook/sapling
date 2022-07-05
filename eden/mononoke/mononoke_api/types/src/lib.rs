@@ -27,6 +27,7 @@ use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use repo_permission_checker::RepoPermissionChecker;
+use repo_sparse_profiles::RepoSparseProfiles;
 use segmented_changelog_types::SegmentedChangelog;
 use skiplist::SkiplistIndex;
 
@@ -75,6 +76,9 @@ pub struct InnerRepo {
 
     #[facet]
     pub acl_regions: dyn AclRegions,
+
+    #[facet]
+    pub sparse_profiles: RepoSparseProfiles,
 }
 
 impl AsBlobRepo for InnerRepo {

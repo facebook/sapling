@@ -28,12 +28,14 @@ use metaconfig_types::SparseProfilesConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use pathmatcher::Matcher;
+use repo_sparse_profiles::RepoSparseProfiles;
 use tests_utils::store_files;
 use tests_utils::CreateCommitContext;
 use types::RepoPath;
 
 use std::collections::BTreeMap;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 async fn init_sparse_profile(
     ctx: &CoreContext,
@@ -101,6 +103,7 @@ fn mock_sparse_monitoring(
 ) -> Result<SparseProfileMonitoring> {
     SparseProfileMonitoring::new(
         "test",
+        Arc::new(RepoSparseProfiles::new(None)),
         Some(SparseProfilesConfig {
             sparse_profiles_location: "sparse".to_string(),
             excluded_paths,

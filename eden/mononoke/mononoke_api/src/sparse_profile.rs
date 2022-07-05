@@ -30,6 +30,7 @@ use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::MPath;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
+use repo_sparse_profiles::RepoSparseProfiles;
 use types::RepoPath;
 
 use std::collections::HashMap;
@@ -46,6 +47,8 @@ use std::sync::Arc;
 //     b. If monitored_profiles is None, then profiles would be checked
 //        in configured location with respect of optional excludes.
 pub struct SparseProfileMonitoring {
+    #[allow(unused)]
+    sql_sparse_profiles: Arc<RepoSparseProfiles>,
     sparse_config: SparseProfilesConfig,
     exact_profiles_matcher: pathmatcher::TreeMatcher,
     profiles_location_with_excludes_matcher: pathmatcher::TreeMatcher,
@@ -56,6 +59,7 @@ pub struct SparseProfileMonitoring {
 impl SparseProfileMonitoring {
     pub fn new(
         repo_name: &str,
+        sql_sparse_profiles: Arc<RepoSparseProfiles>,
         maybe_sparse_config: Option<SparseProfilesConfig>,
         monitoring_profiles: MonitoringProfiles,
     ) -> Result<Self, MononokeError> {
@@ -107,6 +111,7 @@ impl SparseProfileMonitoring {
             )
         };
         Ok(Self {
+            sql_sparse_profiles,
             sparse_config,
             exact_profiles_matcher,
             profiles_location_with_excludes_matcher,

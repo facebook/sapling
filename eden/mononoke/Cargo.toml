@@ -365,6 +365,7 @@ members = [
   "repo_attributes/repo_identity",
   "repo_attributes/repo_lock/repo_lock",
   "repo_attributes/repo_permission_checker",
+  "repo_attributes/repo_sparse_profiles",
   "repo_client",
   "repo_client/getbundle_response",
   "repo_client/mononoke_repo",

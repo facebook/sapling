@@ -46,6 +46,7 @@ impl SourceControlServiceImpl {
         let profiles = convert_profiles_params(params.profiles).await?;
         let monitor = SparseProfileMonitoring::new(
             repo.name(),
+            repo.sparse_profiles().clone(),
             repo.config().sparse_profiles_config.clone(),
             profiles,
         )?;
@@ -84,6 +85,7 @@ impl SourceControlServiceImpl {
         let profiles = convert_profiles_params(params.profiles).await?;
         let monitor = SparseProfileMonitoring::new(
             repo.name(),
+            repo.sparse_profiles().clone(),
             repo.config().sparse_profiles_config.clone(),
             profiles,
         )?;
