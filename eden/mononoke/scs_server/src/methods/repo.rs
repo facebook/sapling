@@ -39,6 +39,7 @@ use mononoke_api_hg::RepoContextHgExt;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
+use permission_checker::MononokeIdentity;
 use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;
@@ -652,8 +653,17 @@ impl SourceControlServiceImpl {
         let push_source = CrossRepoPushSource::from_request(&params.__internal_only_push_source)?;
         if push_source != CrossRepoPushSource::NativeToThisRepo {
             // TODO: Once we move to a land service, this internal_only argument can be removed
-            repo.check_service_permissions("scm_service_identity".to_string())
-                .await?;
+            let original_identities = repo.ctx().metadata().original_identities();
+            if !original_identities.map_or(false, |ids| {
+                ids.contains(&MononokeIdentity::from_identity(&self.identity))
+            }) {
+                return Err(errors::invalid_request(format!(
+                    "Insufficient permissions to use internal only option. Identities: {}",
+                    original_identities
+                        .map_or_else(|| "<none>".to_string(), permission_checker::pretty_print)
+                ))
+                .into());
+            }
         }
         let bookmark_restrictions =
             BookmarkKindRestrictions::from_request(&params.bookmark_restrictions)?;

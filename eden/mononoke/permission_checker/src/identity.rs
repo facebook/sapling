@@ -8,6 +8,7 @@
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use itertools::Itertools;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
@@ -78,6 +79,10 @@ impl<'de> Deserialize<'de> for MononokeIdentity {
         let s = String::deserialize(deserializer)?;
         Self::from_str(&s).map_err(serde::de::Error::custom)
     }
+}
+
+pub fn pretty_print(identities: &MononokeIdentitySet) -> String {
+    identities.iter().map(ToString::to_string).join(",")
 }
 
 pub trait MononokeIdentitySetExt {

@@ -17,6 +17,7 @@ pub use checker::ArcPermissionChecker;
 pub use checker::BoxPermissionChecker;
 pub use checker::PermissionChecker;
 pub use checker::PermissionCheckerBuilder;
+pub use identity::pretty_print;
 pub use identity::MononokeIdentity;
 pub use identity::MononokeIdentitySet;
 pub use identity::MononokeIdentitySetExt;

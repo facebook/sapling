@@ -142,6 +142,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         scuba_builder.clone(),
         args.scribe_logging_args.get_scribe(fb)?,
         security_checker,
+        &app.repo_configs().common,
     );
     let service = {
         move |proto| {

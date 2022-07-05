@@ -26,6 +26,7 @@ use itertools::Itertools;
 use login_objects_thrift::EnvironmentType;
 use maplit::hashset;
 use megarepo_api::MegarepoApi;
+use metaconfig_types::CommonConfig;
 use metadata::Metadata;
 use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetId;
@@ -63,7 +64,6 @@ use crate::scuba_params::AddScubaParams;
 use crate::scuba_response::AddScubaResponse;
 use crate::specifiers::SpecifierExt;
 
-const SCS_IDENTITY: &str = "scm_service_identity";
 const FORWARDED_IDENTITIES_HEADER: &str = "scm_forwarded_identities";
 const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
 const FORWARDED_CLIENT_DEBUG_HEADER: &str = "scm_forwarded_client_debug";
@@ -94,7 +94,7 @@ pub(crate) struct SourceControlServiceImpl {
     pub(crate) megarepo_api: Arc<MegarepoApi>,
     pub(crate) logger: Logger,
     pub(crate) scuba_builder: MononokeScubaSampleBuilder,
-    pub(crate) service_identity: Identity,
+    pub(crate) identity: Identity,
     pub(crate) scribe: Scribe,
     identity_proxy_checker: Arc<ConnectionSecurityChecker>,
 }
@@ -110,6 +110,7 @@ impl SourceControlServiceImpl {
         mut scuba_builder: MononokeScubaSampleBuilder,
         scribe: Scribe,
         identity_proxy_checker: ConnectionSecurityChecker,
+        common_config: &CommonConfig,
     ) -> Self {
         scuba_builder.add_common_server_data();
 
@@ -119,7 +120,10 @@ impl SourceControlServiceImpl {
             megarepo_api,
             logger,
             scuba_builder,
-            service_identity: Identity::with_service(SCS_IDENTITY),
+            identity: Identity::new(
+                common_config.internal_identity.id_type.as_str(),
+                common_config.internal_identity.id_data.as_str(),
+            ),
             scribe,
             identity_proxy_checker: Arc::new(identity_proxy_checker),
         }
@@ -138,7 +142,7 @@ impl SourceControlServiceImpl {
     ) -> Result<CoreContext, errors::ServiceError> {
         let identities: MononokeIdentitySet = req_ctxt
             .identities_including_cats(
-                &self.service_identity,
+                &self.identity,
                 &[EnvironmentType::PROD, EnvironmentType::CORP],
             )
             .map_err(errors::internal_error)?
@@ -224,6 +228,7 @@ impl SourceControlServiceImpl {
     ) -> Result<SessionContainer, errors::ServiceError> {
         let mut client_ip = None;
         let mut client_debug = false;
+        let mut original_identities = None;
 
         let header = |h: &str| req_ctxt.header(h).map_err(errors::invalid_request);
 
@@ -249,7 +254,7 @@ impl SourceControlServiceImpl {
                 serde_json::from_str(forwarded_identities.as_str())
                     .map_err(errors::invalid_request)?;
             // Fully replace the identities with the forwarded identities
-            identities = new_identities;
+            original_identities = Some(std::mem::replace(&mut identities, new_identities));
             client_ip = Some(
                 forwarded_ip
                     .parse::<IpAddr>()
@@ -258,10 +263,12 @@ impl SourceControlServiceImpl {
             client_debug = header(FORWARDED_CLIENT_DEBUG_HEADER)?.is_some();
         }
 
-        let metadata =
-            Arc::new(Metadata::new(None, false, identities, client_debug, client_ip).await);
+        let mut metadata = Metadata::new(None, false, identities, client_debug, client_ip).await;
+        if let Some(original_identities) = original_identities {
+            metadata.add_original_identities(original_identities);
+        }
         let session = SessionContainer::builder(self.fb)
-            .metadata(metadata)
+            .metadata(Arc::new(metadata))
             .blobstore_maybe_read_qps_limiter(tunables().get_scs_request_read_qps())
             .await
             .blobstore_maybe_write_qps_limiter(tunables().get_scs_request_write_qps())

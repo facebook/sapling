@@ -25,6 +25,9 @@ pub struct Metadata {
     session_id: SessionId,
     is_trusted_client: bool,
     identities: MononokeIdentitySet,
+    /// If the identities were proxied, this is the true and original
+    /// identities from the request.
+    original_identities: Option<MononokeIdentitySet>,
     client_debug: bool,
     client_ip: Option<IpAddr>,
     client_hostname: Option<String>,
@@ -66,6 +69,7 @@ impl Metadata {
             session_id,
             is_trusted_client,
             identities,
+            original_identities: None,
             client_debug,
             client_ip,
             client_hostname,
@@ -109,12 +113,21 @@ impl Metadata {
         self
     }
 
+    pub fn add_original_identities(&mut self, identities: MononokeIdentitySet) -> &mut Self {
+        self.original_identities = Some(identities);
+        self
+    }
+
     pub fn session_id(&self) -> &SessionId {
         &self.session_id
     }
 
     pub fn identities(&self) -> &MononokeIdentitySet {
         &self.identities
+    }
+
+    pub fn original_identities(&self) -> Option<&MononokeIdentitySet> {
+        self.original_identities.as_ref()
     }
 
     pub fn raw_encoded_cats(&self) -> &Option<String> {
