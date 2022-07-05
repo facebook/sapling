@@ -29,6 +29,7 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::io::Read;
 use std::io::Write;
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
