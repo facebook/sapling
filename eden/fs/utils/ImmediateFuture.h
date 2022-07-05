@@ -80,7 +80,7 @@ class ImmediateFuture {
   ImmediateFuture<T>& operator=(ImmediateFuture<T>&&) noexcept;
 
   /**
-   * Queue the func continuation once this future is ready.
+   * Call the func continuation once this future is ready.
    *
    * If this ImmediateFuture already has a value, `func` will be called without
    * waiting. Otherwise, it will be called on the executor on which the end of
@@ -101,7 +101,7 @@ class ImmediateFuture {
       Func&& func) &&;
 
   /**
-   * Queue the func continuation once this future is ready.
+   * Call the func continuation once this future is ready.
    *
    * If this ImmediateFuture already has a value, `func` will be called without
    * waiting. Otherwise, it will be called on the executor on which the end of
@@ -120,6 +120,22 @@ class ImmediateFuture {
   template <typename Func>
   ImmediateFuture<detail::continuation_result_t<Func, folly::Try<T>>> thenTry(
       Func&& func) &&;
+
+  /**
+   * Call the func continuation once this future is ready.
+   *
+   * This is a short-hand for:
+   *
+   *   std::move(fut)
+   *     thenTry([](Try<T> value) {
+   *       if (value.hasException()) {
+   *         return func(value.exception());
+   *       }
+   *       return value;
+   *     });
+   */
+  template <typename Func>
+  ImmediateFuture<T> thenError(Func&& func) &&;
 
   /**
    * Call func unconditionally once this future is ready and

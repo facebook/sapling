@@ -534,3 +534,15 @@ TEST(ImmediateFuture, unit_method_error) {
   auto res = std::move(future).getTry();
   EXPECT_THROW_RE(res.value(), std::logic_error, "Test");
 }
+
+TEST(ImmediateFuture, thenError) {
+  int value = 42;
+  ImmediateFuture<int> fortyTwo{value};
+  auto exc = std::move(fortyTwo).thenValue(
+      [](int) -> int { throw std::logic_error("Test exception"); });
+  auto fortyThree = std::move(exc).thenError([](folly::exception_wrapper exc) {
+    EXPECT_THROW_RE(exc.throw_exception(), std::logic_error, "Test exception");
+    return 43;
+  });
+  EXPECT_EQ(std::move(fortyThree).get(), 43);
+}

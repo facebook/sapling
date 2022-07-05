@@ -108,6 +108,20 @@ ImmediateFuture<T>::thenValue(Func&& func) && {
 
 template <typename T>
 template <typename Func>
+ImmediateFuture<T> ImmediateFuture<T>::thenError(Func&& func) && {
+  return std::move(*this).thenTry(
+      [func = std::forward<Func>(func)](
+          folly::Try<T>&& try_) mutable -> ImmediateFuture<T> {
+        if (try_.hasValue()) {
+          return std::move(try_);
+        } else {
+          return func(std::move(try_).exception());
+        }
+      });
+}
+
+template <typename T>
+template <typename Func>
 ImmediateFuture<T> ImmediateFuture<T>::ensure(Func&& func) && {
   return std::move(*this).thenTry(
       [func = std::forward<Func>(func)](
