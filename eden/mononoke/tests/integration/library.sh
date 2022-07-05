@@ -628,6 +628,10 @@ CONFIG
   fi
 
   cat >> common/common.toml <<CONFIG
+[internal_identity]
+identity_type = "SERVICE_IDENTITY"
+identity_data = "proxy"
+
 [redaction_config]
 blobstore = "$blobstorename"
 darkstorm_blobstore = "$blobstorename"

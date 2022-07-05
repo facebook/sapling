@@ -272,6 +272,9 @@ def _setup_mononoke_configs(
     common_config = RawCommonConfig(
         enable_http_control_api=True,
         redaction_config=redaction_config,
+        internal_identity=RawAllowlistIdentity(
+            identity_type="SERVICE_IDENTITY", identity_data="internal"
+        ),
         global_allowlist=[allowlist_entry],
     )
     mononoke_config: RawRepoConfigs = RawRepoConfigs(

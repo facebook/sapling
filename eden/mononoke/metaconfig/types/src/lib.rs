@@ -112,7 +112,7 @@ pub struct RedactionConfig {
 }
 
 /// Configuration for all repos
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CommonConfig {
     /// Hipster tier that is permitted to act as a trusted proxy.
     pub trusted_parties_hipster_tier: Option<String>,
@@ -129,6 +129,8 @@ pub struct CommonConfig {
     pub enable_http_control_api: bool,
     /// Configuration for redaction of blobs
     pub redaction_config: RedactionConfig,
+    /// Service identity for interal Mononoke services.
+    pub internal_identity: AllowlistIdentity,
 }
 
 /// Configuration for logging of censored blobstore accesses

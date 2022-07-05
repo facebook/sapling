@@ -395,6 +395,7 @@ fn parse_common_config(
         .filter(|category| !category.is_empty());
     let scuba_censored_table = common.scuba_censored_table;
     let scuba_censored_local_path = common.scuba_local_path_censored;
+    let internal_identity = common.internal_identity.convert()?;
 
     let censored_scuba_params = CensoredScubaParams {
         table: scuba_censored_table,
@@ -433,6 +434,7 @@ fn parse_common_config(
         enable_http_control_api: common.enable_http_control_api,
         censored_scuba_params,
         redaction_config,
+        internal_identity,
     })
 }
 
@@ -888,6 +890,10 @@ mod test {
             scuba_censored_table="censored_table"
             scuba_local_path_censored="censored_local_path"
             trusted_parties_hipster_tier="tier1"
+            
+            [internal_identity]
+            identity_type = "SERVICE_IDENTITY"
+            identity_data = "internal"
 
             [redaction_config]
             blobstore="main"
@@ -1308,6 +1314,10 @@ mod test {
                     darkstorm_blobstore: None,
                     redaction_sets_location: "loc".to_string(),
                 },
+                internal_identity: AllowlistIdentity {
+                    id_type: "SERVICE_IDENTITY".to_string(),
+                    id_data: "internal".to_string(),
+                }
             }
         );
         assert_eq!(
@@ -1469,6 +1479,10 @@ mod test {
         [redaction_config]
         blobstore = "multiplex_store"
         redaction_sets_location = "loc"
+        
+        [internal_identity]
+        identity_type = "SERVICE_IDENTITY"
+        identity_data = "internal"
         "#;
 
         let paths = btreemap! {
@@ -1581,6 +1595,10 @@ mod test {
         [redaction_config]
         blobstore = "multiplex_store"
         redaction_sets_location = "loc"
+        
+        [internal_identity]
+        identity_type = "SERVICE_IDENTITY"
+        identity_data = "internal"
         "#;
 
         let paths = btreemap! {
@@ -1691,6 +1709,10 @@ mod test {
         [redaction_config]
         blobstore = "multiplex_store"
         redaction_sets_location = "loc"
+        
+        [internal_identity]
+        identity_type = "SERVICE_IDENTITY"
+        identity_data = "internal"
         "#;
 
         let paths = btreemap! {
