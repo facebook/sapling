@@ -281,6 +281,11 @@ pub struct MononokeTunables {
     // with removing it, but this tunable can be used as a quick killswitch to
     // enable them again.
     enable_sql_lag_monitoring: AtomicBool,
+
+    // If this is set, the hook won't be created at all
+    disable_check_write_permissions_hook: AtomicBool,
+    // If this is set, the check result will be discarded
+    log_only_check_write_permissions_hook: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

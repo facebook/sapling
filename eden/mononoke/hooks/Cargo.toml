@@ -49,6 +49,7 @@ stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 tempdir = "0.3"
 thiserror = "1.0.30"
 tokio = { version = "1.15", features = ["full", "test-util", "tracing"] }
+tunables = { version = "0.1.0", path = "../tunables" }
 
 [dev-dependencies]
 blobstore = { version = "0.1.0", path = "../blobstore" }
@@ -56,6 +57,7 @@ borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
+pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }

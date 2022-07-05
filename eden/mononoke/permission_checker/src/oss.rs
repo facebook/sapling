@@ -78,6 +78,14 @@ impl PermissionCheckerBuilder {
         Ok(self.allow_all())
     }
 
+    pub async fn allow_repo_region_acl(
+        self,
+        _fb: FacebookInit,
+        _name: &str,
+    ) -> Result<PermissionCheckerBuilder> {
+        Ok(self.allow_all())
+    }
+
     pub async fn allow_tier_acl(
         self,
         _fb: FacebookInit,
