@@ -48,6 +48,8 @@ DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
     "test-new-walker-count-public-chunked.t",
     "test-mirror-hg-commits-basic.t",
     "test-backfill-derived-data.t",
+    # TOOD(simonfaR) Investigate why this fails, even though it should never talk to SMC
+    "test-remote-gitimport.t",
 }
 
 

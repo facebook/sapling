@@ -1409,7 +1409,9 @@ function lfs_server {
     "${MONONOKE_LFS_START_TIMEOUT:-"$MONONOKE_LFS_DEFAULT_START_TIMEOUT"}" "$bound_addr_file" \
     lfs_health "$poll" "$proto" "$bound_addr_file"
 
-  uri="${proto}://$listen_host:$LFS_PORT"
+  export LFS_HOST_PORT
+  LFS_HOST_PORT="$listen_host:$LFS_PORT"
+  uri="${proto}://$LFS_HOST_PORT"
   echo "$uri"
 
   cp "$log" "$log.saved"

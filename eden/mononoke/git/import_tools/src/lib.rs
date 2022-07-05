@@ -45,11 +45,11 @@ use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
-use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::path::Path;
 use std::process::Stdio;
+use std::sync::RwLock;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 use tokio::process::Command;
@@ -164,7 +164,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator, Uploader: GitUploader>(
         return Ok(Acc::new());
     }
 
-    let acc = RefCell::new(Acc::new());
+    let acc = RwLock::new(Acc::new());
 
     // Kick off a stream that consumes the walk and prepared commits. Then, produce the Bonsais.
     target
@@ -208,7 +208,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator, Uploader: GitUploader>(
                     roots
                         .get(p)
                         .copied()
-                        .or_else(|| acc.borrow().get(p))
+                        .or_else(|| acc.read().expect("lock poisoned").get(p))
                         .ok_or_else(|| format_err!("Commit was not imported: {}", p))
                 })
                 .collect::<Result<Vec<_>, _>>()
@@ -216,14 +216,14 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator, Uploader: GitUploader>(
             let (int_cs, bcs_id) = uploader
                 .generate_changeset(ctx, bonsai_parents, metadata, file_changes, dry_run)
                 .await?;
-            acc.borrow_mut().insert(oid, bcs_id);
+            acc.write().expect("lock poisoned").insert(oid, bcs_id);
 
             let git_sha1 = oid_to_sha1(&oid)?;
             info!(
                 ctx.logger(),
                 "GitRepo:{} commit {} of {} - Oid:{} => Bid:{}",
                 &repo_name,
-                acc.borrow().len(),
+                acc.read().expect("lock poisoned").len(),
                 nb_commits_to_import,
                 git_sha1.to_brief(),
                 bcs_id.to_brief()
@@ -241,7 +241,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator, Uploader: GitUploader>(
         })
         .await?;
 
-    Ok(acc.into_inner())
+    Ok(acc.into_inner().expect("lock poisoned"))
 }
 
 pub async fn gitimport(
