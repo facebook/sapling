@@ -267,7 +267,13 @@ class ThriftLogHelper {
     // Logging completion time for the request
     // The line number points to where the object was originally created
     auto elapsed = itcTimer_.elapsed();
-    TLOG(itcLogger_, level_, itcFileName_, itcLineNumber_) << fmt::format(
+    auto level = level_;
+    if (elapsed > std::chrono::seconds(1)) {
+      // When a request takes over a second, let's raise the loglevel to draw
+      // attention to it
+      level += 1;
+    }
+    TLOG(itcLogger_, level, itcFileName_, itcLineNumber_) << fmt::format(
         "{}() took {} {}", itcFunctionName_, elapsed.count(), EDEN_MICRO);
     if (edenStats_) {
       auto thriftStats = edenStats_->getThriftStatsForCurrentThread();
@@ -1351,7 +1357,7 @@ apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
 EdenServiceHandler::streamChangesSince(
     std::unique_ptr<StreamChangesSinceParams> params) {
   auto helper = INSTRUMENT_THRIFT_CALL_WITH_STAT(
-      DBG2, &ThriftThreadStats::streamChangesSince, *params->mountPoint_ref());
+      DBG3, &ThriftThreadStats::streamChangesSince, *params->mountPoint_ref());
   auto mountPath = AbsolutePathPiece{*params->mountPoint_ref()};
   auto edenMount = server_->getMount(mountPath);
   const auto& fromPosition = *params->fromPosition_ref();
