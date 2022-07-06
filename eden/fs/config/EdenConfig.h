@@ -480,6 +480,34 @@ class EdenConfig : private ConfigSettingManager {
       1,
       this};
 
+  /**
+   * Not sure if a Windows behavior, or a ProjectedFS one, but symlinks
+   * aren't created atomically, they start their life as a directory, and
+   * then a reparse tag is added to them to change them to a symlink. This
+   * is an issue for EdenFS as the call to symlink_status above will race
+   * with this 2 step process and thus may detect a symlink as a
+   * directory...
+   *
+   * This is bad for EdenFS for a number of reason. The main one being that
+   * EdenFS will attempt to recursively add all the childrens of that
+   * directory to the inode hierarchy. If the symlinks points to a very
+   * large directory, this can be extremely slow, leading to a very poor
+   * user experience.
+   *
+   * How to solve this? Since notifications are handled completely
+   * asynchronously, we can simply wait a bit and retry if the notification
+   * has been received semi-recently. We still run the
+   * risk of winning the race if the system is overloaded, but the
+   * probability should be much lower.
+   *
+   * This config controls how long to wait after a directory creation
+   * notification has been received.
+   */
+  ConfigSetting<std::chrono::nanoseconds> prjfsDirectoryCreationDelay{
+      "prjfs:directory-creation-delay",
+      std::chrono::milliseconds(100),
+      this};
+
   // [hg]
 
   /**
