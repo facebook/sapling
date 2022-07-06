@@ -18,6 +18,7 @@ import hashlib
 import os
 import re
 import ssl
+from typing import Any, Dict, Optional, Tuple
 
 from . import error, pycompat, util
 from .i18n import _
@@ -33,7 +34,7 @@ from .i18n import _
 
 configprotocols = {"tls1.0", "tls1.1", "tls1.2"}
 
-hassni = getattr(ssl, "HAS_SNI", False)
+hassni: bool = getattr(ssl, "HAS_SNI", False)
 
 # TLS 1.1 and 1.2 may not be supported if the OpenSSL Python is compiled
 # against doesn't support them.
@@ -106,7 +107,7 @@ except AttributeError:
             return ssl.wrap_socket(socket, **args)
 
 
-def _hostsettings(ui, hostname):
+def _hostsettings(ui, hostname) -> Dict[str, Any]:
     """Obtain security settings for a hostname.
 
     Returns a dict of settings relevant to that hostname.
@@ -199,23 +200,31 @@ def _hostsettings(ui, hostname):
 
         alg, fingerprint = fingerprint.split(":", 1)
         fingerprint = fingerprint.replace(":", "").lower()
+        # pyre-fixme[16]: Item `None` of `Union[None, List[typing.Any], bool]` has
+        #  no attribute `append`.
         s["certfingerprints"].append((alg, fingerprint))
 
     # Fingerprints from [hostfingerprints] are always SHA-1.
     for fingerprint in ui.configlist("hostfingerprints", hostname):
         fingerprint = fingerprint.replace(":", "").lower()
+        # pyre-fixme[16]: Item `None` of `Union[None, List[typing.Any], bool]` has
+        #  no attribute `append`.
         s["certfingerprints"].append(("sha1", fingerprint))
         s["legacyfingerprint"] = True
 
     # If a host cert fingerprint is defined, it is the only thing that
     # matters. No need to validate CA certs.
     if s["certfingerprints"]:
+        # pyre-fixme[6]: For 2nd param expected `Union[None, List[typing.Any],
+        #  bool]` but got `VerifyMode`.
         s["verifymode"] = ssl.CERT_NONE
         s["allowloaddefaultcerts"] = False
 
     # If --insecure is used, don't take CAs into consideration.
     elif ui.insecureconnections:
         s["disablecertverification"] = True
+        # pyre-fixme[6]: For 2nd param expected `Union[None, List[typing.Any],
+        #  bool]` but got `VerifyMode`.
         s["verifymode"] = ssl.CERT_NONE
         s["allowloaddefaultcerts"] = False
 
@@ -267,6 +276,8 @@ def _hostsettings(ui, hostname):
         # Require certificate validation if CA certs are being loaded and
         # verification hasn't been disabled above.
         if cafile or (_canloaddefaultcerts and s["allowloaddefaultcerts"]):
+            # pyre-fixme[6]: For 2nd param expected `Union[None, List[typing.Any],
+            #  bool]` but got `VerifyMode`.
             s["verifymode"] = ssl.CERT_REQUIRED
         else:
             # At this point we don't have a fingerprint, aren't being
@@ -274,6 +285,8 @@ def _hostsettings(ui, hostname):
             # is insecure. We allow the connection and abort during
             # validation (once we have the fingerprint to print to the
             # user).
+            # pyre-fixme[6]: For 2nd param expected `Union[None, List[typing.Any],
+            #  bool]` but got `VerifyMode`.
             s["verifymode"] = ssl.CERT_NONE
 
     assert s["protocol"] is not None
@@ -283,7 +296,7 @@ def _hostsettings(ui, hostname):
     return s
 
 
-def protocolsettings(protocol):
+def protocolsettings(protocol) -> Tuple[ssl._SSLMethod, int, str]:
     """Resolve the protocol for a config value.
 
     Returns a 3-tuple of (protocol, options, ui value) where the first
@@ -544,7 +557,7 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
 
 
 def wrapserversocket(
-    sock, ui, certfile=None, keyfile=None, cafile=None, requireclientcert=False
+    sock, ui, certfile=None, keyfile=None, cafile=None, requireclientcert: bool = False
 ):
     """Wrap a socket for use by servers.
 
@@ -600,6 +613,8 @@ def wrapserversocket(
         # Use the list of more secure ciphers if found in the ssl module.
         if util.safehasattr(ssl, "_RESTRICTED_SERVER_CIPHERS"):
             sslcontext.options |= getattr(ssl, "OP_CIPHER_SERVER_PREFERENCE", 0)
+            # pyre-fixme[16]: Module `ssl` has no attribute
+            #  `_RESTRICTED_SERVER_CIPHERS`.
             sslcontext.set_ciphers(ssl._RESTRICTED_SERVER_CIPHERS)
     else:
         sslcontext = SSLContext(ssl.PROTOCOL_TLSv1)
@@ -622,7 +637,7 @@ class wildcarderror(Exception):
     """Represents an error parsing wildcards in DNS name."""
 
 
-def _dnsnamematch(dn, hostname, maxwildcards=1):
+def _dnsnamematch(dn, hostname: str, maxwildcards: int = 1):
     """Match DNS names according RFC 6125 section 6.4.3.
 
     This code is effectively copied from CPython's ssl._dnsname_match.
@@ -738,7 +753,7 @@ _systemcacertpaths = [
 ]
 
 
-def _defaultcacerts(ui):
+def _defaultcacerts(ui) -> Optional[str]:
     """return path to default CA certificates or None.
 
     It is assumed this function is called when the returned certificates
@@ -840,7 +855,7 @@ def _defaultcacerts(ui):
     return None
 
 
-def validatesocket(sock):
+def validatesocket(sock) -> None:
     """Validate a socket meets security requirements.
 
     The passed socket must have been created with ``wrapsocket()``.
@@ -915,6 +930,7 @@ def validatesocket(sock):
             nice = fmtfingerprint(peerfingerprints["sha1"])
         else:
             section = "hostsecurity"
+            # pyre-fixme[61]: `hash` is undefined, or not always defined.
             nice = "%s:%s" % (hash, fmtfingerprint(peerfingerprints[hash]))
         raise error.Abort(
             _("certificate for %s has unexpected " "fingerprint %s") % (host, nice),
