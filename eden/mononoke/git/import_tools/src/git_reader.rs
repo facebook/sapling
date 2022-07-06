@@ -45,7 +45,7 @@ impl GitRepoReader {
             .current_dir(repo_path)
             .env_clear()
             // We expect dropping to close stdin, which will cause git cat-file
-            // to quite
+            // to quit
             .kill_on_drop(false)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())

@@ -186,9 +186,9 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator, Uploader: GitUploader>(
                         let file_changes = find_file_changes(
                             &ctx,
                             &lfs,
-                            &reader.clone(),
-                            uploader.clone(),
-                            bonsai_diff(ctx.clone(), reader, tree, parent_trees),
+                            &reader,
+                            uploader,
+                            bonsai_diff(ctx.clone(), reader.clone(), tree, parent_trees),
                         )
                         .await?;
 
@@ -241,6 +241,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator, Uploader: GitUploader>(
         })
         .await?;
 
+    info!(ctx.logger(), "Completed git import for repo {}.", repo_name);
     Ok(acc.into_inner().expect("lock poisoned"))
 }
 

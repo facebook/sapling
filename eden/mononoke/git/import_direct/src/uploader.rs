@@ -99,6 +99,12 @@ impl GitUploader for DirectUploader {
             )
             .await?)
         };
+        debug!(
+            ctx.logger(),
+            "Uploaded {} blob {}",
+            path,
+            oid.to_hex_with_len(8),
+        );
         meta_ret.map(|meta| FileChange::tracked(meta.content_id, ty, meta.total_size, None))
     }
 

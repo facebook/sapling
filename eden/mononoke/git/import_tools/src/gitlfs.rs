@@ -54,7 +54,7 @@ pub struct GitImportLfsInner {
     /// Retries.
     max_attempts: u32,
     time_ms_between_attempts: u32,
-    /// Limit the amount of simultainous connections.
+    /// Limit the amount of simultaneous connections.
     conn_limit_sem: Option<Arc<Semaphore>>,
     /// Hyperium client we use to connect with
     client: Client<HttpsConnector<HttpConnector>>,
