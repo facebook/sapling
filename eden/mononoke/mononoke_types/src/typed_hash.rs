@@ -242,6 +242,14 @@ macro_rules! impl_typed_hash_no_context {
             fn into_thrift(self) -> Self::Thrift {
                 $thrift_typed($crate::private::thrift::IdType::Blake2(self.0.into_thrift()))
             }
+            // Ids are special, their bytes serialization is NOT the thrift bytes serialization
+            // as that is an union. Instead, it is simply the serialization of their blake2.
+            fn from_bytes(b: &$crate::private::Bytes) -> Result<Self> {
+                Self::from_bytes(b)
+            }
+            fn into_bytes(self) -> $crate::private::Bytes {
+                self.into()
+            }
         }
 
         impl BlobstoreKey for $typed {
@@ -658,6 +666,7 @@ impl Display for ChangesetIdPrefix {
 #[cfg(test)]
 mod test {
     use super::*;
+    use bytes::Bytes;
     use quickcheck::quickcheck;
 
     quickcheck! {
@@ -674,6 +683,21 @@ mod test {
                 .expect("converting a valid Thrift structure should always work");
             h == sh
         }
+    }
+
+    #[test]
+    fn thrift_convert_bytes_consistent_for_ids() {
+        let id = ShardedMapNodeDMv2Id::from_byte_array([1; 32]);
+        let bytes_1 = Bytes::from(id.clone());
+        let bytes_2 = ThriftConvert::into_bytes(id);
+        assert_eq!(bytes_1, bytes_2);
+        let rev_id_1_2: ShardedMapNodeDMv2Id = ThriftConvert::from_bytes(&bytes_1).unwrap();
+        let rev_id_1_1 = ShardedMapNodeDMv2Id::from_bytes(bytes_1).unwrap();
+        let rev_id_2_2: ShardedMapNodeDMv2Id = ThriftConvert::from_bytes(&bytes_2).unwrap();
+        let rev_id_2_1 = ShardedMapNodeDMv2Id::from_bytes(bytes_2).unwrap();
+        assert_eq!(rev_id_1_2, rev_id_1_1);
+        assert_eq!(rev_id_1_1, rev_id_2_2);
+        assert_eq!(rev_id_2_2, rev_id_2_1);
     }
 
     #[test]

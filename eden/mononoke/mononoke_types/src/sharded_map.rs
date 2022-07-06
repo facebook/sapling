@@ -10,7 +10,6 @@
 
 use anyhow::bail;
 use anyhow::Context;
-use anyhow::Error;
 use anyhow::Ok;
 use anyhow::Result;
 use async_recursion::async_recursion;
@@ -43,9 +42,7 @@ use crate::typed_hash::IdContext;
 use crate::typed_hash::MononokeId;
 use crate::ThriftConvert;
 
-pub trait MapValue:
-    TryFrom<Bytes, Error = Error> + Into<Bytes> + Debug + Clone + Send + Sync + 'static
-{
+pub trait MapValue: ThriftConvert + Debug + Clone + Send + Sync + 'static {
     type Id: MononokeId<Thrift = thrift::ShardedMapNodeId, Value = ShardedMapNode<Self>>;
     type Context: IdContext<Id = Self::Id>;
 }
@@ -554,7 +551,11 @@ impl<Value: MapValue> ThriftConvert for ShardedMapNode<Value> {
         Ok(match t {
             thrift::ShardedMapNode::intermediate(intermediate) => Self::Intermediate {
                 prefix: intermediate.prefix.0,
-                value: intermediate.value.map(Value::try_from).transpose()?,
+                value: intermediate
+                    .value
+                    .as_ref()
+                    .map(ThriftConvert::from_bytes)
+                    .transpose()?,
                 edges: intermediate
                     .edges
                     .into_iter()
@@ -566,7 +567,7 @@ impl<Value: MapValue> ThriftConvert for ShardedMapNode<Value> {
                 values: terminal
                     .values
                     .into_iter()
-                    .map(|(k, v)| Ok((k.0, Value::try_from(v)?)))
+                    .map(|(k, v)| Ok((k.0, Value::from_bytes(&v)?)))
                     .collect::<Result<_>>()?,
             },
             thrift::ShardedMapNode::UnknownField(_) => bail!("Unknown map node variant"),
@@ -582,7 +583,7 @@ impl<Value: MapValue> ThriftConvert for ShardedMapNode<Value> {
                 ..
             } => thrift::ShardedMapNode::intermediate(thrift::ShardedMapIntermediateNode {
                 prefix: thrift::small_binary(prefix),
-                value: value.map(Into::into),
+                value: value.map(ThriftConvert::into_bytes),
                 edges: edges
                     .into_iter()
                     .map(|(k, e)| (k as i8, e.into_thrift()))
@@ -592,7 +593,7 @@ impl<Value: MapValue> ThriftConvert for ShardedMapNode<Value> {
                 thrift::ShardedMapNode::terminal(thrift::ShardedMapTerminalNode {
                     values: values
                         .into_iter()
-                        .map(|(k, v)| (thrift::small_binary(k), v.into()))
+                        .map(|(k, v)| (thrift::small_binary(k), v.into_bytes()))
                         .collect(),
                 })
             }
@@ -660,22 +661,18 @@ mod test {
         type Context = ShardedMapNodeMyContext;
     }
 
+    impl ThriftConvert for MyType {
+        const NAME: &'static str = "MyType";
+        type Thrift = i32;
+        fn into_thrift(self) -> Self::Thrift {
+            self.0
+        }
+        fn from_thrift(t: Self::Thrift) -> Result<Self> {
+            Ok(MyType(t))
+        }
+    }
+
     type TestShardedMap = ShardedMapNode<MyType>;
-
-    impl TryFrom<Bytes> for MyType {
-        type Error = anyhow::Error;
-        fn try_from(mut b: Bytes) -> Result<Self> {
-            Ok(Self(b.get_i32()))
-        }
-    }
-
-    impl From<MyType> for Bytes {
-        fn from(t: MyType) -> Bytes {
-            let mut b = BytesMut::new();
-            b.put_i32(t.0);
-            b.freeze()
-        }
-    }
 
     fn terminal(values: Vec<(&str, i32)>) -> TestShardedMap {
         ShardedMapNode::Terminal {
@@ -1006,7 +1003,7 @@ mod test {
         let blobstore = Memblob::default();
         let map = example_map();
         map.into_blob().store(&ctx, &blobstore).await?;
-        assert_all_keys(&ctx, &blobstore, vec!["mytype.mapnode.blake2.9630d1340c7493f3349ccc843900304bdd5798a803baab5999419e427a2d425a"]).await?;
+        assert_all_keys(&ctx, &blobstore, vec!["mytype.mapnode.blake2.9239707907ceb346d7146c601f131ab7c598a8e98441c2934817c964f0a2c270"]).await?;
         Ok(())
     }
 
@@ -1021,9 +1018,9 @@ mod test {
         assert_all_keys(
             &ctx,
             &blobstore,
-            vec!["mytype.mapnode.blake2.1ad24a2a13cda9a5eb92778b926c7bd6997bb310ea44e7f30077c751c44f9231",
-                "mytype.mapnode.blake2.d928eb3252d524dc8b1a7f2ec0ca3b6d22c94c80b2fa12f7fe35bac1bca80575",
-                "mytype.mapnode.blake2.fb6be2d7e5ad86ca33a4e97f8d711e909c519109bab5fa0a1787c43ce36124a4"],
+            vec!["mytype.mapnode.blake2.8c8f56e9612f7cc94187729e4eff067bf56bb239019e25c8421243a60e4d1fb9",
+                "mytype.mapnode.blake2.e808435da65aa2e0f61db333fba1904e57b1b46dff2d3a5c263d0016750f1f0d",
+                "mytype.mapnode.blake2.f8728f3aabc9b8083db7150e9c2636c2971dac0784fac59cee3b7b6908165476"],
         )
         .await?;
         {
