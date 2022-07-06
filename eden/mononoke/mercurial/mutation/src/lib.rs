@@ -12,12 +12,14 @@
 //!
 //! See <https://fburl.com/m2y3nr5c> for more details.
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
 use mercurial_types::HgChangesetId;
+use mononoke_types::RepositoryId;
 
 mod builder;
 mod entry;
@@ -48,5 +50,32 @@ pub trait HgMutationStore: Send + Sync {
         &self,
         ctx: &CoreContext,
         changeset_ids: HashSet<HgChangesetId>,
-    ) -> Result<Vec<HgMutationEntry>>;
+    ) -> Result<Vec<HgMutationEntry>> {
+        let entries_by_changeset = self
+            .all_predecessors_by_changeset(ctx, changeset_ids)
+            .await?;
+        Ok(entries_by_changeset
+            .into_iter()
+            .flat_map(|(_, entries)| entries)
+            // Collect into a hashset since the preds for different
+            // successors might overlap due to fold and split.
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect())
+    }
+
+    /// Get all predecessor information for the given changeset id, keyed by
+    /// the successor changeset id.
+    ///
+    /// Returns all entries that describe the mutation history of the commits.
+    /// keyed by the successor changeset ids.
+    async fn all_predecessors_by_changeset(
+        &self,
+        ctx: &CoreContext,
+        changeset_ids: HashSet<HgChangesetId>,
+    ) -> Result<HashMap<HgChangesetId, Vec<HgMutationEntry>>>;
+
+    /// Get the repository for which the mutation history is being added
+    /// and retrieved.
+    fn repo_id(&self) -> RepositoryId;
 }

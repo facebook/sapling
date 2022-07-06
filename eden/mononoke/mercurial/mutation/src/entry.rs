@@ -18,21 +18,22 @@ use edenapi_types::HgMutationEntryContent;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::DateTime;
-use smallvec::SmallVec;
+
+use hg_mutation_entry_thrift as thrift;
 use types::mutation::MutationEntry;
 use types::HgId;
 
 use crate::grouper::Grouper;
 
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 /// Record of a Mercurial mutation operation (e.g. amend or rebase).
-#[derive(Clone, Debug, PartialEq)]
 pub struct HgMutationEntry {
     /// The commit that resulted from the mutation operation.
     successor: HgChangesetId,
     /// The commits that were mutated to create the successor.
     ///
     /// There may be multiple predecessors, e.g. if the commits were folded.
-    predecessors: SmallVec<[HgChangesetId; 1]>,
+    predecessors: Vec<HgChangesetId>,
     /// Other commits that were created by the mutation operation splitting the predecessors.
     ///
     /// Where a commit is split into two or more commits, the successor will be the final commit,
@@ -42,8 +43,10 @@ pub struct HgMutationEntry {
     op: String,
     /// The user who performed the mutation operation.  This may differ from the commit author.
     user: String,
-    /// The time of the mutation operation.  This may differ from the commit time.
-    time: DateTime,
+    /// The timestamp of the mutation operation.  This may differ from the commit time.
+    timestamp: i64,
+    /// The timezone offset of the mutation operation.  This may differ from the commit time.
+    timezone: i32,
     /// Extra information about this mutation operation.
     extra: Vec<(String, String)>,
 }
@@ -51,11 +54,12 @@ pub struct HgMutationEntry {
 impl HgMutationEntry {
     pub fn new(
         successor: HgChangesetId,
-        predecessors: SmallVec<[HgChangesetId; 1]>,
+        predecessors: Vec<HgChangesetId>,
         split: Vec<HgChangesetId>,
         op: String,
         user: String,
-        time: DateTime,
+        timestamp: i64,
+        timezone: i32,
         extra: Vec<(String, String)>,
     ) -> Self {
         Self {
@@ -64,7 +68,8 @@ impl HgMutationEntry {
             split,
             op,
             user,
-            time,
+            timestamp,
+            timezone,
             extra,
         }
     }
@@ -93,8 +98,12 @@ impl HgMutationEntry {
         &self.user
     }
 
-    pub fn time(&self) -> &DateTime {
-        &self.time
+    pub fn timestamp(&self) -> i64 {
+        self.timestamp
+    }
+
+    pub fn timezone(&self) -> i32 {
+        self.timezone
     }
 
     pub fn extra(&self) -> &[(String, String)] {
@@ -150,6 +159,59 @@ impl HgMutationEntry {
         }
         Ok(())
     }
+
+    pub(crate) fn from_thrift(entry: thrift::HgMutationEntry) -> Result<Self> {
+        let preds = entry
+            .predecessors
+            .into_iter()
+            .map(HgChangesetId::from_thrift)
+            .collect::<Result<Vec<HgChangesetId>>>()?;
+        let split = entry
+            .split
+            .into_iter()
+            .map(HgChangesetId::from_thrift)
+            .collect::<Result<Vec<HgChangesetId>>>()?;
+        let extra = entry
+            .extra
+            .into_iter()
+            .map(|e| (e.key, e.value))
+            .collect::<Vec<(String, String)>>();
+        Ok(HgMutationEntry::new(
+            HgChangesetId::from_thrift(entry.successor)?,
+            preds,
+            split,
+            entry.op,
+            entry.user,
+            entry.timestamp,
+            entry.timezone,
+            extra,
+        ))
+    }
+
+    pub(crate) fn into_thrift(self) -> thrift::HgMutationEntry {
+        thrift::HgMutationEntry {
+            successor: HgChangesetId::into_thrift(self.successor),
+            predecessors: self
+                .predecessors
+                .into_iter()
+                .map(HgChangesetId::into_thrift)
+                .collect(),
+            split: self
+                .split
+                .into_iter()
+                .map(HgChangesetId::into_thrift)
+                .collect(),
+            op: self.op,
+            user: self.user,
+            timestamp: self.timestamp,
+            timezone: self.timezone,
+            extra: self
+                .extra
+                .into_iter()
+                .map(|(key, value)| thrift::ExtraProperty { key, value })
+                .collect(),
+        }
+    }
 }
 
 // Conversion from client mutation entry
@@ -173,7 +235,8 @@ impl TryFrom<MutationEntry> for HgMutationEntry {
                 .collect(),
             op: entry.op,
             user: entry.user,
-            time: DateTime::from_timestamp(entry.time, entry.tz)?,
+            timestamp: entry.time,
+            timezone: entry.tz,
             extra: entry
                 .extra
                 .into_iter()
@@ -208,8 +271,8 @@ impl Into<MutationEntry> for HgMutationEntry {
                 .collect(),
             op: self.op,
             user: self.user,
-            time: self.time.timestamp_secs(),
-            tz: self.time.tz_offset_secs(),
+            time: self.timestamp,
+            tz: self.timezone,
             extra: self
                 .extra
                 .into_iter()
@@ -234,7 +297,6 @@ impl TryFrom<HgMutationEntryContent> for HgMutationEntry {
             .map(HgNodeHash::from)
             .map(HgChangesetId::new)
             .collect::<Vec<_>>();
-        let predecessors: SmallVec<[_; 1]> = SmallVec::from_vec(predecessors);
         let split = mutation
             .split
             .into_iter()
@@ -243,7 +305,8 @@ impl TryFrom<HgMutationEntryContent> for HgMutationEntry {
             .collect::<Vec<_>>();
         let op = mutation.op;
         let user = std::str::from_utf8(&mutation.user)?.to_string();
-        let time = DateTime::from_timestamp(mutation.time, mutation.tz)?;
+        let timestamp = mutation.time;
+        let timezone = mutation.tz;
         let exta = mutation
             .extras
             .into_iter()
@@ -261,7 +324,8 @@ impl TryFrom<HgMutationEntryContent> for HgMutationEntry {
             split,
             op,
             user,
-            time,
+            timestamp,
+            timezone,
             exta,
         ))
     }
@@ -281,10 +345,8 @@ impl From<HgMutationEntry> for HgMutationEntryContent {
             .collect::<Vec<_>>();
         let op = mutation.op;
         let user = mutation.user.into_bytes();
-        let (time, tz) = (
-            mutation.time.timestamp_secs(),
-            mutation.time.tz_offset_secs(),
-        );
+        let time = mutation.timestamp;
+        let tz = mutation.timezone;
         let extras = mutation
             .extra
             .into_iter()
@@ -520,30 +582,40 @@ impl HgMutationEntrySet {
     }
 
     /// Extracts all entries for predecessors of the given changeset ids.
-    pub(crate) fn into_all_predecessors(
-        mut self,
-        changeset_ids: HashSet<HgChangesetId>,
-    ) -> Vec<HgMutationEntry> {
-        let mut changeset_ids: Vec<_> = changeset_ids.into_iter().collect();
-        let mut entries = Vec::new();
-        while let Some(changeset_id) = changeset_ids.pop() {
-            // See if we have an entry for this changeset_id.
-            if let Some(entry) = self.entries.remove(&changeset_id) {
-                // Add all of this entry's predecessors to the queue of
-                // additional changesets we will need to process.  Push
-                // predecessors in reverse order so that we process them in
-                // forwards order.
-                for predecessor_id in entry.predecessors().iter().rev() {
-                    // Check if there is an entry for the predecessor.  If there
-                    // isn't one, or if we have already processed this
-                    // predecessor, don't waste time enqueuing it.
-                    if self.entries.contains_key(predecessor_id) {
-                        changeset_ids.push(predecessor_id.clone());
+    pub(crate) fn into_all_predecessors_by_changeset(
+        self,
+        successor_ids: HashSet<HgChangesetId>,
+    ) -> HashMap<HgChangesetId, Vec<HgMutationEntry>> {
+        let mut mutation_history = HashMap::new();
+        for successor_id in successor_ids {
+            let mut entries = Vec::new();
+            let mut processed = HashSet::new();
+            let mut changeset_ids = vec![successor_id];
+            while let Some(changeset_id) = changeset_ids.pop() {
+                // See if we have an entry for this changeset_id.
+                if let Some(entry) = self.entries.get(&changeset_id).cloned() {
+                    // Add all of this entry's predecessors to the queue of
+                    // additional changesets we will need to process.  Push
+                    // predecessors in reverse order so that we process them in
+                    // forwards order.
+                    for predecessor_id in entry.predecessors().iter().rev() {
+                        // Only enqueue the predecessor if:
+                        // 1. There is an entry for it
+                        if self.entries.contains_key(predecessor_id)
+                            // 2. AND we haven't already processed this predecessor
+                            && !processed.contains(predecessor_id)
+                            // 3. AND its not the same as the successor
+                            && successor_id != *predecessor_id
+                        {
+                            changeset_ids.push(predecessor_id.clone());
+                        }
                     }
+                    entries.push(entry);
                 }
-                entries.push(entry);
+                processed.insert(changeset_id);
             }
+            mutation_history.insert(successor_id, entries);
         }
-        entries
+        mutation_history
     }
 }

@@ -19,14 +19,12 @@ use mercurial_mutation::HgMutationEntry;
 use mercurial_mutation::HgMutationStore;
 use mercurial_mutation::SqlHgMutationStoreBuilder;
 use mercurial_types_mocks::nodehash::make_hg_cs_id;
-use mononoke_types_mocks::datetime::EPOCH_ZERO;
 use mononoke_types_mocks::repo::REPO_ZERO;
-use smallvec::smallvec;
 use sql_construct::SqlConstruct;
 
 use crate::util::check_entries;
 
-fn create_entries() -> HashMap<usize, HgMutationEntry> {
+pub(crate) fn create_entries() -> HashMap<usize, HgMutationEntry> {
     // Generate the mutation graph:
     //
     //
@@ -36,38 +34,42 @@ fn create_entries() -> HashMap<usize, HgMutationEntry> {
     hashmap! {
         2 => HgMutationEntry::new(
             make_hg_cs_id(2),
-            smallvec![make_hg_cs_id(1)],
+            vec![make_hg_cs_id(1)],
             vec![],
             String::from("amend"),
             String::from("testuser"),
-            EPOCH_ZERO.clone(),
+            0,
+            0,
             vec![],
         ),
         4 => HgMutationEntry::new(
             make_hg_cs_id(4),
-            smallvec![make_hg_cs_id(2), make_hg_cs_id(3)],
+            vec![make_hg_cs_id(2), make_hg_cs_id(3)],
             vec![],
             String::from("fold"),
             String::from("testuser"),
-            EPOCH_ZERO.clone(),
+            0,
+            0,
             vec![],
         ),
         5 => HgMutationEntry::new(
             make_hg_cs_id(5),
-            smallvec![make_hg_cs_id(4)],
+            vec![make_hg_cs_id(4)],
             vec![],
             String::from("rebase"),
             String::from("testuser"),
-            EPOCH_ZERO.clone(),
+            0,
+            0,
             vec![],
         ),
         6 => HgMutationEntry::new(
             make_hg_cs_id(6),
-            smallvec![make_hg_cs_id(5)],
+            vec![make_hg_cs_id(5)],
             vec![make_hg_cs_id(7)],
             String::from("split"),
             String::from("testuser"),
-            EPOCH_ZERO.clone(),
+            0,
+            0,
             vec![(String::from("testextra"), String::from("testextravalue"))],
         ),
     }
@@ -105,11 +107,12 @@ async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
     // Add one new entry.
     let new_entry = HgMutationEntry::new(
         make_hg_cs_id(8),
-        smallvec![make_hg_cs_id(6)],
+        vec![make_hg_cs_id(6)],
         vec![],
         String::from("amend"),
         String::from("testuser"),
-        EPOCH_ZERO.clone(),
+        0,
+        0,
         vec![],
     );
     store
@@ -130,20 +133,22 @@ async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
     let new_entries = vec![
         HgMutationEntry::new(
             make_hg_cs_id(9),
-            smallvec![make_hg_cs_id(6)],
+            vec![make_hg_cs_id(6)],
             vec![],
             String::from("rebase"),
             String::from("testuser"),
-            EPOCH_ZERO.clone(),
+            0,
+            0,
             vec![],
         ),
         HgMutationEntry::new(
             make_hg_cs_id(10),
-            smallvec![make_hg_cs_id(9)],
+            vec![make_hg_cs_id(9)],
             vec![],
             String::from("amend"),
             String::from("testuser"),
-            EPOCH_ZERO.clone(),
+            0,
+            0,
             vec![],
         ),
     ];
@@ -184,16 +189,17 @@ async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
     let new_entries = vec![
         HgMutationEntry::new(
             make_hg_cs_id(11),
-            smallvec![make_hg_cs_id(8)],
+            vec![make_hg_cs_id(8)],
             vec![],
             String::from("amend"),
             String::from("testuser"),
-            EPOCH_ZERO.clone(),
+            0,
+            0,
             vec![],
         ),
         HgMutationEntry::new(
             make_hg_cs_id(13),
-            smallvec![
+            vec![
                 make_hg_cs_id(10),
                 make_hg_cs_id(7),
                 make_hg_cs_id(11),
@@ -202,7 +208,8 @@ async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
             vec![],
             String::from("combine"),
             String::from("testuser"),
-            EPOCH_ZERO.clone(),
+            0,
+            0,
             vec![],
         ),
     ];
@@ -232,38 +239,42 @@ async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
     let new_entries = vec![
         HgMutationEntry::new(
             make_hg_cs_id(15),
-            smallvec![make_hg_cs_id(14)],
+            vec![make_hg_cs_id(14)],
             vec![],
             String::from("amend"),
             String::from("testuser"),
-            EPOCH_ZERO.clone(),
+            0,
+            0,
             vec![],
         ),
         HgMutationEntry::new(
             make_hg_cs_id(1),
-            smallvec![make_hg_cs_id(15)],
+            vec![make_hg_cs_id(15)],
             vec![],
             String::from("amend"),
             String::from("testuser"),
-            EPOCH_ZERO.clone(),
+            0,
+            0,
             vec![],
         ),
         HgMutationEntry::new(
             make_hg_cs_id(16),
-            smallvec![make_hg_cs_id(1)],
+            vec![make_hg_cs_id(1)],
             vec![],
             String::from("amend"),
             String::from("testuser"),
-            EPOCH_ZERO.clone(),
+            0,
+            0,
             vec![],
         ),
         HgMutationEntry::new(
             make_hg_cs_id(17),
-            smallvec![make_hg_cs_id(16)],
+            vec![make_hg_cs_id(16)],
             vec![],
             String::from("amend"),
             String::from("testuser"),
-            EPOCH_ZERO.clone(),
+            0,
+            0,
             vec![],
         ),
     ];
@@ -314,11 +325,12 @@ async fn check_mutations_are_cut_when_reaching_limit(fb: FacebookInit) -> Result
     for index in 1..amend_count {
         new_entries.push(HgMutationEntry::new(
             make_hg_cs_id(index),
-            smallvec![make_hg_cs_id(index - 1)],
+            vec![make_hg_cs_id(index - 1)],
             vec![],
             String::from("amend"),
             String::from("testuser"),
-            EPOCH_ZERO.clone(),
+            0,
+            0,
             vec![],
         ));
     }
@@ -375,27 +387,29 @@ async fn check_mutations_are_cut_when_reaching_limit(fb: FacebookInit) -> Result
     for index in 0..amend_count {
         new_entries.push(HgMutationEntry::new(
             make_hg_cs_id(20 + index),
-            smallvec![make_hg_cs_id(20 + index - 1)],
+            vec![make_hg_cs_id(20 + index - 1)],
             vec![],
             String::from("amend"),
             String::from("testuser"),
-            EPOCH_ZERO.clone(),
+            0,
+            0,
             vec![],
         ));
     }
 
     new_entries.push(HgMutationEntry::new(
         make_hg_cs_id(20 + amend_count),
-        smallvec![
+        vec![
             make_hg_cs_id(20 + amend_count - 1),
             make_hg_cs_id(20 + amend_count + 1),
             make_hg_cs_id(20 + amend_count + 2),
-            make_hg_cs_id(20 + amend_count + 3)
+            make_hg_cs_id(20 + amend_count + 3),
         ],
         vec![],
         String::from("combine"),
         String::from("testuser"),
-        EPOCH_ZERO.clone(),
+        0,
+        0,
         vec![],
     ));
 

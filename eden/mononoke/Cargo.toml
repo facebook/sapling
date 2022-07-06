@@ -324,6 +324,7 @@ members = [
   "megarepo_api/requests_table",
   "mercurial/bundles",
   "mercurial/mutation",
+  "mercurial/mutation/if",
   "mercurial/revlog",
   "mercurial/types",
   "mercurial/types/if",
