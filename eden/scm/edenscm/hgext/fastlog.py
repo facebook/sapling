@@ -51,7 +51,7 @@ FASTLOG_QUEUE_SIZE = 1000
 FASTLOG_TIMEOUT = 20
 
 
-def extsetup(ui):
+def extsetup(ui) -> None:
     extensions.wrapfunction(revset, "_follow", fastlogfollow)
 
 
@@ -114,7 +114,7 @@ def lazyparents(rev, public, parentfunc):
                         public.add(p)
 
 
-def dirmatches(files, paths):
+def dirmatches(files, paths) -> bool:
     """dirmatches(files, paths)
     Return true if any files match directories in paths
     Expects paths to end in '/' if they are directories.
@@ -153,7 +153,7 @@ def originator(parentfunc, rev):
             yield p
 
 
-def fastlogfollow(orig, repo, subset, x, name, followfirst=False):
+def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
     if followfirst:
         # fastlog does not support followfirst=True
         repo.ui.debug("fastlog: not used because 'followfirst' is set\n")
