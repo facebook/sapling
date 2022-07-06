@@ -43,7 +43,7 @@ use crate::errors::ErrorKind;
 use crate::thrift;
 use crate::typed_hash::IdContext;
 use crate::typed_hash::MononokeId;
-use crate::typed_hash::ThriftConvert;
+use crate::ThriftConvert;
 
 pub trait MapValue:
     TryFrom<Bytes, Error = Error> + Into<Bytes> + Debug + Clone + Send + Sync + 'static

@@ -43,6 +43,7 @@ use crate::skeleton_manifest::SkeletonManifest;
 use crate::thrift;
 use crate::unode::FileUnode;
 use crate::unode::ManifestUnode;
+use crate::ThriftConvert;
 
 // There is no NULL_HASH for typed hashes. Any places that need a null hash should use an
 // Option type, or perhaps a list as desired.
@@ -56,12 +57,6 @@ pub trait BlobstoreKey: FromStr<Err = anyhow::Error> {
     /// Return a key suitable for blobstore use.
     fn blobstore_key(&self) -> String;
     fn parse_blobstore_key(key: &str) -> Result<Self>;
-}
-
-pub trait ThriftConvert: Sized {
-    type Thrift;
-    fn from_thrift(t: Self::Thrift) -> Result<Self>;
-    fn into_thrift(self) -> Self::Thrift;
 }
 
 pub trait IdContext {
@@ -221,15 +216,15 @@ macro_rules! impl_typed_hash_no_context {
             }
 
             pub fn from_thrift(h: $thrift_typed) -> $crate::private::anyhow::Result<Self> {
-                $crate::private::ThriftConvert::from_thrift(h)
+                $crate::ThriftConvert::from_thrift(h)
             }
 
             pub fn into_thrift(self) -> $thrift_typed {
-                $crate::private::ThriftConvert::into_thrift(self)
+                $crate::ThriftConvert::into_thrift(self)
             }
         }
 
-        impl $crate::private::ThriftConvert for $typed {
+        impl $crate::ThriftConvert for $typed {
             type Thrift = $thrift_typed;
 
             fn from_thrift(h: Self::Thrift) -> $crate::private::anyhow::Result<Self> {

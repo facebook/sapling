@@ -33,6 +33,7 @@ pub mod sharded_map;
 pub mod skeleton_manifest;
 pub mod sql_types;
 pub mod svnrev;
+pub mod thrift_convert;
 pub mod typed_hash;
 pub mod unode;
 
@@ -75,6 +76,7 @@ pub use redaction_key_list::RedactionKeyList;
 pub use repo::RepositoryId;
 pub use repo::REPO_PREFIX_REGEX;
 pub use svnrev::Svnrev;
+pub use thrift_convert::ThriftConvert;
 pub use typed_hash::BlobstoreKey;
 pub use typed_hash::ChangesetId;
 pub use typed_hash::ChangesetIdPrefix;
@@ -115,5 +117,4 @@ pub mod private {
     pub use crate::hash::Blake2;
     pub use crate::thrift;
     pub use crate::typed_hash::Blake2HexVisitor;
-    pub use crate::typed_hash::ThriftConvert;
 }
