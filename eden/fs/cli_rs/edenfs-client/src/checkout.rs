@@ -451,8 +451,8 @@ impl EdenFsCheckout {
         profile: &String,
         silent: bool,
     ) -> Result<HashSet<String>> {
-        const relative_profiles_location: &str = "xplat/scm/prefetch_profiles/profiles";
-        let profile_path = self.path.join(relative_profiles_location).join(profile);
+        const RELATIVE_PROFILES_LOCATION: &str = "xplat/scm/prefetch_profiles/profiles";
+        let profile_path = self.path.join(RELATIVE_PROFILES_LOCATION).join(profile);
 
         if !profile_path.exists() {
             if !silent {

@@ -62,6 +62,7 @@ impl FromStr for RedirectionType {
 
 #[derive(Debug)]
 enum RedirectionState {
+    #[allow(dead_code)]
     /// Matches the expectations of our configuration as far as we can tell
     MatchesConfiguration,
     /// Something Mounted that we don't have configuration for
@@ -94,7 +95,9 @@ impl fmt::Display for RedirectionState {
 pub struct Redirection {
     repo_path: PathBuf,
     redir_type: RedirectionType,
+    #[allow(dead_code)]
     target: Option<PathBuf>,
+    #[allow(dead_code)]
     source: String,
     state: Option<RedirectionState>,
 }
