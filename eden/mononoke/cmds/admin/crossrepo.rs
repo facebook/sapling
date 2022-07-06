@@ -58,7 +58,7 @@ use mononoke_types::MPath;
 use mononoke_types::RepositoryId;
 use mutable_counters::MutableCountersRef;
 use pushrebase::do_pushrebase_bonsai;
-use pushrebase::FAILUPUSHREBASE_EXTRA;
+use pushrebase::FAIL_PUSHREBASE_EXTRA;
 use slog::info;
 use slog::warn;
 use slog::Logger;
@@ -721,7 +721,7 @@ async fn create_commit_for_mapping_change(
     );
 
     let mut extras = sorted_vector_map! {
-        FAILUPUSHREBASE_EXTRA.to_string() => b"1".to_vec(),
+        FAIL_PUSHREBASE_EXTRA.to_string() => b"1".to_vec(),
     };
     if options.add_mapping_change_extra {
         extras.insert(

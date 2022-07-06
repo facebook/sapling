@@ -114,7 +114,7 @@ const MAX_REBASE_ATTEMPTS: usize = 100;
 
 pub const MUTATION_KEYS: &[&str] = &["mutpred", "mutuser", "mutdate", "mutop", "mutsplit"];
 
-pub const FAILUPUSHREBASE_EXTRA: &str = "failpushrebase";
+pub const FAIL_PUSHREBASE_EXTRA: &str = "failpushrebase";
 
 #[derive(Debug, Error)]
 pub enum PushrebaseInternalError {
@@ -393,7 +393,7 @@ async fn rebase_in_loop(
 }
 
 fn should_fail_pushrebase(bcs: &BonsaiChangeset) -> bool {
-    bcs.extra().any(|(key, _)| key == FAILUPUSHREBASE_EXTRA)
+    bcs.extra().any(|(key, _)| key == FAIL_PUSHREBASE_EXTRA)
 }
 
 async fn do_rebase(
@@ -3135,7 +3135,7 @@ mod tests {
         let before_head_commit = "79a13814c5ce7330173ec04d279bf95ab3f652fb";
         let head_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![before_head_commit])
             .add_file("file", "content")
-            .add_extra(FAILUPUSHREBASE_EXTRA.to_string(), vec![])
+            .add_extra(FAIL_PUSHREBASE_EXTRA.to_string(), vec![])
             .commit()
             .await?;
 
