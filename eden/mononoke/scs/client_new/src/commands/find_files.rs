@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Context;
 use anyhow::Result;
 use clap::Parser;
 use serde::Serialize;
@@ -28,10 +29,15 @@ pub(super) struct CommandArgs {
     #[clap(long, short)]
     /// Subdir to look at
     prefix: Option<Vec<String>>,
-
     #[clap(long, short)]
     /// Filename to filter on
     filename: Option<Vec<String>>,
+    #[clap(long)]
+    /// If provided (even empty), response is sorted and starts from the given name
+    after: Option<String>,
+    #[clap(long, default_value_t = 100)]
+    /// Maximum number of paths to return
+    limit: u64,
 }
 
 #[derive(Serialize)]
@@ -57,6 +63,8 @@ pub(super) async fn run(app: SCSCApp, args: CommandArgs) -> Result<()> {
     let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;
     let prefixes = args.prefix.clone();
     let basenames = args.filename.clone();
+    let after = args.after.clone();
+    let limit: i64 = args.limit.try_into().context("limit too large")?;
 
     let commit_specifier = thrift::CommitSpecifier {
         repo,
@@ -64,8 +72,8 @@ pub(super) async fn run(app: SCSCApp, args: CommandArgs) -> Result<()> {
         ..Default::default()
     };
     let params = thrift::CommitFindFilesParams {
-        limit: 100,
-        after: None,
+        limit,
+        after,
         basenames,
         prefixes,
         ..Default::default()
