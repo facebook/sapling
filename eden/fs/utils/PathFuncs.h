@@ -135,6 +135,12 @@ enum : size_t { kMaxPathComponentLength = 255 };
  * AbsolutePaths.
  *
  * Values of each of these types are immutable.
+ *
+ * Caution:
+ *
+ * Moving a stored path may invalidate the pieces to it due to SSO used in
+ * std::string and folly::fbstring. See ../docs/Paths.md for more details about
+ * this.
  */
 
 namespace detail {

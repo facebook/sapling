@@ -338,33 +338,49 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
     ObjectFetchContext& context);
 
 ImmediateFuture<folly::Unit> handleNotPresentFileNotification(
-    EdenMount& mount,
+    const EdenMount& mount,
     RelativePath path,
     ObjectFetchContext& context) {
-  struct GetFirstPresent {
-    GetFirstPresent() = default;
+  /**
+   * Allows finding the first directory that is present on disk. This must be
+   * heap allocated and kept alive until compute returns.
+   */
+  class GetFirstPresent {
+   public:
+    explicit GetFirstPresent(RelativePath path)
+        : fullPath_{std::move(path)}, currentPrefix_{fullPath_} {}
 
-    ImmediateFuture<RelativePathPiece> compute(
-        EdenMount& mount,
-        RelativePathPiece path) {
-      auto dirname = path.dirname();
+    GetFirstPresent(GetFirstPresent&&) = delete;
+    GetFirstPresent(const GetFirstPresent&) = delete;
+
+    ImmediateFuture<RelativePath> compute(const EdenMount& mount) {
+      auto dirname = currentPrefix_.dirname();
       return getOnDiskState(mount, dirname)
           .thenValue(
-              [this, &mount, path](
-                  OnDiskState state) -> ImmediateFuture<RelativePathPiece> {
+              [this, &mount](
+                  OnDiskState state) mutable -> ImmediateFuture<RelativePath> {
                 if (state != OnDiskState::NotPresent) {
-                  return path;
+                  return currentPrefix_.copy();
                 }
 
-                return compute(mount, path.dirname());
+                currentPrefix_ = currentPrefix_.dirname();
+                return compute(mount);
               });
     }
+
+   private:
+    // The currentPrefix_ is a piece of the fullPath_ which is kept around for
+    // lifetime reasons.
+    RelativePath fullPath_;
+    RelativePathPiece currentPrefix_;
   };
 
   // First, we need to figure out how far down this path has been removed.
-  return GetFirstPresent{}
-      .compute(mount, path)
-      .thenValue([&mount, &context](RelativePathPiece path) {
+  auto getFirstPresent = std::make_unique<GetFirstPresent>(std::move(path));
+  auto fut = getFirstPresent->compute(mount);
+  return std::move(fut)
+      .ensure([getFirstPresent = std::move(getFirstPresent)] {})
+      .thenValue([&mount, &context](RelativePath path) {
         auto basename = path.basename();
         auto dirname = path.dirname();
 
@@ -387,8 +403,7 @@ ImmediateFuture<folly::Unit> handleNotPresentFileNotification(
               }
               return try_;
             });
-      })
-      .ensure([path = std::move(path)] {});
+      });
 }
 
 ImmediateFuture<folly::Unit> fileNotificationImpl(

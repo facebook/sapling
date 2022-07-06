@@ -72,6 +72,30 @@ is stored or non-stored (`Piece`).
 * Note: Iterating the absolute path "/foo/bar/baz" would also yield the same
   sequence.
 
+## Lifetime
+
+All the stored paths are merely a wrapper around an `std::string`, and the
+piece version are also just a wrapper on top of a `folly::StringPiece` (which
+has similar semantic as `std::string_view`), that is, a piece
+merely holds a view of to the underlying `std::string` buffer. When a
+stored path is being moved, the held `std::string` is also moved, which in most
+cases prevents copying and re-allocating a string, this makes the move
+operation fairly cheap and since the pieces were a view on that
+first string memory allocation, these are still viewing valid and allocated
+memory.
+
+However, `std::string` have an optimization where small strings aren't heap
+allocated, but are stored in the `std::string` object itself, this is called SSO
+for small string optimization. In this case, a `folly::StringPiece` is no longer
+a view on the heap allocated memory, but on that SSO memory. What this means is
+that moving a SSO `std::string` will make the `folly::StringPiece` invalid as it
+would no longer point to valid memory!
+
+What this means is that taking a path piece of a stored path and then moving
+that stored path to extend its lifetime (say by moving it to an `ensure` blob),
+will lead to a use after free when using the path piece in the case where the
+stored path is small enough that the SSO kicks-in.
+
 ## Utility Functions
 
 * `stringPiece()` - Returns the path as a `folly::StringPiece`
