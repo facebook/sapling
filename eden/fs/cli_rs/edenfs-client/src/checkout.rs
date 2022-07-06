@@ -609,8 +609,8 @@ impl EdenFsCheckout {
                 background,
                 ..Default::default()
             };
-            let res = client.predictiveGlobFiles(&glob_params).await;
-            Ok(res.context("Failed predictiveGlobFiles() thrift call")?)
+            let res = client.globFiles(&glob_params).await;
+            Ok(res.context("Failed globFiles() thrift call")?)
         }
     }
 
