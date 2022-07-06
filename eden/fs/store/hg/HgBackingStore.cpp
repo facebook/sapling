@@ -104,12 +104,14 @@ class HgImporterThreadFactory : public folly::ThreadFactory {
   std::thread newThread(folly::Func&& func) override {
     return delegate_.newThread([this, func = std::move(func)]() mutable {
       threadLocalImporter.reset(new HgImporterManager(repository_, stats_));
-      SCOPE_EXIT {
-        // TODO(xavierd): On Windows, the ThreadLocalPtr doesn't appear to
-        // release its resources when the thread dies, so let's do it manually
-        // here.
-        threadLocalImporter.reset();
-      };
+      if (folly::kIsWindows) {
+        SCOPE_EXIT {
+          // TODO(T125334969): On Windows, the ThreadLocalPtr doesn't appear to
+          // release its resources when the thread dies, so let's do it
+          // manually here.
+          threadLocalImporter.reset();
+        };
+      }
       func();
     });
   }
