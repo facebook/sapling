@@ -166,40 +166,29 @@ impl PrefetchCmd {
 
         let client_name = instance.client_name(&checkout_path)?;
 
-        let mut telemetry = if cfg!(fbcode_build) {
-            let _fb = expect_init();
-            let sample = PrefetchProfileSample::build(_fb);
-            Some(sample)
-        } else {
-            None
-        };
-
         #[cfg(fbcode_build)]
-        {
-            if let Some(telemetry) = telemetry.as_mut() {
-                telemetry.set_activate_event(
-                    profile_name,
-                    client_name.as_str(),
-                    options.skip_prefetch,
-                );
-            }
-        }
+        let mut sample = {
+            let _fb = expect_init();
+            let mut sample = PrefetchProfileSample::build(_fb);
+            sample.set_activate_event(profile_name, client_name.as_str(), options.skip_prefetch);
+            sample
+        };
 
         let config_dir = instance.config_directory(&client_name);
         let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
         match checkout_config {
             Ok(mut checkout_config) => {
                 checkout_config.activate_profile(profile_name, config_dir)?;
-                if let Some(telemetry) = telemetry {
-                    send(telemetry.builder);
-                }
+                #[cfg(fbcode_build)]
+                send(sample.builder);
             }
+            #[cfg(fbcode_build)]
             Err(e) => {
-                if let Some(mut telemetry) = telemetry {
-                    telemetry.fail(&e.to_string());
-                    send(telemetry.builder);
-                }
+                sample.fail(&e.to_string());
+                send(sample.builder);
             }
+            #[cfg(not(fbcode_build))]
+            Err(_) => (),
         }
 
         if !options.skip_prefetch {
@@ -244,35 +233,28 @@ impl PrefetchCmd {
         };
         let client_name = instance.client_name(&checkout_path)?;
 
-        let mut telemetry = if cfg!(fbcode_build) {
-            let _fb = expect_init();
-            let sample = PrefetchProfileSample::build(_fb);
-            Some(sample)
-        } else {
-            None
-        };
-
         #[cfg(fbcode_build)]
-        {
-            if let Some(telemetry) = telemetry.as_mut() {
-                telemetry.set_deactivate_event(profile_name, client_name.as_str());
-            }
-        }
+        let mut sample = {
+            let _fb = expect_init();
+            let mut sample = PrefetchProfileSample::build(_fb);
+            sample.set_deactivate_event(profile_name, client_name.as_str());
+            sample
+        };
 
         let config_dir = instance.config_directory(&client_name);
         let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
         match checkout_config {
             Ok(mut checkout_config) => {
                 checkout_config.deactivate_profile(profile_name, config_dir)?;
-                if let Some(telemetry) = telemetry {
-                    send(telemetry.builder);
-                }
+                #[cfg(fbcode_build)]
+                send(sample.builder);
                 Ok(0)
             }
             Err(e) => {
-                if let Some(mut telemetry) = telemetry {
-                    telemetry.fail(&e.to_string());
-                    send(telemetry.builder);
+                #[cfg(fbcode_build)]
+                {
+                    sample.fail(&e.to_string());
+                    send(sample.builder);
                 }
                 Err(e)
             }
