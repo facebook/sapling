@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.56"
-clap = { version = "3.2.6", features = ["derive", "regex", "unicode", "wrap_help"] }
+clap = { version = "3.2.8", features = ["derive", "regex", "unicode", "wrap_help"] }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
