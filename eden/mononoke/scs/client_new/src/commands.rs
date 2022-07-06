@@ -11,5 +11,6 @@ base_app::subcommands! {
     mod cat;
     mod repos;
     mod blame;
+    mod find_files;
     app = SCSCApp
 }
