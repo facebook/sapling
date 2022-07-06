@@ -21,6 +21,7 @@ import time
 import traceback
 from functools import partial
 from pathlib import Path
+from typing import List, Optional, Tuple
 
 import bindings
 from edenscm.mercurial import (
@@ -49,7 +50,7 @@ BLACKBOX_PATTERN = """
 """
 
 
-def shcmd(cmd, input=None, check=True, keeperr=True):
+def shcmd(cmd, input=None, check: bool = True, keeperr: bool = True) -> str:
     _, _, _, p = util.popen4(cmd)
     out, err = p.communicate(input)
     out = pycompat.decodeutf8(out, errors="replace")
@@ -61,7 +62,7 @@ def shcmd(cmd, input=None, check=True, keeperr=True):
     return out
 
 
-def which(name):
+def which(name) -> Optional[str]:
     """ """
     for p in encoding.environ.get("PATH", "/bin").split(pycompat.ospathsep):
         path = os.path.join(p, name)
@@ -70,7 +71,7 @@ def which(name):
     return None
 
 
-def _tail(userlogdir, userlogfiles, nlines=100):
+def _tail(userlogdir, userlogfiles, nlines: int = 100) -> str:
     """
     Returns the last `nlines` from logfiles
     """
@@ -101,13 +102,13 @@ def _tail(userlogdir, userlogfiles, nlines=100):
     return "".join(reversed(logs))
 
 
-rageopts = [
+rageopts: List[Tuple[str, str, Optional[int], str]] = [
     ("p", "preview", None, _("print diagnostic information without uploading paste")),
     ("t", "timeout", 20, _("maximum seconds spent on collecting one section")),
 ]
 
 
-def localconfig(ui):
+def localconfig(ui) -> List[str]:
     result = []
     for section, name, value in ui.walkconfig():
         source = ui.configsource(section, name)
@@ -120,7 +121,7 @@ def localconfig(ui):
     return result
 
 
-def allconfig(ui):
+def allconfig(ui) -> List[str]:
     result = []
     with ui.configoverride(
         {("configs", "legacylist"): "", ("configs", "remote_allowlist"): ""}
@@ -132,7 +133,7 @@ def allconfig(ui):
     return result
 
 
-def usechginfo():
+def usechginfo() -> str:
     """FBONLY: Information about whether chg is enabled"""
     files = {"system": "/etc/mercurial/usechg", "user": os.path.expanduser("~/.usechg")}
     result = []
@@ -146,7 +147,7 @@ def usechginfo():
     return "\n".join(result)
 
 
-def rpminfo(ui):
+def rpminfo(ui) -> str:
     """FBONLY: Information about RPM packages"""
     result = set()
     rpmbin = ui.config("rage", "rpmbin", "rpm")
@@ -202,7 +203,7 @@ def scmdaemonlog(ui, repo):
     return _tail(os.path.dirname(logpath), logfiles, 150)
 
 
-def readinfinitepushbackupstate(repo):
+def readinfinitepushbackupstate(repo) -> str:
     dirname = "infinitepushbackups"
     if repo.sharedvfs.exists(dirname):
         result = []
@@ -217,7 +218,7 @@ def readinfinitepushbackupstate(repo):
         return "no any infinitepushbackupstate file in the repo\n"
 
 
-def readcommitcloudstate(repo):
+def readcommitcloudstate(repo) -> str:
     prefixpath = repo.svfs.join("commitcloudstate")
     files = glob.glob(prefixpath + "*")
     if not files:
@@ -230,7 +231,7 @@ def readcommitcloudstate(repo):
     return "\n".join(lines) + "\n"
 
 
-def readsigtraces(repo):
+def readsigtraces(repo) -> str:
     vfs = repo.localvfs
     names = vfs.listdir("sigtrace")
     names.sort(key=lambda name: -vfs.stat("sigtrace/%s" % name).st_mtime)
@@ -247,7 +248,7 @@ def readsigtraces(repo):
     return result
 
 
-def checkproxyagentstate(ui):
+def checkproxyagentstate(ui) -> str:
     if not ui.config("auth_proxy", "x2pagentd"):
         return "Not enabled"
 
@@ -256,7 +257,7 @@ def checkproxyagentstate(ui):
     return "x2pagentd rage:\n\n{}".format(x2prage)
 
 
-def sksagentrage(ui):
+def sksagentrage(ui) -> str:
     sksagentpath = ui.config("rage", "sks-agent-path")
     if not sksagentpath:
         return "Agent not configured for this platform"
@@ -270,7 +271,7 @@ def sksagentrage(ui):
     return "sks-agent status:\n\n{}".format(status)
 
 
-def _makerage(ui, repo, **opts):
+def _makerage(ui, repo, **opts) -> str:
     configoverrides = {
         # Make graphlog shorter.
         ("experimental", "graphshorten"): "1",
@@ -501,7 +502,7 @@ def _makerage(ui, repo, **opts):
 
 
 @command("rage", rageopts, _("hg rage"))
-def rage(ui, repo, *pats, **opts):
+def rage(ui, repo, *pats, **opts) -> None:
     """collect troubleshooting diagnostics
 
     The rage command collects useful diagnostic information.
