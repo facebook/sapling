@@ -5,131 +5,50 @@
  * GNU General Public License version 2.
  */
 
-/// Mononoke pushrebase implementation. The main goal of pushrebase is to decrease push contention.
-/// Commits that client pushed are rebased on top of `onto_bookmark` on the server
-///
-///  Client
-///  ```text
-///     O <- `onto` on client, potentially outdated
-///     |
-///     O  O <- pushed set (in this case just one commit)
-///     | /
-///     O <- root
-///  ```
-///
-///  Server
-///  ```text
-///     O  <- update `onto` bookmark, pointing at the pushed commit
-///     |
-///     O  <- `onto` bookmark on the server before the push
-///     |
-///     O
-///     |
-///     O
-///     |
-///     O <- root
-///  ```
-///
-///  Terminology:
-///  *onto bookmark* - bookmark that is the destination of the rebase, for example "master"
-///
-///  *pushed set* - a set of commits that client has sent us.
-///  Note: all pushed set MUST be committed before doing pushrebase
-///  Note: pushed set MUST contain only one head
-///  Note: not all commits from pushed set maybe rebased on top of onto bookmark. See *rebased set*
-///
-///  *root* - parents of pushed set that are not in the pushed set (see graphs above)
-///
-///  *rebased set* - subset of pushed set that will be rebased on top of onto bookmark
-///  Note: Usually rebased set == pushed set. However in case of merges it may differ
-///
-/// Pushrebase supports hooks, which can be used to modify rebased Bonsai commits as well as
-/// sideload database updates in the transaction that moves forward the bookmark. See hooks.rs for
-/// more information on those;
+//! Mononoke pushrebase implementation. The main goal of pushrebase is to decrease push contention.
+//! Commits that client pushed are rebased on top of `onto_bookmark` on the server
+//!
+//!  Client
+//!  ```text
+//!     O <- `onto` on client, potentially outdated
+//!     |
+//!     O  O <- pushed set (in this case just one commit)
+//!     | /
+//!     O <- root
+//!  ```
+//!
+//!  Server
+//!  ```text
+//!     O  <- update `onto` bookmark, pointing at the pushed commit
+//!     |
+//!     O  <- `onto` bookmark on the server before the push
+//!     |
+//!     O
+//!     |
+//!     O
+//!     |
+//!     O <- root
+//!  ```
+//!
+//!  Terminology:
+//!  *onto bookmark* - bookmark that is the destination of the rebase, for example "master"
+//!
+//!  *pushed set* - a set of commits that client has sent us.
+//!  Note: all pushed set MUST be committed before doing pushrebase
+//!  Note: pushed set MUST contain only one head
+//!  Note: not all commits from pushed set maybe rebased on top of onto bookmark. See *rebased set*
+//!
+//!  *root* - parents of pushed set that are not in the pushed set (see graphs above)
+//!
+//!  *rebased set* - subset of pushed set that will be rebased on top of onto bookmark
+//!  Note: Usually rebased set == pushed set. However in case of merges it may differ
+//!
+//! Pushrebase supports hooks, which can be used to modify rebased Bonsai commits as well as
+//! sideload database updates in the transaction that moves forward the bookmark. See hooks.rs for
+//! more information on those;
+
 use anyhow::format_err;
-/// Mononoke pushrebase implementation. The main goal of pushrebase is to decrease push contention.
-/// Commits that client pushed are rebased on top of `onto_bookmark` on the server
-///
-///  Client
-///  ```text
-///     O <- `onto` on client, potentially outdated
-///     |
-///     O  O <- pushed set (in this case just one commit)
-///     | /
-///     O <- root
-///  ```
-///
-///  Server
-///  ```text
-///     O  <- update `onto` bookmark, pointing at the pushed commit
-///     |
-///     O  <- `onto` bookmark on the server before the push
-///     |
-///     O
-///     |
-///     O
-///     |
-///     O <- root
-///  ```
-///
-///  Terminology:
-///  *onto bookmark* - bookmark that is the destination of the rebase, for example "master"
-///
-///  *pushed set* - a set of commits that client has sent us.
-///  Note: all pushed set MUST be committed before doing pushrebase
-///  Note: pushed set MUST contain only one head
-///  Note: not all commits from pushed set maybe rebased on top of onto bookmark. See *rebased set*
-///
-///  *root* - parents of pushed set that are not in the pushed set (see graphs above)
-///
-///  *rebased set* - subset of pushed set that will be rebased on top of onto bookmark
-///  Note: Usually rebased set == pushed set. However in case of merges it may differ
-///
-/// Pushrebase supports hooks, which can be used to modify rebased Bonsai commits as well as
-/// sideload database updates in the transaction that moves forward the bookmark. See hooks.rs for
-/// more information on those;
 use anyhow::Error;
-/// Mononoke pushrebase implementation. The main goal of pushrebase is to decrease push contention.
-/// Commits that client pushed are rebased on top of `onto_bookmark` on the server
-///
-///  Client
-///  ```text
-///     O <- `onto` on client, potentially outdated
-///     |
-///     O  O <- pushed set (in this case just one commit)
-///     | /
-///     O <- root
-///  ```
-///
-///  Server
-///  ```text
-///     O  <- update `onto` bookmark, pointing at the pushed commit
-///     |
-///     O  <- `onto` bookmark on the server before the push
-///     |
-///     O
-///     |
-///     O
-///     |
-///     O <- root
-///  ```
-///
-///  Terminology:
-///  *onto bookmark* - bookmark that is the destination of the rebase, for example "master"
-///
-///  *pushed set* - a set of commits that client has sent us.
-///  Note: all pushed set MUST be committed before doing pushrebase
-///  Note: pushed set MUST contain only one head
-///  Note: not all commits from pushed set maybe rebased on top of onto bookmark. See *rebased set*
-///
-///  *root* - parents of pushed set that are not in the pushed set (see graphs above)
-///
-///  *rebased set* - subset of pushed set that will be rebased on top of onto bookmark
-///  Note: Usually rebased set == pushed set. However in case of merges it may differ
-///
-/// Pushrebase supports hooks, which can be used to modify rebased Bonsai commits as well as
-/// sideload database updates in the transaction that moves forward the bookmark. See hooks.rs for
-/// more information on those;
 use anyhow::Result;
 use blobrepo::save_bonsai_changesets;
 use blobrepo::BlobRepo;
