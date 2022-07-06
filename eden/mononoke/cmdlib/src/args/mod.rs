@@ -84,6 +84,15 @@ pub fn resolve_repo_by_name<'a>(
     resolve_repo_given_name(repo_name, &configs)
 }
 
+pub fn resolve_repo_by_id<'a>(
+    config_store: &ConfigStore,
+    matches: &'a MononokeMatches<'a>,
+    repo_id: i32,
+) -> Result<ResolvedRepo> {
+    let configs = load_repo_configs(config_store, matches)?;
+    resolve_repo_given_id(RepositoryId::new(repo_id), &configs)
+}
+
 pub fn resolve_repo<'a>(
     config_store: &ConfigStore,
     matches: &'a MononokeMatches<'a>,
@@ -257,6 +266,22 @@ where
     T::with_metadata_database_config(
         fb,
         &config.storage_config.metadata,
+        matches.mysql_options(),
+        matches.readonly_storage().0,
+    )
+}
+
+pub fn open_sql_with_config<'a, T>(
+    fb: FacebookInit,
+    matches: &'a MononokeMatches<'a>,
+    repo_config: &RepoConfig,
+) -> Result<T, Error>
+where
+    T: SqlConstructFromMetadataDatabaseConfig,
+{
+    T::with_metadata_database_config(
+        fb,
+        &repo_config.storage_config.metadata,
         matches.mysql_options(),
         matches.readonly_storage().0,
     )

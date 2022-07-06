@@ -32,6 +32,7 @@ use slog::Logger;
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
+use std::fs::File;
 use std::process::Stdio;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -212,7 +213,7 @@ struct HgPeer {
     invalidated: bool,
     // The extension_file needs to be kept around while we have running instances of the process.
     #[allow(unused)]
-    extension_file: Arc<NamedTempFile>,
+    extension_file: Arc<File>,
 }
 
 impl HgPeer {
@@ -227,16 +228,15 @@ impl HgPeer {
             .to_str()
             .ok_or(Error::msg("Temp file path contains non-unicode chars"))?;
 
-        let extension_file = NamedTempFile::new()?;
-        let extension_path = extension_file
-            .path()
-            .to_str()
-            .ok_or(Error::msg("Temp file path contains non-unicode chars"))?;
-        fs::write(extension_path, SEND_UNBUNDLE_REPLAY_EXTENSION)?;
-
+        let extension_file = NamedTempFile::new().context("Error in creating extension file")?;
+        // Persisting the file so it does not get deleted before its contents are read.
+        let (extension_file, extension_path) = extension_file.keep()?;
+        let path_string = extension_path.clone();
+        fs::write(extension_path, SEND_UNBUNDLE_REPLAY_EXTENSION)
+            .with_context(|| format!("Error in writing data to file {}", &path_string.display()))?;
         let args = &[
             "--config",
-            &format!("extensions.sendunbundlereplay={}", extension_path),
+            &format!("extensions.sendunbundlereplay={}", &path_string.display()),
             "sendunbundlereplaybatch",
             "--debug",
             "--path",

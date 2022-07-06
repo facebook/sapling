@@ -10,6 +10,7 @@ use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
+use cloned::cloned;
 use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
@@ -77,28 +78,30 @@ impl DarkstormGlobalrevSyncer {
             }
         };
 
-        let bcs_id_to_globalrev = stream::iter(commits.iter().map(|(_, bcs_id)| async move {
-            let maybe_globalrev = self
-                .orig_repo
-                .bonsai_globalrev_mapping()
-                .get_globalrev_from_bonsai(ctx, *bcs_id)
-                .await?;
-            Result::<_, Error>::Ok((bcs_id, maybe_globalrev))
+        let commits = commits.clone().into_iter().map(|(_, bcs_id)| bcs_id);
+        let bcs_id_to_globalrev = stream::iter(commits.map(|bcs_id| {
+            cloned!(ctx, self.orig_repo);
+            async move {
+                let maybe_globalrev = orig_repo
+                    .bonsai_globalrev_mapping()
+                    .get_globalrev_from_bonsai(&ctx, bcs_id)
+                    .await?;
+                Result::<_, Error>::Ok((bcs_id, maybe_globalrev))
+            }
         }))
         .map(Ok)
         .try_buffer_unordered(100)
-        .try_filter_map(|(bcs_id, maybe_globalrev)| async move {
-            Ok(maybe_globalrev.map(|globalrev| (bcs_id, globalrev)))
+        .try_filter_map(|(bcs_id, maybe_globalrev)| {
+            let bcs_id = bcs_id.clone();
+            let maybe_globalrev = maybe_globalrev.clone();
+            async move { Ok(maybe_globalrev.map(|globalrev| (bcs_id, globalrev))) }
         })
         .try_collect::<HashMap<_, _>>()
         .await?;
 
         let entries = bcs_id_to_globalrev
             .into_iter()
-            .map(|(bcs_id, globalrev)| BonsaiGlobalrevMappingEntry {
-                bcs_id: *bcs_id,
-                globalrev,
-            })
+            .map(|(bcs_id, globalrev)| BonsaiGlobalrevMappingEntry { bcs_id, globalrev })
             .collect::<Vec<_>>();
 
         self.darkstorm_repo

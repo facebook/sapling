@@ -17,6 +17,7 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1.0.56"
 async-stream = "0.3"
+async-trait = "0.1.56"
 base64 = "0.11.0"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
@@ -31,6 +32,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
 dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
+executor_lib = { version = "0.1.0", path = "../tools/executor" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
@@ -56,6 +58,7 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_api_types = { version = "0.1.0", path = "../mononoke_api/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
+once_cell = "1.12"
 reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
 regex = "1.5.4"
 repo_lock = { version = "0.1.0", path = "../repo_attributes/repo_lock/repo_lock" }

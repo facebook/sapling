@@ -29,7 +29,6 @@ use futures::future::try_join_all;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
-use futures::Future;
 use futures_watchdog::WatchdogExt;
 use getbundle_response::SessionLfsParams;
 use itertools::Itertools;
@@ -134,12 +133,12 @@ impl BundlePreparer {
         .await
     }
 
-    pub fn prepare_bundles<'a>(
+    pub fn prepare_bundles(
         &self,
-        ctx: &'a CoreContext,
+        ctx: CoreContext,
         batches: Vec<BookmarkLogEntryBatch>,
         overlay: &mut crate::BookmarkOverlay,
-    ) -> impl Future<Output = Result<Vec<CombinedBookmarkUpdateLogEntry>, PipelineError>> + 'a {
+    ) -> BoxFuture<'static, Result<Vec<CombinedBookmarkUpdateLogEntry>, PipelineError>> {
         let mut futs = vec![];
         let push_vars = self.push_vars.clone();
 
@@ -154,7 +153,7 @@ impl BundlePreparer {
             let prepare_type = PrepareInfo {
                 lca_hint: lca_hint.clone(),
                 lfs_params: get_session_lfs_params(
-                    ctx,
+                    &ctx,
                     &batch.bookmark_name,
                     lfs_params.clone(),
                     bookmark_regex_force_lfs,
@@ -176,15 +175,18 @@ impl BundlePreparer {
 
         let futs = futs
             .into_iter()
-            .map(|(f, entries)| async move {
-                let f = tokio::spawn(f);
-                let res = f.map_err(Error::from).watched(ctx.logger()).await;
-                let res = match res {
-                    Ok(Ok(res)) => Ok(res),
-                    Ok(Err(err)) => Err(err),
-                    Err(err) => Err(err),
-                };
-                res.map_err(|err| bind_sync_err(&entries, err))
+            .map(|(f, entries)| {
+                let ctx = ctx.clone();
+                async move {
+                    let f = tokio::spawn(f);
+                    let res = f.map_err(Error::from).watched(ctx.logger()).await;
+                    let res = match res {
+                        Ok(Ok(res)) => Ok(res),
+                        Ok(Err(err)) => Err(err),
+                        Err(err) => Err(err),
+                    };
+                    res.map_err(|err| bind_sync_err(&entries, err))
+                }
             })
             .collect::<Vec<_>>();
         async move { try_join_all(futs).await }.boxed()
