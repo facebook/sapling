@@ -21,6 +21,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SystemError.h"
@@ -611,8 +612,18 @@ ImmediateFuture<folly::Unit> fileNotification(
   folly::via(
       executor,
       [&mount, path, receivedAt, context = std::move(context)]() mutable {
-        return fileNotificationImpl(
-                   mount, std::move(path), receivedAt, *context)
+        auto fault = ImmediateFuture{
+            mount.getServerState()->getFaultInjector().checkAsync(
+                "PrjfsDispatcherImpl::fileNotification", path)};
+
+        return std::move(fault)
+            .thenValue([&mount,
+                        path = std::move(path),
+                        receivedAt,
+                        context = std::move(context)](auto&&) {
+              return fileNotificationImpl(
+                  mount, std::move(path), receivedAt, *context);
+            })
             .get();
       })
       .thenError([path](const folly::exception_wrapper& ew) {
