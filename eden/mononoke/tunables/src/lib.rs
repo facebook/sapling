@@ -251,6 +251,14 @@ pub struct MononokeTunables {
     // mononoke hosts will invalidate bonsai_hg_mapping cache
     bonsai_hg_mapping_sitever: AtomicI64,
 
+    // Setting this tunable to a new non-zero value will update the
+    // TTL for the mutation store cache
+    hg_mutation_store_caching_ttl_secs: AtomicI64,
+
+    // Setting this tunable to a new non-zero value and restarting
+    // mononoke hosts will invalidate hg mutation store cache
+    hg_mutation_store_sitever: AtomicI64,
+
     // EdenAPI requests that take long than this get logged unsampled
     edenapi_unsampled_duration_threshold_ms: AtomicI64,
 

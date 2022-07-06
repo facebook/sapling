@@ -12,15 +12,22 @@ name = "mercurial_mutation_test"
 path = "test/main.rs"
 
 [dependencies]
+abomonation = "0.7"
+abomonation_derive = "0.5"
 anyhow = "1.0.56"
 async-trait = "0.1.56"
+bytes = { version = "1.1", features = ["serde"] }
+cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+caching_ext = { version = "0.1.0", path = "../../common/rust/caching_ext" }
 context = { version = "0.1.0", path = "../../server/context" }
 edenapi_types = { version = "0.1.0", path = "../../../scm/lib/edenapi/types" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 hg_mutation_entry_thrift = { version = "0.1.0", path = "if" }
 itertools = "0.10.3"
+memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_types = { version = "0.1.0", path = "../types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
@@ -29,10 +36,11 @@ slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+tunables = { version = "0.1.0", path = "../../tunables" }
 types = { version = "0.1.0", path = "../../../scm/lib/types" }
 
 [dev-dependencies]
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"
 mercurial_types-mocks = { version = "0.1.0", path = "../types/mocks" }

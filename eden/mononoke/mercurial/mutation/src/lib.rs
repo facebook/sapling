@@ -22,11 +22,13 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::RepositoryId;
 
 mod builder;
+mod caching;
 mod entry;
 mod grouper;
 mod store;
 
 pub use crate::builder::SqlHgMutationStoreBuilder;
+pub use crate::caching::CachedHgMutationStore;
 pub use crate::entry::HgMutationEntry;
 pub use crate::store::SqlHgMutationStore;
 

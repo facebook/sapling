@@ -10,23 +10,22 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Read;
 
+use abomonation_derive::Abomonation;
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use edenapi_types::Extra;
 use edenapi_types::HgMutationEntryContent;
+use hg_mutation_entry_thrift as thrift;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
-use mononoke_types::DateTime;
-
-use hg_mutation_entry_thrift as thrift;
 use types::mutation::MutationEntry;
 use types::HgId;
 
 use crate::grouper::Grouper;
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 /// Record of a Mercurial mutation operation (e.g. amend or rebase).
+#[derive(Abomonation, Clone, Debug, Hash, Eq, PartialEq)]
 pub struct HgMutationEntry {
     /// The commit that resulted from the mutation operation.
     successor: HgChangesetId,

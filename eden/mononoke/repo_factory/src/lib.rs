@@ -81,6 +81,7 @@ use hooks::ArcHookManager;
 use hooks_content_stores::RepoFileContentManager;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use mercurial_mutation::ArcHgMutationStore;
+use mercurial_mutation::CachedHgMutationStore;
 use mercurial_mutation::SqlHgMutationStoreBuilder;
 use metaconfig_types::AllowlistIdentity;
 use metaconfig_types::ArcRepoConfig;
@@ -833,7 +834,16 @@ impl RepoFactory {
             .open::<SqlHgMutationStoreBuilder>()
             .context(RepoFactoryError::HgMutationStore)?
             .with_repo_id(repo_identity.id());
-        Ok(Arc::new(hg_mutation_store))
+
+        if let Some(pool) = self.maybe_volatile_pool("hg_mutation_store")? {
+            Ok(Arc::new(CachedHgMutationStore::new(
+                self.env.fb,
+                Arc::new(hg_mutation_store),
+                pool,
+            )))
+        } else {
+            Ok(Arc::new(hg_mutation_store))
+        }
     }
 
     pub async fn segmented_changelog(

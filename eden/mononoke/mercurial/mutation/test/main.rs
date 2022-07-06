@@ -8,5 +8,6 @@
 //! Tests for the hg mutation store.
 
 mod basic;
+mod caching;
 mod cycles;
 mod util;
