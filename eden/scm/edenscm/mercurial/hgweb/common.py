@@ -17,6 +17,9 @@ import base64
 import errno
 import mimetypes
 import os
+from typing import List
+
+from edenscm.mercurial.util import wrapped_stat_result
 
 from .. import encoding, pycompat, util
 
@@ -43,7 +46,7 @@ def ismember(ui, username, userlist):
     return userlist == ["*"] or username in userlist
 
 
-def checkauthz(hgweb, req, op):
+def checkauthz(hgweb, req, op) -> None:
     """Check permission for operation based on request data (including
     authentication info). Return if op allowed, else raise an ErrorResponse
     exception."""
@@ -127,11 +130,11 @@ def _statusmessage(code):
     return responses.get(code, ("Error", "Unknown error"))[0]
 
 
-def statusmessage(code, message=None):
+def statusmessage(code, message=None) -> str:
     return "%d %s" % (code, message or _statusmessage(code))
 
 
-def get_stat(spath, fn):
+def get_stat(spath: str, fn) -> wrapped_stat_result:
     """stat fn if it exists, spath otherwise"""
     cl_path = os.path.join(spath, fn)
     if os.path.exists(cl_path):
@@ -144,7 +147,7 @@ def get_mtime(spath):
     return get_stat(spath, "00changelog.i").st_mtime
 
 
-def ispathsafe(path):
+def ispathsafe(path) -> bool:
     """Determine if a path is safe to use for filesystem access."""
     parts = path.split("/")
     for part in parts:
@@ -159,7 +162,7 @@ def ispathsafe(path):
     return True
 
 
-def staticfile(directory, fname, req):
+def staticfile(directory: List[str], fname, req) -> None:
     """return a file inside directory with guessed Content-Type header
 
     fname always uses '/' as directory separator and isn't allowed to
@@ -179,6 +182,7 @@ def staticfile(directory, fname, req):
         if os.path.exists(path):
             break
     try:
+        # pyre-fixme[61]: `path` is undefined, or not always defined.
         os.stat(path)
         ct = mimetypes.guess_type(path)[0] or "text/plain"
         with open(path, "rb") as fh:
@@ -194,7 +198,7 @@ def staticfile(directory, fname, req):
             raise ErrorResponse(HTTP_SERVER_ERROR, encoding.strtolocal(err.strerror))
 
 
-def paritygen(stripecount, offset=0):
+def paritygen(stripecount, offset: int = 0):
     """count parity of horizontal stripes for easier reading"""
     if stripecount and offset:
         # account for offset, e.g. due to building the list in reverse
@@ -225,7 +229,7 @@ def get_contact(config):
     )
 
 
-def caching(web, req):
+def caching(web, req) -> None:
     tag = r'W/"%d"' % web.mtime
     if req.env.get("HTTP_IF_NONE_MATCH") == tag:
         raise ErrorResponse(HTTP_NOT_MODIFIED)
