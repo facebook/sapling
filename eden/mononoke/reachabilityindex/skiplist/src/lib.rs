@@ -652,6 +652,9 @@ impl ReachabilityIndex for SkiplistIndex {
             changeset_fetcher.get_generation_number(ctx.clone(), anc_hash),
             changeset_fetcher.get_generation_number(ctx.clone(), desc_hash),
         )?;
+        if anc_gen > desc_gen {
+            return Ok(false);
+        }
         ctx.perf_counters()
             .set_counter(PerfCounterType::SkiplistAncestorGen, anc_gen.value() as i64);
         ctx.perf_counters().set_counter(
