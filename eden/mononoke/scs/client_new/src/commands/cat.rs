@@ -23,7 +23,7 @@ use crate::args::commit_id::CommitIdArgs;
 use crate::args::path::PathArgs;
 use crate::args::repo::RepoArgs;
 use crate::render::Render;
-use crate::SCSCApp;
+use crate::ScscApp;
 
 /// Chunk size for requests.
 const CHUNK_SIZE: i64 = source_control::FILE_CONTENT_CHUNK_RECOMMENDED_SIZE;
@@ -70,7 +70,7 @@ impl Render for CatOutput {
     }
 }
 
-pub(super) async fn run(app: SCSCApp, args: CommandArgs) -> Result<()> {
+pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_id = args.commit_id_args.clone().into_commit_id()?;
     let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;

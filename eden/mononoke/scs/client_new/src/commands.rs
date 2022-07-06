@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::SCSCApp;
+use crate::ScscApp;
 
 base_app::subcommands! {
     mod cat;
     mod repos;
     mod blame;
     mod find_files;
-    app = SCSCApp
+    app = ScscApp
 }

@@ -29,7 +29,7 @@ use crate::args::repo::RepoArgs;
 use crate::lib::commit_id::render_commit_id;
 use crate::lib::datetime;
 use crate::render::Render;
-use crate::SCSCApp;
+use crate::ScscApp;
 
 const DEFAULT_TITLE_WIDTH: usize = 32;
 
@@ -375,7 +375,7 @@ impl Render for BlameOut {
     }
 }
 
-pub(super) async fn run(app: SCSCApp, args: CommandArgs) -> Result<()> {
+pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_id = args.commit_id_args.clone().into_commit_id()?;
     let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;

@@ -16,7 +16,7 @@ use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdArgs;
 use crate::args::repo::RepoArgs;
 use crate::render::Render;
-use crate::SCSCApp;
+use crate::ScscApp;
 
 #[derive(Parser)]
 /// Find all files inside a certain dir or with certain filename
@@ -57,7 +57,7 @@ impl Render for FileListOutput {
     }
 }
 
-pub(super) async fn run(app: SCSCApp, args: CommandArgs) -> Result<()> {
+pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_id = args.commit_id_args.clone().into_commit_id()?;
     let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;

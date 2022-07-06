@@ -58,13 +58,13 @@ lazy_static::lazy_static! {
     };
 }
 
-pub(crate) struct SCSCApp {
+pub(crate) struct ScscApp {
     matches: ArgMatches,
     connection: Connection,
     target: OutputTarget,
 }
 
-impl BaseApp for SCSCApp {
+impl BaseApp for ScscApp {
     fn subcommand(&self) -> Option<(&str, &ArgMatches)> {
         self.matches.subcommand()
     }
@@ -104,7 +104,7 @@ async fn main_impl(fb: FacebookInit) -> anyhow::Result<()> {
     } else {
         OutputTarget::Pipe
     };
-    let app = SCSCApp {
+    let app = ScscApp {
         matches,
         connection,
         target,

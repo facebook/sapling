@@ -15,7 +15,7 @@ use serde::Serialize;
 use source_control::types as thrift;
 
 use crate::render::Render;
-use crate::SCSCApp;
+use crate::ScscApp;
 
 #[derive(Parser)]
 /// List repositories
@@ -41,7 +41,7 @@ impl Render for ReposOutput {
     }
 }
 
-pub(super) async fn run(app: SCSCApp, args: CommandArgs) -> Result<()> {
+pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let params = thrift::ListReposParams {
         ..Default::default()
     };
