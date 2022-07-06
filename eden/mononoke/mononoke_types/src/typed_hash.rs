@@ -225,6 +225,7 @@ macro_rules! impl_typed_hash_no_context {
         }
 
         impl $crate::ThriftConvert for $typed {
+            const NAME: &'static str = stringify!($typed);
             type Thrift = $thrift_typed;
 
             fn from_thrift(h: Self::Thrift) -> $crate::private::anyhow::Result<Self> {

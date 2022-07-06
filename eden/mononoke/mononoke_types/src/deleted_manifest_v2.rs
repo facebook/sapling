@@ -5,13 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Context;
 use anyhow::Result;
 use blobstore::Blobstore;
 use blobstore::Storable;
 use bytes::Bytes;
 use context::CoreContext;
-use fbthrift::compact_protocol;
 use futures::stream::BoxStream;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -21,7 +19,6 @@ use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::DeletedManifestV2Blob;
 use crate::deleted_manifest_common::DeletedManifestCommon;
-use crate::errors::ErrorKind;
 use crate::sharded_map::MapValue;
 use crate::sharded_map::ShardedMapNode;
 use crate::thrift;
@@ -29,7 +26,9 @@ use crate::typed_hash::BlobstoreKey;
 use crate::typed_hash::ChangesetId;
 use crate::typed_hash::DeletedManifestV2Context;
 use crate::typed_hash::DeletedManifestV2Id;
+use crate::typed_hash::IdContext;
 use crate::MPathElement;
+use crate::ThriftConvert;
 
 /// Deleted Manifest is a data structure that tracks deleted files and commits where they
 /// were deleted. This manifest was designed in addition to Unodes to make following file history
@@ -170,6 +169,25 @@ impl DeletedManifestCommon for DeletedManifestV2 {
     }
 }
 
+impl ThriftConvert for DeletedManifestV2 {
+    const NAME: &'static str = "DeletedManifestV2";
+
+    type Thrift = thrift::DeletedManifestV2;
+    fn from_thrift(t: thrift::DeletedManifestV2) -> Result<DeletedManifestV2> {
+        Ok(Self {
+            linknode: t.linknode.map(ChangesetId::from_thrift).transpose()?,
+            subentries: ShardedMapNode::from_thrift(t.subentries)?,
+        })
+    }
+
+    fn into_thrift(self) -> thrift::DeletedManifestV2 {
+        thrift::DeletedManifestV2 {
+            linknode: self.linknode.map(ChangesetId::into_thrift),
+            subentries: self.subentries.into_thrift(),
+        }
+    }
+}
+
 impl DeletedManifestV2 {
     pub fn new(
         linknode: Option<ChangesetId>,
@@ -180,42 +198,19 @@ impl DeletedManifestV2 {
             subentries,
         }
     }
-
-    pub(crate) fn from_thrift(t: thrift::DeletedManifestV2) -> Result<DeletedManifestV2> {
-        Ok(Self {
-            linknode: t.linknode.map(ChangesetId::from_thrift).transpose()?,
-            subentries: ShardedMapNode::from_thrift(t.subentries)?,
-        })
-    }
-
-    pub(crate) fn into_thrift(self) -> thrift::DeletedManifestV2 {
-        thrift::DeletedManifestV2 {
-            linknode: self.linknode.map(ChangesetId::into_thrift),
-            subentries: self.subentries.into_thrift(),
-        }
-    }
-
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        let thrift_tc = compact_protocol::deserialize(bytes)
-            .with_context(|| ErrorKind::BlobDeserializeError("DeletedManifestV2".into()))?;
-        Self::from_thrift(thrift_tc)
-    }
 }
 
 impl BlobstoreValue for DeletedManifestV2 {
     type Key = DeletedManifestV2Id;
 
     fn into_blob(self) -> DeletedManifestV2Blob {
-        let thrift = self.into_thrift();
-        let data = compact_protocol::serialize(&thrift);
-        let mut context = DeletedManifestV2Context::new();
-        context.update(&data);
-        let id = context.finish();
+        let data = self.into_bytes();
+        let id = DeletedManifestV2Context::id_from_data(&data);
         Blob::new(id, data)
     }
 
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
-        Self::from_bytes(blob.data().as_ref())
+        Self::from_bytes(blob.data())
     }
 }
 
