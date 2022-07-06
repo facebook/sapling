@@ -22,7 +22,6 @@ use bounded_traversal::OrderedTraversal;
 use bytes::Bytes;
 use context::CoreContext;
 use derivative::Derivative;
-use fbthrift::compact_protocol;
 use futures::stream;
 use futures::FutureExt;
 use futures::Stream;
@@ -39,7 +38,6 @@ use std::fmt::Debug;
 
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
-use crate::errors::ErrorKind;
 use crate::thrift;
 use crate::typed_hash::IdContext;
 use crate::typed_hash::MononokeId;
@@ -546,8 +544,13 @@ impl<Value: MapValue> ShardedMapNode<Value> {
             }),
         }
     }
+}
 
-    pub(crate) fn from_thrift(t: thrift::ShardedMapNode) -> Result<Self> {
+impl<Value: MapValue> ThriftConvert for ShardedMapNode<Value> {
+    const NAME: &'static str = "ShardedMapNode";
+    type Thrift = thrift::ShardedMapNode;
+
+    fn from_thrift(t: thrift::ShardedMapNode) -> Result<Self> {
         Ok(match t {
             thrift::ShardedMapNode::intermediate(intermediate) => Self::Intermediate {
                 prefix: intermediate.prefix.0,
@@ -570,7 +573,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
         })
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::ShardedMapNode {
+    fn into_thrift(self) -> thrift::ShardedMapNode {
         match self {
             Self::Intermediate {
                 prefix,
@@ -595,26 +598,19 @@ impl<Value: MapValue> ShardedMapNode<Value> {
             }
         }
     }
-
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        let thrift_tc = compact_protocol::deserialize(bytes)
-            .with_context(|| ErrorKind::BlobDeserializeError("ShardedMapNode".into()))?;
-        Self::from_thrift(thrift_tc)
-    }
 }
 
 impl<Value: MapValue> BlobstoreValue for ShardedMapNode<Value> {
     type Key = Value::Id;
 
     fn into_blob(self) -> Blob<Self::Key> {
-        let thrift = self.into_thrift();
-        let data = compact_protocol::serialize(&thrift);
+        let data = self.into_bytes();
         let id = Value::Context::id_from_data(&data);
         Blob::new(id, data)
     }
 
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
-        Self::from_bytes(blob.data().as_ref())
+        Self::from_bytes(blob.data())
     }
 }
 
