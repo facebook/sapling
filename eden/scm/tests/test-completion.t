@@ -37,6 +37,7 @@ Show all commands except debug commands
   identify
   import
   init
+  isl
   locate
   log
   manifest
@@ -346,6 +347,7 @@ Show aliases with -v
   identify
   import patch
   init
+  isl
   locate
   log history
   manifest
@@ -541,6 +543,7 @@ Show all commands + options
   identify: rev, num, id, branch, tags, bookmarks, template
   import: strip, base, edit, force, no-commit, bypass, partial, exact, prefix, message, logfile, date, user, similarity
   init: git
+  isl: port
   locate: rev, print0, fullpath, include, exclude
   log: follow, follow-first, date, copies, keyword, rev, line-range, removed, only-merges, user, branch, prune, patch, git, limit, no-merges, stat, graph, style, template, include, exclude
   manifest: rev, all, template
