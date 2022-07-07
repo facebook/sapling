@@ -45,6 +45,7 @@ use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
 use std::collections::HashMap;
 use std::collections::VecDeque;
+use std::ops::Not;
 use std::sync::Arc;
 
 pub(crate) struct SyncChangeset<'a> {
@@ -267,23 +268,24 @@ impl<'a> SyncChangeset<'a> {
                 let author = author.clone();
                 async move {
                     if let Some(cs) = queue.pop_front() {
+                        let is_commit_synced = self
+                            .target_megarepo_mapping
+                            .get_reverse_mapping_entry(ctx, target, cs.id())
+                            .await?
+                            .is_empty()
+                            .not();
+                        // if commit is in the target's mapping,
+                        // then we should not check further
+                        if is_commit_synced {
+                            return anyhow::Ok(Some((Some(true), (local_limit, queue))));
+                        }
                         // if we traversed more than a limit commits
                         if local_limit >= limit {
-                            // check if commit is not in the target's mapping
-                            // that means branch is too long and we shouldn't add more parents
-                            // otherwise it's a forking point and good for squashing
-                            if self
-                                .target_megarepo_mapping
-                                .get_reverse_mapping_entry(ctx, target, cs.id())
-                                .await?
-                                .is_empty()
-                            {
-                                return anyhow::Ok(Some((Some(false), (local_limit, queue))));
-                            } else {
-                                return anyhow::Ok(Some((Some(true), (local_limit, queue))));
-                            }
+                            // We reached out maximum and commit is not in the targets mapping
+                            // return false indicating that branch isn't squashable
+                            return anyhow::Ok(Some((Some(false), (local_limit, queue))));
                         }
-                        // if author is different
+                        // if author is different branch isn't squashable
                         if author != cs.author().await? {
                             return anyhow::Ok(Some((Some(false), (local_limit, queue))));
                         }
