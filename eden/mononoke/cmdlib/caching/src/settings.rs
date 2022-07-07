@@ -22,6 +22,7 @@ pub struct CachelibSettings {
     pub changesets_cache_size: Option<usize>,
     pub filenodes_cache_size: Option<usize>,
     pub filenodes_history_cache_size: Option<usize>,
+    pub hg_mutation_store_cache_size: Option<usize>,
     pub idmapping_cache_size: Option<usize>,
     pub globalrev_cache_size: Option<usize>,
     pub svnrev_cache_size: Option<usize>,
@@ -92,6 +93,11 @@ impl CachelibSettings {
         );
         set_default(
             &mut defaults,
+            "hg-mutation-store-cache-size",
+            &self.hg_mutation_store_cache_size,
+        );
+        set_default(
+            &mut defaults,
             "idmapping-cache-size",
             &self.idmapping_cache_size,
         );
@@ -139,6 +145,10 @@ impl CachelibSettings {
             &mut self.filenodes_history_cache_size,
             &args.filenodes_history_cache_size,
         );
+        replace(
+            &mut self.hg_mutation_store_cache_size,
+            &args.hg_mutation_store_cache_size,
+        );
         replace(&mut self.idmapping_cache_size, &args.idmapping_cache_size);
         replace(&mut self.globalrev_cache_size, &args.globalrevs_cache_size);
         replace(&mut self.svnrev_cache_size, &args.svnrevs_cache_size);
@@ -167,6 +177,7 @@ impl Default for CachelibSettings {
             changesets_cache_size: None,
             filenodes_cache_size: None,
             filenodes_history_cache_size: None,
+            hg_mutation_store_cache_size: None,
             idmapping_cache_size: None,
             globalrev_cache_size: None,
             svnrev_cache_size: None,

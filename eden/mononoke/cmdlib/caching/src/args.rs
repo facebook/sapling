@@ -72,6 +72,10 @@ pub struct CachelibArgs {
     #[clap(long, value_name = "SIZE", hide = true)]
     pub filenodes_history_cache_size: Option<usize>,
 
+    /// Override size of the hg mutation store cache
+    #[clap(long, value_name = "SIZE", hide = true)]
+    pub hg_mutation_store_cache_size: Option<usize>,
+
     /// Override size of the bonsai-hg mapping cache
     #[clap(long, value_name = "SIZE", hide = true)]
     pub idmapping_cache_size: Option<usize>,
