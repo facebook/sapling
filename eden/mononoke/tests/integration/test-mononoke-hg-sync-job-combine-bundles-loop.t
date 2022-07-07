@@ -69,7 +69,7 @@ Sync it to another client
 
 Sync a pushrebase bookmark move
   $ mononoke_hg_sync_loop_regenerate repo-hg 1 --combine-bundles 2 --bundle-prefetch 2 2>&1 | grep 'successful sync of entries'
-  * successful sync of entries [2, 3] (glob)
+  * successful sync of entries [2, 3]* (glob)
 
   $ cd "$TESTTMP"/repo-hg
   $ hg log -r tip -T '{desc}\n'

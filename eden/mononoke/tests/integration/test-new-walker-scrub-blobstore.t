@@ -40,19 +40,18 @@ Base case, check can walk fine, one repo
 
 Check that multi repo runs for all repos specified
   $ mononoke_walker --repo-name repo2 scrub -I deep -q -b master_bookmark 2>&1 | strip_glog > multi_repo.log
-  $ grep repo2 multi_repo.log
-  Walking repos ["repo", "repo2"]
-  Walking edge types *, repo: repo2 (glob)
-  Walking node types *, repo: repo2 (glob)
-  Seen,Loaded: 8,8, repo: repo2
-  Bytes/s,*, repo: repo2 (glob)
-  Walked*, repo: repo2 (glob)
-  $ grep -v repo2 multi_repo.log
-  Walking edge types *, repo: repo (glob)
-  Walking node types *, repo: repo (glob)
-  Seen,Loaded: 40,40, repo: repo
-  Bytes/s,*, repo: repo (glob)
-  Walked*, repo: repo (glob)
+  $ grep repo multi_repo.log
+  Walking repos ["repo", "repo2"]* (glob)
+  Walking edge types *, repo: repo* (glob)
+  Walking node types *, repo: repo* (glob)
+  Walking edge types *, repo: repo2* (glob)
+  Walking node types *, repo: repo2* (glob)
+  Seen,Loaded: 8,8, repo: repo2* (glob)
+  Bytes/s,*, repo: repo2* (glob)
+  Walked*, repo: repo2* (glob)
+  Seen,Loaded: 40,40, repo: repo* (glob)
+  Bytes/s,*, repo: repo* (glob)
+  Walked*, repo: repo* (glob)
 
 Delete all data from one side of the multiplex
   $ ls blobstore/0/blobs/* | wc -l

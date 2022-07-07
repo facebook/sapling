@@ -504,7 +504,6 @@ impl RepoShardedProcess for DerivedDataProcess {
 /// BP over the context of a provided repo.
 pub struct DerivedDataProcessExecutor {
     fb: FacebookInit,
-    logger: Logger,
     matches: Arc<MononokeMatches<'static>>,
     ctx: CoreContext,
     cancellation_requested: Arc<AtomicBool>,
@@ -513,16 +512,15 @@ pub struct DerivedDataProcessExecutor {
 
 impl DerivedDataProcessExecutor {
     fn new(fb: FacebookInit, matches: Arc<MononokeMatches<'static>>, repo_name: String) -> Self {
-        let logger = matches.logger().clone();
         let mut scuba_sample_builder = matches.scuba_sample_builder();
         scuba_sample_builder.add("reponame", repo_name.to_string());
-        let ctx = create_ctx(fb, &logger, scuba_sample_builder, &matches);
+        let ctx = create_ctx(fb, matches.logger(), scuba_sample_builder, &matches)
+            .clone_with_repo_name(&repo_name);
         Self {
             fb,
             matches,
             ctx,
             repo_name,
-            logger,
             cancellation_requested: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -532,13 +530,13 @@ impl DerivedDataProcessExecutor {
 impl RepoShardedProcessExecutor for DerivedDataProcessExecutor {
     async fn execute(&self) -> anyhow::Result<()> {
         info!(
-            self.logger,
+            self.ctx.logger(),
             "Initiating derived data command execution for repo {}", &self.repo_name,
         );
         run_subcmd(
             self.fb,
             &self.ctx,
-            &self.logger,
+            self.ctx.logger(),
             &self.matches,
             self.repo_name.clone(),
             Arc::clone(&self.cancellation_requested),
@@ -551,7 +549,7 @@ impl RepoShardedProcessExecutor for DerivedDataProcessExecutor {
             )
         })?;
         info!(
-            self.logger,
+            self.ctx.logger(),
             "Finished derived data command execution for repo {}", &self.repo_name,
         );
         Ok(())
@@ -559,7 +557,7 @@ impl RepoShardedProcessExecutor for DerivedDataProcessExecutor {
 
     async fn stop(&self) -> anyhow::Result<()> {
         info!(
-            self.logger,
+            self.ctx.logger(),
             "Terminating derived data command execution for repo {}", &self.repo_name,
         );
         self.cancellation_requested.store(true, Ordering::Relaxed);

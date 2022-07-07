@@ -413,7 +413,8 @@ pub struct HgSyncProcessExecutor {
 
 impl HgSyncProcessExecutor {
     fn new(fb: FacebookInit, matches: Arc<MononokeMatches<'static>>, repo_name: String) -> Self {
-        let ctx = CoreContext::new_with_logger(fb, matches.logger().clone());
+        let ctx = CoreContext::new_with_logger(fb, matches.logger().clone())
+            .clone_with_repo_name(&repo_name);
         Self {
             matches,
             ctx,
@@ -727,7 +728,7 @@ fn build_outcome_handler<'a>(
                     Ok(entries)
                 }
                 Err(AnonymousError { cause: e }) => {
-                    info!(ctx.logger(), "error without entry");
+                    error!(ctx.logger(), "Error without entry: {:?}", e);
                     Err(e)
                 }
                 Err(EntryError { cause: e, .. }) => match &lock_via {
@@ -1558,13 +1559,14 @@ fn main(fb: FacebookInit) -> Result<()> {
                 matches.logger(),
                 &matches,
                 cmdlib::monitoring::AliveService,
-            )
+            )?;
         }
         None => {
             let matches = process.matches.clone();
             let config_store = matches.config_store();
             let (repo_name, _) = args::get_config(config_store, &matches)?;
-            let ctx = CoreContext::new_with_logger(fb, matches.logger().clone());
+            let ctx = CoreContext::new_with_logger(fb, matches.logger().clone())
+                .clone_with_repo_name(&repo_name);
             let fut = run(&ctx, &matches, repo_name, Arc::new(AtomicBool::new(false)));
             block_execute(
                 fut,
@@ -1573,7 +1575,8 @@ fn main(fb: FacebookInit) -> Result<()> {
                 matches.logger(),
                 &matches,
                 cmdlib::monitoring::AliveService,
-            )
+            )?;
         }
     }
+    Ok(())
 }

@@ -92,7 +92,7 @@ Check LFS is not in backup
 Sync to backup
   $ cd "$TESTTMP"
   $ mononoke_backup_sync backup sync-once 2 2>&1 | grep "successful sync"
-  * successful sync of entries [3] (glob)
+  * successful sync of entries [3]* (glob)
 
 Check LFS is in backup
   $ cd "$TESTTMP/backup"

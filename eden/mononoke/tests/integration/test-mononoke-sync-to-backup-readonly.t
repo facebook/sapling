@@ -61,7 +61,7 @@ Sync it to another client should fail, because of readonly repo
 Sync it to another client with bypass-readonly should success
   $ cd $TESTTMP
   $ mononoke_backup_sync backup sync-once 2 --bypass-readonly 2>&1 | grep 'successful sync'
-  * successful sync of entries [3] (glob)
+  * successful sync of entries [3]* (glob)
 
 Check synced commit in backup repo
   $ hgclone_treemanifest mononoke://$(mononoke_address)/backup backup --noupdate --config extensions.remotenames=

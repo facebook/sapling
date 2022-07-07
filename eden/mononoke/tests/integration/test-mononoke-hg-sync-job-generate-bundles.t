@@ -93,20 +93,20 @@ Sync it to another client
 
 Sync a pushrebase bookmark move
   $ mononoke_hg_sync repo-hg 1 2>&1 | grep 'successful sync'
-  * successful sync of entries [2] (glob)
+  * successful sync of entries [2]* (glob)
 
   $ mononoke_hg_sync repo-hg 2 2>&1 | grep 'successful sync'
-  * successful sync of entries [3] (glob)
+  * successful sync of entries [3]* (glob)
 
   $ mononoke_hg_sync repo-hg 3 2>&1 | grep 'successful sync'
-  * successful sync of entries [4] (glob)
+  * successful sync of entries [4]* (glob)
 
   $ mononoke_hg_sync repo-hg 4 2>&1 | grep 'successful sync'
-  * successful sync of entries [5] (glob)
+  * successful sync of entries [5]* (glob)
 
   $ mononoke_hg_sync_loop_regenerate repo-hg 5  2>&1 | grep 'successful sync'
-  * successful sync of entries [6] (glob)
-  * successful sync of entries [7] (glob)
+  * successful sync of entries [6]* (glob)
+  * successful sync of entries [7]* (glob)
 
 Do a manual move
   $ cd "$TESTTMP/client-push"
@@ -116,7 +116,7 @@ Do a manual move
   $ mononoke_admin bookmarks set master_bookmark "$NODE" &> /dev/null
   $ cd "$TESTTMP"
   $ mononoke_hg_sync_loop_regenerate repo-hg 6 2>&1 | grep 'successful sync'
-  * successful sync of entries [8] (glob)
+  * successful sync of entries [8]* (glob)
   $ cd "$TESTTMP/repo-hg"
   $ hg log -r master_bookmark -T '{node}\n'
   f5fb745185a2d197d092e7dfffe147f36de1af76

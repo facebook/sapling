@@ -67,10 +67,8 @@ impl WalkerSizingProcess {
 #[async_trait]
 impl RepoShardedProcess for WalkerSizingProcess {
     async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        info!(
-            self.app.logger(),
-            "Setting up walker sizing for repo {}", repo_name
-        );
+        let logger = self.app.repo_logger(repo_name);
+        info!(&logger, "Setting up walker sizing for repo {}", repo_name);
         let repos = MultiRepoArgs {
             repo_name: vec![repo_name.to_string()],
             repo_id: vec![],
@@ -84,12 +82,12 @@ impl RepoShardedProcess for WalkerSizingProcess {
                 )
             })?;
         info!(
-            self.app.logger(),
+            &logger,
             "Completed walker sizing setup for repo {}", repo_name
         );
         Ok(Arc::new(WalkerSizingProcessExecutor::new(
             self.app.fb,
-            self.app.logger().clone(),
+            logger,
             job_params,
             command,
             repo_name.to_string(),
@@ -171,6 +169,11 @@ async fn setup_sizing(
     } = args;
 
     let sampler = Arc::new(WalkSampleMapping::<Node, SizingSample>::new());
+    let repo_name = repos.repo_name.clone().pop();
+    let logger = match repo_name {
+        Some(repo_name) => app.repo_logger(&repo_name),
+        None => app.logger().clone(),
+    };
     let job_params = setup_common(
         COMPRESSION_BENEFIT,
         app,
@@ -178,6 +181,7 @@ async fn setup_sizing(
         &common_args,
         Some(sampler.clone()), // blobstore sampler
         None,                  // blobstore component sampler
+        &logger,
     )
     .await?;
 

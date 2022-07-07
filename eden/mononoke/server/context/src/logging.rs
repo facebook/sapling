@@ -15,6 +15,7 @@ use std::sync::Arc;
 use crate::perf_counters::PerfCounters;
 use crate::perf_counters_stack::PerfCountersStack;
 use scribe_ext::Scribe;
+use slog::o;
 
 /// Used to correlation a high level action on a CoreContext
 /// e.g. walk of a repo,  with low level actions using that context
@@ -76,6 +77,16 @@ impl LoggingContainer {
     pub fn clone_with_logger(&self, logger: Logger) -> Self {
         Self {
             logger,
+            scuba: self.scuba.clone(),
+            perf_counters: self.perf_counters.clone(),
+            sampling_key: self.sampling_key.clone(),
+            scribe: self.scribe.clone(),
+        }
+    }
+
+    pub fn clone_with_repo_name(&self, repo_name: &str) -> Self {
+        Self {
+            logger: self.logger.new(o!("repo" => repo_name.to_string())),
             scuba: self.scuba.clone(),
             perf_counters: self.perf_counters.clone(),
             sampling_key: self.sampling_key.clone(),

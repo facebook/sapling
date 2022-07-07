@@ -69,7 +69,7 @@ Sync it to another client
 
 Sync a pushrebase bookmark move
   $ mononoke_hg_sync_loop_regenerate repo-hg 1 --combine-bundles 2 --bundle-prefetch 2 2>&1 | grep 'successful sync of entries'
-  * successful sync of entries [2, 3] (glob)
+  * successful sync of entries [2, 3]* (glob)
 
   $ cd "$TESTTMP"/repo-hg
   $ hg log -r tip -T '{desc}\n'
@@ -87,7 +87,7 @@ update the "latest replayed" counter. We want to make sure we just skip the firs
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "replace into mutable_counters (repo_id, name, value) values(0, 'latest-replayed-request', 2)"
   $ mononoke_hg_sync_loop_regenerate repo-hg 1 --combine-bundles 2 --bundle-prefetch 2 2>&1 | grep 'adjusting'
-  * adjusting first batch - skipping first entries [3] (glob)
+  * adjusting first batch - skipping first entries [3]* (glob)
 
   $ cd "$TESTTMP"/repo-hg
 
@@ -126,7 +126,7 @@ Check that extension was imported fine (i.e. nothing is printed to stderr)
   $ mkcommit commit_sixth
   $ hgmn push -r . --to another_book --create -q
   $ mononoke_hg_sync_loop_regenerate repo-hg 1 --combine-bundles 2 --bundle-prefetch 2 2>&1 | grep "adjust"
-  * trying to adjust first batch for bookmark another_book. First batch starts points to Some(ChangesetId(Blake2(*))) (glob)
+  * trying to adjust first batch for bookmark another_book. First batch starts points to Some(ChangesetId(Blake2(*)))* (glob)
   * could not adjust first batch, * (glob)
 
   $ cd "$TESTTMP"/repo-hg

@@ -72,9 +72,8 @@ pub async fn setup_common<'a>(
     common_args: &WalkerCommonArgs,
     blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
+    logger: &Logger,
 ) -> Result<JobParams, Error> {
-    let logger = app.logger();
-
     let mut scuba_builder = app.environment().scuba_sample_builder.clone();
     let walker_type = app.args::<WalkerArgs>()?.walker_type;
     scuba_builder.add(WALK_TYPE, walk_stats_key);

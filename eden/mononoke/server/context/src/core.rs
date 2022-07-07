@@ -83,6 +83,14 @@ impl CoreContext {
         }
     }
 
+    pub fn clone_with_repo_name(&self, repo_name: &str) -> Self {
+        Self {
+            fb: self.fb,
+            session: self.session.clone(),
+            logging: self.logging.clone_with_repo_name(repo_name),
+        }
+    }
+
     pub fn with_mutated_scuba(
         &self,
         mutator: impl FnOnce(MononokeScubaSampleBuilder) -> MononokeScubaSampleBuilder,

@@ -80,6 +80,6 @@ Sync it to another client
 
 Sync a push and a force push
   $ mononoke_hg_sync_loop_regenerate repo-hg 1 --bundle-prefetch 2 2>&1 | grep 'successful sync of entries'
-  * successful sync of entries [2] (glob)
-  * successful sync of entries [3] (glob)
-  * successful sync of entries [4] (glob)
+  * successful sync of entries [2]* (glob)
+  * successful sync of entries [3]* (glob)
+  * successful sync of entries [4]* (glob)

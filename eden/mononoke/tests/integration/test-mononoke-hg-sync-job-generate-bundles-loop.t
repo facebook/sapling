@@ -69,8 +69,8 @@ Sync it to another client
 
 Sync a pushrebase bookmark move
   $ mononoke_hg_sync_loop_regenerate repo-hg 1 --bundle-prefetch 2 2>&1 | grep 'successful sync of entries'
-  * successful sync of entries [2] (glob)
-  * successful sync of entries [3] (glob)
+  * successful sync of entries [2]* (glob)
+  * successful sync of entries [3]* (glob)
 
 New bookmark is created
   $ cd $TESTTMP/client-push
@@ -86,5 +86,5 @@ Sync a pushrebase bookmark move. Note that we are using 0 start-id intentionally
 should ignore it and fetch the latest id from db
   $ cd $TESTTMP
   $ mononoke_hg_sync_loop_regenerate repo-hg 0 --bundle-prefetch 2 2>&1 | grep 'successful sync of entries'
-  * successful sync of entries [4] (glob)
-  * successful sync of entries [5] (glob)
+  * successful sync of entries [4]* (glob)
+  * successful sync of entries [5]* (glob)

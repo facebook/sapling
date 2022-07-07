@@ -66,10 +66,8 @@ impl WalkerCorpusProcess {
 #[async_trait]
 impl RepoShardedProcess for WalkerCorpusProcess {
     async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        info!(
-            self.app.logger(),
-            "Setting up walker corpus for repo {}", repo_name
-        );
+        let logger = self.app.repo_logger(repo_name);
+        info!(&logger, "Setting up walker corpus for repo {}", repo_name);
         let repos = MultiRepoArgs {
             repo_name: vec![repo_name.to_string()],
             repo_id: vec![],
@@ -83,12 +81,12 @@ impl RepoShardedProcess for WalkerCorpusProcess {
                 )
             })?;
         info!(
-            self.app.logger(),
+            &logger,
             "Completed walker corpus setup for repo {}", repo_name
         );
         Ok(Arc::new(WalkerCorpusProcessExecutor::new(
             self.app.fb,
-            self.app.logger().clone(),
+            logger,
             job_params,
             command,
             repo_name.to_string(),
@@ -172,6 +170,11 @@ async fn setup_corpus(
     let sampler = Arc::new(CorpusSamplingHandler::<CorpusSample>::new(
         output_dir.clone(),
     ));
+    let repo_name = repos.repo_name.clone().pop();
+    let logger = match repo_name {
+        Some(repo_name) => app.repo_logger(&repo_name),
+        None => app.logger().clone(),
+    };
     let job_params = setup_common(
         CORPUS,
         app,
@@ -179,6 +182,7 @@ async fn setup_corpus(
         &common_args,
         Some(sampler.clone()), // blobstore sampler
         None,                  // blobstore component sampler
+        &logger,
     )
     .await?;
 

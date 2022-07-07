@@ -68,8 +68,8 @@ Sync to backup repos
   0|1000147972
 
   $ mononoke_backup_sync backup sync-loop 2 2>&1 | grep 'successful sync'
-  * successful sync of entries [3] (glob)
-  * successful sync of entries [4] (glob)
+  * successful sync of entries [3]* (glob)
+  * successful sync of entries [4]* (glob)
 
 
 Make sure correct mutable counter is used (it should be repoid = 1)

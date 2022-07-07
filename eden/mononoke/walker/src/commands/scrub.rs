@@ -76,10 +76,8 @@ impl WalkerScrubProcess {
 #[async_trait]
 impl RepoShardedProcess for WalkerScrubProcess {
     async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        info!(
-            self.app.logger(),
-            "Setting up walker scrub for repo {}", repo_name
-        );
+        let logger = self.app.repo_logger(repo_name);
+        info!(&logger, "Setting up walker scrub for repo {}", repo_name);
         let repos = MultiRepoArgs {
             repo_name: vec![repo_name.to_string()],
             repo_id: vec![],
@@ -90,12 +88,12 @@ impl RepoShardedProcess for WalkerScrubProcess {
                 format!("Failure in setting up walker scrub for repo {}", &repo_name)
             })?;
         info!(
-            self.app.logger(),
+            &logger,
             "Completed walker scrub setup for repo {}", repo_name
         );
         Ok(Arc::new(WalkerScrubProcessExecutor::new(
             self.app.fb,
-            self.app.logger().clone(),
+            logger,
             job_params,
             command,
             repo_name.to_string(),
@@ -171,6 +169,11 @@ async fn setup_scrub(
     args: &CommandArgs,
 ) -> Result<(JobParams, ScrubCommand), Error> {
     let component_sampler = Arc::new(WalkSampleMapping::<Node, ScrubSample>::new());
+    let repo_name = repos.repo_name.clone().pop();
+    let logger = match repo_name {
+        Some(repo_name) => app.repo_logger(&repo_name),
+        None => app.logger().clone(),
+    };
     let job_params = setup_common(
         SCRUB,
         app,
@@ -178,6 +181,7 @@ async fn setup_scrub(
         &args.common_args,
         None,
         Some(component_sampler.clone()),
+        &logger,
     )
     .await?;
 

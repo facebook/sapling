@@ -43,6 +43,7 @@ use redactedblobstore::RedactionConfigBlobstore;
 use repo_factory::RepoFactory;
 use repo_factory::RepoFactoryBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
+use slog::o;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
 use tokio::runtime::Handle;
@@ -166,6 +167,11 @@ impl MononokeApp {
     /// The logger for this app.
     pub fn logger(&self) -> &Logger {
         &self.env.logger
+    }
+
+    /// Construct a logger for a specific repo.
+    pub fn repo_logger(&self, repo_name: &str) -> Logger {
+        self.env.logger.new(o!("repo" => repo_name.to_string()))
     }
 
     /// The mysql options for this app.

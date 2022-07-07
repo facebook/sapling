@@ -81,8 +81,8 @@ Make client repo
 
 Two missing blobs that were uploaded
   $ mononoke_hg_sync repo-hg 1 --verify-lfs-blob-presence "${lfs_uri_other}/objects/batch" 2>&1 | grep missing
-  * missing * object, uploading (glob)
-  * missing * object, uploading (glob)
+  * missing * object, uploading* (glob)
+  * missing * object, uploading* (glob)
 
 Check that they were uploaded
   $ hg debuglfsreceive c12949887b7d8c46e9fcc5d9cd4bd884de33c1d00e24d7ac56ed9200e07f31a1 0 "${lfs_uri_other}" > "$TESTTMP/long"

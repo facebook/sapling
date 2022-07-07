@@ -67,7 +67,7 @@ Sync it to another client
 
 Sync a pushrebase bookmark move
   $ mononoke_hg_sync repo-hg 1 2>&1 | grep 'successful sync'
-  * successful sync of entries [2] (glob)
+  * successful sync of entries [2]* (glob)
 
 Move bookmark to another position, and make sure hg sync job fails because of
 pushkey erro

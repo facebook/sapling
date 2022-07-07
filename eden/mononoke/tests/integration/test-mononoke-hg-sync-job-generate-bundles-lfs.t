@@ -130,13 +130,13 @@ Sync it to another client
 
 Sync a lfs pushrebase
   $ mononoke_hg_sync repo-hg 1 2>&1 | grep 'successful sync'
-  * successful sync of entries [2] (glob)
+  * successful sync of entries [2]* (glob)
   $ mononoke_hg_sync repo-hg 2 2>&1 | grep 'successful sync'
-  * successful sync of entries [3] (glob)
+  * successful sync of entries [3]* (glob)
   $ mononoke_hg_sync repo-hg 3 2>&1 | grep 'successful sync'
-  * successful sync of entries [4] (glob)
+  * successful sync of entries [4]* (glob)
   $ mononoke_hg_sync repo-hg 4 2>&1 | grep 'successful sync'
-  * successful sync of entries [5] (glob)
+  * successful sync of entries [5]* (glob)
   $ cd "$TESTTMP/repo-hg"
   $ hg debugfilerev lfs-largefile -v -r 2
   b2a5e71d6d8d: add lfs-large files
@@ -201,7 +201,7 @@ Sync a pushrebase with lfs hg sync disabled in the config
   $ LFS_THRESHOLD="20" LFS_BLOB_HG_SYNC_JOB=false setup_common_config blob_files
   $ cd "$TESTTMP"
   $ mononoke_hg_sync repo-hg-2 1 2>&1 | grep 'successful sync'
-  * successful sync of entries [2] (glob)
+  * successful sync of entries [2]* (glob)
   $ cd "$TESTTMP/repo-hg-2"
   $ hg debugfilerev lfs-largefile -v -r master_bookmark
   b2a5e71d6d8d: add lfs-large files
@@ -211,7 +211,7 @@ Sync a pushrebase with lfs hg sync disabled in the config
 Now override lfs sync config option via command line
   $ cd "$TESTTMP"
   $ mononoke_hg_sync repo-hg-2 2 --bookmark-regex-force-generate-lfs "master.+" 2>&1 | grep 'force generating lfs bundle'
-  * force generating lfs bundle for master_bookmark (glob)
+  * force generating lfs bundle for master_bookmark* (glob)
   $ cd "$TESTTMP/repo-hg-2"
   $ hg debugfilerev lfs-largefile -v -r master_bookmark
   0700ec892f3c: modify lfs-large file

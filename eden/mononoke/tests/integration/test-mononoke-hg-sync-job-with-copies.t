@@ -77,7 +77,7 @@ Sync first simple push
 Sync second tricky push
   $ cd $TESTTMP
   $ mononoke_hg_sync repo-hg 2 2>&1 | grep 'successful sync'
-  * successful sync of entries [3] (glob)
+  * successful sync of entries [3]* (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark -T '{node}\n'
   a1e678b3ed9a3df8ef590d407b97d88891a66778
