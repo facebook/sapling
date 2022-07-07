@@ -118,6 +118,7 @@ impl From<BookmarkMovementError> for MononokeError {
     fn from(e: BookmarkMovementError) -> Self {
         use BookmarkMovementError::*;
         match e {
+            AuthorizationError(e) => MononokeError::AuthorizationError(e.to_string()),
             HookFailure(rejections) => MononokeError::HookFailure(rejections),
             Error(e) => MononokeError::InternalError(InternalError::from(e)),
             _ => MononokeError::InvalidRequest(e.to_string()),

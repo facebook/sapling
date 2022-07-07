@@ -31,12 +31,14 @@ use futures::stream::TryStreamExt;
 use futures_ext::FbStreamExt;
 use hooks::CrossRepoPushSource;
 use hooks::HookManager;
+use hooks::PushAuthoredBy;
 use metaconfig_types::BookmarkAttrs;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_authorization::AuthorizationContext;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use scribe_commit_queue;
 use scribe_commit_queue::ChangedFilesInfo;
@@ -44,7 +46,7 @@ use skeleton_manifest::RootSkeletonManifestId;
 use tunables::tunables;
 
 use crate::hook_running::run_hooks;
-use crate::restrictions::BookmarkMoveAuthorization;
+use crate::restrictions::should_run_hooks;
 use crate::BookmarkMovementError;
 use crate::Repo;
 
@@ -246,6 +248,7 @@ impl AffectedChangesets {
     pub(crate) async fn check_restrictions(
         &mut self,
         ctx: &CoreContext,
+        authz: &AuthorizationContext,
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         pushrebase_params: &PushrebaseParams,
@@ -255,7 +258,6 @@ impl AffectedChangesets {
         pushvars: Option<&HashMap<String, Bytes>>,
         reason: BookmarkUpdateReason,
         kind: BookmarkKind,
-        auth: &BookmarkMoveAuthorization<'_>,
         additional_changesets: AdditionalChangesets,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<(), BookmarkMovementError> {
@@ -285,6 +287,7 @@ impl AffectedChangesets {
 
         self.check_hooks(
             ctx,
+            authz,
             repo,
             lca_hint,
             bookmark_attrs,
@@ -293,19 +296,18 @@ impl AffectedChangesets {
             pushvars,
             reason,
             kind,
-            auth,
             additional_changesets,
             cross_repo_push_source,
         )
         .await?;
 
-        self.check_service_write_restrictions(
+        self.check_path_permissions(
             ctx,
+            authz,
             repo,
             lca_hint,
             bookmark_attrs,
             bookmark,
-            auth,
             additional_changesets,
         )
         .await?;
@@ -442,6 +444,7 @@ impl AffectedChangesets {
     async fn check_hooks(
         &mut self,
         ctx: &CoreContext,
+        authz: &AuthorizationContext,
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         bookmark_attrs: &BookmarkAttrs,
@@ -450,12 +453,11 @@ impl AffectedChangesets {
         pushvars: Option<&HashMap<String, Bytes>>,
         reason: BookmarkUpdateReason,
         kind: BookmarkKind,
-        auth: &BookmarkMoveAuthorization<'_>,
         additional_changesets: AdditionalChangesets,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<(), BookmarkMovementError> {
         if (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
-            && auth.should_run_hooks(reason)
+            && should_run_hooks(authz, reason)
         {
             if reason == BookmarkUpdateReason::Push && tunables().get_disable_hooks_on_plain_push()
             {
@@ -501,6 +503,11 @@ impl AffectedChangesets {
                 }
 
                 if !self.is_empty() {
+                    let push_authored_by = if authz.is_service() {
+                        PushAuthoredBy::Service
+                    } else {
+                        PushAuthoredBy::User
+                    };
                     run_hooks(
                         ctx,
                         hook_manager,
@@ -508,7 +515,7 @@ impl AffectedChangesets {
                         self.iter(),
                         pushvars,
                         cross_repo_push_source,
-                        auth.into(),
+                        push_authored_by,
                     )
                     .await?;
                 }
@@ -517,23 +524,24 @@ impl AffectedChangesets {
         Ok(())
     }
 
-    /// If this is service-initiated update to a bookmark, check the update's
-    /// affected changesets satisfy the service write restrictions.
-    async fn check_service_write_restrictions(
+    /// Check whether the user has permissions to modify the paths that are
+    /// modified by the changesets that are affected by the bookmark move.
+    async fn check_path_permissions(
         &mut self,
         ctx: &CoreContext,
+        authz: &AuthorizationContext,
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         bookmark_attrs: &BookmarkAttrs,
         bookmark: &BookmarkName,
-        auth: &BookmarkMoveAuthorization<'_>,
         additional_changesets: AdditionalChangesets,
     ) -> Result<(), BookmarkMovementError> {
-        if let BookmarkMoveAuthorization::Service(service_name, scs_params) = auth {
-            if scs_params.service_write_all_paths_permitted(service_name) {
-                return Ok(());
-            }
-
+        // For optimization, first check if the user is permitted to modify
+        // all paths.  In that case we don't need to find out which paths were
+        // affected.
+        if authz.check_any_path_write(ctx, repo).await?.is_denied() {
+            // User is not permitted to write to all paths, check if the paths
+            // touched by the changesets are permitted.
             self.load_additional_changesets(
                 ctx,
                 repo,
@@ -546,12 +554,7 @@ impl AffectedChangesets {
             .context("Failed to load additional affected changesets")?;
 
             for cs in self.iter() {
-                if let Err(path) = scs_params.service_write_paths_permitted(service_name, cs) {
-                    return Err(BookmarkMovementError::PermissionDeniedServicePath {
-                        service_name: service_name.clone(),
-                        path: path.clone(),
-                    });
-                }
+                authz.require_changeset_paths_write(ctx, repo, cs).await?;
             }
         }
         Ok(())

@@ -14,14 +14,14 @@ use bytes::Bytes;
 use context::CoreContext;
 use metaconfig_types::BookmarkAttrs;
 use metaconfig_types::InfinitepushParams;
-use metaconfig_types::SourceControlServiceParams;
 use mononoke_types::ChangesetId;
+use repo_authorization::AuthorizationContext;
+use repo_authorization::RepoWriteOperation;
 use repo_read_write_status::RepoReadWriteFetcher;
 
 use crate::repo_lock::check_repo_lock;
 use crate::restrictions::check_bookmark_sync_config;
 use crate::restrictions::BookmarkKindRestrictions;
-use crate::restrictions::BookmarkMoveAuthorization;
 use crate::BookmarkMovementError;
 use crate::Repo;
 
@@ -30,7 +30,6 @@ pub struct DeleteBookmarkOp<'op> {
     bookmark: &'op BookmarkName,
     old_target: ChangesetId,
     reason: BookmarkUpdateReason,
-    auth: BookmarkMoveAuthorization<'op>,
     kind_restrictions: BookmarkKindRestrictions,
     pushvars: Option<&'op HashMap<String, Bytes>>,
 }
@@ -45,21 +44,9 @@ impl<'op> DeleteBookmarkOp<'op> {
             bookmark,
             old_target,
             reason,
-            auth: BookmarkMoveAuthorization::User,
             kind_restrictions: BookmarkKindRestrictions::AnyKind,
             pushvars: None,
         }
-    }
-
-    /// This bookmark change is for an authenticated named service.  The change
-    /// will be checked against the service's write restrictions.
-    pub fn for_service(
-        mut self,
-        service_name: impl Into<String>,
-        params: &'op SourceControlServiceParams,
-    ) -> Self {
-        self.auth = BookmarkMoveAuthorization::Service(service_name.into(), params);
-        self
     }
 
     pub fn only_if_scratch(mut self) -> Self {
@@ -80,6 +67,7 @@ impl<'op> DeleteBookmarkOp<'op> {
     pub async fn run(
         self,
         ctx: &'op CoreContext,
+        authz: &'op AuthorizationContext,
         repo: &'op impl Repo,
         infinitepush_params: &'op InfinitepushParams,
         bookmark_attrs: &'op BookmarkAttrs,
@@ -89,8 +77,11 @@ impl<'op> DeleteBookmarkOp<'op> {
             .kind_restrictions
             .check_kind(infinitepush_params, self.bookmark)?;
 
-        self.auth
-            .check_authorized(ctx, bookmark_attrs, self.bookmark)
+        authz
+            .require_repo_write(ctx, repo, RepoWriteOperation::DeleteBookmark(kind))
+            .await?;
+        authz
+            .require_bookmark_modify(ctx, repo, bookmark_attrs, self.bookmark)
             .await?;
 
         check_bookmark_sync_config(repo, self.bookmark, kind)?;

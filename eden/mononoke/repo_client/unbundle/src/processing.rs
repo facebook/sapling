@@ -46,6 +46,7 @@ use pushrebase_client::SCSPushrebaseClient;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_authorization::AuthorizationContext;
 use repo_identity::RepoIdentityRef;
 use repo_read_write_status::RepoReadWriteFetcher;
 use scribe_commit_queue::ChangedFilesInfo;
@@ -576,8 +577,10 @@ async fn normal_pushrebase<'a>(
         } else {
             None
         };
+    let authz = AuthorizationContext::new();
     let result = LocalPushrebaseClient {
         ctx,
+        authz: &authz,
         repo,
         pushrebase_params,
         lca_hint,
@@ -690,6 +693,7 @@ async fn plain_push_bookmark(
                     .with_push_source(cross_repo_push_source)
                     .run(
                         ctx,
+                        &AuthorizationContext::new(),
                         repo,
                         lca_hint,
                         infinitepush_params,
@@ -736,6 +740,7 @@ async fn plain_push_bookmark(
             .with_push_source(cross_repo_push_source)
             .run(
                 ctx,
+                &AuthorizationContext::new(),
                 repo,
                 lca_hint,
                 infinitepush_params,
@@ -775,6 +780,7 @@ async fn plain_push_bookmark(
                 .with_pushvars(maybe_pushvars)
                 .run(
                     ctx,
+                    &AuthorizationContext::new(),
                     repo,
                     infinitepush_params,
                     bookmark_attrs,
@@ -811,6 +817,7 @@ async fn infinitepush_scratch_bookmark(
         .with_push_source(cross_repo_push_source)
         .run(
             ctx,
+            &AuthorizationContext::new(),
             repo,
             lca_hint,
             infinitepush_params,
@@ -845,6 +852,7 @@ async fn infinitepush_scratch_bookmark(
         .with_push_source(cross_repo_push_source)
         .run(
             ctx,
+            &AuthorizationContext::new(),
             repo,
             lca_hint,
             infinitepush_params,

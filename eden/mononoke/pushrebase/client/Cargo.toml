@@ -25,6 +25,7 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 pushrebase = { version = "0.1.0", path = ".." }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
+repo_authorization = { version = "0.1.0", path = "../../repo_authorization" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 repo_read_write_status = { version = "0.1.0", path = "../../repo_client/repo_read_write_status" }
 source_control = { version = "0.1.0", path = "../../scs/if" }

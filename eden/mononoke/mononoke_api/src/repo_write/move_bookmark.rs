@@ -20,7 +20,6 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use tunables::tunables;
 
 use crate::errors::MononokeError;
-use crate::permissions::WritePermissionsModel;
 use crate::repo_write::RepoWriteContext;
 
 impl RepoWriteContext {
@@ -77,12 +76,9 @@ impl RepoWriteContext {
             op = op.log_new_public_commits_to_scribe();
         }
 
-        if let WritePermissionsModel::ServiceIdentity(service_identity) = &self.permissions_model {
-            op = op.for_service(service_identity, &self.config().source_control_service);
-        }
-
         op.run(
             self.ctx(),
+            self.authorization_context(),
             self.inner_repo(),
             &lca_hint,
             &self.config().infinitepush,

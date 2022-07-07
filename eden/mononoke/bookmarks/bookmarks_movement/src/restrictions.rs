@@ -12,13 +12,12 @@ use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use hooks::PushAuthoredBy;
 use metaconfig_types::BookmarkAttrs;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::PushrebaseParams;
-use metaconfig_types::SourceControlServiceParams;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_authorization::AuthorizationContext;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_identity::RepoIdentityRef;
 use tunables::tunables;
@@ -26,76 +25,12 @@ use tunables::tunables;
 use crate::BookmarkMovementError;
 use crate::Repo;
 
-/// How authorization for the bookmark move should be determined.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) enum BookmarkMoveAuthorization<'params> {
-    /// The bookmark move has been initiated by a user. The user's identity in
-    /// the core context should be used to check permission, and hooks must be
-    /// run.
-    User,
-
-    /// The movement is on behalf of an authenticated service.
-    ///
-    /// repo_client doesn't have SourceControlServiceParams to hand, so until the
-    /// repo attributes refactor is complete, we must store the params here.
-    Service(String, &'params SourceControlServiceParams),
-}
-
-impl<'params> BookmarkMoveAuthorization<'params> {
-    pub(crate) async fn check_authorized(
-        &'params self,
-        ctx: &CoreContext,
-        bookmark_attrs: &BookmarkAttrs,
-        bookmark: &BookmarkName,
-    ) -> Result<(), BookmarkMovementError> {
-        match self {
-            BookmarkMoveAuthorization::User => {
-                // If user is missing, fallback to "svcscm" which is the catch-all
-                // user for service identities etc.
-                let user = ctx.metadata().unix_name().unwrap_or("svcscm");
-
-                // TODO: clean up `is_allowed_user` to avoid this clone.
-                if !bookmark_attrs
-                    .is_allowed_user(&user, ctx.metadata(), bookmark)
-                    .await?
-                {
-                    return Err(BookmarkMovementError::PermissionDeniedUser {
-                        user: user.to_string(),
-                        bookmark: bookmark.clone(),
-                    });
-                }
-
-                // TODO: Check using ctx.identities, and deny if neither are provided.
-            }
-            BookmarkMoveAuthorization::Service(service_name, scs_params) => {
-                if !scs_params.service_write_bookmark_permitted(service_name, bookmark) {
-                    return Err(BookmarkMovementError::PermissionDeniedServiceBookmark {
-                        service_name: service_name.clone(),
-                        bookmark: bookmark.clone(),
-                    });
-                }
-            }
-        }
-        Ok(())
-    }
-
-    pub(crate) fn should_run_hooks(&self, reason: BookmarkUpdateReason) -> bool {
-        match self {
-            BookmarkMoveAuthorization::User => true,
-            BookmarkMoveAuthorization::Service(..) => {
-                reason == BookmarkUpdateReason::Pushrebase
-                    && tunables().get_enable_hooks_on_service_pushrebase()
-            }
-        }
-    }
-}
-
-impl From<&BookmarkMoveAuthorization<'_>> for PushAuthoredBy {
-    fn from(auth: &BookmarkMoveAuthorization<'_>) -> PushAuthoredBy {
-        match auth {
-            BookmarkMoveAuthorization::User => PushAuthoredBy::User,
-            BookmarkMoveAuthorization::Service(_, _) => PushAuthoredBy::Service,
-        }
+pub(crate) fn should_run_hooks(authz: &AuthorizationContext, reason: BookmarkUpdateReason) -> bool {
+    if authz.is_service() {
+        reason == BookmarkUpdateReason::Pushrebase
+            && tunables().get_enable_hooks_on_service_pushrebase()
+    } else {
+        true
     }
 }
 

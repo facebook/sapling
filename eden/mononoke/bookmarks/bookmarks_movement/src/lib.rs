@@ -14,11 +14,13 @@ use bookmarks_types::BookmarkName;
 use changeset_fetcher::ChangesetFetcherArc;
 use changesets::ChangesetsRef;
 use itertools::Itertools;
+use metaconfig_types::RepoConfigRef;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use phases::PhasesRef;
 use pushrebase::PushrebaseError;
 use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
+use repo_authorization::AuthorizationError;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -67,6 +69,7 @@ pub trait Repo = AsBlobRepo
     + ChangesetsRef
     + PhasesRef
     + PushrebaseMutationMappingRef
+    + RepoConfigRef
     + RepoDerivedDataRef
     + RepoBlobstoreRef
     + RepoCrossRepoRef
@@ -84,20 +87,8 @@ pub enum BookmarkMovementError {
     #[error("Deletion of '{bookmark}' is prohibited")]
     DeletionProhibited { bookmark: BookmarkName },
 
-    #[error("User '{user}' is not permitted to move '{bookmark}'")]
-    PermissionDeniedUser {
-        user: String,
-        bookmark: BookmarkName,
-    },
-
-    #[error("Service '{service_name}' is not permitted to move '{bookmark}'")]
-    PermissionDeniedServiceBookmark {
-        service_name: String,
-        bookmark: BookmarkName,
-    },
-
-    #[error("Service '{service_name}' is not permitted to modify path '{path}'")]
-    PermissionDeniedServicePath { service_name: String, path: MPath },
+    #[error(transparent)]
+    AuthorizationError(#[from] AuthorizationError),
 
     #[error(
         "Invalid scratch bookmark: {bookmark} (scratch bookmarks must match pattern {pattern})"

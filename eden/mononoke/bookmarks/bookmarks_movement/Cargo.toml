@@ -38,6 +38,7 @@ pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_hook = { version = "0.1.0", path = "../../pushrebase/pushrebase_hook" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
+repo_authorization = { version = "0.1.0", path = "../../repo_authorization" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_cross_repo = { version = "0.1.0", path = "../../repo_attributes/repo_cross_repo" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }

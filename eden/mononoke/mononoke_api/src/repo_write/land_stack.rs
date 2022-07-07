@@ -25,7 +25,6 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use revset::RangeNodeStream;
 
 use crate::errors::MononokeError;
-use crate::permissions::WritePermissionsModel;
 use crate::repo_write::RepoWriteContext;
 
 pub use bookmarks_movement::PushrebaseOutcome;
@@ -95,18 +94,15 @@ impl RepoWriteContext {
         .await?;
 
         // Pushrebase these commits onto the bookmark.
-        let mut op = bookmarks_movement::PushrebaseOntoBookmarkOp::new(&bookmark, changesets)
+        let op = bookmarks_movement::PushrebaseOntoBookmarkOp::new(&bookmark, changesets)
             .with_pushvars(pushvars)
             .with_push_source(push_source)
             .with_bookmark_restrictions(bookmark_restrictions);
 
-        if let WritePermissionsModel::ServiceIdentity(service_identity) = &self.permissions_model {
-            op = op.for_service(service_identity, &self.config().source_control_service);
-        }
-
         let outcome = op
             .run(
                 self.ctx(),
+                self.authorization_context(),
                 self.inner_repo(),
                 &lca_hint,
                 &self.config().infinitepush,

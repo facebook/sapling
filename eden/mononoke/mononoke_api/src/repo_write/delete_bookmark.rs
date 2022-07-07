@@ -15,7 +15,6 @@ use metaconfig_types::BookmarkAttrs;
 use mononoke_types::ChangesetId;
 
 use crate::errors::MononokeError;
-use crate::permissions::WritePermissionsModel;
 use crate::repo_write::RepoWriteContext;
 
 impl RepoWriteContext {
@@ -49,19 +48,16 @@ impl RepoWriteContext {
         };
 
         // Delete the bookmark.
-        let mut op = bookmarks_movement::DeleteBookmarkOp::new(
+        let op = bookmarks_movement::DeleteBookmarkOp::new(
             &bookmark,
             old_target,
             BookmarkUpdateReason::ApiRequest,
         )
         .with_pushvars(pushvars);
 
-        if let WritePermissionsModel::ServiceIdentity(service_identity) = &self.permissions_model {
-            op = op.for_service(service_identity, &self.config().source_control_service);
-        }
-
         op.run(
             self.ctx(),
+            self.authorization_context(),
             self.inner_repo(),
             &self.config().infinitepush,
             &bookmark_attrs,

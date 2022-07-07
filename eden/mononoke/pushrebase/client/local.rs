@@ -22,6 +22,7 @@ use metaconfig_types::PushrebaseParams;
 use mononoke_types::BonsaiChangeset;
 use pushrebase::PushrebaseOutcome;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_authorization::AuthorizationContext;
 use repo_read_write_status::RepoReadWriteFetcher;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -29,6 +30,7 @@ use std::sync::Arc;
 
 pub struct LocalPushrebaseClient<'a, R: Repo> {
     pub ctx: &'a CoreContext,
+    pub authz: &'a AuthorizationContext,
     pub repo: &'a R,
     pub pushrebase_params: &'a PushrebaseParams,
     pub lca_hint: &'a Arc<dyn LeastCommonAncestorsHint>,
@@ -54,6 +56,7 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
             .with_bookmark_restrictions(bookmark_restrictions)
             .run(
                 self.ctx,
+                self.authz,
                 self.repo,
                 self.lca_hint,
                 self.infinitepush_params,

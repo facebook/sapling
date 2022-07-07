@@ -24,11 +24,12 @@ use hooks::HookManager;
 use metaconfig_types::BookmarkAttrs;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::PushrebaseParams;
-use metaconfig_types::SourceControlServiceParams;
 use mononoke_types::BonsaiChangeset;
 use pushrebase_hook::PushrebaseHook;
 use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_authorization::AuthorizationContext;
+use repo_authorization::RepoWriteOperation;
 use repo_identity::RepoIdentityRef;
 use repo_read_write_status::RepoReadWriteFetcher;
 
@@ -38,7 +39,6 @@ use crate::repo_lock::check_repo_lock;
 use crate::repo_lock::RepoLockPushrebaseHook;
 use crate::restrictions::check_bookmark_sync_config;
 use crate::restrictions::BookmarkKindRestrictions;
-use crate::restrictions::BookmarkMoveAuthorization;
 use crate::BookmarkMovementError;
 use crate::Repo;
 
@@ -46,7 +46,6 @@ use crate::Repo;
 pub struct PushrebaseOntoBookmarkOp<'op> {
     bookmark: &'op BookmarkName,
     affected_changesets: AffectedChangesets,
-    auth: BookmarkMoveAuthorization<'op>,
     bookmark_restrictions: BookmarkKindRestrictions,
     cross_repo_push_source: CrossRepoPushSource,
     pushvars: Option<&'op HashMap<String, Bytes>>,
@@ -60,22 +59,10 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         PushrebaseOntoBookmarkOp {
             bookmark,
             affected_changesets: AffectedChangesets::with_source_changesets(changesets),
-            auth: BookmarkMoveAuthorization::User,
             bookmark_restrictions: BookmarkKindRestrictions::AnyKind,
             cross_repo_push_source: CrossRepoPushSource::NativeToThisRepo,
             pushvars: None,
         }
-    }
-
-    /// This bookmark change is for an authenticated named service.  The change
-    /// will be checked against the service's write restrictions.
-    pub fn for_service(
-        mut self,
-        service_name: impl Into<String>,
-        params: &'op SourceControlServiceParams,
-    ) -> Self {
-        self.auth = BookmarkMoveAuthorization::Service(service_name.into(), params);
-        self
     }
 
     pub fn only_if_scratch(mut self) -> Self {
@@ -109,6 +96,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
     pub async fn run(
         mut self,
         ctx: &'op CoreContext,
+        authz: &'op AuthorizationContext,
         repo: &'op impl Repo,
         lca_hint: &'op Arc<dyn LeastCommonAncestorsHint>,
         infinitepush_params: &'op InfinitepushParams,
@@ -121,8 +109,11 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             .bookmark_restrictions
             .check_kind(infinitepush_params, self.bookmark)?;
 
-        self.auth
-            .check_authorized(ctx, bookmark_attrs, self.bookmark)
+        authz
+            .require_repo_write(ctx, repo, RepoWriteOperation::LandStack(kind))
+            .await?;
+        authz
+            .require_bookmark_modify(ctx, repo, bookmark_attrs, self.bookmark)
             .await?;
 
         check_bookmark_sync_config(repo, self.bookmark, kind)?;
@@ -146,6 +137,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         self.affected_changesets
             .check_restrictions(
                 ctx,
+                authz,
                 repo,
                 lca_hint,
                 pushrebase_params,
@@ -155,7 +147,6 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
                 self.pushvars,
                 BookmarkUpdateReason::Pushrebase,
                 kind,
-                &self.auth,
                 AdditionalChangesets::None,
                 self.cross_repo_push_source,
             )
