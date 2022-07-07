@@ -11,7 +11,7 @@ use bonsai_git_mapping::BonsaiGitMappingRef;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
-use crate::repo_draft::RepoDraftContext;
+use crate::repo::RepoContext;
 
 use std::collections::HashMap;
 
@@ -19,7 +19,7 @@ const HGGIT_MARKER_EXTRA: &str = "hg-git-rename-source";
 const HGGIT_MARKER_VALUE: &[u8] = b"git";
 const HGGIT_COMMIT_ID_EXTRA: &str = "convert_revision";
 
-impl RepoDraftContext {
+impl RepoContext {
     /// Set the bonsai to git mapping based on the changeset
     /// If the user is trusted, this will use the hggit extra
     /// Otherwise, it will only work if we can derive a git commit ID, and that ID matches the hggit extra
@@ -45,11 +45,16 @@ impl RepoDraftContext {
 
                 let hggit_sha1 = String::from_utf8_lossy(&hggit_sha1).parse()?;
                 let entry = BonsaiGitMappingEntry::new(hggit_sha1, changeset_ctx.id());
-                let mapping = self.repo.inner_repo().bonsai_git_mapping();
+                let mapping = self.inner_repo().bonsai_git_mapping();
                 mapping
-                    .bulk_add(self.repo.ctx(), &[entry])
+                    .bulk_add(self.ctx(), &[entry])
                     .await
-                    .context("set_git_mapping_from_changeset")?;
+                    .with_context(|| {
+                        format!(
+                            "Failed to set git mapping from changeset {}",
+                            changeset_ctx.id()
+                        )
+                    })?;
             }
         }
 

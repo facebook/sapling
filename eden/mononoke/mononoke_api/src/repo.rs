@@ -118,7 +118,6 @@ use crate::errors::MononokeError;
 use crate::file::FileContext;
 use crate::file::FileId;
 use crate::permissions::WritePermissionsModel;
-use crate::repo_draft::RepoDraftContext;
 use crate::repo_write::RepoWriteContext;
 use crate::specifiers::ChangesetId;
 use crate::specifiers::ChangesetPrefixSpecifier;
@@ -130,6 +129,9 @@ use crate::tree::TreeId;
 use crate::xrepo::CandidateSelectionHintArgs;
 use crate::MononokeApiEnvironment;
 use crate::WarmBookmarksCacheDerivedData;
+
+pub mod create_changeset;
+pub mod set_git_mapping;
 
 define_stats! {
     prefix = "mononoke.api";
@@ -1678,22 +1680,6 @@ impl RepoContext {
         Ok(maybe_cs_id.map(|cs_id| ChangesetContext::new(other.clone(), cs_id)))
     }
 
-    /// Get a draft context to make draft changes to this repository.
-    pub async fn draft(self) -> Result<RepoDraftContext, MononokeError> {
-        if !self.config().source_control_service.permit_writes {
-            return Err(MononokeError::InvalidRequest(String::from(
-                "source control service writes are not enabled for this repo",
-            )));
-        }
-
-        self.ctx
-            .scuba()
-            .clone()
-            .log_with_msg("Write request start", None);
-
-        Ok(RepoDraftContext::new(self))
-    }
-
     pub async fn check_service_permissions(
         &self,
         service_identity: String,
@@ -1703,14 +1689,17 @@ impl RepoContext {
             .await
     }
 
-    /// Get a draft context to make draft changes to this repository on behalf of a service.
-    pub async fn service_draft(
-        self,
-        _service_identity: String,
-    ) -> Result<RepoDraftContext, MononokeError> {
-        if !self.config().source_control_service.permit_service_writes {
+    /// Start a draft change to the repo.
+    fn start_draft(&self) -> Result<(), MononokeError> {
+        if self.authz.is_service() {
+            if !self.config().source_control_service.permit_service_writes {
+                return Err(MononokeError::InvalidRequest(String::from(
+                    "Service writes are disabled in configuration for this repo",
+                )));
+            }
+        } else if !self.config().source_control_service.permit_writes {
             return Err(MononokeError::InvalidRequest(String::from(
-                "source control service writes are not enabled for this repo",
+                "Writes are disabled in configuration for this repo",
             )));
         }
 
@@ -1719,7 +1708,7 @@ impl RepoContext {
             .clone()
             .log_with_msg("Write request start", None);
 
-        Ok(RepoDraftContext::new(self))
+        Ok(())
     }
 
     /// Get a write context to make changes to this repository.

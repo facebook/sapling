@@ -47,7 +47,7 @@ use crate::errors::MononokeError;
 use crate::file::FileId;
 use crate::file::FileType;
 use crate::path::MononokePath;
-use crate::repo_draft::RepoDraftContext;
+use crate::repo::RepoContext;
 use crate::specifiers::ChangesetSpecifier;
 
 #[derive(Clone)]
@@ -402,7 +402,7 @@ async fn check_addless_union_conflicts(
     }
 }
 
-impl RepoDraftContext {
+impl RepoContext {
     async fn save_changeset(
         &self,
         changeset: BonsaiChangeset,
@@ -458,11 +458,11 @@ impl RepoDraftContext {
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
     ) -> Result<ChangesetContext, MononokeError> {
-        self.repo()
-            .authorization_context()
+        self.start_draft()?;
+        self.authorization_context()
             .require_repo_write(
-                self.repo.ctx(),
-                self.repo.inner_repo(),
+                self.ctx(),
+                self.inner_repo(),
                 RepoWriteOperation::CreateChangeset,
             )
             .await?;
@@ -684,6 +684,6 @@ impl RepoDraftContext {
                 .await?;
         }
 
-        Ok(ChangesetContext::new(self.repo().clone(), new_changeset_id))
+        Ok(ChangesetContext::new(self.clone(), new_changeset_id))
     }
 }

@@ -235,11 +235,6 @@ impl SourceControlServiceImpl {
         let repo = self
             .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await?;
-        let repo = match params.service_identity {
-            Some(service_identity) => repo.service_draft(service_identity).await?,
-            None => repo.draft().await?,
-        };
-
         let parents: Vec<_> = params
             .parents
             .into_iter()
