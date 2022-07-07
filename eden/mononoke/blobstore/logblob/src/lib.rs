@@ -120,7 +120,6 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
             result.as_ref(),
             key,
             ctx.metadata().session_id().as_str(),
-            OperationType::IsPresent,
             None,
             &self.inner,
         );
@@ -170,7 +169,6 @@ impl<B: BlobstorePutOps> LogBlob<B> {
             result.as_ref(),
             &key,
             ctx.metadata().session_id().as_str(),
-            OperationType::Put,
             size,
             None,
             &self.inner,

@@ -378,7 +378,6 @@ pub async fn inner_put(
         result.as_ref(),
         &key,
         ctx.metadata().session_id().as_str(),
-        OperationType::Put,
         size,
         Some(blobstore_id),
         blobstore,
@@ -1060,7 +1059,6 @@ async fn multiplexed_is_present_one<'a>(
         result.as_ref(),
         key,
         ctx.metadata().session_id().as_str(),
-        OperationType::IsPresent,
         Some(blobstore_id),
         blobstore,
     );

@@ -159,7 +159,6 @@ pub fn record_is_present_stats(
     result: Result<&BlobstoreIsPresent, &Error>,
     key: &str,
     session: &str,
-    operation: OperationType,
     blobstore_id: Option<BlobstoreId>,
     blobstore_type: impl ToString,
 ) {
@@ -169,7 +168,7 @@ pub fn record_is_present_stats(
         key,
         session,
         stats,
-        operation,
+        OperationType::IsPresent,
         blobstore_id,
         blobstore_type,
     );
@@ -203,7 +202,6 @@ pub fn record_put_stats(
     result: Result<&OverwriteStatus, &Error>,
     key: &str,
     session: &str,
-    operation: OperationType,
     size: usize,
     blobstore_id: Option<BlobstoreId>,
     blobstore_type: impl ToString,
@@ -215,7 +213,7 @@ pub fn record_put_stats(
         key,
         session,
         stats,
-        operation,
+        OperationType::Put,
         blobstore_id,
         blobstore_type,
     );
