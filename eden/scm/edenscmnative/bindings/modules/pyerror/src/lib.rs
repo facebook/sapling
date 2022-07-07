@@ -119,7 +119,7 @@ fn register_error_handlers() {
                     ));
                 }
                 repolock::LockError::Io(e) => {
-                    return Some(cpython_ext::error::translate_io_error(py, e));
+                    return Some(cpython_ext::error::translate_io_error(py, &e.to_io_err()));
                 }
                 _ => {}
             };

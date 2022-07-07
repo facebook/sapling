@@ -28,8 +28,11 @@ impl IOError {
         }
     }
 
-    pub fn as_io_err(&self) -> &std::io::Error {
-        &self.source
+    pub fn to_io_err(&self) -> std::io::Error {
+        std::io::Error::new(
+            self.source.kind(),
+            format!("{}: {}", self.msg, self.source.to_string()),
+        )
     }
 }
 

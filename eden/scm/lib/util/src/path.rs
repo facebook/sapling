@@ -21,6 +21,9 @@ use std::path::Component;
 use std::path::Path;
 use std::path::PathBuf;
 
+use crate::errors::IOContext;
+use crate::errors::IOResult;
+
 /// Pick a random file name `path.$RAND.atomic` as `real_path`. Write `data` to
 /// it.  Then modify the symlink `path` to point to `real_path`.  Attempt to
 /// delete files that are no longer referred.
@@ -36,7 +39,7 @@ use std::path::PathBuf;
 ///
 /// Attention: the deletion attempt is based on file name. So do not use
 /// confusing file names like `path.0001.atomic` in the same directory.
-pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> io::Result<()> {
+pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> IOResult<()> {
     let append_name = |suffix: &str| -> PathBuf {
         let mut s = path.to_path_buf().into_os_string();
         s.push(suffix);
@@ -57,7 +60,9 @@ pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> io::Result<()> {
         {
             Ok(file) => break Ok((real_path, file)),
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue, // try another file name
-            Err(e) => break Err(e),
+            Err(e) => {
+                break Err(e).path_context("error opening atomic symlink real path", &real_path);
+            }
         }
     }?;
     let real_file_name = real_path
@@ -65,7 +70,8 @@ pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> io::Result<()> {
         .expect("real_path should have a file name");
 
     // Write the content.
-    file.write_all(data)?;
+    file.write_all(data)
+        .path_context("error writing atomic symlink data to real path", &real_path)?;
     drop(file);
 
     // Update the symlink by creating a temporary symlink and rename it.
@@ -74,15 +80,17 @@ pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> io::Result<()> {
         match symlink_file(Path::new(real_file_name), &symlink_path) {
             Ok(()) => break Ok(symlink_path),
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue, // try another file name
-            Err(e) => break Err(e),
+            Err(e) => {
+                break Err(e).path_context("error creating temp atomic symlink", &symlink_path);
+            }
         }
     }?;
 
     // Overwrite the original symlink. This works on both Windows and Linux.
-    fs::rename(&symlink_tmp_path, path)?;
+    fs::rename(&symlink_tmp_path, path).path_context("error renaming temp atomic symlink", path)?;
 
     // Scan. Remove unreferenced files.
-    let _ = (|| -> io::Result<()> {
+    let _ = (|| -> IOResult<()> {
         let looks_like_atomic = |s: &OsStr, prefix: &OsStr| -> bool {
             if let (Some(s), Some(prefix)) = (s.to_str(), prefix.to_str()) {
                 s.starts_with(prefix) && s.ends_with(".atomic")
@@ -91,8 +99,8 @@ pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> io::Result<()> {
             }
         };
         if let (Some(dir), Some(prefix)) = (path.parent(), path.file_name()) {
-            for entry in fs::read_dir(dir)? {
-                let entry = entry?;
+            for entry in fs::read_dir(dir).path_context("error reading atomic symlink dir", dir)? {
+                let entry = entry.path_context("error reading atomic symlink dir entry", dir)?;
                 let name = entry.file_name();
                 if name != prefix && looks_like_atomic(&name, prefix) && name != real_file_name {
                     let _ = remove_file(&entry.path());
@@ -517,8 +525,8 @@ pub fn relativize(base: &Path, path: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use std::fs::File;
-    use std::io::Result;
 
+    use anyhow::Result;
     use tempfile::TempDir;
 
     use super::*;

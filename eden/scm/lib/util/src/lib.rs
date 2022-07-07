@@ -20,5 +20,6 @@ pub mod file;
 pub mod identity;
 pub mod lock;
 pub mod path;
+pub mod sys;
 
 pub use bgprocess::run_background;

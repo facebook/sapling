@@ -7,11 +7,9 @@
 
 use std::error;
 use std::fmt;
-use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::fs::Permissions;
-use std::io;
 use std::io::Write;
 use std::ops::Add;
 #[cfg(unix)]
@@ -25,6 +23,9 @@ use std::time::SystemTime;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use fs2::FileExt;
+use util::errors::IOContext;
+use util::errors::IOError;
+use util::errors::IOResult;
 use util::lock::PathLock;
 
 const WORKING_COPY_NAME: &str = "wlock";
@@ -37,12 +38,7 @@ pub fn lock_working_copy(
         config,
         dot_hg,
         WORKING_COPY_NAME,
-        format!(
-            "{}:{}",
-            hostname::get()?.to_string_lossy(),
-            std::process::id()
-        )
-        .as_bytes(),
+        format!("{}:{}", util::sys::hostname()?, std::process::id()).as_bytes(),
     )
 }
 
@@ -124,10 +120,8 @@ pub fn try_lock(dir: &Path, name: &str, contents: &[u8]) -> anyhow::Result<LockH
     let name = sanitize_lock_name(name);
 
     let path = dir.join(name).with_extension("data");
-    let lock_file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open(path.with_extension("lock"))?;
+    let lock_file_path = path.with_extension("lock");
+    let lock_file = util::file::open(&lock_file_path, "wc")?;
 
     #[cfg(unix)]
     let _ = lock_file.set_permissions(Permissions::from_mode(0o666));
@@ -135,10 +129,12 @@ pub fn try_lock(dir: &Path, name: &str, contents: &[u8]) -> anyhow::Result<LockH
     match lock_file.try_lock_exclusive() {
         Ok(_) => {}
         Err(err) if err.kind() == fs2::lock_contended_error().kind() => {
-            let contents = fs::read(&path)?;
+            let contents = util::file::read(&path)?;
             return Err(LockContendedError { path, contents }.into());
         }
-        Err(err) => return Err(err.into()),
+        Err(err) => {
+            return Err(IOError::from_path(err, "error locking lock file", &lock_file_path).into());
+        }
     };
 
     let mut legacy_already_locked = false;
@@ -175,12 +171,15 @@ pub fn try_lock(dir: &Path, name: &str, contents: &[u8]) -> anyhow::Result<LockH
         }
     }
 
-    let mut contents_file = File::create(path)?;
+    let mut contents_file = util::file::open(&path, "wct")?;
     #[cfg(unix)]
     let _ = contents_file.set_permissions(Permissions::from_mode(0o666));
-    contents_file.write_all(contents.as_ref())?;
+    contents_file
+        .write_all(contents.as_ref())
+        .path_context("error write lock contents", &path)?;
 
     Ok(LockHandle {
+        path: lock_file_path,
         lock: lock_file,
         legacy_path: if !legacy_already_locked {
             Some(legacy_path)
@@ -192,15 +191,18 @@ pub fn try_lock(dir: &Path, name: &str, contents: &[u8]) -> anyhow::Result<LockH
 }
 
 pub struct LockHandle {
+    path: PathBuf,
     lock: File,
     legacy_path: Option<PathBuf>,
     legacy_lock: Option<File>,
 }
 
 impl LockHandle {
-    pub fn unlock(&mut self) -> io::Result<()> {
+    pub fn unlock(&mut self) -> IOResult<()> {
         self.unlink_legacy();
-        self.lock.unlock()
+        self.lock
+            .unlock()
+            .path_context("error unlocking lock file", &self.path)
     }
 
     fn unlink_legacy(&mut self) {
@@ -235,7 +237,7 @@ pub enum LockError {
     #[error(transparent)]
     Contended(#[from] LockContendedError),
     #[error(transparent)]
-    Io(#[from] io::Error),
+    Io(#[from] IOError),
 }
 
 #[derive(Debug)]
@@ -255,6 +257,7 @@ impl fmt::Display for LockContendedError {
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
+    use std::fs;
     use std::thread;
     use std::thread::spawn;
 
@@ -392,11 +395,7 @@ mod tests {
             Err(LockError::Contended(LockContendedError { contents, .. })) => {
                 assert_eq!(
                     String::from_utf8(contents)?,
-                    format!(
-                        "{}:{}",
-                        hostname::get()?.to_string_lossy(),
-                        std::process::id()
-                    )
+                    format!("{}:{}", util::sys::hostname()?, std::process::id())
                 );
             }
             _ => panic!("lock should be contended"),

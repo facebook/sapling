@@ -5,12 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use std::fs;
 use std::fs::File;
-use std::io;
 use std::path::Path;
 
 use fs2::FileExt;
+
+use crate::errors::IOContext;
+use crate::errors::IOResult;
+use crate::file::open;
 
 /// RAII lock on a filesystem path.
 #[derive(Debug)]
@@ -21,9 +23,10 @@ pub struct PathLock {
 impl PathLock {
     /// Take an exclusive lock on `path`. The lock file will be created on
     /// demand.
-    pub fn exclusive<P: AsRef<Path>>(path: P) -> io::Result<Self> {
-        let file = fs::OpenOptions::new().write(true).create(true).open(path)?;
-        file.lock_exclusive()?;
+    pub fn exclusive<P: AsRef<Path>>(path: P) -> IOResult<Self> {
+        let file = open(path.as_ref(), "wc").io_context("lock file")?;
+        file.lock_exclusive()
+            .path_context("error locking file", path.as_ref())?;
         Ok(PathLock { file })
     }
 
@@ -46,7 +49,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_path_lock() -> io::Result<()> {
+    fn test_path_lock() -> anyhow::Result<()> {
         let dir = tempfile::tempdir()?;
         let path = dir.path().join("a");
         let (tx, rx) = channel();
