@@ -232,7 +232,9 @@ impl SourceControlServiceImpl {
         repo: thrift::RepoSpecifier,
         params: thrift::RepoCreateCommitParams,
     ) -> Result<thrift::RepoCreateCommitResponse, errors::ServiceError> {
-        let repo = self.repo(ctx, &repo).await?;
+        let repo = self
+            .repo_for_service(ctx, &repo, params.service_identity.clone())
+            .await?;
         let repo = match params.service_identity {
             Some(service_identity) => repo.service_draft(service_identity).await?,
             None => repo.draft().await?,
@@ -538,7 +540,9 @@ impl SourceControlServiceImpl {
         repo: thrift::RepoSpecifier,
         params: thrift::RepoCreateBookmarkParams,
     ) -> Result<thrift::RepoCreateBookmarkResponse, errors::ServiceError> {
-        let repo = self.repo(ctx, &repo).await?;
+        let repo = self
+            .repo_for_service(ctx, &repo, params.service_identity.clone())
+            .await?;
         let repo = match params.service_identity {
             Some(service_identity) => repo.service_write(service_identity).await?,
             None => repo.write().await?,
@@ -563,7 +567,9 @@ impl SourceControlServiceImpl {
         repo: thrift::RepoSpecifier,
         params: thrift::RepoMoveBookmarkParams,
     ) -> Result<thrift::RepoMoveBookmarkResponse, errors::ServiceError> {
-        let repo = self.repo(ctx, &repo).await?;
+        let repo = self
+            .repo_for_service(ctx, &repo, params.service_identity.clone())
+            .await?;
         let repo = match params.service_identity {
             Some(service_identity) => repo.service_write(service_identity).await?,
             None => repo.write().await?,
@@ -604,7 +610,9 @@ impl SourceControlServiceImpl {
         repo: thrift::RepoSpecifier,
         params: thrift::RepoDeleteBookmarkParams,
     ) -> Result<thrift::RepoDeleteBookmarkResponse, errors::ServiceError> {
-        let repo = self.repo(ctx, &repo).await?;
+        let repo = self
+            .repo_for_service(ctx, &repo, params.service_identity.clone())
+            .await?;
         let repo = match params.service_identity {
             Some(service_identity) => repo.service_write(service_identity).await?,
             None => repo.write().await?,
@@ -633,7 +641,9 @@ impl SourceControlServiceImpl {
         repo: thrift::RepoSpecifier,
         params: thrift::RepoLandStackParams,
     ) -> Result<thrift::RepoLandStackResponse, errors::ServiceError> {
-        let repo = self.repo(ctx, &repo).await?;
+        let repo = self
+            .repo_for_service(ctx, &repo, params.service_identity.clone())
+            .await?;
         let repo = match params.service_identity {
             Some(service_identity) => repo.service_write(service_identity).await?,
             None => repo.write().await?,

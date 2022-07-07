@@ -61,6 +61,7 @@ use mononoke_types::MPath;
 use mononoke_types::RepositoryId;
 use mutable_renames::MutableRenameEntry;
 use mutable_renames::MutableRenames;
+use repo_authorization::AuthorizationContext;
 use sorted_vector_map::SortedVectorMap;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -91,7 +92,7 @@ pub trait MegarepoOp {
             .await
             .map_err(MegarepoError::internal)?
             .ok_or_else(|| MegarepoError::request(anyhow!("repo not found {}", target_repo_id)))?
-            .bypass_acl_check()
+            .with_authorization_context(AuthorizationContext::new_bypass_access_control())
             .build()
             .await
             .map_err(MegarepoError::internal)?;

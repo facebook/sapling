@@ -86,6 +86,7 @@ use permission_checker::PermissionCheckerBuilder;
 use phases::PhasesRef;
 use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
+use repo_authorization::AuthorizationContext;
 use repo_cross_repo::RepoCrossRepo;
 use repo_read_write_status::RepoReadWriteFetcher;
 use repo_read_write_status::SqlRepoReadWriteStatus;
@@ -165,6 +166,7 @@ impl AsBlobRepo for Repo {
 #[derive(Clone)]
 pub struct RepoContext {
     ctx: CoreContext,
+    authz: Arc<AuthorizationContext>,
     repo: Arc<Repo>,
 }
 
@@ -176,18 +178,18 @@ impl fmt::Debug for RepoContext {
 
 pub struct RepoContextBuilder {
     ctx: CoreContext,
+    authz: Option<AuthorizationContext>,
     repo: Arc<Repo>,
     bubble_id: Option<BubbleId>,
-    bypass_acl_check: bool,
 }
 
 impl RepoContextBuilder {
     pub(crate) fn new(ctx: CoreContext, repo: Arc<Repo>) -> Self {
         RepoContextBuilder {
             ctx,
+            authz: None,
             repo,
             bubble_id: None,
-            bypass_acl_check: false,
         }
     }
 
@@ -200,20 +202,14 @@ impl RepoContextBuilder {
         Ok(self)
     }
 
-    pub fn bypass_acl_check(mut self) -> Self {
-        self.bypass_acl_check = true;
+    pub fn with_authorization_context(mut self, authz: AuthorizationContext) -> Self {
+        self.authz = Some(authz);
         self
     }
 
     pub async fn build(self) -> Result<RepoContext, MononokeError> {
-        if self.bypass_acl_check {
-            if self.bubble_id.is_some() {
-                return Err(format_err!("bypass acl check and bubble id not supported").into());
-            }
-            RepoContext::new_bypass_acl_check(self.ctx, self.repo).await
-        } else {
-            RepoContext::new(self.ctx, self.repo, self.bubble_id).await
-        }
+        let authz = Arc::new(self.authz.unwrap_or_else(AuthorizationContext::new));
+        RepoContext::new(self.ctx, authz, self.repo, self.bubble_id).await
     }
 }
 
@@ -864,11 +860,17 @@ pub struct BookmarkInfo {
 impl RepoContext {
     pub async fn new(
         ctx: CoreContext,
+        authz: Arc<AuthorizationContext>,
         repo: Arc<Repo>,
         bubble_id: Option<BubbleId>,
     ) -> Result<Self, MononokeError> {
+        let ctx = ctx.with_mutated_scuba(|mut scuba| {
+            scuba.add("permissions_model", format!("{:?}", authz));
+            scuba
+        });
+
         // Check the user is permitted to access this repo.
-        repo.check_permissions(&ctx, "read").await?;
+        authz.require_full_repo_read(&ctx, &repo.inner).await?;
 
         // Open the bubble if necessary.
         let repo = if let Some(bubble_id) = bubble_id {
@@ -878,22 +880,12 @@ impl RepoContext {
             repo
         };
 
-        Ok(Self { ctx, repo })
-    }
-
-    /// Initializes the repo without the ACL check.
-    ///
-    /// Should be used in the internal services that don't serve user queries so all operations are
-    /// trusted.
-    pub async fn new_bypass_acl_check(
-        ctx: CoreContext,
-        repo: Arc<Repo>,
-    ) -> Result<Self, MononokeError> {
-        Ok(Self { repo, ctx })
+        Ok(Self { ctx, authz, repo })
     }
 
     pub async fn new_test(ctx: CoreContext, repo: Arc<Repo>) -> Result<Self, MononokeError> {
-        RepoContext::new(ctx, repo, None).await
+        let authz = Arc::new(AuthorizationContext::new_bypass_access_control());
+        RepoContext::new(ctx, authz, repo, None).await
     }
 
     /// The context for this query.
@@ -909,6 +901,11 @@ impl RepoContext {
     /// The internal id of the repo. Used for comparing the repo objects with each other.
     pub fn repoid(&self) -> RepositoryId {
         self.repo.repoid()
+    }
+
+    /// The authorization context of the request.
+    pub fn authorization_context(&self) -> &AuthorizationContext {
+        &self.authz
     }
 
     /// The underlying `InnerRepo`.

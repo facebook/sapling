@@ -44,6 +44,7 @@ use mononoke_types::hash::Sha256;
 use once_cell::sync::Lazy;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
+use repo_authorization::AuthorizationContext;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
@@ -283,13 +284,32 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: &thrift::RepoSpecifier,
     ) -> Result<RepoContext, errors::ServiceError> {
-        self.repo_impl(ctx, repo, |_| async { Ok(None) }).await
+        let authz = AuthorizationContext::new();
+        self.repo_impl(ctx, repo, authz, |_| async { Ok(None) })
+            .await
+    }
+
+    /// Get the repo specified by a `thrift::RepoSpecifier` for access by a
+    /// named service.
+    pub(crate) async fn repo_for_service(
+        &self,
+        ctx: CoreContext,
+        repo: &thrift::RepoSpecifier,
+        service_name: Option<String>,
+    ) -> Result<RepoContext, errors::ServiceError> {
+        let authz = match service_name {
+            Some(service_name) => AuthorizationContext::new_for_service_writes(service_name),
+            None => AuthorizationContext::new(),
+        };
+        self.repo_impl(ctx, repo, authz, |_| async { Ok(None) })
+            .await
     }
 
     async fn repo_impl<F, R>(
         &self,
         ctx: CoreContext,
         repo: &thrift::RepoSpecifier,
+        authz: AuthorizationContext,
         bubble_fetcher: F,
     ) -> Result<RepoContext, errors::ServiceError>
     where
@@ -303,6 +323,7 @@ impl SourceControlServiceImpl {
             .ok_or_else(|| errors::repo_not_found(repo.description()))?
             .with_bubble(bubble_fetcher)
             .await?
+            .with_authorization_context(authz)
             .build()
             .await?;
         Ok(repo)
@@ -327,6 +348,7 @@ impl SourceControlServiceImpl {
             .repo_impl(
                 ctx,
                 &commit.repo,
+                AuthorizationContext::new(),
                 self.bubble_fetcher_for_changeset(changeset_specifier.clone()),
             )
             .await?;
@@ -359,6 +381,7 @@ impl SourceControlServiceImpl {
             .repo_impl(
                 ctx,
                 &commit.repo,
+                AuthorizationContext::new(),
                 self.bubble_fetcher_for_changeset(changeset_specifier.clone()),
             )
             .await?;
