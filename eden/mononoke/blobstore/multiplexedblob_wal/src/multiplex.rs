@@ -34,6 +34,10 @@ use std::num::NonZeroUsize;
 use std::sync::Arc;
 use thiserror::Error;
 
+use crate::timed::with_timed_stores;
+use crate::timed::MultiplexTimeout;
+use crate::timed::TimedStore;
+
 type BlobstoresReturnedError = HashMap<BlobstoreId, Error>;
 
 #[derive(Error, Debug, Clone)]
@@ -74,38 +78,28 @@ impl MultiplexQuorum {
 // TODO(aida):
 // - Add scuba logging for the multiplexed operations
 // - Add perf counters
-// - Timeout on background futures
 #[derive(Clone)]
 pub struct WalMultiplexedBlobstore {
     /// Multiplexed blobstore configuration.
     multiplex_id: MultiplexId,
     /// Write-ahead log used to keep data consistent across blobstores.
     wal_queue: Arc<dyn BlobstoreWal>,
+
+    quorum: MultiplexQuorum,
     /// These are the "normal" blobstores, which are read from on `get`, and written to on `put`
     /// as part of normal operation.
-    blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
+    blobstores: Arc<[TimedStore]>,
     /// Write-mostly blobstores are not normally read from on `get`, but take part in writes
     /// like a normal blobstore.
-    write_mostly_blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
-    quorum: MultiplexQuorum,
+    write_mostly_blobstores: Arc<[TimedStore]>,
 }
 
 impl std::fmt::Display for WalMultiplexedBlobstore {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let blobstores: Vec<_> = self
-            .blobstores
-            .iter()
-            .map(|(id, store)| (*id, store.to_string()))
-            .collect();
-        let write_mostly_blobstores: Vec<_> = self
-            .write_mostly_blobstores
-            .iter()
-            .map(|(id, store)| (*id, store.to_string()))
-            .collect();
         write!(
             f,
             "WAL MultiplexedBlobstore[normal {:?}, write mostly {:?}]",
-            blobstores, write_mostly_blobstores
+            self.blobstores, self.write_mostly_blobstores
         )
     }
 }
@@ -118,7 +112,7 @@ impl fmt::Debug for WalMultiplexedBlobstore {
             &self.multiplex_id
         )?;
         f.debug_map()
-            .entries(self.blobstores.iter().map(|(ref k, ref v)| (k, v)))
+            .entries(self.blobstores.iter().map(|v| (v.id(), v)))
             .finish()
     }
 }
@@ -130,13 +124,19 @@ impl WalMultiplexedBlobstore {
         blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         write_quorum: usize,
+        timeout: Option<MultiplexTimeout>,
     ) -> Result<Self> {
         let quorum = MultiplexQuorum::new(blobstores.len(), write_quorum)?;
+
+        let to = timeout.unwrap_or_default();
+        let blobstores = with_timed_stores(blobstores, to.clone()).into();
+        let write_mostly_blobstores = with_timed_stores(write_mostly_blobstores, to).into();
+
         Ok(Self {
             multiplex_id,
             wal_queue,
-            blobstores: blobstores.into(),
-            write_mostly_blobstores: write_mostly_blobstores.into(),
+            blobstores,
+            write_mostly_blobstores,
             quorum,
         })
     }
@@ -382,51 +382,33 @@ fn spawn_stream_completion(s: impl StreamExt + Send + 'static) {
 
 fn inner_multi_put(
     ctx: &CoreContext,
-    blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
+    blobstores: Arc<[TimedStore]>,
     key: String,
     value: BlobstoreBytes,
     put_behaviour: Option<PutBehaviour>,
 ) -> FuturesUnordered<impl Future<Output = Result<OverwriteStatus, (BlobstoreId, Error)>>> {
     let put_futs: FuturesUnordered<_> = blobstores
         .iter()
-        .map(|(bs_id, bs)| {
-            cloned!(bs_id, bs, ctx, key, value, put_behaviour);
-            async move {
-                inner_put(&ctx, bs.as_ref(), key, value, put_behaviour)
-                    .await
-                    .map_err(|er| (bs_id, er))
-            }
+        .map(|bs| {
+            cloned!(bs, ctx, key, value, put_behaviour);
+            async move { bs.put(&ctx, key, value, put_behaviour).await }
         })
         .collect();
     put_futs
 }
 
-async fn inner_put(
-    ctx: &CoreContext,
-    blobstore: &dyn BlobstorePutOps,
-    key: String,
-    value: BlobstoreBytes,
-    put_behaviour: Option<PutBehaviour>,
-) -> Result<OverwriteStatus> {
-    if let Some(put_behaviour) = put_behaviour {
-        blobstore.put_explicit(ctx, key, value, put_behaviour).await
-    } else {
-        blobstore.put_with_status(ctx, key, value).await
-    }
-}
-
 fn inner_multi_get<'a>(
     ctx: &'a CoreContext,
-    blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
+    blobstores: Arc<[TimedStore]>,
     key: &'a str,
 ) -> FuturesUnordered<
     impl Future<Output = Result<Option<BlobstoreGetData>, (BlobstoreId, Error)>> + 'a,
 > {
     let get_futs: FuturesUnordered<_> = blobstores
         .iter()
-        .map(|(bs_id, bs)| {
-            cloned!(bs_id, bs, ctx);
-            async move { bs.get(&ctx, key).await.map_err(|er| (bs_id, er)) }
+        .map(|bs| {
+            cloned!(bs);
+            async move { bs.get(ctx, key).await }
         })
         .collect();
     get_futs
@@ -434,14 +416,14 @@ fn inner_multi_get<'a>(
 
 fn inner_multi_is_present<'a>(
     ctx: &'a CoreContext,
-    blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
+    blobstores: Arc<[TimedStore]>,
     key: &'a str,
 ) -> FuturesUnordered<impl Future<Output = (BlobstoreId, Result<BlobstoreIsPresent, Error>)> + 'a> {
     let futs: FuturesUnordered<_> = blobstores
         .iter()
-        .map(|(bs_id, bs)| {
-            cloned!(bs_id, bs, ctx);
-            async move { (bs_id, bs.is_present(&ctx, key).await) }
+        .map(|bs| {
+            cloned!(bs);
+            async move { bs.is_present(ctx, key).await }
         })
         .collect();
     futs

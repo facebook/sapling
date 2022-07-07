@@ -8,6 +8,8 @@
 mod multiplex;
 #[cfg(test)]
 mod test;
+mod timed;
 
 pub use multiplex::MultiplexQuorum;
 pub use multiplex::WalMultiplexedBlobstore;
+pub use timed::MultiplexTimeout;

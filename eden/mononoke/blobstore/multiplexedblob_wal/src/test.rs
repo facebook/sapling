@@ -28,9 +28,12 @@ use mononoke_types::BlobstoreBytes;
 use sql_construct::SqlConstruct;
 use std::fmt::Debug;
 use std::future::Future;
+use std::panic;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Duration;
 
+use crate::MultiplexTimeout;
 use crate::WalMultiplexedBlobstore;
 
 #[fbinit::test]
@@ -41,8 +44,14 @@ async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {
     {
         // no main-stores, no write-mostly
         let quorum = 0;
-        let result =
-            WalMultiplexedBlobstore::new(MultiplexId::new(0), wal.clone(), vec![], vec![], quorum);
+        let result = WalMultiplexedBlobstore::new(
+            MultiplexId::new(0),
+            wal.clone(),
+            vec![],
+            vec![],
+            quorum,
+            None,
+        );
 
         assert!(result.is_err());
     }
@@ -73,6 +82,7 @@ async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {
             stores,
             write_mostly,
             quorum,
+            None,
         );
 
         assert!(result.is_err());
@@ -90,7 +100,8 @@ async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {
             .collect();
         // no write-mostly
         let quorum = 3;
-        let result = WalMultiplexedBlobstore::new(MultiplexId::new(0), wal, stores, vec![], quorum);
+        let result =
+            WalMultiplexedBlobstore::new(MultiplexId::new(0), wal, stores, vec![], quorum, None);
 
         assert!(result.is_ok());
     }
@@ -128,8 +139,14 @@ async fn test_put_wal_fails(fb: FacebookInit) -> Result<()> {
     let (tickable_blobstores, blobstores) = setup_blobstores(3);
 
     let quorum = 2;
-    let multiplex =
-        WalMultiplexedBlobstore::new(MultiplexId::new(1), wal_queue, blobstores, vec![], quorum)?;
+    let multiplex = WalMultiplexedBlobstore::new(
+        MultiplexId::new(1),
+        wal_queue,
+        blobstores,
+        vec![],
+        quorum,
+        None,
+    )?;
 
     let v = make_value("v");
     let k = "k";
@@ -166,8 +183,14 @@ async fn test_put_fails(fb: FacebookInit) -> Result<()> {
     let (tickable_blobstores, blobstores) = setup_blobstores(3);
 
     let quorum = 2;
-    let multiplex =
-        WalMultiplexedBlobstore::new(MultiplexId::new(1), wal_queue, blobstores, vec![], quorum)?;
+    let multiplex = WalMultiplexedBlobstore::new(
+        MultiplexId::new(1),
+        wal_queue,
+        blobstores,
+        vec![],
+        quorum,
+        None,
+    )?;
 
     // All puts fail, the multiplex put should fail: [x] [x] [x]
     {
@@ -280,8 +303,14 @@ async fn test_put_succeeds(fb: FacebookInit) -> Result<()> {
     let (tickable_blobstores, blobstores) = setup_blobstores(3);
 
     let quorum = 2;
-    let multiplex =
-        WalMultiplexedBlobstore::new(MultiplexId::new(1), wal_queue, blobstores, vec![], quorum)?;
+    let multiplex = WalMultiplexedBlobstore::new(
+        MultiplexId::new(1),
+        wal_queue,
+        blobstores,
+        vec![],
+        quorum,
+        None,
+    )?;
 
     // Quorum puts succeed, the multiplex put succeeds: [ ] [x] [ ]
     // Should wait for the third put to complete.
@@ -392,8 +421,14 @@ async fn test_get_on_missing(fb: FacebookInit) -> Result<()> {
     let (tickable_blobstores, blobstores) = setup_blobstores(3);
 
     let quorum = 2;
-    let multiplex =
-        WalMultiplexedBlobstore::new(MultiplexId::new(1), wal_queue, blobstores, vec![], quorum)?;
+    let multiplex = WalMultiplexedBlobstore::new(
+        MultiplexId::new(1),
+        wal_queue,
+        blobstores,
+        vec![],
+        quorum,
+        None,
+    )?;
 
     // No blobstores have the key
     let k = "k1";
@@ -453,8 +488,14 @@ async fn test_get_on_existing(fb: FacebookInit) -> Result<()> {
     let (tickable_blobstores, blobstores) = setup_blobstores(3);
 
     let quorum = 2;
-    let multiplex =
-        WalMultiplexedBlobstore::new(MultiplexId::new(1), wal_queue, blobstores, vec![], quorum)?;
+    let multiplex = WalMultiplexedBlobstore::new(
+        MultiplexId::new(1),
+        wal_queue,
+        blobstores,
+        vec![],
+        quorum,
+        None,
+    )?;
 
     // Two blobstores have the key, one failed to write: [ ] [x] [ ]
 
@@ -568,8 +609,14 @@ async fn test_is_present_missing(fb: FacebookInit) -> Result<()> {
     let (tickable_blobstores, blobstores) = setup_blobstores(3);
 
     let quorum = 2;
-    let multiplex =
-        WalMultiplexedBlobstore::new(MultiplexId::new(1), wal_queue, blobstores, vec![], quorum)?;
+    let multiplex = WalMultiplexedBlobstore::new(
+        MultiplexId::new(1),
+        wal_queue,
+        blobstores,
+        vec![],
+        quorum,
+        None,
+    )?;
 
     // No blobstores have the key
     let k = "k1";
@@ -642,8 +689,14 @@ async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
     let (tickable_blobstores, blobstores) = setup_blobstores(3);
 
     let quorum = 2;
-    let multiplex =
-        WalMultiplexedBlobstore::new(MultiplexId::new(1), wal_queue, blobstores, vec![], quorum)?;
+    let multiplex = WalMultiplexedBlobstore::new(
+        MultiplexId::new(1),
+        wal_queue,
+        blobstores,
+        vec![],
+        quorum,
+        None,
+    )?;
 
     // Two blobstores have the key, one failed to write: [ ] [x] [ ]
     {
@@ -756,6 +809,113 @@ async fn test_is_present_existing(fb: FacebookInit) -> Result<()> {
                 BlobstoreIsPresent::ProbablyNotPresent(anyhow!("some failed!")),
             );
         }
+    }
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_timeout_on_request(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let quorum = 2;
+    let setup_bs = |timeout| -> Result<(
+        Arc<Tickable<OperationKey>>,
+        Vec<(BlobstoreId, Arc<Tickable<(BlobstoreBytes, u64)>>)>,
+        WalMultiplexedBlobstore,
+    )> {
+        let (tickable_queue, wal_queue) = setup_queue();
+        let (tickable_blobstores, blobstores) = setup_blobstores(3);
+        let multiplex = WalMultiplexedBlobstore::new(
+            MultiplexId::new(1),
+            wal_queue.clone(),
+            blobstores.clone(),
+            vec![],
+            quorum,
+            timeout,
+        )?;
+
+        Ok((tickable_queue, tickable_blobstores, multiplex))
+    };
+
+    // Ensure that even if the quorum writes succeeded, the rest of the writes are not
+    // being dropped.
+    {
+        let timeout = MultiplexTimeout {
+            // we want writes to succeed
+            write: Duration::from_secs(10),
+            // and reads to fail because of timeout
+            read: Duration::from_millis(1),
+        };
+        let (tickable_queue, tickable_blobstores, multiplex) = setup_bs(Some(timeout))?;
+
+        let v = make_value("v1");
+        let k = "k1";
+
+        let mut put_fut = multiplex
+            .put(&ctx, k.to_owned(), v.clone())
+            .map_err(|_| ())
+            .boxed();
+        assert_pending(&mut put_fut).await;
+
+        // wal queue write succeeds
+        tickable_queue.tick(None);
+        assert_pending(&mut put_fut).await;
+
+        // quorum puts succeed -> the multiplexed put succeeds
+        tickable_blobstores[0].1.tick(None);
+        tickable_blobstores[1].1.tick(None);
+        assert!(put_fut.await.is_ok());
+
+        // Now we'll try to respond to the last put, that haven't completed.
+        // It should not panic, as the future is still in flight and still
+        // waits for the response.
+        tokio::time::sleep(Duration::from_millis(5)).await;
+        let result = panic::catch_unwind(|| tickable_blobstores[2].1.tick(None));
+        assert!(result.is_ok());
+
+        // We'll try to read with a delayed response from the blobstores.
+        // Get should fail.
+        let mut fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
+        assert_pending(&mut fut).await;
+        tokio::time::sleep(Duration::from_millis(3)).await;
+        assert!(fut.await.is_err());
+    }
+
+    // Ensure that after the quorum writes succeeded, the rest of the writes are
+    // dropped because of the timeout.
+    {
+        // set write timeout to a very low value
+        let timeout = MultiplexTimeout::new(
+            None,                           /* read */
+            Some(Duration::from_millis(4)), /* write */
+        );
+        let (tickable_queue, tickable_blobstores, multiplex) = setup_bs(Some(timeout))?;
+
+        let v = make_value("v2");
+        let k = "k2";
+
+        let mut put_fut = multiplex
+            .put(&ctx, k.to_owned(), v.clone())
+            .map_err(|_| ())
+            .boxed();
+        assert_pending(&mut put_fut).await;
+
+        // wal queue write succeeds
+        tickable_queue.tick(None);
+        assert_pending(&mut put_fut).await;
+
+        // quorum puts succeed -> the multiplexed put succeeds
+        tickable_blobstores[0].1.tick(None);
+        tickable_blobstores[1].1.tick(None);
+        assert!(put_fut.await.is_ok());
+
+        // Now we'll delay the response again and respond to the last put,
+        // that haven't completed.
+        // It *should* panic, as the future was dropped due to the timeout.
+        tokio::time::sleep(Duration::from_millis(5)).await;
+        let result = panic::catch_unwind(|| tickable_blobstores[2].1.tick(None));
+        assert!(result.is_err());
     }
 
     Ok(())
