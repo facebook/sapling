@@ -149,6 +149,11 @@ impl From<MononokeError> for ServiceError {
                     ..Default::default()
                 })
             }
+            error @ MononokeError::AuthorizationError(_) => Self::Request(thrift::RequestError {
+                kind: thrift::RequestErrorKind::PERMISSION_DENIED,
+                reason: error.to_string(),
+                ..Default::default()
+            }),
             error @ MononokeError::NotAvailable(_) => Self::Request(thrift::RequestError {
                 kind: thrift::RequestErrorKind::NOT_AVAILABLE,
                 reason: error.to_string(),

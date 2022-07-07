@@ -12,6 +12,7 @@ use bookmarks_movement::HookRejection;
 use derived_data::DeriveError;
 use itertools::Itertools;
 use megarepo_error::MegarepoError;
+use repo_authorization::AuthorizationError;
 use std::backtrace::Backtrace;
 use std::convert::Infallible;
 use std::error::Error as StdError;
@@ -80,6 +81,8 @@ pub enum MononokeError {
     HookFailure(Vec<HookRejection>),
     #[error("not available: {0}")]
     NotAvailable(String),
+    #[error("permission denied: {0}")]
+    AuthorizationError(String),
     #[error("internal error: {0}")]
     InternalError(#[source] InternalError),
 }
@@ -118,6 +121,17 @@ impl From<BookmarkMovementError> for MononokeError {
             HookFailure(rejections) => MononokeError::HookFailure(rejections),
             Error(e) => MononokeError::InternalError(InternalError::from(e)),
             _ => MononokeError::InvalidRequest(e.to_string()),
+        }
+    }
+}
+
+impl From<AuthorizationError> for MononokeError {
+    fn from(e: AuthorizationError) -> Self {
+        match e {
+            AuthorizationError::PermissionDenied(e) => {
+                MononokeError::AuthorizationError(e.to_string())
+            }
+            AuthorizationError::Error(e) => MononokeError::InternalError(InternalError::from(e)),
         }
     }
 }
