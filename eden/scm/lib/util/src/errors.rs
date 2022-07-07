@@ -34,6 +34,10 @@ impl IOError {
             format!("{}: {}", self.msg, self.source.to_string()),
         )
     }
+
+    pub fn kind(&self) -> std::io::ErrorKind {
+        self.source.kind()
+    }
 }
 
 pub trait IOContext<T> {

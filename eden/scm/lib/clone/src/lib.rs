@@ -24,6 +24,8 @@ use termlogger::TermLogger;
 use treestate::treestate::TreeState;
 use types::HgId;
 use types::RepoPath;
+use util::errors::IOContext;
+use util::errors::IOError;
 use util::file::atomic_write;
 use util::path::absolute;
 use util::path::create_shared_dir;
@@ -58,7 +60,7 @@ pub enum WorkingCopyError {
     NoSuchTarget(HgId),
 
     #[error(transparent)]
-    Io(#[from] std::io::Error),
+    Io(#[from] IOError),
 
     #[error(transparent)]
     Other(#[from] anyhow::Error),
@@ -73,7 +75,8 @@ pub fn init_working_copy(
     if !sparse_profiles.is_empty() {
         let mut sparse_contents: Vec<u8> = Vec::new();
         for profile in &sparse_profiles {
-            write!(&mut sparse_contents, "%include {}\n", profile)?;
+            write!(&mut sparse_contents, "%include {}\n", profile)
+                .io_context("error generating sparse contents")?;
         }
         atomic_write(&repo.dot_hg_path().join("sparse"), |f| {
             f.write_all(&sparse_contents)
@@ -96,7 +99,8 @@ pub fn init_working_copy(
     };
 
     let roots = repo.dag_commits()?.read().to_dyn_read_root_tree_ids();
-    let tree_id = match block_on(roots.read_root_tree_ids(vec![target.clone()]))??
+    let tree_id = match block_on(roots.read_root_tree_ids(vec![target.clone()]))
+        .io_context("error blocking on read_root_tree_ids")??
         .into_iter()
         .next()
     {

@@ -6,7 +6,6 @@
  */
 
 use std::collections::BTreeMap;
-use std::fs;
 use std::io;
 use std::io::Write;
 use std::path::Path;
@@ -14,6 +13,7 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use async_runtime::try_block_unless_interrupted as block_on;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
@@ -123,7 +123,7 @@ impl CheckoutState {
 
         let mut sparse_overrides = None;
 
-        let matcher: Box<dyn Matcher> = match fs::read_to_string(dot_hg.join("sparse")) {
+        let matcher: Box<dyn Matcher> = match util::file::read_to_string(dot_hg.join("sparse")) {
             Ok(contents) => {
                 let overrides = sparse::config_overrides(config);
                 sparse_overrides = Some(overrides.clone());
@@ -142,8 +142,9 @@ impl CheckoutState {
             }
         };
 
-        let diff = Diff::new(source_mf, target_mf, &matcher)?;
-        let actions = ActionMap::from_diff(diff)?;
+        let diff =
+            Diff::new(source_mf, target_mf, &matcher).context("error creating checkout diff")?;
+        let actions = ActionMap::from_diff(diff).context("error creating checkout action map")?;
 
         let vfs = VFS::new(wc_path.to_path_buf())?;
         let checkout = Checkout::from_config(vfs.clone(), config)?;
@@ -160,7 +161,12 @@ impl CheckoutState {
 
         if config.get_or_default("checkout", "resumable")? {
             let progress_path = dot_hg.join("updateprogress");
-            plan.add_progress(progress_path)?;
+            plan.add_progress(&progress_path).with_context(|| {
+                format!(
+                    "error loading checkout progress '{}'",
+                    progress_path.display()
+                )
+            })?;
             self.resumable = true;
         }
 
@@ -225,7 +231,8 @@ pub fn flush_dirstate(
 
     // Invalidate entries with mtime >= now so we can notice user
     // edits to files in the same second the checkout completes.
-    ts.invalidate_mtime(now.try_into()?)?;
+    ts.invalidate_mtime(now.try_into()?)
+        .context("error invalidating dirstate mtime")?;
 
     let tree_root_id = ts.flush()?;
 

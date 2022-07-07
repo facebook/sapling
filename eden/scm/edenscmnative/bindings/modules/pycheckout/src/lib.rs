@@ -90,7 +90,7 @@ py_class!(class checkoutplan |py| {
         let checkout = Checkout::from_config(vfs, &config).map_pyerr(py)?;
         let mut plan = checkout.plan_action_map(actions);
         if let Some(progress_path) = progress_path {
-            plan.add_progress(progress_path.to_path_buf()).map_pyerr(py)?;
+            plan.add_progress(progress_path.as_path()).map_pyerr(py)?;
         }
         checkoutplan::create_instance(py, plan)
     }
