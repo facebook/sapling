@@ -15,6 +15,7 @@
 // Prefer using the Rust stdlib directly if possible.
 
 mod bgprocess;
+pub mod errors;
 pub mod file;
 pub mod identity;
 pub mod lock;
