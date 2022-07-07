@@ -8,6 +8,7 @@
 use std::io::Write;
 
 use io::IO;
+use lazystr::LazyStr;
 
 /// TermLogger mixes the IO object with knowledge of output verbosity.
 pub struct TermLogger {
@@ -57,16 +58,16 @@ impl TermLogger {
     }
 
     /// Write to stdout if --verbose.
-    pub fn info<S: AsRef<str>, F: FnOnce() -> S>(&mut self, msg: F) {
+    pub fn info(&mut self, msg: impl LazyStr) {
         if self.verbose {
-            Self::write(&mut self.output, msg())
+            Self::write(&mut self.output, msg.to_str())
         }
     }
 
     /// Write to stdout if --debug.
-    pub fn debug<S: AsRef<str>, F: FnOnce() -> S>(&mut self, msg: F) {
+    pub fn debug(&mut self, msg: impl LazyStr) {
         if self.debug {
-            Self::write(&mut self.output, msg())
+            Self::write(&mut self.output, msg.to_str())
         }
     }
 
@@ -114,8 +115,8 @@ mod test {
         let io = IO::new("".as_bytes(), Vec::new(), Some(Vec::new()));
         let mut logger = TermLogger::new(&io);
         logger.status("status");
-        logger.info(|| "info");
-        logger.debug(|| "debug");
+        logger.info("info");
+        logger.debug("debug");
         assert_eq!(get_stdout(&io), "status\n");
         assert_eq!(get_stderr(&io), "");
     }
@@ -124,13 +125,13 @@ mod test {
     fn test_debug() {
         let io = IO::new("".as_bytes(), Vec::new(), Some(Vec::new()));
         let mut logger = TermLogger::new(&io);
-        logger.debug(|| -> &str {
+        logger.debug(|| -> String {
             panic!("don't call me!");
         });
         assert_eq!(get_stdout(&io), "");
 
         let mut logger = logger.with_debug(true);
-        logger.debug(|| "okay");
+        logger.debug(|| "okay".to_string());
         assert_eq!(get_stdout(&io), "okay\n");
     }
 

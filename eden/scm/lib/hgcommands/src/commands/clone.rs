@@ -135,7 +135,7 @@ pub fn run(
             "--eden requires --config clone.use-rust=True"
         );
 
-        logger.info(|| "Falling back to Python clone (no segmented changelog)");
+        logger.info("Falling back to Python clone (no segmented changelog)");
         return Err(errors::FallbackToPython(name()).into());
     }
 
@@ -157,7 +157,7 @@ pub fn run(
             "some specified options are not compatible with --eden"
         );
 
-        logger.info(|| "Falling back to Python clone (incompatible options)");
+        logger.info("Falling back to Python clone (incompatible options)");
         return Err(errors::FallbackToPython(name()).into());
     }
 
@@ -202,7 +202,7 @@ pub fn run(
         .iter()
         .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY)
     {
-        logger.info(|| "Falling back to Python clone (no segmented changelog)");
+        logger.info("Falling back to Python clone (no segmented changelog)");
         bail!(errors::FallbackToPython(name()));
     }
 
@@ -295,7 +295,7 @@ pub fn run(
                 )
             });
         } else {
-            logger.info(|| "Initializing empty non-EdenFS working copy");
+            logger.info("Initializing empty non-EdenFS working copy");
         }
 
         clone::init_working_copy(

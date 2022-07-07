@@ -8,5 +8,6 @@ edition = "2021"
 
 [dependencies]
 io = { version = "0.1.0", path = "../io" }
+lazystr = { version = "0.1.0", path = "../lazystr" }
 tracing = "0.1.35"
 util = { version = "0.1.0", path = "../util" }
