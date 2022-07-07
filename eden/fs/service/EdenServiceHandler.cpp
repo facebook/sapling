@@ -1062,9 +1062,8 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
   if (prjfsChannel) {
     context->subHandle = prjfsChannel->getTraceBusPtr()->subscribeFunction(
         folly::to<std::string>("strace-", edenMount->getPath().basename()),
-        [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
-         serverState =
-             server_->getServerState()](const PrjfsTraceEvent& event) {
+        [publisher = ThriftStreamPublisherOwner{std::move(publisher)}](
+            const PrjfsTraceEvent& event) {
           FsEvent te;
           auto times = thriftTraceEventTimes(event);
           te.times_ref() = times;
@@ -1138,7 +1137,6 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
     context->subHandle = nfsdChannel->getTraceBus().subscribeFunction(
         folly::to<std::string>("strace-", edenMount->getPath().basename()),
         [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
-         serverState = server_->getServerState(),
          eventCategoryMask](const NfsTraceEvent& event) {
           if (isEventMasked(eventCategoryMask, event)) {
             return;
@@ -1220,9 +1218,8 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
 
   context->subHandle = hgBackingStore->getTraceBus().subscribeFunction(
       folly::to<std::string>("hgtrace-", edenMount->getPath().basename()),
-      [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
-       serverState =
-           server_->getServerState()](const HgImportTraceEvent& event) {
+      [publisher = ThriftStreamPublisherOwner{std::move(publisher)}](
+          const HgImportTraceEvent& event) {
         HgEvent te;
         te.times_ref() = thriftTraceEventTimes(event);
         switch (event.eventType) {
@@ -1278,6 +1275,44 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
         te.manifestNodeId_ref() = event.manifestNodeId.toString();
         te.path_ref() = event.getPath();
 
+        // TODO: trace requesting pid
+        // te.requestInfo_ref() = thriftRequestInfo(pid);
+
+        publisher.next(te);
+      });
+
+  return std::move(serverStream);
+}
+
+apache::thrift::ServerStream<InodeEvent> EdenServiceHandler::traceInodeEvents(
+    std::unique_ptr<std::string> mountPoint) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
+  auto mountPath = AbsolutePathPiece{*mountPoint};
+  auto edenMount = server_->getMount(mountPath);
+
+  struct Context {
+    TraceSubscriptionHandle<InodeTraceEvent> subHandle;
+  };
+
+  auto context = std::make_shared<Context>();
+
+  auto [serverStream, publisher] =
+      apache::thrift::ServerStream<InodeEvent>::createPublisher([context] {
+        // on disconnect, release context and the TraceSubscriptionHandle
+      });
+
+  context->subHandle = edenMount->getInodeTraceBus().subscribeFunction(
+      folly::to<std::string>("inodetrace-", edenMount->getPath().basename()),
+      [publisher = ThriftStreamPublisherOwner{std::move(publisher)}](
+          const InodeTraceEvent& event) {
+        InodeEvent te;
+        te.times_ref() = thriftTraceEventTimes(event);
+        te.timestamp_ref() = event.systemTime.time_since_epoch().count();
+        te.ino_ref() = event.ino.getRawValue();
+        te.inodeType_ref() = event.inodeType;
+        te.eventType_ref() = event.eventType;
+        te.progress_ref() = event.progress;
+        te.duration_ref() = event.duration.count();
         // TODO: trace requesting pid
         // te.requestInfo_ref() = thriftRequestInfo(pid);
 
@@ -1453,17 +1488,8 @@ EdenServiceHandler::streamChangesSince(
       const auto& from = *rootIt;
       const auto& to = *(rootIt + 1);
 
-      // Make sure that the diffBetweenRoots is not run immediately.
-      auto semi = folly::makeSemiFuture().deferValue(
-          [from,
-           to,
-           edenMount = edenMount.get(),
-           token = cancellationSource->getToken(),
-           callback = callback.get()](auto&&) {
-            return edenMount->diffBetweenRoots(from, to, token, callback)
-                .semi();
-          });
-      futures.push_back(ImmediateFuture{std::move(semi)});
+      futures.push_back(edenMount->diffBetweenRoots(
+          from, to, cancellationSource->getToken(), callback.get()));
     }
 
     folly::futures::detachOn(
@@ -3125,7 +3151,7 @@ void EdenServiceHandler::getRetroactiveInodeEvents(
     thriftEvent.timestamp_ref() = event.timestamp.time_since_epoch().count();
     thriftEvent.ino_ref() = event.ino.getRawValue();
     thriftEvent.inodeType_ref() = event.inodeType;
-    thriftEvent.eventType_ref() = InodeEventType::Materialize;
+    thriftEvent.eventType_ref() = InodeEventType::MATERIALIZE;
     thriftEvent.duration_ref() = event.duration.count();
     thriftEvents.push_back(std::move(thriftEvent));
   }

@@ -21,6 +21,7 @@
 #include <folly/system/ThreadName.h>
 
 #include <eden/fs/config/MountProtocol.h>
+#include <chrono>
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/EdenDispatcherFactory.h"
@@ -80,6 +81,14 @@ DEFINE_string(
     "the path to the edenfsctl executable");
 
 namespace facebook::eden {
+
+// These static asserts exist to make explicit the memory usage of the per-mount
+// InodeTraceBus. TraceBus uses 2 * capacity * sizeof(TraceEvent) memory usage,
+// so limit total memory usage to around 0.5 MB per åmount.
+constexpr size_t kInodeTraceBusCapacity = 5000;
+static_assert(CheckSize<InodeTraceEvent, 48>());
+static_assert(
+    CheckEqual<240000, kInodeTraceBusCapacity * sizeof(InodeTraceEvent)>());
 
 #ifndef _WIN32
 namespace {
@@ -242,6 +251,8 @@ EdenMount::EdenMount(
       lastCheckoutTime_{EdenTimestamp{serverState_->getClock()->getRealtime()}},
       owner_{Owner{getuid(), getgid()}},
       activityBuffer_{initActivityBuffer()},
+      inodeTraceBus_{
+          TraceBus<InodeTraceEvent>::create("inode", kInodeTraceBusCapacity)},
       clock_{serverState_->getClock()} {
 }
 
@@ -2321,13 +2332,31 @@ std::optional<ActivityBuffer> EdenMount::initActivityBuffer() {
 }
 
 void EdenMount::addInodeMaterializeEvent(
-    folly::stop_watch<std::chrono::microseconds> watch,
+    std::chrono::system_clock::time_point startTime,
     InodeType type,
-    InodeNumber ino) {
-  if (activityBuffer_.has_value()) {
-    std::chrono::system_clock::time_point time =
-        std::chrono::system_clock::now();
-    InodeMaterializeEvent event{time, ino, type, watch.elapsed()};
+    InodeNumber ino,
+    InodeEventProgress progress) {
+  // Measure timestamps and duration
+  auto eventSystemTime = (progress == InodeEventProgress::START)
+      ? startTime
+      : std::chrono::system_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+      eventSystemTime - startTime);
+  auto steadyTime = std::chrono::steady_clock::now();
+
+  // Publish event to inodeTraceBus
+  InodeTraceEvent te{
+      {eventSystemTime, steadyTime},
+      ino,
+      type,
+      InodeEventType::MATERIALIZE,
+      progress,
+      duration};
+  inodeTraceBus_->publish(te);
+
+  // Add event to ActivityBuffer
+  if (activityBuffer_.has_value() && progress == InodeEventProgress::END) {
+    InodeMaterializeEvent event{eventSystemTime, ino, type, duration};
     activityBuffer_.value().addEvent(event);
   }
 }

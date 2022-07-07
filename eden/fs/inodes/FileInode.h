@@ -8,7 +8,6 @@
 #pragma once
 #include <folly/Synchronized.h>
 #include <folly/futures/SharedPromise.h>
-#include <folly/stop_watch.h>
 #include <chrono>
 #include <optional>
 #include "eden/fs/inodes/CacheHint.h"
@@ -330,7 +329,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       std::shared_ptr<const Blob> blob,
       Fn&& fn,
       ObjectFetchContext& fetchContext,
-      std::optional<folly::stop_watch<std::chrono::microseconds>> watch =
+      std::optional<std::chrono::system_clock::time_point> startTime =
           std::nullopt);
 
   /**

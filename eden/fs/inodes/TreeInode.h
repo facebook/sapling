@@ -9,7 +9,6 @@
 #include <folly/File.h>
 #include <folly/Portability.h>
 #include <folly/Synchronized.h>
-#include <folly/stop_watch.h>
 #include <optional>
 #include "eden/fs/fuse/Invalidation.h"
 #include "eden/fs/inodes/CheckoutAction.h"
@@ -612,7 +611,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       mode_t mode,
       folly::ByteRange fileContents,
       InvalidationRequired invalidate,
-      folly::stop_watch<std::chrono::microseconds> watch);
+      std::chrono::system_clock::time_point startTime);
 
   /**
    * removeImpl() is the actual implementation used for unlink() and rmdir().

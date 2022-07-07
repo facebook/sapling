@@ -15,7 +15,6 @@
 #include <folly/futures/Promise.h>
 #include <folly/futures/SharedPromise.h>
 #include <folly/logging/Logger.h>
-#include <folly/stop_watch.h>
 #include <chrono>
 #include <memory>
 #include <mutex>
@@ -140,6 +139,14 @@ enum class CounterName {
 struct Owner {
   uid_t uid;
   gid_t gid;
+};
+
+struct InodeTraceEvent : TraceEventBase {
+  InodeNumber ino;
+  InodeType inodeType;
+  InodeEventType eventType;
+  InodeEventProgress progress;
+  std::chrono::microseconds duration;
 };
 
 /**
@@ -721,6 +728,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
     return activityBuffer_;
   }
 
+  TraceBus<InodeTraceEvent>& getInodeTraceBus() const {
+    return *inodeTraceBus_;
+  }
+
   /**
    * Returns the last checkout time in the Eden mount.
    */
@@ -838,9 +849,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * new InodeMaterializeEvent occurs.
    */
   void addInodeMaterializeEvent(
-      folly::stop_watch<std::chrono::microseconds> watch,
+      std::chrono::system_clock::time_point watch,
       InodeType type,
-      InodeNumber ino);
+      InodeNumber ino,
+      InodeEventProgress progress);
 
   /**
    * mount any configured bind mounts.
@@ -1267,6 +1279,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * so activityBuffer_ is ordered after serverState_ in this header file
    */
   std::optional<ActivityBuffer> activityBuffer_;
+
+  std::shared_ptr<TraceBus<InodeTraceEvent>> inodeTraceBus_;
 
 #ifdef _WIN32
   /**

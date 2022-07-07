@@ -60,8 +60,8 @@ static const std::unordered_map<HgEventType, const char*> kHgEventTypes = {
 
 static const std::unordered_map<InodeEventType, const char*> kInodeEventTypes =
     {
-        {InodeEventType::Unknown, "?"},
-        {InodeEventType::Materialize, "M"},
+        {InodeEventType::UNKNOWN, "?"},
+        {InodeEventType::MATERIALIZE, "M"},
 };
 
 static const std::unordered_map<HgResourceType, const char*> kResourceTypes = {
@@ -144,7 +144,7 @@ int trace_hg(
     folly::ScopedEventBaseThread& evbThread,
     const AbsolutePath& mountRoot,
     apache::thrift::RocketClientChannel::Ptr channel) {
-  StreamingEdenServiceAsyncClient client{std::move(channel)};
+  apache::thrift::Client<StreamingEdenService> client{std::move(channel)};
 
   apache::thrift::ClientBufferedStream<HgEvent> traceHgStream =
       client.semifuture_traceHgEvents(mountRoot.stringPiece().str())
@@ -276,7 +276,7 @@ int trace_fs(
     mask |= streamingeden_constants::FS_EVENT_WRITE_;
   }
 
-  StreamingEdenServiceAsyncClient client{std::move(channel)};
+  apache::thrift::Client<StreamingEdenService> client{std::move(channel)};
   apache::thrift::ClientBufferedStream<FsEvent> traceFsStream =
       client.semifuture_traceFsEvents(mountRoot.stringPiece().str(), mask)
           .via(evbThread.getEventBase())
@@ -425,7 +425,7 @@ std::string formatThriftRequestMetadata(const ThriftRequestMetadata& request) {
 int trace_thrift(
     folly::ScopedEventBaseThread& evbThread,
     apache::thrift::RocketClientChannel::Ptr channel) {
-  StreamingEdenServiceAsyncClient client{std::move(channel)};
+  apache::thrift::Client<StreamingEdenService> client{std::move(channel)};
 
   auto future = client.semifuture_debugOutstandingThriftRequests().via(
       evbThread.getEventBase());
@@ -452,6 +452,44 @@ int trace_thrift(
 }
 
 int trace_inode(
+    folly::ScopedEventBaseThread& evbThread,
+    const AbsolutePath& mountRoot,
+    apache::thrift::RocketClientChannel::Ptr channel) {
+  apache::thrift::Client<StreamingEdenService> client{std::move(channel)};
+
+  apache::thrift::ClientBufferedStream<InodeEvent> traceInodeStream =
+      client.semifuture_traceInodeEvents(mountRoot.stringPiece().str())
+          .via(evbThread.getEventBase())
+          .get();
+
+  std::move(traceInodeStream)
+      .subscribeInline([&](folly::Try<InodeEvent>&& event) {
+        if (event.hasException()) {
+          fmt::print("Error: {}\n", folly::exceptionStr(event.exception()));
+          return;
+        }
+
+        InodeEvent& evt = event.value();
+        if (*evt.progress() == InodeEventProgress::START) {
+          fmt::print(
+              "{} {} {}\n",
+              kDashedArrowEmoji,
+              *evt.inodeType() == InodeType::TREE ? kTreeEmoji : kBlobEmoji,
+              *evt.ino());
+        } else {
+          // Only materialize events are currently supported
+          fmt::print(
+              "{} {} {} materialized in {}\n",
+              kSolidArrowEmoji,
+              *evt.inodeType() == InodeType::TREE ? kTreeEmoji : kBlobEmoji,
+              *evt.ino(),
+              formatMicrosecondTime(*evt.duration()));
+        }
+      });
+  return 0;
+}
+
+int trace_inode_retroactive(
     folly::ScopedEventBaseThread& evbThread,
     const AbsolutePath& mountRoot,
     apache::thrift::RocketClientChannel::Ptr channel) {
@@ -482,7 +520,7 @@ int trace_inode(
         }
         std::sort(
             events.begin(), events.end(), [](const auto& a, const auto& b) {
-              return a.timestamp_ref() < b.timestamp_ref();
+              return a.timestamp() < b.timestamp();
             });
 
         fmt::print("Last {} inode events\n", size);
@@ -550,11 +588,6 @@ int main(int argc, char** argv) {
     fmt::print("Only eden trace inode currently supports retroactive mode\n");
     return 0;
   }
-  if (FLAGS_trace == "inode" && !FLAGS_retroactive) {
-    fmt::print(
-        "`eden trace inode` is only currently supported in retroactive mode\n");
-    return 0;
-  }
 
   auto channel = folly::via(
                      evbThread.getEventBase(),
@@ -575,7 +608,9 @@ int main(int argc, char** argv) {
   } else if (FLAGS_trace == "thrift") {
     return trace_thrift(evbThread, std::move(channel));
   } else if (FLAGS_trace == "inode") {
-    return trace_inode(evbThread, mountRoot, std::move(channel));
+    return FLAGS_retroactive
+        ? trace_inode_retroactive(evbThread, mountRoot, std::move(channel))
+        : trace_inode(evbThread, mountRoot, std::move(channel));
   } else if (FLAGS_trace.empty()) {
     fmt::print(stderr, "Must specify trace mode\n");
     return 1;
