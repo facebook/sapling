@@ -69,7 +69,7 @@ impl GitRepoReader {
         };
 
         // Channel is used so that we don't have issues around ownership of stdin in `get_object`
-        let (send_request, mut recv_request) = mpsc::channel(1);
+        let (send_request, mut recv_request) = mpsc::channel(10000000);
         {
             let outstanding_requests = outstanding_requests.clone();
             let mut cat_file_stdin = batch_cat_file

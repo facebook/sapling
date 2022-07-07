@@ -43,6 +43,7 @@ use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
+use slog::debug;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
 use std::collections::BTreeMap;
@@ -241,7 +242,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator, Uploader: GitUploader>(
         })
         .await?;
 
-    info!(ctx.logger(), "Completed git import for repo {}.", repo_name);
+    debug!(ctx.logger(), "Completed git import for repo {}.", repo_name);
     Ok(acc.into_inner().expect("lock poisoned"))
 }
 
