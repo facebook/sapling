@@ -23,6 +23,12 @@ if(WIN32)
     ${CMAKE_CURRENT_SOURCE_DIR}/stale_inode_test.py
   )
 endif()
+if (NOT WIN32)
+  list(
+    REMOVE_ITEM INTEGRATION_SRCS
+    ${CMAKE_CURRENT_SOURCE_DIR}/prjfs_stress.py
+  )
+endif()
 
 # The following integration test files contain one or more tests that require
 # pexpect.  For now we disable the entire files when pexpect is unavailable.
