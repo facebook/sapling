@@ -36,6 +36,7 @@ use mononoke_types::DateTime as MononokeDateTime;
 use mononoke_types::FileChange;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
+use repo_authorization::RepoWriteOperation;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
@@ -457,7 +458,15 @@ impl RepoDraftContext {
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
     ) -> Result<ChangesetContext, MononokeError> {
-        self.check_method_permitted("create_changeset")?;
+        self.repo()
+            .authorization_context()
+            .require_repo_write(
+                self.repo.ctx(),
+                self.repo.inner_repo(),
+                RepoWriteOperation::CreateChangeset,
+            )
+            .await?;
+
         let allowed_no_parents = self
             .config()
             .source_control_service

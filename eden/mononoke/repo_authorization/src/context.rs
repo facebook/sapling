@@ -241,7 +241,7 @@ impl AuthorizationContext {
             })
     }
 
-    /// Check whether the the user is allowed to set the Git mapping for a
+    /// Check whether the user is allowed to set the Git mapping for a
     /// changeset to a commit that we cannot prove is round-trippable for
     /// the given Git commit id.
     pub async fn check_override_git_mapping(
@@ -266,6 +266,9 @@ impl AuthorizationContext {
         Ok(AuthorizationCheckOutcome::from_permitted(permitted))
     }
 
+    /// Require that the user is allowed to set the Git mapping for a
+    /// changeset to a commit that we cannot prove is round-trippable for
+    /// the given Git commit id.
     pub async fn require_override_git_mapping(
         &self,
         ctx: &CoreContext,

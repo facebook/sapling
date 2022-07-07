@@ -1679,28 +1679,19 @@ impl RepoContext {
     }
 
     /// Get a draft context to make draft changes to this repository.
-    pub async fn draft(mut self) -> Result<RepoDraftContext, MononokeError> {
+    pub async fn draft(self) -> Result<RepoDraftContext, MononokeError> {
         if !self.config().source_control_service.permit_writes {
             return Err(MononokeError::InvalidRequest(String::from(
                 "source control service writes are not enabled for this repo",
             )));
         }
 
-        // TODO(T105334556): This should require draft permission
-        self.ctx = self.ctx.with_mutated_scuba(|mut scuba| {
-            scuba.add("write_permissions_model", "any");
-            scuba
-        });
-
         self.ctx
             .scuba()
             .clone()
             .log_with_msg("Write request start", None);
 
-        Ok(RepoDraftContext::new(
-            self,
-            WritePermissionsModel::AllowAnyWrite,
-        ))
+        Ok(RepoDraftContext::new(self))
     }
 
     pub async fn check_service_permissions(
@@ -1714,8 +1705,8 @@ impl RepoContext {
 
     /// Get a draft context to make draft changes to this repository on behalf of a service.
     pub async fn service_draft(
-        mut self,
-        service_identity: String,
+        self,
+        _service_identity: String,
     ) -> Result<RepoDraftContext, MononokeError> {
         if !self.config().source_control_service.permit_service_writes {
             return Err(MononokeError::InvalidRequest(String::from(
@@ -1723,24 +1714,12 @@ impl RepoContext {
             )));
         }
 
-        // Check the user is permitted to speak for the named service.
-        self.check_service_permissions(service_identity.clone())
-            .await?;
-
-        self.ctx = self.ctx.with_mutated_scuba(|mut scuba| {
-            scuba.add("write_permissions_model", "service");
-            scuba
-        });
-
         self.ctx
             .scuba()
             .clone()
             .log_with_msg("Write request start", None);
 
-        Ok(RepoDraftContext::new(
-            self,
-            WritePermissionsModel::ServiceIdentity(service_identity),
-        ))
+        Ok(RepoDraftContext::new(self))
     }
 
     /// Get a write context to make changes to this repository.

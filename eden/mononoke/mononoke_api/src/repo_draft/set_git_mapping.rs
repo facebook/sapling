@@ -8,11 +8,9 @@
 use anyhow::Context;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
-use itertools::Itertools;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
-use crate::permissions::WritePermissionsModel;
 use crate::repo_draft::RepoDraftContext;
 
 use std::collections::HashMap;
@@ -39,22 +37,11 @@ impl RepoDraftContext {
 
         if extras.get(HGGIT_MARKER_EXTRA).map(Vec::as_slice) == Some(&HGGIT_MARKER_VALUE) {
             if let Some(hggit_sha1) = extras.remove(HGGIT_COMMIT_ID_EXTRA) {
-                // We can't derive right now, so always do the permission check
-                self.check_method_permitted("set_git_mapping_from_changeset")?;
-                // TODO(simonfar): Relax this to a hipster group check when @mbthomas lands repo_authorization rework
-                if let WritePermissionsModel::AllowAnyWrite = self.permissions_model {
-                    let identities = self.repo.ctx().metadata().identities();
-                    let identities = if identities.is_empty() {
-                        "<none>".to_string()
-                    } else {
-                        identities.iter().join(",")
-                    };
-                    return Err(MononokeError::PermissionDenied {
-                        mode: "write git mapping".to_string(),
-                        identities,
-                        reponame: self.repo.name().to_string(),
-                    });
-                }
+                // We can't derive right now, so always do the permission check for
+                // overriding in the case of mismatch.
+                self.authorization_context()
+                    .require_override_git_mapping(self.ctx(), self.inner_repo())
+                    .await?;
 
                 let hggit_sha1 = String::from_utf8_lossy(&hggit_sha1).parse()?;
                 let entry = BonsaiGitMappingEntry::new(hggit_sha1, changeset_ctx.id());
