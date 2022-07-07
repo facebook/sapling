@@ -146,6 +146,9 @@ pub fn normalize_glob(pat: &str) -> String {
             // Change 'a**' to 'a*/**'
             result += "*/";
         }
+        if ch == '/' && i > 0 && chars[i - 1] == '/' {
+            continue;
+        }
         result.push(ch);
         if ch == '*'
             && i > 0
@@ -184,6 +187,7 @@ mod tests {
     #[test]
     fn test_normalize_glob() {
         assert_eq!(normalize_glob("**"), "**");
+        assert_eq!(normalize_glob("a//b"), "a/b");
         assert_eq!(normalize_glob("a/**"), "a/**");
         assert_eq!(normalize_glob("a/b**"), "a/b*/**");
         assert_eq!(normalize_glob("a/b\\**"), "a/b\\**");

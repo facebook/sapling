@@ -472,7 +472,9 @@ fn sparse_pat_to_matcher_rule(pat: Pattern) -> Result<Vec<String>, Error> {
             .iter()
             .map(|s| pathmatcher::normalize_glob(s))
             .collect(),
-        "path" => vec![pathmatcher::plain_to_glob(pat_text)],
+        "path" => vec![pathmatcher::normalize_glob(
+            pathmatcher::plain_to_glob(pat_text).as_str(),
+        )],
         _ => unreachable!(),
     };
 
@@ -666,6 +668,11 @@ title = grand_child
     fn test_sparse_pat_to_matcher_rule() {
         assert_eq!(
             sparse_pat_to_matcher_rule(Pattern::Include("path:/foo/bar".to_string())).unwrap(),
+            vec!["/foo/bar/**"]
+        );
+
+        assert_eq!(
+            sparse_pat_to_matcher_rule(Pattern::Include("path:/foo//bar".to_string())).unwrap(),
             vec!["/foo/bar/**"]
         );
 

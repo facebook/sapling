@@ -121,3 +121,39 @@ class TestSparseClone(BaseTest):
 
         # Make sure we wrote out the sparse config.
         self.assertIn("banana", other_wc[".hg/sparse"].content())
+
+    @hgtest
+    def test_matcher(self, repo: Repo, wc: WorkingCopy) -> None:
+        wc.file(
+            path="sparse/base",
+            content="""
+sparse/
+a////////////x
+a/**y
+b/*
+""",
+        )
+        wc.file(path="a/x")
+        wc.file(path="a/y")
+        wc.file(path="b/1")
+        wc.file(path="b/2")
+        commit1 = wc.commit()
+
+        wc.hg.push(rev=commit1.hash, to="master", create=True)
+
+        sparse_wc = WorkingCopy(repo, new_dir())
+        repo.hg.clone(repo.url, sparse_wc.root, enable_profile="sparse/base")
+
+        self.assertEqual(
+            sorted(sparse_wc.hg.files().stdout.rstrip().split("\n")),
+            ["a/x", "a/y", "b/1", "b/2", "sparse/base"],
+        )
+
+        self.assertTrue(sparse_wc.status().empty())
+
+        # Make sure Python agrees what files we should have.
+        sparse_wc.hg.sparse("refresh")
+        self.assertEqual(
+            sorted(sparse_wc.hg.files().stdout.rstrip().split("\n")),
+            ["a/x", "a/y", "b/1", "b/2", "sparse/base"],
+        )
