@@ -3280,7 +3280,8 @@ void EdenServiceHandler::getDaemonInfo(DaemonInfo& result) {
       case EdenServer::RunState::SHUTTING_DOWN:
         return facebook::fb303::cpp2::fb303_status::STOPPING;
     }
-    EDEN_BUG() << "unexpected EdenServer status " << enumValue(status);
+    EDEN_BUG() << "unexpected EdenServer status "
+               << enumValue(server_->getStatus());
   }();
 
   result.pid_ref() = getpid();

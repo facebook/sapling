@@ -2221,7 +2221,7 @@ void EdenMount::channelInitSuccessful(
   // the FUSE_INIT message from the kernel.
   transitionState(State::STARTING, State::RUNNING);
 #ifndef _WIN32
-  if (auto channel = std::get_if<NfsdChannelVariant>(&channel_)) {
+  if (std::holds_alternative<NfsdChannelVariant>(channel_)) {
     // Make sure that the Nfsd3 is destroyed in the EventBase that it was
     // created on. This is necessary as the various async sockets cannot be
     // used in multiple threads and can only be manipulated in the EventBase
