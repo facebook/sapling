@@ -130,19 +130,7 @@ impl From<MononokeError> for ServiceError {
                 reason: error.to_string(),
                 ..Default::default()
             }),
-            error @ MononokeError::PermissionDenied { .. } => Self::Request(thrift::RequestError {
-                kind: thrift::RequestErrorKind::PERMISSION_DENIED,
-                reason: error.to_string(),
-                ..Default::default()
-            }),
             error @ MononokeError::ServicePermissionDenied { .. } => {
-                Self::Request(thrift::RequestError {
-                    kind: thrift::RequestErrorKind::PERMISSION_DENIED,
-                    reason: error.to_string(),
-                    ..Default::default()
-                })
-            }
-            error @ MononokeError::ServiceRestricted { .. } => {
                 Self::Request(thrift::RequestError {
                     kind: thrift::RequestErrorKind::PERMISSION_DENIED,
                     reason: error.to_string(),

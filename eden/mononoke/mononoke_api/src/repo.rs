@@ -81,8 +81,6 @@ use mononoke_types::Svnrev;
 use mononoke_types::Timestamp;
 use mutable_renames::MutableRenames;
 use mutable_renames::SqlMutableRenamesStore;
-use permission_checker::ArcPermissionChecker;
-use permission_checker::PermissionCheckerBuilder;
 use phases::PhasesRef;
 use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
@@ -155,8 +153,6 @@ pub struct Repo {
     pub(crate) inner: InnerRepo,
     pub(crate) name: String,
     pub(crate) warm_bookmarks_cache: Arc<dyn BookmarksCache>,
-    pub(crate) repo_permission_checker: ArcPermissionChecker,
-    pub(crate) service_permission_checker: ArcPermissionChecker,
     pub(crate) readonly_fetcher: RepoReadWriteFetcher,
     pub(crate) hook_manager: ArcHookManager,
 }
@@ -255,28 +251,6 @@ impl Repo {
 
         let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-        let repo_permission_checker = async {
-            let checker = match &config.hipster_acl {
-                Some(acl) => PermissionCheckerBuilder::new()
-                    .allow_repo_acl(fb, acl)
-                    .await?
-                    .build(),
-                None => PermissionCheckerBuilder::new().allow_all().build(),
-            };
-            Ok::<_, Error>(ArcPermissionChecker::from(checker))
-        };
-
-        let service_permission_checker = async {
-            let checker = match &config.source_control_service.service_write_hipster_acl {
-                Some(acl) => PermissionCheckerBuilder::new()
-                    .allow_tier_acl(fb, acl)
-                    .await?
-                    .build(),
-                None => PermissionCheckerBuilder::new().allow_all().build(),
-            };
-            Ok::<_, Error>(ArcPermissionChecker::from(checker))
-        };
-
         let warm_bookmarks_cache = if env.warm_bookmarks_cache_enabled {
             let mut scuba_sample_builder = env.warm_bookmarks_cache_scuba_sample_builder.clone();
             scuba_sample_builder.add("repo", inner.blob_repo.name().clone());
@@ -333,14 +307,7 @@ impl Repo {
         let hook_manager =
             make_hook_manager(fb, content_store, &config, name.clone(), &disabled_hooks);
 
-        let (
-            repo_permission_checker,
-            service_permission_checker,
-            warm_bookmarks_cache,
-            hook_manager,
-        ): (_, _, Arc<dyn BookmarksCache>, _) = try_join!(
-            repo_permission_checker.watched(&logger),
-            service_permission_checker.watched(&logger),
+        let (warm_bookmarks_cache, hook_manager): (Arc<dyn BookmarksCache>, _) = try_join!(
             warm_bookmarks_cache.watched(&logger),
             hook_manager.watched(&logger),
         )?;
@@ -355,8 +322,6 @@ impl Repo {
             name,
             inner,
             warm_bookmarks_cache,
-            repo_permission_checker,
-            service_permission_checker,
             readonly_fetcher,
             hook_manager: Arc::new(hook_manager),
         })
@@ -373,8 +338,6 @@ impl Repo {
             name: self.name.clone(),
             inner,
             warm_bookmarks_cache: self.warm_bookmarks_cache.clone(),
-            repo_permission_checker: self.repo_permission_checker.clone(),
-            service_permission_checker: self.service_permission_checker.clone(),
             readonly_fetcher: self.readonly_fetcher.clone(),
             hook_manager: self.hook_manager.clone(),
         }
@@ -491,12 +454,6 @@ impl Repo {
             name: name.clone(),
             inner,
             warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
-            repo_permission_checker: ArcPermissionChecker::from(
-                PermissionCheckerBuilder::new().allow_all().build(),
-            ),
-            service_permission_checker: ArcPermissionChecker::from(
-                PermissionCheckerBuilder::new().allow_all().build(),
-            ),
             readonly_fetcher,
             hook_manager: Arc::new(
                 make_hook_manager(

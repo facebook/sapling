@@ -55,12 +55,6 @@ pub enum MononokeError {
     InvalidRequest(String),
     #[error("unresolved path conflicts in merge:\n {}", .conflict_paths.iter().join("\n"))]
     MergeConflicts { conflict_paths: Vec<MononokePath> },
-    #[error("permission denied: {mode} access to repo {reponame} not permitted for {identities}")]
-    PermissionDenied {
-        mode: String,
-        identities: String,
-        reponame: String,
-    },
     #[error(
         "permission denied: access to repo {reponame} on behalf of {service_identity} not permitted for {identities}"
     )]
@@ -68,14 +62,6 @@ pub enum MononokeError {
         identities: String,
         reponame: String,
         service_identity: String,
-    },
-    #[error(
-        "permission denied: service {service_identity} is not permitted to {action} in {reponame}"
-    )]
-    ServiceRestricted {
-        service_identity: String,
-        action: String,
-        reponame: String,
     },
     #[error("hooks failed:\n{}", describe_hook_rejections(.0.as_slice()))]
     HookFailure(Vec<HookRejection>),

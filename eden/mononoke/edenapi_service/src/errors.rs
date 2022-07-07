@@ -94,9 +94,7 @@ impl MononokeErrorExt for MononokeError {
         use MononokeError::*;
         (match self {
             InvalidRequest(_) => HttpError::e400,
-            PermissionDenied { .. } => HttpError::e403,
             ServicePermissionDenied { .. } => HttpError::e403,
-            ServiceRestricted { .. } => HttpError::e403,
             NotAvailable { .. } => HttpError::e503,
             HookFailure(_) => HttpError::e400,
             AuthorizationError(_) => HttpError::e403,
