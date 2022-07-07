@@ -127,7 +127,7 @@ DEFINE_int32(
     apache::thrift::concurrency::ThreadManager::DEFAULT_MAX_QUEUE_SIZE,
     "Maximum number of active thrift requests");
 DEFINE_bool(thrift_enable_codel, false, "Enable Codel queuing timeout");
-DEFINE_int32(thrift_queue_timeout, 5000, "Request queue timeout in ms");
+DEFINE_int32(thrift_queue_timeout, 30000, "Request queue timeout in ms");
 
 DEFINE_int64(
     unload_interval_minutes,
