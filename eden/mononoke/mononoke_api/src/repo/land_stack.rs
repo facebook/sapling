@@ -25,11 +25,11 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use revset::RangeNodeStream;
 
 use crate::errors::MononokeError;
-use crate::repo_write::RepoWriteContext;
+use crate::repo::RepoContext;
 
 pub use bookmarks_movement::PushrebaseOutcome;
 
-impl RepoWriteContext {
+impl RepoContext {
     /// Land a stack of commits to a bookmark via pushrebase.
     pub async fn land_stack(
         &self,
@@ -40,9 +40,9 @@ impl RepoWriteContext {
         push_source: CrossRepoPushSource,
         bookmark_restrictions: BookmarkKindRestrictions,
     ) -> Result<PushrebaseOutcome, MononokeError> {
-        let bookmark = bookmark.as_ref();
-        self.check_method_permitted("land_stack")?;
+        self.start_write()?;
 
+        let bookmark = bookmark.as_ref();
         let bookmark = BookmarkName::new(bookmark)?;
         let bookmark_attrs =
             BookmarkAttrs::new(self.ctx().fb, self.config().bookmarks.clone()).await?;

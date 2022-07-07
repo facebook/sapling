@@ -52,7 +52,6 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
 async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
-    let repo = repo.write().await?;
 
     // Can create public bookmarks on existing changesets (ancestors of trunk).
     repo.create_bookmark("bookmark1", changesets["A"], None)
@@ -93,7 +92,6 @@ async fn create_bookmark(fb: FacebookInit) -> Result<()> {
 async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
-    let repo = repo.write().await?;
 
     repo.move_bookmark("trunk", changesets["E"], None, false, None)
         .await?;
@@ -148,7 +146,6 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
 async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
-    let repo = repo.write().await?;
 
     repo.create_bookmark("bookmark1", changesets["A"], None)
         .await?;

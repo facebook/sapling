@@ -117,8 +117,6 @@ use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
 use crate::file::FileContext;
 use crate::file::FileId;
-use crate::permissions::WritePermissionsModel;
-use crate::repo_write::RepoWriteContext;
 use crate::specifiers::ChangesetId;
 use crate::specifiers::ChangesetPrefixSpecifier;
 use crate::specifiers::ChangesetSpecifier;
@@ -130,7 +128,11 @@ use crate::xrepo::CandidateSelectionHintArgs;
 use crate::MononokeApiEnvironment;
 use crate::WarmBookmarksCacheDerivedData;
 
+pub mod create_bookmark;
 pub mod create_changeset;
+pub mod delete_bookmark;
+pub mod land_stack;
+pub mod move_bookmark;
 pub mod set_git_mapping;
 
 define_stats! {
@@ -786,62 +788,6 @@ impl Repo {
             .get_generation_number(ctx.clone(), *cs_id)
             .await?;
         maybe_gen_num.ok_or(format_err!("gen num for {} not found", cs_id))
-    }
-
-    async fn check_permissions(&self, ctx: &CoreContext, mode: &str) -> Result<(), MononokeError> {
-        let identities = ctx.metadata().identities();
-
-        if !self
-            .repo_permission_checker
-            .check_set(&*identities, &[mode])
-            .await?
-        {
-            debug!(
-                ctx.logger(),
-                "Permission denied: {} access to {}", mode, self.name
-            );
-            let identities = if identities.is_empty() {
-                "<none>".to_string()
-            } else {
-                identities.iter().join(",")
-            };
-            return Err(MononokeError::PermissionDenied {
-                mode: mode.to_string(),
-                identities,
-                reponame: self.name.clone(),
-            });
-        }
-        Ok(())
-    }
-
-    async fn check_service_permissions(
-        &self,
-        ctx: &CoreContext,
-        service_identity: String,
-    ) -> Result<(), MononokeError> {
-        let identities = ctx.metadata().identities();
-
-        if !self
-            .service_permission_checker
-            .check_set(&*identities, &[&service_identity])
-            .await?
-        {
-            debug!(
-                ctx.logger(),
-                "Permission denied: access to {} on behalf of {}", self.name, service_identity,
-            );
-            let identities = if identities.is_empty() {
-                "<none>".to_string()
-            } else {
-                identities.iter().join(",")
-            };
-            return Err(MononokeError::ServicePermissionDenied {
-                identities,
-                reponame: self.name.clone(),
-                service_identity,
-            });
-        }
-        Ok(())
     }
 }
 
@@ -1680,15 +1626,6 @@ impl RepoContext {
         Ok(maybe_cs_id.map(|cs_id| ChangesetContext::new(other.clone(), cs_id)))
     }
 
-    pub async fn check_service_permissions(
-        &self,
-        service_identity: String,
-    ) -> Result<(), MononokeError> {
-        self.repo
-            .check_service_permissions(&self.ctx, service_identity)
-            .await
-    }
-
     /// Start a write to the repo.
     pub fn start_write(&self) -> Result<(), MononokeError> {
         if self.authz.is_service() {
@@ -1709,64 +1646,6 @@ impl RepoContext {
             .log_with_msg("Write request start", None);
 
         Ok(())
-    }
-
-    /// Get a write context to make changes to this repository.
-    pub async fn write(mut self) -> Result<RepoWriteContext, MononokeError> {
-        if !self.config().source_control_service.permit_writes {
-            return Err(MononokeError::InvalidRequest(String::from(
-                "source control service writes are not enabled for this repo",
-            )));
-        }
-
-        // Check the user is permitted to write to this repo.
-        self.repo.check_permissions(&self.ctx, "write").await?;
-
-        self.ctx = self.ctx.with_mutated_scuba(|mut scuba| {
-            scuba.add("write_permissions_model", "any");
-            scuba
-        });
-
-        self.ctx
-            .scuba()
-            .clone()
-            .log_with_msg("Write request start", None);
-
-        Ok(RepoWriteContext::new(
-            self,
-            WritePermissionsModel::AllowAnyWrite,
-        ))
-    }
-
-    /// Get a write context to make changes to this repository on behalf of a service.
-    pub async fn service_write(
-        mut self,
-        service_identity: String,
-    ) -> Result<RepoWriteContext, MononokeError> {
-        if !self.config().source_control_service.permit_service_writes {
-            return Err(MononokeError::InvalidRequest(String::from(
-                "source control service writes are not enabled for this repo",
-            )));
-        }
-
-        // Check the user is permitted to speak for the named service.
-        self.check_service_permissions(service_identity.clone())
-            .await?;
-
-        self.ctx = self.ctx.with_mutated_scuba(|mut scuba| {
-            scuba.add("write_permissions_model", "service");
-            scuba
-        });
-
-        self.ctx
-            .scuba()
-            .clone()
-            .log_with_msg("Write request start", None);
-
-        Ok(RepoWriteContext::new(
-            self,
-            WritePermissionsModel::ServiceIdentity(service_identity),
-        ))
     }
 
     /// Reads a value out of the underlying config, indicating if we support writes without parents in this repo.

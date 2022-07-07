@@ -110,7 +110,7 @@ async fn set_bookmark(
     from: Option<HgId>,
     pushvars: HashMap<String, Bytes>,
 ) -> Result<(), Error> {
-    let repo = repo.write().await?;
+    let repo = repo.repo();
 
     let pushvars = if pushvars.is_empty() {
         None

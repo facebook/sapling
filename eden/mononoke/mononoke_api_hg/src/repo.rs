@@ -61,7 +61,6 @@ use metaconfig_types::RepoConfig;
 use mononoke_api::errors::MononokeError;
 use mononoke_api::path::MononokePath;
 use mononoke_api::repo::RepoContext;
-use mononoke_api::RepoWriteContext;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
@@ -122,11 +121,6 @@ impl HgRepoContext {
             .ephemeral_store()
             .create_bubble(custom_duration)
             .await?)
-    }
-
-    /// Get a write context to make changes to this repository.
-    pub async fn write(self) -> Result<RepoWriteContext, MononokeError> {
-        self.repo.write().await
     }
 
     pub fn ephemeral_store(&self) -> &Arc<RepoEphemeralStore> {

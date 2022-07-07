@@ -68,8 +68,7 @@ async fn land_stack(
     base_hgid: HgId,
     pushvars: HashMap<String, Bytes>,
 ) -> Result<LandStackResponse, Error> {
-    // TODO(meyer): Figure out why these errors weren't propagating to the client
-    let repo = repo.write().await?;
+    let repo = repo.repo();
 
     let head = HgChangesetId::new(HgNodeHash::from(head_hgid));
     let head = repo

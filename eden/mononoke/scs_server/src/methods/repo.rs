@@ -536,12 +536,8 @@ impl SourceControlServiceImpl {
         params: thrift::RepoCreateBookmarkParams,
     ) -> Result<thrift::RepoCreateBookmarkResponse, errors::ServiceError> {
         let repo = self
-            .repo_for_service(ctx, &repo, params.service_identity.clone())
+            .repo_for_service(ctx, &repo, params.service_identity)
             .await?;
-        let repo = match params.service_identity {
-            Some(service_identity) => repo.service_write(service_identity).await?,
-            None => repo.write().await?,
-        };
         let target = &params.target;
         let changeset = repo
             .changeset(ChangesetSpecifier::from_request(target)?)
@@ -563,12 +559,8 @@ impl SourceControlServiceImpl {
         params: thrift::RepoMoveBookmarkParams,
     ) -> Result<thrift::RepoMoveBookmarkResponse, errors::ServiceError> {
         let repo = self
-            .repo_for_service(ctx, &repo, params.service_identity.clone())
+            .repo_for_service(ctx, &repo, params.service_identity)
             .await?;
-        let repo = match params.service_identity {
-            Some(service_identity) => repo.service_write(service_identity).await?,
-            None => repo.write().await?,
-        };
         let target = &params.target;
         let changeset = repo
             .changeset(ChangesetSpecifier::from_request(target)?)
@@ -606,12 +598,8 @@ impl SourceControlServiceImpl {
         params: thrift::RepoDeleteBookmarkParams,
     ) -> Result<thrift::RepoDeleteBookmarkResponse, errors::ServiceError> {
         let repo = self
-            .repo_for_service(ctx, &repo, params.service_identity.clone())
+            .repo_for_service(ctx, &repo, params.service_identity)
             .await?;
-        let repo = match params.service_identity {
-            Some(service_identity) => repo.service_write(service_identity).await?,
-            None => repo.write().await?,
-        };
         let old_changeset_id = match &params.old_target {
             Some(old_target) => Some(
                 repo.changeset(ChangesetSpecifier::from_request(old_target)?)
@@ -637,12 +625,8 @@ impl SourceControlServiceImpl {
         params: thrift::RepoLandStackParams,
     ) -> Result<thrift::RepoLandStackResponse, errors::ServiceError> {
         let repo = self
-            .repo_for_service(ctx, &repo, params.service_identity.clone())
+            .repo_for_service(ctx, &repo, params.service_identity)
             .await?;
-        let repo = match params.service_identity {
-            Some(service_identity) => repo.service_write(service_identity).await?,
-            None => repo.write().await?,
-        };
         borrowed!(params.head, params.base);
         let head = repo
             .changeset(ChangesetSpecifier::from_request(head)?)

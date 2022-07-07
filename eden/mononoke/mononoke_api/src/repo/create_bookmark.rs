@@ -6,61 +6,57 @@
  */
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
-use anyhow::Context;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use bytes::Bytes;
 use metaconfig_types::BookmarkAttrs;
 use mononoke_types::ChangesetId;
+use reachabilityindex::LeastCommonAncestorsHint;
+use tunables::tunables;
 
 use crate::errors::MononokeError;
-use crate::repo_write::RepoWriteContext;
+use crate::repo::RepoContext;
 
-impl RepoWriteContext {
-    /// Delete a bookmark.
-    pub async fn delete_bookmark(
+impl RepoContext {
+    /// Create a bookmark.
+    pub async fn create_bookmark(
         &self,
         bookmark: impl AsRef<str>,
-        old_target: Option<ChangesetId>,
+        target: ChangesetId,
         pushvars: Option<&HashMap<String, Bytes>>,
     ) -> Result<(), MononokeError> {
-        let bookmark = bookmark.as_ref();
-        self.check_method_permitted("delete_bookmark")?;
+        self.start_write()?;
 
+        let bookmark = bookmark.as_ref();
         let bookmark = BookmarkName::new(bookmark)?;
         let bookmark_attrs =
             BookmarkAttrs::new(self.ctx().fb, self.config().bookmarks.clone()).await?;
 
-        // We need to find out where the bookmark currently points to in order
-        // to delete it.  Make sure to bypass any out-of-date caches.
-        let old_target = match old_target {
-            Some(old_target) => old_target,
-            None => self
-                .blob_repo()
-                .bookmarks()
-                .get(self.ctx().clone(), &bookmark)
-                .await
-                .context("Failed to fetch old bookmark target")?
-                .ok_or_else(|| {
-                    MononokeError::InvalidRequest(format!("bookmark '{}' does not exist", bookmark))
-                })?,
-        };
+        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.skiplist_index().clone();
 
-        // Delete the bookmark.
-        let op = bookmarks_movement::DeleteBookmarkOp::new(
+        // Create the bookmark.
+        let mut op = bookmarks_movement::CreateBookmarkOp::new(
             &bookmark,
-            old_target,
+            target,
             BookmarkUpdateReason::ApiRequest,
         )
         .with_pushvars(pushvars);
+
+        if !tunables().get_disable_commit_scribe_logging_scs() {
+            op = op.log_new_public_commits_to_scribe();
+        }
 
         op.run(
             self.ctx(),
             self.authorization_context(),
             self.inner_repo(),
+            &lca_hint,
             &self.config().infinitepush,
+            &self.config().pushrebase,
             &bookmark_attrs,
+            self.hook_manager().as_ref(),
             self.readonly_fetcher(),
         )
         .await?;
