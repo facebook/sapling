@@ -18,7 +18,9 @@ use async_requests::types::Token;
 use context::CoreContext;
 use megarepo_config::SyncTargetConfig;
 use mononoke_api::ChangesetSpecifier;
+use mononoke_api::MononokeError;
 use mononoke_types::RepositoryId;
+use repo_authorization::RepoWriteOperation;
 use slog::warn;
 use source_control as thrift;
 use std::collections::HashSet;
@@ -67,8 +69,18 @@ impl SourceControlServiceImpl {
             .ok_or_else(|| errors::invalid_request(anyhow!("repo not found {}", target_repo_id)))?
             .build()
             .await?;
+        // Check that source control service writes are enabled
+        target_repo.start_write()?;
         // Check that we are allowed to write to the target repo
-        target_repo.write().await?;
+        target_repo
+            .authorization_context()
+            .require_repo_write(
+                ctx,
+                target_repo.inner_repo(),
+                RepoWriteOperation::MegarepoSync,
+            )
+            .await
+            .map_err(MononokeError::from)?;
         Ok(())
     }
 

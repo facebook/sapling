@@ -458,7 +458,7 @@ impl RepoContext {
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
     ) -> Result<ChangesetContext, MononokeError> {
-        self.start_draft()?;
+        self.start_write()?;
         self.authorization_context()
             .require_repo_write(
                 self.ctx(),

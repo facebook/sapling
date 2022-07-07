@@ -1689,8 +1689,8 @@ impl RepoContext {
             .await
     }
 
-    /// Start a draft change to the repo.
-    fn start_draft(&self) -> Result<(), MononokeError> {
+    /// Start a write to the repo.
+    pub fn start_write(&self) -> Result<(), MononokeError> {
         if self.authz.is_service() {
             if !self.config().source_control_service.permit_service_writes {
                 return Err(MononokeError::InvalidRequest(String::from(
