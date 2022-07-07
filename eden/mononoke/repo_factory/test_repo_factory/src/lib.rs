@@ -127,6 +127,7 @@ pub struct TestRepoFactory {
     metadata_db: SqlConnectionsWithSchema,
     hg_mutation_db: SqlConnectionsWithSchema,
     redacted: Option<Arc<RedactedBlobs>>,
+    permission_checker: Option<ArcRepoPermissionChecker>,
     derived_data_lease: Option<Box<dyn Fn() -> Arc<dyn LeaseOps> + Send + Sync>>,
     filenodes_override: Option<Box<dyn Fn(ArcFilenodes) -> ArcFilenodes + Send + Sync>>,
 }
@@ -231,6 +232,7 @@ impl TestRepoFactory {
             metadata_db,
             hg_mutation_db,
             redacted: None,
+            permission_checker: None,
             derived_data_lease: None,
             filenodes_override: None,
         })
@@ -262,6 +264,15 @@ impl TestRepoFactory {
     /// Redact content in repos that are built by this factory.
     pub fn redacted(&mut self, redacted: Option<RedactedBlobs>) -> &mut Self {
         self.redacted = redacted.map(Arc::new);
+        self
+    }
+
+    /// Set a custom permission checker
+    pub fn with_permission_checker(
+        &mut self,
+        permission_checker: ArcRepoPermissionChecker,
+    ) -> &mut Self {
+        self.permission_checker = Some(permission_checker);
         self
     }
 
@@ -417,10 +428,14 @@ impl TestRepoFactory {
         ))
     }
 
-    /// Construct mock, allow-all security checker.
+    /// Construct permission checker.  By default this allows all access.
     pub fn permission_checker(&self) -> Result<ArcRepoPermissionChecker> {
-        let permission_checker = AlwaysAllowMockRepoPermissionChecker::new();
-        Ok(Arc::new(permission_checker))
+        if let Some(permission_checker) = &self.permission_checker {
+            Ok(permission_checker.clone())
+        } else {
+            let permission_checker = AlwaysAllowMockRepoPermissionChecker::new();
+            Ok(Arc::new(permission_checker))
+        }
     }
 
     /// Construct Filenodes.
