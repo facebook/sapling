@@ -188,9 +188,15 @@ class OverlayChecker {
   using ShardID = uint32_t;
   void readInodes(const ProgressCallback& progressCallback = [](auto) {});
   void readInodeSubdir(const AbsolutePath& path, ShardID shardID);
-  void loadInode(InodeNumber number, ShardID shardID);
-  InodeInfo loadInodeInfo(InodeNumber number);
-  overlay::OverlayDir loadDirectoryChildren(folly::File& file);
+  // loadInode and loadInodeInfo are called from a multi-threaded context, so
+  // make them const so they can't accidentally mutate 'this'.
+  std::optional<OverlayChecker::InodeInfo> loadInode(
+      InodeNumber number,
+      ShardID shardID,
+      folly::Synchronized<std::vector<std::unique_ptr<Error>>>& errors) const;
+  std::optional<OverlayChecker::InodeInfo> loadInodeInfo(
+      InodeNumber number,
+      folly::Synchronized<std::vector<std::unique_ptr<Error>>>& errors) const;
 
   void linkInodeChildren();
   void scanForParentErrors();
