@@ -69,7 +69,7 @@ impl GitRepoReader {
         };
 
         // Channel is used so that we don't have issues around ownership of stdin in `get_object`
-        let (send_request, mut recv_request) = mpsc::channel(10000000);
+        let (send_request, mut recv_request) = mpsc::channel(1);
         {
             let outstanding_requests = outstanding_requests.clone();
             let mut cat_file_stdin = batch_cat_file
@@ -105,18 +105,20 @@ impl GitRepoReader {
 
     /// Read `oid` from the git store
     pub fn get_object(&self, oid: &git_hash::oid) -> impl Future<Output = Result<Object>> {
-        let (sender, recv) = oneshot::channel();
-        self.outstanding_requests
-            .lock()
-            .expect("lock poisoned")
-            .entry(oid.to_owned())
-            .or_default()
-            .push(sender);
-
+        let outstanding_requests = self.outstanding_requests.clone();
         let send_request = self.send_request.clone();
         let oid = oid.to_owned();
         async move {
-            send_request.send(oid).await?;
+            let permit = send_request.reserve().await?;
+            let (sender, recv) = oneshot::channel();
+            outstanding_requests
+                .lock()
+                .expect("lock poisoned")
+                .entry(oid.to_owned())
+                .or_default()
+                .push(sender);
+
+            permit.send(oid);
 
             recv.await?
         }
