@@ -12,7 +12,7 @@ find_package(Threads REQUIRED)
 find_package(gflags CONFIG REQUIRED)
 include_directories(${GFLAGS_INCLUDE_DIR})
 
-find_package(glog CONFIG REQUIRED)
+find_package(Glog REQUIRED)
 include_directories(${GLOG_INCLUDE_DIR})
 
 # We need to probe for libevent because the current stable version
