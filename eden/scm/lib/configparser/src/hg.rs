@@ -760,7 +760,8 @@ pub fn generate_dynamicconfig(
     );
 
     let hgrc_path = config_dir.join("hgrc.dynamic");
-    let config = calculate_dynamicconfig(config_dir, repo_name, canary, user_name)?;
+    let global_config_dir = get_config_dir(None)?;
+    let config = calculate_dynamicconfig(global_config_dir, repo_name, canary, user_name)?;
     let config_str = format!("{}{}", header, config.to_string());
 
     // If the file exists and will be unchanged, just update the mtime.
