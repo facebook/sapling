@@ -20,6 +20,7 @@ use configmodel::ConfigExt;
 use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use pathmatcher::Matcher;
+use progress_model::ProgressBar;
 use storemodel::ReadFileContents;
 use tracing::instrument;
 use treestate::dirstate::Dirstate;
@@ -199,9 +200,13 @@ impl CheckoutState {
 
 #[instrument(skip_all, err)]
 fn update_dirstate(plan: &CheckoutPlan, ts: &mut TreeState, vfs: &VFS) -> anyhow::Result<()> {
+    let (update_count, remove_count) = plan.stats();
+    let bar = ProgressBar::register_new("recording", (update_count + remove_count) as u64, "files");
+
     // Probably not required for clone.
     for removed in plan.removed_files() {
         ts.remove(removed)?;
+        bar.increase_position(1);
     }
 
     for updated in plan
@@ -210,6 +215,7 @@ fn update_dirstate(plan: &CheckoutPlan, ts: &mut TreeState, vfs: &VFS) -> anyhow
     {
         let fstate = file_state(&vfs, updated)?;
         ts.insert(updated, &fstate)?;
+        bar.increase_position(1);
     }
 
     Ok(())
