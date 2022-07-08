@@ -845,7 +845,7 @@ async fn test_timeout_on_request(fb: FacebookInit) -> Result<()> {
             // we want writes to succeed
             write: Duration::from_secs(10),
             // and reads to fail because of timeout
-            read: Duration::from_millis(1),
+            read: Duration::from_millis(5),
         };
         let (tickable_queue, tickable_blobstores, multiplex) = setup_bs(Some(timeout))?;
 
@@ -878,7 +878,7 @@ async fn test_timeout_on_request(fb: FacebookInit) -> Result<()> {
         // Get should fail.
         let mut fut = multiplex.get(&ctx, k).map_err(|_| ()).boxed();
         assert_pending(&mut fut).await;
-        tokio::time::sleep(Duration::from_millis(3)).await;
+        tokio::time::sleep(Duration::from_millis(25)).await;
         assert!(fut.await.is_err());
     }
 
@@ -888,7 +888,7 @@ async fn test_timeout_on_request(fb: FacebookInit) -> Result<()> {
         // set write timeout to a very low value
         let timeout = MultiplexTimeout::new(
             None,                           /* read */
-            Some(Duration::from_millis(4)), /* write */
+            Some(Duration::from_millis(5)), /* write */
         );
         let (tickable_queue, tickable_blobstores, multiplex) = setup_bs(Some(timeout))?;
 
@@ -913,7 +913,7 @@ async fn test_timeout_on_request(fb: FacebookInit) -> Result<()> {
         // Now we'll delay the response again and respond to the last put,
         // that haven't completed.
         // It *should* panic, as the future was dropped due to the timeout.
-        tokio::time::sleep(Duration::from_millis(5)).await;
+        tokio::time::sleep(Duration::from_millis(25)).await;
         let result = panic::catch_unwind(|| tickable_blobstores[2].1.tick(None));
         assert!(result.is_err());
     }
