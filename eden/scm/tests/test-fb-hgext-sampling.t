@@ -6,6 +6,9 @@ have it set.
 
   $ unset SCM_SAMPLING_FILEPATH
 
+This enables Rust tracing -> sampling support in tests.
+  $ export EDENSCM_TRACE_LEVEL=info
+
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"
@@ -75,18 +78,18 @@ Do a couple of commits.  We expect to log two messages per call to repo.commit.
   ...         assert len(parsedrecord["data"]) == 4
   ...     elif parsedrecord['category'] == 'measuredtimes':
   ...         print('atexit_measured: ', ", ".join(sorted(parsedrecord['data'])))
-  atexit_measured:  atexit_measured, command_duration, fswalk_time, metrics_type, stdio_blocked (no-fsmonitor !)
-  atexit_measured:  atexit_measured, command_duration, fsmonitorwalk_time, metrics_type, stdio_blocked, watchmanquery_time (fsmonitor !)
+  atexit_measured:  atexit_measured, fswalk_time, metrics_type, stdio_blocked
+  atexit_measured:  command_duration
   match filter commit_table
   message string commit_table
-  atexit_measured:  atexit_measured, command_duration, fswalk_time, metrics_type, stdio_blocked (no-fsmonitor !)
-  atexit_measured:  atexit_measured, command_duration, fswalk_time, metrics_type, stdio_blocked (no-fsmonitor !)
-  atexit_measured:  atexit_measured, command_duration, fsmonitorwalk_time, metrics_type, stdio_blocked, watchmanquery_time (fsmonitor !)
-  atexit_measured:  atexit_measured, command_duration, fsmonitorwalk_time, metrics_type, stdio_blocked, watchmanquery_time (fsmonitor !)
+  atexit_measured:  atexit_measured, fswalk_time, metrics_type, stdio_blocked
+  atexit_measured:  command_duration
+  atexit_measured:  atexit_measured, fswalk_time, metrics_type, stdio_blocked
+  atexit_measured:  command_duration
   match filter commit_table
   message string commit_table
-  atexit_measured:  atexit_measured, command_duration, fswalk_time, metrics_type, stdio_blocked (no-fsmonitor !)
-  atexit_measured:  atexit_measured, command_duration, fsmonitorwalk_time, metrics_type, stdio_blocked, watchmanquery_time (fsmonitor !)
+  atexit_measured:  atexit_measured, fswalk_time, metrics_type, stdio_blocked
+  atexit_measured:  command_duration
 
 Test topdir logging:
   $ setconfig sampling.logtopdir=True
