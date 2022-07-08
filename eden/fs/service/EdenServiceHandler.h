@@ -91,8 +91,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::string> repoPath) override;
 
-  void getSHA1(
-      std::vector<SHA1Result>& out,
+  folly::SemiFuture<std::unique_ptr<std::vector<SHA1Result>>>
+  semifuture_getSHA1(
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::vector<std::string>> paths,
       std::unique_ptr<SyncBehavior> sync) override;
@@ -339,14 +339,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
  private:
   ImmediateFuture<Hash20> getSHA1ForPath(
-      AbsolutePathPiece mountPoint,
-      folly::StringPiece path,
+      const EdenMount& edenMount,
+      RelativePath path,
       ObjectFetchContext& fetchContext);
-
-  ImmediateFuture<Hash20> getSHA1ForPathDefensively(
-      AbsolutePathPiece mountPoint,
-      folly::StringPiece path,
-      ObjectFetchContext& fetchContext) noexcept;
 
   folly::Synchronized<std::unordered_map<uint64_t, OutstandingThriftRequest>>
       outstandingThriftRequests_;
