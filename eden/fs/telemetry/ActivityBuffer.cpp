@@ -12,9 +12,9 @@ namespace facebook::eden {
 
 ActivityBuffer::ActivityBuffer(uint32_t maxEvents) : maxEvents_(maxEvents) {}
 
-void ActivityBuffer::addEvent(InodeMaterializeEvent event) {
+void ActivityBuffer::addEvent(InodeTraceEvent event) {
   XLOG(DBG7) << fmt::format(
-      "\nAdding InodeMaterializeEvent to ActivityBuffer\n{}", event);
+      "\nAdding InodeTraceEvent to ActivityBuffer\n{}", event);
   auto events = events_.wlock();
   events->push_back(std::move(event));
   if (events->size() > maxEvents_) {
@@ -22,7 +22,7 @@ void ActivityBuffer::addEvent(InodeMaterializeEvent event) {
   }
 }
 
-std::deque<InodeMaterializeEvent> ActivityBuffer::getAllEvents() const {
+std::deque<InodeTraceEvent> ActivityBuffer::getAllEvents() const {
   return *events_.rlock();
 }
 

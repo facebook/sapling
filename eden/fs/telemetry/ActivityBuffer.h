@@ -10,25 +10,28 @@
 #include <folly/Synchronized.h>
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
+#include "eden/fs/telemetry/TraceBus.h"
 
 namespace facebook::eden {
 
 /**
- * Represents an event of an inode materialization and the duration it took for
- * the event to occur. An inode materialization refers to when a new version of
+ * Represents an inode state transition and the duration it took for the event
+ * to occur. Currently the only supported transition is inode materialization
+ * but we plan to support loads soon as well. This type extends the
+ * TraceEventBase class so that events can be added to a tracebus for which an
+ * ActivityBuffer subscribes to and stores events from.
+ *
+ * An inode materialization specifically refers to when a new version of
  * an inode's contents are saved in the overlay while before they referred
  * directly to a source control object. The duration we count for an inode
  * materialization consists of any time spent preparing/collecting file data,
  * writing the data to EdenFS's overlay, and materializing any parent inodes.
  */
-class InodeMaterializeEvent {
- public:
-  // Timestamp refers to the event's finish time. Start times are then able to
-  // be calculated by subtracting duration. Also, system_clock is used over
-  // steady_clock to ensure accurate dates for use by the tracing CLI
-  std::chrono::system_clock::time_point timestamp;
+struct InodeTraceEvent : TraceEventBase {
   InodeNumber ino;
   InodeType inodeType;
+  InodeEventType eventType;
+  InodeEventProgress progress;
   std::chrono::microseconds duration;
 };
 
@@ -54,35 +57,34 @@ class ActivityBuffer {
   ActivityBuffer& operator=(ActivityBuffer&&) = delete;
 
   /**
-   * Adds a new InodeMaterializeEvent to the ActivityBuffer. Evicts the oldest
+   * Adds a new InodeTraceEvent to the ActivityBuffer. Evicts the oldest
    * event if the buffer was full (meaning maxEvents events were already stored
    * in the buffer).
    */
-  void addEvent(InodeMaterializeEvent event);
+  void addEvent(InodeTraceEvent event);
 
   /**
-   * Returns an std::deque containing all InodeMaterializeEvents stored in the
+   * Returns an std::deque containing all InodeTraceEvents stored in the
    * ActivityBuffer.
    */
-  std::deque<InodeMaterializeEvent> getAllEvents() const;
+  std::deque<InodeTraceEvent> getAllEvents() const;
 
  private:
   uint32_t maxEvents_;
-  folly::Synchronized<std::deque<InodeMaterializeEvent>> events_;
+  folly::Synchronized<std::deque<InodeTraceEvent>> events_;
 };
 
 } // namespace facebook::eden
 
 namespace fmt {
 template <>
-struct formatter<facebook::eden::InodeMaterializeEvent>
-    : formatter<std::string> {
+struct formatter<facebook::eden::InodeTraceEvent> : formatter<std::string> {
   auto format(
-      const facebook::eden::InodeMaterializeEvent& event,
+      const facebook::eden::InodeTraceEvent& event,
       format_context& ctx) {
     std::string eventInfo = fmt::format(
         "Timestamp: {}\nInode Number: {}\nInode Type: {}\nDuration: {}",
-        event.timestamp.time_since_epoch().count(),
+        event.systemTime.time_since_epoch().count(),
         event.ino.getRawValue(),
         (event.inodeType == facebook::eden::InodeType::TREE ? "Tree" : "File"),
         event.duration.count());

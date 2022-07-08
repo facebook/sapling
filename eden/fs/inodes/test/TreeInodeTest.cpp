@@ -492,27 +492,27 @@ TEST(TreeInode, addNewMaterializationsToActivityBuffer) {
             ObjectFetchContext::getNullContext());
       })
       .get(0ms);
-  EXPECT_EQ(1, countEventsWithInode(buff.value(), somedir->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), somedir->getNodeId()));
 
   // Test creating a directory, a file (on both an unmaterialized/materialized
   // parent), and a symlink
   auto newdir =
       somedir->mkdir("newdir"_pc, S_IFREG | 0740, InvalidationRequired::No);
-  EXPECT_EQ(1, countEventsWithInode(buff.value(), newdir->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), newdir->getNodeId()));
   auto newfile = newdir->mknod(
       "newfile.txt"_pc, S_IFREG | 0740, 0, InvalidationRequired::No);
   auto newfile2 = dir2->mknod(
       "newfile2.txt"_pc, S_IFREG | 0740, 0, InvalidationRequired::No);
   auto symlink = newdir->symlink(
       "symlink.txt"_pc, "newfile.txt", InvalidationRequired::No);
-  EXPECT_EQ(1, countEventsWithInode(buff.value(), newfile->getNodeId()));
-  EXPECT_EQ(1, countEventsWithInode(buff.value(), newfile2->getNodeId()));
-  EXPECT_EQ(1, countEventsWithInode(buff.value(), dir2->getNodeId()));
-  EXPECT_EQ(1, countEventsWithInode(buff.value(), symlink->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), newfile->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), newfile2->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), dir2->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), symlink->getNodeId()));
 
   // Ensure that directories did not get materialized a second time
-  EXPECT_EQ(1, countEventsWithInode(buff.value(), somedir->getNodeId()));
-  EXPECT_EQ(1, countEventsWithInode(buff.value(), newdir->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), somedir->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), newdir->getNodeId()));
 }
 
 TEST(TreeInode, getOrFindChildren) {

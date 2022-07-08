@@ -1321,15 +1321,14 @@ apache::thrift::ServerStream<InodeEvent> EdenServiceHandler::traceInodeEvents(
       [publisher = ThriftStreamPublisherOwner{std::move(publisher)}](
           const InodeTraceEvent& event) {
         InodeEvent te;
-        te.times_ref() = thriftTraceEventTimes(event);
-        te.timestamp_ref() = event.systemTime.time_since_epoch().count();
-        te.ino_ref() = event.ino.getRawValue();
-        te.inodeType_ref() = event.inodeType;
-        te.eventType_ref() = event.eventType;
-        te.progress_ref() = event.progress;
-        te.duration_ref() = event.duration.count();
+        te.times() = thriftTraceEventTimes(event);
+        te.ino() = event.ino.getRawValue();
+        te.inodeType() = event.inodeType;
+        te.eventType() = event.eventType;
+        te.progress() = event.progress;
+        te.duration() = event.duration.count();
         // TODO: trace requesting pid
-        // te.requestInfo_ref() = thriftRequestInfo(pid);
+        // te.requestInfo() = thriftRequestInfo(pid);
 
         publisher.next(te);
       });
@@ -3163,15 +3162,16 @@ void EdenServiceHandler::getRetroactiveInodeEvents(
   thriftEvents.reserve(bufferEvents.size());
   for (auto const& event : bufferEvents) {
     InodeEvent thriftEvent{};
-    thriftEvent.timestamp_ref() = event.timestamp.time_since_epoch().count();
-    thriftEvent.ino_ref() = event.ino.getRawValue();
-    thriftEvent.inodeType_ref() = event.inodeType;
-    thriftEvent.eventType_ref() = InodeEventType::MATERIALIZE;
-    thriftEvent.duration_ref() = event.duration.count();
+    thriftEvent.times() = thriftTraceEventTimes(event);
+    thriftEvent.ino() = event.ino.getRawValue();
+    thriftEvent.inodeType() = event.inodeType;
+    thriftEvent.eventType() = event.eventType;
+    thriftEvent.progress() = event.progress;
+    thriftEvent.duration() = event.duration.count();
     thriftEvents.push_back(std::move(thriftEvent));
   }
 
-  result.events_ref() = std::move(thriftEvents);
+  result.events() = std::move(thriftEvents);
 }
 
 namespace {

@@ -406,19 +406,22 @@ TEST_F(FileInodeTest, addNewMaterializationsToActivityBuffer) {
 
   // Test writing to a file
   inode_a->write("abcd", 0, ObjectFetchContext::getNullContext()).get();
-  EXPECT_EQ(1, countEventsWithInode(buff.value(), inode_a->getNodeId()));
-  EXPECT_EQ(1, countEventsWithInode(buff.value(), inode_dir->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), inode_a->getNodeId()));
+  EXPECT_TRUE(
+      isInodeMaterializedInBuffer(buff.value(), inode_dir->getNodeId()));
 
   // Test truncating a file
   DesiredMetadata desired;
   desired.size = 0;
   (void)inode_b->setattr(desired, ObjectFetchContext::getNullContext())
       .get(0ms);
-  EXPECT_EQ(1, countEventsWithInode(buff.value(), inode_b->getNodeId()));
-  EXPECT_EQ(1, countEventsWithInode(buff.value(), inode_sub->getNodeId()));
+  EXPECT_TRUE(isInodeMaterializedInBuffer(buff.value(), inode_b->getNodeId()));
+  EXPECT_TRUE(
+      isInodeMaterializedInBuffer(buff.value(), inode_sub->getNodeId()));
 
   // Ensure we do not count inode_dir as materialized a second time
-  EXPECT_EQ(1, countEventsWithInode(buff.value(), inode_dir->getNodeId()));
+  EXPECT_TRUE(
+      isInodeMaterializedInBuffer(buff.value(), inode_dir->getNodeId()));
 }
 
 #ifdef __linux__

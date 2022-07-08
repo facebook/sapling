@@ -2345,19 +2345,18 @@ void EdenMount::addInodeMaterializeEvent(
   auto steadyTime = std::chrono::steady_clock::now();
 
   // Publish event to inodeTraceBus
-  InodeTraceEvent te{
+  InodeTraceEvent event{
       {eventSystemTime, steadyTime},
       ino,
       type,
       InodeEventType::MATERIALIZE,
       progress,
       duration};
-  inodeTraceBus_->publish(te);
+  inodeTraceBus_->publish(event);
 
   // Add event to ActivityBuffer
-  if (activityBuffer_.has_value() && progress == InodeEventProgress::END) {
-    InodeMaterializeEvent event{eventSystemTime, ino, type, duration};
-    activityBuffer_.value().addEvent(event);
+  if (activityBuffer_.has_value()) {
+    activityBuffer_->addEvent(event);
   }
 }
 

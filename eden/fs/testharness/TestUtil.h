@@ -27,8 +27,10 @@ ObjectId makeTestHash(folly::StringPiece value);
 Hash20 makeTestHash20(folly::StringPiece value);
 
 /**
- * Helper function for counting the number of events in an ActivityBuffer with a
- * certain InodeNumber. Used in FileInode and TreeInode tests.
+ * Helper function for ensuring an inode finished materializing and events
+ * to record this are correctly stored in a given ActivityBuffer. Ensures that
+ * exactly one START materialization event and one END materialization event is
+ * present in the ActivityBuffer. Used in FileInode and TreeInode tests.
  */
-int countEventsWithInode(ActivityBuffer& buff, InodeNumber ino);
+bool isInodeMaterializedInBuffer(ActivityBuffer& buff, InodeNumber ino);
 } // namespace facebook::eden

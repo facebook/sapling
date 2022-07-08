@@ -14,7 +14,6 @@
 #include <thrift/lib/cpp/util/EnumUtils.h>
 #include <thrift/lib/cpp2/async/RocketClientChannel.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
-#include "common/time/TimeFormat.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/service/gen-cpp2/streamingeden_constants.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -62,6 +61,12 @@ static const std::unordered_map<InodeEventType, const char*> kInodeEventTypes =
     {
         {InodeEventType::UNKNOWN, "?"},
         {InodeEventType::MATERIALIZE, "M"},
+};
+
+static const std::unordered_map<InodeEventProgress, const char*>
+    kInodeProgresses = {
+        {InodeEventProgress::START, kDashedArrowEmoji},
+        {InodeEventProgress::END, kSolidArrowEmoji},
 };
 
 static const std::unordered_map<HgResourceType, const char*> kResourceTypes = {
@@ -451,6 +456,34 @@ int trace_thrift(
   return 0;
 }
 
+void format_trace_inode_event(facebook::eden::InodeEvent& event) {
+  // Convert from ns to seconds
+  time_t seconds = (*event.times()->timestamp()) / 1000000000;
+  struct tm time_buffer;
+  if (!localtime_r(&seconds, &time_buffer)) {
+    folly::throwSystemError("localtime_r failed");
+  }
+  char formattedTime[30];
+  if (!strftime(formattedTime, 30, "%Y-%m-%d %H:%M:%S", &time_buffer)) {
+    // strftime doesn't set errno! Thus we throw a runtime_error intead of
+    // calling folly:throwSystemError
+    throw std::runtime_error(
+        "strftime failed. Formatted string exceeds size of buffer");
+  }
+  auto milliseconds = *event.times()->timestamp() / 1000 % 1000000;
+  fmt::print(
+      "{} {}.{:0>6}  {:<5} {}    {}      {}\n",
+      kInodeProgresses.at(*event.progress()),
+      formattedTime,
+      milliseconds,
+      *event.ino(),
+      *event.inodeType() == InodeType::TREE ? kTreeEmoji : kBlobEmoji,
+      kInodeEventTypes.at(*event.eventType()),
+      *event.progress() == InodeEventProgress::END
+          ? formatMicrosecondTime(*event.duration())
+          : "");
+}
+
 int trace_inode(
     folly::ScopedEventBaseThread& evbThread,
     const AbsolutePath& mountRoot,
@@ -469,22 +502,7 @@ int trace_inode(
           return;
         }
 
-        InodeEvent& evt = event.value();
-        if (*evt.progress() == InodeEventProgress::START) {
-          fmt::print(
-              "{} {} {}\n",
-              kDashedArrowEmoji,
-              *evt.inodeType() == InodeType::TREE ? kTreeEmoji : kBlobEmoji,
-              *evt.ino());
-        } else {
-          // Only materialize events are currently supported
-          fmt::print(
-              "{} {} {} materialized in {}\n",
-              kSolidArrowEmoji,
-              *evt.inodeType() == InodeType::TREE ? kTreeEmoji : kBlobEmoji,
-              *evt.ino(),
-              formatMicrosecondTime(*evt.duration()));
-        }
+        format_trace_inode_event(event.value());
       });
   return 0;
 }
@@ -502,47 +520,18 @@ int trace_inode_retroactive(
 
   std::move(future)
       .thenValue([](GetRetroactiveInodeEventsResult allEvents) {
-        // For each event, create a corresponding event for the event's
-        // start and sort by timestamp
-        std::vector<InodeEvent> events;
-        auto size = 2 * allEvents.events()->size();
-        events.reserve(size);
-        for (auto finish : *allEvents.events()) {
-          InodeEvent start{};
-          start.timestamp() = *finish.timestamp() - 1000 * (*finish.duration());
-          start.ino() = *finish.ino();
-          start.inodeType() = *finish.inodeType();
-          start.eventType() = *finish.eventType();
-          // Use -1 for the duration to distinguish the event's start
-          start.duration() = -1;
-          events.push_back(std::move(start));
-          events.push_back(std::move(finish));
-        }
+        auto events = *allEvents.events();
         std::sort(
             events.begin(), events.end(), [](const auto& a, const auto& b) {
-              return a.timestamp() < b.timestamp();
+              return a.times()->timestamp() < b.times()->timestamp();
             });
 
-        fmt::print("Last {} inode events\n", size);
+        fmt::print("Last {} inode events\n", events.size());
         std::string_view header =
             "  Timestamp                   Ino   Type  Event  Duration "sv;
         fmt::print("{}\n{}\n", header, std::string(header.size(), '-'));
-        std::string format = "%Y-%m-%d %H:%M:%S";
-
         for (auto& event : events) {
-          time_t seconds = (*event.timestamp()) / 1000000000;
-          auto formattedTime = TimeFormat::FormatTime(format, seconds);
-          auto milliseconds = *event.timestamp() / 1000 % 1000000;
-          fmt::print(
-              "{} {}.{:0>6}  {:<5} {}    {}      {}\n",
-              // Use arrow emoji based on if the event started or finished
-              (*event.duration() < 0) ? kDashedArrowEmoji : kSolidArrowEmoji,
-              formattedTime,
-              milliseconds,
-              *event.ino(),
-              *event.inodeType() == InodeType::TREE ? kTreeEmoji : kBlobEmoji,
-              kInodeEventTypes.at(*event.eventType()),
-              formatMicrosecondTime(*event.duration()));
+          format_trace_inode_event(event);
         }
         fmt::print("{}\n", std::string(header.size(), '-'));
       })

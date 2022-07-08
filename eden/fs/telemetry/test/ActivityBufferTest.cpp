@@ -18,6 +18,16 @@ bool buffer_contains_event_with_ino(ActivityBuffer& buff, InodeNumber ino) {
          }) != events.end();
 }
 
+InodeTraceEvent create_inode_trace_event(InodeNumber ino) {
+  return InodeTraceEvent{
+      {std::chrono::system_clock::now(), std::chrono::steady_clock::now()},
+      ino,
+      InodeType::FILE,
+      InodeEventType::MATERIALIZE,
+      InodeEventProgress::END,
+      std::chrono::microseconds(1000)};
+}
+
 TEST(ActivityBufferTest, initialize_buffer) {
   ActivityBuffer buff(kMaxBufLength);
 }
@@ -25,10 +35,7 @@ TEST(ActivityBufferTest, initialize_buffer) {
 TEST(ActivityBufferTest, buffer_zero_capacity) {
   ActivityBuffer buff(0);
   EXPECT_TRUE(buff.getAllEvents().empty());
-  std::chrono::system_clock::time_point time = std::chrono::system_clock::now();
-  InodeMaterializeEvent event{
-      time, InodeNumber(1), InodeType::FILE, std::chrono::microseconds(1000)};
-  buff.addEvent(event);
+  buff.addEvent(create_inode_trace_event(InodeNumber(1)));
 
   // Setting the ActivityBuffer max size to 0 means that events never get stored
   EXPECT_TRUE(buff.getAllEvents().empty());
@@ -38,10 +45,7 @@ TEST(ActivityBufferTest, buffer_zero_capacity) {
 TEST(ActivityBufferTest, add_events) {
   ActivityBuffer buff(kMaxBufLength);
   for (uint64_t i = 1; i <= kMaxBufLength; i++) {
-    std::chrono::system_clock::time_point time =
-        std::chrono::system_clock::now();
-    InodeMaterializeEvent event{
-        time, InodeNumber(i), InodeType::FILE, std::chrono::microseconds(1000)};
+    InodeTraceEvent event = create_inode_trace_event(InodeNumber(i));
     buff.addEvent(event);
 
     EXPECT_EQ(buff.getAllEvents().size(), i);
@@ -57,10 +61,7 @@ TEST(ActivityBufferTest, add_events) {
 TEST(ActivityBufferTest, add_exceed_capacity) {
   ActivityBuffer buff(kMaxBufLength);
   for (uint64_t i = 1; i <= kMaxBufLength + 1; i++) {
-    std::chrono::system_clock::time_point time =
-        std::chrono::system_clock::now();
-    InodeMaterializeEvent event{
-        time, InodeNumber(i), InodeType::FILE, std::chrono::microseconds(1000)};
+    InodeTraceEvent event = create_inode_trace_event(InodeNumber(i));
     buff.addEvent(event);
   }
 

@@ -41,10 +41,22 @@ Hash20 makeTestHash20(folly::StringPiece value) {
   return Hash20{folly::StringPiece{folly::range(fullValue)}};
 }
 
-int countEventsWithInode(ActivityBuffer& buff, InodeNumber ino) {
+bool isInodeMaterializedInBuffer(ActivityBuffer& buff, InodeNumber ino) {
   auto events = buff.getAllEvents();
-  return std::count_if(events.begin(), events.end(), [&](auto event) {
-    return event.ino.getRawValue() == ino.getRawValue();
-  });
+  int num_starts = 0;
+  int num_ends = 0;
+  for (auto const& event : events) {
+    if (event.ino.getRawValue() == ino.getRawValue() &&
+        event.eventType == InodeEventType::MATERIALIZE) {
+      if (event.progress == InodeEventProgress::START && num_starts == 0) {
+        num_starts++;
+      } else if (event.progress == InodeEventProgress::END && num_ends == 0) {
+        num_ends++;
+      } else { // Return early if there exists more than one START or END event
+        return false;
+      }
+    }
+  }
+  return num_starts == 1 && num_ends == 1;
 }
 } // namespace facebook::eden

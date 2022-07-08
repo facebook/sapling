@@ -141,14 +141,6 @@ struct Owner {
   gid_t gid;
 };
 
-struct InodeTraceEvent : TraceEventBase {
-  InodeNumber ino;
-  InodeType inodeType;
-  InodeEventType eventType;
-  InodeEventProgress progress;
-  std::chrono::microseconds duration;
-};
-
 /**
  * Durations of the various stages of checkout.
  */
