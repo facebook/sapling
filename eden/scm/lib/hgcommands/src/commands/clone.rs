@@ -22,6 +22,7 @@ use edenapi::Builder;
 use migration::feature::deprecate;
 use repo::constants::HG_PATH;
 use repo::repo::Repo;
+use tracing::instrument;
 use types::HgId;
 
 use super::ConfigSet;
@@ -339,6 +340,7 @@ fn try_clone_metadata(
     }
 }
 
+#[instrument(skip_all, fields(repo=reponame), err)]
 fn clone_metadata(
     logger: &mut TermLogger,
     clone_opts: &CloneOpts,
@@ -406,6 +408,7 @@ fn get_selective_bookmarks(repo: &Repo) -> Result<Vec<String>> {
     }
 }
 
+#[instrument(skip_all, err, ret)]
 fn get_update_target(
     logger: &mut TermLogger,
     repo: &mut Repo,

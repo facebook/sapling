@@ -21,6 +21,7 @@ use manifest::Manifest;
 use pathmatcher::Matcher;
 use pathmatcher::XorMatcher;
 use progress_model::ProgressBar;
+use tracing::instrument;
 use types::RepoPathBuf;
 
 /// Map of simple actions that needs to be performed to move between revisions without conflicts.
@@ -47,6 +48,7 @@ pub struct UpdateAction {
 impl ActionMap {
     // This is similar to CheckoutPlan::new
     // Eventually CheckoutPlan::new will migrate to take (Conflict)ActionMap instead of a Diff and there won't be code duplication
+    #[instrument(skip_all)]
     pub fn from_diff<D: Iterator<Item = Result<DiffEntry>>>(diff: D) -> Result<Self> {
         let mut map = HashMap::new();
         for entry in diff {

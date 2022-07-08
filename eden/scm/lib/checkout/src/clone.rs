@@ -14,7 +14,6 @@ use std::time::SystemTime;
 
 use anyhow::anyhow;
 use anyhow::Context;
-use async_runtime::try_block_unless_interrupted as block_on;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -22,6 +21,7 @@ use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use pathmatcher::Matcher;
 use storemodel::ReadFileContents;
+use tracing::instrument;
 use treestate::dirstate::Dirstate;
 use treestate::dirstate::TreeStateFields;
 use treestate::metadata::Metadata;
@@ -38,6 +38,7 @@ use workingcopy::sparse;
 use crate::file_state;
 use crate::ActionMap;
 use crate::Checkout;
+use crate::CheckoutPlan;
 
 static CONFIG_OVERRIDE_CACHE: &str = "sparseprofileconfigs";
 
@@ -81,6 +82,7 @@ pub struct CheckoutError {
 }
 
 /// A somewhat simplified/specialized checkout suitable for use during a clone.
+#[instrument(skip_all, fields(path=%wc_path.display(), %target), err)]
 pub fn checkout(
     config: &dyn Config,
     wc_path: &Path,
@@ -174,26 +176,14 @@ impl CheckoutState {
             f.write_all(target.to_hex().as_bytes())
         })?;
 
-        block_on(plan.apply_store(&file_store))?;
+        plan.blocking_apply_store(&file_store)?;
 
         let ts_meta = Metadata(BTreeMap::from([("p1".to_string(), target.to_hex())]));
         let mut ts_buf: Vec<u8> = Vec::new();
         ts_meta.serialize(&mut ts_buf)?;
         ts.set_metadata(&ts_buf);
 
-        // Probably not required for clone.
-        for removed in plan.removed_files() {
-            ts.remove(removed)?;
-        }
-
-        for updated in plan
-            .updated_content_files()
-            .chain(plan.updated_meta_files())
-        {
-            let fstate = file_state(&vfs, updated)?;
-            ts.insert(updated, &fstate)?;
-        }
-
+        update_dirstate(&plan, ts, &vfs)?;
         flush_dirstate(config, ts, &dot_hg, target)?;
 
         remove_file(dot_hg.join("updatestate"))?;
@@ -205,6 +195,24 @@ impl CheckoutState {
             unresolved: 0,
         })
     }
+}
+
+#[instrument(skip_all, err)]
+fn update_dirstate(plan: &CheckoutPlan, ts: &mut TreeState, vfs: &VFS) -> anyhow::Result<()> {
+    // Probably not required for clone.
+    for removed in plan.removed_files() {
+        ts.remove(removed)?;
+    }
+
+    for updated in plan
+        .updated_content_files()
+        .chain(plan.updated_meta_files())
+    {
+        let fstate = file_state(&vfs, updated)?;
+        ts.insert(updated, &fstate)?;
+    }
+
+    Ok(())
 }
 
 pub fn flush_dirstate(

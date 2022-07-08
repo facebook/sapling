@@ -22,6 +22,7 @@ use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
+use async_runtime::try_block_unless_interrupted as block_on;
 use futures::stream;
 use futures::try_join;
 use futures::Stream;
@@ -35,6 +36,7 @@ use progress_model::ProgressBar;
 use progress_model::Registry;
 use storemodel::ReadFileContents;
 use tracing::debug;
+use tracing::instrument;
 use tracing::warn;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
@@ -270,6 +272,14 @@ impl CheckoutPlan {
         try_join!(update_content, update_meta)?;
 
         Ok(stats)
+    }
+
+    #[instrument(skip_all, err)]
+    pub fn blocking_apply_store(
+        &self,
+        store: &dyn ReadFileContents<Error = anyhow::Error>,
+    ) -> Result<CheckoutStats> {
+        block_on(self.apply_store(store))
     }
 
     pub async fn apply_store_dry_run(

@@ -21,6 +21,7 @@ use manifest_tree::Manifest;
 use manifest_tree::TreeManifest;
 use repo::repo::Repo;
 use termlogger::TermLogger;
+use tracing::instrument;
 use treestate::treestate::TreeState;
 use types::HgId;
 use types::RepoPath;
@@ -66,6 +67,7 @@ pub enum WorkingCopyError {
     Other(#[from] anyhow::Error),
 }
 
+#[instrument(skip(logger), err)]
 pub fn init_working_copy(
     logger: &mut TermLogger,
     repo: &mut Repo,
@@ -168,6 +170,7 @@ pub enum EdenCloneError {
     MissingCommandConfig(),
 }
 
+#[instrument(err)]
 pub fn eden_clone(backing_repo: &Repo, working_copy: &Path, target: Option<HgId>) -> Result<()> {
     let config = backing_repo.config();
     let eden_command = config.get_opt::<String>("edenfs", "command")?;
@@ -200,12 +203,11 @@ pub fn eden_clone(backing_repo: &Repo, working_copy: &Path, target: Option<HgId>
         clone_command.arg("--allow-empty-repo");
     }
 
-    let output = clone_command.output().with_context(|| {
-        format!(
-            "failed to execute {}",
-            clone_command.get_program().to_string_lossy()
-        )
-    })?;
+    tracing::info!(?clone_command, "running edenfsctl clone");
+
+    let output = clone_command
+        .output()
+        .with_context(|| format!("failed to execute {:?}", clone_command))?;
 
     if !output.status.success() {
         return Err(EdenCloneError::ExeuctionFailure(

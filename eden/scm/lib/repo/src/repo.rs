@@ -406,3 +406,12 @@ fn read_sharedpath(path: &Path) -> Result<PathBuf> {
     }
     Ok(sharedpath.unwrap_or_else(|| path.to_path_buf()))
 }
+
+impl std::fmt::Debug for Repo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Repo")
+            .field("path", &self.path)
+            .field("repo_name", &self.repo_name)
+            .finish()
+    }
+}

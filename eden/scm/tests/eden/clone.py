@@ -88,5 +88,5 @@ class TestEdenClone(BaseTest):
                 repo.url, new_dir(), eden=True, config="edenfs.command=missing.exe"
             )
         except CommandFailure as err:
-            self.assertIn("failed to execute missing.exe", str(err))
+            self.assertIn('failed to execute "missing.exe"', str(err))
             self.assertIn("No such file or directory", str(err))

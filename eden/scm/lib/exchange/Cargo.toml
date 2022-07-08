@@ -13,4 +13,5 @@ edenapi = { version = "0.1.0", path = "../edenapi" }
 hgcommits = { version = "0.1.0", path = "../hgcommits" }
 metalog = { version = "0.1.0", path = "../metalog" }
 refencode = { version = "0.1.0", path = "../refencode" }
+tracing = "0.1.35"
 types = { version = "0.1.0", path = "../types" }

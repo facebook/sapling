@@ -14,6 +14,7 @@ manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 repo = { version = "0.1.0", path = "../repo" }
 termlogger = { version = "0.1.0", path = "../termlogger" }
 thiserror = "1.0.30"
+tracing = "0.1.35"
 treestate = { version = "0.1.0", path = "../treestate" }
 types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }
