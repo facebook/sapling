@@ -798,6 +798,34 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponentPiece name,
       std::optional<InodeNumber> ino);
 
+  /**
+   * Attempts to find the child inode or other identifying information about
+   * the inode with out performing any write operations. `loadInodes` indicates
+   * that you would like to load the inodes if they are not yet loaded. If the
+   * inode is not loaded and `loadInodes` is set, a nullopt value will be
+   * returned and you can call wlockGetOrFindChild to load and return the inode.
+   *
+   * If the inode is already loaded this will return the inode.
+   * Otherwise, if loadInodes is set or the inode is materialized we will return
+   * nullopt because the inode must be loaded to inspect it and loading an inode
+   * is a write operation.
+   * If we fall into none of the above cases the TreeOrEntry representing the
+   * data for that inode will be returned.
+   */
+  std::optional<ImmediateFuture<InodeOrTreeOrEntry>> rlockGetOrFindChild(
+      const TreeInodeState& contents,
+      PathComponentPiece name,
+      ObjectFetchContext& context,
+      bool loadInodes);
+
+  /**
+   * Loads and returns the inode for this child.
+   */
+  ImmediateFuture<InodeOrTreeOrEntry> wlockGetOrFindChild(
+      folly::Synchronized<TreeInodeState>::LockedPtr& contents,
+      PathComponentPiece name,
+      ObjectFetchContext& context);
+
   folly::Synchronized<TreeInodeState> contents_;
 
   /**

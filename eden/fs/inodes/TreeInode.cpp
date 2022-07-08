@@ -206,6 +206,110 @@ ImmediateFuture<struct stat> TreeInode::stat(ObjectFetchContext& /*context*/) {
   return st;
 }
 
+std::optional<ImmediateFuture<InodeOrTreeOrEntry>>
+TreeInode::rlockGetOrFindChild(
+    const TreeInodeState& contents,
+    PathComponentPiece name,
+    ObjectFetchContext& context,
+    bool loadInodes) {
+  auto objectStore = getMount()->getObjectStore();
+  // Check if the child is already loaded and return it if so
+  auto iter = contents.entries.find(name);
+  if (iter == contents.entries.end()) {
+    XLOG(DBG7) << "attempted to load non-existent entry \"" << name << "\" in "
+               << getLogPath();
+    return std::make_optional(
+        ImmediateFuture<InodeOrTreeOrEntry>{folly::Try<InodeOrTreeOrEntry>{
+            InodeError(ENOENT, inodePtrFromThis(), name)}});
+  }
+
+  // Check to see if the entry is already loaded
+  auto& entry = iter->second;
+  if (auto inodePtr = entry.getInodePtr()) {
+    return ImmediateFuture{InodeOrTreeOrEntry{std::move(inodePtr)}};
+  }
+
+  // The node is not loaded. If the caller requires that we load
+  // Inodes, or the entry is materialized, go on and load the inode
+  // by returning std::nullopt here.
+  if (loadInodes || entry.isMaterialized()) {
+    return std::nullopt;
+  }
+
+  // Note that a child's inode may be currently loading. If it's
+  // currently being loaded there's no chance it's been
+  // modified/materialized yet (it has to have been loaded prior),
+  // so it's safe here to ignore the loading inode and instead
+  // query the object store for information about the path.
+  auto hash = entry.getHash();
+  if (entry.isDirectory()) {
+    // This is a directory, always get the tree corresponding to
+    // the hash
+    return objectStore->getTree(hash, context)
+        .thenValue([mode = entry.getInitialMode()](
+                       std::shared_ptr<const Tree>&& tree) {
+          return InodeOrTreeOrEntry(std::move(tree), mode);
+        });
+  }
+  // This is a file, return the DirEntry if this was the last
+  // path component. Note that because the entry is not loaded and
+  // is not materialized, it's guaranteed to have a hash set, and
+  // the constructor of UnmaterializedUnloadedBlobDirEntry can be
+  // called safely.
+  return ImmediateFuture{
+      InodeOrTreeOrEntry{UnmaterializedUnloadedBlobDirEntry(entry)}};
+}
+
+ImmediateFuture<InodeOrTreeOrEntry> TreeInode::wlockGetOrFindChild(
+    folly::Synchronized<TreeInodeState>::LockedPtr& contents,
+    PathComponentPiece name,
+    ObjectFetchContext& context) {
+  auto inodeLoadFuture = Future<unique_ptr<InodeBase>>::makeEmpty();
+  InodePtr childInodePtr;
+  InodeMap::PromiseVector promises;
+
+  // The entry is not loaded yet.  Ask the InodeMap about the
+  // entry. The InodeMap will tell us if this inode is already in
+  // the process of being loaded, or if we need to start loading it
+  // now.
+  auto iter = contents->entries.find(name);
+  auto inodeName = copyCanonicalInodeName(iter);
+  name = inodeName.piece();
+  auto& entry = iter->second;
+  folly::Promise<InodePtr> promise;
+  auto returnFuture = promise.getSemiFuture();
+  auto childNumber = entry.getInodeNumber();
+  bool startLoad = getInodeMap()->shouldLoadChild(
+      this, name, childNumber, std::move(promise));
+  if (startLoad) {
+    // The inode is not already being loaded.  We have to start
+    // loading it now.
+    auto loadFuture = startLoadingInodeNoThrow(entry, name, context);
+    if (loadFuture.isReady() && loadFuture.hasValue()) {
+      // If we finished loading the inode immediately, just call
+      // InodeMap::inodeLoadComplete() now, since we still have the
+      // data_ lock.
+      auto childInode = std::move(loadFuture).get();
+      entry.setInode(childInode.get());
+      promises = getInodeMap()->inodeLoadComplete(childInode.get());
+      childInodePtr = InodePtr::takeOwnership(std::move(childInode));
+    } else {
+      inodeLoadFuture = std::move(loadFuture);
+    }
+  }
+  contents.unlock();
+  if (inodeLoadFuture.valid()) {
+    registerInodeLoadComplete(inodeLoadFuture, name, childNumber);
+  } else {
+    for (auto& promise : promises) {
+      promise.setValue(childInodePtr);
+    }
+  }
+
+  return ImmediateFuture<InodePtr>{std::move(returnFuture)}.thenValue(
+      [](auto&& inode) { return InodeOrTreeOrEntry{inode}; });
+}
+
 ImmediateFuture<InodeOrTreeOrEntry> TreeInode::getOrFindChild(
     PathComponentPiece name,
     ObjectFetchContext& context,
@@ -227,109 +331,14 @@ ImmediateFuture<InodeOrTreeOrEntry> TreeInode::getOrFindChild(
         });
   }
 #endif // !_WIN32
-
-  auto objectStore = mount->getObjectStore();
   return tryRlockCheckBeforeUpdate<ImmediateFuture<InodeOrTreeOrEntry>>(
              contents_,
              [&](const auto& contents)
                  -> std::optional<ImmediateFuture<InodeOrTreeOrEntry>> {
-               // Check if the child is already loaded and return it if so
-               auto iter = contents.entries.find(name);
-               if (iter == contents.entries.end()) {
-                 XLOG(DBG7) << "attempted to load non-existent entry \"" << name
-                            << "\" in " << getLogPath();
-                 return std::make_optional(ImmediateFuture<InodeOrTreeOrEntry>{
-                     folly::Try<InodeOrTreeOrEntry>{
-                         InodeError(ENOENT, inodePtrFromThis(), name)}});
-               }
-
-               // Check to see if the entry is already loaded
-               auto& entry = iter->second;
-               if (auto inodePtr = entry.getInodePtr()) {
-                 return ImmediateFuture{
-                     InodeOrTreeOrEntry{std::move(inodePtr)}};
-               }
-
-               // The node is not loaded. If the caller requires that we load
-               // Inodes, or the entry is materialized, go on and load the inode
-               // by returning std::nullopt here.
-               if (loadInodes || entry.isMaterialized()) {
-                 return std::nullopt;
-               }
-
-               // Note that a child's inode may be currently loading. If it's
-               // currently being loaded there's no chance it's been
-               // modified/materialized yet (it has to have been loaded prior),
-               // so it's safe here to ignore the loading inode and instead
-               // query the object store for information about the path.
-               auto hash = entry.getHash();
-               if (entry.isDirectory()) {
-                 // This is a directory, always get the tree corresponding to
-                 // the hash
-                 return objectStore->getTree(hash, context)
-                     .thenValue([mode = entry.getInitialMode()](
-                                    std::shared_ptr<const Tree>&& tree) {
-                       return InodeOrTreeOrEntry(std::move(tree), mode);
-                     });
-               }
-               // This is a file, return the DirEntry if this was the last
-               // path component. Note that because the entry is not loaded and
-               // is not materialized, it's guaranteed to have a hash set, and
-               // the constructor of UnmaterializedUnloadedBlobDirEntry can be
-               // called safely.
-               return ImmediateFuture{InodeOrTreeOrEntry{
-                   UnmaterializedUnloadedBlobDirEntry(entry)}};
+               return rlockGetOrFindChild(contents, name, context, loadInodes);
              },
              [&](auto& contents) -> ImmediateFuture<InodeOrTreeOrEntry> {
-               auto inodeLoadFuture =
-                   Future<unique_ptr<InodeBase>>::makeEmpty();
-               InodePtr childInodePtr;
-               InodeMap::PromiseVector promises;
-
-               // The entry is not loaded yet.  Ask the InodeMap about the
-               // entry. The InodeMap will tell us if this inode is already in
-               // the process of being loaded, or if we need to start loading it
-               // now.
-               auto iter = contents->entries.find(name);
-               auto inodeName = copyCanonicalInodeName(iter);
-               name = inodeName.piece();
-               auto& entry = iter->second;
-               folly::Promise<InodePtr> promise;
-               auto returnFuture = promise.getSemiFuture();
-               auto childNumber = entry.getInodeNumber();
-               bool startLoad = getInodeMap()->shouldLoadChild(
-                   this, name, childNumber, std::move(promise));
-               if (startLoad) {
-                 // The inode is not already being loaded.  We have to start
-                 // loading it now.
-                 auto loadFuture =
-                     startLoadingInodeNoThrow(entry, name, context);
-                 if (loadFuture.isReady() && loadFuture.hasValue()) {
-                   // If we finished loading the inode immediately, just call
-                   // InodeMap::inodeLoadComplete() now, since we still have the
-                   // data_ lock.
-                   auto childInode = std::move(loadFuture).get();
-                   entry.setInode(childInode.get());
-                   promises =
-                       getInodeMap()->inodeLoadComplete(childInode.get());
-                   childInodePtr =
-                       InodePtr::takeOwnership(std::move(childInode));
-                 } else {
-                   inodeLoadFuture = std::move(loadFuture);
-                 }
-               }
-               contents.unlock();
-               if (inodeLoadFuture.valid()) {
-                 registerInodeLoadComplete(inodeLoadFuture, name, childNumber);
-               } else {
-                 for (auto& promise : promises) {
-                   promise.setValue(childInodePtr);
-                 }
-               }
-
-               return ImmediateFuture<InodePtr>{std::move(returnFuture)}
-                   .thenValue(
-                       [](auto&& inode) { return InodeOrTreeOrEntry{inode}; });
+               return wlockGetOrFindChild(contents, name, context);
              })
       .ensure([b = std::move(block)]() mutable { b.close(); });
 }
