@@ -10,6 +10,7 @@
 #include <folly/Conv.h>
 #include <folly/Unicode.h>
 #include <folly/logging/xlog.h>
+#include "eden/fs/utils/Throw.h"
 
 namespace {
 void validateUtf8(folly::StringPiece sp) {
@@ -26,8 +27,8 @@ namespace facebook::eden {
 void DynamicEvent::addInt(std::string name, int64_t value) {
   auto [iter, inserted] = ints_.emplace(std::move(name), value);
   if (!inserted) {
-    throw std::logic_error(folly::to<std::string>(
-        "Attempted to insert duplicate int: ", iter->first));
+    throw_<std::logic_error>(
+        "Attempted to insert duplicate int: ", iter->first);
   }
 }
 
@@ -35,8 +36,8 @@ void DynamicEvent::addString(std::string name, std::string value) {
   validateUtf8(value);
   auto [iter, inserted] = strings_.emplace(std::move(name), std::move(value));
   if (!inserted) {
-    throw std::logic_error(folly::to<std::string>(
-        "Attempted to insert duplicate string: ", iter->first));
+    throw_<std::logic_error>(
+        "Attempted to insert duplicate string: ", iter->first);
   }
 }
 
@@ -46,8 +47,8 @@ void DynamicEvent::addDouble(std::string name, double value) {
       << name;
   auto [iter, inserted] = doubles_.emplace(std::move(name), value);
   if (!inserted) {
-    throw std::logic_error(folly::to<std::string>(
-        "Attempted to insert duplicate double: ", iter->first));
+    throw_<std::logic_error>(
+        "Attempted to insert duplicate double: ", iter->first);
   }
 }
 

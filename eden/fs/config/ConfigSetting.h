@@ -18,6 +18,7 @@
 
 #include "eden/fs/config/FieldConverter.h"
 #include "eden/fs/config/gen-cpp2/eden_config_types.h"
+#include "eden/fs/utils/Throw.h"
 
 namespace facebook::eden {
 
@@ -206,11 +207,11 @@ class ConfigSetting final : private ConfigSettingBase {
     // Normally, dynamic_cast would be a better fit here, but private
     // inheritance prevents its use. Instead, compare the value's typeid.
     if (getValueType() != rhs.getValueType()) {
-      throw std::logic_error{folly::to<std::string>(
+      throw_<std::logic_error>(
           "ConfigSetting<",
           getValueType().name(),
           "> copyFrom unknown type: ",
-          rhs.getValueType().name())};
+          rhs.getValueType().name());
     }
     auto* rhsConfigSetting = static_cast<const ConfigSetting*>(&rhs);
     key_ = rhsConfigSetting->key_;

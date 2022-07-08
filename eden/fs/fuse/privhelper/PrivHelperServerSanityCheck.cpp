@@ -15,10 +15,12 @@
 #include <errno.h>
 #include <folly/Conv.h>
 #include <folly/String.h>
+#include <string>
+#include "eden/fs/utils/Throw.h"
+
 #ifndef __APPLE__
 #include <sys/statfs.h>
 #endif
-#include <string>
 
 namespace facebook::eden {
 
@@ -43,8 +45,8 @@ void sanityCheckFs(const std::string& mountPoint) {
       // process that crashed without unmounting.
       return;
     }
-    throw std::domain_error(folly::to<std::string>(
-        "statfs failed for: ", mountPoint, ": ", folly::errnoStr(err)));
+    throw_<std::domain_error>(
+        "statfs failed for: ", mountPoint, ": ", folly::errnoStr(err));
   }
 
   constexpr typeof(fsBuf.f_type) allowedFs[] = {
@@ -88,8 +90,8 @@ void sanityCheckFs(const std::string& mountPoint) {
     }
   }
 
-  throw std::domain_error(folly::to<std::string>(
-      "Cannot mount over filesystem type: ", fsBuf.f_type));
+  throw_<std::domain_error>(
+      "Cannot mount over filesystem type: ", fsBuf.f_type);
 #else
   (void)mountPoint;
 #endif
@@ -103,31 +105,23 @@ void PrivHelperServer::sanityCheckMountPoint(const std::string& mountPoint) {
 
   if (access(mountPoint.c_str(), W_OK) < 0) {
     auto err = errno;
-    throw std::domain_error(folly::to<std::string>(
-        "User doesn't have access to ",
-        mountPoint,
-        ": ",
-        folly::errnoStr(err)));
+    throw_<std::domain_error>(
+        "User doesn't have access to ", mountPoint, ": ", folly::errnoStr(err));
   }
 
   struct stat st;
   if (stat(mountPoint.c_str(), &st) < 0) {
     auto err = errno;
-    throw std::domain_error(folly::to<std::string>(
-        "User doesn't have access to ",
-        mountPoint,
-        ": ",
-        folly::errnoStr(err)));
+    throw_<std::domain_error>(
+        "User doesn't have access to ", mountPoint, ": ", folly::errnoStr(err));
   }
 
   if (!S_ISDIR(st.st_mode)) {
-    throw std::domain_error(
-        folly::to<std::string>(mountPoint, " isn't a directory"));
+    throw_<std::domain_error>(mountPoint, " isn't a directory");
   }
 
   if (st.st_uid != uid_) {
-    throw std::domain_error(
-        folly::to<std::string>("User isn't the owner of: ", mountPoint));
+    throw_<std::domain_error>("User isn't the owner of: ", mountPoint);
   }
 
   sanityCheckFs(mountPoint);

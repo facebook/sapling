@@ -19,7 +19,7 @@ namespace detail {
  * _CxxThrowException.
  */
 template <typename E>
-[[noreturn]] void throw_(const char* what) {
+[[noreturn]] void throw_dedup(const char* what) {
   throw E{what};
 }
 
@@ -28,7 +28,7 @@ template <typename E>
  * _CxxThrowException.
  */
 template <typename E>
-[[noreturn]] void throw_(const std::string& what) {
+[[noreturn]] void throw_dedup(const std::string& what) {
   throw E{what};
 }
 
@@ -44,7 +44,7 @@ template <typename E>
  */
 template <typename E, typename... T>
 [[noreturn]] void throw_(T&&... args) {
-  detail::throw_<E>(folly::to<std::string>(std::forward<T>(args)...));
+  detail::throw_dedup<E>(folly::to<std::string>(std::forward<T>(args)...));
 }
 
 /**
@@ -54,7 +54,7 @@ template <typename E, typename... T>
  */
 template <typename E, typename... T>
 [[noreturn]] void throwf(fmt::format_string<T...> fmt, T&&... args) {
-  detail::throw_<E>(fmt::format(std::move(fmt), std::forward<T>(args)...));
+  detail::throw_dedup<E>(fmt::format(std::move(fmt), std::forward<T>(args)...));
 }
 
 } // namespace facebook::eden

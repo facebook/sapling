@@ -15,6 +15,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/Throw.h"
 
 using folly::ByteRange;
 using folly::Endian;
@@ -36,9 +37,9 @@ std::optional<HgProxyHash> HgProxyHash::tryParseEmbeddedProxyHash(
   }
 
   if (edenObjectId.size() < 20) {
-    throw std::invalid_argument{fmt::format(
+    throwf<std::invalid_argument>(
         "unsupported proxy hash format: {}",
-        folly::hexlify(edenObjectId.getBytes()))};
+        folly::hexlify(edenObjectId.getBytes()));
   }
 
   auto bytes = edenObjectId.getBytes();
@@ -46,9 +47,9 @@ std::optional<HgProxyHash> HgProxyHash::tryParseEmbeddedProxyHash(
   switch (type) {
     case TYPE_HG_ID_WITH_PATH:
       if (bytes.size() < 21) {
-        throw std::invalid_argument(fmt::format(
+        throwf<std::invalid_argument>(
             "Invalid proxy hash size for TYPE_HG_ID_WITH_PATH: size {}",
-            edenObjectId.size()));
+            edenObjectId.size());
       }
       return HgProxyHash{
           RelativePathPiece{folly::StringPiece{bytes.subpiece(21)}},
@@ -56,14 +57,14 @@ std::optional<HgProxyHash> HgProxyHash::tryParseEmbeddedProxyHash(
 
     case TYPE_HG_ID_NO_PATH:
       if (bytes.size() != 21) {
-        throw std::invalid_argument(fmt::format(
+        throwf<std::invalid_argument>(
             "Invalid proxy hash size for TYPE_HG_ID_NO_PATH: size {}",
-            edenObjectId.size()));
+            edenObjectId.size());
       }
       return HgProxyHash{RelativePathPiece{}, Hash20{bytes.subpiece(1)}};
   }
-  throw std::invalid_argument(fmt::format(
-      "Unknown proxy hash type: size {}, type {}", edenObjectId.size(), type));
+  throwf<std::invalid_argument>(
+      "Unknown proxy hash type: size {}, type {}", edenObjectId.size(), type);
 }
 
 folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(

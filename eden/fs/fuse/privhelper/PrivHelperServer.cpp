@@ -37,6 +37,7 @@
 #include "eden/fs/fuse/privhelper/NfsMountRpc.h"
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/Throw.h"
 
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h> // @manual
@@ -255,8 +256,8 @@ void checkedSnprintf(
   auto rc = vsnprintf(buf, Size, format, ap);
 
   if (rc <= 0 || static_cast<size_t>(rc) >= Size) {
-    throw std::runtime_error(folly::to<std::string>(
-        "string exceeds buffer size in snprintf.  Format string was ", format));
+    throw_<std::runtime_error>(
+        "string exceeds buffer size in snprintf.  Format string was ", format);
   }
 }
 
@@ -610,10 +611,10 @@ void PrivHelperServer::nfsMount(
   auto mountdFamily = mountdAddr.getFamily();
   auto nfsdFamily = nfsdAddr.getFamily();
   if (mountdFamily != nfsdFamily) {
-    throw std::runtime_error(fmt::format(
+    throwf<std::runtime_error>(
         "The mountd and nfsd socket must be of the same type: mountd=\"{}\", nfsd=\"{}\"",
         mountdAddr.describe(),
-        nfsdAddr.describe()));
+        nfsdAddr.describe());
   }
 
   mattrFlags |= NFS_MATTR_SOCKET_TYPE;
@@ -629,8 +630,7 @@ void PrivHelperServer::nfsMount(
       socketType = "ticotsord";
       break;
     default:
-      throw std::runtime_error(
-          fmt::format("Unknown socket family: {}", nfsdFamily));
+      throwf<std::runtime_error>("Unknown socket family: {}", nfsdFamily);
   }
   XdrTrait<nfs_mattr_socket_type>::serialize(attrSer, socketType);
 
@@ -885,8 +885,7 @@ UnixSocket::Message PrivHelperServer::processUnmountMsg(Cursor& cursor) {
 
   const auto it = mountPoints_.find(mountPath);
   if (it == mountPoints_.end()) {
-    throw std::domain_error(
-        folly::to<string>("No FUSE mount found for ", mountPath));
+    throw_<std::domain_error>("No FUSE mount found for ", mountPath);
   }
 
   unmount(mountPath.c_str());
@@ -901,8 +900,7 @@ UnixSocket::Message PrivHelperServer::processNfsUnmountMsg(Cursor& cursor) {
 
   const auto it = mountPoints_.find(mountPath);
   if (it == mountPoints_.end()) {
-    throw std::domain_error(
-        folly::to<string>("No NFS mount found for ", mountPath));
+    throw_<std::domain_error>("No NFS mount found for ", mountPath);
   }
 
   unmount(mountPath.c_str());
@@ -918,8 +916,7 @@ UnixSocket::Message PrivHelperServer::processTakeoverShutdownMsg(
 
   const auto it = mountPoints_.find(mountPath);
   if (it == mountPoints_.end()) {
-    throw std::domain_error(
-        folly::to<string>("No mount found for ", mountPath));
+    throw_<std::domain_error>("No mount found for ", mountPath);
   }
 
   mountPoints_.erase(mountPath);
@@ -932,7 +929,7 @@ std::string PrivHelperServer::findMatchingMountPrefix(folly::StringPiece path) {
       return mountPoint;
     }
   }
-  throw std::domain_error(folly::to<string>("No FUSE mount found for ", path));
+  throw_<std::domain_error>("No FUSE mount found for ", path);
 }
 
 UnixSocket::Message PrivHelperServer::processBindMountMsg(Cursor& cursor) {
@@ -971,10 +968,10 @@ UnixSocket::Message PrivHelperServer::processSetLogFileMsg(
   XLOG(DBG3) << "set log file";
   PrivHelperConn::parseSetLogFileRequest(cursor);
   if (request.files.size() != 1) {
-    throw std::runtime_error(folly::to<string>(
+    throw_<std::runtime_error>(
         "expected to receive 1 file descriptor with setLogFile() request ",
         "received ",
-        request.files.size()));
+        request.files.size());
   }
 
   setLogFile(std::move(request.files[0]));
@@ -1192,8 +1189,7 @@ UnixSocket::Message PrivHelperServer::processMessage(
       break;
   }
 
-  throw std::runtime_error(
-      folly::to<std::string>("unexpected privhelper message type: ", msgType));
+  throw_<std::runtime_error>("unexpected privhelper message type: ", msgType);
 }
 
 void PrivHelperServer::eofReceived() noexcept {

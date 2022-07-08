@@ -11,8 +11,9 @@
 #include <folly/Range.h>
 #include <folly/lang/Bits.h>
 
-#include <eden/fs/model/BlobMetadata.h>
-#include <eden/fs/model/Hash.h>
+#include "eden/fs/model/BlobMetadata.h"
+#include "eden/fs/model/Hash.h"
+#include "eden/fs/utils/Throw.h"
 
 namespace facebook::eden {
 
@@ -35,10 +36,10 @@ BlobMetadata SerializedBlobMetadata::parse(
     const StoreResult& result) {
   auto bytes = result.bytes();
   if (bytes.size() != SIZE) {
-    throw std::invalid_argument(fmt::format(
+    throwf<std::invalid_argument>(
         "Blob metadata for {} had unexpected size {}. Could not deserialize.",
         blobID,
-        bytes.size()));
+        bytes.size());
   }
 
   return unslice(bytes);

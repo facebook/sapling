@@ -76,9 +76,9 @@ char scmStatusCodeChar(ScmFileStatus code) {
     case ScmFileStatus::IGNORED:
       return 'I';
   }
-  throw std::runtime_error(folly::to<std::string>(
+  throw_<std::runtime_error>(
       "Unrecognized ScmFileStatus: ",
-      static_cast<typename std::underlying_type<ScmFileStatus>::type>(code)));
+      static_cast<typename std::underlying_type<ScmFileStatus>::type>(code));
 }
 
 std::ostream& operator<<(std::ostream& os, const ScmStatus& status) {

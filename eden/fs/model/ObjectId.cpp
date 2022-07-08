@@ -6,7 +6,6 @@
  */
 
 #include "eden/fs/model/ObjectId.h"
-#include "eden/fs/model/Hash.h"
 
 #include <folly/Conv.h>
 #include <folly/Format.h>
@@ -15,6 +14,9 @@
 #include <folly/io/IOBuf.h>
 #include <folly/ssl/OpenSSLHash.h>
 #include <string>
+
+#include "eden/fs/model/Hash.h"
+#include "eden/fs/utils/Throw.h"
 
 using folly::ByteRange;
 using folly::range;
@@ -59,7 +61,7 @@ ObjectId ObjectId::sha1(ByteRange data) {
 }
 
 void ObjectId::throwInvalidArgument(const char* message, size_t number) {
-  throw std::invalid_argument(folly::to<std::string>(message, number));
+  throw_<std::invalid_argument>(message, number);
 }
 
 std::ostream& operator<<(std::ostream& os, const ObjectId& hash) {

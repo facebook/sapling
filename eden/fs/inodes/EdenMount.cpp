@@ -555,22 +555,22 @@ folly::SemiFuture<Unit> EdenMount::performBindMounts() {
         if (returnCode.exitStatus() == 0) {
           return folly::unit;
         }
-        throw std::runtime_error(folly::to<std::string>(
+        throw_<std::runtime_error>(
             "Failed to run `",
             FLAGS_edenfsctlPath,
             " redirect fixup --mount ",
             mountPath,
             "`: exited with status ",
-            returnCode.str()));
+            returnCode.str());
       })
       .deferError([mountPath](folly::exception_wrapper err) {
-        throw std::runtime_error(folly::to<std::string>(
+        throw_<std::runtime_error>(
             "Failed to run `",
             FLAGS_edenfsctlPath,
             " fixup --mount ",
             mountPath,
             "`: ",
-            folly::exceptionStr(err)));
+            folly::exceptionStr(err));
       });
 }
 
@@ -585,7 +585,7 @@ void EdenMount::transitionState(State expected, State newState) {
   State found = expected;
   if (!state_.compare_exchange_strong(
           found, newState, std::memory_order_acq_rel)) {
-    throw std::runtime_error(folly::to<std::string>(
+    throw_<std::runtime_error>(
         "unable to transition mount ",
         getPath(),
         " to state ",
@@ -593,7 +593,7 @@ void EdenMount::transitionState(State expected, State newState) {
         ": expected to be in state ",
         expected,
         " but actually in ",
-        found));
+        found);
   }
 }
 

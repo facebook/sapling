@@ -11,6 +11,7 @@
 #include <folly/Range.h>
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
+#include "eden/fs/utils/Throw.h"
 
 namespace facebook::eden {
 
@@ -69,8 +70,8 @@ setDefault(cpptoml::table& root, TomlPath key, const T& defaultValue) {
       if (entry->is_table()) {
         table = static_cast<cpptoml::table*>(entry.get());
       } else {
-        throw std::runtime_error(
-            folly::join(".", key.begin(), begin + 1) + " is not a table");
+        throw_<std::runtime_error>(
+            folly::join(".", key.begin(), begin + 1), " is not a table");
       }
     } else {
       auto entry = cpptoml::make_table();
@@ -85,8 +86,8 @@ setDefault(cpptoml::table& root, TomlPath key, const T& defaultValue) {
     if (auto value = table->get(keystr)->as<T>()) {
       return std::make_pair(value->get(), false);
     } else {
-      throw std::runtime_error(
-          folly::join(".", key.begin(), key.end()) + " has mismatched type");
+      throw_<std::runtime_error>(
+          folly::join(".", key.begin(), key.end()), " has mismatched type");
     }
   }
   table->insert(begin->str(), defaultValue);

@@ -13,6 +13,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/utils/Throw.h"
 
 using folly::IOBuf;
 using std::invalid_argument;
@@ -79,10 +80,10 @@ std::unique_ptr<Tree> deserializeGitTree(
     } else if (mode == GitModeMask::SYMLINK) {
       fileType = TreeEntryType::SYMLINK;
     } else if (mode == GitModeMask::GIT_LINK) {
-      throw std::domain_error(fmt::format(
+      throwf<std::domain_error>(
           "Gitlinks are not currently supported: {:o} in object {}",
           mode,
-          hash));
+          hash);
     } else {
       throw invalid_argument(
           fmt::format("Unrecognized mode: {:o} in object {}", mode, hash));

@@ -36,10 +36,10 @@ FOLLY_NODISCARD folly::File openLockFile(AbsolutePathPiece edenDir) {
   if (!lockFile.try_lock()) {
     string existingPid;
     folly::readFile(lockFile.fd(), existingPid);
-    throw std::runtime_error(folly::to<string>(
+    throw_<std::runtime_error>(
         "another instance of the EdenFS monitor already "
         "appears to be running: pid ",
-        existingPid));
+        existingPid);
   }
 
   // We acquired the lock.  Write our process ID to the lock file.

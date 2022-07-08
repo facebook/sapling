@@ -37,6 +37,7 @@
 #include "eden/fs/utils/IDGen.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/StaticAssert.h"
+#include "eden/fs/utils/Throw.h"
 #include "folly/ScopeGuard.h"
 #include "folly/String.h"
 
@@ -265,8 +266,8 @@ ObjectId HgQueuedBackingStore::staticParseObjectId(
     folly::StringPiece objectId) {
   if (objectId.startsWith("proxy-")) {
     if (objectId.size() != 46) {
-      throw std::invalid_argument(
-          fmt::format("invalid proxy hash length: {}", objectId.size()));
+      throwf<std::invalid_argument>(
+          "invalid proxy hash length: {}", objectId.size());
     }
 
     return ObjectId{folly::unhexlify<folly::fbstring>(objectId.subpiece(6))};
@@ -277,13 +278,12 @@ ObjectId HgQueuedBackingStore::staticParseObjectId(
   }
 
   if (objectId.size() < 41) {
-    throw std::invalid_argument(
-        fmt::format("hg object ID too short: {}", objectId));
+    throwf<std::invalid_argument>("hg object ID too short: {}", objectId);
   }
 
   if (objectId[40] != ':') {
-    throw std::invalid_argument(
-        fmt::format("missing separator colon in hg object ID: {}", objectId));
+    throwf<std::invalid_argument>(
+        "missing separator colon in hg object ID: {}", objectId);
   }
 
   Hash20 hgRevHash{objectId.subpiece(0, 40)};

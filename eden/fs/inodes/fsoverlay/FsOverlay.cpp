@@ -27,6 +27,7 @@
 #include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/Throw.h"
 
 namespace facebook::eden {
 
@@ -221,16 +222,15 @@ void FsOverlay::readExistingOverlay(int infoFD) {
       "error reading from overlay info file in ",
       localDir_.stringPiece());
   if (sizeRead != infoHeader.size()) {
-    throw std::runtime_error(folly::to<string>(
-        "truncated info file in overlay directory ", localDir_));
+    throw_<std::runtime_error>(
+        "truncated info file in overlay directory ", localDir_);
   }
   // Verify the magic value is correct
   if (memcmp(
           infoHeader.data(),
           kInfoHeaderMagic.data(),
           kInfoHeaderMagic.size()) != 0) {
-    throw std::runtime_error(
-        folly::to<string>("bad data in overlay info file for ", localDir_));
+    throw_<std::runtime_error>("bad data in overlay info file for ", localDir_);
   }
   // Extract the version number
   uint32_t version;
@@ -240,8 +240,8 @@ void FsOverlay::readExistingOverlay(int infoFD) {
 
   // Make sure we understand this version number
   if (version != kOverlayVersion) {
-    throw std::runtime_error(folly::to<string>(
-        "Unsupported eden overlay format ", version, " in ", localDir_));
+    throw_<std::runtime_error>(
+        "Unsupported eden overlay format ", version, " in ", localDir_);
   }
 }
 

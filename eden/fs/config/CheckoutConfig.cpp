@@ -17,6 +17,7 @@
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathMap.h"
 #include "eden/fs/utils/SystemError.h"
+#include "eden/fs/utils/Throw.h"
 
 using folly::ByteRange;
 using folly::IOBuf;
@@ -115,14 +116,14 @@ ParentCommit CheckoutConfig::getParentCommit() const {
   StringPiece contents{snapshotFileContents};
 
   if (contents.size() < kSnapshotHeaderSize) {
-    throw std::runtime_error(fmt::format(
+    throwf<std::runtime_error>(
         "eden SNAPSHOT file is too short ({} bytes): {}",
         contents.size(),
-        snapshotFile));
+        snapshotFile);
   }
 
   if (!contents.startsWith(kSnapshotFileMagic)) {
-    throw std::runtime_error(fmt::format("unsupported legacy SNAPSHOT file"));
+    throw std::runtime_error("unsupported legacy SNAPSHOT file");
   }
 
   IOBuf buf(IOBuf::WRAP_BUFFER, ByteRange{contents});
@@ -133,10 +134,10 @@ ParentCommit CheckoutConfig::getParentCommit() const {
   switch (version) {
     case kSnapshotFormatVersion1: {
       if (sizeLeft != Hash20::RAW_SIZE && sizeLeft != (Hash20::RAW_SIZE * 2)) {
-        throw std::runtime_error(fmt::format(
+        throwf<std::runtime_error>(
             "unexpected length for eden SNAPSHOT file ({} bytes): {}",
             contents.size(),
-            snapshotFile));
+            snapshotFile);
       }
 
       Hash20 parent1;
@@ -192,10 +193,10 @@ ParentCommit CheckoutConfig::getParentCommit() const {
     }
 
     default:
-      throw std::runtime_error(fmt::format(
+      throwf<std::runtime_error>(
           "unsupported eden SNAPSHOT file format (version {}): {}",
           uint32_t{version},
-          snapshotFile));
+          snapshotFile);
   }
 }
 

@@ -20,6 +20,7 @@
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/EnumValue.h"
+#include "eden/fs/utils/Throw.h"
 #include "folly/String.h"
 
 using folly::ByteRange;
@@ -31,15 +32,16 @@ using std::make_unique;
 using std::string;
 using std::unique_ptr;
 
+namespace facebook::eden {
+
 namespace {
 
 template <typename... Args>
 void gitCheckError(int error, Args&&... args) {
   if (error) {
     auto lastError = giterr_last();
-    auto message = folly::to<string>(
+    throw_<std::runtime_error>(
         std::forward<Args>(args)..., ": ", lastError->message);
-    throw std::runtime_error(message);
   }
 }
 
@@ -47,9 +49,8 @@ void freeBlobIOBufData(void* /*blobData*/, void* blobObject) {
   git_blob* gitBlob = static_cast<git_blob*>(blobObject);
   git_blob_free(gitBlob);
 }
-} // namespace
 
-namespace facebook::eden {
+} // namespace
 
 GitBackingStore::GitBackingStore(AbsolutePathPiece repository) {
   // Make sure libgit2 is initialized.
@@ -153,13 +154,13 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const ObjectId& id) {
       fileType = TreeEntryType::REGULAR_FILE;
     } else {
       // TODO: We currently don't handle GIT_FILEMODE_COMMIT
-      throw std::runtime_error(folly::to<string>(
+      throw_<std::runtime_error>(
           "unknown file mode ",
           enumValue(entryMode),
           " on file ",
           entryName,
           " in git tree ",
-          id));
+          id);
     }
     auto entryHash = oid2Hash(git_tree_entry_id(gitEntry));
     auto name = PathComponentPiece{entryName};

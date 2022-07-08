@@ -42,6 +42,7 @@
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/EnumValue.h"
+#include "eden/fs/utils/Throw.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 using folly::Future;
@@ -379,11 +380,11 @@ struct ManifestEntry {
     auto namePiece = StringPiece{*start, folly::to_unsigned(nameend - *start)};
 
     if (nameend + kNodeHexLen + 1 >= end) {
-      throw std::domain_error(fmt::format(
+      throwf<std::domain_error>(
           FMT_STRING(
               "invalid manifest entry for {}: 40-bytes hash is too short: only {}-bytes available"),
           namePiece,
-          nameend - end));
+          nameend - end);
     }
 
     auto node = Hash20(StringPiece{nameend + 1, kNodeHexLen});

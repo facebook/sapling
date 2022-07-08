@@ -21,6 +21,7 @@
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/Throw.h"
 #include "eden/fs/utils/UnixSocket.h"
 
 using apache::thrift::CompactSerializer;
@@ -41,10 +42,10 @@ TakeoverMountProtocol getMountProtocol(
   } else if (std::holds_alternative<NfsChannelData>(mountInfo.channelInfo)) {
     return TakeoverMountProtocol::NFS;
   }
-  throw std::runtime_error(fmt::format(
+  throwf<std::runtime_error>(
       "unrecognized mount protocol {} for mount: {}",
       mountInfo.channelInfo.index(),
-      mountInfo.mountPath));
+      mountInfo.mountPath);
 }
 
 } // namespace
@@ -103,7 +104,7 @@ uint64_t TakeoverData::versionToCapabilites(int32_t version) {
           TakeoverCapabilities::ORDERED_FDS |
           TakeoverCapabilities::OPTIONAL_MOUNTD;
   }
-  throw std::runtime_error(fmt::format("Unsupported version: {}", version));
+  throwf<std::runtime_error>("Unsupported version: {}", version);
 }
 
 int32_t TakeoverData::capabilitesToVersion(uint64_t capabilities) {
@@ -143,8 +144,8 @@ int32_t TakeoverData::capabilitesToVersion(uint64_t capabilities) {
     return kTakeoverProtocolVersionSix;
   }
 
-  throw std::runtime_error(
-      fmt::format("Unsupported combination of capabilities: {}", capabilities));
+  throwf<std::runtime_error>(
+      "Unsupported combination of capabilities: {}", capabilities);
 }
 
 bool TakeoverData::shouldSerdeNFSInfo(uint32_t protocolCapabilities) {
@@ -184,8 +185,7 @@ void TakeoverData::serializeFd(
       fileToSerialize = &mountdServerSocket.value();
       break;
     default:
-      throw std::runtime_error{
-          fmt::format("Unexpected FileDescriptorType {}", type)};
+      throwf<std::runtime_error>("Unexpected FileDescriptorType {}", type);
   }
 
   XLOG(DBG7, "serializing file type: {} fd: {}", type, fileToSerialize->fd());
@@ -205,8 +205,7 @@ void TakeoverData::deserializeFd(FileDescriptorType type, folly::File& file) {
       mountdServerSocket = std::move(file);
       return;
     default:
-      throw std::runtime_error{
-          fmt::format("Unexpected FileDescriptorType {}", type)};
+      throwf<std::runtime_error>("Unexpected FileDescriptorType {}", type);
   }
 }
 
@@ -301,12 +300,12 @@ TakeoverData TakeoverData::deserialize(UnixSocket::Message& msg) {
 
   // Add 2 here for the lock file and the thrift socket
   if (data.mountPoints.size() + mountPointFilesOffset != msg.files.size()) {
-    throw std::runtime_error(folly::to<string>(
+    throw_<std::runtime_error>(
         "received ",
         data.mountPoints.size(),
         " mount paths, but ",
         msg.files.size(),
-        " FDs (including the lock file FD)"));
+        " FDs (including the lock file FD)");
   }
   if (capabilities & TakeoverCapabilities::ORDERED_FDS) {
     uint32_t filesIndex = 0;
@@ -392,13 +391,13 @@ void checkCanSerDeMountType(
     TakeoverMountProtocol mountProtocol,
     folly::StringPiece mountPath) {
   if (!canSerDeMountType(protocolCapabilities, mountProtocol)) {
-    throw std::runtime_error(fmt::format(
+    throwf<std::runtime_error>(
         "protocol does not support serializing/deserializing this type of "
         "mounts. protocol capabilities: {}. problem mount: {}. mount protocol:"
         " {}",
         protocolCapabilities,
         mountPath,
-        mountProtocol));
+        mountProtocol);
   }
 }
 

@@ -24,6 +24,7 @@
 #include <type_traits>
 
 #include "eden/fs/utils/CaseSensitivity.h"
+#include "eden/fs/utils/Throw.h"
 #include "eden/fs/utils/Utf8.h"
 
 #ifdef _WIN32
@@ -600,17 +601,17 @@ struct PathComponentSanityCheck {
   constexpr void operator()(folly::StringPiece val) const {
     for (auto c : val) {
       if (isDirSeparator(c)) {
-        throw PathComponentContainsDirectorySeparator(folly::to<std::string>(
+        throw_<PathComponentContainsDirectorySeparator>(
             "attempt to construct a PathComponent from a string containing a "
             "directory separator: ",
-            val));
+            val);
       }
 
       if (c == '\0') {
-        throw PathComponentValidationError(folly::to<std::string>(
+        throw_<PathComponentValidationError>(
             "attempt to construct a PathComponent from a string containing a "
             "nul byte: ",
-            val));
+            val);
       }
     }
 
@@ -631,9 +632,9 @@ struct PathComponentSanityCheck {
     }
 
     if (!isValidUtf8(val)) {
-      throw PathComponentNotUtf8(folly::to<std::string>(
+      throw_<PathComponentNotUtf8>(
           "attempt to construct a PathComponent from non valid UTF8 data: ",
-          val));
+          val);
     }
   }
 };
@@ -1146,14 +1147,14 @@ struct RelativePathSanityCheck {
     if (!val.empty()) {
       const char* data = val.data();
       if (isDirSeparator(data[0])) {
-        throw std::domain_error(folly::to<std::string>(
+        throw_<std::domain_error>(
             "attempt to construct a RelativePath from an absolute path string: ",
-            val));
+            val);
       }
 
       if (isDirSeparator(data[val.size() - 1])) {
-        throw std::domain_error(folly::to<std::string>(
-            "RelativePath must not end with a slash: ", val));
+        throw_<std::domain_error>(
+            "RelativePath must not end with a slash: ", val);
       }
 
       ComposedPathSanityCheck()(val);
@@ -1387,16 +1388,16 @@ struct AbsolutePathSanityCheck {
     // This won't work on Windows. The usermode Windows path can start with
     // a drive letter in front: c:\folder\file.txt
     if (!val.startsWith(kDirSeparator)) {
-      throw std::domain_error(folly::to<std::string>(
+      throw_<std::domain_error>(
           "attempt to construct an AbsolutePath from a non-absolute string: \"",
           val,
-          "\""));
+          "\"");
     }
 #endif
     if (val.size() > 1 && val.endsWith(kDirSeparator)) {
       // We do allow "/" though
-      throw std::domain_error(folly::to<std::string>(
-          "AbsolutePath must not end with a slash: ", val));
+      throw_<std::domain_error>(
+          "AbsolutePath must not end with a slash: ", val);
     }
 
     if (val.size() > 1) {
@@ -1491,14 +1492,14 @@ class AbsolutePathBase : public ComposedPathBase<
     auto childIter = childPaths.begin();
     while (true) {
       if (childIter == childPaths.end()) {
-        throw std::runtime_error(folly::to<std::string>(
-            child, " should be under ", this->stringPiece()));
+        throw_<std::runtime_error>(
+            child, " should be under ", this->stringPiece());
       }
 
       // Note that a RelativePath cannot contain "../" path elements.
       if (myIter.piece() != childIter.piece()) {
-        throw std::runtime_error(folly::to<std::string>(
-            this->stringPiece(), " does not seem to be a prefix of ", child));
+        throw_<std::runtime_error>(
+            this->stringPiece(), " does not seem to be a prefix of ", child);
       }
 
       myIter++;

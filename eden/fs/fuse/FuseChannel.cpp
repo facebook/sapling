@@ -1362,20 +1362,20 @@ void FuseChannel::readInitPacket() {
   // Loop until we receive the INIT packet, or until we are stopped.
   while (true) {
     if (stop_.load(std::memory_order_relaxed)) {
-      throw std::runtime_error(folly::to<string>(
+      throw_<std::runtime_error>(
           "FuseChannel for \"",
           mountPath_,
-          "\" stopped while waiting for INIT packet"));
+          "\" stopped while waiting for INIT packet");
     }
 
     auto res = read(fuseDevice_.fd(), &init, sizeof(init));
     if (res < 0) {
       int errnum = errno;
       if (stop_.load(std::memory_order_relaxed)) {
-        throw std::runtime_error(folly::to<string>(
+        throw_<std::runtime_error>(
             "FuseChannel for \"",
             mountPath_,
-            "\" stopped while waiting for INIT packet"));
+            "\" stopped while waiting for INIT packet");
       }
 
       if (errnum == EINTR || errnum == EAGAIN || errnum == ENOENT) {
@@ -1386,11 +1386,11 @@ void FuseChannel::readInitPacket() {
       if (errnum == ENODEV) {
         throw FuseDeviceUnmountedDuringInitialization(mountPath_);
       }
-      throw std::runtime_error(folly::to<string>(
+      throw_<std::runtime_error>(
           "error reading from FUSE device for \"",
           mountPath_,
           "\" while expecting INIT request: ",
-          folly::errnoStr(errnum)));
+          folly::errnoStr(errnum));
     }
     if (res == 0) {
       // This is generally caused by the unit tests closing a fake fuse
@@ -1404,11 +1404,11 @@ void FuseChannel::readInitPacket() {
     // could happen for future kernel versions that speak a newer FUSE protocol
     // with extra fields in fuse_init_in?
     if (static_cast<size_t>(res) < sizeof(init) - sizeof(init.padding_)) {
-      throw std::runtime_error(folly::to<string>(
+      throw_<std::runtime_error>(
           "received partial FUSE_INIT packet on mount \"",
           mountPath_,
           "\": size=",
-          res));
+          res);
     }
 
     break;
@@ -1416,14 +1416,14 @@ void FuseChannel::readInitPacket() {
 
   if (init.header.opcode != FUSE_INIT) {
     replyError(init.header, EPROTO);
-    throw std::runtime_error(folly::to<std::string>(
+    throw_<std::runtime_error>(
         "expected to receive FUSE_INIT for \"",
         mountPath_,
         "\" but got ",
         fuseOpcodeName(init.header.opcode),
         " (",
         init.header.opcode,
-        ")"));
+        ")");
   }
 
   fuse_init_out connInfo = {};
@@ -1517,14 +1517,14 @@ void FuseChannel::readInitPacket() {
 
   if (init.init.major != FUSE_KERNEL_VERSION) {
     replyError(init.header, EPROTO);
-    throw std::runtime_error(folly::to<std::string>(
+    throw_<std::runtime_error>(
         "Unsupported FUSE kernel version ",
         init.init.major,
         ".",
         init.init.minor,
         " while initializing \"",
         mountPath_,
-        "\""));
+        "\"");
   }
 
   // Update connInfo_

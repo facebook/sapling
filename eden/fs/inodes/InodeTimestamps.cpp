@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/utils/Clock.h"
+#include "eden/fs/utils/Throw.h"
 
 namespace facebook::eden {
 
@@ -48,20 +49,20 @@ struct ClampPolicy {
 struct ThrowPolicy {
   static constexpr bool is_noexcept = false;
   static uint64_t minimum(timespec ts) {
-    throw std::underflow_error(folly::to<std::string>(
+    throw_<std::underflow_error>(
         "underflow converting timespec (",
         ts.tv_sec,
         " s, ",
         ts.tv_nsec,
-        " ns) to EdenTimestamp"));
+        " ns) to EdenTimestamp");
   }
   static uint64_t maximum(timespec ts) {
-    throw std::overflow_error(folly::to<std::string>(
+    throw_<std::overflow_error>(
         "overflow converting timespec (",
         ts.tv_sec,
         " s, ",
         ts.tv_nsec,
-        " ns) to EdenTimestamp"));
+        " ns) to EdenTimestamp");
   }
 };
 

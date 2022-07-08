@@ -86,9 +86,9 @@ class PrivHelperClientImpl : public PrivHelper,
     {
       auto state = state_.wlock();
       if (state->status != Status::NOT_STARTED) {
-        throw std::runtime_error(folly::to<string>(
+        throw_<std::runtime_error>(
             "PrivHelper::start() called in unexpected state ",
-            static_cast<uint32_t>(state->status)));
+            static_cast<uint32_t>(state->status));
       }
       state->eventBase = eventBase;
       state->status = Status::RUNNING;
@@ -261,10 +261,10 @@ class PrivHelperClientImpl : public PrivHelper,
     if (iter == pendingRequests_.end()) {
       // This normally shouldn't happen unless there is a bug.
       // We'll throw and our caller will turn this into an EDEN_BUG()
-      throw std::runtime_error(folly::to<string>(
+      throw_<std::runtime_error>(
           "received unexpected response from privhelper for unknown "
           "transaction ID ",
-          xid));
+          xid);
     }
 
     auto promise = std::move(iter->second);
@@ -378,10 +378,10 @@ Future<File> PrivHelperClientImpl::fuseMount(
         PrivHelperConn::parseEmptyResponse(
             PrivHelperConn::REQ_MOUNT_FUSE, response);
         if (response.files.size() != 1) {
-          throw std::runtime_error(folly::to<string>(
+          throw_<std::runtime_error>(
               "expected privhelper FUSE response to contain a single file "
               "descriptor; got ",
-              response.files.size()));
+              response.files.size());
         }
         return std::move(response.files[0]);
       });
@@ -553,7 +553,7 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
       // communicate with a previously spawned privhelper process. Return a
       // client constructed from that channel.
       if ((i + 1) >= argc) {
-        throw std::runtime_error(folly::to<std::string>("Too few arguments"));
+        throw std::runtime_error("Too few arguments");
       }
       auto fdNum = folly::to<int>(argv[i + 1]);
       return make_unique<PrivHelperClientImpl>(
@@ -562,7 +562,7 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
 
     if (arg == "--privhelper_path") {
       if ((i + 1) >= argc) {
-        throw std::runtime_error(std::string("Too few arguments"));
+        throw std::runtime_error("Too few arguments");
       }
       helperPathFromArgs = std::string(argv[i + 1]);
     }
@@ -579,13 +579,13 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
   auto exePath = executablePath();
   auto canonPath = realpath(exePath.c_str());
   if (exePath != canonPath) {
-    throw std::runtime_error(folly::to<std::string>(
+    throw_<std::runtime_error>(
         "Refusing to start because my exePath ",
         exePath,
         " is not the realpath to myself (which is ",
         canonPath,
         "). This is an unsafe installation and may be an indication of a "
-        "symlink attack or similar attempt to escalate privileges"));
+        "symlink attack or similar attempt to escalate privileges");
   }
 
   bool isSetuid = getuid() != geteuid();
@@ -596,8 +596,8 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
     helperPath = exePath.dirname() + "edenfs_privhelper"_relpath;
   } else {
     if (isSetuid) {
-      throw std::invalid_argument(folly::to<std::string>(
-          "Cannot provide privhelper_path when executing a setuid binary"));
+      throw std::invalid_argument(
+          "Cannot provide privhelper_path when executing a setuid binary");
     }
     helperPath = canonicalPath(helperPathFromArgs);
   }
@@ -613,18 +613,18 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
     // root, otherwise refuse to continue on the basis that something is
     // very fishy.
     if (selfStat.st_uid != 0) {
-      throw std::runtime_error(folly::to<std::string>(
+      throw_<std::runtime_error>(
           "Refusing to start because my exePath ",
           exePath,
           "is owned by uid ",
           selfStat.st_uid,
-          " rather than by root."));
+          " rather than by root.");
     }
   }
 
   if (selfStat.st_uid != helperStat.st_uid ||
       selfStat.st_gid != helperStat.st_gid) {
-    throw std::runtime_error(folly::to<std::string>(
+    throw_<std::runtime_error>(
         "Refusing to start because my exePath ",
         exePath,
         "is owned by uid=",
@@ -636,12 +636,12 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
         "which is owned by uid=",
         helperStat.st_uid,
         " gid=",
-        helperStat.st_gid));
+        helperStat.st_gid);
   }
 
   if (S_ISLNK(helperStat.st_mode)) {
-    throw std::runtime_error(folly::to<std::string>(
-        "Refusing to start because ", helperPath, " is a symlink"));
+    throw_<std::runtime_error>(
+        "Refusing to start because ", helperPath, " is a symlink");
   }
 
   opts.executablePath(helperPath);

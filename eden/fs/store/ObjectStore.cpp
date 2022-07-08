@@ -20,6 +20,7 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/ImmediateFuture.h"
+#include "eden/fs/utils/Throw.h"
 
 using folly::Future;
 using folly::makeFuture;
@@ -158,8 +159,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getRootTree(
       [treeCache = treeCache_, rootId, caseSensitive = caseSensitive_](
           std::shared_ptr<const Tree> tree) {
         if (!tree) {
-          throw std::domain_error(
-              folly::to<string>("unable to import root ", rootId));
+          throw_<std::domain_error>("unable to import root ", rootId);
         }
 
         treeCache->insert(tree);
@@ -214,7 +214,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
           // TODO: Perhaps we should do some short-term negative
           // caching?
           XLOG(DBG2) << "unable to find tree " << id;
-          throw std::domain_error(fmt::format("tree {} not found", id));
+          throwf<std::domain_error>("tree {} not found", id);
         }
 
         // promote to shared_ptr so we can store in the cache and return
@@ -255,7 +255,7 @@ ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
             if (!result.blob) {
               // TODO: Perhaps we should do some short-term negative caching?
               XLOG(DBG2) << "unable to find blob " << id;
-              throw std::domain_error(fmt::format("blob {} not found", id));
+              throwf<std::domain_error>("blob {} not found", id);
             }
             // Quick check in-memory cache first, before doing expensive
             // calculations. If metadata is present in cache, it most certainly
@@ -364,7 +364,7 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
                 return makeFuture(metadata);
               }
 
-              throw std::domain_error(fmt::format("blob {} not fonud", id));
+              throwf<std::domain_error>("blob {} not found", id);
             });
       })
       .semi();
