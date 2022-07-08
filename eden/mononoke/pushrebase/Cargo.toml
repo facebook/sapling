@@ -9,12 +9,14 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.56"
-blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_utils = { version = "0.1.0", path = "../blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
+changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
+changesets = { version = "0.1.0", path = "../changesets" }
+changesets_creation = { version = "0.1.0", path = "../changesets/changesets_creation" }
 context = { version = "0.1.0", path = "../server/context" }
-derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../manifest" }
@@ -24,14 +26,19 @@ mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 pushrebase_hook = { version = "0.1.0", path = "pushrebase_hook" }
+repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
+repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
+repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 revset = { version = "0.1.0", path = "../revset" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.30"
+trait_alias = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tunables = { version = "0.1.0", path = "../tunables" }
 
 [dev-dependencies]
 async-trait = "0.1.56"
+blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
