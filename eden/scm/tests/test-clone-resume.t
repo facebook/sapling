@@ -47,6 +47,8 @@ Verify the checkout resumes where it left off
   warning: this repository appears to have not finished cloning - run 'hg checkout --continue' to resume the clone
   continuing checkout to '*' (glob)
   DEBUG checkout::prefetch: skip prefetch for non-lazychangelog
+   INFO from_diff: checkout::actions: enter
+   INFO from_diff: checkout::actions: exit
   DEBUG checkout: Skipping checking out [^0].* files since they're already written (re)
   5002 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
