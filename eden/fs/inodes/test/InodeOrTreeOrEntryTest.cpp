@@ -592,11 +592,11 @@ TEST(InodeOrTreeOrEntryTest, getChildren) {
     auto inodeOr = mount.getInodeOrTreeOrEntry(RelativePathPiece{"root_dirA"});
     EXPECT_TRUE(inodeOr.isDirectory());
 
-    auto children =
-        inodeOr.getAllEntryNames(RelativePathPiece{"root_dirA"}).get();
-    EXPECT_EQ(2, children.size());
-    EXPECT_THAT(children, testing::Contains("child1_fileA1"_pc));
-    EXPECT_THAT(children, testing::Contains("child1_fileA2"_pc));
+    auto children = inodeOr.getAllEntryNames(
+        RelativePathPiece{"root_dirA"}, ObjectFetchContext::getNullContext());
+    EXPECT_EQ(2, children.value().size());
+    EXPECT_THAT(children.value(), testing::Contains("child1_fileA1"_pc));
+    EXPECT_THAT(children.value(), testing::Contains("child1_fileA2"_pc));
   };
 
   test_root_dir_a_children();
@@ -627,7 +627,8 @@ TEST(InodeOrTreeOrEntryTest, getChildrenDoesNotChangeState) {
     auto inodeOr = mount.getInodeOrTreeOrEntry(info->path);
     EXPECT_INODE_OR(inodeOr, *info.get());
     if (inodeOr.isDirectory()) {
-      inodeOr.getAllEntryNames(info->path);
+      inodeOr.getAllEntryNames(
+          info->path, ObjectFetchContext::getNullContext());
     }
   }
   VERIFY_TREE(flags);

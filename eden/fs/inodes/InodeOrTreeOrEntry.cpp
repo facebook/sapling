@@ -313,29 +313,37 @@ ImmediateFuture<struct stat> InodeOrTreeOrEntry::stat(
       variant_);
 }
 
-ImmediateFuture<std::vector<PathComponent>>
-InodeOrTreeOrEntry::getAllEntryNames(RelativePathPiece path) {
+folly::Try<std::vector<PathComponent>> InodeOrTreeOrEntry::getAllEntryNames(
+    RelativePathPiece path,
+    ObjectFetchContext& context) {
   if (!isDirectory()) {
-    return makeImmediateFuture<std::vector<PathComponent>>(
-        PathError(ENOTDIR, path));
+    return folly::Try<std::vector<PathComponent>>(PathError(ENOTDIR, path));
   }
   return std::visit(
-      [path](auto&& arg) -> ImmediateFuture<std::vector<PathComponent>> {
+      [path, &context](auto&& arg) -> folly::Try<std::vector<PathComponent>> {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, InodePtr>) {
-          return arg.asTreePtr()->getAllEntryNames();
+          auto children = arg.asTreePtr()->getChildren(context, false);
+
+          std::vector<PathComponent> entryNames{};
+          entryNames.reserve(children.size());
+          for (auto& entry : children) {
+            entryNames.push_back(std::move(entry.first));
+          }
+          return folly::Try<std::vector<PathComponent>>{std::move(entryNames)};
+
         } else if constexpr (std::is_same_v<T, TreePtr>) {
           std::vector<PathComponent> entries;
           entries.reserve(arg->size());
           for (auto& entry : *arg) {
             entries.push_back(entry.first);
           }
-          return entries;
+          return folly::Try<std::vector<PathComponent>>{std::move(entries)};
         } else if constexpr (
             std::is_same_v<T, UnmaterializedUnloadedBlobDirEntry> ||
             std::is_same_v<T, TreeEntry>) {
           // These represent files in InodeOrTreeOrEntry, and can't be descended
-          return makeImmediateFuture<std::vector<PathComponent>>(
+          return folly::Try<std::vector<PathComponent>>(
               PathError(ENOTDIR, path, "variant is of unhandled type"));
         } else {
           static_assert(always_false_v<T>, "non-exhaustive visitor!");

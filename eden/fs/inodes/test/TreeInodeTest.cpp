@@ -521,18 +521,20 @@ TEST(TreeInode, getOrFindChildren) {
   TestMount mount{builder};
   auto somedir = mount.getTreeInode("somedir"_relpath);
 
-  auto result = somedir->getAllEntryNames();
+  auto result =
+      somedir->getChildren(ObjectFetchContext::getNullContext(), false);
 
   EXPECT_EQ(1, result.size());
-  EXPECT_THAT(result, testing::Contains("foo.txt"_pc));
+  EXPECT_THAT(result, testing::Contains(testing::Key("foo.txt"_pc)));
 
   somedir->mknod("newfile.txt"_pc, S_IFREG | 0740, 0, InvalidationRequired::No);
 
-  auto result2 = somedir->getAllEntryNames();
+  auto result2 =
+      somedir->getChildren(ObjectFetchContext::getNullContext(), false);
 
   EXPECT_EQ(2, result2.size());
-  EXPECT_THAT(result2, testing::Contains("foo.txt"_pc));
-  EXPECT_THAT(result2, testing::Contains("newfile.txt"_pc));
+  EXPECT_THAT(result2, testing::Contains(testing::Key("foo.txt"_pc)));
+  EXPECT_THAT(result2, testing::Contains(testing::Key("newfile.txt"_pc)));
 
   somedir
       ->unlink(
@@ -541,11 +543,13 @@ TEST(TreeInode, getOrFindChildren) {
           ObjectFetchContext::getNullContext())
       .get();
 
-  auto result3 = somedir->getAllEntryNames();
+  auto result3 =
+      somedir->getChildren(ObjectFetchContext::getNullContext(), false);
 
   EXPECT_EQ(1, result3.size());
-  EXPECT_THAT(result3, testing::Not(testing::Contains("foo.txt"_pc)));
-  EXPECT_THAT(result3, testing::Contains("newfile.txt"_pc));
+  EXPECT_THAT(
+      result3, testing::Not(testing::Contains(testing::Key("foo.txt"_pc))));
+  EXPECT_THAT(result3, testing::Contains(testing::Key("newfile.txt"_pc)));
 }
 
 #endif

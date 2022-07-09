@@ -1821,7 +1821,7 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
                          RelativePathPiece{path}, fetchContext);
                      futures.emplace_back(
                          std::move(inodeOr)
-                             .thenValue([path = std::move(path)](
+                             .thenValue([path = std::move(path), &fetchContext](
                                             InodeOrTreeOrEntry tree) mutable {
                                if (!tree.isDirectory()) {
                                  return ImmediateFuture<
@@ -1832,8 +1832,10 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
                                          "{}: path must be a directory",
                                          path)));
                                }
-                               return tree.getAllEntryNames(
-                                   RelativePathPiece{path});
+                               return ImmediateFuture<
+                                   std::vector<PathComponent>>{
+                                   tree.getAllEntryNames(
+                                       RelativePathPiece{path}, fetchContext)};
                              })
                              .thenTry([](folly::Try<std::vector<PathComponent>>
                                              entries) {

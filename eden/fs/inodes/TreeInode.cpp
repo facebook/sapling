@@ -343,15 +343,30 @@ ImmediateFuture<InodeOrTreeOrEntry> TreeInode::getOrFindChild(
       .ensure([b = std::move(block)]() mutable { b.close(); });
 }
 
-std::vector<PathComponent> TreeInode::getAllEntryNames() {
-  std::vector<PathComponent> entries;
+std::vector<std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>
+TreeInode::getChildren(ObjectFetchContext& context, bool loadInodes) {
+  // We could optimize this to take the rlock first and try to get all the
+  // InodeOrTreeOrEntry with out loading inodes. This would allow for higher
+  // concurrency. However, this will significantly increase code
+  // complexity and can make non concurrent requests more expensive. We should
+  //  perf in production before making this change: T125563920
 
-  auto contents = contents_.rlock();
-  entries.reserve(contents->entries.size());
-  for (auto& entry : contents->entries) {
-    entries.push_back(entry.first);
+  auto contents = contents_.wlock();
+  std::vector<std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>
+      result;
+  result.reserve(contents->entries.size());
+  for (const auto& entry : contents->entries) {
+    auto inodeOrTreeOrEntry =
+        rlockGetOrFindChild(*contents, entry.first, context, loadInodes);
+    if (inodeOrTreeOrEntry) {
+      result.push_back(
+          std::make_pair(entry.first, std::move(inodeOrTreeOrEntry.value())));
+    } else {
+      result.push_back(std::make_pair(
+          entry.first, wlockGetOrFindChild(contents, entry.first, context)));
+    }
   }
-  return entries;
+  return result;
 }
 
 ImmediateFuture<InodePtr> TreeInode::getOrLoadChild(

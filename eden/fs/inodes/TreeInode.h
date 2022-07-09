@@ -141,10 +141,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       bool loadInodes);
 
   /**
-   * For now this method returns the names for all the children of this
-   * directory. And is eventually intended to return InodeOrTreeOrEntry
-   * for each of them, like getOrFindChild but for all the children of a
-   * directory.
+   * Retrieves InodeOrTreeOrEntry for each of entry in this Tree, like
+   * getOrFindChild, but for all the children of a directory.
    *
    * Note that this is separated out from the readdir logic below. There are
    * a few reasons for this. First. this method will not return information
@@ -153,8 +151,14 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * the entire directory can be listed. The readdir logic is complicated by
    * these two requirements, so we choose to use a much simpler implementation
    * here.
+   *
+   * Implements getOrLoadChild if loadInodes is true. If loadInodes is false and
+   * the inode load is already-in-progress, this may NOT return the loading
+   * inode. Otherwise, the returned InodeOrTreeOrEntry may contain a ObjectStore
+   * Tree or a DirEntry/TreeEntry representing the entry.
    */
-  std::vector<PathComponent> getAllEntryNames();
+  std::vector<std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>
+  getChildren(ObjectFetchContext& context, bool loadInodes);
 
   /**
    * Get the inode object for a child of this directory.

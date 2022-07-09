@@ -132,8 +132,9 @@ class InodeOrTreeOrEntry {
       ObjectStore* objectStore,
       ObjectFetchContext& fetchContext) const;
 
-  ImmediateFuture<std::vector<PathComponent>> getAllEntryNames(
-      RelativePathPiece path);
+  folly::Try<std::vector<PathComponent>> getAllEntryNames(
+      RelativePathPiece path,
+      ObjectFetchContext& context);
 
  private:
   /**
