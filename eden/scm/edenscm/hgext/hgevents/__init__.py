@@ -61,11 +61,7 @@ def reposetup(ui, repo):
 
     # Ensure there is a Watchman client associated with the repo that
     # state_update() can use later.
-    try:
-        watchmanclient.createclientforrepo(repo)
-    except Exception as ex:
-        ui.log("hgevents", "Watchman exception: %s\n", ex)
-        return
+    watchmanclient.createclientforrepo(repo)
 
     class hgeventsrepo(repo.__class__):
         def wlocknostateupdate(self, *args, **kwargs):
