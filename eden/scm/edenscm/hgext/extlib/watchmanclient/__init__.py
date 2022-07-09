@@ -102,7 +102,12 @@ class client(object):
         self._resolved_root = getcanonicalpath(self._root)
         self._ui = repo.ui
         self._firsttime = True
-        self._approx_total_file_count = len(repo.dirstate._map)
+        try:
+            self._approx_total_file_count = len(repo.dirstate._map)
+        except Exception:
+            # EdenFS-based dirstates don't include all the files. They also
+            # don't crawl the repo, so this value isn't important anymore.
+            self._approx_total_file_count = 0
 
     def settimeout(self, timeout):
         self._timeout = timeout
