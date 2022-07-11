@@ -17,6 +17,7 @@ tempfile = { git = "https://github.com/Stebalien/tempfile.git", rev = "66aa57f7d
 terminfo = { git = "https://github.com/rust-terminfo/terminfo", rev = "9b4e1c6aae79644c9da7a2e312e3c10ee4759930" }
 toml = { git = "https://github.com/fbsource/toml", branch = "dotted-table-0.5.8" }
 windows-sys = { git = "https://github.com/fanzeyi/windows-rs", rev = "8775afca5d2017da427d34b291ae4f85f5820740" }
+windows-sys028 = { package = "windows-sys", git = "https://github.com/wilfred/windows-rs", rev = "eacf60132fc798a8e59174a7f25471bad541a042" }
 
 [workspace]
 members = [
