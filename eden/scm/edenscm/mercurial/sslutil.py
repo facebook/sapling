@@ -296,7 +296,7 @@ def _hostsettings(ui, hostname) -> Dict[str, Any]:
     return s
 
 
-def protocolsettings(protocol) -> Tuple[ssl._SSLMethod, int, str]:
+def protocolsettings(protocol: str) -> Tuple[ssl._SSLMethod, int, str]:
     """Resolve the protocol for a config value.
 
     Returns a 3-tuple of (protocol, options, ui value) where the first
@@ -685,7 +685,7 @@ def _dnsnamematch(dn, hostname: str, maxwildcards: int = 1):
     return pat.match(hostname) is not None
 
 
-def _verifycert(cert, hostname):
+def _verifycert(cert, hostname: str):
     """Verify that cert (in socket.getpeercert() format) matches hostname.
     CRLs is not handled.
 
