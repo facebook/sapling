@@ -169,6 +169,29 @@ ImmediateFuture<TreeEntryType> InodeOrTreeOrEntry::getTreeEntryType(
       variant_);
 }
 
+ImmediateFuture<BlobMetadata> InodeOrTreeOrEntry::getBlobMetadata(
+    RelativePathPiece path,
+    ObjectStore* objectStore,
+    ObjectFetchContext& fetchContext) const {
+  return std::visit(
+      [path, objectStore, &fetchContext](
+          auto&& arg) mutable -> ImmediateFuture<BlobMetadata> {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, InodePtr>) {
+          return arg.asFilePtr()->getBlobMetadata(fetchContext);
+        } else if constexpr (
+            std::is_same_v<T, UnmaterializedUnloadedBlobDirEntry> ||
+            std::is_same_v<T, TreeEntry>) {
+          return objectStore->getBlobMetadata(arg.getHash(), fetchContext);
+        } else if constexpr (std::is_same_v<T, TreePtr>) {
+          return makeImmediateFuture<BlobMetadata>(PathError(EISDIR, path));
+        } else {
+          static_assert(always_false_v<T>, "non-exhaustive visitor!");
+        }
+      },
+      variant_);
+}
+
 ImmediateFuture<EntryAttributes> InodeOrTreeOrEntry::getEntryAttributes(
     RelativePathPiece path,
     ObjectStore* objectStore,
@@ -196,37 +219,15 @@ ImmediateFuture<EntryAttributes> InodeOrTreeOrEntry::getEntryAttributes(
   return getTreeEntryType(path, fetchContext)
       .thenValue(
           [this, path, objectStore, &fetchContext](
-              auto type) -> ImmediateFuture<EntryAttributes> {
-            // This is now guaranteed to be a dtype_t::Regular file. This means
-            // there's no need for a Tree case, as Trees are always directories.
-            // It's included to check that the visitor here is exhaustive.
-            return std::visit(
-                [type, path, objectStore, &fetchContext](
-                    auto&& arg) -> ImmediateFuture<EntryAttributes> {
-                  using T = std::decay_t<decltype(arg)>;
-                  if constexpr (std::is_same_v<T, InodePtr>) {
-                    return arg.asFilePtr()
-                        ->getBlobMetadata(fetchContext)
-                        .thenValue([type](auto&& blobMetadata) {
-                          return EntryAttributes{blobMetadata, type};
-                        });
-                  } else if constexpr (
-                      std::is_same_v<T, UnmaterializedUnloadedBlobDirEntry> ||
-                      std::is_same_v<T, TreeEntry>) {
-                    return objectStore
-                        ->getBlobMetadata(arg.getHash(), fetchContext)
-                        .thenValue([type](auto&& blobMetadata) {
-                          return EntryAttributes{blobMetadata, type};
-                        });
-                    ;
-                  } else if constexpr (std::is_same_v<T, TreePtr>) {
-                    return makeImmediateFuture<EntryAttributes>(
-                        PathError(EISDIR, path));
-                  } else {
-                    static_assert(always_false_v<T>, "non-exhaustive visitor!");
-                  }
-                },
-                variant_);
+              auto type) mutable -> ImmediateFuture<EntryAttributes> {
+            // This is now guaranteed to be a dtype_t::Regular file. This
+            // means there's no need for a Tree case, as Trees are always
+            // directories. It's included to check that the visitor here is
+            // exhaustive.
+            return this->getBlobMetadata(path, objectStore, fetchContext)
+                .thenValue([type](auto&& blobMetadata) mutable {
+                  return EntryAttributes{blobMetadata, type};
+                });
           });
 }
 

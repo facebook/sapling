@@ -174,6 +174,14 @@ class InodeOrTreeOrEntry {
       ObjectFetchContext& fetchContext);
 
   /**
+   * Helper function for getChildrenAttributes
+   */
+  ImmediateFuture<BlobMetadata> getBlobMetadata(
+      RelativePathPiece path,
+      ObjectStore* objectStore,
+      ObjectFetchContext& fetchContext) const;
+
+  /**
    * The main object this encapsulates
    */
   detail::VariantInodeOrTreeOrEntry variant_;
