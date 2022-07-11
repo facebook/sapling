@@ -1821,45 +1821,55 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
                          RelativePathPiece{path}, fetchContext);
                      futures.emplace_back(
                          std::move(inodeOr)
-                             .thenValue([path = std::move(path), &fetchContext](
+                             .thenValue([path = std::move(path),
+                                         objectStore =
+                                             edenMount->getObjectStore(),
+                                         &fetchContext](
                                             InodeOrTreeOrEntry tree) mutable {
                                if (!tree.isDirectory()) {
-                                 return ImmediateFuture<
-                                     std::vector<PathComponent>>(newEdenError(
-                                     EINVAL,
-                                     EdenErrorType::ARGUMENT_ERROR,
-                                     fmt::format(
-                                         "{}: path must be a directory",
-                                         path)));
+                                 return ImmediateFuture<std::vector<std::pair<
+                                     PathComponent,
+                                     ImmediateFuture<InodeOrTreeOrEntry>>>>(
+                                     newEdenError(
+                                         EINVAL,
+                                         EdenErrorType::ARGUMENT_ERROR,
+                                         fmt::format(
+                                             "{}: path must be a directory",
+                                             path)));
                                }
-                               return ImmediateFuture<
-                                   std::vector<PathComponent>>{
-                                   tree.getAllEntryNames(
-                                       RelativePathPiece{path}, fetchContext)};
+                               return ImmediateFuture{tree.getChildren(
+                                   RelativePathPiece{path},
+                                   objectStore,
+                                   fetchContext)};
                              })
-                             .thenTry([](folly::Try<std::vector<PathComponent>>
-                                             entries) {
-                               DirListAttributeDataOrError result{};
-                               if (entries.hasException()) {
-                                 result.error_ref() = newEdenError(
-                                     *entries.exception().get_exception());
-                                 return result;
-                               }
-                               std::map<std::string, FileAttributeDataOrErrorV2>
-                                   thriftEntryResult{};
-                               for (auto& entry : entries.value()) {
-                                 FileAttributeDataOrErrorV2 emptyData{};
-                                 emptyData.fileAttributeData_ref() =
-                                     FileAttributeDataV2{};
-                                 thriftEntryResult.emplace(
-                                     entry.stringPiece().str(),
-                                     std::move(emptyData));
-                               }
+                             .thenTry(
+                                 [](folly::Try<std::vector<std::pair<
+                                        PathComponent,
+                                        ImmediateFuture<InodeOrTreeOrEntry>>>>
+                                        entries) {
+                                   DirListAttributeDataOrError result{};
+                                   if (entries.hasException()) {
+                                     result.error_ref() = newEdenError(
+                                         *entries.exception().get_exception());
+                                     return result;
+                                   }
+                                   std::map<
+                                       std::string,
+                                       FileAttributeDataOrErrorV2>
+                                       thriftEntryResult{};
+                                   for (auto& entry : entries.value()) {
+                                     FileAttributeDataOrErrorV2 emptyData{};
+                                     emptyData.fileAttributeData_ref() =
+                                         FileAttributeDataV2{};
+                                     thriftEntryResult.emplace(
+                                         entry.first.stringPiece().str(),
+                                         std::move(emptyData));
+                                   }
 
-                               result.dirListAttributeData_ref() =
-                                   std::move(thriftEntryResult);
-                               return result;
-                             })
+                                   result.dirListAttributeData_ref() =
+                                       std::move(thriftEntryResult);
+                                   return result;
+                                 })
 
                      );
                    }

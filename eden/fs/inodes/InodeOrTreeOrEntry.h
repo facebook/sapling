@@ -132,9 +132,19 @@ class InodeOrTreeOrEntry {
       ObjectStore* objectStore,
       ObjectFetchContext& fetchContext) const;
 
-  folly::Try<std::vector<PathComponent>> getAllEntryNames(
+  /**
+   * Retrieves InodeOrTreeOrEntry for each of the children of this
+   * directory.
+   *
+   * fetchContext is used in the returned ImmediateFutures, it must have a
+   * lifetime longer than these futures.
+   */
+  folly::Try<std::vector<
+      std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>>
+  getChildren(
       RelativePathPiece path,
-      ObjectFetchContext& context);
+      ObjectStore* objectStore,
+      ObjectFetchContext& fetchContext);
 
  private:
   /**

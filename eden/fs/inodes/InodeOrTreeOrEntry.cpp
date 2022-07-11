@@ -313,38 +313,72 @@ ImmediateFuture<struct stat> InodeOrTreeOrEntry::stat(
       variant_);
 }
 
-folly::Try<std::vector<PathComponent>> InodeOrTreeOrEntry::getAllEntryNames(
+namespace {
+/**
+ * Helper function for getChildren when the current node is a Tree.
+ */
+std::vector<std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>
+getChildrenHelper(
+    const TreePtr& tree,
+    ObjectStore* objectStore,
+    ObjectFetchContext& fetchContext) {
+  std::vector<std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>
+      result{};
+  result.reserve(tree->size());
+
+  for (auto& child : *tree) {
+    const auto* treeEntry = &child.second;
+    if (treeEntry->isTree()) {
+      result.push_back(std::make_pair(
+          child.first,
+          objectStore->getTree(treeEntry->getHash(), fetchContext)
+              .thenValue([mode = modeFromTreeEntryType(treeEntry->getType())](
+                             TreePtr tree) {
+                return InodeOrTreeOrEntry{std::move(tree), mode};
+              })));
+    } else {
+      // This is a file, return the TreeEntry for it
+      result.push_back(std::make_pair(
+          child.first, ImmediateFuture{InodeOrTreeOrEntry{*treeEntry}}));
+    }
+  }
+
+  return result;
+}
+} // namespace
+
+folly::Try<
+    std::vector<std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>>
+InodeOrTreeOrEntry::getChildren(
     RelativePathPiece path,
-    ObjectFetchContext& context) {
+    ObjectStore* objectStore,
+    ObjectFetchContext& fetchContext) {
   if (!isDirectory()) {
-    return folly::Try<std::vector<PathComponent>>(PathError(ENOTDIR, path));
+    return folly::Try<std::vector<
+        std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>>(
+        PathError(ENOTDIR, path));
   }
   return std::visit(
-      [path, &context](auto&& arg) -> folly::Try<std::vector<PathComponent>> {
+      [&](auto&& arg)
+          -> folly::Try<std::vector<
+              std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>> {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, InodePtr>) {
-          auto children = arg.asTreePtr()->getChildren(context, false);
-
-          std::vector<PathComponent> entryNames{};
-          entryNames.reserve(children.size());
-          for (auto& entry : children) {
-            entryNames.push_back(std::move(entry.first));
-          }
-          return folly::Try<std::vector<PathComponent>>{std::move(entryNames)};
-
+          return folly::Try<std::vector<
+              std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>>{
+              arg.asTreePtr()->getChildren(fetchContext, false)};
         } else if constexpr (std::is_same_v<T, TreePtr>) {
-          std::vector<PathComponent> entries;
-          entries.reserve(arg->size());
-          for (auto& entry : *arg) {
-            entries.push_back(entry.first);
-          }
-          return folly::Try<std::vector<PathComponent>>{std::move(entries)};
+          return folly::Try<std::vector<
+              std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>>{
+              getChildrenHelper(arg, objectStore, fetchContext)};
         } else if constexpr (
             std::is_same_v<T, UnmaterializedUnloadedBlobDirEntry> ||
             std::is_same_v<T, TreeEntry>) {
-          // These represent files in InodeOrTreeOrEntry, and can't be descended
-          return folly::Try<std::vector<PathComponent>>(
-              PathError(ENOTDIR, path, "variant is of unhandled type"));
+          // These represent files in InodeOrTreeOrEntry, and can't be
+          // descended
+          return folly::Try<std::vector<
+              std::pair<PathComponent, ImmediateFuture<InodeOrTreeOrEntry>>>>{
+              PathError(ENOTDIR, path, "variant is of unhandled type")};
         } else {
           static_assert(always_false_v<T>, "non-exhaustive visitor!");
         }
