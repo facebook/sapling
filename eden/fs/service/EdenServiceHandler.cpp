@@ -1792,6 +1792,90 @@ SourceControlType entryTypeToThriftType(TreeEntryType type) {
       throw std::system_error(EINVAL, std::generic_category());
   }
 }
+
+ImmediateFuture<
+    std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
+getAllEntryAttributes(
+    const EdenMount& edenMount,
+    std::string path,
+    ObjectFetchContext& fetchContext) {
+  auto inodeOr =
+      edenMount.getInodeOrTreeOrEntry(RelativePathPiece{path}, fetchContext);
+  return std::move(inodeOr).thenValue([path = std::move(path),
+                                       objectStore = edenMount.getObjectStore(),
+                                       &fetchContext](
+                                          InodeOrTreeOrEntry tree) mutable {
+    if (!tree.isDirectory()) {
+      return ImmediateFuture<
+          std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>(
+          newEdenError(
+              EINVAL,
+              EdenErrorType::ARGUMENT_ERROR,
+              fmt::format("{}: path must be a directory", path)));
+    }
+    return ImmediateFuture{tree.getChildrenAttributes(
+        RelativePath{path}, objectStore, fetchContext)};
+  });
+}
+
+DirListAttributeDataOrError serializeEntryAttributes(
+    const folly::Try<std::vector<
+        std::pair<PathComponent, folly::Try<EntryAttributes>>>>& entries,
+    uint64_t requestedAttributes) {
+  DirListAttributeDataOrError result;
+  if (entries.hasException()) {
+    result.error_ref() = newEdenError(*entries.exception().get_exception());
+    return result;
+  }
+  std::map<std::string, FileAttributeDataOrErrorV2> thriftEntryResult;
+  for (auto& entry : entries.value()) {
+    FileAttributeDataOrErrorV2 fileResult;
+
+    if (entry.second.hasException()) {
+      fileResult.error_ref() = newEdenError(entry.second.exception());
+    } else {
+      FileAttributeDataV2 fileData;
+      if (ATTR_BITMASK(requestedAttributes, SHA1_HASH)) {
+        Sha1OrError sha1;
+        if (entry.second->sha1.hasException()) {
+          sha1.error_ref() = newEdenError(entry.second->sha1.exception());
+        } else {
+          sha1.sha1_ref() = thriftHash20(entry.second->sha1.value());
+        }
+        fileData.sha1() = std::move(sha1);
+      }
+
+      if (ATTR_BITMASK(requestedAttributes, FILE_SIZE)) {
+        SizeOrError size;
+        if (entry.second->size.hasException()) {
+          size.error_ref() = newEdenError(entry.second->size.exception());
+        } else {
+          size.size_ref() = entry.second->size.value();
+        }
+        fileData.size() = std::move(size);
+      }
+
+      if (ATTR_BITMASK(requestedAttributes, SOURCE_CONTROL_TYPE)) {
+        SourceControlTypeOrError type;
+        if (entry.second->type.hasException()) {
+          type.error_ref() = newEdenError(entry.second->type.exception());
+        } else {
+          type.sourceControlType_ref() =
+              entryTypeToThriftType(entry.second->type.value());
+        }
+        fileData.sourceControlType() = std::move(type);
+      }
+      fileResult.fileAttributeData_ref() = fileData;
+    }
+
+    thriftEntryResult.emplace(
+        entry.first.stringPiece().str(), std::move(fileResult));
+  }
+
+  result.dirListAttributeData_ref() = std::move(thriftEntryResult);
+  return result;
+}
+
 } // namespace
 
 folly::SemiFuture<std::unique_ptr<ReaddirResult>>
@@ -1803,86 +1887,50 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3, mountPoint, getSyncTimeout(*params->sync()), toLogArg(paths));
   auto& fetchContext = helper->getFetchContext();
-
+  auto requestedAttributes = params->get_requestedAttributes();
   return wrapImmediateFuture(
              std::move(helper),
              waitForPendingNotifications(
                  *server_->getMount(mountPath), *params->sync())
-                 .thenValue([this,
-                             paths = std::move(paths),
-                             &fetchContext,
-                             mountPath = mountPath.copy()](auto&&) mutable {
-                   std::vector<ImmediateFuture<DirListAttributeDataOrError>>
-                       futures;
-                   futures.reserve(paths.size());
-                   auto edenMount = server_->getMount(mountPath);
-                   for (auto& path : paths) {
-                     auto inodeOr = edenMount->getInodeOrTreeOrEntry(
-                         RelativePathPiece{path}, fetchContext);
-                     futures.emplace_back(
-                         std::move(inodeOr)
-                             .thenValue([path = std::move(path),
-                                         objectStore =
-                                             edenMount->getObjectStore(),
-                                         &fetchContext](
-                                            InodeOrTreeOrEntry tree) mutable {
-                               if (!tree.isDirectory()) {
-                                 return ImmediateFuture<std::vector<std::pair<
-                                     PathComponent,
-                                     ImmediateFuture<InodeOrTreeOrEntry>>>>(
-                                     newEdenError(
-                                         EINVAL,
-                                         EdenErrorType::ARGUMENT_ERROR,
-                                         fmt::format(
-                                             "{}: path must be a directory",
-                                             path)));
-                               }
-                               return ImmediateFuture{tree.getChildren(
-                                   RelativePathPiece{path},
-                                   objectStore,
-                                   fetchContext)};
-                             })
-                             .thenTry(
-                                 [](folly::Try<std::vector<std::pair<
-                                        PathComponent,
-                                        ImmediateFuture<InodeOrTreeOrEntry>>>>
-                                        entries) {
-                                   DirListAttributeDataOrError result{};
-                                   if (entries.hasException()) {
-                                     result.error_ref() = newEdenError(
-                                         *entries.exception().get_exception());
-                                     return result;
-                                   }
-                                   std::map<
-                                       std::string,
-                                       FileAttributeDataOrErrorV2>
-                                       thriftEntryResult{};
-                                   for (auto& entry : entries.value()) {
-                                     FileAttributeDataOrErrorV2 emptyData{};
-                                     emptyData.fileAttributeData_ref() =
-                                         FileAttributeDataV2{};
-                                     thriftEntryResult.emplace(
-                                         entry.first.stringPiece().str(),
-                                         std::move(emptyData));
-                                   }
-
-                                   result.dirListAttributeData_ref() =
-                                       std::move(thriftEntryResult);
-                                   return result;
+                 .thenValue(
+                     [this,
+                      requestedAttributes,
+                      paths = std::move(paths),
+                      &fetchContext,
+                      mountPath = mountPath.copy()](auto&&) mutable
+                     -> ImmediateFuture<
+                         std::vector<DirListAttributeDataOrError>> {
+                       std::vector<ImmediateFuture<DirListAttributeDataOrError>>
+                           futures;
+                       futures.reserve(paths.size());
+                       auto edenMount = server_->getMount(mountPath);
+                       for (auto& path : paths) {
+                         futures.emplace_back(
+                             getAllEntryAttributes(
+                                 *edenMount, std::move(path), fetchContext)
+                                 .thenTry([requestedAttributes](
+                                              folly::Try<std::vector<std::pair<
+                                                  PathComponent,
+                                                  folly::Try<EntryAttributes>>>>
+                                                  entries) {
+                                   return serializeEntryAttributes(
+                                       entries, requestedAttributes);
                                  })
 
-                     );
-                   }
+                         );
+                       }
 
-                   // Collect all futures into a single tuple
-                   return facebook::eden::collectAllSafe(std::move(futures))
-                       .thenValue([](std::vector<DirListAttributeDataOrError>&&
-                                         allRes) {
-                         auto res = std::make_unique<ReaddirResult>();
-                         res->dirLists() = std::move(allRes);
-                         return res;
-                       });
-                 }))
+                       // Collect all futures into a single tuple
+                       return facebook::eden::collectAllSafe(
+                           std::move(futures));
+                     })
+                 .thenValue(
+                     [](std::vector<DirListAttributeDataOrError>&& allRes)
+                         -> std::unique_ptr<ReaddirResult> {
+                       auto res = std::make_unique<ReaddirResult>();
+                       res->dirLists() = std::move(allRes);
+                       return res;
+                     }))
       .semi();
 }
 

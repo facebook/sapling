@@ -11,7 +11,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Pattern, TypeVar, Union
+from typing import List, Pattern, Tuple, TypeVar, Union
 
 from facebook.eden.ttypes import (
     DirListAttributeDataOrError,
@@ -27,7 +27,11 @@ from facebook.eden.ttypes import (
     ReaddirParams,
     ReaddirResult,
     ScmFileStatus,
+    Sha1OrError,
     SHA1Result,
+    SizeOrError,
+    SourceControlType,
+    SourceControlTypeOrError,
     SyncBehavior,
     TimeSpec,
 )
@@ -35,6 +39,13 @@ from facebook.eden.ttypes import (
 from .lib import testcase
 
 EdenThriftResult = TypeVar("EdenThriftResult", FileAttributeDataOrError, SHA1Result)
+
+# Change this if more attributes are added
+ALL_ATTRIBUTES = (
+    FileAttributes.FILE_SIZE
+    | FileAttributes.SHA1_HASH
+    | FileAttributes.SOURCE_CONTROL_TYPE
+)
 
 
 @testcase.eden_repo_test
@@ -199,15 +210,8 @@ class ThriftTest(testcase.EdenRepoTest):
             )
             return client.getAttributesFromFiles(thrift_params)
 
-    # Change this if more attributes are added
-    ALL_ATTRIBUTES = (
-        FileAttributes.FILE_SIZE
-        | FileAttributes.SHA1_HASH
-        | FileAttributes.SOURCE_CONTROL_TYPE
-    )
-
     def get_all_attributes(self, files: List[bytes]) -> GetAttributesFromFilesResult:
-        return self.get_attributes(files, self.ALL_ATTRIBUTES)
+        return self.get_attributes(files, ALL_ATTRIBUTES)
 
     def test_get_attributes(self) -> None:
         # expected results for file named "hello"
@@ -477,6 +481,33 @@ class ThriftTest(testcase.EdenRepoTest):
             },
         )
 
+    def constructReaddirResult(
+        self,
+        expected_attributes: Tuple[bytes, int, SourceControlType],
+        req_attr: int = ALL_ATTRIBUTES,
+    ) -> FileAttributeDataOrErrorV2:
+        sha1 = None
+        if req_attr & FileAttributes.SHA1_HASH:
+            sha1 = Sha1OrError(sha1=expected_attributes[0])
+
+        size = None
+        if req_attr & FileAttributes.FILE_SIZE:
+            size = SizeOrError(size=expected_attributes[1])
+
+        sourceControlType = None
+        if req_attr & FileAttributes.SOURCE_CONTROL_TYPE:
+            sourceControlType = SourceControlTypeOrError(
+                sourceControlType=expected_attributes[2]
+            )
+
+        return FileAttributeDataOrErrorV2(
+            fileAttributeData=FileAttributeDataV2(
+                sha1=sha1,
+                size=size,
+                sourceControlType=sourceControlType,
+            )
+        )
+
     def test_readdir(self) -> None:
         # each of these tests should arguably be their own test case,
         # but integration tests are expensive, so we will do it all in one.
@@ -485,15 +516,15 @@ class ThriftTest(testcase.EdenRepoTest):
         with self.get_thrift_client_legacy() as client:
             adir_result = DirListAttributeDataOrError(
                 dirListAttributeData={
-                    b"file": FileAttributeDataOrErrorV2(
-                        fileAttributeData=FileAttributeDataV2()
+                    b"file": self.constructReaddirResult(
+                        self.get_expected_file_attributes("adir/file")
                     )
                 }
             )
             bdir_result = DirListAttributeDataOrError(
                 dirListAttributeData={
-                    b"file": FileAttributeDataOrErrorV2(
-                        fileAttributeData=FileAttributeDataV2()
+                    b"file": self.constructReaddirResult(
+                        self.get_expected_file_attributes("bdir/file")
                     )
                 }
             )
@@ -503,6 +534,7 @@ class ThriftTest(testcase.EdenRepoTest):
                 ReaddirParams(
                     self.mount_path_bytes,
                     [b"adir", b"bdir"],
+                    requestedAttributes=ALL_ATTRIBUTES,
                     sync=SyncBehavior(),
                 )
             )
@@ -586,3 +618,155 @@ class ThriftTest(testcase.EdenRepoTest):
             self.assertIn(b"test_fetch1", actual.dirLists[0].get_dirListAttributeData())
             self.assertIn(b"hello", actual.dirLists[0].get_dirListAttributeData())
             self.assertIn(b"cdir", actual.dirLists[0].get_dirListAttributeData())
+
+    def readdir_single_attr_only(self, req_attr: int) -> None:
+        with self.get_thrift_client_legacy() as client:
+
+            adir_result = DirListAttributeDataOrError(
+                dirListAttributeData={
+                    b"file": self.constructReaddirResult(
+                        self.get_expected_file_attributes("adir/file"),
+                        req_attr=req_attr,
+                    )
+                }
+            )
+            bdir_result = DirListAttributeDataOrError(
+                dirListAttributeData={
+                    b"file": self.constructReaddirResult(
+                        self.get_expected_file_attributes("bdir/file"),
+                        req_attr=req_attr,
+                    )
+                }
+            )
+
+            expected = ReaddirResult([adir_result, bdir_result])
+            actual_result = client.readdir(
+                ReaddirParams(
+                    self.mount_path_bytes,
+                    [b"adir", b"bdir"],
+                    requestedAttributes=req_attr,
+                    sync=SyncBehavior(),
+                )
+            )
+            print(expected)
+            print(actual_result)
+
+            self.assertEqual(
+                expected,
+                actual_result,
+            )
+
+    def test_readdir_single_attr_only(self) -> None:
+        self.readdir_single_attr_only(FileAttributes.SHA1_HASH)
+
+        self.readdir_single_attr_only(FileAttributes.FILE_SIZE)
+
+        self.readdir_single_attr_only(FileAttributes.SOURCE_CONTROL_TYPE)
+
+    def readdir_no_size_or_sha1(
+        self,
+        parent_name: bytes,
+        entry_name: bytes,
+        error_message: str,
+        error_code: int,
+        source_control_type: SourceControlType,
+    ) -> None:
+        with self.get_thrift_client_legacy() as client:
+            expected = FileAttributeDataOrErrorV2(
+                fileAttributeData=FileAttributeDataV2(
+                    sha1=Sha1OrError(
+                        error=EdenError(
+                            message=error_message,
+                            errorCode=error_code,
+                            errorType=EdenErrorType.POSIX_ERROR,
+                        )
+                    ),
+                    size=SizeOrError(
+                        error=EdenError(
+                            message=error_message,
+                            errorCode=error_code,
+                            errorType=EdenErrorType.POSIX_ERROR,
+                        )
+                    ),
+                    sourceControlType=SourceControlTypeOrError(
+                        sourceControlType=source_control_type
+                    ),
+                )
+            )
+
+            actual = client.readdir(
+                ReaddirParams(
+                    self.mount_path_bytes,
+                    [parent_name],
+                    requestedAttributes=ALL_ATTRIBUTES,
+                    sync=SyncBehavior(),
+                )
+            )
+            print(expected)
+            print(actual)
+
+            self.assertEqual(
+                expected,
+                actual.dirLists[0].get_dirListAttributeData()[entry_name],
+            )
+
+            expected = FileAttributeDataOrErrorV2(
+                fileAttributeData=FileAttributeDataV2(
+                    sha1=None,
+                    size=None,
+                    sourceControlType=SourceControlTypeOrError(
+                        sourceControlType=source_control_type,
+                    ),
+                )
+            )
+
+            actual = client.readdir(
+                ReaddirParams(
+                    self.mount_path_bytes,
+                    [parent_name],
+                    requestedAttributes=FileAttributes.SOURCE_CONTROL_TYPE,
+                    sync=SyncBehavior(),
+                )
+            )
+            print(expected)
+            print(actual)
+            self.assertEqual(
+                expected,
+                actual.dirLists[0].get_dirListAttributeData()[entry_name],
+            )
+
+    def test_readdir_directory_and_symlink(self) -> None:
+        self.readdir_no_size_or_sha1(
+            parent_name=b"cdir",
+            entry_name=b"subdir",
+            error_message="cdir/subdir: Is a directory",
+            error_code=21,
+            source_control_type=SourceControlType.TREE,
+        )
+        if sys.platform != "win32":
+            self.readdir_no_size_or_sha1(
+                parent_name=b"",
+                entry_name=b"slink",
+                error_message="slink: file is a symlink: Invalid argument",
+                error_code=22,
+                source_control_type=SourceControlType.SYMLINK,
+            )
+        else:
+            with self.get_thrift_client_legacy() as client:
+                actual = client.readdir(
+                    ReaddirParams(
+                        self.mount_path_bytes,
+                        [b""],
+                        requestedAttributes=ALL_ATTRIBUTES,
+                        sync=SyncBehavior(),
+                    )
+                )
+
+                expected = self.constructReaddirResult(
+                    self.get_expected_file_attributes("slink")
+                )
+
+                self.assertEqual(
+                    expected,
+                    actual.dirLists[0].get_dirListAttributeData()[b"slink"],
+                )
