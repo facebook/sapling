@@ -1748,6 +1748,7 @@ pub fn create_synced_commit_mapping_entry(
     }
 }
 
+#[derive(Clone)]
 pub struct Syncers<M: SyncedCommitMapping + Clone + 'static> {
     pub large_to_small: CommitSyncer<M>,
     pub small_to_large: CommitSyncer<M>,
