@@ -369,6 +369,12 @@ class ActivateProfileCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser = add_common_args(parser)
         parser.add_argument("profile_name", help="Profile to activate.")
+        parser.add_argument(
+            "--force-fetch",
+            help="Fetch the profile even if the profile has already been activated",
+            default=False,
+            action="store_true",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         checkout = args.checkout
@@ -384,7 +390,7 @@ class ActivateProfileCmd(Subcmd):
             telemetry_sample.add_bool("skip_prefetch", args.skip_prefetch)
 
             activation_result = checkout.activate_profile(
-                args.profile_name, telemetry_sample
+                args.profile_name, telemetry_sample, args.force_fetch
             )
 
             # error in activation, no point in continuing, so exit early

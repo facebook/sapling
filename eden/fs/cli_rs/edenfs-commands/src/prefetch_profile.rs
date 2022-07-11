@@ -89,6 +89,11 @@ pub enum PrefetchCmd {
         common: CommonOptions,
         #[clap(help = "Profile to activate.")]
         profile_name: String,
+        #[clap(
+            long,
+            help = "Fetch the profile even if the profile has already been activated"
+        )]
+        force_fetch: bool,
     },
     Deactivate {
         #[clap(flatten)]
@@ -158,6 +163,7 @@ impl PrefetchCmd {
         instance: EdenFsInstance,
         options: &CommonOptions,
         profile_name: &str,
+        force_fetch: &bool,
     ) -> Result<ExitCode> {
         let checkout_path = match &options.checkout {
             Some(p) => p.clone(),
@@ -178,7 +184,7 @@ impl PrefetchCmd {
         let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
         match checkout_config {
             Ok(mut checkout_config) => {
-                checkout_config.activate_profile(profile_name, config_dir)?;
+                checkout_config.activate_profile(profile_name, config_dir, force_fetch)?;
                 #[cfg(fbcode_build)]
                 send(sample.builder);
             }
@@ -272,7 +278,11 @@ impl Subcommand for PrefetchCmd {
             Self::Activate {
                 common,
                 profile_name,
-            } => self.activate(instance, common, profile_name).await,
+                force_fetch,
+            } => {
+                self.activate(instance, common, profile_name, force_fetch)
+                    .await
+            }
             Self::Deactivate {
                 common,
                 profile_name,

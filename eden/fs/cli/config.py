@@ -1387,7 +1387,10 @@ class EdenCheckout:
         return self.instance.get_hg_repo(repo_path)
 
     def activate_profile(
-        self, profile: str, telemetry_sample: telemetry.TelemetrySample
+        self,
+        profile: str,
+        telemetry_sample: telemetry.TelemetrySample,
+        force_fetch: bool,
     ) -> int:
         """Add a profile to the config (read the config file and write it back
         with profile added). Returns 0 on sucess and anything else on failure.
@@ -1397,6 +1400,10 @@ class EdenCheckout:
         old_config = self.get_config()
         old_active_profiles = old_config.active_prefetch_profiles
         if profile in old_active_profiles:
+            # The profile is already activated so we don't need to update the profile list,
+            # but we want to return zero so we continue with the fetch
+            if force_fetch:
+                return 0
             print(f"Profile {profile} already activated.")
             telemetry_sample.fail(f"Profile {profile} already activated.")
             return 1

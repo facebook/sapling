@@ -266,9 +266,19 @@ impl CheckoutConfig {
 
     /// Add a profile to the config (read the config file and write it back
     /// with profile added). Returns 0 on sucess and EdenFsError on failure
-    pub fn activate_profile(&mut self, profile: &str, config_dir: PathBuf) -> Result<()> {
+    pub fn activate_profile(
+        &mut self,
+        profile: &str,
+        config_dir: PathBuf,
+        force_fetch: &bool,
+    ) -> Result<()> {
         if let Some(profiles) = &mut self.profiles {
             if profiles.active.iter().any(|x| x == profile) {
+                // The profile is already activated so we don't need to update the profile list,
+                // but we want to return a success so we continue with the fetch
+                if *force_fetch {
+                    return Ok(());
+                }
                 return Err(EdenFsError::Other(anyhow!(
                     "{} is already an active prefetch profile",
                     profile
