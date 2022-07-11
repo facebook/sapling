@@ -299,8 +299,6 @@ function mononoke_hg_sync_with_retry {
 }
 
 function mononoke_hg_sync_with_failure_handler {
-  sqlite_name="${TESTTMP}/monsql/sqlite_dbs"
-
   GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
     "${COMMON_ARGS[@]}" \
     --retry-num 1 \
@@ -308,7 +306,6 @@ function mononoke_hg_sync_with_failure_handler {
     --mononoke-config-path "$TESTTMP"/mononoke-config \
     --verify-server-bookmark-on-failure \
     --lock-on-failure \
-    --sqlite-repo-lock-db-path "$sqlite_name" \
      ssh://user@dummy/"$1" sync-once --start-id "$2"
 }
 

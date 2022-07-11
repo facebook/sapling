@@ -74,7 +74,6 @@ use retry::RetryAttemptsCount;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::error;
 use slog::info;
-use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 
 use std::collections::HashMap;
@@ -109,7 +108,6 @@ const ARG_DARKSTORM_BACKUP_REPO_GROUP: &str = "darkstorm-backup-repo";
 const ARG_DARKSTORM_BACKUP_REPO_ID: &str = "darkstorm-backup-repo-id";
 const ARG_DARKSTORM_BACKUP_REPO_NAME: &str = "darkstorm-backup-repo-name";
 const ARG_BYPASS_READONLY: &str = "bypass-readonly";
-const ARG_SQLITE_REPO_LOCK_DB: &str = "sqlite-repo-lock-db-path";
 const MODE_SYNC_ONCE: &str = "sync-once";
 const MODE_SYNC_LOOP: &str = "sync-loop";
 const JOB_TYPE: &str = "job-type";
@@ -205,20 +203,6 @@ impl HgSyncProcess {
                 .takes_value(false)
                 .required(false)
                 .help("if present, check after a failure whether a server bookmark is already in the expected location")
-        )
-        .arg(
-            Arg::with_name("repo-lock-sqlite")
-                .long("repo-lock-sqlite")
-                .takes_value(false)
-                .required(false)
-                .help("Enable sqlite for repo_lock access, path is in repo-lock-db-address"),
-        )
-        .arg(
-            Arg::with_name(ARG_SQLITE_REPO_LOCK_DB)
-                .long(ARG_SQLITE_REPO_LOCK_DB)
-                .takes_value(true)
-                .required(false)
-                .help("Path to a sqlite DB for the repo_lock"),
         )
         .arg(
             Arg::with_name(HGSQL_GLOBALREVS_USE_SQLITE)
@@ -1131,16 +1115,12 @@ async fn run<'a>(
         None => matches.is_present("lock-on-failure"),
     };
 
-    let sql_repo_lock = if let Some(sqlite_path) = matches.value_of(ARG_SQLITE_REPO_LOCK_DB) {
-        SqlRepoLock::with_sqlite_path(sqlite_path, readonly_storage.0)?
-    } else {
-        SqlRepoLock::with_metadata_database_config(
-            ctx.fb,
-            &repo_config.storage_config.metadata,
-            mysql_options,
-            readonly_storage.0,
-        )?
-    };
+    let sql_repo_lock = SqlRepoLock::with_metadata_database_config(
+        ctx.fb,
+        &repo_config.storage_config.metadata,
+        mysql_options,
+        readonly_storage.0,
+    )?;
 
     let repo_lock: Arc<dyn RepoLock> = Arc::new(MutableRepoLock::new(sql_repo_lock, repo_id));
 
