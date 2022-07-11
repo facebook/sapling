@@ -115,7 +115,6 @@ fn parse_with_repo_definition(
         backup_source_repo_name,
         repo_name,
         repo_config,
-        write_lock_db_address,
         hipster_acl,
         enabled,
         readonly,
@@ -324,7 +323,6 @@ fn parse_with_repo_definition(
         readonly,
         redaction,
         skiplist_index_blobstore_key,
-        write_lock_db_address,
         infinitepush,
         list_keys_patterns_max,
         filestore,
@@ -861,7 +859,6 @@ mod test {
         "#;
         let fbsource_repo_def = r#"
             repo_id=0
-            write_lock_db_address="write_lock_db_address"
             repo_name="fbsource"
             hipster_acl="foo/test"
             repo_config="fbsource"
@@ -1017,7 +1014,6 @@ mod test {
             RepoConfig {
                 enabled: true,
                 storage_config: main_storage_config.clone(),
-                write_lock_db_address: Some("write_lock_db_address".into()),
                 generation_cache_size: 1024 * 1024,
                 repoid: RepositoryId::new(0),
                 scuba_table_hooks: Some("scm_hooks".to_string()),
@@ -1244,7 +1240,6 @@ mod test {
                         bubble_deletion_mode: BubbleDeletionMode::MarkOnly,
                     }),
                 },
-                write_lock_db_address: None,
                 generation_cache_size: 10 * 1024 * 1024,
                 repoid: RepositoryId::new(1),
                 scuba_table_hooks: Some("scm_hooks".to_string()),

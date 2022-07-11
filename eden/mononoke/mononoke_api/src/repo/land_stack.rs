@@ -109,7 +109,6 @@ impl RepoContext {
                 &self.config().pushrebase,
                 &bookmark_attrs,
                 self.hook_manager().as_ref(),
-                self.readonly_fetcher(),
             )
             .await?;
 

@@ -88,6 +88,8 @@ use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
+use repo_lock::AlwaysUnlockedRepoLock;
+use repo_lock::ArcRepoLock;
 use repo_lock::SqlRepoLock;
 use repo_permission_checker::AlwaysAllowMockRepoPermissionChecker;
 use repo_permission_checker::ArcRepoPermissionChecker;
@@ -612,5 +614,11 @@ impl TestRepoFactory {
         Arc::new(RepoSparseProfiles {
             sql_profile_sizes: None,
         })
+    }
+
+    /// Construct unlocked repo lock.
+    pub fn repo_lock(&self) -> Result<ArcRepoLock> {
+        let repo_lock = AlwaysUnlockedRepoLock {};
+        Ok(Arc::new(repo_lock))
     }
 }

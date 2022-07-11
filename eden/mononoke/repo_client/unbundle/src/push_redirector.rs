@@ -180,7 +180,6 @@ impl PushRedirector {
             &puhsrebase_params,
             &push_params,
             self.repo.hook_manager().as_ref(),
-            self.repo.readonly_fetcher(),
             large_repo_action,
             CrossRepoPushSource::PushRedirected,
         )

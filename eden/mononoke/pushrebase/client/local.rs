@@ -23,7 +23,6 @@ use mononoke_types::BonsaiChangeset;
 use pushrebase::PushrebaseOutcome;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
-use repo_read_write_status::RepoReadWriteFetcher;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -37,7 +36,6 @@ pub struct LocalPushrebaseClient<'a, R: Repo> {
     pub bookmark_attrs: &'a BookmarkAttrs,
     pub infinitepush_params: &'a InfinitepushParams,
     pub hook_manager: &'a HookManager,
-    pub readonly_fetcher: &'a RepoReadWriteFetcher,
 }
 
 #[async_trait::async_trait]
@@ -63,7 +61,6 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
                 self.pushrebase_params,
                 self.bookmark_attrs,
                 self.hook_manager,
-                self.readonly_fetcher,
             )
             .await
     }

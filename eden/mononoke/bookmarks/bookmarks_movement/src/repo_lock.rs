@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -16,16 +15,19 @@ use bookmarks::BookmarkTransactionError;
 use bookmarks_types::BookmarkKind;
 use bytes::Bytes;
 use context::CoreContext;
-use metaconfig_types::RepoReadOnly;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use permission_checker::MononokeIdentitySet;
 use pushrebase_hook::PushrebaseCommitHook;
 use pushrebase_hook::PushrebaseHook;
 use pushrebase_hook::PushrebaseTransactionHook;
 use pushrebase_hook::RebasedChangesets;
+use repo_lock::RepoLockRef;
+use repo_lock::RepoLockState;
+use repo_lock::TransactionRepoLock;
 use repo_permission_checker::RepoPermissionChecker;
-use repo_read_write_status::RepoReadWriteFetcher;
+use repo_permission_checker::RepoPermissionCheckerRef;
 use sql::Transaction;
 use tunables::tunables;
 
@@ -63,18 +65,19 @@ async fn should_check_repo_lock(
 }
 
 pub(crate) async fn check_repo_lock(
-    repo_read_write_fetcher: &RepoReadWriteFetcher,
+    repo: &(impl RepoLockRef + RepoPermissionCheckerRef),
     kind: BookmarkKind,
     pushvars: Option<&HashMap<String, Bytes>>,
-    repo_perm_checker: &dyn RepoPermissionChecker,
     idents: &MononokeIdentitySet,
 ) -> Result<(), BookmarkMovementError> {
-    if should_check_repo_lock(kind, pushvars, repo_perm_checker, idents).await? {
-        let state = repo_read_write_fetcher
-            .readonly()
+    if should_check_repo_lock(kind, pushvars, repo.repo_permission_checker(), idents).await? {
+        let state = repo
+            .repo_lock()
+            .check_repo_lock()
             .await
             .context("Failed to fetch repo lock state")?;
-        if let RepoReadOnly::ReadOnly(reason) = state {
+
+        if let RepoLockState::Locked(reason) = state {
             return Err(BookmarkMovementError::RepoLocked(reason));
         }
     }
@@ -83,12 +86,12 @@ pub(crate) async fn check_repo_lock(
 }
 
 pub(crate) struct RepoLockPushrebaseHook {
-    repo_read_write_fetcher: Arc<RepoReadWriteFetcher>,
+    transaction_repo_lock: TransactionRepoLock,
 }
 
 impl RepoLockPushrebaseHook {
     pub(crate) async fn new(
-        repo_read_write_fetcher: &RepoReadWriteFetcher,
+        repo_id: RepositoryId,
         kind: BookmarkKind,
         pushvars: Option<&HashMap<String, Bytes>>,
         repo_perm_checker: &dyn RepoPermissionChecker,
@@ -96,7 +99,7 @@ impl RepoLockPushrebaseHook {
     ) -> Result<Option<Box<dyn PushrebaseHook>>> {
         let hook = if should_check_repo_lock(kind, pushvars, repo_perm_checker, idents).await? {
             let hook = Box::new(RepoLockPushrebaseHook {
-                repo_read_write_fetcher: Arc::new(repo_read_write_fetcher.clone()),
+                transaction_repo_lock: TransactionRepoLock::new(repo_id),
             });
             Some(hook as Box<dyn PushrebaseHook>)
         } else {
@@ -111,14 +114,14 @@ impl RepoLockPushrebaseHook {
 impl PushrebaseHook for RepoLockPushrebaseHook {
     async fn prepushrebase(&self) -> Result<Box<dyn PushrebaseCommitHook>> {
         let hook = Box::new(RepoLockCommitTransactionHook {
-            repo_read_write_fetcher: self.repo_read_write_fetcher.clone(),
+            transaction_repo_lock: self.transaction_repo_lock,
         });
         Ok(hook as Box<dyn PushrebaseCommitHook>)
     }
 }
 
 struct RepoLockCommitTransactionHook {
-    repo_read_write_fetcher: Arc<RepoReadWriteFetcher>,
+    transaction_repo_lock: TransactionRepoLock,
 }
 
 #[async_trait]
@@ -147,12 +150,12 @@ impl PushrebaseTransactionHook for RepoLockCommitTransactionHook {
         _ctx: &CoreContext,
         txn: Transaction,
     ) -> Result<Transaction, BookmarkTransactionError> {
-        let state = self
-            .repo_read_write_fetcher
-            .readonly()
+        let (txn, state) = self
+            .transaction_repo_lock
+            .check_repo_lock_with_transaction(txn)
             .await
             .context("Failed to fetch repo lock state")?;
-        if let RepoReadOnly::ReadOnly(reason) = state {
+        if let RepoLockState::Locked(reason) = state {
             return Err(BookmarkTransactionError::Other(anyhow!(
                 "Repo is locked: {}",
                 reason

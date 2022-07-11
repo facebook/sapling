@@ -61,7 +61,6 @@ impl RepoContext {
             self.inner_repo(),
             &self.config().infinitepush,
             &bookmark_attrs,
-            self.readonly_fetcher(),
         )
         .await?;
 

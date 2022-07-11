@@ -81,6 +81,8 @@ use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
+use repo_lock::AlwaysUnlockedRepoLock;
+use repo_lock::ArcRepoLock;
 use repo_permission_checker::AlwaysAllowMockRepoPermissionChecker;
 use repo_permission_checker::ArcRepoPermissionChecker;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -335,6 +337,12 @@ impl BenchmarkRepoFactory {
         Ok(Arc::new(
             SqlMutableCountersBuilder::with_sqlite_in_memory()?.build(repo_identity.id()),
         ))
+    }
+
+    /// Construct unlocked repo lock.
+    pub fn repo_lock(&self) -> Result<ArcRepoLock> {
+        let repo_lock = AlwaysUnlockedRepoLock {};
+        Ok(Arc::new(repo_lock))
     }
 }
 

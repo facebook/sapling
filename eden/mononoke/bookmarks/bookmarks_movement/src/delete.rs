@@ -17,7 +17,6 @@ use metaconfig_types::InfinitepushParams;
 use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
-use repo_read_write_status::RepoReadWriteFetcher;
 
 use crate::repo_lock::check_repo_lock;
 use crate::restrictions::check_bookmark_sync_config;
@@ -71,7 +70,6 @@ impl<'op> DeleteBookmarkOp<'op> {
         repo: &'op impl Repo,
         infinitepush_params: &'op InfinitepushParams,
         bookmark_attrs: &'op BookmarkAttrs,
-        repo_read_write_fetcher: &'op RepoReadWriteFetcher,
     ) -> Result<(), BookmarkMovementError> {
         let kind = self
             .kind_restrictions
@@ -93,14 +91,7 @@ impl<'op> DeleteBookmarkOp<'op> {
             });
         }
 
-        check_repo_lock(
-            repo_read_write_fetcher,
-            kind,
-            self.pushvars,
-            repo.repo_permission_checker(),
-            ctx.metadata().identities(),
-        )
-        .await?;
+        check_repo_lock(repo, kind, self.pushvars, ctx.metadata().identities()).await?;
 
         ctx.scuba()
             .clone()

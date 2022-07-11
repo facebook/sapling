@@ -150,8 +150,6 @@ pub struct RepoConfig {
     pub enabled: bool,
     /// Persistent storage for this repo
     pub storage_config: StorageConfig,
-    /// Address of the SQL database used to lock writes to a repo.
-    pub write_lock_db_address: Option<String>,
     /// How large a cache to use (in bytes) for RepoGenCache derived information
     pub generation_cache_size: usize,
     /// Numerical repo id of the repo.

@@ -86,8 +86,6 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use repo_authorization::AuthorizationContext;
 use repo_cross_repo::RepoCrossRepo;
-use repo_read_write_status::RepoReadWriteFetcher;
-use repo_read_write_status::SqlRepoReadWriteStatus;
 use repo_sparse_profiles::RepoSparseProfiles;
 use revset::AncestorsNodeStream;
 use segmented_changelog::CloneData;
@@ -98,7 +96,6 @@ use skiplist::SkiplistIndex;
 use slog::debug;
 use slog::error;
 use slog::o;
-use sql_construct::facebook::FbSqlConstruct;
 use sql_construct::SqlConstruct;
 use sql_ext::facebook::MysqlOptions;
 use stats::prelude::*;
@@ -153,7 +150,6 @@ pub struct Repo {
     pub(crate) inner: InnerRepo,
     pub(crate) name: String,
     pub(crate) warm_bookmarks_cache: Arc<dyn BookmarksCache>,
-    pub(crate) readonly_fetcher: RepoReadWriteFetcher,
     pub(crate) hook_manager: ArcHookManager,
 }
 
@@ -282,18 +278,6 @@ impl Repo {
             .boxed()
         };
 
-        let sql_read_write_status = if let Some(addr) = &config.write_lock_db_address {
-            let r = SqlRepoReadWriteStatus::with_mysql(
-                fb,
-                addr.clone(),
-                &env.repo_factory.env.mysql_options,
-                env.repo_factory.env.readonly_storage.0,
-            )?;
-            Result::<_, Error>::Ok(Some(r))
-        } else {
-            Ok(None)
-        }?;
-
         let content_store = RepoFileContentManager::new(&inner.blob_repo);
 
         let disabled_hooks = env
@@ -312,17 +296,10 @@ impl Repo {
             hook_manager.watched(&logger),
         )?;
 
-        let readonly_fetcher = RepoReadWriteFetcher::new(
-            sql_read_write_status,
-            config.readonly.clone(),
-            config.hgsql_name.clone(),
-        );
-
         Ok(Self {
             name,
             inner,
             warm_bookmarks_cache,
-            readonly_fetcher,
             hook_manager: Arc::new(hook_manager),
         })
     }
@@ -338,7 +315,6 @@ impl Repo {
             name: self.name.clone(),
             inner,
             warm_bookmarks_cache: self.warm_bookmarks_cache.clone(),
-            readonly_fetcher: self.readonly_fetcher.clone(),
             hook_manager: self.hook_manager.clone(),
         }
     }
@@ -447,14 +423,10 @@ impl Repo {
         warm_bookmarks_cache_builder.wait_until_warmed();
         let warm_bookmarks_cache = warm_bookmarks_cache_builder.build().await?;
 
-        let readonly_fetcher =
-            RepoReadWriteFetcher::new(None, config.readonly.clone(), config.hgsql_name.clone());
-
         Ok(Self {
             name: name.clone(),
             inner,
             warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
-            readonly_fetcher,
             hook_manager: Arc::new(
                 make_hook_manager(
                     ctx.fb,
@@ -525,11 +497,6 @@ impl Repo {
     /// The hook manager for the referenced repository.
     pub fn hook_manager(&self) -> &Arc<HookManager> {
         &self.hook_manager
-    }
-
-    /// The Read/Write or Read-Only status fetcher.
-    pub fn readonly_fetcher(&self) -> &RepoReadWriteFetcher {
-        &self.readonly_fetcher
     }
 
     /// The configuration for the referenced repository.
@@ -856,11 +823,6 @@ impl RepoContext {
     /// The hook manager for the referenced repository.
     pub fn hook_manager(&self) -> &Arc<HookManager> {
         self.repo.hook_manager()
-    }
-
-    /// The Read/Write or Read-Only status fetcher.
-    pub fn readonly_fetcher(&self) -> &RepoReadWriteFetcher {
-        self.repo.readonly_fetcher()
     }
 
     /// The configuration for the referenced repository.

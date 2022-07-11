@@ -76,16 +76,11 @@ Make a copy of it that will be used later
 
 Try to sync blobimport bookmark move, which should fail
   $ cd "$TESTTMP"
-  $ create_repo_lock_sqlite3_db
-  $ init_repo_lock_sqlite3_db
-  $ sqlite3 "$TESTTMP/hgrepos/repo_lock" "select count(*) from repo_lock"
-  1
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from repo_lock"
-  1
+
+State 0 means Mononoke is unlocked
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "insert into repo_lock (repo_id, state, reason) values(0, 0, null)";
   $ mononoke_hg_sync_with_failure_handler repo-hg 0 2>&1 | grep 'unexpected bookmark move'
   * unexpected bookmark move: blobimport* (glob)
-  $ sqlite3 "$TESTTMP/hgrepos/repo_lock" "select count(*) from repo_lock"
-  1
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from repo_lock"
   1
 
@@ -158,6 +153,9 @@ Replay in a loop
   * successful sync of entries [4]* (glob)
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters where name = 'latest-replayed-request'";
   0|latest-replayed-request|4
+
+Unlock the repo so that we can push again
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE repo_lock SET state = 0 WHERE repo_id = 0";
 
 Make one more push from the client
   $ cd $TESTTMP/client-push

@@ -26,6 +26,7 @@ use repo_blobstore::RepoBlobstore;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+use repo_lock::RepoLock;
 use repo_permission_checker::RepoPermissionChecker;
 use repo_sparse_profiles::RepoSparseProfiles;
 use segmented_changelog_types::SegmentedChangelog;
@@ -53,6 +54,7 @@ pub struct InnerRepo {
         dyn HgMutationStore,
         dyn MutableCounters,
         dyn RepoPermissionChecker,
+        dyn RepoLock,
     )]
     pub blob_repo: BlobRepo,
 

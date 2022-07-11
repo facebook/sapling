@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use ::repo_lock::RepoLockRef;
 use blobrepo::AsBlobRepo;
 use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
@@ -75,6 +76,7 @@ pub trait Repo = AsBlobRepo
     + RepoCrossRepoRef
     + RepoIdentityRef
     + RepoPermissionCheckerRef
+    + RepoLockRef
     + Send
     + Sync;
 

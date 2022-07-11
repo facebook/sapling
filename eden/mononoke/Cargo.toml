@@ -374,7 +374,6 @@ members = [
   "repo_client/mononoke_repo",
   "repo_client/obsolete",
   "repo_client/remotefilelog",
-  "repo_client/repo_read_write_status",
   "repo_client/scribe_commit_queue",
   "repo_client/streaming_clone",
   "repo_client/unbundle",

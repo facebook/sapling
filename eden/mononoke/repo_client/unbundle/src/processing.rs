@@ -48,7 +48,6 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
 use repo_identity::RepoIdentityRef;
-use repo_read_write_status::RepoReadWriteFetcher;
 use scribe_commit_queue::ChangedFilesInfo;
 use slog::debug;
 use stats::prelude::*;
@@ -88,7 +87,6 @@ pub async fn run_post_resolve_action(
     pushrebase_params: &PushrebaseParams,
     push_params: &PushParams,
     hook_manager: &HookManager,
-    readonly_fetcher: &RepoReadWriteFetcher,
     action: PostResolveAction,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<UnbundleResponse, BundleResolverError> {
@@ -105,7 +103,6 @@ pub async fn run_post_resolve_action(
             hook_manager,
             infinitepush_params,
             pushrebase_params,
-            readonly_fetcher,
             action,
             push_params,
             cross_repo_push_source,
@@ -121,7 +118,6 @@ pub async fn run_post_resolve_action(
             hook_manager,
             infinitepush_params,
             pushrebase_params,
-            readonly_fetcher,
             action,
             cross_repo_push_source,
         )
@@ -136,7 +132,6 @@ pub async fn run_post_resolve_action(
             infinitepush_params,
             pushrebase_params,
             hook_manager,
-            readonly_fetcher,
             action,
             cross_repo_push_source,
         )
@@ -150,7 +145,6 @@ pub async fn run_post_resolve_action(
             hook_manager,
             infinitepush_params,
             pushrebase_params,
-            readonly_fetcher,
             action,
             cross_repo_push_source,
         )
@@ -182,7 +176,6 @@ async fn run_push(
     hook_manager: &HookManager,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
-    readonly_fetcher: &RepoReadWriteFetcher,
     action: PostResolvePush,
     push_params: &PushParams,
     cross_repo_push_source: CrossRepoPushSource,
@@ -246,7 +239,6 @@ async fn run_push(
             maybe_pushvars.as_ref(),
             hook_rejection_remapper.as_ref(),
             cross_repo_push_source,
-            readonly_fetcher,
         )
         .await?;
 
@@ -276,7 +268,6 @@ async fn run_infinitepush(
     hook_manager: &HookManager,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
-    readonly_fetcher: &RepoReadWriteFetcher,
     action: PostResolveInfinitePush,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<UnbundleInfinitePushResponse, BundleResolverError> {
@@ -308,7 +299,6 @@ async fn run_infinitepush(
                 hook_manager,
                 &bookmark_push,
                 cross_repo_push_source,
-                readonly_fetcher,
             )
             .await?;
 
@@ -344,7 +334,6 @@ async fn run_pushrebase(
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
     hook_manager: &HookManager,
-    readonly_fetcher: &RepoReadWriteFetcher,
     action: PostResolvePushRebase,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<UnbundlePushRebaseResponse, BundleResolverError> {
@@ -382,7 +371,6 @@ async fn run_pushrebase(
                 hook_manager,
                 hook_rejection_remapper.as_ref(),
                 cross_repo_push_source,
-                readonly_fetcher,
             )
             .await?;
             let new_commits: Vec<ChangesetId> =
@@ -428,7 +416,6 @@ async fn run_pushrebase(
                 infinitepush_params,
                 hook_rejection_remapper.as_ref(),
                 cross_repo_push_source,
-                readonly_fetcher,
             )
             .await
             .context("While doing a force pushrebase")?;
@@ -466,7 +453,6 @@ async fn run_bookmark_only_pushrebase(
     hook_manager: &HookManager,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
-    readonly_fetcher: &RepoReadWriteFetcher,
     action: PostResolveBookmarkOnlyPushRebase,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<UnbundleBookmarkOnlyPushRebaseResponse, BundleResolverError> {
@@ -501,7 +487,6 @@ async fn run_bookmark_only_pushrebase(
         maybe_pushvars.as_ref(),
         hook_rejection_remapper.as_ref(),
         cross_repo_push_source,
-        readonly_fetcher,
     )
     .await?;
 
@@ -531,7 +516,6 @@ async fn normal_pushrebase<'a>(
     hook_manager: &'a HookManager,
     hook_rejection_remapper: &'a dyn HookRejectionRemapper,
     cross_repo_push_source: CrossRepoPushSource,
-    readonly_fetcher: &RepoReadWriteFetcher,
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
     let bookmark_restriction = BookmarkKindRestrictions::OnlyPublishing;
     let maybe_fallback_scuba: Option<(MononokeScubaSampleBuilder, BookmarkMovementError)> =
@@ -587,7 +571,6 @@ async fn normal_pushrebase<'a>(
         bookmark_attrs,
         infinitepush_params,
         hook_manager,
-        readonly_fetcher,
     }
     .pushrebase(
         bookmark,
@@ -602,6 +585,7 @@ async fn normal_pushrebase<'a>(
             scuba.log_with_msg("failed_remote_pushrebase", err.to_string());
         }
     }
+
     match result {
         Ok(outcome) => Ok((outcome.head, outcome.rebased_changesets)),
         Err(err) => match err {
@@ -630,7 +614,6 @@ async fn force_pushrebase(
     infinitepush_params: &InfinitepushParams,
     hook_rejection_remapper: &dyn HookRejectionRemapper,
     cross_repo_push_source: CrossRepoPushSource,
-    readonly_fetcher: &RepoReadWriteFetcher,
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
     let new_target = bookmark_push
         .new
@@ -657,7 +640,6 @@ async fn force_pushrebase(
         maybe_pushvars,
         hook_rejection_remapper,
         cross_repo_push_source,
-        readonly_fetcher,
     )
     .await?;
 
@@ -681,7 +663,6 @@ async fn plain_push_bookmark(
     maybe_pushvars: Option<&HashMap<String, Bytes>>,
     hook_rejection_remapper: &dyn HookRejectionRemapper,
     cross_repo_push_source: CrossRepoPushSource,
-    readonly_fetcher: &RepoReadWriteFetcher,
 ) -> Result<(), BundleResolverError> {
     match (bookmark_push.old, bookmark_push.new) {
         (None, Some(new_target)) => {
@@ -700,7 +681,6 @@ async fn plain_push_bookmark(
                         pushrebase_params,
                         bookmark_attrs,
                         hook_manager,
-                        readonly_fetcher,
                     )
                     .await;
             match res {
@@ -747,7 +727,6 @@ async fn plain_push_bookmark(
                 pushrebase_params,
                 bookmark_attrs,
                 hook_manager,
-                readonly_fetcher,
             )
             .await;
             match res {
@@ -784,7 +763,6 @@ async fn plain_push_bookmark(
                     repo,
                     infinitepush_params,
                     bookmark_attrs,
-                    readonly_fetcher,
                 )
                 .await
                 .context("Failed to delete bookmark")?;
@@ -805,7 +783,6 @@ async fn infinitepush_scratch_bookmark(
     hook_manager: &HookManager,
     bookmark_push: &InfiniteBookmarkPush<ChangesetId>,
     cross_repo_push_source: CrossRepoPushSource,
-    readonly_fetcher: &RepoReadWriteFetcher,
 ) -> Result<()> {
     if bookmark_push.old.is_none() && bookmark_push.create {
         bookmarks_movement::CreateBookmarkOp::new(
@@ -824,7 +801,6 @@ async fn infinitepush_scratch_bookmark(
             pushrebase_params,
             bookmark_attrs,
             hook_manager,
-            readonly_fetcher,
         )
         .await
         .context("Failed to create scratch bookmark")?;
@@ -859,7 +835,6 @@ async fn infinitepush_scratch_bookmark(
             pushrebase_params,
             bookmark_attrs,
             hook_manager,
-            readonly_fetcher,
         )
         .await
         .context(if bookmark_push.force {

@@ -31,7 +31,6 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
 use repo_identity::RepoIdentityRef;
-use repo_read_write_status::RepoReadWriteFetcher;
 
 use crate::affected_changesets::AdditionalChangesets;
 use crate::affected_changesets::AffectedChangesets;
@@ -103,7 +102,6 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         pushrebase_params: &'op PushrebaseParams,
         bookmark_attrs: &'op BookmarkAttrs,
         hook_manager: &'op HookManager,
-        repo_read_write_fetcher: &'op RepoReadWriteFetcher,
     ) -> Result<pushrebase::PushrebaseOutcome, BookmarkMovementError> {
         let kind = self
             .bookmark_restrictions
@@ -159,17 +157,10 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         // pushrebase operation, and then once more as part of the pushrebase
         // bookmark update transaction, to check if the repo got locked while
         // we were peforming the pushrebase.
-        check_repo_lock(
-            repo_read_write_fetcher,
-            kind,
-            self.pushvars,
-            repo.repo_permission_checker(),
-            ctx.metadata().identities(),
-        )
-        .await?;
+        check_repo_lock(repo, kind, self.pushvars, ctx.metadata().identities()).await?;
 
         if let Some(hook) = RepoLockPushrebaseHook::new(
-            repo_read_write_fetcher,
+            repo.repo_identity().id(),
             kind,
             self.pushvars,
             repo.repo_permission_checker(),

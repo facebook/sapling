@@ -1742,7 +1742,6 @@ impl HgCommands for RepoClient {
                                     .await?
                             }
                             None => {
-                                let readonly_fetcher = client.repo.readonly_fetcher();
                                 run_post_resolve_action(
                                     &ctx,
                                     repo,
@@ -1752,7 +1751,6 @@ impl HgCommands for RepoClient {
                                     &pushrebase_params,
                                     &push_params,
                                     hook_manager.as_ref(),
-                                    readonly_fetcher,
                                     action,
                                     CrossRepoPushSource::NativeToThisRepo,
                                 )

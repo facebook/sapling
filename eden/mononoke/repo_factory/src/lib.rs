@@ -92,6 +92,7 @@ use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::Redaction;
 use metaconfig_types::RedactionConfig;
 use metaconfig_types::RepoConfig;
+use metaconfig_types::RepoReadOnly;
 use mutable_counters::ArcMutableCounters;
 use mutable_counters::SqlMutableCountersBuilder;
 use mutable_renames::ArcMutableRenames;
@@ -115,6 +116,10 @@ use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
+use repo_lock::AlwaysLockedRepoLock;
+use repo_lock::ArcRepoLock;
+use repo_lock::MutableRepoLock;
+use repo_lock::SqlRepoLock;
 use repo_permission_checker::ArcRepoPermissionChecker;
 use repo_permission_checker::ProdRepoPermissionChecker;
 use repo_sparse_profiles::ArcRepoSparseProfiles;
@@ -134,6 +139,7 @@ use slog::o;
 use sql::SqlConnectionsWithSchema;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromDatabaseConfig;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sqlphases::SqlPhasesBuilder;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use thiserror::Error;
@@ -1161,6 +1167,28 @@ impl RepoFactory {
         Ok(Arc::new(RepoSparseProfiles {
             sql_profile_sizes: Some(sql),
         }))
+    }
+
+    pub fn repo_lock(
+        &self,
+        repo_config: &ArcRepoConfig,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcRepoLock> {
+        match repo_config.readonly {
+            RepoReadOnly::ReadOnly(ref reason) => {
+                Ok(Arc::new(AlwaysLockedRepoLock::new(reason.clone())))
+            }
+            RepoReadOnly::ReadWrite => {
+                let sql = SqlRepoLock::with_metadata_database_config(
+                    self.env.fb,
+                    &repo_config.storage_config.metadata,
+                    &self.env.mysql_options,
+                    self.env.readonly_storage.0,
+                )?;
+
+                Ok(Arc::new(MutableRepoLock::new(sql, repo_identity.id())))
+            }
+        }
     }
 }
 

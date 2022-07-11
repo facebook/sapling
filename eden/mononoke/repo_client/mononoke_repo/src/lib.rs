@@ -25,7 +25,7 @@ use mononoke_types::RepositoryId;
 use rand::Rng;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
-use repo_read_write_status::RepoReadWriteFetcher;
+use repo_lock::RepoLock;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use std::collections::hash_map::DefaultHasher;
@@ -162,8 +162,8 @@ impl MononokeRepo {
         self.repo.repoid()
     }
 
-    pub fn readonly_fetcher(&self) -> &RepoReadWriteFetcher {
-        &self.repo.readonly_fetcher()
+    pub fn repo_lock(&self) -> Arc<dyn RepoLock> {
+        self.repo.blob_repo().repo_lock()
     }
 
     pub fn infinitepush(&self) -> &InfinitepushParams {

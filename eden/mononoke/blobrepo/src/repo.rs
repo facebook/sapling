@@ -59,6 +59,8 @@ use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+use repo_lock::ArcRepoLock;
+use repo_lock::RepoLock;
 use repo_permission_checker::ArcRepoPermissionChecker;
 use repo_permission_checker::RepoPermissionChecker;
 use stats::prelude::*;
@@ -139,6 +141,9 @@ pub struct BlobRepoInner {
 
     #[facet]
     pub permission_checker: dyn RepoPermissionChecker,
+
+    #[facet]
+    pub repo_lock: dyn RepoLock,
 }
 
 #[facet::container]
@@ -163,6 +168,7 @@ pub struct BlobRepo {
         RepoDerivedData,
         dyn MutableCounters,
         dyn RepoPermissionChecker,
+        dyn RepoLock,
     )]
     inner: Arc<BlobRepoInner>,
 }
@@ -418,6 +424,11 @@ impl BlobRepo {
     #[inline]
     pub fn permission_checker(&self) -> ArcRepoPermissionChecker {
         self.inner.permission_checker.clone()
+    }
+
+    #[inline]
+    pub fn repo_lock(&self) -> ArcRepoLock {
+        self.inner.repo_lock.clone()
     }
 }
 

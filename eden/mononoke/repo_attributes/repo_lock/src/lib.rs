@@ -17,6 +17,7 @@ use async_trait::async_trait;
 use auto_impl::auto_impl;
 use sql::queries;
 use sql::Connection;
+use sql::Transaction;
 
 const DEFAULT_DB_MSG: &str = "Repo is locked in DB";
 
@@ -75,6 +76,43 @@ impl SqlConstruct for SqlRepoLock {
 
 impl SqlConstructFromMetadataDatabaseConfig for SqlRepoLock {}
 
+fn convert_sql_state(row: Option<&(u8, Option<String>)>) -> Result<RepoLockState, Error> {
+    match row {
+        Some((state, reason)) => match state {
+            0 => Ok(RepoLockState::Unlocked),
+            1 => Ok(RepoLockState::Locked(
+                reason.clone().unwrap_or_else(|| DEFAULT_DB_MSG.to_string()),
+            )),
+            _ => Err(anyhow!("Invalid repo lock state: {}", state)),
+        },
+        None => Ok(RepoLockState::Unlocked),
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct TransactionRepoLock {
+    repo_id: RepositoryId,
+}
+
+impl TransactionRepoLock {
+    pub fn new(repo_id: RepositoryId) -> Self {
+        Self { repo_id }
+    }
+
+    pub async fn check_repo_lock_with_transaction(
+        &self,
+        txn: Transaction,
+    ) -> Result<(Transaction, RepoLockState), Error> {
+        let (txn, row) = GetRepoLockStatus::query_with_transaction(txn, &self.repo_id)
+            .await
+            .context("Failed to query repo lock status")?;
+
+        let state = convert_sql_state(row.first())?;
+
+        Ok((txn, state))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct MutableRepoLock {
     repo_id: RepositoryId,
@@ -97,16 +135,7 @@ impl RepoLock for MutableRepoLock {
             .await
             .context("Failed to query repo lock status")?;
 
-        match row.first() {
-            Some((state, reason)) => match state {
-                0 => Ok(RepoLockState::Unlocked),
-                1 => Ok(RepoLockState::Locked(
-                    reason.clone().unwrap_or_else(|| DEFAULT_DB_MSG.to_string()),
-                )),
-                _ => Err(anyhow!("Invalid repo lock state: {}", state)),
-            },
-            None => Ok(RepoLockState::Unlocked),
-        }
+        convert_sql_state(row.first())
     }
 
     async fn set_repo_lock(&self, lock_state: RepoLockState) -> Result<bool, Error> {

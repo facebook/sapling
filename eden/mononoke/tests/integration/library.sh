@@ -299,7 +299,6 @@ function mononoke_hg_sync_with_retry {
 }
 
 function mononoke_hg_sync_with_failure_handler {
-  sql_name="${TESTTMP}/hgrepos/repo_lock"
   sqlite_name="${TESTTMP}/monsql/sqlite_dbs"
 
   GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
@@ -309,43 +308,8 @@ function mononoke_hg_sync_with_failure_handler {
     --mononoke-config-path "$TESTTMP"/mononoke-config \
     --verify-server-bookmark-on-failure \
     --lock-on-failure \
-    --repo-lock-sqlite \
-    --repo-lock-db-address "$sql_name" \
     --sqlite-repo-lock-db-path "$sqlite_name" \
      ssh://user@dummy/"$1" sync-once --start-id "$2"
-}
-
-function create_repo_lock_sqlite3_db {
-  # Create the old hgsql table
-  cat >> "$TESTTMP"/hg_repo_lock.sql <<SQL
-  CREATE TABLE IF NOT EXISTS repo_lock (
-    repo VARCHAR(255) PRIMARY KEY,
-    state INTEGER NOT NULL,
-    reason VARCHAR(255)
-  );
-SQL
-  mkdir -p "$TESTTMP"/hgrepos
-  sqlite3 "$TESTTMP/hgrepos/repo_lock" < "$TESTTMP"/hg_repo_lock.sql
-
-  # Create the new Mononoke table in the metadata DB
-  cat >> "$TESTTMP"/repo_lock.sql <<SQL
-  CREATE TABLE IF NOT EXISTS repo_lock (
-    repo_id INTEGER PRIMARY KEY,
-    state INTEGER NOT NULL,
-    reason VARCHAR(255)
-  );
-SQL
-  sqlite3 "$TESTTMP/monsql/sqlite_dbs" < "$TESTTMP"/repo_lock.sql
-}
-
-function init_repo_lock_sqlite3_db {
-  # State 2 is mononoke write
-  sqlite3 "$TESTTMP/hgrepos/repo_lock" \
-    "insert into repo_lock (repo, state, reason) values(CAST('repo' AS BLOB), 2, null)";
-
-  # State 0 means Mononoke is unlocked
-  sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
-    "insert into repo_lock (repo_id, state, reason) values(0, 0, null)";
 }
 
 function create_books_sqlite3_db {
@@ -885,12 +849,6 @@ repo_config="$reponame"
 enabled=${ENABLED:-true}
 CONFIG
 
-
-if [[ -n "${HGSQL_NAME:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
-hgsql_name="$HGSQL_NAME"
-CONFIG
-fi
 
 if [[ -n "${ACL_NAME:-}" ]]; then
   cat >> "repo_definitions/$reponame/server.toml" <<CONFIG
