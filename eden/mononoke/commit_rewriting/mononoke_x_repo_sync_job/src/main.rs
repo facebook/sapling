@@ -500,7 +500,7 @@ async fn run<'a>(
     let (source_repo, target_repo): (InnerRepo, InnerRepo) =
         try_join(source_repo, target_repo).await?;
 
-    let commit_syncer = create_commit_syncer_from_matches(&ctx, &matches).await?;
+    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches, None).await?;
 
     let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &config_store)?);
     let common_commit_sync_config =

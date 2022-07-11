@@ -16,5 +16,6 @@ context = { version = "0.1.0", path = "../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo_sync" }
 futures-util = "0.3.7"
 live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }

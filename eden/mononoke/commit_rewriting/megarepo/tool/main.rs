@@ -606,7 +606,7 @@ async fn run_manual_commit_sync<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
+    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches, None).await?;
 
     let target_repo = commit_syncer.get_target_repo();
     let target_repo_parents = if sub_m.is_present(SELECT_PARENTS_AUTOMATICALLY) {
@@ -653,7 +653,7 @@ async fn run_check_push_redirection_prereqs<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let commit_syncer = create_commit_syncer_from_matches(&ctx, &matches).await?;
+    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches, None).await?;
 
     let target_repo = commit_syncer.get_target_repo();
     let source_repo = commit_syncer.get_source_repo();
@@ -767,7 +767,7 @@ async fn run_mover<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
+    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches, None).await?;
     let version = get_version(sub_m)?;
     let mover = commit_syncer.get_mover_by_version(&version).await?;
     let path = sub_m
@@ -812,7 +812,7 @@ async fn run_mark_not_synced<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
+    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches, None).await?;
 
     let small_repo = commit_syncer.get_small_repo();
     let large_repo = commit_syncer.get_large_repo();
@@ -901,7 +901,7 @@ async fn run_backfill_noop_mapping<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
+    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches, None).await?;
 
     let small_repo = commit_syncer.get_small_repo();
     let large_repo = commit_syncer.get_large_repo();
@@ -1150,7 +1150,7 @@ async fn run_sync_commit_and_ancestors<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
+    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches, None).await?;
 
     let source_commit_hash = sub_m
         .value_of(COMMIT_HASH)
@@ -1196,7 +1196,7 @@ async fn run_delete_no_longer_bound_files_from_large_repo<'a>(
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
+    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches, None).await?;
     let large_repo = commit_syncer.get_large_repo();
     if commit_syncer.get_source_repo().get_repoid() != large_repo.get_repoid() {
         return Err(format_err!("source repo must be large!"));

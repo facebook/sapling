@@ -43,7 +43,7 @@ Before config change
   ~
 
 -- wait a second to give backsyncer some time to catch up
-  $ sleep 8
+  $ sleep 50
   $ flush_mononoke_bookmarks
 
 -- check the same commit in the small repo
@@ -70,7 +70,7 @@ Config change
   $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
 
 -- wait a second to give backsyncer some time to catch up
-  $ sleep 3
+  $ sleep 50
   $ flush_mononoke_bookmarks
   $ LARGE_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDLARGE master_bookmark)
   $ SMALL_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDSMALL master_bookmark)
@@ -90,7 +90,7 @@ Config change
   ~
 
 -- wait a second to give backsyncer some time to catch up
-  $ sleep 3
+  $ sleep 50
   $ flush_mononoke_bookmarks
 
 -- check the same commit in the small repo

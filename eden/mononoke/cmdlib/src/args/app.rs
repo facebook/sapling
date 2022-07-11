@@ -540,7 +540,8 @@ impl MononokeAppBuilder {
                 .long(SHARDED_SERVICE_NAME)
                 .value_name("NAME")
                 .multiple(false)
-                .help("The name of SM service to be used when the command needs to be executed in a sharded setting");
+                .help("The name of SM service to be used when the command needs to be executed in a sharded setting")
+                .conflicts_with_all(repo_conflicts);
 
             let group_args = if self.dynamic_repos {
                 vec![REPO_ID, REPO_NAME, SHARDED_SERVICE_NAME]

@@ -61,7 +61,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     // Backsyncer works in large -> small direction, however
     // for bookmarks vaidator it's simpler to have commits syncer in small -> large direction
     // Hence here we are creating a reverse syncer
-    let syncers = runtime.block_on(create_commit_syncers_from_matches(&ctx, &matches))?;
+    let syncers = runtime.block_on(create_commit_syncers_from_matches(&ctx, &matches, None))?;
     if syncers.large_to_small.get_large_repo().get_repoid() != source_repo_id {
         return Err(format_err!("Source repo must be a large repo!"));
     }

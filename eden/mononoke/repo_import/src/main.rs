@@ -82,6 +82,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::Path;
 use std::process::Stdio;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::time::Duration;
 use synced_commit_mapping::SqlSyncedCommitMapping;
@@ -512,6 +513,7 @@ async fn move_bookmark(
                 small_repo_back_sync_vars.large_to_small_syncer.clone(),
                 small_repo_back_sync_vars.target_repo_dbs.clone(),
                 BacksyncLimit::NoLimit,
+                Arc::new(AtomicBool::new(false)),
             )
             .await?;
             let small_repo_cs_id = small_repo_back_sync_vars

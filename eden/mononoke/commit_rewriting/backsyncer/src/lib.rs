@@ -84,11 +84,14 @@ use mutable_counters::ArcMutableCounters;
 use mutable_counters::MutableCountersArc;
 use mutable_counters::SqlMutableCounters;
 use slog::debug;
+use slog::info;
 use slog::warn;
 use sql::Transaction;
 use sql_ext::facebook::MysqlOptions;
 use sql_ext::SqlConnections;
 use sql_ext::TransactionResult;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Instant;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -116,6 +119,7 @@ pub async fn backsync_latest<M>(
     commit_syncer: CommitSyncer<M>,
     target_repo_dbs: TargetRepoDbs,
     limit: BacksyncLimit,
+    cancellation_requested: Arc<AtomicBool>,
 ) -> Result<(), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
@@ -150,6 +154,13 @@ where
         .try_collect()
         .await?;
 
+    // Before syncing entries, check if cancellation has been
+    // requested. If yes, then exit early.
+    if cancellation_requested.load(Ordering::Relaxed) {
+        info!(ctx.logger(), "sync stopping due to cancellation request");
+        return Ok(());
+    }
+
     if next_entries.is_empty() {
         debug!(ctx.logger(), "nothing to sync");
         Ok(())
@@ -160,6 +171,7 @@ where
             target_repo_dbs,
             next_entries,
             counter as i64,
+            cancellation_requested,
         )
         .await
     }
@@ -171,11 +183,18 @@ async fn sync_entries<M>(
     target_repo_dbs: TargetRepoDbs,
     entries: Vec<BookmarkUpdateLogEntry>,
     mut counter: i64,
+    cancellation_requested: Arc<AtomicBool>,
 ) -> Result<(), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
 {
     for entry in entries {
+        // Before processing each entry, check if cancellation has
+        // been requested and exit if that's the case.
+        if cancellation_requested.load(Ordering::Relaxed) {
+            info!(ctx.logger(), "sync stopping due to cancellation request");
+            return Ok(());
+        }
         let entry_id = entry.id;
         if counter >= entry_id {
             continue;

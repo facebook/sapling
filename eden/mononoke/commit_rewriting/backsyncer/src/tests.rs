@@ -60,6 +60,7 @@ use sql_construct::SqlConstruct;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SqlSyncedCommitMapping;
@@ -166,6 +167,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
             commit_syncer.clone(),
             target_repo_dbs.clone(),
             BacksyncLimit::Limit(2),
+            Arc::new(AtomicBool::new(false)),
         )
         .map_err(Error::from)
         .await?;
@@ -185,6 +187,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
             target_repo_dbs.clone(),
             next_log_entries.clone(),
             0,
+            Arc::new(AtomicBool::new(false)),
         )
         .await?;
 
@@ -382,6 +385,7 @@ async fn backsync_two_small_repos(fb: FacebookInit) -> Result<(), Error> {
             commit_syncer.clone(),
             target_repo_dbs.clone(),
             BacksyncLimit::NoLimit,
+            Arc::new(AtomicBool::new(false)),
         )
         .map_err(Error::from)
         .await?;
@@ -611,6 +615,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
         commit_syncer.clone(),
         target_repo_dbs.clone(),
         BacksyncLimit::NoLimit,
+        Arc::new(AtomicBool::new(false)),
     )
     .await?;
 
@@ -638,6 +643,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
         commit_syncer.clone(),
         target_repo_dbs.clone(),
         BacksyncLimit::NoLimit,
+        Arc::new(AtomicBool::new(false)),
     )
     .await?;
     let maybe_outcome = commit_syncer
@@ -777,6 +783,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
         commit_syncer.clone(),
         target_repo_dbs.clone(),
         BacksyncLimit::NoLimit,
+        Arc::new(AtomicBool::new(false)),
     );
     with_tunables_async(tunables, f.boxed()).await?;
 
@@ -884,6 +891,7 @@ async fn backsync_and_verify_master_wc(
             commit_syncer.clone(),
             target_repo_dbs.clone(),
             BacksyncLimit::NoLimit,
+            Arc::new(AtomicBool::new(false)),
         ))
         .flatten_err();
         futs.push(f);

@@ -7,7 +7,9 @@
 
 use anyhow::bail;
 use anyhow::format_err;
+use anyhow::Context;
 use anyhow::Error;
+use async_trait::async_trait;
 use backsyncer::backsync_latest;
 use backsyncer::format_counter;
 use backsyncer::open_backsyncer_dbs;
@@ -19,6 +21,7 @@ use clap::Arg;
 use clap::SubCommand;
 use cloned::cloned;
 use cmdlib::args;
+use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
 use cmdlib::monitoring;
 use cmdlib_x_repo::create_commit_syncer_from_matches;
@@ -28,6 +31,9 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
+use executor_lib::BackgroundProcessExecutor;
+use executor_lib::RepoShardedProcess;
+use executor_lib::RepoShardedProcessExecutor;
 use fbinit::FacebookInit;
 use futures::future::FutureExt;
 use futures::stream;
@@ -39,14 +45,18 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
+use once_cell::sync::OnceCell;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
+use slog::error;
 use slog::info;
 use stats::prelude::*;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::str::FromStr;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 use synced_commit_mapping::SqlSyncedCommitMapping;
@@ -69,6 +79,167 @@ define_stats! {
         "{}.{}.delay_secs",
         (source_repo_name: String, target_repo_name: String)
     ),
+}
+
+const SM_SERVICE_SCOPE: &str = "global";
+const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
+const APP_NAME: &str = "backsyncer cmd-line tool";
+
+/// Struct representing the Back Syncer BP.
+pub struct BacksyncProcess {
+    matches: Arc<MononokeMatches<'static>>,
+    fb: FacebookInit,
+}
+
+impl BacksyncProcess {
+    fn new(fb: FacebookInit) -> anyhow::Result<Self> {
+        let app = args::MononokeAppBuilder::new(APP_NAME)
+            .with_fb303_args()
+            .with_source_and_target_repos()
+            .with_dynamic_repos()
+            .build();
+        let backsync_forever_subcommand = SubCommand::with_name(ARG_MODE_BACKSYNC_FOREVER)
+            .about("Backsyncs all new bookmark moves");
+
+        let sync_loop = SubCommand::with_name(ARG_MODE_BACKSYNC_COMMITS)
+            .about("Syncs all commits from the file")
+            .arg(
+                Arg::with_name(ARG_INPUT_FILE)
+                    .takes_value(true)
+                    .required(true)
+                    .help("list of hg commits to backsync"),
+            )
+            .arg(
+                Arg::with_name(ARG_BATCH_SIZE)
+                    .long(ARG_BATCH_SIZE)
+                    .takes_value(true)
+                    .required(false)
+                    .help("how many commits to backsync at once"),
+            );
+
+        let backsync_all_subcommand = SubCommand::with_name(ARG_MODE_BACKSYNC_ALL)
+            .about("Backsyncs all new bookmark moves once");
+        let app = app
+            .subcommand(backsync_all_subcommand)
+            .subcommand(backsync_forever_subcommand)
+            .subcommand(sync_loop);
+        let matches = Arc::new(app.get_matches(fb)?);
+        Ok(Self { matches, fb })
+    }
+}
+
+#[async_trait]
+impl RepoShardedProcess for BacksyncProcess {
+    async fn setup(
+        &self,
+        repo_names_pair: &str,
+    ) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+        // Since for backsyncer, two repos (i.e. source and target)
+        // are required, the input would be of the form:
+        // source_repo_TO_target_repo (e.g. fbsource_TO_aros)
+        let repo_pair: Vec<_> = repo_names_pair.split("_TO_").collect();
+        if repo_pair.len() != 2 {
+            error!(
+                self.matches.logger(),
+                "Repo names provided in incorrect format: {}", repo_names_pair
+            );
+            bail!(
+                "Repo names provided in incorrect format: {}",
+                repo_names_pair
+            )
+        }
+        let (source_repo_name, target_repo_name) = (repo_pair[0], repo_pair[1]);
+        info!(
+            self.matches.logger(),
+            "Setting up back syncer command from repo {} to repo {}",
+            source_repo_name,
+            target_repo_name,
+        );
+        let executor = BacksyncProcessExecutor::new(
+            self.fb,
+            Arc::clone(&self.matches),
+            source_repo_name.to_string(),
+            target_repo_name.to_string(),
+        );
+        info!(
+            self.matches.logger(),
+            "Completed back syncer command setup from repo {} to repo {}",
+            source_repo_name,
+            target_repo_name,
+        );
+        Ok(Arc::new(executor))
+    }
+}
+
+/// Struct representing the execution of the Back Syncer
+/// BP over the context of a provided repos.
+pub struct BacksyncProcessExecutor {
+    fb: FacebookInit,
+    matches: Arc<MononokeMatches<'static>>,
+    source_repo_name: String,
+    target_repo_name: String,
+    cancellation_requested: Arc<AtomicBool>,
+}
+
+impl BacksyncProcessExecutor {
+    fn new(
+        fb: FacebookInit,
+        matches: Arc<MononokeMatches<'static>>,
+        source_repo_name: String,
+        target_repo_name: String,
+    ) -> Self {
+        Self {
+            fb,
+            matches,
+            source_repo_name,
+            target_repo_name,
+            cancellation_requested: Arc::new(AtomicBool::new(false)),
+        }
+    }
+}
+
+#[async_trait]
+impl RepoShardedProcessExecutor for BacksyncProcessExecutor {
+    async fn execute(&self) -> anyhow::Result<()> {
+        info!(
+            self.matches.logger(),
+            "Initiating back syncer command execution for repo pair {}-{}",
+            &self.source_repo_name,
+            &self.target_repo_name,
+        );
+        run(
+            self.fb,
+            Arc::clone(&self.matches),
+            self.source_repo_name.clone(),
+            self.target_repo_name.clone(),
+            Arc::clone(&self.cancellation_requested),
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Error during back syncer command execution for repo pair {}-{}",
+                &self.source_repo_name, &self.target_repo_name,
+            )
+        })?;
+        info!(
+            self.matches.logger(),
+            "Finished back syncer command execution for repo pair {}-{}",
+            &self.source_repo_name,
+            self.target_repo_name
+        );
+        Ok(())
+    }
+
+    async fn stop(&self) -> anyhow::Result<()> {
+        info!(
+            self.matches.logger(),
+            "Terminating back syncer command execution for repo pair {}-{}",
+            &self.source_repo_name,
+            self.target_repo_name,
+        );
+        self.cancellation_requested.store(true, Ordering::Relaxed);
+        Ok(())
+    }
 }
 
 fn extract_cs_id_from_sync_outcome(
@@ -116,6 +287,7 @@ pub async fn backsync_forever<M>(
     source_repo_name: String,
     target_repo_name: String,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
+    cancellation_requested: Arc<AtomicBool>,
 ) -> Result<(), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
@@ -124,6 +296,12 @@ where
     let live_commit_sync_config = Arc::new(live_commit_sync_config);
 
     loop {
+        // Before initiating loop, check if cancellation has been
+        // requested. If yes, then exit early.
+        if cancellation_requested.load(Ordering::Relaxed) {
+            info!(ctx.logger(), "sync stopping due to cancellation request");
+            return Ok(());
+        }
         // We only care about public pushes because draft pushes are not in the bookmark
         // update log at all.
         let enabled = live_commit_sync_config.push_redirector_enabled_for_public(target_repo_id);
@@ -142,6 +320,7 @@ where
                     commit_syncer.clone(),
                     target_repo_dbs.clone(),
                     BacksyncLimit::NoLimit,
+                    Arc::clone(&cancellation_requested),
                 )
                 .await?
             }
@@ -222,62 +401,89 @@ fn log_delay(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app_name = "backsyncer cmd-line tool";
-    let app = args::MononokeAppBuilder::new(app_name)
-        .with_fb303_args()
-        .with_source_and_target_repos()
-        .build();
-    let backsync_forever_subcommand =
-        SubCommand::with_name(ARG_MODE_BACKSYNC_FOREVER).about("Backsyncs all new bookmark moves");
+    let process = BacksyncProcess::new(fb)?;
+    match process.matches.value_of("sharded-service-name") {
+        Some(service_name) => {
+            // The service name needs to be 'static to satisfy SM contract
+            static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
+            let logger = process.matches.logger().clone();
+            let matches = Arc::clone(&process.matches);
+            let mut executor = BackgroundProcessExecutor::new(
+                process.fb,
+                process.matches.runtime().clone(),
+                &logger,
+                SM_SERVICE_NAME.get_or_init(|| service_name.to_string()),
+                SM_SERVICE_SCOPE,
+                SM_CLEANUP_TIMEOUT_SECS,
+                Arc::new(process),
+            )?;
+            helpers::block_execute(
+                executor.block_and_execute(&logger),
+                fb,
+                &std::env::var("TW_JOB_NAME").unwrap_or_else(|_| APP_NAME.to_string()),
+                matches.logger(),
+                &matches,
+                cmdlib::monitoring::AliveService,
+            )
+        }
+        None => {
+            let logger = process.matches.logger().clone();
+            let matches = process.matches.clone();
+            let config_store = matches.config_store();
+            let source_repo_id = args::get_source_repo_id(config_store, &matches)?;
+            let target_repo_id = args::get_target_repo_id(config_store, &matches)?;
+            let (source_repo_name, _) =
+                args::get_config_by_repoid(config_store, &matches, source_repo_id)?;
+            let (target_repo_name, _) =
+                args::get_config_by_repoid(config_store, &matches, target_repo_id)?;
+            let fut = run(
+                fb,
+                matches.clone(),
+                source_repo_name,
+                target_repo_name,
+                Arc::new(AtomicBool::new(false)),
+            );
+            helpers::block_execute(
+                fut,
+                fb,
+                APP_NAME,
+                &logger,
+                &matches,
+                monitoring::AliveService,
+            )
+        }
+    }
+}
 
-    let sync_loop = SubCommand::with_name(ARG_MODE_BACKSYNC_COMMITS)
-        .about("Syncs all commits from the file")
-        .arg(
-            Arg::with_name(ARG_INPUT_FILE)
-                .takes_value(true)
-                .required(true)
-                .help("list of hg commits to backsync"),
-        )
-        .arg(
-            Arg::with_name(ARG_BATCH_SIZE)
-                .long(ARG_BATCH_SIZE)
-                .takes_value(true)
-                .required(false)
-                .help("how many commits to backsync at once"),
-        );
-
-    let backsync_all_subcommand =
-        SubCommand::with_name(ARG_MODE_BACKSYNC_ALL).about("Backsyncs all new bookmark moves once");
-    let app = app
-        .subcommand(backsync_all_subcommand)
-        .subcommand(backsync_forever_subcommand)
-        .subcommand(sync_loop);
-    let matches = app.get_matches(fb)?;
-
-    let logger = matches.logger();
-    let runtime = matches.runtime();
+async fn run(
+    fb: FacebookInit,
+    matches: Arc<MononokeMatches<'static>>,
+    source_repo_name: String,
+    target_repo_name: String,
+    cancellation_requested: Arc<AtomicBool>,
+) -> Result<(), Error> {
     let config_store = matches.config_store();
 
-    let source_repo_id = args::get_source_repo_id(config_store, &matches)?;
-    let target_repo_id = args::get_target_repo_id(config_store, &matches)?;
-
-    let (source_repo_name, _) = args::get_config_by_repoid(config_store, &matches, source_repo_id)?;
-    let (target_repo_name, target_repo_config) =
-        args::get_config_by_repoid(config_store, &matches, target_repo_id)?;
-
+    let source_repo = args::resolve_repo_by_name(config_store, &matches, &source_repo_name)?;
+    let target_repo = args::resolve_repo_by_name(config_store, &matches, &target_repo_name)?;
+    let repo_tag = format!("{}=>{}", &source_repo_name, &target_repo_name);
     let session_container = SessionContainer::new_with_defaults(fb);
-    let commit_syncer = {
-        let scuba_sample = MononokeScubaSampleBuilder::with_discard();
-        let ctx = session_container.new_context(logger.clone(), scuba_sample);
-        runtime.block_on(create_commit_syncer_from_matches(&ctx, &matches))?
-    };
-
+    let ctx = session_container
+        .new_context(
+            matches.logger().clone(),
+            MononokeScubaSampleBuilder::with_discard(),
+        )
+        .clone_with_repo_name(&repo_tag);
+    let commit_syncer =
+        create_commit_syncer_from_matches(&ctx, &matches, Some((source_repo.id, target_repo.id)))
+            .await?;
+    let logger = ctx.logger();
     let mysql_options = matches.mysql_options();
     let readonly_storage = matches.readonly_storage();
 
     info!(
         logger,
-        "syncing from repoid {:?} into repoid {:?}", source_repo_id, target_repo_id,
+        "syncing from repoid {:?} into repoid {:?}", source_repo.id, target_repo.id,
     );
 
     let config_store = matches.config_store();
@@ -287,44 +493,47 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         (ARG_MODE_BACKSYNC_ALL, _) => {
             let scuba_sample = MononokeScubaSampleBuilder::with_discard();
             let ctx = session_container.new_context(logger.clone(), scuba_sample);
-            let db_config = target_repo_config.storage_config.metadata;
-            let target_repo_dbs = runtime.block_on(
-                open_backsyncer_dbs(
-                    ctx.clone(),
-                    commit_syncer.get_target_repo().clone(),
-                    db_config,
-                    mysql_options.clone(),
-                    *readonly_storage,
-                )
-                .boxed(),
-            )?;
+            let db_config = target_repo.config.storage_config.metadata;
+            let target_repo_dbs = open_backsyncer_dbs(
+                ctx.clone(),
+                commit_syncer.get_target_repo().clone(),
+                db_config,
+                mysql_options.clone(),
+                *readonly_storage,
+            )
+            .boxed()
+            .await?;
 
             // TODO(ikostia): why do we use discarding ScubaSample for BACKSYNC_ALL?
-            runtime.block_on(
-                backsync_latest(ctx, commit_syncer, target_repo_dbs, BacksyncLimit::NoLimit)
-                    .boxed(),
-            )?;
+            backsync_latest(
+                ctx,
+                commit_syncer,
+                target_repo_dbs,
+                BacksyncLimit::NoLimit,
+                cancellation_requested,
+            )
+            .boxed()
+            .await?;
         }
         (ARG_MODE_BACKSYNC_FOREVER, _) => {
-            let db_config = target_repo_config.storage_config.metadata;
+            let db_config = target_repo.config.storage_config.metadata;
             let ctx = session_container
                 .new_context(logger.clone(), MononokeScubaSampleBuilder::with_discard());
-            let target_repo_dbs = runtime.block_on(
-                open_backsyncer_dbs(
-                    ctx,
-                    commit_syncer.get_target_repo().clone(),
-                    db_config,
-                    mysql_options.clone(),
-                    *readonly_storage,
-                )
-                .boxed(),
-            )?;
+            let target_repo_dbs = open_backsyncer_dbs(
+                ctx,
+                commit_syncer.get_target_repo().clone(),
+                db_config,
+                mysql_options.clone(),
+                *readonly_storage,
+            )
+            .boxed()
+            .await?;
 
             let mut scuba_sample = MononokeScubaSampleBuilder::new(fb, SCUBA_TABLE);
-            scuba_sample.add("source_repo", source_repo_id.id());
-            scuba_sample.add("source_repo_name", source_repo_name.clone());
-            scuba_sample.add("target_repo", target_repo_id.id());
-            scuba_sample.add("target_repo_name", target_repo_name.clone());
+            scuba_sample.add("source_repo", source_repo.id.id());
+            scuba_sample.add("source_repo_name", source_repo.name.clone());
+            scuba_sample.add("target_repo", target_repo.id.id());
+            scuba_sample.add("target_repo_name", target_repo.name.clone());
             scuba_sample.add_common_server_data();
 
             let ctx = session_container.new_context(logger.clone(), scuba_sample);
@@ -332,13 +541,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 ctx,
                 commit_syncer,
                 target_repo_dbs,
-                source_repo_name,
-                target_repo_name,
+                source_repo.name,
+                target_repo.name,
                 live_commit_sync_config,
+                cancellation_requested,
             )
             .boxed();
-
-            helpers::block_execute(f, fb, app_name, &logger, &matches, monitoring::AliveService)?;
+            f.await?;
         }
         (ARG_MODE_BACKSYNC_COMMITS, Some(sub_m)) => {
             let ctx = session_container
@@ -348,7 +557,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .expect("input file is not set");
             let inputfile = File::open(inputfile)?;
             let file = BufReader::new(&inputfile);
-            let batch_size = args::get_usize(&matches, ARG_BATCH_SIZE, 100);
+            let batch_size = args::get_usize(matches.as_ref(), ARG_BATCH_SIZE, 100);
 
             let source_repo = commit_syncer.get_source_repo().clone();
 
@@ -362,6 +571,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let ctx = &ctx;
             let commit_syncer = &commit_syncer;
 
+            // Before processing each commit, check if cancellation has
+            // been requested and exit if that's the case.
+            if cancellation_requested.load(Ordering::Relaxed) {
+                info!(ctx.logger(), "sync stopping due to cancellation request");
+                return Ok(());
+            }
             let f = stream::iter(hg_cs_ids.clone())
                 .chunks(batch_size)
                 .map(Result::<_, Error>::Ok)
@@ -418,7 +633,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         })
                 });
 
-            runtime.block_on(f)?;
+            f.await?;
         }
         _ => {
             bail!("unknown subcommand");

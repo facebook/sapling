@@ -56,6 +56,7 @@ use pushrebase::PushrebaseChangesetPair;
 use slog::debug;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -498,6 +499,7 @@ impl PushRedirector {
             self.large_to_small_commit_syncer.clone(),
             self.target_repo_dbs.clone(),
             BacksyncLimit::NoLimit,
+            Arc::new(AtomicBool::new(false)),
         )
         .await?;
 
@@ -553,6 +555,7 @@ impl PushRedirector {
             self.large_to_small_commit_syncer.clone(),
             self.target_repo_dbs.clone(),
             BacksyncLimit::NoLimit,
+            Arc::new(AtomicBool::new(false)),
         )
         .await?;
 
@@ -575,6 +578,7 @@ impl PushRedirector {
             self.large_to_small_commit_syncer.clone(),
             self.target_repo_dbs.clone(),
             BacksyncLimit::NoLimit,
+            Arc::new(AtomicBool::new(false)),
         )
         .await?;
 
