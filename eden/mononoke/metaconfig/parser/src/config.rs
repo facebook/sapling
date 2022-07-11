@@ -176,8 +176,6 @@ fn parse_with_repo_definition(
         source_control_service_monitoring,
         derived_data_config,
         scuba_local_path_hooks,
-        hgsql_name,
-        hgsql_globalrevs_name,
         enforce_lfs_acl_check,
         repo_client_use_warm_bookmarks_cache,
         segmented_changelog_config,
@@ -273,12 +271,6 @@ fn parse_with_repo_definition(
 
     let derived_data_config = derived_data_config.convert()?.unwrap_or_default();
 
-    // XXX only www has it explicitly specified.
-    let hgsql_name = HgsqlName(hgsql_name.unwrap_or_else(|| reponame.to_string()));
-
-    let hgsql_globalrevs_name =
-        HgsqlGlobalrevsName(hgsql_globalrevs_name.unwrap_or_else(|| hgsql_name.0.clone()));
-
     let enforce_lfs_acl_check = enforce_lfs_acl_check.unwrap_or(false);
     let repo_client_use_warm_bookmarks_cache =
         repo_client_use_warm_bookmarks_cache.unwrap_or(false);
@@ -331,8 +323,6 @@ fn parse_with_repo_definition(
         source_control_service,
         source_control_service_monitoring,
         derived_data_config,
-        hgsql_name,
-        hgsql_globalrevs_name,
         enforce_lfs_acl_check,
         repo_client_use_warm_bookmarks_cache,
         segmented_changelog_config,
@@ -869,8 +859,6 @@ mod test {
         let www_content = r#"
             scuba_table_hooks="scm_hooks"
             storage_config="files"
-            hgsql_name = "www-foobar"
-            hgsql_globalrevs_name = "www-barfoo"
             phabricator_callsign="WWW"
             [segmented_changelog_config]
             heads_to_include = [
@@ -1154,8 +1142,6 @@ mod test {
                     },],
                     scuba_table: None,
                 },
-                hgsql_name: HgsqlName("fbsource".to_string()),
-                hgsql_globalrevs_name: HgsqlGlobalrevsName("fbsource".to_string()),
                 enforce_lfs_acl_check: false,
                 repo_client_use_warm_bookmarks_cache: true,
                 segmented_changelog_config: SegmentedChangelogConfig {
@@ -1263,8 +1249,6 @@ mod test {
                 source_control_service: SourceControlServiceParams::default(),
                 source_control_service_monitoring: None,
                 derived_data_config: DerivedDataConfig::default(),
-                hgsql_name: HgsqlName("www-foobar".to_string()),
-                hgsql_globalrevs_name: HgsqlGlobalrevsName("www-barfoo".to_string()),
                 enforce_lfs_acl_check: false,
                 repo_client_use_warm_bookmarks_cache: false,
                 segmented_changelog_config: SegmentedChangelogConfig {
@@ -1531,8 +1515,6 @@ mod test {
                 generation_cache_size: 10 * 1024 * 1024,
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,
-                hgsql_name: HgsqlName("test".to_string()),
-                hgsql_globalrevs_name: HgsqlGlobalrevsName("test".to_string()),
                 ..Default::default()
             }
         };
@@ -1625,8 +1607,6 @@ mod test {
                 generation_cache_size: 10 * 1024 * 1024,
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,
-                hgsql_name: HgsqlName("test".to_string()),
-                hgsql_globalrevs_name: HgsqlGlobalrevsName("test".to_string()),
                 ..Default::default()
             }
         };

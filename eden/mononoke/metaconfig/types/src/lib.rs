@@ -196,11 +196,6 @@ pub struct RepoConfig {
     pub source_control_service_monitoring: Option<SourceControlServiceMonitoring>,
     /// Derived data config for this repo
     pub derived_data_config: DerivedDataConfig,
-    /// Name of this repository in hgsql.
-    pub hgsql_name: HgsqlName,
-    /// Name of this repository in hgsql ... for globalrevs. This could, in some cases, not be the
-    /// same as HgsqlName.
-    pub hgsql_globalrevs_name: HgsqlGlobalrevsName,
     /// Whether to enforce strict LFS ACL checks for this repo.
     pub enforce_lfs_acl_check: bool,
     /// Whether to use warm bookmark cache while serving data hg wireprotocol
