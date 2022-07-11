@@ -572,7 +572,7 @@ def findthingstopurge(dirstate, match, findfiles, finddirs, includeignored):
     return files, dirs
 
 
-def badtype(mode):
+def badtype(mode: int) -> str:
     kind = _("unknown")
     if stat.S_ISCHR(mode):
         kind = _("character device")
