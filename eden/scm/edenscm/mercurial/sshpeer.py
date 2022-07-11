@@ -18,7 +18,7 @@ import re
 import subprocess
 import threading
 import weakref
-from typing import Any
+from typing import Any, Tuple
 
 from . import error, progress, stdiopeer, util
 from .i18n import _
@@ -31,7 +31,7 @@ _totalbytessent = 0
 _totalbytesreceived = 0
 
 
-def _serverquote(s):
+def _serverquote(s) -> str:
     if not s:
         return s
     """quote a string for the remote shell ... which we assume is sh"""
@@ -133,7 +133,7 @@ class threadedstderr(object):
 _sshpeerweakrefs = []
 
 
-def cleanupall():
+def cleanupall() -> None:
     """Call _cleanup for all remaining sshpeers.
 
     sshpeer.__del__ -> _cleanup -> thread.join might cause deadlock
@@ -334,12 +334,12 @@ class sshpeer(stdiopeer.stdiopeer):
     __del__ = _cleanup
 
 
-def _pipe():
+def _pipe() -> Tuple[io.BufferedReader, io.BufferedWriter]:
     rfd, wfd = os.pipe()
     return os.fdopen(rfd, "rb"), os.fdopen(wfd, "wb")
 
 
-def _popen4testhgserve(path, env=None, newlines=False, bufsize=-1):
+def _popen4testhgserve(path, env=None, newlines: bool = False, bufsize: int = -1):
     """spawn 'hg serve' without depending on /bin/sh or cmd.exe or /usr/bin/env python or dummyssh"""
     assert util.istest()
 
