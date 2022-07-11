@@ -136,7 +136,7 @@ pub fn run(
             "--eden requires --config clone.use-rust=True"
         );
 
-        logger.info("Falling back to Python clone (no segmented changelog)");
+        logger.info("Falling back to Python clone (config not enabled)");
         return Err(errors::FallbackToPython(name()).into());
     }
 
