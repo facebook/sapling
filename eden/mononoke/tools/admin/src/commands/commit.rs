@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod rebase;
 mod split;
 
 use anyhow::Context;
@@ -13,6 +14,7 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
+use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use clap::Parser;
 use clap::Subcommand;
@@ -20,6 +22,7 @@ use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use repo_blobstore::RepoBlobstore;
 
+use rebase::CommitRebaseArgs;
 use split::CommitSplitArgs;
 
 /// Manipulate commits
@@ -51,6 +54,9 @@ pub struct Repo {
 
     #[facet]
     changesets: dyn Changesets,
+
+    #[facet]
+    changeset_fetcher: dyn ChangesetFetcher,
 }
 
 #[derive(Subcommand)]
@@ -65,6 +71,13 @@ pub enum CommitSubcommand {
     ///
     /// The stack is printed in order from ancestor to descendant.
     Split(CommitSplitArgs),
+
+    /// Rebase a commit
+    ///
+    /// Rebases a commit from its current parent to a new parent.  This is a
+    /// low-level command and does not perform any validation on the rebase.
+    /// The caller must ensure that the result of this rebase is valid.
+    Rebase(CommitRebaseArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -77,6 +90,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     match args.subcommand {
         CommitSubcommand::Split(split_args) => split::split(&ctx, &repo, split_args).await?,
+        CommitSubcommand::Rebase(rebase_args) => rebase::rebase(&ctx, &repo, rebase_args).await?,
     }
 
     Ok(())
