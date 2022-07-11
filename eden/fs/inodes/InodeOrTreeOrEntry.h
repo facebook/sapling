@@ -146,6 +146,22 @@ class InodeOrTreeOrEntry {
       ObjectStore* objectStore,
       ObjectFetchContext& fetchContext);
 
+  /**
+   * Collect all available attributes for all of the children
+   * of a directory. All available attributes are currently:
+   * - sha1
+   * - size
+   * - source control type
+   * Note that we return error values for sha1s and sizes of directories and
+   * symlinks.
+   */
+  ImmediateFuture<
+      std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
+  getChildrenAttributes(
+      RelativePath path,
+      ObjectStore* objectStore,
+      ObjectFetchContext& fetchContext);
+
  private:
   /**
    * Helper function for getOrFindChild when the current node is a Tree.

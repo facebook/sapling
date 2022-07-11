@@ -49,6 +49,15 @@ class EntryAttributes {
 };
 
 /**
+ * Comparing two EntryAttributes or Try of EntryAttributes, exceptions of any
+ * kind are considered equal for simplicity.
+ */
+bool operator==(const EntryAttributes& lhs, const EntryAttributes& rhs);
+bool operator==(
+    const folly::Try<EntryAttributes>& lhs,
+    const folly::Try<EntryAttributes>& rhs);
+
+/**
  * Computes an initial mode_t, including permission bits, from a FileType.
  */
 mode_t modeFromTreeEntryType(TreeEntryType ft);

@@ -36,6 +36,32 @@ EntryAttributes::EntryAttributes(
     TreeEntryType fileType)
     : sha1(blobMetadata.sha1), size(blobMetadata.size), type(fileType) {}
 
+template <typename T>
+bool checkValueEqual(const folly::Try<T>& lhs, const folly::Try<T>& rhs) {
+  if (lhs.hasException() || rhs.hasException()) {
+    return lhs.hasException() == rhs.hasException();
+  }
+  return lhs.value() == rhs.value();
+}
+
+bool operator==(const EntryAttributes& lhs, const EntryAttributes& rhs) {
+  return checkValueEqual(lhs.sha1, rhs.sha1) &&
+      checkValueEqual(lhs.size, rhs.size) &&
+      checkValueEqual(lhs.type, rhs.type);
+}
+
+bool operator==(
+    const folly::Try<EntryAttributes>& lhs,
+    const folly::Try<EntryAttributes>& rhs) {
+  if (lhs.hasException()) {
+    return rhs.hasException();
+  }
+  if (rhs.hasException()) {
+    return lhs.hasException();
+  }
+  return rhs.value() == lhs.value();
+}
+
 mode_t modeFromTreeEntryType(TreeEntryType ft) {
   switch (ft) {
     case TreeEntryType::TREE:

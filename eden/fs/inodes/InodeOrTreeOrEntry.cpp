@@ -386,6 +386,54 @@ InodeOrTreeOrEntry::getChildren(
       variant_);
 }
 
+ImmediateFuture<
+    std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>
+InodeOrTreeOrEntry::getChildrenAttributes(
+    RelativePath path,
+    ObjectStore* objectStore,
+    ObjectFetchContext& fetchContext) {
+  auto children = this->getChildren(path.piece(), objectStore, fetchContext);
+
+  if (children.hasException()) {
+    return ImmediateFuture<
+        std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>>{
+        children.exception()};
+  }
+
+  std::vector<PathComponent> names{};
+  std::vector<ImmediateFuture<EntryAttributes>> attributesFutures{};
+
+  names.reserve(children.value().size());
+  attributesFutures.reserve(children.value().size());
+
+  for (auto& nameAndinodeOr : children.value()) {
+    names.push_back(nameAndinodeOr.first);
+    attributesFutures.push_back(
+        std::move(nameAndinodeOr.second)
+            .thenValue([subPath = path + nameAndinodeOr.first,
+                        objectStore,
+                        &fetchContext](InodeOrTreeOrEntry inodeOr) {
+              return inodeOr.getEntryAttributes(
+                  subPath, objectStore, fetchContext);
+            }));
+  }
+  return collectAll(std::move(attributesFutures))
+      .thenValue(
+          [names = std::move(names)](
+              std::vector<folly::Try<EntryAttributes>> attributes) mutable {
+            std::vector<std::pair<PathComponent, folly::Try<EntryAttributes>>>
+                zippedResult{};
+            zippedResult.reserve(attributes.size());
+            XDCHECK_EQ(attributes.size(), names.size())
+                << "Missing/too many attributes for the names.";
+            for (uint32_t i = 0; i < attributes.size(); ++i) {
+              zippedResult.push_back(std::make_pair(
+                  std::move(names.at(i)), std::move(attributes.at(i))));
+            }
+            return zippedResult;
+          });
+}
+
 ImmediateFuture<InodeOrTreeOrEntry> InodeOrTreeOrEntry::getOrFindChild(
     PathComponentPiece childName,
     RelativePathPiece path,

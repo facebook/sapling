@@ -321,6 +321,16 @@ class TestFileDatabase {
     throw std::out_of_range("No path match for lhs");
   }
 
+  std::vector<TestFileInfo*> getChildren(RelativePathPiece path) {
+    std::vector<TestFileInfo*> kids;
+    for (auto& info : initialInfos_) {
+      if (info->path.stringPiece().size() && info->path.dirname() == path) {
+        kids.emplace_back(&getEntry(info->path));
+      }
+    }
+    return kids;
+  }
+
  private:
   TestFileInfo& getEntry(RelativePathPiece path) {
     auto& info = modifiedInfos_[path];
@@ -367,16 +377,6 @@ class TestFileDatabase {
   void onUnMaterialized(RelativePathPiece /*path*/) {
     // TODO: right now we only ever unMaterialize the entire tree
     assert(false);
-  }
-
-  std::vector<TestFileInfo*> getChildren(RelativePathPiece path) {
-    std::vector<TestFileInfo*> kids;
-    for (auto& info : initialInfos_) {
-      if (info->path.stringPiece().size() && info->path.dirname() == path) {
-        kids.emplace_back(&getEntry(info->path));
-      }
-    }
-    return kids;
   }
 
   std::vector<std::shared_ptr<const TestFileInfo>> initialInfos_;
@@ -635,6 +635,43 @@ TEST(InodeOrTreeOrEntryTest, getChildrenDoesNotChangeState) {
           info->path,
           mount.getEdenMount()->getObjectStore(),
           ObjectFetchContext::getNullContext());
+    }
+  }
+  VERIFY_TREE(flags);
+}
+
+TEST(InodeOrTreeOrEntryTest, getChildrenAttributes) {
+  TestFileDatabase files;
+  auto flags = VERIFY_DEFAULT & (~VERIFY_SHA1);
+  auto mount = TestMount{MakeTestTreeBuilder(files)};
+  VERIFY_TREE(flags);
+
+  for (auto info : files.getOriginalItems()) {
+    VERIFY_TREE(flags);
+    auto inodeOr = mount.getInodeOrTreeOrEntry(info->path);
+    EXPECT_INODE_OR(inodeOr, *info.get());
+    if (inodeOr.isDirectory()) {
+      auto result = inodeOr
+                        .getChildrenAttributes(
+                            info->path,
+                            mount.getEdenMount()->getObjectStore(),
+                            ObjectFetchContext::getNullContext())
+                        .get();
+
+      for (auto child : files.getChildren(RelativePathPiece{info->path})) {
+        auto childInodeOr = mount.getInodeOrTreeOrEntry(child->path);
+        auto entryName = basename(child->path.stringPiece());
+        EXPECT_THAT(
+            result,
+            testing::Contains(testing::Pair(
+                entryName,
+                childInodeOr
+                    .getEntryAttributes(
+                        child->path,
+                        mount.getEdenMount()->getObjectStore(),
+                        ObjectFetchContext::getNullContext())
+                    .getTry())));
+      }
     }
   }
   VERIFY_TREE(flags);
