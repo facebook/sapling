@@ -46,6 +46,8 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../../mutable_renames" }
 phases = { version = "0.1.0", path = "../../phases" }
+pushrebase = { version = "0.1.0", path = "../../pushrebase" }
+pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
 regex = "1.5.4"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_cross_repo = { version = "0.1.0", path = "../../repo_attributes/repo_cross_repo" }
