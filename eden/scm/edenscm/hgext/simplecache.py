@@ -337,7 +337,7 @@ def localset(key: str, value: bytes, ui) -> None:
 cachefuncs = {"local": (localget, localset), "memcache": (mcget, mcset)}
 
 
-def _adjust_key(key, ui) -> str:
+def _adjust_key(key: str, ui) -> str:
     version = ui.config("simplecache", "version", default="2")
     key = "%s:v%s" % (key, version)
     if pycompat.iswindows:
@@ -346,7 +346,7 @@ def _adjust_key(key, ui) -> str:
     return key
 
 
-def memoize(func, key, serializer, ui):
+def memoize(func, key: str, serializer, ui):
     key = _adjust_key(key, ui)
     sentinel = object()
     result = cacheget(key, serializer, ui, sentinel, _adjusted=True)
@@ -359,7 +359,7 @@ def memoize(func, key, serializer, ui):
     return value
 
 
-def cacheget(key, serializer, ui, default=None, _adjusted: bool = False):
+def cacheget(key: str, serializer, ui, default=None, _adjusted: bool = False):
     if not _adjusted:
         key = _adjust_key(key, ui)
     cachelist = ui.configlist("simplecache", "caches", ["local"])
@@ -378,7 +378,7 @@ def cacheget(key, serializer, ui, default=None, _adjusted: bool = False):
     return default
 
 
-def cacheset(key, value, serializer, ui, _adjusted: bool = False) -> None:
+def cacheset(key: str, value, serializer, ui, _adjusted: bool = False) -> None:
     if not _adjusted:
         key = _adjust_key(key, ui)
     cachelist = ui.configlist("simplecache", "caches", ["local"])
