@@ -217,17 +217,27 @@ ImmediateFuture<EntryAttributes> InodeOrTreeOrEntry::getEntryAttributes(
   }
 
   return getTreeEntryType(path, fetchContext)
-      .thenValue(
+      .thenTry(
           [this, path, objectStore, &fetchContext](
-              auto type) mutable -> ImmediateFuture<EntryAttributes> {
+              folly::Try<TreeEntryType> type) mutable
+          -> ImmediateFuture<EntryAttributes> {
             // This is now guaranteed to be a dtype_t::Regular file. This
             // means there's no need for a Tree case, as Trees are always
             // directories. It's included to check that the visitor here is
             // exhaustive.
             return this->getBlobMetadata(path, objectStore, fetchContext)
-                .thenValue([type](auto&& blobMetadata) mutable {
-                  return EntryAttributes{blobMetadata, type};
-                });
+                .thenTry(
+                    [type](folly::Try<BlobMetadata> blobMetadata) mutable
+                    -> EntryAttributes {
+                      return EntryAttributes{
+                          blobMetadata.hasException()
+                              ? folly::Try<Hash20>(blobMetadata.exception())
+                              : folly::Try<Hash20>(blobMetadata.value().sha1),
+                          blobMetadata.hasException()
+                              ? folly::Try<uint64_t>(blobMetadata.exception())
+                              : folly::Try<uint64_t>(blobMetadata.value().size),
+                          type};
+                    });
           });
 }
 

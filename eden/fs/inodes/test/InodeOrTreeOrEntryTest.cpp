@@ -759,6 +759,31 @@ TEST(InodeOrTreeOrEntryTest, getEntryAttributesDoesNotChangeState) {
   VERIFY_TREE(VERIFY_DEFAULT & (~VERIFY_SHA1));
 }
 
+TEST(InodeOrTreeOrEntryTest, getEntryAttributesAttributeError) {
+  TestFileDatabase files;
+  FakeTreeBuilder builder;
+  files.build(builder);
+  auto mount = TestMount{builder, false};
+
+  builder.setReady("root_dirA");
+  builder.setReady("root_dirA/child1_fileA2");
+
+  auto inodeOr = mount.getInodeOrTreeOrEntry("root_dirA");
+
+  auto attributesFuture = inodeOr.getEntryAttributes(
+      RelativePathPiece{"root_dirA"},
+      mount.getEdenMount()->getObjectStore(),
+      ObjectFetchContext::getNullContext());
+
+  builder.triggerError(
+      "root_dirA/child1_fileA1", std::domain_error("fake error for testing"));
+
+  auto attributes = std::move(attributesFuture).get();
+  EXPECT_TRUE(attributes.sha1.hasException());
+  EXPECT_TRUE(attributes.size.hasException());
+  EXPECT_FALSE(attributes.type.hasException());
+}
+
 TEST(InodeOrTreeOrEntryTest, sha1DoesNotChangeState) {
   TestFileDatabase files;
   auto mount = TestMount{MakeTestTreeBuilder(files)};

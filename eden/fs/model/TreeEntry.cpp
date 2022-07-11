@@ -31,11 +31,6 @@ EntryAttributes::EntryAttributes(
       size(std::move(fileLength)),
       type(std::move(fileType)) {}
 
-EntryAttributes::EntryAttributes(
-    BlobMetadata blobMetadata,
-    TreeEntryType fileType)
-    : sha1(blobMetadata.sha1), size(blobMetadata.size), type(fileType) {}
-
 template <typename T>
 bool checkValueEqual(const folly::Try<T>& lhs, const folly::Try<T>& rhs) {
   if (lhs.hasException() || rhs.hasException()) {

@@ -41,8 +41,6 @@ class EntryAttributes {
       folly::Try<uint64_t> fileLength,
       folly::Try<TreeEntryType> fileType);
 
-  EntryAttributes(BlobMetadata blobMetadata, TreeEntryType fileType);
-
   folly::Try<Hash20> sha1;
   folly::Try<uint64_t> size;
   folly::Try<TreeEntryType> type;
