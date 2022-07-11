@@ -48,6 +48,7 @@ pub struct PushrebaseOntoBookmarkOp<'op> {
     bookmark_restrictions: BookmarkKindRestrictions,
     cross_repo_push_source: CrossRepoPushSource,
     pushvars: Option<&'op HashMap<String, Bytes>>,
+    only_log_acl_checks: bool,
 }
 
 impl<'op> PushrebaseOntoBookmarkOp<'op> {
@@ -61,6 +62,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             bookmark_restrictions: BookmarkKindRestrictions::AnyKind,
             cross_repo_push_source: CrossRepoPushSource::NativeToThisRepo,
             pushvars: None,
+            only_log_acl_checks: false,
         }
     }
 
@@ -92,6 +94,11 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         self
     }
 
+    pub fn only_log_acl_checks(mut self, only_log: bool) -> Self {
+        self.only_log_acl_checks = only_log;
+        self
+    }
+
     pub async fn run(
         mut self,
         ctx: &'op CoreContext,
@@ -107,9 +114,22 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             .bookmark_restrictions
             .check_kind(infinitepush_params, self.bookmark)?;
 
-        authz
-            .require_repo_write(ctx, repo, RepoWriteOperation::LandStack(kind))
-            .await?;
+        if self.only_log_acl_checks {
+            if authz
+                .check_repo_write(ctx, repo, RepoWriteOperation::LandStack(kind))
+                .await?
+                .is_denied()
+            {
+                ctx.scuba().clone().log_with_msg(
+                    "Repo write ACL check would fail for bookmark pushrebase",
+                    None,
+                );
+            }
+        } else {
+            authz
+                .require_repo_write(ctx, repo, RepoWriteOperation::LandStack(kind))
+                .await?;
+        }
         authz
             .require_bookmark_modify(ctx, repo, bookmark_attrs, self.bookmark)
             .await?;

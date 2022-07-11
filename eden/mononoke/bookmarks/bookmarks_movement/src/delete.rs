@@ -31,6 +31,7 @@ pub struct DeleteBookmarkOp<'op> {
     reason: BookmarkUpdateReason,
     kind_restrictions: BookmarkKindRestrictions,
     pushvars: Option<&'op HashMap<String, Bytes>>,
+    only_log_acl_checks: bool,
 }
 
 impl<'op> DeleteBookmarkOp<'op> {
@@ -45,6 +46,7 @@ impl<'op> DeleteBookmarkOp<'op> {
             reason,
             kind_restrictions: BookmarkKindRestrictions::AnyKind,
             pushvars: None,
+            only_log_acl_checks: false,
         }
     }
 
@@ -63,6 +65,11 @@ impl<'op> DeleteBookmarkOp<'op> {
         self
     }
 
+    pub fn only_log_acl_checks(mut self, only_log: bool) -> Self {
+        self.only_log_acl_checks = only_log;
+        self
+    }
+
     pub async fn run(
         self,
         ctx: &'op CoreContext,
@@ -75,9 +82,21 @@ impl<'op> DeleteBookmarkOp<'op> {
             .kind_restrictions
             .check_kind(infinitepush_params, self.bookmark)?;
 
-        authz
-            .require_repo_write(ctx, repo, RepoWriteOperation::DeleteBookmark(kind))
-            .await?;
+        if self.only_log_acl_checks {
+            if authz
+                .check_repo_write(ctx, repo, RepoWriteOperation::DeleteBookmark(kind))
+                .await?
+                .is_denied()
+            {
+                ctx.scuba()
+                    .clone()
+                    .log_with_msg("Repo write ACL check would fail for bookmark delete", None);
+            }
+        } else {
+            authz
+                .require_repo_write(ctx, repo, RepoWriteOperation::DeleteBookmark(kind))
+                .await?;
+        }
         authz
             .require_bookmark_modify(ctx, repo, bookmark_attrs, self.bookmark)
             .await?;

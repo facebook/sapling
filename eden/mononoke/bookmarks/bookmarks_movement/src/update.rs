@@ -100,6 +100,7 @@ pub struct UpdateBookmarkOp<'op> {
     affected_changesets: AffectedChangesets,
     pushvars: Option<&'op HashMap<String, Bytes>>,
     log_new_public_commits_to_scribe: bool,
+    only_log_acl_checks: bool,
 }
 
 impl<'op> UpdateBookmarkOp<'op> {
@@ -119,6 +120,7 @@ impl<'op> UpdateBookmarkOp<'op> {
             affected_changesets: AffectedChangesets::new(),
             pushvars: None,
             log_new_public_commits_to_scribe: false,
+            only_log_acl_checks: false,
         }
     }
 
@@ -157,6 +159,11 @@ impl<'op> UpdateBookmarkOp<'op> {
         self
     }
 
+    pub fn only_log_acl_checks(mut self, only_log: bool) -> Self {
+        self.only_log_acl_checks = only_log;
+        self
+    }
+
     pub async fn run(
         mut self,
         ctx: &'op CoreContext,
@@ -172,9 +179,21 @@ impl<'op> UpdateBookmarkOp<'op> {
             .kind_restrictions
             .check_kind(infinitepush_params, self.bookmark)?;
 
-        authz
-            .require_repo_write(ctx, repo, RepoWriteOperation::UpdateBookmark(kind))
-            .await?;
+        if self.only_log_acl_checks {
+            if authz
+                .check_repo_write(ctx, repo, RepoWriteOperation::UpdateBookmark(kind))
+                .await?
+                .is_denied()
+            {
+                ctx.scuba()
+                    .clone()
+                    .log_with_msg("Repo write ACL check would fail for bookmark update", None);
+            }
+        } else {
+            authz
+                .require_repo_write(ctx, repo, RepoWriteOperation::UpdateBookmark(kind))
+                .await?;
+        }
         authz
             .require_bookmark_modify(ctx, repo, bookmark_attrs, self.bookmark)
             .await?;

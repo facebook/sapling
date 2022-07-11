@@ -44,6 +44,7 @@ pub struct CreateBookmarkOp<'op> {
     affected_changesets: AffectedChangesets,
     pushvars: Option<&'op HashMap<String, Bytes>>,
     log_new_public_commits_to_scribe: bool,
+    only_log_acl_checks: bool,
 }
 
 impl<'op> CreateBookmarkOp<'op> {
@@ -61,6 +62,7 @@ impl<'op> CreateBookmarkOp<'op> {
             affected_changesets: AffectedChangesets::new(),
             pushvars: None,
             log_new_public_commits_to_scribe: false,
+            only_log_acl_checks: false,
         }
     }
 
@@ -81,6 +83,11 @@ impl<'op> CreateBookmarkOp<'op> {
 
     pub fn log_new_public_commits_to_scribe(mut self) -> Self {
         self.log_new_public_commits_to_scribe = true;
+        self
+    }
+
+    pub fn only_log_acl_checks(mut self, only_log: bool) -> Self {
+        self.only_log_acl_checks = only_log;
         self
     }
 
@@ -114,9 +121,21 @@ impl<'op> CreateBookmarkOp<'op> {
             .kind_restrictions
             .check_kind(infinitepush_params, self.bookmark)?;
 
-        authz
-            .require_repo_write(ctx, repo, RepoWriteOperation::CreateBookmark(kind))
-            .await?;
+        if self.only_log_acl_checks {
+            if authz
+                .check_repo_write(ctx, repo, RepoWriteOperation::CreateBookmark(kind))
+                .await?
+                .is_denied()
+            {
+                ctx.scuba()
+                    .clone()
+                    .log_with_msg("Repo write ACL check would fail for bookmark create", None);
+            }
+        } else {
+            authz
+                .require_repo_write(ctx, repo, RepoWriteOperation::CreateBookmark(kind))
+                .await?;
+        }
         authz
             .require_bookmark_modify(ctx, repo, bookmark_attrs, self.bookmark)
             .await?;

@@ -294,6 +294,10 @@ pub struct MononokeTunables {
     disable_check_write_permissions_hook: AtomicBool,
     // If this is set, the check result will be discarded
     log_only_check_write_permissions_hook: AtomicBool,
+
+    // If set, the wireproto implementation will only log the repo write ACL
+    // check result.
+    log_only_wireproto_write_acl: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

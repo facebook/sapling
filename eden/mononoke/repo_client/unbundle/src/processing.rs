@@ -672,6 +672,7 @@ async fn plain_push_bookmark(
                     .with_new_changesets(new_changesets)
                     .with_pushvars(maybe_pushvars)
                     .with_push_source(cross_repo_push_source)
+                    .only_log_acl_checks(tunables().get_log_only_wireproto_write_acl())
                     .run(
                         ctx,
                         &AuthorizationContext::new(),
@@ -718,6 +719,7 @@ async fn plain_push_bookmark(
             .with_new_changesets(new_changesets)
             .with_pushvars(maybe_pushvars)
             .with_push_source(cross_repo_push_source)
+            .only_log_acl_checks(tunables().get_log_only_wireproto_write_acl())
             .run(
                 ctx,
                 &AuthorizationContext::new(),
@@ -757,6 +759,7 @@ async fn plain_push_bookmark(
             bookmarks_movement::DeleteBookmarkOp::new(&bookmark_push.name, old_target, reason)
                 .only_if_public()
                 .with_pushvars(maybe_pushvars)
+                .only_log_acl_checks(tunables().get_log_only_wireproto_write_acl())
                 .run(
                     ctx,
                     &AuthorizationContext::new(),
@@ -792,6 +795,7 @@ async fn infinitepush_scratch_bookmark(
         )
         .only_if_scratch()
         .with_push_source(cross_repo_push_source)
+        .only_log_acl_checks(tunables().get_log_only_wireproto_write_acl())
         .run(
             ctx,
             &AuthorizationContext::new(),
@@ -826,6 +830,7 @@ async fn infinitepush_scratch_bookmark(
         )
         .only_if_scratch()
         .with_push_source(cross_repo_push_source)
+        .only_log_acl_checks(tunables().get_log_only_wireproto_write_acl())
         .run(
             ctx,
             &AuthorizationContext::new(),
