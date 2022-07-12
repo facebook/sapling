@@ -9,6 +9,7 @@ mononoke_app::subcommands! {
     mod blobstore;
     mod blobstore_unlink;
     mod bookmarks;
+    mod changelog;
     mod commit;
     mod convert;
     mod fetch;
