@@ -137,6 +137,9 @@ class WorkingCopy:
         # pyre-fixme[7]: Expected `Path` but got `str`.
         return os.path.join(self.root, str(path))
 
+    def files(self) -> List[str]:
+        return sorted(self.hg.files().stdout.rstrip().split("\n"))
+
 
 class EdenWorkingCopy(WorkingCopy):
     eden: edenclient.EdenFS
