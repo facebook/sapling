@@ -35,6 +35,7 @@ from .. import (
     bundle2,
     changegroup,
     changelog2,
+    clone,
     cmdutil,
     color,
     context,
@@ -4017,3 +4018,11 @@ def debugscmstore(ui, repo, mode=None, path=None, python=False):
         repo.manifestlog.treescmstore.test_fetch(path)
     if mode == "file":
         repo.fileslog.filescmstore.test_fetch(path)
+
+
+@command("debugrevlogclone", [], _("source"))
+def debugrevlogclone(ui, repo, source):
+    """download revlog and bookmarks into a newly initialized repo"""
+    clone.revlogclone(source, repo)
+    changelog_format = ui.config("clone", "nonsegmented-changelog", "doublewrite")
+    changelog2.migrateto(repo, changelog_format)

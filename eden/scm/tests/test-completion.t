@@ -176,6 +176,7 @@ Show debug commands if there are no other candidates
   debugrename
   debugresetheads
   debugrevlog
+  debugrevlogclone
   debugrevspec
   debugrunlog
   debugrunshell
@@ -495,6 +496,7 @@ Show all commands + options
   debugrename: rev
   debugresetheads: 
   debugrevlog: changelog, manifest, dir, dump
+  debugrevlogclone: 
   debugrevspec: optimize, show-revs, show-set, show-stage, no-optimized, verify-optimized
   debugrunlog: ended, template
   debugrunshell: cmd

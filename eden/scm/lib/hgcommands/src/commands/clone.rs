@@ -9,7 +9,6 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
-use anyhow::bail;
 use async_runtime::block_unless_interrupted as block_on;
 use clidispatch::abort;
 use clidispatch::abort_if;
@@ -18,7 +17,6 @@ use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::output::new_logger;
 use clidispatch::output::TermLogger;
 use cliparser::define_flags;
-use edenapi::Builder;
 use migration::feature::deprecate;
 use repo::constants::HG_PATH;
 use repo::repo::Repo;
@@ -28,6 +26,8 @@ use types::HgId;
 use super::ConfigSet;
 use super::Result;
 use super::IO;
+
+use crate::HgPython;
 
 static SEGMENTED_CHANGELOG_CAPABILITY: &str = "segmented-changelog";
 
@@ -192,21 +192,6 @@ pub fn run(
         },
     };
 
-    // Rust clone only supports segmented changelog clone
-    // TODO: add binding for python streaming revlog download
-    let edenapi = Builder::from_config(config)?
-        .correlator(Some(edenapi::DEFAULT_CORRELATOR.as_str()))
-        .build()?;
-    let capabilities: Vec<String> =
-        block_on(edenapi.capabilities())?.map_err(|e| e.tag_network())?;
-    if !capabilities
-        .iter()
-        .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY)
-    {
-        logger.info("Falling back to Python clone (no segmented changelog)");
-        bail!(errors::FallbackToPython(name()));
-    }
-
     let destination = match clone_opts.args.pop() {
         Some(dest) => PathBuf::from(dest),
         None => {
@@ -253,6 +238,7 @@ pub fn run(
             });
             try_clone_metadata(
                 &mut logger,
+                io,
                 &clone_opts,
                 &global_opts,
                 config,
@@ -279,6 +265,7 @@ pub fn run(
     } else {
         let mut repo = try_clone_metadata(
             &mut logger,
+            io,
             &clone_opts,
             &global_opts,
             config,
@@ -312,6 +299,7 @@ pub fn run(
 
 fn try_clone_metadata(
     logger: &mut TermLogger,
+    io: &IO,
     clone_opts: &CloneOpts,
     global_opts: &HgGlobalOpts,
     config: &mut ConfigSet,
@@ -321,6 +309,7 @@ fn try_clone_metadata(
     let dest_preexists = destination.exists();
     match clone_metadata(
         logger,
+        io,
         clone_opts,
         global_opts,
         config,
@@ -343,6 +332,7 @@ fn try_clone_metadata(
 #[instrument(skip_all, fields(repo=reponame), err)]
 fn clone_metadata(
     logger: &mut TermLogger,
+    io: &IO,
     clone_opts: &CloneOpts,
     global_opts: &HgGlobalOpts,
     config: &mut ConfigSet,
@@ -372,28 +362,80 @@ fn clone_metadata(
     let mut repo = Repo::init(destination, config, Some(hgrc_content))?;
 
     repo.config_mut().set_overrides(&global_opts.config)?;
-    repo.add_store_requirement("lazychangelog")?;
     repo.add_requirement("remotefilelog")?;
 
     let edenapi = repo.eden_api()?;
-    let metalog = repo.metalog()?;
-    let commits = repo.dag_commits()?;
 
-    let bookmark_names: Vec<String> = get_selective_bookmarks(&repo)?;
+    let capabilities: Vec<String> =
+        block_on(edenapi.capabilities())?.map_err(|e| e.tag_network())?;
 
-    tracing::trace!("fetching lazy commit data and bookmarks");
-    let bookmark_ids = exchange::clone(
-        edenapi,
-        &mut metalog.write(),
-        &mut commits.write(),
-        bookmark_names.clone(),
-    )?;
-    logger.debug(|| format!("Pulled bookmarks {:?}", bookmark_ids));
+    let segmented_changelog = capabilities
+        .iter()
+        .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY);
+
+    if segmented_changelog {
+        repo.add_store_requirement("lazychangelog")?;
+
+        let bookmark_names: Vec<String> = get_selective_bookmarks(&repo)?;
+        let metalog = repo.metalog()?;
+        let commits = repo.dag_commits()?;
+        tracing::trace!("fetching lazy commit data and bookmarks");
+        let bookmark_ids = exchange::clone(
+            edenapi,
+            &mut metalog.write(),
+            &mut commits.write(),
+            bookmark_names,
+        )?;
+        logger.debug(|| format!("Pulled bookmarks {:?}", bookmark_ids));
+    } else {
+        revlog_clone(logger, io, global_opts, &clone_opts.source, destination)?;
+        // reload the repo to pick up any changes written out by the revlog clone
+        // such as metalog remotenames writes
+        repo = Repo::load(destination)?;
+        repo.config_mut().set_overrides(&global_opts.config)?;
+    }
 
     ::fail::fail_point!("run::clone", |_| {
         abort!("Injected clone failure");
     });
     Ok(repo)
+}
+
+pub fn revlog_clone(
+    logger: &mut TermLogger,
+    io: &IO,
+    global_opts: &HgGlobalOpts,
+    source: &str,
+    root: &Path,
+) -> Result<()> {
+    let mut args = vec![
+        "hg".to_string(),
+        "debugrevlogclone".to_string(),
+        source.to_string(),
+        "-R".to_string(),
+        root.to_string_lossy().to_string(),
+    ];
+
+    for config in global_opts.config.iter() {
+        args.push("--config".into());
+        args.push(config.into());
+    }
+    if global_opts.quiet {
+        args.push("-q".into());
+    }
+    if global_opts.verbose {
+        args.push("-v".into());
+    }
+    if global_opts.debug {
+        args.push("--debug".into());
+    }
+
+    logger.debug(|| format!("Running {}", args.join(" ")));
+
+    let hg_python = HgPython::new(&args);
+
+    abort_if!(hg_python.run_hg(args, io) != 0, "Cloning revlog failed");
+    Ok(())
 }
 
 fn get_selective_bookmarks(repo: &Repo) -> Result<Vec<String>> {

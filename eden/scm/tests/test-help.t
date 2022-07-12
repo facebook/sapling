@@ -1052,6 +1052,8 @@ Test list of internal help commands
    debugresetheads
                  reset heads of repo so it looks like after a fresh clone
    debugrevlog   show data and statistics about a revlog
+   debugrevlogclone
+                 download revlog and bookmarks into a newly initialized repo
    debugrevspec  parse and apply a revision specification
    debugrunlog   display runlog entries
    debugrunshell
