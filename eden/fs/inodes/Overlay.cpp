@@ -531,8 +531,16 @@ void Overlay::gcThread() noexcept {
 
 void Overlay::handleGCRequest(GCRequest& request) {
   IORequest req{this};
-  if (request.flush) {
-    request.flush->setValue();
+
+  if (std::holds_alternative<GCRequest::MaintenanceRequest>(
+          request.requestType)) {
+    backingOverlay_->maintenance();
+    return;
+  }
+
+  if (auto* flush =
+          std::get_if<GCRequest::FlushRequest>(&request.requestType)) {
+    flush->setValue();
     return;
   }
 
@@ -573,7 +581,7 @@ void Overlay::handleGCRequest(GCRequest& request) {
     }
   };
 
-  processDir(request.dir);
+  processDir(std::get<overlay::OverlayDir>(request.requestType));
 
   while (!queue.empty()) {
     auto ino = queue.front();
@@ -644,6 +652,6 @@ void Overlay::renameChild(
 }
 
 void Overlay::maintenance() {
-  backingOverlay_->maintenance();
+  gcQueue_.lock()->queue.emplace_back(Overlay::GCRequest::MaintenanceRequest{});
 }
 } // namespace facebook::eden

@@ -267,10 +267,10 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       std::shared_ptr<StructuredLogger> logger);
 
   /**
-   * A request for the background GC thread.  There are two types of requests:
-   * recursively forget data underneath an given directory, or complete a
-   * promise.  The latter is used for synchronization with the GC thread,
-   * primarily in unit tests.
+   * A request for the background GC thread.  There are three types of
+   * requests: recursively forget data underneath a given directory, perform
+   * some maintenance of the overlay or complete a promise.  The latter is used
+   * for synchronization with the GC thread, primarily in unit tests.
    *
    * If additional request types are added in the future, consider renaming to
    * AsyncRequest.  However, recursive collection of forgotten inode numbers
@@ -278,13 +278,16 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * durability goals.
    */
   struct GCRequest {
-    GCRequest() {}
-    explicit GCRequest(overlay::OverlayDir&& d) : dir{std::move(d)} {}
-    explicit GCRequest(folly::Promise<folly::Unit> p) : flush{std::move(p)} {}
+    explicit GCRequest(overlay::OverlayDir&& d) : requestType{std::move(d)} {}
 
-    overlay::OverlayDir dir;
-    // Iff set, this is a flush request.
-    std::optional<folly::Promise<folly::Unit>> flush;
+    using FlushRequest = folly::Promise<folly::Unit>;
+    explicit GCRequest(FlushRequest p) : requestType{std::move(p)} {}
+
+    struct MaintenanceRequest {};
+    explicit GCRequest(MaintenanceRequest req) : requestType{std::move(req)} {}
+
+    std::variant<MaintenanceRequest, overlay::OverlayDir, FlushRequest>
+        requestType;
   };
 
   struct GCQueue {
