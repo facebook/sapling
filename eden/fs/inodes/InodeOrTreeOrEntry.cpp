@@ -215,29 +215,27 @@ ImmediateFuture<EntryAttributes> InodeOrTreeOrEntry::getEntryAttributes(
       return makeImmediateFuture<EntryAttributes>(
           PathError(EINVAL, path, "variant is of unhandled type"));
   }
+  // This is now guaranteed to be a dtype_t::Regular file. This
+  // means there's no need for a Tree case, as Trees are always
+  // directories. It's included to check that the visitor here is
+  // exhaustive.
+  auto entryTypeFuture = getTreeEntryType(path, fetchContext);
+  auto blobMetadataFuture = getBlobMetadata(path, objectStore, fetchContext);
 
-  return getTreeEntryType(path, fetchContext)
-      .thenTry(
-          [this, path, objectStore, &fetchContext](
-              folly::Try<TreeEntryType> type) mutable
-          -> ImmediateFuture<EntryAttributes> {
-            // This is now guaranteed to be a dtype_t::Regular file. This
-            // means there's no need for a Tree case, as Trees are always
-            // directories. It's included to check that the visitor here is
-            // exhaustive.
-            return this->getBlobMetadata(path, objectStore, fetchContext)
-                .thenTry(
-                    [type](folly::Try<BlobMetadata> blobMetadata) mutable
-                    -> EntryAttributes {
-                      return EntryAttributes{
-                          blobMetadata.hasException()
-                              ? folly::Try<Hash20>(blobMetadata.exception())
-                              : folly::Try<Hash20>(blobMetadata.value().sha1),
-                          blobMetadata.hasException()
-                              ? folly::Try<uint64_t>(blobMetadata.exception())
-                              : folly::Try<uint64_t>(blobMetadata.value().size),
-                          type};
-                    });
+  return collectAll(std::move(entryTypeFuture), std::move(blobMetadataFuture))
+      .thenValue(
+          [](std::tuple<folly::Try<TreeEntryType>, folly::Try<BlobMetadata>>
+                 rawAttributeData) mutable -> ImmediateFuture<EntryAttributes> {
+            auto& blobMetadata =
+                std::get<folly::Try<BlobMetadata>>(rawAttributeData);
+            return EntryAttributes{
+                blobMetadata.hasException()
+                    ? folly::Try<Hash20>(blobMetadata.exception())
+                    : folly::Try<Hash20>(blobMetadata.value().sha1),
+                blobMetadata.hasException()
+                    ? folly::Try<uint64_t>(blobMetadata.exception())
+                    : folly::Try<uint64_t>(blobMetadata.value().size),
+                std::get<folly::Try<TreeEntryType>>(rawAttributeData)};
           });
 }
 

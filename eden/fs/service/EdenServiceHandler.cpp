@@ -1822,8 +1822,8 @@ getAllEntryAttributes(
               EdenErrorType::ARGUMENT_ERROR,
               fmt::format("{}: path must be a directory", path)));
     }
-    return ImmediateFuture{tree.getChildrenAttributes(
-        RelativePath{path}, objectStore, fetchContext)};
+    return tree.getChildrenAttributes(
+        RelativePath{path}, objectStore, fetchContext);
   });
 }
 
