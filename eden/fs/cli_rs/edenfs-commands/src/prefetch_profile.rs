@@ -21,6 +21,7 @@ use util::path::expand_path;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::checkout::CheckoutConfig;
 use edenfs_client::EdenFsInstance;
+use edenfs_config::EdenFsConfig;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
@@ -101,6 +102,10 @@ pub enum PrefetchCmd {
         #[clap(help = "Profile to deactivate.")]
         profile_name: String,
     },
+    #[clap(about = "Disables prefetch profiles locally")]
+    Disable,
+    #[clap(about = "Enables prefetch profiles locally")]
+    Enable,
 }
 
 impl PrefetchCmd {
@@ -266,6 +271,40 @@ impl PrefetchCmd {
             }
         }
     }
+
+    async fn disable(&self, instance: EdenFsInstance) -> Result<ExitCode> {
+        let mut loader = EdenFsConfig::loader();
+        let home_dir_path = instance
+            .get_user_home_dir()
+            .ok_or_else(|| {
+                EdenFsError::Other(anyhow!(
+                    "Failed to disable prefetch-profiles, could not determine user's home directory"
+                ))
+            })?
+            .as_path();
+        edenfs_config::load_user(&mut loader, home_dir_path)?;
+        let mut edenfs_config = loader.build().map_err(EdenFsError::ConfigurationError)?;
+        edenfs_config.set_bool("prefetch-profiles", "prefetching-enabled", false);
+        edenfs_config.save_user(home_dir_path)?;
+        Ok(0)
+    }
+
+    async fn enable(&self, instance: EdenFsInstance) -> Result<ExitCode> {
+        let mut loader = EdenFsConfig::loader();
+        let home_dir_path = instance
+            .get_user_home_dir()
+            .ok_or_else(|| {
+                EdenFsError::Other(anyhow!(
+                    "Failed to enable prefetch-profiles, could not determine user's home directory"
+                ))
+            })?
+            .as_path();
+        edenfs_config::load_user(&mut loader, home_dir_path)?;
+        let mut edenfs_config = loader.build().map_err(EdenFsError::ConfigurationError)?;
+        edenfs_config.set_bool("prefetch-profiles", "prefetching-enabled", true);
+        edenfs_config.save_user(home_dir_path)?;
+        Ok(0)
+    }
 }
 
 #[async_trait]
@@ -287,6 +326,8 @@ impl Subcommand for PrefetchCmd {
                 common,
                 profile_name,
             } => self.deactivate(instance, common, profile_name).await,
+            Self::Disable {} => self.disable(instance).await,
+            Self::Enable {} => self.enable(instance).await,
         }
     }
 }

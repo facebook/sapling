@@ -66,6 +66,10 @@ impl EdenFsInstance {
         )
     }
 
+    pub fn get_user_home_dir(&self) -> Option<&PathBuf> {
+        self.home_dir.as_ref()
+    }
+
     pub fn should_prefetch_profiles(&self) -> bool {
         self.get_config()
             .ok()

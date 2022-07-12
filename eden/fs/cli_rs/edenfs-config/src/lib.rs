@@ -7,11 +7,13 @@
 
 use std::path::Path;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
 use stack_config::StackConfig;
+use std::fs::write;
 use tracing::event;
 use tracing::trace;
 use tracing::Level;
@@ -28,11 +30,12 @@ pub struct Core {
 #[derive(Serialize, Deserialize, StackConfig, Debug)]
 pub struct EdenFsConfig {
     #[stack(nested)]
-    core: Core,
+    #[serde(skip_serializing_if = "skip_core_serialization")]
+    pub core: Core,
 
     #[stack(merge = "merge_table")]
     #[serde(flatten)]
-    other: toml::value::Table,
+    pub other: toml::value::Table,
 }
 
 impl EdenFsConfig {
@@ -43,6 +46,26 @@ impl EdenFsConfig {
             .and_then(|x| x.get(entry))
             .and_then(|x| x.as_bool())
     }
+
+    pub fn set_bool(&mut self, section: &str, entry: &str, value: bool) {
+        let config_items = self.other.get_mut(section).and_then(|x| x.as_table_mut());
+        if let Some(item) = config_items {
+            item.insert(entry.to_owned(), toml::Value::Boolean(value));
+        }
+    }
+
+    /// Store information in the local config file.
+    pub fn save_user(&mut self, home_dir: &Path) -> Result<()> {
+        let toml_out = &toml::to_string(&self).expect("Could not toml-ize config");
+        let home_rc = home_dir.join(".edenrc");
+        write(home_rc.clone(), toml_out)
+            .with_context(|| anyhow!("Could not write to config file! {:?}", home_rc))?;
+        Ok(())
+    }
+}
+
+fn skip_core_serialization(core: &Core) -> bool {
+    core.eden_directory.is_none()
 }
 
 fn merge_table(lhs: &mut toml::value::Table, rhs: toml::value::Table) {
@@ -119,7 +142,7 @@ fn load_system_rcs(loader: &mut EdenFsConfigLoader, etc_dir: &Path) -> Result<()
     Ok(())
 }
 
-fn load_user(loader: &mut EdenFsConfigLoader, home_dir: &Path) -> Result<()> {
+pub fn load_user(loader: &mut EdenFsConfigLoader, home_dir: &Path) -> Result<()> {
     let home_rc = home_dir.join(".edenrc");
     load_path(loader, &home_rc)
 }
