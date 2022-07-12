@@ -135,12 +135,34 @@ impl ConfigSet {
         self.sections.keys().cloned().collect()
     }
 
-    /// Get config names in the given section. Sorted by insertion order.
-    pub fn keys(&self, section: impl AsRef<str>) -> Vec<Text> {
-        self.sections
-            .get(section.as_ref())
-            .map(|section| section.items.keys().cloned().collect())
-            .unwrap_or_default()
+    /// Get config names matching the given prefix, sorted by insertion order.
+    ///
+    /// keys("foo") returns keys in section "foo".
+    /// keys(&["foo", "bar"]) returns keys in section "foo" with prefix "bar(.|$)".
+    ///
+    /// As a special case, keys(&[]) returns nothing.
+    pub fn keys(&self, prefix: impl KeyPrefix) -> Vec<Text> {
+        match prefix.section() {
+            None => Vec::new(),
+            Some(section_name) => {
+                let name_prefixes = prefix.name_prefixes();
+                self.sections
+                    .get(section_name)
+                    .map(|section| {
+                        section
+                            .items
+                            .keys()
+                            .filter(|name| {
+                                name.split('.')
+                                    .take(name_prefixes.len())
+                                    .eq(name_prefixes.iter().copied())
+                            })
+                            .cloned()
+                            .collect()
+                    })
+                    .unwrap_or_default()
+            }
+        }
     }
 
     /// Get config value for a given config.
@@ -610,6 +632,41 @@ impl ConfigSet {
     }
 }
 
+pub trait KeyPrefix {
+    fn section(&self) -> Option<&str>;
+    fn name_prefixes(&self) -> &[&str] {
+        &[]
+    }
+}
+
+impl KeyPrefix for &str {
+    fn section(&self) -> Option<&str> {
+        Some(*self)
+    }
+}
+
+impl KeyPrefix for &Text {
+    fn section(&self) -> Option<&str> {
+        Some(self)
+    }
+}
+
+impl KeyPrefix for String {
+    fn section(&self) -> Option<&str> {
+        Some(self)
+    }
+}
+
+impl<const N: usize> KeyPrefix for &[&str; N] {
+    fn section(&self) -> Option<&str> {
+        self.first().copied()
+    }
+
+    fn name_prefixes(&self) -> &[&str] {
+        &self[1..]
+    }
+}
+
 impl ValueSource {
     /// Return the actual value stored in this config value, or `None` if uset.
     pub fn value(&self) -> &Option<Text> {
@@ -760,6 +817,28 @@ pub(crate) mod tests {
         assert_eq!(sources[0].location(), None);
         assert_eq!(sources[1].location(), None);
         assert_eq!(sources[1].file_content(), None);
+    }
+
+    #[test]
+    fn test_keys() {
+        let mut cfg = ConfigSet::new();
+        cfg.set("foo", "other", Some(""), &"".into());
+        cfg.set("foo", "bar", Some(""), &"".into());
+        cfg.set("foo", "bar.baz", Some(""), &"".into());
+        cfg.set("foo", "bar.qux", Some(""), &"".into());
+        cfg.set("foo", "bar.qux.more", Some(""), &"".into());
+
+        assert_eq!(cfg.keys(&[] as &[&str; 0]), Vec::<Text>::new());
+
+        assert_eq!(
+            cfg.keys("foo"),
+            vec!["other", "bar", "bar.baz", "bar.qux", "bar.qux.more"]
+        );
+
+        assert_eq!(
+            cfg.keys(&["foo", "bar"]),
+            vec!["bar", "bar.baz", "bar.qux", "bar.qux.more"]
+        );
     }
 
     #[test]
